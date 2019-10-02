@@ -99,45 +99,50 @@ int iwl_queue_space(struct iwl_trans* trans, const struct iwl_txq* q) {
 
     return max - used;
 }
+#endif
 
 /*
  * iwl_queue_init - Initialize queue's high/low-water and read/write indexes
  */
-static int iwl_queue_init(struct iwl_txq* q, int slots_num) {
-    q->n_window = slots_num;
+static zx_status_t iwl_queue_init(struct iwl_txq* q, int slots_num) {
+  q->n_window = slots_num;
 
-    /* slots_num must be power-of-two size, otherwise
-     * iwl_pcie_get_cmd_index is broken. */
-    if (WARN_ON(!is_power_of_2(slots_num))) { return -EINVAL; }
+  // slots_num must be power-of-two size, otherwise iwl_pcie_get_cmd_index is broken.
+  if (WARN_ON(slots_num <= 0 || (slots_num & (slots_num - 1)) != 0)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-    q->low_mark = q->n_window / 4;
-    if (q->low_mark < 4) { q->low_mark = 4; }
+  q->low_mark = q->n_window / 4;
+  if (q->low_mark < 4) {
+    q->low_mark = 4;
+  }
 
-    q->high_mark = q->n_window / 8;
-    if (q->high_mark < 2) { q->high_mark = 2; }
+  q->high_mark = q->n_window / 8;
+  if (q->high_mark < 2) {
+    q->high_mark = 2;
+  }
 
-    q->write_ptr = 0;
-    q->read_ptr = 0;
+  q->write_ptr = 0;
+  q->read_ptr = 0;
 
-    return 0;
+  return ZX_OK;
 }
 
-int iwl_pcie_alloc_dma_ptr(struct iwl_trans* trans, struct iwl_dma_ptr* ptr, size_t size) {
-    if (WARN_ON(ptr->addr)) { return -EINVAL; }
+zx_status_t iwl_pcie_alloc_dma_ptr(struct iwl_trans* trans, struct iwl_dma_ptr* ptr, size_t size) {
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  zx_status_t status =
+      io_buffer_init(&ptr->io_buf, trans_pcie->bti, size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  if (status != ZX_OK) {
+    return status;
+  }
 
-    ptr->addr = dma_alloc_coherent(trans->dev, size, &ptr->dma, GFP_KERNEL);
-    if (!ptr->addr) { return -ENOMEM; }
-    ptr->size = size;
-    return 0;
+  ptr->size = size;
+  return ZX_OK;
 }
 
 void iwl_pcie_free_dma_ptr(struct iwl_trans* trans, struct iwl_dma_ptr* ptr) {
-    if (unlikely(!ptr->addr)) { return; }
-
-    dma_free_coherent(trans->dev, ptr->size, ptr->addr, ptr->dma);
-    memset(ptr, 0, sizeof(*ptr));
+  io_buffer_release(&ptr->io_buf);
 }
-#endif  // NEEDS_PORTING
 
 static void iwl_pcie_txq_stuck_timer(async_dispatcher_t* dispatcher, async_task_t* task,
                                      zx_status_t status) {
@@ -203,7 +208,7 @@ void iwlwifi_timer_stop(struct iwlwifi_timer_info* timer) {
   }
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 /*
  * iwl_pcie_txq_update_byte_cnt_tbl - Set up entry in Tx byte-count array
  */
@@ -268,66 +273,72 @@ static void iwl_pcie_txq_inval_byte_cnt_tbl(struct iwl_trans* trans, struct iwl_
         scd_bc_tbl[txq_id].tfd_offset[TFD_QUEUE_SIZE_MAX + read_ptr] = bc_ent;
     }
 }
+#endif
 
 /*
  * iwl_pcie_txq_inc_wr_ptr - Send new write index to hardware
  */
 static void iwl_pcie_txq_inc_wr_ptr(struct iwl_trans* trans, struct iwl_txq* txq) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    uint32_t reg = 0;
-    int txq_id = txq->id;
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  uint32_t reg = 0;
+  int txq_id = txq->id;
 
-    lockdep_assert_held(&txq->lock);
+  lockdep_assert_held(&txq->lock);
 
+  /*
+   * explicitly wake up the NIC if:
+   * 1. shadow registers aren't enabled
+   * 2. NIC is woken up for CMD regardless of shadow outside this function
+   * 3. there is a chance that the NIC is asleep
+   */
+  if (!trans->cfg->base_params->shadow_reg_enable && txq_id != trans_pcie->cmd_queue &&
+      test_bit(STATUS_TPOWER_PMI, &trans->status)) {
     /*
-     * explicitly wake up the NIC if:
-     * 1. shadow registers aren't enabled
-     * 2. NIC is woken up for CMD regardless of shadow outside this function
-     * 3. there is a chance that the NIC is asleep
+     * wake up nic if it's powered down ...
+     * uCode will wake up, and interrupt us again, so next
+     * time we'll skip this part.
      */
-    if (!trans->cfg->base_params->shadow_reg_enable && txq_id != trans_pcie->cmd_queue &&
-        test_bit(STATUS_TPOWER_PMI, &trans->status)) {
-        /*
-         * wake up nic if it's powered down ...
-         * uCode will wake up, and interrupt us again, so next
-         * time we'll skip this part.
-         */
-        reg = iwl_read32(trans, CSR_UCODE_DRV_GP1);
+    reg = iwl_read32(trans, CSR_UCODE_DRV_GP1);
 
-        if (reg & CSR_UCODE_DRV_GP1_BIT_MAC_SLEEP) {
-            IWL_DEBUG_INFO(trans, "Tx queue %d requesting wakeup, GP1 = 0x%x\n", txq_id, reg);
-            iwl_set_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_access_req));
-            txq->need_update = true;
-            return;
-        }
+    if (reg & CSR_UCODE_DRV_GP1_BIT_MAC_SLEEP) {
+      IWL_DEBUG_INFO(trans, "Tx queue %d requesting wakeup, GP1 = 0x%x\n", txq_id, reg);
+      iwl_set_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_access_req));
+      txq->need_update = true;
+      return;
     }
+  }
 
-    /*
-     * if not in power-save mode, uCode will never sleep when we're
-     * trying to tx (during RFKILL, we're not trying to tx).
-     */
-    IWL_DEBUG_TX(trans, "Q:%d WR: 0x%x\n", txq_id, txq->write_ptr);
-    if (!txq->block) { iwl_write32(trans, HBUS_TARG_WRPTR, txq->write_ptr | (txq_id << 8)); }
+  /*
+   * if not in power-save mode, uCode will never sleep when we're
+   * trying to tx (during RFKILL, we're not trying to tx).
+   */
+  IWL_DEBUG_TX(trans, "Q:%d WR: 0x%x\n", txq_id, txq->write_ptr);
+  if (!txq->block) {
+    iwl_write32(trans, HBUS_TARG_WRPTR, txq->write_ptr | (txq_id << 8));
+  }
 }
 
 void iwl_pcie_txq_check_wrptrs(struct iwl_trans* trans) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    int i;
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  int i;
 
-    for (i = 0; i < trans->cfg->base_params->num_of_queues; i++) {
-        struct iwl_txq* txq = trans_pcie->txq[i];
+  for (i = 0; i < trans->cfg->base_params->num_of_queues; i++) {
+    struct iwl_txq* txq = trans_pcie->txq[i];
 
-        if (!test_bit(i, trans_pcie->queue_used)) { continue; }
-
-        spin_lock_bh(&txq->lock);
-        if (txq->need_update) {
-            iwl_pcie_txq_inc_wr_ptr(trans, txq);
-            txq->need_update = false;
-        }
-        spin_unlock_bh(&txq->lock);
+    if (!test_bit(i, trans_pcie->queue_used)) {
+      continue;
     }
+
+    mtx_lock(&txq->lock);
+    if (txq->need_update) {
+      iwl_pcie_txq_inc_wr_ptr(trans, txq);
+      txq->need_update = false;
+    }
+    mtx_unlock(&txq->lock);
+  }
 }
 
+#if 0   // NEEDS_PORTING
 static inline dma_addr_t iwl_pcie_tfd_tb_get_addr(struct iwl_trans* trans, void* _tfd,
                                                   uint8_t idx) {
     if (trans->cfg->use_tfh) {
@@ -484,89 +495,108 @@ static int iwl_pcie_txq_build_tfd(struct iwl_trans* trans, struct iwl_txq* txq, 
 
     return num_tbs;
 }
+#endif  // NEEDS_PORTING
 
-int iwl_pcie_txq_alloc(struct iwl_trans* trans, struct iwl_txq* txq, int slots_num,
-                       bool cmd_queue) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    size_t tfd_sz = trans_pcie->tfd_size * trans->cfg->base_params->max_tfd_queue_size;
-    size_t tb0_buf_sz;
-    int i;
+zx_status_t iwl_pcie_txq_alloc(struct iwl_trans* trans, struct iwl_txq* txq, int slots_num,
+                               bool cmd_queue) {
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-    if (WARN_ON(txq->entries || txq->tfds)) { return -EINVAL; }
+  if (WARN_ON(txq->entries || io_buffer_is_valid(&txq->tfds))) {
+    return ZX_ERR_BAD_STATE;
+  }
 
-    if (trans->cfg->use_tfh) { tfd_sz = trans_pcie->tfd_size * slots_num; }
+  size_t tfd_sz = trans_pcie->tfd_size * trans->cfg->base_params->max_tfd_queue_size;
+  if (trans->cfg->use_tfh) {
+    tfd_sz = trans_pcie->tfd_size * slots_num;
+  }
 
-    timer_setup(&txq->stuck_timer, iwl_pcie_txq_stuck_timer, 0);
-    txq->trans_pcie = trans_pcie;
+  iwlwifi_timer_init(trans, &txq->stuck_timer);
+  txq->trans_pcie = trans_pcie;
 
-    txq->n_window = slots_num;
+  txq->n_window = slots_num;
 
-    txq->entries = kcalloc(slots_num, sizeof(struct iwl_pcie_txq_entry), GFP_KERNEL);
+  txq->entries = calloc(slots_num, sizeof(struct iwl_pcie_txq_entry));
 
-    if (!txq->entries) { goto error; }
+  if (!txq->entries) {
+    goto error;
+  }
 
-    if (cmd_queue)
-        for (i = 0; i < slots_num; i++) {
-            txq->entries[i].cmd = kmalloc(sizeof(struct iwl_device_cmd), GFP_KERNEL);
-            if (!txq->entries[i].cmd) { goto error; }
-        }
+  if (cmd_queue) {
+    for (int i = 0; i < slots_num; i++) {
+      txq->entries[i].cmd = malloc(sizeof(struct iwl_device_cmd));
+      if (!txq->entries[i].cmd) {
+        goto error;
+      }
+    }
+  }
 
-    /* Circular buffer of transmit frame descriptors (TFDs),
-     * shared with device */
-    txq->tfds = dma_alloc_coherent(trans->dev, tfd_sz, &txq->dma_addr, GFP_KERNEL);
-    if (!txq->tfds) { goto error; }
+  // Circular buffer of transmit frame descriptors (TFDs), shared with device.
+  zx_status_t status =
+      io_buffer_init(&txq->tfds, trans_pcie->bti, tfd_sz, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  if (status != ZX_OK) {
+    goto error;
+  }
 
-    BUILD_BUG_ON(IWL_FIRST_TB_SIZE_ALIGN != sizeof(*txq->first_tb_bufs));
+  BUILD_BUG_ON(IWL_FIRST_TB_SIZE_ALIGN != sizeof(struct iwl_pcie_first_tb_buf));
 
-    tb0_buf_sz = sizeof(*txq->first_tb_bufs) * slots_num;
+  size_t tb0_buf_sz = sizeof(struct iwl_pcie_first_tb_buf) * slots_num;
 
-    txq->first_tb_bufs = dma_alloc_coherent(trans->dev, tb0_buf_sz, &txq->first_tb_dma, GFP_KERNEL);
-    if (!txq->first_tb_bufs) { goto err_free_tfds; }
+  status = io_buffer_init(&txq->first_tb_bufs, trans_pcie->bti, tb0_buf_sz,
+                          IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  if (status != ZX_OK) {
+    goto err_free_tfds;
+  }
 
-    return 0;
+  return ZX_OK;
+
 err_free_tfds:
-    dma_free_coherent(trans->dev, tfd_sz, txq->tfds, txq->dma_addr);
+  io_buffer_release(&txq->tfds);
 error:
-    if (txq->entries && cmd_queue)
-        for (i = 0; i < slots_num; i++) {
-            kfree(txq->entries[i].cmd);
-        }
-    kfree(txq->entries);
-    txq->entries = NULL;
+  if (txq->entries && cmd_queue) {
+    for (int i = 0; i < slots_num; i++) {
+      free(txq->entries[i].cmd);
+    }
+  }
+  free(txq->entries);
+  txq->entries = NULL;
 
-    return -ENOMEM;
+  return ZX_ERR_NO_MEMORY;
 }
 
-int iwl_pcie_txq_init(struct iwl_trans* trans, struct iwl_txq* txq, int slots_num, bool cmd_queue) {
-    int ret;
-    uint32_t tfd_queue_max_size = trans->cfg->base_params->max_tfd_queue_size;
+zx_status_t iwl_pcie_txq_init(struct iwl_trans* trans, struct iwl_txq* txq, int slots_num,
+                              bool cmd_queue) {
+  uint32_t tfd_queue_max_size = trans->cfg->base_params->max_tfd_queue_size;
 
-    txq->need_update = false;
+  txq->need_update = false;
 
-    /* max_tfd_queue_size must be power-of-two size, otherwise
-     * iwl_queue_inc_wrap and iwl_queue_dec_wrap are broken. */
-    if (WARN_ONCE(tfd_queue_max_size & (tfd_queue_max_size - 1),
-                  "Max tfd queue size must be a power of two, but is %d", tfd_queue_max_size)) {
-        return -EINVAL;
-    }
+  // max_tfd_queue_size must be power-of-two size, otherwise iwl_queue_inc_wrap and
+  // iwl_queue_dec_wrap are broken.
+  if (WARN_ON(tfd_queue_max_size & (tfd_queue_max_size - 1))) {
+    IWL_ERR(trans, "Max tfd queue size must be a power of two, but is %d", tfd_queue_max_size);
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-    /* Initialize queue's high/low-water marks, and head/tail indexes */
-    ret = iwl_queue_init(txq, slots_num);
-    if (ret) { return ret; }
+  /* Initialize queue's high/low-water marks, and head/tail indexes */
+  zx_status_t status = iwl_queue_init(txq, slots_num);
+  if (status != ZX_OK) {
+    return status;
+  }
 
-    spin_lock_init(&txq->lock);
+  mtx_init(&txq->lock, mtx_plain);
 
+#if 0   // NEEDS_PORTING
     if (cmd_queue) {
         static struct lock_class_key iwl_pcie_cmd_queue_lock_class;
-
         lockdep_set_class(&txq->lock, &iwl_pcie_cmd_queue_lock_class);
     }
 
     __skb_queue_head_init(&txq->overflow_q);
+#endif  // NEEDS_PORTING
 
-    return 0;
+  return 0;
 }
 
+#if 0   // NEEDS_PORTING
 void iwl_pcie_free_tso_page(struct iwl_trans_pcie* trans_pcie, struct sk_buff* skb) {
     struct page** page_ptr;
 
@@ -642,6 +672,7 @@ static void iwl_pcie_txq_unmap(struct iwl_trans* trans, int txq_id) {
     /* just in case - this queue may have been stopped */
     iwl_wake_queue(trans, txq);
 }
+#endif  // NEEDS_PORTING
 
 /*
  * iwl_pcie_txq_free - Deallocate DMA queue.
@@ -652,42 +683,42 @@ static void iwl_pcie_txq_unmap(struct iwl_trans* trans, int txq_id) {
  * 0-fill, but do not free "txq" descriptor structure.
  */
 static void iwl_pcie_txq_free(struct iwl_trans* trans, int txq_id) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    struct iwl_txq* txq = trans_pcie->txq[txq_id];
-    struct device* dev = trans->dev;
-    int i;
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  struct iwl_txq* txq = trans_pcie->txq[txq_id];
+  int i;
 
-    if (WARN_ON(!txq)) { return; }
+  if (WARN_ON(!txq)) {
+    return;
+  }
 
+#if 0   // NEEDS_PORTING
     iwl_pcie_txq_unmap(trans, txq_id);
+#endif  // NEEDS_PORTING
 
-    /* De-alloc array of command/tx buffers */
-    if (txq_id == trans_pcie->cmd_queue)
-        for (i = 0; i < txq->n_window; i++) {
-            kzfree(txq->entries[i].cmd);
-            kzfree(txq->entries[i].free_buf);
-        }
-
-    /* De-alloc circular buffer of TFDs */
-    if (txq->tfds) {
-        dma_free_coherent(dev, trans_pcie->tfd_size * trans->cfg->base_params->max_tfd_queue_size,
-                          txq->tfds, txq->dma_addr);
-        txq->dma_addr = 0;
-        txq->tfds = NULL;
-
-        dma_free_coherent(dev, sizeof(*txq->first_tb_bufs) * txq->n_window, txq->first_tb_bufs,
-                          txq->first_tb_dma);
+  /* De-alloc array of command/tx buffers */
+  if (txq_id == trans_pcie->cmd_queue)
+    for (i = 0; i < txq->n_window; i++) {
+      free(txq->entries[i].cmd);
+#if 0   // NEEDS_PORTING
+            free(txq->entries[i].free_buf);
+#endif  // NEEDS_PORTING
     }
 
-    kfree(txq->entries);
-    txq->entries = NULL;
+  /* De-alloc circular buffer of TFDs */
+  io_buffer_release(&txq->tfds);
+  txq->dma_addr = 0;
+  io_buffer_release(&txq->first_tb_bufs);
 
-    del_timer_sync(&txq->stuck_timer);
+  free(txq->entries);
+  txq->entries = NULL;
 
-    /* 0-fill queue descriptor structure */
-    memset(txq, 0, sizeof(*txq));
+  iwlwifi_timer_stop(&txq->stuck_timer);
+
+  /* 0-fill queue descriptor structure */
+  memset(txq, 0, sizeof(*txq));
 }
 
+#if 0   // NEEDS_PORTING
 void iwl_pcie_tx_start(struct iwl_trans* trans, uint32_t scd_base_addr) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     int nq = trans->cfg->base_params->num_of_queues;
@@ -830,6 +861,7 @@ int iwl_pcie_tx_stop(struct iwl_trans* trans) {
 
     return 0;
 }
+#endif  // NEEDS_PORTING
 
 /*
  * iwl_trans_tx_free - Free TXQ Context
@@ -837,146 +869,147 @@ int iwl_pcie_tx_stop(struct iwl_trans* trans) {
  * Destroy all TX DMA queues and structures
  */
 void iwl_pcie_tx_free(struct iwl_trans* trans) {
-    int txq_id;
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  int txq_id;
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-    memset(trans_pcie->queue_used, 0, sizeof(trans_pcie->queue_used));
+  memset(trans_pcie->queue_used, 0, sizeof(trans_pcie->queue_used));
 
-    /* Tx queues */
-    if (trans_pcie->txq_memory) {
-        for (txq_id = 0; txq_id < trans->cfg->base_params->num_of_queues; txq_id++) {
-            iwl_pcie_txq_free(trans, txq_id);
-            trans_pcie->txq[txq_id] = NULL;
-        }
+  /* Tx queues */
+  if (trans_pcie->txq_memory) {
+    for (txq_id = 0; txq_id < trans->cfg->base_params->num_of_queues; txq_id++) {
+      iwl_pcie_txq_free(trans, txq_id);
+      trans_pcie->txq[txq_id] = NULL;
     }
+  }
 
-    kfree(trans_pcie->txq_memory);
-    trans_pcie->txq_memory = NULL;
+  free(trans_pcie->txq_memory);
+  trans_pcie->txq_memory = NULL;
 
-    iwl_pcie_free_dma_ptr(trans, &trans_pcie->kw);
+  iwl_pcie_free_dma_ptr(trans, &trans_pcie->kw);
 
-    iwl_pcie_free_dma_ptr(trans, &trans_pcie->scd_bc_tbls);
+  iwl_pcie_free_dma_ptr(trans, &trans_pcie->scd_bc_tbls);
 }
 
 /*
  * iwl_pcie_tx_alloc - allocate TX context
  * Allocate all Tx DMA structures and initialize them
  */
-static int iwl_pcie_tx_alloc(struct iwl_trans* trans) {
-    int ret;
-    int txq_id, slots_num;
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    uint16_t bc_tbls_size = trans->cfg->base_params->num_of_queues;
+static zx_status_t iwl_pcie_tx_alloc(struct iwl_trans* trans) {
+  zx_status_t ret;
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  uint16_t bc_tbls_size = trans->cfg->base_params->num_of_queues;
 
-    bc_tbls_size *= (trans->cfg->device_family >= IWL_DEVICE_FAMILY_22560)
-                        ? sizeof(struct iwl_gen3_bc_tbl)
-                        : sizeof(struct iwlagn_scd_bc_tbl);
+  bc_tbls_size *= (trans->cfg->device_family >= IWL_DEVICE_FAMILY_22560)
+                      ? sizeof(struct iwl_gen3_bc_tbl)
+                      : sizeof(struct iwlagn_scd_bc_tbl);
 
-    /*It is not allowed to alloc twice, so warn when this happens.
-     * We cannot rely on the previous allocation, so free and fail */
-    if (WARN_ON(trans_pcie->txq_memory)) {
-        ret = -EINVAL;
-        goto error;
+  /*It is not allowed to alloc twice, so warn when this happens.
+   * We cannot rely on the previous allocation, so free and fail */
+  if (WARN_ON(trans_pcie->txq_memory)) {
+    ret = ZX_ERR_BAD_STATE;
+    goto error;
+  }
+
+  ret = iwl_pcie_alloc_dma_ptr(trans, &trans_pcie->scd_bc_tbls, bc_tbls_size);
+  if (ret != ZX_OK) {
+    IWL_ERR(trans, "Scheduler BC Table allocation failed\n");
+    goto error;
+  }
+
+  /* Alloc keep-warm buffer */
+  ret = iwl_pcie_alloc_dma_ptr(trans, &trans_pcie->kw, IWL_KW_SIZE);
+  if (ret != ZX_OK) {
+    IWL_ERR(trans, "Keep Warm allocation failed\n");
+    goto error;
+  }
+
+  trans_pcie->txq_memory = calloc(trans->cfg->base_params->num_of_queues, sizeof(struct iwl_txq));
+  if (!trans_pcie->txq_memory) {
+    IWL_ERR(trans, "Not enough memory for txq\n");
+    ret = ZX_ERR_NO_MEMORY;
+    goto error;
+  }
+
+  /* Alloc and init all Tx queues, including the command queue (#4/#9) */
+  for (int txq_id = 0; txq_id < trans->cfg->base_params->num_of_queues; txq_id++) {
+    bool cmd_queue = (txq_id == trans_pcie->cmd_queue);
+
+    int slots_num = cmd_queue ? TFD_CMD_SLOTS : TFD_TX_CMD_SLOTS;
+    trans_pcie->txq[txq_id] = &trans_pcie->txq_memory[txq_id];
+    ret = iwl_pcie_txq_alloc(trans, trans_pcie->txq[txq_id], slots_num, cmd_queue);
+    if (ret != ZX_OK) {
+      IWL_ERR(trans, "Tx %d queue alloc failed\n", txq_id);
+      goto error;
     }
+    trans_pcie->txq[txq_id]->id = txq_id;
+  }
 
-    ret = iwl_pcie_alloc_dma_ptr(trans, &trans_pcie->scd_bc_tbls, bc_tbls_size);
-    if (ret) {
-        IWL_ERR(trans, "Scheduler BC Table allocation failed\n");
-        goto error;
-    }
-
-    /* Alloc keep-warm buffer */
-    ret = iwl_pcie_alloc_dma_ptr(trans, &trans_pcie->kw, IWL_KW_SIZE);
-    if (ret) {
-        IWL_ERR(trans, "Keep Warm allocation failed\n");
-        goto error;
-    }
-
-    trans_pcie->txq_memory =
-        kcalloc(trans->cfg->base_params->num_of_queues, sizeof(struct iwl_txq), GFP_KERNEL);
-    if (!trans_pcie->txq_memory) {
-        IWL_ERR(trans, "Not enough memory for txq\n");
-        ret = -ENOMEM;
-        goto error;
-    }
-
-    /* Alloc and init all Tx queues, including the command queue (#4/#9) */
-    for (txq_id = 0; txq_id < trans->cfg->base_params->num_of_queues; txq_id++) {
-        bool cmd_queue = (txq_id == trans_pcie->cmd_queue);
-
-        slots_num = cmd_queue ? TFD_CMD_SLOTS : TFD_TX_CMD_SLOTS;
-        trans_pcie->txq[txq_id] = &trans_pcie->txq_memory[txq_id];
-        ret = iwl_pcie_txq_alloc(trans, trans_pcie->txq[txq_id], slots_num, cmd_queue);
-        if (ret) {
-            IWL_ERR(trans, "Tx %d queue alloc failed\n", txq_id);
-            goto error;
-        }
-        trans_pcie->txq[txq_id]->id = txq_id;
-    }
-
-    return 0;
+  return ZX_OK;
 
 error:
+  iwl_pcie_tx_free(trans);
+  return ret;
+}
+
+zx_status_t iwl_pcie_tx_init(struct iwl_trans* trans) {
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  int ret;
+  bool alloc = false;
+
+  if (!trans_pcie->txq_memory) {
+    ret = iwl_pcie_tx_alloc(trans);
+    if (ret) {
+      goto error;
+    }
+    alloc = true;
+  }
+
+  mtx_lock(&trans_pcie->irq_lock);
+
+  /* Turn off all Tx DMA fifos */
+  iwl_scd_deactivate_fifos(trans);
+
+  /* Tell NIC where to find the "keep warm" buffer */
+  iwl_write_direct32(trans, FH_KW_MEM_ADDR_REG, trans_pcie->kw.dma >> 4);
+
+  mtx_unlock(&trans_pcie->irq_lock);
+
+  /* Alloc and init all Tx queues, including the command queue (#4/#9) */
+  for (int txq_id = 0; txq_id < trans->cfg->base_params->num_of_queues; txq_id++) {
+    bool cmd_queue = (txq_id == trans_pcie->cmd_queue);
+
+    int slots_num = cmd_queue ? TFD_CMD_SLOTS : TFD_TX_CMD_SLOTS;
+    ret = iwl_pcie_txq_init(trans, trans_pcie->txq[txq_id], slots_num, cmd_queue);
+    if (ret != ZX_OK) {
+      IWL_ERR(trans, "Tx %d queue init failed\n", txq_id);
+      goto error;
+    }
+
+    /*
+     * Tell nic where to find circular buffer of TFDs for a
+     * given Tx queue, and enable the DMA channel used for that
+     * queue.
+     * Circular buffer (TFD queue in DRAM) physical base address
+     */
+    iwl_write_direct32(trans, FH_MEM_CBBC_QUEUE(trans, txq_id),
+                       trans_pcie->txq[txq_id]->dma_addr >> 8);
+  }
+
+  iwl_set_bits_prph(trans, SCD_GP_CTRL, SCD_GP_CTRL_AUTO_ACTIVE_MODE);
+  if (trans->cfg->base_params->num_of_queues > 20) {
+    iwl_set_bits_prph(trans, SCD_GP_CTRL, SCD_GP_CTRL_ENABLE_31_QUEUES);
+  }
+
+  return ZX_OK;
+error:
+  /*Upon error, free only if we allocated something */
+  if (alloc) {
     iwl_pcie_tx_free(trans);
-
-    return ret;
+  }
+  return ret;
 }
 
-int iwl_pcie_tx_init(struct iwl_trans* trans) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    int ret;
-    int txq_id, slots_num;
-    bool alloc = false;
-
-    if (!trans_pcie->txq_memory) {
-        ret = iwl_pcie_tx_alloc(trans);
-        if (ret) { goto error; }
-        alloc = true;
-    }
-
-    mtx_lock(&trans_pcie->irq_lock);
-
-    /* Turn off all Tx DMA fifos */
-    iwl_scd_deactivate_fifos(trans);
-
-    /* Tell NIC where to find the "keep warm" buffer */
-    iwl_write_direct32(trans, FH_KW_MEM_ADDR_REG, trans_pcie->kw.dma >> 4);
-
-    mtx_unlock(&trans_pcie->irq_lock);
-
-    /* Alloc and init all Tx queues, including the command queue (#4/#9) */
-    for (txq_id = 0; txq_id < trans->cfg->base_params->num_of_queues; txq_id++) {
-        bool cmd_queue = (txq_id == trans_pcie->cmd_queue);
-
-        slots_num = cmd_queue ? TFD_CMD_SLOTS : TFD_TX_CMD_SLOTS;
-        ret = iwl_pcie_txq_init(trans, trans_pcie->txq[txq_id], slots_num, cmd_queue);
-        if (ret) {
-            IWL_ERR(trans, "Tx %d queue init failed\n", txq_id);
-            goto error;
-        }
-
-        /*
-         * Tell nic where to find circular buffer of TFDs for a
-         * given Tx queue, and enable the DMA channel used for that
-         * queue.
-         * Circular buffer (TFD queue in DRAM) physical base address
-         */
-        iwl_write_direct32(trans, FH_MEM_CBBC_QUEUE(trans, txq_id),
-                           trans_pcie->txq[txq_id]->dma_addr >> 8);
-    }
-
-    iwl_set_bits_prph(trans, SCD_GP_CTRL, SCD_GP_CTRL_AUTO_ACTIVE_MODE);
-    if (trans->cfg->base_params->num_of_queues > 20) {
-        iwl_set_bits_prph(trans, SCD_GP_CTRL, SCD_GP_CTRL_ENABLE_31_QUEUES);
-    }
-
-    return 0;
-error:
-    /*Upon error, free only if we allocated something */
-    if (alloc) { iwl_pcie_tx_free(trans); }
-    return ret;
-}
-
+#if 0   // NEEDS_PORTING
 static inline void iwl_pcie_txq_progress(struct iwl_txq* txq) {
     lockdep_assert_held(&txq->lock);
 

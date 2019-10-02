@@ -553,13 +553,11 @@ static zx_status_t iwl_pcie_nic_init(struct iwl_trans* trans) {
     return status;
   }
 
-#if 0   // NEEDS_PORTING
   // Allocate or reset and init all Tx and Command queues.
   status = iwl_pcie_tx_init(trans);
   if (status != ZX_OK) {
     return status;
   }
-#endif  // NEEDS_PORTING
 
   if (trans->cfg->base_params->shadow_reg_enable) {
     /* enable shadow regs in HW */

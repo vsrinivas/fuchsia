@@ -47,6 +47,8 @@ class PcieTest : public zxtest::Test {
     trans_ops_.write8 = write8_wrapper;
     trans_ops_.write32 = write32_wrapper;
     trans_ops_.read32 = read32_wrapper;
+    trans_ops_.read_prph = read_prph_wrapper;
+    trans_ops_.write_prph = write_prph_wrapper;
     trans_ops_.grab_nic_access = grab_nic_access_wrapper;
     trans_ops_.release_nic_access = release_nic_access_wrapper;
     cfg_.base_params = &base_params_;
@@ -86,6 +88,24 @@ class PcieTest : public zxtest::Test {
       return wrapper->test->mock_read32_.Call(ofs);
     } else {
       return 0;
+    }
+  }
+
+  mock_function::MockFunction<uint32_t, uint32_t> mock_read_prph_;
+  static uint32_t read_prph_wrapper(struct iwl_trans* trans, uint32_t ofs) {
+    auto wrapper = reinterpret_cast<iwl_trans_pcie_wrapper*>(IWL_TRANS_GET_PCIE_TRANS(trans));
+    if (wrapper->test->mock_read_prph_.HasExpectations()) {
+      return wrapper->test->mock_read_prph_.Call(ofs);
+    } else {
+      return 0;
+    }
+  }
+
+  mock_function::MockFunction<void, uint32_t, uint32_t> mock_write_prph_;
+  static void write_prph_wrapper(struct iwl_trans* trans, uint32_t ofs, uint32_t val) {
+    auto wrapper = reinterpret_cast<iwl_trans_pcie_wrapper*>(IWL_TRANS_GET_PCIE_TRANS(trans));
+    if (wrapper->test->mock_write_prph_.HasExpectations()) {
+      wrapper->test->mock_write_prph_.Call(ofs, val);
     }
   }
 
@@ -265,6 +285,21 @@ TEST_F(PcieTest, RxInterrupts) {
   EXPECT_EQ(trans_pcie_->rxq->write_actual, 168);
 
   iwl_pcie_rx_free(trans_);
+}
+
+TEST_F(PcieTest, TxInit) {
+  base_params_.num_of_queues = 31;
+  base_params_.max_tfd_queue_size = 256;
+  trans_pcie_->tfd_size = sizeof(struct iwl_tfh_tfd);
+
+  ASSERT_OK(iwl_pcie_tx_init(trans_));
+
+  for (int txq_id = 0; txq_id < base_params_.num_of_queues; txq_id++) {
+    struct iwl_txq* queue = trans_pcie_->txq[txq_id];
+    ASSERT_NOT_NULL(queue);
+    EXPECT_EQ(queue->write_ptr, 0);
+    EXPECT_EQ(queue->read_ptr, 0);
+  }
 }
 
 class StuckTimerTest : public PcieTest {

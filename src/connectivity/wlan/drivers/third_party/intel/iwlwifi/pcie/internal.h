@@ -212,6 +212,7 @@ struct iwl_rxq {
 };
 
 struct iwl_dma_ptr {
+  io_buffer_t io_buf;
   dma_addr_t dma;
   void* addr;
   size_t size;
@@ -313,7 +314,6 @@ void iwlwifi_timer_stop(struct iwlwifi_timer_info* timer);
  * @first_tb_bufs: start of command headers, including scratch buffers, for
  *  the writeback -- this is DMA memory and an array holding one buffer
  *  for each command on the queue
- * @first_tb_dma: DMA address for the first_tb_bufs start
  * @entries: transmit entries (driver state)
  * @lock: queue lock
  * @stuck_timer: timer that fires if queue gets stuck
@@ -349,9 +349,8 @@ void iwlwifi_timer_stop(struct iwlwifi_timer_info* timer);
  * data is a window overlayed over the HW queue.
  */
 struct iwl_txq {
-  void* tfds;
-  struct iwl_pcie_first_tb_buf* first_tb_bufs;
-  dma_addr_t first_tb_dma;
+  io_buffer_t tfds;
+  io_buffer_t first_tb_bufs;
   struct iwl_pcie_txq_entry* entries;
   mtx_t lock;
   unsigned long frozen_expiry_remainder;
@@ -375,7 +374,7 @@ struct iwl_txq {
 };
 
 static inline dma_addr_t iwl_pcie_get_first_tb_dma(struct iwl_txq* txq, int idx) {
-  return txq->first_tb_dma + sizeof(struct iwl_pcie_first_tb_buf) * idx;
+  return io_buffer_phys(&txq->first_tb_bufs) + (sizeof(struct iwl_pcie_first_tb_buf) * idx);
 }
 
 struct iwl_tso_hdr_page {
@@ -682,7 +681,7 @@ uint32_t iwl_pcie_int_cause_ict(struct iwl_trans* trans);
 /*****************************************************
  * TX / HCMD
  ******************************************************/
-int iwl_pcie_tx_init(struct iwl_trans* trans);
+zx_status_t iwl_pcie_tx_init(struct iwl_trans* trans);
 int iwl_pcie_gen2_tx_init(struct iwl_trans* trans, int txq_id, int queue_size);
 void iwl_pcie_tx_start(struct iwl_trans* trans, uint32_t scd_base_addr);
 int iwl_pcie_tx_stop(struct iwl_trans* trans);
@@ -872,7 +871,8 @@ static inline void* iwl_pcie_get_tfd(struct iwl_trans* trans, struct iwl_txq* tx
     idx = iwl_pcie_get_cmd_index(txq, idx);
   }
 
-  return (char*)txq->tfds + trans_pcie->tfd_size * idx;
+  char* ptr = (char*)io_buffer_virt(&txq->tfds);
+  return ptr + trans_pcie->tfd_size * idx;
 }
 
 #if 0   // NEEDS_PORTING
@@ -1016,9 +1016,11 @@ void iwl_pcie_txq_free_tfd(struct iwl_trans* trans, struct iwl_txq* txq);
 int iwl_queue_space(struct iwl_trans* trans, const struct iwl_txq* q);
 void iwl_pcie_apm_stop_master(struct iwl_trans* trans);
 void iwl_pcie_conf_msix_hw(struct iwl_trans_pcie* trans_pcie);
-int iwl_pcie_txq_init(struct iwl_trans* trans, struct iwl_txq* txq, int slots_num, bool cmd_queue);
-int iwl_pcie_txq_alloc(struct iwl_trans* trans, struct iwl_txq* txq, int slots_num, bool cmd_queue);
-int iwl_pcie_alloc_dma_ptr(struct iwl_trans* trans, struct iwl_dma_ptr* ptr, size_t size);
+zx_status_t iwl_pcie_txq_init(struct iwl_trans* trans, struct iwl_txq* txq, int slots_num,
+                              bool cmd_queue);
+zx_status_t iwl_pcie_txq_alloc(struct iwl_trans* trans, struct iwl_txq* txq, int slots_num,
+                               bool cmd_queue);
+zx_status_t iwl_pcie_alloc_dma_ptr(struct iwl_trans* trans, struct iwl_dma_ptr* ptr, size_t size);
 void iwl_pcie_free_dma_ptr(struct iwl_trans* trans, struct iwl_dma_ptr* ptr);
 int iwl_trans_pcie_power_device_off(struct iwl_trans_pcie* trans_pcie);
 void iwl_pcie_apply_destination(struct iwl_trans* trans);

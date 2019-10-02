@@ -900,13 +900,21 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
     int index = SEQ_TO_INDEX(sequence);
     struct iwl_txq* txq = trans_pcie->txq[trans_pcie->cmd_queue];
     __UNUSED int cmd_index = iwl_pcie_get_cmd_index(txq, index);
+#endif  // NEEDS_PORTING
 
-    if (rxq->id == trans_pcie->def_rx_queue) {
-      iwl_op_mode_rx(trans->op_mode, &rxq->napi, &rxcb);
-    } else {
-      iwl_op_mode_rx_rss(trans->op_mode, &rxq->napi, &rxcb, rxq->id);
+    // Only handle rx packets when the mvm has been initialed.
+    //
+    // In the case of pcie_test, the MVM is not required for testing so that we just ignore the RX
+    // packet anyway.
+    if (trans->op_mode) {
+      if (rxq->id == trans_pcie->def_rx_queue) {
+        iwl_op_mode_rx(trans->op_mode, &rxq->napi, &rxcb);
+      } else {
+        iwl_op_mode_rx_rss(trans->op_mode, &rxq->napi, &rxcb, rxq->id);
+      }
     }
 
+#if 0   // NEEDS_PORTING
     if (reclaim) {
       kzfree(txq->entries[cmd_index].free_buf);
       txq->entries[cmd_index].free_buf = NULL;
@@ -1391,9 +1399,7 @@ zx_status_t iwl_pcie_isr(struct iwl_trans* trans) {
   if (inta & CSR_INT_BIT_WAKEUP) {
     IWL_DEBUG_ISR(trans, "Wakeup interrupt\n");
     iwl_pcie_rxq_check_wrptr(trans);
-#if 0   // NEEDS_PORTING
     iwl_pcie_txq_check_wrptrs(trans);
-#endif  // NEEDS_PORTING
 
     isr_stats->wakeup++;
 
