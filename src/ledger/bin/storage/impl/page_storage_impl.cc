@@ -491,75 +491,53 @@ void PageStorageImpl::AddObjectFromLocal(ObjectType object_type,
       });
 }
 
-void PageStorageImpl::DeleteObject(
-    ObjectDigest object_digest,
-    fit::function<void(Status, ObjectReferencesAndPriority references)> callback) {
+Status PageStorageImpl::DeleteObject(coroutine::CoroutineHandler* handler,
+                                     ObjectDigest object_digest,
+                                     ObjectReferencesAndPriority* references) {
   if (GetObjectDigestInfo(object_digest).is_inlined()) {
     FXL_VLOG(2) << "Object is inline, cannot be deleted: " << object_digest;
-    callback(Status::INTERNAL_NOT_FOUND, {});
-    return;
+    return Status::INTERNAL_NOT_FOUND;
   }
   if (!pending_garbage_collection_.insert(object_digest).second) {
     // Delete object is already in progress.
-    callback(Status::INTERRUPTED, {});
-    return;
+    return Status::CANCELED;
   }
-  coroutine_manager_.StartCoroutine(
-      std::move(callback),
-      [this, object_digest = std::move(object_digest)](
-          CoroutineHandler* handler,
-          fit::function<void(Status, ObjectReferencesAndPriority)> callback) mutable {
-        auto cleanup_pending =
-            fit::defer(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this, object_digest] {
-              pending_garbage_collection_.erase(object_digest);
-            }));
-        // Collect outbound references from the deleted object. Scope ancillary variables to avoid
-        // live references to the object when calling |PageDb::DeleteObject| below, which would
-        // abort the deletion.
-        ObjectReferencesAndPriority references;
-        {
-          std::unique_ptr<const Piece> piece;
-          // This object identifier is used only to read piece data from storage. The key index can
-          // be arbitrary, it is ignored.
-          ObjectIdentifier identifier =
-              object_identifier_factory_.MakeObjectIdentifier(0u, object_digest);
-          Status status = db_->ReadObject(handler, identifier, &piece);
-          if (status != Status::OK) {
-            callback(status, {});
-            return;
-          }
-          status = piece->AppendReferences(&references);
-          if (status != Status::OK) {
-            callback(status, {});
-            return;
-          }
-          // Read tree references if necessary.
-          if (GetObjectDigestInfo(object_digest).object_type == ObjectType::TREE_NODE) {
-            std::unique_ptr<const Object> object;
-            if (coroutine::SyncCall(
-                    handler,
-                    [this, identifier](fit::function<void(Status, std::unique_ptr<const Object>)>
-                                           callback) mutable {
-                      GetObject(identifier, Location::Local(), std::move(callback));
-                    },
-                    &status, &object) == coroutine::ContinuationStatus::INTERRUPTED) {
-              callback(Status::INTERRUPTED, {});
-              return;
-            }
-            if (status != Status::OK) {
-              callback(status, {});
-              return;
-            }
-            status = object->AppendReferences(&references);
-            if (status != Status::OK) {
-              callback(status, {});
-              return;
-            }
-          }
-        }
-        Status status = db_->DeleteObject(handler, object_digest, references);
-        callback(status, references);
-      });
+  auto cleanup_pending =
+      fit::defer(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this, object_digest] {
+        pending_garbage_collection_.erase(object_digest);
+      }));
+  // Collect outbound references from the deleted object. Scope ancillary variables to avoid
+  // live references to the object when calling |PageDb::DeleteObject| below, which would
+  // abort the deletion.
+  references->clear();
+  {
+    std::unique_ptr<const Piece> piece;
+    // This object identifier is used only to read piece data from storage. The key index can
+    // be arbitrary, it is ignored.
+    ObjectIdentifier identifier =
+        object_identifier_factory_.MakeObjectIdentifier(0u, object_digest);
+    RETURN_ON_ERROR(db_->ReadObject(handler, identifier, &piece));
+    RETURN_ON_ERROR(piece->AppendReferences(references));
+    // Read tree references if necessary.
+    if (GetObjectDigestInfo(object_digest).object_type == ObjectType::TREE_NODE) {
+      Status status;
+      std::unique_ptr<const Object> object;
+      if (coroutine::SyncCall(
+              handler,
+              [this, identifier](
+                  fit::function<void(Status, std::unique_ptr<const Object>)> callback) mutable {
+                GetObject(identifier, Location::Local(), std::move(callback));
+              },
+              &status, &object) == coroutine::ContinuationStatus::INTERRUPTED) {
+        return Status::INTERRUPTED;
+      }
+      if (status != Status::OK) {
+        return status;
+      }
+      RETURN_ON_ERROR(object->AppendReferences(references));
+    }
+  }
+  return db_->DeleteObject(handler, object_digest, *references);
 }
 
 void PageStorageImpl::GetObjectPart(ObjectIdentifier object_identifier, int64_t offset,
@@ -904,16 +882,25 @@ void PageStorageImpl::GetCommitRootIdentifier(
 }
 
 void PageStorageImpl::ScheduleObjectGarbageCollection(const ObjectDigest& object_digest) {
-  DeleteObject(object_digest,
-               callback::MakeScoped(
-                   weak_factory_.GetWeakPtr(),
-                   [this, object_digest](Status status, ObjectReferencesAndPriority references) {
-                     if (status == Status::OK) {
-                       for (const auto& [object_digest, priority] : references) {
-                         ScheduleObjectGarbageCollection(object_digest);
-                       }
-                     }
-                   }));
+  coroutine_manager_.StartCoroutine(
+      [this, object_digest = object_digest](CoroutineHandler* handler) mutable {
+        std::queue<ObjectDigest> to_delete;
+        to_delete.push(object_digest);
+        while (!to_delete.empty()) {
+          object_digest = to_delete.front();
+          to_delete.pop();
+          ObjectReferencesAndPriority references;
+          Status status = DeleteObject(handler, std::move(object_digest), &references);
+          if (status == Status::INTERRUPTED) {
+            return;
+          }
+          if (status == Status::OK) {
+            for (const auto& [object_digest, priority] : references) {
+              to_delete.push(object_digest);
+            }
+          }
+        }
+      });
 }
 
 Status PageStorageImpl::MarkAllPiecesLocal(CoroutineHandler* handler, PageDb::Batch* batch,

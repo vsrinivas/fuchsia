@@ -215,8 +215,8 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
   // Deletes the piece identifier by |object_digest| from local storage. On success, returns the
   // references from the deleted piece to other pieces. Aborts if there is already a pending
   // deletion of |object_digest|.
-  void DeleteObject(ObjectDigest object_digest,
-                    fit::function<void(Status, ObjectReferencesAndPriority references)> callback);
+  Status DeleteObject(coroutine::CoroutineHandler* handler, ObjectDigest object_digest,
+                      ObjectReferencesAndPriority* references);
 
   // Attempts to delete |object_digest|, and recursively schedules the deletion of the objects it
   // references upon success.

@@ -82,10 +82,17 @@ class PageStorageImplAccessorForTest {
     return storage->ChooseDiffBases(std::move(target_id), std::move(callback));
   }
 
+  // Asynchronous version of PageStorage::DeleteObject, running it inside a coroutine.
   static void DeleteObject(
       const std::unique_ptr<PageStorageImpl>& storage, ObjectDigest object_digest,
       fit::function<void(Status, ObjectReferencesAndPriority references)> callback) {
-    return storage->DeleteObject(std::move(object_digest), std::move(callback));
+    storage->coroutine_manager_.StartCoroutine(
+        [&storage, object_digest = std::move(object_digest),
+         callback = std::move(callback)](coroutine::CoroutineHandler* handler) mutable {
+          ObjectReferencesAndPriority references;
+          Status status = storage->DeleteObject(handler, std::move(object_digest), &references);
+          callback(status, references);
+        });
   }
 
   static long CountLiveReferences(const std::unique_ptr<PageStorageImpl>& storage,
