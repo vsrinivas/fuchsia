@@ -449,10 +449,7 @@ impl HubInner {
         Ok(())
     }
 
-    async fn on_remove_dynamic_child_async(
-        &self,
-        realm: Arc<model::Realm>,
-    ) -> Result<(), ModelError> {
+    async fn on_destroy_instance_async(&self, realm: Arc<model::Realm>) -> Result<(), ModelError> {
         let mut instance_map = self.instances.lock().await;
 
         // TODO(xbhatnag): Investigate error handling scenarios here.
@@ -466,6 +463,13 @@ impl HubInner {
         instance_map
             .remove(&realm.abs_moniker)
             .expect("the dynamic component must exist in the instance map");
+        Ok(())
+    }
+
+    async fn on_stop_instance_async(&self, realm: Arc<model::Realm>) -> Result<(), ModelError> {
+        let mut instance_map = self.instances.lock().await;
+        instance_map[&realm.abs_moniker].directory.remove_node("exec").await?;
+        instance_map.get_mut(&realm.abs_moniker).expect("instance must exist").execution = None;
         Ok(())
     }
 
@@ -487,8 +491,11 @@ impl model::Hook for HubInner {
             Event::AddDynamicChild { realm } => {
                 self.on_add_dynamic_child_async(realm.clone()).await?;
             }
-            Event::RemoveDynamicChild { realm } => {
-                self.on_remove_dynamic_child_async(realm.clone()).await?;
+            Event::StopInstance { realm } => {
+                self.on_stop_instance_async(realm.clone()).await?;
+            }
+            Event::DestroyInstance { realm } => {
+                self.on_destroy_instance_async(realm.clone()).await?;
             }
             _ => (),
         };

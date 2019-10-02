@@ -88,9 +88,8 @@ async fn main() -> Result<(), Error> {
         .context("delete_child failed")?
         .expect("failed to delete child");
 
-    // Read the children of this component and pass the results to the integration test
-    // via HubReport.
-    report_directory_contents(&hub_report, "/hub/children").await?;
+    // TODO(xbhatnag): Add breakpointing for component side so that directory contents can be
+    //                 reported after stop/deletion.
 
     Ok(())
 }

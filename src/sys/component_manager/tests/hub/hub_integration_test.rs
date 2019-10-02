@@ -62,15 +62,44 @@ async fn install_hub_test_hook(model: &Model) -> Arc<HubTestHook> {
 
 impl TestRunner {
     async fn new(root_component_url: &str) -> Result<Self, Error> {
+        TestRunner::new_with_breakpoints(root_component_url, vec![]).await
+    }
+
+    async fn new_with_breakpoints(
+        root_component_url: &str,
+        breakpoints: Vec<BreakpointEvent>,
+    ) -> Result<Self, Error> {
         let model = create_model(root_component_url).await?;
         let hub_proxy = install_hub(&model).await?;
         let hub_test_hook = install_hub_test_hook(&model).await;
+
+        let hooks = breakpoints
+            .iter()
+            .map(|breakpoint| match breakpoint {
+                BreakpointEvent::OnStop => HookRegistration {
+                    event_type: EventType::StopInstance,
+                    callback: hub_test_hook.clone(),
+                },
+                BreakpointEvent::OnDestroy => HookRegistration {
+                    event_type: EventType::DestroyInstance,
+                    callback: hub_test_hook.clone(),
+                },
+            })
+            .collect();
+        model.root_realm.hooks.install(hooks).await;
 
         let res = model.look_up_and_bind_instance(model::AbsoluteMoniker::root()).await;
         let expected_res: Result<(), model::ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
 
         Ok(Self { hub_proxy, hub_test_hook })
+    }
+
+    async fn expect_breakpoint(&self, event: BreakpointEvent, component_url: &str) -> Breakpoint {
+        let breakpoint = self.hub_test_hook.wait_for_breakpoint().await;
+        assert_eq!(breakpoint.event, event);
+        assert_eq!(breakpoint.realm.component_url, component_url);
+        breakpoint
     }
 
     async fn connect_to_echo_service(&self, echo_service_path: String) -> Result<(), Error> {
@@ -235,10 +264,14 @@ async fn basic_hub_test() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn dynamic_child_create_bind_delete_test() -> Result<(), Error> {
+async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
     let root_component_url =
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/hub_collection_realm.cm";
-    let test_runner = TestRunner::new(root_component_url).await?;
+    let test_runner = TestRunner::new_with_breakpoints(
+        root_component_url,
+        vec![BreakpointEvent::OnStop, BreakpointEvent::OnDestroy],
+    )
+    .await?;
 
     // Verify that the dynamic child exists in the parent's hub
     test_runner.verify_directory_listing("children", vec!["coll:simple_instance:1"]).await;
@@ -260,16 +293,56 @@ async fn dynamic_child_create_bind_delete_test() -> Result<(), Error> {
         )
         .await;
 
-    // After binding, verify that the dynamic child's static children are visible
+    // After binding, verify that the dynamic child's static child is visible
     test_runner
-        .verify_directory_listing(
-            "children/coll:simple_instance:1/children",
-            vec!["child_1:0", "child_2:0"],
+        .verify_directory_listing("children/coll:simple_instance:1/children", vec!["child:0"])
+        .await;
+
+    // Wait for the dynamic child to stop
+    let breakpoint = test_runner
+        .expect_breakpoint(
+            BreakpointEvent::OnStop,
+            "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/simple.cm",
         )
         .await;
 
-    // After deletion, verify that parent can no longer see the child in the Hub
-    test_runner.verify_directory_listing("children", vec![]).await;
+    // After stopping, the dynamic child should not have an exec directory
+    test_runner
+        .verify_global_directory_listing("children/coll:simple_instance:1", vec!["children", "url"])
+        .await;
+
+    // Unblock the Component Manager
+    breakpoint.resume();
+
+    // Wait for the dynamic child's static child to be destroyed
+    let breakpoint = test_runner
+        .expect_breakpoint(
+            BreakpointEvent::OnDestroy,
+            "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/hub_client.cm",
+        )
+        .await;
+
+    // The dynamic child's static child should not be visible in the hub anymore
+    test_runner
+        .verify_global_directory_listing("children/coll:simple_instance:1/children", vec![])
+        .await;
+
+    // Unblock the Component Manager
+    breakpoint.resume();
+
+    // Wait for the dynamic child to be destroyed
+    let breakpoint = test_runner
+        .expect_breakpoint(
+            BreakpointEvent::OnDestroy,
+            "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/simple.cm",
+        )
+        .await;
+
+    // After deletion, verify that parent can no longer see the dynamic child in the Hub
+    test_runner.verify_global_directory_listing("children", vec![]).await;
+
+    // Unblock the Component Manager
+    breakpoint.resume();
 
     Ok(())
 }

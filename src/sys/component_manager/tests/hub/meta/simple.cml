@@ -4,12 +4,8 @@
     },
     "children": [
         {
-            "name": "child_1",
-            "url": "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/simple.cm",
-        },
-        {
-            "name": "child_2",
-            "url": "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/simple.cm",
+            "name": "child",
+            "url": "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/hub_client.cm",
         },
     ],
 }
