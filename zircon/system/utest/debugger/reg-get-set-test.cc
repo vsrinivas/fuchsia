@@ -20,7 +20,7 @@ bool HWBreakpointGettersTest() {
   EXPECT_EQ(ARM64_DBGBCR_BT_GET(0), 0);
 
   // Arm64.
-  uint64_t dbgbcr = 1 << 0    |   // E = 1
+  uint32_t dbgbcr = 1 << 0    |   // E = 1
                     3 << 1    |   // PMC = 3
                     5 << 5    |   // BAS = 5
                     1 << 13   |   // HMC = 1
@@ -43,8 +43,8 @@ bool HWBreakpointSettersTest() {
   BEGIN_TEST;
 
   // Arm64.
-  uint64_t dbgbcr = 0;
-  uint64_t golden = 1 << 0    |   // E = 1
+  uint32_t dbgbcr = 0;
+  uint32_t golden = 1 << 0    |   // E = 1
                     3 << 1    |   // PMC = 3
                     5 << 5    |   // BAS = 5
                     1 << 13   |   // HMC = 1
@@ -86,7 +86,7 @@ bool WatchpointGettersTest() {
   EXPECT_EQ(ARM64_DBGWCR_WT_GET(0), 0);
   EXPECT_EQ(ARM64_DBGWCR_MSK_GET(0), 0);
 
-  uint64_t dbgwcr = 1 << 0    |   // E = 1
+  uint32_t dbgwcr = 1 << 0    |   // E = 1
                     3 << 1    |   // PAC = 3
                     2 << 3    |   // LSC = 2
                     114 << 5  |   // BAS = 114
@@ -112,8 +112,8 @@ bool WatchpointGettersTest() {
 bool WatchpointSettersTest() {
   BEGIN_TEST;
 
-  uint64_t dbgwcr = 0;
-  uint64_t golden = 1 << 0    |   // E = 1
+  uint32_t dbgwcr = 0;
+  uint32_t golden = 1 << 0    |   // E = 1
                     3 << 1    |   // PAC = 3
                     2 << 3    |   // LSC = 2
                     114 << 5  |   // BAS = 114

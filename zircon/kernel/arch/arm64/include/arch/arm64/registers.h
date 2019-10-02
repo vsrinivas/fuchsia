@@ -70,15 +70,15 @@
 // The actual addresses bits that we will allow the user to write for a hw breakpoint.
 #define ARM64_DBGBVR_USER_MASK (0xfffffffffffcu)
 
-#define ARM64_DBGWCR_ACTIVE_MASK ((ARM64_DBGWCR_E) |                      \
-                                  (0b10u << ARM64_DBGWCR_PAC_SHIFT) |     \
-                                  (0b10u << ARM64_DBGWCR_LSC_SHIFT) |     \
-                                  (0b10u << ARM64_DBGWCR_BAS_SHIFT) |     \
-                                  (ARM64_DBGWCR_BAS) |                    \
-                                  (0b01u << ARM64_DBGWCR_SSC_SHIFT))
+// The actual fields userspace can write to.
+// TODO: Add LSC here.
+#define ARM64_DBGWCR_ACTIVE_MASK ((ARM64_DBGWCR_E_MASK) | (ARM64_DBGWCR_BAS_MASK))
 
-// The actual addresses bits that we will allow the user to write for a hw watchpoint.
-#define ARM64_DBGWVR_USER_MASK (0xffffffffffffu)
+// The DBGWVR format is as follows (x = writeable):
+//
+// |63  ...  49|48           ...             2|10|
+// |0000...0000|xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx|00|
+#define ARM64_DBGWVR_USER_MASK (0xffff'ffff'fffcu)
 
 #include <sys/types.h>
 #include <zircon/compiler.h>

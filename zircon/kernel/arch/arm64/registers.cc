@@ -80,8 +80,8 @@ static bool arm64_validate_hw_watchpoints(arm64_debug_state_t* state,
   // independent of what the user provided within those.
   size_t hw_wp_count = arm64_hw_watchpoint_count();
   for (size_t i = 0; i < hw_wp_count; i++) {
-    uint32_t dbgwcr = state->hw_wps[i].dbgwcr;
-    uint64_t dbgwvr = state->hw_wps[i].dbgwvr;
+    uint32_t& dbgwcr = state->hw_wps[i].dbgwcr;
+    uint64_t& dbgwvr = state->hw_wps[i].dbgwvr;
 
     // Watchpoints values beyond the CPU count won't ever be written to the
     // debug state, so they can be ignored.
@@ -93,12 +93,20 @@ static bool arm64_validate_hw_watchpoints(arm64_debug_state_t* state,
     if (dbgwvr != 0 && !is_user_address(dbgwvr)) {
       return false;
     }
-    state->hw_wps[i].dbgwvr &= ARM64_DBGWVR_USER_MASK;
+    dbgwvr &= ARM64_DBGWVR_USER_MASK;
 
     // If the address is valid and the watchpoint is active, we mask in
     // the other necessary bits.
-    if (dbgwcr & ARM64_DBGWCR_E_MASK) {
-      state->hw_wps[i].dbgwcr = ARM64_DBGWCR_ACTIVE_MASK;
+    if (ARM64_DBGWCR_E_GET(dbgwcr)) {
+      dbgwcr &= ARM64_DBGWCR_ACTIVE_MASK;
+
+      // See zircon/hw/debug/arm64.h for details on the fields set for PAC, HMC and SSC.
+      ARM64_DBGWCR_PAC_SET(&dbgwcr, 0b10);
+      ARM64_DBGWCR_SSC_SET(&dbgwcr, 0b01);
+
+      // TODO(donosoc): Expose this field to userspace.
+      ARM64_DBGWCR_LSC_SET(&dbgwcr, 0b10);
+
       watchpoint_count++;
     }
   }
@@ -297,6 +305,9 @@ void arm64_print_debug_registers(const arm64_debug_state_t* debug_state) {
     uint32_t dbgbcr = debug_state->hw_bps[i].dbgbcr;
     uint64_t dbgbvr = debug_state->hw_bps[i].dbgbvr;
 
+    if (!ARM64_DBGBCR_E_GET(dbgbcr))
+      continue;
+
     printf(
         "%02u. DBGBVR: 0x%lx, "
         "DBGBCR: E=%d, PMC=%d, BAS=%d, HMC=%d, SSC=%d, LBN=%d, BT=%d\n",
@@ -313,6 +324,9 @@ void arm64_print_debug_registers(const arm64_debug_state_t* debug_state) {
   for (uint32_t i = 0; i < ARM64_MAX_HW_WATCHPOINTS; i++) {
     uint32_t dbgwcr = debug_state->hw_wps[i].dbgwcr;
     uint64_t dbgwvr = debug_state->hw_wps[i].dbgwvr;
+
+    if (!ARM64_DBGWCR_E_GET(dbgwcr))
+      continue;
 
     printf(
         "%02u. DBGWVR: 0x%lx, DBGWCR: "

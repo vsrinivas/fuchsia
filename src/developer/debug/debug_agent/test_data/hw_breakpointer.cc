@@ -60,23 +60,25 @@ int BreakOnFunctionThreadFunction(void* user) {
 }
 
 void BreakOnFunctionTestCase() {
-  PRINT("Running HW breakpoint when calling a function test.");
+  printf("Running HW breakpoint when calling a function test.\n");
 
   // The functions to be called sequentially by the test.
+  // clang-format off
   HWBreakpointTestCaseFunctionToBeCalled breakpoint_functions[] = {
-    FunctionToBreakpointOn1,
-    FunctionToBreakpointOn2,
-    FunctionToBreakpointOn3,
-    FunctionToBreakpointOn4,
-    FunctionToBreakpointOn5,
+      FunctionToBreakpointOn1,
+      FunctionToBreakpointOn2,
+      FunctionToBreakpointOn3,
+      FunctionToBreakpointOn4,
+      FunctionToBreakpointOn5,
   };
+  // clang-format on
 
   auto thread_setup = CreateTestSetup(BreakOnFunctionThreadFunction);
   auto [port, exception_channel] = CreateExceptionChannel(thread_setup->thread);
   WaitAsyncOnExceptionChannel(port, exception_channel);
 
   Exception exception = {};
-  for (size_t i = 0; i < ARRAY_SIZE(breakpoint_functions); i++) {
+  for (size_t i = 0; i < std::size(breakpoint_functions); i++) {
     // If this is the first iteration, we don't resume the exception.
     if (i > 0u) {
       WaitAsyncOnExceptionChannel(port, exception_channel);
@@ -96,14 +98,15 @@ void BreakOnFunctionTestCase() {
     thread_setup->event.signal(kThreadToHarness, kHarnessToThread);
 
     // We wait until we receive an exception.
-    exception = WaitForException(port, exception_channel);
+    auto opt_excp = WaitForException(port, exception_channel);
+    FXL_DCHECK(opt_excp.has_value());
+    exception = std::move(*opt_excp);
 
     FXL_DCHECK(exception.info.type == ZX_EXCP_HW_BREAKPOINT);
     PRINT("Hit HW breakpoint %zu on 0x%zx", i, exception.pc);
 
     // Remove the breakpoint.
     RemoveHWBreakpoint(thread_setup->thread);
-
   }
 
   // Tell the thread to exit.
@@ -125,62 +128,88 @@ int WatchpointThreadFunction(void* user) {
   // We signal the test harness that we are here.
   thread_setup->event.signal(kHarnessToThread, kThreadToHarness);
 
-  // We wait now for the harness to tell us we can continue.
-  CHECK_OK(thread_setup->event.wait_one(kHarnessToThread, zx::time::infinite(), nullptr));
-
-  PRINT("Got signaled by harness.");
-
   while (thread_setup->test_running) {
+    // We wait now for the harness to tell us we can continue.
+    CHECK_OK(thread_setup->event.wait_one(kHarnessToThread, zx::time::infinite(), nullptr));
+
     uint8_t* byte = reinterpret_cast<uint8_t*>(thread_setup->user);
     FXL_DCHECK(byte);
 
-    // We use write to avoid deadlocking with the outside libc calls.
-    write(1, kBeacon, sizeof(kBeacon));
+    PRINT("Writing into 0x%zx.", reinterpret_cast<uint64_t>(byte));
     *byte += 1;
-    zx::nanosleep(zx::deadline_after(zx::sec(1)));
+
+    // We signal that we finished this write.
+    CHECK_OK(thread_setup->event.signal(kHarnessToThread, kThreadToHarness));
   }
 
   return 0;
 }
 
+// Returns whether the breakpoint was hit.
+bool TestWatchpointRun(const zx::port& port, const zx::channel& exception_channel,
+                       ThreadSetup* thread_setup, uint64_t wp_address, uint8_t* data_ptr,
+                       uint32_t bytes_to_hit) {
+  thread_setup->user = data_ptr;
+
+  // Install the watchpoint.
+  InstallWatchpoint(thread_setup->thread, wp_address, bytes_to_hit);
+
+  // Tell the thread to continue.
+  CHECK_OK(thread_setup->event.signal(kThreadToHarness, kHarnessToThread));
+
+  // Wait until the exception is hit.
+  auto opt_excp = WaitForException(port, exception_channel, zx::deadline_after(zx::msec(250)));
+
+  // Remove the watchpoint.
+  RemoveWatchpoint(thread_setup->thread);
+
+  if (!opt_excp)
+    return false;
+
+  Exception exception = std::move(*opt_excp);
+
+  FXL_DCHECK(exception.info.type = ZX_EXCP_HW_BREAKPOINT);
+  PRINT("Hit watchpoint 0x%zx", reinterpret_cast<uint64_t>(data_ptr));
+
+  WaitAsyncOnExceptionChannel(port, exception_channel);
+  ResumeException(thread_setup->thread, std::move(exception));
+
+  // Wait until the thread tells us it's ready.
+  CHECK_OK(thread_setup->event.wait_one(kThreadToHarness, zx::time::infinite(), nullptr));
+
+  return true;
+}
+
 void WatchpointTestCase() {
-  PRINT("Runnint Watchpoint test case.");
+  PRINT("Running Watchpoint test case.");
 
   auto thread_setup = CreateTestSetup(WatchpointThreadFunction);
   auto [port, exception_channel] = CreateExceptionChannel(thread_setup->thread);
   WaitAsyncOnExceptionChannel(port, exception_channel);
 
-  Exception exception = {};
-  for (size_t i = 0; i < ARRAY_SIZE(gDataToTouch); i++) {
-  // If this is the first iteration, we don't resume the exception.
-    if (i > 0u) {
-      WaitAsyncOnExceptionChannel(port, exception_channel);
-      ResumeException(thread_setup->thread, std::move(exception));
+  for (size_t i = 0; i < std::size(gDataToTouch); i++) {
+    uint64_t brk = reinterpret_cast<uint64_t>(gDataToTouch) + i;
+    printf("----------------------------------------\n");
+    PRINT("Setting breakpoint for 0x%zx", brk);
+
+    for (size_t j = 0; j < std::size(gDataToTouch); j++) {
+      // Pass in the byte to break on.
+      uint8_t* data_ptr = gDataToTouch + j;
+      bool hit = TestWatchpointRun(port, exception_channel, thread_setup.get(),
+                                   reinterpret_cast<uint64_t>(gDataToTouch), data_ptr, (1 << i));
+
+      // We should only hit if it is the expected byte.
+      if (i == j) {
+        FXL_DCHECK(hit) << "i: " << i << ", j: " << j << ". Expected hit.";
+      } else {
+        FXL_DCHECK(!hit) << "i: " << i << ", j: " << j << ". Not expected hit.";
+      }
     }
-
-    // Pass in the byte to break on.
-    uint8_t* data_ptr = gDataToTouch + i;
-    thread_setup->user = data_ptr;
-
-    // Install the watchpoint.
-    InstallWatchpoint(thread_setup->thread, reinterpret_cast<uint64_t>(data_ptr));
-
-    // Tell the thread to continue.
-    thread_setup->event.signal(kThreadToHarness, kHarnessToThread);
-
-    // Wait until the exception is hit.
-    exception = WaitForException(port, exception_channel);
-
-    FXL_DCHECK(exception.info.type = ZX_EXCP_HW_BREAKPOINT);
-    PRINT("Hit watchpoint %zu on 0x%zx", i, exception.pc);
-
-    // Remove the watchpoint.
-    RemoveWatchpoint(thread_setup->thread);
   }
 
   // Tell the thread to exit.
   thread_setup->test_running = false;
-  ResumeException(thread_setup->thread, std::move(exception));
+  CHECK_OK(thread_setup->event.signal(kThreadToHarness, kHarnessToThread));
 }
 
 // Channel messaging -------------------------------------------------------------------------------
@@ -248,7 +277,7 @@ void ChannelMessagingTestCase() {
 // Main --------------------------------------------------------------------------------------------
 
 struct TestCase {
-  using TestFunction = void(*)();
+  using TestFunction = void (*)();
 
   std::string name = nullptr;
   std::string description = nullptr;

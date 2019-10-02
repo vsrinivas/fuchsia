@@ -129,14 +129,13 @@
 // The following fields are accepted by the user. All other fields are ignored (masked).
 //
 // - E
+// - BAS
 // - TODO(donosoc): Expose LSC.
-// - TODO(donosoc): Expose BAS.
 
 // This mask is applied when to DBGWCR. Any set values on those fields will be overwritten.
 //
 // - PAC = 0b10
 // - LSC = 0b10: Write watchpoint. TODO(donosoc): Expose to users so they can define it.
-// - BAS = 0xff: Match on all 7 bits. TODO(donosoc): Expose this to user so they can define it.
 // - HMC = 0
 // - SSC = 0b01
 // - LBN = 0
@@ -243,13 +242,13 @@
 
 // Helper functions ================================================================================
 
-inline uint64_t __arm64_internal_hw_debug_get_reg_value(uint64_t reg, uint64_t mask,
-                                                        uint64_t shift) {
+inline uint32_t __arm64_internal_hw_debug_get_reg_value(uint32_t reg, uint32_t mask,
+                                                        uint32_t shift) {
   return (reg & mask) >> shift;
 }
 
-inline void __arm64_internal_hw_debug_set_reg_value(uint64_t* reg, uint64_t value, uint64_t mask,
-                                                    uint64_t shift) {
+inline void __arm64_internal_hw_debug_set_reg_value(uint32_t* reg, uint32_t value, uint32_t mask,
+                                                    uint32_t shift) {
   *reg &= ~mask;
   *reg |= (value << shift) & mask;
 }

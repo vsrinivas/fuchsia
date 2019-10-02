@@ -3,6 +3,10 @@
 
 #include "hw_breakpointer_helpers.h"
 
+#include <zircon/hw/debug/arm64.h>
+
+#include <vector>
+
 ThreadSetup::~ThreadSetup() {
   DEFER_PRINT("Joined thread.");
 
@@ -48,10 +52,14 @@ void WriteGeneralRegs(const zx::thread& thread, const zx_thread_state_debug_regs
   CHECK_OK(thread.write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)));
 }
 
-zx_port_packet_t WaitOnPort(const zx::port& port, zx_signals_t signals) {
+std::optional<zx_port_packet_t> WaitOnPort(const zx::port& port, zx_signals_t signals,
+                                           zx::time deadline) {
   // Wait till we get the HW exception.
   zx_port_packet_t packet;
-  CHECK_OK(port.wait(zx::time::infinite(), &packet));
+  zx_status_t status = port.wait(deadline, &packet);
+  if (status == ZX_ERR_TIMED_OUT)
+    return std::nullopt;
+  CHECK_OK(status);
 
   FXL_DCHECK(packet.key == kPortKey);
   FXL_DCHECK(packet.type == ZX_PKT_TYPE_SIGNAL_ONE);
@@ -83,14 +91,15 @@ Exception GetException(const zx::channel& exception_channel) {
   return exception;
 }
 
-Exception WaitForException(const zx::port& port, const zx::channel& exception_channel) {
-  PRINT("Waiting for exception.");
-  WaitOnPort(port, ZX_CHANNEL_READABLE);
+std::optional<Exception> WaitForException(const zx::port& port,
+                                          const zx::channel& exception_channel, zx::time deadline) {
+  auto packet = WaitOnPort(port, ZX_CHANNEL_READABLE, deadline);
+  if (!packet)
+    return std::nullopt;
   return GetException(exception_channel);
 }
 
 void ResumeException(const zx::thread& thread, Exception&& exception, bool handled) {
-  DEFER_PRINT("Resumed from exception. Handled: %d", handled);
   /* #if defined(__aarch64__) */
   /*   // Skip past the brk instruction. Otherwise the breakpoint will trigger again. */
   /*   auto regs = ReadGeneralRegs(thread); */
@@ -105,7 +114,6 @@ void ResumeException(const zx::thread& thread, Exception&& exception, bool handl
 
   exception.handle.reset();
 }
-
 
 void WaitAsyncOnExceptionChannel(const zx::port& port, const zx::channel& exception_channel) {
   // Listen on the exception channel for the thread.
@@ -123,8 +131,6 @@ bool IsOnException(const zx::thread& thread) {
 }
 
 zx::suspend_token Suspend(const zx::thread& thread) {
-  DEFER_PRINT("Suspended thread.");
-
   // Check if the thread is on an exception.
   if (IsOnException(thread))
     return {};
@@ -199,7 +205,8 @@ namespace {
 
 #if defined(__x86_64__)
 
-zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address) {
+zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t bytes_to_hit) {
+  (void)bytes_to_hit;
   zx_thread_state_debug_regs_t debug_regs = {};
   if (address == 0)
     return {};
@@ -207,46 +214,134 @@ zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address) {
   debug_regs.dr7 = 0b1 | 1 << 16;
   debug_regs.dr[0] = address;
   return debug_regs;
+
+
 }
+
+
+void arm64_print_debug_registers(const zx_thread_state_debug_regs_t& debug_state) {}
 
 #elif defined(__aarch64__)
 
-zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address) {
+zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t bytes_to_hit) {
   if (address == 0)
     return {};
 
   zx_thread_state_debug_regs_t debug_regs = {};
   auto& wp = debug_regs.hw_wps[0];
-  wp.dbgwcr = 1 | 0b10 << 3 | 1 << 5;
   wp.dbgwvr = address;
+
+  ARM64_DBGWCR_E_SET(&wp.dbgwcr, 1);
+  ARM64_DBGWCR_LSC_SET(&wp.dbgwcr, 0b10);
+  ARM64_DBGWCR_BAS_SET(&wp.dbgwcr, bytes_to_hit);
+
   return debug_regs;
 }
+
+// Debug only.
+void arm64_print_debug_registers(const zx_thread_state_debug_regs_t& debug_state) {
+  printf("HW breakpoints:\n");
+  for (uint32_t i = 0; i < ARM64_MAX_HW_BREAKPOINTS; i++) {
+    uint32_t dbgbcr = debug_state.hw_bps[i].dbgbcr;
+    uint64_t dbgbvr = debug_state.hw_bps[i].dbgbvr;
+
+    if (!ARM64_DBGBCR_E_GET(dbgbcr))
+      continue;
+
+    printf(
+        "%02u. DBGBVR: 0x%lx, "
+        "DBGBCR: E=%d, PMC=%d, BAS=%d, HMC=%d, SSC=%d, LBN=%d, BT=%d\n",
+        i, dbgbvr, (int)(dbgbcr & ARM64_DBGBCR_E),
+        (int)((dbgbcr & ARM64_DBGBCR_PMC_MASK) >> ARM64_DBGBCR_PMC_SHIFT),
+        (int)((dbgbcr & ARM64_DBGBCR_BAS_MASK) >> ARM64_DBGBCR_BAS_SHIFT),
+        (int)((dbgbcr & ARM64_DBGBCR_HMC_MASK) >> ARM64_DBGBCR_HMC_SHIFT),
+        (int)((dbgbcr & ARM64_DBGBCR_SSC_MASK) >> ARM64_DBGBCR_SSC_SHIFT),
+        (int)((dbgbcr & ARM64_DBGBCR_LBN_MASK) >> ARM64_DBGBCR_LBN_SHIFT),
+        (int)((dbgbcr & ARM64_DBGBCR_BT_MASK) >> ARM64_DBGBCR_BT_SHIFT));
+  }
+
+  printf("HW watchpoints:\n");
+  for (uint32_t i = 0; i < ARM64_MAX_HW_WATCHPOINTS; i++) {
+    uint32_t dbgwcr = debug_state.hw_wps[i].dbgwcr;
+    uint64_t dbgwvr = debug_state.hw_wps[i].dbgwvr;
+
+    if (!ARM64_DBGWCR_E_GET(dbgwcr))
+      continue;
+
+    printf(
+        "%02u. DBGWVR: 0x%lx, DBGWCR: "
+        "E=%d, PAC=%d, LSC=%d, BAS=0x%x, HMC=%d, SSC=%d, LBN=%d, WT=%d, MASK=0x%x\n",
+        i, dbgwvr, (int)(dbgwcr & ARM64_DBGWCR_E_MASK),
+        (int)((dbgwcr & ARM64_DBGWCR_PAC_MASK) >> ARM64_DBGWCR_PAC_SHIFT),
+        (int)((dbgwcr & ARM64_DBGWCR_LSC_MASK) >> ARM64_DBGWCR_LSC_SHIFT),
+        (unsigned int)((dbgwcr & ARM64_DBGWCR_BAS_MASK) >> ARM64_DBGWCR_BAS_SHIFT),
+        (int)((dbgwcr & ARM64_DBGWCR_HMC_MASK) >> ARM64_DBGWCR_HMC_SHIFT),
+        (int)((dbgwcr & ARM64_DBGWCR_SSC_MASK) >> ARM64_DBGWCR_SSC_SHIFT),
+        (int)((dbgwcr & ARM64_DBGWCR_LBN_MASK) >> ARM64_DBGWCR_LBN_SHIFT),
+        (int)((dbgwcr & ARM64_DBGWCR_WT_MASK) >> ARM64_DBGWCR_WT_SHIFT),
+        (unsigned int)((dbgwcr & ARM64_DBGWCR_MSK_MASK) >> ARM64_DBGWCR_MSK_SHIFT));
+  }
+}
+
+
 
 #else
 #error Unsupported arch.
 #endif
 
-void SetWatchpoint(const zx::thread& thread, uint64_t address) {
+
+void SetWatchpoint(const zx::thread& thread, uint64_t address, uint32_t bytes_to_hit) {
   zx::suspend_token suspend_token = Suspend(thread);
 
+
+
   // Install the HW breakpoint.
-  auto debug_regs = WatchpointRegs(address);
+  auto debug_regs = WatchpointRegs(address, bytes_to_hit);
+  static bool a = false;
+
+  if (a) {
+    printf("-----------------------------------------------------------\n");
+    arm64_print_debug_registers(debug_regs);
+    printf("-----------------------------------------------------------\n");
+  }
+
   CHECK_OK(thread.write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs)));
 
   // Resume the thread.
   suspend_token.reset();
 }
 
-
 }  // namespace
 
-void InstallWatchpoint(const zx::thread& thread, uint64_t address) {
-  PRINT("Installing one byte watchpoint on 0x%zx", address);
-  SetWatchpoint(thread, address);
+std::string BytesToHitStr(uint32_t bytes_to_hit) {
+  std::stringstream ss;
+  bool first = true;
+  for (size_t i = 0; i < 8; i++) {
+    if (((bytes_to_hit >> i) & 0x1) == 0)
+      continue;
+
+    if (first) {
+      first = false;
+    } else {
+      ss << ", ";
+    }
+
+    ss << i + 1;
+  }
+
+  return ss.str();
+}
+
+
+
+void InstallWatchpoint(const zx::thread& thread, uint64_t address, uint32_t bytes_to_hit) {
+  /* PRINT("Installing one byte watchpoint on 0x%zx. Bytes to hit: %s", address, */
+  /*       BytesToHitStr(bytes_to_hit).c_str()); */
+  SetWatchpoint(thread, address, bytes_to_hit);
 }
 
 void RemoveWatchpoint(const zx::thread& thread) {
-  PRINT("Unintalling watchpoint.");
-  SetWatchpoint(thread, 0);
+  /* PRINT("Unintalling watchpoint."); */
+  SetWatchpoint(thread, 0, 0);
 }
 

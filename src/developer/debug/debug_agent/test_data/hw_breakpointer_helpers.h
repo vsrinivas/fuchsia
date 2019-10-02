@@ -18,17 +18,21 @@
 
 #include <iostream>
 #include <thread>
+#include <mutex>
 
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-#define PRINT(...)                                                                           \
-  {                                                                                          \
-    auto base_name = files::GetBaseName(__FILE__);                                             \
-    std::cout << "[" << base_name << ":" << __LINE__ << "][t: " << std::this_thread::get_id() \
-              << "] " << fxl::StringPrintf(__VA_ARGS__) << std::endl                         \
-              << std::flush;                                                                 \
+
+    // auto base_name = files::GetBaseName(__FILE__);                                            \
+    // std::cout << "[" << base_name << ":" << __LINE__ << "][t: " << std::this_thread::get_id()
+
+#define PRINT(...)                                                                            \
+  {                                                                                           \
+    std::cout << "[t: " << std::this_thread::get_id() \
+              << "] " << fxl::StringPrintf(__VA_ARGS__) << std::endl                          \
+              << std::flush;                                                                  \
   }
 
 #define DEFER_PRINT(...) auto __defer = fit::defer([=]() { PRINT(__VA_ARGS__); });
@@ -70,7 +74,8 @@ zx_thread_state_general_regs_t ReadGeneralRegs(const zx::thread& thread);
 
 void WriteGeneralRegs(const zx::thread& thread, const zx_thread_state_debug_regs_t& regs);
 
-zx_port_packet_t WaitOnPort(const zx::port& port, zx_signals_t signals);
+std::optional<zx_port_packet_t> WaitOnPort(const zx::port& port, zx_signals_t signals,
+                                           zx::time deadline = zx::time::infinite());
 
 struct Exception {
   zx::process process;
@@ -84,7 +89,9 @@ struct Exception {
 
 Exception GetException(const zx::channel& exception_channel);
 
-Exception WaitForException(const zx::port& port, const zx::channel& exception_channel);
+std::optional<Exception> WaitForException(const zx::port& port,
+                                          const zx::channel& exception_channel,
+                                          zx::time deadline = zx::time::infinite());
 
 void ResumeException(const zx::thread& thread, Exception&& exception, bool handled = true);
 
@@ -99,7 +106,13 @@ zx::suspend_token Suspend(const zx::thread& thread);
 void InstallHWBreakpoint(const zx::thread& thread, uint64_t address);
 void RemoveHWBreakpoint(const zx::thread& thread);
 
-void InstallWatchpoint(const zx::thread& thread, uint64_t address);
+// |bytes_to_hit| is a bitfield that defines which bytes to hit from |address|.
+//
+// Bit 0 = Match |address|.
+// ...
+// Bit 7 = Match |address| + 7.
+// Bit >= 8 = ignored.
+void InstallWatchpoint(const zx::thread& thread, uint64_t address, uint32_t bytes_to_hit);
 void RemoveWatchpoint(const zx::thread& thread);
 
 #endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_DATA_HW_BREAKPOINTER_HELPERS_H_
