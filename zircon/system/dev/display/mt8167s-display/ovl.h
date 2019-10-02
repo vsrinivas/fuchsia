@@ -5,9 +5,6 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_OVL_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_OVL_H_
 
-#include <ddk/protocol/platform/device.h>
-#include <ddktl/device.h>
-#include <fbl/unique_ptr.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
@@ -15,6 +12,10 @@
 #include <zircon/compiler.h>
 
 #include <optional>
+
+#include <ddk/protocol/platform/device.h>
+#include <ddktl/device.h>
+#include <fbl/unique_ptr.h>
 
 #include "common.h"
 #include "registers-ovl.h"
@@ -95,10 +96,10 @@ class Ovl {
   }
   void PrintRegisters();
 
- private:
   // Overlay support ARGB, RGB and YUV formats only
-  bool IsSupportedFormat(zx_pixel_format_t format);
+  static bool IsSupportedFormat(zx_pixel_format_t format);
 
+ private:
   // Return format as expected by OVL register
   uint32_t GetFormat(zx_pixel_format_t format);
 

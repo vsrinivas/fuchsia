@@ -94,6 +94,8 @@ class Mt8167sDisplay
   void DdkUnbind();
   void DdkRelease();
 
+  void SetBtiForTesting(zx::bti bti) { bti_ = std::move(bti); }
+
  private:
   void PopulateAddedDisplayArgs(added_display_args_t* args);
   void CopyDisplaySettings();

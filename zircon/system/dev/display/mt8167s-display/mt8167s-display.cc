@@ -113,7 +113,7 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplImportVmoImage(image_t* image, 
   }
 
   fbl::AutoLock lock(&image_lock_);
-  if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != kSupportedPixelFormats[0]) {
+  if (image->type != IMAGE_TYPE_SIMPLE || !Ovl::IsSupportedFormat(image->pixel_format)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -147,7 +147,7 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplImportImage(image_t* image,
   }
 
   fbl::AutoLock lock(&image_lock_);
-  if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != kSupportedPixelFormats[0]) {
+  if (image->type != IMAGE_TYPE_SIMPLE || !Ovl::IsSupportedFormat(image->pixel_format)) {
     return ZX_ERR_INVALID_ARGS;
   }
 

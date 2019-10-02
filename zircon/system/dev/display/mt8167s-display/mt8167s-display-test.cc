@@ -1,9 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include <ddktl/protocol/platform/device.h>
+#include "mt8167s-display.h"
+
 #include <lib/device-protocol/pdev.h>
+#include <lib/fake-bti/bti.h>
 #include <lib/mmio/mmio.h>
+
+#include <ddktl/protocol/platform/device.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
@@ -204,6 +208,24 @@ TEST(DsiHostTest, DsiHostPowerOn) {
   EXPECT_TRUE(ac.check());
   EXPECT_OK(syscfg->Init(std::move(syscfg_mmio), std::move(mutex_mmio)));
   EXPECT_OK(dsi_host.PowerOn(syscfg));
+}
+
+TEST(DisplayTest, ImportRGBX) {
+  zx::bti bti;
+  ASSERT_OK(fake_bti_create(bti.reset_and_get_address()));
+
+  image_t image = {};
+  image.width = 800;
+  image.height = 600;
+  image.pixel_format = ZX_PIXEL_FORMAT_RGB_x888;
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create_contiguous(bti, image.width * image.height * 4, 0u, &vmo));
+
+  mt8167s_display::Mt8167sDisplay display(nullptr);
+  display.SetBtiForTesting(std::move(bti));
+
+  EXPECT_OK(display.DisplayControllerImplImportVmoImage(&image, std::move(vmo), 0));
 }
 
 }  // namespace mt8167s_display
