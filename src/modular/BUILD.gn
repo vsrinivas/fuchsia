@@ -21,6 +21,7 @@ group("tests") {
   deps = [
     ":modular_lib_tests",
     "tests",  # tests/ directory
+    "//sdk/lib/modular/cpp:modular_cpp_tests",
     "//sdk/lib/modular/testing/cpp:modular_testing_cpp_tests",
   ]
 }

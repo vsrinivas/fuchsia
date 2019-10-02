@@ -22,7 +22,7 @@ The first step to writing an Agent is setting up the scaffolding using the `modu
 class.
 
 ```c++
-#include "src/modular/lib/agent/cpp/agent.h"
+#include <lib/modular/cpp/agent.h>
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

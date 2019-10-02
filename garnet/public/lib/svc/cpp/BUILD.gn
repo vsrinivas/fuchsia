@@ -38,7 +38,6 @@ source_set("cpp") {
     "//src/ledger/bin/testing:memory_usage_test_benchmark",
     "//src/ledger/bin/testing/ledger_test_instance_provider:ledger_test_instance_provider_bin",
     "//src/modular/bin/sessionmgr:user_intelligence_provider",
-    "//src/modular/lib/agent/cpp:agent_impl",
     "//src/modular/lib/fidl:app_client",
     "//src/modular/lib/lifecycle/cpp:lifecycle_impl",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",

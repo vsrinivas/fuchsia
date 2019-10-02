@@ -5,12 +5,12 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
+#include <lib/modular/cpp/agent.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "src/modular/bin/agents/clipboard/clipboard_impl.h"
 #include "src/modular/bin/agents/clipboard/clipboard_storage.h"
-#include "src/modular/lib/agent/cpp/agent.h"
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/modular/lib/agent/cpp/agent.h"
+#include <lib/modular/cpp/agent.h>
 
 namespace modular {
 
-Agent::Agent(std::shared_ptr<sys::OutgoingDirectory> publish_dir,
-             fit::callback<void()> on_terminate)
+Agent::Agent(std::shared_ptr<sys::OutgoingDirectory> publish_dir, fit::closure on_terminate)
     : publish_dir_(std::move(publish_dir)), on_terminate_(std::move(on_terminate)) {
   publish_dir_->AddPublicService<fuchsia::modular::Agent>(agent_bindings_.GetHandler(this));
   publish_dir_->AddPublicService<fuchsia::modular::Lifecycle>(lifecycle_bindings_.GetHandler(this));
@@ -44,7 +43,10 @@ void Agent::Terminate() {
   lifecycle_bindings_.CloseAll();
   agent_service_provider_bindings_.CloseAll();
 
-  on_terminate_();
+  // Move |on_terminate_| onto the stack to make it re-entrant. This allows the supplied
+  // |on_terminate_| to destroy this Agent instance while still making its state accessible.
+  auto on_terminate = std::move(on_terminate_);
+  on_terminate();
 }
 
 }  // namespace modular

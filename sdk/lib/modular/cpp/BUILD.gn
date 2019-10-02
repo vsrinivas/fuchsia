@@ -1,0 +1,63 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_source_set.gni")
+import("//build/fidl/fidl.gni")
+import("//build/test/test_package.gni")
+
+sdk_source_set("cpp") {
+  category = "partner"
+
+  sdk_name = "modular_cpp"
+
+  include_base = "//sdk"
+
+  public_configs = [ "//sdk/config" ]
+
+  sources = [
+    "agent.cc",
+    "agent.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+  ]
+}
+
+fidl("test.modular.agent") {
+  sources = [
+    "agent.test.fidl",
+  ]
+}
+
+executable("modular_cpp_tests_bin") {
+  testonly = true
+  sources = [
+    "agent_unittest.cc",
+  ]
+
+  deps = [
+    ":cpp",
+    ":test.modular.agent",
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+test_package("modular_cpp_tests") {
+  tests = [
+    {
+      name = "modular_cpp_tests_bin"
+    },
+  ]
+
+  deps = [
+    ":modular_cpp_tests_bin",
+  ]
+}

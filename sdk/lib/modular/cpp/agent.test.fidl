@@ -6,5 +6,5 @@ library test.modular.agent;
 
 [Discoverable]
 protocol Pinger {
-  Ping();
+    Ping();
 };

@@ -11,6 +11,7 @@
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <fuchsia/setui/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/modular/cpp/agent.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/component_interceptor.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
@@ -18,7 +19,6 @@
 
 #include <set>
 
-#include "src/modular/lib/agent/cpp/agent.h"
 #include "src/modular/lib/lifecycle/cpp/lifecycle_impl.h"
 
 namespace modular::testing {

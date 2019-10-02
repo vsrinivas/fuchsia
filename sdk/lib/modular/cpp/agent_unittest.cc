@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/modular/lib/agent/cpp/agent.h"
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/modular/cpp/agent.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <test/modular/agent/cpp/fidl.h>
@@ -58,4 +57,24 @@ TEST_F(AgentTest, AddService) {
 
   // Check that Pinger/Ping() was received;  this should verify that Pinger was registered
   RunLoopUntil([this]() { return ping_count() > 0; });
+}
+
+TEST_F(AgentTest, ReentrentDestroy) {
+  sys::testing::ComponentContextProvider ctx_provider;
+
+  std::unique_ptr<modular::Agent> agent;
+  auto val = std::make_unique<int>(42);
+  agent =
+      std::make_unique<modular::Agent>(ctx_provider.context()->outgoing(),
+                                       /* on_terminate */ [&agent, val = std::move(val)]() mutable {
+                                         agent.reset();
+                                         // this should abort/crash if |on_terminate| wasn't
+                                         // reentrant after |agent| is destroyed:
+                                         *val.get() += 1;
+                                       });
+
+  auto lifecycle_ptr = ctx_provider.ConnectToPublicService<fuchsia::modular::Lifecycle>();
+  lifecycle_ptr->Terminate();
+
+  RunLoopUntil([&] { return !lifecycle_ptr; });
 }

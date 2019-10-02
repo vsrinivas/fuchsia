@@ -47,16 +47,16 @@ executable("entity_provider_runner_unittest") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/modular/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/bin/sessionmgr/agent_runner",
-    "//src/modular/lib/agent/cpp",
     "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/testing:mock_base",
     "//src/modular/lib/testing:test_with_ledger",
-    "//zircon/public/lib/trace",
     "//zircon/public/lib/fs",
+    "//zircon/public/lib/trace",
   ]
 }

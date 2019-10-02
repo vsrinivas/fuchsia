@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/modular_cpp_tests_bin"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}
