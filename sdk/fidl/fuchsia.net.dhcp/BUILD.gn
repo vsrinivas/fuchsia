@@ -7,6 +7,11 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.net.dhcp") {
   sdk_category = "partner"
   sources = [
-    "dhcp.fidl",
+    "client.fidl",
+    "options.fidl",
+    "server.fidl",
+  ]
+  public_deps = [
+    "//zircon/system/fidl/fuchsia-net",
   ]
 }
