@@ -1,0 +1,59 @@
+{
+    "facets": {
+        "fuchsia.netemul": {
+            "capture": true,
+            "environment": {
+                "children": [
+                    {
+                        "name": "dhcp_server",
+                        "services": {
+                            "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                            "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                            "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                            "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                        },
+                        "setup": [
+                            {
+                                "arguments": [
+                                    "-e",
+                                    "client-ep"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                            }
+                        ],
+                        "test": [
+                            "fuchsia-pkg://fuchsia.com/netemul_dhcp_tests#meta/dhcp_validity.cmx"
+                        ]
+                    }
+                ]
+            },
+            "guest": [
+                {
+                    "files": {
+                        "data/dhcp_setup.sh": "/root/input/dhcp_setup.sh",
+                        "data/dhcpd.conf": "/etc/dhcp/dhcpd.conf"
+                    },
+                    "label": "debian_guest",
+                    "networks": [
+                        "net"
+                    ],
+                    "url": "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cmx"
+                }
+            ],
+            "networks": [
+                {
+                    "endpoints": [
+                        {
+                            "name": "client-ep"
+                        }
+                    ],
+                    "name": "net"
+                }
+            ]
+        }
+    },
+    "program": {
+        "binary": "bin/app"
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+}

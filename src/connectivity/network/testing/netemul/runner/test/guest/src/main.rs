@@ -7,13 +7,12 @@ use {
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::FileMarker,
     fidl_fuchsia_netemul_guest::{
-        CommandListenerEvent, CommandListenerEventStream, CommandListenerMarker,
-        EnvironmentVariable, GuestDiscoveryMarker, GuestInteractionMarker,
+        CommandListenerMarker, EnvironmentVariable, GuestDiscoveryMarker, GuestInteractionMarker,
     },
     fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon as zx,
-    futures::TryStreamExt,
+    netemul_guest_lib::wait_for_command_completion,
     rand::distributions::Alphanumeric,
     rand::{thread_rng, Rng},
     std::fs::File,
@@ -71,28 +70,6 @@ async fn test_file_transfer() -> Result<(), Error> {
     return Ok(());
 }
 
-async fn wait_for_command_completion(
-    mut stream: CommandListenerEventStream,
-    stdin_socket: zx::Socket,
-    to_write: String,
-) -> Result<(), Error> {
-    loop {
-        let event = stream.try_next().await?;
-        assert!(event.is_some());
-        match event.unwrap() {
-            CommandListenerEvent::OnStarted { status } => {
-                zx::ok(status)?;
-                stdin_socket.write(to_write.as_bytes())?;
-            }
-            CommandListenerEvent::OnTerminated { status, return_code } => {
-                zx::ok(status)?;
-                assert_eq!(return_code, 0);
-                return Ok(());
-            }
-        }
-    }
-}
-
 async fn test_exec_script() -> Result<(), Error> {
     // Command to run, environment variable definitions, and stdin to input.
     let command_to_run = "/bin/sh -c \"/root/input/test_script.sh\"";
@@ -134,7 +111,7 @@ async fn test_exec_script() -> Result<(), Error> {
     )?;
 
     // Ensure that the process completes normally.
-    wait_for_command_completion(client_proxy.take_event_stream(), stdin_0, stdin_input.to_string())
+    wait_for_command_completion(client_proxy.take_event_stream(), Some((stdin_0, &stdin_input)))
         .await?;
 
     // Validate the stdout and stderr.

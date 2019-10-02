@@ -403,6 +403,10 @@ bool Sandbox::CreateGuestOptions(const std::vector<config::Guest>& guests,
     return false;
   }
 
+  environment::LoggerOptions* logger = options->mutable_logger_options();
+  logger->set_enabled(true);
+  logger->set_syslog_output(true);
+
   std::vector<environment::LaunchService>* services = options->mutable_services();
   {
     auto& ls = services->emplace_back();

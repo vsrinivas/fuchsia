@@ -6,33 +6,34 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
-rustc_binary("guest") {
-  name = "netemul_guest"
+rustc_binary("test") {
   edition = "2018"
+  name = "dhcp_validity"
   deps = [
     ":lib",
-    "//garnet/lib/rust/io_util",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
-    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
-    "//src/virtualization/lib/guest_interaction:fuchsia.netemul.guest-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
-    "//third_party/rust_crates:rand",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }
 
 rustc_library("lib") {
   edition = "2018"
-  name = "netemul_guest_lib"
+  name = "dhcp_validity_lib"
   deps = [
+    "//garnet/lib/rust/fidl_fuchsia_net_ext",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
+    "//src/connectivity/network/testing/netemul/runner/test/guest:lib",
     "//src/virtualization/lib/guest_interaction:fuchsia.netemul.guest-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }

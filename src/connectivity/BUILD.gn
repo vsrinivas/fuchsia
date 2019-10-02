@@ -39,6 +39,7 @@ group("tests") {
     "//src/connectivity/network/netdump:tests",
     "//src/connectivity/network/testing/netemul:tests",
     "//src/connectivity/network/tests",
+    "//src/connectivity/network/tests/integration",
     "//src/connectivity/overnet:tests",
     "//src/connectivity/ppp:tests",
     "//src/connectivity/telephony/lib/qmi-protocol:tests",

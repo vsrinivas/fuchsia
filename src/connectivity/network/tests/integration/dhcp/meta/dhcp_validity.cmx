@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/dhcp_validity"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.netemul.guest.GuestDiscovery",
+            "fuchsia.netstack.Netstack"
+        ]
+    }
+}
