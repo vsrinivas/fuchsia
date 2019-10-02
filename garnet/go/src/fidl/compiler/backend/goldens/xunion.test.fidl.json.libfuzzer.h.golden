@@ -11,6 +11,7 @@ namespace fidl {
 namespace fuzzing {
 
 
+using StructWithNullableXUnion = ::test::name::StructWithNullableXUnion;
 using StrictSimpleXUnion = ::test::name::StrictSimpleXUnion;
 using StrictBoundedXUnion = ::test::name::StrictBoundedXUnion;
 using OlderSimpleUnion = ::test::name::OlderSimpleUnion;
@@ -19,6 +20,24 @@ using Empty = ::test::name::Empty;
 using XUnionContainingEmptyStruct = ::test::name::XUnionContainingEmptyStruct;
 
 
+template<>
+struct MinSize<StructWithNullableXUnion> {
+  operator size_t() {
+    return MinSize<::std::unique_ptr<OlderSimpleUnion>>();
+  }
+};
+template<>
+struct Allocate<StructWithNullableXUnion> {
+  StructWithNullableXUnion operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<StructWithNullableXUnion>());
+    const size_t slack_per_member = (*size - MinSize<StructWithNullableXUnion>()) / 1;
+    StructWithNullableXUnion out;
+    size_t out_size;
+    out_size = MinSize<::std::unique_ptr<OlderSimpleUnion>>() + slack_per_member;
+    out.x1 = Allocate<::std::unique_ptr<OlderSimpleUnion>>{}(src, &out_size);
+    return out;
+  }
+};
 template<>
 struct MinSize<StrictSimpleXUnion> {
   operator size_t() { return sizeof(StrictSimpleXUnion); }

@@ -102,6 +102,23 @@ fidl_empty_struct!(
 	Empty
 );
 
+#[derive(Debug, PartialEq)]
+pub struct StructWithNullableXUnion {
+  pub x1: Option<Box<OlderSimpleUnion>>,
+}
+
+fidl_struct! {
+  name: StructWithNullableXUnion,
+  members: [
+    x1 {
+      ty: Option<Box<OlderSimpleUnion>>,
+      offset: 0,
+    },
+  ],
+  size: 24,
+  align: 8,
+}
+
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct TestProtocolMarker;

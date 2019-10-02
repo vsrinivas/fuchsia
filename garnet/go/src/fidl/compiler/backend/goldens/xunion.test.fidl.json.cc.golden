@@ -6,6 +6,23 @@
 namespace test {
 namespace name {
 
+extern "C" const fidl_type_t test_name_StructWithNullableXUnionTable;
+const fidl_type_t* StructWithNullableXUnion::FidlType = &test_name_StructWithNullableXUnionTable;
+
+void StructWithNullableXUnion::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+  ::fidl::Encode(_encoder, &x1, _offset + 0);
+}
+
+void StructWithNullableXUnion::Decode(::fidl::Decoder* _decoder, StructWithNullableXUnion* value, size_t _offset) {
+  ::fidl::Decode(_decoder, &value->x1, _offset + 0);
+}
+
+zx_status_t StructWithNullableXUnion::Clone(StructWithNullableXUnion* _result) const {
+  zx_status_t _status = ::fidl::Clone(x1, &_result->x1);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
 extern "C" const fidl_type_t test_name_StrictSimpleXUnionTable;
 const fidl_type_t* StrictSimpleXUnion::FidlType = &test_name_StrictSimpleXUnionTable;
 

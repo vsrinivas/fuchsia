@@ -611,22 +611,14 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 		case types.StructDeclType:
 			fallthrough
 		case types.UnionDeclType:
+			fallthrough
+		case types.XUnionDeclType:
 			if val.Nullable {
 				if borrowed {
 					r = fmt.Sprintf("Option<fidl::encoding::OutOfLine<%s>>", t)
 				} else {
 					r = fmt.Sprintf("Option<Box<%s>>", t)
 				}
-			} else {
-				if borrowed {
-					r = fmt.Sprintf("&mut %s", t)
-				} else {
-					r = t
-				}
-			}
-		case types.XUnionDeclType:
-			if val.Nullable {
-				r = fmt.Sprintf("Option<%s>", t)
 			} else {
 				if borrowed {
 					r = fmt.Sprintf("&mut %s", t)

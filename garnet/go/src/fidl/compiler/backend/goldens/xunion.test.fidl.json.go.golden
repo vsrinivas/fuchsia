@@ -21,6 +21,17 @@ var _mEmpty = _bindings.CreateLazyMarshaler(Empty{})
 func (msg *Empty) Marshaler() _bindings.Marshaler {
 	return _mEmpty
 }
+
+type StructWithNullableXUnion struct {
+	_ struct{} `fidl:"s,24,8" fidl2:"s,24,8"`
+	X1 *OlderSimpleUnion`fidl:"0"`
+}
+
+var _mStructWithNullableXUnion = _bindings.CreateLazyMarshaler(StructWithNullableXUnion{})
+
+func (msg *StructWithNullableXUnion) Marshaler() _bindings.Marshaler {
+	return _mStructWithNullableXUnion
+}
 type I_olderSimpleUnionTag uint32
 const (
 	OlderSimpleUnion_unknownData = 0  // 0x00000000

@@ -726,7 +726,7 @@
       "name": "test.name/WithErrorSyntax_ErrorAsPrimitive_Result",
       "location": {
         "filename": "generated",
-        "line": 17,
+        "line": 15,
         "column": 1
       },
       "maybe_attributes": [
@@ -737,16 +737,16 @@
       ],
       "members": [
         {
-          "xunion_ordinal": 3968580,
+          "name": "response",
           "type": {
             "kind": "identifier",
             "identifier": "test.name/WithErrorSyntax_ErrorAsPrimitive_Response",
             "nullable": false
           },
-          "name": "response",
+          "xunion_ordinal": 138512668,
           "location": {
             "filename": "generated",
-            "line": 15,
+            "line": 16,
             "column": 1
           },
           "size": 1,
@@ -755,15 +755,15 @@
           "offset": 4
         },
         {
-          "xunion_ordinal": 598382991,
+          "name": "err",
           "type": {
             "kind": "primitive",
             "subtype": "uint32"
           },
-          "name": "err",
+          "xunion_ordinal": 1043053528,
           "location": {
             "filename": "generated",
-            "line": 16,
+            "line": 17,
             "column": 1
           },
           "size": 4,
@@ -781,7 +781,7 @@
       "name": "test.name/WithErrorSyntax_ErrorAsEnum_Result",
       "location": {
         "filename": "generated",
-        "line": 24,
+        "line": 22,
         "column": 1
       },
       "maybe_attributes": [
@@ -792,16 +792,16 @@
       ],
       "members": [
         {
-          "xunion_ordinal": 3968580,
+          "name": "response",
           "type": {
             "kind": "identifier",
             "identifier": "test.name/WithErrorSyntax_ErrorAsEnum_Response",
             "nullable": false
           },
-          "name": "response",
+          "xunion_ordinal": 1951667349,
           "location": {
             "filename": "generated",
-            "line": 22,
+            "line": 23,
             "column": 1
           },
           "size": 1,
@@ -810,16 +810,16 @@
           "offset": 4
         },
         {
-          "xunion_ordinal": 598382991,
+          "name": "err",
           "type": {
             "kind": "identifier",
             "identifier": "test.name/ErrorEnun",
             "nullable": false
           },
-          "name": "err",
+          "xunion_ordinal": 887935114,
           "location": {
             "filename": "generated",
-            "line": 23,
+            "line": 24,
             "column": 1
           },
           "size": 4,

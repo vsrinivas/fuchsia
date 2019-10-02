@@ -13,6 +13,15 @@ test_name_EmptyOutOfLine {
 test_name_EmptyHandles {
        void void
 } [packed]
+test_name_StructWithNullableXUnionInLine {
+        
+} [packed]
+test_name_StructWithNullableXUnionOutOfLine {
+       void void
+} [packed]
+test_name_StructWithNullableXUnionHandles {
+       void void
+} [packed]
 
 
 test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequest {

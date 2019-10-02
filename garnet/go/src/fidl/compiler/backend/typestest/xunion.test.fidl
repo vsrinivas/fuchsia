@@ -40,3 +40,6 @@ protocol TestProtocol {
     FlexibleXUnionHenceResponseMustBeHeapAllocated() -> (OlderSimpleUnion xu);
 };
 
+struct StructWithNullableXUnion {
+    OlderSimpleUnion? x1;
+};

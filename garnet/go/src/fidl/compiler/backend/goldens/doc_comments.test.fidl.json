@@ -215,12 +215,12 @@
       ],
       "members": [
         {
-          "xunion_ordinal": 1868605377,
+          "name": "Field",
           "type": {
             "kind": "primitive",
             "subtype": "int32"
           },
-          "name": "Field",
+          "xunion_ordinal": 1868605377,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
             "line": 28,

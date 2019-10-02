@@ -2350,9 +2350,26 @@ macro_rules! fidl_xunion {
             }
         }
 
-        impl $crate::encoding::AutonullContainer for $name {
+        impl $crate::encoding::AutonullContainer for Box<$name> {
             fn inline_align() -> usize { 8 }
             fn inline_size() -> usize { 24 }
+        }
+
+        impl $crate::encoding::Encodable for Box<$name> {
+            fn inline_align(&self) -> usize { 8 }
+            fn inline_size(&self) -> usize { 24 }
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
+                (**self).encode(encoder)
+            }
+        }
+
+        impl $crate::encoding::Decodable for Box<$name> {
+            fn inline_align() -> usize { 8 }
+            fn inline_size() -> usize { 24 }
+            fn new_empty() -> Self { Box::new($name::new_empty()) }
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
+                (**self).decode(decoder)
+            }
         }
     }
 }
@@ -3407,7 +3424,14 @@ mod test {
             0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00, // content + padding
         ];
 
-        encode_assert_bytes(TestSampleXUnion::U(0xdeadbeef), xunion_u_bytes)
+        encode_assert_bytes(TestSampleXUnion::U(0xdeadbeef), xunion_u_bytes);
+        // The nullable representation Option<Box<TestSampleXUnion>> has the same layout.
+        encode_assert_bytes(Some(Box::new(TestSampleXUnion::U(0xdeadbeef))), xunion_u_bytes);
+    }
+
+    #[test]
+    fn xunion_golden_null() {
+        encode_assert_bytes(None::<Box<TestSampleXUnion>>, &[0; 24]);
     }
 
     #[test]
@@ -3481,7 +3505,11 @@ mod test {
             ],
         }
 
-        identities![XUnion::Variant(vec![1, 2, 3]),];
+        identities![
+            XUnion::Variant(vec![1, 2, 3]),
+            Some(Box::new(XUnion::Variant(vec![1, 2, 3]))),
+            None::<Box<XUnion>>,
+        ];
     }
 
     #[test]

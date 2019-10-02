@@ -8,6 +8,7 @@
 namespace test {
 namespace name {
 
+class StructWithNullableXUnion;
 class StrictSimpleXUnion;
 class StrictBoundedXUnion;
 class OlderSimpleUnion;
@@ -31,6 +32,26 @@ constexpr uint64_t kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_
 class NewerSimpleUnion;
 class Empty;
 class XUnionContainingEmptyStruct;
+
+class StructWithNullableXUnion final {
+ public:
+  static const fidl_type_t* FidlType;
+  
+  ::std::unique_ptr<OlderSimpleUnion> x1{};
+
+  static inline ::std::unique_ptr<StructWithNullableXUnion> New() { return ::std::make_unique<StructWithNullableXUnion>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, StructWithNullableXUnion* value, size_t _offset);
+  zx_status_t Clone(StructWithNullableXUnion* result) const;
+};
+
+inline zx_status_t Clone(const ::test::name::StructWithNullableXUnion& _value,
+                         ::test::name::StructWithNullableXUnion* _result) {
+  return _value.Clone(_result);
+}
+
+using StructWithNullableXUnionPtr = ::std::unique_ptr<StructWithNullableXUnion>;
 
 class StrictSimpleXUnion final {
  public:
@@ -707,6 +728,24 @@ using XUnionContainingEmptyStructPtr = ::std::unique_ptr<XUnionContainingEmptySt
 }  // namespace test
 namespace fidl {
 
+template <>
+struct CodingTraits<::test::name::StructWithNullableXUnion>
+    : public EncodableCodingTraits<::test::name::StructWithNullableXUnion, 24> {};
+
+inline zx_status_t Clone(const ::test::name::StructWithNullableXUnion& value,
+                         ::test::name::StructWithNullableXUnion* result) {
+  return ::test::name::Clone(value, result);
+}
+
+template<>
+struct Equality<::test::name::StructWithNullableXUnion> {
+  static inline bool Equals(const ::test::name::StructWithNullableXUnion& _lhs, const ::test::name::StructWithNullableXUnion& _rhs) {
+    if (!::fidl::Equals(_lhs.x1, _rhs.x1)) {
+      return false;
+    }
+    return true;
+  }
+};
 template <>
 struct CodingTraits<::test::name::StrictSimpleXUnion>
     : public EncodableCodingTraits<::test::name::StrictSimpleXUnion, 24> {};
