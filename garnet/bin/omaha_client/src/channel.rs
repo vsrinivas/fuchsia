@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 mod tests {
-    use fidl_fuchsia_update::ChannelControlMarker;
+    use fidl_fuchsia_update_channelcontrol::ChannelControlMarker;
     use fuchsia_async as fasync;
     use fuchsia_component::client::connect_to_service;
 

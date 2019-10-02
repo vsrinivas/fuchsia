@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use failure::{Error, ResultExt};
-use fidl_fuchsia_update::{ChannelControlRequest, ChannelControlRequestStream};
+use fidl_fuchsia_update_channelcontrol::{ChannelControlRequest, ChannelControlRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;

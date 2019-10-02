@@ -5,7 +5,7 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/update/cpp/fidl.h>
+#include <fuchsia/update/channel/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/result.h>

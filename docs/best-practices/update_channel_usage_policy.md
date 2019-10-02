@@ -5,11 +5,12 @@ Fuchsia.
 
 ## Background
 
-Fuchsia exposes Get/Set channel information through the _fuchsia.update_ FIDL
-APIs. In order to expose these APIs to a wider set of clients as part of the
-Fuchsia SDK, it is important to ensure client behavior is not modulated based
-on channel strings. Below is our policy which applies to internal clients as
-well as any other Fuchsia supported components.
+Fuchsia exposes Get/Set channel information through the
+_fuchsia.update.channelcontrol_ FIDL APIs. In order to expose these APIs to a
+wider set of clients as part of the Fuchsia SDK, it is important to ensure
+client behavior is not modulated based on channel strings. Below is our
+policy which applies to internal clients as well as any other Fuchsia
+supported components.
 
 ## Policy
 

@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 use failure::{bail, Error, ResultExt};
+use fidl_fuchsia_update_channelcontrol::{
+    ChannelControlRequest, ChannelControlRequestStream,
+};
 use fidl_fuchsia_update::{
-    ChannelControlRequest, ChannelControlRequestStream, CheckStartedResult, Initiator,
-    ManagerRequest, ManagerRequestStream, ManagerState, MonitorControlHandle, State,
+    CheckStartedResult, Initiator, ManagerRequest, ManagerRequestStream,
+    ManagerState, MonitorControlHandle, State,
 };
 use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
@@ -197,7 +200,7 @@ where
         Ok(())
     }
 
-    /// Handle fuchsia.update.ChannelControl requests.
+    /// Handle fuchsia.update.channelcontrol.ChannelControl requests.
     async fn handle_channel_control_request(
         server: Rc<RefCell<Self>>,
         request: ChannelControlRequest,
@@ -280,8 +283,9 @@ mod tests {
     use super::*;
     use crate::configuration;
     use fidl::endpoints::{create_proxy, create_proxy_and_stream};
+    use fidl_fuchsia_update_channelcontrol::{ChannelControlMarker};
     use fidl_fuchsia_update::{
-        ChannelControlMarker, ManagerMarker, MonitorEvent, MonitorMarker, Options,
+        ManagerMarker, MonitorEvent, MonitorMarker, Options,
     };
     use omaha_client::{
         common::App, http_request::StubHttpRequest, installer::stub::StubInstaller,

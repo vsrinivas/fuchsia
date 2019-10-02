@@ -14,6 +14,7 @@ rustc_binary("omaha_client_ctl_bin") {
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
+    "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:structopt",

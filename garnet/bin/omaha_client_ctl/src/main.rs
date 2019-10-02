@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 use failure::{Error, ResultExt};
+use fidl_fuchsia_update_channelcontrol::{
+    ChannelControlMarker,
+};
 use fidl_fuchsia_update::{
-    ChannelControlMarker, Initiator, ManagerMarker, MonitorEvent, MonitorMarker, MonitorProxy,
+    Initiator, ManagerMarker, MonitorEvent, MonitorMarker, MonitorProxy,
     Options, State,
 };
 use fuchsia_async as fasync;
@@ -51,7 +54,7 @@ async fn main() -> Result<(), Error> {
     #[derive(Debug, StructOpt)]
     #[structopt(rename_all = "kebab-case")]
     enum Command {
-        // fuchsia.update ChannelControl protocol:
+        // fuchsia.update.channelcontrol.ChannelControl protocol:
         /// Get the current channel.
         GetCurrent,
         /// Get the target channel.

@@ -12,7 +12,7 @@ rustc_binary("bin") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
-    "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
+    "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
   ]

@@ -1,0 +1,37 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.update.channelcontrol;
+
+using fuchsia.update.channel;
+
+/// Control the target update channel, this is the channel we will use on the next update check.
+[Discoverable]
+protocol ChannelControl {
+    compose fuchsia.update.channel.Provider;
+
+    /// Set a new desired target channel.  This tells the updater to attempt to
+    /// check for updates using a new channel.  This is tentative, and won't be
+    /// persisted unless an update check on that channel is successful.
+    ///
+    /// A response is generated when the new target channel has been verified as
+    /// valid.
+    ///
+    /// + request `channel` the new target channel name (name used by the updater)
+    SetTarget(string:128 channel) -> ();
+
+    /// Get the current tentative target channel for updates.
+    /// This returns the channel that the update client is using to perform update
+    /// checks.  It's always one of:
+    ///    - the current channel
+    ///    - the default channel
+    ///    - a new target that's different, but hasn't been OTA'd from yet.
+    ///
+    /// - response `channel` the current target channel.
+    GetTarget() -> (string:128 channel);
+
+    /// Get the list of well-known target channels that can be passed to SetTarget().
+    /// There may be other, unlisted channels.
+    GetTargetList() -> (vector<string:128>:100 channels);
+};
