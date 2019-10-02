@@ -1421,6 +1421,7 @@ if (target_cpu != "arm64" && !use_vboot) {
         name = "efi"
         type = "blk"
         bootserver_pave = [ "--bootloader" ]
+        bootserver_pave_zedboot = [ "--bootloader" ]
       }
       if (!use_vboot && custom_signing_script == "") {
         updater = "bootloader"
@@ -1457,6 +1458,7 @@ if (target_cpu != "arm64" && !use_vboot) {
           name = "efi"
           type = "blk"
           bootserver_pave = [ "--bootloader" ]
+          bootserver_pave_zedboot = [ "--bootloader" ]
         }
         sdk = "bootloader.img"
         updater = "bootloader"
