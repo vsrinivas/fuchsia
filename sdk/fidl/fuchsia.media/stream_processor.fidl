@@ -577,9 +577,8 @@ table StreamBufferSettings {
     // for convenience when using gralloc video buffers.
     5: uint32 per_packet_buffer_bytes;
 
-    // If true, there is only one buffer with index 0 which all packets
-    // implicitly refer to.  If false, the packet_index and buffer_index are
-    // 1:1, and each packet refers to its corresponding buffer.
+    // If true there is only one buffer, with index 0, which all packets
+    // must explicitly refer to with buffer_index == 0.
     //
     // While it's possible to set up single_buffer_mode false with each buffer
     // referring to the same underlying VMO, single_buffer_mode true is more
@@ -698,8 +697,7 @@ table StreamBufferPartialSettings {
 //
 
 // When single_buffer_mode is true, there is only buffer_index 0 shared by all
-// Packet(s) of the relevant input or output.  When single_buffer_mode is
-// false, the buffer_index equals the packet_index.
+// packet(s) of the relevant input or output.
 table StreamBuffer {
     // When using AddOutputBuffer()/AddInputBuffer(), this must match the
     // buffer_lifetime_ordinal of the most recent
@@ -707,10 +705,8 @@ table StreamBuffer {
     1: uint64 buffer_lifetime_ordinal;
 
     // Buffers must be added via AddOutputBuffer() / AddInputBuffer() in order
-    // by buffer_index, and the buffer_index is always equal to 0 or equal to
-    // the packet_index (depending on single_buffer_mode true or false), but
-    // it's still nice to have StreamBuffer include the buffer_index if only
-    // for easier debugging.
+    // by buffer_index. The buffer_index is always equal to 0 if
+    // single_buffer_mode is true.
     2: uint32 buffer_index;
 
     // For each new buffer_lifetime_ordinal, a client must use new low-level
@@ -797,9 +793,7 @@ table PacketHeader {
     // Both the client and server should validate the packet_index against the
     // known bound and disconnect if it's out of bounds.
     //
-    // When running in buffer-per-packet mode, the packet_index is also the
-    // buffer index.  When running in single-buffer mode, the buffer index is
-    // always 0 referring to the single buffer.
+    // When running in single-buffer mode, the buffer index is always 0.
     //
     // The packet_index values don't imply anything about order of use of
     // packets. The client should not expect the ordering to remain the same
@@ -1496,9 +1490,7 @@ protocol StreamProcessor {
     // with the client vs. free with the server.  See "packet lifetime" in
     // stream_processor.md for more.
     //
-    // The relevant buffer is buffer 0 if running in single-buffer mode, or the
-    // buffer index is the same as packet_index if running in buffer-per-packet
-    // mode.
+    // The relevant buffer is always the one specified in the packet's buffer_index field.
     //
     // For low-level buffer types that support it, a StreamProcessor is free to
     // emit an output packet before the low-level buffer actually has any
