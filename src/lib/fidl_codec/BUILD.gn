@@ -35,13 +35,8 @@ static_library("fidl_codec") {
     "//src/lib/fxl",
     "//third_party/rapidjson",
     "//zircon/public/lib/fidl_base",
+    "//zircon/system/public",
   ]
-
-  if (current_toolchain == host_toolchain) {
-    public_deps = [
-      "//zircon/system/public",
-    ]
-  }
 }
 
 executable("fidl_codec_test_bin") {
