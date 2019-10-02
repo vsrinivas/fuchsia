@@ -13,7 +13,6 @@
             "fuchsia.netemul.environment.ManagedEnvironment",
             "fuchsia.netemul.network.NetworkContext",
             "fuchsia.netstack.Netstack",
-            "fuchsia.net.SocketProvider",
             "fuchsia.posix.socket.Provider"
         ]
     }
