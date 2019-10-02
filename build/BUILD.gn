@@ -129,7 +129,6 @@ group("rootresource_svc_allowlist") {
     "//garnet/bin/system_monitor/harvester:system_monitor_harvester",
     "//garnet/bin/system_monitor/harvester:system_monitor_harvester_tests",
     "//garnet/bin/thermd:thermd",
-    "//src/cobalt/bin/system-metrics:cobalt_system_metrics",
     "//src/developer/memory/monitor/tests:memory_monitor_tests",
     "//src/developer/memory/monitor:monitor",
     "//src/developer/memory/monitor/tests:memory_monitor_inspect_integration_tests",

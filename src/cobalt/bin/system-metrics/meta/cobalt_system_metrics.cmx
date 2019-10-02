@@ -8,8 +8,8 @@
             "class/thermal"
         ],
         "services": [
-            "fuchsia.boot.RootResource",
             "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.kernel.Stats",
             "fuchsia.logger.LogSink",
             "fuchsia.tracing.provider.Registry"
         ]

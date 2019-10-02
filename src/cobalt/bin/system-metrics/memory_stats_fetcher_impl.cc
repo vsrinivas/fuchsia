@@ -6,7 +6,6 @@
 
 #include <fcntl.h>
 #include <fuchsia/cobalt/cpp/fidl.h>
-#include <fuchsia/boot/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/resource.h>
@@ -17,51 +16,44 @@
 
 namespace cobalt {
 
-MemoryStatsFetcherImpl::MemoryStatsFetcherImpl() { InitializeRootResourceHandle(); }
+MemoryStatsFetcherImpl::MemoryStatsFetcherImpl() { InitializeKernelStats(); }
 
-bool MemoryStatsFetcherImpl::FetchMemoryStats(zx_info_kmem_stats_t* mem_stats) {
+bool MemoryStatsFetcherImpl::FetchMemoryStats(llcpp::fuchsia::kernel::MemoryStats** mem_stats) {
   TRACE_DURATION("system_metrics", "MemoryStatsFetcherImpl::FetchMemoryStats");
-  if (root_resource_handle_ == ZX_HANDLE_INVALID) {
-    FX_LOGS(ERROR) << "MemoryStatsFetcherImpl: No root resource"
+  if (stats_ == nullptr) {
+    FX_LOGS(ERROR) << "MemoryStatsFetcherImpl: No kernel stats service"
                    << "present. Reconnecting...";
-    InitializeRootResourceHandle();
+    InitializeKernelStats();
     return false;
   }
-  zx_status_t err = zx_object_get_info(root_resource_handle_, ZX_INFO_KMEM_STATS, mem_stats,
-                                       sizeof(*mem_stats), NULL, NULL);
-  if (err != ZX_OK) {
+  auto result = stats_->GetMemoryStats(mem_stats_buffer_.view());
+  if (result.status() != ZX_OK) {
     FX_LOGS(ERROR) << "MemoryStatsFetcherImpl: Fetching "
-                   << "ZX_INFO_KMEM_STATS through syscall returns " << zx_status_get_string(err);
+                   << "MemoryStats through fuchsia.kernel.Stats returns "
+                   << zx_status_get_string(result.status());
     return false;
   }
+  *mem_stats = &result->stats;
   return true;
 }
 
 // TODO(CF-691) When Component Stats (CS) supports memory metrics,
 // switch to Component Stats / iquery, by creating a new class with the
 // interface MemoryStatsFetcher.
-void MemoryStatsFetcherImpl::InitializeRootResourceHandle() {
+void MemoryStatsFetcherImpl::InitializeKernelStats() {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
     return;
   }
-  static const char kRootResourceSvc[] = "/svc/fuchsia.boot.RootResource";
-  status = fdio_service_connect(kRootResourceSvc, remote.release());
+  static const char kKernelStatsSvc[] = "/svc/fuchsia.kernel.Stats";
+  status = fdio_service_connect(kKernelStatsSvc, remote.release());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
-                   << "Cannot open fuchsia.boot.RootResource: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: Error getting kernel stats. "
+                   << "Cannot open fuchsia.kernel.Stats: " << zx_status_get_string(status);
     return;
   }
-  zx_status_t fidl_status = fuchsia_boot_RootResourceGet(local.get(), &root_resource_handle_);
-  if (fidl_status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
-                   << zx_status_get_string(fidl_status);
-    return;
-  } else if (root_resource_handle_ == ZX_HANDLE_INVALID) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: Failed to get root_resource_handle_.";
-    return;
-  }
+  stats_ = std::make_unique<llcpp::fuchsia::kernel::Stats::SyncClient>(std::move(local));
 }
 
 }  // namespace cobalt

@@ -36,9 +36,9 @@ source_set("system_metrics_daemon_lib") {
     "//src/cobalt/bin/utils:clock",
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//third_party/cobalt/src/registry:buckets_config",
-    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
     "//zircon/system/fidl/fuchsia-cobalt",
     "//zircon/system/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal_c",
+    "//zircon/system/fidl/fuchsia-kernel:llcpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/trace",
@@ -61,8 +61,6 @@ executable("system-metrics") {
 }
 
 package("cobalt_system_metrics") {
-  rootresource_svc = "//build"
-
   deps = [
     ":system-metrics",
   ]

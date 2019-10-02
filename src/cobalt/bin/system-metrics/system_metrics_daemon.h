@@ -147,7 +147,7 @@ class SystemMetricsDaemon {
 
   // Helper function to call Cobalt logger's LogCobaltEvent to log
   // information in one zx_info_kmem_stats_t stats data point.
-  void LogMemoryUsageToCobalt(const zx_info_kmem_stats_t& stats,
+  void LogMemoryUsageToCobalt(const llcpp::fuchsia::kernel::MemoryStats& stats,
                               const std::chrono::seconds& uptime);
 
   // Helper function to translate uptime in seconds to
@@ -159,7 +159,7 @@ class SystemMetricsDaemon {
   // fuchsia_memory_experimental_2.
   // Helper function to call Cobalt logger's LogCobaltEvent to log
   // information in one zx_info_kmem_stats_t stats data point.
-  void LogMemoryUsageToCobalt(const zx_info_kmem_stats_t& stats);
+  void LogMemoryUsageToCobalt(const llcpp::fuchsia::kernel::MemoryStats& stats);
 
   // Fetches and logs system-wide CPU usage.
   //

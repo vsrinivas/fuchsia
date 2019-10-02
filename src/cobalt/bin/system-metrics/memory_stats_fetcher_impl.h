@@ -16,12 +16,13 @@ class MemoryStatsFetcherImpl : public MemoryStatsFetcher {
  public:
   MemoryStatsFetcherImpl();
 
-  bool FetchMemoryStats(zx_info_kmem_stats_t* mem_stats) override;
+  bool FetchMemoryStats(llcpp::fuchsia::kernel::MemoryStats** mem_stats) override;
 
  private:
-  void InitializeRootResourceHandle();
+  void InitializeKernelStats();
 
-  zx_handle_t root_resource_handle_ = ZX_HANDLE_INVALID;
+  fidl::Buffer<llcpp::fuchsia::kernel::Stats::GetMemoryStatsResponse> mem_stats_buffer_;
+  std::unique_ptr<llcpp::fuchsia::kernel::Stats::SyncClient> stats_;
 };
 
 }  // namespace cobalt

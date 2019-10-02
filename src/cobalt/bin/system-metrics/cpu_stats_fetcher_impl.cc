@@ -6,7 +6,6 @@
 
 #include <fcntl.h>
 #include <fuchsia/cobalt/cpp/fidl.h>
-#include <fuchsia/boot/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/resource.h>
@@ -17,7 +16,7 @@
 
 namespace cobalt {
 
-CpuStatsFetcherImpl::CpuStatsFetcherImpl() { InitializeRootResourceHandle(); }
+CpuStatsFetcherImpl::CpuStatsFetcherImpl() { InitializeKernelStats(); }
 
 bool CpuStatsFetcherImpl::FetchCpuPercentage(double *cpu_percentage) {
   TRACE_DURATION("system_metrics", "CpuStatsFetcherImpl::FetchCpuPercentage");
@@ -25,43 +24,42 @@ bool CpuStatsFetcherImpl::FetchCpuPercentage(double *cpu_percentage) {
     return false;
   }
   bool success = CalculateCpuPercentage(cpu_percentage);
-  last_cpu_stats_.swap(cpu_stats_);
+  last_cpu_stats_buffer_.swap(cpu_stats_buffer_);
+  last_cpu_stats_ = cpu_stats_;
 
   last_cpu_fetch_time_ = cpu_fetch_time_;
   return success;
 }
 
 bool CpuStatsFetcherImpl::FetchCpuStats() {
-  if (root_resource_handle_ == ZX_HANDLE_INVALID) {
-    FX_LOGS(ERROR) << "CpuStatsFetcherImpl: No root resource "
+  if (stats_service_ == nullptr) {
+    FX_LOGS(ERROR) << "CpuStatsFetcherImpl: No kernel stats service "
                    << "present. Reconnecting...";
-    InitializeRootResourceHandle();
+    InitializeKernelStats();
     return false;
   }
-  size_t actual, available;
   cpu_fetch_time_ = std::chrono::high_resolution_clock::now();
-  zx_status_t err =
-      zx_object_get_info(root_resource_handle_, ZX_INFO_CPU_STATS, &cpu_stats_[0],
-                         cpu_stats_.size() * sizeof(zx_info_cpu_stats_t), &actual, &available);
-  if (err != ZX_OK) {
+  auto result = stats_service_->GetCpuStats(cpu_stats_buffer_->view());
+  if (result.status() != ZX_OK) {
     FX_LOGS(ERROR) << "CpuStatsFetcherImpl: Fetching "
-                   << "ZX_INFO_CPU_STATS through syscall returns " << zx_status_get_string(err);
+                   << "CpuStats through fuchsia.kernel.Stats returns "
+                   << zx_status_get_string(result.status());
     return false;
   }
-  if (actual < available) {
-    FX_LOGS(WARNING) << "CpuStatsFetcherImpl:  actual CPUs reported " << actual
-                     << " is less than available CPUs " << available
-                     << ". Please increase zx_info_cpu_stats_t vector size!" << sizeof(cpu_stats_);
+  cpu_stats_ = &result->stats;
+  if (cpu_stats_->actual_num_cpus < cpu_stats_->per_cpu_stats.count()) {
+    FX_LOGS(WARNING) << "CpuStatsFetcherImpl:  actual CPUs reported " << cpu_stats_->actual_num_cpus
+                     << " is less than available CPUs " << cpu_stats_->per_cpu_stats.count();
     return false;
   }
   if (num_cpu_cores_ == 0) {
-    num_cpu_cores_ = actual;
+    num_cpu_cores_ = cpu_stats_->actual_num_cpus;
   }
   return true;
 }
 
 bool CpuStatsFetcherImpl::CalculateCpuPercentage(double *cpu_percentage) {
-  if (last_cpu_stats_.empty()) {
+  if (last_cpu_stats_ == nullptr) {
     return false;
   }
   auto elapsed_time =
@@ -69,8 +67,8 @@ bool CpuStatsFetcherImpl::CalculateCpuPercentage(double *cpu_percentage) {
           .count();
   double cpu_percentage_sum = 0;
   for (size_t i = 0; i < num_cpu_cores_; i++) {
-    zx_duration_t delta_idle_time =
-        zx_duration_sub_duration(cpu_stats_[i].idle_time, last_cpu_stats_[i].idle_time);
+    zx_duration_t delta_idle_time = zx_duration_sub_duration(
+        cpu_stats_->per_cpu_stats[i].idle_time(), last_cpu_stats_->per_cpu_stats[i].idle_time());
     zx_duration_t delta_busy_time =
         (delta_idle_time > elapsed_time ? 0 : elapsed_time - delta_idle_time);
     cpu_percentage_sum +=
@@ -84,28 +82,24 @@ bool CpuStatsFetcherImpl::CalculateCpuPercentage(double *cpu_percentage) {
 // TODO(CF-691) When Component Stats (CS) supports cpu metrics,
 // switch to Component Stats / iquery, by creating a new class with the
 // interface CpuStatsFetcher.
-void CpuStatsFetcherImpl::InitializeRootResourceHandle() {
+void CpuStatsFetcherImpl::InitializeKernelStats() {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
     return;
   }
-  static const char kRootResourceSvc[] = "/svc/fuchsia.boot.RootResource";
-  status = fdio_service_connect(kRootResourceSvc, remote.release());
+  static const char kKernelStatsSvc[] = "/svc/fuchsia.kernel.Stats";
+  status = fdio_service_connect(kKernelStatsSvc, remote.release());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
-                   << "Cannot open fuchsia.boot.RootResource: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: Error getting kernel stats. "
+                   << "Cannot open fuchsia.kernel.Stats: " << zx_status_get_string(status);
     return;
   }
-  zx_status_t fidl_status = fuchsia_boot_RootResourceGet(local.get(), &root_resource_handle_);
-  if (fidl_status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
-                   << zx_status_get_string(fidl_status);
-    return;
-  } else if (root_resource_handle_ == ZX_HANDLE_INVALID) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: Failed to get root_resource_handle_.";
-    return;
-  }
+  cpu_stats_buffer_ =
+      std::make_unique<fidl::Buffer<llcpp::fuchsia::kernel::Stats::GetCpuStatsResponse>>();
+  last_cpu_stats_buffer_ =
+      std::make_unique<fidl::Buffer<llcpp::fuchsia::kernel::Stats::GetCpuStatsResponse>>();
+  stats_service_ = std::make_unique<llcpp::fuchsia::kernel::Stats::SyncClient>(std::move(local));
 }
 
 }  // namespace cobalt
