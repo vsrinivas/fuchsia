@@ -12,30 +12,30 @@ namespace dockyard {
 
 uint64_t MessageRequest::next_request_id_ = 0u;
 
-Dockyard::Dockyard() {}
+Dockyard::Dockyard() = default;
 
-Dockyard::~Dockyard() {}
+Dockyard::~Dockyard() = default;
 
 void Dockyard::AddSample(DockyardId dockyard_id, Sample sample) {}
 
-void Dockyard::AddSamples(DockyardId dockyard_id, std::vector<Sample> samples) {
-}
+void Dockyard::AddSamples(DockyardId dockyard_id,
+                          const std::vector<Sample>& samples) {}
 
 SampleTimeNs Dockyard::DeviceDeltaTimeNs() const { return 0; }
 
-void Dockyard::SetDeviceTimeDeltaNs(SampleTimeNs delta_ns) {}
+void Dockyard::SetDeviceTimeDeltaNs(SampleTimeNs /*delta_ns*/) {}
 
 SampleTimeNs Dockyard::LatestSampleTimeNs() const { return 0; }
 
-DockyardId Dockyard::GetDockyardId(const std::string& dockyard_path) {
+DockyardId Dockyard::GetDockyardId(const std::string& /*dockyard_path*/) {
   return 0;
 }
-bool Dockyard::GetDockyardPath(DockyardId dockyard_id,
-                               std::string* dockyard_path) const {
+bool Dockyard::GetDockyardPath(DockyardId /*dockyard_id*/,
+                               std::string* /*dockyard_path*/) const {
   return false;
 }
-DockyardPathToIdMap Dockyard::MatchPaths(const std::string& starting,
-                                         const std::string& ending) const {
+DockyardPathToIdMap Dockyard::MatchPaths(const std::string& /*starting*/,
+                                         const std::string& /*ending*/) const {
   DockyardPathToIdMap result;
   return result;
 }
@@ -72,21 +72,21 @@ void Dockyard::ResetHarvesterData() {
   }
 }
 
-void Dockyard::GetStreamSets(StreamSetsRequest&& request,
-                             OnStreamSetsCallback callback) {}
+void Dockyard::GetStreamSets(StreamSetsRequest&& /*request*/,
+                             OnStreamSetsCallback /*callback*/) {}
 
-void Dockyard::OnConnection(MessageType message_type,
-                            uint32_t harvester_version) {}
+void Dockyard::OnConnection(MessageType /*message_type*/,
+                            uint32_t /*harvester_version*/) {}
 
-bool Dockyard::StartCollectingFrom(ConnectionRequest&& request,
-                                   OnConnectionCallback callback) {
+bool Dockyard::StartCollectingFrom(ConnectionRequest&& /*request*/,
+                                   OnConnectionCallback /*callback*/) {
   return true;
 }
 
 void Dockyard::StopCollectingFromDevice() {}
 
 OnPathsCallback Dockyard::SetDockyardPathsHandler(OnPathsCallback callback) {
-  on_paths_handler_ = callback;
+  on_paths_handler_ = std::move(callback);
   return nullptr;
 }
 
@@ -98,18 +98,19 @@ std::ostringstream Dockyard::DebugDump() const {
   return out;
 }
 
-std::ostream& operator<<(std::ostream& out, const StreamSetsRequest& request) {
+std::ostream& operator<<(std::ostream& out,
+                         const StreamSetsRequest& /*request*/) {
   return out;
 }
 
 std::ostream& operator<<(std::ostream& out,
-                         const StreamSetsResponse& response) {
+                         const StreamSetsResponse& /*response*/) {
   return out;
 }
 
-std::ostringstream DebugPrintQuery(const Dockyard& dockyard,
-                                   const StreamSetsRequest& request,
-                                   const StreamSetsResponse& response) {
+std::ostringstream DebugPrintQuery(const Dockyard& /*dockyard*/,
+                                   const StreamSetsRequest& /*request*/,
+                                   const StreamSetsResponse& /*response*/) {
   std::ostringstream out;
   return out;
 }

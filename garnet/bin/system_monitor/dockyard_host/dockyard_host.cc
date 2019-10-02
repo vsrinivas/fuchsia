@@ -29,10 +29,10 @@ std::vector<V> GetMapValues(std::map<K, V> input) {
 // Test a multi-step query. First the set of named kernel objects is collected,
 // then the IDs are determined, the IDs are translated into strings, and final
 // results are printed to the log.
-void TestFetchKoidNames(DockyardHost& dockyard_host,
-                        dockyard::Dockyard& dockyard) {
+void TestFetchKoidNames(DockyardHost* dockyard_host,
+                        const dockyard::Dockyard& dockyard) {
   dockyard::DockyardPathToIdMap paths = dockyard.MatchPaths("koid:", ":name");
-  auto names = dockyard_host.GetSampleStringsForIds(GetMapValues(paths));
+  auto names = dockyard_host->GetSampleStringsForIds(GetMapValues(paths));
   if (!names) {
     return;
   }
@@ -135,7 +135,7 @@ std::optional<std::string> DockyardHost::GetSampleString(
 
 std::optional<std::vector<const std::string>>
 DockyardHost::GetSampleStringsForIds(
-    const std::vector<dockyard::DockyardId> path_ids) {
+    const std::vector<dockyard::DockyardId>& path_ids) {
   auto future = GetSamples(path_ids);
   if (!future) {
     return {};
@@ -184,7 +184,7 @@ void DockyardHost::OnConnection(const std::string& device_name) {
     }
 
     // Print a list of all the named kernel objects.
-    TestFetchKoidNames(*this, dockyard_);
+    TestFetchKoidNames(this, dockyard_);
   });
 }
 

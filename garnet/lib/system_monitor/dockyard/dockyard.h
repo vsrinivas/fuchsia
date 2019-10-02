@@ -418,7 +418,7 @@ class Dockyard {
 
   // Insert sample information for a given dockyard_id. Not intended for use by
   // the GUI.
-  void AddSamples(DockyardId dockyard_id, std::vector<Sample> samples);
+  void AddSamples(DockyardId dockyard_id, const std::vector<Sample>& samples);
 
   // The *approximate* difference between host time and device time. This value
   // is negotiated at connection time and not reevaluated. If either clock is

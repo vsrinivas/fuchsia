@@ -246,7 +246,8 @@ void Dockyard::AddSample(DockyardId dockyard_id, Sample sample) {
   }
 }
 
-void Dockyard::AddSamples(DockyardId dockyard_id, std::vector<Sample> samples) {
+void Dockyard::AddSamples(DockyardId dockyard_id,
+                          const std::vector<Sample>& samples) {
   std::lock_guard<std::mutex> guard(mutex_);
   if (ignore_dockyard_ids_.find(dockyard_id) != ignore_dockyard_ids_.end()) {
     return;
@@ -471,7 +472,7 @@ void Dockyard::RunGrpcServer() {
 OnPathsCallback Dockyard::SetDockyardPathsHandler(OnPathsCallback callback) {
   assert(!server_thread_.joinable());
   auto old_handler = on_paths_handler_;
-  on_paths_handler_ = callback;
+  on_paths_handler_ = std::move(callback);
   return old_handler;
 }
 
@@ -559,7 +560,7 @@ void Dockyard::ProcessSingleRequest(const StreamSetsRequest& request,
 }
 
 void Dockyard::ComputeAveragePerColumn(
-    DockyardId dockyard_id, const SampleStream& sample_stream,
+    DockyardId /*dockyard_id*/, const SampleStream& sample_stream,
     const StreamSetsRequest& request, std::vector<SampleValue>* samples) const {
   // To calculate the slope, a range of time is needed. |prior_time| and
   // |start_time| define that range. The very first |prior_time| is one stride
@@ -602,7 +603,7 @@ void Dockyard::ComputeAveragePerColumn(
 }
 
 void Dockyard::ComputeHighestPerColumn(
-    DockyardId dockyard_id, const SampleStream& sample_stream,
+    DockyardId /*dockyard_id*/, const SampleStream& sample_stream,
     const StreamSetsRequest& request, std::vector<SampleValue>* samples) const {
   // To calculate the slope, a range of time is needed. |prior_time| and
   // |start_time| define that range. The very first |prior_time| is one stride
@@ -646,7 +647,7 @@ void Dockyard::ComputeHighestPerColumn(
   }
 }
 
-void Dockyard::ComputeLowestPerColumn(DockyardId dockyard_id,
+void Dockyard::ComputeLowestPerColumn(DockyardId /*dockyard_id*/,
                                       const SampleStream& sample_stream,
                                       const StreamSetsRequest& request,
                                       std::vector<SampleValue>* samples) const {
@@ -691,7 +692,7 @@ void Dockyard::ComputeLowestPerColumn(DockyardId dockyard_id,
   }
 }
 
-void Dockyard::ComputeRecent(DockyardId dockyard_id,
+void Dockyard::ComputeRecent(DockyardId /*dockyard_id*/,
                              const SampleStream& sample_stream,
                              const StreamSetsRequest& request,
                              std::vector<SampleValue>* samples) const {
@@ -733,8 +734,8 @@ void Dockyard::ComputeRecent(DockyardId dockyard_id,
 }
 
 void Dockyard::NormalizeResponse(DockyardId dockyard_id,
-                                 const SampleStream& sample_stream,
-                                 const StreamSetsRequest& request,
+                                 const SampleStream& /*sample_stream*/,
+                                 const StreamSetsRequest& /*request*/,
                                  std::vector<SampleValue>* samples) const {
   auto low_high = sample_stream_low_high_.find(dockyard_id);
   SampleValue lowest = low_high->second.first;
@@ -805,7 +806,7 @@ void Dockyard::ComputeSculpted(DockyardId dockyard_id,
   }
 }
 
-void Dockyard::ComputeSmoothed(DockyardId dockyard_id,
+void Dockyard::ComputeSmoothed(DockyardId /*dockyard_id*/,
                                const SampleStream& sample_stream,
                                const StreamSetsRequest& request,
                                std::vector<SampleValue>* samples) const {

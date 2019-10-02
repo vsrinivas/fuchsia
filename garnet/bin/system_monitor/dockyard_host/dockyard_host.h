@@ -44,7 +44,7 @@ class DockyardHost {
 
   // Get a list of string results for a given list of Dockyard IDs.
   std::optional<std::vector<const std::string>> GetSampleStringsForIds(
-      std::vector<dockyard::DockyardId> path_ids);
+      const std::vector<dockyard::DockyardId>& path_ids);
 
   // Access the host's Dockyard instance.
   dockyard::Dockyard& Dockyard() { return dockyard_; }
