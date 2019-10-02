@@ -835,7 +835,7 @@ TEST(ZxTestAssertionTest, NonVoidHelperTestNonFatalFailures) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionTest, AssertNoFailrues) {
+TEST(ZxTestAssertionTest, AssertNoFailures) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failed to detect non fatal failure");
   ASSERT_NO_FAILURES(HasExpects());
   TEST_CHECKPOINT();
