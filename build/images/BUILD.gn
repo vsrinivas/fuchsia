@@ -730,13 +730,10 @@ generated_file("zxcrypt_config.txt") {
   contents = zxcrypt_key_source
 }
 
-coordinator_label =
-    "//src/devices/coordinator:coordinator.bootfs"
-coordinator_target_dir =
-    get_label_info(coordinator_label, "target_out_dir")
+coordinator_label = "//src/devices/coordinator:coordinator.bootfs"
+coordinator_target_dir = get_label_info(coordinator_label, "target_out_dir")
 coordinator_target_name = get_label_info(coordinator_label, "name")
-coordinator_manifest =
-    coordinator_target_dir + "/" + coordinator_target_name
+coordinator_manifest = coordinator_target_dir + "/" + coordinator_target_name
 
 component_manager_label = "//src/sys/component_manager:component_manager.bootfs"
 component_manager_target_dir =
