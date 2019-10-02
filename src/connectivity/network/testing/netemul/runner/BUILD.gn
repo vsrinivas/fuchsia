@@ -67,6 +67,7 @@ source_set("src") {
     "//src/connectivity/network/testing/netemul/lib/network:netdump",
     "//src/connectivity/network/testing/netemul/lib/sync:sync_service",
     "//src/lib/fxl",
+    "//src/lib/pkg_url",
     "//src/virtualization/lib/guest_interaction:fuchsia.netemul.guest",
     "//src/virtualization/tests:guest_console",
     "//src/virtualization/tests:mock_netstack",
