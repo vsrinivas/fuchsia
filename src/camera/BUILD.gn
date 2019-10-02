@@ -11,6 +11,7 @@ group("camera") {
   testonly = true
   deps = [
     "calibration",
+    "camera_manager2",
     "drivers",
   ]
 }
@@ -19,12 +20,12 @@ group("tests") {
   testonly = true
 
   deps = [
-    "drivers/hw_accel/gdc/test:gdc-task",
-    "drivers/hw_accel/ge2d/test:ge2d-task",
-    "drivers/isp/mali-009/test:mali_009_test",
-    "drivers/isp/modules/test:modules_bin",
-    "drivers/test_utils/test:test_utils_test",
+    ":camera_full_on_device_test",
+    ":camera_full_test",
+    "camera_manager2:tests",
     "examples/demo",
+    "simple_camera/simple_camera_lib:camera_tests",
+    "test/camera_client_test",
   ]
 }
 
@@ -32,6 +33,7 @@ test_package("camera_full_test") {
   deps = [
     "//src/camera/calibration/blc/test:blc_test",
     "//src/camera/calibration/image_writer/test:image_writer_test",
+    "//src/camera/camera_manager2/test:camera-manager-test",
     "//src/camera/drivers/controller/test:controller-test",
     "//src/camera/drivers/hw_accel/gdc/test:gdc-task",
     "//src/camera/drivers/hw_accel/ge2d/test:ge2d-task",
@@ -105,6 +107,11 @@ test_package("camera_full_test") {
     {
       name = "blc_test"
       manifest = "calibration/blc/test/meta/blc_test.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "camera-manager-test"
+      manifest = "camera_manager2/test/meta/camera_manager_test.cmx"
       environments = basic_envs
     },
 

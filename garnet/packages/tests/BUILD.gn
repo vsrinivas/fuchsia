@@ -305,8 +305,6 @@ group("all") {
     ":battery_manager",
     ":bluetooth",
     ":boringssl",
-    ":camera_client",
-    ":camera_driver",
     ":carnelian",
     ":catapult_converter",
     ":chrealm",
@@ -818,22 +816,6 @@ group("fidl_compatibility_test") {
     ":fidl_compatibility_test_server_llcpp",
     ":fidl_compatibility_test_server_rust",
     "//garnet/bin/fidl_compatibility_test",
-  ]
-}
-
-group("camera_client") {
-  testonly = true
-  public_deps = [
-    "//src/camera/simple_camera/simple_camera_lib:camera_tests",
-    "//src/camera/test/camera_client_test",
-  ]
-}
-
-group("camera_driver") {
-  testonly = true
-  public_deps = [
-    "//src/camera:camera_full_on_device_test",
-    "//src/camera:camera_full_test",
   ]
 }
 

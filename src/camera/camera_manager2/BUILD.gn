@@ -1,0 +1,77 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("lib") {
+  sources = [
+    "camera_manager_app.cc",
+    "camera_manager_app.h",
+  ]
+
+  deps = [
+    "//zircon/public/lib/fzl",
+    "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fsl",
+    "//sdk/fidl/fuchsia.camera2:fuchsia.camera2",
+    "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/fbl",
+    "//zircon/system/fidl/fuchsia-sysmem",
+  ]
+}
+
+executable("bin") {
+  output_name = "camera_manager2"
+
+  sources = [
+    "camera_manager2.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+  ]
+}
+
+package("camera_manager2") {
+  deps = [
+    ":bin",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/camera_manager2.cmx")
+      dest = "camera_manager2.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "camera_manager2"
+    },
+  ]
+}
+
+# This group is used to signal that the camera-manager-test needs
+# the camera manager to be in the build for the test to run.
+group("tests") {
+  testonly = true
+  deps = [
+    ":camera_manager2",
+    "test:camera-manager-test",
+  ]
+}

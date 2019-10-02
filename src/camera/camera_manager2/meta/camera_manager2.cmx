@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "bin/camera_manager2"
+    },
+    "sandbox": {
+        "dev": [
+            "class/camera"
+        ],
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.sysmem.Allocator"
+        ]
+    }
+}
