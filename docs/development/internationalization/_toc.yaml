@@ -8,3 +8,5 @@ toc:
   path: /docs/development/internationalization/icu.md
 - title: "ICU data"
   path: /docs/development/internationalization/icu_data.md
+- title: "Localizing mods"
+  path: /docs/development/internationalization/localizing_mods.md
