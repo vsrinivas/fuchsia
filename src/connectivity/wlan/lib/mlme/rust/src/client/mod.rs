@@ -20,7 +20,7 @@ use {
         big_endian::BigEndianU16,
         buffer_writer::BufferWriter,
         frame_len,
-        mac::{self, OptionalField, Presence},
+        mac::{self, Aid, OptionalField, Presence},
         sequence::SequenceManager,
     },
     zerocopy::ByteSlice,
@@ -276,6 +276,18 @@ impl ClientStation {
         if let Err(e) = result {
             error!("error sending MLME-EAPOL.confirm message: {}", e);
         }
+    }
+
+    pub fn send_ps_poll_frame(&mut self, aid: Aid) -> Result<(), Error> {
+        const FRAME_LEN: usize = frame_len!(mac::PsPoll);
+        let mut buf = self.buf_provider.get_buffer(FRAME_LEN)?;
+        let mut w = BufferWriter::new(&mut buf[..]);
+        write_ps_poll_frame(&mut w, aid, self.bssid, self.iface_mac)?;
+        let bytes_written = w.bytes_written();
+        let out_buf = OutBuf::from(buf, bytes_written);
+        self.device
+            .send_wlan_frame(out_buf, TxFlags::NONE)
+            .map_err(|s| Error::Status(format!("error sending PS-Poll frame"), s))
     }
 
     pub fn handle_timed_event(&mut self, event_id: EventId) {
@@ -638,5 +650,16 @@ mod tests {
 
         // Verify EAPoL frame was not sent over the air.
         assert!(fake_device.wlan_queue.is_empty());
+    }
+
+    #[test]
+    fn send_ps_poll_frame() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut client = make_client_station(
+            fake_device.as_device_fail_wlan_tx(),
+            fake_scheduler.as_scheduler(),
+        );
+        client.send_ps_poll_frame(0xABCD);
     }
 }
