@@ -7,9 +7,6 @@
         }
     },
     "program": {
-        "args": [
-            "--test-threads=1"
-        ],
         "binary": "test/pkg-resolver-test"
     },
     "sandbox": {
