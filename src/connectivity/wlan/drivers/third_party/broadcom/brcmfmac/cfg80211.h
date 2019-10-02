@@ -237,7 +237,7 @@ enum wl_escan_state { WL_ESCAN_STATE_IDLE, WL_ESCAN_STATE_SCANNING };
 
 struct escan_info {
   uint32_t escan_state;
-  struct wiphy* wiphy;
+  uint8_t* escan_buf;
   struct brcmf_if* ifp;
   zx_status_t (*run)(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
                      const wlanif_scan_req_t* request);
@@ -282,8 +282,6 @@ enum brcmf_disconnect_mode { BRCMF_DISCONNECT_DEAUTH, BRCMF_DISCONNECT_DISASSOC 
 /**
  * struct brcmf_cfg80211_info - dongle private data of cfg80211 interface
  *
- * @wiphy: wiphy object for cfg80211 interface.
- * @ops: pointer to copy of ops as registered with wiphy object.
  * @conf: dongle configuration.
  * @p2p: peer-to-peer specific information.
  * @btcoex: Bluetooth coexistence information.
@@ -319,7 +317,6 @@ enum brcmf_disconnect_mode { BRCMF_DISCONNECT_DEAUTH, BRCMF_DISCONNECT_DISASSOC 
  * @pno: information of pno module.
  */
 struct brcmf_cfg80211_info {
-  struct wiphy* wiphy;
   struct brcmf_cfg80211_conf* conf;
   struct brcmf_p2p_info p2p;
   struct brcmf_btcoex_info* btcoex;
@@ -368,30 +365,10 @@ struct brcmf_tlv {
   uint8_t data[1];
 };
 
-static inline struct wiphy* cfg_to_wiphy(struct brcmf_cfg80211_info* cfg) { return cfg->wiphy; }
-
-static inline struct brcmf_cfg80211_info* wiphy_to_cfg(struct wiphy* w) { return w->cfg80211_info; }
-
-static inline struct brcmf_cfg80211_info* wdev_to_cfg(struct wireless_dev* wd) {
-  return wd->cfg80211_info;
-}
-
 static inline struct net_device* cfg_to_ndev(struct brcmf_cfg80211_info* cfg) {
   struct brcmf_cfg80211_vif* vif;
   vif = list_peek_head_type(&cfg->vif_list, struct brcmf_cfg80211_vif, list);
   return vif->wdev.netdev;
-}
-
-static inline struct brcmf_cfg80211_info* ndev_to_cfg(struct net_device* ndev) {
-  return wdev_to_cfg(ndev->ieee80211_ptr);
-}
-
-static inline struct wiphy* ndev_to_wiphy(struct net_device* ndev) {
-  return ndev->ieee80211_ptr->wiphy;
-}
-
-static inline struct net_device* wiphy_to_ndev(struct wiphy* wiphy) {
-  return cfg_to_ndev(wiphy_to_cfg(wiphy));
 }
 
 static inline struct brcmf_if* ndev_to_if(struct net_device* ndev) {

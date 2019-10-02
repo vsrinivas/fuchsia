@@ -442,8 +442,7 @@ zx_status_t brcmf_p2p_ifchange(struct brcmf_cfg80211_info* cfg,
   return err;
 }
 
-zx_status_t brcmf_p2p_start_device(struct wiphy* wiphy, struct wireless_dev* wdev) {
-  struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
+zx_status_t brcmf_p2p_start_device(struct brcmf_cfg80211_info* cfg, struct wireless_dev* wdev) {
   struct brcmf_p2p_info* p2p = &cfg->p2p;
   struct brcmf_cfg80211_vif* vif;
   zx_status_t err;
@@ -458,8 +457,7 @@ zx_status_t brcmf_p2p_start_device(struct wiphy* wiphy, struct wireless_dev* wde
   return err;
 }
 
-void brcmf_p2p_stop_device(struct wiphy* wiphy, struct wireless_dev* wdev) {
-  struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
+void brcmf_p2p_stop_device(struct brcmf_cfg80211_info* cfg, struct wireless_dev* wdev) {
   struct brcmf_p2p_info* p2p = &cfg->p2p;
   struct brcmf_cfg80211_vif* vif;
 

@@ -24,7 +24,6 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_LINUXISMS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_LINUXISMS_H_
 
-#include <ddk/debug.h>
 #include <netinet/if_ether.h>
 #include <pthread.h>
 #include <stdarg.h>
@@ -36,6 +35,8 @@
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
+#include <ddk/debug.h>
 
 typedef uint16_t __be16;
 typedef uint32_t __be32;
@@ -337,35 +338,6 @@ struct regulatory_request {
     int initiator;
 };
 
-struct wiphy {
-    int max_sched_scan_reqs;
-    int max_sched_scan_plan_interval;
-    int max_sched_scan_ie_len;
-    int max_match_sets;
-    int max_sched_scan_ssids;
-    uint32_t rts_threshold;
-    uint32_t frag_threshold;
-    uint32_t retry_long;
-    uint32_t retry_short;
-    uint32_t interface_modes;
-    uint32_t max_scan_ssids;
-    uint32_t max_scan_ie_len;
-    uint32_t max_num_pmkids;
-    struct mac_address* addresses;
-    uint32_t n_addresses;
-    uint32_t signal_type;
-    const uint32_t* cipher_suites;
-    uint32_t n_cipher_suites;
-    uint32_t bss_select_support;
-    uint32_t flags;
-    const struct ieee80211_txrx_stypes* mgmt_stypes;
-    uint32_t max_remain_on_channel_duration;
-    uint32_t n_vendor_commands;
-    const struct wiphy_vendor_command* vendor_commands;
-    uint8_t perm_addr[ETH_ALEN];
-    struct brcmf_cfg80211_info* cfg80211_info;
-};
-
 struct vif_params {
     uint8_t macaddr[ETH_ALEN];
 };
@@ -374,8 +346,6 @@ struct wireless_dev {
     struct net_device* netdev;
     uint16_t iftype;
     uint8_t address[ETH_ALEN];
-    struct wiphy* wiphy;
-    struct brcmf_cfg80211_info* cfg80211_info;
 };
 
 // This stubs the use of struct sdio_func, which we only use for locking.
@@ -449,15 +419,6 @@ struct cfg80211_sched_scan_request {
     } * scan_plans;
     uint8_t mac_addr_mask[ETH_ALEN];
     struct cfg80211_match_set match_sets[123];
-};
-
-struct wiphy_vendor_command {
-    struct {
-        int vendor_id;
-        int subcmd;
-    } unknown_name;
-    uint32_t flags;
-    zx_status_t (*doit)(struct wiphy* wiphy, struct wireless_dev* wdev, const void* data, int len);
 };
 
 struct iface_combination_params {

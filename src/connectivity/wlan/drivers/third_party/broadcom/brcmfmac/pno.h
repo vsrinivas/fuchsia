@@ -47,14 +47,6 @@ zx_status_t brcmf_pno_start_sched_scan(struct brcmf_if* ifp,
 zx_status_t brcmf_pno_stop_sched_scan(struct brcmf_if* ifp, uint64_t reqid);
 
 /**
- * brcmf_pno_wiphy_params - fill scheduled scan parameters in wiphy instance.
- *
- * @wiphy: wiphy instance to be used.
- * @gscan: indicates whether the device has support for g-scan feature.
- */
-void brcmf_pno_wiphy_params(struct wiphy* wiphy, bool gscan);
-
-/**
  * brcmf_pno_attach - allocate and attach module information.
  *
  * @cfg: cfg80211 context used.

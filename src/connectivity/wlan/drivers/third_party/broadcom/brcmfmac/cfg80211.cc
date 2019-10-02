@@ -224,7 +224,7 @@ static zx_status_t brcmf_vif_change_validate(struct brcmf_cfg80211_info* cfg,
   }
 
   if (check_combos) {
-    ret = cfg80211_check_combinations(cfg->wiphy, &params);
+    ret = cfg80211_check_combinations(cfg, &params);
   }
 
   return ret;
@@ -241,7 +241,7 @@ static zx_status_t brcmf_vif_add_validate(struct brcmf_cfg80211_info* cfg, uint1
   }
 
   params.iftype_num[new_type]++;
-  return cfg80211_check_combinations(cfg->wiphy, &params);
+  return cfg80211_check_combinations(cfg, &params);
 }
 
 static void convert_key_from_CPU(struct brcmf_wsec_key* key, struct brcmf_wsec_key_le* key_le) {
@@ -328,13 +328,12 @@ static zx_status_t brcmf_cfg80211_request_ap_if(struct brcmf_if* ifp) {
 /**
  * brcmf_ap_add_vif() - create a new AP virtual interface for multiple BSS
  *
- * @wiphy: wiphy device of new interface.
+ * @cfg: config of new interface.
  * @name: name of the new interface.
  * @params: contains mac address for AP device.
  */
-static zx_status_t brcmf_ap_add_vif(struct wiphy* wiphy, const char* name,
+static zx_status_t brcmf_ap_add_vif(struct brcmf_cfg80211_info* cfg, const char* name,
                                     struct vif_params* params, struct wireless_dev** dev_out) {
-  struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
   struct brcmf_if* ifp = cfg_to_if(cfg);
   struct brcmf_cfg80211_vif* vif;
   zx_status_t err;
@@ -405,13 +404,13 @@ static bool brcmf_is_apmode(struct brcmf_cfg80211_vif* vif) {
   return iftype == WLAN_INFO_MAC_ROLE_AP;
 }
 
-zx_status_t brcmf_cfg80211_add_iface(struct wiphy* wiphy, const char* name,
-                                     unsigned char name_assign_type, uint16_t type,
-                                     struct vif_params* params, struct wireless_dev** wdev_out) {
+zx_status_t brcmf_cfg80211_add_iface(struct brcmf_cfg80211_info* cfg, const char* name,
+                                     uint16_t type, struct vif_params* params,
+                                     struct wireless_dev** wdev_out) {
   zx_status_t err;
 
   BRCMF_DBG(TRACE, "enter: %s type %d\n", name, type);
-  err = brcmf_vif_add_validate(wiphy_to_cfg(wiphy), type);
+  err = brcmf_vif_add_validate(cfg, type);
   if (err != ZX_OK) {
     BRCMF_ERR("iface validation failed: err=%d\n", err);
     if (wdev_out) {
@@ -421,7 +420,7 @@ zx_status_t brcmf_cfg80211_add_iface(struct wiphy* wiphy, const char* name,
   }
   switch (type) {
     case WLAN_INFO_MAC_ROLE_AP:
-      err = brcmf_ap_add_vif(wiphy, name, params, wdev_out);
+      err = brcmf_ap_add_vif(cfg, name, params, wdev_out);
       break;
     default:
       if (wdev_out) {
@@ -558,8 +557,9 @@ zx_status_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
   return err;
 }
 
-static zx_status_t brcmf_cfg80211_change_iface(struct wiphy* wiphy, struct net_device* ndev,
-                                               uint16_t type, struct vif_params* params) {
+static zx_status_t brcmf_cfg80211_change_iface(struct brcmf_cfg80211_info* cfg,
+                                               struct net_device* ndev, uint16_t type,
+                                               struct vif_params* params) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_cfg80211_vif* vif = ifp->vif;
   int32_t infra = 0;
@@ -569,7 +569,7 @@ static zx_status_t brcmf_cfg80211_change_iface(struct wiphy* wiphy, struct net_d
 
   BRCMF_DBG(TRACE, "Enter");
 
-  err = brcmf_vif_change_validate(wiphy_to_cfg(wiphy), vif, type);
+  err = brcmf_vif_change_validate(cfg, vif, type);
   if (err != ZX_OK) {
     BRCMF_ERR("iface validation failed: err=%d\n", err);
     return err;
@@ -598,7 +598,7 @@ static zx_status_t brcmf_cfg80211_change_iface(struct wiphy* wiphy, struct net_d
     }
     BRCMF_DBG(INFO, "IF Type = Infra");
   }
-  ndev->ieee80211_ptr->iftype = type;
+  vif->wdev.iftype = type;
 
   brcmf_cfg80211_update_proto_addr_mode(&vif->wdev);
 
@@ -736,7 +736,6 @@ static zx_status_t brcmf_do_escan(struct brcmf_if* ifp, const wlanif_scan_req_t*
 
   BRCMF_DBG(SCAN, "Enter\n");
   escan->ifp = ifp;
-  escan->wiphy = cfg->wiphy;
   escan->escan_state = WL_ESCAN_STATE_SCANNING;
 
   brcmf_scan_config_mpc(ifp, 0);
@@ -759,8 +758,7 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t
     return ZX_ERR_IO;
   }
 
-  struct wiphy* wiphy = ndev_to_wiphy(ndev);
-  struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
+  struct brcmf_cfg80211_info* cfg = ndev_to_if(ndev)->drvr->config;
 
   if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
     BRCMF_ERR("Scanning already: status (%lu)\n", cfg->scan_status.load());
@@ -869,7 +867,7 @@ static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t reaso
 }
 
 static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t reason) {
-  struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(vif->wdev.wiphy);
+  struct brcmf_cfg80211_info* cfg = vif->ifp->drvr->config;
   zx_status_t err = ZX_OK;
 
   BRCMF_DBG(TRACE, "Enter\n");
@@ -1201,8 +1199,8 @@ done:
   return status;
 }
 
-static zx_status_t brcmf_cfg80211_del_key(struct wiphy* wiphy, struct net_device* ndev,
-                                          uint8_t key_idx, bool pairwise, const uint8_t* mac_addr) {
+static zx_status_t brcmf_cfg80211_del_key(struct net_device* ndev, uint8_t key_idx, bool pairwise,
+                                          const uint8_t* mac_addr) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_wsec_key* key;
   zx_status_t err;
@@ -1237,8 +1235,8 @@ static zx_status_t brcmf_cfg80211_del_key(struct wiphy* wiphy, struct net_device
   return err;
 }
 
-static zx_status_t brcmf_cfg80211_add_key(struct wiphy* wiphy, struct net_device* ndev,
-                                          const set_key_descriptor_t* req) {
+static zx_status_t brcmf_cfg80211_add_key(struct net_device* ndev,
+    const set_key_descriptor_t* req) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_wsec_key* key;
   int32_t val;
@@ -1262,7 +1260,7 @@ static zx_status_t brcmf_cfg80211_add_key(struct wiphy* wiphy, struct net_device
   }
 
   if (req->key_count == 0) {
-    return brcmf_cfg80211_del_key(wiphy, ndev, key_idx, pairwise, mac_addr);
+    return brcmf_cfg80211_del_key(ndev, key_idx, pairwise, mac_addr);
   }
 
   if (req->key_count > sizeof(key->data)) {
@@ -1440,10 +1438,9 @@ void brcmf_cfg80211_rx(struct brcmf_if* ifp, struct brcmf_netbuf* packet) {
   brcmu_pkt_buf_free_netbuf(packet);
 }
 
-static void brcmf_return_scan_result(struct wiphy* wiphy, uint16_t channel, const uint8_t* bssid,
-                                     uint16_t capability, uint16_t interval, uint8_t* ie,
-                                     size_t ie_len, int16_t rssi_dbm) {
-  struct net_device* ndev = wiphy_to_ndev(wiphy);
+static void brcmf_return_scan_result(struct net_device* ndev, uint16_t channel,
+                                     const uint8_t* bssid, uint16_t capability, uint16_t interval,
+                                     uint8_t* ie, size_t ie_len, int16_t rssi_dbm) {
   wlanif_scan_result_t result = {};
 
   if (!ndev->scan_busy) {
@@ -1471,9 +1468,8 @@ static void brcmf_return_scan_result(struct wiphy* wiphy, uint16_t channel, cons
   wlanif_impl_ifc_on_scan_result(&ndev->if_proto, &result);
 }
 
-static zx_status_t brcmf_inform_single_bss(struct brcmf_cfg80211_info* cfg,
+static zx_status_t brcmf_inform_single_bss(struct net_device* ndev, struct brcmf_cfg80211_info* cfg,
                                            struct brcmf_bss_info_le* bi) {
-  struct wiphy* wiphy = cfg_to_wiphy(cfg);
   struct brcmu_chan ch;
   uint16_t channel;
   uint16_t notify_capability;
@@ -1510,7 +1506,7 @@ static zx_status_t brcmf_inform_single_bss(struct brcmf_cfg80211_info* cfg,
     brcmf_iedump(notify_ie, notify_ielen);
   }
 
-  brcmf_return_scan_result(wiphy, (uint8_t)channel, (const uint8_t*)bi->BSSID, notify_capability,
+  brcmf_return_scan_result(ndev, (uint8_t)channel, (const uint8_t*)bi->BSSID, notify_capability,
                            notify_interval, notify_ie, notify_ielen, notify_rssi_dbm);
 
   return ZX_OK;
@@ -1549,6 +1545,7 @@ static void brcmf_escan_timeout(void* data) {
 static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
                                                 const struct brcmf_event_msg* e, void* data) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
+  struct net_device* ndev = cfg_to_ndev(cfg);
   int32_t status;
   struct brcmf_escan_result_le* escan_result_le;
   uint32_t escan_buflen;
@@ -1610,7 +1607,7 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
     goto chk_scan_end;
   }
 
-  brcmf_inform_single_bss(cfg, bss_info_le);
+  brcmf_inform_single_bss(ndev, cfg, bss_info_le);
 
   if (status == BRCMF_E_STATUS_PARTIAL) {
     BRCMF_DBG(SCAN, "ESCAN Partial result\n");
@@ -2537,8 +2534,7 @@ static zx_status_t brcmf_notify_tdls_peer_event(struct brcmf_if* ifp,
   return ZX_OK;
 }
 
-static void brcmf_cfg80211_set_country(struct wiphy* wiphy, const char code[3]) {
-  struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
+static void brcmf_cfg80211_set_country(struct brcmf_cfg80211_info* cfg, const char code[3]) {
   struct brcmf_if* ifp = cfg_to_if(cfg);
   struct brcmf_fil_country_le ccreq;
   zx_status_t err;
@@ -2583,7 +2579,7 @@ static zx_status_t brcmf_if_start(void* ctx, const wlanif_impl_ifc_protocol_t* i
   ndev->if_proto = *ifc;
   brcmf_netdev_open(ndev);
   ndev->flags = IFF_UP;
-  brcmf_cfg80211_set_country(ndev_to_wiphy(ndev), "US");
+  brcmf_cfg80211_set_country(ndev_to_if(ndev)->drvr->config, "US");
   ZX_DEBUG_ASSERT(out_sme_channel != nullptr);
   *out_sme_channel = ndev->sme_channel.release();
   return ZX_OK;
@@ -2905,7 +2901,6 @@ void brcmf_hook_set_keys_req(void* ctx, const wlanif_set_keys_req_t* req) {
   BRCMF_DBG(WLANIF, "Set keys request from SME. num_keys: %zu\n", req->num_keys);
 
   struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
-  struct wiphy* wiphy = ndev_to_wiphy(ndev);
   zx_status_t result;
 
   // TODO(WLAN-733)
@@ -2913,7 +2908,7 @@ void brcmf_hook_set_keys_req(void* ctx, const wlanif_set_keys_req_t* req) {
     BRCMF_ERR("Help! num_keys needs to be 1! But it's %ld.", req->num_keys);
     return;
   }
-  result = brcmf_cfg80211_add_key(wiphy, ndev, &req->keylist[0]);
+  result = brcmf_cfg80211_add_key(ndev, &req->keylist[0]);
 }
 
 void brcmf_hook_del_keys_req(void* ctx, const wlanif_del_keys_req_t* req) {
@@ -3558,7 +3553,6 @@ zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, uint16_t type,
     return ZX_ERR_NO_MEMORY;
   }
 
-  vif->wdev.wiphy = cfg->wiphy;
   vif->wdev.iftype = type;
 
   brcmf_init_prof(&vif->profile);
@@ -3969,7 +3963,6 @@ static zx_status_t brcmf_notify_vif_event(struct brcmf_if* ifp, const struct brc
       vif->ifp = ifp;
       if (ifp->ndev) {
         vif->wdev.netdev = ifp->ndev;
-        ifp->ndev->ieee80211_ptr = &vif->wdev;
       }
       mtx_unlock(&event->vif_event_lock);
       if (event->action == cfg->vif_event_pending_action) {
@@ -4214,7 +4207,7 @@ static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
   }
 
   ndev = cfg_to_ndev(cfg);
-  wdev = ndev->ieee80211_ptr;
+  wdev = ndev_to_wdev(ndev);
   ifp = ndev_to_if(ndev);
 
   /* make sure RF is ready for work */
@@ -4233,7 +4226,7 @@ static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
   if (err != ZX_OK) {
     goto default_conf_out;
   }
-  err = brcmf_cfg80211_change_iface(wdev->wiphy, ndev, wdev->iftype, NULL);
+  err = brcmf_cfg80211_change_iface(cfg, ndev, wdev->iftype, NULL);
   if (err != ZX_OK) {
     goto default_conf_out;
   }
@@ -4400,19 +4393,9 @@ static zx_status_t brcmf_translate_country_code(struct brcmf_pub* drvr, char alp
 }
 #endif
 
-static void brcmf_free_wiphy(struct wiphy* wiphy) {
-  if (!wiphy) {
-    return;
-  }
-
-  free(wiphy_to_cfg(wiphy));
-  free(wiphy);
-}
-
 struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
   struct net_device* ndev = brcmf_get_ifp(drvr, 0)->ndev;
   struct brcmf_cfg80211_info* cfg;
-  struct wiphy* wiphy;
   struct brcmf_cfg80211_vif* vif;
   struct brcmf_if* ifp;
   zx_status_t err = ZX_OK;
@@ -4426,38 +4409,28 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
   }
 
   ifp = ndev_to_if(ndev);
-  wiphy = static_cast<decltype(wiphy)>(calloc(1, sizeof(struct wiphy)));
-  if (!wiphy) {
-    BRCMF_ERR("Could not allocate wiphy device\n");
-    return NULL;
+  cfg = static_cast<decltype(cfg)>(calloc(1, sizeof(struct brcmf_cfg80211_info)));
+  if (cfg == NULL) {
+    goto cfg80211_info_out;
   }
-  wiphy->cfg80211_info =
-      static_cast<decltype(wiphy->cfg80211_info)>(calloc(1, sizeof(struct brcmf_cfg80211_info)));
-  if (wiphy->cfg80211_info == NULL) {
-    goto wiphy_out;
-  }
-  memcpy(wiphy->perm_addr, drvr->mac, ETH_ALEN);
 
-  cfg = wiphy_to_cfg(wiphy);
-  cfg->wiphy = wiphy;
   cfg->pub = drvr;
   init_vif_event(&cfg->vif_event);
   list_initialize(&cfg->vif_list);
 
   err = brcmf_alloc_vif(cfg, WLAN_INFO_MAC_ROLE_CLIENT, &vif);
   if (err != ZX_OK) {
-    goto wiphy_out;
+    goto cfg80211_info_out;
   }
 
   vif->ifp = ifp;
   vif->wdev.netdev = ndev;
-  ndev->ieee80211_ptr = &vif->wdev;
 
   err = wl_init_priv(cfg);
   if (err != ZX_OK) {
     BRCMF_ERR("Failed to init iwm_priv (%d)\n", err);
     brcmf_free_vif(vif);
-    goto wiphy_out;
+    goto cfg80211_info_out;
   }
   ifp->vif = vif;
 
@@ -4486,19 +4459,19 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
   err = brcmf_fweh_activate_events(ifp);
   if (err != ZX_OK) {
     BRCMF_ERR("FWEH activation failed (%d)\n", err);
-    goto wiphy_unreg_out;
+    goto unreg_out;
   }
 
   err = brcmf_btcoex_attach(cfg);
   if (err != ZX_OK) {
     BRCMF_ERR("BT-coex initialisation failed (%d)\n", err);
-    goto wiphy_unreg_out;
+    goto unreg_out;
   }
   err = brcmf_pno_attach(cfg);
   if (err != ZX_OK) {
     BRCMF_ERR("PNO initialisation failed (%d)\n", err);
     brcmf_btcoex_detach(cfg);
-    goto wiphy_unreg_out;
+    goto unreg_out;
   }
 
   if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_TDLS)) {
@@ -4506,7 +4479,7 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
     if (err != ZX_OK) {
       BRCMF_DBG(INFO, "TDLS not enabled: %s, fw err %s\n", zx_status_get_string(err),
                 brcmf_fil_get_errstr(fw_err));
-      wiphy->flags &= ~WIPHY_FLAG_SUPPORTS_TDLS;
+      // wiphy->flags &= ~WIPHY_FLAG_SUPPORTS_TDLS;
     } else {
       brcmf_fweh_register(cfg->pub, BRCMF_E_TDLS_PEER_EVENT, brcmf_notify_tdls_peer_event);
     }
@@ -4525,14 +4498,14 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
 detach:
   brcmf_pno_detach(cfg);
   brcmf_btcoex_detach(cfg);
-wiphy_unreg_out:
+unreg_out:
   BRCMF_DBG(TEMP, "* * Would have called wiphy_unregister(cfg->wiphy);");
 priv_out:
   wl_deinit_priv(cfg);
   brcmf_free_vif(vif);
   ifp->vif = NULL;
-wiphy_out:
-  brcmf_free_wiphy(wiphy);
+cfg80211_info_out:
+  free(cfg);
   return NULL;
 }
 
@@ -4545,5 +4518,4 @@ void brcmf_cfg80211_detach(struct brcmf_cfg80211_info* cfg) {
   brcmf_btcoex_detach(cfg);
   BRCMF_DBG(TEMP, "* * Would have called wiphy_unregister(cfg->wiphy);");
   wl_deinit_priv(cfg);
-  brcmf_free_wiphy(cfg->wiphy);
 }

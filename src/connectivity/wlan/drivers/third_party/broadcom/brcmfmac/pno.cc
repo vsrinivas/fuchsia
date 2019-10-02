@@ -558,15 +558,6 @@ void brcmf_pno_detach(struct brcmf_cfg80211_info* cfg) {
   free(pi);
 }
 
-void brcmf_pno_wiphy_params(struct wiphy* wiphy, bool gscan) {
-  /* scheduled scan settings */
-  wiphy->max_sched_scan_reqs = gscan ? BRCMF_PNO_MAX_BUCKETS : 1;
-  wiphy->max_sched_scan_ssids = BRCMF_PNO_MAX_PFN_COUNT;
-  wiphy->max_match_sets = BRCMF_PNO_MAX_PFN_COUNT;
-  wiphy->max_sched_scan_ie_len = BRCMF_SCAN_IE_LEN_MAX;
-  wiphy->max_sched_scan_plan_interval = BRCMF_PNO_SCHED_SCAN_MAX_PERIOD;
-}
-
 uint64_t brcmf_pno_find_reqid_by_bucket(struct brcmf_pno_info* pi, uint32_t bucket) {
   uint64_t reqid = 0;
 

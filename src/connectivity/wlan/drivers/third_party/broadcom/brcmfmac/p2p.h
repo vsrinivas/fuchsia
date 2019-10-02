@@ -151,8 +151,8 @@ struct brcmf_p2p_info {
 
 zx_status_t brcmf_p2p_ifchange(struct brcmf_cfg80211_info* cfg,
                                enum brcmf_fil_p2p_if_types if_type);
-zx_status_t brcmf_p2p_start_device(struct wiphy* wiphy, struct wireless_dev* wdev);
-void brcmf_p2p_stop_device(struct wiphy* wiphy, struct wireless_dev* wdev);
+zx_status_t brcmf_p2p_start_device(struct brcmf_cfg80211_info* cfg, struct wireless_dev* wdev);
+void brcmf_p2p_stop_device(struct brcmf_cfg80211_info* cfg, struct wireless_dev* wdev);
 bool brcmf_p2p_scan_finding_common_channel(struct brcmf_cfg80211_info* cfg,
                                            struct brcmf_bss_info_le* bi);
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_P2P_H_

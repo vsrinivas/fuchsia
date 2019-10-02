@@ -257,7 +257,6 @@ void brcmf_net_setcarrier(struct brcmf_if* ifp, bool on);
 #define IFF_UP 1
 
 struct net_device {
-  struct wireless_dev* ieee80211_ptr;
   bool initialized_for_ap;
   bool scan_busy;
   bool multicast_promisc;
