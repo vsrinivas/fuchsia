@@ -106,7 +106,13 @@ class Device(object):
       A Process object.
     """
         args = self.get_ssh_cmd(['ssh', self._addr] + cmdline)
-        return self.host.create_process(args, **kwargs)
+        p = self.host.create_process(args, **kwargs)
+
+        # Explicitly prevent the subprocess from inheriting our stdin
+        if not p.stdin:
+            p.stdin = Host.DEVNULL
+
+        return p
 
     def getpids(self):
         """Maps names to process IDs for running fuzzers.
