@@ -60,6 +60,7 @@ source_set("address_space") {
     "fake_address_space.h",
   ]
   deps = [
+    "$magma_build_root/src/magma_util:address_space",
     "$magma_build_root/src/magma_util:common",
     "$magma_build_root/src/magma_util/platform:buffer",
   ]
