@@ -1,4 +1,15 @@
-# LibFuzzer in Fuchsia
+# Fuzz testing in Fuchsia with LibFuzzer
+
+Fuzzing is a testing technique that feeds auto-generated inputs to a piece of
+target code in an attempt to crash the code. This technique finds security
+vulnerabilities and stability bugs that other testing might miss. You can see
+Fuchsia fuzzing trophies in Monorail by using the
+[`component:Security>clusterfuzz
+reporter:clusterfuzz@chromium.org`](https://bugs.fuchsia.dev/p/fuchsia/issues/list?colspec=ID%20jira_id%20Component%20Type%20Pri%20Status%20Owner%20Summary%20Modified&q=component%3ASecurity%3Eclusterfuzz%20reporter%3Aclusterfuzz%40chromium.org&can=2)
+filter.
+
+This guide focuses on [LibFuzzer](#q-what-is-libfuzzer), an in-process fuzzing
+engine.
 
 ## Quick-start guide
 

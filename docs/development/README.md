@@ -16,7 +16,7 @@ and debugging Fuchsia and programs running on Fuchsia.
  - [Pushing a package](workflows/package_update.md)
  - [Working across different petals](workflows/working_across_petals.md)
  - [Debugging](workflows/debugging.md)
- - [LibFuzzer-based fuzzing](workflows/libfuzzer.md)
+ - [Fuzz testing with LibFuzzer](workflows/libfuzzer.md)
  - [Build system](build/README.md)
  - [Workflow tips and FAQ](workflows/workflow_tips_and_faq.md)
  - [Testing FAQ](workflows/testing_faq.md)
