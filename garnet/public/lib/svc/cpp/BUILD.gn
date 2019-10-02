@@ -32,6 +32,7 @@ source_set("cpp") {
   visibility = [
     "//garnet/bin/developer/tiles:tiles_lib",
     "//garnet/bin/ui/present_view:present_view",
+    "//src/cobalt/bin/testapp:cobalt_testapp",
     "//src/lib/component/cpp/testing:testing",
     "//src/lib/component/cpp:cpp",
     "//src/ledger/bin/fidl_helpers:message_relay",

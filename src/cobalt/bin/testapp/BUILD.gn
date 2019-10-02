@@ -51,6 +51,7 @@ executable("cobalt_testapp") {
     ":testapp_metrics_registry_cc",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/syslog/cpp",
+    "//garnet/public/lib/svc/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/fxl",
