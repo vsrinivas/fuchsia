@@ -76,8 +76,10 @@ using ParseJournalTest = ParseJournalTestFixture;
 TEST_F(ParseJournalTest, ParseBadJournalExpectError) {
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
+  uint64_t next_entry_start = 0;
   EXPECT_EQ(ZX_ERR_IO,
-            ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+            ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
 }
 
 TEST_F(ParseJournalTest, ParseEmptyJournalNoOperations) {
@@ -85,18 +87,24 @@ TEST_F(ParseJournalTest, ParseEmptyJournalNoOperations) {
 
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
-  EXPECT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+  uint64_t next_entry_start = 0;
+  EXPECT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
   EXPECT_EQ(0, operations.size());
   EXPECT_EQ(0, sequence_number);
+  EXPECT_EQ(0, next_entry_start);
 }
 
 TEST_F(ParseJournalTest, ParseEmptyJournalNonzeroSequenceNumber) {
   info_block()->Update(0, kGoldenSequenceNumber);
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
-  EXPECT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+  uint64_t next_entry_start = 0;
+  EXPECT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
   EXPECT_EQ(0, operations.size());
   EXPECT_EQ(kGoldenSequenceNumber, sequence_number);
+  EXPECT_EQ(0, next_entry_start);
 }
 
 void AddOperation(uint64_t dev_offset, uint64_t length,
@@ -128,9 +136,12 @@ TEST_F(ParseJournalTest, ParseOneEntryOneOperation) {
 
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+  uint64_t next_entry_start = 0;
+  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
   ASSERT_EQ(1, operations.size());
   EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
+  EXPECT_EQ(kEntryLength, next_entry_start);
   uint64_t vmo_offset = kJournalEntryHeaderBlocks;
   ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
 }
@@ -149,33 +160,54 @@ TEST_F(ParseJournalTest, ParseOneEntryOneOperationFullJournal) {
 
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+  uint64_t next_entry_start = 0;
+  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
   ASSERT_EQ(1, operations.size());
   EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
+  EXPECT_EQ(0, next_entry_start);
   uint64_t vmo_offset = kJournalEntryHeaderBlocks;
   ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, kDevOffset, kLength));
 }
 
 TEST_F(ParseJournalTest, ParseOneEntryOneOperationWrapsAroundJournal) {
+  // Start writing two blocks before the end of the journal.
   uint64_t vmo_offset = kJournalLength - 2;
   info_block()->Update(vmo_offset, kGoldenSequenceNumber);
 
+  // This operation will be split as follows:
+  //   [ 2, 3, 4, C, _, _, _, _, _, H, 1 ]
+  //
+  // Resulting in two writeback operations:
+  //   [ _, _, _, _, _, _, _, _, _, _, 1 ], and
+  //   [ 2, 3, 4, _, _, _, _, _, _, _, _ ]
   fbl::Vector<fs::BufferedOperation> ops;
-  AddOperation(/* dev_offset= */ 10, /* length= */ 4, &ops);
+  uint64_t dev_offset = 10;
+  const uint64_t kOperationLength = 4;
+  AddOperation(dev_offset, kOperationLength, &ops);
 
-  const uint64_t kEntryLength = 4 + kEntryMetadataBlocks;
+  const uint64_t kEntryLength = kOperationLength + kEntryMetadataBlocks;
   JournalEntryView entry_view(fs::BlockBufferView(journal_buffer(), vmo_offset, kEntryLength), ops,
                               kGoldenSequenceNumber);
 
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+  uint64_t next_entry_start = 0;
+  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
   ASSERT_EQ(2, operations.size());
-  EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
   vmo_offset += kJournalEntryHeaderBlocks;
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
+
+  uint64_t length = kJournalLength - vmo_offset;
+  ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, dev_offset, length));
+
+  dev_offset += length;
   vmo_offset = 0;
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[1], vmo_offset, 11, 3));
+  length = kOperationLength - length;
+  ASSERT_NO_FAILURES(CheckWriteOperation(operations[1], vmo_offset, dev_offset, length));
+
+  EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
+  ASSERT_EQ(vmo_offset + length + kJournalEntryCommitBlocks, next_entry_start);
 }
 
 TEST_F(ParseJournalTest, ParseOneEntryManyOperations) {
@@ -191,9 +223,12 @@ TEST_F(ParseJournalTest, ParseOneEntryManyOperations) {
 
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
-  EXPECT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+  uint64_t next_entry_start = 0;
+  EXPECT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
   EXPECT_EQ(3, operations.size());
   EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
+  EXPECT_EQ(kEntryLength, next_entry_start);
   uint64_t vmo_offset = kJournalEntryHeaderBlocks;
   ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 3));
   vmo_offset += 3;
@@ -218,9 +253,12 @@ TEST_F(ParseJournalTest, ParseMultipleEntries) {
 
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+  uint64_t next_entry_start = 0;
+  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
   ASSERT_EQ(2, operations.size());
   EXPECT_EQ(kGoldenSequenceNumber + 2, sequence_number);
+  EXPECT_EQ(kEntryLengthA + kEntryLengthB, next_entry_start);
   uint64_t vmo_offset = kJournalEntryHeaderBlocks;
   ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
   vmo_offset += kEntryLengthA;
@@ -249,7 +287,9 @@ TEST_F(ParseJournalTest, ParseMultipleEntriesWithSameSequenceNumberOnlyKeepsFirs
   // Writing entries with the same sequence number only parses the first.
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+  uint64_t next_entry_start = 0;
+  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
   ASSERT_EQ(1, operations.size());
   ASSERT_EQ(kGoldenSequenceNumber + 1, sequence_number);
   uint64_t vmo_offset = kJournalEntryHeaderBlocks;
@@ -279,9 +319,12 @@ TEST_F(ParseJournalTest, ParseEscapedEntry) {
 
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+  uint64_t next_entry_start = 0;
+  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
   ASSERT_EQ(1, operations.size());
   EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
+  EXPECT_EQ(kEntryLength, next_entry_start);
   uint64_t vmo_offset = kJournalEntryHeaderBlocks;
   ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
 
@@ -304,9 +347,12 @@ TEST_F(ParseJournalTest, ParseTooOldDropped) {
   // Observe that the new sequence_number is parsed, but the entry is dropped.
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+  uint64_t next_entry_start = 0;
+  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
   ASSERT_EQ(0, operations.size());
   EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
+  EXPECT_EQ(0, next_entry_start);
 }
 
 TEST_F(ParseJournalTest, ParseNewerThanExpectedDropped) {
@@ -324,9 +370,12 @@ TEST_F(ParseJournalTest, ParseNewerThanExpectedDropped) {
   // Observe that the entry's sequence_number is parsed as too new, and dropped.
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+  uint64_t next_entry_start = 0;
+  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
   EXPECT_EQ(0, operations.size());
   EXPECT_EQ(kUpdatedSequenceNumber, sequence_number);
+  EXPECT_EQ(0, next_entry_start);
 }
 
 TEST_F(ParseJournalTest, ParseEntryMultipleTimes) {
@@ -341,17 +390,22 @@ TEST_F(ParseJournalTest, ParseEntryMultipleTimes) {
   // Observe that we can replay journal entries with this setup.
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+  uint64_t next_entry_start = 0;
+  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
   ASSERT_EQ(1, operations.size());
   EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
+  EXPECT_EQ(kEntryLength, next_entry_start);
   uint64_t vmo_offset = kJournalEntryHeaderBlocks;
   ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
   operations.reset();
 
   // We can replay the same entries multiple times.
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
   ASSERT_EQ(1, operations.size());
   EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
+  EXPECT_EQ(kEntryLength, next_entry_start);
   ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
 }
 
@@ -372,9 +426,12 @@ TEST_F(ParseJournalTest, ParseEntryModifiedHeaderDropped) {
   // As a result, there are no entries identified as replayable.
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+  uint64_t next_entry_start = 0;
+  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
   ASSERT_EQ(0, operations.size());
   EXPECT_EQ(kGoldenSequenceNumber, sequence_number);
+  EXPECT_EQ(0, next_entry_start);
 }
 
 TEST_F(ParseJournalTest, ParseEntryModifiedEntryDropped) {
@@ -394,9 +451,12 @@ TEST_F(ParseJournalTest, ParseEntryModifiedEntryDropped) {
   // As a result, there are no entries identified as replayable.
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+  uint64_t next_entry_start = 0;
+  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
   ASSERT_EQ(0, operations.size());
   EXPECT_EQ(kGoldenSequenceNumber, sequence_number);
+  EXPECT_EQ(0, next_entry_start);
 }
 
 TEST_F(ParseJournalTest, ParseEntryModifiedCommitDropped) {
@@ -416,9 +476,12 @@ TEST_F(ParseJournalTest, ParseEntryModifiedCommitDropped) {
   // As a result, there are no entries identified as replayable.
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+  uint64_t next_entry_start = 0;
+  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
   ASSERT_EQ(0, operations.size());
   EXPECT_EQ(kGoldenSequenceNumber, sequence_number);
+  EXPECT_EQ(0, next_entry_start);
 }
 
 TEST_F(ParseJournalTest, ParseEntryModifiedAfterCommitStillKept) {
@@ -441,7 +504,9 @@ TEST_F(ParseJournalTest, ParseEntryModifiedAfterCommitStillKept) {
   // The current implementation of journaling is not checksumming the commit block.
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+  uint64_t next_entry_start = 0;
+  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
   ASSERT_EQ(1, operations.size());
   EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
   uint64_t vmo_offset = kJournalEntryHeaderBlocks;
@@ -475,8 +540,10 @@ TEST_F(ParseJournalTest, ParseDetectsCorruptJournalIfOldEntryHasBadChecksumButGo
   // is identified as corrupt.
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
+  uint64_t next_entry_start = 0;
   EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY,
-            ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+            ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
 }
 
 TEST_F(ParseJournalTest, ParseDoesntDetectCorruptJournalIfOldEntryHasBadChecksumAndBadLength) {
@@ -506,7 +573,9 @@ TEST_F(ParseJournalTest, ParseDoesntDetectCorruptJournalIfOldEntryHasBadChecksum
 
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
-  EXPECT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number));
+  uint64_t next_entry_start = 0;
+  EXPECT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
   ASSERT_EQ(0, operations.size());
   EXPECT_EQ(kGoldenSequenceNumber, sequence_number);
 }
@@ -561,6 +630,13 @@ class ReplayJournalTest : public ParseJournalTestFixture {
 
   void ValidInfoReadRequest(const block_fifo_request_t& request) const {
     EXPECT_EQ(BLOCKIO_READ, request.opcode);
+    EXPECT_EQ(0, request.vmo_offset);
+    EXPECT_EQ(kJournalAreaStart, request.dev_offset);
+    EXPECT_EQ(kJournalMetadataBlocks, request.length);
+  }
+
+  void ValidInfoWriteRequest(const block_fifo_request_t& request) const {
+    EXPECT_EQ(BLOCKIO_WRITE, request.opcode);
     EXPECT_EQ(0, request.vmo_offset);
     EXPECT_EQ(kJournalAreaStart, request.dev_offset);
     EXPECT_EQ(kJournalMetadataBlocks, request.length);
@@ -689,12 +765,19 @@ TEST_F(ReplayJournalTest, ReplayOneEntry) {
         EXPECT_EQ(operations[0].op.dev_offset, requests[0].dev_offset);
         EXPECT_EQ(operations[0].op.length, requests[0].length);
         return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        // Observe that the replay code updates the journal superblock.
+        EXPECT_EQ(1, count);
+        ValidInfoWriteRequest(requests[0]);
+        return ZX_OK;
       }};
+
   MockTransactionHandler transaction_handler(callbacks, std::size(callbacks));
   JournalSuperblock superblock;
   ASSERT_OK(ReplayJournal(&transaction_handler, registry(), kJournalAreaStart, kJournalAreaLength,
                           &superblock));
-  EXPECT_EQ(kStart, superblock.start());
+  EXPECT_EQ(kStart + entry_size, superblock.start());
   // The sequence_number should have advanced to avoid replaying the old entry.
   EXPECT_EQ(kSequenceNumber + 1, superblock.sequence_number());
 }

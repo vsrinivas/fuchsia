@@ -23,7 +23,7 @@ namespace fs {
 // of replaying a journal on boot.
 zx_status_t ParseJournalEntries(const JournalSuperblock* info, fs::VmoBuffer* journal_buffer,
                                 fbl::Vector<fs::BufferedOperation>* operations,
-                                uint64_t* out_sequence_number);
+                                uint64_t* out_sequence_number, uint64_t* out_start);
 
 // Replays the entries in the journal, first parsing them, and later writing them
 // out to disk.

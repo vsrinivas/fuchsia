@@ -169,7 +169,9 @@ void MockVmoidRegistry::Replay(fbl::Vector<fs::BufferedOperation>* operations,
   ASSERT_OK(mapper.Map(std::move(journal_vmo), length));
   VmoBuffer journal_buffer(this, std::move(mapper), kJournalVmoid, kJournalLength, kBlockSize);
 
-  ASSERT_OK(ParseJournalEntries(&superblock, &journal_buffer, operations, sequence_number));
+  uint64_t next_entry_start = 0;
+  ASSERT_OK(ParseJournalEntries(&superblock, &journal_buffer, operations,
+                                sequence_number, &next_entry_start));
 }
 
 // A transaction handler class, controlling all block device operations which are transmitted

@@ -149,7 +149,7 @@ void ParseBlocks(const fs::VmoBuffer& journal_buffer, const JournalEntryView& en
 
 zx_status_t ParseJournalEntries(const JournalSuperblock* info, fs::VmoBuffer* journal_buffer,
                                 fbl::Vector<fs::BufferedOperation>* operations,
-                                uint64_t* out_sequence_number) {
+                                uint64_t* out_sequence_number, uint64_t* out_start) {
   // Validate |info| before using it.
   zx_status_t status = info->Validate();
   if (status != ZX_OK) {
@@ -192,7 +192,7 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, fs::VmoBuffer* jo
 
     // Move to the next entry.
     auto entry_blocks = entry->header()->payload_blocks + kEntryMetadataBlocks;
-    entry_start += entry_blocks % journal_buffer->capacity();
+    entry_start = (entry_start + entry_blocks) % journal_buffer->capacity();
 
     // Move the sequence_number forward beyond the most recently seen entry.
     sequence_number = entry->header()->prefix.sequence_number + 1;
@@ -202,6 +202,7 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, fs::VmoBuffer* jo
   // It is the responsibility of the caller to update the info block, but only after
   // all prior operations have been replayed.
   *out_sequence_number = sequence_number;
+  *out_start = entry_start;
   return ZX_OK;
 }
 
@@ -221,7 +222,7 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler, fs::Vmoid
     return status;
   }
   // Initialize and read the journal itself.
-  FS_TRACE_DEBUG("replay: Initializing journal buffer\n");
+  FS_TRACE_INFO("replay: Initializing journal buffer (%zu blocks)\n", journal_entry_blocks);
   VmoBuffer journal_buffer;
   status = journal_buffer.Initialize(registry, journal_entry_blocks,
                                      transaction_handler->FsBlockSize(), "journal-buffer");
@@ -250,27 +251,46 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler, fs::Vmoid
   // regardless.
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
+  uint64_t next_entry_start = 0;
   FS_TRACE_DEBUG("replay: Parsing journal entries\n");
   JournalSuperblock journal_superblock(std::move(journal_superblock_buffer));
-  status = ParseJournalEntries(&journal_superblock, &journal_buffer, &operations, &sequence_number);
+  status = ParseJournalEntries(&journal_superblock, &journal_buffer, &operations,
+                               &sequence_number, &next_entry_start);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Cannot parse journal entries: %d\n", status);
     return status;
   }
 
-  // Replay the requested journal entries.
+  // Replay the requested journal entries, then the new header.
   if (operations.size() > 0) {
+    // Update to the new sequence_number (in-memory).
+    journal_superblock.Update(next_entry_start, sequence_number);
+
     status = fs::FlushWriteRequests(transaction_handler, operations);
     if (status != ZX_OK) {
       FS_TRACE_ERROR("journal: Cannot replay entries: %d\n", status);
       return status;
     }
+
+    operations.reset();
+    FS_TRACE_INFO("replay: New start: %zu, sequence_number: %zu\n", next_entry_start,
+                  sequence_number);
+    fs::BufferedOperation operation;
+    operation.vmoid = journal_superblock.buffer().vmoid();
+    operation.op.type = fs::OperationType::kWrite;
+    operation.op.vmo_offset = 0;
+    operation.op.dev_offset = journal_start;
+    operation.op.length = kJournalMetadataBlocks;
+    operations.push_back(std::move(operation));
+    status = fs::FlushWriteRequests(transaction_handler, operations);
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("journal: Cannot update journal superblock: %d\n", status);
+      return status;
+    }
+
   } else {
     FS_TRACE_DEBUG("replay: Not replaying entries\n");
   }
-
-  // Update to the new sequence_number.
-  journal_superblock.Update(journal_superblock.start(), sequence_number);
 
   if (out_journal_superblock) {
     *out_journal_superblock = std::move(journal_superblock);
