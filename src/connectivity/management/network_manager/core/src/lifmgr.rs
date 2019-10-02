@@ -418,7 +418,6 @@ impl LIFManager {
 
 #[cfg(test)]
 mod tests {
-    #![allow(unused)]
     use super::*;
     use crate::portmgr::{Port, PortManager};
     use fidl_fuchsia_net::Ipv4Address;
@@ -434,7 +433,6 @@ mod tests {
 
     #[test]
     fn test_new_lif() {
-        let pm = create_ports();
         let d = LIF::new(3, LIFType::WAN, "name", PortId::from(0), vec![PortId::from(3)], 0, None);
         d.unwrap();
         let d = LIF::new(3, LIFType::LAN, "name", PortId::from(0), vec![PortId::from(1)], 0, None);
@@ -452,7 +450,6 @@ mod tests {
     }
     #[test]
     fn test_new_lif_wrong_number_ports() {
-        let pm = create_ports();
         let d = LIF::new(3, LIFType::GRE, "name", PortId::from(0), Vec::new(), 0, None);
         assert!(d.is_err());
         let d = LIF::new(3, LIFType::WAN, "name", PortId::from(0), Vec::new(), 0, None);
@@ -476,7 +473,6 @@ mod tests {
     }
     #[test]
     fn test_new_lif_inexisting_port() {
-        let pm = create_ports();
         let d = LIF::new(3, LIFType::WAN, "name", PortId::from(0), vec![PortId::from(5)], 0, None);
         assert!(d.is_ok());
         let d = LIF::new(
@@ -492,7 +488,6 @@ mod tests {
     }
     #[test]
     fn test_new_lif_reusing_port() {
-        let pm = create_ports();
         let d = LIF::new(3, LIFType::WAN, "name", PortId::from(0), vec![PortId::from(1)], 0, None);
         assert!(d.is_ok());
         let d = LIF::new(
@@ -509,13 +504,10 @@ mod tests {
 
     #[test]
     fn test_update_with_address() {
-        let pm = create_ports();
         let d = LIF::new(3, LIFType::WAN, "name", PortId::from(0), vec![PortId::from(3)], 0, None);
-        assert!(d.is_ok());
         let wan = d.unwrap();
         assert_eq!(wan.id.version(), 3);
         let d = LIF::new(3, LIFType::LAN, "name", PortId::from(0), vec![PortId::from(1)], 0, None);
-        assert!(d.is_ok());
         let mut lan = d.unwrap();
         assert_eq!(lan.id.version(), 3);
         assert_eq!(lan.properties.dhcp, false, "dhcp client should be disabled");
@@ -574,7 +566,6 @@ mod tests {
 
     #[test]
     fn test_lif_manager_add() {
-        let pm = create_ports();
         let mut lm = LIFManager::new();
         lm.add_lif(
             &LIF::new(
@@ -587,22 +578,24 @@ mod tests {
                 None,
             )
             .unwrap(),
-        );
+        )
+        .unwrap();
         lm.add_lif(
             &LIF::new(3, LIFType::LAN, "lan2", PortId::from(0), vec![PortId::from(3)], 0, None)
                 .unwrap(),
-        );
+        )
+        .unwrap();
         lm.add_lif(
             &LIF::new(3, LIFType::WAN, "wan", PortId::from(0), vec![PortId::from(4)], 0, None)
                 .unwrap(),
-        );
+        )
+        .unwrap();
         assert_eq!(lm.lifs.len(), 3);
     }
     // TODO(dpradilla): verify a port cant be part of multiple LIFs except for trunk switchport ports
 
     #[test]
     fn test_lif_manager_add_existing() {
-        let pm = create_ports();
         let mut lm = LIFManager::new();
         let l = LIF::new(
             3,
@@ -614,28 +607,26 @@ mod tests {
             None,
         )
         .unwrap();
-        lm.add_lif(&l);
-        lm.add_lif(&l);
+        lm.add_lif(&l).unwrap();
+        assert!(lm.add_lif(&l).is_err());
         assert_eq!(lm.lifs.len(), 1);
     }
 
     #[test]
     fn test_lif_manager_add_same_name() {
-        let pm = create_ports();
         let mut lm = LIFManager::new();
         let l = LIF::new(3, LIFType::LAN, "lan1", PortId::from(0), vec![PortId::from(1)], 0, None)
             .unwrap();
-        lm.add_lif(&l);
+        lm.add_lif(&l).unwrap();
         let l = LIF::new(4, LIFType::LAN, "lan1", PortId::from(0), vec![PortId::from(2)], 0, None)
             .unwrap();
-        lm.add_lif(&l);
+        assert!(lm.add_lif(&l).is_err());
         assert_eq!(lm.lifs.len(), 1);
     }
 
     #[test]
     #[ignore] // TODO(dpradilla): enable test once LIF actually checks for this.
     fn test_lif_manager_add_same_port() {
-        let pm = create_ports();
         let mut lm = LIFManager::new();
         let l = LIF::new(
             3,
@@ -647,7 +638,7 @@ mod tests {
             None,
         )
         .unwrap();
-        lm.add_lif(&l);
+        lm.add_lif(&l).unwrap();
         let l = LIF::new(
             3,
             LIFType::LAN,
@@ -658,13 +649,12 @@ mod tests {
             None,
         )
         .unwrap();
-        lm.add_lif(&l);
+        lm.add_lif(&l).unwrap();
         assert_eq!(lm.lifs.len(), 1);
     }
 
     #[test]
     fn test_lif_manager_get_existing() {
-        let pm = create_ports();
         let mut lm = LIFManager::new();
         let l = LIF::new(
             3,
@@ -676,22 +666,23 @@ mod tests {
             None,
         )
         .unwrap();
-        lm.add_lif(&l);
+        lm.add_lif(&l).unwrap();
         lm.add_lif(
             &LIF::new(3, LIFType::LAN, "lan2", PortId::from(0), vec![PortId::from(3)], 0, None)
                 .unwrap(),
-        );
+        )
+        .unwrap();
         lm.add_lif(
             &LIF::new(3, LIFType::WAN, "wan", PortId::from(0), vec![PortId::from(4)], 0, None)
                 .unwrap(),
-        );
+        )
+        .unwrap();
         let got = lm.lif(&l.id.uuid);
         assert_eq!(got, Some(&l))
     }
 
     #[test]
     fn test_lif_manager_get_inexisting() {
-        let pm = create_ports();
         let mut lm = LIFManager::new();
         let l = LIF::new(
             3,
@@ -703,22 +694,23 @@ mod tests {
             None,
         )
         .unwrap();
-        lm.add_lif(&l);
+        lm.add_lif(&l).unwrap();
         lm.add_lif(
             &LIF::new(3, LIFType::LAN, "lan2", PortId::from(0), vec![PortId::from(3)], 0, None)
                 .unwrap(),
-        );
+        )
+        .unwrap();
         lm.add_lif(
             &LIF::new(3, LIFType::WAN, "wan", PortId::from(0), vec![PortId::from(4)], 0, None)
                 .unwrap(),
-        );
+        )
+        .unwrap();
         let got = lm.lif(&9);
         assert_eq!(got, None)
     }
 
     #[test]
     fn test_lif_manager_remove_existing() {
-        let pm = create_ports();
         let mut lm = LIFManager::new();
         let l = LIF::new(
             3,
@@ -730,15 +722,17 @@ mod tests {
             None,
         )
         .unwrap();
-        lm.add_lif(&l);
+        lm.add_lif(&l).unwrap();
         lm.add_lif(
             &LIF::new(3, LIFType::LAN, "lan2", PortId::from(0), vec![PortId::from(3)], 0, None)
                 .unwrap(),
-        );
+        )
+        .unwrap();
         lm.add_lif(
             &LIF::new(3, LIFType::WAN, "wan", PortId::from(0), vec![PortId::from(4)], 0, None)
                 .unwrap(),
-        );
+        )
+        .unwrap();
         assert_eq!(lm.lifs.len(), 3);
         let got = lm.remove_lif(l.id.uuid);
         assert_eq!(lm.lifs.len(), 2);
@@ -747,7 +741,6 @@ mod tests {
 
     #[test]
     fn test_lif_manager_reuse_name_and_port_after_remove() {
-        let pm = create_ports();
         let mut lm = LIFManager::new();
         let l = LIF::new(
             3,
@@ -759,15 +752,17 @@ mod tests {
             None,
         )
         .unwrap();
-        lm.add_lif(&l);
+        lm.add_lif(&l).unwrap();
         lm.add_lif(
             &LIF::new(3, LIFType::LAN, "lan2", PortId::from(0), vec![PortId::from(3)], 0, None)
                 .unwrap(),
-        );
+        )
+        .unwrap();
         lm.add_lif(
             &LIF::new(3, LIFType::WAN, "wan", PortId::from(0), vec![PortId::from(4)], 0, None)
                 .unwrap(),
-        );
+        )
+        .unwrap();
         assert_eq!(lm.lifs.len(), 3);
         let got = lm.remove_lif(l.id.uuid);
         assert_eq!(lm.lifs.len(), 2);
@@ -783,13 +778,13 @@ mod tests {
                 None,
             )
             .unwrap(),
-        );
+        )
+        .unwrap();
         assert_eq!(lm.lifs.len(), 3)
     }
 
     #[test]
     fn test_lif_manager_remove_inexisting() {
-        let pm = create_ports();
         let mut lm = LIFManager::new();
         lm.add_lif(
             &LIF::new(
@@ -802,15 +797,18 @@ mod tests {
                 None,
             )
             .unwrap(),
-        );
+        )
+        .unwrap();
         lm.add_lif(
             &LIF::new(3, LIFType::LAN, "lan2", PortId::from(0), vec![PortId::from(3)], 0, None)
                 .unwrap(),
-        );
+        )
+        .unwrap();
         lm.add_lif(
             &LIF::new(3, LIFType::WAN, "wan", PortId::from(0), vec![PortId::from(4)], 0, None)
                 .unwrap(),
-        );
+        )
+        .unwrap();
         assert_eq!(lm.lifs.len(), 3);
         let got = lm.remove_lif(5 as UUID);
         assert_eq!(lm.lifs.len(), 3);
