@@ -32,3 +32,27 @@ fn as_dir(dir: fidl::endpoints::ClientEnd<fidl_fuchsia_io::DirectoryMarker>) -> 
 fn as_file(dir: fidl::endpoints::ClientEnd<fidl_fuchsia_io::DirectoryMarker>) -> std::fs::File {
     fdio::create_fd(dir.into_channel().into()).expect("into file")
 }
+
+struct ProcessKillGuard {
+    process: fuchsia_zircon::Process,
+}
+
+impl Drop for ProcessKillGuard {
+    fn drop(&mut self) {
+        use fuchsia_zircon::Task;
+        let _ = self.process.kill();
+    }
+}
+
+impl std::ops::Deref for ProcessKillGuard {
+    type Target = fuchsia_zircon::Process;
+    fn deref(&self) -> &Self::Target {
+        &self.process
+    }
+}
+
+impl From<fuchsia_zircon::Process> for ProcessKillGuard {
+    fn from(process: fuchsia_zircon::Process) -> Self {
+        Self { process }
+    }
+}

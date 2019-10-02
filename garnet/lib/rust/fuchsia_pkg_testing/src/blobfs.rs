@@ -5,7 +5,7 @@
 //! Test utilities for starting a blobfs server.
 
 use {
-    crate::as_dir,
+    crate::{as_dir, ProcessKillGuard},
     failure::{bail, format_err, Error, ResultExt},
     fdio::{SpawnAction, SpawnOptions},
     fidl::endpoints::{ClientEnd, ServerEnd},
@@ -71,7 +71,7 @@ fn mkblobfs(ramdisk: &TestRamDisk) -> Result<(), Error> {
 /// A running BlobFs server
 pub struct TestBlobFs {
     backing_ramdisk: TestRamDisk,
-    process: zx::Process,
+    process: ProcessKillGuard,
     proxy: DirectoryAdminProxy,
 }
 
@@ -102,7 +102,7 @@ impl TestBlobFs {
         .context("spawning 'blobfs mount'")?;
         let proxy = blobfs_root.into_proxy()?;
 
-        Ok(Self { backing_ramdisk: test_ramdisk, process, proxy })
+        Ok(Self { backing_ramdisk: test_ramdisk, process: process.into(), proxy })
     }
 
     pub(crate) fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {

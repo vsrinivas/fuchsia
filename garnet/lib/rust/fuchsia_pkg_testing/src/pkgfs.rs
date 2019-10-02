@@ -5,7 +5,7 @@
 //! Test utilities for starting a pkgfs server.
 
 use {
-    crate::{as_dir, as_file, blobfs::TestBlobFs},
+    crate::{as_dir, as_file, blobfs::TestBlobFs, ProcessKillGuard},
     failure::{Error, ResultExt},
     fdio::{SpawnAction, SpawnOptions},
     fidl::endpoints::ClientEnd,
@@ -27,7 +27,7 @@ pub struct TestPkgFs {
     blobfs: TestBlobFs,
     index: TempDir,
     proxy: DirectoryProxy,
-    process: zx::Process,
+    process: ProcessKillGuard,
 }
 
 impl TestPkgFs {
@@ -76,7 +76,7 @@ impl TestPkgFs {
         )
         .map_err(|(status, _)| status)
         .context("spawning 'pkgsvr'")?;
-        Ok(TestPkgFs { blobfs, index, proxy, process })
+        Ok(TestPkgFs { blobfs, index, proxy, process: process.into() })
     }
 
     /// Returns a new connection to the pkgfs root directory.
