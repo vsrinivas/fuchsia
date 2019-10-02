@@ -30,7 +30,6 @@ test_package("crashpad_agent_tests") {
   tests = [
     {
       name = "crashpad_agent_unittest"
-      environments = basic_envs
     },
     {
       # Binary name on the host. We prefix it with "crashpad_agent" to reduce collisions.
@@ -41,7 +40,6 @@ test_package("crashpad_agent_tests") {
     },
     {
       name = "crashpad_agent_integration_test"
-      environments = basic_envs
     },
     {
       # Binary name on the host. Shared across all integration test components.
@@ -49,7 +47,6 @@ test_package("crashpad_agent_tests") {
 
       # Component and binary name on the target. Specific to each integration test component.
       dest = "crashpad_agent_integration_test_valid_override_config"
-      environments = basic_envs
     },
     {
       # Binary name on the host. Shared across all integration test components.
@@ -57,7 +54,6 @@ test_package("crashpad_agent_tests") {
 
       # Component and binary name on the target. Specific to each integration test component.
       dest = "crashpad_agent_integration_test_invalid_override_config"
-      environments = basic_envs
     },
     {
       # Binary name on the host. We prefix it with "crashpad_agent" to reduce collisions.
