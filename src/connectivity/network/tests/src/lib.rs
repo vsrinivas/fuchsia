@@ -41,9 +41,9 @@ fn get_endpoint_manager(
     Ok(client)
 }
 
-async fn create_endpoint<'a>(
+async fn create_endpoint(
     name: &'static str,
-    endpoint_manager: &'a fidl_fuchsia_netemul_network::EndpointManagerProxy,
+    endpoint_manager: &fidl_fuchsia_netemul_network::EndpointManagerProxy,
 ) -> std::result::Result<fidl_fuchsia_netemul_network::EndpointProxy, failure::Error> {
     let (status, endpoint) = endpoint_manager
         .create_endpoint(

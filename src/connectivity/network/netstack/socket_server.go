@@ -320,6 +320,21 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}) {
 				//
 				// This is equivalent to the connection having been refused.
 				fallthrough
+			case tcpip.ErrTimeout:
+				// At the time of writing, this error indicates that a TCP connection
+				// has failed. This can occur during the TCP handshake if the peer
+				// fails to respond to a SYN within 60 seconds, or if the retransmit
+				// logic gives up after 60 seconds of missing ACKs from the peer, or if
+				// the maximum number of unacknowledged keepalives is reached.
+				if connected {
+					// The connection was alive but now is dead - this is equivalent to
+					// having received a TCP RST.
+					closeFn()
+					return
+				}
+				// The connection was never created. This is equivalent to the
+				// connection having been refused.
+				fallthrough
 			case tcpip.ErrConnectionRefused:
 				// Linux allows sockets with connection errors to be reused. If the
 				// client calls connect() again (and the underlying Endpoint correctly

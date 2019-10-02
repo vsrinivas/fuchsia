@@ -1,0 +1,78 @@
+{
+    "facets": {
+        "fuchsia.netemul": {
+            "environment": {
+                "children": [
+                    {
+                        "name": "client",
+                        "setup": [
+                            {
+                                "arguments": [
+                                    "-e",
+                                    "client-ep",
+                                    "-i",
+                                    "192.168.0.2/24"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                            }
+                        ],
+                        "test": [
+                            {
+                                "arguments": [
+                                    "client",
+                                    "--remote",
+                                    "192.168.0.1"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netstack_c_api_tests#meta/connect.cmx"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "server",
+                        "setup": [
+                            {
+                                "arguments": [
+                                    "-e",
+                                    "server-ep",
+                                    "-i",
+                                    "192.168.0.1/24"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                            }
+                        ],
+                        "test": [
+                            {
+                                "arguments": [
+                                    "server"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netstack_c_api_tests#meta/connect.cmx"
+                            }
+                        ]
+                    }
+                ],
+                "services": {
+                    "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                }
+            },
+            "networks": [
+                {
+                    "endpoints": [
+                        {
+                            "name": "server-ep"
+                        },
+                        {
+                            "name": "client-ep"
+                        }
+                    ],
+                    "name": "net"
+                }
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/connect_test"
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+}
