@@ -8,7 +8,6 @@
 #include <assert.h>    // NOLINT(modernize-deprecated-headers, foobar)
 #include <stdalign.h>  // NOLINT(modernize-deprecated-headers)
 #include <stdint.h>    // NOLINT(modernize-*)
-
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -352,10 +351,16 @@ typedef struct {
 
 // All fidl messages share a common 16 byte header.
 
+enum {
+  kFidlWireFormatMagicNumberInitial = 1,
+};
+
 typedef struct fidl_message_header {
   zx_txid_t txid;
-  // This reserved word is used by Epitaphs to represent an error value.
-  uint32_t reserved0;
+  uint8_t flags[3];
+  // This value indicates the message's wire format. Two sides with different
+  // wire formats are incompatible with each other
+  uint8_t magic_number;
   uint64_t ordinal;
 } fidl_message_header_t;
 
@@ -363,10 +368,6 @@ typedef struct fidl_message_header {
 // transaction id.
 
 #define FIDL_TXID_NO_RESPONSE 0ul
-
-// The system reserves the high half of the ordinal space.
-
-#define FIDL_ORD_SYSTEM_MASK 0x80000000ul
 
 // A FIDL message.
 typedef struct fidl_msg {

@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/vector.h>
-#include <fidl/test/llcpp/controlflow/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
@@ -19,11 +16,14 @@
 #include <string.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
-#include <zxtest/zxtest.h>
 
 #include <atomic>
 #include <memory>
 #include <utility>
+
+#include <fbl/vector.h>
+#include <fidl/test/llcpp/controlflow/c/fidl.h>
+#include <zxtest/zxtest.h>
 
 // Interface under test
 #include "generated/fidl_llcpp_controlflow.h"
@@ -95,7 +95,7 @@ TEST(ControlFlowTest, ServerShutdown) {
           ZX_OK);
       ASSERT_EQ(out_bytes, sizeof(epitaph));
       ASSERT_EQ(out_handles, 0);
-      ASSERT_OK(static_cast<zx_status_t>(epitaph.hdr.reserved0));
+      ASSERT_OK(static_cast<zx_status_t>(epitaph.error));
     }
 
     // Verify that the remote end of |client_chan| has been closed

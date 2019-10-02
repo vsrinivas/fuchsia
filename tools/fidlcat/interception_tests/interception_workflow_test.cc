@@ -37,10 +37,16 @@ static std::vector<debug_ipc::RegisterID> amd64_regs = {
 DataForSyscallTest::DataForSyscallTest(debug_ipc::Arch arch) : arch_(arch) {
   param_regs_ = (arch_ == debug_ipc::Arch::kArm64) ? &aarch64_regs : &amd64_regs;
   header_.txid = kTxId;
-  header_.reserved0 = kReserved;
+  header_.magic_number = kFidlWireFormatMagicNumberInitial;
+  header_.flags[0] = 0;
+  header_.flags[1] = 0;
+  header_.flags[2] = 0;
   header_.ordinal = kOrdinal;
   header2_.txid = kTxId2;
-  header2_.reserved0 = kReserved;
+  header2_.magic_number = kFidlWireFormatMagicNumberInitial;
+  header2_.flags[0] = 0;
+  header2_.flags[1] = 0;
+  header2_.flags[2] = 0;
   header2_.ordinal = kOrdinal2;
 
   sp_ = stack_ + kMaxStackSizeInWords;

@@ -62,6 +62,13 @@ class Message {
   // Valid only if has_header().
   uint64_t ordinal() const { return header().ordinal; }
 
+  // Whether this message is in a supported version of the wire format.
+  //
+  // Valid only if has_header().
+  bool is_supported_version() const {
+    return header().magic_number == kFidlWireFormatMagicNumberInitial;
+  }
+
   // The message payload that follows the header.
   //
   // Valid only if has_header().

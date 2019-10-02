@@ -207,7 +207,7 @@ class DataForSyscallTest {
   static constexpr uint64_t kMaxStackSizeInWords = 0x100;
   static constexpr zx_txid_t kTxId = 0xaaaaaaaa;
   static constexpr zx_txid_t kTxId2 = 0x88888888;
-  static constexpr uint32_t kReserved = 0x0;
+  static constexpr uint32_t kFidlWireFormatMagicNumberInitial = 0x1;
   static constexpr uint64_t kOrdinal = 0x77e4cceb00000000lu;
   static constexpr uint64_t kOrdinal2 = 1234567890123456789lu;
   static constexpr char kElfSymbolBuildID[] = "123412341234";
