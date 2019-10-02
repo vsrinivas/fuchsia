@@ -466,11 +466,7 @@ mod tests {
         // But calls to the service should fail, since it doesn't exist.
         let res = proxy.echo_string(Some("hippos")).await;
         let err = res.expect_err("echo_string unexpected succeeded");
-        match err {
-            fidl::Error::ClientRead(zx::Status::PEER_CLOSED)
-            | fidl::Error::ClientWrite(zx::Status::PEER_CLOSED) => {}
-            _ => panic!("Unexpected error: {:?}", err),
-        };
+        assert!(err.is_closed(), "Unexpected error: {:?}", err);
         Ok(())
     }
 }

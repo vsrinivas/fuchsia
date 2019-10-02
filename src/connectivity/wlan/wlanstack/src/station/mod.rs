@@ -23,7 +23,6 @@ use wlan_sme::{
     MlmeRequest, MlmeStream, Station,
 };
 
-use crate::fidl_util::is_peer_closed;
 use crate::stats_scheduler::StatsRequest;
 
 // The returned future successfully terminates when MLME closes the channel
@@ -56,14 +55,14 @@ where
                 // Handle the stats response separately since it is SME-independent
                 Some(Ok(MlmeEvent::StatsQueryResp{ resp })) => handle_stats_resp(&mut stats_sender, resp)?,
                 Some(Ok(other)) => station.lock().unwrap().on_mlme_event(other),
-                Some(Err(ref e)) if is_peer_closed(e) => return Ok(()),
+                Some(Err(ref e)) if e.is_closed() => return Ok(()),
                 None => return Ok(()),
                 Some(Err(e)) => bail!("Error reading an event from MLME channel: {}", e),
             },
             mlme_req = mlme_stream.next().fuse() => match mlme_req {
                 Some(req) => match forward_mlme_request(req, &proxy) {
                     Ok(()) => {},
-                    Err(ref e) if is_peer_closed(e) => return Ok(()),
+                    Err(ref e) if e.is_closed() => return Ok(()),
                     Err(e) => bail!("Error forwarding a request from SME to MLME: {}", e),
                 },
                 None => bail!("Stream of requests from SME to MLME has ended unexpectedly"),

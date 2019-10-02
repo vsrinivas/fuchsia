@@ -469,6 +469,10 @@ impl InterfaceControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
 	}
+
+	pub fn shutdown_with_epitaph(&self, status: zx::Status) {
+		self.inner.shutdown_with_epitaph(status)
+	}
 	pub fn send_on_event(&self) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: 0,

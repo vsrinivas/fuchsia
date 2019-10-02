@@ -21,7 +21,6 @@ use wlan_sme::client::{
 };
 use wlan_sme::{self as sme, client as client_sme, DeviceInfo, InfoStream};
 
-use crate::fidl_util::is_peer_closed;
 use crate::stats_scheduler::StatsRequest;
 use crate::telemetry;
 use fuchsia_cobalt::CobaltSender;
@@ -174,7 +173,7 @@ async fn connect(
 
 pub fn filter_out_peer_closed(r: Result<(), fidl::Error>) -> Result<(), fidl::Error> {
     match r {
-        Err(ref e) if is_peer_closed(e) => Ok(()),
+        Err(ref e) if e.is_closed() => Ok(()),
         other => other,
     }
 }

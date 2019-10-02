@@ -9,8 +9,8 @@
 use {
     crate::{
         encoding::{
-            decode_transaction_header, Decodable, Decoder, Encodable, Encoder, TransactionHeader,
-            TransactionMessage,
+            decode_transaction_header, Decodable, Decoder, Encodable, Encoder, EpitaphBody,
+            TransactionHeader, TransactionMessage, EPITAPH_ORDINAL,
         },
         Error,
     },
@@ -99,7 +99,8 @@ impl Client {
             inner: Arc::new(ClientInner {
                 channel: channel,
                 message_interests: Mutex::new(Slab::<MessageInterest>::new()),
-                event_channel: Mutex::<EventChannel>::default(),
+                event_channel: Mutex::default(),
+                epitaph: Mutex::default(),
             }),
         }
     }
@@ -280,7 +281,7 @@ impl Stream for EventReceiver {
         let inner = self.inner.as_ref().expect("polled EventReceiver after `None`");
         Poll::Ready(match ready!(inner.poll_recv_event(cx)) {
             Ok(x) => Some(Ok(x)),
-            Err(Error::ClientRead(zx::Status::PEER_CLOSED)) => {
+            Err(Error::ClientChannelClosed(_)) => {
                 self.inner = None;
                 None
             }
@@ -334,6 +335,9 @@ struct ClientInner {
 
     /// A queue of received events and a waker for the task to receive them.
     event_channel: Mutex<EventChannel>,
+
+    /// The server provided epitaph, or None if the channel is not closed.
+    epitaph: Mutex<Option<zx::Status>>,
 }
 
 impl Deref for Client {
@@ -362,15 +366,15 @@ impl ClientInner {
             lock.listener = EventListener::Some(cx.waker().clone());
         }
 
-        let is_closed = self.recv_all()?;
+        let epitaph = self.recv_all()?;
 
         let mut lock = self.event_channel.lock();
 
         if let Some(msg_buf) = lock.queue.pop_front() {
             Poll::Ready(Ok(msg_buf))
         } else {
-            if is_closed {
-                Poll::Ready(Err(Error::ClientRead(zx::Status::PEER_CLOSED)))
+            if let Some(status) = epitaph {
+                Poll::Ready(Err(Error::ClientChannelClosed(status)))
             } else {
                 Poll::Pending
             }
@@ -395,7 +399,7 @@ impl ClientInner {
             }
         }
 
-        let is_closed = self.recv_all()?;
+        let epitaph = self.recv_all()?;
 
         let mut message_interests = self.message_interests.lock();
         if message_interests
@@ -408,8 +412,8 @@ impl ClientInner {
             let buf = message_interests.remove(interest_id.as_raw_id()).unwrap_received();
             Poll::Ready(Ok(buf))
         } else {
-            if is_closed {
-                Poll::Ready(Err(Error::ClientRead(zx::Status::PEER_CLOSED)))
+            if let Some(status) = epitaph {
+                Poll::Ready(Err(Error::ClientChannelClosed(status)))
             } else {
                 Poll::Pending
             }
@@ -419,29 +423,64 @@ impl ClientInner {
     /// Poll for the receipt of any response message or an event.
     ///
     /// Returns whether or not the channel is closed.
-    fn recv_all(&self) -> Result<bool, Error> {
+    fn recv_all(&self) -> Result<Option<zx::Status>, Error> {
         // TODO(cramertj) return errors if one has occured _ever_ in recv_all, not just if
         // one happens on this call.
         loop {
+            // Acquire a mutex so that only one thread can read from the underlying channel
+            // at a time. zx::Channel is already synchronized, but we need to also decode the
+            // FIDL message header atomically so that epitaphs can be properly handled.
+            let mut epitaph_lock = self.epitaph.lock();
+            if epitaph_lock.is_some() {
+                return Ok(*epitaph_lock);
+            }
             let buf = {
                 let waker = match self.get_pending_waker() {
                     Some(v) => v,
-                    None => return Ok(false),
+                    None => return Ok(None),
                 };
                 let cx = &mut Context::from_waker(&waker);
 
                 let mut buf = zx::MessageBuf::new();
-                match self.channel.recv_from(cx, &mut buf) {
+                let result = self.channel.recv_from(cx, &mut buf);
+                match result {
                     Poll::Ready(Ok(())) => {}
-                    Poll::Ready(Err(zx::Status::PEER_CLOSED)) => return Ok(true),
+                    Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
+                        // The channel has been closed, and no epitaph was received. Set the epitaph to PEER_CLOSED.
+                        *epitaph_lock = Some(zx::Status::PEER_CLOSED);
+                        // The task that calls this method also has its Waker woken. This could be
+                        // optimized by excluding this task, but since this occurs on channel close,
+                        // it is not a critical optimization.
+                        self.wake_all();
+                        return Ok(*epitaph_lock);
+                    }
                     Poll::Ready(Err(e)) => return Err(Error::ClientRead(e)),
-                    Poll::Pending => return Ok(false),
-                }
+                    Poll::Pending => {
+                        return Ok(None);
+                    }
+                };
                 buf
             };
 
-            let (header, _) =
+            let (header, body_bytes) =
                 decode_transaction_header(buf.bytes()).map_err(|_| Error::InvalidHeader)?;
+            if header.ordinal == EPITAPH_ORDINAL {
+                // Received an epitaph. Record this so that future operations receive the same
+                // epitaph.
+                let handles = &mut [];
+                let mut epitaph_body = EpitaphBody::new_empty();
+                Decoder::decode_into(&body_bytes, handles, &mut epitaph_body)?;
+                *epitaph_lock = Some(epitaph_body.error);
+                // The task that calls this method also has its Waker woken. This could be
+                // optimized by excluding this task, but since this occurs on channel close,
+                // it is not a critical optimization.
+                self.wake_all();
+                return Ok(*epitaph_lock);
+            }
+
+            // Epitaph handling is done, so the lock is no longer required.
+            drop(epitaph_lock);
+
             if header.tx_id == 0 {
                 // received an event
                 let mut lock = self.event_channel.lock();
@@ -450,7 +489,7 @@ impl ClientInner {
                     if let EventListener::Some(waker) =
                         mem::replace(&mut lock.listener, EventListener::WillPoll)
                     {
-                        waker.wake()
+                        waker.wake();
                     }
                 }
             } else {
@@ -510,6 +549,31 @@ impl ClientInner {
     fn wake_any(&self) {
         if let Some(waker) = self.get_pending_waker() {
             waker.wake();
+        }
+    }
+
+    /// Wakes all tasks that have polled on this channel.
+    fn wake_all(&self) {
+        {
+            let mut lock = self.message_interests.lock();
+            for (_, message_interest) in lock.iter_mut() {
+                // Only wake and replace the tasks that have polled and have Wakers.
+                // Otherwise a task has received a response would have that buffer
+                // overridden.
+                if let MessageInterest::Waiting(_) = message_interest {
+                    if let MessageInterest::Waiting(waker) =
+                        mem::replace(message_interest, MessageInterest::WillPoll)
+                    {
+                        waker.wake();
+                    }
+                }
+            }
+        }
+        {
+            let lock = self.event_channel.lock();
+            if let EventListener::Some(waker) = &lock.listener {
+                waker.wake_by_ref();
+            }
         }
     }
 }
@@ -608,12 +672,14 @@ pub mod sync {
 mod tests {
     use super::*;
     use {
+        crate::epitaph::{self, ChannelEpitaphExt},
         failure::{Error, ResultExt},
         fuchsia_async::{DurationExt, TimeoutExt},
         fuchsia_zircon::DurationNum,
-        futures::{future::join, FutureExt, StreamExt},
+        futures::{join, FutureExt, StreamExt},
         futures_test::task::new_count_waker,
         std::thread,
+        test_util::assert_matches,
     };
 
     #[rustfmt::skip]
@@ -682,9 +748,8 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn client() {
-        let mut executor = fasync::Executor::new().unwrap();
+    #[fasync::run_singlethreaded(test)]
+    async fn client() {
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = fasync::Channel::from_channel(client_end).unwrap();
         let client = Client::new(client_end);
@@ -704,11 +769,11 @@ mod tests {
             client.send(&mut SEND_DATA, SEND_ORDINAL).expect("failed to send msg");
         });
 
-        executor.run_singlethreaded(join(receiver, sender));
+        join!(receiver, sender);
     }
 
-    #[test]
-    fn client_with_response() {
+    #[fasync::run_singlethreaded(test)]
+    async fn client_with_response() {
         const EXPECTED: &[u8] = &[
             1, 0, 0, 0, 0, 0, 0, 0, // 32 bit tx_id followed by 32 bits of padding
             0, 0, 0, 0, // low bytes of 64 bit ordinal
@@ -716,8 +781,6 @@ mod tests {
             55, // 8 bit data
             0, 0, 0, 0, 0, 0, 0, // 7 bytes of padding after our 1 byte of data
         ];
-
-        let mut executor = fasync::Executor::new().unwrap();
 
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = fasync::Channel::from_channel(client_end).unwrap();
@@ -750,13 +813,42 @@ mod tests {
         let sender = sender
             .on_timeout(300.millis().after_now(), || panic!("did not receive response in time!"));
 
-        let ((), ()) = executor.run_singlethreaded(join(receiver, sender));
+        let ((), ()) = join!(receiver, sender);
     }
 
-    #[test]
+    #[fasync::run_singlethreaded(test)]
+    async fn client_with_response_receives_epitaph() {
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        let client_end = fasync::Channel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end);
+
+        let server = fasync::Channel::from_channel(server_end).unwrap();
+        let mut buffer = zx::MessageBuf::new();
+        let receiver = async move {
+            server.recv_msg(&mut buffer).await.expect("failed to recv msg");
+            server.close_with_epitaph(zx::Status::UNAVAILABLE).expect("failed to write epitaph");
+        };
+        // add a timeout to receiver so if test is broken it doesn't take forever
+        let receiver = receiver
+            .on_timeout(300.millis().after_now(), || panic!("did not receive message in time!"));
+
+        let sender = async move {
+            let result = client.send_query::<u8, u8>(&mut 55, 42 << 32).await;
+            assert_matches!(
+                result,
+                Err(crate::Error::ClientChannelClosed(zx::Status::UNAVAILABLE))
+            );
+        };
+        // add a timeout to sender so if test is broken it doesn't take forever
+        let sender = sender
+            .on_timeout(300.millis().after_now(), || panic!("did not receive response in time!"));
+
+        let ((), ()) = join!(receiver, sender);
+    }
+
+    #[fasync::run_singlethreaded(test)]
     #[should_panic]
-    fn event_cant_be_taken_twice() {
-        let _exec = fasync::Executor::new().unwrap();
+    async fn event_cant_be_taken_twice() {
         let (client_end, _) = zx::Channel::create().unwrap();
         let client_end = fasync::Channel::from_channel(client_end).unwrap();
         let client = Client::new(client_end);
@@ -764,19 +856,16 @@ mod tests {
         client.take_event_receiver();
     }
 
-    #[test]
-    fn event_can_be_taken() {
-        let _exec = fasync::Executor::new().unwrap();
+    #[fasync::run_singlethreaded(test)]
+    async fn event_can_be_taken() {
         let (client_end, _) = zx::Channel::create().unwrap();
         let client_end = fasync::Channel::from_channel(client_end).unwrap();
         let client = Client::new(client_end);
         client.take_event_receiver();
     }
 
-    #[test]
-    fn event_received() {
-        let mut executor = fasync::Executor::new().unwrap();
-
+    #[fasync::run_singlethreaded(test)]
+    async fn event_received() {
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = fasync::Channel::from_channel(client_end).unwrap();
         let client = Client::new(client_end);
@@ -805,7 +894,27 @@ mod tests {
         let recv =
             recv.on_timeout(300.millis().after_now(), || panic!("did not receive event in time!"));
 
-        executor.run_singlethreaded(recv);
+        recv.await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn polling_event_receives_epitaph() {
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        let client_end = fasync::Channel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end);
+
+        // Send the epitaph from the server
+        let server = fasync::Channel::from_channel(server_end).unwrap();
+        server.close_with_epitaph(zx::Status::UNAVAILABLE).expect("failed to write epitaph");
+
+        let mut event_receiver = client.take_event_receiver();
+        let recv = event_receiver.next().map(|x| assert!(x.is_none(), "should be None"));
+
+        // add a timeout to receiver so if test is broken it doesn't take forever
+        let recv =
+            recv.on_timeout(300.millis().after_now(), || panic!("did not receive event in time!"));
+
+        recv.await;
     }
 
     #[test]
@@ -866,9 +975,83 @@ mod tests {
     }
 
     #[test]
-    fn client_allows_take_event_stream_even_if_event_delivered() {
-        let mut _executor = fasync::Executor::new().unwrap();
+    fn client_always_wakes_pending_futures_on_epitaph() {
+        let mut executor = fasync::Executor::new().unwrap();
 
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        let client_end = fasync::Channel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end);
+
+        let mut event_receiver = client.take_event_receiver();
+
+        // first poll on a response
+        let (response1_waker, response1_waker_count) = new_count_waker();
+        let response1_cx = &mut Context::from_waker(&response1_waker);
+        let mut response1_future = client.send_raw_query(|tx_id, bytes, handles| {
+            let header = TransactionHeader { tx_id: tx_id.as_raw_id(), ordinal: 42 };
+            encode_transaction(header, bytes, handles);
+            Ok(())
+        });
+        assert!(response1_future.poll_unpin(response1_cx).is_pending());
+
+        // then, poll on an event
+        let (event_waker, event_waker_count) = new_count_waker();
+        let event_cx = &mut Context::from_waker(&event_waker);
+        assert!(event_receiver.poll_next_unpin(event_cx).is_pending());
+
+        // poll on another response
+        let (response2_waker, response2_waker_count) = new_count_waker();
+        let response2_cx = &mut Context::from_waker(&response2_waker);
+        let mut response2_future = client.send_raw_query(|tx_id, bytes, handles| {
+            let header = TransactionHeader { tx_id: tx_id.as_raw_id(), ordinal: 42 };
+            encode_transaction(header, bytes, handles);
+            Ok(())
+        });
+        assert!(response2_future.poll_unpin(response2_cx).is_pending());
+
+        let wakers = vec![response1_waker_count, response2_waker_count, event_waker_count];
+
+        // get event loop to deliver readiness notifications to channels
+        let _ = executor.run_until_stalled(&mut future::pending::<()>());
+
+        // at this point, nothing should have been woken
+        assert_eq!(0, wakers.iter().fold(0, |acc, x| acc + x.get()));
+
+        // next, simulate an epitaph without closing
+        epitaph::write_epitaph_impl(&server_end, zx::Status::UNAVAILABLE).expect("wrote epitaph");
+
+        // get event loop to deliver readiness notifications to channels
+        let _ = executor.run_until_stalled(&mut future::pending::<()>());
+
+        // one waker should have woken up, since reading from a channel only supports
+        // a single waker.
+        assert_eq!(1, wakers.iter().fold(0, |acc, x| acc + x.get()));
+
+        // pretend that response1 woke and poll that to completion.
+        assert_matches!(
+            response1_future.poll_unpin(response1_cx),
+            Poll::Ready(Err(crate::Error::ClientChannelClosed(zx::Status::UNAVAILABLE)))
+        );
+
+        // get event loop to deliver readiness notifications to channels
+        let _ = executor.run_until_stalled(&mut future::pending::<()>());
+
+        // response1 will have woken all other tasks again.
+        // NOTE: The task that is waking all other tasks is also woken.
+        assert_eq!(1 + wakers.len(), wakers.iter().fold(0, |acc, x| acc + x.get()));
+
+        // poll response2 to completion.
+        assert_matches!(
+            response2_future.poll_unpin(response2_cx),
+            Poll::Ready(Err(crate::Error::ClientChannelClosed(zx::Status::UNAVAILABLE)))
+        );
+
+        // poll the event stream to completion.
+        assert!(event_receiver.poll_next_unpin(event_cx).is_ready());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn client_allows_take_event_stream_even_if_event_delivered() {
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = fasync::Channel::from_channel(client_end).unwrap();
         let client = Client::new(client_end);

@@ -7,7 +7,6 @@ use {
     fidl_fuchsia_test_echos::{EchoExposedByParentMarker, EchoHiddenByParentMarker},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
-    fuchsia_zircon as zx,
     std::env,
     std::io::Read,
 };
@@ -23,8 +22,7 @@ async fn main() -> Result<(), Error> {
     assert_eq!(42, echo.echo(1).await?);
     let echo = connect_to_service::<EchoHiddenByParentMarker>()?;
     match echo.echo(2).await {
-        Err(fidl::Error::ClientRead(zx::Status::PEER_CLOSED))
-        | Err(fidl::Error::ClientWrite(zx::Status::PEER_CLOSED)) => {}
+        Err(e) if e.is_closed() => {}
         Ok(_) => panic!("inner nested component successfully echoed through parent"),
         Err(e) => panic!("Unexpected error connecting to hidden service: {:?}", e),
     }

@@ -411,8 +411,7 @@ mod test_real_service_connector {
 
         assert_matches!(
             read_dirents_res,
-            Err(fidl::Error::ClientRead(zx::Status::PEER_CLOSED))
-                | Err(fidl::Error::ClientWrite(zx::Status::PEER_CLOSED))
+            Err(e) if e.is_closed()
         );
     }
 }

@@ -7,7 +7,6 @@ use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog as syslog;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
-use fuchsia_zircon as zx;
 use futures::{future, io, StreamExt, TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
 use std::collections::HashMap;
@@ -41,13 +40,9 @@ impl DeviceSettingsManagerServer {
         if let Some(m) = map.get_mut(key) {
             m.retain(|w| {
                 if let Err(e) = w.on_change_settings(t) {
-                    match e {
-                        fidl::Error::ClientRead(zx::Status::PEER_CLOSED)
-                        | fidl::Error::ClientWrite(zx::Status::PEER_CLOSED) => {
-                            return false;
-                        }
-                        _ => {}
-                    };
+                    if e.is_closed() {
+                        return false;
+                    }
                     fx_log_err!("Error call watcher: {:?}", e);
                 }
                 return true;

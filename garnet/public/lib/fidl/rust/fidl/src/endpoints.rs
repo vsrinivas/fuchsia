@@ -7,7 +7,7 @@
 //! Wrapper types for the endpoints of a connection.
 
 use {
-    crate::{Error, ServeInner},
+    crate::{epitaph::ChannelEpitaphExt, Error, ServeInner},
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
@@ -141,12 +141,12 @@ impl<T> ClientEnd<T> {
         ClientEnd { inner, phantom: PhantomData }
     }
 
-    /// Get a reference to the undelrying channel
+    /// Get a reference to the underlying channel
     pub fn channel(&self) -> &zx::Channel {
         &self.inner
     }
 
-    /// Extract the inner channel.
+    /// Extract the underlying channel.
     pub fn into_channel(self) -> zx::Channel {
         self.inner
     }
@@ -237,6 +237,11 @@ impl<T> ServerEnd<T> {
         let stream = self.into_stream()?;
         let control_handle = stream.control_handle();
         Ok((stream, control_handle))
+    }
+
+    /// Writes an epitaph into the underlying channel before closing it.
+    pub fn close_with_epitaph(self, status: zx::Status) -> Result<(), Error> {
+        self.inner.close_with_epitaph(status)
     }
 }
 

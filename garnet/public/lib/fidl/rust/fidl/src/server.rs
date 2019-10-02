@@ -7,7 +7,8 @@
 //! An implementation of a server for a fidl interface.
 
 use {
-    fuchsia_async as fasync,
+    crate::epitaph,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::task::{AtomicWaker, Context},
     std::sync::atomic::{self, AtomicBool},
 };
@@ -37,6 +38,16 @@ impl ServeInner {
     pub fn shutdown(&self) {
         self.shutdown.store(true, atomic::Ordering::Relaxed);
         self.waker.wake();
+    }
+
+    /// Set the server to shutdown with an epitaph.
+    pub fn shutdown_with_epitaph(&self, status: zx::Status) {
+        let already_shutting_down = self.shutdown.swap(true, atomic::Ordering::Relaxed);
+        if !already_shutting_down {
+            // Ignore the error, best effort sending an epitaph.
+            let _ = epitaph::write_epitaph_impl(&self.channel, status);
+            self.waker.wake();
+        }
     }
 
     /// Check if the server has been set to shutdown.

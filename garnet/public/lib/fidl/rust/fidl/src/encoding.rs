@@ -110,6 +110,9 @@ pub const ALLOC_ABSENT_U64: u64 = 0;
 /// Indicates that an optional value is absent.
 pub const ALLOC_ABSENT_U32: u32 = 0;
 
+/// Special ordinal signifying an epitaph message.
+pub const EPITAPH_ORDINAL: u64 = 0xffffffffffffffffu64;
+
 /// Encoding state
 #[derive(Debug)]
 pub struct Encoder<'a> {
@@ -1407,6 +1410,40 @@ mod zx_encoding {
         }
     }
 
+    /// The body of a FIDL Epitaph
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    pub struct EpitaphBody {
+        /// The error status
+        pub error: zx::Status,
+    }
+
+    impl Encodable for EpitaphBody {
+        fn inline_size(&self) -> usize {
+            self.error.inline_size()
+        }
+        fn inline_align(&self) -> usize {
+            self.error.inline_align()
+        }
+        fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+            self.error.encode(encoder)
+        }
+    }
+
+    impl Decodable for EpitaphBody {
+        fn new_empty() -> Self {
+            Self { error: zx::Status::new_empty() }
+        }
+        fn inline_size() -> usize {
+            <zx::Status as Decodable>::inline_size()
+        }
+        fn inline_align() -> usize {
+            <zx::Status as Decodable>::inline_align()
+        }
+        fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+            self.error.decode(decoder)
+        }
+    }
+
     type ZxChannel = zx::Channel;
     type ZxEvent = zx::Event;
     type ZxEventPair = zx::EventPair;
@@ -1441,7 +1478,6 @@ mod zx_encoding {
         ZxVmar,
         ZxVmo,
     ];
-
 }
 
 #[cfg(target_os = "fuchsia")]
@@ -1457,7 +1493,6 @@ mod fidl_handle_encoding {
     type FidlVmo = crate::handle::Vmo;
 
     handle_based_codable![FidlChannel, FidlEvent, FidlEventPair, FidlSocket, FidlVmo,];
-
 }
 
 #[cfg(not(target_os = "fuchsia"))]
@@ -1954,8 +1989,8 @@ fn result_field_padding<O: Decodable>() -> usize {
 // to satisfy its alignment requirements.
 fn result_inline_size<O: Decodable>() -> usize {
     <u32 as Decodable>::inline_size()
-    + result_field_padding::<O>()
-    + std::cmp::max(O::inline_size(), <u32 as Decodable>::inline_size())
+        + result_field_padding::<O>()
+        + std::cmp::max(O::inline_size(), <u32 as Decodable>::inline_size())
 }
 
 impl<O, E> Encodable for std::result::Result<O, E>
@@ -3626,5 +3661,13 @@ mod zx_test {
         } else {
             panic!("wrong final variant")
         }
+    }
+
+    #[test]
+    fn encode_epitaph() {
+        assert_eq!(
+            EpitaphBody { error: zx::Status::UNAVAILABLE },
+            encode_decode(&mut EpitaphBody { error: zx::Status::UNAVAILABLE })
+        );
     }
 }

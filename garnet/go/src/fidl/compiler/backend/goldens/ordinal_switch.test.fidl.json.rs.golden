@@ -486,6 +486,10 @@ impl SwitchingOrdinalsControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
 	}
+
+	pub fn shutdown_with_epitaph(&self, status: zx::Status) {
+		self.inner.shutdown_with_epitaph(status)
+	}
 	pub fn send_event_ordinal_fifteen(&self) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: 0,

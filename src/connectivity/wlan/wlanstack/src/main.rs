@@ -9,7 +9,6 @@
 
 mod device;
 mod device_watch;
-mod fidl_util;
 mod future_util;
 mod inspect;
 mod logger;

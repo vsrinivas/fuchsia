@@ -120,6 +120,14 @@ pub enum Error {
     )]
     ServerRequestRead(#[cause] zx::Status),
 
+    /// A FIDL server encountered an IO error writing an epitaph to a channel.
+    #[cfg(target_os = "fuchsia")]
+    #[fail(
+        display = "A FIDL server encountered an IO error writing an epitaph into a channel: {}",
+        _0
+    )]
+    ServerEpitaphWrite(#[cause] zx::Status),
+
     /// A FIDL client encountered an IO error reading a response from a channel.
     #[cfg(target_os = "fuchsia")]
     #[fail(
@@ -135,6 +143,12 @@ pub enum Error {
         _0
     )]
     ClientWrite(#[cause] zx::Status),
+
+    /// A FIDL client's channel was closed. Contains an epitaph if one was sent by the server, or
+    /// `zx::Status::PEER_CLOSED` otherwise.
+    #[cfg(target_os = "fuchsia")]
+    #[fail(display = "A FIDL client's channel was closed: {}", _0)]
+    ClientChannelClosed(#[cause] zx::Status),
 
     /// There was an error creating a channel to be used for a FIDL client-server pair.
     #[cfg(target_os = "fuchsia")]
@@ -157,4 +171,29 @@ pub enum Error {
     #[doc(hidden)]
     #[fail(display = "__Nonexhaustive error should never be created.")]
     __Nonexhaustive,
+}
+
+impl Error {
+    /// Returns `true` if the error was caused by a closed channel.
+    pub fn is_closed(&self) -> bool {
+        self.is_closed_impl()
+    }
+
+    #[cfg(target_os = "fuchsia")]
+    fn is_closed_impl(&self) -> bool {
+        match self {
+            Error::ClientRead(zx::Status::PEER_CLOSED)
+            | Error::ClientWrite(zx::Status::PEER_CLOSED)
+            | Error::ClientChannelClosed(_)
+            | Error::ServerRequestRead(zx::Status::PEER_CLOSED)
+            | Error::ServerResponseWrite(zx::Status::PEER_CLOSED)
+            | Error::ServerEpitaphWrite(zx::Status::PEER_CLOSED) => true,
+            _ => false,
+        }
+    }
+
+    #[cfg(not(target_os = "fuchsia"))]
+    fn is_closed_impl(&self) -> bool {
+        false
+    }
 }

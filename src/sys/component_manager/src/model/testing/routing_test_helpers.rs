@@ -489,10 +489,7 @@ pub mod capability_util {
 
         match should_succeed {
             true => assert_eq!("hippo", res.expect("failed to read file")),
-            false => {
-                let err = res.expect_err("read file successfully when it should fail");
-                assert_eq!(format!("{:?}", err), "ClientRead(Status(PEER_CLOSED))");
-            }
+            false => assert!(res.is_err(), "read file successfully when it should fail"),
         }
     }
 
@@ -580,11 +577,7 @@ pub mod capability_util {
             }
             false => {
                 let err = res.expect_err("used echo service successfully when it should fail");
-                if let fidl::Error::ClientRead(status) = err {
-                    assert_eq!(status, zx::Status::PEER_CLOSED);
-                } else {
-                    panic!("unexpected error value: {}", err);
-                }
+                assert!(err.is_closed(), "expected file closed error, got: {:?}", err);
             }
         }
     }
@@ -637,10 +630,7 @@ pub mod capability_util {
 
         match should_succeed {
             true => assert_eq!("hippo", res.expect("failed to read file")),
-            false => {
-                let err = res.expect_err("read file successfully when it should fail");
-                assert_eq!(format!("{:?}", err), "ClientRead(Status(PEER_CLOSED))");
-            }
+            false => assert!(res.is_err(), "read file successfully when it should fail"),
         }
     }
 
@@ -662,11 +652,7 @@ pub mod capability_util {
             }
             false => {
                 let err = res.expect_err("used echo service successfully when it should fail");
-                if let fidl::Error::ClientRead(status) = err {
-                    assert_eq!(status, zx::Status::PEER_CLOSED);
-                } else {
-                    panic!("unexpected error value: {}", err);
-                }
+                assert!(err.is_closed(), "expected file closed error, got: {:?}", err);
             }
         }
     }

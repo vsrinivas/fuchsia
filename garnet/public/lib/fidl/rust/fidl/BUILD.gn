@@ -26,6 +26,7 @@ rustc_library("fidl") {
       "//garnet/public/rust/fuchsia-zircon",
     ]
   }
+  test_deps = [ "//src/lib/test_util" ]
 }
 
 # not actually used-- just to ensure successful compilation
@@ -70,7 +71,7 @@ test_package("rust_fidl_tests") {
 group("tests") {
   testonly = true
   public_deps = [
-    ":rust_fidl_tests",
     ":fidl_test($host_toolchain)",
+    ":rust_fidl_tests",
   ]
 }

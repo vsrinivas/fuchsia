@@ -5,7 +5,6 @@
 use failure::{Error, ResultExt};
 use fidl::endpoints::ClientEnd;
 use fuchsia_async as fasync;
-use fuchsia_zircon as zx;
 use futures::{TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
 use std::collections::HashSet;
@@ -57,13 +56,11 @@ impl ListenerWrapper {
     /// This fn assumes that logs have already been filtered.
     fn send_filtered_logs(&self, log_messages: &mut Vec<&mut LogMessage>) -> ListenerStatus {
         if let Err(e) = self.listener.log_many(&mut log_messages.iter_mut().map(|x| &mut **x)) {
-            match e {
-                fidl::Error::ClientRead(zx::Status::PEER_CLOSED)
-                | fidl::Error::ClientWrite(zx::Status::PEER_CLOSED) => ListenerStatus::Stale,
-                e => {
-                    eprintln!("Error calling listener: {:?}", e);
-                    ListenerStatus::Fine
-                }
+            if e.is_closed() {
+                ListenerStatus::Stale
+            } else {
+                eprintln!("Error calling listener: {:?}", e);
+                ListenerStatus::Fine
             }
         } else {
             ListenerStatus::Fine
@@ -75,13 +72,11 @@ impl ListenerWrapper {
             return ListenerStatus::Fine;
         }
         if let Err(e) = self.listener.log(log_message) {
-            match e {
-                fidl::Error::ClientRead(zx::Status::PEER_CLOSED)
-                | fidl::Error::ClientWrite(zx::Status::PEER_CLOSED) => ListenerStatus::Stale,
-                e => {
-                    eprintln!("Error calling listener: {:?}", e);
-                    ListenerStatus::Fine
-                }
+            if e.is_closed() {
+                ListenerStatus::Stale
+            } else {
+                eprintln!("Error calling listener: {:?}", e);
+                ListenerStatus::Fine
             }
         } else {
             ListenerStatus::Fine
@@ -390,7 +385,7 @@ mod tests {
         LogMarker, LogProxy, LogSinkMarker, LogSinkProxy,
     };
     use fuchsia_async::DurationExt;
-    use fuchsia_zircon::prelude::*;
+    use fuchsia_zircon::{self as zx, prelude::*};
 
     mod memory_bounded_buffer {
         use super::*;

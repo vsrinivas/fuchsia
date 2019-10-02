@@ -857,6 +857,10 @@ impl WithAndWithoutRequestResponseControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
 	}
+
+	pub fn shutdown_with_epitaph(&self, status: zx::Status) {
+		self.inner.shutdown_with_epitaph(status)
+	}
 	pub fn send_on_empty_response(&self) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: 0,
@@ -1705,6 +1709,10 @@ impl ::std::ops::Deref for WithErrorSyntaxControlHandle {
 impl WithErrorSyntaxControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
+	}
+
+	pub fn shutdown_with_epitaph(&self, status: zx::Status) {
+		self.inner.shutdown_with_epitaph(status)
 	}}
 
 /* beginning of response types */
@@ -2521,6 +2529,10 @@ impl ::std::ops::Deref for ChannelProtocolControlHandle {
 impl ChannelProtocolControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
+	}
+
+	pub fn shutdown_with_epitaph(&self, status: zx::Status) {
+		self.inner.shutdown_with_epitaph(status)
 	}
 	pub fn send_event_a(&self,
 		mut a: i64,

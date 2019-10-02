@@ -125,6 +125,20 @@ macro_rules! assert_read_fidl_err {
 
 // See comment at the top of the file for why this is a macro.
 #[macro_export]
+macro_rules! assert_read_fidl_err_closed {
+    ($proxy:expr) => {{
+        match $proxy.read(100).await {
+            Err(error) if error.is_closed() => (),
+            Err(error) => panic!("read() returned unexpected error: {:?}", error),
+            Ok((status, content)) => {
+                panic!("Read succeeded: status: {:?}, content: '{:?}'", status, content)
+            }
+        }
+    }};
+}
+
+// See comment at the top of the file for why this is a macro.
+#[macro_export]
 macro_rules! assert_get_buffer {
     ($proxy:expr, $expected:expr) => {{
         use $crate::test_utils::reexport::{Status, OPEN_RIGHT_READABLE};
@@ -216,6 +230,20 @@ macro_rules! assert_write_fidl_err {
     ($proxy:expr, $content:expr, $expected_error:pat) => {
         match $proxy.write(&mut $content.bytes()).await {
             Err($expected_error) => (),
+            Err(error) => panic!("write() returned unexpected error: {:?}", error),
+            Ok((status, actual)) => {
+                panic!("Write succeeded: status: {:?}, actual: '{:?}'", status, actual)
+            }
+        }
+    };
+}
+
+// See comment at the top of the file for why this is a macro.
+#[macro_export]
+macro_rules! assert_write_fidl_err_closed {
+    ($proxy:expr, $content:expr) => {
+        match $proxy.write(&mut $content.bytes()).await {
+            Err(error) if error.is_closed() => (),
             Err(error) => panic!("write() returned unexpected error: {:?}", error),
             Ok((status, actual)) => {
                 panic!("Write succeeded: status: {:?}, actual: '{:?}'", status, actual)

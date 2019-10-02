@@ -351,6 +351,10 @@ impl ::std::ops::Deref for FirstProtocolControlHandle {
 impl FirstProtocolControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
+	}
+
+	pub fn shutdown_with_epitaph(&self, status: zx::Status) {
+		self.inner.shutdown_with_epitaph(status)
 	}}
 
 /* beginning of response types */
@@ -684,6 +688,10 @@ impl ::std::ops::Deref for SecondProtocolControlHandle {
 impl SecondProtocolControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
+	}
+
+	pub fn shutdown_with_epitaph(&self, status: zx::Status) {
+		self.inner.shutdown_with_epitaph(status)
 	}}
 
 /* beginning of response types */

@@ -13,7 +13,6 @@ use {
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
-    fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::prelude::*,
     std::{collections::HashMap, convert::TryFrom, path::Path, sync::Arc},
@@ -42,11 +41,7 @@ async fn call_work_scheduler_svc_from_namespace(
         true => assert_eq!(res.expect("failed to use WorkScheduler service"), Ok(())),
         false => {
             let err = res.expect_err("used WorkScheduler service successfully when it should fail");
-            if let fidl::Error::ClientRead(status) = err {
-                assert_eq!(status, zx::Status::PEER_CLOSED);
-            } else {
-                panic!("unexpected error value: {}", err);
-            }
+            assert!(err.is_closed(), "expected channel closed error, got: {:?}", err);
         }
     }
 }
@@ -93,11 +88,7 @@ async fn call_work_scheduler_control_svc_from_namespace(
         false => {
             let err = res
                 .expect_err("used WorkSchedulerControl service successfully when it should fail");
-            if let fidl::Error::ClientRead(status) = err {
-                assert_eq!(status, zx::Status::PEER_CLOSED);
-            } else {
-                panic!("unexpected error value: {}", err);
-            }
+            assert!(err.is_closed(), "expected channel closed error, got: {:?}", err);
         }
     }
 }

@@ -1016,16 +1016,8 @@ mod tests {
                         Status::ACCESS_DENIED
                     );
 
-                    assert_read_fidl_err!(
-                        second_proxy,
-                        fidl::Error::ClientWrite(Status::PEER_CLOSED)
-                    );
-                    assert_write_fidl_err!(
-                        second_proxy,
-                        "Write attempt",
-                        fidl::Error::ClientWrite(Status::PEER_CLOSED)
-                    );
-
+                    assert_read_fidl_err_closed!(second_proxy);
+                    assert_write_fidl_err_closed!(second_proxy, "Write attempt");
                     assert_close!(first_proxy);
                 }
             },

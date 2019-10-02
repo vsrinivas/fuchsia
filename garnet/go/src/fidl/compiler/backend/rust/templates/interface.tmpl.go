@@ -673,6 +673,10 @@ impl {{ $interface.Name }}ControlHandle {
 		self.inner.shutdown()
 	}
 
+	pub fn shutdown_with_epitaph(&self, status: zx::Status) {
+		self.inner.shutdown_with_epitaph(status)
+	}
+
 	{{- range $method := $interface.Methods }}
 	{{- if not $method.HasRequest }}
 	pub fn send_{{ $method.Name }}(&self
