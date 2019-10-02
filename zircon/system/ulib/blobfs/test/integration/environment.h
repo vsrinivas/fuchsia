@@ -77,7 +77,7 @@ class Environment : public zxtest::Environment {
   std::string path_;
 
   uint32_t block_size_ = 512;
-  uint64_t block_count_ = 1 << 20;  // TODO(ZX-4203): Reduce this value.
+  uint64_t block_count_ = 1 << 19;  // TODO(ZX-4203): Reduce this value.
 };
 
 extern Environment* g_environment;
