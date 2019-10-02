@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 #include <fbl/macros.h>
-
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -23,9 +22,7 @@ DECLARE_HAS_MEMBER_TYPE(has_type_true, Typedef);
 DECLARE_HAS_MEMBER_TYPE(has_type_false, Nonexistent);
 
 // This will compile down to nothing but we want to make sure it is built
-bool macro_test() {
-  BEGIN_TEST;
-
+TEST(MacroTests, CompileTime) {
   static_assert(has_fn_true_v<Full>);
   static_assert(!has_fn_false_v<Full>);
   static_assert(!has_fn_true_v<Empty>);
@@ -40,12 +37,6 @@ bool macro_test() {
   static_assert(!has_type_false_v<Full>);
   static_assert(!has_type_true_v<Empty>);
   static_assert(!has_type_false_v<Empty>);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(compile_time_macro_tests)
-RUN_TEST(macro_test)
-END_TEST_CASE(compile_time_macro_tests)
