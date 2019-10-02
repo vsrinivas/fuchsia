@@ -7,6 +7,7 @@
             "log"
         ],
         "services": [
+            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.feedback.CrashReporter",
             "fuchsia.logger.LogSink",
             "fuchsia.net.Connectivity"
