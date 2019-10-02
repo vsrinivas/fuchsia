@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::convert::TryInto;
+use std::os::unix::io::AsRawFd;
+
 use futures::io::{AsyncReadExt, AsyncWriteExt};
 use futures::stream::{StreamExt, TryStreamExt};
 use net2::TcpStreamExt;
@@ -156,29 +159,40 @@ async fn main() -> Result<(), failure::Error> {
 
             // Start the keepalive machinery.
             let () = keepalive_timeout.std().set_keepalive_ms(Some(0))?;
+            // TODO(tamird): use upstream's setters when
+            // https://github.com/rust-lang-nursery/net2-rs/issues/90 is fixed.
+            //
+            // TODO(tamird): use into_iter after
+            // https://github.com/rust-lang/rust/issues/25725.
+            for name in [libc::TCP_KEEPCNT, libc::TCP_KEEPINTVL].iter().cloned() {
+                let value = 1u32;
+                // This is safe because `setsockopt` does not retain memory passed to it.
+                if unsafe {
+                    libc::setsockopt(
+                        keepalive_timeout.std().as_raw_fd(),
+                        libc::IPPROTO_TCP,
+                        name,
+                        &value as *const _ as *const libc::c_void,
+                        std::mem::size_of_val(&value).try_into().unwrap(),
+                    )
+                } != 0
+                {
+                    return Err(std::io::Error::last_os_error().into());
+                }
+            }
 
             // Start the retransmit machinery.
-            let () = retransmit_timeout.std().set_send_buffer_size(1)?;
-            let size = retransmit_timeout.std().send_buffer_size()?;
-            let mut payload = Vec::with_capacity(size);
-            let () = payload.resize(size, 0xde);
+            let payload = [0xde; 1];
             let n = retransmit_timeout.write(&payload).await?;
             if n != payload.len() {
                 return Err(failure::format_err!("wrote {}/{} bytes", n, payload.len()))?;
             }
 
-            // TCP_KEEP{CNT,INVTL} aren't supported, so this can't complete in a reasonable amount
-            // of time. See https://github.com/rust-lang-nursery/net2-rs/issues/90.
-            //
-            // At the time of writing, the defaults are TCP_KEEPCNT=9, TCP_KEEPINVTL=75s.
-            //
-            // TODO(tamird): when the above is fixed, include this in the try_join! below. This
-            // will require keepalive_timeout to be made `mut`.
-            let _ = verify_broken_pipe(keepalive_timeout);
-
+            let keepalive_timeout = verify_broken_pipe(keepalive_timeout);
             let retransmit_timeout = verify_broken_pipe(retransmit_timeout);
 
-            let ((), ()) = futures::try_join!(connect_timeout, retransmit_timeout)?;
+            let ((), (), ()) =
+                futures::try_join!(connect_timeout, keepalive_timeout, retransmit_timeout)?;
             Ok(())
         }
         SubCommand::Server(Server {}) => {

@@ -239,6 +239,14 @@ func getSockOptTCP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 
 		return int32(time.Duration(v) / time.Second), nil
 
+	case C.TCP_KEEPCNT:
+		var v tcpip.KeepaliveCountOption
+		if err := ep.GetSockOpt(&v); err != nil {
+			return nil, err
+		}
+
+		return int32(v), nil
+
 	case C.TCP_INFO:
 		var v tcpip.TCPInfoOption
 		if err := ep.GetSockOpt(&v); err != nil {
@@ -465,6 +473,14 @@ func setSockOptTCP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 
 		v := binary.LittleEndian.Uint32(optVal)
 		return ep.SetSockOpt(tcpip.KeepaliveIntervalOption(time.Second * time.Duration(v)))
+
+	case C.TCP_KEEPCNT:
+		if len(optVal) < sizeOfInt32 {
+			return tcpip.ErrInvalidOptionValue
+		}
+
+		v := binary.LittleEndian.Uint32(optVal)
+		return ep.SetSockOpt(tcpip.KeepaliveCountOption(v))
 
 	case C.TCP_REPAIR_OPTIONS:
 

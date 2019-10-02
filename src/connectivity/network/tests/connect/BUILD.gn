@@ -18,6 +18,7 @@ rustc_binary("connect") {
     "//src/lib/argh",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:libc",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:net2",
   ]
