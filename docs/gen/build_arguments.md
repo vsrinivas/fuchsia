@@ -979,7 +979,7 @@ From //build/config/BUILDCONFIG.gn:15
 
 ### kernel_cmdline_args
 List of kernel command line arguments to bake into the boot image.
-See also [kernel_cmdline](/docs/zircon/kernel_cmdline.md) and
+See also [kernel_cmdline](/docs/reference/kernel/kernel_cmdline.md) and
 [`devmgr_config`](#devmgr_config).
 
 **Current value for `target_cpu = "arm64"`:** `["dummy=arg"]`
@@ -2427,7 +2427,7 @@ From //build/config/fuchsia/zbi.gni:11
 
 ### zedboot_cmdline_args
 List of kernel command line arguments to bake into the Zedboot image.
-See //docs/zircon/kernel_cmdline.md and
+See //docs/reference/kernel/kernel_cmdline.md and
 [`zedboot_devmgr_config`](#zedboot_devmgr_config).
 
 **Current value (from the default):** `[]`

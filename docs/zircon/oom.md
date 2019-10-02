@@ -92,7 +92,7 @@ OOM info:
 ```
 
 The redline, sleep duration, and auto-start values are controlled by
-`kernel.oom.*` [kernel commandline flags](kernel_cmdline.md).
+`kernel.oom.*` [kernel commandline flags](/docs/reference/kernel/kernel_cmdline.md).
 
 The thread can be started with `k oom start` and stopped with `k oom stop`.
 

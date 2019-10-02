@@ -74,7 +74,7 @@ relatively large chunk of memory, divided into `kernel.jitterentropy.bc`-many
 blocks of size `kernel.jitterentropy.bs` bytes each. The default values when I
 wrote the current document are `bc = 1024` and `bs = 64`; up-to-date defaults
 should be documented in
-[the cmdline document](../kernel_cmdline.md). For comparison, the defaults in
+[the cmdline document](/docs/reference/kernel/kernel_cmdline.md). For comparison, the defaults in
 the jitterentropy source code are `bc = 64` and `bs = 32`,
 [defined here](/zircon/third_party/lib/jitterentropy/include/lib/jitterentropy/jitterentropy.h#79).
 Per the comment above the `jent_memaccess` function, the total memory size

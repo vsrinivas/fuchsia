@@ -18,7 +18,7 @@ image and a data blob in Zircon Boot Image format.
 The [ZBI format](/zircon/system/public/zircon/boot/image.h) is a
 simple container format that embeds items passed by the boot loader,
 including hardware-specific information,
-the [kernel "command line"](kernel_cmdline.md) giving boot options, and RAM
+the [kernel "command line"](/docs/reference/kernel/kernel_cmdline.md) giving boot options, and RAM
 disk images (which are usually compressed).  The kernel extracts some
 essential information for its own use in the early stages of booting.
 
@@ -168,7 +168,7 @@ When the loader service channel is closed (or if the executable had no
 `PT_INTERP` and so no loader service was required, then as soon as the
 process has been started), `userboot` no longer has anything to do.
 
-If [the `userboot.shutdown` option was given on the kernel command line](kernel_cmdline.md#userboot_shutdown),
+If [the `userboot.shutdown` option was given on the kernel command line](/docs/reference/kernel/kernel_cmdline.md#userboot-shutdown),
 then `userboot` waits for the process it started to exit, and then shuts
 down the system (as if by the `dm shutdown` command).  This can be useful
 to run a single test program and then shut down the machine (or emulator).

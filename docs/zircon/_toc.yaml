@@ -48,8 +48,6 @@ toc:
 
 - title: "Kernel"
   section:
-  - title: "Kernel command line options"
-    path: /docs/zircon/kernel_cmdline.md
   - title: "Kernel internal errors"
     path: /docs/zircon/kernel_internal_errors.md
   - title: "Kernel invariants"
@@ -60,6 +58,9 @@ toc:
     path: /docs/zircon/fair_scheduler.md
   - title: "Kernel tracing"
     path: /docs/zircon/tracing/ktrace.md
+  - title: "Kernel reference"
+    section:
+    - include: /docs/reference/kernel/_toc.yaml
 
 - title: "Errors"
   path: /docs/zircon/errors.md
@@ -157,9 +158,6 @@ toc:
 
 - title: "Shadow call stack"
   path: /docs/zircon/shadow_call_stack.md
-
-- title: "Symbolizer markup format"
-  path: /docs/zircon/symbolizer_markup.md
 
 - title: "Zircon and LK"
   path: /docs/zircon/zx_and_lk.md

@@ -19,7 +19,7 @@ or to do a more thorough job of optimizing the parameters).
 The following tunable parameters control how fast jitterentropy runs, and how fast it collects
 entropy:
 
-### [`kernel.jitterentropy.ll`](../kernel_cmdline.md#kernel_jitterentropy_ll_num)
+### [`kernel.jitterentropy.ll`](/docs/reference/kernel/kernel_cmdline.md#kernel-jitterentropy-ll-num)
 
 "`ll`" stands for "LFSR loops". Jitterentropy uses a (deliberately inefficient implementation of a)
 LFSR to exercise the CPU, as part of its noise generation. The inner loop shifts the LFSR 64 times;
@@ -35,7 +35,7 @@ loops in a "random-ish" way. As described in [the basic config doc](config-basic
 the use of `kernel.jitterentropy.ll=0`.
 
 
-### [`kernel.jitterentropy.ml`](../kernel_cmdline.md#kernel_jitterentropy_ml_num)
+### [`kernel.jitterentropy.ml`](/docs/reference/kernel/kernel_cmdline.md#kernel-jitterentropy-ml-num)
 
 "`ml`" stands for "memory access loops". Jitterentropy walks through a moderately large chunk of
 RAM, reading and writing each byte. The size of the chunk and access pattern are controlled by the
@@ -47,7 +47,7 @@ this on RPi3 and qemu-arm64 so far.
 Much like `kernel.jitterentropy.ll`, if you set `kernel.jitterentropy.ml=0`, then jitterentropy will
 choose a "random-ish" value for the memory access loop count. I also discourage this.
 
-### [`kernel.jitterentropy.bs`](../kernel_cmdline.md#kernel_jitterentropy_bs_num)
+### [`kernel.jitterentropy.bs`](/docs/reference/kernel/kernel_cmdline.md#kernel-jitterentropy-bs-num)
 
 "`bs`" stands for "block size". Jitterentropy divides its chunk of RAM into blocks of this size. The
 memory access loop starts with byte 0 of block zero, then "byte -1" of block 1 (which is actually
@@ -57,7 +57,7 @@ so on. This pattern ensures that every byte gets hit, and most accesses go into 
 I have usually tested jitterentropy with `kernel.jitterentropy.bs=64`, based on the size of a cache
 line. I haven't tested yet to see whether there's a better option on some/all platforms.
 
-### [`kernel.jitterentropy.bc`](../kernel_cmdline.md#kernel_jitterentropy_bc_num)
+### [`kernel.jitterentropy.bc`](/docs/reference/kernel/kernel_cmdline.md#kernel-jitterentropy-bc-num)
 
 "`bc`" stands for "block count". Jitterentropy uses this many blocks of RAM, each of size
 `kernel.jitterentropy.bs`, in its memory access loops.

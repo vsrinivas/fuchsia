@@ -8,7 +8,7 @@ several system services:
 - A loader service that loads from that bootfs
 
 After preparing these services, it launches one program from the bootfs.  The
-program may be selected with a [kernel command line argument](kernel_cmdline.md)
+program may be selected with a [kernel command line argument](/docs/reference/kernel/kernel_cmdline.md)
 `bootsvc.next` (this default to `bin/devmgr` currently).  The launched program
 is provided with the bootfs mounted at `/boot` and the loader service.  The
 kernel command line arguments are provided to it via `envp`.  See the
