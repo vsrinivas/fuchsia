@@ -902,6 +902,8 @@ func (c *compiler) compileTable(val types.Table) Table {
 
 func (c *compiler) compileParameter(p types.Parameter) StructMember {
 	ty, tag, tag2 := c.compileType(p.Type)
+	// TODO(fxb/7704): Remove special handling of requests/responses.
+	tag.reverseOfBounds = append(tag.reverseOfBounds, p.Offset - MessageHeaderSize)
 	return StructMember{
 		Type:        ty,
 		Name:        c.compileIdentifier(p.Name, true, ""),

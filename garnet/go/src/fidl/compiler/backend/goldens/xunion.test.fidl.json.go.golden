@@ -290,7 +290,7 @@ const (
 
 type testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse struct {
 	_ struct{} `fidl:"s,24,0" fidl2:"s,24,0"`
-	Xu StrictBoundedXUnion
+	Xu StrictBoundedXUnion`fidl:"0"`
 }
 
 var _mtestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse = _bindings.CreateLazyMarshaler(testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse{})
@@ -301,7 +301,7 @@ func (msg *testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse) Mar
 
 type testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse struct {
 	_ struct{} `fidl:"s,24,0" fidl2:"s,24,0"`
-	Xu OlderSimpleUnion
+	Xu OlderSimpleUnion`fidl:"0"`
 }
 
 var _mtestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse = _bindings.CreateLazyMarshaler(testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{})

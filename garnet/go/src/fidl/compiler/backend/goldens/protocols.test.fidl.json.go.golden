@@ -145,7 +145,7 @@ const (
 
 type withAndWithoutRequestResponseNoRequestWithResponseResponse struct {
 	_ struct{} `fidl:"s,16,0" fidl2:"s,16,0"`
-	Ret string
+	Ret string`fidl:"0,"`
 }
 
 var _mwithAndWithoutRequestResponseNoRequestWithResponseResponse = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseNoRequestWithResponseResponse{})
@@ -156,7 +156,7 @@ func (msg *withAndWithoutRequestResponseNoRequestWithResponseResponse) Marshaler
 
 type withAndWithoutRequestResponseWithRequestNoResponseRequest struct {
 	_ struct{} `fidl:"s,16,0" fidl2:"s,16,0"`
-	Arg string
+	Arg string`fidl:"0,"`
 }
 
 var _mwithAndWithoutRequestResponseWithRequestNoResponseRequest = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseWithRequestNoResponseRequest{})
@@ -167,7 +167,7 @@ func (msg *withAndWithoutRequestResponseWithRequestNoResponseRequest) Marshaler(
 
 type withAndWithoutRequestResponseWithRequestEmptyResponseRequest struct {
 	_ struct{} `fidl:"s,16,0" fidl2:"s,16,0"`
-	Arg string
+	Arg string`fidl:"0,"`
 }
 
 var _mwithAndWithoutRequestResponseWithRequestEmptyResponseRequest = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseWithRequestEmptyResponseRequest{})
@@ -178,7 +178,7 @@ func (msg *withAndWithoutRequestResponseWithRequestEmptyResponseRequest) Marshal
 
 type withAndWithoutRequestResponseWithRequestWithResponseRequest struct {
 	_ struct{} `fidl:"s,16,0" fidl2:"s,16,0"`
-	Arg string
+	Arg string`fidl:"0,"`
 }
 
 var _mwithAndWithoutRequestResponseWithRequestWithResponseRequest = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseWithRequestWithResponseRequest{})
@@ -189,7 +189,7 @@ func (msg *withAndWithoutRequestResponseWithRequestWithResponseRequest) Marshale
 
 type withAndWithoutRequestResponseWithRequestWithResponseResponse struct {
 	_ struct{} `fidl:"s,16,0" fidl2:"s,16,0"`
-	Ret string
+	Ret string`fidl:"0,"`
 }
 
 var _mwithAndWithoutRequestResponseWithRequestWithResponseResponse = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseWithRequestWithResponseResponse{})
@@ -200,7 +200,7 @@ func (msg *withAndWithoutRequestResponseWithRequestWithResponseResponse) Marshal
 
 type withAndWithoutRequestResponseOnWithResponseResponse struct {
 	_ struct{} `fidl:"s,16,0" fidl2:"s,16,0"`
-	Ret string
+	Ret string`fidl:"0,"`
 }
 
 var _mwithAndWithoutRequestResponseOnWithResponseResponse = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseOnWithResponseResponse{})
@@ -381,7 +381,7 @@ const (
 
 type withErrorSyntaxErrorAsPrimitiveResponse struct {
 	_ struct{} `fidl:"s,8,0" fidl2:"s,8,0"`
-	Result WithErrorSyntaxErrorAsPrimitiveResult
+	Result WithErrorSyntaxErrorAsPrimitiveResult`fidl:"0"`
 }
 
 var _mwithErrorSyntaxErrorAsPrimitiveResponse = _bindings.CreateLazyMarshaler(withErrorSyntaxErrorAsPrimitiveResponse{})
@@ -392,7 +392,7 @@ func (msg *withErrorSyntaxErrorAsPrimitiveResponse) Marshaler() _bindings.Marsha
 
 type withErrorSyntaxErrorAsEnumResponse struct {
 	_ struct{} `fidl:"s,8,0" fidl2:"s,8,0"`
-	Result WithErrorSyntaxErrorAsEnumResult
+	Result WithErrorSyntaxErrorAsEnumResult`fidl:"0"`
 }
 
 var _mwithErrorSyntaxErrorAsEnumResponse = _bindings.CreateLazyMarshaler(withErrorSyntaxErrorAsEnumResponse{})
@@ -487,8 +487,8 @@ const (
 
 type channelProtocolMethodARequest struct {
 	_ struct{} `fidl:"s,16,0" fidl2:"s,16,0"`
-	A int64
-	B int64
+	A int64`fidl:"0"`
+	B int64`fidl:"8"`
 }
 
 var _mchannelProtocolMethodARequest = _bindings.CreateLazyMarshaler(channelProtocolMethodARequest{})
@@ -499,8 +499,8 @@ func (msg *channelProtocolMethodARequest) Marshaler() _bindings.Marshaler {
 
 type channelProtocolEventAResponse struct {
 	_ struct{} `fidl:"s,16,0" fidl2:"s,16,0"`
-	A int64
-	B int64
+	A int64`fidl:"0"`
+	B int64`fidl:"8"`
 }
 
 var _mchannelProtocolEventAResponse = _bindings.CreateLazyMarshaler(channelProtocolEventAResponse{})
@@ -511,8 +511,8 @@ func (msg *channelProtocolEventAResponse) Marshaler() _bindings.Marshaler {
 
 type channelProtocolMethodBRequest struct {
 	_ struct{} `fidl:"s,16,0" fidl2:"s,16,0"`
-	A int64
-	B int64
+	A int64`fidl:"0"`
+	B int64`fidl:"8"`
 }
 
 var _mchannelProtocolMethodBRequest = _bindings.CreateLazyMarshaler(channelProtocolMethodBRequest{})
@@ -523,7 +523,7 @@ func (msg *channelProtocolMethodBRequest) Marshaler() _bindings.Marshaler {
 
 type channelProtocolMethodBResponse struct {
 	_ struct{} `fidl:"s,8,0" fidl2:"s,8,0"`
-	Result int64
+	Result int64`fidl:"0"`
 }
 
 var _mchannelProtocolMethodBResponse = _bindings.CreateLazyMarshaler(channelProtocolMethodBResponse{})
@@ -534,7 +534,7 @@ func (msg *channelProtocolMethodBResponse) Marshaler() _bindings.Marshaler {
 
 type channelProtocolMutateSocketRequest struct {
 	_ struct{} `fidl:"s,8,0" fidl2:"s,8,0"`
-	A _zx.Socket`fidl:"0" fidl2:"0"`
+	A _zx.Socket`fidl:"0,0" fidl2:"0"`
 }
 
 var _mchannelProtocolMutateSocketRequest = _bindings.CreateLazyMarshaler(channelProtocolMutateSocketRequest{})
@@ -545,7 +545,7 @@ func (msg *channelProtocolMutateSocketRequest) Marshaler() _bindings.Marshaler {
 
 type channelProtocolMutateSocketResponse struct {
 	_ struct{} `fidl:"s,8,0" fidl2:"s,8,0"`
-	B _zx.Socket`fidl:"0" fidl2:"0"`
+	B _zx.Socket`fidl:"0,0" fidl2:"0"`
 }
 
 var _mchannelProtocolMutateSocketResponse = _bindings.CreateLazyMarshaler(channelProtocolMutateSocketResponse{})

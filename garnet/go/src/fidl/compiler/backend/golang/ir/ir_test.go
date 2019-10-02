@@ -618,6 +618,7 @@ func TestCompileInterface(t *testing.T) {
 					{
 						Type: PrimitiveType(types.Int16),
 						Name: types.Identifier("Value"),
+						Offset: 16,
 					},
 				},
 				RequestSize: 18,
@@ -631,6 +632,7 @@ func TestCompileInterface(t *testing.T) {
 					{
 						Type: Nullable(StringType(nil)),
 						Name: types.Identifier("Value"),
+						Offset: 16,
 					},
 				},
 				RequestSize: 32,
@@ -639,6 +641,7 @@ func TestCompileInterface(t *testing.T) {
 					{
 						Type: PrimitiveType(types.Uint32),
 						Name: types.Identifier("Value"),
+						Offset: 16,
 					},
 				},
 				ResponseSize: 20,
@@ -678,6 +681,7 @@ func TestCompileInterface(t *testing.T) {
 							Name:        "Value",
 							PrivateName: "value",
 							Type:        "int16",
+							Tags:        "`" + `fidl:"0"` + "`",
 						},
 					},
 					Size: 2,
@@ -702,6 +706,7 @@ func TestCompileInterface(t *testing.T) {
 							Name:        "Value",
 							PrivateName: "value",
 							Type:        "*string",
+							Tags:        "`" + `fidl:"0,"` + "`",
 						},
 					},
 					Size: 16,
@@ -713,6 +718,7 @@ func TestCompileInterface(t *testing.T) {
 							Name:        "Value",
 							PrivateName: "value",
 							Type:        "uint32",
+							Tags:        "`" + `fidl:"0"` + "`",
 						},
 					},
 					Size: 4,
@@ -740,6 +746,7 @@ func TestCompileInterface(t *testing.T) {
 					{
 						Type: StringType(nil),
 						Name: types.Identifier("value"),
+						Offset: 16,
 					},
 				},
 				ResponseSize: 32,
@@ -779,6 +786,7 @@ func TestCompileInterface(t *testing.T) {
 							Name:        "Value",
 							PrivateName: "value",
 							Type:        "string",
+							Tags:        "`" + `fidl:"0,"` + "`",
 						},
 					},
 					Size: 16,
