@@ -7,5 +7,6 @@ mod fakes;
 mod intl_tests;
 mod light_sensor_tests;
 mod privacy_tests;
+mod setui_tests;
 mod setup_tests;
 mod system_tests;
