@@ -15,6 +15,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
@@ -26,6 +27,10 @@ import (
 const (
 	// The size in bytes at which files will be read and written to GCS.
 	chunkSize = 8 * 1024 * 1024
+
+	// Err412Msg is substring of an error message returned that indicates a 412
+	// HTTP response.
+	err412Msg = "Error 412"
 
 	// Relative path within the build directory to the repo produced by a build.
 	repoSubpath = "amber-files"
@@ -222,7 +227,7 @@ func (s cloudSink) objectExistsAt(ctx context.Context, name string, expectedChec
 	if err == storage.ErrObjectNotExist {
 		return false, nil
 	} else if err != nil {
-		return false, fmt.Errorf("blob possibly exists remotely, but is in an uknown state: %v", err)
+		return false, fmt.Errorf("object %q: possibly exists remotely, but is in an unknown state: %v", fullName, err)
 	}
 	if bytes.Compare(attrs.MD5, expectedChecksum) != 0 {
 		return true, checksumError{
@@ -236,7 +241,7 @@ func (s cloudSink) objectExistsAt(ctx context.Context, name string, expectedChec
 
 func (s cloudSink) write(ctx context.Context, name string, path string, expectedChecksum []byte) error {
 	fullName := filepath.Join(s.getNamespace(), name)
-	w := s.bucket.Object(fullName).NewWriter(ctx)
+	w := s.bucket.Object(fullName).If(storage.Conditions{DoesNotExist: true}).NewWriter(ctx)
 	w.ChunkSize = chunkSize
 	w.MD5 = expectedChecksum
 
@@ -246,20 +251,45 @@ func (s cloudSink) write(ctx context.Context, name string, path string, expected
 	}
 	defer fd.Close()
 
+	return copyToCloud(ctx, fullName, fd, w)
+}
+
+func copyToCloud(ctx context.Context, objName string, r io.Reader, w io.WriteCloser) error {
+	var err error
+	for {
+		if _, err = io.CopyN(w, r, chunkSize); err != nil {
+			break
+		}
+	}
+
+	// If the precondition of the object not existing is not met on write (i.e.,
+	// at the time of the write the object is there), then the server will respond
+	// with a 412. (See
+	// https://cloud.google.com/storage/docs/json_api/v1/status-codes and
+	// https://tools.ietf.org/html/rfc7232#section-4.2.)
+	// We do not report this as an error, however, as the associated object might
+	// have been created after having checked its non-existence - and we wish to
+	// be resilient in the event of such a race.
+	handleOkayError := func(err error) error {
+		preconditionNotMet := err != nil && strings.Contains(err.Error(), err412Msg)
+		if err == io.EOF || preconditionNotMet {
+			if preconditionNotMet {
+				logger.Warningf(ctx, "object %q: created after its non-existence check", objName)
+			}
+			return nil
+		}
+		return err
+	}
+
 	// Writes happen asynchronously, and so a nil may be returned while the write
 	// goes on to fail. It is recommended in
 	// https://godoc.org/cloud.google.com/go/storage#Writer.Write
 	// to return the value of Close() to detect the success of the write.
-	for {
-		if _, err := io.CopyN(w, fd, chunkSize); err != nil {
-			if err == io.EOF {
-				break
-			}
-			w.Close()
-			return err
-		}
+	if handleOkayError(err) == nil {
+		return handleOkayError(w.Close())
 	}
-	return w.Close()
+	w.Close()
+	return err
 }
 
 type checksumError struct {
@@ -270,7 +300,7 @@ type checksumError struct {
 
 func (err checksumError) Error() string {
 	return fmt.Sprintf(
-		"blob %q checksum mismatch: expected %v; actual %v",
+		"object %q: checksum mismatch: expected %v; actual %v",
 		err.name, err.expected, err.actual,
 	)
 }
@@ -326,15 +356,15 @@ func uploadFilesAt(ctx context.Context, src string, dest dataSink, opts uploadOp
 				return
 			}
 			if exists {
-				logger.Debugf(ctx, "object %q already exists remotely", fullName)
+				logger.Debugf(ctx, "object %q: already exists remotely", fullName)
 				if opts.failOnCollision {
-					errs <- fmt.Errorf("object %q collided", fullName)
+					errs <- fmt.Errorf("object %q: collided", fullName)
 					return
 				}
 				continue
 			}
 
-			logger.Debugf(ctx, "writing to %s", fullName)
+			logger.Debugf(ctx, "object %q: attempting creation", fullName)
 			if err := dest.write(ctx, name, srcPath, checksum); err != nil {
 				errs <- err
 				return
