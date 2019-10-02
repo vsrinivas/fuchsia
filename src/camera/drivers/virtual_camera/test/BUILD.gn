@@ -8,6 +8,7 @@ import("//build/test.gni")
 executable("virtual-camera-test") {
   testonly = true
   sources = [
+    "stream-test.cc",
     "virtual-camera-test.cc",
   ]
   deps = [

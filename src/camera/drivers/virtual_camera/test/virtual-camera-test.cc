@@ -12,6 +12,7 @@
 
 #include "../virtual_camera2_control.h"
 #include "gtest/gtest.h"
+#include "stream-test.h"
 
 namespace {
 
@@ -68,6 +69,8 @@ class CameraHalTest : public ::testing::Test {
     // Assert that the channel is open:
     ASSERT_TRUE(stream.is_bound());
     ASSERT_TRUE(camera_client_.is_bound());
+    camera::StreamTest stream_test(stream.Unbind().TakeChannel());
+    stream_test.TestGetFrames();
   }
 
  private:
