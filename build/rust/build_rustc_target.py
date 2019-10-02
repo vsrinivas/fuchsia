@@ -42,6 +42,7 @@ def main():
     parser.add_argument("--rustc",
                         help="Path to rustc",
                         required=True)
+    # This forces a recompile when the CIPD version changes. The value is unused.
     parser.add_argument("--cipd-version",
                         help="CIPD version of Rust toolchain",
                         required=False)

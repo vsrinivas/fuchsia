@@ -39,6 +39,45 @@ def run_command(args, env, cwd):
     stdout, stderr = job.communicate()
     return (job.returncode, stdout, stderr)
 
+def configure_triple(triple, args, clang_c_compiler, env):
+    rustflags = [
+        "-Copt-level=" + args.opt_level,
+        "-Cdebuginfo=" + args.symbol_level,
+    ]
+
+    if triple.endswith("fuchsia"):
+        if triple.startswith("aarch64"):
+            rustflags += ["-Clink-arg=--fix-cortex-a53-843419"]
+        rustflags += [
+            "-L", os.path.join(args.sysroot, "lib"),
+            "-Clink-arg=--pack-dyn-relocs=relr",
+            "-Clink-arg=--threads",
+            "-Clink-arg=--icf=all",
+            "-Clink-arg=-L%s" % os.path.join(args.sysroot, "lib"),
+            "-Clink-arg=-L%s" % os.path.join(args.clang_resource_dir, triple, "lib"),
+        ]
+        if args.sysroot:
+            rustflags.append("-Clink-arg=--sysroot=" + args.sysroot)
+        for dir in args.lib_dir:
+            rustflags.append("-Lnative=" + dir)
+    else:
+        if triple.startswith("aarch64"):
+            rustflags += ["-Clink-arg=-Wl,--fix-cortex-a53-843419"]
+        if triple.endswith("linux-gnu"):
+            rustflags += ["-Clink-arg=-Wl,--build-id"]
+        if not triple.endswith("darwin"):
+            rustflags += ["-Clink-arg=-Wl,--threads", "-Clink-arg=-Wl,--icf=all"]
+        env["CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER"] = clang_c_compiler
+        env["CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER"] = clang_c_compiler
+        env["CARGO_TARGET_%s_LINKER" % triple.replace("-", "_").upper()] = clang_c_compiler
+        rustflags += ["-Clink-arg=--target=" + triple]
+
+    if args.mmacosx_version_min:
+        rustflags += ["-Clink-arg=-mmacosx-version-min=%s" % args.mmacosx_version_min]
+    env["CARGO_TARGET_%s_RUSTFLAGS" % triple.replace("-", "_").upper()] = (
+        ' '.join(rustflags)
+    )
+
 def main():
     parser = argparse.ArgumentParser("Compiles all third-party Rust crates")
     parser.add_argument("--rustc",
@@ -67,6 +106,9 @@ def main():
     parser.add_argument("--target",
                         help="Target for which this crate is being compiled",
                         required=True)
+    parser.add_argument("--host",
+                        help="Triple for the host which is building right now",
+                        required=True)
     parser.add_argument("--cmake-dir",
                         help="Path to the directory containing cmake",
                         required=True)
@@ -79,13 +121,13 @@ def main():
     parser.add_argument("--mmacosx-version-min",
                         help="Select macosx framework version",
                         required=False)
-    # TODO(cramertj) make these args required when the third_party/rust_crates change lands
     parser.add_argument("--sysroot",
                         help="Path to the sysroot",
-                        required=False)
+                        required=True)
     parser.add_argument("--lib-dir",
                         help="Path to the location of shared libraries",
                         action='append', default=[])
+    # This forces a recompile when the CIPD version changes. The value is unused.
     parser.add_argument("--cipd-version",
                         help="CIPD version of Rust toolchain",
                         required=False)
@@ -96,45 +138,10 @@ def main():
     create_base_directory(args.out_dir)
 
     clang_c_compiler = os.path.join(args.clang_prefix, "clang")
+    configure_triple(args.target, args, clang_c_compiler, env)
+    if args.host != args.target:
+        configure_triple(args.host, args, clang_c_compiler, env)
 
-    rustflags = [
-        "-Copt-level=" + args.opt_level,
-        "-Cdebuginfo=" + args.symbol_level,
-    ]
-
-    if args.target.endswith("fuchsia"):
-        if args.target.startswith("aarch64"):
-            rustflags += ["-Clink-arg=--fix-cortex-a53-843419"]
-        rustflags += [
-            "-L", os.path.join(args.sysroot, "lib"),
-            "-Clink-arg=--pack-dyn-relocs=relr",
-            "-Clink-arg=--threads",
-            "-Clink-arg=--icf=all",
-            "-Clink-arg=-L%s" % os.path.join(args.sysroot, "lib"),
-            "-Clink-arg=-L%s" % os.path.join(args.clang_resource_dir, args.target, "lib"),
-        ]
-        if args.sysroot:
-            rustflags.append("-Clink-arg=--sysroot=" + args.sysroot)
-        for dir in args.lib_dir:
-            rustflags.append("-Lnative=" + dir)
-    else:
-        if args.target.startswith("aarch64"):
-            rustflags += ["-Clink-arg=-Wl,--fix-cortex-a53-843419"]
-        if args.target.endswith("linux-gnu"):
-            rustflags += ["-Clink-arg=-Wl,--build-id"]
-        if not args.target.endswith("darwin"):
-            rustflags += ["-Clink-arg=-Wl,--threads", "-Clink-arg=-Wl,--icf=all"]
-        env["CARGO_TARGET_LINKER"] = clang_c_compiler
-        env["CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER"] = clang_c_compiler
-        env["CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER"] = clang_c_compiler
-        env["CARGO_TARGET_%s_LINKER" % args.target.replace("-", "_").upper()] = clang_c_compiler
-        rustflags += ["-Clink-arg=--target=" + args.target]
-
-    if args.mmacosx_version_min:
-        rustflags += ["-Clink-arg=-mmacosx-version-min=%s" % args.mmacosx_version_min]
-    env["CARGO_TARGET_%s_RUSTFLAGS" % args.target.replace("-", "_").upper()] = (
-        ' '.join(rustflags)
-    )
     env["CARGO_TARGET_DIR"] = args.out_dir
     env["CARGO_BUILD_DEP_INFO_BASEDIR"] = args.out_dir
     env["RUSTC"] = args.rustc

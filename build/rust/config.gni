@@ -82,6 +82,17 @@ if (current_os == "mac") {
   }
 }
 
+_host_os_cpu = "${host_os}-${host_cpu}"
+if ("linux-x64" == _host_os_cpu) {
+  host = "x86_64-unknown-linux-gnu"
+} else if ("linux-arm64" == _host_os_cpu) {
+  host = "aarch64-unknown-linux-gnu"
+} else if ("mac-x64" == _host_os_cpu) {
+  host = "x86_64-apple-darwin"
+} else {
+  assert(false, "Unsupported host os/cpu: ${_host_os_cpu}")
+}
+
 clang_prefix_rebased = rebase_path(clang_prefix, "", root_build_dir)
 
 clang_resource_dir = exec_script(rebase_path("$clang_prefix_rebased/clang"),

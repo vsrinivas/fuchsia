@@ -55,6 +55,8 @@ action("build-third-party") {
     rebase_path("${rustc_prefix}/cargo"),
     "--crate-root",
     rebase_path("//third_party/rust_crates"),
+    "--host",
+    host,
     "--out-dir",
     rebase_path(out_dir),
     "--out-deps-data",
