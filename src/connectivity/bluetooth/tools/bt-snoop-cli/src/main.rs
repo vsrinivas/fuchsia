@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    argh::FromArgs,
     byteorder::{BigEndian, WriteBytesExt},
     failure::{Error, ResultExt},
     fidl_fuchsia_bluetooth_snoop::{PacketType, SnoopEvent, SnoopMarker, SnoopPacket},
@@ -11,7 +12,6 @@ use {
     fuchsia_component::client::connect_to_service,
     futures::TryStreamExt,
     std::{fmt, fs::File, io, path::Path},
-    structopt::StructOpt,
 };
 
 const PCAP_CMD: u8 = 0x01;
@@ -33,14 +33,17 @@ impl fmt::Display for Format {
     }
 }
 
-fn parse_format(value: &str) -> Format {
-    if value == "pcap" {
-        Format::Pcap
-    } else if value == "pretty" {
-        Format::Pretty
-    } else {
-        eprintln!("Unrecognized format. Using pcap");
-        Format::Pcap
+impl std::str::FromStr for Format {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "pcap" => Format::Pcap,
+            "pretty" => Format::Pretty,
+            _ => {
+                eprintln!("Unrecognized format. Using pcap");
+                Format::Pcap
+            }
+        })
     }
 }
 
@@ -98,34 +101,31 @@ fn to_pretty_fmt(pkt: SnoopPacket) -> String {
 }
 
 /// Define the command line arguments that the tool accepts.
-#[derive(StructOpt)]
-#[structopt(
-    version = "0.2.0",
-    author = "Fuchsia Bluetooth Team",
-    about = "Snoop Bluetooth controller packets"
-)]
+#[derive(FromArgs)]
+#[argh(description = "Snoop Bluetooth controller packets")]
 struct Opt {
-    #[structopt(short = "d", long = "dump", help = "dump the available history of snoop packets")]
+    #[argh(switch, short = 'd')]
+    /// dump the available history of snoop packets
     dump: bool,
-    #[structopt(
-        short = "f",
-        long = "format",
-        default_value = "pcap",
-        parse(from_str = "parse_format"),
-        help = "file format. options: [pcap, pretty]"
-    )]
+
+    #[argh(option, short = 'f', default = "Format::Pcap")]
+    /// file format. options: [pcap, pretty]. Defaults to `pcap`.
     format: Format,
-    #[structopt(short = "c", long = "count", help = "exit after N packets have been recorded.")]
+
+    #[argh(option, short = 'c')]
+    /// exit after N packets have been recorded
     count: Option<u64>,
-    #[structopt(long = "device", help = "request snoop log for a single device by name.")]
+
+    #[argh(option)]
+    /// request snoop log for a single device by name.
     device: Option<String>,
-    #[structopt(short = "o", long = "output", help = "output location. Default: stdout")]
+
+    #[argh(option, short = 'o')]
+    /// output location. Default: stdout
     output: Option<String>,
-    #[structopt(
-        short = "t",
-        long = "truncate",
-        help = "truncate packets to N bytes before outputting them."
-    )]
+
+    #[argh(option, short = 't')]
+    /// truncate packets to N bytes before outputting them
     truncate: Option<usize>,
 }
 
@@ -153,7 +153,7 @@ fn print_opts(opts: &Opt) {
 
 fn main_res() -> Result<(), Error> {
     // Parse and transform command line arguments.
-    let opts = Opt::from_args();
+    let opts: Opt = argh::from_env();
 
     print_opts(&opts);
 

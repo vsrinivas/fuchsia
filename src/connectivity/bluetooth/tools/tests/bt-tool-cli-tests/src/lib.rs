@@ -135,6 +135,8 @@ fn bt_snoop_cli_help_string() {
     reader.read_line(&mut ret).expect("Unable to read stdout");
     reader.read_line(&mut ret).expect("Unable to read stdout");
 
-    assert!(ret.contains("Fuchsia Bluetooth Team"));
-    assert!(ret.contains("Snoop Bluetooth controller packets"));
+    assert!(ret.contains("Usage: "), "found: {}", ret);
+    assert!(ret.contains("Snoop Bluetooth controller packets"), "found: {}", ret);
+    // Ensure that the doc comment on the type isn't leaking into the help docs.
+    assert!(!ret.contains("command line arguments"), "found: {}");
 }
