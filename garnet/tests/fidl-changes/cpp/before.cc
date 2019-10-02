@@ -4,31 +4,31 @@
 
 #ifdef BEFORE
 
-#include <fidl/test/before/cpp/fidl.h>
-using namespace fidl::test::before;
+#include <fidl/test/before/cpp/fidl.h>  // nogncheck
+namespace fidl_test = fidl::test::before;
 
 #else
 
-#include <fidl/test/during/cpp/fidl.h>
-using namespace fidl::test::during;
+#include <fidl/test/during/cpp/fidl.h>  // nogncheck
+namespace fidl_test = fidl::test::during;
 
 #endif
 
-class AddMethodImpl : public AddMethod {
-  virtual void ExistingMethod() override{};
+class AddMethodImpl : public fidl_test::AddMethod {
+  void ExistingMethod() final {}
 };
 
-class RemoveMethodImpl : public RemoveMethod {
-  virtual void ExistingMethod() override{};
-  virtual void OldMethod() override{};
+class RemoveMethodImpl : public fidl_test::RemoveMethod {
+  void ExistingMethod() final{}
+  void OldMethod() final {}
 };
 
-class AddEventImpl : public AddEvent {
-  virtual void ExistingMethod() override{};
+class AddEventImpl : public fidl_test::AddEvent {
+  void ExistingMethod() final {}
 };
 
-class RemoveEventImpl : public RemoveEvent {
-  virtual void ExistingMethod() override{};
+class RemoveEventImpl : public fidl_test::RemoveEvent {
+  void ExistingMethod() final {}
 };
 
 int main(int argc, const char** argv) {
