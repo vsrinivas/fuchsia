@@ -1023,7 +1023,10 @@ if (use_vbmeta) {
         type = "vbmeta"
         archive = true
 
-        bootserver_pave = [ "--vbmetaa" ]
+        # TODO (dmitryya@) netsvc does not support correct
+        # flashing vbmeta images to a device.
+        # Comment out this till this will be fixed.
+        #bootserver_pave = [ "--vbmetaa" ]
       }
       public = [
         "IMAGE_VBMETAA_RAW",

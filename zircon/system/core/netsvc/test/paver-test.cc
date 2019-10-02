@@ -65,24 +65,13 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
 
   void InitializeAbr(InitializeAbrCompleter::Sync completer) {
     last_command_ = Command::kInitializeAbr;
-    if (abr_supported_) {
-      abr_initialized_ = true;
-      completer.Reply(abr_supported_ ? ZX_OK : ZX_ERR_NOT_SUPPORTED);
-    } else {
-      completer.Reply(ZX_ERR_NOT_SUPPORTED);
-    }
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
 
   void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) {
     last_command_ = Command::kQueryActiveConfiguration;
     ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result;
-    if (abr_supported_ && abr_initialized_) {
-      ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response response;
-      response.configuration = ::llcpp::fuchsia::paver::Configuration::A;
-      result.set_response(response);
-    } else {
-      result.set_err(ZX_ERR_NOT_SUPPORTED);
-    }
+    result.set_err(ZX_ERR_NOT_SUPPORTED);
     completer.Reply(std::move(result));
   }
 
@@ -90,31 +79,26 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
                                 QueryConfigurationStatusCompleter::Sync completer) {
     last_command_ = Command::kQueryConfigurationStatus;
     ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result result;
-    if (abr_supported_ && abr_initialized_) {
-      ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response response;
-      response.status = ::llcpp::fuchsia::paver::ConfigurationStatus::HEALTHY;
-    } else {
-      result.set_err(ZX_ERR_NOT_SUPPORTED);
-    }
+    result.set_err(ZX_ERR_NOT_SUPPORTED);
     completer.Reply(std::move(result));
   }
 
   void SetConfigurationActive(::llcpp::fuchsia::paver::Configuration configuration,
                               SetConfigurationActiveCompleter::Sync completer) {
     last_command_ = Command::kSetConfigurationActive;
-    completer.Reply(abr_supported_ && abr_initialized_ ? ZX_OK : ZX_ERR_NOT_SUPPORTED);
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
 
   void SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration configuration,
                                    SetConfigurationUnbootableCompleter::Sync completer) {
     last_command_ = Command::kSetConfigurationUnbootable;
-    completer.Reply(abr_supported_ && abr_initialized_ ? ZX_OK : ZX_ERR_NOT_SUPPORTED);
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
 
   void SetActiveConfigurationHealthy(
       SetActiveConfigurationHealthyCompleter::Sync completer) {
     last_command_ = Command::kSetActiveConfigurationHealthy;
-    completer.Reply(abr_supported_ && abr_initialized_ ? ZX_OK : ZX_ERR_NOT_SUPPORTED);
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
 
   void ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
@@ -209,13 +193,10 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
 
   Command last_command() { return last_command_; }
   void set_expected_payload_size(size_t size) { expected_payload_size_ = size; }
-  void set_abr_supported(bool supported) { abr_supported_ = supported; }
 
  private:
   Command last_command_ = Command::kUnknown;
   size_t expected_payload_size_ = 0;
-  bool abr_supported_ = false;
-  bool abr_initialized_ = false;
 };
 
 class FakeSvc {
@@ -394,73 +375,6 @@ TEST_F(PaverTest, WriteVbMetaA) {
   Wait();
   ASSERT_OK(paver_.exit_code());
   ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteAsset);
-}
-
-TEST_F(PaverTest, WriteZirconAWithABRSupported) {
-  size_t size = sizeof(kFakeData);
-  fake_svc_.fake_paver().set_abr_supported(true);
-  fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONA_FILENAME, size), TFTP_NO_ERROR);
-  ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
-  ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
-  Wait();
-  ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteAsset);
-}
-
-TEST_F(PaverTest, WriteZirconBWithABRSupported) {
-  size_t size = sizeof(kFakeData);
-  fake_svc_.fake_paver().set_abr_supported(true);
-  fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONB_FILENAME, size), TFTP_NO_ERROR);
-  ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
-  ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
-  Wait();
-  ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteAsset);
-}
-
-TEST_F(PaverTest, WriteVbMetaAWithABRSupported) {
-  size_t size = sizeof(kFakeData);
-  fake_svc_.fake_paver().set_abr_supported(true);
-  fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(NB_VBMETAA_FILENAME, size), TFTP_NO_ERROR);
-  ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
-  ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
-  Wait();
-  ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kSetActiveConfigurationHealthy);
-}
-
-TEST_F(PaverTest, WriteVbMetaBWithABRSupported) {
-  size_t size = sizeof(kFakeData);
-  fake_svc_.fake_paver().set_abr_supported(true);
-  fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(NB_VBMETAB_FILENAME, size), TFTP_NO_ERROR);
-  ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
-  ASSERT_EQ(size, sizeof(kFakeData));
-  paver_.Close();
-  Wait();
-  ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteAsset);
-}
-
-TEST_F(PaverTest, WriteZirconAWithABRSupportedTwice) {
-  size_t size = sizeof(kFakeData);
-  fake_svc_.fake_paver().set_abr_supported(true);
-  fake_svc_.fake_paver().set_expected_payload_size(size);
-  for (int i = 0 ; i < 2; i++) {
-    ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONA_FILENAME, size), TFTP_NO_ERROR);
-    ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
-    ASSERT_EQ(size, sizeof(kFakeData));
-    paver_.Close();
-    Wait();
-    ASSERT_OK(paver_.exit_code());
-    ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteAsset);
-  }
 }
 
 TEST_F(PaverTest, WriteSshAuth) {

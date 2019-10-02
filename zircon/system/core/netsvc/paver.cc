@@ -116,74 +116,6 @@ int Paver::StreamBuffer() {
   return 0;
 }
 
-zx_status_t Paver::WriteAsset(::llcpp::fuchsia::mem::Buffer buffer) {
-  bool abr_supported;
-  // First find out whether or not ABR is supported.
-  {
-    auto result = paver_svc_->QueryActiveConfiguration();
-    auto status =
-        result.ok() ? (result->result.is_err() ? result->result.err() : ZX_OK) : result.status();
-    if (status == ZX_ERR_NOT_SUPPORTED) {
-      auto init_result = paver_svc_->InitializeAbr();
-      status = init_result.ok() ? init_result->status : init_result.status();
-      abr_supported = false;
-      if (status == ZX_OK) {
-        abr_supported = true;
-      } else if (status != ZX_ERR_NOT_SUPPORTED) {
-        fprintf(stderr, "netsvc: Unable to initialize ABR.\n");
-        return status;
-      }
-    } else if (status != ZX_OK) {
-      fprintf(stderr, "netsvc: Unable to query active configuration.\n");
-      return status;
-    } else {
-      abr_supported = true;
-    }
-  }
-  // Make sure to mark the configuration we are about to pave as no longer bootable.
-  if (abr_supported) {
-    auto result = paver_svc_->SetConfigurationUnbootable(configuration_);
-    auto status = result.ok() ? result->status : result.status();
-    if (status != ZX_OK) {
-      fprintf(stderr, "netsvc: Unable to set configuration as unbootable.\n");
-      return status;
-    }
-  }
-  {
-    auto result = paver_svc_->WriteAsset(configuration_, asset_, std::move(buffer));
-    auto status = result.ok() ? result->status : result.status();
-    if (status != ZX_OK) {
-      fprintf(stderr, "netsvc: Unable to write asset.\n");
-      return status;
-    }
-  }
-  // Set configuration A as default.
-  // We assume that verified boot metadata asset will only be written after the kernel asset.
-  if (!abr_supported || configuration_ != ::llcpp::fuchsia::paver::Configuration::A ||
-      asset_ != ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA) {
-    return ZX_OK;
-  }
-  {
-    auto result = paver_svc_->SetConfigurationActive(configuration_);
-    auto status = result.ok() ? result->status : result.status();
-    if (status != ZX_OK) {
-      fprintf(stderr, "netsvc: Unable to set configuration as active.\n");
-      return status;
-    }
-  }
-  // TODO(22860): Set configuration A as healthy until system_updater starts doing this on
-  // boot correctly.
-  {
-    auto result = paver_svc_->SetActiveConfigurationHealthy();
-    auto status = result.ok() ? result->status : result.status();
-    if (status != ZX_OK) {
-      fprintf(stderr, "netsvc: Unable to set configuration as healthy.\n");
-      return status;
-    }
-  }
-  return ZX_OK;
-}
-
 int Paver::MonitorBuffer() {
   int result = TFTP_NO_ERROR;
 
@@ -242,9 +174,11 @@ int Paver::MonitorBuffer() {
       status = res.status() == ZX_OK ? res.value().status : res.status();
       break;
     }
-    case Command::kAsset:
-      status = WriteAsset(std::move(buffer));
+    case Command::kAsset: {
+      auto res = paver_svc_->WriteAsset(configuration_, asset_, std::move(buffer));
+      status = res.status() == ZX_OK ? res.value().status : res.status();
       break;
+    }
     default:
       result = TFTP_ERR_INTERNAL;
       status = ZX_ERR_INTERNAL;
