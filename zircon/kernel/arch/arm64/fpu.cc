@@ -21,7 +21,9 @@
  */
 #define FPU_ENABLE_MASK (3 << 20)
 
-static inline bool is_fpu_enabled(uint32_t cpacr) { return !!(BITS(cpacr, 21, 20) != 0); }
+static inline bool is_fpu_enabled(uint64_t cpacr) {
+  return !!(BITS(cpacr, 21, 20) != 0);
+}
 
 static void arm64_fpu_load_state(thread_t* t) {
   struct fpstate* fpstate = &t->arch.fpstate;
@@ -85,40 +87,58 @@ __NO_SAFESTACK static void arm64_fpu_save_state(thread_t* t) {
   LTRACEF("thread %s, fpcr %x, fpsr %x\n", t->name, fpstate->fpcr, fpstate->fpsr);
 }
 
-/* save fpu state if the thread had dirtied it and disable the fpu */
+__NO_SAFESTACK static bool use_lazy_fpu_restore(thread_t* t) {
+  // The number 8 here was selected by measuring |fp_restore_count| running
+  // a particular workload.
+  return (t->arch.fp_restore_count < 8u);
+}
+
 __NO_SAFESTACK void arm64_fpu_context_switch(thread_t* oldthread, thread_t* newthread) {
-  uint64_t cpacr = __arm_rsr64("cpacr_el1");
-  if (is_fpu_enabled((uint32_t)cpacr)) {
+  const uint64_t cpacr = __arm_rsr64("cpacr_el1");
+  if (is_fpu_enabled(cpacr)) {
     LTRACEF("saving state on thread %s\n", oldthread->name);
-
-    /* save the state */
     arm64_fpu_save_state(oldthread);
+  }
 
-    /* disable the fpu again */
-    __arm_wsr64("cpacr_el1", cpacr & ~FPU_ENABLE_MASK);
-    __isb(ARM_MB_SY);
+  if (use_lazy_fpu_restore(newthread)) {
+    if (is_fpu_enabled(cpacr)) {
+      // Previous thread had the fpu enabled, but the next thread is going
+      // to use lazy restore via the exception, so disable the fpu.
+      __arm_wsr64("cpacr_el1", cpacr & ~FPU_ENABLE_MASK);
+      __isb(ARM_MB_SY);
+    }
+  } else {
+    // Restoring fpu state eagerly.
+    if (!is_fpu_enabled(cpacr)) {
+      // .. but previous thread has the fpu disabled. So enable it.
+      __arm_wsr64("cpacr_el1", cpacr | FPU_ENABLE_MASK);
+      __isb(ARM_MB_SY);
+    }
+    arm64_fpu_load_state(newthread);
   }
 }
 
-/* called because of a fpu instruction used exception */
+// Called because of a fpu instruction caused exception.
 void arm64_fpu_exception(arm64_iframe_t* iframe, uint exception_flags) {
   LTRACEF("cpu %u, thread %s, flags 0x%x\n", arch_curr_cpu_num(), get_current_thread()->name,
           exception_flags);
 
-  /* only valid to be called if exception came from lower level */
+  // Only valid to be called if exception came from lower level.
   DEBUG_ASSERT(exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL);
 
   uint64_t cpacr = __arm_rsr64("cpacr_el1");
-  DEBUG_ASSERT(!is_fpu_enabled((uint32_t)cpacr));
+  DEBUG_ASSERT(!is_fpu_enabled(cpacr));
 
-  /* enable the fpu */
+  // Enable the fpu.
   cpacr |= FPU_ENABLE_MASK;
   __arm_wsr64("cpacr_el1", cpacr);
   __isb(ARM_MB_SY);
 
-  /* load the state from the current cpu */
+  // Load the fpu state for the current thread.
   thread_t* t = get_current_thread();
   if (likely(t)) {
+    DEBUG_ASSERT(use_lazy_fpu_restore(t));
+    t->arch.fp_restore_count++;
     arm64_fpu_load_state(t);
   }
 }

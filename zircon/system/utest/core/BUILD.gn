@@ -17,6 +17,7 @@ core_tests = [
   "elf-tls",
   "event-pair",
   "fifo",
+  "fpu",
   "futex",
   "handle-close",
   "handle-dup",
