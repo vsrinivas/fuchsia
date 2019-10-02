@@ -844,6 +844,143 @@ void RootJob::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetRespo
 namespace {
 
 [[maybe_unused]]
+constexpr uint64_t kRootJobForInspect_Get_Ordinal = 0x7e473a2400000000lu;
+[[maybe_unused]]
+constexpr uint64_t kRootJobForInspect_Get_GenOrdinal = 0x70e2566b29e1af06lu;
+extern "C" const fidl_type_t fuchsia_boot_RootJobForInspectGetResponseTable;
+
+}  // namespace
+template <>
+RootJobForInspect::ResultOf::Get_Impl<RootJobForInspect::GetResponse>::Get_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetRequest));
+  ::fidl::DecodedMessage<GetRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      RootJobForInspect::InPlace::Get(std::move(_client_end), Super::response_buffer()));
+}
+
+RootJobForInspect::ResultOf::Get RootJobForInspect::SyncClient::Get() {
+  return ResultOf::Get(zx::unowned_channel(this->channel_));
+}
+
+RootJobForInspect::ResultOf::Get RootJobForInspect::Call::Get(zx::unowned_channel _client_end) {
+  return ResultOf::Get(std::move(_client_end));
+}
+
+template <>
+RootJobForInspect::UnownedResultOf::Get_Impl<RootJobForInspect::GetResponse>::Get_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetRequest));
+  ::fidl::DecodedMessage<GetRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      RootJobForInspect::InPlace::Get(std::move(_client_end), std::move(_response_buffer)));
+}
+
+RootJobForInspect::UnownedResultOf::Get RootJobForInspect::SyncClient::Get(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::Get(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+RootJobForInspect::UnownedResultOf::Get RootJobForInspect::Call::Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::Get(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<RootJobForInspect::GetResponse> RootJobForInspect::InPlace::Get(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(GetRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<GetRequest> params(std::move(_request_buffer));
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kRootJobForInspect_Get_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<RootJobForInspect::GetResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<GetRequest, GetResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<RootJobForInspect::GetResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
+bool RootJobForInspect::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_INVALID_ARGS);
+    return true;
+  }
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  switch (hdr->ordinal) {
+    case kRootJobForInspect_Get_Ordinal:
+    case kRootJobForInspect_Get_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<GetRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->Get(
+        Interface::GetCompleter::Sync(txn));
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+bool RootJobForInspect::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  bool found = TryDispatch(impl, msg, txn);
+  if (!found) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_NOT_SUPPORTED);
+  }
+  return found;
+}
+
+
+void RootJobForInspect::Interface::GetCompleterBase::Reply(::zx::job job) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
+  _response._hdr.ordinal = kRootJobForInspect_Get_Ordinal;
+  _response.job = std::move(job);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetResponse>(std::move(_response_bytes)));
+}
+
+void RootJobForInspect::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::zx::job job) {
+  if (_buffer.capacity() < GetResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<GetResponse*>(_buffer.data());
+  _response._hdr.ordinal = kRootJobForInspect_Get_Ordinal;
+  _response.job = std::move(job);
+  _buffer.set_actual(sizeof(GetResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetResponse>(std::move(_buffer)));
+}
+
+void RootJobForInspect::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kRootJobForInspect_Get_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+namespace {
+
+[[maybe_unused]]
 constexpr uint64_t kArguments_Get_Ordinal = 0x6e7258e600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kArguments_Get_GenOrdinal = 0x2e594d9c82b93ee3lu;

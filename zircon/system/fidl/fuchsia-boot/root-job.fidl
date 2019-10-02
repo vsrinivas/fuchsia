@@ -7,8 +7,15 @@ library fuchsia.boot;
 /// Protocol for providing the root job.
 ///
 /// TODO(ZX-4072): Do not use this without first consulting the Zircon team.
-[Discoverable, Layout = "Simple"]
+[Discoverable, Layout = "Simple", FragileBase]
 protocol RootJob {
     /// Get the root `job`.
     Get() -> (handle<job> job);
+};
+
+/// Protocol for providing the root job with restricted rights, specifically:
+/// INSPECT | ENUMERATE | DUPLICATE | TRANSFER
+[Discoverable, Layout = "Simple"]
+protocol RootJobForInspect {
+    compose RootJob;
 };

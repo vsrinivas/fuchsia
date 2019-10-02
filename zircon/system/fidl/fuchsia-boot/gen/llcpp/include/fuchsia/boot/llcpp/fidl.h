@@ -29,6 +29,7 @@ class Items;
 class FactoryItems;
 class RootResource;
 class RootJob;
+class RootJobForInspect;
 class Arguments;
 
 extern "C" const fidl_type_t fuchsia_boot_WriteOnlyLogGetResponseTable;
@@ -1106,6 +1107,175 @@ class RootJob final {
 
 };
 
+extern "C" const fidl_type_t fuchsia_boot_RootJobForInspectGetResponseTable;
+
+// Protocol for providing the root job with restricted rights, specifically:
+// INSPECT | ENUMERATE | DUPLICATE | TRANSFER
+class RootJobForInspect final {
+  RootJobForInspect() = delete;
+ public:
+  static constexpr char Name[] = "fuchsia.boot.RootJobForInspect";
+
+  struct GetResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::job job;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_boot_RootJobForInspectGetResponseTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using GetRequest = ::fidl::AnyZeroArgMessage;
+
+
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+    ResultOf() = delete;
+   private:
+    template <typename ResponseType>
+    class Get_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Get_Impl(zx::unowned_channel _client_end);
+      ~Get_Impl() = default;
+      Get_Impl(Get_Impl&& other) = default;
+      Get_Impl& operator=(Get_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+
+   public:
+    using Get = Get_Impl<GetResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+    UnownedResultOf() = delete;
+   private:
+    template <typename ResponseType>
+    class Get_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Get_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~Get_Impl() = default;
+      Get_Impl(Get_Impl&& other) = default;
+      Get_Impl& operator=(Get_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+
+   public:
+    using Get = Get_Impl<GetResponse>;
+  };
+
+  class SyncClient final {
+   public:
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
+    SyncClient(SyncClient&&) = default;
+    SyncClient& operator=(SyncClient&&) = default;
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Get the root `job`.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::Get Get();
+
+    // Get the root `job`.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Get Get(::fidl::BytePart _response_buffer);
+
+   private:
+    ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+    Call() = delete;
+   public:
+
+    // Get the root `job`.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::Get Get(zx::unowned_channel _client_end);
+
+    // Get the root `job`.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Get Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+    InPlace() = delete;
+   public:
+
+    // Get the root `job`.
+    static ::fidl::DecodeResult<GetResponse> Get(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+  };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = RootJobForInspect;
+    using _Base = ::fidl::CompleterBase;
+
+    class GetCompleterBase : public _Base {
+     public:
+      void Reply(::zx::job job);
+      void Reply(::fidl::BytePart _buffer, ::zx::job job);
+      void Reply(::fidl::DecodedMessage<GetResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using GetCompleter = ::fidl::Completer<GetCompleterBase>;
+
+    virtual void Get(GetCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+};
+
 extern "C" const fidl_type_t fuchsia_boot_ArgumentsGetResponseTable;
 
 // Protocol for retrieving boot arguments.
@@ -1352,6 +1522,14 @@ struct IsFidlMessage<::llcpp::fuchsia::boot::RootJob::GetResponse> : public std:
 static_assert(sizeof(::llcpp::fuchsia::boot::RootJob::GetResponse)
     == ::llcpp::fuchsia::boot::RootJob::GetResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::boot::RootJob::GetResponse, job) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::boot::RootJobForInspect::GetResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::boot::RootJobForInspect::GetResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::boot::RootJobForInspect::GetResponse)
+    == ::llcpp::fuchsia::boot::RootJobForInspect::GetResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::boot::RootJobForInspect::GetResponse, job) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::boot::Arguments::GetResponse> : public std::true_type {};
