@@ -6,6 +6,7 @@
 
 #![deny(missing_docs)]
 
+pub mod cobalt_event_builder;
 pub mod connector;
 pub mod sender;
 pub mod traits;
@@ -13,6 +14,7 @@ pub mod traits;
 use futures::prelude::*;
 
 pub use {
+    cobalt_event_builder::CobaltEventExt,
     connector::{CobaltConnector, ConnectionType},
     sender::CobaltSender,
 };

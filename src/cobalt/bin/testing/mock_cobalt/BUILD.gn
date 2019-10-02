@@ -18,6 +18,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//sdk/fidl/fuchsia.cobalt.test:fuchsia.cobalt.test-rustc",
+    "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",

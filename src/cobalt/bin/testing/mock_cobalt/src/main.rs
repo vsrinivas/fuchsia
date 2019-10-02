@@ -8,6 +8,7 @@ use {
         self as cobalt, CobaltEvent, LoggerFactoryRequest::CreateLoggerFromProjectName,
     },
     fidl_fuchsia_cobalt_test as cobalt_test, fuchsia_async as fasync,
+    fuchsia_cobalt::CobaltEventExt,
     fuchsia_syslog::{self as syslog, fx_log_info},
     futures::{lock::Mutex, StreamExt, TryStreamExt},
     std::{collections::HashMap, sync::Arc},
@@ -15,110 +16,6 @@ use {
 
 /// MAX_QUERY_LENGTH is used as a usize in this component
 const MAX_QUERY_LENGTH: usize = cobalt_test::MAX_QUERY_LENGTH as usize;
-
-/// Extension trait to construct the fidl CobaltEvent type from various metric types.
-trait CobaltEventExt {
-    fn log_event(metric_id: u32, event_code: u32) -> Self;
-    fn log_event_count(
-        metric_id: u32,
-        event_code: u32,
-        component: impl Into<String>,
-        period_duration_micros: i64,
-        count: i64,
-    ) -> Self;
-    fn log_elapsed_time(
-        metric_id: u32,
-        event_code: u32,
-        component: impl Into<String>,
-        elapsed_micros: i64,
-    ) -> Self;
-    fn log_frame_rate(metric_id: u32, event_code: u32, component: impl Into<String>, fps: f32) -> Self;
-    fn log_memory_usage(metric_id: u32, event_code: u32, component: impl Into<String>, bytes: i64) -> Self;
-    fn log_string(metric_id: u32, s: impl Into<String>) -> Self;
-    fn log_int_histogram(
-        metric_id: u32,
-        event_code: u32,
-        component: impl Into<String>,
-        histogram: Vec<cobalt::HistogramBucket>,
-    ) -> Self;
-}
-
-impl CobaltEventExt for CobaltEvent {
-    fn log_event(metric_id: u32, event_code: u32) -> Self {
-        CobaltEvent {
-            metric_id,
-            event_codes: vec![event_code],
-            component: None,
-            payload: cobalt::EventPayload::Event(cobalt::Event),
-        }
-    }
-    fn log_event_count(
-        metric_id: u32,
-        event_code: u32,
-        component: impl Into<String>,
-        period_duration_micros: i64,
-        count: i64,
-    ) -> Self {
-        let payload =
-            cobalt::EventPayload::EventCount(cobalt::CountEvent { count, period_duration_micros });
-        CobaltEvent {
-            metric_id,
-            event_codes: vec![event_code],
-            component: Some(component.into()),
-            payload,
-        }
-    }
-    fn log_elapsed_time(
-        metric_id: u32,
-        event_code: u32,
-        component: impl Into<String>,
-        elapsed_micros: i64,
-    ) -> Self {
-        let payload = cobalt::EventPayload::ElapsedMicros(elapsed_micros);
-        CobaltEvent {
-            metric_id,
-            event_codes: vec![event_code],
-            component: Some(component.into()),
-            payload,
-        }
-    }
-    fn log_frame_rate(metric_id: u32, event_code: u32, component: impl Into<String>, fps: f32) -> Self {
-        let payload = cobalt::EventPayload::Fps(fps);
-        CobaltEvent {
-            metric_id,
-            event_codes: vec![event_code],
-            component: Some(component.into()),
-            payload,
-        }
-    }
-    fn log_memory_usage(metric_id: u32, event_code: u32, component: impl Into<String>, bytes: i64) -> Self {
-        let payload = cobalt::EventPayload::MemoryBytesUsed(bytes);
-        CobaltEvent {
-            metric_id,
-            event_codes: vec![event_code],
-            component: Some(component.into()),
-            payload,
-        }
-    }
-    fn log_string(metric_id: u32, s: impl Into<String>) -> Self {
-        let payload = cobalt::EventPayload::StringEvent(s.into());
-        CobaltEvent { metric_id, event_codes: vec![], payload, component: None }
-    }
-    fn log_int_histogram(
-        metric_id: u32,
-        event_code: u32,
-        component: impl Into<String>,
-        histogram: Vec<cobalt::HistogramBucket>,
-    ) -> Self {
-        let payload = cobalt::EventPayload::IntHistogram(histogram);
-        CobaltEvent {
-            metric_id,
-            event_codes: vec![event_code],
-            component: Some(component.into()),
-            payload,
-        }
-    }
-}
 
 #[derive(Default)]
 // Does not record StartTimer, EndTimer, and LogCustomEvent requests
@@ -172,8 +69,8 @@ async fn handle_cobalt_logger(mut stream: cobalt::LoggerRequestStream, log: Even
         let mut log = log.lock().await;
         match event {
             LogEvent { metric_id, event_code, responder } => {
-                let event = CobaltEvent::log_event(metric_id, event_code);
-                log.log_event.push(event);
+                log.log_event
+                    .push(CobaltEvent::builder(metric_id).with_event_code(event_code).as_event());
                 let _ = responder.send(cobalt::Status::Ok);
             }
             LogEventCount {
@@ -184,45 +81,56 @@ async fn handle_cobalt_logger(mut stream: cobalt::LoggerRequestStream, log: Even
                 count,
                 responder,
             } => {
-                let event = CobaltEvent::log_event_count(
-                    metric_id,
-                    event_code,
-                    component,
-                    period_duration_micros,
-                    count,
+                log.log_event.push(
+                    CobaltEvent::builder(metric_id)
+                        .with_event_code(event_code)
+                        .with_component(component)
+                        .as_count_event(period_duration_micros, count),
                 );
-                log.log_event_count.push(event);
                 let _ = responder.send(cobalt::Status::Ok);
             }
             LogElapsedTime { metric_id, event_code, component, elapsed_micros, responder } => {
-                let event =
-                    CobaltEvent::log_elapsed_time(metric_id, event_code, component, elapsed_micros);
-                log.log_elapsed_time.push(event);
+                log.log_event.push(
+                    CobaltEvent::builder(metric_id)
+                        .with_event_code(event_code)
+                        .with_component(component)
+                        .as_elapsed_time(elapsed_micros),
+                );
                 let _ = responder.send(cobalt::Status::Ok);
             }
             LogFrameRate { metric_id, event_code, component, fps, responder } => {
-                let event = CobaltEvent::log_frame_rate(metric_id, event_code, component, fps);
-                log.log_frame_rate.push(event);
+                log.log_event.push(
+                    CobaltEvent::builder(metric_id)
+                        .with_event_code(event_code)
+                        .with_component(component)
+                        .as_frame_rate(fps),
+                );
                 let _ = responder.send(cobalt::Status::Ok);
             }
             LogMemoryUsage { metric_id, event_code, component, bytes, responder } => {
-                let event = CobaltEvent::log_memory_usage(metric_id, event_code, component, bytes);
-                log.log_memory_usage.push(event);
+                log.log_event.push(
+                    CobaltEvent::builder(metric_id)
+                        .with_event_code(event_code)
+                        .with_component(component)
+                        .as_memory_usage(bytes),
+                );
                 let _ = responder.send(cobalt::Status::Ok);
             }
             LogString { metric_id, s, responder } => {
-                let event = CobaltEvent::log_string(metric_id, s);
-                log.log_string.push(event);
+                log.log_event.push(CobaltEvent::builder(metric_id).as_string_event(s));
                 let _ = responder.send(cobalt::Status::Ok);
             }
             LogIntHistogram { metric_id, event_code, component, histogram, responder } => {
-                let event =
-                    CobaltEvent::log_int_histogram(metric_id, event_code, component, histogram);
-                log.log_int_histogram.push(event);
+                log.log_event.push(
+                    CobaltEvent::builder(metric_id)
+                        .with_event_code(event_code)
+                        .with_component(component)
+                        .as_int_histogram(histogram),
+                );
                 let _ = responder.send(cobalt::Status::Ok);
             }
             LogCobaltEvent { event, responder } => {
-                log.log_cobalt_event.push(event);
+                log.log_event.push(event);
                 let _ = responder.send(cobalt::Status::Ok);
             }
             LogCobaltEvents { mut events, responder } => {
@@ -327,95 +235,6 @@ mod tests {
     use fuchsia_async as fasync;
     use futures::FutureExt;
 
-    #[test]
-    fn cobalt_event_log_event_constructor() {
-        let event = CobaltEvent::log_event(1, 2);
-        let expected = CobaltEvent {
-            metric_id: 1,
-            event_codes: vec![2],
-            component: None,
-            payload: EventPayload::Event(Event),
-        };
-        assert_eq!(event, expected);
-    }
-
-    #[test]
-    fn cobalt_event_log_event_count_constructor() {
-        let event = CobaltEvent::log_event_count(2, 3, "A", 4, 5);
-        let expected = CobaltEvent {
-            metric_id: 2,
-            event_codes: vec![3],
-            component: Some("A".into()),
-            payload: EventPayload::EventCount(CountEvent { count: 5, period_duration_micros: 4 }),
-        };
-        assert_eq!(event, expected);
-    }
-
-    #[test]
-    fn cobalt_event_log_elapsed_time_constructor() {
-        let event = CobaltEvent::log_elapsed_time(3, 4, "B", 5);
-        let expected = CobaltEvent {
-            metric_id: 3,
-            event_codes: vec![4],
-            component: Some("B".into()),
-            payload: EventPayload::ElapsedMicros(5),
-        };
-        assert_eq!(event, expected);
-    }
-
-    #[test]
-    fn cobalt_event_log_frame_rate_constructor() {
-        let event = CobaltEvent::log_frame_rate(4, 5, "C", 6.);
-        let expected = CobaltEvent {
-            metric_id: 4,
-            event_codes: vec![5],
-            component: Some("C".into()),
-            payload: EventPayload::Fps(6.),
-        };
-        assert_eq!(event, expected);
-    }
-
-    #[test]
-    fn cobalt_event_log_memory_usage_constructor() {
-        let event = CobaltEvent::log_memory_usage(5, 6, "D", 7);
-        let expected = CobaltEvent {
-            metric_id: 5,
-            event_codes: vec![6],
-            component: Some("D".into()),
-            payload: EventPayload::MemoryBytesUsed(7),
-        };
-        assert_eq!(event, expected);
-    }
-
-    #[test]
-    fn cobalt_event_log_string_constructor() {
-        let event = CobaltEvent::log_string(6, "String Value");
-        let expected = CobaltEvent {
-            metric_id: 6,
-            event_codes: vec![],
-            component: None,
-            payload: EventPayload::StringEvent("String Value".into()),
-        };
-        assert_eq!(event, expected);
-    }
-
-    #[test]
-    fn cobalt_event_log_int_histogram_constructor() {
-        let event = CobaltEvent::log_int_histogram(
-            7,
-            8,
-            "E",
-            vec![HistogramBucket { index: 0, count: 1 }],
-        );
-        let expected = CobaltEvent {
-            metric_id: 7,
-            event_codes: vec![8],
-            component: Some("E".into()),
-            payload: EventPayload::IntHistogram(vec![HistogramBucket { index: 0, count: 1 }]),
-        };
-        assert_eq!(event, expected);
-    }
-
     #[fasync::run_until_stalled(test)]
     async fn mock_logger_factory() {
         let loggers = LoggersHandle::default();
@@ -462,7 +281,7 @@ mod tests {
         // Log a single event
         logger_proxy.log_event(1, 2).await.expect("log_event fidl call to succeed");
         assert_eq!(
-            Ok((vec![CobaltEvent::log_event(1, 2)], false)),
+            Ok((vec![CobaltEvent::builder(1).with_event_code(2).as_event()], false)),
             querier_proxy
                 .query_logger("foo", LogMethod::LogEvent)
                 .await
@@ -505,7 +324,7 @@ mod tests {
             .await
             .expect("query_logger fidl call to succeed")
             .expect("logger to exist and have recorded events");
-        assert_eq!(CobaltEvent::log_event(0, 1), events[0]);
+        assert_eq!(CobaltEvent::builder(0).with_event_code(1).as_event(), events[0]);
         assert_eq!(MAX_QUERY_LENGTH, events.len());
         assert!(more);
     }
@@ -557,7 +376,7 @@ mod tests {
         // Log a single event
         logger_proxy.log_event(1, 2).await.expect("log_event fidl call to succeed");
         assert_eq!(
-            Ok((vec![CobaltEvent::log_event(1, 2)], false)),
+            Ok((vec![CobaltEvent::builder(1).with_event_code(2).as_event()], false)),
             querier_proxy
                 .query_logger("foo", LogMethod::LogEvent)
                 .await
