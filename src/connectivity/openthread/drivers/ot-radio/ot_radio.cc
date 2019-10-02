@@ -4,6 +4,8 @@
 
 #include "ot_radio.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/driver-unit-test/utils.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
@@ -11,6 +13,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
@@ -21,7 +24,6 @@
 #include <fbl/ref_ptr.h>
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
-
 
 namespace ot_radio {
 
@@ -37,10 +39,21 @@ enum {
   PORT_KEY_RADIO_IRQ,
   PORT_KEY_TX_TO_APP,
   PORT_KEY_RX_FROM_APP,
+  PORT_KEY_EXIT_THREAD,
 };
 
 OtRadioDevice::OtRadioDevice(zx_device_t* device)
-    : ddk::Device<OtRadioDevice, ddk::Unbindable>(device) {}
+    : ddk::Device<OtRadioDevice, ddk::Unbindable>(device),
+      loop_(&kAsyncLoopConfigNoAttachToThread) {}
+
+zx_status_t OtRadioDevice::StartLoopThread() {
+  zxlogf(TRACE, "Start loop thread\n");
+  return loop_.StartThread("ot-stack-loop");
+}
+
+bool OtRadioDevice::RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t channel) {
+  return driver_unit_test::RunZxTests("OtRadioTests", parent, channel);
+}
 
 zx_status_t OtRadioDevice::Init() {
   composite_protocol_t composite;
@@ -59,31 +72,44 @@ zx_status_t OtRadioDevice::Init() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  spi_ = ddk::SpiProtocolClient(components[COMPONENT_SPI]);
+  if (!spi_.is_valid()) {
+    zxlogf(ERROR, "ot-radio %s: failed to acquire spi\n", __func__);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   status = device_get_protocol(components[COMPONENT_INT_GPIO], ZX_PROTOCOL_GPIO,
                                &gpio_[OT_RADIO_INT_PIN]);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ot-radio: failed to acquire gpio\n");
+    zxlogf(ERROR, "ot-radio %s: failed to acquire interrupt gpio\n", __func__);
     return status;
   }
 
-  gpio_config_in(&gpio_[OT_RADIO_INT_PIN], GPIO_NO_PULL);
+  status = gpio_[OT_RADIO_INT_PIN].ConfigIn(GPIO_NO_PULL);
 
-  status = gpio_get_interrupt(&gpio_[OT_RADIO_INT_PIN], ZX_INTERRUPT_MODE_EDGE_LOW,
-                              interrupt_.reset_and_get_address());
   if (status != ZX_OK) {
+    zxlogf(ERROR, "ot-radio %s: failed to configure interrupt gpio\n", __func__);
+    return status;
+  }
+
+  status = gpio_[OT_RADIO_INT_PIN].GetInterrupt(ZX_INTERRUPT_MODE_EDGE_LOW, &interrupt_);
+
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "ot-radio %s: failed to get interrupt\n", __func__);
     return status;
   }
 
   status = device_get_protocol(components[COMPONENT_RESET_GPIO], ZX_PROTOCOL_GPIO,
                                &gpio_[OT_RADIO_RESET_PIN]);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ot-radio: failed to acquire gpio\n");
+    zxlogf(ERROR, "ot-radio %s: failed to acquire reset gpio\n", __func__);
     return status;
   }
 
-  status = gpio_config_out(&gpio_[OT_RADIO_RESET_PIN], 1);
+  status = gpio_[OT_RADIO_RESET_PIN].ConfigOut(1);
+
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ot-radio: failed to configure rst gpio, status = %d", status);
+    zxlogf(ERROR, "ot-radio %s: failed to configure rst gpio, status = %d", __func__, status);
     return status;
   }
 
@@ -98,32 +124,57 @@ zx_status_t OtRadioDevice::Init() {
   return ZX_OK;
 }
 
-void OtRadioDevice::Reset() {
-  zxlogf(TRACE, "ot-radio: reset\n");
-  gpio_write(&gpio_[OT_RADIO_RESET_PIN], 0);
+zx_status_t OtRadioDevice::Reset() {
+  zx_status_t status = ZX_OK;
+  zxlogf(TRACE, "#s: reset\n");
+
+  status = gpio_[OT_RADIO_RESET_PIN].Write(0);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "ot-radio: gpio write failed\n");
+    return status;
+  }
   zx::nanosleep(zx::deadline_after(zx::msec(100)));
-  gpio_write(&gpio_[OT_RADIO_RESET_PIN], 1);
+
+  status = gpio_[OT_RADIO_RESET_PIN].Write(1);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "ot-radio: gpio write failed\n");
+    return status;
+  }
   zx::nanosleep(zx::deadline_after(zx::msec(50)));
+  return status;
 }
 
-int OtRadioDevice::Thread() {
-  zx_status_t status = 0;
+zx_status_t OtRadioDevice::RadioThread(void) {
+  zx_status_t status = ZX_OK;
+  zxlogf(ERROR, "ot-radio: entered thread\n");
 
-  zxlogf(TRACE, "ot-radio: entering thread\n");
-
-  Reset();
   while (true) {
     zx_port_packet_t packet = {};
     auto status = port_.wait(zx::time::infinite(), &packet);
 
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s port wait failed: %d\n", __func__, status);
+    if (status == ZX_ERR_TIMED_OUT) {
+      continue;
+    } else if (status != ZX_OK) {
+      zxlogf(ERROR, "ot-radio: port wait failed: %d\n", status);
       return thrd_error;
     }
 
-    if (packet.key == PORT_KEY_RADIO_IRQ) {
+    if (packet.key == PORT_KEY_EXIT_THREAD) {
+      break;
+    } else if (packet.key == PORT_KEY_RADIO_IRQ) {
       interrupt_.ack();
       zxlogf(TRACE, "ot-radio: interrupt\n");
+      // Read packet
+      uint8_t i;
+      size_t rx_actual;
+      size_t read_length = 10;
+      spi_.Receive(read_length, &spi_rx_buffer_[0], read_length, &rx_actual);
+      // Printing to cross check with bytes seen with a scope
+      zxlogf(TRACE, "ot-radio: rx_actual %lu\n", rx_actual);
+      for (i = 0; i < read_length; i++) {
+        zxlogf(TRACE, "ot-radio: RX %2X\n", spi_rx_buffer_[i]);
+      }
+      sync_completion_signal(&spi_rx_complete);
     }
   }
   zxlogf(TRACE, "ot-radio: exiting\n");
@@ -131,51 +182,88 @@ int OtRadioDevice::Thread() {
   return status;
 }
 
-zx_status_t OtRadioDevice::Create(void* ctx, zx_device_t* device) {
-  zxlogf(TRACE, "ot-radio: driver started...\n");
-
-  auto ot_radio_dev = std::make_unique<OtRadioDevice>(device);
-  zx_status_t status = ot_radio_dev->Init();
-
+zx_status_t OtRadioDevice::CreateBindAndStart(void* ctx, zx_device_t* parent) {
+  std::unique_ptr<OtRadioDevice> ot_radio_dev;
+  zx_status_t status = Create(ctx, parent, &ot_radio_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ot-radio: Driver bind failed %d\n", status);
     return status;
   }
 
-  status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &ot_radio_dev->port_);
+  status = ot_radio_dev->Bind();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s port create failed %d\n", __func__, status);
+    return status;
+  }
+  // device intentionally leaked as it is now held by DevMgr
+  auto dev_ptr = ot_radio_dev.release();
+
+  status = dev_ptr->Start();
+  if (status != ZX_OK) {
     return status;
   }
 
-  status = ot_radio_dev->interrupt_.bind(ot_radio_dev->port_, PORT_KEY_RADIO_IRQ, 0 /*options*/);
+  return status;
+}
+
+zx_status_t OtRadioDevice::Create(void* ctx, zx_device_t* parent,
+                                  std::unique_ptr<OtRadioDevice>* out) {
+  auto dev = std::make_unique<OtRadioDevice>(parent);
+  zx_status_t status = dev->Init();
+
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s interrupt bind failed %d\n", __func__, status);
+    zxlogf(ERROR, "ot-radio: Driver init failed %d\n", status);
     return status;
   }
 
-  auto cleanup = fbl::MakeAutoCall([&]() { ot_radio_dev->ShutDown(); });
+  *out = std::move(dev);
 
-  auto cb = [](void* arg) -> int { return reinterpret_cast<OtRadioDevice*>(arg)->Thread(); };
+  return ZX_OK;
+}
 
-  int ret = thrd_create_with_name(&ot_radio_dev->thread_, cb,
-                                  reinterpret_cast<void*>(ot_radio_dev.get()), "ot-radio-thread");
-  ZX_DEBUG_ASSERT(ret == thrd_success);
-
-  status = ot_radio_dev->DdkAdd("ot-radio");
+zx_status_t OtRadioDevice::Bind(void) {
+  zx_status_t status = DdkAdd("ot-radio");
   if (status != ZX_OK) {
     zxlogf(ERROR, "ot-radio: Could not create device: %d\n", status);
     return status;
   } else {
     zxlogf(TRACE, "ot-radio: Added device\n");
   }
+  return status;
+}
+
+zx_status_t OtRadioDevice::Start(void) {
+  zx_status_t status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "ot-radio: port create failed %d\n", status);
+    return status;
+  }
+
+  status = interrupt_.bind(port_, PORT_KEY_RADIO_IRQ, 0);
+
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "ot-radio: interrupt bind failed %d\n", status);
+    return status;
+  }
+
+  auto cleanup = fbl::MakeAutoCall([&]() { ShutDown(); });
+
+  auto callback = [](void* cookie) {
+    return reinterpret_cast<OtRadioDevice*>(cookie)->RadioThread();
+  };
+  int ret = thrd_create_with_name(&thread_, callback, this, "ot-radio-thread");
+
+  ZX_DEBUG_ASSERT(ret == thrd_success);
+
+  status = StartLoopThread();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "ot-radio: Could not start loop thread\n");
+    return status;
+  }
+
+  zxlogf(TRACE, "ot-radio: Started thread\n");
 
   cleanup.cancel();
 
-  // device intentionally leaked as it is now held by DevMgr
-  __UNUSED auto ptr = ot_radio_dev.release();
-
-  return ZX_OK;
+  return status;
 }
 
 void OtRadioDevice::DdkRelease() { delete this; }
@@ -186,15 +274,20 @@ void OtRadioDevice::DdkUnbind() {
 }
 
 zx_status_t OtRadioDevice::ShutDown() {
-  interrupt_.destroy();
+  zx_port_packet packet = {PORT_KEY_EXIT_THREAD, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  port_.queue(&packet);
   thrd_join(thread_, NULL);
+  gpio_[OT_RADIO_INT_PIN].ReleaseInterrupt();
+  interrupt_.destroy();
+  loop_.Shutdown();
   return ZX_OK;
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = OtRadioDevice::Create;
+  ops.bind = OtRadioDevice::CreateBindAndStart;
+  ops.run_unit_tests = OtRadioDevice::RunUnitTests;
   return ops;
 }();
 

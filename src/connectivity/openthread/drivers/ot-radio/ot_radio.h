@@ -2,24 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_OT_RADIO_OT_RADIO_H_
-#define ZIRCON_SYSTEM_DEV_OT_RADIO_OT_RADIO_H_
+#ifndef SRC_CONNECTIVITY_OPENTHREAD_DRIVERS_OT_RADIO_OT_RADIO_H_
+#define SRC_CONNECTIVITY_OPENTHREAD_DRIVERS_OT_RADIO_OT_RADIO_H_
 
 #ifndef _ALL_SOURCE
 #define _ALL_SOURCE  // Enables thrd_create_with_name in <threads.h>.
 #endif
-#include <threads.h>
-
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/sync/completion.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <array>
 #include <atomic>
 
 #include <ddk/device.h>
-#include <ddk/protocol/gpio.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/gpio.h>
+#include <ddktl/protocol/spi.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 
@@ -34,24 +36,34 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable> {
  public:
   explicit OtRadioDevice(zx_device_t* device);
 
-  static zx_status_t Create(void* ctx, zx_device_t* device);
+  static zx_status_t Create(void* ctx, zx_device_t* parent, std::unique_ptr<OtRadioDevice>* out);
+  static zx_status_t CreateBindAndStart(void* ctx, zx_device_t* parent);
+  zx_status_t Bind(void);
+  zx_status_t Start(void);
+  static bool RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t channel);
+  zx_status_t Init();
 
   void DdkRelease();
   void DdkUnbind();
-
- private:
-  zx_status_t Init();
   zx_status_t ShutDown();
+  void RemoveDevice();
+  void FreeDevice();
+  zx_status_t Reset();
 
-  int Thread();
-  void Reset();
-
-  gpio_protocol_t gpio_[OT_RADIO_PIN_COUNT];
   zx::port port_;
   zx::interrupt interrupt_;
+  ddk::SpiProtocolClient spi_;
+  std::array<uint8_t, 100> spi_rx_buffer_;
+  sync_completion_t spi_rx_complete;
 
+ private:
+  zx_status_t RadioThread();
+  zx_status_t StartLoopThread();
+
+  std::array<ddk::GpioProtocolClient, OT_RADIO_PIN_COUNT> gpio_;
   thrd_t thread_;
+  async::Loop loop_;
 };
 }  // namespace ot_radio
 
-#endif  // ZIRCON_SYSTEM_DEV_OT_RADIO_OT_RADIO_H_
+#endif  // SRC_CONNECTIVITY_OPENTHREAD_DRIVERS_OT_RADIO_OT_RADIO_H_

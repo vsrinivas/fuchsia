@@ -10,18 +10,23 @@ driver_module("ot-radio") {
 
   sources = [
     "ot_radio.cc",
+    "ot_radio_tests.cc",
   ]
 
   deps = [
-    "//zircon/system/banjo/ddk.protocol.composite",
-    "//zircon/system/banjo/ddk.protocol.gpio",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/driver",
+    "//zircon/public/lib/driver-unit-test",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.composite",
+    "//zircon/system/banjo/ddk.protocol.gpio",
+    "//zircon/system/banjo/ddk.protocol.spi",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
