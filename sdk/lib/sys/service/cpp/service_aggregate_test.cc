@@ -6,7 +6,7 @@
 #include <lib/sys/service/cpp/service_aggregate.h>
 #include <lib/sys/service/cpp/test_base.h>
 
-#include <gmock/gmock-matchers.h>
+#include <gmock/gmock.h>
 
 namespace sys {
 namespace {

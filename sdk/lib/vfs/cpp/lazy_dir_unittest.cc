@@ -8,7 +8,7 @@
 #include <lib/vfs/cpp/lazy_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <lib/vfs/cpp/testing/dir_test_util.h>
-#include <zircon/system/public/zircon/errors.h>
+#include <zircon/errors.h>
 
 #include <memory>
 

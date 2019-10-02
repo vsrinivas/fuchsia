@@ -13,8 +13,9 @@ source_set("fuzzing") {
     "traits.h",
   ]
   public_deps = [
-    "//sdk/lib/fidl/cpp:cpp_base",
+    "//sdk/lib/fidl/cpp",
     "//sdk/lib/fuzzing/cpp",
+    "//sdk/lib/fuzzing/cpp:traits",
     "//zircon/system/public",
   ]
   public_configs = [ "//sdk/config" ]

@@ -9,7 +9,7 @@
 #include <lib/sys/service/cpp/test_base.h>
 #include <zircon/types.h>
 
-#include <gmock/gmock-matchers.h>
+#include <gmock/gmock.h>
 
 namespace sys {
 namespace {
