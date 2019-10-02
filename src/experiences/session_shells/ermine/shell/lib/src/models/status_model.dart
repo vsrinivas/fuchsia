@@ -20,12 +20,14 @@ class StatusModel implements Inspectable {
   final GlobalKey key = GlobalKey(debugLabel: 'status');
   UiStream brightness;
   UiStream memory;
+  UiStream battery;
   final StartupContext startupContext;
   final modular.PuppetMasterProxy puppetMaster;
 
   StatusModel({this.startupContext, this.puppetMaster}) {
     brightness = UiStream(Brightness.fromStartupContext(startupContext));
     memory = UiStream(Memory.fromStartupContext(startupContext));
+    battery = UiStream(Battery.fromStartupContext(startupContext));
   }
 
   factory StatusModel.fromStartupContext(StartupContext startupContext) {
@@ -42,6 +44,7 @@ class StatusModel implements Inspectable {
     puppetMaster.ctrl.close();
     brightness.dispose();
     memory.dispose();
+    battery.dispose();
   }
 
   // Launch settings mod.

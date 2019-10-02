@@ -10,12 +10,14 @@ dart_library("settings") {
 
   sources = [
     "settings.dart",
+    "src/battery.dart",
     "src/brightness.dart",
     "src/memory.dart",
   ]
 
   deps = [
     "//sdk/fidl/fuchsia.memory",
+    "//sdk/fidl/fuchsia.power",
     "//sdk/fidl/fuchsia.ui.brightness",
     "//src/experiences/lib/quickui",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
