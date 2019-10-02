@@ -52,9 +52,7 @@ class ViewEmbedderTest : public sys::testing::TestWithEnvironment {
       const auto& [url, args] = url_and_args;
       fuchsia::sys::LaunchInfo launch_info;
       launch_info.url = url;
-      if (!args.empty()) {
-        launch_info.arguments->insert(launch_info.arguments->end(), args.begin(), args.end());
-      }
+      launch_info.arguments = args;
       services->AddServiceWithLaunchInfo(std::move(launch_info), service_name);
     }
 

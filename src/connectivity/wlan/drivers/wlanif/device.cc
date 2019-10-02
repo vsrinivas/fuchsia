@@ -247,14 +247,18 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
   impl_req.probe_delay = req.probe_delay;
 
   // channel_list
-  if (req.channel_list->size() > WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS) {
-    warnf("wlanif: truncating channel list from %lu to %d\n", req.channel_list->size(),
+  std::vector<uint8_t> channel_list;
+  if (req.channel_list.has_value()) {
+    channel_list = std::move(req.channel_list.value());
+  }
+  if (channel_list.size() > WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS) {
+    warnf("wlanif: truncating channel list from %lu to %d\n", channel_list.size(),
           WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
     impl_req.num_channels = WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS;
   } else {
-    impl_req.num_channels = req.channel_list->size();
+    impl_req.num_channels = channel_list.size();
   }
-  std::memcpy(impl_req.channel_list, req.channel_list->data(), impl_req.num_channels);
+  std::memcpy(impl_req.channel_list, channel_list.data(), impl_req.num_channels);
 
   // min_channel_time
   impl_req.min_channel_time = req.min_channel_time;
@@ -263,13 +267,17 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
   impl_req.max_channel_time = req.max_channel_time;
 
   // ssid_list
-  size_t num_ssids = req.ssid_list->size();
+  std::vector<std::vector<uint8_t>> ssid_list;
+  if (req.ssid_list.has_value()) {
+    ssid_list = std::move(req.ssid_list.value());
+  }
+  size_t num_ssids = ssid_list.size();
   if (num_ssids > WLAN_SCAN_MAX_SSIDS) {
     warnf("wlanif: truncating SSID list from %zu to %d\n", num_ssids, WLAN_SCAN_MAX_SSIDS);
     num_ssids = WLAN_SCAN_MAX_SSIDS;
   }
   for (size_t ndx = 0; ndx < num_ssids; ndx++) {
-    CopySSID((*req.ssid_list)[ndx], &impl_req.ssid_list[ndx]);
+    CopySSID(ssid_list[ndx], &impl_req.ssid_list[ndx]);
   }
   impl_req.num_ssids = num_ssids;
 

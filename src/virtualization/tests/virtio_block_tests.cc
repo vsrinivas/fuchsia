@@ -225,6 +225,9 @@ class VirtioBlockZirconGuest : public ZirconEnclosedGuest, public VirtioBlockTes
 
     // Disable other virtio devices to ensure there's enough space on the PCI bus, and to simplify
     // slot assignment.
+    if (!launch_info->args.has_value()) {
+      launch_info->args = std::vector<std::string>{};
+    }
     launch_info->args->push_back("--virtio-balloon=false");
     launch_info->args->push_back("--virtio-gpu=false");
     launch_info->args->push_back("--virtio-magma=false");
@@ -247,6 +250,9 @@ class VirtioBlockDebianGuest : public DebianEnclosedGuest, public VirtioBlockTes
 
     // Disable other virtio devices to ensure there's enough space on the PCI bus, and to simplify
     // slot assignment.
+    if (!launch_info->args.has_value()) {
+      launch_info->args = std::vector<std::string>{};
+    }
     launch_info->args->push_back("--virtio-balloon=false");
     launch_info->args->push_back("--virtio-gpu=false");
     launch_info->args->push_back("--virtio-magma=false");
@@ -268,7 +274,7 @@ class VirtioBlockGuestTest : public GuestTest<T> {
 };
 
 // The Debian tests are temporarily disabled until the test utilities roll.
-using GuestTypes = ::testing::Types<VirtioBlockZirconGuest , VirtioBlockDebianGuest>;
+using GuestTypes = ::testing::Types<VirtioBlockZirconGuest, VirtioBlockDebianGuest>;
 TYPED_TEST_SUITE(VirtioBlockGuestTest, GuestTypes);
 
 TYPED_TEST(VirtioBlockGuestTest, CheckSize) {

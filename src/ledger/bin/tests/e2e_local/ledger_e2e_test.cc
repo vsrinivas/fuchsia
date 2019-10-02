@@ -89,7 +89,7 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
     launch_info.directory_request = child_services.NewRequest();
-    launch_info.arguments->push_back("--disable_reporting");
+    launch_info.arguments = std::vector<std::string>{"--disable_reporting"};
     ledger::AppendGarbageCollectionPolicyFlags(ledger::kTestingGarbageCollectionPolicy,
                                                &launch_info);
     for (auto& additional_arg : additional_args) {

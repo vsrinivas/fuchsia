@@ -310,7 +310,7 @@ ImagePipeUpdateResults ImagePipe2::Update(escher::ReleaseFenceSignaller* release
 
   bool present_next_image = false;
   ResourceId next_image_id = current_image_id_;
-  ::fidl::VectorPtr<zx::event> next_release_fences;
+  std::vector<zx::event> next_release_fences;
 
   ImagePtr next_image = nullptr;
   while (!frames_.empty() && frames_.front().presentation_time <= presentation_time &&
@@ -326,15 +326,19 @@ ImagePipeUpdateResults ImagePipe2::Update(escher::ReleaseFenceSignaller* release
     FXL_DCHECK(next_image);
     next_image_id = next_image->id();
 
-    if (!next_release_fences->empty()) {
+    if (!next_release_fences.empty()) {
       // We're skipping a frame, so we can immediately signal its release
       // fences.
-      for (auto& fence : *next_release_fences) {
+      for (auto& fence : next_release_fences) {
         fence.signal(0u, escher::kFenceSignalled);
       }
     }
 
-    next_release_fences = std::move(frames_.front().release_fences);
+    if (frames_.front().release_fences.has_value()) {
+      next_release_fences = std::move(frames_.front().release_fences.value());
+    } else {
+      next_release_fences.clear();
+    }
 
     results.callbacks.push(std::move(frames_.front().present_image_callback));
     TRACE_FLOW_END("gfx", "image_pipe_present_image_to_update", next_image_id);

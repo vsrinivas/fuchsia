@@ -45,6 +45,9 @@ void AppendGarbageCollectionPolicyFlags(storage::GarbageCollectionPolicy policy,
       flag = kEagerPolicy;
       break;
   }
+  if (!launch_info->arguments.has_value()) {
+    launch_info->arguments = std::vector<std::string>{};
+  }
   launch_info->arguments->push_back(fxl::Concatenate({"--", kGcPolicyFlag, "=", flag}));
 };
 
