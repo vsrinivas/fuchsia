@@ -7,8 +7,8 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "src/lib/files/file.h"
-#include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fxl/logging.h"
+#include "tools/kazoo/read_file_to_string.h"
 
 namespace {
 
@@ -40,9 +40,7 @@ TEST(Writer, CustomImplementation) {
 }
 
 TEST(Writer, FileWriter) {
-  files::ScopedTempDir temp_dir;
-  std::string filename;
-  ASSERT_TRUE(temp_dir.NewTempFile(&filename));
+  std::string filename("/tmp/Kazoo-FileWriter-testfile");
 
   FileWriter* file_writer = new FileWriter;
   ASSERT_TRUE(file_writer->Open(filename));
@@ -55,7 +53,7 @@ TEST(Writer, FileWriter) {
   }
 
   std::string result;
-  ASSERT_TRUE(files::ReadFileToString(filename, &result));
+  ASSERT_TRUE(ReadFileToString(filename, &result));
   EXPECT_EQ(result, R"(xyz
 0 0
 1 1
@@ -78,6 +76,8 @@ TEST(Writer, FileWriter) {
 18 12
 19 13
 )");
+
+  unlink(filename.c_str());
 }
 
 }  // namespace

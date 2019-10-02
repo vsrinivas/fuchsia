@@ -35,6 +35,8 @@ if (current_toolchain == host_toolchain) {
       "output_util.cc",
       "output_util.h",
       "outputs.h",
+      "read_file_to_string.cc",
+      "read_file_to_string.h",
       "rust_output.cc",
       "syscall_library.cc",
       "syscall_library.h",
@@ -47,7 +49,6 @@ if (current_toolchain == host_toolchain) {
     ]
 
     deps = [
-      "//src/lib/files",
       "//zircon/public/lib/fbl",
       "//zircon/system/public",
     ]

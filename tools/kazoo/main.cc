@@ -6,9 +6,9 @@
 
 #include <cmdline/args_parser.h>
 
-#include "src/lib/files/file.h"
 #include "src/lib/fxl/logging.h"
 #include "tools/kazoo/outputs.h"
+#include "tools/kazoo/read_file_to_string.h"
 #include "tools/kazoo/syscall_library.h"
 
 namespace {
@@ -124,7 +124,7 @@ int main(int argc, const char* argv[]) {
   }
 
   std::string contents;
-  if (!files::ReadFileToString(params[0], &contents)) {
+  if (!ReadFileToString(params[0], &contents)) {
     FXL_LOG(ERROR) << "Couldn't read " << params[0] << ".";
     return 1;
   }
