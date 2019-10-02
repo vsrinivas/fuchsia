@@ -8,6 +8,7 @@ sdk://docs/musl_license
 sdk://docs/open_source
 sdk://docs/vulkan_license
 sdk://fidl/fuchsia.accessibility.semantics
+sdk://fidl/fuchsia.auth
 sdk://fidl/fuchsia.auth.oldtokens
 sdk://fidl/fuchsia.bluetooth
 sdk://fidl/fuchsia.bluetooth.gatt
@@ -35,6 +36,7 @@ sdk://fidl/fuchsia.images
 sdk://fidl/fuchsia.intl
 sdk://fidl/fuchsia.io
 sdk://fidl/fuchsia.ldsvc
+sdk://fidl/fuchsia.ledger
 sdk://fidl/fuchsia.logger
 sdk://fidl/fuchsia.math
 sdk://fidl/fuchsia.media
@@ -44,6 +46,8 @@ sdk://fidl/fuchsia.media.playback
 sdk://fidl/fuchsia.media.sessions2
 sdk://fidl/fuchsia.mediacodec
 sdk://fidl/fuchsia.mem
+sdk://fidl/fuchsia.modular
+sdk://fidl/fuchsia.modular.auth
 sdk://fidl/fuchsia.net
 sdk://fidl/fuchsia.net.dhcp
 sdk://fidl/fuchsia.net.http
@@ -96,6 +100,7 @@ sdk://pkg/inspect-common
 sdk://pkg/media_cpp
 sdk://pkg/media_cpp_no_converters
 sdk://pkg/memfs
+sdk://pkg/modular_cpp
 sdk://pkg/scenic_cpp
 sdk://pkg/svc
 sdk://pkg/sync
