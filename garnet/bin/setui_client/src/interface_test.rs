@@ -69,11 +69,11 @@ async fn main() -> Result<(), Error> {
     println!("audio service tests");
     println!("  client calls audio watch");
     validate_audio(&ExpectedStreamSettingsStruct {
-        stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
-        source: Some(fidl_fuchsia_settings::AudioStreamSettingSource::User),
-        level: Some(0.6),
-        volume_muted: Some(false),
-        input_muted: Some(true),
+        stream: None,
+        source: None,
+        level: None,
+        volume_muted: None,
+        input_muted: None,
     })
     .await?;
 

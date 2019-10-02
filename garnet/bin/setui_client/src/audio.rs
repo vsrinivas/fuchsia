@@ -29,12 +29,25 @@ pub async fn command(
     volume.muted = volume_muted;
     stream_settings.stream = stream;
     stream_settings.source = source;
-    stream_settings.user_volume = if volume == Volume::empty() { None } else { Some(volume) };
+    if volume != Volume::empty() {
+        stream_settings.user_volume = Some(volume);
+    }
     input.muted = input_muted;
-    audio_settings.streams = Some(vec![stream_settings]);
-    audio_settings.input = if input == AudioInput::empty() { None } else { Some(input) };
 
-    if audio_settings == AudioSettings::empty() {
+    if stream_settings != AudioStreamSettings::empty() {
+        audio_settings.streams = Some(vec![stream_settings]);
+    }
+    if input != AudioInput::empty() {
+        audio_settings.input = Some(input);
+    }
+
+    let none_set = stream.is_none()
+        && source.is_none()
+        && level.is_none()
+        && volume_muted.is_none()
+        && input_muted.is_none();
+
+    if none_set {
         let settings = proxy.watch().await?;
         match settings {
             Ok(setting_value) => {
