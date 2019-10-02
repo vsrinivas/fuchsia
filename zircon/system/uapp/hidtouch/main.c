@@ -18,6 +18,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <ddk/device.h>
 #include <hid/acer12.h>
 #include <hid/egalax.h>
 #include <hid/eyoyo.h>
@@ -451,7 +452,6 @@ int main(int argc, char* argv[]) {
   }
 
   int ret;
-  void* buf = NULL;
   uint8_t* rpt_desc = NULL;
   int touchfd = -1;
   zx_handle_t touchsvc = ZX_HANDLE_INVALID;
@@ -624,53 +624,78 @@ int main(int argc, char* argv[]) {
     goto cleanup;
   }
   printf("Max report size is %u\n", max_rpt_sz);
-  buf = malloc(max_rpt_sz);
-  if (buf == NULL) {
-    printf("no memory!\n");
+
+  zx_handle_t report_event = ZX_OK;
+  zx_status_t out_status = ZX_OK;
+  status = fuchsia_hardware_input_DeviceGetReportsEvent(touchsvc, &out_status, &report_event);
+  if (status != ZX_OK || out_status != ZX_OK) {
+    printf("failed to get reports event: %d %d\n", status, out_status);
     ret = -1;
     goto cleanup;
   }
 
   run = true;
+  uint8_t report_data[fuchsia_hardware_input_MAX_REPORT_LEN] = {};
+  size_t report_data_size = 0;
+  size_t report_data_used = 0;
   while (run) {
-    ssize_t r = read(touchfd, buf, max_rpt_sz);
-    if (r < 0) {
-      printf("touchscreen read error: %zd (errno=%d)\n", r, errno);
+    status = fuchsia_hardware_input_DeviceGetReports(touchsvc, &out_status, report_data,
+                                                     sizeof(report_data), &report_data_size);
+    if (status != ZX_OK || out_status != ZX_OK) {
+      if (out_status == ZX_ERR_SHOULD_WAIT) {
+        status = zx_object_wait_one(report_event, DEV_STATE_READABLE, ZX_TIME_INFINITE, NULL);
+        continue;
+      }
+      printf("touchscreen read error: %d %d\n", status, out_status);
       break;
     }
-    if (panel == TOUCH_PANEL_ACER12) {
-      if (*(uint8_t*)buf == ACER12_RPT_ID_TOUCH) {
-        process_acer12_touchscreen_input(buf, r, pixels32, &info);
-      } else if (*(uint8_t*)buf == ACER12_RPT_ID_STYLUS) {
-        process_acer12_stylus_input(buf, r, pixels32, &info);
-      }
-    } else if (panel == TOUCH_PANEL_PARADISE) {
-      if (*(uint8_t*)buf == PARADISE_RPT_ID_TOUCH) {
-        process_paradise_touchscreen_input(buf, r, pixels32, &info);
-      }
-    } else if (panel == TOUCH_PANEL_PARADISEv2) {
-      if (*(uint8_t*)buf == PARADISE_RPT_ID_TOUCH) {
-        process_paradise_touchscreen_v2_input(buf, r, pixels32, &info);
-      }
-    } else if (panel == TOUCH_PANEL_PARADISEv3) {
-      if (*(uint8_t*)buf == PARADISE_RPT_ID_TOUCH) {
-        process_paradise_touchscreen_input(buf, r, pixels32, &info);
-      }
-    } else if (panel == TOUCH_PANEL_EGALAX) {
-      if (*(uint8_t*)buf == EGALAX_RPT_ID_TOUCH) {
-        process_egalax_touchscreen_input(buf, r, pixels32, &info);
-      }
-    } else if (panel == TOUCH_PANEL_EYOYO) {
-      if (*(uint8_t*)buf == EYOYO_RPT_ID_TOUCH) {
-        process_eyoyo_touchscreen_input(buf, r, pixels32, &info);
-      }
-    } else if (panel == TOUCH_PANEL_FT3X27) {
-      if (*(uint8_t*)buf == FT3X27_RPT_ID_TOUCH) {
-        process_ft3x27_ft5726_touchscreen_input(buf, r, pixels32, &info);
-      }
-    } else if (panel == TOUCH_PANEL_FT5726) {
-      if (*(uint8_t*)buf == FT5726_RPT_ID_TOUCH) {
-        process_ft3x27_ft5726_touchscreen_input(buf, r, pixels32, &info);
+    report_data_used = 0;
+    while (report_data_used < report_data_size) {
+      uint8_t* buf = report_data + report_data_used;
+      ssize_t r = report_data_size - report_data_used;
+      if (panel == TOUCH_PANEL_ACER12) {
+        if (*(uint8_t*)buf == ACER12_RPT_ID_TOUCH) {
+          process_acer12_touchscreen_input(buf, r, pixels32, &info);
+          report_data_used += sizeof(acer12_touch_t);
+        } else if (*(uint8_t*)buf == ACER12_RPT_ID_STYLUS) {
+          process_acer12_stylus_input(buf, r, pixels32, &info);
+          report_data_used += sizeof(acer12_stylus_t);
+        }
+      } else if (panel == TOUCH_PANEL_PARADISE) {
+        if (*(uint8_t*)buf == PARADISE_RPT_ID_TOUCH) {
+          process_paradise_touchscreen_input(buf, r, pixels32, &info);
+          report_data_used += sizeof(paradise_touch_t);
+        }
+      } else if (panel == TOUCH_PANEL_PARADISEv2) {
+        if (*(uint8_t*)buf == PARADISE_RPT_ID_TOUCH) {
+          process_paradise_touchscreen_v2_input(buf, r, pixels32, &info);
+          report_data_used += sizeof(paradise_touch_v2_t);
+        }
+      } else if (panel == TOUCH_PANEL_PARADISEv3) {
+        if (*(uint8_t*)buf == PARADISE_RPT_ID_TOUCH) {
+          process_paradise_touchscreen_input(buf, r, pixels32, &info);
+          report_data_used += sizeof(paradise_touch_t);
+        }
+      } else if (panel == TOUCH_PANEL_EGALAX) {
+        if (*(uint8_t*)buf == EGALAX_RPT_ID_TOUCH) {
+          process_egalax_touchscreen_input(buf, r, pixels32, &info);
+          report_data_used += sizeof(egalax_touch_t);
+        }
+      } else if (panel == TOUCH_PANEL_EYOYO) {
+        if (*(uint8_t*)buf == EYOYO_RPT_ID_TOUCH) {
+          process_eyoyo_touchscreen_input(buf, r, pixels32, &info);
+          report_data_used += sizeof(eyoyo_touch_t);
+        }
+      } else if (panel == TOUCH_PANEL_FT3X27) {
+        if (*(uint8_t*)buf == FT3X27_RPT_ID_TOUCH) {
+          process_ft3x27_ft5726_touchscreen_input(buf, r, pixels32, &info);
+          report_data_used += sizeof(ft3x27_touch_t);
+        }
+      } else if (panel == TOUCH_PANEL_FT5726) {
+        if (*(uint8_t*)buf == FT5726_RPT_ID_TOUCH) {
+          process_ft3x27_ft5726_touchscreen_input(buf, r, pixels32, &info);
+          report_data_used += sizeof(ft3x27_touch_t);
+        }
       }
     }
     zx_cache_flush(pixels32, size, ZX_CACHE_FLUSH_DATA);
@@ -680,7 +705,6 @@ int main(int argc, char* argv[]) {
 
   ret = 0;
 cleanup:
-  free(buf);
   free(rpt_desc);
   if (touchio != NULL) {
     fdio_unsafe_release(touchio);

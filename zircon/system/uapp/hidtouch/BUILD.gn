@@ -9,6 +9,7 @@ executable("hidtouch") {
   deps = [
     "$zx/system/fidl/fuchsia-hardware-display:c",
     "$zx/system/fidl/fuchsia-hardware-input:c",
+    "$zx/system/ulib/ddk",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/framebuffer",
     "$zx/system/ulib/hid",
