@@ -7,10 +7,12 @@
     },
     "revision": {
       "type": "string"
-    }
+    },
+    "additionalProperties": false
   },
   "required": [
     "name",
     "revision"
-  ]
+  ],
+  "additionalProperties": false
 }

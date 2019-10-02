@@ -35,13 +35,13 @@ async fn main() -> Result<(), Error> {
     let proxy = connect_to_service::<MiscFactoryStoreProviderMarker>()
         .expect("Failed to connect to MiscFactoryStoreProvider service");
     // Loading Device Info
-    let device_info = DeviceInfo::load(&proxy).await?;
+    let device_info = DeviceInfo::load(&proxy).await;
     let locked_device_info = Arc::new(RwLock::new(device_info));
     // Loading Product Info
-    let product_info = ProductInfo::load(&proxy).await?;
+    let product_info = ProductInfo::load(&proxy).await;
     let locked_product_info = Arc::new(RwLock::new(product_info));
     // Loading Board Info
-    let board_info = BoardInfo::load()?;
+    let board_info = BoardInfo::load();
     let locked_board_info = Arc::new(RwLock::new(board_info));
     let mut fs = ServiceFs::new();
     fs.dir("svc")

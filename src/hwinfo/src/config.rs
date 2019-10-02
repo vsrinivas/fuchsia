@@ -11,13 +11,14 @@ use {
     fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE},
     fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_log_warn},
     serde_derive::{Deserialize, Serialize},
-    std::fs::File,
-    std::path::Path,
+    std::{fs::File, io, path::Path},
 };
 
 // CONFIG AND FACTORY FILE NAMES
-const CONFIG_JSON_FILE: &str = "/config/data/product_config.json";
+const PRODUCT_CONFIG_JSON_FILE: &str = "/config/data/product_config.json";
 const BOARD_CONFIG_JSON_FILE: &str = "/config/data/board_config.json";
+const DEFAULT_PRODUCT_CONFIG_JSON_FILE: &str = "/config/data/default_product_config.json";
+const DEFAULT_BOARD_CONFIG_JSON_FILE: &str = "/config/data/default_board_config.json";
 const SERIAL_TXT: &str = "serial.txt";
 const LOCALE_LIST_FILE: &str = "locale_list.txt";
 const HW_TXT: &str = "hw.txt";
@@ -44,8 +45,7 @@ pub struct DeviceInfo {
 }
 
 impl DeviceInfo {
-    pub async fn load(proxy_handle: &MiscFactoryStoreProviderProxy) -> Result<Self, Error> {
-        // Read Serial File
+    pub async fn load(proxy_handle: &MiscFactoryStoreProviderProxy) -> Self {
         let mut device_info = DeviceInfo { serial_number: None };
         device_info.serial_number = match read_factory_file(SERIAL_TXT, proxy_handle).await {
             Ok(content) => Some(content),
@@ -54,7 +54,7 @@ impl DeviceInfo {
                 None
             }
         };
-        Ok(device_info)
+        device_info
     }
 }
 
@@ -71,25 +71,20 @@ pub struct BoardInfo {
 }
 
 impl BoardInfo {
-    pub fn load() -> Result<Self, Error> {
-        //Read Board Config
-        let mut board_info = BoardInfo { name: None, revision: None };
-        match File::open(BOARD_CONFIG_JSON_FILE.to_owned()) {
-            Ok(content) => match serde_json::from_reader(content) {
-                Ok(config_json) => {
-                    let board_info_json: BoardInfo = config_json;
-                    board_info.name = board_info_json.name;
-                    board_info.revision = board_info_json.revision;
-                }
-                Err(err) => {
-                    fx_log_err!("Failed to read board_config.json due to {}", err);
-                }
-            },
-            Err(err) => {
-                fx_log_err!("Failed to read board_config.json due to {}", err);
-            }
-        }
+    fn read_config(path: &str) -> Result<Self, Error> {
+        let board_info: BoardInfo = serde_json::from_reader(io::BufReader::new(File::open(path)?))?;
         Ok(board_info)
+    }
+
+    pub fn load() -> Self {
+        let board_info = BoardInfo::read_config(BOARD_CONFIG_JSON_FILE).unwrap_or_else(|err| {
+            fx_log_err!("Failed to read board_config.json due to {}", err);
+            BoardInfo::read_config(DEFAULT_BOARD_CONFIG_JSON_FILE).unwrap_or_else(|err| {
+                fx_log_err!("Failed to read default_board_config.json due to {}", err);
+                BoardInfo { name: None, revision: None }
+            })
+        });
+        board_info
     }
 }
 
@@ -131,7 +126,8 @@ impl ProductInfo {
     }
 
     fn load_from_config_data(&mut self, path: &str) -> Result<(), Error> {
-        let config_map: ConfigFile = serde_json::from_reader(File::open(path)?)?;
+        let config_map: ConfigFile =
+            serde_json::from_reader(io::BufReader::new(File::open(path)?))?;
         self.name = Some(config_map.name);
         self.model = Some(config_map.model);
         self.manufacturer = Some(config_map.manufacturer);
@@ -179,27 +175,21 @@ impl ProductInfo {
         Ok(())
     }
 
-    pub async fn load(proxy_handle: &MiscFactoryStoreProviderProxy) -> Result<Self, Error> {
+    pub async fn load(proxy_handle: &MiscFactoryStoreProviderProxy) -> Self {
         let mut product_info = ProductInfo::new();
-        match product_info.load_from_config_data(CONFIG_JSON_FILE) {
-            Ok(_) => {}
-            Err(err) => {
-                fx_log_err!("Failed to load product_config.json due to {}", err);
+        if let Err(err) = product_info.load_from_config_data(PRODUCT_CONFIG_JSON_FILE) {
+            fx_log_err!("Failed to load product_config.json due to {}", err);
+            if let Err(err) = product_info.load_from_config_data(DEFAULT_PRODUCT_CONFIG_JSON_FILE) {
+                fx_log_err!("Failed to load default_product_config.json due to {}", err);
             }
         }
-        match product_info.load_from_hw_file(HW_TXT, proxy_handle).await {
-            Ok(_) => {}
-            Err(err) => {
-                fx_log_err!("Failed to load hw.txt.txt due to {}", err);
-            }
+        if let Err(err) = product_info.load_from_hw_file(HW_TXT, proxy_handle).await {
+            fx_log_err!("Failed to load hw.txt.txt due to {}", err);
         }
-        match product_info.load_from_locale_list(LOCALE_LIST_FILE, proxy_handle).await {
-            Ok(_) => {}
-            Err(err) => {
-                fx_log_err!("Failed to load local_list.txt due to {}", err);
-            }
+        if let Err(err) = product_info.load_from_locale_list(LOCALE_LIST_FILE, proxy_handle).await {
+            fx_log_err!("Failed to load local_list.txt due to {}", err);
         }
-        Ok(product_info)
+        product_info
     }
 }
 
