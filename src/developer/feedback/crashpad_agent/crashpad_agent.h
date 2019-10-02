@@ -5,7 +5,6 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CRASHPAD_AGENT_H_
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CRASHPAD_AGENT_H_
 
-#include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/async/dispatcher.h>
@@ -27,7 +26,7 @@
 
 namespace feedback {
 
-class CrashpadAgent : public fuchsia::crash::Analyzer, public fuchsia::feedback::CrashReporter {
+class CrashpadAgent : public fuchsia::feedback::CrashReporter {
  public:
   // Static factory methods.
   //
@@ -44,13 +43,6 @@ class CrashpadAgent : public fuchsia::crash::Analyzer, public fuchsia::feedback:
                                                   Config config,
                                                   std::unique_ptr<CrashServer> crash_server,
                                                   InspectManager* inspect_manager);
-
-  // |fuchsia::crash::Analyzer|
-  //
-  // TODO(fxb/6599): delete once transitioned to fuchsia.feedback.CrashReporter.
-  void OnManagedRuntimeException(std::string component_url,
-                                 fuchsia::crash::ManagedRuntimeException exception,
-                                 OnManagedRuntimeExceptionCallback callback) override;
 
   // |fuchsia::feedback::CrashReporter|
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;

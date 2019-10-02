@@ -4,7 +4,6 @@
 
 #include "src/developer/feedback/crashpad_agent/crashpad_agent.h"
 
-#include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fit/result.h>
@@ -46,8 +45,6 @@
 namespace feedback {
 namespace {
 
-using fuchsia::crash::GenericException;
-using fuchsia::crash::ManagedRuntimeException;
 using fuchsia::feedback::Annotation;
 using fuchsia::feedback::Attachment;
 using fuchsia::feedback::CrashReport;
@@ -92,8 +89,7 @@ Attachment BuildAttachment(const std::string& key, const std::string& value) {
   return attachment;
 }
 
-// Unit-tests the implementation of the fuchsia.crash.Analyzer and fuchsia.feedback.CrashReporter
-// FIDL interfaces.
+// Unit-tests the implementation of the fuchsia.feedback.CrashReporter FIDL interface.
 //
 // This does not test the environment service. It directly instantiates the class, without
 // connecting through FIDL.
@@ -360,28 +356,6 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   std::unique_ptr<timekeeper::TestClock> clock_;
   std::unique_ptr<InspectManager> inspect_manager_;
 };
-
-TEST_F(CrashpadAgentTest, Succeed_OnLegacyDartException) {
-  ResetAgentDefaultConfig({kUploadSuccessful});
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  GenericException exception = {};
-  const std::string type = "FileSystemException";
-  std::copy(type.begin(), type.end(), exception.type.data());
-  const std::string message = "cannot open file";
-  std::copy(message.begin(), message.end(), exception.message.data());
-  ASSERT_TRUE(fsl::VmoFromString("#0", &exception.stack_trace));
-  ManagedRuntimeException dart_exception;
-  dart_exception.set_dart(std::move(exception));
-
-  fit::result<void, zx_status_t> out_result;
-  agent_->OnManagedRuntimeException(
-      "component_url", std::move(dart_exception),
-      [&out_result](fit::result<void, zx_status_t> result) { out_result = std::move(result); });
-  ASSERT_TRUE(RunLoopUntilIdle());
-
-  EXPECT_TRUE(out_result.is_ok());
-  CheckAttachmentsInDatabase({"DartError"});
-}
 
 TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReport) {
   ResetAgentDefaultConfig({kUploadSuccessful});

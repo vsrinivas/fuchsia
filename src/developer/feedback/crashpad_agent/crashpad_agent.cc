@@ -134,30 +134,6 @@ CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
   inspect_manager_->ExposeSettings(&settings_);
 }
 
-void CrashpadAgent::OnManagedRuntimeException(std::string component_url,
-                                              fuchsia::crash::ManagedRuntimeException exception,
-                                              OnManagedRuntimeExceptionCallback callback) {
-  // This is a legacy flow using the old protocol. We convert its input arguments to the ones of the
-  // new protocol so the rest of this class only needs to know about the new protocol.
-  FX_LOGS(WARNING) << "fuchsia.crash.Analyzer.OnManagedRuntimeException() is a legacy flow. Please "
-                      "switch to fuchsia.feedback.CrashReporter.File()";
-
-  fuchsia::feedback::RuntimeCrashReport dart_report;
-  dart_report.set_exception_type(
-      std::string(reinterpret_cast<const char*>(exception.dart().type.data())));
-  dart_report.set_exception_message(
-      std::string(reinterpret_cast<const char*>(exception.dart().message.data())));
-  dart_report.set_exception_stack_trace(std::move(exception.dart().stack_trace));
-  fuchsia::feedback::SpecificCrashReport specific_report;
-  specific_report.set_dart(std::move(dart_report));
-  CrashReport report;
-  report.set_program_name(std::move(component_url));
-  report.set_specific_report(std::move(specific_report));
-  File(std::move(report), [callback = std::move(callback)](fit::result<void, zx_status_t> result) {
-    callback(std::move(result));
-  });
-}
-
 void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
   if (!report.has_program_name()) {
     FX_LOGS(ERROR) << "Invalid crash report. No program name. Won't file.";
