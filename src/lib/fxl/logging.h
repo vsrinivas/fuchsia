@@ -94,9 +94,11 @@ FXL_EXPORT bool ShouldCreateLogMessage(LogSeverity severity);
 
 #ifndef NDEBUG
 #define FXL_DLOG(severity) FXL_LOG(severity)
+#define FXL_DVLOG(verbose_level) FXL_VLOG(verbose_level)
 #define FXL_DCHECK(condition) FXL_CHECK(condition)
 #else
 #define FXL_DLOG(severity) FXL_EAT_STREAM_PARAMETERS(true)
+#define FXL_DVLOG(verbose_level) FXL_EAT_STREAM_PARAMETERS(true)
 #define FXL_DCHECK(condition) FXL_EAT_STREAM_PARAMETERS(condition)
 #endif
 

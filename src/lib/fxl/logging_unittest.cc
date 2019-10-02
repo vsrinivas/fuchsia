@@ -17,8 +17,7 @@ namespace {
 
 class LoggingFixture : public ::testing::Test {
  public:
-  LoggingFixture()
-      : old_settings_(GetLogSettings()), old_stderr_(dup(STDERR_FILENO)) {}
+  LoggingFixture() : old_settings_(GetLogSettings()), old_stderr_(dup(STDERR_FILENO)) {}
   ~LoggingFixture() {
     SetLogSettings(old_settings_);
     dup2(old_stderr_, STDERR_FILENO);
@@ -42,14 +41,46 @@ TEST_F(LoggingFixture, Log) {
   std::string log;
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
 
-  EXPECT_THAT(
-      log,
-      testing::HasSubstr(
-          "[ERROR:src/lib/fxl/logging_unittest.cc(39)] something at error"));
+  EXPECT_THAT(log,
+              testing::HasSubstr("[ERROR:src/lib/fxl/logging_unittest.cc(38)] something at error"));
 
-  EXPECT_THAT(
-      log, testing::HasSubstr(
-               "[INFO:logging_unittest.cc(40)] and some other at info level"));
+  EXPECT_THAT(log,
+              testing::HasSubstr("[INFO:logging_unittest.cc(39)] and some other at info level"));
+}
+
+TEST_F(LoggingFixture, DVLogNoMinLevel) {
+  LogSettings new_settings;
+  EXPECT_EQ(LOG_INFO, new_settings.min_log_level);
+  files::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
+  SetLogSettings(new_settings);
+
+  FXL_DVLOG(1) << "hello";
+
+  std::string log;
+  ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
+
+  EXPECT_EQ(log, "");
+}
+
+TEST_F(LoggingFixture, DVLogWithMinLevel) {
+  LogSettings new_settings;
+  EXPECT_EQ(LOG_INFO, new_settings.min_log_level);
+  new_settings.min_log_level = -1;
+  files::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
+  SetLogSettings(new_settings);
+
+  FXL_DVLOG(1) << "hello";
+
+  std::string log;
+  ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
+
+#if defined(NDEBUG)
+  EXPECT_EQ(log, "");
+#else
+  EXPECT_THAT(log, testing::HasSubstr("hello"));
+#endif
 }
 
 #if defined(__Fuchsia__)
@@ -67,8 +98,7 @@ TEST_F(LoggingFixture, Plog) {
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
 
   EXPECT_THAT(log, testing::HasSubstr("should be ok: 0 (ZX_OK)"));
-  EXPECT_THAT(
-      log, testing::HasSubstr("got access denied: -30 (ZX_ERR_ACCESS_DENIED)"));
+  EXPECT_THAT(log, testing::HasSubstr("got access denied: -30 (ZX_ERR_ACCESS_DENIED)"));
 }
 #endif  // defined(__Fuchsia__)
 
