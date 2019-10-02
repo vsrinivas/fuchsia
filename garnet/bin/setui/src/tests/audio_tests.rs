@@ -18,17 +18,14 @@ use {
         AudioInfo, AudioInputInfo, AudioStream, AudioStreamType, SettingAction, SettingType,
     },
     crate::switchboard::switchboard_impl::SwitchboardImpl,
-    failure::format_err,
-    fidl::endpoints::{ServerEnd, ServiceMarker},
+    crate::tests::fakes::audio_core_service::AudioCoreService,
+    crate::tests::fakes::service_registry::ServiceRegistry,
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj},
-    fuchsia_zircon as zx,
     futures::prelude::*,
-    lazy_static::lazy_static,
     parking_lot::RwLock,
-    std::collections::HashMap,
     std::sync::Arc,
 };
 
@@ -66,18 +63,6 @@ fn verify_audio_stream(settings: AudioSettings, stream: AudioStreamSettings) {
         .expect("contains stream");
 }
 
-// Verifies that the |streams| map contains correct |gain_db| for |usage|.
-fn verify_gain(
-    gain_db: f32,
-    usage: AudioRenderUsage,
-    streams: &RwLock<HashMap<AudioRenderUsage, f32>>,
-) {
-    assert_eq!(
-        gain_db,
-        *(*streams.read()).get(&usage).expect("contains stream with correct gain db")
-    );
-}
-
 // This function is created so that we can manipulate the |pair_media_and_system_agent| flag.
 // TODO(go/fxb/37493): Remove this function and the related tests when the hack is removed.
 fn create_audio_fidl_service<'a>(
@@ -109,44 +94,18 @@ fn create_audio_fidl_service<'a>(
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_audio() {
-    lazy_static! {
-        static ref AUDIO_STREAMS: RwLock<HashMap<AudioRenderUsage, f32>> =
-            { RwLock::new(HashMap::new()) };
-    }
-
-    let service_gen = |service_name: &str, channel: zx::Channel| {
-        if service_name != fidl_fuchsia_media::AudioCoreMarker::NAME {
-            return Err(format_err!("unsupported!"));
-        }
-
-        let mut manager_stream =
-            ServerEnd::<fidl_fuchsia_media::AudioCoreMarker>::new(channel).into_stream()?;
-
-        fasync::spawn(async move {
-            while let Some(req) = manager_stream.try_next().await.unwrap() {
-                #[allow(unreachable_patterns)]
-                match req {
-                    fidl_fuchsia_media::AudioCoreRequest::SetRenderUsageGain {
-                        usage,
-                        gain_db,
-                        control_handle: _,
-                    } => {
-                        (*AUDIO_STREAMS.write()).insert(usage, gain_db);
-                    }
-                    _ => {}
-                }
-            }
-        });
-
-        Ok(())
-    };
+    let service_registry = ServiceRegistry::create();
+    let audio_core_service_handle = Arc::new(RwLock::new(AudioCoreService::new()));
+    service_registry.write().register_service(audio_core_service_handle.clone());
 
     let mut fs = ServiceFs::new();
 
     create_fidl_service(
         fs.root_dir(),
         [SettingType::Audio].iter().cloned().collect(),
-        Arc::new(RwLock::new(ServiceContext::new(Some(Box::new(service_gen))))),
+        Arc::new(RwLock::new(ServiceContext::new(ServiceRegistry::serve(
+            service_registry.clone(),
+        )))),
         Box::new(InMemoryStorageFactory::create()),
     );
 
@@ -162,10 +121,9 @@ async fn test_audio() {
     let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
     verify_audio_stream(settings.clone(), AudioStreamSettings::from(CHANGED_MEDIA_STREAM));
 
-    verify_gain(
+    assert_eq!(
         get_gain_db(CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
-        AudioRenderUsage::Media,
-        &AUDIO_STREAMS,
+        audio_core_service_handle.read().get_gain(AudioRenderUsage::Media).unwrap()
     );
 }
 
@@ -176,43 +134,17 @@ async fn test_audio_pair_media_system() {
     let mut changed_system_stream = CHANGED_MEDIA_STREAM.clone();
     changed_system_stream.stream = Some(fidl_fuchsia_media::AudioRenderUsage::SystemAgent);
 
-    lazy_static! {
-        static ref AUDIO_STREAMS: RwLock<HashMap<AudioRenderUsage, f32>> =
-            { RwLock::new(HashMap::new()) };
-    }
-
-    let service_gen = |service_name: &str, channel: zx::Channel| {
-        if service_name != fidl_fuchsia_media::AudioCoreMarker::NAME {
-            return Err(format_err!("unsupported!"));
-        }
-
-        let mut manager_stream =
-            ServerEnd::<fidl_fuchsia_media::AudioCoreMarker>::new(channel).into_stream()?;
-
-        fasync::spawn(async move {
-            while let Some(req) = manager_stream.try_next().await.unwrap() {
-                #[allow(unreachable_patterns)]
-                match req {
-                    fidl_fuchsia_media::AudioCoreRequest::SetRenderUsageGain {
-                        usage,
-                        gain_db,
-                        control_handle: _,
-                    } => {
-                        (*AUDIO_STREAMS.write()).insert(usage, gain_db);
-                    }
-                    _ => {}
-                }
-            }
-        });
-
-        Ok(())
-    };
+    let service_registry = ServiceRegistry::create();
+    let audio_core_service_handle = Arc::new(RwLock::new(AudioCoreService::new()));
+    service_registry.write().register_service(audio_core_service_handle.clone());
 
     let mut fs = ServiceFs::new();
 
     create_audio_fidl_service(
         fs.root_dir(),
-        Arc::new(RwLock::new(ServiceContext::new(Some(Box::new(service_gen))))),
+        Arc::new(RwLock::new(ServiceContext::new(ServiceRegistry::serve(
+            service_registry.clone(),
+        )))),
         true,
     );
 
@@ -232,51 +164,31 @@ async fn test_audio_pair_media_system() {
     verify_audio_stream(settings.clone(), AudioStreamSettings::from(changed_system_stream));
 
     let expected_gain_db = get_gain_db(CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED);
-    verify_gain(expected_gain_db, AudioRenderUsage::Media, &AUDIO_STREAMS);
-    verify_gain(expected_gain_db, AudioRenderUsage::SystemAgent, &AUDIO_STREAMS);
+    assert_eq!(
+        expected_gain_db,
+        audio_core_service_handle.read().get_gain(AudioRenderUsage::Media).unwrap()
+    );
+    assert_eq!(
+        expected_gain_db,
+        audio_core_service_handle.read().get_gain(AudioRenderUsage::SystemAgent).unwrap()
+    );
 }
 
 // Test to ensure that when |pair_media_and_system_agent| is disabled, setting the media volume will
 // not affect the system agent volume.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_audio_pair_media_system_off() {
-    lazy_static! {
-        static ref AUDIO_STREAMS: RwLock<HashMap<AudioRenderUsage, f32>> =
-            { RwLock::new(HashMap::new()) };
-    }
-
-    let service_gen = |service_name: &str, channel: zx::Channel| {
-        if service_name != fidl_fuchsia_media::AudioCoreMarker::NAME {
-            return Err(format_err!("unsupported!"));
-        }
-
-        let mut manager_stream =
-            ServerEnd::<fidl_fuchsia_media::AudioCoreMarker>::new(channel).into_stream()?;
-
-        fasync::spawn(async move {
-            while let Some(req) = manager_stream.try_next().await.unwrap() {
-                #[allow(unreachable_patterns)]
-                match req {
-                    fidl_fuchsia_media::AudioCoreRequest::SetRenderUsageGain {
-                        usage,
-                        gain_db,
-                        control_handle: _,
-                    } => {
-                        (*AUDIO_STREAMS.write()).insert(usage, gain_db);
-                    }
-                    _ => {}
-                }
-            }
-        });
-
-        Ok(())
-    };
+    let service_registry = ServiceRegistry::create();
+    let audio_core_service_handle = Arc::new(RwLock::new(AudioCoreService::new()));
+    service_registry.write().register_service(audio_core_service_handle.clone());
 
     let mut fs = ServiceFs::new();
 
     create_audio_fidl_service(
         fs.root_dir(),
-        Arc::new(RwLock::new(ServiceContext::new(Some(Box::new(service_gen))))),
+        Arc::new(RwLock::new(ServiceContext::new(ServiceRegistry::serve(
+            service_registry.clone(),
+        )))),
         false,
     );
 
@@ -296,55 +208,28 @@ async fn test_audio_pair_media_system_off() {
     verify_audio_stream(settings.clone(), AudioStreamSettings::from(CHANGED_MEDIA_STREAM));
     verify_audio_stream(settings.clone(), AudioStreamSettings::from(DEFAULT_SYSTEM_STREAM));
 
-    verify_gain(
+    assert_eq!(
         get_gain_db(CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
-        AudioRenderUsage::Media,
-        &AUDIO_STREAMS,
+        audio_core_service_handle.read().get_gain(AudioRenderUsage::Media).unwrap()
     );
-    assert_eq!(None, (*AUDIO_STREAMS.read()).get(&AudioRenderUsage::SystemAgent));
+    assert_eq!(None, audio_core_service_handle.read().get_gain(AudioRenderUsage::SystemAgent));
 }
 
 // Test to ensure that when |pair_media_and_system_agent| is enabled, setting the media volume
 // with the system agent volume will not set to the system agent volume to the media volume.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_audio_pair_media_system_with_system_agent_change() {
-    lazy_static! {
-        static ref AUDIO_STREAMS: RwLock<HashMap<AudioRenderUsage, f32>> =
-            { RwLock::new(HashMap::new()) };
-    }
-
-    let service_gen = |service_name: &str, channel: zx::Channel| {
-        if service_name != fidl_fuchsia_media::AudioCoreMarker::NAME {
-            return Err(format_err!("unsupported!"));
-        }
-
-        let mut manager_stream =
-            ServerEnd::<fidl_fuchsia_media::AudioCoreMarker>::new(channel).into_stream()?;
-
-        fasync::spawn(async move {
-            while let Some(req) = manager_stream.try_next().await.unwrap() {
-                #[allow(unreachable_patterns)]
-                match req {
-                    fidl_fuchsia_media::AudioCoreRequest::SetRenderUsageGain {
-                        usage,
-                        gain_db,
-                        control_handle: _,
-                    } => {
-                        (*AUDIO_STREAMS.write()).insert(usage, gain_db);
-                    }
-                    _ => {}
-                }
-            }
-        });
-
-        Ok(())
-    };
+    let service_registry = ServiceRegistry::create();
+    let audio_core_service_handle = Arc::new(RwLock::new(AudioCoreService::new()));
+    service_registry.write().register_service(audio_core_service_handle.clone());
 
     let mut fs = ServiceFs::new();
 
     create_audio_fidl_service(
         fs.root_dir(),
-        Arc::new(RwLock::new(ServiceContext::new(Some(Box::new(service_gen))))),
+        Arc::new(RwLock::new(ServiceContext::new(ServiceRegistry::serve(
+            service_registry.clone(),
+        )))),
         true,
     );
 
@@ -374,16 +259,14 @@ async fn test_audio_pair_media_system_with_system_agent_change() {
     verify_audio_stream(settings.clone(), AudioStreamSettings::from(CHANGED_MEDIA_STREAM));
     verify_audio_stream(settings.clone(), AudioStreamSettings::from(CHANGED_SYSTEM_STREAM));
 
-    verify_gain(
+    assert_eq!(
         get_gain_db(CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
-        AudioRenderUsage::Media,
-        &AUDIO_STREAMS,
+        audio_core_service_handle.read().get_gain(AudioRenderUsage::Media).unwrap()
     );
 
-    verify_gain(
+    assert_eq!(
         get_gain_db(CHANGED_SYSTEM_LEVEL, CHANGED_SYSTEM_MUTED),
-        AudioRenderUsage::SystemAgent,
-        &AUDIO_STREAMS,
+        audio_core_service_handle.read().get_gain(AudioRenderUsage::SystemAgent).unwrap()
     );
 }
 

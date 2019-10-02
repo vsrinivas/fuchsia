@@ -10,7 +10,8 @@ use {
     crate::registry::service_context::ServiceContext,
     crate::switchboard::base::SettingType,
     crate::switchboard::base::{ConfigurationInterfaceFlags, SetupInfo},
-    crate::tests::fake_services::{Action, FakeDeviceAdmin},
+    crate::tests::fakes::device_admin_service::{Action, DeviceAdminService},
+    crate::tests::fakes::service_registry::ServiceRegistry,
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -74,13 +75,17 @@ async fn test_setup() {
             .is_ok());
     }
 
-    let device_admin_service = FakeDeviceAdmin::new();
+    let service_registry = ServiceRegistry::create();
+    let device_admin_service_handle = Arc::new(RwLock::new(DeviceAdminService::new()));
+    service_registry.write().register_service(device_admin_service_handle.clone());
 
     // Handle reboot
     create_fidl_service(
         fs.root_dir(),
         [SettingType::Setup].iter().cloned().collect(),
-        Arc::new(RwLock::new(ServiceContext::new(Some(device_admin_service.get_service())))),
+        Arc::new(RwLock::new(ServiceContext::new(ServiceRegistry::serve(
+            service_registry.clone(),
+        )))),
         storage_factory,
     );
 
@@ -120,7 +125,7 @@ async fn test_setup() {
     }
 
     // Ensure reboot was requested by the controller
-    let actions_lock = device_admin_service.get_actions();
+    let actions_lock = device_admin_service_handle.read().get_actions();
     let actions = actions_lock.read();
 
     assert_eq!(actions.len(), 1);
