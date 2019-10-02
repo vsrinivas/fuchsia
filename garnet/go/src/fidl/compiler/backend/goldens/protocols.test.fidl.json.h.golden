@@ -8,6 +8,8 @@
 namespace test {
 namespace name {
 
+class WithErrorSyntax_ResponseAsStruct_Response;
+class WithErrorSyntax_ResponseAsStruct_Result;
 class WithErrorSyntax_ErrorAsPrimitive_Response;
 class WithErrorSyntax_ErrorAsPrimitive_Result;
 class WithErrorSyntax_ErrorAsEnum_Response;
@@ -83,6 +85,8 @@ class WithErrorSyntax_Sync;
 using WithErrorSyntaxSyncPtr = ::fidl::SynchronousInterfacePtr<WithErrorSyntax>;
 class WithErrorSyntax_SyncProxy;
 namespace internal {
+constexpr uint64_t kWithErrorSyntax_ResponseAsStruct_Ordinal = 0x4f3c32be00000000lu;
+constexpr uint64_t kWithErrorSyntax_ResponseAsStruct_GenOrdinal = 0x592157d505db2bcflu;
 constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal = 0x7b58113900000000lu;
 constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal = 0x20cf80ad7d9b60belu;
 constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 0x4c95de1f00000000lu;
@@ -90,6 +94,127 @@ constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_GenOrdinal = 0x3fcd36560f812e7fl
 
 }  // namespace
 #endif // __Fuchsia__
+
+class WithErrorSyntax_ResponseAsStruct_Response final {
+ public:
+  static const fidl_type_t* FidlType;
+  WithErrorSyntax_ResponseAsStruct_Response() = default;
+  WithErrorSyntax_ResponseAsStruct_Response(std::tuple<int64_t, int64_t, int64_t>&& _value_tuple) {
+    std::tie(a, b, c) = std::move(_value_tuple);
+  }
+  operator std::tuple<int64_t, int64_t, int64_t>() && {
+    return std::make_tuple(std::move(a), std::move(b), std::move(c)
+    );
+  }
+  
+  int64_t a{};
+  
+  int64_t b{};
+  
+  int64_t c{};
+
+  static inline ::std::unique_ptr<WithErrorSyntax_ResponseAsStruct_Response> New() { return ::std::make_unique<WithErrorSyntax_ResponseAsStruct_Response>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ResponseAsStruct_Response* value, size_t _offset);
+  zx_status_t Clone(WithErrorSyntax_ResponseAsStruct_Response* result) const;
+};
+
+inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ResponseAsStruct_Response& _value,
+                         ::test::name::WithErrorSyntax_ResponseAsStruct_Response* _result) {
+  return _value.Clone(_result);
+}
+
+using WithErrorSyntax_ResponseAsStruct_ResponsePtr = ::std::unique_ptr<WithErrorSyntax_ResponseAsStruct_Response>;
+
+class WithErrorSyntax_ResponseAsStruct_Result final {
+ public:
+  WithErrorSyntax_ResponseAsStruct_Result();
+  ~WithErrorSyntax_ResponseAsStruct_Result();
+
+  WithErrorSyntax_ResponseAsStruct_Result(WithErrorSyntax_ResponseAsStruct_Result&&);
+  WithErrorSyntax_ResponseAsStruct_Result& operator=(WithErrorSyntax_ResponseAsStruct_Result&&);
+  WithErrorSyntax_ResponseAsStruct_Result(fit::result<std::tuple<int64_t, int64_t, int64_t>, uint32_t>&& result) {
+    ZX_ASSERT(!result.is_pending());
+    if (result.is_ok()) {
+      set_response(std::move(result.take_value()));
+    } else {
+      set_err(std::move(result.take_error()));
+    }
+  }
+
+  WithErrorSyntax_ResponseAsStruct_Result(fit::ok_result<std::tuple<int64_t, int64_t, int64_t>>&& result)
+    : WithErrorSyntax_ResponseAsStruct_Result(fit::result<std::tuple<int64_t, int64_t, int64_t>, uint32_t>(std::move(result))) { }
+
+  WithErrorSyntax_ResponseAsStruct_Result(fit::error_result<uint32_t>&& result)
+    : WithErrorSyntax_ResponseAsStruct_Result(fit::result<std::tuple<int64_t, int64_t, int64_t>, uint32_t>(std::move(result))) { }
+
+  operator fit::result<std::tuple<int64_t, int64_t, int64_t>, uint32_t>() && {
+    if (is_err()) {
+      return fit::error(err());
+    }
+    return fit::ok(std::move(response()));
+  }
+
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<WithErrorSyntax_ResponseAsStruct_Result> New() { return ::std::make_unique<WithErrorSyntax_ResponseAsStruct_Result>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ResponseAsStruct_Result* _value, size_t _offset);
+  zx_status_t Clone(WithErrorSyntax_ResponseAsStruct_Result* result) const;
+
+  bool has_invalid_tag() const { return Which() == Tag::Invalid; }
+
+  bool is_response() const { return Which() == Tag(0); }
+  
+  WithErrorSyntax_ResponseAsStruct_Response& response() {
+    if (!is_response()) {
+      value_.emplace<0 + 1>();
+    }
+    return value_.template get<0 + 1>();
+  }
+  
+  const WithErrorSyntax_ResponseAsStruct_Response& response() const { return value_.template get<0 + 1>(); }
+  void set_response(WithErrorSyntax_ResponseAsStruct_Response value);
+
+  bool is_err() const { return Which() == Tag(1); }
+  
+  uint32_t& err() {
+    if (!is_err()) {
+      value_.emplace<1 + 1>();
+    }
+    return value_.template get<1 + 1>();
+  }
+  
+  const uint32_t& err() const { return value_.template get<1 + 1>(); }
+  void set_err(uint32_t value);
+
+  Tag Which() const {
+    size_t index = value_.index();
+    if (index == 0) {
+      return Tag::Invalid;
+    } else {
+      return Tag(index - 1);
+    }
+  }
+
+ private:
+
+  using Variant = fit::internal::variant<fit::internal::monostate, WithErrorSyntax_ResponseAsStruct_Response, uint32_t>;
+  Variant value_;
+};
+
+inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ResponseAsStruct_Result& value,
+                         ::test::name::WithErrorSyntax_ResponseAsStruct_Result* result) {
+  return value.Clone(result);
+}
+
+using WithErrorSyntax_ResponseAsStruct_ResultPtr = ::std::unique_ptr<WithErrorSyntax_ResponseAsStruct_Result>;
 
 class WithErrorSyntax_ErrorAsPrimitive_Response final {
  public:
@@ -877,6 +1002,10 @@ class WithErrorSyntax {
   using EventSender_ = WithErrorSyntax_EventSender;
   using Sync_ = WithErrorSyntax_Sync;
   virtual ~WithErrorSyntax();
+  using ResponseAsStructCallback =
+      fit::function<void(WithErrorSyntax_ResponseAsStruct_Result)>;
+      
+  virtual void ResponseAsStruct(ResponseAsStructCallback callback) = 0;
   using ErrorAsPrimitiveCallback =
       fit::function<void(WithErrorSyntax_ErrorAsPrimitive_Result)>;
       
@@ -889,6 +1018,10 @@ class WithErrorSyntax {
 
 class WithErrorSyntax_RequestEncoder {
  public:
+  static ::fidl::Message ResponseAsStruct(::fidl::Encoder* _encoder) {
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    return _encoder->GetMessage();
+  }
   static ::fidl::Message ErrorAsPrimitive(::fidl::Encoder* _encoder) {
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
     return _encoder->GetMessage();
@@ -918,6 +1051,12 @@ class WithErrorSyntax_RequestDecoder {
     }
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
+      case internal::kWithErrorSyntax_ResponseAsStruct_Ordinal:
+      case internal::kWithErrorSyntax_ResponseAsStruct_GenOrdinal:
+      {
+        ResponseAsStruct();
+        break;
+      }
       case internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal:
       case internal::kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal:
       {
@@ -937,12 +1076,18 @@ class WithErrorSyntax_RequestDecoder {
     }
     return status;
   }
+  virtual void ResponseAsStruct() = 0;
   virtual void ErrorAsPrimitive() = 0;
   virtual void ErrorAsEnum() = 0;
 };
 
 class WithErrorSyntax_ResponseEncoder {
  public:
+  static ::fidl::Message ResponseAsStruct(::fidl::Encoder* _encoder, WithErrorSyntax_ResponseAsStruct_Result* result) {
+    _encoder->Alloc(48 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, result, 16);
+    return _encoder->GetMessage();
+  }
   static ::fidl::Message ErrorAsPrimitive(::fidl::Encoder* _encoder, WithErrorSyntax_ErrorAsPrimitive_Result* result) {
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, result, 16);
@@ -973,6 +1118,13 @@ class WithErrorSyntax_ResponseDecoder {
     }
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
+      case internal::kWithErrorSyntax_ResponseAsStruct_Ordinal:
+      case internal::kWithErrorSyntax_ResponseAsStruct_GenOrdinal:
+      {
+        auto arg0 = ::fidl::DecodeAs<WithErrorSyntax_ResponseAsStruct_Result>(&response_decoder, 16);
+        ResponseAsStruct(std::move(arg0));
+        break;
+      }
       case internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal:
       case internal::kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal:
       {
@@ -993,6 +1145,7 @@ class WithErrorSyntax_ResponseDecoder {
     }
     return ZX_OK;
   }
+  virtual void ResponseAsStruct(WithErrorSyntax_ResponseAsStruct_Result result) = 0;
   virtual void ErrorAsPrimitive(WithErrorSyntax_ErrorAsPrimitive_Result result) = 0;
   virtual void ErrorAsEnum(WithErrorSyntax_ErrorAsEnum_Result result) = 0;
 };
@@ -1006,6 +1159,7 @@ class WithErrorSyntax_Sync {
  public:
   using Proxy_ = WithErrorSyntax_SyncProxy;
   virtual ~WithErrorSyntax_Sync();
+  virtual zx_status_t ResponseAsStruct(WithErrorSyntax_ResponseAsStruct_Result* out_result) = 0;
   virtual zx_status_t ErrorAsPrimitive(WithErrorSyntax_ErrorAsPrimitive_Result* out_result) = 0;
   virtual zx_status_t ErrorAsEnum(WithErrorSyntax_ErrorAsEnum_Result* out_result) = 0;
 };
@@ -1016,6 +1170,7 @@ class WithErrorSyntax_Proxy final : public ::fidl::internal::Proxy, public WithE
   ~WithErrorSyntax_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::Message message) override;
+  void ResponseAsStruct(ResponseAsStructCallback callback) override;
   void ErrorAsPrimitive(ErrorAsPrimitiveCallback callback) override;
   void ErrorAsEnum(ErrorAsEnumCallback callback) override;
 
@@ -1043,6 +1198,7 @@ class WithErrorSyntax_SyncProxy : public WithErrorSyntax_Sync {
  public:
   explicit WithErrorSyntax_SyncProxy(::zx::channel channel);
   ~WithErrorSyntax_SyncProxy() override;
+  zx_status_t ResponseAsStruct(WithErrorSyntax_ResponseAsStruct_Result* out_result) override;
   zx_status_t ErrorAsPrimitive(WithErrorSyntax_ErrorAsPrimitive_Result* out_result) override;
   zx_status_t ErrorAsEnum(WithErrorSyntax_ErrorAsEnum_Result* out_result) override;
 
@@ -1055,6 +1211,57 @@ class WithErrorSyntax_SyncProxy : public WithErrorSyntax_Sync {
 }  // namespace test
 namespace fidl {
 
+template <>
+struct CodingTraits<::test::name::WithErrorSyntax_ResponseAsStruct_Response>
+    : public EncodableCodingTraits<::test::name::WithErrorSyntax_ResponseAsStruct_Response, 24> {};
+
+inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ResponseAsStruct_Response& value,
+                         ::test::name::WithErrorSyntax_ResponseAsStruct_Response* result) {
+  return ::test::name::Clone(value, result);
+}
+
+template<>
+struct Equality<::test::name::WithErrorSyntax_ResponseAsStruct_Response> {
+  static inline bool Equals(const ::test::name::WithErrorSyntax_ResponseAsStruct_Response& _lhs, const ::test::name::WithErrorSyntax_ResponseAsStruct_Response& _rhs) {
+    if (!::fidl::Equals(_lhs.a, _rhs.a)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.b, _rhs.b)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.c, _rhs.c)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::name::WithErrorSyntax_ResponseAsStruct_Result>
+    : public EncodableCodingTraits<::test::name::WithErrorSyntax_ResponseAsStruct_Result, 32> {};
+
+inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ResponseAsStruct_Result& value,
+                         ::test::name::WithErrorSyntax_ResponseAsStruct_Result* result) {
+  return ::test::name::Clone(value, result);
+}
+
+template<>
+struct Equality<::test::name::WithErrorSyntax_ResponseAsStruct_Result> {
+  static inline bool Equals(const ::test::name::WithErrorSyntax_ResponseAsStruct_Result& _lhs, const ::test::name::WithErrorSyntax_ResponseAsStruct_Result& _rhs) {
+    if (_lhs.Which() != _rhs.Which()) {
+      return false;
+    }
+    switch (_lhs.Which()) {
+      case ::test::name::WithErrorSyntax_ResponseAsStruct_Result::Tag::kResponse:
+	return ::fidl::Equals(_lhs.response(), _rhs.response());
+      case ::test::name::WithErrorSyntax_ResponseAsStruct_Result::Tag::kErr:
+	return ::fidl::Equals(_lhs.err(), _rhs.err());
+      case ::test::name::WithErrorSyntax_ResponseAsStruct_Result::Tag::Invalid:
+	return true;
+      default:
+	return false;
+    }
+  }
+};
 template <>
 struct CodingTraits<::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>
     : public EncodableCodingTraits<::test::name::WithErrorSyntax_ErrorAsPrimitive_Response, 1> {};

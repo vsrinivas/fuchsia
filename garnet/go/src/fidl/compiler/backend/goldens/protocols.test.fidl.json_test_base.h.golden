@@ -52,6 +52,9 @@ class WithErrorSyntax_TestBase : public WithErrorSyntax {
   public:
   virtual ~WithErrorSyntax_TestBase() { }
   virtual void NotImplemented_(const std::string& name) = 0;
+  void ResponseAsStruct(ResponseAsStructCallback callback) override {
+    NotImplemented_("ResponseAsStruct");
+  }
   void ErrorAsPrimitive(ErrorAsPrimitiveCallback callback) override {
     NotImplemented_("ErrorAsPrimitive");
   }

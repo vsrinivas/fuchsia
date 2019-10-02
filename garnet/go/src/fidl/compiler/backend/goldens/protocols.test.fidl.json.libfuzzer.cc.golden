@@ -506,8 +506,39 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     FuzzInput src(data, size);
 
     uint8_t method_selector = data[1];
-    uint8_t method_selection = method_selector % 2;
+    uint8_t method_selection = method_selector % 3;
     if (method_selection == 0) {
+#if !(ALL_METHODS || defined(METHOD_ResponseAsStruct))
+      // Selected method from interface that is not part of this fuzzer.
+      printf("Early exit: Chose disabled method: ResponseAsStruct\n");
+      return 0;
+#else
+      const size_t min_size = ;
+
+      // Must have enough bytes for input.
+      if (size < min_size) {
+        printf("Early exit: Input size too small: %zu < %zu\n", size, min_size);
+        return 0;
+      }
+
+      const size_t slack_size = size - min_size;
+      const size_t slack_size_per_param = slack_size / 0;
+
+      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size, slack_size_per_param);
+
+      size_t param_size;
+
+      printf("Invoking method test_name_WithErrorSyntax.ResponseAsStruct\n");
+      iface->ResponseAsStruct([signaller = fuzzer.NewCallbackSignaller()](WithErrorSyntax_ResponseAsStruct_Result result) {
+        printf("Invoked test_name_WithErrorSyntax.ResponseAsStruct\n");
+        zx_status_t  status = signaller.SignalCallback();
+        if (status != ZX_OK) {
+          printf("signaller.SignalCallback returned bad status: %d\n", status);
+        }
+      });
+#endif
+    }
+    if (method_selection == 1) {
 #if !(ALL_METHODS || defined(METHOD_ErrorAsPrimitive))
       // Selected method from interface that is not part of this fuzzer.
       printf("Early exit: Chose disabled method: ErrorAsPrimitive\n");
@@ -538,7 +569,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       });
 #endif
     }
-    if (method_selection == 1) {
+    if (method_selection == 2) {
 #if !(ALL_METHODS || defined(METHOD_ErrorAsEnum))
       // Selected method from interface that is not part of this fuzzer.
       printf("Early exit: Chose disabled method: ErrorAsEnum\n");

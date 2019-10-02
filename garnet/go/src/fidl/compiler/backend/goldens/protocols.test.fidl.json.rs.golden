@@ -30,11 +30,44 @@ fidl_enum! {
 }
 
 
+pub type WithErrorSyntaxResponseAsStructResult = std::result::Result< (
+      i64,
+      i64,
+      i64,
+), u32 >;
+
 pub type WithErrorSyntaxErrorAsPrimitiveResult = std::result::Result< (
 ), u32 >;
 
 pub type WithErrorSyntaxErrorAsEnumResult = std::result::Result< (
 ), ErrorEnun >;
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct WithErrorSyntaxResponseAsStructResponse {
+  pub a: i64,
+  pub b: i64,
+  pub c: i64,
+}
+
+fidl_struct! {
+  name: WithErrorSyntaxResponseAsStructResponse,
+  members: [
+    a {
+      ty: i64,
+      offset: 0,
+    },
+    b {
+      ty: i64,
+      offset: 8,
+    },
+    c {
+      ty: i64,
+      offset: 16,
+    },
+  ],
+  size: 24,
+  align: 8,
+}
 
 
 fidl_empty_struct!(
@@ -1197,6 +1230,9 @@ impl fidl::endpoints::ServiceMarker for WithErrorSyntaxMarker {
 
 #[cfg(target_os = "fuchsia")]
 pub trait WithErrorSyntaxProxyInterface: Send + Sync {
+	type ResponseAsStructResponseFut: futures::Future<Output = Result<(WithErrorSyntaxResponseAsStructResult), fidl::Error>> + Send;
+	fn response_as_struct(&self,
+	)-> Self::ResponseAsStructResponseFut;
 	type ErrorAsPrimitiveResponseFut: futures::Future<Output = Result<(WithErrorSyntaxErrorAsPrimitiveResult), fidl::Error>> + Send;
 	fn error_as_primitive(&self,
 	)-> Self::ErrorAsPrimitiveResponseFut;
@@ -1220,6 +1256,10 @@ impl WithErrorSyntaxSynchronousProxy {
 	pub fn into_channel(self) -> zx::Channel {
 		self.client.into_channel()
 	}
+	pub fn response_as_struct(&mut self,___deadline: zx::Time,) -> Result<(WithErrorSyntaxResponseAsStructResult), fidl::Error> {self.client.send_query(&mut (),
+				0x4f3c32be00000000,
+				___deadline,
+			)}
 	pub fn error_as_primitive(&mut self,___deadline: zx::Time,) -> Result<(WithErrorSyntaxErrorAsPrimitiveResult), fidl::Error> {self.client.send_query(&mut (),
 				0x7b58113900000000,
 				___deadline,
@@ -1276,6 +1316,11 @@ impl WithErrorSyntaxProxy {
 			event_receiver: self.client.take_event_receiver(),
 		}
 	}
+	pub fn response_as_struct(&self,
+	)-> fidl::client::QueryResponseFut<(WithErrorSyntaxResponseAsStructResult)> {
+		WithErrorSyntaxProxyInterface::response_as_struct(self,
+		)
+	}
 	pub fn error_as_primitive(&self,
 	)-> fidl::client::QueryResponseFut<(WithErrorSyntaxErrorAsPrimitiveResult)> {
 		WithErrorSyntaxProxyInterface::error_as_primitive(self,
@@ -1290,6 +1335,11 @@ impl WithErrorSyntaxProxy {
 
 #[cfg(target_os = "fuchsia")]
 impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
+	type ResponseAsStructResponseFut = fidl::client::QueryResponseFut<(WithErrorSyntaxResponseAsStructResult)>;
+	fn response_as_struct(&self,
+	)-> Self::ResponseAsStructResponseFut {
+		self.client.send_query(&mut (), 0x4f3c32be00000000)
+	}
 	type ErrorAsPrimitiveResponseFut = fidl::client::QueryResponseFut<(WithErrorSyntaxErrorAsPrimitiveResult)>;
 	fn error_as_primitive(&self,
 	)-> Self::ErrorAsPrimitiveResponseFut {
@@ -1345,6 +1395,7 @@ impl futures::Stream for WithErrorSyntaxEventStream {
 #[derive(Debug)]
 #[cfg(target_os = "fuchsia")]
 pub enum WithErrorSyntaxEvent {
+	
 	
 	
 	}
@@ -1453,6 +1504,19 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 			futures::Poll::Ready(Some(match header.ordinal {
+				0x4f3c32be00000000 | 0x592157d505db2bcf => {
+					let mut req: () = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					let control_handle = WithErrorSyntaxControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(WithErrorSyntaxRequest::ResponseAsStruct {responder:WithErrorSyntaxResponseAsStructResponder {
+								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+								tx_id: header.tx_id,
+								ordinal: header.ordinal,
+							},})
+				}
 				0x7b58113900000000 | 0x20cf80ad7d9b60be => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
@@ -1490,6 +1554,8 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
 #[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub enum WithErrorSyntaxRequest {
+	ResponseAsStruct {
+		responder: WithErrorSyntaxResponseAsStructResponder,},
 	ErrorAsPrimitive {
 		responder: WithErrorSyntaxErrorAsPrimitiveResponder,},
 	ErrorAsEnum {
@@ -1498,6 +1564,17 @@ pub enum WithErrorSyntaxRequest {
 
 #[cfg(target_os = "fuchsia")]
 impl WithErrorSyntaxRequest {
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_response_as_struct(self) -> Option<(WithErrorSyntaxResponseAsStructResponder
+	)> {
+		if let WithErrorSyntaxRequest::ResponseAsStruct {responder,
+		} = self {
+			Some((responder))
+		} else {
+			None
+		}
+	}
+	
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_error_as_primitive(self) -> Option<(WithErrorSyntaxErrorAsPrimitiveResponder
 	)> {
@@ -1524,6 +1601,7 @@ impl WithErrorSyntaxRequest {
         /// Name of the method defined in FIDL
         pub fn method_name(&self) -> &'static str {
           match *self {
+                WithErrorSyntaxRequest::ResponseAsStruct{..} => "response_as_struct",
                 WithErrorSyntaxRequest::ErrorAsPrimitive{..} => "error_as_primitive",
                 WithErrorSyntaxRequest::ErrorAsEnum{..} => "error_as_enum",
           }
@@ -1535,6 +1613,30 @@ pub struct WithErrorSyntaxEncoder;
 
 #[cfg(target_os = "fuchsia")]
 impl WithErrorSyntaxEncoder {
+	pub fn encode_response_as_struct_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<fidl::Handle>,
+		tx_id: u32,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id,ordinal: 0x4f3c32be00000000,
+		};
+		let mut body = ();
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_response_as_struct_response<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<fidl::Handle>,
+		tx_id: u32,mut in_result: &mut WithErrorSyntaxResponseAsStructResult,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id,ordinal: 0x4f3c32be00000000,
+		};
+		let mut body = (in_result,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
 	pub fn encode_error_as_primitive_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,
@@ -1606,6 +1708,85 @@ impl WithErrorSyntaxControlHandle {
 	}}
 
 /* beginning of response types */
+#[must_use = "FIDL methods require a response to be sent"]
+#[cfg(target_os = "fuchsia")]
+#[derive(Debug)]
+pub struct WithErrorSyntaxResponseAsStructResponder {
+	control_handle: ::std::mem::ManuallyDrop<WithErrorSyntaxControlHandle>,
+	tx_id: u32,
+	ordinal: u64,
+}
+
+#[cfg(target_os = "fuchsia")]
+impl ::std::ops::Drop for WithErrorSyntaxResponseAsStructResponder {
+	fn drop(&mut self) {
+		// Shutdown the channel if the responder is dropped without sending a response
+		// so that the client doesn't hang. To prevent this behavior, some methods
+		// call "drop_without_shutdown"
+		self.control_handle.shutdown();
+		// Safety: drops once, never accessed again
+		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+	}
+}
+
+#[cfg(target_os = "fuchsia")]
+impl WithErrorSyntaxResponseAsStructResponder {
+	pub fn control_handle(&self) -> &WithErrorSyntaxControlHandle {
+		&self.control_handle
+	}
+
+	/// Drop the Responder without setting the channel to shutdown.
+	///
+	/// This method shouldn't normally be used-- instead, send a response
+	/// to prevent the channel from shutting down.
+	pub fn drop_without_shutdown(mut self) {
+		// Safety: drops once, never accessed again due to mem::forget
+		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+		// Prevent Drop from running (which would shut down the channel)
+		::std::mem::forget(self);
+	}
+
+	/// Sends a response to the FIDL transaction.
+	///
+	/// Sets the channel to shutdown if an error occurs.
+	pub fn send(self,mut result: &mut WithErrorSyntaxResponseAsStructResult,) -> Result<(), fidl::Error> {
+		let r = self.send_raw(result,);
+		if r.is_err() {
+			self.control_handle.shutdown();
+		}
+		self.drop_without_shutdown();
+		r
+	}
+
+	/// Similar to "send" but does not shutdown the channel if
+	/// an error occurs.
+	pub fn send_no_shutdown_on_err(self,mut result: &mut WithErrorSyntaxResponseAsStructResult,) -> Result<(), fidl::Error> {
+		let r = self.send_raw(result,);
+		self.drop_without_shutdown();
+		r
+	}
+
+	fn send_raw(&self,mut result: &mut WithErrorSyntaxResponseAsStructResult,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id: self.tx_id,
+			ordinal: self.ordinal,
+		};
+
+		let mut response = (result);
+
+		let mut msg = fidl::encoding::TransactionMessage {
+			header,
+			body: &mut response,
+		};
+
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+			self.control_handle.inner.channel().write(&*bytes, &mut *handles)
+				.map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
+	}
+}
 #[must_use = "FIDL methods require a response to be sent"]
 #[cfg(target_os = "fuchsia")]
 #[derive(Debug)]

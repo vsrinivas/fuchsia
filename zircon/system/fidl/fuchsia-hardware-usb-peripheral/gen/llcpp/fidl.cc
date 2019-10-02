@@ -494,6 +494,14 @@ void Device::Interface::SetConfigurationCompleterBase::Reply(Device_SetConfigura
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetConfigurationResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetConfigurationResponse>(std::move(_response_bytes)));
 }
+void Device::Interface::SetConfigurationCompleterBase::ReplySuccess() {
+  Device_SetConfiguration_Response response;
+
+  Reply(Device_SetConfiguration_Result::WithResponse(std::move(response)));
+}
+void Device::Interface::SetConfigurationCompleterBase::ReplyError(int32_t error) {
+  Reply(Device_SetConfiguration_Result::WithErr(std::move(error)));
+}
 
 void Device::Interface::SetConfigurationCompleterBase::Reply(::fidl::BytePart _buffer, Device_SetConfiguration_Result result) {
   if (_buffer.capacity() < SetConfigurationResponse::PrimarySize) {
@@ -505,6 +513,11 @@ void Device::Interface::SetConfigurationCompleterBase::Reply(::fidl::BytePart _b
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(SetConfigurationResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetConfigurationResponse>(std::move(_buffer)));
+}
+void Device::Interface::SetConfigurationCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  Device_SetConfiguration_Response response;
+
+  Reply(std::move(_buffer), Device_SetConfiguration_Result::WithResponse(std::move(response)));
 }
 
 void Device::Interface::SetConfigurationCompleterBase::Reply(::fidl::DecodedMessage<SetConfigurationResponse> params) {

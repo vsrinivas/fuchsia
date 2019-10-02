@@ -1721,6 +1721,15 @@ void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(Paver_QueryA
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(QueryActiveConfigurationResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<QueryActiveConfigurationResponse>(std::move(_response_bytes)));
 }
+void Paver::Interface::QueryActiveConfigurationCompleterBase::ReplySuccess(Configuration configuration) {
+  Paver_QueryActiveConfiguration_Response response;
+  response.configuration = std::move(configuration);
+
+  Reply(Paver_QueryActiveConfiguration_Result::WithResponse(std::move(response)));
+}
+void Paver::Interface::QueryActiveConfigurationCompleterBase::ReplyError(int32_t error) {
+  Reply(Paver_QueryActiveConfiguration_Result::WithErr(std::move(error)));
+}
 
 void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl::BytePart _buffer, Paver_QueryActiveConfiguration_Result result) {
   if (_buffer.capacity() < QueryActiveConfigurationResponse::PrimarySize) {
@@ -1732,6 +1741,12 @@ void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl::Byte
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(QueryActiveConfigurationResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<QueryActiveConfigurationResponse>(std::move(_buffer)));
+}
+void Paver::Interface::QueryActiveConfigurationCompleterBase::ReplySuccess(::fidl::BytePart _buffer, Configuration configuration) {
+  Paver_QueryActiveConfiguration_Response response;
+  response.configuration = std::move(configuration);
+
+  Reply(std::move(_buffer), Paver_QueryActiveConfiguration_Result::WithResponse(std::move(response)));
 }
 
 void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl::DecodedMessage<QueryActiveConfigurationResponse> params) {
@@ -1750,6 +1765,15 @@ void Paver::Interface::QueryConfigurationStatusCompleterBase::Reply(Paver_QueryC
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(QueryConfigurationStatusResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<QueryConfigurationStatusResponse>(std::move(_response_bytes)));
 }
+void Paver::Interface::QueryConfigurationStatusCompleterBase::ReplySuccess(ConfigurationStatus status) {
+  Paver_QueryConfigurationStatus_Response response;
+  response.status = std::move(status);
+
+  Reply(Paver_QueryConfigurationStatus_Result::WithResponse(std::move(response)));
+}
+void Paver::Interface::QueryConfigurationStatusCompleterBase::ReplyError(int32_t error) {
+  Reply(Paver_QueryConfigurationStatus_Result::WithErr(std::move(error)));
+}
 
 void Paver::Interface::QueryConfigurationStatusCompleterBase::Reply(::fidl::BytePart _buffer, Paver_QueryConfigurationStatus_Result result) {
   if (_buffer.capacity() < QueryConfigurationStatusResponse::PrimarySize) {
@@ -1761,6 +1785,12 @@ void Paver::Interface::QueryConfigurationStatusCompleterBase::Reply(::fidl::Byte
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(QueryConfigurationStatusResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<QueryConfigurationStatusResponse>(std::move(_buffer)));
+}
+void Paver::Interface::QueryConfigurationStatusCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ConfigurationStatus status) {
+  Paver_QueryConfigurationStatus_Response response;
+  response.status = std::move(status);
+
+  Reply(std::move(_buffer), Paver_QueryConfigurationStatus_Result::WithResponse(std::move(response)));
 }
 
 void Paver::Interface::QueryConfigurationStatusCompleterBase::Reply(::fidl::DecodedMessage<QueryConfigurationStatusResponse> params) {
@@ -1866,6 +1896,15 @@ void Paver::Interface::ReadAssetCompleterBase::Reply(Paver_ReadAsset_Result resu
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReadAssetResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ReadAssetResponse>(std::move(_response_bytes)));
 }
+void Paver::Interface::ReadAssetCompleterBase::ReplySuccess(::llcpp::fuchsia::mem::Buffer asset) {
+  Paver_ReadAsset_Response response;
+  response.asset = std::move(asset);
+
+  Reply(Paver_ReadAsset_Result::WithResponse(std::move(response)));
+}
+void Paver::Interface::ReadAssetCompleterBase::ReplyError(int32_t error) {
+  Reply(Paver_ReadAsset_Result::WithErr(std::move(error)));
+}
 
 void Paver::Interface::ReadAssetCompleterBase::Reply(::fidl::BytePart _buffer, Paver_ReadAsset_Result result) {
   if (_buffer.capacity() < ReadAssetResponse::PrimarySize) {
@@ -1877,6 +1916,12 @@ void Paver::Interface::ReadAssetCompleterBase::Reply(::fidl::BytePart _buffer, P
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(ReadAssetResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ReadAssetResponse>(std::move(_buffer)));
+}
+void Paver::Interface::ReadAssetCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::mem::Buffer asset) {
+  Paver_ReadAsset_Response response;
+  response.asset = std::move(asset);
+
+  Reply(std::move(_buffer), Paver_ReadAsset_Result::WithResponse(std::move(response)));
 }
 
 void Paver::Interface::ReadAssetCompleterBase::Reply(::fidl::DecodedMessage<ReadAssetResponse> params) {

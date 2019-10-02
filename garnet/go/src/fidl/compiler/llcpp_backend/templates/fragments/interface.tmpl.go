@@ -326,8 +326,15 @@ class {{ .Name }} final {
     class {{ .Name }}CompleterBase : public _Base {
      public:
       void {{ template "ReplyCFlavorMethodSignature" . }};
+          {{- if .Result }}
+      void {{ template "ReplyCFlavorResultSuccessMethodSignature" . }};
+      void {{ template "ReplyCFlavorResultErrorMethodSignature" . }};
+          {{- end }}
           {{- if .Response }}
       void {{ template "ReplyCallerAllocateMethodSignature" . }};
+            {{- if .Result }}
+      void {{ template "ReplyCallerAllocateResultSuccessMethodSignature" . }};
+            {{- end }}
       void {{ template "ReplyInPlaceMethodSignature" . }};
           {{- end }}
 
@@ -515,9 +522,16 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
     {{- else }}
 {{ "" }}
       {{- template "ReplyCFlavorMethodDefinition" . }}
+      {{- if .Result }}
+      {{- template "ReplyCFlavorResultSuccessMethodDefinition" . }}
+      {{- template "ReplyCFlavorResultErrorMethodDefinition" . }}
+      {{- end }}
       {{- if .Response }}
 {{ "" }}
         {{- template "ReplyCallerAllocateMethodDefinition" . }}
+        {{- if .Result }}
+        {{- template "ReplyCallerAllocateResultSuccessMethodDefinition" . }}
+        {{- end }}
       {{- end }}
       {{- if .Response }}
 {{ "" }}

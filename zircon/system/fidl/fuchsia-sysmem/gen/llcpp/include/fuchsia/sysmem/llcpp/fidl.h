@@ -2793,7 +2793,10 @@ class SecureMem final {
     class GetPhysicalSecureHeapsCompleterBase : public _Base {
      public:
       void Reply(SecureMem_GetPhysicalSecureHeaps_Result result);
+      void ReplySuccess(PhysicalSecureHeaps heaps);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, SecureMem_GetPhysicalSecureHeaps_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, PhysicalSecureHeaps heaps);
       void Reply(::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse> params);
 
      protected:
@@ -2807,7 +2810,10 @@ class SecureMem final {
     class SetPhysicalSecureHeapsCompleterBase : public _Base {
      public:
       void Reply(SecureMem_SetPhysicalSecureHeaps_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, SecureMem_SetPhysicalSecureHeaps_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<SetPhysicalSecureHeapsResponse> params);
 
      protected:

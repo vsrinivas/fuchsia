@@ -288,7 +288,10 @@ class NameProvider final {
     class GetDeviceNameCompleterBase : public _Base {
      public:
       void Reply(NameProvider_GetDeviceName_Result result);
+      void ReplySuccess(::fidl::StringView name);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, NameProvider_GetDeviceName_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::fidl::StringView name);
       void Reply(::fidl::DecodedMessage<GetDeviceNameResponse> params);
 
      protected:
@@ -2296,7 +2299,10 @@ class Controller final {
     class GetDevicePowerCapsCompleterBase : public _Base {
      public:
       void Reply(Controller_GetDevicePowerCaps_Result result);
+      void ReplySuccess(::fidl::Array<DevicePowerStateInfo, 5> dpstates);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Controller_GetDevicePowerCaps_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::fidl::Array<DevicePowerStateInfo, 5> dpstates);
       void Reply(::fidl::DecodedMessage<GetDevicePowerCapsResponse> params);
 
      protected:
@@ -2310,7 +2316,10 @@ class Controller final {
     class UpdatePowerStateMappingCompleterBase : public _Base {
      public:
       void Reply(Controller_UpdatePowerStateMapping_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Controller_UpdatePowerStateMapping_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<UpdatePowerStateMappingResponse> params);
 
      protected:
@@ -2324,7 +2333,10 @@ class Controller final {
     class GetPowerStateMappingCompleterBase : public _Base {
      public:
       void Reply(Controller_GetPowerStateMapping_Result result);
+      void ReplySuccess(::fidl::Array<SystemPowerStateInfo, 6> mapping);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Controller_GetPowerStateMapping_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::fidl::Array<SystemPowerStateInfo, 6> mapping);
       void Reply(::fidl::DecodedMessage<GetPowerStateMappingResponse> params);
 
      protected:
@@ -2352,7 +2364,10 @@ class Controller final {
     class ResumeCompleterBase : public _Base {
      public:
       void Reply(Controller_Resume_Result result);
+      void ReplySuccess(DevicePowerState out_state);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Controller_Resume_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, DevicePowerState out_state);
       void Reply(::fidl::DecodedMessage<ResumeResponse> params);
 
      protected:

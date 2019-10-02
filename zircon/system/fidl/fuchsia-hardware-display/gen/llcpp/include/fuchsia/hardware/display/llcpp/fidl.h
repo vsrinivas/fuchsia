@@ -3161,7 +3161,10 @@ class Controller final {
     class ImportImageForCaptureCompleterBase : public _Base {
      public:
       void Reply(Controller_ImportImageForCapture_Result result);
+      void ReplySuccess(uint64_t image_id);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Controller_ImportImageForCapture_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, uint64_t image_id);
       void Reply(::fidl::DecodedMessage<ImportImageForCaptureResponse> params);
 
      protected:
@@ -3175,7 +3178,10 @@ class Controller final {
     class StartCaptureCompleterBase : public _Base {
      public:
       void Reply(Controller_StartCapture_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Controller_StartCapture_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<StartCaptureResponse> params);
 
      protected:
@@ -3189,7 +3195,10 @@ class Controller final {
     class ReleaseCaptureCompleterBase : public _Base {
      public:
       void Reply(Controller_ReleaseCapture_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Controller_ReleaseCapture_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<ReleaseCaptureResponse> params);
 
      protected:

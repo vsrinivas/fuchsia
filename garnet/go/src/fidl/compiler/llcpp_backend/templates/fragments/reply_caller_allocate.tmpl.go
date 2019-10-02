@@ -37,4 +37,19 @@ void {{ .LLProps.InterfaceName }}::Interface::{{ .Name }}CompleterBase::{{ templ
   {{- end }}
 }
 {{- end }}
+
+{{- define "ReplyCallerAllocateResultSuccessMethodSignature" -}}
+ReplySuccess(::fidl::BytePart _buffer {{- if .Result.ValueMembers }}, {{ end }}{{ template "Params" .Result.ValueMembers }})
+{{- end }}
+
+{{- define "ReplyCallerAllocateResultSuccessMethodDefinition" }}
+void {{ .LLProps.InterfaceName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCallerAllocateResultSuccessMethodSignature" . }} {
+  {{ .Result.ValueStructDecl }} response;
+  {{- range .Result.ValueMembers }}
+  response.{{ .Name }} = std::move({{ .Name }});
+  {{- end }}
+
+  Reply(std::move(_buffer), {{ .Result.ResultDecl }}::WithResponse(std::move(response)));
+}
+{{- end }}
 `

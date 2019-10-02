@@ -656,7 +656,10 @@ class Device final {
     class SetConfigurationCompleterBase : public _Base {
      public:
       void Reply(Device_SetConfiguration_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Device_SetConfiguration_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<SetConfigurationResponse> params);
 
      protected:

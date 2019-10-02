@@ -5,6 +5,17 @@
 
 include <test/name/c/fidl.h>
 test_name_ErrorEnun = test_name_ErrorEnun_ERR_FOO, test_name_ErrorEnun_ERR_BAR
+test_name_WithErrorSyntax_ResponseAsStruct_ResponseInLine {
+       a int64
+       b int64
+       c int64
+} [packed]
+test_name_WithErrorSyntax_ResponseAsStruct_ResponseOutOfLine {
+       void void
+} [packed]
+test_name_WithErrorSyntax_ResponseAsStruct_ResponseHandles {
+       void void
+} [packed]
 test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseInLine {
        padding int8
 } [packed]
@@ -23,6 +34,16 @@ test_name_WithErrorSyntax_ErrorAsEnum_ResponseOutOfLine {
 test_name_WithErrorSyntax_ErrorAsEnum_ResponseHandles {
        void void
 } [packed]
+test_name_WithErrorSyntax_ResponseAsStruct_ResultInLine [
+       responseInLine fidl_union_member[test_name_WithErrorSyntax_ResponseAsStruct_ResultTag_response, test_name_WithErrorSyntax_ResponseAsStruct_ResponseInLine]
+       err fidl_union_member[test_name_WithErrorSyntax_ResponseAsStruct_ResultTag_err, int32]
+]
+test_name_WithErrorSyntax_ResponseAsStruct_ResultOutOfLine [
+       responseOutOfLine test_name_WithErrorSyntax_ResponseAsStruct_ResponseOutOfLine
+][varlen]
+test_name_WithErrorSyntax_ResponseAsStruct_ResultHandles [
+       response test_name_WithErrorSyntax_ResponseAsStruct_ResponseHandles
+][varlen]
 test_name_WithErrorSyntax_ErrorAsPrimitive_ResultInLine [
        responseInLine fidl_union_member[test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTag_response, test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseInLine]
        err fidl_union_member[test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTag_err, int32]
@@ -145,6 +166,20 @@ zx_channel_read$test_name_WithAndWithoutRequestResponseOnEmptyResponse(handle zx
 zx_channel_read$test_name_WithAndWithoutRequestResponseOnWithResponse(handle zx_chan_test_name_WithAndWithoutRequestResponse_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_name_WithAndWithoutRequestResponseOnWithResponseEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 
 
+test_name_WithErrorSyntaxResponseAsStructRequest {
+       hdr fidl_message_header[5709494219224121344]
+} [packed]
+test_name_WithErrorSyntaxResponseAsStructRequestHandles {
+       void void
+} [packed]
+test_name_WithErrorSyntaxResponseAsStructResponse {
+       hdr fidl_message_header[5709494219224121344]
+       resultInLine test_name_WithErrorSyntax_ResponseAsStruct_ResultInLine
+       resultOutOfLine test_name_WithErrorSyntax_ResponseAsStruct_ResultOutOfLine
+} [packed]
+test_name_WithErrorSyntaxResponseAsStructResponseHandles {
+       result test_name_WithErrorSyntax_ResponseAsStruct_ResultHandles
+} [packed]
 test_name_WithErrorSyntaxErrorAsPrimitiveRequest {
        hdr fidl_message_header[8887872801126481920]
 } [packed]
@@ -179,6 +214,7 @@ resource zx_chan_test_name_WithErrorSyntax_server[zx_chan]
 
 zx_channel_create$test_name_WithErrorSyntax(options const[0], out0 ptr[out, zx_chan_test_name_WithErrorSyntax_client], out1 ptr[out, zx_chan_test_name_WithErrorSyntax_server])
 fdio_service_connect$test_name_WithErrorSyntax(path ptr[in, string["/svc/"]], handle zx_chan_test_name_WithErrorSyntax_server)
+zx_channel_call$test_name_WithErrorSyntaxResponseAsStruct(handle zx_chan_test_name_WithErrorSyntax_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_name_WithErrorSyntaxResponseAsStructRequest, test_name_WithErrorSyntaxResponseAsStructRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_name_WithErrorSyntaxResponseAsStructResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_call$test_name_WithErrorSyntaxErrorAsPrimitive(handle zx_chan_test_name_WithErrorSyntax_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_name_WithErrorSyntaxErrorAsPrimitiveRequest, test_name_WithErrorSyntaxErrorAsPrimitiveRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_name_WithErrorSyntaxErrorAsPrimitiveResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_call$test_name_WithErrorSyntaxErrorAsEnum(handle zx_chan_test_name_WithErrorSyntax_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_name_WithErrorSyntaxErrorAsEnumRequest, test_name_WithErrorSyntaxErrorAsEnumRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_name_WithErrorSyntaxErrorAsEnumResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 

@@ -27,6 +27,19 @@ func (x ErrorEnun) String() string {
 	return "Unknown"
 }
 
+type WithErrorSyntaxResponseAsStructResponse struct {
+	_ struct{} `fidl:"s,24,8" fidl2:"s,24,8"`
+	A int64`fidl:"0"`
+	B int64`fidl:"8"`
+	C int64`fidl:"16"`
+}
+
+var _mWithErrorSyntaxResponseAsStructResponse = _bindings.CreateLazyMarshaler(WithErrorSyntaxResponseAsStructResponse{})
+
+func (msg *WithErrorSyntaxResponseAsStructResponse) Marshaler() _bindings.Marshaler {
+	return _mWithErrorSyntaxResponseAsStructResponse
+}
+
 type WithErrorSyntaxErrorAsPrimitiveResponse struct {
 	_ struct{} `fidl:"s,1,1" fidl2:"s,1,1"`
 }
@@ -45,6 +58,45 @@ var _mWithErrorSyntaxErrorAsEnumResponse = _bindings.CreateLazyMarshaler(WithErr
 
 func (msg *WithErrorSyntaxErrorAsEnumResponse) Marshaler() _bindings.Marshaler {
 	return _mWithErrorSyntaxErrorAsEnumResponse
+}
+type I_withErrorSyntaxResponseAsStructResultTag uint32
+const (
+	_ I_withErrorSyntaxResponseAsStructResultTag = iota
+	WithErrorSyntaxResponseAsStructResultResponse
+	WithErrorSyntaxResponseAsStructResultErr
+)
+
+
+type WithErrorSyntaxResponseAsStructResult struct {
+	I_withErrorSyntaxResponseAsStructResultTag `fidl:"u,32,8" fidl2:"u,32,8"`
+	Response WithErrorSyntaxResponseAsStructResponse 
+	Err uint32 
+}
+
+func (u *WithErrorSyntaxResponseAsStructResult) Which() I_withErrorSyntaxResponseAsStructResultTag {
+	return u.I_withErrorSyntaxResponseAsStructResultTag
+}
+
+func (u *WithErrorSyntaxResponseAsStructResult) SetResponse(response WithErrorSyntaxResponseAsStructResponse) {
+	u.I_withErrorSyntaxResponseAsStructResultTag = WithErrorSyntaxResponseAsStructResultResponse
+	u.Response = response
+}
+
+func WithErrorSyntaxResponseAsStructResultWithResponse(response WithErrorSyntaxResponseAsStructResponse) WithErrorSyntaxResponseAsStructResult {
+	var _u WithErrorSyntaxResponseAsStructResult
+	_u.SetResponse(response)
+	return _u
+}
+
+func (u *WithErrorSyntaxResponseAsStructResult) SetErr(err uint32) {
+	u.I_withErrorSyntaxResponseAsStructResultTag = WithErrorSyntaxResponseAsStructResultErr
+	u.Err = err
+}
+
+func WithErrorSyntaxResponseAsStructResultWithErr(err uint32) WithErrorSyntaxResponseAsStructResult {
+	var _u WithErrorSyntaxResponseAsStructResult
+	_u.SetErr(err)
+	return _u
 }
 type I_withErrorSyntaxErrorAsPrimitiveResultTag uint32
 const (
@@ -373,11 +425,24 @@ func (p *WithAndWithoutRequestResponseEventProxy) OnWithResponse(ret string) err
 
 
 const (
+	WithErrorSyntaxResponseAsStructOrdinal uint64 = 0x4f3c32be00000000
+	WithErrorSyntaxResponseAsStructGenOrdinal uint64 = 0x592157d505db2bcf
 	WithErrorSyntaxErrorAsPrimitiveOrdinal uint64 = 0x7b58113900000000
 	WithErrorSyntaxErrorAsPrimitiveGenOrdinal uint64 = 0x20cf80ad7d9b60be
 	WithErrorSyntaxErrorAsEnumOrdinal uint64 = 0x4c95de1f00000000
 	WithErrorSyntaxErrorAsEnumGenOrdinal uint64 = 0x3fcd36560f812e7f
 )
+
+type withErrorSyntaxResponseAsStructResponse struct {
+	_ struct{} `fidl:"s,32,0" fidl2:"s,32,0"`
+	Result WithErrorSyntaxResponseAsStructResult`fidl:"0"`
+}
+
+var _mwithErrorSyntaxResponseAsStructResponse = _bindings.CreateLazyMarshaler(withErrorSyntaxResponseAsStructResponse{})
+
+func (msg *withErrorSyntaxResponseAsStructResponse) Marshaler() _bindings.Marshaler {
+	return _mwithErrorSyntaxResponseAsStructResponse
+}
 
 type withErrorSyntaxErrorAsPrimitiveResponse struct {
 	_ struct{} `fidl:"s,8,0" fidl2:"s,8,0"`
@@ -404,6 +469,13 @@ func (msg *withErrorSyntaxErrorAsEnumResponse) Marshaler() _bindings.Marshaler {
 type WithErrorSyntaxInterface _bindings.ChannelProxy
 
 
+func (p *WithErrorSyntaxInterface) ResponseAsStruct() (WithErrorSyntaxResponseAsStructResult, error) {
+	var req_ _bindings.Message
+	resp_ := &withErrorSyntaxResponseAsStructResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Call(WithErrorSyntaxResponseAsStructOrdinal, req_, resp_, WithErrorSyntaxResponseAsStructOrdinal, WithErrorSyntaxResponseAsStructGenOrdinal)
+	return resp_.Result, err
+}
+
 func (p *WithErrorSyntaxInterface) ErrorAsPrimitive() (WithErrorSyntaxErrorAsPrimitiveResult, error) {
 	var req_ _bindings.Message
 	resp_ := &withErrorSyntaxErrorAsPrimitiveResponse{}
@@ -420,6 +492,7 @@ func (p *WithErrorSyntaxInterface) ErrorAsEnum() (WithErrorSyntaxErrorAsEnumResu
 
 
 type WithErrorSyntax interface {
+	ResponseAsStruct() (WithErrorSyntaxResponseAsStructResult, error)
 	ErrorAsPrimitive() (WithErrorSyntaxErrorAsPrimitiveResult, error)
 	ErrorAsEnum() (WithErrorSyntaxErrorAsEnumResult, error)
 }
@@ -440,6 +513,13 @@ type WithErrorSyntaxStub struct {
 
 func (s_ *WithErrorSyntaxStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
+	case WithErrorSyntaxResponseAsStructOrdinal:
+		fallthrough
+	case WithErrorSyntaxResponseAsStructGenOrdinal:
+		result, err_ := s_.Impl.ResponseAsStruct()
+		out_ := withErrorSyntaxResponseAsStructResponse{}
+		out_.Result = result
+		return &out_, true, err_
 	case WithErrorSyntaxErrorAsPrimitiveOrdinal:
 		fallthrough
 	case WithErrorSyntaxErrorAsPrimitiveGenOrdinal:

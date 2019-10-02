@@ -1411,6 +1411,15 @@ void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(SecureMem_
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetPhysicalSecureHeapsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse>(std::move(_response_bytes)));
 }
+void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::ReplySuccess(PhysicalSecureHeaps heaps) {
+  SecureMem_GetPhysicalSecureHeaps_Response response;
+  response.heaps = std::move(heaps);
+
+  Reply(SecureMem_GetPhysicalSecureHeaps_Result::WithResponse(std::move(response)));
+}
+void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::ReplyError(int32_t error) {
+  Reply(SecureMem_GetPhysicalSecureHeaps_Result::WithErr(std::move(error)));
+}
 
 void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(::fidl::BytePart _buffer, SecureMem_GetPhysicalSecureHeaps_Result result) {
   if (_buffer.capacity() < GetPhysicalSecureHeapsResponse::PrimarySize) {
@@ -1422,6 +1431,12 @@ void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(::fidl::By
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(GetPhysicalSecureHeapsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse>(std::move(_buffer)));
+}
+void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::ReplySuccess(::fidl::BytePart _buffer, PhysicalSecureHeaps heaps) {
+  SecureMem_GetPhysicalSecureHeaps_Response response;
+  response.heaps = std::move(heaps);
+
+  Reply(std::move(_buffer), SecureMem_GetPhysicalSecureHeaps_Result::WithResponse(std::move(response)));
 }
 
 void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse> params) {
@@ -1440,6 +1455,14 @@ void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(SecureMem_
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetPhysicalSecureHeapsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetPhysicalSecureHeapsResponse>(std::move(_response_bytes)));
 }
+void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::ReplySuccess() {
+  SecureMem_SetPhysicalSecureHeaps_Response response;
+
+  Reply(SecureMem_SetPhysicalSecureHeaps_Result::WithResponse(std::move(response)));
+}
+void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::ReplyError(int32_t error) {
+  Reply(SecureMem_SetPhysicalSecureHeaps_Result::WithErr(std::move(error)));
+}
 
 void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(::fidl::BytePart _buffer, SecureMem_SetPhysicalSecureHeaps_Result result) {
   if (_buffer.capacity() < SetPhysicalSecureHeapsResponse::PrimarySize) {
@@ -1451,6 +1474,11 @@ void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(::fidl::By
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(SetPhysicalSecureHeapsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetPhysicalSecureHeapsResponse>(std::move(_buffer)));
+}
+void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  SecureMem_SetPhysicalSecureHeaps_Response response;
+
+  Reply(std::move(_buffer), SecureMem_SetPhysicalSecureHeaps_Result::WithResponse(std::move(response)));
 }
 
 void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(::fidl::DecodedMessage<SetPhysicalSecureHeapsResponse> params) {

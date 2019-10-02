@@ -189,6 +189,15 @@ void NameProvider::Interface::GetDeviceNameCompleterBase::Reply(NameProvider_Get
   }
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
+void NameProvider::Interface::GetDeviceNameCompleterBase::ReplySuccess(::fidl::StringView name) {
+  NameProvider_GetDeviceName_Response response;
+  response.name = std::move(name);
+
+  Reply(NameProvider_GetDeviceName_Result::WithResponse(std::move(response)));
+}
+void NameProvider::Interface::GetDeviceNameCompleterBase::ReplyError(int32_t error) {
+  Reply(NameProvider_GetDeviceName_Result::WithErr(std::move(error)));
+}
 
 void NameProvider::Interface::GetDeviceNameCompleterBase::Reply(::fidl::BytePart _buffer, NameProvider_GetDeviceName_Result result) {
   if (_buffer.capacity() < GetDeviceNameResponse::PrimarySize) {
@@ -204,6 +213,12 @@ void NameProvider::Interface::GetDeviceNameCompleterBase::Reply(::fidl::BytePart
     return;
   }
   CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+void NameProvider::Interface::GetDeviceNameCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::fidl::StringView name) {
+  NameProvider_GetDeviceName_Response response;
+  response.name = std::move(name);
+
+  Reply(std::move(_buffer), NameProvider_GetDeviceName_Result::WithResponse(std::move(response)));
 }
 
 void NameProvider::Interface::GetDeviceNameCompleterBase::Reply(::fidl::DecodedMessage<GetDeviceNameResponse> params) {
@@ -2129,6 +2144,15 @@ void Controller::Interface::GetDevicePowerCapsCompleterBase::Reply(Controller_Ge
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetDevicePowerCapsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetDevicePowerCapsResponse>(std::move(_response_bytes)));
 }
+void Controller::Interface::GetDevicePowerCapsCompleterBase::ReplySuccess(::fidl::Array<DevicePowerStateInfo, 5> dpstates) {
+  Controller_GetDevicePowerCaps_Response response;
+  response.dpstates = std::move(dpstates);
+
+  Reply(Controller_GetDevicePowerCaps_Result::WithResponse(std::move(response)));
+}
+void Controller::Interface::GetDevicePowerCapsCompleterBase::ReplyError(int32_t error) {
+  Reply(Controller_GetDevicePowerCaps_Result::WithErr(std::move(error)));
+}
 
 void Controller::Interface::GetDevicePowerCapsCompleterBase::Reply(::fidl::BytePart _buffer, Controller_GetDevicePowerCaps_Result result) {
   if (_buffer.capacity() < GetDevicePowerCapsResponse::PrimarySize) {
@@ -2140,6 +2164,12 @@ void Controller::Interface::GetDevicePowerCapsCompleterBase::Reply(::fidl::ByteP
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(GetDevicePowerCapsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetDevicePowerCapsResponse>(std::move(_buffer)));
+}
+void Controller::Interface::GetDevicePowerCapsCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::fidl::Array<DevicePowerStateInfo, 5> dpstates) {
+  Controller_GetDevicePowerCaps_Response response;
+  response.dpstates = std::move(dpstates);
+
+  Reply(std::move(_buffer), Controller_GetDevicePowerCaps_Result::WithResponse(std::move(response)));
 }
 
 void Controller::Interface::GetDevicePowerCapsCompleterBase::Reply(::fidl::DecodedMessage<GetDevicePowerCapsResponse> params) {
@@ -2158,6 +2188,14 @@ void Controller::Interface::UpdatePowerStateMappingCompleterBase::Reply(Controll
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(UpdatePowerStateMappingResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<UpdatePowerStateMappingResponse>(std::move(_response_bytes)));
 }
+void Controller::Interface::UpdatePowerStateMappingCompleterBase::ReplySuccess() {
+  Controller_UpdatePowerStateMapping_Response response;
+
+  Reply(Controller_UpdatePowerStateMapping_Result::WithResponse(std::move(response)));
+}
+void Controller::Interface::UpdatePowerStateMappingCompleterBase::ReplyError(int32_t error) {
+  Reply(Controller_UpdatePowerStateMapping_Result::WithErr(std::move(error)));
+}
 
 void Controller::Interface::UpdatePowerStateMappingCompleterBase::Reply(::fidl::BytePart _buffer, Controller_UpdatePowerStateMapping_Result result) {
   if (_buffer.capacity() < UpdatePowerStateMappingResponse::PrimarySize) {
@@ -2169,6 +2207,11 @@ void Controller::Interface::UpdatePowerStateMappingCompleterBase::Reply(::fidl::
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(UpdatePowerStateMappingResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<UpdatePowerStateMappingResponse>(std::move(_buffer)));
+}
+void Controller::Interface::UpdatePowerStateMappingCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  Controller_UpdatePowerStateMapping_Response response;
+
+  Reply(std::move(_buffer), Controller_UpdatePowerStateMapping_Result::WithResponse(std::move(response)));
 }
 
 void Controller::Interface::UpdatePowerStateMappingCompleterBase::Reply(::fidl::DecodedMessage<UpdatePowerStateMappingResponse> params) {
@@ -2187,6 +2230,15 @@ void Controller::Interface::GetPowerStateMappingCompleterBase::Reply(Controller_
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetPowerStateMappingResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetPowerStateMappingResponse>(std::move(_response_bytes)));
 }
+void Controller::Interface::GetPowerStateMappingCompleterBase::ReplySuccess(::fidl::Array<SystemPowerStateInfo, 6> mapping) {
+  Controller_GetPowerStateMapping_Response response;
+  response.mapping = std::move(mapping);
+
+  Reply(Controller_GetPowerStateMapping_Result::WithResponse(std::move(response)));
+}
+void Controller::Interface::GetPowerStateMappingCompleterBase::ReplyError(int32_t error) {
+  Reply(Controller_GetPowerStateMapping_Result::WithErr(std::move(error)));
+}
 
 void Controller::Interface::GetPowerStateMappingCompleterBase::Reply(::fidl::BytePart _buffer, Controller_GetPowerStateMapping_Result result) {
   if (_buffer.capacity() < GetPowerStateMappingResponse::PrimarySize) {
@@ -2198,6 +2250,12 @@ void Controller::Interface::GetPowerStateMappingCompleterBase::Reply(::fidl::Byt
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(GetPowerStateMappingResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetPowerStateMappingResponse>(std::move(_buffer)));
+}
+void Controller::Interface::GetPowerStateMappingCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::fidl::Array<SystemPowerStateInfo, 6> mapping) {
+  Controller_GetPowerStateMapping_Response response;
+  response.mapping = std::move(mapping);
+
+  Reply(std::move(_buffer), Controller_GetPowerStateMapping_Result::WithResponse(std::move(response)));
 }
 
 void Controller::Interface::GetPowerStateMappingCompleterBase::Reply(::fidl::DecodedMessage<GetPowerStateMappingResponse> params) {
@@ -2247,6 +2305,15 @@ void Controller::Interface::ResumeCompleterBase::Reply(Controller_Resume_Result 
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ResumeResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ResumeResponse>(std::move(_response_bytes)));
 }
+void Controller::Interface::ResumeCompleterBase::ReplySuccess(DevicePowerState out_state) {
+  Controller_Resume_Response response;
+  response.out_state = std::move(out_state);
+
+  Reply(Controller_Resume_Result::WithResponse(std::move(response)));
+}
+void Controller::Interface::ResumeCompleterBase::ReplyError(int32_t error) {
+  Reply(Controller_Resume_Result::WithErr(std::move(error)));
+}
 
 void Controller::Interface::ResumeCompleterBase::Reply(::fidl::BytePart _buffer, Controller_Resume_Result result) {
   if (_buffer.capacity() < ResumeResponse::PrimarySize) {
@@ -2258,6 +2325,12 @@ void Controller::Interface::ResumeCompleterBase::Reply(::fidl::BytePart _buffer,
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(ResumeResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ResumeResponse>(std::move(_buffer)));
+}
+void Controller::Interface::ResumeCompleterBase::ReplySuccess(::fidl::BytePart _buffer, DevicePowerState out_state) {
+  Controller_Resume_Response response;
+  response.out_state = std::move(out_state);
+
+  Reply(std::move(_buffer), Controller_Resume_Result::WithResponse(std::move(response)));
 }
 
 void Controller::Interface::ResumeCompleterBase::Reply(::fidl::DecodedMessage<ResumeResponse> params) {

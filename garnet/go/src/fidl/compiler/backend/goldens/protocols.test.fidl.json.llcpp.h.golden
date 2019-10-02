@@ -20,6 +20,8 @@ namespace llcpp {
 namespace test {
 namespace name {
 
+struct WithErrorSyntax_ResponseAsStruct_Response;
+struct WithErrorSyntax_ResponseAsStruct_Result;
 struct WithErrorSyntax_ErrorAsPrimitive_Response;
 struct WithErrorSyntax_ErrorAsPrimitive_Result;
 struct WithErrorSyntax_ErrorAsEnum_Response;
@@ -33,6 +35,117 @@ enum class ErrorEnun : uint32_t {
 
 struct WithErrorSyntax_ErrorAsEnum_Result;
 class WithErrorSyntax;
+
+
+
+struct WithErrorSyntax_ResponseAsStruct_Response {
+  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  int64_t a = {};
+
+  int64_t b = {};
+
+  int64_t c = {};
+};
+
+extern "C" const fidl_type_t test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
+
+struct WithErrorSyntax_ResponseAsStruct_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  WithErrorSyntax_ResponseAsStruct_Result();
+  ~WithErrorSyntax_ResponseAsStruct_Result();
+
+  WithErrorSyntax_ResponseAsStruct_Result(WithErrorSyntax_ResponseAsStruct_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  WithErrorSyntax_ResponseAsStruct_Result& operator=(WithErrorSyntax_ResponseAsStruct_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static WithErrorSyntax_ResponseAsStruct_Result WithResponse(WithErrorSyntax_ResponseAsStruct_Response&& val) {
+    WithErrorSyntax_ResponseAsStruct_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  WithErrorSyntax_ResponseAsStruct_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, WithErrorSyntax_ResponseAsStruct_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, WithErrorSyntax_ResponseAsStruct_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  WithErrorSyntax_ResponseAsStruct_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static WithErrorSyntax_ResponseAsStruct_Result WithErr(uint32_t&& val) {
+    WithErrorSyntax_ResponseAsStruct_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  uint32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  uint32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 32;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+ private:
+  void Destroy();
+  void MoveImpl_(WithErrorSyntax_ResponseAsStruct_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    WithErrorSyntax_ResponseAsStruct_Response response_;
+    uint32_t err_;
+  };
+};
 
 
 
@@ -1141,12 +1254,28 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
   };
 };
 
+extern "C" const fidl_type_t test_name_WithErrorSyntaxResponseAsStructResponseTable;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 
 class WithErrorSyntax final {
   WithErrorSyntax() = delete;
  public:
+
+  struct ResponseAsStructResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    WithErrorSyntax_ResponseAsStruct_Result result;
+
+    static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntaxResponseAsStructResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 48;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using ResponseAsStructRequest = ::fidl::AnyZeroArgMessage;
 
   struct ErrorAsPrimitiveResponse final {
     FIDL_ALIGNDECL
@@ -1184,6 +1313,22 @@ class WithErrorSyntax final {
     ResultOf() = delete;
    private:
     template <typename ResponseType>
+    class ResponseAsStruct_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      ResponseAsStruct_Impl(zx::unowned_channel _client_end);
+      ~ResponseAsStruct_Impl() = default;
+      ResponseAsStruct_Impl(ResponseAsStruct_Impl&& other) = default;
+      ResponseAsStruct_Impl& operator=(ResponseAsStruct_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class ErrorAsPrimitive_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -1217,6 +1362,7 @@ class WithErrorSyntax final {
     };
 
    public:
+    using ResponseAsStruct = ResponseAsStruct_Impl<ResponseAsStructResponse>;
     using ErrorAsPrimitive = ErrorAsPrimitive_Impl<ErrorAsPrimitiveResponse>;
     using ErrorAsEnum = ErrorAsEnum_Impl<ErrorAsEnumResponse>;
   };
@@ -1226,6 +1372,22 @@ class WithErrorSyntax final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
    private:
+    template <typename ResponseType>
+    class ResponseAsStruct_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      ResponseAsStruct_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~ResponseAsStruct_Impl() = default;
+      ResponseAsStruct_Impl(ResponseAsStruct_Impl&& other) = default;
+      ResponseAsStruct_Impl& operator=(ResponseAsStruct_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
     template <typename ResponseType>
     class ErrorAsPrimitive_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
@@ -1260,6 +1422,7 @@ class WithErrorSyntax final {
     };
 
    public:
+    using ResponseAsStruct = ResponseAsStruct_Impl<ResponseAsStructResponse>;
     using ErrorAsPrimitive = ErrorAsPrimitive_Impl<ErrorAsPrimitiveResponse>;
     using ErrorAsEnum = ErrorAsEnum_Impl<ErrorAsEnumResponse>;
   };
@@ -1274,6 +1437,12 @@ class WithErrorSyntax final {
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::ResponseAsStruct ResponseAsStruct();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::ResponseAsStruct ResponseAsStruct(::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ErrorAsPrimitive ErrorAsPrimitive();
@@ -1296,6 +1465,12 @@ class WithErrorSyntax final {
     Call() = delete;
    public:
 
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::ResponseAsStruct ResponseAsStruct(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::ResponseAsStruct ResponseAsStruct(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ErrorAsPrimitive ErrorAsPrimitive(zx::unowned_channel _client_end);
 
@@ -1316,6 +1491,8 @@ class WithErrorSyntax final {
     InPlace() = delete;
    public:
 
+    static ::fidl::DecodeResult<ResponseAsStructResponse> ResponseAsStruct(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
     static ::fidl::DecodeResult<ErrorAsPrimitiveResponse> ErrorAsPrimitive(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     static ::fidl::DecodeResult<ErrorAsEnumResponse> ErrorAsEnum(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
@@ -1330,10 +1507,30 @@ class WithErrorSyntax final {
     using _Outer = WithErrorSyntax;
     using _Base = ::fidl::CompleterBase;
 
+    class ResponseAsStructCompleterBase : public _Base {
+     public:
+      void Reply(WithErrorSyntax_ResponseAsStruct_Result result);
+      void ReplySuccess(int64_t a, int64_t b, int64_t c);
+      void ReplyError(uint32_t error);
+      void Reply(::fidl::BytePart _buffer, WithErrorSyntax_ResponseAsStruct_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, int64_t a, int64_t b, int64_t c);
+      void Reply(::fidl::DecodedMessage<ResponseAsStructResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using ResponseAsStructCompleter = ::fidl::Completer<ResponseAsStructCompleterBase>;
+
+    virtual void ResponseAsStruct(ResponseAsStructCompleter::Sync _completer) = 0;
+
     class ErrorAsPrimitiveCompleterBase : public _Base {
      public:
       void Reply(WithErrorSyntax_ErrorAsPrimitive_Result result);
+      void ReplySuccess();
+      void ReplyError(uint32_t error);
       void Reply(::fidl::BytePart _buffer, WithErrorSyntax_ErrorAsPrimitive_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<ErrorAsPrimitiveResponse> params);
 
      protected:
@@ -1347,7 +1544,10 @@ class WithErrorSyntax final {
     class ErrorAsEnumCompleterBase : public _Base {
      public:
       void Reply(WithErrorSyntax_ErrorAsEnum_Result result);
+      void ReplySuccess();
+      void ReplyError(ErrorEnun error);
       void Reply(::fidl::BytePart _buffer, WithErrorSyntax_ErrorAsEnum_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<ErrorAsEnumResponse> params);
 
      protected:
@@ -1385,6 +1585,18 @@ class WithErrorSyntax final {
 }  // namespace llcpp
 
 namespace fidl {
+
+template <>
+struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>);
+static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response, a) == 0);
+static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response, b) == 8);
+static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response, c) == 16);
+static_assert(sizeof(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response) == ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result>);
 
 template <>
 struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response> : public std::true_type {};
@@ -1504,6 +1716,14 @@ static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::OnWit
 template <>
 struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result>);
+
+template <>
+struct IsFidlType<::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse)
+    == ::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse, result) == 16);
 
 template <>
 struct IsFidlType<::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse> : public std::true_type {};

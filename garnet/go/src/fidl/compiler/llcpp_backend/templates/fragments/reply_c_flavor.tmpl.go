@@ -42,4 +42,29 @@ void {{ .LLProps.InterfaceName }}::Interface::{{ .Name }}CompleterBase::{{ templ
   {{- end }}
 }
 {{- end }}
+
+{{- define "ReplyCFlavorResultSuccessMethodSignature" -}}
+ReplySuccess({{ template "Params" .Result.ValueMembers }})
+{{- end }}
+
+{{- define "ReplyCFlavorResultSuccessMethodDefinition" }}
+void {{ .LLProps.InterfaceName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorResultSuccessMethodSignature" . }} {
+  {{ .Result.ValueStructDecl }} response;
+  {{- range .Result.ValueMembers }}
+  response.{{ .Name }} = std::move({{ .Name }});
+  {{- end }}
+
+  Reply({{ .Result.ResultDecl }}::WithResponse(std::move(response)));
+}
+{{- end }}
+
+{{- define "ReplyCFlavorResultErrorMethodSignature" -}}
+ReplyError({{ .Result.ErrorDecl }} error)
+{{- end }}
+
+{{- define "ReplyCFlavorResultErrorMethodDefinition" }}
+void {{ .LLProps.InterfaceName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorResultErrorMethodSignature" . }} {
+  Reply({{ .Result.ResultDecl }}::WithErr(std::move(error)));
+}
+{{- end }}
 `

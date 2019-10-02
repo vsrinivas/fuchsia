@@ -1041,7 +1041,10 @@ class Device final {
     class GetStateNormalizedCompleterBase : public _Base {
      public:
       void Reply(Device_GetStateNormalized_Result result);
+      void ReplySuccess(State state);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Device_GetStateNormalized_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, State state);
       void Reply(::fidl::DecodedMessage<GetStateNormalizedResponse> params);
 
      protected:
@@ -1055,7 +1058,10 @@ class Device final {
     class SetStateNormalizedCompleterBase : public _Base {
      public:
       void Reply(Device_SetStateNormalized_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Device_SetStateNormalized_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<SetStateNormalizedResponse> params);
 
      protected:
@@ -1069,7 +1075,10 @@ class Device final {
     class GetStateAbsoluteCompleterBase : public _Base {
      public:
       void Reply(Device_GetStateAbsolute_Result result);
+      void ReplySuccess(State state);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Device_GetStateAbsolute_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, State state);
       void Reply(::fidl::DecodedMessage<GetStateAbsoluteResponse> params);
 
      protected:
@@ -1083,7 +1092,10 @@ class Device final {
     class SetStateAbsoluteCompleterBase : public _Base {
      public:
       void Reply(Device_SetStateAbsolute_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Device_SetStateAbsolute_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<SetStateAbsoluteResponse> params);
 
      protected:
@@ -1097,7 +1109,10 @@ class Device final {
     class GetMaxAbsoluteBrightnessCompleterBase : public _Base {
      public:
       void Reply(Device_GetMaxAbsoluteBrightness_Result result);
+      void ReplySuccess(double max_brightness);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Device_GetMaxAbsoluteBrightness_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, double max_brightness);
       void Reply(::fidl::DecodedMessage<GetMaxAbsoluteBrightnessResponse> params);
 
      protected:

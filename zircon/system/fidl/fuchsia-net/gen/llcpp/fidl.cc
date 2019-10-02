@@ -546,6 +546,15 @@ void NameLookup::Interface::LookupIpCompleterBase::Reply(NameLookup_LookupIp_Res
   }
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
+void NameLookup::Interface::LookupIpCompleterBase::ReplySuccess(IpAddressInfo addr) {
+  NameLookup_LookupIp_Response response;
+  response.addr = std::move(addr);
+
+  Reply(NameLookup_LookupIp_Result::WithResponse(std::move(response)));
+}
+void NameLookup::Interface::LookupIpCompleterBase::ReplyError(LookupError error) {
+  Reply(NameLookup_LookupIp_Result::WithErr(std::move(error)));
+}
 
 void NameLookup::Interface::LookupIpCompleterBase::Reply(::fidl::BytePart _buffer, NameLookup_LookupIp_Result result) {
   if (_buffer.capacity() < LookupIpResponse::PrimarySize) {
@@ -561,6 +570,12 @@ void NameLookup::Interface::LookupIpCompleterBase::Reply(::fidl::BytePart _buffe
     return;
   }
   CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+void NameLookup::Interface::LookupIpCompleterBase::ReplySuccess(::fidl::BytePart _buffer, IpAddressInfo addr) {
+  NameLookup_LookupIp_Response response;
+  response.addr = std::move(addr);
+
+  Reply(std::move(_buffer), NameLookup_LookupIp_Result::WithResponse(std::move(response)));
 }
 
 void NameLookup::Interface::LookupIpCompleterBase::Reply(::fidl::DecodedMessage<LookupIpResponse> params) {
@@ -584,6 +599,15 @@ void NameLookup::Interface::LookupHostnameCompleterBase::Reply(NameLookup_Lookup
   }
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
+void NameLookup::Interface::LookupHostnameCompleterBase::ReplySuccess(::fidl::StringView hostname) {
+  NameLookup_LookupHostname_Response response;
+  response.hostname = std::move(hostname);
+
+  Reply(NameLookup_LookupHostname_Result::WithResponse(std::move(response)));
+}
+void NameLookup::Interface::LookupHostnameCompleterBase::ReplyError(LookupError error) {
+  Reply(NameLookup_LookupHostname_Result::WithErr(std::move(error)));
+}
 
 void NameLookup::Interface::LookupHostnameCompleterBase::Reply(::fidl::BytePart _buffer, NameLookup_LookupHostname_Result result) {
   if (_buffer.capacity() < LookupHostnameResponse::PrimarySize) {
@@ -599,6 +623,12 @@ void NameLookup::Interface::LookupHostnameCompleterBase::Reply(::fidl::BytePart 
     return;
   }
   CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+void NameLookup::Interface::LookupHostnameCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::fidl::StringView hostname) {
+  NameLookup_LookupHostname_Response response;
+  response.hostname = std::move(hostname);
+
+  Reply(std::move(_buffer), NameLookup_LookupHostname_Result::WithResponse(std::move(response)));
 }
 
 void NameLookup::Interface::LookupHostnameCompleterBase::Reply(::fidl::DecodedMessage<LookupHostnameResponse> params) {

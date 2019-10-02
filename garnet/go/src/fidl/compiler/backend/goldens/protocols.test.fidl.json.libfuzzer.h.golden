@@ -11,6 +11,8 @@ namespace fidl {
 namespace fuzzing {
 
 
+using WithErrorSyntax_ResponseAsStruct_Response = ::test::name::WithErrorSyntax_ResponseAsStruct_Response;
+using WithErrorSyntax_ResponseAsStruct_Result = ::test::name::WithErrorSyntax_ResponseAsStruct_Result;
 using WithErrorSyntax_ErrorAsPrimitive_Response = ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response;
 using WithErrorSyntax_ErrorAsPrimitive_Result = ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result;
 using WithErrorSyntax_ErrorAsEnum_Response = ::test::name::WithErrorSyntax_ErrorAsEnum_Response;
@@ -18,6 +20,42 @@ using ErrorEnun = ::test::name::ErrorEnun;
 using WithErrorSyntax_ErrorAsEnum_Result = ::test::name::WithErrorSyntax_ErrorAsEnum_Result;
 
 
+template<>
+struct MinSize<WithErrorSyntax_ResponseAsStruct_Response> {
+  operator size_t() {
+    return MinSize<int64_t>() + MinSize<int64_t>() + MinSize<int64_t>();
+  }
+};
+template<>
+struct Allocate<WithErrorSyntax_ResponseAsStruct_Response> {
+  WithErrorSyntax_ResponseAsStruct_Response operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<WithErrorSyntax_ResponseAsStruct_Response>());
+    const size_t slack_per_member = (*size - MinSize<WithErrorSyntax_ResponseAsStruct_Response>()) / 3;
+    WithErrorSyntax_ResponseAsStruct_Response out;
+    size_t out_size;
+    out_size = MinSize<int64_t>() + slack_per_member;
+    out.a = Allocate<int64_t>{}(src, &out_size);
+    out_size = MinSize<int64_t>() + slack_per_member;
+    out.b = Allocate<int64_t>{}(src, &out_size);
+    out_size = MinSize<int64_t>() + slack_per_member;
+    out.c = Allocate<int64_t>{}(src, &out_size);
+    return out;
+  }
+};
+template<>
+struct MinSize<WithErrorSyntax_ResponseAsStruct_Result> {
+  operator size_t() { return sizeof(WithErrorSyntax_ResponseAsStruct_Result); }
+};
+template<>
+struct Allocate<WithErrorSyntax_ResponseAsStruct_Result> {
+  WithErrorSyntax_ResponseAsStruct_Result operator()(FuzzInput* src, size_t* size) {
+    WithErrorSyntax_ResponseAsStruct_Result out;
+    ZX_ASSERT(*size >= sizeof(WithErrorSyntax_ResponseAsStruct_Result));
+    ZX_ASSERT(src->CopyObject(&out));
+    *size = sizeof(WithErrorSyntax_ResponseAsStruct_Result);
+    return out;
+  }
+};
 template<>
 struct MinSize<WithErrorSyntax_ErrorAsPrimitive_Response> {
   operator size_t() {

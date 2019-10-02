@@ -503,6 +503,15 @@ void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::Reply(ProcessLimbo
   }
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
+void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::ReplySuccess(ProcessException process_exception) {
+  ProcessLimbo_RetrieveException_Response response;
+  response.process_exception = std::move(process_exception);
+
+  Reply(ProcessLimbo_RetrieveException_Result::WithResponse(std::move(response)));
+}
+void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::ReplyError(int32_t error) {
+  Reply(ProcessLimbo_RetrieveException_Result::WithErr(std::move(error)));
+}
 
 void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::Reply(::fidl::BytePart _buffer, ProcessLimbo_RetrieveException_Result result) {
   if (_buffer.capacity() < RetrieveExceptionResponse::PrimarySize) {
@@ -518,6 +527,12 @@ void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::Reply(::fidl::Byte
     return;
   }
   CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ProcessException process_exception) {
+  ProcessLimbo_RetrieveException_Response response;
+  response.process_exception = std::move(process_exception);
+
+  Reply(std::move(_buffer), ProcessLimbo_RetrieveException_Result::WithResponse(std::move(response)));
 }
 
 void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::Reply(::fidl::DecodedMessage<RetrieveExceptionResponse> params) {

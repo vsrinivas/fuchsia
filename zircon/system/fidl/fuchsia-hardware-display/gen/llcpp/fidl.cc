@@ -3484,6 +3484,15 @@ void Controller::Interface::ImportImageForCaptureCompleterBase::Reply(Controller
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ImportImageForCaptureResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ImportImageForCaptureResponse>(std::move(_response_bytes)));
 }
+void Controller::Interface::ImportImageForCaptureCompleterBase::ReplySuccess(uint64_t image_id) {
+  Controller_ImportImageForCapture_Response response;
+  response.image_id = std::move(image_id);
+
+  Reply(Controller_ImportImageForCapture_Result::WithResponse(std::move(response)));
+}
+void Controller::Interface::ImportImageForCaptureCompleterBase::ReplyError(int32_t error) {
+  Reply(Controller_ImportImageForCapture_Result::WithErr(std::move(error)));
+}
 
 void Controller::Interface::ImportImageForCaptureCompleterBase::Reply(::fidl::BytePart _buffer, Controller_ImportImageForCapture_Result result) {
   if (_buffer.capacity() < ImportImageForCaptureResponse::PrimarySize) {
@@ -3495,6 +3504,12 @@ void Controller::Interface::ImportImageForCaptureCompleterBase::Reply(::fidl::By
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(ImportImageForCaptureResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ImportImageForCaptureResponse>(std::move(_buffer)));
+}
+void Controller::Interface::ImportImageForCaptureCompleterBase::ReplySuccess(::fidl::BytePart _buffer, uint64_t image_id) {
+  Controller_ImportImageForCapture_Response response;
+  response.image_id = std::move(image_id);
+
+  Reply(std::move(_buffer), Controller_ImportImageForCapture_Result::WithResponse(std::move(response)));
 }
 
 void Controller::Interface::ImportImageForCaptureCompleterBase::Reply(::fidl::DecodedMessage<ImportImageForCaptureResponse> params) {
@@ -3513,6 +3528,14 @@ void Controller::Interface::StartCaptureCompleterBase::Reply(Controller_StartCap
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(StartCaptureResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<StartCaptureResponse>(std::move(_response_bytes)));
 }
+void Controller::Interface::StartCaptureCompleterBase::ReplySuccess() {
+  Controller_StartCapture_Response response;
+
+  Reply(Controller_StartCapture_Result::WithResponse(std::move(response)));
+}
+void Controller::Interface::StartCaptureCompleterBase::ReplyError(int32_t error) {
+  Reply(Controller_StartCapture_Result::WithErr(std::move(error)));
+}
 
 void Controller::Interface::StartCaptureCompleterBase::Reply(::fidl::BytePart _buffer, Controller_StartCapture_Result result) {
   if (_buffer.capacity() < StartCaptureResponse::PrimarySize) {
@@ -3524,6 +3547,11 @@ void Controller::Interface::StartCaptureCompleterBase::Reply(::fidl::BytePart _b
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(StartCaptureResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<StartCaptureResponse>(std::move(_buffer)));
+}
+void Controller::Interface::StartCaptureCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  Controller_StartCapture_Response response;
+
+  Reply(std::move(_buffer), Controller_StartCapture_Result::WithResponse(std::move(response)));
 }
 
 void Controller::Interface::StartCaptureCompleterBase::Reply(::fidl::DecodedMessage<StartCaptureResponse> params) {
@@ -3542,6 +3570,14 @@ void Controller::Interface::ReleaseCaptureCompleterBase::Reply(Controller_Releas
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReleaseCaptureResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ReleaseCaptureResponse>(std::move(_response_bytes)));
 }
+void Controller::Interface::ReleaseCaptureCompleterBase::ReplySuccess() {
+  Controller_ReleaseCapture_Response response;
+
+  Reply(Controller_ReleaseCapture_Result::WithResponse(std::move(response)));
+}
+void Controller::Interface::ReleaseCaptureCompleterBase::ReplyError(int32_t error) {
+  Reply(Controller_ReleaseCapture_Result::WithErr(std::move(error)));
+}
 
 void Controller::Interface::ReleaseCaptureCompleterBase::Reply(::fidl::BytePart _buffer, Controller_ReleaseCapture_Result result) {
   if (_buffer.capacity() < ReleaseCaptureResponse::PrimarySize) {
@@ -3553,6 +3589,11 @@ void Controller::Interface::ReleaseCaptureCompleterBase::Reply(::fidl::BytePart 
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(ReleaseCaptureResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ReleaseCaptureResponse>(std::move(_buffer)));
+}
+void Controller::Interface::ReleaseCaptureCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  Controller_ReleaseCapture_Response response;
+
+  Reply(std::move(_buffer), Controller_ReleaseCapture_Result::WithResponse(std::move(response)));
 }
 
 void Controller::Interface::ReleaseCaptureCompleterBase::Reply(::fidl::DecodedMessage<ReleaseCaptureResponse> params) {

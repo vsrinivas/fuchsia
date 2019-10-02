@@ -1,0 +1,19 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library llcpptest.result.test;
+
+enum MyError : int32 {
+    BAD_ERROR = 1;
+    REALLY_BAD_ERROR = 2;
+};
+
+/// Protocol for testing methods with error types.
+/// In the implementation, each method is hardcoded to return either the
+/// success or the error case. This should follow the naming of the method,
+/// e.g. ReturnPrimitiveError will always return the error case.
+protocol ErrorMethods {
+    NoArgsPrimitiveError(bool should_error) -> () error int32;
+    ManyArgsCustomError(bool should_error) -> (int32 a, int32 b, int32 c) error MyError;
+};

@@ -2316,7 +2316,10 @@ class Paver final {
     class QueryActiveConfigurationCompleterBase : public _Base {
      public:
       void Reply(Paver_QueryActiveConfiguration_Result result);
+      void ReplySuccess(Configuration configuration);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Paver_QueryActiveConfiguration_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, Configuration configuration);
       void Reply(::fidl::DecodedMessage<QueryActiveConfigurationResponse> params);
 
      protected:
@@ -2330,7 +2333,10 @@ class Paver final {
     class QueryConfigurationStatusCompleterBase : public _Base {
      public:
       void Reply(Paver_QueryConfigurationStatus_Result result);
+      void ReplySuccess(ConfigurationStatus status);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Paver_QueryConfigurationStatus_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ConfigurationStatus status);
       void Reply(::fidl::DecodedMessage<QueryConfigurationStatusResponse> params);
 
      protected:
@@ -2386,7 +2392,10 @@ class Paver final {
     class ReadAssetCompleterBase : public _Base {
      public:
       void Reply(Paver_ReadAsset_Result result);
+      void ReplySuccess(::llcpp::fuchsia::mem::Buffer asset);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Paver_ReadAsset_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::mem::Buffer asset);
       void Reply(::fidl::DecodedMessage<ReadAssetResponse> params);
 
      protected:

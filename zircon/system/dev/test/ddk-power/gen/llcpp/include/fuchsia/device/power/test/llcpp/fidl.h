@@ -459,7 +459,10 @@ class TestDevice final {
     class AddDeviceWithPowerArgsCompleterBase : public _Base {
      public:
       void Reply(TestDevice_AddDeviceWithPowerArgs_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, TestDevice_AddDeviceWithPowerArgs_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<AddDeviceWithPowerArgsResponse> params);
 
      protected:
@@ -473,7 +476,10 @@ class TestDevice final {
     class GetCurrentDevicePowerStateCompleterBase : public _Base {
      public:
       void Reply(TestDevice_GetCurrentDevicePowerState_Result result);
+      void ReplySuccess(::llcpp::fuchsia::device::DevicePowerState cur_state);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, TestDevice_GetCurrentDevicePowerState_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::DevicePowerState cur_state);
       void Reply(::fidl::DecodedMessage<GetCurrentDevicePowerStateResponse> params);
 
      protected:

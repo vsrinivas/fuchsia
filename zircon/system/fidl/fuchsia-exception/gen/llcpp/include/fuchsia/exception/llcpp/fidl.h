@@ -870,7 +870,10 @@ class ProcessLimbo final {
     class RetrieveExceptionCompleterBase : public _Base {
      public:
       void Reply(ProcessLimbo_RetrieveException_Result result);
+      void ReplySuccess(ProcessException process_exception);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, ProcessLimbo_RetrieveException_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ProcessException process_exception);
       void Reply(::fidl::DecodedMessage<RetrieveExceptionResponse> params);
 
      protected:

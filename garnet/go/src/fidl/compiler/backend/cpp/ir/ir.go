@@ -283,6 +283,7 @@ type Method struct {
 	ResponseHandlerType  string
 	ResponderType        string
 	Transitional         bool
+	Result               *Result
 	LLProps              LLProps
 }
 
@@ -329,11 +330,16 @@ type Root struct {
 
 // Holds information about error results on methods
 type Result struct {
-	ValueArity      int
+	ValueMembers    []StructMember
+	ResultDecl      string
 	ErrorDecl       string
 	ValueDecl       string
 	ValueStructDecl string
 	ValueTupleDecl  string
+}
+
+func (r Result) ValueArity() int {
+	return len(r.ValueMembers)
 }
 
 func (m *Method) CallbackWrapper() string {
@@ -579,7 +585,7 @@ func (c *compiler) compileLiteral(val types.Literal, typ types.Type) string {
 		if val.Value == "-9223372036854775808" || val.Value == "0x8000000000000000" {
 			// C++ only supports nonnegative literals and a value this large in absolute
 			// value cannot be represented as a nonnegative number in 64-bits.
-			return "(-9223372036854775807ll-1)";
+			return "(-9223372036854775807ll-1)"
 		}
 		// TODO(FIDL-486): Once we expose resolved constants for defaults, e.g.
 		// in structs, we will not need ignore hex and binary values.
@@ -916,7 +922,12 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			responseTypeNameSuffix = "EventTable"
 			hasEvents = true
 		}
-		_, transitional := v.LookupAttribute("Transitional")
+
+		var result *Result
+		if v.HasResponse && len(v.Response) == 1 && v.Response[0].Name == "result" {
+			result = c.resultForUnion[v.Response[0].Type.Identifier]
+		}
+
 		m := Method{
 			Attributes: v.Attributes,
 			Ordinals: types.NewOrdinalsStep5(
@@ -945,7 +956,8 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			CallbackType:         callbackType,
 			ResponseHandlerType:  fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
 			ResponderType:        fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
-			Transitional:         transitional,
+			Transitional:         v.IsTransitional(),
+			Result:               result,
 		}
 
 		m.LLProps = m.NewLLProps(r)
@@ -992,11 +1004,11 @@ func (c *compiler) compileStructMember(val types.StructMember, appendNamespace s
 	}
 
 	return StructMember{
-		Attributes: val.Attributes,
-		Type: t,
-		Name: changeIfReserved(val.Name, ""),
+		Attributes:   val.Attributes,
+		Type:         t,
+		Name:         changeIfReserved(val.Name, ""),
 		DefaultValue: defaultValue,
-		Offset: val.Offset,
+		Offset:       val.Offset,
 	}
 }
 
@@ -1020,7 +1032,7 @@ func (c *compiler) compileStruct(val types.Struct, appendNamespace string) Struc
 
 	result := c.resultForStruct[val.Name]
 	if result != nil {
-		(*result).ValueArity = len(r.Members)
+		(*result).ValueMembers = r.Members
 		memberTypeDecls := []string{}
 		for _, m := range r.Members {
 			memberTypeDecls = append(memberTypeDecls, m.Type.Decl)
@@ -1155,6 +1167,7 @@ func (c *compiler) compileUnion(val types.Union) *Union {
 			log.Fatal("First member of result union not a struct: ", val.Name)
 		}
 		result := Result{
+			ResultDecl:      r.Name,
 			ValueStructDecl: r.Members[0].Type.Decl,
 			ErrorDecl:       r.Members[1].Type.Decl,
 		}

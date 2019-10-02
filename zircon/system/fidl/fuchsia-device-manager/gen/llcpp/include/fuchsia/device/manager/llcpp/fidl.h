@@ -4895,7 +4895,10 @@ class Coordinator final {
     class AddDeviceCompleterBase : public _Base {
      public:
       void Reply(Coordinator_AddDevice_Result result);
+      void ReplySuccess(uint64_t local_device_id);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Coordinator_AddDevice_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, uint64_t local_device_id);
       void Reply(::fidl::DecodedMessage<AddDeviceResponse> params);
 
      protected:
@@ -4909,7 +4912,10 @@ class Coordinator final {
     class AddDeviceInvisibleCompleterBase : public _Base {
      public:
       void Reply(Coordinator_AddDeviceInvisible_Result result);
+      void ReplySuccess(uint64_t local_device_id);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Coordinator_AddDeviceInvisible_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, uint64_t local_device_id);
       void Reply(::fidl::DecodedMessage<AddDeviceInvisibleResponse> params);
 
      protected:
@@ -4931,7 +4937,10 @@ class Coordinator final {
     class UnbindDoneCompleterBase : public _Base {
      public:
       void Reply(Coordinator_UnbindDone_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Coordinator_UnbindDone_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<UnbindDoneResponse> params);
 
      protected:
@@ -4945,7 +4954,10 @@ class Coordinator final {
     class RemoveDoneCompleterBase : public _Base {
      public:
       void Reply(Coordinator_RemoveDone_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Coordinator_RemoveDone_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<RemoveDoneResponse> params);
 
      protected:
@@ -4959,7 +4971,10 @@ class Coordinator final {
     class MakeVisibleCompleterBase : public _Base {
      public:
       void Reply(Coordinator_MakeVisible_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Coordinator_MakeVisible_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<MakeVisibleResponse> params);
 
      protected:
@@ -4973,7 +4988,10 @@ class Coordinator final {
     class BindDeviceCompleterBase : public _Base {
      public:
       void Reply(Coordinator_BindDevice_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Coordinator_BindDevice_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<BindDeviceResponse> params);
 
      protected:
@@ -4987,7 +5005,10 @@ class Coordinator final {
     class GetTopologicalPathCompleterBase : public _Base {
      public:
       void Reply(Coordinator_GetTopologicalPath_Result result);
+      void ReplySuccess(::fidl::StringView path);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Coordinator_GetTopologicalPath_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::fidl::StringView path);
       void Reply(::fidl::DecodedMessage<GetTopologicalPathResponse> params);
 
      protected:
@@ -5001,7 +5022,10 @@ class Coordinator final {
     class LoadFirmwareCompleterBase : public _Base {
      public:
       void Reply(Coordinator_LoadFirmware_Result result);
+      void ReplySuccess(::zx::vmo vmo, uint64_t size);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Coordinator_LoadFirmware_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::zx::vmo vmo, uint64_t size);
       void Reply(::fidl::DecodedMessage<LoadFirmwareResponse> params);
 
      protected:
@@ -5015,7 +5039,10 @@ class Coordinator final {
     class GetMetadataCompleterBase : public _Base {
      public:
       void Reply(Coordinator_GetMetadata_Result result);
+      void ReplySuccess(::fidl::VectorView<uint8_t> data);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Coordinator_GetMetadata_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::fidl::VectorView<uint8_t> data);
       void Reply(::fidl::DecodedMessage<GetMetadataResponse> params);
 
      protected:
@@ -5029,7 +5056,10 @@ class Coordinator final {
     class GetMetadataSizeCompleterBase : public _Base {
      public:
       void Reply(Coordinator_GetMetadataSize_Result result);
+      void ReplySuccess(uint64_t size);
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Coordinator_GetMetadataSize_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, uint64_t size);
       void Reply(::fidl::DecodedMessage<GetMetadataSizeResponse> params);
 
      protected:
@@ -5043,7 +5073,10 @@ class Coordinator final {
     class AddMetadataCompleterBase : public _Base {
      public:
       void Reply(Coordinator_AddMetadata_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Coordinator_AddMetadata_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<AddMetadataResponse> params);
 
      protected:
@@ -5057,7 +5090,10 @@ class Coordinator final {
     class PublishMetadataCompleterBase : public _Base {
      public:
       void Reply(Coordinator_PublishMetadata_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Coordinator_PublishMetadata_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<PublishMetadataResponse> params);
 
      protected:
@@ -5071,7 +5107,10 @@ class Coordinator final {
     class AddCompositeDeviceCompleterBase : public _Base {
      public:
       void Reply(Coordinator_AddCompositeDevice_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Coordinator_AddCompositeDevice_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<AddCompositeDeviceResponse> params);
 
      protected:
@@ -5085,7 +5124,10 @@ class Coordinator final {
     class DirectoryWatchCompleterBase : public _Base {
      public:
       void Reply(Coordinator_DirectoryWatch_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Coordinator_DirectoryWatch_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<DirectoryWatchResponse> params);
 
      protected:
@@ -5099,7 +5141,10 @@ class Coordinator final {
     class RunCompatibilityTestsCompleterBase : public _Base {
      public:
       void Reply(Coordinator_RunCompatibilityTests_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, Coordinator_RunCompatibilityTests_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<RunCompatibilityTestsResponse> params);
 
      protected:

@@ -874,7 +874,10 @@ class NameLookup final {
     class LookupIpCompleterBase : public _Base {
      public:
       void Reply(NameLookup_LookupIp_Result result);
+      void ReplySuccess(IpAddressInfo addr);
+      void ReplyError(LookupError error);
       void Reply(::fidl::BytePart _buffer, NameLookup_LookupIp_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, IpAddressInfo addr);
       void Reply(::fidl::DecodedMessage<LookupIpResponse> params);
 
      protected:
@@ -888,7 +891,10 @@ class NameLookup final {
     class LookupHostnameCompleterBase : public _Base {
      public:
       void Reply(NameLookup_LookupHostname_Result result);
+      void ReplySuccess(::fidl::StringView hostname);
+      void ReplyError(LookupError error);
       void Reply(::fidl::BytePart _buffer, NameLookup_LookupHostname_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::fidl::StringView hostname);
       void Reply(::fidl::DecodedMessage<LookupHostnameResponse> params);
 
      protected:

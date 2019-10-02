@@ -332,6 +332,14 @@ void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(TestDevic
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddDeviceWithPowerArgsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceWithPowerArgsResponse>(std::move(_response_bytes)));
 }
+void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::ReplySuccess() {
+  TestDevice_AddDeviceWithPowerArgs_Response response;
+
+  Reply(TestDevice_AddDeviceWithPowerArgs_Result::WithResponse(std::move(response)));
+}
+void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::ReplyError(int32_t error) {
+  Reply(TestDevice_AddDeviceWithPowerArgs_Result::WithErr(std::move(error)));
+}
 
 void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(::fidl::BytePart _buffer, TestDevice_AddDeviceWithPowerArgs_Result result) {
   if (_buffer.capacity() < AddDeviceWithPowerArgsResponse::PrimarySize) {
@@ -343,6 +351,11 @@ void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(::fidl::B
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(AddDeviceWithPowerArgsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceWithPowerArgsResponse>(std::move(_buffer)));
+}
+void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  TestDevice_AddDeviceWithPowerArgs_Response response;
+
+  Reply(std::move(_buffer), TestDevice_AddDeviceWithPowerArgs_Result::WithResponse(std::move(response)));
 }
 
 void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(::fidl::DecodedMessage<AddDeviceWithPowerArgsResponse> params) {
@@ -361,6 +374,15 @@ void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(TestD
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetCurrentDevicePowerStateResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetCurrentDevicePowerStateResponse>(std::move(_response_bytes)));
 }
+void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::ReplySuccess(::llcpp::fuchsia::device::DevicePowerState cur_state) {
+  TestDevice_GetCurrentDevicePowerState_Response response;
+  response.cur_state = std::move(cur_state);
+
+  Reply(TestDevice_GetCurrentDevicePowerState_Result::WithResponse(std::move(response)));
+}
+void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::ReplyError(int32_t error) {
+  Reply(TestDevice_GetCurrentDevicePowerState_Result::WithErr(std::move(error)));
+}
 
 void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(::fidl::BytePart _buffer, TestDevice_GetCurrentDevicePowerState_Result result) {
   if (_buffer.capacity() < GetCurrentDevicePowerStateResponse::PrimarySize) {
@@ -372,6 +394,12 @@ void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(::fid
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(GetCurrentDevicePowerStateResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetCurrentDevicePowerStateResponse>(std::move(_buffer)));
+}
+void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::DevicePowerState cur_state) {
+  TestDevice_GetCurrentDevicePowerState_Response response;
+  response.cur_state = std::move(cur_state);
+
+  Reply(std::move(_buffer), TestDevice_GetCurrentDevicePowerState_Result::WithResponse(std::move(response)));
 }
 
 void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(::fidl::DecodedMessage<GetCurrentDevicePowerStateResponse> params) {

@@ -743,6 +743,15 @@ void Device::Interface::GetStateNormalizedCompleterBase::Reply(Device_GetStateNo
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetStateNormalizedResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetStateNormalizedResponse>(std::move(_response_bytes)));
 }
+void Device::Interface::GetStateNormalizedCompleterBase::ReplySuccess(State state) {
+  Device_GetStateNormalized_Response response;
+  response.state = std::move(state);
+
+  Reply(Device_GetStateNormalized_Result::WithResponse(std::move(response)));
+}
+void Device::Interface::GetStateNormalizedCompleterBase::ReplyError(int32_t error) {
+  Reply(Device_GetStateNormalized_Result::WithErr(std::move(error)));
+}
 
 void Device::Interface::GetStateNormalizedCompleterBase::Reply(::fidl::BytePart _buffer, Device_GetStateNormalized_Result result) {
   if (_buffer.capacity() < GetStateNormalizedResponse::PrimarySize) {
@@ -754,6 +763,12 @@ void Device::Interface::GetStateNormalizedCompleterBase::Reply(::fidl::BytePart 
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(GetStateNormalizedResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetStateNormalizedResponse>(std::move(_buffer)));
+}
+void Device::Interface::GetStateNormalizedCompleterBase::ReplySuccess(::fidl::BytePart _buffer, State state) {
+  Device_GetStateNormalized_Response response;
+  response.state = std::move(state);
+
+  Reply(std::move(_buffer), Device_GetStateNormalized_Result::WithResponse(std::move(response)));
 }
 
 void Device::Interface::GetStateNormalizedCompleterBase::Reply(::fidl::DecodedMessage<GetStateNormalizedResponse> params) {
@@ -772,6 +787,14 @@ void Device::Interface::SetStateNormalizedCompleterBase::Reply(Device_SetStateNo
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetStateNormalizedResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetStateNormalizedResponse>(std::move(_response_bytes)));
 }
+void Device::Interface::SetStateNormalizedCompleterBase::ReplySuccess() {
+  Device_SetStateNormalized_Response response;
+
+  Reply(Device_SetStateNormalized_Result::WithResponse(std::move(response)));
+}
+void Device::Interface::SetStateNormalizedCompleterBase::ReplyError(int32_t error) {
+  Reply(Device_SetStateNormalized_Result::WithErr(std::move(error)));
+}
 
 void Device::Interface::SetStateNormalizedCompleterBase::Reply(::fidl::BytePart _buffer, Device_SetStateNormalized_Result result) {
   if (_buffer.capacity() < SetStateNormalizedResponse::PrimarySize) {
@@ -783,6 +806,11 @@ void Device::Interface::SetStateNormalizedCompleterBase::Reply(::fidl::BytePart 
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(SetStateNormalizedResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetStateNormalizedResponse>(std::move(_buffer)));
+}
+void Device::Interface::SetStateNormalizedCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  Device_SetStateNormalized_Response response;
+
+  Reply(std::move(_buffer), Device_SetStateNormalized_Result::WithResponse(std::move(response)));
 }
 
 void Device::Interface::SetStateNormalizedCompleterBase::Reply(::fidl::DecodedMessage<SetStateNormalizedResponse> params) {
@@ -801,6 +829,15 @@ void Device::Interface::GetStateAbsoluteCompleterBase::Reply(Device_GetStateAbso
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetStateAbsoluteResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetStateAbsoluteResponse>(std::move(_response_bytes)));
 }
+void Device::Interface::GetStateAbsoluteCompleterBase::ReplySuccess(State state) {
+  Device_GetStateAbsolute_Response response;
+  response.state = std::move(state);
+
+  Reply(Device_GetStateAbsolute_Result::WithResponse(std::move(response)));
+}
+void Device::Interface::GetStateAbsoluteCompleterBase::ReplyError(int32_t error) {
+  Reply(Device_GetStateAbsolute_Result::WithErr(std::move(error)));
+}
 
 void Device::Interface::GetStateAbsoluteCompleterBase::Reply(::fidl::BytePart _buffer, Device_GetStateAbsolute_Result result) {
   if (_buffer.capacity() < GetStateAbsoluteResponse::PrimarySize) {
@@ -812,6 +849,12 @@ void Device::Interface::GetStateAbsoluteCompleterBase::Reply(::fidl::BytePart _b
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(GetStateAbsoluteResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetStateAbsoluteResponse>(std::move(_buffer)));
+}
+void Device::Interface::GetStateAbsoluteCompleterBase::ReplySuccess(::fidl::BytePart _buffer, State state) {
+  Device_GetStateAbsolute_Response response;
+  response.state = std::move(state);
+
+  Reply(std::move(_buffer), Device_GetStateAbsolute_Result::WithResponse(std::move(response)));
 }
 
 void Device::Interface::GetStateAbsoluteCompleterBase::Reply(::fidl::DecodedMessage<GetStateAbsoluteResponse> params) {
@@ -830,6 +873,14 @@ void Device::Interface::SetStateAbsoluteCompleterBase::Reply(Device_SetStateAbso
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetStateAbsoluteResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetStateAbsoluteResponse>(std::move(_response_bytes)));
 }
+void Device::Interface::SetStateAbsoluteCompleterBase::ReplySuccess() {
+  Device_SetStateAbsolute_Response response;
+
+  Reply(Device_SetStateAbsolute_Result::WithResponse(std::move(response)));
+}
+void Device::Interface::SetStateAbsoluteCompleterBase::ReplyError(int32_t error) {
+  Reply(Device_SetStateAbsolute_Result::WithErr(std::move(error)));
+}
 
 void Device::Interface::SetStateAbsoluteCompleterBase::Reply(::fidl::BytePart _buffer, Device_SetStateAbsolute_Result result) {
   if (_buffer.capacity() < SetStateAbsoluteResponse::PrimarySize) {
@@ -841,6 +892,11 @@ void Device::Interface::SetStateAbsoluteCompleterBase::Reply(::fidl::BytePart _b
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(SetStateAbsoluteResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetStateAbsoluteResponse>(std::move(_buffer)));
+}
+void Device::Interface::SetStateAbsoluteCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  Device_SetStateAbsolute_Response response;
+
+  Reply(std::move(_buffer), Device_SetStateAbsolute_Result::WithResponse(std::move(response)));
 }
 
 void Device::Interface::SetStateAbsoluteCompleterBase::Reply(::fidl::DecodedMessage<SetStateAbsoluteResponse> params) {
@@ -859,6 +915,15 @@ void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::Reply(Device_GetM
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetMaxAbsoluteBrightnessResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetMaxAbsoluteBrightnessResponse>(std::move(_response_bytes)));
 }
+void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::ReplySuccess(double max_brightness) {
+  Device_GetMaxAbsoluteBrightness_Response response;
+  response.max_brightness = std::move(max_brightness);
+
+  Reply(Device_GetMaxAbsoluteBrightness_Result::WithResponse(std::move(response)));
+}
+void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::ReplyError(int32_t error) {
+  Reply(Device_GetMaxAbsoluteBrightness_Result::WithErr(std::move(error)));
+}
 
 void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::Reply(::fidl::BytePart _buffer, Device_GetMaxAbsoluteBrightness_Result result) {
   if (_buffer.capacity() < GetMaxAbsoluteBrightnessResponse::PrimarySize) {
@@ -870,6 +935,12 @@ void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::Reply(::fidl::Byt
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(GetMaxAbsoluteBrightnessResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetMaxAbsoluteBrightnessResponse>(std::move(_buffer)));
+}
+void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::ReplySuccess(::fidl::BytePart _buffer, double max_brightness) {
+  Device_GetMaxAbsoluteBrightness_Response response;
+  response.max_brightness = std::move(max_brightness);
+
+  Reply(std::move(_buffer), Device_GetMaxAbsoluteBrightness_Result::WithResponse(std::move(response)));
 }
 
 void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::Reply(::fidl::DecodedMessage<GetMaxAbsoluteBrightnessResponse> params) {

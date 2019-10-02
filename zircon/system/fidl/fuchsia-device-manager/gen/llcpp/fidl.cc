@@ -3816,6 +3816,15 @@ void Coordinator::Interface::AddDeviceCompleterBase::Reply(Coordinator_AddDevice
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceResponse>(std::move(_response_bytes)));
 }
+void Coordinator::Interface::AddDeviceCompleterBase::ReplySuccess(uint64_t local_device_id) {
+  Coordinator_AddDevice_Response response;
+  response.local_device_id = std::move(local_device_id);
+
+  Reply(Coordinator_AddDevice_Result::WithResponse(std::move(response)));
+}
+void Coordinator::Interface::AddDeviceCompleterBase::ReplyError(int32_t error) {
+  Reply(Coordinator_AddDevice_Result::WithErr(std::move(error)));
+}
 
 void Coordinator::Interface::AddDeviceCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_AddDevice_Result result) {
   if (_buffer.capacity() < AddDeviceResponse::PrimarySize) {
@@ -3827,6 +3836,12 @@ void Coordinator::Interface::AddDeviceCompleterBase::Reply(::fidl::BytePart _buf
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(AddDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceResponse>(std::move(_buffer)));
+}
+void Coordinator::Interface::AddDeviceCompleterBase::ReplySuccess(::fidl::BytePart _buffer, uint64_t local_device_id) {
+  Coordinator_AddDevice_Response response;
+  response.local_device_id = std::move(local_device_id);
+
+  Reply(std::move(_buffer), Coordinator_AddDevice_Result::WithResponse(std::move(response)));
 }
 
 void Coordinator::Interface::AddDeviceCompleterBase::Reply(::fidl::DecodedMessage<AddDeviceResponse> params) {
@@ -3845,6 +3860,15 @@ void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(Coordinator_
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddDeviceInvisibleResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceInvisibleResponse>(std::move(_response_bytes)));
 }
+void Coordinator::Interface::AddDeviceInvisibleCompleterBase::ReplySuccess(uint64_t local_device_id) {
+  Coordinator_AddDeviceInvisible_Response response;
+  response.local_device_id = std::move(local_device_id);
+
+  Reply(Coordinator_AddDeviceInvisible_Result::WithResponse(std::move(response)));
+}
+void Coordinator::Interface::AddDeviceInvisibleCompleterBase::ReplyError(int32_t error) {
+  Reply(Coordinator_AddDeviceInvisible_Result::WithErr(std::move(error)));
+}
 
 void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_AddDeviceInvisible_Result result) {
   if (_buffer.capacity() < AddDeviceInvisibleResponse::PrimarySize) {
@@ -3856,6 +3880,12 @@ void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(::fidl::Byte
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(AddDeviceInvisibleResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceInvisibleResponse>(std::move(_buffer)));
+}
+void Coordinator::Interface::AddDeviceInvisibleCompleterBase::ReplySuccess(::fidl::BytePart _buffer, uint64_t local_device_id) {
+  Coordinator_AddDeviceInvisible_Response response;
+  response.local_device_id = std::move(local_device_id);
+
+  Reply(std::move(_buffer), Coordinator_AddDeviceInvisible_Result::WithResponse(std::move(response)));
 }
 
 void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(::fidl::DecodedMessage<AddDeviceInvisibleResponse> params) {
@@ -3874,6 +3904,14 @@ void Coordinator::Interface::UnbindDoneCompleterBase::Reply(Coordinator_UnbindDo
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(UnbindDoneResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<UnbindDoneResponse>(std::move(_response_bytes)));
 }
+void Coordinator::Interface::UnbindDoneCompleterBase::ReplySuccess() {
+  Coordinator_UnbindDone_Response response;
+
+  Reply(Coordinator_UnbindDone_Result::WithResponse(std::move(response)));
+}
+void Coordinator::Interface::UnbindDoneCompleterBase::ReplyError(int32_t error) {
+  Reply(Coordinator_UnbindDone_Result::WithErr(std::move(error)));
+}
 
 void Coordinator::Interface::UnbindDoneCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_UnbindDone_Result result) {
   if (_buffer.capacity() < UnbindDoneResponse::PrimarySize) {
@@ -3885,6 +3923,11 @@ void Coordinator::Interface::UnbindDoneCompleterBase::Reply(::fidl::BytePart _bu
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(UnbindDoneResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<UnbindDoneResponse>(std::move(_buffer)));
+}
+void Coordinator::Interface::UnbindDoneCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  Coordinator_UnbindDone_Response response;
+
+  Reply(std::move(_buffer), Coordinator_UnbindDone_Result::WithResponse(std::move(response)));
 }
 
 void Coordinator::Interface::UnbindDoneCompleterBase::Reply(::fidl::DecodedMessage<UnbindDoneResponse> params) {
@@ -3903,6 +3946,14 @@ void Coordinator::Interface::RemoveDoneCompleterBase::Reply(Coordinator_RemoveDo
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(RemoveDoneResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<RemoveDoneResponse>(std::move(_response_bytes)));
 }
+void Coordinator::Interface::RemoveDoneCompleterBase::ReplySuccess() {
+  Coordinator_RemoveDone_Response response;
+
+  Reply(Coordinator_RemoveDone_Result::WithResponse(std::move(response)));
+}
+void Coordinator::Interface::RemoveDoneCompleterBase::ReplyError(int32_t error) {
+  Reply(Coordinator_RemoveDone_Result::WithErr(std::move(error)));
+}
 
 void Coordinator::Interface::RemoveDoneCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_RemoveDone_Result result) {
   if (_buffer.capacity() < RemoveDoneResponse::PrimarySize) {
@@ -3914,6 +3965,11 @@ void Coordinator::Interface::RemoveDoneCompleterBase::Reply(::fidl::BytePart _bu
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(RemoveDoneResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<RemoveDoneResponse>(std::move(_buffer)));
+}
+void Coordinator::Interface::RemoveDoneCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  Coordinator_RemoveDone_Response response;
+
+  Reply(std::move(_buffer), Coordinator_RemoveDone_Result::WithResponse(std::move(response)));
 }
 
 void Coordinator::Interface::RemoveDoneCompleterBase::Reply(::fidl::DecodedMessage<RemoveDoneResponse> params) {
@@ -3932,6 +3988,14 @@ void Coordinator::Interface::MakeVisibleCompleterBase::Reply(Coordinator_MakeVis
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(MakeVisibleResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<MakeVisibleResponse>(std::move(_response_bytes)));
 }
+void Coordinator::Interface::MakeVisibleCompleterBase::ReplySuccess() {
+  Coordinator_MakeVisible_Response response;
+
+  Reply(Coordinator_MakeVisible_Result::WithResponse(std::move(response)));
+}
+void Coordinator::Interface::MakeVisibleCompleterBase::ReplyError(int32_t error) {
+  Reply(Coordinator_MakeVisible_Result::WithErr(std::move(error)));
+}
 
 void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_MakeVisible_Result result) {
   if (_buffer.capacity() < MakeVisibleResponse::PrimarySize) {
@@ -3943,6 +4007,11 @@ void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::fidl::BytePart _b
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(MakeVisibleResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<MakeVisibleResponse>(std::move(_buffer)));
+}
+void Coordinator::Interface::MakeVisibleCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  Coordinator_MakeVisible_Response response;
+
+  Reply(std::move(_buffer), Coordinator_MakeVisible_Result::WithResponse(std::move(response)));
 }
 
 void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::fidl::DecodedMessage<MakeVisibleResponse> params) {
@@ -3961,6 +4030,14 @@ void Coordinator::Interface::BindDeviceCompleterBase::Reply(Coordinator_BindDevi
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(BindDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<BindDeviceResponse>(std::move(_response_bytes)));
 }
+void Coordinator::Interface::BindDeviceCompleterBase::ReplySuccess() {
+  Coordinator_BindDevice_Response response;
+
+  Reply(Coordinator_BindDevice_Result::WithResponse(std::move(response)));
+}
+void Coordinator::Interface::BindDeviceCompleterBase::ReplyError(int32_t error) {
+  Reply(Coordinator_BindDevice_Result::WithErr(std::move(error)));
+}
 
 void Coordinator::Interface::BindDeviceCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_BindDevice_Result result) {
   if (_buffer.capacity() < BindDeviceResponse::PrimarySize) {
@@ -3972,6 +4049,11 @@ void Coordinator::Interface::BindDeviceCompleterBase::Reply(::fidl::BytePart _bu
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(BindDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<BindDeviceResponse>(std::move(_buffer)));
+}
+void Coordinator::Interface::BindDeviceCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  Coordinator_BindDevice_Response response;
+
+  Reply(std::move(_buffer), Coordinator_BindDevice_Result::WithResponse(std::move(response)));
 }
 
 void Coordinator::Interface::BindDeviceCompleterBase::Reply(::fidl::DecodedMessage<BindDeviceResponse> params) {
@@ -3996,6 +4078,15 @@ void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(Coordinator_
   }
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
+void Coordinator::Interface::GetTopologicalPathCompleterBase::ReplySuccess(::fidl::StringView path) {
+  Coordinator_GetTopologicalPath_Response response;
+  response.path = std::move(path);
+
+  Reply(Coordinator_GetTopologicalPath_Result::WithResponse(std::move(response)));
+}
+void Coordinator::Interface::GetTopologicalPathCompleterBase::ReplyError(int32_t error) {
+  Reply(Coordinator_GetTopologicalPath_Result::WithErr(std::move(error)));
+}
 
 void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_GetTopologicalPath_Result result) {
   if (_buffer.capacity() < GetTopologicalPathResponse::PrimarySize) {
@@ -4011,6 +4102,12 @@ void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::Byte
     return;
   }
   CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+void Coordinator::Interface::GetTopologicalPathCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::fidl::StringView path) {
+  Coordinator_GetTopologicalPath_Response response;
+  response.path = std::move(path);
+
+  Reply(std::move(_buffer), Coordinator_GetTopologicalPath_Result::WithResponse(std::move(response)));
 }
 
 void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::DecodedMessage<GetTopologicalPathResponse> params) {
@@ -4029,6 +4126,16 @@ void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(Coordinator_LoadFi
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(LoadFirmwareResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<LoadFirmwareResponse>(std::move(_response_bytes)));
 }
+void Coordinator::Interface::LoadFirmwareCompleterBase::ReplySuccess(::zx::vmo vmo, uint64_t size) {
+  Coordinator_LoadFirmware_Response response;
+  response.vmo = std::move(vmo);
+  response.size = std::move(size);
+
+  Reply(Coordinator_LoadFirmware_Result::WithResponse(std::move(response)));
+}
+void Coordinator::Interface::LoadFirmwareCompleterBase::ReplyError(int32_t error) {
+  Reply(Coordinator_LoadFirmware_Result::WithErr(std::move(error)));
+}
 
 void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_LoadFirmware_Result result) {
   if (_buffer.capacity() < LoadFirmwareResponse::PrimarySize) {
@@ -4040,6 +4147,13 @@ void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(::fidl::BytePart _
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(LoadFirmwareResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<LoadFirmwareResponse>(std::move(_buffer)));
+}
+void Coordinator::Interface::LoadFirmwareCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::zx::vmo vmo, uint64_t size) {
+  Coordinator_LoadFirmware_Response response;
+  response.vmo = std::move(vmo);
+  response.size = std::move(size);
+
+  Reply(std::move(_buffer), Coordinator_LoadFirmware_Result::WithResponse(std::move(response)));
 }
 
 void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(::fidl::DecodedMessage<LoadFirmwareResponse> params) {
@@ -4064,6 +4178,15 @@ void Coordinator::Interface::GetMetadataCompleterBase::Reply(Coordinator_GetMeta
   }
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
+void Coordinator::Interface::GetMetadataCompleterBase::ReplySuccess(::fidl::VectorView<uint8_t> data) {
+  Coordinator_GetMetadata_Response response;
+  response.data = std::move(data);
+
+  Reply(Coordinator_GetMetadata_Result::WithResponse(std::move(response)));
+}
+void Coordinator::Interface::GetMetadataCompleterBase::ReplyError(int32_t error) {
+  Reply(Coordinator_GetMetadata_Result::WithErr(std::move(error)));
+}
 
 void Coordinator::Interface::GetMetadataCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_GetMetadata_Result result) {
   if (_buffer.capacity() < GetMetadataResponse::PrimarySize) {
@@ -4079,6 +4202,12 @@ void Coordinator::Interface::GetMetadataCompleterBase::Reply(::fidl::BytePart _b
     return;
   }
   CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+void Coordinator::Interface::GetMetadataCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::fidl::VectorView<uint8_t> data) {
+  Coordinator_GetMetadata_Response response;
+  response.data = std::move(data);
+
+  Reply(std::move(_buffer), Coordinator_GetMetadata_Result::WithResponse(std::move(response)));
 }
 
 void Coordinator::Interface::GetMetadataCompleterBase::Reply(::fidl::DecodedMessage<GetMetadataResponse> params) {
@@ -4097,6 +4226,15 @@ void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(Coordinator_Get
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetMetadataSizeResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetMetadataSizeResponse>(std::move(_response_bytes)));
 }
+void Coordinator::Interface::GetMetadataSizeCompleterBase::ReplySuccess(uint64_t size) {
+  Coordinator_GetMetadataSize_Response response;
+  response.size = std::move(size);
+
+  Reply(Coordinator_GetMetadataSize_Result::WithResponse(std::move(response)));
+}
+void Coordinator::Interface::GetMetadataSizeCompleterBase::ReplyError(int32_t error) {
+  Reply(Coordinator_GetMetadataSize_Result::WithErr(std::move(error)));
+}
 
 void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_GetMetadataSize_Result result) {
   if (_buffer.capacity() < GetMetadataSizeResponse::PrimarySize) {
@@ -4108,6 +4246,12 @@ void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(::fidl::BytePar
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(GetMetadataSizeResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetMetadataSizeResponse>(std::move(_buffer)));
+}
+void Coordinator::Interface::GetMetadataSizeCompleterBase::ReplySuccess(::fidl::BytePart _buffer, uint64_t size) {
+  Coordinator_GetMetadataSize_Response response;
+  response.size = std::move(size);
+
+  Reply(std::move(_buffer), Coordinator_GetMetadataSize_Result::WithResponse(std::move(response)));
 }
 
 void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(::fidl::DecodedMessage<GetMetadataSizeResponse> params) {
@@ -4126,6 +4270,14 @@ void Coordinator::Interface::AddMetadataCompleterBase::Reply(Coordinator_AddMeta
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddMetadataResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddMetadataResponse>(std::move(_response_bytes)));
 }
+void Coordinator::Interface::AddMetadataCompleterBase::ReplySuccess() {
+  Coordinator_AddMetadata_Response response;
+
+  Reply(Coordinator_AddMetadata_Result::WithResponse(std::move(response)));
+}
+void Coordinator::Interface::AddMetadataCompleterBase::ReplyError(int32_t error) {
+  Reply(Coordinator_AddMetadata_Result::WithErr(std::move(error)));
+}
 
 void Coordinator::Interface::AddMetadataCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_AddMetadata_Result result) {
   if (_buffer.capacity() < AddMetadataResponse::PrimarySize) {
@@ -4137,6 +4289,11 @@ void Coordinator::Interface::AddMetadataCompleterBase::Reply(::fidl::BytePart _b
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(AddMetadataResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddMetadataResponse>(std::move(_buffer)));
+}
+void Coordinator::Interface::AddMetadataCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  Coordinator_AddMetadata_Response response;
+
+  Reply(std::move(_buffer), Coordinator_AddMetadata_Result::WithResponse(std::move(response)));
 }
 
 void Coordinator::Interface::AddMetadataCompleterBase::Reply(::fidl::DecodedMessage<AddMetadataResponse> params) {
@@ -4155,6 +4312,14 @@ void Coordinator::Interface::PublishMetadataCompleterBase::Reply(Coordinator_Pub
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(PublishMetadataResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<PublishMetadataResponse>(std::move(_response_bytes)));
 }
+void Coordinator::Interface::PublishMetadataCompleterBase::ReplySuccess() {
+  Coordinator_PublishMetadata_Response response;
+
+  Reply(Coordinator_PublishMetadata_Result::WithResponse(std::move(response)));
+}
+void Coordinator::Interface::PublishMetadataCompleterBase::ReplyError(int32_t error) {
+  Reply(Coordinator_PublishMetadata_Result::WithErr(std::move(error)));
+}
 
 void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_PublishMetadata_Result result) {
   if (_buffer.capacity() < PublishMetadataResponse::PrimarySize) {
@@ -4166,6 +4331,11 @@ void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::fidl::BytePar
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(PublishMetadataResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<PublishMetadataResponse>(std::move(_buffer)));
+}
+void Coordinator::Interface::PublishMetadataCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  Coordinator_PublishMetadata_Response response;
+
+  Reply(std::move(_buffer), Coordinator_PublishMetadata_Result::WithResponse(std::move(response)));
 }
 
 void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::fidl::DecodedMessage<PublishMetadataResponse> params) {
@@ -4184,6 +4354,14 @@ void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(Coordinator_
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddCompositeDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddCompositeDeviceResponse>(std::move(_response_bytes)));
 }
+void Coordinator::Interface::AddCompositeDeviceCompleterBase::ReplySuccess() {
+  Coordinator_AddCompositeDevice_Response response;
+
+  Reply(Coordinator_AddCompositeDevice_Result::WithResponse(std::move(response)));
+}
+void Coordinator::Interface::AddCompositeDeviceCompleterBase::ReplyError(int32_t error) {
+  Reply(Coordinator_AddCompositeDevice_Result::WithErr(std::move(error)));
+}
 
 void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_AddCompositeDevice_Result result) {
   if (_buffer.capacity() < AddCompositeDeviceResponse::PrimarySize) {
@@ -4195,6 +4373,11 @@ void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::fidl::Byte
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(AddCompositeDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddCompositeDeviceResponse>(std::move(_buffer)));
+}
+void Coordinator::Interface::AddCompositeDeviceCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  Coordinator_AddCompositeDevice_Response response;
+
+  Reply(std::move(_buffer), Coordinator_AddCompositeDevice_Result::WithResponse(std::move(response)));
 }
 
 void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::fidl::DecodedMessage<AddCompositeDeviceResponse> params) {
@@ -4213,6 +4396,14 @@ void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(Coordinator_Dire
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DirectoryWatchResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DirectoryWatchResponse>(std::move(_response_bytes)));
 }
+void Coordinator::Interface::DirectoryWatchCompleterBase::ReplySuccess() {
+  Coordinator_DirectoryWatch_Response response;
+
+  Reply(Coordinator_DirectoryWatch_Result::WithResponse(std::move(response)));
+}
+void Coordinator::Interface::DirectoryWatchCompleterBase::ReplyError(int32_t error) {
+  Reply(Coordinator_DirectoryWatch_Result::WithErr(std::move(error)));
+}
 
 void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_DirectoryWatch_Result result) {
   if (_buffer.capacity() < DirectoryWatchResponse::PrimarySize) {
@@ -4224,6 +4415,11 @@ void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::fidl::BytePart
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(DirectoryWatchResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DirectoryWatchResponse>(std::move(_buffer)));
+}
+void Coordinator::Interface::DirectoryWatchCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  Coordinator_DirectoryWatch_Response response;
+
+  Reply(std::move(_buffer), Coordinator_DirectoryWatch_Result::WithResponse(std::move(response)));
 }
 
 void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::fidl::DecodedMessage<DirectoryWatchResponse> params) {
@@ -4242,6 +4438,14 @@ void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(Coordinat
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(RunCompatibilityTestsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<RunCompatibilityTestsResponse>(std::move(_response_bytes)));
 }
+void Coordinator::Interface::RunCompatibilityTestsCompleterBase::ReplySuccess() {
+  Coordinator_RunCompatibilityTests_Response response;
+
+  Reply(Coordinator_RunCompatibilityTests_Result::WithResponse(std::move(response)));
+}
+void Coordinator::Interface::RunCompatibilityTestsCompleterBase::ReplyError(int32_t error) {
+  Reply(Coordinator_RunCompatibilityTests_Result::WithErr(std::move(error)));
+}
 
 void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_RunCompatibilityTests_Result result) {
   if (_buffer.capacity() < RunCompatibilityTestsResponse::PrimarySize) {
@@ -4253,6 +4457,11 @@ void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(::fidl::B
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(RunCompatibilityTestsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<RunCompatibilityTestsResponse>(std::move(_buffer)));
+}
+void Coordinator::Interface::RunCompatibilityTestsCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  Coordinator_RunCompatibilityTests_Response response;
+
+  Reply(std::move(_buffer), Coordinator_RunCompatibilityTests_Result::WithResponse(std::move(response)));
 }
 
 void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(::fidl::DecodedMessage<RunCompatibilityTestsResponse> params) {
