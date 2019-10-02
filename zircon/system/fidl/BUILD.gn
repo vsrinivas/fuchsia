@@ -12,7 +12,6 @@ group("fidl") {
     "fuchsia-camera-common",
     "fuchsia-camera-test",
     "fuchsia-cobalt",
-    "fuchsia-crash",
     "fuchsia-debugdata",
     "fuchsia-device",
     "fuchsia-device-manager",
