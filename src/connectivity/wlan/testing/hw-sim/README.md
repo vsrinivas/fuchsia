@@ -11,7 +11,7 @@ The most convenient way to run this test locally is to run it in a QEMU instance
 1. Make sure `src/connectivity/wlan:tests` is included in `with-base` so that the driver for the fake wlantap device is loaded in QEMU. For example:
 
     ```
-    fx set core.x64 --with-base src/connectivity/wlan:tests
+    fx set core.x64 --with-base src/connectivity/wlan:tests,bundles:tools
     ```
 
 1. Start the QEMU instance with
@@ -93,7 +93,7 @@ Often when debugging flakiness, it is more helpful to run the tests repeatedly. 
 
 1. Include `bundles:tools` in your build, so that the `seq` command is available. The previous example is now
      ````
-     fx set core.x64 --with-base bundles:tools,src/connectivity/wlan:tests
+     fx set core.x64 --with-base bundles:tools,src/connectivity/wlan:tests,bundles:tools
      ````
 1. Start a QEMU instance
     ````
