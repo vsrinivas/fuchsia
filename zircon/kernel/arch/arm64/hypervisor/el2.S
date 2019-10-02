@@ -111,17 +111,13 @@ reg_xa  .req x11
 
 .macro host_state inst, off
     add reg_xt, reg_xs, \off
-.ifc "\inst", "ldp"
-    ldr x18, [reg_xt, HS_X(0)]
-.else
-    str x18, [reg_xt, HS_X(0)]
-.endif
-    \inst x19, x20, [reg_xt, HS_X(1)]
-    \inst x21, x22, [reg_xt, HS_X(3)]
-    \inst x23, x24, [reg_xt, HS_X(5)]
-    \inst x25, x26, [reg_xt, HS_X(7)]
-    \inst x27, x28, [reg_xt, HS_X(9)]
-    \inst x29, x30, [reg_xt, HS_X(11)]
+    \inst x15, x18, [reg_xt, HS_X(0)]
+    \inst x19, x20, [reg_xt, HS_X(2)]
+    \inst x21, x22, [reg_xt, HS_X(4)]
+    \inst x23, x24, [reg_xt, HS_X(6)]
+    \inst x25, x26, [reg_xt, HS_X(8)]
+    \inst x27, x28, [reg_xt, HS_X(10)]
+    \inst x29, x30, [reg_xt, HS_X(12)]
 .endm
 
 .macro guest_state inst
@@ -498,7 +494,7 @@ FUNCTION_LABEL(el2_hvc_resume)
     msr cptr_el2, reg_xt
     isb
 
-    host_state stp, HS_X18
+    host_state stp, HS_XREGS
     system_state str, HS_SYSTEM_STATE
     guest_enter_state
     system_state ldr, GS_SYSTEM_STATE
@@ -527,7 +523,7 @@ FUNCTION_LABEL(el2_guest_exit)
     system_state str, GS_SYSTEM_STATE
     guest_exit_state
     system_state ldr, HS_SYSTEM_STATE
-    host_state ldp, HS_X18
+    host_state ldp, HS_XREGS
 
     mrs reg_xt, cptr_el2
     tbnz reg_xt, CPTR_EL2_TFP_SHIFT, .Lfp_untrap
