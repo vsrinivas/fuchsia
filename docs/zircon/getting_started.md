@@ -241,4 +241,4 @@ For random tips on debugging in the zircon environment see
 [debugging](debugging/tips.md).
 
 ## Contribute changes
-* See [contributing.md](contributing.md).
+* See [contributing.md](/docs/contribute/contributing.md).

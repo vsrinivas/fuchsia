@@ -12,3 +12,5 @@ toc:
   path: /docs/development/testing/testing_isolated_cache_storage.md
 - title: "Testability rubrics"
   path: /docs/development/testing/testability_rubric.md
+- title: "Fuchsia flaky test policy"
+  path: /docs/development/testing/test_flake_policy.md

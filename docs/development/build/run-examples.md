@@ -37,12 +37,12 @@ language-dependent directory has its own `BUILD.gn` file that defines a package
 for the specific example, as well as a `meta` subdirectory with `.cmx` files.
 
 The `.cmx` file is known as a
-[component manifest](glossary.md#component-manifest) and describes how to run
-the application on Fuchsia as a [component](glossary.md#component). This is
-the proper way to create a [Fuchsia package](glossary.md#fuchsia-package).
+[component manifest](/docs/glossary.md#component-manifest) and describes how to run
+the application on Fuchsia as a [component](/docs/glossary.md#component). This is
+the proper way to create a [Fuchsia package](/docs/glossary.md#fuchsia-package).
 
 You run a Fuchsia component by referencing its
-[Fuchsia package URI](glossary.md#fuchsia-pkg-url). To run one of the
+[Fuchsia package URI](/docs/glossary.md#fuchsia-pkg-url). To run one of the
 examples:
 
 1.  Make sure `fx serve` is running in a terminal window. If it's not running, start it:

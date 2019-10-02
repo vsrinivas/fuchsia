@@ -67,7 +67,7 @@ queue. This can be achieved in the following ways:
     patch which triggers this flake.
 -   Submitting a change to mark the test as flaky. You can do this by adding
     "flaky" to the `tags` field in the
-    [test environment](../development/testing/environments.md). This will remove
+    [test environment](/docs/development/testing/environments.md). This will remove
     it from the builders that run in the commit queue, and onto special flaky
     builders that continue to run the test in CI. Be sure to note the bug in a
     comment in the BUILD.gn file.

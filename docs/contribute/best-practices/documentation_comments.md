@@ -22,7 +22,7 @@ Tips for writing effective documentation comments:
 - Link to conceptual documentation for more complete descriptions of how APIs fit together as a
   whole.
 - Follow the approved style guide for your programming language. See the
-  [Development Readme](../development/README.md) for style guidelines related to specific
+  [Development Readme](/docs/development/README.md) for style guidelines related to specific
   programming languages.
 
 ## What documentation style guidelines should I follow?
@@ -30,5 +30,5 @@ Tips for writing effective documentation comments:
 It is important to try to follow documentation style guidelines to ensure that the documentation,
 even comments, can flow together. See [Documentation Style Guide](documentation_style_guide.md).
 
-Also, see the [Development Readme](../development/README.md) for style guidelines
+Also, see the [Development Readme](/docs/development/README.md) for style guidelines
 related to specific programming languages.

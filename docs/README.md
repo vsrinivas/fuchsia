@@ -11,7 +11,7 @@ documentation.
    testing Fuchsia and software that runs on Fuchsia
  - [System](the-book/README.md) - documentation for how Fuchsia works
  - [Zircon](zircon/README.md) - documentation for the Zircon kernel
- - [Run the examples](run-examples.md) - instructions for running examples
+ - [Run the examples](/docs/development/build/run-examples.md) - instructions for running examples
    on a device
  - [Contributing changes](/CONTRIBUTING.md)
 

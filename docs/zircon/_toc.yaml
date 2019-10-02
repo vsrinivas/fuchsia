@@ -18,9 +18,6 @@ toc:
 - title: "Concepts"
   path: /docs/zircon/concepts.md
 
-- title: "Contributing patches"
-  path: /docs/zircon/contributing.md
-
 - title: "C++"
   section:
   - title: "Overview"

@@ -70,14 +70,14 @@ This section covers Fuchsia development hardware targets.
  - [Test components](testing/test_component.md)
  - [Test environments](testing/environments.md)
  - [Testability rubrics](testing/testability_rubric.md)
- - [Test flake policy](/docs/best-practices/test_flake_policy.md)
+ - [Test flake policy](testing/test_flake_policy.md)
  - [Testing Isolated Cache Storage](testing/testing_isolated_cache_storage.md)
 
 ## Conventions
 
 This section covers Fuchsia-wide conventions and best practices.
 
- - [Documentation standards](/docs/best-practices/documentation_standards.md)
+ - [Documentation standards](/docs/contribute/best-practices/documentation_standards.md)
  - [Endian Issues](source_code/endian.md) and recommendations
 
 ## Tracing

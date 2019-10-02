@@ -97,7 +97,7 @@ Tips for leaving breadcrumbs:
   on fuchsia.dev. See
   [Change table of contents navigation](documentation_navigation_toc.md).
 - Top-down linkage: Add links from more general documents to more specific documents to help
-  readers learn more about specific topics. The [Fuchsia book](../the-book/README.md) is a good
+  readers learn more about specific topics. The [Fuchsia book](/docs/the-book/README.md) is a good
   starting point for top-down linkage.
 - Bottom-up linkage: Add links from more specific documents to more general documents to help
   readers understand the full context context of the topics being discussed. Adding links from

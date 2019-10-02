@@ -8,6 +8,8 @@ toc:
   path: /docs/development/build/build_information.md
 - title: "The build system"
   path: /docs/development/build/overview.md
+- title: "Run the examples"
+  path: /docs/development/build/run-examples.md
 - title: "Boards and products"
   path: /docs/development/build/boards_and_products.md
 - title: "Toolchain"
