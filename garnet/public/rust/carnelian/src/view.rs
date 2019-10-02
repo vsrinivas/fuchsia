@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    app::{App, TestSender, ViewMode},
+    app::{App, FrameBufferPtr, TestSender, ViewMode},
     canvas::{Canvas, MappingPixelSink},
     geometry::{IntSize, Size},
     message::{make_message, Message},
@@ -17,12 +17,14 @@ use fidl_fuchsia_ui_input::{
 };
 use fidl_fuchsia_ui_views::ViewToken;
 use fuchsia_async::{self as fasync, Interval};
+use fuchsia_framebuffer::{Frame, FrameSet, ImageId};
 use fuchsia_scenic::{EntityNode, HostImageCycler, SessionPtr, View};
-use fuchsia_zircon::Duration;
-use fuchsia_zircon::{ClockId, Time};
-use futures::{StreamExt, TryFutureExt};
-use mapped_vmo::Mapping;
-use std::{cell::RefCell, sync::Arc};
+use fuchsia_zircon::{ClockId, Duration, Time};
+use futures::{channel::mpsc::unbounded, StreamExt, TryFutureExt};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, BTreeSet},
+};
 
 /// enum that defines all messages sent with `App::send_message` that
 /// the view struct will understand and process.
@@ -180,14 +182,10 @@ struct ScenicCanvasResources {
     image_cycler: HostImageCycler,
 }
 
-struct FramebufferResources {
-    canvas: RefCell<Canvas<MappingPixelSink>>,
-}
-
 trait ViewStrategy {
     fn setup(&mut self, _view_details: &ViewDetails, _view_assistant: &mut ViewAssistantPtr);
     fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr);
-    fn present(&mut self);
+    fn present(&mut self, view_details: &ViewDetails);
     fn validate_root_node_id(&self, _: u32) -> bool {
         true
     }
@@ -200,6 +198,8 @@ trait ViewStrategy {
         _view_assistant: &mut ViewAssistantPtr,
         _: &fidl_fuchsia_ui_input::InputEvent,
     ) -> Vec<Message>;
+
+    fn image_freed(&mut self, _image_id: u64) {}
 }
 
 type ViewStrategyPtr = Box<dyn ViewStrategy>;
@@ -250,7 +250,7 @@ impl ViewStrategy for ScenicViewStrategy {
         view_assistant.update(&context).unwrap_or_else(|e| panic!("Update error: {:?}", e));
     }
 
-    fn present(&mut self) {
+    fn present(&mut self, _view_details: &ViewDetails) {
         scenic_present(&self.scenic_resources);
     }
 
@@ -340,6 +340,7 @@ impl ViewStrategy for ScenicCanvasViewStrategy {
                 MappingPixelSink::new(&guard.image().mapping()),
                 stride,
                 4,
+                0,
             ));
 
             let canvas_context =
@@ -350,7 +351,7 @@ impl ViewStrategy for ScenicCanvasViewStrategy {
         }
     }
 
-    fn present(&mut self) {
+    fn present(&mut self, _view_details: &ViewDetails) {
         scenic_present(&self.scenic_resources);
     }
 
@@ -370,24 +371,64 @@ impl ViewStrategy for ScenicCanvasViewStrategy {
     }
 }
 
+type Canvases = BTreeMap<ImageId, RefCell<Canvas<MappingPixelSink>>>;
+type Frames = BTreeMap<ImageId, Frame>;
+
 struct FrameBufferViewStrategy {
-    framebuffer_resources: FramebufferResources,
+    frames: Frames,
+    frame_buffer: FrameBufferPtr,
+    canvases: Canvases,
+    frame_set: FrameSet,
+    image_sender: futures::channel::mpsc::UnboundedSender<u64>,
 }
 
 impl FrameBufferViewStrategy {
     fn new(
         size: &IntSize,
-        mapping: &Arc<Mapping>,
+        frames: BTreeMap<ImageId, Frame>,
         pixel_size: u32,
         _pixel_format: fuchsia_framebuffer::PixelFormat,
         stride: u32,
+        frame_buffer: FrameBufferPtr,
     ) -> ViewStrategyPtr {
-        let canvas = Canvas::new(*size, MappingPixelSink::new(mapping), stride, pixel_size);
-        let framebuffer_resources = FramebufferResources { canvas: RefCell::new(canvas) };
-        Box::new(FrameBufferViewStrategy { framebuffer_resources })
+        let mut canvases: Canvases = Canvases::new();
+        let mut image_ids = BTreeSet::new();
+        frames.iter().for_each(|(_image_id, frame)| {
+            let canvas = RefCell::new(Canvas::new(
+                *size,
+                MappingPixelSink::new(&frame.mapping),
+                stride,
+                pixel_size,
+                frame.image_id,
+            ));
+            canvases.insert(frame.image_id, canvas);
+            image_ids.insert(frame.image_id);
+        });
+        let (image_sender, mut image_receiver) = unbounded::<u64>();
+        // wait for events from the image freed fence to know when an
+        // image can prepared.
+        fasync::spawn_local(async move {
+            while let Some(image_id) = image_receiver.next().await {
+                App::with(|app| {
+                    app.image_freed(image_id);
+                })
+            }
+        });
+        let frame_set = FrameSet::new(image_ids);
+        Box::new(FrameBufferViewStrategy {
+            frames,
+            canvases,
+            frame_buffer: frame_buffer.clone(),
+            frame_set: frame_set,
+            image_sender: image_sender,
+        })
     }
 
-    fn make_context(&mut self, view_details: &ViewDetails) -> ViewAssistantContext {
+    fn make_context(
+        &mut self,
+        view_details: &ViewDetails,
+        image_id: ImageId,
+    ) -> ViewAssistantContext {
         ViewAssistantContext {
             key: view_details.key,
             logical_size: view_details.logical_size,
@@ -396,28 +437,42 @@ impl FrameBufferViewStrategy {
             presentation_time: Time::get(ClockId::Monotonic),
             messages: Vec::new(),
             scenic_resources: None,
-            canvas: Some(&self.framebuffer_resources.canvas),
+            canvas: Some(
+                &self.canvases.get(&image_id).expect("failed to get canvas in make_context"),
+            ),
         }
     }
 }
 
 impl ViewStrategy for FrameBufferViewStrategy {
     fn setup(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
-        let framebuffer_context = self.make_context(view_details);
-        view_assistant
-            .setup(&framebuffer_context)
-            .unwrap_or_else(|e| panic!("Setup error: {:?}", e));
+        if let Some(available) = self.frame_set.get_available_image() {
+            let framebuffer_context = self.make_context(view_details, available);
+            view_assistant
+                .setup(&framebuffer_context)
+                .unwrap_or_else(|e| panic!("Setup error: {:?}", e));
+        }
     }
 
     fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
-        let framebuffer_context = self.make_context(view_details);
-        view_assistant
-            .update(&framebuffer_context)
-            .unwrap_or_else(|e| panic!("Update error: {:?}", e));
+        if let Some(available) = self.frame_set.get_available_image() {
+            let framebuffer_context = self.make_context(view_details, available);
+            view_assistant
+                .update(&framebuffer_context)
+                .unwrap_or_else(|e| panic!("Update error: {:?}", e));
+            self.frame_set.mark_prepared(available);
+        }
     }
 
-    fn present(&mut self) {
-        // this function intentionally left blank
+    fn present(&mut self, _view_details: &ViewDetails) {
+        if let Some(prepared) = self.frame_set.prepared {
+            let frame = self.frames.get_mut(&prepared).expect("prepared frame to be in frame map");
+            let mut fb = self.frame_buffer.borrow_mut();
+            frame
+                .present(&mut fb, Some(self.image_sender.clone()))
+                .unwrap_or_else(|e| panic!("Present error: {:?}", e));
+            self.frame_set.mark_presented(frame.image_id);
+        }
     }
 
     fn handle_input_event(
@@ -427,6 +482,10 @@ impl ViewStrategy for FrameBufferViewStrategy {
         _event: &fidl_fuchsia_ui_input::InputEvent,
     ) -> Vec<Message> {
         panic!("Not yet implemented");
+    }
+
+    fn image_freed(&mut self, image_id: u64) {
+        self.frame_set.mark_done_presenting(image_id);
     }
 }
 
@@ -494,13 +553,20 @@ impl ViewController {
         size: IntSize,
         pixel_size: u32,
         pixel_format: fuchsia_framebuffer::PixelFormat,
-        mapping: Arc<Mapping>,
+        frames: Vec<Frame>,
         stride: u32,
         mut view_assistant: ViewAssistantPtr,
         test_sender: Option<TestSender>,
+        frame_buffer: FrameBufferPtr,
     ) -> Result<ViewController, Error> {
-        let strategy =
-            FrameBufferViewStrategy::new(&size, &mapping, pixel_size, pixel_format, stride);
+        let strategy = FrameBufferViewStrategy::new(
+            &size,
+            frames.into_iter().map(|frame| (frame.image_id, frame)).collect(),
+            pixel_size,
+            pixel_format,
+            stride,
+            frame_buffer,
+        );
         let initial_animation_mode = view_assistant.initial_animation_mode();
         let mut view_controller = ViewController {
             key,
@@ -532,7 +598,7 @@ impl ViewController {
 
     /// Informs Scenic of any changes made to this View's |Session|.
     pub fn present(&mut self) {
-        self.strategy.present();
+        self.strategy.present(&self.make_view_details());
     }
 
     pub(crate) fn update(&mut self) {
@@ -628,5 +694,9 @@ impl ViewController {
         } else {
             self.assistant.handle_message(msg);
         }
+    }
+
+    pub(crate) fn image_freed(&mut self, image_id: u64) {
+        self.strategy.image_freed(image_id);
     }
 }

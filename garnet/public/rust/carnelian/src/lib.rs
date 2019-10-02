@@ -25,7 +25,7 @@ pub use crate::{
         measure_text, Canvas, Color, FontDescription, FontFace, MappingPixelSink, Paint, PixelSink,
     },
     geometry::{Coord, IntCoord, IntPoint, IntRect, IntSize, Point, Rect, Size},
-    label::Label,
+    label::{make_font_description, Label},
     message::{make_message, Message},
     scenic_utils::set_node_color,
     view::{

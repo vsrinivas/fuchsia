@@ -101,6 +101,7 @@ fn main() -> Result<(), Error> {
             MappingPixelSink::new(&frame.mapping),
             config.linear_stride_bytes() as u32,
             config.pixel_size_bytes,
+            frame.image_id,
         );
         let mut ui = RecoveryUI { face: face, canvas, config, text_size: config.height / 12 };
         run(&mut ui).await?;
@@ -142,6 +143,7 @@ mod tests {
             sink,
             config.linear_stride_bytes() as u32,
             config.pixel_size_bytes,
+            0,
         );
 
         let mut ui = RecoveryUI { face: face, canvas, config, text_size: 24 };

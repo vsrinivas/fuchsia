@@ -98,7 +98,8 @@ struct GlyphDescriptor {
 
 /// Struct containing a font and a cache of rendered glyphs.
 pub struct FontFace<'a> {
-    font: Font<'a>,
+    /// Font.
+    pub font: Font<'a>,
 }
 
 /// Struct containing font, size and baseline.
@@ -403,6 +404,7 @@ pub struct Canvas<T: PixelSink> {
     pub pixel_sink: T,
     pub row_stride: u32,
     pub col_stride: u32,
+    pub id: u64,
     bounds: IntRect,
     current_clip: Option<IntRect>,
     update_area: UpdateArea,
@@ -410,12 +412,13 @@ pub struct Canvas<T: PixelSink> {
 
 impl<T: PixelSink> Canvas<T> {
     /// Create a canvas targeting a shared buffer with stride.
-    pub fn new(size: IntSize, pixel_sink: T, row_stride: u32, col_stride: u32) -> Self {
+    pub fn new(size: IntSize, pixel_sink: T, row_stride: u32, col_stride: u32, id: u64) -> Self {
         let bounds = IntRect::new(IntPoint::zero(), size);
         Canvas {
             pixel_sink,
             row_stride,
             col_stride,
+            id,
             bounds: bounds,
             current_clip: None,
             update_area: UpdateArea::new_with_bounds_patch(&bounds),
@@ -750,7 +753,7 @@ mod tests {
             pixel_size_bytes: 4,
         };
         let sink = TestPixelSink::new(size);
-        Canvas::new(size, sink, config.linear_stride_bytes() as u32, config.pixel_size_bytes)
+        Canvas::new(size, sink, config.linear_stride_bytes() as u32, config.pixel_size_bytes, 0)
     }
 
     #[test]

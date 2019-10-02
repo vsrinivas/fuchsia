@@ -12,6 +12,7 @@ use failure::Error;
 use fidl_fuchsia_ui_input::{KeyboardEvent, KeyboardEventPhase};
 use fuchsia_zircon::{ClockId, Time};
 use std::{
+    collections::BTreeMap,
     env,
     f32::consts::PI,
     io::{self, Read},
@@ -64,7 +65,7 @@ struct DrawingViewAssistant {
     color3: Color,
     color4: Color,
     color5: Color,
-    last_radius: Option<Coord>,
+    last_radius_map: BTreeMap<u64, Coord>,
 }
 
 impl DrawingViewAssistant {
@@ -85,7 +86,7 @@ impl DrawingViewAssistant {
             color3,
             color4,
             color5,
-            last_radius: None,
+            last_radius_map: BTreeMap::new(),
         })
     }
 
@@ -117,8 +118,8 @@ impl ViewAssistant for DrawingViewAssistant {
         let v = grid_size * 3.0;
         let pt = Point::new(v, v);
 
-        if let Some(last_radius) = self.last_radius {
-            Self::inval_circle(&pt, last_radius, canvas);
+        if let Some(last_radius) = self.last_radius_map.get(&canvas.id) {
+            Self::inval_circle(&pt, *last_radius, canvas);
         }
 
         canvas.fill_rect(&self.bounds, self.bg_color);
@@ -132,8 +133,9 @@ impl ViewAssistant for DrawingViewAssistant {
             * SPEED)
             % 1.0;
         let angle = t * PI * 2.0;
-        let radius = angle.cos() * grid_size / 2.0 + grid_size / 2.0;
-        self.last_radius = Some(radius);
+        let circle_size = grid_size;
+        let radius = angle.cos() * circle_size + circle_size;
+        self.last_radius_map.insert(canvas.id, radius);
         Self::inval_circle(&pt, radius, canvas);
         canvas.fill_circle(&pt, radius, self.color2);
 

@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, ResultExt};
+use failure::{bail, Error, ResultExt};
 use fuchsia_async::{self as fasync, DurationExt, Timer};
-use fuchsia_framebuffer::{Config, Frame, FrameBuffer, PixelFormat, VSyncMessage};
+use fuchsia_framebuffer::{
+    to_565, Config, Frame, FrameBuffer, FrameSet, ImageId, PixelFormat, VSyncMessage,
+};
 use fuchsia_zircon::DurationNum;
 use futures::{channel::mpsc::unbounded, future, StreamExt, TryFutureExt};
 use std::{
@@ -16,9 +18,6 @@ use std::{
     thread,
     time::Instant,
 };
-
-#[cfg(test)]
-use std::ops::Range;
 
 /// Convenience function that can be called from main and causes the Fuchsia process being
 /// run over ssh to be terminated when the user hits control-C.
@@ -40,123 +39,7 @@ pub fn wait_for_close() {
     });
 }
 
-fn to_565(pixel: &[u8; 4]) -> [u8; 2] {
-    let red = pixel[0] >> 3;
-    let green = pixel[1] >> 2;
-    let blue = pixel[2] >> 3;
-    let b1 = (red << 3) | ((green & 0b11_1000) >> 3);
-    let b2 = ((green & 0b111) << 5) | blue;
-    [b2, b1]
-}
-
-type ImageId = u64;
-
-struct FrameSet {
-    available: BTreeSet<ImageId>,
-    prepared: Option<ImageId>,
-    presented: BTreeSet<ImageId>,
-}
-
-impl FrameSet {
-    pub fn new(available: BTreeSet<ImageId>) -> FrameSet {
-        FrameSet { available, prepared: None, presented: BTreeSet::new() }
-    }
-
-    #[cfg(test)]
-    pub fn new_with_range(r: Range<ImageId>) -> FrameSet {
-        let mut available = BTreeSet::new();
-        for image_id in r {
-            available.insert(image_id);
-        }
-        Self::new(available)
-    }
-
-    pub fn mark_presented(&mut self, image_id: ImageId) {
-        assert!(
-            !self.presented.contains(&image_id),
-            "Attempted to mark as presented image {} which was already in the presented image set",
-            image_id
-        );
-        self.presented.insert(image_id);
-        self.prepared = None;
-    }
-
-    pub fn mark_done_presenting(&mut self, image_id: ImageId) {
-        assert!(
-            self.presented.remove(&image_id),
-            "Attempted to mark as freed image {} which was not the presented image",
-            image_id
-        );
-        self.available.insert(image_id);
-    }
-
-    pub fn mark_prepared(&mut self, image_id: ImageId) {
-        assert!(self.prepared.is_none(), "Trying to mark image {} as prepared when image {} is prepared and has not been presented", image_id, self.prepared.unwrap());
-        self.prepared.replace(image_id);
-        self.available.remove(&image_id);
-    }
-
-    pub fn get_available_image(&mut self) -> Option<ImageId> {
-        let first = self.available.iter().next().map(|a| *a);
-        if let Some(first) = first {
-            self.available.remove(&first);
-        }
-        first
-    }
-}
-
-#[cfg(test)]
-mod frameset_tests {
-    use crate::{FrameSet, ImageId};
-    use std::ops::Range;
-
-    const IMAGE_RANGE: Range<ImageId> = 200..202;
-
-    #[test]
-    #[should_panic]
-    fn test_double_prepare() {
-        let mut fs = FrameSet::new_with_range(IMAGE_RANGE);
-
-        fs.mark_prepared(100);
-        fs.mark_prepared(200);
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_not_presented() {
-        let mut fs = FrameSet::new_with_range(IMAGE_RANGE);
-        fs.mark_done_presenting(100);
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_already_presented() {
-        let mut fs = FrameSet::new_with_range(IMAGE_RANGE);
-        fs.mark_presented(100);
-        fs.mark_presented(100);
-    }
-
-    #[test]
-    fn test_basic_use() {
-        let mut fs = FrameSet::new_with_range(IMAGE_RANGE);
-        let avail = fs.get_available_image();
-        assert!(avail.is_some());
-        let avail = avail.unwrap();
-        assert!(!fs.available.contains(&avail));
-        assert!(!fs.presented.contains(&avail));
-        fs.mark_prepared(avail);
-        assert_eq!(fs.prepared.unwrap(), avail);
-        fs.mark_presented(avail);
-        assert!(fs.prepared.is_none());
-        assert!(!fs.available.contains(&avail));
-        assert!(fs.presented.contains(&avail));
-        fs.mark_done_presenting(avail);
-        assert!(fs.available.contains(&avail));
-        assert!(!fs.presented.contains(&avail));
-    }
-}
-
-struct FrameManager {
+pub struct FrameManager {
     frames: BTreeMap<ImageId, Frame>,
     frame_set: FrameSet,
 }
@@ -166,14 +49,14 @@ impl FrameManager {
         // this buffering approach will only work with two images, since
         // as soon as it is released by the display controller it is prepared
         // for use again and their can only be one prepared image.
-        const BUFFER_COUNT: usize = 2; // this buffering approach
+        const BUFFER_COUNT: usize = 2;
         let mut frames = BTreeMap::new();
         let mut available = BTreeSet::new();
         let config = fb.get_config();
         for _ in 0..BUFFER_COUNT {
             let mut frame = Frame::new(fb).await?;
             let black = [0x00, 0x00, 0x00, 0xFF];
-            if config.format == PixelFormat::Argb8888 {
+            if config.format != PixelFormat::Rgb565 {
                 frame.fill_rectangle(0, 0, config.width, config.height, &black);
             } else {
                 frame.fill_rectangle(0, 0, config.width, config.height, &to_565(&black));
@@ -225,10 +108,10 @@ const FRAME_DELTA: u64 = 10_000_000;
 fn update(config: &Config, frame: &mut Frame, timestamp: u64) -> Result<(), Error> {
     let box_color = [0x80, 0x00, 0x80, 0xFF];
     let white = [0xFF, 0xFF, 0xFF, 0xFF];
-    let box_size = 500;
+    let box_size = 200;
     let box_x = config.width / 2 - box_size / 2;
     let box_y = config.height / 2 - box_size / 2;
-    if config.format == PixelFormat::Argb8888 {
+    if config.format != PixelFormat::Rgb565 {
         frame.fill_rectangle(box_x, box_y, box_size, box_size, &box_color);
     } else {
         frame.fill_rectangle(box_x, box_y, box_size, box_size, &to_565(&box_color));
@@ -236,7 +119,7 @@ fn update(config: &Config, frame: &mut Frame, timestamp: u64) -> Result<(), Erro
     let delta = ((timestamp / FRAME_DELTA) % box_size as u64) as u32;
     let x = box_x + delta;
     let y = box_y + delta;
-    if config.format == PixelFormat::Argb8888 {
+    if config.format != PixelFormat::Rgb565 {
         frame.fill_rectangle(x, box_y, 1, box_size, &white);
         frame.fill_rectangle(box_x, y, box_size, 1, &white);
     } else {
@@ -260,7 +143,13 @@ fn main() -> Result<(), Error> {
         let (sender, mut receiver) = unbounded::<VSyncMessage>();
 
         // create a framebuffer
-        let mut fb = FrameBuffer::new(None, Some(sender)).await?;
+        let fb = FrameBuffer::new(None, Some(sender)).await;
+
+        let mut fb = if fb.is_err() {
+            bail!("Can't open frame buffer.");
+        } else {
+            fb.unwrap()
+        };
 
         // Find out the details of the display this frame buffer targets
         let config = fb.get_config();

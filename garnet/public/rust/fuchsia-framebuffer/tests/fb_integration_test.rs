@@ -45,7 +45,7 @@ fn test_main() -> Result<(), Error> {
         let mut frame = Frame::new(&fb).await?;
 
         let grey = [0x80, 0x80, 0x80, 0xFF];
-        if config.format == PixelFormat::Argb8888 {
+        if config.format != PixelFormat::Rgb565 {
             frame.fill_rectangle(0, 0, config.width, config.height, &grey);
         } else {
             frame.fill_rectangle(0, 0, config.width, config.height, &to_565(&grey));
@@ -59,7 +59,7 @@ fn test_main() -> Result<(), Error> {
         fasync::spawn_local(async move {
             receiver.next().await;
             let white = [0x0ff, 0xff, 0xff, 0xFF];
-            if config.format == PixelFormat::Argb8888 {
+            if config.format != PixelFormat::Rgb565 {
                 frame2.fill_rectangle(0, 0, config.width, config.height, &white);
             } else {
                 frame2.fill_rectangle(0, 0, config.width, config.height, &to_565(&white));

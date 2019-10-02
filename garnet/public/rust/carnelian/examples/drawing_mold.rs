@@ -6,8 +6,8 @@
 #![allow(unused_imports)]
 
 use carnelian::{
-    AnimationMode, App, AppAssistant, PixelSink, Point, ViewAssistant, ViewAssistantContext,
-    ViewAssistantPtr, ViewKey, ViewMode, Size,
+    make_font_description, AnimationMode, App, AppAssistant, Canvas, MappingPixelSink, PixelSink,
+    Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
 };
 use failure::Error;
 use fuchsia_zircon::{ClockId, Time};
@@ -17,6 +17,7 @@ use mold::{
 };
 use rusttype::{Contour, Font, Scale, Segment};
 use std::{
+    collections::BTreeMap,
     env, f32,
     io::{self, Read},
     slice, thread,
@@ -128,6 +129,92 @@ impl Glyph {
     }
 }
 
+struct Contents {
+    rect: Raster,
+    glyph: Vec<Contour>,
+    map: Map,
+    size: Size,
+}
+
+impl Contents {
+    fn make_background(size: &Size) -> Map {
+        let mut map = Map::new(size.width.floor() as usize, size.height.floor() as usize);
+        map.global(0, vec![TileOp::ColorAccZero]);
+
+        map.global(3, vec![TileOp::ColorAccBackground(0xEBD5_B3FF)]);
+        map
+    }
+
+    fn new(size: Size) -> Contents {
+        let map = Self::make_background(&size);
+
+        let rounded_rect = RoundedRect::new(Point::new(200.0, 100.0), Point::new(90.0, 50.0), 20.0);
+
+        let rect = Raster::new(&rounded_rect.path);
+
+        let font_description = make_font_description(0, 1);
+        let glyph =
+            font_description.face.font.glyph('a').scaled(Scale::uniform(1.0)).shape().unwrap();
+
+        Self { rect, glyph, map: map, size: Size::zero() }
+    }
+
+    fn update(&mut self, size: &Size, start: &Time, canvas: &Canvas<MappingPixelSink>) {
+        if self.size != *size {
+            self.size = *size;
+            self.map = Self::make_background(size);
+        }
+
+        const SPEED: f32 = 1.2;
+        const SECONDS_PER_NANOSECOND: f32 = 1e-9;
+        const DELTA: f32 = 100.0;
+        const GLYPH_SIZE: f32 = 200.0;
+
+        let time_now = Time::get(ClockId::Monotonic);
+        let t =
+            (time_now.into_nanos() - start.into_nanos()) as f32 * SECONDS_PER_NANOSECOND * SPEED;
+
+        self.rect.set_translation(mold::Point::new((DELTA * t.sin()).round() as i32, 0));
+
+        let mut raster = Raster::new(&Glyph::new(&self.glyph, GLYPH_SIZE * t.sin().abs()).path);
+        raster.translate(mold::Point::new(100, 100));
+
+        self.map.print(
+            1,
+            Layer::new(
+                self.rect.clone(),
+                vec![
+                    TileOp::CoverWipZero,
+                    TileOp::CoverWipNonZero,
+                    TileOp::ColorWipZero,
+                    TileOp::ColorWipFillSolid(0x7B68_EEFF),
+                    TileOp::ColorAccBlendOver,
+                ],
+            ),
+        );
+
+        self.map.print(
+            2,
+            Layer::new(
+                raster,
+                vec![
+                    TileOp::CoverWipZero,
+                    TileOp::CoverWipNonZero,
+                    TileOp::ColorWipZero,
+                    TileOp::ColorWipFillSolid(0x0000_00FF),
+                    TileOp::ColorAccBlendOver,
+                ],
+            ),
+        );
+
+        self.map.render(PixelSinkWrapper::new(
+            canvas.pixel_sink.clone(),
+            canvas.col_stride,
+            canvas.row_stride,
+        ));
+    }
+}
+
 struct DrawingAppAssistant;
 
 impl AppAssistant for DrawingAppAssistant {
@@ -145,24 +232,13 @@ impl AppAssistant for DrawingAppAssistant {
 }
 
 struct DrawingViewAssistant {
-    rect: Raster,
-    glyph: Vec<Contour>,
+    contents: BTreeMap<u64, Contents>,
     start: Time,
-    map: Option<Map>,
-    size: Size,
 }
 
 impl DrawingViewAssistant {
     pub fn new() -> Self {
-        let rounded_rect =
-            RoundedRect::new(Point::new(200.0, 700.0), Point::new(300.0, 200.0), 20.0);
-
-        let rect = Raster::new(&rounded_rect.path);
-
-        let font: Font<'static> = Font::from_bytes(FONT_DATA).unwrap();
-        let glyph = font.glyph('a').scaled(Scale::uniform(1.0)).shape().unwrap();
-
-        Self { rect, glyph, start: Time::get(ClockId::Monotonic), map: None, size: Size::zero() }
+        Self { contents: BTreeMap::new(), start: Time::get(ClockId::Monotonic) }
     }
 }
 
@@ -203,67 +279,21 @@ impl ViewAssistant for DrawingViewAssistant {
     }
 
     fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        if self.map.is_none() || context.size != self.size {
-            self.size = context.size;
-            let mut map = Map::new(context.size.width as usize, context.size.height as usize);
-            map.global(0, vec![TileOp::ColorAccZero]);
-
-            map.global(3, vec![TileOp::ColorAccBackground(0xEBD5_B3FF)]);
-            self.map = Some(map);
-        }
-
-        const SPEED: f32 = 1.2;
-        const SECONDS_PER_NANOSECOND: f32 = 1e-9;
-        const DELTA: f32 = 7.0;
-        const GLYPH_SIZE: f32 = 200.0;
-
-        let time_now = Time::get(ClockId::Monotonic);
-        let t = (time_now.into_nanos() - self.start.into_nanos()) as f32
-            * SECONDS_PER_NANOSECOND
-            * SPEED;
-
-        self.rect.translate(mold::Point::new((DELTA * t.sin()).round() as i32, 0));
-
         let canvas = context.canvas.as_ref().unwrap().borrow();
 
-        let map = self.map.as_mut().unwrap();
-        let mut raster = Raster::new(&Glyph::new(&self.glyph, GLYPH_SIZE * t.sin().abs()).path);
-        raster.translate(mold::Point::new(100, 100));
+        // Temporary hack to deal with the fact that carnelian
+        // allocates a new buffer for each frame with the same
+        // image ID of zero.
+        let mut temp_content;
+        let content;
 
-        map.print(
-            1,
-            Layer::new(
-                self.rect.clone(),
-                vec![
-                    TileOp::CoverWipZero,
-                    TileOp::CoverWipNonZero,
-                    TileOp::ColorWipZero,
-                    TileOp::ColorWipFillSolid(0x7B68_EEFF),
-                    TileOp::ColorAccBlendOver,
-                ],
-            ),
-        );
-
-        map.print(
-            2,
-            Layer::new(
-                raster,
-                vec![
-                    TileOp::CoverWipZero,
-                    TileOp::CoverWipNonZero,
-                    TileOp::ColorWipZero,
-                    TileOp::ColorWipFillSolid(0x0000_00FF),
-                    TileOp::ColorAccBlendOver,
-                ],
-            ),
-        );
-
-        map.render(PixelSinkWrapper::new(
-            canvas.pixel_sink.clone(),
-            canvas.col_stride,
-            canvas.row_stride,
-        ));
-
+        if canvas.id == 0 {
+            temp_content = Contents::new(context.size);
+            content = &mut temp_content;
+        } else {
+            content = self.contents.entry(canvas.id).or_insert_with(|| Contents::new(context.size));
+        }
+        content.update(&context.size, &self.start, &canvas);
         Ok(())
     }
 

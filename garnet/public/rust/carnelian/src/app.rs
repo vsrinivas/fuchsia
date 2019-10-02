@@ -23,15 +23,12 @@ use futures::{
     future::{self, FutureExt},
     StreamExt, TryFutureExt, TryStreamExt,
 };
-use mapped_vmo::Mapping;
 use std::{
     cell::RefCell,
     collections::BTreeMap,
     mem,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+    rc::Rc,
+    sync::atomic::{AtomicBool, Ordering},
 };
 
 /// Mode for all views created by this application
@@ -106,7 +103,10 @@ pub type AppAssistantPtr = Box<dyn AppAssistant>;
 trait AppStrategy {
     fn supports_scenic(&self) -> bool;
     fn get_scenic_proxy(&self) -> Option<&ScenicProxy>;
-    fn get_frame_buffer_mapping(&self) -> Option<&Arc<Mapping>>;
+    fn take_frame_buffer_frames(&mut self) -> Option<Vec<Frame>>;
+    fn get_frame_buffer(&self) -> Option<FrameBufferPtr> {
+        None
+    }
     fn get_frame_buffer_size(&self) -> Option<IntSize>;
     fn get_pixel_size(&self) -> u32;
     fn get_pixel_format(&self) -> fuchsia_framebuffer::PixelFormat;
@@ -114,11 +114,12 @@ trait AppStrategy {
 }
 
 type AppStrategyPtr = Box<dyn AppStrategy>;
+pub type FrameBufferPtr = Rc<RefCell<FrameBuffer>>;
 
 struct FrameBufferAppStrategy {
     #[allow(unused)]
-    frame_buffer: FrameBuffer,
-    frame: Frame,
+    frame_buffer: FrameBufferPtr,
+    frames: Vec<Frame>,
 }
 
 impl AppStrategy for FrameBufferAppStrategy {
@@ -130,30 +131,38 @@ impl AppStrategy for FrameBufferAppStrategy {
         return None;
     }
 
-    fn get_frame_buffer_mapping(&self) -> Option<&Arc<Mapping>> {
-        Some(&self.frame.mapping)
+    fn take_frame_buffer_frames(&mut self) -> Option<Vec<Frame>> {
+        let mut frames = Vec::new();
+        frames.append(&mut self.frames);
+        Some(frames)
     }
 
     fn get_frame_buffer_size(&self) -> Option<IntSize> {
-        let config = self.frame_buffer.get_config();
+        let config = self.frame_buffer.borrow().get_config();
         Some(IntSize::new(config.width as i32, config.height as i32))
     }
 
     fn get_pixel_size(&self) -> u32 {
-        let config = self.frame_buffer.get_config();
+        let config = self.frame_buffer.borrow().get_config();
         config.pixel_size_bytes
     }
 
     fn get_pixel_format(&self) -> fuchsia_framebuffer::PixelFormat {
-        let config = self.frame_buffer.get_config();
+        let config = self.frame_buffer.borrow().get_config();
         config.format
     }
 
     fn get_linear_stride_bytes(&self) -> u32 {
-        let config = self.frame_buffer.get_config();
+        let config = self.frame_buffer.borrow().get_config();
         config.linear_stride_bytes() as u32
     }
+
+    fn get_frame_buffer(&self) -> Option<FrameBufferPtr> {
+        Some(self.frame_buffer.clone())
+    }
 }
+
+const FRAME_COUNT: usize = 3;
 
 // Tries to create a framebuffer. If that fails, assume Scenic is running.
 async fn create_app_strategy() -> Result<AppStrategyPtr, Error> {
@@ -164,12 +173,19 @@ async fn create_app_strategy() -> Result<AppStrategyPtr, Error> {
         Ok::<AppStrategyPtr, Error>(Box::new(ScenicAppStrategy { scenic }))
     } else {
         let fb = fb.unwrap();
-        let frame = Frame::new(&fb).await?;
+        let mut frames = Vec::new();
+        for _ in 0..FRAME_COUNT {
+            let frame = Frame::new(&fb).await?;
+            frames.push(frame);
+        }
+        // TODO: avoid presenting a frame that hasn't been
+        // updated by the view assistent.
+        frames[0].present(&fb, None)?;
         // TODO: improve scheduling of updates
         fasync::spawn(
             async move {
-                while let Some(vsync_message) = receiver.next().await {
-                    App::with(|app| app.update_all_views(&vsync_message));
+                while let Some(_) = receiver.next().await {
+                    App::with(|app| app.update_all_views());
                 }
                 Ok(())
             }
@@ -177,8 +193,11 @@ async fn create_app_strategy() -> Result<AppStrategyPtr, Error> {
                     println!("error {:#?}", e);
                 }),
         );
-        frame.present(&fb, None)?;
-        Ok::<AppStrategyPtr, Error>(Box::new(FrameBufferAppStrategy { frame_buffer: fb, frame }))
+
+        Ok::<AppStrategyPtr, Error>(Box::new(FrameBufferAppStrategy {
+            frame_buffer: Rc::new(RefCell::new(fb)),
+            frames,
+        }))
     }
 }
 
@@ -195,7 +214,7 @@ impl AppStrategy for ScenicAppStrategy {
         return Some(&self.scenic);
     }
 
-    fn get_frame_buffer_mapping(&self) -> Option<&Arc<Mapping>> {
+    fn take_frame_buffer_frames(&mut self) -> Option<Vec<Frame>> {
         None
     }
 
@@ -266,7 +285,7 @@ impl App {
         app: &mut App,
     ) -> Result<bool, Error> {
         let strat_future = create_app_strategy();
-        let strat = executor.run_singlethreaded(strat_future)?;
+        let strat = executor.run_singlethreaded(strat_future).context("create_app_strategy")?;
         let supports_scenic = strat.supports_scenic();
         if assistant.get_mode() != ViewMode::Canvas && !supports_scenic {
             bail!("This application requires Scenic but this Fuchsia system doesn't have it.");
@@ -274,7 +293,7 @@ impl App {
         app.strategy.replace(strat);
         app.set_assistant(assistant);
         App::start_services(app)?;
-        app.assistant.as_mut().unwrap().setup()?;
+        app.assistant.as_mut().unwrap().setup().context("app setup")?;
         Ok(supports_scenic)
     }
 
@@ -289,9 +308,8 @@ impl App {
             App::with(|app| Self::app_init_common(assistant, &mut executor, app))?;
         if !supports_scenic {
             App::with(|app| {
-                let mapping =
-                    app.strategy.as_ref().unwrap().get_frame_buffer_mapping().unwrap().clone();
-                app.create_view_framebuffer(mapping, None)
+                let frames = app.strategy.as_mut().unwrap().take_frame_buffer_frames().unwrap();
+                app.create_view_framebuffer(frames, None)
             })?;
         }
 
@@ -322,9 +340,8 @@ impl App {
             });
         } else {
             App::with(|app| {
-                let mapping =
-                    app.strategy.as_ref().unwrap().get_frame_buffer_mapping().unwrap().clone();
-                app.create_view_framebuffer(mapping, Some(create_view_sender))
+                let frames = app.strategy.as_mut().unwrap().take_frame_buffer_frames().unwrap();
+                app.create_view_framebuffer(frames, Some(create_view_sender))
                     .expect("create_view_framebuffer failed");
             });
         }
@@ -356,9 +373,9 @@ impl App {
         F: FnOnce(&mut App) -> R,
     {
         APP.with(|app| {
-            let mut app_ref = app
-                .try_borrow_mut()
-                .expect("Attempted to call App::with() while already in a call to App::with()");
+            let mut app_ref = app.try_borrow_mut().expect(&format!(
+                "Attempted to call App::with() while already in a call to App::with()"
+            ));
             let r = f(&mut app_ref);
 
             // Replace app's messages with an empty list before
@@ -400,7 +417,7 @@ impl App {
         self.assistant = Some(assistant);
     }
 
-    fn update_all_views(&mut self, _vsync_message: &VSyncMessage) {
+    fn update_all_views(&mut self) {
         for (_, view_controller) in &mut self.view_controllers {
             view_controller.update();
         }
@@ -486,7 +503,7 @@ impl App {
 
     fn create_view_framebuffer(
         &mut self,
-        mapping: Arc<Mapping>,
+        frames: Vec<Frame>,
         test_sender: Option<TestSender>,
     ) -> Result<(), Error> {
         let view_assistant = self.create_view_assistant_canvas()?;
@@ -497,10 +514,11 @@ impl App {
             size,
             strat.get_pixel_size(),
             strat.get_pixel_format(),
-            mapping,
+            frames,
             strat.get_linear_stride_bytes(),
             view_assistant,
             test_sender,
+            strat.get_frame_buffer().unwrap(),
         )?;
 
         // For framebuffer apps, always use vsync to drive update
@@ -578,5 +596,9 @@ impl App {
 
     fn scenic_mode(&mut self) -> bool {
         self.get_strategy().get_scenic_proxy().is_some()
+    }
+
+    pub(crate) fn image_freed(&mut self, image_id: u64) {
+        self.view_controllers.iter_mut().for_each(|(_view_id, view)| view.image_freed(image_id));
     }
 }

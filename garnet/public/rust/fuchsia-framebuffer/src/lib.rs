@@ -13,12 +13,15 @@ use fuchsia_async::{self as fasync, DurationExt, OnSignals, TimeoutExt};
 use fuchsia_zircon::{
     self as zx,
     sys::{zx_cache_policy_t::ZX_CACHE_POLICY_WRITE_COMBINING, ZX_TIME_INFINITE},
-    AsHandleRef, DurationNum, Event, HandleBased, Rights, Signals, Vmo,
+    AsHandleRef, DurationNum, Event, HandleBased, Rights, Signals, Status, Vmo,
 };
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use mapped_vmo::Mapping;
 use std::fs::OpenOptions;
-use std::sync::Arc;
+use std::{collections::BTreeSet, sync::Arc};
+
+#[cfg(test)]
+use std::ops::Range;
 
 #[allow(non_camel_case_types, non_upper_case_globals)]
 const ZX_PIXEL_FORMAT_NONE: u32 = 0;
@@ -96,6 +99,123 @@ fn pixel_format_bytes(pixel_format: u32) -> usize {
     ((pixel_format >> 16) & 7) as usize
 }
 
+pub type ImageId = u64;
+
+#[derive(Debug)]
+pub struct FrameSet {
+    available: BTreeSet<ImageId>,
+    pub prepared: Option<ImageId>,
+    presented: BTreeSet<ImageId>,
+}
+
+impl FrameSet {
+    pub fn new(available: BTreeSet<ImageId>) -> FrameSet {
+        FrameSet { available, prepared: None, presented: BTreeSet::new() }
+    }
+
+    #[cfg(test)]
+    pub fn new_with_range(r: Range<ImageId>) -> FrameSet {
+        let mut available = BTreeSet::new();
+        for image_id in r {
+            available.insert(image_id);
+        }
+        Self::new(available)
+    }
+
+    pub fn mark_presented(&mut self, image_id: ImageId) {
+        assert!(
+            !self.presented.contains(&image_id),
+            "Attempted to mark as presented image {} which was already in the presented image set",
+            image_id
+        );
+        self.presented.insert(image_id);
+        self.prepared = None;
+    }
+
+    pub fn mark_done_presenting(&mut self, image_id: ImageId) {
+        assert!(
+            self.presented.remove(&image_id),
+            "Attempted to mark as freed image {} which was not the presented image",
+            image_id
+        );
+        self.available.insert(image_id);
+    }
+
+    pub fn mark_prepared(&mut self, image_id: ImageId) {
+        assert!(self.prepared.is_none(), "Trying to mark image {} as prepared when image {} is prepared and has not been presented", image_id, self.prepared.unwrap());
+        self.prepared.replace(image_id);
+        self.available.remove(&image_id);
+    }
+
+    pub fn get_available_image(&mut self) -> Option<ImageId> {
+        let first = self.available.iter().next().map(|a| *a);
+        if let Some(first) = first {
+            self.available.remove(&first);
+        }
+        first
+    }
+}
+
+#[cfg(test)]
+mod frameset_tests {
+    use crate::{FrameSet, ImageId};
+    use std::ops::Range;
+
+    const IMAGE_RANGE: Range<ImageId> = 200..202;
+
+    #[test]
+    #[should_panic]
+    fn test_double_prepare() {
+        let mut fs = FrameSet::new_with_range(IMAGE_RANGE);
+
+        fs.mark_prepared(100);
+        fs.mark_prepared(200);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_not_presented() {
+        let mut fs = FrameSet::new_with_range(IMAGE_RANGE);
+        fs.mark_done_presenting(100);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_already_presented() {
+        let mut fs = FrameSet::new_with_range(IMAGE_RANGE);
+        fs.mark_presented(100);
+        fs.mark_presented(100);
+    }
+
+    #[test]
+    fn test_basic_use() {
+        let mut fs = FrameSet::new_with_range(IMAGE_RANGE);
+        let avail = fs.get_available_image();
+        assert!(avail.is_some());
+        let avail = avail.unwrap();
+        assert!(!fs.available.contains(&avail));
+        assert!(!fs.presented.contains(&avail));
+        fs.mark_prepared(avail);
+        assert_eq!(fs.prepared.unwrap(), avail);
+        fs.mark_presented(avail);
+        assert!(fs.prepared.is_none());
+        assert!(!fs.available.contains(&avail));
+        assert!(fs.presented.contains(&avail));
+        fs.mark_done_presenting(avail);
+        assert!(fs.available.contains(&avail));
+        assert!(!fs.presented.contains(&avail));
+    }
+}
+
+pub fn to_565(pixel: &[u8; 4]) -> [u8; 2] {
+    let red = pixel[0] >> 3;
+    let green = pixel[1] >> 2;
+    let blue = pixel[2] >> 3;
+    let b1 = (red << 3) | ((green & 0b11_1000) >> 3);
+    let b2 = ((green & 0b111) << 5) | blue;
+    [b2, b1]
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Config {
     pub display_id: u64,
@@ -122,9 +242,18 @@ pub struct Frame {
 
 impl Frame {
     async fn allocate_image_vmo(framebuffer: &FrameBuffer) -> Result<Vmo, Error> {
-        let (_status, vmo) =
+        let (status, vmo) =
             framebuffer.controller.allocate_vmo(framebuffer.byte_size() as u64).await?;
-        Ok(vmo.unwrap())
+        if let Some(vmo) = vmo {
+            Ok(vmo)
+        } else {
+            bail!(
+                "failed to allocate image vmo {} ({})\nThis happens if scenic is \
+                 running or if box is run under Qemu with virtual consoles enabled.",
+                Status::from_raw(status),
+                status
+            );
+        }
     }
 
     async fn import_image_vmo(framebuffer: &FrameBuffer, image_vmo: Vmo) -> Result<u64, Error> {
@@ -156,7 +285,7 @@ impl Frame {
         let image_vmo = Self::allocate_image_vmo(framebuffer).await?;
         image_vmo
             .set_cache_policy(ZX_CACHE_POLICY_WRITE_COMBINING)
-            .unwrap_or_else(|_err| println!("set_cache_policy failed"));
+            .unwrap_or_else(|err| println!("set_cache_policy failed {}", err));
 
         let mapping = Mapping::create_from_vmo(
             &image_vmo,
@@ -338,7 +467,7 @@ impl FrameBuffer {
                 first_path = Some(format!("/dev/class/display-controller/{}", path.display()));
                 Err(zx::Status::STOP)
             });
-            first_path.unwrap()
+            first_path.expect("failed to unwrap first path in FrameBuffer::new")
         };
         let file = OpenOptions::new().read(true).write(true).open(device_path)?;
 
