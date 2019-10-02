@@ -8,7 +8,6 @@ use {
     fidl::endpoints::Proxy,
     fidl_fuchsia_io::{DirectoryProxy, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::future::{join_all, BoxFuture, Future},
     futures::lock::{Mutex, MutexLockFuture},
     std::convert::TryInto,
     std::iter::Iterator,
@@ -35,12 +34,16 @@ pub struct Realm {
     pub startup: fsys::StartupMode,
     /// The absolute moniker of this realm.
     pub abs_moniker: AbsoluteMoniker,
+    /// The hooks scoped to this realm.
+    pub hooks: Hooks,
+
+    // These locks must be taken in the order declared if held simultaneously.
     /// The component's mutable state.
     state: Mutex<Option<RealmState>>,
     /// The component's execution state.
     execution: Mutex<ExecutionState>,
-    /// The hooks scoped to this realm.
-    pub hooks: Hooks,
+    /// Actions on the realm that must eventually be completed.
+    actions: Mutex<ActionSet>,
 }
 
 impl Realm {
@@ -59,6 +62,7 @@ impl Realm {
             startup: fsys::StartupMode::Lazy,
             state: Mutex::new(None),
             execution: Mutex::new(ExecutionState::new()),
+            actions: Mutex::new(ActionSet::new()),
             hooks: Hooks::new(None),
         }
     }
@@ -132,6 +136,26 @@ impl Realm {
         Ok(Some(meta_dir))
     }
 
+    /// Register an action on a realm.
+    pub async fn register_action(
+        realm: Arc<Realm>,
+        model: Model,
+        action: Action,
+    ) -> Result<Notification, ModelError> {
+        let mut actions = realm.actions.lock().await;
+        let (nf, needs_handle) = actions.register(action.clone());
+        if needs_handle {
+            action.handle(model, realm.clone());
+        }
+        Ok(nf)
+    }
+
+    /// Finish an action on a realm.
+    pub async fn finish_action(realm: Arc<Realm>, action: &Action, res: Result<(), ModelError>) {
+        let mut actions = realm.actions.lock().await;
+        actions.finish(action, res).await
+    }
+
     /// Adds the dynamic child defined by `child_decl` to the given `collection_name`. Once
     /// added, the component instance exists but is not bound.
     pub async fn add_dynamic_child<'a>(
@@ -188,17 +212,17 @@ impl Realm {
         let child_realm = {
             let mut state = realm.lock_state().await;
             let state = state.as_mut().expect("remove_dynamic_child: not resolved");
-            let model = model.clone();
             if let Some(tup) = state.live_child_realms.get(&partial_moniker).map(|t| t.clone()) {
                 let (instance, child_realm) = tup;
+
+                state.mark_child_realm_deleting(&partial_moniker);
                 let child_moniker = ChildMoniker::from_partial(partial_moniker, instance);
-                let _ = state
-                    .register_action(
-                        model,
-                        realm.clone(),
-                        Action::DeleteChild(child_moniker.clone()),
-                    )
-                    .await?;
+                let _ = Self::register_action(
+                    realm.clone(),
+                    model,
+                    Action::DeleteChild(child_moniker.clone()),
+                )
+                .await?;
                 child_realm
             } else {
                 return Err(ModelError::instance_not_found_in_realm(
@@ -207,6 +231,7 @@ impl Realm {
                 ));
             }
         };
+
         // Call hooks outside of lock
         let event = Event::RemoveDynamicChild { realm: child_realm.clone() };
         realm.hooks.dispatch(&event).await?;
@@ -214,16 +239,19 @@ impl Realm {
     }
 
     /// Performs the shutdown protocol for this component instance.
+    ///
+    /// Returns whether the instance was already running, and notifications to wait on for
+    /// transient children to be destroyed.
+    ///
     /// REQUIRES: All dependents have already been stopped.
     // TODO: This is a stub because currently the shutdown protocol is not implemented.
     pub async fn stop_instance(
         model: Model,
         realm: Arc<Realm>,
+        state: Option<&mut RealmState>,
         shut_down: bool,
-    ) -> Result<(), ModelError> {
-        // When the realm is stopped, any child instances in transient collections must be
-        // destroyed.
-        let (nf, was_running) = {
+    ) -> Result<(bool, Vec<Notification>), ModelError> {
+        let (was_running, nfs) = {
             let was_running = {
                 let mut execution = realm.lock_execution().await;
                 let was_running = execution.runtime.is_some();
@@ -231,19 +259,16 @@ impl Realm {
                 execution.shut_down |= shut_down;
                 was_running
             };
-            let nf = {
-                let mut state = realm.lock_state().await;
-                let state = state.as_mut().expect("stop_instance: not resolved");
+            let nfs = if let Some(state) = state {
+                // When the realm is stopped, any child instances in transient collections must be
+                // destroyed.
                 Self::destroy_transient_children(model.clone(), realm.clone(), state).await?
+            } else {
+                vec![]
             };
-            (nf, was_running)
+            (was_running, nfs)
         };
-        nf.await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
-        if was_running {
-            let event = Event::StopInstance { realm: realm.clone() };
-            realm.hooks.dispatch(&event).await?;
-        }
-        Ok(())
+        Ok((was_running, nfs))
     }
 
     /// Destroys this component instance.
@@ -252,11 +277,19 @@ impl Realm {
     // - Delete the instance's persistent marker, if it was a persistent dynamic instance
     pub async fn destroy_instance(model: Model, realm: Arc<Realm>) -> Result<(), ModelError> {
         // Clean up isolated storage.
-        let state = realm.lock_state().await;
-        let state = state.as_ref().expect("destroy_instance: not resolved");
-        for use_ in state.decl.uses.iter() {
+        let decl = {
+            let state = realm.lock_state().await;
+            if let Some(state) = state.as_ref() {
+                state.decl.clone()
+            } else {
+                // The instance was never resolved and therefore never ran, it can't possibly have
+                // storage to clean up.
+                return Ok(());
+            }
+        };
+        for use_ in decl.uses.iter() {
             if let UseDecl::Storage(_) = use_ {
-                route_and_delete_storage(&model, use_, realm.abs_moniker.clone()).await?;
+                route_and_delete_storage(&model, &use_, realm.abs_moniker.clone()).await?;
                 break;
             }
         }
@@ -269,7 +302,7 @@ impl Realm {
         model: Model,
         realm: Arc<Realm>,
         state: &mut RealmState,
-    ) -> Result<impl Future<Output = Vec<Result<(), ModelError>>>, ModelError> {
+    ) -> Result<Vec<Notification>, ModelError> {
         let transient_colls: HashSet<_> = state
             .decl()
             .collections
@@ -286,14 +319,16 @@ impl Realm {
             // above.
             if let Some(coll) = m.collection() {
                 if transient_colls.contains(coll) {
-                    let nf = state
-                        .register_action(model.clone(), realm.clone(), Action::DeleteChild(m))
-                        .await?;
+                    let partial_moniker = m.to_partial();
+                    state.mark_child_realm_deleting(&partial_moniker);
+                    let nf =
+                        Self::register_action(realm.clone(), model.clone(), Action::DeleteChild(m))
+                            .await?;
                     futures.push(nf);
                 }
             }
         }
-        Ok(join_all(futures))
+        Ok(futures)
     }
 }
 
@@ -331,9 +366,6 @@ pub struct RealmState {
     /// getter.
     // TODO: Store this under a separate Mutex?
     meta_dir: Option<Arc<DirectoryProxy>>,
-    /// Actions on the realm that must eventually be completed.
-    // TODO: Store this under a separate Mutex?
-    actions: ActionSet,
     /// The next unique identifier for a dynamic component instance created in the realm.
     /// (Static instances receive identifier 0.)
     next_dynamic_instance_id: InstanceId,
@@ -353,7 +385,6 @@ impl RealmState {
             live_child_realms: HashMap::new(),
             decl: decl.clone(),
             meta_dir: None,
-            actions: ActionSet::new(),
             next_dynamic_instance_id: 1,
         };
         state.add_static_child_realms(realm, &decl).await;
@@ -454,6 +485,7 @@ impl RealmState {
                 startup: child.startup,
                 state: Mutex::new(None),
                 execution: Mutex::new(ExecutionState::new()),
+                actions: Mutex::new(ActionSet::new()),
                 hooks: Hooks::new(Some(&realm.hooks)),
             });
             self.child_realms.insert(child_moniker, child_realm.clone());
@@ -468,30 +500,6 @@ impl RealmState {
         for child in decl.children.iter() {
             self.add_child_realm(realm, child, None).await;
         }
-    }
-
-    /// Register an action on this realm, rolling the action forward if necessary. Returns boxed
-    /// future to allow recursive calls.
-    ///
-    /// REQUIRES: Component has been resolved.
-    pub fn register_action<'a>(
-        &'a mut self,
-        model: Model,
-        realm: Arc<Realm>,
-        action: Action,
-    ) -> BoxFuture<Result<Notification, ModelError>> {
-        Box::pin(async move {
-            let (nf, needs_handle) = self.actions.register(action.clone());
-            if needs_handle {
-                self.handle_action(model, realm.clone(), &action).await?;
-            }
-            Ok(nf)
-        })
-    }
-
-    /// Finish an action on this realm, which will cause its notifications to be completed.
-    pub async fn finish_action<'a>(&'a mut self, action: &'a Action, res: Result<(), ModelError>) {
-        self.actions.finish(action, res).await;
     }
 }
 

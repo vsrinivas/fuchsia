@@ -2,55 +2,55 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// The "Action" concept represents a long-running activity on a realm that should eventually
-/// complete.
-///
-/// Actions decouple the "what" of what needs to happen to a component from the "how". Several
-/// client APIs may induce long-running operations on a realm's state that complete asynchronously.
-/// These operations could depend on each other in various ways.
-///
-/// A key property of actions is idempotency. If two equal actions are registered on a realm, the
-/// work for that action is performed only once. This means that two distinct call sites can
-/// register the same action, and be ensured the work is not repeated.
-///
-/// Here are a couple examples:
-/// - A `Shutdown()` FIDL call must shut down every component instance in the tree, in
-///   dependency order. For this to happen every component must shut down, but not before its
-///   downstream dependencies have shut down.
-/// - A `Realm.DestroyChild()` FIDL call returns right after a child component is marked deleted.
-///   However, in order to actually delete the child, a sequence of events must happen:
-///     * All instances in the realm must be shut down (see above)
-///     * The component instance's persistent storage must be erased, if any.
-///     * The component's parent must remove it as a child.
-///
-/// Note the interdependencies here -- destroying a component also requires shutdown, for example.
-///
-/// These processes could be implemented through a chain of futures in the vicinity of the API
-/// call. However, this doesn't scale well, because it requires distributed state handling and is
-/// prone to races. Actions solve this problem by allowing client code to just specify the actions
-/// that need to eventually be fulfilled. The actual business logic to perform the actions can be
-/// implemented by the realm itself in a coordinated manner.
-///
-/// `DestroyChild()` is an example of how this can work. For simplicity, suppose it's called on a
-/// component with no children of its own. This might cause a chain of events like the following:
-///
-/// - Before it returns, the `DestroyChild` FIDL handler registers the `DeleteChild` action on the
-///   containing realm for child being destroyed.
-/// - This results in a call on the realm's `RealmState::handle_action()`. In response to
-///   `DestroyChild`, `handle_action()` spawns a future that sets a `Destroy` action on the child.
-///   Note that `handle_action()` should never block, so it always spawns any work that might block
-///   in a future.
-/// - `handle_action()` is called on the child. In response to `Destroy`, it sets a `Shutdown`
-///   action
-///   (the component instance must be stopped before it is destroyed).
-/// - `handle_action()` is called on the child again, in response to `Shutdown`. It turns out the
-///   instance is still running, so the `Shutdown` future tells the instance to stop. When this
-///   completes, the `Shutdown` action is finished.
-/// - The future that was spawned for `Destroy` is notified that `Shutdown` completes, so it cleans
-///   up the instance's resources and finishes the `Destroy` action.
-/// - When the work for `Destroy` completes, the future spawned for `DestroyChild` deletes the
-///   child and marks `DestroyChild` finished, which will notify the client that the action is
-///   complete.
+//! The "Action" concept represents a long-running activity on a realm that should eventually
+//! complete.
+//!
+//! Actions decouple the "what" of what needs to happen to a component from the "how". Several
+//! client APIs may induce long-running operations on a realm's state that complete asynchronously.
+//! These operations could depend on each other in various ways.
+//!
+//! A key property of actions is idempotency. If two equal actions are registered on a realm, the
+//! work for that action is performed only once. This means that two distinct call sites can
+//! register the same action, and be guaranteed the work is not repeated.
+//!
+//! Here are a couple examples:
+//! - A `Shutdown` FIDL call must shut down every component instance in the tree, in
+//!   dependency order. For this to happen every component must shut down, but not before its
+//!   downstream dependencies have shut down.
+//! - A `Realm.DestroyChild` FIDL call returns right after a child component is marked deleted.
+//!   However, in order to actually delete the child, a sequence of events must happen:
+//!     * All instances in the realm must be shut down (see above)
+//!     * The component instance's persistent storage must be erased, if any.
+//!     * The component's parent must remove it as a child.
+//!
+//! Note the interdependencies here -- destroying a component also requires shutdown, for example.
+//!
+//! These processes could be implemented through a chain of futures in the vicinity of the API
+//! call. However, this doesn't scale well, because it requires distributed state handling and is
+//! prone to races. Actions solve this problem by allowing client code to just specify the actions
+//! that need to eventually be fulfilled. The actual business logic to perform the actions can be
+//! implemented by the realm itself in a coordinated manner.
+//!
+//! `DestroyChild()` is an example of how this can work. For simplicity, suppose it's called on a
+//! component with no children of its own. This might cause a chain of events like the following:
+//!
+//! - Before it returns, the `DestroyChild` FIDL handler registers the `DeleteChild` action on the
+//!   containing realm for child being destroyed.
+//! - This results in a call to `Action::handle` for the realm. In response to
+//!   `DestroyChild`, `Action::handle()` spawns a future that sets a `Destroy` action on the child.
+//!   Note that `Action::handle()` is not async, it always spawns any work that might block
+//!   in a future.
+//! - `Action::handle()` is called on the child. In response to `Destroy`, it sets a `Shutdown`
+//!   action on itself (the component instance must be stopped before it is destroyed).
+//! - `Action::handle()` is called on the child again, in response to `Shutdown`. It turns out the
+//!   instance is still running, so the `Shutdown` future tells the instance to stop. When this
+//!   completes, the `Shutdown` action is finished.
+//! - The future that was spawned for `Destroy` is notified that `Shutdown` completes, so it cleans
+//!   up the instance's resources and finishes the `Destroy` action.
+//! - When the work for `Destroy` completes, the future spawned for `DestroyChild` deletes the
+//!   child and marks `DestroyChild` finished, which will notify the client that the action is
+//!   complete.
+
 use {
     crate::model::*,
     fuchsia_async as fasync,
@@ -94,7 +94,7 @@ impl ActionStatus {
 /// causes the notifications returned by `register()` to be woken.
 ///
 /// `register()` and `finish()` return a boolean that indicates whether the set of actions changed
-/// as a result of the call. If so, the caller should invoke `RealmState::handle_action()` to
+/// as a result of the call. If so, the caller should invoke `Action::handle()` to
 /// ensure the change in actions is acted upon.
 pub struct ActionSet {
     rep: HashMap<Action, Arc<ActionStatus>>,
@@ -119,7 +119,7 @@ impl ActionSet {
     /// The return value is as follows:
     /// - A notification, i.e. a Future that completes when the action is finished. This can be
     ///   chained with other futures to perform additional work when the action completes.
-    /// - A boolean that indicates whether `handle_action()` should be called to reify the action
+    /// - A boolean that indicates whether `Action::handle()` should be called to reify the action
     ///   update.
     #[must_use]
     pub fn register(&mut self, action: Action) -> (Notification, bool) {
@@ -157,170 +157,146 @@ impl ActionSet {
     }
 }
 
-/// Register and wait for an action on a realm.
-pub async fn execute_action(
-    model: Model,
-    realm: Arc<Realm>,
-    action: Action,
-) -> Result<(), ModelError> {
-    let nf = register_action(model, realm, action).await?;
-    nf.await
-}
-
-/// Register an action on a realm.
-pub async fn register_action(
-    model: Model,
-    realm: Arc<Realm>,
-    action: Action,
-) -> Result<Notification, ModelError> {
-    // `RealmState::register_action()` assumes component is resolved.
-    realm.resolve_decl().await?;
-    let mut state = realm.lock_state().await;
-    let state = state.as_mut().expect("register_action: not resolved");
-    state.register_action(model, realm.clone(), action).await
-}
-
-/// Finish an action on a realm.
-pub async fn finish_action(realm: Arc<Realm>, action: &Action, res: Result<(), ModelError>) {
-    let mut state = realm.lock_state().await;
-    let state = state.as_mut().expect("finish_action: not resolved");
-    state.finish_action(action, res).await
-}
-
-impl RealmState {
-    /// Take any necessary actions for the new action on the given realm Should be called after a
-    /// new action was registered.
+impl Action {
+    /// Schedule a task for the new action on the given realm. Should be called after a new action
+    /// was registered.
     ///
-    /// The work to fulfill these actions should be scheduled asynchronously, so this method should
-    /// not use `await` for long-running work.
-    ///
-    /// REQUIRES: Component has been resolved.
-    pub async fn handle_action<'a>(
-        &'a mut self,
-        model: Model,
-        realm: Arc<Realm>,
-        action: &'a Action,
-    ) -> Result<(), ModelError> {
-        match action {
-            Action::DeleteChild(moniker) => {
-                self.handle_delete_child(model, realm, action.clone(), moniker.clone()).await?;
-            }
-            Action::Destroy => {
-                self.handle_destroy(model, realm).await?;
-            }
-            Action::Shutdown => {
-                self.handle_shutdown(model, realm).await?;
-            }
-        }
-        Ok(())
-    }
-
-    async fn handle_shutdown(&mut self, model: Model, realm: Arc<Realm>) -> Result<(), ModelError> {
+    /// The work to fulfill these actions should be scheduled asynchronously, so this method is not
+    /// `async`.
+    pub fn handle(&self, model: Model, realm: Arc<Realm>) {
+        let action = self.clone();
         fasync::spawn(async move {
-            let res = do_shutdown(model, realm.clone()).await;
-            finish_action(realm, &Action::Shutdown, res).await;
+            let res = match &action {
+                Action::DeleteChild(moniker) => {
+                    do_delete_child(model, realm.clone(), moniker.clone()).await
+                }
+                Action::Destroy => {
+                    do_destroy(model, realm.clone()).await
+                }
+                Action::Shutdown => {
+                    do_shutdown(model, realm.clone()).await
+                }
+            };
+            Realm::finish_action(realm, &action, res).await;
         });
-        Ok(())
-    }
-
-    async fn handle_delete_child(
-        &mut self,
-        model: Model,
-        realm: Arc<Realm>,
-        action: Action,
-        moniker: ChildMoniker,
-    ) -> Result<(), ModelError> {
-        let child_realm = { self.all_child_realms().get(&moniker).map(|r| r.clone()) };
-        if let Some(child_realm) = child_realm {
-            // Child exists (live or deleting).
-
-            // Transactional so that the child is marked deleted as soon as `handle_action`
-            // returns.
-            self.mark_child_realm_deleting(&moniker.to_partial());
-
-            fasync::spawn(async move {
-                let res = do_delete_child(model, realm.clone(), child_realm, moniker).await;
-                finish_action(realm, &action, res).await;
-            });
-        } else {
-            // The child was already deleted, so immediately complete the action.
-            self.finish_action(&action, Ok(())).await;
-        }
-        Ok(())
-    }
-
-    async fn handle_destroy(&mut self, model: Model, realm: Arc<Realm>) -> Result<(), ModelError> {
-        fasync::spawn(async move {
-            let res = do_destroy(model, realm.clone()).await;
-            finish_action(realm, &Action::Destroy, res).await;
-        });
-        Ok(())
     }
 }
 
 async fn do_shutdown(model: Model, realm: Arc<Realm>) -> Result<(), ModelError> {
-    let child_realms = {
-        let state = realm.lock_state().await;
-        let res: Vec<_> = state
-            .as_ref()
-            .expect("do_shutdown: not resolved")
-            .live_child_realms()
-            .map(|(_, r)| r.clone())
-            .collect();
-        res
-    };
-    // Stop children before stopping the parent.
-    let mut futures = vec![];
-    for child_realm in child_realms {
-        let nf = register_action(model.clone(), child_realm, Action::Shutdown).await?;
-        futures.push(nf);
+    enum Result {
+        // Component was resolved, return notifications for the Shutdown actions on children.
+        Resolved(Vec<Notification>),
+        // Component was not resolved.
+        NotResolved,
     }
-    let results = join_all(futures).await;
-    ok_or_first_error(results)?;
+    let result = {
+        let mut state = realm.lock_state().await;
+        if let Some(state) = state.as_mut() {
+            // Stop children before stopping the parent.
+            let mut nfs = vec![];
+            for child_realm in state.live_child_realms().map(|(_, r)| r.clone()) {
+                let nf =
+                    Realm::register_action(child_realm.clone(), model.clone(), Action::Shutdown)
+                        .await?;
+                nfs.push(nf);
+            }
+            Result::Resolved(nfs)
+        } else {
+            // The component was never resolved. Shut down the component now, which will prevent any
+            // children from starting.
+            // TODO: Actually implement not allowing child to start if parent is shut down.
+            let (was_running, nfs) =
+                Realm::stop_instance(model.clone(), realm.clone(), state.as_mut(), true).await?;
+            assert!(!was_running, "unresolved component was running");
+            assert!(
+                nfs.is_empty(),
+                "nonempty destroy notifications when stopping unresolved component"
+            );
+            Result::NotResolved
+        }
+    };
+    match result {
+        Result::Resolved(futures) => {
+            let results = join_all(futures).await;
+            ok_or_first_error(results)?;
 
-    // Now that all children have shut down, shut down the parent.
-    Realm::stop_instance(model, realm, true).await
+            // Now that all children have shut down, shut down the parent.
+            let (was_running, nfs) = {
+                let mut state = realm.lock_state().await;
+                Realm::stop_instance(model, realm.clone(), state.as_mut(), true).await?
+            };
+            join_all(nfs).await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
+            if was_running {
+                let event = Event::StopInstance { realm: realm.clone() };
+                realm.hooks.dispatch(&event).await?;
+            }
+        }
+        Result::NotResolved => {}
+    };
+    Ok(())
 }
 
 async fn do_delete_child(
     model: Model,
     realm: Arc<Realm>,
-    child_realm: Arc<Realm>,
     moniker: ChildMoniker,
 ) -> Result<(), ModelError> {
-    execute_action(model.clone(), child_realm.clone(), Action::Destroy).await?;
-    {
-        let mut state = realm.lock_state().await;
-        state.as_mut().expect("do_delete_child: not resolved").remove_child_realm(&moniker);
+    enum Result {
+        // Child was found, return notification for the Destroy action on child.
+        Found(Notification, Arc<Realm>),
+        // Child was not found.
+        NotFound,
     }
-    let event = Event::DestroyInstance { realm: child_realm.clone() };
-    child_realm.hooks.dispatch(&event).await?;
+    let result = {
+        let state = realm.lock_state().await;
+        let state = state.as_ref().expect("do_delete_child: not resolved");
+        if let Some(child_realm) = state.all_child_realms().get(&moniker).map(|r| r.clone()) {
+            let nf =
+                Realm::register_action(child_realm.clone(), model.clone(), Action::Destroy).await?;
+            Result::Found(nf, child_realm)
+        } else {
+            Result::NotFound
+        }
+    };
+    match result {
+        Result::Found(nf, child_realm) => {
+            nf.await?;
+            {
+                let mut state = realm.lock_state().await;
+                state.as_mut().expect("do_delete_child: not resolved").remove_child_realm(&moniker);
+            }
+            let event = Event::DestroyInstance { realm: child_realm.clone() };
+            child_realm.hooks.dispatch(&event).await?;
+        }
+        Result::NotFound => {}
+    }
     Ok(())
 }
 
 async fn do_destroy(model: Model, realm: Arc<Realm>) -> Result<(), ModelError> {
     // For destruction to behave correctly, the component has to be shut down first.
-    execute_action(model.clone(), realm.clone(), Action::Shutdown).await?;
+    let nf = Realm::register_action(realm.clone(), model.clone(), Action::Shutdown).await?;
+    nf.await?;
 
-    // Shutdown is complete, now destroy the component. This involves marking all children
-    // "deleting", destroying them all, and finishing the action.
-    let child_realms = {
-        let state = realm.lock_state().await;
-        let state = state.as_ref().expect("do_destroy: not resolved");
-        state.all_child_realms().clone()
+    let nfs = if let Some(state) = realm.lock_state().await.as_ref() {
+        let mut nfs = vec![];
+        for (m, _) in state.all_child_realms().iter() {
+            let realm = realm.clone();
+            let nf = Realm::register_action(realm, model.clone(), Action::DeleteChild(m.clone()))
+                .await?;
+            nfs.push(nf);
+        }
+        nfs
+    } else {
+        // Component was never resolved. No explicit cleanup is required for children.
+        vec![]
     };
-    let mut futures = vec![];
-    for (m, _) in child_realms {
-        let realm = realm.clone();
-        let nf = register_action(model.clone(), realm, Action::DeleteChild(m)).await?;
-        let fut = async move { nf.await };
-        futures.push(fut);
-    }
-    let results = join_all(futures).await;
+    let results = join_all(nfs).await;
     ok_or_first_error(results)?;
 
     // Now that all children have been destroyed, destroy the containing realm.
-    Realm::destroy_instance(model, realm).await
+    Realm::destroy_instance(model, realm).await?;
+    Ok(())
 }
 
 fn ok_or_first_error(results: Vec<Result<(), ModelError>>) -> Result<(), ModelError> {
@@ -703,6 +679,79 @@ mod tests {
         }
     }
 
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn shutdown_not_resolved() {
+        let components = vec![
+            (
+                "root",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "a".to_string(),
+                        url: "test:///a".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "a",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "b",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "c".to_string(),
+                        url: "test:///c".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            ("c", ComponentDecl { ..default_component_decl() }),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+        let realm_a = test.look_up(vec!["a:0"].into()).await;
+        test.model.bind_instance(realm_a.clone()).await.expect("could not bind to a");
+        assert!(is_executing(&realm_a).await);
+
+        // Register shutdown action on "a", and wait for it.
+        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
+            .await
+            .expect("shutdown failed");
+        assert!(is_shut_down(&realm_a).await);
+        // Get realm_b without resolving it.
+        let realm_b = {
+            let state = realm_a.lock_state().await;
+            let state = state.as_ref().unwrap();
+            state.get_live_child_realm(&PartialMoniker::from("b")).expect("child b not found")
+        };
+        assert!(is_shut_down(&realm_b).await);
+        assert!(is_unresolved(&realm_b).await);
+
+        // Now "a" is shut down. There should be no event for "b" because it was never started
+        // (or resolved).
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter_map(|e| match e {
+                    Lifecycle::Stop(_) => Some(e),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(events, vec![Lifecycle::Stop(vec!["a:0"].into())]);
+        }
+    }
+
     /// Shut down `a`:
     ///  a
     ///   \
@@ -798,6 +847,95 @@ mod tests {
             assert_eq!(
                 events,
                 vec![
+                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
+                    Lifecycle::Stop(vec!["a:0"].into())
+                ]
+            );
+        }
+    }
+
+    /// Shut down `b`:
+    ///  a
+    ///   \
+    ///    b
+    ///     \
+    ///      b
+    ///       \
+    ///      ...
+    ///
+    /// `b` is a child of itself, but shutdown should still be able to complete.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn shutdown_self_referential() {
+        let components = vec![
+            (
+                "root",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "a".to_string(),
+                        url: "test:///a".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "a",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "b",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+        let realm_a = test.look_up(vec!["a:0"].into()).await;
+        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let realm_b2 = test.look_up(vec!["a:0", "b:0", "b:0"].into()).await;
+
+        // Bind to second `b`.
+        test.model.bind_instance(realm_a.clone()).await.expect("could not bind to b2");
+        test.model.bind_instance(realm_b.clone()).await.expect("could not bind to b2");
+        test.model.bind_instance(realm_b2.clone()).await.expect("could not bind to b2");
+        assert!(is_executing(&realm_a).await);
+        assert!(is_executing(&realm_b).await);
+        assert!(is_executing(&realm_b2).await);
+
+        // Register shutdown action on "a", and wait for it. This should cause all components
+        // that were started to shut down, in bottom-up order.
+        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
+            .await
+            .expect("shutdown failed");
+        assert!(is_shut_down(&realm_a).await);
+        assert!(is_shut_down(&realm_b).await);
+        assert!(is_shut_down(&realm_b2).await);
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter_map(|e| match e {
+                    Lifecycle::Stop(_) => Some(e),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(
+                events,
+                vec![
+                    Lifecycle::Stop(vec!["a:0", "b:0", "b:0"].into()),
                     Lifecycle::Stop(vec!["a:0", "b:0"].into()),
                     Lifecycle::Stop(vec!["a:0"].into())
                 ]
@@ -1160,6 +1298,85 @@ mod tests {
         }
     }
 
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn destroy_not_resolved() {
+        let components = vec![
+            (
+                "root",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "a".to_string(),
+                        url: "test:///a".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "a",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "b",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "c".to_string(),
+                        url: "test:///c".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            ("c", ComponentDecl { ..default_component_decl() }),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+        let realm_root = test.look_up(vec![].into()).await;
+        let realm_a = test.look_up(vec!["a:0"].into()).await;
+        test.model.bind_instance(realm_a.clone()).await.expect("could not bind to a");
+        assert!(is_executing(&realm_a).await);
+        // Get realm_b without resolving it.
+        let realm_b = {
+            let state = realm_a.lock_state().await;
+            let state = state.as_ref().unwrap();
+            state.get_live_child_realm(&PartialMoniker::from("b")).expect("child b not found")
+        };
+
+        // Register delete action on "a", and wait for it.
+        execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("a:0".into()))
+            .await
+            .expect("destroy failed");
+        assert!(is_destroyed(&realm_a).await);
+        assert!(is_unresolved(&realm_b).await);
+
+        // Now "a" is destroyed. Expect destroy events for "a" and "b".
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter_map(|e| match e {
+                    Lifecycle::Stop(_) | Lifecycle::Destroy(_) => Some(e),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(
+                events,
+                vec![
+                    Lifecycle::Stop(vec!["a:0"].into()),
+                    Lifecycle::Destroy(vec!["a:0", "b:0"].into()),
+                    Lifecycle::Destroy(vec!["a:0"].into())
+                ]
+            );
+        }
+    }
+
     ///  Delete "a" as child of root:
     ///
     ///  /\
@@ -1300,6 +1517,108 @@ mod tests {
             assert_eq!(
                 events,
                 vec![
+                    Lifecycle::Destroy(vec!["a:0", "b:0"].into()),
+                    Lifecycle::Destroy(vec!["a:0"].into())
+                ]
+            );
+        }
+    }
+
+    /// Destroy `b`:
+    ///  a
+    ///   \
+    ///    b
+    ///     \
+    ///      b
+    ///       \
+    ///      ...
+    ///
+    /// `b` is a child of itself, but destruction should still be able to complete.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn destroy_self_referential() {
+        let components = vec![
+            (
+                "root",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "a".to_string(),
+                        url: "test:///a".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "a",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "b",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+        let realm_root = test.look_up(vec![].into()).await;
+        let realm_a = test.look_up(vec!["a:0"].into()).await;
+        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let realm_b2 = test.look_up(vec!["a:0", "b:0", "b:0"].into()).await;
+
+        // Bind to second `b`.
+        test.model.bind_instance(realm_a.clone()).await.expect("could not bind to b2");
+        test.model.bind_instance(realm_b.clone()).await.expect("could not bind to b2");
+        test.model.bind_instance(realm_b2.clone()).await.expect("could not bind to b2");
+        assert!(is_executing(&realm_a).await);
+        assert!(is_executing(&realm_b).await);
+        assert!(is_executing(&realm_b2).await);
+
+        // Register destroy action on "a", and wait for it. This should cause all components
+        // that were started to be destroyed, in bottom-up order.
+        execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("a:0".into()))
+            .await
+            .expect("delete child failed");
+        assert!(is_destroyed(&realm_a).await);
+        assert!(is_destroyed(&realm_b).await);
+        assert!(is_destroyed(&realm_b2).await);
+        {
+            let state = realm_root.lock_state().await;
+            let children: Vec<_> =
+                state.as_ref().unwrap().all_child_realms().keys().map(|m| m.clone()).collect();
+            assert_eq!(children, Vec::<ChildMoniker>::new());
+        }
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter_map(|e| match e {
+                    Lifecycle::Stop(_) | Lifecycle::Destroy(_) => Some(e),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(
+                events,
+                vec![
+                    Lifecycle::Stop(vec!["a:0", "b:0", "b:0"].into()),
+                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
+                    Lifecycle::Stop(vec!["a:0"].into()),
+                    // This component instance is never resolved but we still invoke the Destroy
+                    // hook on it.
+                    Lifecycle::Destroy(vec!["a:0", "b:0", "b:0", "b:0"].into()),
+                    Lifecycle::Destroy(vec!["a:0", "b:0", "b:0"].into()),
                     Lifecycle::Destroy(vec!["a:0", "b:0"].into()),
                     Lifecycle::Destroy(vec!["a:0"].into())
                 ]
@@ -1486,6 +1805,15 @@ mod tests {
         }
     }
 
+    async fn execute_action(
+        model: Model,
+        realm: Arc<Realm>,
+        action: Action,
+    ) -> Result<(), ModelError> {
+        let nf = Realm::register_action(realm, model, action).await?;
+        nf.await
+    }
+
     async fn is_executing(realm: &Realm) -> bool {
         realm.lock_execution().await.runtime.is_some()
     }
@@ -1502,6 +1830,12 @@ mod tests {
         execution.runtime.is_none()
             && execution.is_shut_down()
             && state.all_child_realms().is_empty()
+    }
+
+    async fn is_unresolved(realm: &Realm) -> bool {
+        let state = realm.lock_state().await;
+        let execution = realm.lock_execution().await;
+        execution.runtime.is_none() && state.is_none()
     }
 
     fn is_pending(p: Poll<Result<(), ModelError>>) -> bool {
