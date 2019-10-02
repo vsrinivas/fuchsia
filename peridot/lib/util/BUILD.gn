@@ -64,8 +64,9 @@ source_set("unittests") {
     "string_escape_unittest.cc",
   ]
 
-  public_deps = [
+  deps = [
     ":util",
+    "//garnet/public/lib/gtest",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
