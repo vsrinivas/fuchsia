@@ -125,6 +125,8 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
                                                 &event_aggregator_, observation_store_.get())) {
   auto global_project_context_factory =
       std::make_shared<ProjectContextFactory>(ReadGlobalMetricsRegistryBytes(kMetricsRegistryPath));
+  undated_event_manager_ = std::make_shared<logger::UndatedEventManager>(
+      &logger_encoder_, &event_aggregator_, &observation_writer_, &system_data_);
 
   // Create internal Logger and pass a pointer to objects which use it.
   internal_logger_ = NewInternalLogger(global_project_context_factory, logger::kCustomerName,
@@ -141,9 +143,13 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
     FX_LOGS(INFO) << "The system clock has become accurate, now at: "
                   << std::put_time(std::localtime(&current_time), "%F %T %z");
 
+    auto system_clock = std::make_unique<util::SystemClock>();
+    undated_event_manager_->Flush(system_clock.get(), internal_logger_.get());
+    undated_event_manager_.reset();
+
     // Now that the clock is accurate, start workers that need an accurate clock.
     if (start_event_aggregator_worker) {
-      event_aggregator_.Start(std::make_unique<util::SystemClock>());
+      event_aggregator_.Start(std::move(system_clock));
     }
   });
 
@@ -151,10 +157,10 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
   clearcut_shipping_manager_.Start();
 
   // Create LoggerFactory.
-  logger_factory_impl_.reset(
-      new LoggerFactoryImpl(std::move(global_project_context_factory), getClientSecret(),
-                            &timer_manager_, &logger_encoder_, &observation_writer_,
-                            &event_aggregator_, internal_logger_.get(), &system_data_));
+  logger_factory_impl_.reset(new LoggerFactoryImpl(
+      std::move(global_project_context_factory), getClientSecret(), &timer_manager_,
+      &logger_encoder_, &observation_writer_, &event_aggregator_, &system_clock_,
+      undated_event_manager_, internal_logger_.get(), &system_data_));
 
   context_->outgoing()->AddPublicService(
       logger_factory_bindings_.GetHandler(logger_factory_impl_.get()));

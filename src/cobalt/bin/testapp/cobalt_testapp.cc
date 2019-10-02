@@ -168,6 +168,9 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds, uint32_t min_int
 
   sys::ServiceDirectory services(std::move(directory));
 
+  // Delay to give the fake timekeeper service time to start and return that the clock is accurate.
+  sleep(1);
+
   fuchsia::cobalt::LoggerFactorySyncPtr logger_factory;
   services.Connect(logger_factory.NewRequest());
 

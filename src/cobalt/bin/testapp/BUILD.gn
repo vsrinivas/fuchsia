@@ -8,6 +8,7 @@ import("//third_party/cobalt/metrics_registry.gni")
 group("testapp") {
   testonly = true
   deps = [
+    ":cobalt_fake_timekeeper",
     ":cobalt_testapp",
     ":prober_metrics_registry",
     ":testapp_metrics_registry",
@@ -55,15 +56,53 @@ executable("cobalt_testapp") {
     "//sdk/lib/sys/cpp",
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/fxl",
+    "//src/sys/timekeeper:fuchsia.time",
     "//third_party/cobalt/src/lib/crypto_util",
     "//third_party/cobalt/src/lib/util:clock",
     "//third_party/cobalt/src/lib/util:datetime_util",
     "//third_party/cobalt/src/registry:cobalt_registry_proto",
     "//third_party/cobalt/src/registry:id",
-    "//zircon/system/fidl/fuchsia-cobalt",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
+    "//zircon/system/fidl/fuchsia-cobalt",
   ]
 
   configs += [ "//third_party/cobalt:cobalt_config" ]
+}
+
+executable("fake_timekeeper") {
+  output_name = "fake_timekeeper"
+  sources = [
+    "fake_timekeeper.h",
+    "fake_timekeeper_main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/sys/timekeeper:fuchsia.time",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+  ]
+}
+
+package("cobalt_fake_timekeeper") {
+  deps = [
+    ":fake_timekeeper",
+  ]
+
+  binaries = [
+    {
+      name = "fake_timekeeper"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/timekeeper.cmx")
+      dest = "cobalt_fake_timekeeper.cmx"
+    },
+  ]
 }

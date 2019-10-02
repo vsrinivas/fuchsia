@@ -23,6 +23,7 @@ test_package("cobalt_tests") {
     "app:app",
     "app:cobalt_app_unittests",
     "system-metrics:cobalt_system_metrics_unittests",
+    "testapp:cobalt_fake_timekeeper",
     "testapp:cobalt_testapp",
     "utils:cobalt_utils_unittests",
   ]

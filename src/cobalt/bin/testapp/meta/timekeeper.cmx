@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/fake_timekeeper"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

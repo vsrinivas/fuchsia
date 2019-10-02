@@ -27,6 +27,7 @@
 #include "third_party/cobalt/src/logger/encoder.h"
 #include "third_party/cobalt/src/logger/event_aggregator.h"
 #include "third_party/cobalt/src/logger/observation_writer.h"
+#include "third_party/cobalt/src/logger/undated_event_manager.h"
 #include "third_party/cobalt/src/observation_store/file_observation_store.h"
 #include "third_party/cobalt/src/registry/project_configs.h"
 #include "third_party/cobalt/src/system_data/client_secret.h"
@@ -136,6 +137,7 @@ class CobaltApp {
   logger::Encoder logger_encoder_;
   logger::ObservationWriter observation_writer_;
   logger::EventAggregator event_aggregator_;
+  std::shared_ptr<logger::UndatedEventManager> undated_event_manager_;
 
   std::unique_ptr<fuchsia::cobalt::Controller> controller_impl_;
   fidl::BindingSet<fuchsia::cobalt::Controller> controller_bindings_;

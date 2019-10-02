@@ -2,7 +2,8 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.net.oldhttp.HttpService": "fuchsia-pkg://fuchsia.com/http#meta/http.cmx"
+                "fuchsia.net.oldhttp.HttpService": "fuchsia-pkg://fuchsia.com/http#meta/http.cmx",
+                "fuchsia.time.Utc": "fuchsia-pkg://fuchsia.com/cobalt_fake_timekeeper#meta/cobalt_fake_timekeeper.cmx"
             },
             "system-services": [
                 "fuchsia.net.Connectivity",

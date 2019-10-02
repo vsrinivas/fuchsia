@@ -19,10 +19,7 @@ namespace cobalt {
 //    fx run-test-component cobalt_testapp_no_network
 class LoggerImpl : public fuchsia::cobalt::Logger, public fuchsia::cobalt::LoggerSimple {
  public:
-  LoggerImpl(std::unique_ptr<logger::ProjectContext> project_context, logger::Encoder* encoder,
-             logger::EventAggregator* event_aggregator,
-             logger::ObservationWriter* observation_writer, TimerManager* timer_manager,
-             encoder::SystemDataInterface* system_data, logger::LoggerInterface* internal_logger);
+  LoggerImpl(std::unique_ptr<logger::Logger> logger, TimerManager* timer_manager);
 
  private:
   void LogEvent(uint32_t metric_id, uint32_t event_code,
@@ -74,7 +71,7 @@ class LoggerImpl : public fuchsia::cobalt::Logger, public fuchsia::cobalt::Logge
                        fuchsia::cobalt::Logger::LogCobaltEventCallback callback) override;
 
  private:
-  logger::Logger logger_;
+  std::unique_ptr<logger::Logger> logger_;
   TimerManager* timer_manager_;
 };
 
