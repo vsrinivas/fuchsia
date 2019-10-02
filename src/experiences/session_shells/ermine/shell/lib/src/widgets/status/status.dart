@@ -42,6 +42,7 @@ class Status extends StatelessWidget {
         children: <Widget>[
           _ManualStatusEntry(model),
           _StatusEntry(model.brightness),
+          _StatusEntry(model.volume),
           _StatusEntry(model.battery),
           _StatusEntry(model.memory),
           _StatusEntry(model.weather),

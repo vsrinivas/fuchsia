@@ -18,6 +18,8 @@
             "fuchsia.fonts.Provider",
             "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.LogSink",
+            "fuchsia.media.Audio",
+            "fuchsia.media.AudioCore",
             "fuchsia.memory.Monitor",
             "fuchsia.modular.Clipboard",
             "fuchsia.modular.ComponentContext",
