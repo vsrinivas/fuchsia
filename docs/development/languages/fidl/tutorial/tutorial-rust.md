@@ -28,7 +28,8 @@ introduction section, by opening
 
 ## Build
 
-@@@ What are the specific instructions for Rust?
+* To build the echo server, add `--with //garnet/examples/fidl/echo_server_rust` to your `fx set` invocation.
+* To build the echo client, add `--with //garnet/examples/fidl/echo_client_rust` to your `fx set` invocation.
 
 ## `Echo` server
 
@@ -198,24 +199,19 @@ of the `EchoRequest` enum. For a protocol with more than one type of request,
 we would instead write `|x| match x { MyServiceRequest::Req1 { ... } => ... }`.
 In our case, we receive `value`, an optional string, and `responder`, a control
 handle with a `send` method for sending a response.
-We log the request using `println!`, and
-then do a bit of complicated-looking nonsense. :)
-The `as_ref().map(|s| &**s)` trick isn't related to FIDL, but is a specific
-issue with converting `Option<String>` into `Option<&str>`. If you're not
-interested in the details of this conversion, feel free to skip the following
-paragraph.
 
-`s` is an `Option<String>`, but our `send` method takes back an
-`Option<&str>` to allow sending back non-heap-allocated strings. To convert between
+We log the request using `println!`, and then convert `Option<String>` into `Option<&str>`.
+This is necessary because `s` is an `Option<String>`, but our `send` method takes back an
+`Option<&str>` (to allow sending back non-heap-allocated strings). To convert between
 the two, we use `.as_ref()` to go from `Option<String>` to `Option<&String>`,
-and then `.map(|s| &**s)` to get `Option<&str>` using the `Deref<Target=str>`
-implementation for `String`. The first `*` goes from `&String` to `String`,
-the next goes from `String` to `str`, and the last goes from `str` to `&str`.
-You might well ask why we used `as_ref` at all, since we immediately dereference
-the resulting `&String`. This necessary in order to make sure that we're still
-borrowing from the initial `Option<String>` value. `Option::map` takes `self`
-by value and so consumes its input, but we want to instead create a *reference*
-to its input.
+and then `.map(|s| s.as_str())` to go from `Option<&String>` to `Option<&str>`.
+
+You might well ask why we used `as_ref` at all, since we immediately
+dereference the resulting `&String` (this happens implicitly, when we
+call the `.as_str()` method). This is necessary in order to make sure that
+we're still borrowing from the initial `Option<String>` value. `Option::map`
+takes `self` by value and so consumes its input, but we want to instead create
+a *reference* to its input.
 
 Once we've done the conversion from `Option<String>` to `Option<&str>`, we call
 `send`, which returns a `Result<(), Error>` which we use `?` on to return an
