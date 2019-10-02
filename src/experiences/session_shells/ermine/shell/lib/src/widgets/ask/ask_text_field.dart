@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
+// Includes the strings used for the button labels.  Please only use the labels
+// defined there, and add new ones if you need them.
+import 'package:internationalization/strings.dart' as strings;
 
 import '../../models/ask_model.dart';
 import '../../utils/styles.dart';
@@ -59,7 +62,7 @@ class AskTextField extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.only(right: 20),
               child: Text(
-                'TYPE TO ASK',
+                strings.typeToAsk().toUpperCase(),
                 style: Theme.of(context).textTheme.body1.copyWith(
                       color: Colors.white,
                       backgroundColor: Colors.black,

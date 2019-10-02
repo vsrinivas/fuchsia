@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:fidl_fuchsia_ui_brightness/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:fuchsia_services/services.dart' show StartupContext;
+import 'package:internationalization/strings.dart' as strings;
 import 'package:quickui/quickui.dart';
 
 /// Defines a [UiSpec] for controlling screen brightness.
@@ -25,8 +26,6 @@ import 'package:quickui/quickui.dart';
 ///         ----------------------
 /// * {A} - Auto icon, {b} Brightness min icon, {B} Brightness max icon.
 class Brightness extends UiSpec {
-  static const _title = 'Brightness';
-  static const _buttonLabel = 'Auto';
   static const progressAction = 1;
   static const autoAction = 2;
 
@@ -66,21 +65,21 @@ class Brightness extends UiSpec {
 
   static Spec _specForAutoBrightness(double value) {
     return Spec(groups: [
-      Group(title: _title, values: [
+      Group(title: strings.brightness(), values: [
         Value.withIcon(IconValue(codePoint: Icons.brightness_auto.codePoint)),
         Value.withProgress(ProgressValue(value: value, action: progressAction)),
-        Value.withText(TextValue(text: _buttonLabel)),
+        Value.withText(TextValue(text: strings.auto())),
       ]),
     ]);
   }
 
   static Spec _specForManualBrightness(double value) {
     return Spec(groups: [
-      Group(title: _title, values: [
+      Group(title: strings.brightness(), values: [
         Value.withIcon(IconValue(codePoint: Icons.brightness_low.codePoint)),
         Value.withProgress(ProgressValue(value: value, action: progressAction)),
         Value.withIcon(IconValue(codePoint: Icons.brightness_high.codePoint)),
-        Value.withButton(ButtonValue(label: _buttonLabel, action: autoAction)),
+        Value.withButton(ButtonValue(label: strings.auto(), action: autoAction)),
       ]),
     ]);
   }
