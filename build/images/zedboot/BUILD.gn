@@ -229,13 +229,7 @@ if (custom_signing_script != "") {
       json = {
         name = "zircon-r.signed"
         type = "zbi.signed"
-        bootserver_pave = [
-          "--zirconr",
-
-          # TODO(ZX-2625): `dm reboot-recovery` boots from
-          # zircon-b instead of zircon-r, so put it there too.
-          "--zirconb",
-        ]
+        bootserver_pave = [ "--zirconr" ]
         bootserver_pave_zedboot = [ "--zircona" ]
       }
     },
