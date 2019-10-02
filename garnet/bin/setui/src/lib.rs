@@ -45,6 +45,7 @@ mod device;
 mod display;
 mod do_not_disturb;
 mod fidl_clone;
+mod input;
 mod intl;
 mod power;
 mod privacy;

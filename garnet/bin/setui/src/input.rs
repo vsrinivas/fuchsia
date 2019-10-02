@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod audio_core_service;
-pub mod base;
-pub mod device_admin_service;
-pub mod input_device_registry_service;
-pub mod service_registry;
+pub use self::common::monitor_mic_mute;
+
+pub mod common;

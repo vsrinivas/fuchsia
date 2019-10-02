@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
+    crate::input::monitor_mic_mute,
     crate::registry::base::{Command, Notifier, State},
     crate::registry::service_context::ServiceContext,
     crate::switchboard::base::*,
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_media_audio::MUTED_GAIN_DB,
+    fidl_fuchsia_ui_input::MediaButtonsEvent,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
     futures::StreamExt,
@@ -16,6 +18,7 @@ use {
 };
 
 // TODO(go/fxb/35983): Load default values from a config.
+const DEFAULT_MIC_MUTE: bool = false;
 const DEFAULT_VOLUME_LEVEL: f32 = 0.5;
 const DEFAULT_VOLUME_MUTED: bool = false;
 
@@ -59,17 +62,34 @@ pub fn spawn_audio_controller(
     let (audio_handler_tx, mut audio_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
 
     let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));
+    let mic_mute_state = Arc::<RwLock<bool>>::new(RwLock::new(DEFAULT_MIC_MUTE));
 
     // TODO(go/fxb/35878): Add persistent storage.
     // TODO(go/fxb/35983): Load default values from a config.
     let mut stored_audio_streams = HashMap::new();
 
-    // TODO(go/fxb/35988): Hook up the presentation service to listen for the mic mute state.
-    let stored_mic_mute = false;
-
     for stream in DEFAULT_STREAMS.iter() {
         stored_audio_streams.insert(stream.stream_type.clone(), stream.clone());
     }
+
+    let (input_tx, mut input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
+
+    monitor_mic_mute(service_context_handle.clone(), input_tx);
+
+    let mic_mute_state_clone = mic_mute_state.clone();
+    let notifier_lock_clone = notifier_lock.clone();
+    fasync::spawn(async move {
+        while let Some(event) = input_rx.next().await {
+            if let Some(mic_mute) = event.mic_mute {
+                if *mic_mute_state_clone.read() != mic_mute {
+                    *mic_mute_state_clone.write() = mic_mute;
+                    if let Some(notifier) = (*notifier_lock_clone.read()).clone() {
+                        notifier.unbounded_send(SettingType::Audio).unwrap();
+                    }
+                }
+            }
+        }
+    });
 
     fasync::spawn(async move {
         // Connect to the audio core service.
@@ -133,7 +153,7 @@ pub fn spawn_audio_controller(
                             let _ = responder
                                 .send(Ok(Some(SettingResponse::Audio(AudioInfo {
                                     streams: get_streams_array_from_map(&stored_audio_streams),
-                                    input: AudioInputInfo { mic_mute: stored_mic_mute },
+                                    input: AudioInputInfo { mic_mute: *mic_mute_state.read() },
                                 }))))
                                 .ok();
                         }
