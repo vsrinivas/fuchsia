@@ -63,11 +63,13 @@ executable("unittest_bin") {
 
   sources = [
     "bookkeeping_unittest.cc",
+    "gain_unittest.cc",
     "output_producer_unittest.cc",
   ]
 
   deps = [
     ":mixer",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
   ]
 }
