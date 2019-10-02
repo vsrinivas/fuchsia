@@ -8,6 +8,7 @@ use {
     zerocopy::{ByteSlice, LayoutVerified},
 };
 
+mod ctrl;
 mod data;
 mod eth;
 mod fields;
@@ -17,7 +18,7 @@ mod fields;
 mod frame_class;
 mod mgmt;
 
-pub use {data::*, eth::*, fields::*, mgmt::*};
+pub use {ctrl::*, data::*, eth::*, fields::*, mgmt::*};
 
 #[macro_export]
 macro_rules! frame_len {
@@ -27,6 +28,8 @@ macro_rules! frame_len {
         std::mem::size_of::<$first>() + frame_len!($($tail),*)
     };
 }
+
+pub type Aid = u16;
 
 pub type MacAddr = [u8; 6];
 pub const BCAST_ADDR: MacAddr = [0xFF; 6];

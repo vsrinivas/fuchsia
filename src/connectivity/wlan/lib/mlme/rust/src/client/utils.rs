@@ -11,7 +11,7 @@ use {
         big_endian::BigEndianU16,
         buffer_writer::BufferWriter,
         data_writer,
-        mac::{self, OptionalField},
+        mac::{self, Aid, OptionalField},
         mgmt_writer,
         sequence::SequenceManager,
     },
@@ -141,6 +141,28 @@ pub fn write_data_frame<B: Appendable>(
 
     data_writer::write_snap_llc_hdr(buf, ether_type)?;
     buf.append_bytes(payload)?;
+    Ok(())
+}
+
+pub fn write_ps_poll_frame<B: Appendable>(
+    buf: &mut B,
+    aid: Aid,
+    bssid: MacAddr,
+    ta: MacAddr,
+) -> Result<(), Error> {
+    const PS_POLL_ID_MASK: u16 = 0b11000000_00000000;
+
+    buf.append_value(&mac::PsPoll {
+        frame_ctrl: mac::FrameControl(0)
+            .with_frame_type(mac::FrameType::CTRL)
+            .with_ctrl_subtype(mac::CtrlSubtype::PS_POLL),
+        // IEEE 802.11-2016 9.3.1.5 states the ID in the PS-Poll frame is the association ID with
+        // the 2 MSBs set to 1.
+        id: aid | PS_POLL_ID_MASK,
+        bssid: bssid,
+        ta: ta,
+    })?;
+
     Ok(())
 }
 
@@ -374,5 +396,19 @@ mod tests {
             &[4, 5, 6],
         );
         assert_variant!(result, Err(Error::BufferTooSmall));
+    }
+
+    #[test]
+    fn ps_poll_frame() {
+        let mut buf = vec![];
+        write_ps_poll_frame(&mut buf, 0b00100000_00100001, [1; 6], [2; 6])
+            .expect("failed writing frame");
+        let expected = [
+            0b10100100, 0, // Frame control
+            0b00100001, 0b11100000, // ID (2 MSBs are set to 1 from the AID)
+            1, 1, 1, 1, 1, 1, // BSSID
+            2, 2, 2, 2, 2, 2, // TA
+        ];
+        assert_eq!(&expected[..], &buf[..])
     }
 }
