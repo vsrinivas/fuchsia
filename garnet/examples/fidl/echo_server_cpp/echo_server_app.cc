@@ -8,18 +8,20 @@
 
 namespace echo {
 
-EchoServerApp::EchoServerApp(bool quiet) : EchoServerApp(sys::ComponentContext::Create(), quiet) {}
+EchoServer::EchoServer(bool quiet) : quiet_(quiet) {}
 
-EchoServerApp::EchoServerApp(std::unique_ptr<sys::ComponentContext> context, bool quiet)
-    : context_(std::move(context)), quiet_(quiet) {
-  context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
-}
-
-void EchoServerApp::EchoString(fidl::StringPtr value, EchoStringCallback callback) {
+void EchoServer::EchoString(fidl::StringPtr value, EchoStringCallback callback) {
   if (!quiet_) {
     printf("EchoString: %s\n", value->data());
   }
   callback(std::move(value));
+}
+
+EchoServerApp::EchoServerApp(bool quiet) : EchoServerApp(sys::ComponentContext::Create(), quiet) {}
+
+EchoServerApp::EchoServerApp(std::unique_ptr<sys::ComponentContext> context, bool quiet)
+    : service_(new EchoServer(quiet)), context_(std::move(context)) {
+  context_->outgoing()->AddPublicService(bindings_.GetHandler(service_.get()));
 }
 
 }  // namespace echo

@@ -10,12 +10,16 @@ source_set("fuzzing") {
   testonly = true
   sources = [
     "fuzzer.h",
+    "server_provider.h",
     "traits.h",
   ]
   public_deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fuzzing/cpp",
     "//sdk/lib/fuzzing/cpp:traits",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/system/public",
   ]
   public_configs = [ "//sdk/config" ]

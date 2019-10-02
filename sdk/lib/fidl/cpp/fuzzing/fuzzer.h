@@ -20,8 +20,8 @@ extern "C" {
 #endif
 
 zx_status_t fuzzer_init();
-zx_status_t fuzzer_next_begin(zx_handle_t);
-zx_status_t fuzzer_end(zx_handle_t);
+zx_status_t fuzzer_connect(zx_handle_t, async_dispatcher_t*);
+zx_status_t fuzzer_disconnect(zx_handle_t, async_dispatcher_t*);
 zx_status_t fuzzer_clean_up();
 
 #ifdef __cplusplus
@@ -56,12 +56,13 @@ class FuzzerCallbackSignaller {
 template <typename Impl>
 class Fuzzer {
  public:
-  Fuzzer()
+  Fuzzer(async_dispatcher_t* dispatcher)
       : init_status_(ZX_ERR_UNAVAILABLE),
         service_status_(ZX_ERR_UNAVAILABLE),
         client_status_(ZX_ERR_UNAVAILABLE),
         service_handle_(ZX_HANDLE_INVALID),
-        client_handle_(ZX_HANDLE_INVALID) {}
+        client_handle_(ZX_HANDLE_INVALID),
+        dispatcher_(dispatcher) {}
 
   // Attempt to initialize the fuzzer by allowing the service provider to initialize itself and
   // creating kernel primitives.
@@ -82,7 +83,7 @@ class Fuzzer {
   // Attempt to pass `service_handle_` to service provider. If successful, the service
   // implementation now owns `service_handle_`.
   zx_status_t BindService() {
-    service_status_ = fuzzer_next_begin(service_handle_);
+    service_status_ = fuzzer_connect(service_handle_, dispatcher_);
     return service_status_;
   }
 
@@ -113,7 +114,7 @@ class Fuzzer {
 
     // Service owns service_handle_ when service setup succeeded, else Fuzzer owns it.
     if (service_status_ == ZX_OK) {
-      fuzzer_end(service_handle_);
+      fuzzer_disconnect(service_handle_, dispatcher_);
     } else {
       zx_handle_close(service_handle_);
     }
@@ -131,6 +132,7 @@ class Fuzzer {
   zx_handle_t service_handle_;
   zx_handle_t client_handle_;
   zx::event evt_;
+  async_dispatcher_t* dispatcher_;
 };
 
 }  // namespace fuzzing

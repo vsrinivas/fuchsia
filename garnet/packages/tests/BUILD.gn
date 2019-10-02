@@ -425,6 +425,7 @@ group("all") {
     "//garnet/bin/perfcompare:tests",
     "//garnet/bin/sl4f:tests",
     "//garnet/bin/sshd-host:sshd-host-tests",
+    "//garnet/examples/fidl/echo_server_cpp/fuzzer:echo_fuzzers",
     "//garnet/go/src/pm:host_tests",
     "//garnet/public/rust/fuchsia-vfs/pseudo-fs-mt/macros:tests",
     "//src/connectivity/network/dhcp:dhcp_tests",

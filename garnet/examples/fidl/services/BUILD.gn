@@ -13,6 +13,12 @@ fidl("echo") {
   sources = [
     "echo.fidl",
   ]
+
+  fuzzers = [
+    {
+      protocol = "fidl.examples.echo.Echo"
+    },
+  ]
 }
 
 group("echo2") {
