@@ -55,6 +55,5 @@ group("dev") {
     "test/unit-test-test:unit-test-pass",
     "thermal",
     "usb",
-    "virtual_camera",
   ]
 }
