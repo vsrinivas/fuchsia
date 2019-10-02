@@ -29,10 +29,10 @@ namespace fidl {
 // by the channel, allowing for *pipelined* operation.
 //
 // The |InterfacePtr| also keeps state about the connection and about
-// outstanding request transactions that are expecting replies. When a the
+// outstanding request transactions that are expecting replies. When the
 // |InterfacePtr| receives a reply to an outstanding transaction, the
 // |InterfacePtr| decodes the reply and calls the appropriate callback on the
-// thread on which the |InterfacePtr| was bound.
+// thread to which the |InterfacePtr| was bound.
 //
 // You need to bind the |InterfacePtr| before calling any |Interface| methods.
 // There are a number of ways to bind the |InterfacePtr|.  See |NewRequest|,
@@ -42,7 +42,7 @@ namespace fidl {
 // unbind from the channel and call its error handler.
 //
 // This class is thread-hostile, as is the local proxy it manages. All calls to
-// this class or the proxy should be from the thread on which the
+// this class or the proxy should be from the thread to which the
 // |InterfacePtr| was bound. If you need to move the proxy to a different
 // thread, extract the |InterfaceHandle| by calling |Unbind|, and pass the
 // |InterfaceHandle| to a different thread, which the |InterfaceHandle| can be
@@ -90,9 +90,10 @@ class InterfacePtr final {
   // underlying channel until the |InterfaceRequest| is bound to an
   // implementation of |Interface|, potentially in a remote process.
   //
-  // Uses the given async_t (e.g., a message loop) in order to read messages
-  // from the channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|.
-  // If |dispatcher| is null, the current thread must have a default async_t.
+  // Uses the given async_dispatcher_t in order to read messages from the
+  // channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|. If
+  // |dispatcher| is null, the current thread must have a default
+  // async_dispatcher_t.
   //
   // # Example
   //
@@ -129,9 +130,10 @@ class InterfacePtr final {
   // unbind the |InterfacePtr|. A more direct way to have that effect is to call
   // |Unbind|.
   //
-  // Uses the given async_t (e.g., a message loop) in order to read messages
-  // from the channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|.
-  // If |dispatcher| is null, the current thread must have a default async_t.
+  // Uses the given async_dispatcher_t in order to read messages from the
+  // channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|. If
+  // |dispatcher| is null, the current thread must have a default
+  // async_dispatcher_t.
   //
   // Returns an error if the binding was not able to be created (e.g., because
   // the |channel| lacks |ZX_RIGHT_WAIT|).
@@ -150,9 +152,10 @@ class InterfacePtr final {
   // effectively unbind the |InterfacePtr|. A more direct way to have that
   // effect is to call |Unbind|.
   //
-  // Uses the given async_t (e.g., a message loop) in order to read messages
-  // from the channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|.
-  // If |dispatcher| is null, the current thread must have a default async_t.
+  // Uses the given async_dispatcher_t in order to read messages from the
+  // channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|. If
+  // |dispatcher| is null, the current thread must have a default
+  // async_dispatcher_t.
   //
   // Returns an error if the binding was not able to be created (e.g., because
   // the |channel| lacks |ZX_RIGHT_WAIT|).
@@ -176,7 +179,7 @@ class InterfacePtr final {
   // Whether this |InterfacePtr| is currently bound to a channel.
   //
   // If the |InterfacePtr| is bound to a channel, the |InterfacePtr| has
-  // affinity for the thread on which it was bound and calls to |Interface|
+  // affinity for the thread to which it was bound and calls to |Interface|
   // methods are proxied to the remote endpoint of the channel.
   //
   // See also:
@@ -202,7 +205,7 @@ class InterfacePtr final {
   // the returned |Interface|.
   //
   // The returned |Interface| is thread-hostile and can be used only on the
-  // thread on which the |InterfacePtr| was bound.
+  // thread to which the |InterfacePtr| was bound.
   Interface* get() const { return &impl_->proxy; }
   Interface* operator->() const { return get(); }
   Interface& operator*() const { return *get(); }

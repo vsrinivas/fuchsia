@@ -55,10 +55,10 @@ class DeprecatedBrokenBindingSet final {
   // binding generates an error will delete |impl| because |~ImplPtr| is
   // |~unique_ptr|, which deletes |impl|.
   //
-  // The impl will use the given async_t (e.g., a message loop) in order to read
-  // messages from the channel and to monitor the channel for
-  // |ZX_CHANNEL_PEER_CLOSED|. It is not necessary to use the same async_t for
-  // each binding added.
+  // The impl will use the given async_dispatcher_t in order to read messages
+  // from the channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|.
+  // It is not necessary to use the same async_dispatcher_t for each binding
+  // added.
   void AddBinding(ImplPtr impl, InterfaceRequest<Interface> request,
                   async_dispatcher_t* dispatcher) {
     std::lock_guard<std::mutex> guard(lock_);

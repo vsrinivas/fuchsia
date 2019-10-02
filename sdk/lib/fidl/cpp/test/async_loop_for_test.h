@@ -30,7 +30,7 @@ class AsyncLoopForTest {
   // This call matches the behavior of async_loop_run().
   zx_status_t Run();
 
-  // Returns the underlying async_t.
+  // Returns the underlying async_dispatcher_t.
   async_dispatcher_t* dispatcher();
 
  private:

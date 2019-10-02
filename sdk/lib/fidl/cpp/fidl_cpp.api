@@ -1,14 +1,14 @@
 {
-  "pkg/fidl_cpp/include/lib/fidl/cpp/binding.h": "46efd6459a6d6379579fda5ebfb83df6",
+  "pkg/fidl_cpp/include/lib/fidl/cpp/binding.h": "7f203538aca29287ea5fc6050bcc432d",
   "pkg/fidl_cpp/include/lib/fidl/cpp/binding_set.h": "a4aaf8ac87d3c7628a3c574d5e95bca1",
   "pkg/fidl_cpp/include/lib/fidl/cpp/enum.h": "ad164c5cd66ea3db9d5df386b47755a4",
   "pkg/fidl_cpp/include/lib/fidl/cpp/event_sender.h": "cac2e1fe4c1e0f4efafec35a57e04ab3",
-  "pkg/fidl_cpp/include/lib/fidl/cpp/interface_ptr.h": "ddcbe949f15c6fcf82309b5fe6f3c53c",
+  "pkg/fidl_cpp/include/lib/fidl/cpp/interface_ptr.h": "49017de688ed353a5f5ba8c66412420c",
   "pkg/fidl_cpp/include/lib/fidl/cpp/interface_ptr_set.h": "f58f00673b293acbb674b9ec6f02b2dd",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/header.h": "f83255d75cb018538697111f613e416f",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/implementation.h": "8dfc64d045bbfb27491e60988ba56c07",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/message_handler.h": "adbe35ee73b7ec16fda90e48bb2ef2d1",
-  "pkg/fidl_cpp/include/lib/fidl/cpp/internal/message_reader.h": "00358a626c97aa83343ba8f271f91cc5",
+  "pkg/fidl_cpp/include/lib/fidl/cpp/internal/message_reader.h": "229a4d7cb41296dd234d4a0e4d48d6f3",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/pending_response.h": "abb1fd9e60635a14262149117054a664",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/proxy.h": "12a79be8ee86efcf3600c2d39b38c454",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/proxy_controller.h": "e7587733d8fbae165690a8221e449014",
@@ -19,6 +19,6 @@
   "pkg/fidl_cpp/include/lib/fidl/cpp/optional.h": "6749907c07e72a7826342b5cc341bff8",
   "pkg/fidl_cpp/include/lib/fidl/cpp/service_connector.h": "921dc36b03d9c1854b05ebed40c00644",
   "pkg/fidl_cpp/include/lib/fidl/cpp/service_handler_base.h": "4a422b98568937fae5340575ac8d4303",
-  "pkg/fidl_cpp/include/lib/fidl/cpp/thread_safe_binding_set.h": "2d21b3a1201406d105efd8696458aa19",
+  "pkg/fidl_cpp/include/lib/fidl/cpp/thread_safe_binding_set.h": "729eeddc1e62d1cd92a4830b9f9f8349",
   "pkg/fidl_cpp/include/lib/fidl/cpp/type_converter.h": "81ea87e9526f104ff4bbebd502c6a7ec"
 }

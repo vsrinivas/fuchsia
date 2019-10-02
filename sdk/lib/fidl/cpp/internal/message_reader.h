@@ -37,7 +37,8 @@ class MessageReader final {
   // If the |MessageReader| is already bound, the |MessageReader| will first
   // be unbound.
   //
-  // If |dispatcher| is null, the current thread must have a default async_t.
+  // If |dispatcher| is null, the current thread must have a default
+  // async_dispatcher_t.
   zx_status_t Bind(zx::channel channel, async_dispatcher_t* dispatcher = nullptr);
 
   // Unbinds the channel from this |MessageReader|.

@@ -51,8 +51,8 @@ namespace fidl {
 //
 // After the |Binding| has been bound to an implementation, the implementation
 // will receive methods calls from the remote endpoint of the channel on the
-// async_t on which the |InterfaceRequest| was bound. By default this is the
-// thread on which the binding occurred.
+// async_dispatcher_t to which the |InterfaceRequest| was bound. By default this
+// is the thread on which the binding occurred.
 //
 // See also:
 //

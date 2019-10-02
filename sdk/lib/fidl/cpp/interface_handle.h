@@ -118,8 +118,8 @@ class InterfaceHandle final {
   // returned |InterfacePtr|, which means the |is_valid()| method will return
   // false after this method returns.
   //
-  // Requires the current thread to have a default async_t (e.g., a message
-  // loop) in order to read messages from the channel and to monitor the
+  // Requires the current thread to have a default async_dispatcher_t (e.g., a
+  // message loop) in order to read messages from the channel and to monitor the
   // channel for |ZX_CHANNEL_PEER_CLOSED|.
   //
   // Making this method templated ensures that it is not type-instantiated

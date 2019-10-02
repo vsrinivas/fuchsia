@@ -32,9 +32,9 @@ namespace fidl {
 // |SynchronousInterfacePtr| does not attempt to synchronize mutating operatios,
 // such as |Bind| or |Unbind|.
 //
-// |SynchronousInterfacePtr| does not require a |async_t| implementation and
-// does not bind to the default |async_dispatcher_t*| for the current thread,
-// unlike |InterfacePtr|.
+// |SynchronousInterfacePtr| does not require a |async_dispatcher_t|
+// implementation and does not bind to the default |async_dispatcher_t*| for the
+// current thread, unlike |InterfacePtr|.
 //
 // See also:
 //
@@ -105,7 +105,7 @@ class SynchronousInterfacePtr final {
   // effectively unbind the |SynchronousInterfacePtr|. A more direct way to have
   // that effect is to call |Unbind|.
   //
-  // Does not require the current thread to have a default async_t.
+  // Does not require the current thread to have a default async_dispatcher_t.
   void Bind(zx::channel channel) {
     if (!channel) {
       proxy_.reset();
@@ -125,7 +125,7 @@ class SynchronousInterfacePtr final {
   // method will effectively unbind the |SynchronousInterfacePtr|. A more direct
   // way to have that effect is to call |Unbind|.
   //
-  // Does not require the current thread to have a default async_t.
+  // Does not require the current thread to have a default async_dispatcher_t.
   void Bind(InterfaceHandle<Interface> handle) { return Bind(handle.TakeChannel()); }
 
   // Unbinds the underlying channel from the |SynchronousInterfacePtr|.

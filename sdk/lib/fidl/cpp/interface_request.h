@@ -54,7 +54,7 @@ class Builder;
 //
 // After the |InterfaceRequest| has been bound to an implementation, the
 // implementation will receive method calls from the remote endpoint of the
-// channel on the thread on which the |InterfaceRequest| was bound.
+// channel on the thread to which the |InterfaceRequest| was bound.
 //
 // See also:
 //
