@@ -102,6 +102,8 @@ void inspector_print_debug_info(FILE* out, zx_handle_t process, zx_handle_t thre
 // Prints to |out| the debug info for all the threads in the process (registers, bottom of user
 // stack, dso list, backtrace, etc.).
 //
+// It will first print all the threads that are in an exception and then print the other threads.
+//
 // Does NOT close the |process| handle.
 void inspector_print_debug_info_for_all_threads(FILE* out, zx_handle_t process);
 

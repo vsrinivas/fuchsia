@@ -13,6 +13,9 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
 
+#include <string>
+#include <vector>
+
 #include "inspector/inspector.h"
 #include "utils-impl.h"
 
@@ -218,7 +221,7 @@ __EXPORT void inspector_print_debug_info(FILE* out, zx_handle_t process_handle,
       fatal = "";
     }
 
-    fprintf(out, "<== %sexception: process %s[%" PRIu64 "] thread %s[%" PRIu64 "]\n", fatal,
+    fprintf(out, "<== %s: process %s[%" PRIu64 "] thread %s[%" PRIu64 "]\n", fatal,
             process_name, pid, thread_name, tid);
     inspector::print_exception_report(out, report, &regs);
 
@@ -242,19 +245,13 @@ __EXPORT void inspector_print_debug_info(FILE* out, zx_handle_t process_handle,
     fprintf(out, "<== process %s[%" PRIu64 "] thread %s[%" PRIu64 "]\n", process_name, pid,
             thread_name, tid);
     fprintf(out, "<== PC at 0x%" PRIxPTR "\n", decoded.pc);
-
-#if defined(__x86_64__)
     inspector_print_general_regs(out, &regs, nullptr);
-#elif defined(__aarch64__)
-    inspector_print_general_regs(out, &regs, nullptr);
-#else
-#error unsupported architecture
-#endif
   }
 
   // Print the common stack part of the thread.
   fprintf(out, "bottom of user stack:\n");
   inspector_print_memory(out, process->get(), decoded.sp, inspector::kMemoryDumpSize);
+
   fprintf(out, "arch: %s\n", inspector::kArch);
   inspector_print_stack_trace(out, process->get(), thread->get(), &regs);
 
@@ -262,6 +259,9 @@ __EXPORT void inspector_print_debug_info(FILE* out, zx_handle_t process_handle,
     printf("Done handling thread %" PRIu64 ".%" PRIu64 ".\n", pid, tid);
 }
 
+// The approach of |inspector_print_debug_info_for_all_threads| is to suspend the process, obtain
+// all threads, go over the ones in an exception first and print them and only then print all the
+// other threads. This permits to have a clearer view between logs and the crash report.
 __EXPORT void inspector_print_debug_info_for_all_threads(FILE* out, zx_handle_t process_handle) {
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
 
@@ -290,48 +290,78 @@ __EXPORT void inspector_print_debug_info_for_all_threads(FILE* out, zx_handle_t 
   // NOTE: This could be skipping threads being created at the moment of this call.
   //       This is an inherent race between suspending a process and a thread being created.
   size_t actual, avail;
-  zx_koid_t thread_koids[1024];   // This is an outrageous amount of threads to output.
-  status = process->get_info(ZX_INFO_PROCESS_THREADS, thread_koids, sizeof(thread_koids), &actual,
-                             &avail);
+  // This is an outrageous amount of threads to output. We mark them all as invalid first.
+  constexpr size_t kMaxThreadHandles = 128;
+  std::vector<zx_koid_t> thread_koids(kMaxThreadHandles);
+  status = process->get_info(ZX_INFO_PROCESS_THREADS, thread_koids.data(),
+                             thread_koids.size() * sizeof(zx_koid_t), &actual, &avail);
   if (status != ZX_OK) {
     printf("[Process %s (%" PRIu64 ")] Could not get list of threads: %s.\n", process_name,
            process_koid, zx_status_get_string(status));
     return;
   }
 
-  // Go over each thread and print them.
-  for (size_t i = 0; i < actual; i++) {
-    zx_koid_t thread_koid = thread_koids[i];
+  std::vector<zx::thread> thread_handles(actual);
+  std::vector<std::string> thread_names(actual);
+  std::vector<zx_info_thread_t> thread_infos(actual);
 
-    // Get the child thread handle.
-    zx::thread child;
-    status = process->get_child(thread_koid, ZX_RIGHT_SAME_RIGHTS, &child);
+  // Get the thread associated data.
+  for (size_t i = 0; i < actual; i++) {
+    // Get the handles.
+    zx::thread& child = thread_handles[i];
+    status = process->get_child(thread_koids[i], ZX_RIGHT_SAME_RIGHTS, &child);
     if (status != ZX_OK) {
-      printf("[Process %s (%" PRIu64 "), Thread %" PRIu64 "] Could not obtain handle: %s.\n",
-             process_name, process_koid, thread_koid, zx_status_get_string(status));
+      printf("[Process %s (%" PRIu64 ")] Could not obtain thread handle: %s.\n", process_name,
+             process_koid, zx_status_get_string(status));
       continue;
     }
 
+    // Get the name.
     char thread_name[ZX_MAX_NAME_LEN];
     inspector::get_name(child.get(), thread_name, sizeof(thread_name));
+    thread_names[i] = thread_name;
 
-    // Get the thread info.
-    zx_info_thread_t thread_info;
+    // Get the thread infos.
+    zx_info_thread_t thread_info = {};
     status = child.get_info(ZX_INFO_THREAD, &thread_info, sizeof(thread_info), nullptr, nullptr);
     if (status != ZX_OK) {
-      printf("[Process %s (%" PRIu64 "), Thread %s (%" PRIu64
-             ")] Could not obtain thread info: %s\n",
-             process_name, process_koid, thread_name, thread_koid, zx_status_get_string(status));
+      printf("[Process %s (%" PRIu64 "), Thread %s (%" PRIu64 ")] Could not obtain info: %s\n",
+             process_name, process_koid, thread_names[i].c_str(), thread_koids[i],
+             zx_status_get_string(status));
       continue;
     }
 
-    // If the thread is in an exception, we print it as such.
-    if (thread_info.state == ZX_THREAD_STATE_BLOCKED_EXCEPTION) {
-      inspector_print_debug_info(out, process->get(), child.get());
-      continue;
-    }
+    thread_infos[i] = std::move(thread_info);
+  }
 
-    // The thread is not in an exception, so we wait for it to be suspended.
+  // Print the threads in an exception first.
+  for (size_t i = 0; i < actual; i++) {
+    zx::thread& child = thread_handles[i];
+    if (!child.is_valid())
+      continue;
+
+    // If the thread is not in an exception, it will be printed on the next loop.
+    if (thread_infos[i].state != ZX_THREAD_STATE_BLOCKED_EXCEPTION)
+      continue;
+
+    // We print the thread and then mark this koid as empty, so that it won't be printed on the
+    // suspended pass. This means we can free the handle after this.
+    inspector_print_debug_info(out, process->get(), child.get());
+    thread_handles[i].reset();
+  }
+
+  // Go over each thread and print them.
+  for (size_t i = 0; i < actual; i++) {
+    if (!thread_handles[i].is_valid())
+      continue;
+
+    // If the thread is in an exception, it was already printed by the previous loop.
+    if (thread_infos[i].state == ZX_THREAD_STATE_BLOCKED_EXCEPTION)
+      continue;
+
+    zx::thread& child = thread_handles[i];
+
+    // Wait for the thread to be suspended.
     // We do this regardless of the process suspension. There are legitimate cases where the process
     // suspension would fail, like trying to suspend one's own process. If the process suspension
     // was successful, this is a no-op.
@@ -339,15 +369,16 @@ __EXPORT void inspector_print_debug_info_for_all_threads(FILE* out, zx_handle_t 
     status = child.suspend(&suspend_token);
     if (status != ZX_OK) {
       printf("[Process %s (%" PRIu64 "), Thread %s (%" PRIu64 ")] Could not suspend thread: %s.\n",
-             process_name, process_koid, thread_name, thread_koid, zx_status_get_string(status));
+             process_name, process_koid, thread_names[i].c_str(), thread_koids[i],
+             zx_status_get_string(status));
       continue;
     }
 
     status = child.wait_one(ZX_THREAD_SUSPENDED, zx::deadline_after(zx::msec(100)), nullptr);
     if (status != ZX_OK) {
-      printf("[Process %s (%" PRIu64 "), Thread %s (%" PRIu64
-             ")] Could not wait for suspend signal: %s.\n",
-             process_name, process_koid, thread_name, thread_koid, zx_status_get_string(status));
+      printf("[Process %s (%" PRIu64 "), Thread %s (%" PRIu64 ")] Didn't get suspend signal: %s.\n",
+             process_name, process_koid, thread_names[i].c_str(), thread_koids[i],
+             zx_status_get_string(status));
       continue;
     }
 

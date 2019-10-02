@@ -20,17 +20,28 @@ namespace {
 
 // Test utilities ----------------------------------------------------------------------------------
 
+constexpr int kLoopThreadCount = 5;
+
 struct ThreadContext {
   zx::unowned<zx::thread> thread;
   zx::channel exception_channel;
 
   // NOTE: Not all events are used by all tests.
-  zx::event crash_thread_ready;  // Set when the crash thread is about to crash.
-  zx::event test_done;           // Set when test is OK and other threads should exit.
+  zx::event loop_threads_ready[kLoopThreadCount]; // Set then all the looping threads are ready.
+  zx::event crash_thread_ready;                   // Set when the crash thread is about to crash.
+  zx::event test_done;                            // Set when test is done.
+};
+
+struct LoopThreadContext {
+  int index;
+  ThreadContext* context;
 };
 
 ThreadContext SetupThreadContext() {
   ThreadContext context;
+  for (int i = 0; i < kLoopThreadCount; i++) {
+    zx::event::create(0, &context.loop_threads_ready[i]);
+  }
   zx::event::create(0, &context.crash_thread_ready);
   zx::event::create(0, &context.test_done);
   return context;
@@ -77,6 +88,17 @@ void ResumeException(ThreadContext* context, ExceptionReport* report) {
 
 // Thread Functions --------------------------------------------------------------------------------
 
+int LoopThread(void* user) {
+  LoopThreadContext* context = reinterpret_cast<LoopThreadContext*>(user);
+
+  // Tell the test that this thread is running.
+  context->context->loop_threads_ready[context->index].signal(0, ZX_USER_SIGNAL_0);
+
+  // Wait until the test tells us we're ready.
+  context->context->test_done.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), 0);
+  return 0;
+}
+
 int CrashThreadFunction(void* user) {
   ThreadContext* context = reinterpret_cast<ThreadContext*>(user);
 
@@ -95,15 +117,14 @@ int CrashThreadFunction(void* user) {
     return 1;
   }
 
-  // Throw a SW breakpoint exception.
-  backtrace_request();
+#if defined(__aarch64__)
+  __asm__ volatile("brk 0");
+#elif defined(__x86_64__)
+  __asm__ volatile("int3");
+#else
+#error Not supported on this platform.
+#endif
 
-  return 0;
-}
-
-int LoopThread(void* user) {
-  ThreadContext* context = reinterpret_cast<ThreadContext*>(user);
-  context->test_done.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), 0);
   return 0;
 }
 
@@ -153,21 +174,31 @@ TEST(Inspector, PrintDebugInfoForManyThreads) {
   ThreadContext context = SetupThreadContext();
 
   // Create threads that will loop until the signal is off.
-  constexpr int kLoopThreadCount = 5;
   thrd_t loop_threads[kLoopThreadCount];
   std::string loop_thread_names[kLoopThreadCount];
 
+  LoopThreadContext loop_thread_contexts[kLoopThreadCount];
+
   for (int i = 0; i < kLoopThreadCount; i++) {
+    LoopThreadContext* loop_context = loop_thread_contexts + i;
+    loop_context->index = i;
+    loop_context->context = &context;
+
     char buf[128];
     snprintf(buf, sizeof(buf), "loop_thread_%d", i);
-    ASSERT_EQ(thrd_create_with_name(loop_threads + i, LoopThread, &context, buf), 0);
+    ASSERT_EQ(thrd_create_with_name(loop_threads + i, LoopThread, loop_context, buf), 0);
     loop_thread_names[i] = buf;
   }
 
+  // Wait until all the loop threads are done.
+  for (int i = 0; i < kLoopThreadCount; i++) {
+    context.loop_threads_ready[i].wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), 0);
+  }
+
   // Create the main crash thread.
-  constexpr char kThreadName[] = "main-test-thread";
+  constexpr char kCrashThread1[] = "crash-thread";
   thrd_t c_thread;
-  ASSERT_EQ(thrd_create_with_name(&c_thread, CrashThreadFunction, &context, kThreadName), 0);
+  ASSERT_EQ(thrd_create_with_name(&c_thread, CrashThreadFunction, &context, kCrashThread1), 0);
   context.thread = zx::unowned<zx::thread>(thrd_get_zx_handle(c_thread));
 
   // Wait for the thread to tell us we're ready.
@@ -192,9 +223,15 @@ TEST(Inspector, PrintDebugInfoForManyThreads) {
   ASSERT_NE(inspector_output.find(GetProcessName()), std::string::npos);
 
   size_t pos = std::string::npos;
-  pos = inspector_output.find(kThreadName);
+  pos = inspector_output.find(kCrashThread1);
+  size_t inspector_pos = pos;
   ASSERT_NE(pos, std::string::npos);
-  ASSERT_EQ(inspector_output.find(kThreadName, pos + 1), std::string::npos);
+  ASSERT_EQ(inspector_output.find(kCrashThread1, pos + 1), std::string::npos);
+
+  // Exception should only appear once.
+  pos = inspector_output.find("sw breakpoint");
+  ASSERT_NE(pos, std::string::npos);
+  ASSERT_EQ(inspector_output.find("sw breakpoint", pos + 1), std::string::npos);
 
   // Each name should only appear once.
   for (int i = 0; i < kLoopThreadCount; i++) {
@@ -202,12 +239,10 @@ TEST(Inspector, PrintDebugInfoForManyThreads) {
     ASSERT_NE(pos, std::string::npos, "%s not found.", loop_thread_names[i].c_str());
     ASSERT_EQ(inspector_output.find(loop_thread_names[i], pos + 1), std::string::npos,
               "%s found twice.", loop_thread_names[i].c_str());
-  }
 
-  // Exception should only appear once.
-  pos = inspector_output.find("sw breakpoint");
-  ASSERT_NE(pos, std::string::npos);
-  ASSERT_EQ(inspector_output.find("sw breakpoint", pos + 1), std::string::npos);
+    // Exception should always appear first.
+    ASSERT_LT(inspector_pos, pos);
+  }
 
   ResumeException(&context, &report);
 
