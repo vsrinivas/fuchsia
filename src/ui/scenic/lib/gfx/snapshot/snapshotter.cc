@@ -10,6 +10,7 @@
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/lib/escher/vk/image.h"
 #include "src/ui/scenic/lib/gfx/resources/buffer.h"
@@ -42,6 +43,7 @@
 namespace scenic_impl {
 namespace gfx {
 
+namespace {
 // Helper function to create a |SizedVmo| from bytes of certain size.
 bool VmoFromBytes(const uint8_t* bytes, size_t num_bytes, uint32_t type, uint32_t version,
                   fsl::SizedVmo* sized_vmo_ptr) {
@@ -78,8 +80,19 @@ bool VmoFromBytes(const uint8_t* bytes, size_t num_bytes, uint32_t type, uint32_
   return true;
 }
 
-Snapshotter::Snapshotter(std::unique_ptr<escher::BatchGpuUploader> gpu_uploader)
-    : gpu_uploader_(std::move(gpu_uploader)) {}
+escher::ImagePtr CreateReplacementImage(escher::EscherWeakPtr escher, uint32_t width,
+                                        uint32_t height) {
+  // Fuchsia colors
+  uint8_t channels[4];
+  channels[1] = 119;
+  channels[0] = channels[2] = channels[3] = 255;
+  return escher->NewRgbaImage(width, height, channels);
+}
+
+}  // namespace
+
+Snapshotter::Snapshotter(escher::EscherWeakPtr escher)
+    : gpu_uploader_(escher::BatchGpuUploader::New(escher)), escher_(escher) {}
 
 void Snapshotter::TakeSnapshot(Resource* resource, TakeSnapshotCallback snapshot_callback) {
   FXL_DCHECK(resource) << "Cannot snapshot null resource.";
@@ -276,6 +289,13 @@ void Snapshotter::VisitResource(Resource* r) {
 void Snapshotter::VisitImage(escher::ImagePtr image) {
   if (!image) {
     return;
+  }
+  if (image->use_protected_memory()) {
+    // We are not allowed to readback protected memory.
+    image = CreateReplacementImage(escher_, image->width(), image->height());
+    if (!image) {
+      return;
+    }
   }
 
   auto format = (int32_t)image->format();

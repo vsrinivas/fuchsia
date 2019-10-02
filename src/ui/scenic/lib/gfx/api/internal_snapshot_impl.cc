@@ -37,8 +37,7 @@ void InternalSnapshotImpl::TakeSnapshot(
   auto pending_snapshot = std::make_shared<PendingSnapshot>(num_compositors);
   pending_snapshot->callback = std::move(callback);
 
-  auto gpu_uploader = escher::BatchGpuUploader::New(escher_->GetWeakPtr());
-  Snapshotter snapshotter(std::move(gpu_uploader));
+  Snapshotter snapshotter(escher_);
 
   // Loop over each of the compositors and take a snapshot. The resulting buffers
   // are pushed into the caller's result vector. The caller then calls the provided
