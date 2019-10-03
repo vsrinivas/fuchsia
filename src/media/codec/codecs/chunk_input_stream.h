@@ -104,7 +104,7 @@ class ChunkInputStream {
     size_t offset = 0;
     const uint8_t* data_at_offset() const {
       ZX_DEBUG_ASSERT(bytes_unread() > 0);
-      return packet->buffer()->buffer_base() + packet->start_offset() + offset;
+      return packet->buffer()->base() + packet->start_offset() + offset;
     }
     size_t bytes_unread() const {
       ZX_DEBUG_ASSERT(packet);

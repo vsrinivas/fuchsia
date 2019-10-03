@@ -36,17 +36,20 @@ struct VideoFrame;
 // instance, not to the data pointed at by buffer_base().
 class CodecBuffer {
  public:
-  uint64_t buffer_lifetime_ordinal() const;
+  // This is the same value as buffer_lifetime_ordinal in StreamProcessor FIDL.
+  uint64_t lifetime_ordinal() const;
 
-  uint32_t buffer_index() const;
+  // This matches the buffer_index field of fuchsia::media::Packet when the packet refers to this
+  // buffer.
+  uint32_t index() const;
 
-  uint8_t* buffer_base() const;
+  uint8_t* base() const;
 
-  size_t buffer_size() const;
+  size_t size() const;
 
-  const zx::vmo& buffer_vmo() const;
+  const zx::vmo& vmo() const;
 
-  uint64_t buffer_offset() const;
+  uint64_t offset() const;
 
   const fuchsia::media::StreamBuffer& codec_buffer() const;
 

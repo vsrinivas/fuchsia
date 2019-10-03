@@ -3234,7 +3234,7 @@ void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet, bool error_detected
     fuchsia::media::Packet p;
     p.mutable_header()->set_buffer_lifetime_ordinal(packet->buffer_lifetime_ordinal());
     p.mutable_header()->set_packet_index(packet->packet_index());
-    p.set_buffer_index(packet->buffer()->buffer_index());
+    p.set_buffer_index(packet->buffer()->index());
     p.set_stream_lifetime_ordinal(stream_lifetime_ordinal_);
     p.set_start_offset(packet->start_offset());
     p.set_valid_length_bytes(packet->valid_length_bytes());
