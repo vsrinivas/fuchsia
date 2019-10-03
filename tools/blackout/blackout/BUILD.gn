@@ -12,7 +12,7 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:rand",
       "//third_party/rust_crates:structopt",
     ]
-    source_root = "src/host.rs"
+    source_root = "src/host/lib.rs"
   }
 }
 
