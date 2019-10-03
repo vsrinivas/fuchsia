@@ -8,9 +8,11 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
-static uint8_t DestructionTrackerStorage[32];
+namespace {
+
+uint8_t DestructionTrackerStorage[32];
 
 template <bool EnableAdoptionValidator>
 class DestructionTracker
@@ -48,7 +50,7 @@ static_assert(sizeof(DestructionTracker<true>) <= sizeof(DestructionTrackerStora
               "Not enough static storage for DestructionTracker<true|false>!");
 
 template <bool EnableAdoptionValidator>
-static void* inc_and_dec(void* arg) {
+void* inc_and_dec(void* arg) {
   auto tracker = reinterpret_cast<DestructionTracker<EnableAdoptionValidator>*>(arg);
   for (size_t i = 0u; i < 500; ++i) {
     fbl::RefPtr<DestructionTracker<EnableAdoptionValidator>> ptr(tracker);
@@ -57,9 +59,7 @@ static void* inc_and_dec(void* arg) {
 }
 
 template <bool EnableAdoptionValidator>
-static bool ref_counted_test() {
-  BEGIN_TEST;
-
+void ref_counted_test() {
   bool destroyed = false;
   {
     fbl::AllocChecker ac;
@@ -84,13 +84,20 @@ static bool ref_counted_test() {
     EXPECT_FALSE(destroyed, "should not be destroyed after inc/dec pairs");
   }
   EXPECT_TRUE(destroyed, "should be when RefPtr falls out of scope");
-  END_TEST;
+}
+
+TEST(RefCountedTests, RefCountedWithAdoptValidation) {
+  auto do_test = ref_counted_test<true>;
+  ASSERT_NO_FAILURES(do_test());
+}
+
+TEST(RefCountedTests, RefCountedWithoutAdoptValidation) {
+  auto do_test = ref_counted_test<false>;
+  ASSERT_NO_FAILURES(do_test());
 }
 
 template <bool EnableAdoptionValidator>
-static bool make_ref_counted_test() {
-  BEGIN_TEST;
-
+void make_ref_counted_test() {
   bool destroyed = false;
   {
     auto ptr = fbl::MakeRefCounted<DestructionTracker<EnableAdoptionValidator>>(&destroyed);
@@ -106,13 +113,19 @@ static bool make_ref_counted_test() {
     EXPECT_TRUE(ac.check());
   }
   EXPECT_TRUE(destroyed, "should be when RefPtr falls out of scope");
-
-  END_TEST;
 }
 
-static bool wrap_dead_pointer_asserts() {
-  BEGIN_TEST;
+TEST(RefCountedTests, MakeRefCountedWithAdoptValidation) {
+  auto do_test = make_ref_counted_test<true>;
+  ASSERT_NO_FAILURES(do_test());
+}
 
+TEST(RefCountedTests, MakeRefCountedWithoutAdoptValidation) {
+  auto do_test = make_ref_counted_test<false>;
+  ASSERT_NO_FAILURES(do_test());
+}
+
+TEST(RefCountedTests, WrapDeadPointerAssert) {
   bool destroyed = false;
   DestructionTracker<true>* raw = nullptr;
   {
@@ -127,19 +140,13 @@ static bool wrap_dead_pointer_asserts() {
   EXPECT_TRUE(destroyed);
 
   // Wrapping the now-destroyed object should trigger an assertion.
-  ASSERT_DEATH(
-      [](void* void_raw) {
-        auto raw = reinterpret_cast<DestructionTracker<true>*>(void_raw);
-        __UNUSED fbl::RefPtr<DestructionTracker<true>> zombie = fbl::RefPtr(raw);
-      },
-      raw, "Assert should have fired after wraping dead object\n");
-
-  END_TEST;
+  auto lambda = [raw]() {
+    __UNUSED fbl::RefPtr<DestructionTracker<true>> zombie = fbl::RefPtr(raw);
+  };
+  ASSERT_DEATH(lambda, "Assert should have fired after wraping dead object\n");
 }
 
-static bool extra_release_asserts() {
-  BEGIN_TEST;
-
+TEST(RefCountedTests, ExtraReleaseAssert) {
   // Create and adopt a ref-counted object.
   bool destroyed = false;
   fbl::AllocChecker ac;
@@ -153,25 +160,19 @@ static bool extra_release_asserts() {
   // of Release())
   EXPECT_FALSE(destroyed);
 
-  ASSERT_DEATH(
-      [](void* void_raw) {
-        auto raw = reinterpret_cast<DestructionTracker<true>*>(void_raw);
-        // Manually releasing again should trigger the assertion.
-        __UNUSED bool unused = raw->Release();
-      },
-      raw, "Assert should have fired after releasing object with ref count of zero\n");
+  auto lambda = [raw]() {
+    // Manually releasing again should trigger the assertion.
+    __UNUSED bool unused = raw->Release();
+  };
+  ASSERT_DEATH(lambda, "Assert should have fired after releasing object with ref count of zero\n");
 
   // Do not attempt to actually delete the object.  It was never actually heap
   // allocated, so we are not leaking anything, and the system is in a bad
   // state now.  Attempting to delete the object can trigger other ASSERTs
   // which will crash the test.
-
-  END_TEST;
 }
 
-static bool wrap_after_last_release_asserts() {
-  BEGIN_TEST;
-
+TEST(RefCountedTests, WrapZeroRefCountAssert) {
   // Create and adopt a ref-counted object.
   bool destroyed = false;
   fbl::AllocChecker ac;
@@ -185,72 +186,46 @@ static bool wrap_after_last_release_asserts() {
   // of Release())
   EXPECT_FALSE(destroyed);
 
-  ASSERT_DEATH(
-      [](void* void_raw) {
-        auto raw = reinterpret_cast<DestructionTracker<true>*>(void_raw);
-        // Adding another ref (by wrapping) should trigger the assertion.
-        __UNUSED bool unused = raw->Release();
-      },
-      raw, "Assert should have fired after wraping object with ref count of zero\n");
+  auto lambda = [raw]() {
+    // Adding another ref (by wrapping) should trigger the assertion.
+    __UNUSED bool unused = raw->Release();
+  };
+  ASSERT_DEATH(lambda, "Assert should have fired after wraping object with ref count of zero\n");
 
   // Do not attempt to actually delete the object.  See previous comments.
-
-  END_TEST;
 }
 
-static bool unadopted_add_ref_asserts() {
-  BEGIN_TEST;
-
+TEST(RefCountedTests, AddRefUnadoptedAssert) {
   // Create an un-adopted ref-counted object.
   bool destroyed = false;
   fbl::AllocChecker ac;
   DestructionTracker<true>* raw = new (&ac) DestructionTracker<true>(&destroyed);
   ASSERT_TRUE(ac.check());
 
-  ASSERT_DEATH(
-      [](void* void_raw) {
-        auto raw = reinterpret_cast<DestructionTracker<true>*>(void_raw);
-        // Adding a ref (by wrapping) without adopting first should trigger an
-        // assertion.
-        fbl::RefPtr<DestructionTracker<true>> unadopted = fbl::RefPtr(raw);
-      },
-      raw, "Assert should have fired after wraping non-adopted object\n");
+  auto lambda = [raw]() {
+    // Adding a ref (by wrapping) without adopting first should trigger an
+    // assertion.
+    fbl::RefPtr<DestructionTracker<true>> unadopted = fbl::RefPtr(raw);
+  };
+  ASSERT_DEATH(lambda, "Assert should have fired after wraping non-adopted object\n");
 
   // Do not attempt to actually delete the object.  See previous comments.
-
-  END_TEST;
 }
 
-static bool unadopted_release_asserts() {
-  BEGIN_TEST;
-
+TEST(RefCountedTests, ReleaseUnadoptedAssert) {
   // Create an un-adopted ref-counted object.
   bool destroyed = false;
   fbl::AllocChecker ac;
   DestructionTracker<true>* raw = new (&ac) DestructionTracker<true>(&destroyed);
   ASSERT_TRUE(ac.check());
 
-  ASSERT_DEATH(
-      [](void* void_raw) {
-        auto raw = reinterpret_cast<DestructionTracker<true>*>(void_raw);
-        // Releasing without adopting first should trigger an assertion.
-        __UNUSED bool unused = raw->Release();
-      },
-      raw, "Assert should have fired after releasing non-adopted object\n");
+  auto lambda = [raw]() {
+    // Releasing without adopting first should trigger an assertion.
+    __UNUSED bool unused = raw->Release();
+  };
+  ASSERT_DEATH(lambda, "Assert should have fired after releasing non-adopted object\n");
 
   // Do not attempt to actually delete the object.  See previous comments.
-
-  END_TEST;
 }
 
-BEGIN_TEST_CASE(ref_counted_tests)
-RUN_NAMED_TEST("Ref Counted (adoption validation on)", ref_counted_test<true>)
-RUN_NAMED_TEST("Ref Counted (adoption validation off)", ref_counted_test<false>)
-RUN_NAMED_TEST("Make Ref Counted (adoption validation on)", make_ref_counted_test<true>)
-RUN_NAMED_TEST("Make Ref Counted (adoption validation off)", make_ref_counted_test<false>)
-RUN_NAMED_TEST("Wrapping dead pointer should assert", wrap_dead_pointer_asserts)
-RUN_NAMED_TEST("Extra release should assert", extra_release_asserts)
-RUN_NAMED_TEST("Wrapping zero-count pointer should assert", wrap_after_last_release_asserts)
-RUN_NAMED_TEST("AddRef on unadopted object should assert", unadopted_add_ref_asserts)
-RUN_NAMED_TEST("Release on unadopted object should assert", unadopted_release_asserts)
-END_TEST_CASE(ref_counted_tests)
+}  // namespace
