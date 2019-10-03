@@ -103,6 +103,8 @@ class Mixer {
   //
   // TODO(mpuryear): Change parameter frac_src_frames to src_frames (change
   // subframes to int frames), as this was never intended to be fractional.
+  //
+  // TODO(37356): Make frac_src_frames and frac_src_offset typesafe
   virtual bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
                    uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate,
                    Bookkeeping* info) = 0;

@@ -21,6 +21,8 @@ source_set("mixer") {
     "output_producer.h",
     "point_sampler.cc",
     "point_sampler.h",
+    "position_manager.cc",
+    "position_manager.h",
   ]
 
   public_deps = [
@@ -65,11 +67,13 @@ executable("unittest_bin") {
     "bookkeeping_unittest.cc",
     "gain_unittest.cc",
     "output_producer_unittest.cc",
+    "position_manager_unittest.cc",
   ]
 
   deps = [
     ":mixer",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
+    "//zircon/public/lib/fbl",
   ]
 }
