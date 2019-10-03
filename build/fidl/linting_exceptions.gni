@@ -8,7 +8,6 @@
 # See fxb/36769.
 
 unlinted_libraries = [
-  "fuchsia.camera.common",
   "fuchsia.exception",
   "fuchsia.hardware.block",
   "fuchsia.hardware.block.partition",

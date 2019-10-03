@@ -122,7 +122,7 @@ void DmaManager::PrintStatus(ddk::MmioBuffer* mmio) {
 
 zx_status_t DmaManager::Configure(
     fuchsia_sysmem_BufferCollectionInfo buffer_collection,
-    fit::function<void(fuchsia_camera_common_FrameAvailableEvent)> frame_available_callback) {
+    fit::function<void(fuchsia_camera_FrameAvailableEvent)> frame_available_callback) {
   current_format_ = DmaFormat(buffer_collection.format.image);
   // TODO(CAM-54): Provide a way to dump the previous set of write locked
   // buffers.
@@ -180,9 +180,9 @@ void DmaManager::OnFrameWritten() {
   }
   ZX_ASSERT(frame_available_callback_ != nullptr);
   ZX_ASSERT(!write_locked_buffers_.empty());
-  fuchsia_camera_common_FrameAvailableEvent event;
+  fuchsia_camera_FrameAvailableEvent event;
   event.buffer_id = write_locked_buffers_.back().ReleaseWriteLockAndGetIndex();
-  event.frame_status = fuchsia_camera_common_FrameStatus_OK;
+  event.frame_status = fuchsia_camera_FrameStatus_OK;
   // TODO(garratt): set metadata
   event.metadata.timestamp = 0;
   frame_available_callback_(event);
@@ -218,9 +218,9 @@ void DmaManager::OnNewFrame() {
         }
     // clang-format on
     // Send callback:
-    fuchsia_camera_common_FrameAvailableEvent event;
+    fuchsia_camera_FrameAvailableEvent event;
     event.buffer_id = 0;
-    event.frame_status = fuchsia_camera_common_FrameStatus_ERROR_BUFFER_FULL;
+    event.frame_status = fuchsia_camera_FrameStatus_ERROR_BUFFER_FULL;
     event.metadata.timestamp = 0;
     frame_available_callback_(event);
     return;

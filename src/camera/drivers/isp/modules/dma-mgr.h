@@ -5,7 +5,7 @@
 #ifndef SRC_CAMERA_DRIVERS_ISP_MODULES_DMA_MGR_H_
 #define SRC_CAMERA_DRIVERS_ISP_MODULES_DMA_MGR_H_
 
-#include <fuchsia/camera/common/c/fidl.h>
+#include <fuchsia/camera/c/fidl.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/fzl/vmo-pool.h>
@@ -45,7 +45,7 @@ class DmaManager {
   //    will return errors.
   zx_status_t Configure(
       fuchsia_sysmem_BufferCollectionInfo buffer_collection,
-      fit::function<void(fuchsia_camera_common_FrameAvailableEvent)> frame_available_callback);
+      fit::function<void(fuchsia_camera_FrameAvailableEvent)> frame_available_callback);
 
   static zx_status_t Create(const zx::bti& bti, const ddk::MmioView& isp_mmio_local,
                             Stream stream_type, std::unique_ptr<DmaManager>* out);
@@ -79,7 +79,7 @@ class DmaManager {
   std::deque<fzl::VmoPool::Buffer> write_locked_buffers_;
   std::optional<DmaFormat> current_format_;
   Stream stream_type_;
-  fit::function<void(fuchsia_camera_common_FrameAvailableEvent)> frame_available_callback_;
+  fit::function<void(fuchsia_camera_FrameAvailableEvent)> frame_available_callback_;
   zx::bti bti_;
 
   // Get the Registers used by the DMA Writer.

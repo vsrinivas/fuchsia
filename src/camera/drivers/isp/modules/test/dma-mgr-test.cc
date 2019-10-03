@@ -5,7 +5,7 @@
 #include "../dma-mgr.h"
 
 #include <fcntl.h>
-#include <fuchsia/camera/common/c/fidl.h>
+#include <fuchsia/camera/c/fidl.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/syslog/global.h>
@@ -62,11 +62,11 @@ class DmaMgrTest : public zxtest::Test {
     ASSERT_OK(status);
   }
 
-  void FullResCallback(fuchsia_camera_common_FrameAvailableEvent event) {
+  void FullResCallback(fuchsia_camera_FrameAvailableEvent event) {
     full_resolution_callbacks_.push_back(event);
   }
 
-  void DownScaledCallback(fuchsia_camera_common_FrameAvailableEvent event) {
+  void DownScaledCallback(fuchsia_camera_FrameAvailableEvent event) {
     downscaled_callbacks_.push_back(event);
   }
 
@@ -166,8 +166,8 @@ class DmaMgrTest : public zxtest::Test {
   fbl::unique_ptr<camera::DmaManager> downscaled_dma_;
   fuchsia_sysmem_BufferCollectionInfo full_resolution_buffer_collection_;
   fuchsia_sysmem_BufferCollectionInfo downscaled_buffer_collection_;
-  std::vector<fuchsia_camera_common_FrameAvailableEvent> full_resolution_callbacks_;
-  std::vector<fuchsia_camera_common_FrameAvailableEvent> downscaled_callbacks_;
+  std::vector<fuchsia_camera_FrameAvailableEvent> full_resolution_callbacks_;
+  std::vector<fuchsia_camera_FrameAvailableEvent> downscaled_callbacks_;
 };
 
 TEST_F(DmaMgrTest, EnableDeathTest) {
@@ -249,7 +249,7 @@ TEST_F(DmaMgrTest, RunOutOfBuffers) {
     CheckNoDmaWriteAddress(Stream::FullResolution);
     EXPECT_EQ(full_resolution_callbacks_.size(), i + 1);
     EXPECT_EQ(full_resolution_callbacks_.back().frame_status,
-              fuchsia_camera_common_FrameStatus_ERROR_BUFFER_FULL);
+              fuchsia_camera_FrameStatus_ERROR_BUFFER_FULL);
   }
   full_resolution_callbacks_.clear();
   // Now mark them all written:
@@ -258,7 +258,7 @@ TEST_F(DmaMgrTest, RunOutOfBuffers) {
     full_resolution_dma_->OnFrameWritten();
     CheckNoDmaWriteAddress(Stream::FullResolution);
     EXPECT_EQ(full_resolution_callbacks_.size(), i + 1);
-    EXPECT_EQ(full_resolution_callbacks_.back().frame_status, fuchsia_camera_common_FrameStatus_OK);
+    EXPECT_EQ(full_resolution_callbacks_.back().frame_status, fuchsia_camera_FrameStatus_OK);
   }
   full_resolution_callbacks_.clear();
   // Now we should still not be able to get frames:
@@ -269,7 +269,7 @@ TEST_F(DmaMgrTest, RunOutOfBuffers) {
     CheckNoDmaWriteAddress(Stream::FullResolution);
     EXPECT_EQ(full_resolution_callbacks_.size(), i + 1);
     EXPECT_EQ(full_resolution_callbacks_.back().frame_status,
-              fuchsia_camera_common_FrameStatus_ERROR_BUFFER_FULL);
+              fuchsia_camera_FrameStatus_ERROR_BUFFER_FULL);
   }
   // Now release buffers:
   for (uint32_t i = 0; i < kFullResNumberOfBuffers; ++i) {
@@ -314,7 +314,7 @@ TEST_F(DmaMgrTest, MultipleConfigureCalls) {
 
   // Releasing frames should also fail:
   ASSERT_EQ(full_resolution_callbacks_.size(), 1);
-  ASSERT_EQ(full_resolution_callbacks_.back().frame_status, fuchsia_camera_common_FrameStatus_OK);
+  ASSERT_EQ(full_resolution_callbacks_.back().frame_status, fuchsia_camera_FrameStatus_OK);
   EXPECT_NOT_OK(full_resolution_dma_->ReleaseFrame(full_resolution_callbacks_.back().buffer_id));
 
   // But future operations will still work:
@@ -328,20 +328,20 @@ TEST_F(DmaMgrTest, MultipleConfigureCalls) {
   ASSERT_NO_DEATH(([this]() { full_resolution_dma_->OnFrameWritten(); }));
   // Make sure we can release the frame.
   ASSERT_EQ(full_resolution_callbacks_.size(), 1);
-  ASSERT_EQ(full_resolution_callbacks_.back().frame_status, fuchsia_camera_common_FrameStatus_OK);
+  ASSERT_EQ(full_resolution_callbacks_.back().frame_status, fuchsia_camera_FrameStatus_OK);
   EXPECT_OK(full_resolution_dma_->ReleaseFrame(full_resolution_callbacks_.back().buffer_id));
 }
 
 // Make sure callbacks can call back into the class.
 TEST_F(DmaMgrTest, CallbackReentrancy) {
   uint32_t buffer_id = kFullResNumberOfBuffers;
-  zx_status_t status = full_resolution_dma_->Configure(
-      full_resolution_buffer_collection_,
-      [this, &buffer_id](fuchsia_camera_common_FrameAvailableEvent event) {
-        buffer_id = event.buffer_id;
-        full_resolution_dma_->Disable();
-        ASSERT_FALSE(full_resolution_dma_->enabled());
-      });
+  zx_status_t status =
+      full_resolution_dma_->Configure(full_resolution_buffer_collection_,
+                                      [this, &buffer_id](fuchsia_camera_FrameAvailableEvent event) {
+                                        buffer_id = event.buffer_id;
+                                        full_resolution_dma_->Disable();
+                                        ASSERT_FALSE(full_resolution_dma_->enabled());
+                                      });
   EXPECT_OK(status);
   full_resolution_dma_->Enable();
   ASSERT_TRUE(full_resolution_dma_->enabled());

@@ -9,6 +9,7 @@ executable("mali_009_test") {
   ]
   deps = [
     "//garnet/tests/zircon/libdriver-integration-test:libdriver-integration-test",
+    "//sdk/fidl/fuchsia.camera.test:fuchsia.camera.test_c",
     "//src/camera/drivers/test_utils",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/devmgr-integration-test",
@@ -17,8 +18,6 @@ executable("mali_009_test") {
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-camera-common:fuchsia-camera-common_c",
-    "//zircon/system/fidl/fuchsia-camera-test:fuchsia-camera-test_c",
     "//zircon/system/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
   ]
 }

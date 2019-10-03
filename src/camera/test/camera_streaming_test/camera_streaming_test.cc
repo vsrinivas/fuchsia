@@ -4,7 +4,6 @@
 
 #include <button_checker.h>
 #include <fcntl.h>
-#include <fuchsia/camera/common/cpp/fidl.h>
 #include <fuchsia/camera/test/cpp/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>  // For RecursiveWaitForFile
 #include <lib/fdio/fdio.h>
@@ -78,7 +77,7 @@ TEST_F(CameraStreamingTest, CheckStreamFromIsp) {
   ASSERT_TRUE(tester.is_bound());
 
   // Request a stream.
-  fuchsia::camera::common::StreamPtr stream;
+  fuchsia::camera::StreamPtr stream;
   fuchsia::sysmem::BufferCollectionInfo buffers;
   ASSERT_EQ(tester->CreateStream(stream.NewRequest(), &buffers), ZX_OK);
   std::atomic_bool stream_alive = true;
@@ -101,7 +100,7 @@ TEST_F(CameraStreamingTest, CheckStreamFromIsp) {
   std::map<std::string, uint32_t> frame_hashes;
   std::vector<bool> buffer_owned(buffers.buffer_count, false);
   std::atomic_uint32_t frames_received{0};
-  stream.events().OnFrameAvailable = [&](fuchsia::camera::common::FrameAvailableEvent event) {
+  stream.events().OnFrameAvailable = [&](fuchsia::camera::FrameAvailableEvent event) {
     ++frames_received;
 
     // Check ownership validity of the buffer.
