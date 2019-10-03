@@ -2,7 +2,7 @@
 
 [TOC]
 
-Zircon is a object-based kernel. User mode code almost exclusively interacts
+Zircon is an object-based kernel. User mode code almost exclusively interacts
 with OS resources via object handles. A handle can be thought of as an active
 session with a specific OS subsystem scoped to a particular resource.
 
