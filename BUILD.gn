@@ -8,6 +8,7 @@ import("//build/config/fuchsia/zircon.gni")
 import("//build/testing/platforms.gni")
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
+import("//zircon/public/gn/build_api_module.gni")
 
 declare_args() {
   # If you add package labels to this variable, the packages will be included in
@@ -101,7 +102,12 @@ declare_args() {
   }
 }
 
+###
+### Zircon build integration.
+###
+
 # The Zircon GN is completely a puppet of this build.  This gen runs that gen.
+# See also :zircon below.
 if (current_toolchain == default_toolchain) {
   # First run Zircon's `gn gen`.  By GN evaluation order this is roughly
   # the first thing that happens at all and it's synchronous so after this
@@ -128,16 +134,11 @@ if (current_toolchain == default_toolchain) {
               [ rebase_path("$zircon_root_build_dir/legacy_dirs.json") ],
               "",
               [ "$zircon_root_build_dir/legacy_dirs.json" ])
-
-  # This file indicates what Ninja invocation must be done to build Zircon
-  # prerequisites before *any* Ninja invocation for this build.
-  write_file("$root_build_dir/zircon.json",
-             {
-               dir = rebase_path(zircon_root_build_dir, root_build_dir)
-               targets = [ "default" ]
-             },
-             "json")
 }
+
+###
+### fx integration.
+###
 
 # Write a file that can be sourced by `fx`.  This file is produced
 # by `gn gen` and is not known to Ninja at all, so it has nothing to
@@ -153,33 +154,38 @@ _fx_config_lines = [
 ]
 write_file("$root_build_dir/fx.config", _fx_config_lines)
 
-# Permit dependencies on testonly targets from packages.
-testonly = true
+###
+### Build API modules.
+###
 
-group("default") {
+# This is the top-level build API module that just lists all the others.
+# Each element of the list is the simple name of the API module; the
+# module's contents are found at "$root_build_dir/$target_name.json".
+#
+# Type: list(string)
+#
+build_api_module("api") {
+  testonly = true
+  data_keys = [ "build_api_modules" ]
   deps = [
-    ":build_time_checks",
-    "//build:tests",
+    ":binaries",
+    ":fuzzers",
+    ":platforms",
+    ":tests",
+    ":tool_paths",
+    ":zircon",
+  ]
+}
+
+# See //zircon:binaries for a description and schema definition.
+#
+build_api_module("binaries") {
+  testonly = true
+  data_keys = [ "binaries" ]
+  deps = [
+    ":binaries.zircon",
     "//build/images:packages",
     "//sdk",
-  ]
-  if (base_package_labels != [] || cache_package_labels != []) {
-    deps += [ "//build/images" ]
-  }
-  if (universe_package_labels != []) {
-    deps += [ "//build/images:updates" ]
-  }
-}
-
-group("build_time_checks") {
-  deps = [
-    "//tools/fidlgen_llcpp_zircon:validate",
-  ]
-}
-
-group("recovery_image") {
-  deps = [
-    "build/images/recovery",
   ]
 }
 
@@ -209,31 +215,69 @@ group("binaries.zircon") {
   }
 }
 
-generated_file("binaries") {
-  outputs = [
-    "$root_build_dir/binaries.json",
-  ]
-  data_keys = [ "binaries" ]
-  output_conversion = "json"
+# Describes the "fuzzers" in the build.
+#
+# See //build/fuzzing/fuzzer.gni for more details.
+#
+#
+# Type: list(scope)
+#
+#  fuzzers_package
+#    Required: Name of a package containing fuzzers.
+#    Type: string
+#
+#  fuzzers
+#    Required: The fuzzer binaries included in the associated package.
+#    Type: list of labels
+#
+#  fuzz_host
+#    Required: Indicates whether the associated fuzzer binaries were built for
+#    the host.
+#    Type: boolean
+#
+build_api_module("fuzzers") {
+  testonly = true
+  data_keys = [ "fuzz_spec" ]
   deps = [
-    ":binaries.zircon",
+    "//build/images:packages",
+  ]
+}
+
+# Describes the platforms available for testing.
+#
+# TODO(fxbug.dev/10429): the fuchsia platform should not know about such things.
+#
+# Type: list(scope)
+#
+build_api_module("platforms") {
+  testonly = true
+  contents = []
+  foreach(platform, test_platforms) {
+    if (!defined(platform.cpu) || platform.cpu == current_cpu) {
+      contents += [ platform ]
+    }
+  }
+}
+
+# See //zircon:tests for a description and schema definition.
+#
+build_api_module("tests") {
+  testonly = true
+  data_keys = [ "test_spec" ]
+  deps = [
+    "//build:tests",
     "//build/images:packages",
     "//sdk",
   ]
 }
 
-# TODO(joshuaseaton|mcgrathr): Make this a formal build_api_module().
+# See //zircon:tool_paths for a description and schema definition.
 #
-# Aggregates metadata about all tests within the build graph to create a
-# top-level manifest.
-generated_file("tests") {
-  outputs = [
-    "$root_build_dir/tests.json",
-  ]
-  data_keys = [ "test_spec" ]
-  output_conversion = "json"
+build_api_module("tool_paths") {
+  testonly = true
+  data_keys = [ "tool_paths" ]
   deps = [
-    "//build:tests",
+    ":tool_paths.zircon",
     "//build/images:packages",
   ]
 }
@@ -255,56 +299,46 @@ group("tool_paths.zircon") {
   }
 }
 
-# Aggregates metadata about the paths of tools within the build graph.
-# See documentation at //zircon:tool_paths for a similar file with
-# identical schema.
-generated_file("tool_paths") {
-  outputs = [
-    "$root_build_dir/tool_paths.json",
-  ]
-  data_keys = [ "tool_paths" ]
-  output_conversion = "json"
+# Describes how to invoke Njnja for the Zircon build.
+#
+# These instructions are a prerequisite for this build.
+#
+# Type: scope
+#
+#   dir
+#     Required: the zircon build directory root.
+#     Type: path relative to $root_build_dir
+#
+#   targets
+#     Required: the ninja targets to execute.
+#     Type: list of ninja targets
+#
+build_api_module("zircon") {
+  testonly = true
+  contents = {
+    dir = rebase_path(zircon_root_build_dir, root_build_dir)
+    targets = [ "default" ]
+  }
+}
+
+###
+### Top-level targets.
+###
+group("default") {
+  testonly = true
   deps = [
-    ":tool_paths.zircon",
+    ":build_time_checks",
+    "//build:tests",
     "//build/images:packages",
     "//sdk",
   ]
-}
-
-# Aggregates metadata about all fuzz targets within the build graph to create a
-# top-level manifest.
-generated_file("fuzzers") {
-  outputs = [
-    "$root_build_dir/fuzzers.json",
-  ]
-  data_keys = [ "fuzz_spec" ]
-  output_conversion = "json"
-  deps = [
-    "//build/images:packages",
-  ]
-}
-
-group("breakpad_symbols") {
-  public_deps = [
-    "//build/gn:breakpad_symbols",
-  ]
-}
-
-group("package_archive") {
-  public_deps = [
-    "//build/gn:package_archive",
-  ]
-}
-
-# Generates a JSON manifest of the platforms available for testing, along with
-# their properties.
-target_platforms = []
-foreach(platform, test_platforms) {
-  if (!defined(platform.cpu) || platform.cpu == current_cpu) {
-    target_platforms += [ platform ]
+  if (base_package_labels != [] || cache_package_labels != []) {
+    deps += [ "//build/images" ]
+  }
+  if (universe_package_labels != []) {
+    deps += [ "//build/images:updates" ]
   }
 }
-write_file("$root_build_dir/platforms.json", target_platforms, "json")
 
 # These groups exist at the root of the build so relative labels specified
 # through GN args are interpreted as if they were absolute.
@@ -322,6 +356,36 @@ group("additional_cache_packages") {
 
 group("additional_universe_packages") {
   testonly = true
+  testonly = true
   visibility = [ "//build/images:universe_packages" ]
   public_deps = universe_package_labels
+}
+
+group("build_time_checks") {
+  testonly = true
+  deps = [
+    "//tools/fidlgen_llcpp_zircon:validate",
+  ]
+}
+
+group("recovery_image") {
+  # TODO(fxbug.dev/37792): Investigate use of testonly here.
+  testonly = true
+  deps = [
+    "build/images/recovery",
+  ]
+}
+
+group("breakpad_symbols") {
+  testonly = true
+  public_deps = [
+    "//build/gn:breakpad_symbols",
+  ]
+}
+
+group("package_archive") {
+  testonly = true
+  public_deps = [
+    "//build/gn:package_archive",
+  ]
 }
