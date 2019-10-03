@@ -97,8 +97,7 @@ void ScsiDevice::IrqRingUpdate() {
         }
         // If Read, copy data from iobuffer to the iovec.
         if (status == ZX_OK && io_slot->data_in.iov_len) {
-          memcpy(io_slot->data_in.iov_base, io_slot->data_in_region,
-                 io_slot->data_in.iov_len);
+          memcpy(io_slot->data_in.iov_base, io_slot->data_in_region, io_slot->data_in.iov_len);
         }
         void* cookie = io_slot->cookie;
         auto (*callback)(void* cookie, zx_status_t status) = io_slot->callback;
@@ -381,6 +380,10 @@ zx_status_t ScsiDevice::Init() {
 
   Device::DriverStatusAck();
 
+  if (!bti().is_valid()) {
+    zxlogf(ERROR, "invalid bti handle\n");
+    return ZX_ERR_BAD_HANDLE;
+  }
   {
     fbl::AutoLock lock(&lock_);
     auto err = control_ring_.Init(/*index=*/Queue::CONTROL);

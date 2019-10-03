@@ -10,7 +10,6 @@ driver("virtio") {
     "block.cc",
     "console.cc",
     "ethernet.cc",
-    "gpu.cc",
     "input.cc",
     "input_kbd.cc",
     "input_touch.cc",
@@ -20,7 +19,6 @@ driver("virtio") {
   ]
   deps = [
     ":common",
-    "$zx/system/banjo/ddk.protocol.display.controller",
     "$zx/system/banjo/ddk.protocol.ethernet",
     "$zx/system/banjo/ddk.protocol.hidbus",
     "$zx/system/dev/lib/mmio",
@@ -41,14 +39,18 @@ source_set("common") {
   visibility = [ ":*" ]
   sources = [
     "device.cc",
+    "gpu.cc",
     "ring.cc",
     "scsi.cc",
   ]
   public_deps = [
     "$zx/system/banjo/ddk.protocol.block",
+    "$zx/system/banjo/ddk.protocol.display.controller",
     "$zx/system/banjo/ddk.protocol.pci",
+    "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/dev/lib/device-protocol-pci",
     "$zx/system/dev/lib/scsi",
+    "$zx/system/fidl/fuchsia-sysmem:llcpp",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/async-loop:async-loop-default.static",
@@ -57,6 +59,7 @@ source_set("common") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/hid",
     "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/image-format",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/virtio",
@@ -68,12 +71,15 @@ source_set("common") {
 
 test("virtio-test") {
   sources = [
+    "gpu_test.cc",
     "scsi_test.cc",
   ]
   deps = [
     ":common",
+    "$zx/system/dev/lib/fake-bti",
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/ulib/driver",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zxtest",
   ]

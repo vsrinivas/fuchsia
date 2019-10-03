@@ -4,22 +4,26 @@
 
 #include "gpu.h"
 
+#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <inttypes.h>
+#include <lib/image-format/image_format.h>
 #include <string.h>
 #include <sys/param.h>
-
-#include <ddk/debug.h>
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 #include <zircon/compiler.h>
 #include <zircon/time.h>
 
 #include <utility>
 
+#include <ddk/debug.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+
 #include "trace.h"
 #include "virtio_gpu.h"
 
 #define LOCAL_TRACE 0
+
+namespace sysmem = llcpp::fuchsia::sysmem;
 
 namespace virtio {
 
@@ -70,6 +74,76 @@ zx_status_t GpuDevice::virtio_gpu_import_vmo_image(void* ctx, image_t* image, zx
   zx::vmo vmo(vmo_in);
 
   GpuDevice* gd = static_cast<GpuDevice*>(ctx);
+  unsigned pixel_size = ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
+  return gd->Import(std::move(vmo), image, offset, pixel_size, image->width * pixel_size);
+}
+
+zx_status_t GpuDevice::GetVmoAndStride(image_t* image, zx_unowned_handle_t handle, uint32_t index,
+                                       zx::vmo* vmo_out, size_t* offset_out,
+                                       uint32_t* pixel_size_out, uint32_t* row_bytes_out) {
+  auto wait_result =
+      sysmem::BufferCollection::Call::WaitForBuffersAllocated(zx::unowned_channel(handle));
+  if (!wait_result.ok()) {
+    zxlogf(ERROR, "%s: failed to WaitForBuffersAllocated %d\n", tag(), wait_result.status());
+    return wait_result.status();
+  }
+  if (wait_result->status != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to WaitForBuffersAllocated call %d\n", tag(), wait_result->status);
+    return wait_result->status;
+  }
+
+  sysmem::BufferCollectionInfo_2& collection_info = wait_result->buffer_collection_info;
+
+  if (!collection_info.settings.has_image_format_constraints) {
+    zxlogf(ERROR, "%s: bad image format constraints\n", tag());
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (index >= collection_info.buffer_count) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  ZX_DEBUG_ASSERT(collection_info.settings.image_format_constraints.pixel_format.type ==
+                  sysmem::PixelFormatType::BGRA32);
+  ZX_DEBUG_ASSERT(
+      collection_info.settings.image_format_constraints.pixel_format.has_format_modifier);
+  ZX_DEBUG_ASSERT(
+      collection_info.settings.image_format_constraints.pixel_format.format_modifier.value ==
+      sysmem::FORMAT_MODIFIER_LINEAR);
+
+  fuchsia_sysmem_ImageFormatConstraints format_constraints;
+  memcpy(&format_constraints, &collection_info.settings.image_format_constraints,
+         sizeof(format_constraints));
+  uint32_t minimum_row_bytes;
+  if (!ImageFormatMinimumRowBytes(&format_constraints, image->width, &minimum_row_bytes)) {
+    zxlogf(ERROR, "%s: Invalid image width %d for collection\n", tag(), image->width);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  *offset_out = collection_info.buffers[index].vmo_usable_start;
+  *pixel_size_out = ImageFormatStrideBytesPerWidthPixel(&format_constraints.pixel_format);
+  *row_bytes_out = minimum_row_bytes;
+  *vmo_out = std::move(collection_info.buffers[index].vmo);
+  return ZX_OK;
+}
+
+zx_status_t GpuDevice::virtio_gpu_import_image(void* ctx, image_t* image,
+                                               zx_unowned_handle_t handle, uint32_t index) {
+  GpuDevice* gd = static_cast<GpuDevice*>(ctx);
+
+  zx::vmo vmo;
+  size_t offset;
+  uint32_t pixel_size;
+  uint32_t row_bytes;
+  zx_status_t status =
+      gd->GetVmoAndStride(image, handle, index, &vmo, &offset, &pixel_size, &row_bytes);
+  if (status != ZX_OK)
+    return status;
+  return gd->Import(std::move(vmo), image, offset, pixel_size, row_bytes);
+}
+
+zx_status_t GpuDevice::Import(zx::vmo vmo, image_t* image, size_t offset, uint32_t pixel_size,
+                              uint32_t row_bytes) {
   if (image->type != IMAGE_TYPE_SIMPLE) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -80,24 +154,24 @@ zx_status_t GpuDevice::virtio_gpu_import_vmo_image(void* ctx, image_t* image, zx
     return ZX_ERR_NO_MEMORY;
   }
 
-  unsigned pixel_size = ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
-  unsigned size = ROUNDUP(image->width * image->height * pixel_size, PAGE_SIZE);
+  unsigned size = ROUNDUP(row_bytes * image->height, PAGE_SIZE);
   zx_paddr_t paddr;
-  zx_status_t status = gd->bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, vmo, offset, size, &paddr,
-                                    1, &import_data->pmt);
+  zx_status_t status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, vmo, offset, size, &paddr, 1,
+                                &import_data->pmt);
   if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to pin vmo\n", tag());
     return status;
   }
 
-  status = gd->allocate_2d_resource(&import_data->resource_id, image->width, image->height);
+  status = allocate_2d_resource(&import_data->resource_id, row_bytes / pixel_size, image->height);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to allocate 2d resource\n", gd->tag());
+    zxlogf(ERROR, "%s: failed to allocate 2d resource\n", tag());
     return status;
   }
 
-  status = gd->attach_backing(import_data->resource_id, paddr, size);
+  status = attach_backing(import_data->resource_id, paddr, size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to attach backing store\n", gd->tag());
+    zxlogf(ERROR, "%s: failed to attach backing store\n", tag());
     return status;
   }
 
@@ -176,12 +250,60 @@ zx_status_t GpuDevice::virtio_gpu_allocate_vmo(void* ctx, uint64_t size, zx_hand
 }
 
 zx_status_t GpuDevice::virtio_get_sysmem_connection(void* ctx, zx_handle_t handle) {
-  return ZX_ERR_NOT_SUPPORTED;
+  GpuDevice* gd = static_cast<GpuDevice*>(ctx);
+  zx_status_t status = sysmem_connect(&gd->sysmem_, handle);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  return ZX_OK;
 }
 
 zx_status_t GpuDevice::virtio_set_buffer_collection_constraints(void* ctx, const image_t* config,
                                                                 zx_unowned_handle_t collection) {
-  return ZX_ERR_NOT_SUPPORTED;
+  sysmem::BufferCollectionConstraints constraints;
+  constraints.usage.display = sysmem::displayUsageLayer;
+  constraints.has_buffer_memory_constraints = true;
+  sysmem::BufferMemoryConstraints& buffer_constraints = constraints.buffer_memory_constraints;
+  buffer_constraints.min_size_bytes = 0;
+  buffer_constraints.max_size_bytes = 0xffffffff;
+  buffer_constraints.physically_contiguous_required = true;
+  buffer_constraints.secure_required = false;
+  buffer_constraints.ram_domain_supported = true;
+  buffer_constraints.cpu_domain_supported = true;
+  constraints.image_format_constraints_count = 1;
+  sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
+  image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+  image_constraints.pixel_format.has_format_modifier = true;
+  image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
+  image_constraints.color_spaces_count = 1;
+  image_constraints.color_space[0].type = sysmem::ColorSpaceType::SRGB;
+  image_constraints.min_coded_width = 0;
+  image_constraints.max_coded_width = 0xffffffff;
+  image_constraints.min_coded_height = 0;
+  image_constraints.max_coded_height = 0xffffffff;
+  image_constraints.min_bytes_per_row = 0;
+  image_constraints.max_bytes_per_row = 0xffffffff;
+  image_constraints.max_coded_width_times_coded_height = 0xffffffff;
+  image_constraints.layers = 1;
+  image_constraints.coded_width_divisor = 1;
+  image_constraints.coded_height_divisor = 1;
+  // Bytes per row needs to be a multiple of the pixel size.
+  image_constraints.bytes_per_row_divisor = 4;
+  image_constraints.start_offset_divisor = 1;
+  image_constraints.display_width_divisor = 1;
+  image_constraints.display_height_divisor = 1;
+
+  zx_status_t status = sysmem::BufferCollection::Call::SetConstraints(
+                           zx::unowned_channel(collection), true, constraints)
+                           .status();
+
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "virtio::GpuDevice: Failed to set constraints");
+    return status;
+  }
+
+  return ZX_OK;
 }
 
 zx_status_t GpuDevice::virtio_get_single_buffer_framebuffer(void* ctx, zx_handle_t* out_vmo,
@@ -432,7 +554,7 @@ void GpuDevice::virtio_gpu_flusher() {
       uint32_t res_id = displayed_fb_ ? displayed_fb_->resource_id : 0;
       zx_status_t status = set_scanout(pmode_id_, res_id, pmode_.r.width, pmode_.r.height);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: failed to set scanout\n", tag());
+        zxlogf(ERROR, "%s: failed to set scanout: %d\n", tag(), status);
         continue;
       }
     }
@@ -448,6 +570,20 @@ void GpuDevice::virtio_gpu_flusher() {
     next_deadline = zx_time_add_duration(next_deadline, period);
   }
 }
+
+display_controller_impl_protocol_ops_t GpuDevice::proto_ops = {
+    .set_display_controller_interface = GpuDevice::virtio_gpu_set_display_controller_interface,
+    .import_vmo_image = GpuDevice::virtio_gpu_import_vmo_image,
+    .import_image = GpuDevice::virtio_gpu_import_image,
+    .release_image = GpuDevice::virtio_gpu_release_image,
+    .check_configuration = GpuDevice::virtio_gpu_check_configuration,
+    .apply_configuration = GpuDevice::virtio_gpu_apply_configuration,
+    .compute_linear_stride = GpuDevice::virtio_gpu_compute_linear_stride,
+    .allocate_vmo = GpuDevice::virtio_gpu_allocate_vmo,
+    .get_sysmem_connection = GpuDevice::virtio_get_sysmem_connection,
+    .set_buffer_collection_constraints = GpuDevice::virtio_set_buffer_collection_constraints,
+    .get_single_buffer_framebuffer = GpuDevice::virtio_get_single_buffer_framebuffer,
+};
 
 zx_status_t GpuDevice::virtio_gpu_start() {
   LTRACEF("dev %p\n", this);
@@ -477,17 +613,6 @@ zx_status_t GpuDevice::virtio_gpu_start() {
 
   LTRACEF("publishing device\n");
 
-  display_proto_ops_.set_display_controller_interface = virtio_gpu_set_display_controller_interface;
-  display_proto_ops_.import_vmo_image = virtio_gpu_import_vmo_image;
-  display_proto_ops_.release_image = virtio_gpu_release_image;
-  display_proto_ops_.check_configuration = virtio_gpu_check_configuration;
-  display_proto_ops_.apply_configuration = virtio_gpu_apply_configuration;
-  display_proto_ops_.compute_linear_stride = virtio_gpu_compute_linear_stride;
-  display_proto_ops_.allocate_vmo = virtio_gpu_allocate_vmo;
-  display_proto_ops_.get_sysmem_connection = virtio_get_sysmem_connection;
-  display_proto_ops_.set_buffer_collection_constraints = virtio_set_buffer_collection_constraints;
-  display_proto_ops_.get_single_buffer_framebuffer = virtio_get_single_buffer_framebuffer;
-
   // Initialize the zx_device and publish us
   // Point the ctx of our DDK device at ourself
   device_add_args_t args = {};
@@ -496,9 +621,9 @@ zx_status_t GpuDevice::virtio_gpu_start() {
   args.ctx = this;
   args.ops = &device_ops_;
   args.proto_id = ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL;
-  args.proto_ops = &display_proto_ops_;
+  args.proto_ops = &proto_ops;
 
-  status = device_add(bus_device_, &args, &bus_device_);
+  status = device_add(bus_device_, &args, &device_);
   if (status != ZX_OK) {
     device_ = nullptr;
     return status;
@@ -510,6 +635,12 @@ zx_status_t GpuDevice::virtio_gpu_start() {
 
 zx_status_t GpuDevice::Init() {
   LTRACE_ENTRY;
+
+  zx_status_t status = device_get_protocol(bus_device(), ZX_PROTOCOL_SYSMEM, &sysmem_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Could not get Display SYSMEM protocol\n", tag());
+    return status;
+  }
 
   DeviceReset();
 
@@ -526,7 +657,7 @@ zx_status_t GpuDevice::Init() {
   // XXX check features bits and ack/nak them
 
   // Allocate the main vring
-  zx_status_t status = vring_.Init(0, 16);
+  status = vring_.Init(0, 16);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: failed to allocate vring\n", tag());
     return status;
