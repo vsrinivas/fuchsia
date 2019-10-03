@@ -59,6 +59,7 @@ executable("bin-monitor") {
   deps = [
     "//sdk/lib/sys/cpp",
     "//src/developer/memory/monitor:lib",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
