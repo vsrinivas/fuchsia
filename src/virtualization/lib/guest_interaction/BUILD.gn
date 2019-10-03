@@ -274,6 +274,7 @@ executable("guest_discovery_service_bin") {
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
     "//src/virtualization/lib/grpc:grpc",
     "//third_party/grpc:grpc++",
     "//zircon/public/lib/async-cpp",

@@ -47,6 +47,7 @@ source_set("cpp") {
     "//src/virtualization/bin/guest:bin",
     "//src/virtualization/bin/guest_manager:lib",
     "//src/virtualization/lib/guest_interaction:guest_interaction_service_test",
+    "//src/virtualization/packages/biscotti_guest/linux_runner:lib",
     "//src/virtualization/tests:guest_console",
     "//src/virtualization/tests:lib",
   ]
