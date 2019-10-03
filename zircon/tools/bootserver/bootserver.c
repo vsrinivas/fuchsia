@@ -613,6 +613,9 @@ int main(int argc, char** argv) {
   addr.sin6_port = htons(NB_ADVERT_PORT);
 
   s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+  if (!IN6_IS_ADDR_UNSPECIFIED(&allowed_addr) || nodename) {
+    setsockopt(s, SOL_SOCKET, SO_REUSEPORT, &(int){1}, sizeof 1);
+  }
   if (s < 0) {
     log("cannot create socket %d", s);
     return -1;
