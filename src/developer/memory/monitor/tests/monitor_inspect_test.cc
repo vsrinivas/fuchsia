@@ -40,7 +40,7 @@ class InspectTest : public sys::testing::TestWithEnvironment {
     fuchsia::sys::EnvironmentPtr parent_env;
     env_services->Connect(parent_env.NewRequest());
     auto services = sys::testing::EnvironmentServices::Create(parent_env);
-    services->AllowParentService("fuchsia.boot.RootResource");
+    services->AllowParentService("fuchsia.kernel.Stats");
     environment_ = CreateNewEnclosingEnvironment(test_case_, std::move(services));
     Connect();
   }

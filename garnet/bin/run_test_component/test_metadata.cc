@@ -39,6 +39,7 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::device::NameProvider::Name_,
     fuchsia::hardware::pty::Device::Name_,
     fuchsia::kernel::Counter::Name_,
+    fuchsia::kernel::Stats::Name_,
     fuchsia::net::Connectivity::Name_,
     fuchsia::net::NameLookup::Name_,
     fuchsia::net::stack::Stack::Name_,

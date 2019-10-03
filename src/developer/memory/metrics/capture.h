@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_MEMORY_METRICS_CAPTURE_H_
 #define SRC_DEVELOPER_MEMORY_METRICS_CAPTURE_H_
 
+#include <fuchsia/kernel/llcpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
 #include <zircon/syscalls.h>
@@ -37,13 +38,14 @@ struct Vmo {
 typedef enum { KMEM, PROCESS, VMO } CaptureLevel;
 
 struct CaptureState {
-  zx_handle_t root;
+  std::unique_ptr<llcpp::fuchsia::kernel::Stats::SyncClient> stats_client;
   zx_koid_t self_koid;
 };
 
 class OS {
  public:
-  virtual zx_status_t GetRootResource(zx_handle_t* root_resource) = 0;
+  virtual zx_status_t GetKernelStats(
+      std::unique_ptr<llcpp::fuchsia::kernel::Stats::SyncClient>* stats_client) = 0;
   virtual zx_handle_t ProcessSelf() = 0;
   virtual zx_time_t GetMonotonic() = 0;
   virtual zx_status_t GetProcesses(
@@ -54,6 +56,8 @@ class OS {
                                   size_t name_len) = 0;
   virtual zx_status_t GetInfo(zx_handle_t handle, uint32_t topic, void* buffer, size_t buffer_size,
                               size_t* actual, size_t* avail) = 0;
+  virtual zx_status_t GetKernelMemoryStats(llcpp::fuchsia::kernel::Stats::SyncClient* stats_client,
+                                           zx_info_kmem_stats_t* kmem) = 0;
 };
 
 class Capture {

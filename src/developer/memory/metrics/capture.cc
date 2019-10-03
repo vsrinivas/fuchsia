@@ -5,7 +5,7 @@
 #include "src/developer/memory/metrics/capture.h"
 
 #include <fcntl.h>
-#include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/kernel/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
@@ -22,19 +22,21 @@ namespace memory {
 
 class OSImpl : public OS, public TaskEnumerator {
  private:
-  zx_status_t GetRootResource(zx_handle_t* root_resource) override {
+  zx_status_t GetKernelStats(
+      std::unique_ptr<llcpp::fuchsia::kernel::Stats::SyncClient>* stats) override {
     zx::channel local, remote;
     zx_status_t status = zx::channel::create(0, &local, &remote);
     if (status != ZX_OK) {
       return status;
     }
-    const char* root_resource_svc = "/svc/fuchsia.boot.RootResource";
-    status = fdio_service_connect(root_resource_svc, remote.release());
+    const char* kernel_stats_svc = "/svc/fuchsia.kernel.Stats";
+    status = fdio_service_connect(kernel_stats_svc, remote.release());
     if (status != ZX_OK) {
       return status;
     }
 
-    return fuchsia_boot_RootResourceGet(local.get(), root_resource);
+    *stats = std::make_unique<llcpp::fuchsia::kernel::Stats::SyncClient>(std::move(local));
+    return ZX_OK;
   }
 
   zx_handle_t ProcessSelf() override { return zx_process_self(); }
@@ -62,6 +64,28 @@ class OSImpl : public OS, public TaskEnumerator {
     return zx_object_get_info(handle, topic, buffer, buffer_size, actual, avail);
   }
 
+  zx_status_t GetKernelMemoryStats(llcpp::fuchsia::kernel::Stats::SyncClient* stats_client,
+                                   zx_info_kmem_stats_t* kmem) override {
+    if (stats_client == nullptr) {
+      return ZX_ERR_BAD_STATE;
+    }
+    auto result = stats_client->GetMemoryStats();
+    if (result.status() != ZX_OK) {
+      return result.status();
+    }
+    const auto& stats = result.Unwrap()->stats;
+    kmem->total_bytes = stats.total_bytes();
+    kmem->free_bytes = stats.free_bytes();
+    kmem->wired_bytes = stats.wired_bytes();
+    kmem->total_heap_bytes = stats.total_heap_bytes();
+    kmem->free_heap_bytes = stats.free_heap_bytes();
+    kmem->vmo_bytes = stats.vmo_bytes();
+    kmem->mmu_overhead_bytes = stats.mmu_overhead_bytes();
+    kmem->ipc_bytes = stats.ipc_bytes();
+    kmem->other_bytes = stats.other_bytes();
+    return ZX_OK;
+  }
+
   bool has_on_process() const final { return true; }
 
   fit::function<zx_status_t(int /* depth */, zx_handle_t /* handle */, zx_koid_t /* koid */,
@@ -76,7 +100,7 @@ zx_status_t Capture::GetCaptureState(CaptureState* state) {
 }
 
 zx_status_t Capture::GetCaptureState(CaptureState* state, OS* os) {
-  zx_status_t err = os->GetRootResource(&state->root);
+  zx_status_t err = os->GetKernelStats(&state->stats_client);
   if (err != ZX_OK) {
     return err;
   }
@@ -101,8 +125,8 @@ zx_status_t Capture::GetCapture(Capture* capture, const CaptureState& state, Cap
                                 OS* os) {
   TRACE_DURATION("memory_metrics", "Capture::GetCapture");
   capture->time_ = os->GetMonotonic();
-  zx_status_t err = os->GetInfo(state.root, ZX_INFO_KMEM_STATS, &capture->kmem_,
-                                sizeof(capture->kmem_), nullptr, nullptr);
+
+  zx_status_t err = os->GetKernelMemoryStats(state.stats_client.get(), &capture->kmem_);
   if (err != ZX_OK) {
     return err;
   }

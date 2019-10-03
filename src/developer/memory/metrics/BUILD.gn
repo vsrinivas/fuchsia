@@ -19,10 +19,13 @@ source_set("metrics") {
     "watcher.h",
   ]
 
+  public_deps = [
+    "//zircon/system/fidl/fuchsia-kernel:llcpp",
+  ]
+
   deps = [
     "//garnet/public/lib/fsl",
     "//src/lib/fxl",
-    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
     "//zircon/public/lib/task-utils",
     "//zircon/public/lib/trace",
   ]

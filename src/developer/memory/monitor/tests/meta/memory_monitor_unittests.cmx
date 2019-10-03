@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
-                "fuchsia.boot.RootResource"
+                "fuchsia.kernel.Stats"
             ]
         }
     },
@@ -13,6 +13,6 @@
         "dev": [
             "misc/sysinfo"
         ],
-        "services": [ "fuchsia.boot.RootResource" ]
+        "services": [ "fuchsia.kernel.Stats" ]
     }
 }

@@ -20,8 +20,8 @@ class MockOS : public OS {
       : responses_(responses), i_get_processes_(0), i_get_property_(0), i_get_info_(0), clock_(0) {}
 
  private:
-  zx_status_t GetRootResource(zx_handle_t* root_resource) override {
-    *root_resource = TestUtils::kRootHandle;
+  zx_status_t GetKernelStats(
+      std::unique_ptr<llcpp::fuchsia::kernel::Stats::SyncClient>* stats) override {
     return ZX_OK;
   }
 
@@ -71,6 +71,13 @@ class MockOS : public OS {
         *avail = 0;
       }
     }
+    return r.ret;
+  }
+
+  zx_status_t GetKernelMemoryStats(llcpp::fuchsia::kernel::Stats::SyncClient* stats_client,
+                                   zx_info_kmem_stats_t* kmem) override {
+    const auto& r = responses_.get_info.at(i_get_info_++);
+    memcpy(kmem, r.values, r.value_size);
     return r.ret;
   }
 
