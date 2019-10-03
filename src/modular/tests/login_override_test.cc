@@ -73,7 +73,8 @@ TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
 
 // Setting LoginOverride to AUTOLOGIN_GUEST should skip the base shell and
 // launch the session shell.
-TEST_F(LoginOverrideTest, AutoLoginGuestOverrideSkipsBaseShell) {
+// Test is DISABLED. see fxb/37780
+TEST_F(LoginOverrideTest, DISABLED_AutoLoginGuestOverrideSkipsBaseShell) {
   modular_testing::TestHarnessBuilder builder;
   builder.AddServiceFromComponent<fuchsia::setui::SetUiService>(
       "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx");
