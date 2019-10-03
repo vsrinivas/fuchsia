@@ -2182,9 +2182,9 @@ void iwl_trans_pcie_log_scd_error(struct iwl_trans* trans, struct iwl_txq* txq) 
 }
 #endif  // NEEDS_PORTING
 
+#if 0   // NEEDS_PORTING
 static int iwl_trans_pcie_rxq_dma_data(struct iwl_trans* trans, int queue,
                                        struct iwl_trans_rxq_dma_data* data) {
-#if 0   // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
     if (queue >= trans->num_rx_queues || !trans_pcie->rxq) { return -EINVAL; }
@@ -2195,13 +2195,9 @@ static int iwl_trans_pcie_rxq_dma_data(struct iwl_trans* trans, int queue,
     data->fr_bd_wid = 0;
 
     return 0;
-#endif  // NEEDS_PORTING
-  IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
-  return -1;
 }
 
 static int iwl_trans_pcie_wait_txq_empty(struct iwl_trans* trans, int txq_idx) {
-#if 0   // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct iwl_txq* txq;
     unsigned long now = jiffies;
@@ -2236,10 +2232,8 @@ static int iwl_trans_pcie_wait_txq_empty(struct iwl_trans* trans, int txq_idx) {
     IWL_DEBUG_TX_QUEUES(trans, "Queue %d is now empty.\n", txq_idx);
 
     return 0;
-#endif  // NEEDS_PORTING
-  IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
-  return -1;
 }
+#endif  // NEEDS_PORTING
 
 static int iwl_trans_pcie_wait_txqs_empty(struct iwl_trans* trans, uint32_t txq_bm) {
 #if 0   // NEEDS_PORTING
@@ -3145,6 +3139,7 @@ static const struct iwl_trans_ops trans_ops_pcie = {
 #endif
 };
 
+#if 0  // NEEDS_PORTING
 static const struct iwl_trans_ops trans_ops_pcie_gen2 = {
     IWL_TRANS_COMMON_OPS,
     IWL_TRANS_PM_OPS.start_hw = iwl_trans_pcie_start_hw,
@@ -3165,6 +3160,7 @@ static const struct iwl_trans_ops trans_ops_pcie_gen2 = {
     .debugfs_cleanup = iwl_trans_pcie_debugfs_cleanup,
 #endif
 };
+#endif  // NEEDS_PORTING
 
 struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
                                        const struct iwl_pci_device* device) {
@@ -3176,11 +3172,15 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
     int ret, addr_size;
 #endif  // NEEDS_PORTING
 
+#if 0   // NEEDS_PORTING
   if (device->config->gen2) {
     trans = iwl_trans_alloc(sizeof(struct iwl_trans_pcie), device->config, &trans_ops_pcie_gen2);
   } else {
-    trans = iwl_trans_alloc(sizeof(struct iwl_trans_pcie), device->config, &trans_ops_pcie);
+#endif  // NEEDS_PORTING
+  trans = iwl_trans_alloc(sizeof(struct iwl_trans_pcie), device->config, &trans_ops_pcie);
+#if 0   // NEEDS_PORTING
   }
+#endif  // NEEDS_PORTING
 
   if (!trans) {
     return NULL;

@@ -1032,6 +1032,7 @@ struct iwl_tso_hdr_page* get_page_hdr(struct iwl_trans* trans, size_t len);
 /* common functions that are used by gen3 transport */
 void iwl_pcie_alloc_fw_monitor(struct iwl_trans* trans, uint8_t max_power);
 
+#if 0   // NEEDS_PORTING
 /* transport gen 2 exported functions */
 int iwl_trans_pcie_gen2_start_fw(struct iwl_trans* trans, const struct fw_img* fw,
                                  bool run_in_rfkill);
@@ -1052,5 +1053,6 @@ void _iwl_trans_pcie_gen2_stop_device(struct iwl_trans* trans, bool low_power);
 void iwl_pcie_gen2_txq_unmap(struct iwl_trans* trans, int txq_id);
 void iwl_pcie_gen2_tx_free(struct iwl_trans* trans);
 void iwl_pcie_gen2_tx_stop(struct iwl_trans* trans);
+#endif  // NEEDS_PORTING
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_INTERNAL_H_
