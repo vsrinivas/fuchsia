@@ -16,13 +16,28 @@
 //
 //
 
+static bool s_amd_statistics_enabled = false;
+
+bool
+vk_shader_info_amd_statistics_is_enabled(void)
+{
+  return s_amd_statistics_enabled;
+}
+
+void
+vk_shader_info_amd_statistics_enable(void)
+{
+  s_amd_statistics_enabled = true;
+}
+
 void
 vk_shader_info_amd_statistics(VkDevice           device,
                               VkPipeline         p[],
                               char const * const names[],
                               uint32_t const     count)
 {
-#ifndef VK_SHADER_INFO_AMD_STATISTICS_DISABLE
+  if (!vk_shader_info_amd_statistics_is_enabled())
+    return;
 
   PFN_vkGetShaderInfoAMD vkGetShaderInfoAMD =
     (PFN_vkGetShaderInfoAMD)vkGetDeviceProcAddr(device, "vkGetShaderInfoAMD");
@@ -30,9 +45,10 @@ vk_shader_info_amd_statistics(VkDevice           device,
   if (vkGetShaderInfoAMD == NULL)
     return;
 
-  fprintf(stdout,
-          "                                   PHY   PHY  AVAIL AVAIL\n"
-          "VGPRs SGPRs LDS_MAX LDS/WG  SPILL VGPRs SGPRs VGPRs SGPRs  WORKGROUP_SIZE  NAME\n");
+  fprintf(
+    stdout,
+    "                                   PHY   PHY  AVAIL AVAIL\n"
+    "VGPRs SGPRs LDS_MAX LDS/WG  SPILL VGPRs SGPRs VGPRs SGPRs  WORKGROUP_SIZE              NAME\n");
 
   for (uint32_t ii = 0; ii < count; ii++)
     {
@@ -81,8 +97,6 @@ vk_shader_info_amd_statistics(VkDevice           device,
             fprintf(stdout, "---\n");
         }
     }
-
-#endif
 }
 
 //
@@ -95,7 +109,8 @@ vk_shader_info_amd_disassembly(VkDevice           device,
                                char const * const names[],
                                uint32_t const     count)
 {
-#ifndef VK_SHADER_INFO_AMD_DISASSEMBLY_DISABLE
+  if (!vk_shader_info_amd_statistics_is_enabled())
+    return;
 
   PFN_vkGetShaderInfoAMD vkGetShaderInfoAMD =
     (PFN_vkGetShaderInfoAMD)vkGetDeviceProcAddr(device, "vkGetShaderInfoAMD");
@@ -132,8 +147,6 @@ vk_shader_info_amd_disassembly(VkDevice           device,
           free(disassembly_amd);
         }
     }
-
-#endif
 }
 
 //

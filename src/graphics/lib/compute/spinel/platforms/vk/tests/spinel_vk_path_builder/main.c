@@ -17,6 +17,14 @@
 //
 //
 
+#if defined(SPN_VK_SHADER_INFO_AMD_STATISTICS) || defined(SPN_VK_SHADER_INFO_AMD_DISASSEMBLY)
+#include "common/vk/vk_shader_info_amd.h"
+#endif
+
+//
+//
+//
+
 #define SPN_TEST_SHORT_PATHS_LOOPS (1 << 16)
 #define SPN_TEST_PATH_BUILDER_LOST_LOOPS (1 << 20)
 
@@ -292,18 +300,24 @@ main(int argc, char const * argv[])
                                        .pQueuePriorities = qp };
 
   //
-  // enable AMD shader info extension?
+  // clumsily enable AMD GCN shader info extension
   //
-#if defined(SPN_VK_SHADER_INFO_AMD_STATISTICS) || defined(SPN_VK_SHADER_INFO_AMD_DISASSEMBLY)
   char const * const device_enabled_extensions[] = {
-    // VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME,
-    VK_AMD_SHADER_INFO_EXTENSION_NAME,
-  };
-  uint32_t const device_enabled_extension_count =
-    ARRAY_LENGTH_MACRO(device_enabled_extensions) - ((pdp.vendor_id != 0x1002) ? 1 : 0);
+#if defined(SPN_VK_SHADER_INFO_AMD_STATISTICS) || defined(SPN_VK_SHADER_INFO_AMD_DISASSEMBLY)
+    VK_AMD_SHADER_INFO_EXTENSION_NAME
 #else
-  char const * const device_enabled_extensions[]    = {};
-  uint32_t const     device_enabled_extension_count = 0;
+    NULL
+#endif
+  };
+
+  uint32_t device_enabled_extension_count = 0;
+
+#if defined(SPN_VK_SHADER_INFO_AMD_STATISTICS) || defined(SPN_VK_SHADER_INFO_AMD_DISASSEMBLY)
+  if (pdp.vendorID == 0x1002)
+    {
+      device_enabled_extension_count = 1;
+      vk_shader_info_amd_statistics_enable();
+    }
 #endif
 
   //
