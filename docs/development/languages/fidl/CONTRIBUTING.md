@@ -51,11 +51,26 @@ Most of the FIDL team uses VSCode for development. Some useful plugins and workf
 really well for doing remote work from your laptop.
   * Setting up tmux or screen is also helpful for remote work, to preserve
   history and manage multiple sessions in the shell.
-* The fuchsia docs have instructions for setting up language servers:
+* The Fuchsia documentation has instructions for setting up language servers:
   * [clangd](https://fuchsia.dev/fuchsia-src/development/languages/c-cpp/editors) for c++
   * [rls](https://fuchsia.dev/fuchsia-src/development/languages/rust/editors) for rust
 * The [rewrap extension](https://marketplace.visualstudio.com/items?itemName=stkb.rewrap) is useful
   for automatically reflowing lines to a certain length (e.g. when editing markdown files).
+* To get automatic syntax highlighting for the bindings golden files, update the
+  `file.associations` setting:
+
+  ```json
+  "files.associations": {
+      "*.test.fidl.json.rs.golden": "rust",
+      "*.test.fidl.json.cc.golden": "cpp",
+      "*.test.fidl.json.h.golden": "cpp",
+      "*.test.fidl.json.llcpp.cc.golden": "cpp",
+      "*.test.fidl.json.llcpp.h.golden": "cpp",
+      "*.test.fidl.json.h.go.golden": "go",
+      "*.test.fidl.json_async.dart.golden": "dart",
+      "*.test.fidl.json_test.dart.golden": "dart"
+  },
+  ```
 
 ### C++ Style Guide
 
