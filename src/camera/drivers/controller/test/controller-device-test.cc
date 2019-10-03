@@ -68,7 +68,7 @@ class ControllerDeviceTest : public ControllerDevice {
 TEST(ControllerDeviceTest, DdkLifecycle) {
   ControllerDeviceTest test_controller;
   EXPECT_OK(test_controller.DdkAdd("test-camera-controller"));
-  test_controller.DdkUnbind();
+  test_controller.DdkUnbindDeprecated();
   EXPECT_TRUE(test_controller.ddk().Ok());
 }
 

@@ -167,7 +167,7 @@ static void mac_unbind(void* ctx) {
     return;
   }
 
-  status = device_remove(mvmvif->zxdev);
+  status = device_remove_deprecated(mvmvif->zxdev);
   if (status != ZX_OK) {
     IWL_WARN(mvmvif, "Unbind MAC failed. Cannot remove device from devhost: %s\n",
              zx_status_get_string(status));
@@ -336,7 +336,7 @@ static zx_status_t phy_destroy_iface(void* ctx, uint16_t id) {
 
   // Only remove the device if it has been added and not removed yet.
   if (mvmvif->zxdev) {
-    ret = device_remove(mvmvif->zxdev);
+    ret = device_remove_deprecated(mvmvif->zxdev);
     if (ret != ZX_OK) {
       IWL_WARN(mvmvif, "cannot remove the zxdev of interface (%d): %s\n", id,
                zx_status_get_string(ret));

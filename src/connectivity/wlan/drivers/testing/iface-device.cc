@@ -73,7 +73,7 @@ zx_status_t IfaceDevice::Bind() {
 
 void IfaceDevice::Unbind() {
   zxlogf(INFO, "wlan::testing::IfaceDevice::Unbind()\n");
-  device_remove(zxdev_);
+  device_remove_deprecated(zxdev_);
 }
 
 void IfaceDevice::Release() {

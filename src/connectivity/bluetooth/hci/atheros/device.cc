@@ -251,7 +251,7 @@ zx_status_t Device::LoadFirmware() {
 }
 
 zx_status_t Device::Remove(zx_status_t status, const char* note) {
-  device_remove(zxdev_);
+  device_remove_deprecated(zxdev_);
   errorf("%s: %s", note, zx_status_get_string(status));
   return status;
 }
@@ -280,7 +280,7 @@ zx_handle_t Device::MapFirmware(const char* name, uintptr_t* fw_addr, size_t* fw
   return vmo;
 }
 
-void Device::DdkUnbind() { device_remove(zxdev_); }
+void Device::DdkUnbindDeprecated() { device_remove_deprecated(zxdev_); }
 
 void Device::DdkRelease() { delete this; }
 

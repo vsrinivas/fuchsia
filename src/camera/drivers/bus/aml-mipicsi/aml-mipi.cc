@@ -205,7 +205,7 @@ zx_status_t AmlMipiDevice::MipiCsiDeInit() {
   return ZX_OK;
 }
 
-void AmlMipiDevice::DdkUnbind() { DdkRemove(); }
+void AmlMipiDevice::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 void AmlMipiDevice::DdkRelease() { delete this; }
 

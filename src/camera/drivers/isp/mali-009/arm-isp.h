@@ -51,7 +51,7 @@ constexpr uint32_t kGammaRgbPingDsAddr = 0x1c1d8;
 // |ArmIspDevice| is spawned by the driver in |arm-isp.cc|
 // This provides the interface provided in camera.fidl in Zircon.
 class ArmIspDevice;
-using IspDeviceType = ddk::Device<ArmIspDevice, ddk::Unbindable>;
+using IspDeviceType = ddk::Device<ArmIspDevice, ddk::UnbindableDeprecated>;
 
 class ArmIspDevice : public IspDeviceType,
                      public ddk::IspProtocol<ArmIspDevice, ddk::base_protocol> {
@@ -83,7 +83,7 @@ class ArmIspDevice : public IspDeviceType,
 
   // Methods required by the ddk.
   void DdkRelease();
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
 
   // +++++++++   ZX_PROTOCOL_ISP +++++++++++++++++++++++
   // This is the interface that is used by the Camera Controller

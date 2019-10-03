@@ -199,7 +199,7 @@ struct WlantapMacImpl : WlantapMac {
       std::lock_guard<std::mutex> guard(lock_);
       ifc_ = {};
     }
-    device_remove(device_);
+    device_remove_deprecated(device_);
   }
 
   zx_device_t* device_ = nullptr;

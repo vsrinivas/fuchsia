@@ -24,9 +24,9 @@ enum {
   COMPONENT_COUNT,
 };
 }
-void ControllerDevice::DdkUnbind() {
+void ControllerDevice::DdkUnbindDeprecated() {
   ShutDown();
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void ControllerDevice::DdkRelease() { delete this; }

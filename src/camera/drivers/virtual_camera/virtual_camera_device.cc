@@ -42,7 +42,7 @@ zx_status_t VirtualCameraDevice::Bind(zx_device_t* device) {
 
 void VirtualCameraDevice::Unbind() {
   // Unpublish our device node.
-  // DdkRemove();
+  // DdkRemoveDeprecated();
 }
 
 void VirtualCameraDevice::Release() { delete this; }

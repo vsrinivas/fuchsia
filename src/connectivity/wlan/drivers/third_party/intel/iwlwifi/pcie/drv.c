@@ -960,7 +960,7 @@ static zx_status_t iwl_find_pci_device(uint16_t device_id, uint16_t subsystem_de
 
 static void iwl_pci_unbind(void* ctx) {
   struct iwl_trans* trans = (struct iwl_trans*)ctx;
-  device_remove(trans->zxdev);
+  device_remove_deprecated(trans->zxdev);
 }
 
 static void iwl_pci_release(void* ctx) {
@@ -1163,7 +1163,7 @@ fail_stop_device:
 fail_destroy_loop:
   async_loop_destroy(iwl_trans->loop);
 fail_remove_device:
-  device_remove(iwl_trans->zxdev);
+  device_remove_deprecated(iwl_trans->zxdev);
   return status;
 }
 

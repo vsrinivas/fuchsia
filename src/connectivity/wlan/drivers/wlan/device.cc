@@ -196,7 +196,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
       status = RegisterChannelWaitLocked();
       if (status != ZX_OK) {
         errorf("could not wait on channel: %s\n", zx_status_get_string(status));
-        device_remove(ethdev_);
+        device_remove_deprecated(ethdev_);
         channel_.reset();
       }
     }
@@ -206,7 +206,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
       status = AddEthDevice(zxdev_);
       if (status != ZX_OK) {
         // Remove the wlan device.
-        device_remove(zxdev_);
+        device_remove_deprecated(zxdev_);
         errorf("could not add eth device: %s\n", zx_status_get_string(status));
       }
     } else {
@@ -334,7 +334,7 @@ void Device::ShutdownMainLoop() {
 void Device::WlanUnbind() {
   debugfn();
   ShutdownMainLoop();
-  device_remove(zxdev_);
+  device_remove_deprecated(zxdev_);
 }
 
 void Device::WlanRelease() {
@@ -347,7 +347,7 @@ void Device::WlanRelease() {
 void Device::EthUnbind() {
   debugfn();
   ShutdownMainLoop();
-  device_remove(ethdev_);
+  device_remove_deprecated(ethdev_);
 }
 
 void Device::EthRelease() {

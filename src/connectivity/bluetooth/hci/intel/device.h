@@ -16,7 +16,8 @@ namespace btintel {
 
 class Device;
 
-using DeviceType = ddk::Device<Device, ddk::GetProtocolable, ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<Device, ddk::GetProtocolable, ddk::UnbindableDeprecated,
+                               ddk::Messageable>;
 
 class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_protocol> {
  public:
@@ -35,7 +36,7 @@ class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_pr
   zx_status_t LoadFirmware(bool secure);
 
   // ddk::Device methods
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_proto);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);

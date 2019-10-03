@@ -315,7 +315,7 @@ static void hogd_on_read_report_map(void* ctx, const bt_gatt_status_t* status,
            "%i ATT_ECODE: %i MAP_LEN: %lu)\n",
            status->status, status->att_ecode, len);
     // Unrecoverable state. Remove the device and let dev manger clean us up.
-    device_remove(hogd->bus_dev);
+    device_remove_deprecated(hogd->bus_dev);
     return;
   }
 
@@ -451,7 +451,7 @@ static void hogd_connect(void* ctx, const bt_gatt_status_t* status,
   } else {
     zxlogf(ERROR,
            "bt_hog HID service is missing mandatory service attributes\n");
-    device_remove(hogd->bus_dev);
+    device_remove_deprecated(hogd->bus_dev);
   }
 }
 

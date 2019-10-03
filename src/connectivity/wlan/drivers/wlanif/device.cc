@@ -187,7 +187,7 @@ zx_status_t Device::Bind() {
     status = Connect(zx::channel(sme_channel));
     if (status != ZX_OK) {
       errorf("wlanif: unable to wait on SME channel: %s\n", zx_status_get_string(status));
-      device_remove(ethdev_);
+      device_remove_deprecated(ethdev_);
     }
   }
 
@@ -208,7 +208,7 @@ void Device::EthUnbind() {
 
   // Ensure that all FIDL messages have been processed before removing the device
   auto dispatcher = loop_.dispatcher();
-  ::async::PostTask(dispatcher, [this] { device_remove(ethdev_); });
+  ::async::PostTask(dispatcher, [this] { device_remove_deprecated(ethdev_); });
 }
 
 void Device::EthRelease() {

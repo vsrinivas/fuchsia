@@ -324,7 +324,7 @@ void Device::Unbind() {
   zx_port_queue(qmi_channel_port_, &packet);
   zxlogf(INFO, "qmi-fake-transport: unbind(): joining thread\n");
   thrd_join(fake_qmi_thread_, NULL);
-  device_remove(zxdev_);
+  device_remove_deprecated(zxdev_);
 }
 
 zx_status_t Device::GetProtocol(uint32_t proto_id, void* out_proto) {

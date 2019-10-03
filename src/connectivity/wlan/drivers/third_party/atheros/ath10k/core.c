@@ -2198,7 +2198,7 @@ static void ath10k_core_mac_unbind(void* ctx) {
     struct ath10k* ar = ctx;
     zx_status_t status;
 
-    status = device_remove(ar->zxdev_mac);
+    status = device_remove_deprecated(ar->zxdev_mac);
     if (status != ZX_OK) {
         ath10k_err("Unbind MAC failed. Cannot remove device from list: %u\n", status);
     }
@@ -2226,7 +2226,7 @@ static void ath10k_core_phy_unbind(void* ctx) {
     struct ath10k* ar = ctx;
     zx_status_t status;
 
-    status = device_remove(ar->zxdev);
+    status = device_remove_deprecated(ar->zxdev);
     if (status != ZX_OK) { ath10k_err("Unbind PHY failed. remove device from list: %u\n", status); }
 }
 
@@ -2315,7 +2315,7 @@ static zx_status_t ath10k_core_destroy_iface(void* ctx, uint16_t id) {
         goto ret;
     }
 
-    status = device_remove(ar->zxdev_mac);
+    status = device_remove_deprecated(ar->zxdev_mac);
     if (status != ZX_OK) {
         ath10k_err("Destroy interface failed. Cannot remove device from list: %u\n", status);
     }

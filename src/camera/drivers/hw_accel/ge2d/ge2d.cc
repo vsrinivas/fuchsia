@@ -259,9 +259,9 @@ zx_status_t Ge2dDevice::Setup(zx_device_t* parent, std::unique_ptr<Ge2dDevice>* 
   return status;
 }
 
-void Ge2dDevice::DdkUnbind() {
+void Ge2dDevice::DdkUnbindDeprecated() {
   ShutDown();
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void Ge2dDevice::DdkRelease() {

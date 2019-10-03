@@ -90,8 +90,8 @@ void WlanPhy::Unbind() {
   zx_device_t* const to_remove = zx_device_;
   zx_device_ = nullptr;
 
-  // Call device_remove() last, as it may call Release().
-  device_remove(to_remove);
+  // Call device_remove_deprecated() last, as it may call Release().
+  device_remove_deprecated(to_remove);
 }
 
 void WlanPhy::Release() { delete this; }

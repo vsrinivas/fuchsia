@@ -36,7 +36,8 @@
 namespace camera {
 
 class ControllerDevice;
-using ControllerDeviceType = ddk::Device<ControllerDevice, ddk::Unbindable, ddk::Messageable>;
+using ControllerDeviceType = ddk::Device<ControllerDevice, ddk::UnbindableDeprecated,
+                                         ddk::Messageable>;
 
 class ControllerDevice : public ControllerDeviceType,
                          public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA> {
@@ -53,7 +54,7 @@ class ControllerDevice : public ControllerDeviceType,
 
   // Methods required by the ddk.
   void DdkRelease();
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
   // Used for tests.

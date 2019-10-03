@@ -40,7 +40,7 @@ static zx_status_t bt_hci_passthrough_get_protocol(void* ctx, uint32_t proto_id,
 static void bt_hci_passthrough_unbind(void* ctx) {
   passthrough_t* passthrough = ctx;
 
-  device_remove(passthrough->dev);
+  device_remove_deprecated(passthrough->dev);
 }
 
 static void bt_hci_passthrough_release(void* ctx) { free(ctx); }

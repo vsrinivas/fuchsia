@@ -27,7 +27,7 @@ namespace camera {
 //   *Make some calls on isp that wrap sensor*
 class MockSensorDevice;
 
-using DeviceType = ddk::Device<MockSensorDevice, ddk::Unbindable>;
+using DeviceType = ddk::Device<MockSensorDevice, ddk::UnbindableDeprecated>;
 
 class MockSensorDevice : public DeviceType,
                          public ddk::CameraSensorProtocol<MockSensorDevice, ddk::base_protocol> {
@@ -41,7 +41,7 @@ class MockSensorDevice : public DeviceType,
   static zx_status_t GetDebugHandle(MockSensorDevice* device);
 
   // Methods required by ddk.
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   // Methods required for ZX_PROTOCOL_CAMERA_SENSOR.

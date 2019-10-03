@@ -50,7 +50,7 @@ typedef struct sensor_context {
 } sensor_context_t;
 
 class Imx227Device;
-using DeviceType = ddk::Device<Imx227Device, ddk::Unbindable>;
+using DeviceType = ddk::Device<Imx227Device, ddk::UnbindableDeprecated>;
 
 class Imx227Device : public DeviceType,
                      public ddk::CameraSensorProtocol<Imx227Device, ddk::base_protocol> {
@@ -78,7 +78,7 @@ class Imx227Device : public DeviceType,
         mipi_(mipicsi) {}
   static zx_status_t Setup(void* ctx, zx_device_t* parent, std::unique_ptr<Imx227Device>* device);
   // Methods required by the ddk mixins.
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   // Testing interface will need to use this to check

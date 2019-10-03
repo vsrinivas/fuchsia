@@ -22,7 +22,7 @@ namespace brcmfmac {
 zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
   zx_status_t status = ZX_OK;
 
-  const auto ddk_remover = [](SdioDevice* device) { device->DdkRemove(); };
+  const auto ddk_remover = [](SdioDevice* device) { device->DdkRemoveDeprecated(); };
   std::unique_ptr<SdioDevice, decltype(ddk_remover)> device(new SdioDevice(parent_device),
                                                             ddk_remover);
   if ((status = device->DdkAdd("brcmfmac-wlanphy", DEVICE_ADD_INVISIBLE)) != ZX_OK) {
@@ -41,7 +41,7 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
   return ZX_OK;
 }
 
-void SdioDevice::DdkUnbind() { DdkRemove(); }
+void SdioDevice::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 void SdioDevice::DdkRelease() { delete this; }
 
@@ -58,7 +58,7 @@ zx_status_t SdioDevice::BusRegister(brcmf_pub* drvr) {
 }
 
 SdioDevice::SdioDevice(zx_device_t* parent)
-    : ::ddk::Device<SdioDevice, ::ddk::Unbindable>(parent) {}
+    : ::ddk::Device<SdioDevice, ::ddk::UnbindableDeprecated>(parent) {}
 
 SdioDevice::~SdioDevice() {
   DisableDispatcher();

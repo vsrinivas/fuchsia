@@ -32,7 +32,7 @@ enum {
 };
 
 namespace ot_radio {
-class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable> {
+class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::UnbindableDeprecated> {
  public:
   explicit OtRadioDevice(zx_device_t* device);
 
@@ -44,7 +44,7 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable> {
   zx_status_t Init();
 
   void DdkRelease();
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   zx_status_t ShutDown();
   void RemoveDevice();
   void FreeDevice();

@@ -340,7 +340,7 @@ static void qmi_release(void* ctx) {
 static void qmi_unbind(void* ctx) {
   qmi_ctx_t* qmi_ctx = static_cast<qmi_ctx_t*>(ctx);
   zx_status_t result = ZX_OK;
-  result = device_remove(qmi_ctx->zxdev);
+  result = device_remove_deprecated(qmi_ctx->zxdev);
   if (result != ZX_OK) {
     zxlogf(ERROR, "Failed to unbind qmi-usb-transport driver. Cannot remove device: %u\n", result);
   }

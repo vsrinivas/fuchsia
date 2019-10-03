@@ -26,7 +26,7 @@ zx_status_t MockSensorDevice::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-void MockSensorDevice::DdkUnbind() {}
+void MockSensorDevice::DdkUnbindDeprecated() {}
 
 void MockSensorDevice::DdkRelease() { delete this; }
 

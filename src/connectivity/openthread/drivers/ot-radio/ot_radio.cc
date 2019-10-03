@@ -43,7 +43,7 @@ enum {
 };
 
 OtRadioDevice::OtRadioDevice(zx_device_t* device)
-    : ddk::Device<OtRadioDevice, ddk::Unbindable>(device),
+    : ddk::Device<OtRadioDevice, ddk::UnbindableDeprecated>(device),
       loop_(&kAsyncLoopConfigNoAttachToThread) {}
 
 zx_status_t OtRadioDevice::StartLoopThread() {
@@ -268,9 +268,9 @@ zx_status_t OtRadioDevice::Start(void) {
 
 void OtRadioDevice::DdkRelease() { delete this; }
 
-void OtRadioDevice::DdkUnbind() {
+void OtRadioDevice::DdkUnbindDeprecated() {
   ShutDown();
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 zx_status_t OtRadioDevice::ShutDown() {

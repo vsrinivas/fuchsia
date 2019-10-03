@@ -47,7 +47,7 @@ zx::bti& ArmIspDeviceTester::GetBti() { return isp_->bti_; }
 // Methods required by the ddk.
 void ArmIspDeviceTester::DdkRelease() { delete this; }
 
-void ArmIspDeviceTester::DdkUnbind() { DdkRemove(); }
+void ArmIspDeviceTester::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 void ArmIspDeviceTester::Disconnect() {
   fbl::AutoLock guard(&isp_lock_);
