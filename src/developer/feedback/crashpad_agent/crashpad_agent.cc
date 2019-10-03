@@ -140,62 +140,62 @@ void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback cal
     callback(fit::error(ZX_ERR_INVALID_ARGS));
     return;
   }
-
-  auto promise =
-      File(std::move(report))
-          .or_else([] {
-            FX_LOGS(ERROR) << "Failed to file crash report. Won't retry.";
-            return fit::error(ZX_ERR_INTERNAL);
-          })
-          .then([callback = std::move(callback), this](fit::result<void, zx_status_t>& result) {
-            callback(std::move(result));
-            PruneDatabase();
-            CleanDatabase();
-          });
-
-  executor_.schedule_task(std::move(promise));
-}
-
-fit::promise<void> CrashpadAgent::File(fuchsia::feedback::CrashReport report) {
   FX_LOGS(INFO) << "generating crash report for " << report.program_name();
 
   // Create local Crashpad report.
   std::unique_ptr<crashpad::CrashReportDatabase::NewReport> crashpad_report;
   if (const auto status = database_->PrepareNewCrashReport(&crashpad_report);
       status != crashpad::CrashReportDatabase::kNoError) {
-    FX_LOGS(ERROR) << "error creating local Crashpad report (" << status << ")";
-    return fit::make_error_promise();
+    FX_LOGS(ERROR) << "Error creating local Crashpad report (" << status << ")";
+    callback(fit::error(ZX_ERR_INTERNAL));
+    return;
   }
 
-  return GetFeedbackData(dispatcher_, services_, /*timeout=*/zx::sec(10))
-      .then([this, report = std::move(report), crashpad_report = std::move(crashpad_report)](
-                fit::result<Data>& result) mutable -> fit::result<void> {
-        Data feedback_data;
-        if (result.is_ok()) {
-          feedback_data = result.take_value();
-        }
+  using UploadArgs = std::tuple<crashpad::UUID, std::map<std::string, std::string>, bool>;
 
-        bool has_minidump = false;
-        std::map<std::string, std::string> annotations;
-        BuildAnnotationsAndAttachments(report, feedback_data, &annotations, crashpad_report.get(),
-                                       &has_minidump);
+  auto promise =
+      GetFeedbackData(dispatcher_, services_, /*timeout=*/zx::sec(10))
+          .then([this, report = std::move(report), crashpad_report = std::move(crashpad_report)](
+                    fit::result<Data>& result) mutable -> fit::result<UploadArgs> {
+            Data feedback_data;
+            if (result.is_ok()) {
+              feedback_data = result.take_value();
+            }
 
-        // Finish new local crash report.
-        crashpad::UUID local_report_id;
-        if (const auto status =
-                database_->FinishedWritingCrashReport(std::move(crashpad_report), &local_report_id);
-            status != crashpad::CrashReportDatabase::kNoError) {
-          FX_LOGS(ERROR) << "error writing local Crashpad report (" << status << ")";
-          return fit::error();
-        }
+            bool has_minidump = false;
+            std::map<std::string, std::string> annotations;
+            BuildAnnotationsAndAttachments(report, feedback_data, &annotations,
+                                           crashpad_report.get(), &has_minidump);
 
-        inspect_manager_->AddReport(report.program_name(), local_report_id.ToString());
+            // Finish new local crash report.
+            crashpad::UUID local_report_id;
+            if (const auto status = database_->FinishedWritingCrashReport(
+                    std::move(crashpad_report), &local_report_id);
+                status != crashpad::CrashReportDatabase::kNoError) {
+              FX_LOGS(ERROR) << "error writing local Crashpad report (" << status << ")";
+              return fit::error();
+            }
 
-        if (!UploadReport(local_report_id, annotations, has_minidump)) {
-          return fit::error();
-        }
-        return fit::ok();
-      });
+            inspect_manager_->AddReport(report.program_name(), local_report_id.ToString());
+
+            return fit::ok(
+                std::make_tuple(std::move(local_report_id), std::move(annotations), has_minidump));
+          })
+          .then([callback = std::move(callback), this](fit::result<UploadArgs>& result) {
+            if (result.is_error()) {
+              FX_LOGS(ERROR) << "Failed to file crash report. Won't retry.";
+              callback(fit::error(ZX_ERR_INTERNAL));
+            } else {
+              callback(fit::ok());
+              const auto& args = result.value();
+              UploadReport(std::get<0>(args), std::get<1>(args), std::get<2>(args));
+            }
+
+            PruneDatabase();
+            CleanDatabase();
+          });
+
+  executor_.schedule_task(std::move(promise));
 }
 
 bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,

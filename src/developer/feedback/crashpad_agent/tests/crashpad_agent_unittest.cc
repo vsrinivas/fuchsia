@@ -576,7 +576,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnConcurrentReports) {
   }
 }
 
-TEST_F(CrashpadAgentTest, Fail_OnFailedUpload) {
+TEST_F(CrashpadAgentTest, Succeed_OnFailedUpload) {
   ResetAgent(
       Config{/*crashpad_database=*/
              {
@@ -590,7 +590,7 @@ TEST_F(CrashpadAgentTest, Fail_OnFailedUpload) {
              }},
       std::make_unique<StubCrashServer>(std::vector<bool>({kUploadFailed})));
 
-  EXPECT_TRUE(FileOneCrashReport().is_error());
+  EXPECT_TRUE(FileOneCrashReport().is_ok());
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnDisabledUpload) {

@@ -52,8 +52,6 @@ class CrashpadAgent : public fuchsia::feedback::CrashReporter {
                 Config config, std::unique_ptr<crashpad::CrashReportDatabase> database,
                 std::unique_ptr<CrashServer> crash_server, InspectManager* inspect_manager);
 
-  fit::promise<void> File(fuchsia::feedback::CrashReport report);
-
   // Uploads local crash report of ID |local_report_id|, attaching the passed |annotations|.
   bool UploadReport(const crashpad::UUID& local_report_id,
                     const std::map<std::string, std::string>& annotations, bool has_minidump);
