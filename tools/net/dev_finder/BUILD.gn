@@ -21,6 +21,7 @@ go_binary("dev_finder") {
   deps = [
     ":main",
   ]
+  sdk_category = "partner"
 }
 
 go_test("dev_finder_tests") {

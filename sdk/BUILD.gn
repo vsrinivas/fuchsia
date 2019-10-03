@@ -150,7 +150,6 @@ sdk_molecule("fidl") {
 sdk_molecule("core_tools") {
   visibility = [ ":*" ]
   deps = [
-    "tools:dev_finder_sdk($host_toolchain)",
     "tools:symbolize_sdk($host_toolchain)",
     "//garnet/bin/far:bin_sdk($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_sdk($host_toolchain)",
@@ -158,6 +157,7 @@ sdk_molecule("core_tools") {
     "//src/developer/debug/zxdb:zxdb_sdk($host_toolchain)",
     "//src/sys/cmc:cmc_sdk($host_toolchain)",
     "//tools/fidlcat:fidlcat_sdk($host_toolchain)",
+    "//tools/net/dev_finder:dev_finder_sdk($host_toolchain)",
     "//zircon/public/tool/bootserver:bootserver_sdk($host_toolchain)",
     "//zircon/public/tool/fidl-format:fidl-format_sdk($host_toolchain)",
     "//zircon/public/tool/fidlc:fidlc_sdk($host_toolchain)",

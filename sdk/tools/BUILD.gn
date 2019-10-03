@@ -4,12 +4,6 @@
 
 import("//build/sdk/sdk_prebuilt_executable.gni")
 
-sdk_prebuilt_executable("dev_finder") {
-  category = "partner"
-
-  prebuilt = "//prebuilt/tools/dev_finder/${host_platform}/dev_finder"
-}
-
 sdk_prebuilt_executable("symbolize") {
   category = "partner"
 
