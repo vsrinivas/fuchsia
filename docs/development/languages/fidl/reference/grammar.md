@@ -72,7 +72,7 @@ compound-identifier = IDENTIFIER ( "." , IDENTIFIER )* ;
 
 declaration = bits-declaration | const-declaration | enum-declaration | protocol-declaration
             | struct-declaration | table-declaration | union-declaration | xunion-declaration
-            | type-alias-declaration ;
+            | type-alias-declaration | service-declaration ;
 
 const-declaration = ( attribute-list ) , "const" , type-constructor , IDENTIFIER , "=" , constant ;
 
@@ -121,6 +121,10 @@ table-field-ordinal = ordinal , ":" ;
 table-field-declaration = struct-field | "reserved" ;
 
 type-alias-declaration = ( attribute-list ) , "using" , IDENTIFIER ,  "=" , type-constructor ;
+
+service-declaration = ( attribute-list ) , "service" , IDENTIFIER , "{" , ( service-member , ";" )* , "}" ;
+
+service-member = ( attribute-list ) , type-constructor , IDENTIFIER ; [NOTE 6]
 
 attribute-list = "[" , attributes , "]" ;
 
@@ -171,6 +175,10 @@ an enum thereof.
 
 ### NOTE 5
 Attributes cannot be placed on a reserved member.
+
+### NOTE 6
+The `service-member` allows the more liberal `type-constructor` in the grammar, but the compiler
+limits this to protocols.
 
 <!-- xrefs -->
 [primitives]: /docs/development/languages/fidl/reference/language.md#primitives
