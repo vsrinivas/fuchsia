@@ -13,7 +13,7 @@ src .req x1
 len .req x2
 fault_return_ptr .req x3
 fault_return_mask .req x4
-temp .req x9
+temp .req x15
 
 // NOTE! We know here that the memcpy code doesn't touch these registers,
 // so we can use them to save values.  But they are call-clobbered in the

@@ -44,13 +44,10 @@ if (current_toolchain == default_toolchain) {
 
   # This is used pervasively throughout the kernel on arm64.
   config("kernel") {
-    # x15 is reserved so we can use it to point at the per-CPU structure.
-    cflags = [ "-ffixed-x15" ]
-
     if (!is_gcc) {
       # Clang needs -mcmodel=kernel to tell it to use the right safe-stack
       # ABI for the kernel.
-      cflags += [ "-mcmodel=kernel" ]
+      cflags = [ "-mcmodel=kernel" ]
     }
 
     defines = [

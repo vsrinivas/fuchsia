@@ -85,12 +85,12 @@
 #define GS_FAR_EL2          (GS_ESR_EL2 + 8)
 #define GS_HPFAR_EL2        (GS_FAR_EL2 + 8)
 
-#define HS_XREGS            (GS_HPFAR_EL2 + 16)
+#define HS_X18              (GS_HPFAR_EL2 + 16)
 // NOTE(abdulla): This differs from GS_X in that it calculates a value relative
 // to host_state.x, and not relative to El2State.
 #define HS_X(num)           ((num) * 8)
-#define HS_NUM_REGS         14
-#define HS_FP_STATE         (HS_XREGS + HS_X(HS_NUM_REGS))
+#define HS_NUM_REGS         13
+#define HS_FP_STATE         (HS_X18 + HS_X(HS_NUM_REGS) + 8)
 #define HS_SYSTEM_STATE     (HS_FP_STATE + FS_FPCR + 8)
 
 #define IS_NUM_APRS         0
@@ -164,7 +164,7 @@ struct GuestState {
 };
 
 struct HostState {
-  // We only save X15, X18..X30 from the host, as the host is making an explicit
+  // We only save X18 to X30 from the host, as the host is making an explicit
   // call into the hypervisor, and therefore is saving the rest of its state.
   uint64_t x[HS_NUM_REGS];
   FpState fp_state;
@@ -233,9 +233,8 @@ static_assert(offsetof(El2State, guest_state.esr_el2) == GS_ESR_EL2);
 static_assert(offsetof(El2State, guest_state.far_el2) == GS_FAR_EL2);
 static_assert(offsetof(El2State, guest_state.hpfar_el2) == GS_HPFAR_EL2);
 
-static_assert(offsetof(El2State, host_state.x) == HS_XREGS);
-static_assert(offsetof(El2State, host_state.x[HS_NUM_REGS - 1]) ==
-              HS_XREGS + HS_X(HS_NUM_REGS - 1));
+static_assert(offsetof(El2State, host_state.x) == HS_X18);
+static_assert(offsetof(El2State, host_state.x[HS_NUM_REGS - 1]) == HS_X18 + HS_X(HS_NUM_REGS - 1));
 static_assert(offsetof(El2State, host_state.fp_state) == HS_FP_STATE);
 static_assert(offsetof(El2State, host_state.fp_state.q) == HS_FP_STATE + FS_Q0);
 static_assert(offsetof(El2State, host_state.system_state) == HS_SYSTEM_STATE);
