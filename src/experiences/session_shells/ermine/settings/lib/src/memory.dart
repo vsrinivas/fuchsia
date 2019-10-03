@@ -10,11 +10,14 @@ import 'package:flutter/material.dart';
 import 'package:fidl_fuchsia_memory/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:fuchsia_services/services.dart' show StartupContext;
+import 'package:internationalization/strings.dart' as strings;
 import 'package:quickui/quickui.dart';
 
 /// Defines a [UiSpec] for visualizing memory.
 class Memory extends UiSpec {
-  static const _title = 'Memory';
+
+  // Localized strings.
+  static String get _memory => strings.memory();
 
   MemoryModel model;
 
@@ -48,7 +51,7 @@ class Memory extends UiSpec {
     String usedString = (used).toStringAsPrecision(3);
     String totalString = (total).toStringAsPrecision(3);
     return Spec(groups: [
-      Group(title: _title, values: [
+      Group(title: _memory, values: [
         Value.withProgress(ProgressValue(value: value)),
         Value.withText(TextValue(text: '${usedString}GB / ${totalString}GB')),
       ]),

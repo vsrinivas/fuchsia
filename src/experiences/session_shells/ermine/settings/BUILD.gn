@@ -20,6 +20,7 @@ dart_library("settings") {
     "//sdk/fidl/fuchsia.power",
     "//sdk/fidl/fuchsia.ui.brightness",
     "//src/experiences/lib/quickui",
+    "//src/experiences/session_shells/ermine/internationalization",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//topaz/public/dart/fuchsia_services",
   ]

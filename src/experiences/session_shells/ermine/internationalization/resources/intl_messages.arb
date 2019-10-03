@@ -1,0 +1,279 @@
+{
+  "@@last_modified": "2019-10-04T10:36:29.147518",
+  "brightness": "Brightness",
+  "@brightness": {
+    "description": "The label for the screen brightness settings widget",
+    "type": "text",
+    "placeholders": {}
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "The label for canceling an offered command",
+    "type": "text",
+    "placeholders": {}
+  },
+  "done": "Done",
+  "@done": {
+    "description": "The label for saying we are done with a command",
+    "type": "text",
+    "placeholders": {}
+  },
+  "sleep": "Sleep",
+  "@sleep": {
+    "description": "The label for the sleep settings widget",
+    "type": "text",
+    "placeholders": {}
+  },
+  "restart": "Restart",
+  "@restart": {
+    "description": "The label for the restart button",
+    "type": "text",
+    "placeholders": {}
+  },
+  "powerOff": "Power Off",
+  "@powerOff": {
+    "description": "The label for the restart button",
+    "type": "text",
+    "placeholders": {}
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "The label for the settings button",
+    "type": "text",
+    "placeholders": {}
+  },
+  "volume": "Volume",
+  "@volume": {
+    "description": "The label for the settings button",
+    "type": "text",
+    "placeholders": {}
+  },
+  "min": "Min",
+  "@min": {
+    "description": "The short label for \"minimal\" label for the volume button",
+    "type": "text",
+    "placeholders": {}
+  },
+  "max": "Max",
+  "@max": {
+    "description": "The shortened label for \"maximal\" label for the volume button",
+    "type": "text",
+    "placeholders": {}
+  },
+  "music": "Music",
+  "@music": {
+    "description": "The label used for the music button",
+    "type": "text",
+    "placeholders": {}
+  },
+  "back": "Back",
+  "@back": {
+    "description": "The label for the \"Back\" button",
+    "type": "text",
+    "placeholders": {}
+  },
+  "pause": "Pause",
+  "@pause": {
+    "description": "The label for the \"Pause\" button",
+    "type": "text",
+    "placeholders": {}
+  },
+  "skip": "Skip",
+  "@skip": {
+    "description": "The label for the \"Skip\" button",
+    "type": "text",
+    "placeholders": {}
+  },
+  "topProcesses": "Top Processes",
+  "@topProcesses": {
+    "description": "The label for the \"Top processes\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "shutdown": "Shutdown",
+  "@shutdown": {
+    "description": "The label for the \"System shutdown\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "memory": "Memory",
+  "@memory": {
+    "description": "The label for the \"memory\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "cpu": "CPU",
+  "@cpu": {
+    "description": "The short name for the \"Central Processing Unit\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "mem": "MEM",
+  "@mem": {
+    "description": "The short name for the \"Memory\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "ide": "IDE",
+  "@ide": {
+    "description": "The short name for the \"Integrated Development Environment\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "chrome": "Chrome",
+  "@chrome": {
+    "description": "The short name for the \"Google Chrome\" browser",
+    "type": "text",
+    "placeholders": {}
+  },
+  "pid": "PID",
+  "@pid": {
+    "description": "The short name for the \"Process identifier\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "tasks": "TASKS",
+  "@tasks": {
+    "description": "The short name for the \"Tasks\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "weather": "Weather",
+  "@weather": {
+    "description": "The short name for the \"Weather\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "date": "Date",
+  "@date": {
+    "description": "The short name for the \"date\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "network": "Network",
+  "@network": {
+    "description": "The short name for the \"network\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "fps": "FPS",
+  "@fps": {
+    "description": "The short name for the \"Frames per Second\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "batt": "Batt",
+  "@batt": {
+    "description": "The short name for the \"Battery level\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "battery": "Battery",
+  "@battery": {
+    "description": "The long name for the \"Battery level\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "wireless": "Wireless",
+  "@wireless": {
+    "description": "The short name for the \"Wireless network\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "signalStrong": "Strong Signal",
+  "@signalStrong": {
+    "description": "The short name for the \"Strong signal\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "sunny": "Sunny",
+  "@sunny": {
+    "description": "The short name for the \"Weather is sunny\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "runningTasks": "{numTasks,plural, =0{{numTasks} RUNNING}=1{{numTasks} RUNNING}other{{numTasks} RUNNING}}",
+  "@runningTasks": {
+    "description": "How many tasks are currently running",
+    "type": "text",
+    "placeholders": {
+      "numTasks": {
+        "example": 42
+      }
+    }
+  },
+  "totalTasks": "{numTasks,plural, =0{{numTasks}}=1{{numTasks}}other{{numTasks}}}",
+  "@totalTasks": {
+    "description": "How many tasks are currently running",
+    "type": "text",
+    "placeholders": {
+      "numTasks": {
+        "example": 42
+      }
+    }
+  },
+  "numThreads": "{numThreads,plural, =0{{numThreads} THR}=1{{numThreads} THR}other{{numThreads} THR}}",
+  "@numThreads": {
+    "description": "How many threads are currently there, short label",
+    "type": "text",
+    "placeholders": {
+      "numThreads": {
+        "example": 42
+      }
+    }
+  },
+  "name": "Name",
+  "@name": {
+    "description": "A generic label for a name, sentence case.",
+    "type": "text",
+    "placeholders": {}
+  },
+  "ask": "ASK",
+  "@ask": {
+    "description": "A generic short label for \"query\", sentence case.",
+    "type": "text",
+    "placeholders": {}
+  },
+  "typeToAsk": "TYPE TO ASK",
+  "@typeToAsk": {
+    "description": "Shown in the ask text entry box in Ermine shell",
+    "type": "text",
+    "placeholders": {}
+  },
+  "overview": "Overview",
+  "@overview": {
+    "description": "Shown in top bar on the Ermine shell",
+    "type": "text",
+    "placeholders": {}
+  },
+  "recents": "Recents",
+  "@recents": {
+    "description": "A list of recent apps",
+    "type": "text",
+    "placeholders": {}
+  },
+  "browser": "Browser",
+  "@browser": {
+    "description": "A button to invoke a browser with",
+    "type": "text",
+    "placeholders": {}
+  },
+  "auto": "Auto",
+  "@auto": {
+    "description": "A shorthand for \"automatic\" setting.",
+    "type": "text",
+    "placeholders": {}
+  },
+  "mockWirelessNetwork": "Wireless_Network",
+  "@mockWirelessNetwork": {
+    "description": "A mock label for a wireless network name that the device is connected to",
+    "type": "text",
+    "placeholders": {}
+  },
+  "nameThisStory": "Name this story",
+  "@nameThisStory": {
+    "description": "A hint appearing in a window for naming a story. This text should not include padding, but now it does.",
+    "type": "text",
+    "placeholders": {}
+  }
+}
