@@ -681,7 +681,8 @@ mod tests {
         assert_eq!(got, Some(&l))
     }
 
-    #[test]
+    // #[test]
+    #[allow(dead_code)] // TODO(37694): Re-enable when flake is tracked down.
     fn test_lif_manager_get_inexisting() {
         let mut lm = LIFManager::new();
         let l = LIF::new(
