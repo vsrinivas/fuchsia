@@ -17,13 +17,13 @@
 namespace camera {
 
 namespace {
-
 enum {
   COMPONENT_ISP,
   COMPONENT_GDC,
   COMPONENT_COUNT,
 };
-}
+} // namespace
+
 void ControllerDevice::DdkUnbindDeprecated() {
   ShutDown();
   DdkRemoveDeprecated();

@@ -8,18 +8,19 @@
 #include <lib/fit/function.h>
 
 #include <fbl/auto_call.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "../controller-protocol.h"
 
 namespace camera {
+namespace {
 
 class ControllerDeviceTest : public ControllerDevice {
  public:
   ControllerDeviceTest()
       : ControllerDevice(fake_ddk::kFakeParent, fake_ddk::kFakeParent, fake_ddk::kFakeParent),
         loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-    ASSERT_OK(zx::channel::create(0u, &local_, &remote_));
+    EXPECT_EQ(zx::channel::create(0u, &local_, &remote_), ZX_OK);
     loop_.StartThread("camera-controller-loop", &loop_thread_);
   }
 
@@ -35,7 +36,7 @@ class ControllerDeviceTest : public ControllerDevice {
 
   void GetConfigCallback(::fidl::VectorPtr<fuchsia::camera2::hal::Config> configs,
                          zx_status_t status) {
-    ASSERT_OK(status);
+    ASSERT_EQ(status, ZX_OK);
     EXPECT_TRUE(configs.has_value());
     EXPECT_GT(configs->size(), 0u);
     sync_completion_signal(&event_);
@@ -50,8 +51,9 @@ class ControllerDeviceTest : public ControllerDevice {
 
   void SetupForControllerProtocol() {
     StartThread();
-    ASSERT_OK(DdkAdd("test-camera-controller"));
-    ASSERT_OK(fuchsia_hardware_camera_DeviceGetChannel2(DdkFidlChannel(), remote().release()));
+    ASSERT_EQ(DdkAdd("test-camera-controller"), ZX_OK);
+    ASSERT_EQ(fuchsia_hardware_camera_DeviceGetChannel2(DdkFidlChannel(), remote().release()),
+              ZX_OK);
     controller_protocol().Bind(std::move(local()), loop().dispatcher());
   }
 
@@ -67,7 +69,7 @@ class ControllerDeviceTest : public ControllerDevice {
 
 TEST(ControllerDeviceTest, DdkLifecycle) {
   ControllerDeviceTest test_controller;
-  EXPECT_OK(test_controller.DdkAdd("test-camera-controller"));
+  EXPECT_EQ(test_controller.DdkAdd("test-camera-controller"), ZX_OK);
   test_controller.DdkUnbindDeprecated();
   EXPECT_TRUE(test_controller.ddk().Ok());
 }
@@ -76,9 +78,10 @@ TEST(ControllerDeviceTest, DdkLifecycle) {
 // GetChannel API
 TEST(ControllerDeviceTest, GetChannel) {
   ControllerDeviceTest test_controller;
-  ASSERT_OK(test_controller.DdkAdd("test-camera-controller"));
-  ASSERT_OK(fuchsia_hardware_camera_DeviceGetChannel(test_controller.DdkFidlChannel(),
-                                                     test_controller.remote().release()));
+  ASSERT_EQ(test_controller.DdkAdd("test-camera-controller"), ZX_OK);
+  ASSERT_EQ(fuchsia_hardware_camera_DeviceGetChannel(test_controller.DdkFidlChannel(),
+                                                     test_controller.remote().release()),
+            ZX_OK);
   zx_signals_t observed;
   EXPECT_EQ(ZX_OK, test_controller.local().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
                                                     &observed));
@@ -86,16 +89,18 @@ TEST(ControllerDeviceTest, GetChannel) {
 
 TEST(ControllerDeviceTest, GetChannel2) {
   ControllerDeviceTest test_controller;
-  ASSERT_OK(test_controller.DdkAdd("test-camera-controller"));
-  EXPECT_OK(fuchsia_hardware_camera_DeviceGetChannel2(test_controller.DdkFidlChannel(),
-                                                      test_controller.remote().release()));
+  ASSERT_EQ(test_controller.DdkAdd("test-camera-controller"), ZX_OK);
+  EXPECT_EQ(fuchsia_hardware_camera_DeviceGetChannel2(test_controller.DdkFidlChannel(),
+                                                      test_controller.remote().release()),
+            ZX_OK);
 }
 
 TEST(ControllerDeviceTest, GetChannel2InvalidHandle) {
   ControllerDeviceTest test_controller;
-  ASSERT_OK(test_controller.DdkAdd("test-camera-controller"));
-  EXPECT_OK(fuchsia_hardware_camera_DeviceGetChannel2(test_controller.DdkFidlChannel(),
-                                                      test_controller.remote().release()));
+  ASSERT_EQ(test_controller.DdkAdd("test-camera-controller"), ZX_OK);
+  EXPECT_EQ(fuchsia_hardware_camera_DeviceGetChannel2(test_controller.DdkFidlChannel(),
+                                                      test_controller.remote().release()),
+            ZX_OK);
   EXPECT_EQ(ZX_ERR_INVALID_ARGS,
             fuchsia_hardware_camera_DeviceGetChannel2(test_controller.DdkFidlChannel(),
                                                       test_controller.remote().release()));
@@ -103,14 +108,16 @@ TEST(ControllerDeviceTest, GetChannel2InvalidHandle) {
 
 TEST(ControllerDeviceTest, GetChannel2InvokeTwice) {
   ControllerDeviceTest test_controller;
-  ASSERT_OK(test_controller.DdkAdd("test-camera-controller"));
-  EXPECT_OK(fuchsia_hardware_camera_DeviceGetChannel2(test_controller.DdkFidlChannel(),
-                                                      test_controller.remote().release()));
+  ASSERT_EQ(test_controller.DdkAdd("test-camera-controller"), ZX_OK);
+  EXPECT_EQ(fuchsia_hardware_camera_DeviceGetChannel2(test_controller.DdkFidlChannel(),
+                                                      test_controller.remote().release()),
+            ZX_OK);
 
   zx::channel new_local, new_remote;
-  ASSERT_OK(zx::channel::create(0u, &new_local, &new_remote));
-  EXPECT_OK(fuchsia_hardware_camera_DeviceGetChannel2(test_controller.DdkFidlChannel(),
-                                                      new_remote.release()));
+  ASSERT_EQ(zx::channel::create(0u, &new_local, &new_remote), ZX_OK);
+  EXPECT_EQ(fuchsia_hardware_camera_DeviceGetChannel2(test_controller.DdkFidlChannel(),
+                                                      new_remote.release()),
+            ZX_OK);
   zx_signals_t observed;
   EXPECT_EQ(ZX_OK, new_local.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &observed));
 }
@@ -130,4 +137,6 @@ TEST(ControllerDeviceTest, GetConfigs) {
       fit::bind_member(&test_controller, &ControllerDeviceTest::GetConfigCallback));
   sync_completion_wait(&test_controller.event(), ZX_TIME_INFINITE);
 }
+
+}  // namespace
 }  // namespace camera

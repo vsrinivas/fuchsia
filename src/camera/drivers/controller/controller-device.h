@@ -67,8 +67,7 @@ class ControllerDevice : public ControllerDeviceType,
   // Fuchsia Hardware Camera FIDL implementation.
   zx_status_t GetChannel2(zx_handle_t handle);
   zx_status_t GetChannel(zx_handle_t handle) {
-    // Closing the handle to let the client know that this
-    // call is not supported.
+    // Closing the handle to let the client know that this call is not supported.
     zx::channel ch(handle);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -83,7 +82,7 @@ class ControllerDevice : public ControllerDeviceType,
   async::Loop controller_loop_;
   thrd_t loop_thread_;
   std::unique_ptr<ControllerImpl> controller_ = nullptr;
-};  // namespace camera
+};
 
 }  // namespace camera
 
