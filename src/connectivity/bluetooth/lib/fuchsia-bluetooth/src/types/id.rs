@@ -68,6 +68,12 @@ impl Into<String> for PeerId {
     }
 }
 
+impl fmt::Display for PeerId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
+}
+
 /// A Bluetooth generic device id. The id used in Fuchsia Bluetooth.
 /// `Id` can be converted to/from a FIDL Bluetooth Id type.
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
