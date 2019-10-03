@@ -6,9 +6,7 @@ library fuchsia.web;
 
 using fuchsia.media.sessions2;
 using fuchsia.mem;
-using fuchsia.net.http;
 using fuchsia.ui.views;
-using zx;
 
 // TODO(fxb/29926): Consider using [`fuchsia.logger.LogLevelFilter`] if possible.
 enum ConsoleLogLevel : int32 {
@@ -171,18 +169,7 @@ protocol Frame {
     /// - [`fuchsia.web.Frame/SetUrlRequestRewriteRules`] must not be called again until its
     ///   acknowledgement callback has been processed. If this happens, the [`fuchsia.web.Frame`]
     ///   will be closed with `ERR_BAD_STATE`.
-    [Transitional]
     SetUrlRequestRewriteRules(vector<UrlRequestRewriteRule>:MAX_RULE_COUNT rules) -> ();
-};
-
-// [Deprecated] Use fuchsia.web.Frame/SetUrlRequestRewriteRules instead.
-[Discoverable]
-protocol AdditionalHeadersProvider {
-    /// Returns a set of `headers` to include in network requests. The returned
-    /// `headers` may be cached and applied to further network requests until
-    /// `expiry`. If `expiry` is in the past then `headers` should be used once
-    /// but not cached.
-    GetHeaders() -> (vector<fuchsia.net.http.Header> headers, zx.time expiry);
 };
 
 table WebMessage {
