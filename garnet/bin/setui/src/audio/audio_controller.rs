@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
+    crate::audio::StreamVolumeControl,
     crate::input::monitor_mic_mute,
     crate::registry::base::{Command, Notifier, State},
     crate::registry::service_context::ServiceContext,
     crate::switchboard::base::*,
-    fidl_fuchsia_media::AudioRenderUsage,
-    fidl_fuchsia_media_audio::MUTED_GAIN_DB,
     fidl_fuchsia_ui_input::MediaButtonsEvent,
     fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_err,
     futures::StreamExt,
     parking_lot::RwLock,
     std::collections::HashMap,
@@ -19,8 +17,8 @@ use {
 
 // TODO(go/fxb/35983): Load default values from a config.
 const DEFAULT_MIC_MUTE: bool = false;
-const DEFAULT_VOLUME_LEVEL: f32 = 0.5;
-const DEFAULT_VOLUME_MUTED: bool = false;
+pub const DEFAULT_VOLUME_LEVEL: f32 = 0.5;
+pub const DEFAULT_VOLUME_MUTED: bool = false;
 
 // TODO(go/fxb/35983): Load default values from a config.
 pub const DEFAULT_STREAMS: [AudioStream; 5] = [
@@ -42,12 +40,12 @@ pub const fn create_default_audio_stream(stream_type: AudioStreamType) -> AudioS
 }
 
 fn get_streams_array_from_map(
-    stream_map: &HashMap<AudioStreamType, AudioStream>,
+    stream_map: &HashMap<AudioStreamType, StreamVolumeControl>,
 ) -> [AudioStream; 5] {
     let mut streams: [AudioStream; 5] = DEFAULT_STREAMS;
     for i in 0..streams.len() {
-        if let Some(stored_stream) = stream_map.get(&streams[i].stream_type) {
-            streams[i] = stored_stream.clone();
+        if let Some(volume_control) = stream_map.get(&streams[i].stream_type) {
+            streams[i] = volume_control.stored_stream.clone();
         }
     }
     streams
@@ -66,11 +64,7 @@ pub fn spawn_audio_controller(
 
     // TODO(go/fxb/35878): Add persistent storage.
     // TODO(go/fxb/35983): Load default values from a config.
-    let mut stored_audio_streams = HashMap::new();
-
-    for stream in DEFAULT_STREAMS.iter() {
-        stored_audio_streams.insert(stream.stream_type.clone(), stream.clone());
-    }
+    let mut stream_volume_controls = HashMap::new();
 
     let (input_tx, mut input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
 
@@ -98,6 +92,13 @@ pub fn spawn_audio_controller(
             .connect::<fidl_fuchsia_media::AudioCoreMarker>()
             .expect("connected to audio core");
 
+        for stream in DEFAULT_STREAMS.iter() {
+            stream_volume_controls.insert(
+                stream.stream_type.clone(),
+                StreamVolumeControl::create(&audio_service, stream.clone()),
+            );
+        }
+
         while let Some(command) = audio_handler_rx.next().await {
             match command {
                 Command::ChangeState(state) => match state {
@@ -112,12 +113,7 @@ pub fn spawn_audio_controller(
                     #[allow(unreachable_patterns)]
                     match request {
                         SettingRequest::SetVolume(volume) => {
-                            update_volume_stream(
-                                &volume,
-                                &mut stored_audio_streams,
-                                &audio_service,
-                            )
-                            .await;
+                            update_volume_stream(&volume, &mut stream_volume_controls).await;
 
                             if pair_media_and_system_agent {
                                 // Check to see if |volume| contains the media stream and not
@@ -134,12 +130,8 @@ pub fn spawn_audio_controller(
                                         let mut system_stream = media_stream_value.clone();
                                         system_stream.stream_type = AudioStreamType::SystemAgent;
                                         let streams = &vec![system_stream];
-                                        update_volume_stream(
-                                            &streams,
-                                            &mut stored_audio_streams,
-                                            &audio_service,
-                                        )
-                                        .await;
+                                        update_volume_stream(&streams, &mut stream_volume_controls)
+                                            .await;
                                     }
                                 }
                             }
@@ -152,7 +144,7 @@ pub fn spawn_audio_controller(
                         SettingRequest::Get => {
                             let _ = responder
                                 .send(Ok(Some(SettingResponse::Audio(AudioInfo {
-                                    streams: get_streams_array_from_map(&stored_audio_streams),
+                                    streams: get_streams_array_from_map(&stream_volume_controls),
                                     input: AudioInputInfo { mic_mute: *mic_mute_state.read() },
                                 }))))
                                 .ok();
@@ -169,53 +161,11 @@ pub fn spawn_audio_controller(
 // Updates |stored_audio_streams| and then update volume via the AudioCore service.
 async fn update_volume_stream(
     new_streams: &Vec<AudioStream>,
-    stored_audio_streams: &mut HashMap<AudioStreamType, AudioStream>,
-    audio_service: &fidl_fuchsia_media::AudioCoreProxy,
+    stored_volume_controls: &mut HashMap<AudioStreamType, StreamVolumeControl>,
 ) {
     for stream in new_streams {
-        set_volume(stream, audio_service).await.unwrap_or_else(move |e| {
-            fx_log_err!("failed updating the audio volume, {}", e);
-        });
-        stored_audio_streams.insert(stream.stream_type, stream.clone());
+        if let Some(volume_control) = stored_volume_controls.get_mut(&stream.stream_type) {
+            volume_control.set_volume(stream.clone()).await;
+        }
     }
-}
-
-// Sets the volume via the AudioCore service.
-async fn set_volume(
-    stream: &AudioStream,
-    audio_service: &fidl_fuchsia_media::AudioCoreProxy,
-) -> Result<(), fidl::Error> {
-    if stream.source == AudioSettingSource::User {
-        return audio_service.set_render_usage_gain(
-            AudioRenderUsage::from(stream.stream_type),
-            get_gain_db(stream.user_volume_level, stream.user_volume_muted),
-        );
-    }
-
-    if stream.source == AudioSettingSource::Default {
-        return audio_service.set_render_usage_gain(
-            AudioRenderUsage::from(stream.stream_type),
-            get_gain_db(DEFAULT_VOLUME_LEVEL, DEFAULT_VOLUME_MUTED),
-        );
-    }
-
-    return Ok(());
-}
-
-// Converts an audio 'level' in the range 0.0 to 1.0 inclusive to a gain in
-// db.
-// TODO(go/fxb/36148): Use the VolumeControl for the volume curve.
-pub fn get_gain_db(level: f32, muted: bool) -> f32 {
-    const MIN_LEVEL_GAIN_DB: f32 = -45.0;
-    const UNITY_GAIN_DB: f32 = 0.0;
-
-    if muted || level <= 0.0 {
-        return MUTED_GAIN_DB;
-    }
-
-    if level >= 1.0 {
-        return UNITY_GAIN_DB;
-    }
-
-    (1.0 - level) * MIN_LEVEL_GAIN_DB
 }

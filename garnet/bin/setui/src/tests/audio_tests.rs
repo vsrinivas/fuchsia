@@ -5,7 +5,7 @@
 #[cfg(test)]
 use {
     crate::audio::{
-        create_default_audio_stream, get_gain_db, spawn_audio_controller, spawn_audio_fidl_handler,
+        create_default_audio_stream, spawn_audio_controller, spawn_audio_fidl_handler,
         DEFAULT_STREAMS,
     },
     crate::create_fidl_service,
@@ -142,8 +142,8 @@ async fn test_audio() {
     verify_audio_stream(settings.clone(), AudioStreamSettings::from(CHANGED_MEDIA_STREAM));
 
     assert_eq!(
-        get_gain_db(CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
-        audio_core_service_handle.read().get_gain(AudioRenderUsage::Media).unwrap()
+        (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
+        audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::Media).unwrap()
     );
 }
 
@@ -212,14 +212,13 @@ async fn test_audio_pair_media_system() {
     verify_audio_stream(settings.clone(), AudioStreamSettings::from(CHANGED_MEDIA_STREAM));
     verify_audio_stream(settings.clone(), AudioStreamSettings::from(changed_system_stream));
 
-    let expected_gain_db = get_gain_db(CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED);
     assert_eq!(
-        expected_gain_db,
-        audio_core_service_handle.read().get_gain(AudioRenderUsage::Media).unwrap()
+        (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
+        audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::Media).unwrap()
     );
     assert_eq!(
-        expected_gain_db,
-        audio_core_service_handle.read().get_gain(AudioRenderUsage::SystemAgent).unwrap()
+        (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
+        audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::SystemAgent).unwrap()
     );
 }
 
@@ -244,16 +243,19 @@ async fn test_audio_pair_media_system_off() {
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM]).await;
 
-    // The audio stream for system agent should remain the same.
     let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
     verify_audio_stream(settings.clone(), AudioStreamSettings::from(CHANGED_MEDIA_STREAM));
     verify_audio_stream(settings.clone(), AudioStreamSettings::from(DEFAULT_SYSTEM_STREAM));
 
     assert_eq!(
-        get_gain_db(CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
-        audio_core_service_handle.read().get_gain(AudioRenderUsage::Media).unwrap()
+        (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
+        audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::Media).unwrap()
     );
-    assert_eq!(None, audio_core_service_handle.read().get_gain(AudioRenderUsage::SystemAgent));
+
+    assert_eq!(
+        None,
+        audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::SystemAgent)
+    );
 }
 
 // Test to ensure that when |pair_media_and_system_agent| is enabled, setting the media volume
@@ -293,13 +295,13 @@ async fn test_audio_pair_media_system_with_system_agent_change() {
     verify_audio_stream(settings.clone(), AudioStreamSettings::from(CHANGED_SYSTEM_STREAM));
 
     assert_eq!(
-        get_gain_db(CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
-        audio_core_service_handle.read().get_gain(AudioRenderUsage::Media).unwrap()
+        (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
+        audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::Media).unwrap()
     );
 
     assert_eq!(
-        get_gain_db(CHANGED_SYSTEM_LEVEL, CHANGED_SYSTEM_MUTED),
-        audio_core_service_handle.read().get_gain(AudioRenderUsage::SystemAgent).unwrap()
+        (CHANGED_SYSTEM_LEVEL, CHANGED_SYSTEM_MUTED),
+        audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::SystemAgent).unwrap()
     );
 }
 
