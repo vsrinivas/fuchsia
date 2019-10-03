@@ -179,7 +179,17 @@ size_t Blobfs::WritebackCapacity() const { return WriteBufferSize(); }
 
 void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
   TRACE_DURATION("blobfs", "Blobfs::Unmount");
-
+#ifdef __Fuchsia__
+  // On a read-write filesystem, set the kBlobFlagClean on a clean unmount.
+  if (IsReadonly() == false) {
+    fs::UnbufferedOperationsBuilder operations;
+    UpdateFlags(&operations, kBlobFlagClean, true);
+    journal_->schedule_task(journal_->WriteMetadata(operations.TakeOperations()));
+  }
+#endif
+  if (!cb) {
+    return;
+  }
   // 1) Shutdown all external connections to blobfs.
   ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
     // 2a) Shutdown all internal connections to blobfs.
@@ -187,7 +197,6 @@ void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
       auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
       vnode->CloneWatcherTeardown();
     });
-
     // 2b) Flush all pending work to blobfs to the underlying storage.
     Sync([this, cb = std::move(cb)](zx_status_t status) mutable {
       async::PostTask(dispatcher(), [this, status, cb = std::move(cb)]() mutable {
@@ -199,10 +208,8 @@ void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
           // Although the transaction shouldn't reference 'this'
           // after completing, scope it here to be extra cautious.
         }
-
         metrics_.Dump();
         flush_loop_.Shutdown();
-
         auto on_unmount = std::move(on_unmount_);
 
         // Manually destroy Blobfs. The promise of Shutdown is that no
@@ -253,6 +260,15 @@ void Blobfs::WriteNode(uint32_t map_index, fs::UnbufferedOperationsBuilder* oper
                                            .length = 1,
                                        }};
   operations->Add(std::move(operation));
+}
+
+void Blobfs::UpdateFlags(fs::UnbufferedOperationsBuilder *operations, uint32_t flags, bool set) {
+  if (set) {
+    info_.flags |= flags;
+  } else {
+    info_.flags &= (~flags);
+  }
+  WriteInfo(operations);
 }
 
 void Blobfs::WriteInfo(fs::UnbufferedOperationsBuilder* operations) {
@@ -521,6 +537,13 @@ void Blobfs::ScheduleMetricFlush() {
       flush_loop_.dispatcher(), [this]() { ScheduleMetricFlush(); }, kCobaltFlushTimer);
 }
 
+bool Blobfs::IsReadonly() {
+#ifdef __Fuchsia__
+  fbl::AutoLock lock(&vfs_lock_);
+#endif
+  return ReadonlyLocked();
+}
+
 zx_status_t Blobfs::Create(std::unique_ptr<BlockDevice> device, MountOptions* options,
                            std::unique_ptr<Blobfs>* out) {
   TRACE_DURATION("blobfs", "Blobfs::Create");
@@ -669,6 +692,18 @@ zx_status_t Blobfs::Create(std::unique_ptr<BlockDevice> device, MountOptions* op
     FS_TRACE_ERROR("blobfs: Failed to initialize Vnodes\n");
     return status;
   }
+
+#ifdef __Fuchsia__
+  // Filesystem instance is safely created at this point. On a read-write filesystem,
+  // since we can now serve writes on the filesystem, we need to unset the kBlobFlagClean flag
+  // to indicate that the filesystem may not be in a "clean" state anymore. This helps to make
+  // sure we are unmounted cleanly i.e the kBlobFlagClean flag is set back on clean unmount.
+  if (options->writability == blobfs::Writability::Writable) {
+    fs::UnbufferedOperationsBuilder operations;
+    fs->UpdateFlags(&operations, kBlobFlagClean, false);
+    fs->journal()->schedule_task(fs->journal()->WriteMetadata(operations.TakeOperations()));
+  }
+#endif
 
   *out = std::move(fs);
   return ZX_OK;

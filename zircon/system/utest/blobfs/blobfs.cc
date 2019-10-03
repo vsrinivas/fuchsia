@@ -350,7 +350,11 @@ bool BlobfsTest::Teardown() {
   if (state_ == FsTestState::kRunning) {
     ASSERT_EQ(state_, FsTestState::kRunning);
     ASSERT_TRUE(CheckInfo());
-    ASSERT_EQ(umount(MOUNT_PATH), ZX_OK, "Failed to unmount filesystem");
+    zx_status_t status = umount(MOUNT_PATH);
+    // Unmount will propagate the result of sync; for cases where the filesystem is disconnected
+    // from the underlying device, ZX_ERR_IO_REFUSED is expected. Please see the newer version
+    // of this test. i.e BlobfsTest::TearDown.
+    ASSERT_TRUE(status == ZX_OK || status == ZX_ERR_IO_REFUSED, "Failed to unmount filesystem");
     ASSERT_EQ(fsck(device_path_, DISK_FORMAT_BLOBFS, &test_fsck_options, launch_stdio_sync), ZX_OK,
               "Filesystem fsck failed");
   }

@@ -64,6 +64,7 @@ test("blobfs-integration") {
     "integration/environment.cc",
     "integration/fixtures.cc",
     "integration/integration_main.cc",
+    "integration/superblock-test.cc",
     "integration/test_support.cc",
   ]
   deps = [
@@ -78,6 +79,8 @@ test("blobfs-integration") {
     "$zx/system/ulib/fvm",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/memfs",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
 }

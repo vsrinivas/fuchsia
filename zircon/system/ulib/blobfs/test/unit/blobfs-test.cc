@@ -52,6 +52,48 @@ TEST_F(BlobfsTest, BlockNumberToDevice) {
   ASSERT_EQ(42 * kBlobfsBlockSize / kBlockSize, fs_->BlockNumberToDevice(42));
 }
 
+
+TEST_F(BlobfsTest, CleanFlag) {
+  fs::VmoBuffer buffer;
+  ASSERT_OK(buffer.Initialize(fs_.get(), 1, kBlobfsBlockSize, "source"));
+
+  // Write the superblock with the clean flag unset on Blobfs::Create in Setup.
+  fs::Operation operation = {};
+  memcpy(buffer.Data(0), &fs_->Info(), sizeof(Superblock));
+  operation.type = fs::OperationType::kWrite;
+  operation.dev_offset = 0;
+  operation.length = 1;
+
+  ASSERT_OK(fs_->RunOperation(operation, &buffer));
+
+  // Read the superblock with the clean flag unset.
+  operation.type = fs::OperationType::kRead;
+  ASSERT_OK(fs_->RunOperation(operation, &buffer));
+
+  // Check if superblock on-disk flags are marked "dirty".
+  Superblock* info = reinterpret_cast<Superblock*>(buffer.Data(0));
+  EXPECT_EQ(0, (info->flags & kBlobFlagClean));
+
+  // Call shutdown to set the clean flag again.
+  fs_->Shutdown(nullptr);
+
+  // fs_->Shutdown(nullptr) will set the clean flags field, but it simply queues the writes
+  // and doesn't explicitly write it to the disk. Explicitly writing the changed superblock to disk.
+  operation.type = fs::OperationType::kWrite;
+  operation.dev_offset = 0;
+  operation.length = 1;
+  memcpy(buffer.Data(0), &fs_->Info(), sizeof(Superblock));
+  ASSERT_OK(fs_->RunOperation(operation, &buffer));
+
+  // Read the superblock and confirm the clean flag is set on shutdown.
+  memset(buffer.Data(0), 0, kBlobfsBlockSize);
+  operation.type = fs::OperationType::kRead;
+  operation.length = 1;
+  ASSERT_OK(fs_->RunOperation(operation, &buffer));
+  info = reinterpret_cast<Superblock*>(buffer.Data(0));
+  EXPECT_EQ(kBlobFlagClean, (info->flags & kBlobFlagClean));
+}
+
 // Tests reading a well known location.
 TEST_F(BlobfsTest, RunOperationExpectedRead) {
   fs::VmoBuffer buffer;

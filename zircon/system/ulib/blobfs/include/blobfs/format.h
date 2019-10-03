@@ -33,7 +33,6 @@ constexpr uint64_t kBlobfsMagic1  = (0x985000d4d4d3d314ULL);
 constexpr uint32_t kBlobfsVersion = 0x00000008;
 
 constexpr uint32_t kBlobFlagClean        = 1;
-constexpr uint32_t kBlobFlagDirty        = 2;
 constexpr uint32_t kBlobFlagFVM          = 4;
 constexpr uint32_t kBlobfsBlockSize      = 8192;
 constexpr uint32_t kBlobfsBlockBits      = (kBlobfsBlockSize * 8);

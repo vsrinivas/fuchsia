@@ -46,6 +46,7 @@
 #include <block-client/cpp/client.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -218,6 +219,9 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   // Record the location and size of all non-free block regions.
   fbl::Vector<BlockRegion> GetAllocatedRegions() const { return allocator_->GetAllocatedRegions(); }
 
+  // Updates the flags field in superblock.
+  void UpdateFlags(fs::UnbufferedOperationsBuilder* operations, uint32_t flags, bool set);
+
  private:
   friend class BlobfsChecker;
 
@@ -257,6 +261,9 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
 
   // Verifies that the contents of a blob are valid.
   zx_status_t VerifyBlob(uint32_t node_index);
+
+  // Check if filesystem is readonly.
+  bool IsReadonly() FS_TA_EXCLUDES(vfs_lock_);
 
   fbl::unique_ptr<fs::Journal> journal_;
   Superblock info_;

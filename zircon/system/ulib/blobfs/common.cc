@@ -107,6 +107,14 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
     return ZX_ERR_NO_SPACE;
   }
 
+#ifdef __Fuchsia__
+  if ((info->flags & kBlobFlagClean) == 0) {
+    FS_TRACE_ERROR("blobfs: filesystem in dirty state. Was not unmounted cleanly.\n");
+  } else {
+    FS_TRACE_INFO("blobfs: filesystem in clean state.\n");
+  }
+#endif
+
   // Determine the number of blocks necessary for the block map and node map.
   if (info->inode_count * sizeof(Inode) != NodeMapBlocks(*info) * kBlobfsBlockSize) {
     FS_TRACE_ERROR("blobfs: Inode table block must be entirely filled\n");
