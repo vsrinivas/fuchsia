@@ -2,11 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("modular_config_constants") {
+  sources = [
+    "modular_config_constants.h",
+  ]
+}
+
 source_set("modular_config") {
   sources = [
     "modular_config.cc",
     "modular_config.h",
-    "modular_config_constants.h",
+  ]
+
+  public_deps = [
+    ":modular_config_constants",
   ]
 
   deps = [
@@ -23,9 +32,12 @@ source_set("modular_config") {
 
 source_set("json_xdr") {
   sources = [
-    "modular_config_constants.h",
     "modular_config_xdr.cc",
     "modular_config_xdr.h",
+  ]
+
+  public_deps = [
+    ":modular_config_constants",
   ]
 
   deps = [
@@ -53,6 +65,7 @@ source_set("unittests") {
     "//peridot/lib/util:pseudo_dir_utils",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.modular.session",
+    "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",

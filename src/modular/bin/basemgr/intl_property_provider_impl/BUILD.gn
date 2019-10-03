@@ -39,6 +39,7 @@ source_set("intl_property_provider_impl") {
     "//sdk/lib/sys/service/cpp",
     "//src/lib/fxl",
     "//src/lib/icu_data/cpp",
+    "//src/modular/lib/fidl:clone",
     "//third_party/icu",
   ]
 

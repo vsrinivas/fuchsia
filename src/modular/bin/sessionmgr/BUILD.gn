@@ -139,6 +139,7 @@ source_set("session_ctl") {
 
   deps = [
     "//garnet/public/lib/fsl",
+    "//sdk/lib/vfs/cpp",
     "//src/lib/fxl",
     "//src/modular/bin/sessionmgr/puppet_master:puppet_master_impl",
     "//zircon/public/lib/fs",

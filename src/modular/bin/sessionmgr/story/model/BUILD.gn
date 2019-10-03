@@ -30,6 +30,7 @@ source_set("story_observer") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.modular.storymodel",
+    "//src/lib/fxl",
   ]
 }
 

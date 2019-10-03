@@ -53,6 +53,7 @@ executable("agent_runner_unittest") {
     ":agent_runner",
     ":public",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/svc/cpp",
     "//peridot/lib/ledger_client:page_client",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
