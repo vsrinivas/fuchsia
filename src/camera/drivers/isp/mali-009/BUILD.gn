@@ -17,8 +17,6 @@ driver_module("mali-009-driver") {
   deps = [
     "//sdk/banjo/ddk.protocol.isp",
     "//sdk/fidl/fuchsia.camera",
-    "//sdk/fidl/fuchsia.camera.test",
-    "//sdk/fidl/fuchsia.camera.test:fuchsia.camera.test_c",
     "//sdk/lib/fidl/cpp",
     "//src/camera/drivers/isp/modules",
     "//src/camera/drivers/isp/modules:isp-registers",
@@ -47,6 +45,7 @@ driver_module("mali-009-driver") {
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
+    "//zircon/system/fidl/fuchsia-camera-test:fuchsia-camera-test_c",
     "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
   ]

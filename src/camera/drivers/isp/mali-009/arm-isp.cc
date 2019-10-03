@@ -716,10 +716,10 @@ zx_status_t ArmIspDevice::IspCreateOutputStream(const buffer_collection_info_t* 
   }
 
   // TODO(CAM-79): Set frame rate in sensor
-  auto frame_ready_callback = [stream = *stream](fuchsia_camera_FrameAvailableEvent event) {
+  auto frame_ready_callback = [stream = *stream](fuchsia_camera_common_FrameAvailableEvent event) {
     // TODO(CAM-80): change the output_stream_callback_t so it uses all the
     // frame available info
-    if (event.frame_status == fuchsia_camera_FrameStatus_OK) {
+    if (event.frame_status == fuchsia_camera_common_FrameStatus_OK) {
       stream.frame_ready(stream.ctx, event.buffer_id);
     }
   };

@@ -4,6 +4,7 @@
 
 library fuchsia.camera;
 
+using fuchsia.camera.common;
 using fuchsia.sysmem;
 
 /// A stream that the camera manager can provide.  Video streams reference a
@@ -33,7 +34,7 @@ struct VideoStreamV2 {
     /// The requested video format. Note that this field is necessary to set the
     /// frame rate, even when calling CreateStream. When calling CreateStream
     /// format.format should match buffer_info.format.
-    VideoFormat format;
+    fuchsia.camera.common.VideoFormat format;
 };
 
 /// The Camera Manager grants access to individual or sets of cameras
@@ -67,7 +68,7 @@ protocol Manager {
     [Transitional="This is meant to replace CreateStream"]
     CreateStreamV2(VideoStreamV2 request,
                    fuchsia.sysmem.BufferCollectionInfo buffer_info,
-                   request<Stream> stream,
+                   request<fuchsia.camera.common.Stream> stream,
                    handle<eventpair> client_token);
 
 };

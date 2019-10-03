@@ -9,6 +9,8 @@ group("fidl") {
   deps = [
     "fuchsia-blobfs",
     "fuchsia-boot",
+    "fuchsia-camera-common",
+    "fuchsia-camera-test",
     "fuchsia-cobalt",
     "fuchsia-debugdata",
     "fuchsia-device",

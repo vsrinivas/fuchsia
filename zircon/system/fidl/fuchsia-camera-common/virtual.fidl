@@ -1,0 +1,46 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This file defines types and protocols used by the virtual camera library.
+
+library fuchsia.camera.common;
+
+/// Configuration for an artificial stream.
+/// TODO(eweeks): Replace this stand-in with the full design.
+struct ArtificialStreamConfig {
+  /// Numeric identifier for the stream being configured.
+  int16 stream_id;
+};
+
+/// Configuration for a stream generated from stored frames.
+/// TODO(eweeks): Replace this stand-in with the full design.
+struct RealWorldStreamConfig {
+  /// Numeric identifier for the stream being configured.
+  int16 stream_id;
+};
+
+/// Configuration for the stream.
+/// The Configuration must be either artificial or real
+/// TODO(eweeks): Replace this stand-in with the full design.
+xunion VirtualStreamConfig {
+  ArtificialStreamConfig artificial_config;
+  RealWorldStreamConfig real_world_config;
+};
+
+/// Configuration used by VirtualManager to create a VirtualCameraDevice.
+struct VirtualCameraConfig {
+  /// The formats that the controller will support.
+  vector<VideoFormat> formats;
+  /// Device specific information that can be set by the user.
+  DeviceInfo info;
+  /// Either an ArtificialStreamConfig or a RealWorldStreamConfig.
+  VirtualStreamConfig stream_config;
+};
+
+/// Protocol for managing virtual cameras that need to be added for tests.
+protocol VirtualCameraFactory {
+  /// Creates a new VirtualCameraDevice based on the configuration passed in.
+  /// `config`: a VirtualCameraConfig defining how the new device should behave.
+  CreateDevice(VirtualCameraConfig config);
+};

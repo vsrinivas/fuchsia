@@ -8,8 +8,7 @@ fx shell tiles_ctl add fuchsia-pkg://fuchsia.com/camera_demo#meta/camera_demo.cm
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <fuchsia/camera/c/fidl.h>
-#include <fuchsia/camera/cpp/fidl.h>
+#include <fuchsia/camera/common/cpp/fidl.h>
 #include <fuchsia/camera/test/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
@@ -160,13 +159,13 @@ class DemoView : public scenic::BaseView {
   // |scenic::SessionListener|
   void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
 
-  void OnFrameAvailable(fuchsia::camera::FrameAvailableEvent event) {
+  void OnFrameAvailable(fuchsia::camera::common::FrameAvailableEvent event) {
     SleepIfChaos();
     if (!has_logical_size()) {
       stream_->ReleaseFrame(event.buffer_id);
       return;
     }
-    if (event.frame_status != fuchsia::camera::FrameStatus::OK) {
+    if (event.frame_status != fuchsia::camera::common::FrameStatus::OK) {
       FXL_LOG(ERROR) << "Received OnFrameAvailable with error event";
       return;
     }
@@ -233,7 +232,7 @@ class DemoView : public scenic::BaseView {
   bool chaos_;
   std::mt19937 chaos_gen_;
   std::binomial_distribution<uint32_t> chaos_dist_;
-  fuchsia::camera::StreamPtr stream_;
+  fuchsia::camera::common::StreamPtr stream_;
   scenic::ShapeNode node_;
   fuchsia::images::ImagePipePtr image_pipe_;
   std::map<uint32_t, uint32_t> image_ids_;
