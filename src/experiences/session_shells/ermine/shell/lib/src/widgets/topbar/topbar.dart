@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter/material.dart';
-import 'package:internationalization/strings.dart' as strings;
 import 'package:intl/intl.dart';
+import 'package:flutter/material.dart';
 
 import '../../models/topbar_model.dart';
 import '../../utils/styles.dart';
@@ -37,7 +36,7 @@ class Topbar extends StatelessWidget {
               children: <Widget>[
                 // Overview.
                 Button(
-                  child: Text(strings.overview().toUpperCase()),
+                  child: Text('OVERVIEW'),
                   decoration: BoxDecoration(
                     border: Border(
                       right: BorderSide(
@@ -50,7 +49,7 @@ class Topbar extends StatelessWidget {
                 ),
                 // Recents.
                 Button(
-                  child: Text(strings.recents().toUpperCase()),
+                  child: Text('RECENTS'),
                   decoration: BoxDecoration(
                     border: Border(
                       right: BorderSide(
@@ -88,7 +87,7 @@ class Topbar extends StatelessWidget {
                 // Ask.
                 Button(
                   key: model.askButtonKey,
-                  child: Text(strings.ask().toUpperCase()),
+                  child: Text('ASK'),
                   decoration: BoxDecoration(
                     border: Border(
                       left: BorderSide(
@@ -121,7 +120,7 @@ class Topbar extends StatelessWidget {
             ),
             // Story title.
             // Center(
-            //   child: Text(strings.browser().toUpperCase(), textAlign: TextAlign.center),
+            //   child: Text('BROWSER', textAlign: TextAlign.center),
             // ),
           ],
         ),

@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:flutter/material.dart';
-import 'package:internationalization/strings.dart' as strings;
+import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:quickui/uistream.dart';
 
 import '../../models/status_model.dart';
@@ -219,11 +218,11 @@ class _ManualStatusEntry extends StatelessWidget {
       height: kRowHeight,
       child: Row(
         children: <Widget>[
-          _buildButton(strings.restart(), null),
+          _buildButton('Restart', null),
           Padding(padding: EdgeInsets.only(right: kPadding)),
-          _buildButton(strings.shutdown(), null),
+          _buildButton('Shutdown', null),
           Spacer(),
-          _buildButton(strings.settings(), model.launchSettings),
+          _buildButton('Settings', model.launchSettings),
         ],
       ),
     );

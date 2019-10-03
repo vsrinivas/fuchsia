@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
-import 'package:internationalization/strings.dart' as strings;
 
 import '../../utils/styles.dart';
 
@@ -117,7 +116,7 @@ class TileChrome extends StatelessWidget {
 
           // Cancel edit button.
           if (editing)
-            _buildTitleBarTextButton(context, strings.cancel(), onTapCancel),
+            _buildTitleBarTextButton(context, 'Cancel', onTapCancel),
 
           // Story name.
           Expanded(
@@ -132,8 +131,7 @@ class TileChrome extends StatelessWidget {
                     textAlign: TextAlign.center,
                     decoration: InputDecoration(
                       contentPadding: EdgeInsets.zero,
-                      // TODO(fmil): I18N There should be no hard-coded paddings in the text.
-                      hintText: '              ${strings.nameThisStory().toUpperCase()}',
+                      hintText: '              NAME THIS STORY',
                       border: InputBorder.none,
                       isDense: true,
                     ),
@@ -150,7 +148,7 @@ class TileChrome extends StatelessWidget {
 
           // Done edit button.
           if (editing)
-            _buildTitleBarTextButton(context, strings.done(), onTapDone),
+            _buildTitleBarTextButton(context, 'Done', onTapDone),
 
           if (editing)
             Padding(
