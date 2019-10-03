@@ -53,11 +53,11 @@ constexpr fxl::StringView kTestTopLevelNodeName = "top-level-of-test node";
 // implementation.
 class DelegatedRandom final : public rng::Random {
  public:
-  DelegatedRandom(rng::Random* base) : base_(base) {}
+  explicit DelegatedRandom(rng::Random* base) : base_(base) {}
   ~DelegatedRandom() override = default;
 
  private:
-  void InternalDraw(void* buffer, size_t buffer_size) { base_->Draw(buffer, buffer_size); }
+  void InternalDraw(void* buffer, size_t buffer_size) override { base_->Draw(buffer, buffer_size); }
 
   rng::Random* base_;
 };

@@ -239,7 +239,7 @@ TEST_F(OvernetFactoryTest, HostList_TwoHosts_Callback) {
 
 class OvernetServiceProvider : public fuchsia::overnet::ServiceProvider {
  public:
-  OvernetServiceProvider(std::vector<std::unique_ptr<fidl_helpers::MessageRelay>>* relays)
+  explicit OvernetServiceProvider(std::vector<std::unique_ptr<fidl_helpers::MessageRelay>>* relays)
       : relays_(relays) {}
 
   void ConnectToService(zx::channel channel) override {

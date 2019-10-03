@@ -14,7 +14,7 @@ namespace fake {
 
 class FakeObjectIdentifierFactory::TokenImpl : public ObjectIdentifier::Token {
  public:
-  TokenImpl(fxl::WeakPtr<FakeObjectIdentifierFactory> factory) : factory_(factory) {}
+  explicit TokenImpl(fxl::WeakPtr<FakeObjectIdentifierFactory> factory) : factory_(factory) {}
   ~TokenImpl() override = default;
   ObjectIdentifierFactory* factory() const override { return factory_.get(); }
 

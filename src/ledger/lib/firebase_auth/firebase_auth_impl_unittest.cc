@@ -23,7 +23,7 @@ class MockCobaltLogger : public cobalt::CobaltLogger {
  public:
   ~MockCobaltLogger() override = default;
 
-  MockCobaltLogger(int* called) : called_(called) {}
+  explicit MockCobaltLogger(int* called) : called_(called) {}
 
   void LogEvent(uint32_t metric_id, uint32_t event_code) override {}
   void LogEventCount(uint32_t metric_id, uint32_t event_code, const std::string& component,

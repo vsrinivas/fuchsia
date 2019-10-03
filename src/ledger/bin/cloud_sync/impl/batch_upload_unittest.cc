@@ -31,7 +31,6 @@
 namespace cloud_sync {
 namespace {
 
-using ::storage::fake::FakeObject;
 using ::storage::fake::FakePiece;
 using ::testing::Each;
 using ::testing::SizeIs;
@@ -762,7 +761,8 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommitsOnRetry) {
 
 class PageStorageBlockingGetDiff : public TestPageStorage {
  public:
-  PageStorageBlockingGetDiff(async_dispatcher_t* dispatcher) : TestPageStorage(dispatcher) {}
+  explicit PageStorageBlockingGetDiff(async_dispatcher_t* dispatcher)
+      : TestPageStorage(dispatcher) {}
 
   void GetDiffForCloud(
       const storage::Commit& commit,

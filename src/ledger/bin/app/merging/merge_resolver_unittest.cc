@@ -46,7 +46,7 @@ std::vector<storage::CommitId> ToCommitIds(
 
 class FakePageStorageImpl : public storage::PageStorageEmptyImpl {
  public:
-  FakePageStorageImpl(std::unique_ptr<storage::PageStorage> page_storage)
+  explicit FakePageStorageImpl(std::unique_ptr<storage::PageStorage> page_storage)
       : storage_(std::move(page_storage)) {}
 
   void MarkCommitContentsUnavailable(storage::CommitIdView commit_id) {

@@ -110,7 +110,9 @@ class LockingWrapper {
 class ScopedAsyncExecutor {
  public:
   // Creates a ScopedAsyncExecutor using the provided async loop dispatcher.
-  ScopedAsyncExecutor(async_dispatcher_t* dispatcher) : executor_(dispatcher) { scope_.emplace(); }
+  explicit ScopedAsyncExecutor(async_dispatcher_t* dispatcher) : executor_(dispatcher) {
+    scope_.emplace();
+  }
 
   ~ScopedAsyncExecutor() { FXL_DCHECK(stopped_); }
 

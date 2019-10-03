@@ -24,9 +24,9 @@ constexpr zx::duration kUnusedTimeLimit = zx::hour(5);
 template <class T>
 class VectorIterator : public storage::Iterator<T> {
  public:
-  VectorIterator(const std::vector<T>& v) : it_(v.begin()), end_(v.end()) {}
+  explicit VectorIterator(const std::vector<T>& v) : it_(v.begin()), end_(v.end()) {}
 
-  ~VectorIterator() = default;
+  ~VectorIterator() override = default;
 
   storage::Iterator<T>& Next() override {
     ++it_;
@@ -52,11 +52,11 @@ class VectorIterator : public storage::Iterator<T> {
 class FakePageEvictionDelegate : public PageEvictionDelegate {
  public:
   FakePageEvictionDelegate() = default;
-  ~FakePageEvictionDelegate() = default;
+  ~FakePageEvictionDelegate() override = default;
 
   void TryEvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
                     PageEvictionCondition condition,
-                    fit::function<void(Status, PageWasEvicted)> callback) {
+                    fit::function<void(Status, PageWasEvicted)> callback) override {
     if (try_evict_page_status_ != Status::OK) {
       callback(try_evict_page_status_, PageWasEvicted(false));
       return;

@@ -332,7 +332,7 @@ class PageStorageTest : public StorageTest {
  public:
   PageStorageTest() : PageStorageTest(ledger::kTestingGarbageCollectionPolicy) {}
 
-  PageStorageTest(GarbageCollectionPolicy gc_policy)
+  explicit PageStorageTest(GarbageCollectionPolicy gc_policy)
       : StorageTest(gc_policy), encryption_service_(dispatcher()) {}
 
   ~PageStorageTest() override = default;

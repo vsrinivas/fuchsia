@@ -686,7 +686,7 @@ TEST_F(PageDownloadDiffTest, GetDiffNotFound) {
 
 class PageCloudReturningNoDiffPack : public TestPageCloud {
  public:
-  PageCloudReturningNoDiffPack(fidl::InterfaceRequest<cloud_provider::PageCloud> request)
+  explicit PageCloudReturningNoDiffPack(fidl::InterfaceRequest<cloud_provider::PageCloud> request)
       : TestPageCloud(std::move(request)) {}
   void GetDiff(std::vector<uint8_t> commit_id, std::vector<std::vector<uint8_t>> possible_bases,
                GetDiffCallback callback) override {
