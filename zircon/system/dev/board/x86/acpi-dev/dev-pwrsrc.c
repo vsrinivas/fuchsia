@@ -67,6 +67,13 @@ static zx_status_t call_PSR(acpi_pwrsrc_device_t* dev) {
 static void acpi_pwrsrc_notify(ACPI_HANDLE handle, UINT32 value, void* ctx) {
   acpi_pwrsrc_device_t* dev = ctx;
   zxlogf(TRACE, "acpi-pwrsrc: notify got event 0x%x\n", value);
+
+  // TODO(fxbug.dev/37719): there seems to exist an ordering problem in
+  // some ACPI EC firmware such that the event notification takes place before
+  // the actual state update, resulting in the immediate call to _PSR obtaining stale data.
+  // Instead, we must delay the PSR evaluation so as to allow time for the
+  // actual state to update following the 0x80 event notification.
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(200)));
   call_PSR(dev);
 }
 
