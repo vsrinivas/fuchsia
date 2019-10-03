@@ -159,7 +159,7 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   scenic::EntityNode root_node_;
   scenic::ViewHolder view_holder_;
 
-  scenic::Mesh cursor_shape_;
+  scenic::RoundedRectangle cursor_shape_;
   scenic::Material cursor_material_;
 
   SessionPresentState session_present_state_ = kNoPresentPending;

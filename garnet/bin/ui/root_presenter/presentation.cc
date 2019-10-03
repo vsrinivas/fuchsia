@@ -15,7 +15,6 @@
 #include "garnet/bin/ui/root_presenter/displays/display_configuration.h"
 #include "garnet/bin/ui/root_presenter/key_util.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/ui/scenic/cpp/mesh_utils.h"
 
 using fuchsia::ui::policy::MediaButtonsListenerPtr;
 
@@ -23,17 +22,9 @@ namespace root_presenter {
 namespace {
 
 // The shape and elevation of the cursor.
-constexpr float kCursorSize = 14.0f;
-constexpr float kCursorVertexBufferData[] = {
-    0.0f,        0.0f,        0.0f,  // 0
-    kCursorSize, kCursorSize, 0.0f,  // 1
-    0.0f,        kCursorSize, 0.0f,  // 2
-};
-constexpr uint32_t kCursorIndexBufferData[] = {0, 1, 2};
-const std::vector<float> kCursorVertices(std::begin(kCursorVertexBufferData),
-                                         std::end(kCursorVertexBufferData));
-const std::vector<uint32_t> kCursorIndices(std::begin(kCursorIndexBufferData),
-                                           std::end(kCursorIndexBufferData));
+constexpr float kCursorWidth = 20;
+constexpr float kCursorHeight = 20;
+constexpr float kCursorRadius = 10;
 // TODO(SCN-1276): Don't hardcode Z bounds in multiple locations.
 // Derive cursor elevation from non-hardcoded Z bounds.
 constexpr float kCursorElevation = 800;
@@ -75,8 +66,8 @@ Presentation::Presentation(
       view_holder_node_(session),
       root_node_(session_),
       view_holder_(session, std::move(view_holder_token), "root_presenter"),
-      cursor_shape_(
-          std::move(*scenic_util::NewMeshWithVertices(session_, kCursorVertices, kCursorIndices))),
+      cursor_shape_(session_, kCursorWidth, kCursorHeight, 0u, kCursorRadius, kCursorRadius,
+                    kCursorRadius),
       cursor_material_(session_),
       display_startup_rotation_adjustment_(display_startup_rotation_adjustment),
       yield_callback_(std::move(yield_callback)),
@@ -115,8 +106,7 @@ Presentation::Presentation(
     SetRendererParam(std::move(param));
   }
 
-  // set cursor color to a light fuchsia
-  cursor_material_.SetColor(0xfd, 0x88, 0xff, 0xff);
+  cursor_material_.SetColor(0xff, 0x00, 0xff, 0xff);
 
   SetScenicDisplayRotation();
 
@@ -773,9 +763,10 @@ void Presentation::PresentScene() {
         scene_.AddChild(*state.node);
         state.created = true;
       }
-      state.node->SetTranslation(state.position.x * display_metrics_.x_scale_in_pp_per_px(),
-                                 state.position.y * display_metrics_.y_scale_in_pp_per_px(),
-                                 -kCursorElevation);
+      state.node->SetTranslation(
+          state.position.x * display_metrics_.x_scale_in_pp_per_px() + kCursorWidth * .5f,
+          state.position.y * display_metrics_.y_scale_in_pp_per_px() + kCursorHeight * .5f,
+          -kCursorElevation);
     } else if (state.created) {
       state.node->Detach();
       state.created = false;
