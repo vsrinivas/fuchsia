@@ -4,10 +4,7 @@
 
 //! A macro to generate pseudo directory trees using a small DSL.
 
-use {fidl_fuchsia_io::MAX_FILENAME, fuchsia_zircon::Status, proc_macro_hack::proc_macro_hack};
-
-#[proc_macro_hack]
-use fuchsia_vfs_pseudo_fs_mt_macros::pseudo_directory_max_filename;
+use {fuchsia_zircon::Status};
 
 /// A helper function used by the `pseudo_directory!` macro, to report nice errors in case
 /// add_entry() fails.
@@ -36,20 +33,29 @@ pub fn unwrap_add_entry_span(entry: &str, location: &str, res: Result<(), Status
     );
 }
 
-#[test]
-fn macros_max_filename_constant() {
-    // `pseudo_directory!` needs access to [`fidl_fuchsia_io::MAX_FILENAME`], but the
-    // [`fidl_fuchsia_io`] crate is not available on the host.  So we hardcode the constant value
-    // in there and then make sure that the values are in sync.
-    let in_macros = pseudo_directory_max_filename! {};
-    assert!(
-        MAX_FILENAME == in_macros,
-        "\n`fidl_fuchsia_io::MAX_FILENAME` and the value hardcoded in \
-         `pseudo-fs/macros/src/lib.rs` have diverged.\n\
-         Please update the `MAX_FILENAME` value in `pseudo-fs/macros/src/lib.rs`.\n\
-         `fidl_fuchsia_io::MAX_FILENAME`: {}\n\
-         pseudo-fs/macros/src/lib.rs:MAX_FILENAME: {}",
-        MAX_FILENAME,
-        in_macros
-    );
+#[cfg(test)]
+mod tests {
+    use fidl_fuchsia_io::MAX_FILENAME;
+    use proc_macro_hack::proc_macro_hack;
+
+    #[proc_macro_hack]
+    use fuchsia_vfs_pseudo_fs_mt_macros::pseudo_directory_max_filename;
+
+    #[test]
+    fn macros_max_filename_constant() {
+        // `pseudo_directory!` needs access to [`fidl_fuchsia_io::MAX_FILENAME`], but the
+        // [`fidl_fuchsia_io`] crate is not available on the host.  So we hardcode the constant value
+        // in there and then make sure that the values are in sync.
+        let in_macros = pseudo_directory_max_filename! {};
+        assert!(
+            MAX_FILENAME == in_macros,
+            "\n`fidl_fuchsia_io::MAX_FILENAME` and the value hardcoded in \
+             `pseudo-fs/macros/src/lib.rs` have diverged.\n\
+             Please update the `MAX_FILENAME` value in `pseudo-fs/macros/src/lib.rs`.\n\
+             `fidl_fuchsia_io::MAX_FILENAME`: {}\n\
+             pseudo-fs/macros/src/lib.rs:MAX_FILENAME: {}",
+            MAX_FILENAME,
+            in_macros
+        );
+    }
 }
