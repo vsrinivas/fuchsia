@@ -6,6 +6,16 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
+import("//third_party/cobalt/metrics_registry.gni")
+
+metrics_registry("session_framework_metrics_registry") {
+  # This must match the name of the Cobalt project as specified in:
+  # https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/projects.yaml
+  project_name = "session_framework"
+  generate_rust = true
+  namespace = "cobalt_registry"
+  generate_binarypb = false
+}
 
 rustc_library("lib") {
   name = "session_manager_lib"
@@ -18,6 +28,7 @@ rustc_library("lib") {
   ]
 
   deps = [
+    ":session_framework_metrics_registry_rustlib",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
@@ -26,6 +37,7 @@ rustc_library("lib") {
     "//src/lib/argh",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
@@ -36,6 +48,7 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
+    ":session_framework_metrics_registry_rustlib",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
@@ -44,6 +57,7 @@ rustc_binary("bin") {
     "//src/lib/argh",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
@@ -68,7 +82,7 @@ package("session_manager") {
   ]
 }
 
-test_package("session_manager_tests") {
+unittest_package("session_manager_tests") {
   deps = [
     ":lib_test",
   ]

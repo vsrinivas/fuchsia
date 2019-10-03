@@ -17,3 +17,10 @@ group("session_framework") {
     "//src/ui/bin/ime:ime_service",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    "//src/session/session_manager:session_manager_tests",
+  ]
+}

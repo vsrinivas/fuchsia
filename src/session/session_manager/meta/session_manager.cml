@@ -9,6 +9,10 @@
             // The Realm service allows session_manager to start components.
             "legacy_service": "/svc/fuchsia.sys2.Realm",
             "from": "framework",
+        },
+        {
+            "legacy_service": "/svc/fuchsia.cobalt.LoggerFactory",
+            "from": "realm",
         }
     ],
     // Holds all the sessions this session_manager will create. Capabilities offered to and exposed

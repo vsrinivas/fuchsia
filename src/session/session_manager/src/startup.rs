@@ -12,10 +12,10 @@ use {
 
 #[derive(FromArgs)]
 /// The session manager component.
-struct SessionManagerArgs {
+pub struct SessionManagerArgs {
     #[argh(option, short = 's')]
     /// the URL for the session to start.
-    session_url: String,
+    pub session_url: String,
 }
 
 /// The name of the session child component.
@@ -25,13 +25,22 @@ const SESSION_NAME: &str = "session";
 /// session_manager.cml.
 const SESSION_CHILD_COLLECTION: &str = "session";
 
+/// Gets the session url from `std::env::args()`. Fails with a comment about the missing
+/// --session_url option if the argument isn't provided.
+///
+/// # Returns
+/// `String` if the session url argument exists.
+pub fn get_session_url() -> String {
+    let SessionManagerArgs { session_url } = argh::from_env();
+    session_url
+}
+
 /// Launches the "root" session, as specified in `std::env::args()`.
 ///
 /// # Returns
 /// `Ok` if the session component is added and bound successfully.
 pub async fn launch_session() -> Result<(), Error> {
-    let SessionManagerArgs { session_url } = argh::from_env();
-
+    let session_url = get_session_url();
     let realm =
         connect_to_service::<fsys::RealmMarker>().context("Could not connect to Realm service.")?;
     add_session_to_realm(&session_url, &realm).await?;
