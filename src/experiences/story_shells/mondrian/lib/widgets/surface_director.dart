@@ -9,7 +9,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lib.widgets/model.dart';
 
-import '../layout/container_layout.dart' as container;
 import '../layout/copresent_layout.dart' as copresent;
 import '../layout/pattern_layout.dart' as pattern;
 import '../models/depth_model.dart';
@@ -98,26 +97,26 @@ class _SurfaceDirectorState extends State<SurfaceDirector> {
           InsetManager insetManager,
         ) =>
             ScopedModelDescendant<LayoutModel>(
-              builder: (
-                BuildContext context,
-                Widget child,
-                LayoutModel layoutModel,
-              ) =>
-                  ScopedModelDescendant<SurfaceGraph>(
-                    builder: (
-                      BuildContext context,
-                      Widget child,
-                      SurfaceGraph graph,
-                    ) =>
-                        _buildStage(
-                          context,
-                          FractionalOffset.topRight,
-                          insetManager,
-                          layoutModel,
-                          graph,
-                        ),
-                  ),
+          builder: (
+            BuildContext context,
+            Widget child,
+            LayoutModel layoutModel,
+          ) =>
+              ScopedModelDescendant<SurfaceGraph>(
+            builder: (
+              BuildContext context,
+              Widget child,
+              SurfaceGraph graph,
+            ) =>
+                _buildStage(
+              context,
+              FractionalOffset.topRight,
+              insetManager,
+              layoutModel,
+              graph,
             ),
+          ),
+        ),
       );
 
   Widget _buildStage(
@@ -146,14 +145,6 @@ class _SurfaceDirectorState extends State<SurfaceDirector> {
           positionedSurfaces = pattern.layoutSurfaces(
             context,
             focusStack,
-            layoutModel,
-          );
-        } else if (last.properties.containerMembership != null &&
-            last.properties.containerMembership.isNotEmpty) {
-          positionedSurfaces = container.layoutSurfaces(
-            context,
-            graph,
-            last,
             layoutModel,
           );
         } else {

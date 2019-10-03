@@ -195,8 +195,7 @@ class SurfaceContainer extends Surface {
       Tree<String> node,
       SurfaceProperties properties,
       SurfaceRelation relation,
-      String compositionPattern,
-      this._layouts)
+      String compositionPattern)
       : super(graph, node, properties, relation, compositionPattern, '') {
     super.connection = null;
   }
@@ -205,9 +204,4 @@ class SurfaceContainer extends Surface {
   set connection(ChildViewConnection value) {
     log.warning('Cannot set a child view connection on a Container');
   }
-
-  /// returns the layouts for this container;
-  List<ContainerLayout> get layouts => _layouts;
-
-  final List<ContainerLayout> _layouts;
 }

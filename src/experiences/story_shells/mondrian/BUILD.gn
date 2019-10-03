@@ -19,7 +19,6 @@ flutter_app("mondrian") {
   sources = [
     "anim/flux.dart",
     "anim/sim.dart",
-    "layout/container_layout.dart",
     "layout/copresent_layout.dart",
     "layout/pattern_layout.dart",
     "models/depth_model.dart",

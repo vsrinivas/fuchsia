@@ -116,81 +116,9 @@ class StoryShellImpl extends StoryShell {
     surfaceGraph.dismissSurface(surfaceId);
   }
 
-  @Deprecated('Deprecated')
-  @override
-  Future<void> addContainer(
-    String containerName,
-    String parentId,
-    SurfaceRelation relation,
-    List<ContainerLayout> layouts,
-    List<ContainerRelationEntry> relationships,
-    List<ContainerView> views,
-  ) async {
-    // Add a root node for the container
-    Timeline.instantSync('adding container', arguments: {
-      'containerName': '$containerName',
-      'parentId': '$parentId'
-    });
-    surfaceGraph.addContainer(
-      containerName,
-      SurfaceProperties(),
-      parentId,
-      relation,
-      layouts,
-    );
-    Map<String, ContainerRelationEntry> nodeMap =
-        <String, ContainerRelationEntry>{};
-    Map<String, List<String>> parentChildrenMap = <String, List<String>>{};
-    Map<String, ViewHolderToken> viewMap = <String, ViewHolderToken>{};
-    for (ContainerView view in views) {
-      viewMap[view.nodeName] = view.viewHolderToken;
-    }
-    for (ContainerRelationEntry relatedNode in relationships) {
-      nodeMap[relatedNode.nodeName] = relatedNode;
-      parentChildrenMap
-          .putIfAbsent(relatedNode.parentNodeName, () => <String>[])
-          .add(relatedNode.nodeName);
-    }
-    List<String> nodeQueue =
-        views.map((ContainerView v) => v.nodeName).toList();
-    List<String> addedParents = <String>[containerName];
-    int i = 0;
-    while (nodeQueue.isNotEmpty) {
-      String nodeId = nodeQueue.elementAt(i);
-      String parentId = nodeMap[nodeId].parentNodeName;
-      if (addedParents.contains(parentId)) {
-        for (nodeId in parentChildrenMap[parentId]) {
-          SurfaceProperties prop = SurfaceProperties()
-            ..containerMembership = <String>[containerName]
-            ..containerLabel = nodeId;
-          surfaceGraph.addSurface(
-              nodeId, prop, parentId, nodeMap[nodeId].relationship, null, '');
-          addedParents.add(nodeId);
-          surfaceGraph.connectView(nodeId, viewMap[nodeId]);
-          nodeQueue.remove(nodeId);
-          surfaceGraph.focusSurface(nodeId);
-        }
-        i = 0;
-      } else {
-        i++;
-        if (i > nodeQueue.length) {
-          log.warning('''Error iterating through container children.
-          All nodes iterated without finding all parents specified in
-          Container Relations''');
-          return;
-        }
-      }
-    }
-  }
-
   @override
   Future<void> removeSurface(String surfaceId) async {
     return surfaceGraph.removeSurface(surfaceId);
-  }
-
-  @override
-  Future<void> reconnectView(ViewConnection viewConnection) async {
-    // TODO (jphsiao): implement
   }
 
   @override

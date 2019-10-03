@@ -146,32 +146,6 @@ class SurfaceGraph extends Model {
     }
   }
 
-  /// Add a container root to the surface graph
-  void addContainer(
-    String id,
-    SurfaceProperties properties,
-    String parentId,
-    SurfaceRelation relation,
-    List<ContainerLayout> layouts,
-  ) {
-    // TODO (djurphy): collisions/pathing - partial fix if we
-    // make the changes so container IDs are paths.
-    log.info('addContainer: $id');
-    Tree<String> node = _tree.find(id) ?? Tree<String>(value: id);
-    log.info('found or made node: $node');
-    Tree<String> parent =
-        (parentId == kNoParent) ? _tree : _tree.find(parentId);
-    assert(parent != null);
-    assert(relation != null);
-    parent.add(node);
-    Surface oldSurface = _surfaces[id];
-    _surfaces[id] = SurfaceContainer(
-        this, node, properties, relation, '' /*pattern*/, layouts);
-    oldSurface?.notifyListeners();
-    log.info('_surfaces[id]: ${_surfaces[id]}');
-    notifyListeners();
-  }
-
   /// Returns the list of surfaces that would be dismissed if this surface
   /// were dismissed - e.g. as a result of dependency - including this surface
   List<String> dismissedSet(String id) {
