@@ -13,6 +13,5 @@ fidl("fuchsia.modular.auth") {
 
   sources = [
     "account/account.fidl",
-    "account_provider.fidl",
   ]
 }
