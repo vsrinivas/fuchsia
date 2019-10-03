@@ -8,6 +8,7 @@ executable("mali_009_test") {
     "isp.cc",
   ]
   deps = [
+    "//garnet/tests/zircon/libdriver-integration-test:libdriver-integration-test",
     "//src/camera/drivers/test_utils",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/devmgr-integration-test",

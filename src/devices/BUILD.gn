@@ -14,7 +14,6 @@ group("tests") {
   testonly = true
   deps = [
     "coordinator:coordinator_tests",
-    "tests",
     "tools:tests",
   ]
 }
