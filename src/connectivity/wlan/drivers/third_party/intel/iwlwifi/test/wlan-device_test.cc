@@ -9,10 +9,11 @@ extern "C" {
 }
 
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/mock-function/mock-function.h>
 #include <stdio.h>
 #include <zircon/syscalls.h>
 
-#include "gtest/gtest.h"
+#include <zxtest/zxtest.h>
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"

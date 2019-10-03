@@ -4,9 +4,10 @@
 
 // Used to test iwl-phy-db.c.
 
+#include <lib/mock-function/mock-function.h>
 #include <stdio.h>
 
-#include "gtest/gtest.h"
+#include <zxtest/zxtest.h>
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-phy-db.h"
@@ -16,7 +17,7 @@ namespace wlan {
 namespace testing {
 namespace {
 
-class IwlPhyDbTest : public ::testing::Test {
+class IwlPhyDbTest : public ::zxtest::Test {
  public:
   IwlPhyDbTest() {}
   ~IwlPhyDbTest() {}

@@ -15,9 +15,10 @@
  */
 // Unittest code for the functions in mvm/utils.c
 
+#include <lib/mock-function/mock-function.h>
 #include <stdio.h>
 
-#include "gtest/gtest.h"
+#include <zxtest/zxtest.h>
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
@@ -25,7 +26,7 @@ extern "C" {
 
 namespace {
 
-class UtilsTest : public testing::Test {
+class UtilsTest : public zxtest::Test {
  public:
   UtilsTest() {}
   ~UtilsTest() {}

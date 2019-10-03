@@ -5,10 +5,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_SINGLE_AP_TEST_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_SINGLE_AP_TEST_H_
 
+#include <lib/mock-function/mock-function.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
-#include "gtest/gtest.h"
+#include <zxtest/zxtest.h>
+
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/trans-sim.h"
@@ -21,7 +23,7 @@ namespace wlan::testing {
 // Note that the contructor will call the init function of transportation layer,
 // and assert it is successful. The test case doesn't need to init again.
 //
-class SingleApTest : public ::testing::Test {
+class SingleApTest : public ::zxtest::Test {
  public:
   SingleApTest() : ap_(&env_, default_macaddr_, kSsid, kChannel), sim_trans_(&env_) {
     zx_status_t status = sim_trans_.Init();

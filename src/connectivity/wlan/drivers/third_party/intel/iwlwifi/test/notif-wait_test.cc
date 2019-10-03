@@ -8,9 +8,10 @@
 // IRQ) and the user (the driver code waiting for the notification from firmware). In this file,
 // we will act as those 2 parties in a test case.
 
+#include <lib/mock-function/mock-function.h>
 #include <stdio.h>
 
-#include "gtest/gtest.h"
+#include <zxtest/zxtest.h>
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/notif-wait.h"
@@ -41,7 +42,7 @@ enum FakeCommandId : uint16_t {
     },                     \
   }
 
-class NotifWaitTest : public ::testing::Test {
+class NotifWaitTest : public ::zxtest::Test {
  public:
   NotifWaitTest() {}
   ~NotifWaitTest() {}

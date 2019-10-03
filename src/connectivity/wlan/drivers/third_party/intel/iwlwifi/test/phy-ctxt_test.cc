@@ -4,9 +4,10 @@
 
 // Used to test mvm/phy-ctxt.c
 
+#include <lib/mock-function/mock-function.h>
 #include <stdio.h>
 
-#include "gtest/gtest.h"
+#include <zxtest/zxtest.h>
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
@@ -16,7 +17,7 @@ namespace wlan {
 namespace testing {
 namespace {
 
-class PhyContextTest : public ::testing::Test {
+class PhyContextTest : public ::zxtest::Test {
  public:
   PhyContextTest() {}
   ~PhyContextTest() {}
