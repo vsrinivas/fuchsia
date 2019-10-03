@@ -27,11 +27,13 @@ TEST_F(AutoLoginBaseShellTest, AutoLoginBaseShellLaunchesSessionShell) {
   // Listen for session shell interception.
   bool intercepted = false;
   builder.InterceptSessionShell(
-      [&intercepted](
-          fuchsia::sys::StartupInfo startup_info,
-          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
-        intercepted = true;
-      });
+      {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
+       .launch_handler =
+           [&intercepted](
+               fuchsia::sys::StartupInfo startup_info,
+               fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
+             intercepted = true;
+           }});
   builder.BuildAndRun(test_harness());
 
   RunLoopUntil([&] { return intercepted; });

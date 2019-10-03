@@ -50,17 +50,18 @@ constexpr char kIntentParameterName[] = "intent_parameter";
 
 class InspectSessionTest : public modular::testing::TestHarnessFixture {
  protected:
+  InspectSessionTest()
+      : fake_session_shell_(modular::testing::FakeSessionShell::CreateWithDefaultOptions()) {}
+
   void RunHarnessAndInterceptSessionShell() {
     fuchsia::modular::testing::TestHarnessSpec spec;
     spec.set_environment_suffix("inspect");
     modular_testing::TestHarnessBuilder builder(std::move(spec));
-    builder.InterceptSessionShell(fake_session_shell_.GetOnCreateHandler(),
-                                  {.sandbox_services = {"fuchsia.modular.SessionShellContext",
-                                                        "fuchsia.modular.PuppetMaster"}});
+    builder.InterceptSessionShell(fake_session_shell_->BuildInterceptOptions());
     builder.BuildAndRun(test_harness());
 
     // Wait for our session shell to start.
-    RunLoopUntil([&] { return fake_session_shell_.is_running(); });
+    RunLoopUntil([&] { return fake_session_shell_->is_running(); });
   }
 
   zx_status_t GetInspectVmo(zx::vmo* out_vmo) {
@@ -112,8 +113,8 @@ class InspectSessionTest : public modular::testing::TestHarnessFixture {
     return intent;
   }
 
-  modular::testing::FakeSessionShell fake_session_shell_;
-};
+  std::unique_ptr<modular::testing::FakeSessionShell> fake_session_shell_;
+};  // namespace
 
 class TestStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher {
  public:
@@ -146,7 +147,7 @@ class TestStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher {
 TEST_F(InspectSessionTest, NodeHierarchyNoStories) {
   RunHarnessAndInterceptSessionShell();
 
-  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_.story_provider();
+  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_->story_provider();
   ASSERT_TRUE(story_provider != nullptr);
 
   bool called_get_stories = false;
@@ -178,7 +179,7 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
   svc.set_puppet_master(puppet_master.NewRequest());
   test_harness()->ConnectToModularService(std::move(svc));
 
-  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_.story_provider();
+  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_->story_provider();
   ASSERT_TRUE(story_provider != nullptr);
   const char kStoryId[] = "my_story";
 
@@ -202,7 +203,7 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
 
   // Watch for changes to the session.
   TestStoryProviderWatcher story_provider_watcher;
-  story_provider_watcher.Watch(fake_session_shell_.story_provider());
+  story_provider_watcher.Watch(fake_session_shell_->story_provider());
 
   // Keep track of the focus timestamp that we receive for the story.
   std::vector<int64_t> last_focus_timestamps;

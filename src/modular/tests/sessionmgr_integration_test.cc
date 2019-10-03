@@ -33,18 +33,17 @@ TEST_F(SessionmgrIntegrationTest, RebootCalledIfSessionmgrCrashNumberReachesRetr
   MockAdmin mock_admin;
   fidl::BindingSet<fuchsia::device::manager::Administrator> admin_bindings;
 
-  modular::testing::FakeSessionShell session_shell;
+  auto session_shell = modular::testing::FakeSessionShell::CreateWithDefaultOptions();
   modular_testing::TestHarnessBuilder builder;
-  builder.InterceptSessionShell(session_shell.GetOnCreateHandler(),
-                                {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
+  builder.InterceptSessionShell(session_shell->BuildInterceptOptions());
   builder.AddService(admin_bindings.GetHandler(&mock_admin));
   builder.BuildAndRun(test_harness());
 
   // kill session_shell
   for (int i = 0; i < 4; i++) {
-    RunLoopUntil([&] { return session_shell.is_running(); });
-    session_shell.Exit(0);
-    RunLoopUntil([&] { return !session_shell.is_running(); });
+    RunLoopUntil([&] { return session_shell->is_running(); });
+    session_shell->Exit(0);
+    RunLoopUntil([&] { return !session_shell->is_running(); });
   }
   // Validate suspend is invoked
 

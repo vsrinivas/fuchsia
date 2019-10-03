@@ -4,15 +4,32 @@
 
 #include "src/modular/lib/modular_test_harness/cpp/fake_module.h"
 
+#include <fuchsia/modular/cpp/fidl.h>
+
+#include "src/modular/lib/modular_test_harness/cpp/fake_component.h"
+
 namespace modular {
 namespace testing {
 
-FakeModule::FakeModule() = default;
-
-FakeModule::FakeModule(fit::function<void(fuchsia::modular::Intent)> on_intent_handled)
-    : on_intent_handled_(std::move(on_intent_handled)) {}
+FakeModule::FakeModule(modular::testing::FakeComponent::Args args,
+                       fit::function<void(fuchsia::modular::Intent)> on_intent_handled)
+    : FakeComponent(std::move(args)), on_intent_handled_(std::move(on_intent_handled)) {}
 
 FakeModule::~FakeModule() = default;
+
+// static
+std::unique_ptr<FakeModule> FakeModule::CreateWithDefaultOptions() {
+  return std::make_unique<FakeModule>(
+      modular::testing::FakeComponent::Args{
+          .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
+          .sandbox_services = FakeModule::GetDefaultSandboxServices()},
+      [](fuchsia::modular::Intent) {});
+}
+
+// static
+std::vector<std::string> FakeModule::GetDefaultSandboxServices() {
+  return {fuchsia::modular::ComponentContext::Name_, fuchsia::modular::ModuleContext::Name_};
+}
 
 // |modular::testing::FakeComponent|
 void FakeModule::OnCreate(fuchsia::sys::StartupInfo startup_info) {
@@ -23,10 +40,6 @@ void FakeModule::OnCreate(fuchsia::sys::StartupInfo startup_info) {
       [this](fidl::InterfaceRequest<fuchsia::modular::IntentHandler> request) {
         bindings_.AddBinding(this, std::move(request));
       });
-}
-
-std::vector<std::string> FakeModule::GetSandboxServices() {
-  return {"fuchsia.modular.ComponentContext", "fuchsia.modular.ModuleContext"};
 }
 
 // |IntentHandler|

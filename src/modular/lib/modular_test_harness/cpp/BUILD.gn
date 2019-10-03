@@ -42,6 +42,7 @@ source_set("test_harness_fixture") {
   deps = [
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/lib/modular/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/modular/lib/testing:session_shell_impl",

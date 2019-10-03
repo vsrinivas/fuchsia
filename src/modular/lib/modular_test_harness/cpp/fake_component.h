@@ -15,23 +15,45 @@ namespace testing {
 // Represents an instance of an intercepted component. Clients may use directly
 // or sub-class and override OnCreate() and/or OnDestroy().
 //
-// Consumes a fuchsia.sys.StartupInfo and
-// fuchsia.modular.testing.InterceptedComponent handle, constructs a
-// sys.ComponentContext and forwards lifecycle signals to virtual functions.
+// FakeComponent::BuildInterceptOptions() may be passed to TestHarnessBuilder::InterceptComponent()
+// to route the component's launch to this instance.
 //
-// Usage: pass ComponentBase.GetOnCreateHandler() to TestHarnessBuilder's
-// Intercept*() methods.
-class FakeComponent : public fuchsia::modular::Lifecycle {
+// EXAMPLE USAGE:
+//
+// ..
+// modular_testing::TestHarnessBuilder builder;
+// modular::testing::FakeComponent fake_component(
+//     {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
+// builder.InterceptComponent(fake_component.BuildInterceptOptions());
+// builder.BuildAndRun(test_harness());
+// ..
+class FakeComponent : fuchsia::modular::Lifecycle {
  public:
-  virtual ~FakeComponent();
+  struct Args {
+    // Required.
+    //
+    // The URL of this component.
+    std::string url;
+
+    // Optional.
+    std::vector<std::string> sandbox_services;
+  };
+
+  explicit FakeComponent(Args args);
+  FakeComponent() = delete;
+
+  ~FakeComponent() override;
 
   // Returns a binder function that initializes members, dispatches OnCreate()
   // and wires OnDestroy() to the InterceptedComponent.OnKill event.
   //
   // |dispatcher| is used for serving the component's outgoing directory and dispatching
   // |OnDestroy()|. A value of |nullptr| will use the current thread's dispatcher.
-  modular_testing::TestHarnessBuilder::OnNewComponentHandler GetOnCreateHandler(
+  modular_testing::TestHarnessBuilder::InterceptOptions BuildInterceptOptions(
       async_dispatcher_t* dispatcher = nullptr);
+
+  // Returns the URL assigned to this component;  see |Args::url|.
+  std::string url() const;
 
   // Returns true if the component was launched by the component manager and
   // has not yet been destroyed.
@@ -71,6 +93,8 @@ class FakeComponent : public fuchsia::modular::Lifecycle {
   void Terminate() override;
 
  private:
+  Args args_;
+
   fuchsia::modular::testing::InterceptedComponentPtr intercepted_component_ptr_;
   std::unique_ptr<sys::ComponentContext> component_context_;
 

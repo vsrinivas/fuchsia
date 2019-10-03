@@ -5,8 +5,8 @@
 #include <fuchsia/auth/account/cpp/fidl.h>
 #include <fuchsia/devicesettings/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
-#include <fuchsia/stash/cpp/fidl.h>
 #include <fuchsia/setui/cpp/fidl.h>
+#include <fuchsia/stash/cpp/fidl.h>
 #include <lib/modular/testing/cpp/test_harness_builder.h>
 
 #include <src/lib/fxl/logging.h>
@@ -58,12 +58,13 @@ TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
       "stash.cmx");
 
   bool intercepted = false;
-  builder.InterceptBaseShell(
-      [&](fuchsia::sys::StartupInfo startup_info,
-          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
-        intercepted = true;
-      },
-      modular_testing::TestHarnessBuilder::InterceptOptions{.url = kSingleUserBaseShellUrl});
+  builder.InterceptBaseShell(modular_testing::TestHarnessBuilder::InterceptOptions{
+      .url = kSingleUserBaseShellUrl,
+      .launch_handler =
+          [&](fuchsia::sys::StartupInfo startup_info,
+              fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
+            intercepted = true;
+          }});
 
   // Setting AUTH_PROVIDER should launch the configured base shell.
   SetLoginOverride(fuchsia::setui::LoginOverride::AUTH_PROVIDER, &builder);
@@ -91,17 +92,21 @@ TEST_F(LoginOverrideTest, DISABLED_AutoLoginGuestOverrideSkipsBaseShell) {
   // remain false when the session shell launches.
   bool intercepted_base_shell = false;
   builder.InterceptBaseShell(
-      [&](fuchsia::sys::StartupInfo startup_info,
-          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
-        intercepted_base_shell = true;
-      });
+      {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
+       .launch_handler =
+           [&](fuchsia::sys::StartupInfo startup_info,
+               fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
+             intercepted_base_shell = true;
+           }});
 
   bool intercepted_session_shell = false;
   builder.InterceptSessionShell(
-      [&](fuchsia::sys::StartupInfo startup_info,
-          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
-        intercepted_session_shell = true;
-      });
+      {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
+       .launch_handler =
+           [&](fuchsia::sys::StartupInfo startup_info,
+               fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
+             intercepted_session_shell = true;
+           }});
 
   SetLoginOverride(fuchsia::setui::LoginOverride::AUTOLOGIN_GUEST, &builder);
 

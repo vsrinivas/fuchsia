@@ -9,7 +9,7 @@
 namespace modular_testing {
 namespace {
 
-std::string StringsToCSV(std::vector<std::string> strings) {
+std::string StringsToCSV(const std::vector<std::string>& strings) {
   std::stringstream csv;
   for (size_t i = 0; i < strings.size(); i++) {
     if (i != 0) {
@@ -20,7 +20,7 @@ std::string StringsToCSV(std::vector<std::string> strings) {
   return csv.str();
 }
 
-std::string BuildExtraCmx(TestHarnessBuilder::InterceptOptions options) {
+std::string BuildExtraCmx(const TestHarnessBuilder::InterceptOptions& options) {
   std::stringstream ss;
   ss << R"({
     "sandbox": {
@@ -73,7 +73,7 @@ fuchsia::modular::testing::TestHarnessSpec TestHarnessBuilder::BuildSpec() {
   return std::move(spec_);
 }
 
-TestHarnessBuilder::OnNewComponentHandler TestHarnessBuilder::BuildOnNewComponentHandler() {
+TestHarnessBuilder::LaunchHandler TestHarnessBuilder::BuildOnNewComponentHandler() {
   return [handlers = std::move(handlers_)](
              fuchsia::sys::StartupInfo startup_info,
              fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
@@ -92,12 +92,9 @@ void TestHarnessBuilder::BuildAndRun(
   test_harness->Run(BuildSpec());
 }
 
-TestHarnessBuilder& TestHarnessBuilder::InterceptComponent(OnNewComponentHandler on_new_component,
-                                                           InterceptOptions options) {
-  ZX_ASSERT(on_new_component);
-  if (options.url.empty()) {
-    options.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
-  }
+TestHarnessBuilder& TestHarnessBuilder::InterceptComponent(InterceptOptions options) {
+  ZX_ASSERT(options.launch_handler);
+  ZX_ASSERT(!options.url.empty());
 
   fuchsia::modular::testing::InterceptSpec intercept_spec;
   intercept_spec.set_component_url(options.url);
@@ -107,45 +104,32 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptComponent(OnNewComponentHandler
   }
   spec_.mutable_components_to_intercept()->push_back(std::move(intercept_spec));
 
-  handlers_.insert(std::make_pair(options.url, std::move(on_new_component)));
+  handlers_.insert(std::make_pair(options.url, std::move(options.launch_handler)));
   return *this;
 }
 
-TestHarnessBuilder& TestHarnessBuilder::InterceptBaseShell(OnNewComponentHandler on_new_component,
-                                                           InterceptOptions options) {
-  if (options.url.empty()) {
-    options.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("base_shell");
-  }
-  auto url = options.url;
-  InterceptComponent(std::move(on_new_component), std::move(options));
-
-  spec_.mutable_basemgr_config()->mutable_base_shell()->mutable_app_config()->set_url(url);
+TestHarnessBuilder& TestHarnessBuilder::InterceptBaseShell(InterceptOptions options) {
+  spec_.mutable_basemgr_config()->mutable_base_shell()->mutable_app_config()->set_url(options.url);
+  InterceptComponent(std::move(options));
   return *this;
 }
 
-TestHarnessBuilder& TestHarnessBuilder::InterceptSessionShell(
-    OnNewComponentHandler on_new_component, InterceptOptions options) {
-  if (options.url.empty()) {
-    options.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("session_shell");
-  }
-  auto url = options.url;
-  InterceptComponent(std::move(on_new_component), std::move(options));
+TestHarnessBuilder& TestHarnessBuilder::InterceptBaseShell(LaunchHandler handler, InterceptOptions options) {
+  options.launch_handler = std::move(handler);
+  return InterceptBaseShell(std::move(options));
+}
 
+TestHarnessBuilder& TestHarnessBuilder::InterceptSessionShell(InterceptOptions options) {
   fuchsia::modular::session::SessionShellMapEntry entry;
-  entry.mutable_config()->mutable_app_config()->set_url(url);
+  entry.mutable_config()->mutable_app_config()->set_url(options.url);
   spec_.mutable_basemgr_config()->mutable_session_shell_map()->push_back(std::move(entry));
+  InterceptComponent(std::move(options));
   return *this;
 }
 
-TestHarnessBuilder& TestHarnessBuilder::InterceptStoryShell(OnNewComponentHandler on_new_component,
-                                                            InterceptOptions options) {
-  if (options.url.empty()) {
-    options.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("story_shell");
-  }
-  auto url = options.url;
-  InterceptComponent(std::move(on_new_component), std::move(options));
-
-  spec_.mutable_basemgr_config()->mutable_story_shell()->mutable_app_config()->set_url(url);
+TestHarnessBuilder& TestHarnessBuilder::InterceptStoryShell(InterceptOptions options) {
+  spec_.mutable_basemgr_config()->mutable_story_shell()->mutable_app_config()->set_url(options.url);
+  InterceptComponent(std::move(options));
   return *this;
 }
 

@@ -47,11 +47,18 @@ TEST_F(ModularTestHarnessTest, SimpleSuccess) {
 class ModularTestHarnessDestructionTest : public sys::testing::TestWithEnvironment,
                                           protected modular::testing::FakeSessionShell {
  protected:
-  ModularTestHarnessDestructionTest() { termination_signaled_.store(false); }
+  ModularTestHarnessDestructionTest()
+      : FakeSessionShell({.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
+                          .sandbox_services = {
+                              "fuchsia.modular.SessionShellContext",
+                          }}) {
+    termination_signaled_.store(false);
+  }
 
   std::atomic<bool> termination_signaled_;
 
  private:
+  // |fuchsia::modular::Lifecycle|
   void Terminate() override {
     termination_signaled_.store(true);
     modular::testing::FakeSessionShell::Terminate();
@@ -69,10 +76,7 @@ TEST_F(ModularTestHarnessDestructionTest, CleanTeardown) {
   {
     modular_testing::TestHarnessLauncher launcher(
         real_services()->Connect<fuchsia::sys::Launcher>());
-    builder.InterceptSessionShell(GetOnCreateHandler(session_shell_loop.dispatcher()),
-                                  {.sandbox_services = {
-                                       "fuchsia.modular.SessionShellContext",
-                                   }});
+    builder.InterceptSessionShell(BuildInterceptOptions(session_shell_loop.dispatcher()));
     builder.BuildAndRun(launcher.test_harness());
 
     RunLoopUntil([&] { return is_running(); });

@@ -16,26 +16,41 @@ namespace testing {
 // Session shell fake that provides access to the StoryProvider, the
 // SessionShellContext, and a test implementation of SessionShellImpl.
 //
-// EXAMPLE USAGE (see test_harness_fixture.h for more details on how to use the
-// test harness):
+// EXAMPLE USAGE:
 //
-// FakeSessionShell fake_session_shell;
+// ...
 // modular_testing::TestHarnessBuilder builder;
-// builder.InterceptSessionShell(fake_session_shell.GetOnCreateHandler(),
-//                               {.sandbox_services = {
-//                                    "fuchsia.modular.SessionShellContext",
-//                                    "fuchsia.modular.PuppetMaster"}});
+// auto fake_session_shell = FakeSessionShell::CreateWithDefaultOptions();
 //
-// test_harness().events().OnNewComponent =
-//     builder.BuildOnNewComponentHandler();
+// builder.InterceptSessionShell(fake_session_shell.BuildInterceptOptions());
 // builder.BuildAndRun(test_harness());
 //
 // // Wait for the session shell to be intercepted.
-// RunLoopUntil([&] { return fake_session_shell.is_running(); });
+// RunLoopUntil([&] { return fake_session_shell->is_running(); });
+// ...
 class FakeSessionShell : public modular::testing::FakeComponent {
  public:
+  explicit FakeSessionShell(FakeComponent::Args args);
+
+  ~FakeSessionShell() override;
+
+  // Instantiates a FakeSessionShell with a randomly generated URL and default sandbox services
+  // (see GetDefaultSandboxServices()).
+  static std::unique_ptr<FakeSessionShell> CreateWithDefaultOptions();
+
+  // Returns the default list of services (capabilities) a session shell expects in its namespace.
+  // This method is useful when setting up a session shell for interception.
+  //
+  // Default services:
+  //  * fuchsia.modular.ComponentContext
+  //  * fuchsia.modular.SessionShellContext
+  //  * fuchsia.modular.PuppetMaster
+  static std::vector<std::string> GetDefaultSandboxServices();
+
+  // Requires: FakeComponent::is_running()
   fuchsia::modular::StoryProvider* story_provider() { return story_provider_.get(); }
 
+  // Requires: FakeComponent::is_running()
   fuchsia::modular::SessionShellContext* session_shell_context() {
     return session_shell_context_.get();
   }

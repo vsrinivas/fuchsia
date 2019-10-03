@@ -19,26 +19,25 @@ constexpr char kTestType[] = "test-type";
 
 class StoryModuleTest : public modular::testing::TestHarnessFixture {
  public:
-  void SetUp() override {
-    test_module_ =
-        std::make_unique<modular::testing::FakeModule>([](fuchsia::modular::Intent intent) {});
-    test_module_url_ = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
-    builder_.InterceptComponent(test_module_->GetOnCreateHandler(),
-                                {.url = test_module_url_,
-                                 .sandbox_services = {"fuchsia.app.discover.StoryModule",
-                                                      "fuchsia.modular.ModuleContext"}});
+  StoryModuleTest() {
+    test_module_ = std::make_unique<modular::testing::FakeModule>(
+        modular::testing::FakeComponent::Args{
+            .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
+            .sandbox_services = {"fuchsia.app.discover.StoryModule",
+                                 "fuchsia.modular.ModuleContext"}},
+        [](fuchsia::modular::Intent intent) {});
+    builder_.InterceptComponent(test_module_->BuildInterceptOptions());
     builder_.BuildAndRun(test_harness());
   }
 
   std::unique_ptr<modular::testing::FakeModule> test_module_;
   modular_testing::TestHarnessBuilder builder_;
-  std::string test_module_url_;
   std::string test_entity_provider_agent_url_;
 };
 
 TEST_F(StoryModuleTest, ModuleWritesToOutput) {
   fuchsia::modular::Intent intent;
-  intent.handler = test_module_url_;
+  intent.handler = test_module_->url();
   intent.action = kIntentAction;
 
   modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName, std::move(intent));

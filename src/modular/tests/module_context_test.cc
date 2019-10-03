@@ -18,18 +18,20 @@ namespace {
 
 class ModuleContextTest : public modular::testing::TestHarnessFixture {
  protected:
+  ModuleContextTest()
+      : session_shell_(modular::testing::FakeSessionShell::CreateWithDefaultOptions()) {}
+
   void StartSession(modular_testing::TestHarnessBuilder builder) {
-    builder.InterceptSessionShell(session_shell_.GetOnCreateHandler(),
-                                  {.sandbox_services = {"fuchsia.modular.SessionShellContext"}});
+    builder.InterceptSessionShell(session_shell_->BuildInterceptOptions());
     builder.BuildAndRun(test_harness());
 
     // Wait for our session shell to start.
-    RunLoopUntil([this] { return session_shell_.is_running(); });
+    RunLoopUntil([this] { return session_shell_->is_running(); });
   }
 
   void RestartStory(std::string story_name) {
     fuchsia::modular::StoryControllerPtr story_controller;
-    session_shell_.story_provider()->GetController(story_name, story_controller.NewRequest());
+    session_shell_->story_provider()->GetController(story_name, story_controller.NewRequest());
 
     bool restarted = false;
     story_controller->Stop([&] {
@@ -39,19 +41,25 @@ class ModuleContextTest : public modular::testing::TestHarnessFixture {
     RunLoopUntil([&] { return restarted; });
   }
 
-  modular::testing::FakeSessionShell* session_shell() { return &session_shell_; }
-
  private:
-  modular::testing::FakeSessionShell session_shell_;
+  std::unique_ptr<modular::testing::FakeSessionShell> session_shell_;
 };
 
 // A version of FakeModule which captures handled intents in a std::vector<>
 // and exposes callbacks triggered on certain lifecycle events.
-class FakeModule : public modular::testing::FakeModule {
+class TestModule : public modular::testing::FakeModule {
  public:
+  explicit TestModule(std::string module_name = "")
+      : modular::testing::FakeModule(
+            {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(module_name),
+             .sandbox_services = modular::testing::FakeModule::GetDefaultSandboxServices()},
+            [this](fuchsia::modular::Intent intent) {
+              handled_intents.push_back(std::move(intent));
+            }) {}
   std::vector<fuchsia::modular::Intent> handled_intents;
   fit::function<void()> on_destroy;
   fit::function<void()> on_create;
+  fuchsia::modular::ModuleControllerPtr controller;
 
  private:
   // |modular::testing::FakeModule|
@@ -67,11 +75,6 @@ class FakeModule : public modular::testing::FakeModule {
     if (on_destroy)
       on_destroy();
   }
-
-  // |fuchsia::modular::IntentHandler|
-  void HandleIntent(fuchsia::modular::Intent intent) {
-    handled_intents.push_back(std::move(intent));
-  }
 };
 
 // Test that ModuleContext.AddModuleToStory() starts child modules and that
@@ -81,77 +84,55 @@ class FakeModule : public modular::testing::FakeModule {
 TEST_F(ModuleContextTest, AddModuleToStory) {
   modular_testing::TestHarnessBuilder builder;
 
-  struct FakeModuleInfo {
-    std::string url;
-    FakeModule component;
-
-    fuchsia::modular::ModuleControllerPtr controller;
-  };
-
-  FakeModuleInfo parent_module{
-      .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("parent_module")};
-  FakeModuleInfo child_module1{
-      .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("child_module1")};
-  FakeModuleInfo child_module2{
-      .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("child_module2")};
-
-  builder.InterceptComponent(
-      parent_module.component.GetOnCreateHandler(),
-      {.url = parent_module.url, .sandbox_services = parent_module.component.GetSandboxServices()});
-  builder.InterceptComponent(
-      child_module1.component.GetOnCreateHandler(),
-      {.url = child_module1.url, .sandbox_services = child_module1.component.GetSandboxServices()});
-  builder.InterceptComponent(
-      child_module2.component.GetOnCreateHandler(),
-      {.url = child_module2.url, .sandbox_services = child_module2.component.GetSandboxServices()});
+  TestModule parent_module("parent_module");
+  TestModule child_module1("child_module1");
+  TestModule child_module2("child_module2");
+  builder.InterceptComponent(parent_module.BuildInterceptOptions());
+  builder.InterceptComponent(child_module1.BuildInterceptOptions());
+  builder.InterceptComponent(child_module2.BuildInterceptOptions());
 
   StartSession(std::move(builder));
   modular::testing::AddModToStory(test_harness(), "storyname", "modname",
-                                  {.action = "action", .handler = parent_module.url});
-  RunLoopUntil([&] { return parent_module.component.is_running(); });
+                                  {.action = "action", .handler = parent_module.url()});
+  RunLoopUntil([&] { return parent_module.is_running(); });
 
   // Add a single child module.
-  fuchsia::modular::ModuleControllerPtr child_module1_controller;
-  parent_module.component.module_context()->AddModuleToStory(
-      "childmodname", {.action = "action", .handler = child_module1.url},
+  parent_module.module_context()->AddModuleToStory(
+      "childmodname", {.action = "action", .handler = child_module1.url()},
       child_module1.controller.NewRequest(),
       /*surface_relation=*/nullptr, [&](fuchsia::modular::StartModuleStatus status) {
         ASSERT_EQ(status, fuchsia::modular::StartModuleStatus::SUCCESS);
       });
-  RunLoopUntil([&] {
-    return child_module1.component.is_running() &&
-           child_module1.component.handled_intents.size() == 1;
-  });
-  EXPECT_EQ(child_module1.component.handled_intents.at(0).action, "action");
+  RunLoopUntil(
+      [&] { return child_module1.is_running() && child_module1.handled_intents.size() == 1; });
+  EXPECT_EQ(child_module1.handled_intents.at(0).action, "action");
 
   // Add the same module again but with a different Intent action.
   bool child_module1_destroyed{false};
-  child_module1.component.on_destroy = [&] { child_module1_destroyed = true; };
-  parent_module.component.module_context()->AddModuleToStory(
-      "childmodname", {.action = "action2", .handler = child_module1.url},
+  child_module1.on_destroy = [&] { child_module1_destroyed = true; };
+  parent_module.module_context()->AddModuleToStory(
+      "childmodname", {.action = "action2", .handler = child_module1.url()},
       child_module1.controller.NewRequest(),
       /*surface_relation=*/nullptr, [&](fuchsia::modular::StartModuleStatus status) {
         ASSERT_EQ(status, fuchsia::modular::StartModuleStatus::SUCCESS);
       });
-  RunLoopUntil([&] { return child_module1.component.handled_intents.size() == 2; });
-  EXPECT_EQ(child_module1.component.handled_intents.at(1).action, "action2");
+  RunLoopUntil([&] { return child_module1.handled_intents.size() == 2; });
+  EXPECT_EQ(child_module1.handled_intents.at(1).action, "action2");
   // At no time should the child module have been destroyed.
   EXPECT_EQ(child_module1_destroyed, false);
 
   // This time change the handler. Expect the first module to be shut down,
   // and the second to run in its place.
-  parent_module.component.module_context()->AddModuleToStory(
-      "childmodname", {.action = "action", .handler = child_module2.url},
+  parent_module.module_context()->AddModuleToStory(
+      "childmodname", {.action = "action", .handler = child_module2.url()},
       child_module2.controller.NewRequest(),
       /*surface_relation=*/nullptr, [&](fuchsia::modular::StartModuleStatus status) {
         ASSERT_EQ(status, fuchsia::modular::StartModuleStatus::SUCCESS);
       });
-  RunLoopUntil([&] {
-    return child_module2.component.is_running() &&
-           child_module2.component.handled_intents.size() == 1;
-  });
-  EXPECT_FALSE(child_module1.component.is_running());
-  EXPECT_EQ(child_module2.component.handled_intents.at(0).action, "action");
+  RunLoopUntil(
+      [&] { return child_module2.is_running() && child_module2.handled_intents.size() == 1; });
+  EXPECT_FALSE(child_module1.is_running());
+  EXPECT_EQ(child_module2.handled_intents.at(0).action, "action");
 }
 
 // Test that ModuleContext.RemoveSelfFromStory() has the affect of shutting
@@ -160,43 +141,33 @@ TEST_F(ModuleContextTest, AddModuleToStory) {
 TEST_F(ModuleContextTest, RemoveSelfFromStory) {
   modular_testing::TestHarnessBuilder builder;
 
-  struct FakeModuleInfo {
-    std::string url;
-    FakeModule component;
-  };
-
-  FakeModuleInfo module1{.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("module1")};
-  FakeModuleInfo module2{.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("module2")};
-
-  builder.InterceptComponent(
-      module1.component.GetOnCreateHandler(),
-      {.url = module1.url, .sandbox_services = module1.component.GetSandboxServices()});
-  builder.InterceptComponent(
-      module2.component.GetOnCreateHandler(),
-      {.url = module2.url, .sandbox_services = module2.component.GetSandboxServices()});
+  TestModule module1("module1");
+  TestModule module2("module2");
+  builder.InterceptComponent(module1.BuildInterceptOptions());
+  builder.InterceptComponent(module2.BuildInterceptOptions());
 
   StartSession(std::move(builder));
   modular::testing::AddModToStory(test_harness(), "storyname", "modname1",
-                                  {.action = "action", .handler = module1.url});
+                                  {.action = "action", .handler = module1.url()});
   modular::testing::AddModToStory(test_harness(), "storyname", "modname2",
-                                  {.action = "action", .handler = module2.url});
-  RunLoopUntil([&] { return module1.component.is_running() && module2.component.is_running(); });
+                                  {.action = "action", .handler = module2.url()});
+  RunLoopUntil([&] { return module1.is_running() && module2.is_running(); });
 
   // Instruct module1 to remove itself from the story. Expect to see that
   // module1 is terminated and module2 is not.
-  module1.component.module_context()->RemoveSelfFromStory();
-  RunLoopUntil([&] { return !module1.component.is_running(); });
-  ASSERT_TRUE(module2.component.is_running());
+  module1.module_context()->RemoveSelfFromStory();
+  RunLoopUntil([&] { return !module1.is_running(); });
+  ASSERT_TRUE(module2.is_running());
 
   // Additionally, restarting the story should not result in module1 being
   // restarted whereas it should for module2.
   bool module2_destroyed = false;
   bool module2_restarted = false;
-  module2.component.on_destroy = [&] { module2_destroyed = true; };
-  module2.component.on_create = [&] { module2_restarted = true; };
+  module2.on_destroy = [&] { module2_destroyed = true; };
+  module2.on_create = [&] { module2_restarted = true; };
   RestartStory("storyname");
   RunLoopUntil([&] { return module2_restarted; });
-  EXPECT_FALSE(module1.component.is_running());
+  EXPECT_FALSE(module1.is_running());
   EXPECT_TRUE(module2_destroyed);
 }
 
@@ -205,14 +176,12 @@ TEST_F(ModuleContextTest, RemoveSelfFromStory) {
 TEST_F(ModuleContextTest, CreateEntity) {
   modular_testing::TestHarnessBuilder builder;
 
-  auto module_url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("module");
-  FakeModule module;
-  builder.InterceptComponent(module.GetOnCreateHandler(),
-                             {.url = module_url, .sandbox_services = module.GetSandboxServices()});
+  TestModule module;
+  builder.InterceptComponent(module.BuildInterceptOptions());
 
   StartSession(std::move(builder));
   modular::testing::AddModToStory(test_harness(), "storyname", "modname",
-                                  {.action = "action", .handler = module_url});
+                                  {.action = "action", .handler = module.url()});
   RunLoopUntil([&] { return module.is_running(); });
 
   // Create an entity, acquire an Entity handle as well as a reference

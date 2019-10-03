@@ -5,6 +5,8 @@
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/fsl/vmo/strings.h>
 
+#include <tuple>
+
 #include <src/lib/fxl/logging.h>
 
 #include "gmock/gmock.h"
@@ -19,23 +21,26 @@ namespace {
 
 class StoryShellTest : public modular::testing::TestHarnessFixture {
  protected:
+  StoryShellTest()
+      : session_shell_(modular::testing::FakeSessionShell::CreateWithDefaultOptions()),
+        story_shell_({.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
+                      .sandbox_services = {"fuchsia.modular.StoryShellContext"}}) {}
+
   void StartSession() {
     modular_testing::TestHarnessBuilder builder;
-
-    builder.InterceptSessionShell(session_shell_.GetOnCreateHandler(),
-                                  {.sandbox_services = {"fuchsia.modular.SessionShellContext"}});
-    builder.InterceptStoryShell(story_shell_.GetOnCreateHandler());
+    builder.InterceptSessionShell(session_shell_->BuildInterceptOptions());
+    builder.InterceptStoryShell(story_shell_.BuildInterceptOptions());
 
     fake_module_url_ = modular_testing::TestHarnessBuilder::GenerateFakeUrl("module");
     builder.InterceptComponent(
-        [this](fuchsia::sys::StartupInfo startup_info,
-               fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-                   intercepted_component) {
-          intercepted_modules_.push_back(std::make_unique<modular::testing::FakeComponent>());
-          intercepted_modules_.back()->GetOnCreateHandler()(std::move(startup_info),
-                                                            std::move(intercepted_component));
-        },
-        {.url = fake_module_url_});
+        {.url = fake_module_url_,
+         .launch_handler =
+             [this](fuchsia::sys::StartupInfo startup_info,
+                    fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
+                        intercepted_component) {
+               intercepted_modules_.push_back(
+                   {std::move(startup_info), std::move(intercepted_component)});
+             }});
     builder.BuildAndRun(test_harness());
 
     fuchsia::modular::testing::ModularService request;
@@ -43,7 +48,7 @@ class StoryShellTest : public modular::testing::TestHarnessFixture {
     test_harness()->ConnectToModularService(std::move(request));
 
     // Wait for our session shell to start.
-    RunLoopUntil([this] { return session_shell_.is_running(); });
+    RunLoopUntil([this] { return session_shell_->is_running(); });
   }
 
   void AddModToStory(std::string story_name, std::string mod_name,
@@ -71,7 +76,7 @@ class StoryShellTest : public modular::testing::TestHarnessFixture {
 
   void RestartStory(std::string story_name) {
     fuchsia::modular::StoryControllerPtr story_controller;
-    session_shell_.story_provider()->GetController(story_name, story_controller.NewRequest());
+    session_shell_->story_provider()->GetController(story_name, story_controller.NewRequest());
 
     bool restarted = false;
     story_controller->Stop([&] {
@@ -82,15 +87,16 @@ class StoryShellTest : public modular::testing::TestHarnessFixture {
   }
 
   fuchsia::modular::PuppetMasterPtr puppet_master_;
-  modular::testing::FakeSessionShell session_shell_;
+  std::unique_ptr<modular::testing::FakeSessionShell> session_shell_;
   modular::testing::FakeStoryShell story_shell_;
+  std::string fake_module_url_;
 
   // Stories must have modules in them so the stories created above
   // contain fake intercepted modules. This list holds onto them so that
   // they can be successfully launched and don't die immediately.
-  std::vector<std::unique_ptr<modular::testing::FakeComponent>> intercepted_modules_;
-
-  std::string fake_module_url_;
+  std::vector<std::tuple<fuchsia::sys::StartupInfo,
+                         fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>>>
+      intercepted_modules_;
 };
 
 TEST_F(StoryShellTest, GetsModuleMetadata) {

@@ -6,37 +6,42 @@
 #define SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_FAKE_MODULE_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/modular/testing/cpp/fidl.h>
 
-#include <src/lib/fxl/logging.h>
-
-#include "src/modular/lib/modular_test_harness/cpp/fake_component.h"
+#include <src/modular/lib/modular_test_harness/cpp/fake_component.h>
 
 namespace modular {
 namespace testing {
 
 // A fake module that exposes an IntentHandler service that can be used with
-// the TestHarness. Refer to detailed documentation at test_harness_fixture.h.
+// TestHarnessBuilder. Refer to detailed documentation at test_harness_fixture.h.
 //
-// EXAMPLE USAGE
+// EXAMPLE USAGE:
+//
 // ...
-//
-// FakeModule fake_module;
-//
-// builder.InterceptComponent(
-//   fake_module->GetOnCreateHandler(),
-//   { .url = fake_module_url,
-//     .sandbox_services = fake_module->GetSandboxServices() });
-//
+// modular_testing::TestHarnessBuilder builder;
+// auto fake_module = modular::testing::FakeModule::CreateWithDefaultOptions();
+// builder.InterceptComponent(fake_module->BuildInterceptOptions());
+// builder.BuildAndRun(test_harness());
 // ...
 class FakeModule : public modular::testing::FakeComponent, fuchsia::modular::IntentHandler {
  public:
-  FakeModule();
-
   // |on_intent_handled| will be invoked whenever HandleIntent() is called.
-  FakeModule(fit::function<void(fuchsia::modular::Intent)> on_intent_handled);
+  explicit FakeModule(modular::testing::FakeComponent::Args args,
+                      fit::function<void(fuchsia::modular::Intent)> on_intent_handled);
 
-  ~FakeModule();
+  ~FakeModule() override;
+
+  // Instantiates a FakeModule with a randomly generated URL, default sandbox
+  // services (see GetDefaultSandboxServices()).
+  static std::unique_ptr<FakeModule> CreateWithDefaultOptions();
+
+  // Returns the default list of services (capabilities) a module expects in its namespace.
+  // This method is useful when setting up a module for interception.
+  //
+  // Default services:
+  //  * fuchsia.modular.ComponentContext
+  //  * fuchsia.modular.ModuleContext
+  static std::vector<std::string> GetDefaultSandboxServices();
 
   fuchsia::modular::ComponentContext* modular_component_context() {
     return component_context_.get();
@@ -44,8 +49,6 @@ class FakeModule : public modular::testing::FakeComponent, fuchsia::modular::Int
 
   // Returns the module's |module_context_|
   fuchsia::modular::ModuleContext* module_context() { return module_context_.get(); }
-
-  static std::vector<std::string> GetSandboxServices();
 
  protected:
   // |FakeComponent|

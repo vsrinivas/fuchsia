@@ -19,6 +19,12 @@ constexpr char kIntentAction[] = "action";
 // Minimal module that connects to `fuchsia.intl.PropertyProvider` and retrieves a `Profile`.
 class IntlClientModule : public modular::testing::FakeModule {
  public:
+  IntlClientModule()
+      : modular::testing::FakeModule({.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
+                                      .sandbox_services = {"fuchsia.intl.PropertyProvider",
+                                                           "fuchsia.modular.ModuleContext"}},
+                                     [](fuchsia::modular::Intent) {}) {}
+
   zx_status_t ConnectToIntlPropertyProvider() {
     return component_context()->svc()->Connect<fuchsia::intl::PropertyProvider>(
         client_.NewRequest());
@@ -41,24 +47,19 @@ class IntlClientModule : public modular::testing::FakeModule {
 // Smoke test for Modular's provision of fuchsia.intl.PropertyProvider.
 class IntlPropertyProviderTest : public modular::testing::TestHarnessFixture {
  public:
-  void SetUp() override {
+  IntlPropertyProviderTest() {
     test_module_ = std::make_unique<IntlClientModule>();
-    test_module_url_ = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
-    builder_.InterceptComponent(
-        test_module_->GetOnCreateHandler(),
-        {.url = test_module_url_,
-         .sandbox_services = {"fuchsia.intl.PropertyProvider", "fuchsia.modular.ModuleContext"}});
+    builder_.InterceptComponent(test_module_->BuildInterceptOptions());
     builder_.BuildAndRun(test_harness());
   }
 
   std::unique_ptr<IntlClientModule> test_module_;
   modular_testing::TestHarnessBuilder builder_;
-  std::string test_module_url_;
 };
 
 TEST_F(IntlPropertyProviderTest, GetsProfileFromProvider) {
   fuchsia::modular::Intent intent;
-  intent.handler = test_module_url_;
+  intent.handler = test_module_->url();
   intent.action = kIntentAction;
 
   modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName, std::move(intent));

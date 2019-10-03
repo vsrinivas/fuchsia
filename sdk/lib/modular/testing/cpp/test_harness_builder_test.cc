@@ -125,14 +125,19 @@ TEST_F(TestHarnessBuilderTest, InterceptSpecTest) {
   modular_testing::TestHarnessBuilder builder;
 
   std::string called;
-  builder.InterceptComponent([&](auto launch_info, auto handle) { called = "generic"; },
-                             {.url = "generic", .sandbox_services = {"library.Protocol"}});
-  builder.InterceptBaseShell([&](auto launch_info, auto handle) { called = "base_shell"; },
-                             {.url = "base_shell"});
-  builder.InterceptSessionShell([&](auto launch_info, auto handle) { called = "session_shell"; },
-                                {.url = "session_shell"});
-  builder.InterceptStoryShell([&](auto launch_info, auto handle) { called = "story_shell"; },
-                              {.url = "story_shell"});
+  builder.InterceptComponent(
+      {.url = "generic",
+       .sandbox_services = {"library.Protocol"},
+       .launch_handler = [&](auto launch_info, auto handle) { called = "generic"; }});
+  builder.InterceptBaseShell(
+      {.url = "base_shell",
+       .launch_handler = [&](auto launch_info, auto handle) { called = "base_shell"; }});
+  builder.InterceptSessionShell(
+      {.url = "session_shell",
+       .launch_handler = [&](auto launch_info, auto handle) { called = "session_shell"; }});
+  builder.InterceptStoryShell(
+      {.url = "story_shell",
+       .launch_handler = [&](auto launch_info, auto handle) { called = "story_shell"; }});
 
   auto [spec, new_component_handler] = TakeSpecAndHandler(&builder);
 

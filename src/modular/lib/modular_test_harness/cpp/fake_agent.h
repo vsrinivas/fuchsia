@@ -7,9 +7,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
-#include <lib/svc/cpp/service_namespace.h>
-
-#include <src/lib/fxl/logging.h>
+#include <lib/modular/cpp/agent.h>
 
 #include "src/modular/lib/modular_test_harness/cpp/fake_component.h"
 
@@ -19,24 +17,26 @@ namespace testing {
 // An Agent implementation which provides access to
 // |fuchsia::modular::AgentContext|, implements boilerplate for exposing
 // services, and exposes task running callback registration.
-class FakeAgent : public modular::testing::FakeComponent, fuchsia::modular::Agent {
+class FakeAgent : public FakeComponent {
  public:
-  // Returns a vector of services names which are expected to be provided to the
-  // agent.
-  static std::vector<std::string> GetSandboxServices();
+  explicit FakeAgent(FakeComponent::Args args);
+  ~FakeAgent() override;
 
-  FakeAgent();
+  // Instantiates a FakeAgent with a randomly generated URL, default sandbox services (see
+  // GetDefaultSandboxServices()).
+  static std::unique_ptr<FakeAgent> CreateWithDefaultOptions();
 
-  // Constructs a FakeAgent which calls |connect_callback| whenever a connection
-  // is initiated by the modular framework. |client_url| is the url of the
-  // connecting component.
-  explicit FakeAgent(fit::function<void(std::string client_url)> connect_callback);
-
-  ~FakeAgent();
+  // Returns the default list of services (capabilities) an agent expects in its namespace.
+  // This method is useful when setting up an agent for interception.
+  //
+  // Default services:
+  //  * fuchsia.modular.ComponentContext
+  //  * fuchsia.modular.AgentContext
+  static std::vector<std::string> GetDefaultSandboxServices();
 
   // Returns the agent's |fuchsia::modular::ComponentContext|.
   fuchsia::modular::ComponentContext* modular_component_context() {
-    return component_context_.get();
+    return modular_component_context_.get();
   }
 
   // Returns the agent's |fuchsia::modular::AgentContext|.
@@ -44,41 +44,19 @@ class FakeAgent : public modular::testing::FakeComponent, fuchsia::modular::Agen
 
   // Adds a service to the service namespace which is exposed to clients
   // connecting to the agent.
-  template <typename ServiceType>
-  void AddService(fidl::InterfaceRequestHandler<ServiceType> connection_handler) {
-    services_.AddService<ServiceType>(std::move(connection_handler));
+  template <typename Interface>
+  void AddAgentService(fidl::InterfaceRequestHandler<Interface> handler) {
+    agent_->AddService<Interface>(std::move(handler));
   }
-
-  // Sets a callback which will be called when a
-  // |fuchsia::modular::modular::Agent/RunTask| is received.
-  void set_on_run_task(
-      fit::function<void(std::string task_id, RunTaskCallback callback)> on_run_task);
 
  private:
   // |FakeComponent|
   void OnCreate(fuchsia::sys::StartupInfo startup_info) override;
 
-  // |fuchsia::modular::Agent|
-  void Connect(std::string requestor_url,
-               fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services_request) override;
-
-  // |fuchsia::modular::Agent|
-  void RunTask(std::string task_id, RunTaskCallback callback) override;
-
-  // The callback which is called when the modular framework tells the agent to
-  // trigger a task.
-  fit::function<void(std::string task_id, RunTaskCallback callback)> on_run_task_;
-
-  // The callback which is called when the modular framework connects to the
-  // agent.
-  fit::function<void(std::string client_url)> on_connect_;
-
-  fuchsia::modular::ComponentContextPtr component_context_;
+  fuchsia::modular::ComponentContextPtr modular_component_context_;
   fuchsia::modular::AgentContextPtr agent_context_;
 
-  fidl::BindingSet<fuchsia::modular::Agent> bindings_;
-
-  component::ServiceNamespace services_;
+  std::unique_ptr<modular::Agent> agent_;
 };
 
 }  // namespace testing

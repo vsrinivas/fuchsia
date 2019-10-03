@@ -7,45 +7,35 @@
 namespace modular {
 namespace testing {
 
-FakeAgent::FakeAgent() = default;
-
-FakeAgent::FakeAgent(fit::function<void(std::string client_url)> connect_callback)
-    : on_connect_(std::move(connect_callback)) {}
+FakeAgent::FakeAgent(FakeComponent::Args args) : FakeComponent(std::move(args)) {}
 
 FakeAgent::~FakeAgent() = default;
 
+// static
+std::unique_ptr<FakeAgent> FakeAgent::CreateWithDefaultOptions() {
+  return std::make_unique<FakeAgent>(modular::testing::FakeComponent::Args{
+      .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
+      .sandbox_services = FakeAgent::GetDefaultSandboxServices()});
+}
+
+// static
+std::vector<std::string> FakeAgent::GetDefaultSandboxServices() {
+  return {fuchsia::modular::ComponentContext::Name_, fuchsia::modular::AgentContext::Name_};
+}
+
 // |modular::testing::FakeComponent|
 void FakeAgent::OnCreate(fuchsia::sys::StartupInfo startup_info) {
-  component_context()->svc()->Connect(component_context_.NewRequest());
+  FakeComponent::OnCreate(std::move(startup_info));
+
+  component_context()->svc()->Connect(modular_component_context_.NewRequest());
   component_context()->svc()->Connect(agent_context_.NewRequest());
 
-  component_context()->outgoing()->AddPublicService<fuchsia::modular::Agent>(
-      bindings_.GetHandler(this));
-}
-
-void FakeAgent::set_on_run_task(
-    fit::function<void(std::string task_id, RunTaskCallback callback)> on_run_task) {
-  on_run_task_ = std::move(on_run_task);
-}
-
-// |fuchsia::modular::Agent|
-void FakeAgent::Connect(std::string requestor_url,
-                        fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services_request) {
-  services_.AddBinding(std::move(services_request));
-  if (on_connect_) {
-    on_connect_(requestor_url);
-  }
-}
-
-// |fuchsia::modular::Agent|
-void FakeAgent::RunTask(std::string task_id, RunTaskCallback callback) {
-  if (on_run_task_) {
-    on_run_task_(task_id, std::move(callback));
-  }
-}
-
-std::vector<std::string> FakeAgent::GetSandboxServices() {
-  return {"fuchsia.modular.ComponentContext", "fuchsia.modular.AgentContext"};
+  agent_ = std::make_unique<modular::Agent>(component_context()->outgoing(),
+                                            /* on_terminate */
+                                            [this] {
+                                              Exit(0);
+                                              // |OnDestroy| is invoked at this point.
+                                            });
 }
 
 }  // namespace testing

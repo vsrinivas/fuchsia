@@ -22,53 +22,29 @@ constexpr char kStoryName[] = "story";
 
 class StoryShellEmbeddedModTest : public modular::testing::TestHarnessFixture {
  public:
-  void SetUp() override {
-    // Listen for session shell interception
-    builder_.InterceptSessionShell(fake_session_shell_.GetOnCreateHandler(),
-                                   {.sandbox_services = {"fuchsia.modular.SessionShellContext",
-                                                         "fuchsia.modular.PuppetMaster"}});
-
-    // Listen for story shell interception
-    builder_.InterceptStoryShell(test_story_shell_.GetOnCreateHandler(),
-                                 {.sandbox_services = {"fuchsia.modular.StoryShellContext"}});
-
-    // Listen for parent module interception
-    parent_module_ =
-        std::make_unique<modular::testing::FakeModule>([](fuchsia::modular::Intent intent) {});
-    parent_module_url_ = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
-    builder_.InterceptComponent(
-        parent_module_->GetOnCreateHandler(),
-        {.url = parent_module_url_,
-         .sandbox_services = modular::testing::FakeModule::GetSandboxServices()});
-
-    // Listen for embedded module interception
-    embedded_module_ =
-        std::make_unique<modular::testing::FakeModule>([](fuchsia::modular::Intent intent) {});
-    embedded_module_url_ = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
-    builder_.InterceptComponent(
-        embedded_module_->GetOnCreateHandler(),
-        {.url = embedded_module_url_,
-         .sandbox_services = modular::testing::FakeModule::GetSandboxServices()});
-
-    // Listen for third module interception
-    third_module_ =
-        std::make_unique<modular::testing::FakeModule>([](fuchsia::modular::Intent intent) {});
-    third_module_url_ = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
-    builder_.InterceptComponent(
-        third_module_->GetOnCreateHandler(),
-        {.url = third_module_url_,
-         .sandbox_services = modular::testing::FakeModule::GetSandboxServices()});
+  StoryShellEmbeddedModTest()
+      : fake_session_shell_(modular::testing::FakeSessionShell::CreateWithDefaultOptions()),
+        test_story_shell_({.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
+                           .sandbox_services = {"fuchsia.modular.StoryShellContext"}}),
+        parent_module_(modular::testing::FakeModule::CreateWithDefaultOptions()),
+        embedded_module_(modular::testing::FakeModule::CreateWithDefaultOptions()),
+        third_module_(modular::testing::FakeModule::CreateWithDefaultOptions()) {
+    builder_.InterceptSessionShell(fake_session_shell_->BuildInterceptOptions());
+    builder_.InterceptStoryShell(test_story_shell_.BuildInterceptOptions());
+    builder_.InterceptComponent(parent_module_->BuildInterceptOptions());
+    builder_.InterceptComponent(embedded_module_->BuildInterceptOptions());
+    builder_.InterceptComponent(third_module_->BuildInterceptOptions());
 
     // Start modular
     builder_.BuildAndRun(test_harness());
 
     // Wait for session shell to start
-    RunLoopUntil([&] { return fake_session_shell_.is_running(); });
+    RunLoopUntil([&] { return fake_session_shell_->is_running(); });
   }
 
   // Launches an initial parent module.
   void LaunchParentModule() {
-    auto parent_mod_intent = fuchsia::modular::Intent{.handler = parent_module_url_};
+    auto parent_mod_intent = fuchsia::modular::Intent{.handler = parent_module_->url()};
     modular::testing::AddModToStory(test_harness(), kStoryName, kParentModuleName,
                                     std::move(parent_mod_intent));
 
@@ -77,7 +53,7 @@ class StoryShellEmbeddedModTest : public modular::testing::TestHarnessFixture {
 
   // The parent module embeds a module.
   void ParentModuleEmbedsModule() {
-    auto embedded_mod_intent = fuchsia::modular::Intent{.handler = embedded_module_url_};
+    auto embedded_mod_intent = fuchsia::modular::Intent{.handler = embedded_module_->url()};
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
     fuchsia::modular::ModuleControllerPtr module_controller;
     parent_module_->module_context()->EmbedModule(
@@ -94,7 +70,7 @@ class StoryShellEmbeddedModTest : public modular::testing::TestHarnessFixture {
   // declared to the story shell for the view of module three.
   void EmbeddedModuleLaunchesModule() {
     fuchsia::modular::ModuleControllerPtr third_module_ptr;
-    auto third_module_intent = fuchsia::modular::Intent{.handler = third_module_url_};
+    auto third_module_intent = fuchsia::modular::Intent{.handler = third_module_->url()};
     embedded_module_->module_context()->AddModuleToStory(
         kThirdModuleName, std::move(third_module_intent), third_module_ptr.NewRequest(),
         /* surface_relation */ nullptr, [](const fuchsia::modular::StartModuleStatus) {});
@@ -102,15 +78,12 @@ class StoryShellEmbeddedModTest : public modular::testing::TestHarnessFixture {
     RunLoopUntil([&] { return third_module_->is_running(); });
   }
 
-  modular::testing::FakeSessionShell fake_session_shell_;
+  std::unique_ptr<modular::testing::FakeSessionShell> fake_session_shell_;
   modular::testing::FakeStoryShell test_story_shell_;
   std::unique_ptr<modular::testing::FakeModule> parent_module_;
   std::unique_ptr<modular::testing::FakeModule> embedded_module_;
   std::unique_ptr<modular::testing::FakeModule> third_module_;
   modular_testing::TestHarnessBuilder builder_;
-  std::string parent_module_url_;
-  std::string embedded_module_url_;
-  std::string third_module_url_;
 };
 
 }  // namespace
@@ -147,7 +120,7 @@ TEST_F(StoryShellEmbeddedModTest, ReinflateModules) {
   EmbeddedModuleLaunchesModule();
 
   fuchsia::modular::StoryControllerPtr story_controller;
-  fake_session_shell_.story_provider()->GetController(kStoryName, story_controller.NewRequest());
+  fake_session_shell_->story_provider()->GetController(kStoryName, story_controller.NewRequest());
   bool modules_reinflated_correctly{false};
 
   // Stop and restart the story

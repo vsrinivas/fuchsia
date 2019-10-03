@@ -7,6 +7,8 @@
 namespace modular {
 namespace testing {
 
+FakeStoryShell::FakeStoryShell(FakeComponent::Args args) : FakeComponent(std::move(args)) {}
+
 void FakeStoryShell::OnCreate(fuchsia::sys::StartupInfo startup_info) {
   component_context()->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }

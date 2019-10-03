@@ -17,20 +17,19 @@ namespace testing {
 // EXAMPLE USAGE (see test_harness_fixture.h for more details on how to use the
 // test harness):
 //
-// modular::testing::FakeStoryShell fake_story_shell;
-// modular_testing::TestHarnessBuilder builder;
-// builder.InterceptSessionShell(fake_story_shell.GetOnCreateHandler(),
-//                               {.sandbox_services = {
-//                                    "fuchsia.modular.StoryShellContext"}});
+// modular::testing::FakeStoryShell fake_story_shell(
+//    {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
+//     .sandbox_services = {"fuchsia.modular.StoryShellContext"}});
 //
-// test_harness().events().OnNewComponent =
-//     builder.BuildOnNewComponentHandler();
+// modular_testing::TestHarnessBuilder builder;
+// builder.InterceptSessionShell(fake_story_shell.BuildInterceptOptions());
 // builder.BuildAndRun(test_harness()));
 //
 // // Wait for the session shell to be intercepted.
 // RunLoopUntil([&] { return fake_story_shell.is_running(); });
 class FakeStoryShell : public modular::testing::FakeComponent, fuchsia::modular::StoryShell {
  public:
+  explicit FakeStoryShell(FakeComponent::Args args);
   ~FakeStoryShell() override = default;
 
   bool is_initialized() const { return !!story_shell_context_; }

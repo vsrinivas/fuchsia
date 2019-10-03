@@ -32,27 +32,35 @@ std::unique_ptr<sys::ComponentContext> CreateComponentContext(
 }
 }  // namespace
 
+FakeComponent::FakeComponent(Args args) : args_(std::move(args)) {}
 FakeComponent::~FakeComponent() = default;
 
-modular_testing::TestHarnessBuilder::OnNewComponentHandler FakeComponent::GetOnCreateHandler(
+modular_testing::TestHarnessBuilder::InterceptOptions FakeComponent::BuildInterceptOptions(
     async_dispatcher_t* dispatcher) {
-  return [this, dispatcher](fuchsia::sys::StartupInfo startup_info,
-                            fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-                                intercepted_component) {
-    intercepted_component_ptr_.Bind(std::move(intercepted_component), dispatcher);
-    intercepted_component_ptr_.events().OnKill = [this] {
-      component_context_.reset();
-      OnDestroy();
-    };
+  modular_testing::TestHarnessBuilder::InterceptOptions options;
+  options.url = args_.url;
+  options.sandbox_services = args_.sandbox_services;
+  options.launch_handler =
+      [this, dispatcher](fuchsia::sys::StartupInfo startup_info,
+                         fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
+                             intercepted_component) {
+        intercepted_component_ptr_.Bind(std::move(intercepted_component), dispatcher);
+        intercepted_component_ptr_.events().OnKill = [this] {
+          component_context_.reset();
+          OnDestroy();
+        };
 
-    component_context_ = CreateComponentContext(&startup_info, dispatcher);
-    component_context_->outgoing()->AddPublicService(
-        lifecycle_bindings_.GetHandler(this, dispatcher));
+        component_context_ = CreateComponentContext(&startup_info, dispatcher);
+        component_context_->outgoing()->AddPublicService(
+            lifecycle_bindings_.GetHandler(this, dispatcher));
 
-    OnCreate(std::move(startup_info));
-  };
+        OnCreate(std::move(startup_info));
+      };
+
+  return options;
 }
 
+std::string FakeComponent::url() const { return args_.url; }
 bool FakeComponent::is_running() const { return !!component_context_; }
 
 sys::ComponentContext* FakeComponent::component_context() { return component_context_.get(); }

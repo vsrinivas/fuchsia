@@ -24,19 +24,17 @@ constexpr char kIntentAction[] = "action";
 
 class IntentsTest : public modular::testing::TestHarnessFixture {
  protected:
-  void SetUp() override {
-    number_of_intents_handled_ = 0;
-    test_module_ =
-        std::make_unique<modular::testing::FakeModule>([this](fuchsia::modular::Intent intent) {
-          latest_handled_intent_ = std::move(intent);
-          number_of_intents_handled_++;
-        });
-    test_module_url_ = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
-    builder_.InterceptComponent(
-        test_module_->GetOnCreateHandler(),
-        {.url = test_module_url_,
-         .sandbox_services = modular::testing::FakeModule::GetSandboxServices()});
-
+  IntentsTest()
+      : number_of_intents_handled_(0),
+        test_module_(
+            modular::testing::FakeComponent::Args{
+                .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
+                .sandbox_services = modular::testing::FakeModule::GetDefaultSandboxServices()},
+            [this](fuchsia::modular::Intent intent) {
+              latest_handled_intent_ = std::move(intent);
+              number_of_intents_handled_++;
+            }) {
+    builder_.InterceptComponent(test_module_.BuildInterceptOptions());
     builder_.BuildAndRun(test_harness());
   }
 
@@ -90,9 +88,8 @@ class IntentsTest : public modular::testing::TestHarnessFixture {
   }
 
   int number_of_intents_handled_;
-  std::unique_ptr<modular::testing::FakeModule> test_module_;
+  modular::testing::FakeModule test_module_;
   modular_testing::TestHarnessBuilder builder_;
-  std::string test_module_url_;
   fuchsia::modular::Intent latest_handled_intent_;
 };
 
@@ -101,11 +98,11 @@ class IntentsTest : public modular::testing::TestHarnessFixture {
 TEST_F(IntentsTest, ModuleUsesIntentHandler) {
   // Launch initial module
   auto initial_module_intent =
-      CreateIntent(test_module_url_, kIntentParameterName, kInitialIntentParameterData);
+      CreateIntent(test_module_.url(), kIntentParameterName, kInitialIntentParameterData);
   modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName,
                                   std::move(initial_module_intent));
   RunLoopUntil([&] { return number_of_intents_handled_ == 1; });
-  ASSERT_TRUE(test_module_->is_running());
+  ASSERT_TRUE(test_module_.is_running());
 
   // Check that the intent handler received the intent
   EXPECT_TRUE(IntentMatchesExpectations(&latest_handled_intent_, kIntentParameterName,
@@ -118,11 +115,11 @@ TEST_F(IntentsTest, ModuleUsesIntentHandler) {
 TEST_F(IntentsTest, ReuseIntentHandlerSameParamName) {
   // Launch initial module
   auto initial_module_intent =
-      CreateIntent(test_module_url_, kIntentParameterName, kInitialIntentParameterData);
+      CreateIntent(test_module_.url(), kIntentParameterName, kInitialIntentParameterData);
   modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName,
                                   std::move(initial_module_intent));
   RunLoopUntil([&] { return number_of_intents_handled_ == 1; });
-  ASSERT_TRUE(test_module_->is_running());
+  ASSERT_TRUE(test_module_.is_running());
 
   // Launch second module using first module's |module_context|
   fuchsia::modular::ModuleControllerPtr second_module_controller;
@@ -130,8 +127,8 @@ TEST_F(IntentsTest, ReuseIntentHandlerSameParamName) {
 
   // Use different param data
   auto second_module_param_data = "\"second_module_param_data\"";
-  AddModuleToStory(test_module_->module_context(),
-                   CreateIntent(test_module_url_, kIntentParameterName, second_module_param_data),
+  AddModuleToStory(test_module_.module_context(),
+                   CreateIntent(test_module_.url(), kIntentParameterName, second_module_param_data),
                    second_module_controller.NewRequest(), &module_started);
 
   RunLoopUntil([&] { return number_of_intents_handled_ == 2; });
@@ -146,11 +143,11 @@ TEST_F(IntentsTest, ReuseIntentHandlerSameParamName) {
 TEST_F(IntentsTest, ReuseIntentHandlerDifferentParam) {
   // Launch initial module
   auto initial_module_intent =
-      CreateIntent(test_module_url_, kIntentParameterName, kInitialIntentParameterData);
+      CreateIntent(test_module_.url(), kIntentParameterName, kInitialIntentParameterData);
   modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName,
                                   std::move(initial_module_intent));
   RunLoopUntil([&] { return number_of_intents_handled_ == 1; });
-  ASSERT_TRUE(test_module_->is_running());
+  ASSERT_TRUE(test_module_.is_running());
 
   // Launch second module using first module's |module_context|
   fuchsia::modular::ModuleControllerPtr second_module_controller;
@@ -160,8 +157,8 @@ TEST_F(IntentsTest, ReuseIntentHandlerDifferentParam) {
   auto second_module_param_name = "second_param_name";
   auto second_module_param_data = "\"second_module_param_data\"";
   AddModuleToStory(
-      test_module_->module_context(),
-      CreateIntent(test_module_url_, second_module_param_name, second_module_param_data),
+      test_module_.module_context(),
+      CreateIntent(test_module_.url(), second_module_param_name, second_module_param_data),
       second_module_controller.NewRequest(), &module_started);
 
   RunLoopUntil([&] { return number_of_intents_handled_ == 2; });
@@ -176,11 +173,11 @@ TEST_F(IntentsTest, ReuseIntentHandlerDifferentParam) {
 TEST_F(IntentsTest, DifferentHandler) {
   // Launch initial module
   auto initial_module_intent =
-      CreateIntent(test_module_url_, kIntentParameterName, kInitialIntentParameterData);
+      CreateIntent(test_module_.url(), kIntentParameterName, kInitialIntentParameterData);
   modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName,
                                   std::move(initial_module_intent));
   RunLoopUntil([&] { return number_of_intents_handled_ == 1; });
-  ASSERT_TRUE(test_module_->is_running());
+  ASSERT_TRUE(test_module_.is_running());
 
   // Launch second module using first module's |module_context|
   fuchsia::modular::ModuleControllerPtr second_module_controller;
@@ -192,7 +189,7 @@ TEST_F(IntentsTest, DifferentHandler) {
   auto different_intent_param_data = "\"different_param_data\"";
   auto different_intent =
       CreateIntent(different_module_url, different_intent_param_name, different_intent_param_data);
-  AddModuleToStory(test_module_->module_context(), std::move(different_intent),
+  AddModuleToStory(test_module_.module_context(), std::move(different_intent),
                    second_module_controller.NewRequest(), &module_started);
 
   RunLoopUntil([&] { return module_started; });

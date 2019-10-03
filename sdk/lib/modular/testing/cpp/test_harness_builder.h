@@ -32,12 +32,10 @@ namespace modular_testing {
 //   // Instruct the test harness to intercept the launch of a new component
 //   // within the test harness environment. Specify that the component should
 //   // include foo.Service within its component manifest.
-//   auto component_url = GenerateFakeUrl();
-//   modular::testing::FakeComponent component;
-//   builder.InterceptComponent(
-//      component.GetOnCreateHandler(),
-//      {.url = component_url,
-//       .sandbox_services = {"foo.Service"}});
+//   modular::testing::FakeComponent component(
+//       {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
+//        .sandbox_services = {"foo.Service"}});
+//   builder.InterceptComponent(component.BuildInterceptOptions());
 //
 //   // Start an instance of the modular runtime in the test harness
 //   // environment. As soon as |component_url| is created in
@@ -54,11 +52,16 @@ namespace modular_testing {
 // }
 class TestHarnessBuilder final {
  public:
+  using LaunchHandler =
+      fit::function<void(fuchsia::sys::StartupInfo startup_info,
+                         fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
+                             intercepted_component)>;
+
   struct InterceptOptions {
     // The URL of the component to intercept. Use GenerateFakeUrl() to create a
     // random valid URL.
     //
-    // Optional: if not provided, a URL is generated using GenerateFakeUrl().
+    // Required: Must not be empty.
     std::string url;
 
     // A list of service names to populate the component's manifest
@@ -66,12 +69,12 @@ class TestHarnessBuilder final {
     //
     // Optional.
     std::vector<std::string> sandbox_services;
-  };
 
-  using OnNewComponentHandler =
-      fit::function<void(fuchsia::sys::StartupInfo startup_info,
-                         fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-                             intercepted_component)>;
+    // Called when this component is launched.
+    //
+    // Required.
+    LaunchHandler launch_handler;
+  };
 
   // Builds on top of an empty |fuchsia.modular.testing.TestHarnessSpec|.
   TestHarnessBuilder();
@@ -92,26 +95,24 @@ class TestHarnessBuilder final {
   // Can only be called once.
   void BuildAndRun(const fuchsia::modular::testing::TestHarnessPtr& test_harness);
 
-  // Amends the TestHarnessSpec to include interception instructions based on
-  // |options| and stores |on_create| for use in the router function created
-  // through BuildOnNewComponentHandler().
-  TestHarnessBuilder& InterceptComponent(OnNewComponentHandler on_new_component,
-                                         InterceptOptions options = InterceptOptions());
+  // Amends the TestHarnessSpec to include interception instructions specified by
+  // |options|.
+  TestHarnessBuilder& InterceptComponent(InterceptOptions options);
 
   // Convenience variant of InterceptComponent() which sets the base shell URL
   // in the ModularConfig to |options.url|.
-  TestHarnessBuilder& InterceptBaseShell(OnNewComponentHandler on_new_component,
-                                         InterceptOptions options = InterceptOptions());
+  TestHarnessBuilder& InterceptBaseShell(InterceptOptions options);
+
+  // DEPRECATED.  Please use the variant above.
+  [[deprecated]] TestHarnessBuilder& InterceptBaseShell(LaunchHandler, InterceptOptions options);
 
   // Convenience variant of InterceptComponent() which adds a session shell URL
   // to the ModularConfig for |options.url|.
-  TestHarnessBuilder& InterceptSessionShell(OnNewComponentHandler on_new_component,
-                                            InterceptOptions options = InterceptOptions());
+  TestHarnessBuilder& InterceptSessionShell(InterceptOptions options);
 
   // Convenience variant of InterceptComponent() which sets the story shell URL
   // in the ModularConfig to |options.url|.
-  TestHarnessBuilder& InterceptStoryShell(OnNewComponentHandler on_new_component,
-                                          InterceptOptions options = InterceptOptions());
+  TestHarnessBuilder& InterceptStoryShell(InterceptOptions options);
 
   // Make a service named |service_name| available in the test harness
   // environment. |connector| is called every time a client requests to
@@ -181,13 +182,13 @@ class TestHarnessBuilder final {
   // TestHarness.events.OnNewComponent
   //
   // Can only be called once.
-  OnNewComponentHandler BuildOnNewComponentHandler();
+  LaunchHandler BuildOnNewComponentHandler();
 
   fuchsia::modular::testing::TestHarnessSpec spec_;
 
   // Map from url to handler to be called when that url's component
   // is created and intercepted.
-  std::map<std::string, OnNewComponentHandler> handlers_;
+  std::map<std::string, LaunchHandler> handlers_;
 
   // Hosts services injected using AddService() and InheritService().
   std::unique_ptr<vfs::PseudoDir> env_services_;
