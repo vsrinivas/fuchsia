@@ -1222,6 +1222,7 @@ class Control final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -1234,13 +1235,15 @@ class Control final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Clone Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -1253,7 +1256,8 @@ class Control final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Clone Clone(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -1420,6 +1424,7 @@ class Control final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -1432,13 +1437,15 @@ class Control final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Clone Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -1451,7 +1458,8 @@ class Control final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Clone Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -1617,6 +1625,7 @@ class Control final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -1629,7 +1638,8 @@ class Control final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     static ::fidl::internal::StatusAndError Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
 
     // Terminates connection with object.

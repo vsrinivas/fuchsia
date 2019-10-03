@@ -68,22 +68,22 @@ struct WatchedEvent {
   ::fidl::VectorView<uint8_t> name = {};
 };
 
-// Used by Directory::Watch. Requests transmission of `WATCH_EVENT_REMOVED`.
+// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_REMOVED`.
 constexpr uint32_t WATCH_MASK_REMOVED = 4u;
 
-// Used by Directory::Watch. Requests transmission of `WATCH_EVENT_IDLE`.
+// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_IDLE`.
 constexpr uint32_t WATCH_MASK_IDLE = 16u;
 
-// Used by Directory::Watch. Requests transmission of `WATCH_EVENT_EXISTING`.
+// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_EXISTING`.
 constexpr uint32_t WATCH_MASK_EXISTING = 8u;
 
-// Used by Directory::Watch. Requests transmission of `WATCH_EVENT_DELETED`.
+// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_DELETED`.
 constexpr uint32_t WATCH_MASK_DELETED = 1u;
 
-// Used by Directory::Watch. Requests transmission of all watcher events.
+// Used by `Directory.Watch`. Requests transmission of all watcher events.
 constexpr uint32_t WATCH_MASK_ALL = 31u;
 
-// Used by Directory::Watch. Requests transmission of `WATCH_EVENT_ADDED`.
+// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_ADDED`.
 constexpr uint32_t WATCH_MASK_ADDED = 2u;
 
 // Identifies a node has been removed (either deleted or moved) from the directory.
@@ -160,7 +160,7 @@ extern "C" const fidl_type_t fuchsia_io_DirectoryWatcherOnEventRequestTable;
 
 // DirectoryWatcher transmits messages from a filesystem server
 // about events happening in the filesystem. Clients can register
-// new watchers using the Directory "Watch" method, where they can
+// new watchers using the `Directory.Watch` method, where they can
 // filter which events they want to receive notifications for.
 class DirectoryWatcher final {
   DirectoryWatcher() = delete;
@@ -595,7 +595,7 @@ extern "C" const fidl_type_t fuchsia_io_NodeInfoTable;
 // Describes how the connection to an should be handled, as well as
 // how to interpret the optional handle.
 //
-// Refer to `Node::Describe()` and `Node::OnOpen()` for usage.
+// Refer to `Node.Describe()` and `Node.OnOpen()` for usage.
 struct NodeInfo {
   enum class Tag : fidl_union_tag_t {
     kService = 0,
@@ -1286,6 +1286,7 @@ class Node final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -1298,13 +1299,15 @@ class Node final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Clone Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -1317,7 +1320,8 @@ class Node final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Clone Clone(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -1410,6 +1414,7 @@ class Node final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -1422,13 +1427,15 @@ class Node final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Clone Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -1441,7 +1448,8 @@ class Node final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Clone Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -1533,6 +1541,7 @@ class Node final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -1545,7 +1554,8 @@ class Node final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     static ::fidl::internal::StatusAndError Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
 
     // Terminates connection with object.
@@ -2730,6 +2740,7 @@ class File final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -2742,13 +2753,15 @@ class File final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Clone Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -2761,7 +2774,8 @@ class File final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Clone Clone(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -2837,28 +2851,28 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Ioctl Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
 
-    // Reads 'count' bytes at the seek offset.
+    // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::Read Read(uint64_t count);
 
-    // Reads 'count' bytes at the seek offset.
+    // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Read Read(::fidl::BytePart _request_buffer, uint64_t count, ::fidl::BytePart _response_buffer);
 
-    // Reads 'count' bytes at the provided offset.
+    // Reads `count` bytes at the provided offset.
     // Does not affect the seek offset.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::ReadAt ReadAt(uint64_t count, uint64_t offset);
 
-    // Reads 'count' bytes at the provided offset.
+    // Reads `count` bytes at the provided offset.
     // Does not affect the seek offset.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
@@ -2919,19 +2933,19 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Truncate Truncate(::fidl::BytePart _request_buffer, uint64_t length, ::fidl::BytePart _response_buffer);
 
-    // Acquires the Directory::Open rights and flags used to access this file.
+    // Acquires the `Directory.Open` rights and flags used to access this file.
     //
     // This method does not require any rights.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetFlags GetFlags();
 
-    // Acquires the Directory::Open rights and flags used to access this file.
+    // Acquires the `Directory.Open` rights and flags used to access this file.
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetFlags GetFlags(::fidl::BytePart _response_buffer);
 
-    // Changes the Directory::Open flags used to access the file.
+    // Changes the `Directory.Open` flags used to access the file.
     // Supported flags which can be turned on / off:
     // - `OPEN_FLAG_APPEND`
     //
@@ -2939,7 +2953,7 @@ class File final {
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetFlags SetFlags(uint32_t flags);
 
-    // Changes the Directory::Open flags used to access the file.
+    // Changes the `Directory.Open` flags used to access the file.
     // Supported flags which can be turned on / off:
     // - `OPEN_FLAG_APPEND`
     //
@@ -2953,6 +2967,7 @@ class File final {
     // `flags` may be any of `VMO_FLAG_*`.
     //
     // This method requires following rights:
+    //
     // - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
     // - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
@@ -2964,6 +2979,7 @@ class File final {
     // `flags` may be any of `VMO_FLAG_*`.
     //
     // This method requires following rights:
+    //
     // - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
     // - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -2986,6 +3002,7 @@ class File final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -2998,13 +3015,15 @@ class File final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Clone Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -3017,7 +3036,8 @@ class File final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Clone Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -3093,28 +3113,28 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
 
-    // Reads 'count' bytes at the seek offset.
+    // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::Read Read(zx::unowned_channel _client_end, uint64_t count);
 
-    // Reads 'count' bytes at the seek offset.
+    // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Read Read(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t count, ::fidl::BytePart _response_buffer);
 
-    // Reads 'count' bytes at the provided offset.
+    // Reads `count` bytes at the provided offset.
     // Does not affect the seek offset.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::ReadAt ReadAt(zx::unowned_channel _client_end, uint64_t count, uint64_t offset);
 
-    // Reads 'count' bytes at the provided offset.
+    // Reads `count` bytes at the provided offset.
     // Does not affect the seek offset.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
@@ -3175,19 +3195,19 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Truncate Truncate(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t length, ::fidl::BytePart _response_buffer);
 
-    // Acquires the Directory::Open rights and flags used to access this file.
+    // Acquires the `Directory.Open` rights and flags used to access this file.
     //
     // This method does not require any rights.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetFlags GetFlags(zx::unowned_channel _client_end);
 
-    // Acquires the Directory::Open rights and flags used to access this file.
+    // Acquires the `Directory.Open` rights and flags used to access this file.
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetFlags GetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Changes the Directory::Open flags used to access the file.
+    // Changes the `Directory.Open` flags used to access the file.
     // Supported flags which can be turned on / off:
     // - `OPEN_FLAG_APPEND`
     //
@@ -3195,7 +3215,7 @@ class File final {
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetFlags SetFlags(zx::unowned_channel _client_end, uint32_t flags);
 
-    // Changes the Directory::Open flags used to access the file.
+    // Changes the `Directory.Open` flags used to access the file.
     // Supported flags which can be turned on / off:
     // - `OPEN_FLAG_APPEND`
     //
@@ -3209,6 +3229,7 @@ class File final {
     // `flags` may be any of `VMO_FLAG_*`.
     //
     // This method requires following rights:
+    //
     // - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
     // - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
@@ -3220,6 +3241,7 @@ class File final {
     // `flags` may be any of `VMO_FLAG_*`.
     //
     // This method requires following rights:
+    //
     // - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
     // - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -3241,6 +3263,7 @@ class File final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -3253,7 +3276,8 @@ class File final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     static ::fidl::internal::StatusAndError Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
 
     // Terminates connection with object.
@@ -3286,13 +3310,13 @@ class File final {
     // Deprecated. Only for use with compatibility with devhost.
     static ::fidl::DecodeResult<IoctlResponse> Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
 
-    // Reads 'count' bytes at the seek offset.
+    // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
     static ::fidl::DecodeResult<ReadResponse> Read(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer);
 
-    // Reads 'count' bytes at the provided offset.
+    // Reads `count` bytes at the provided offset.
     // Does not affect the seek offset.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
@@ -3321,12 +3345,12 @@ class File final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<TruncateResponse> Truncate(zx::unowned_channel _client_end, ::fidl::DecodedMessage<TruncateRequest> params, ::fidl::BytePart response_buffer);
 
-    // Acquires the Directory::Open rights and flags used to access this file.
+    // Acquires the `Directory.Open` rights and flags used to access this file.
     //
     // This method does not require any rights.
     static ::fidl::DecodeResult<GetFlagsResponse> GetFlags(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    // Changes the Directory::Open flags used to access the file.
+    // Changes the `Directory.Open` flags used to access the file.
     // Supported flags which can be turned on / off:
     // - `OPEN_FLAG_APPEND`
     //
@@ -3339,6 +3363,7 @@ class File final {
     // `flags` may be any of `VMO_FLAG_*`.
     //
     // This method requires following rights:
+    //
     // - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
     // - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
     static ::fidl::DecodeResult<GetBufferResponse> GetBuffer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetBufferRequest> params, ::fidl::BytePart response_buffer);
@@ -4522,6 +4547,7 @@ class Directory final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -4534,13 +4560,15 @@ class Directory final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Clone Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -4553,7 +4581,8 @@ class Directory final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Clone Clone(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -4632,7 +4661,7 @@ class Directory final {
     // Opens a new object relative to this directory object.
     //
     // `path` may contain multiple segments, separated by "/" characters,
-    // and should never be empty i.e. "" is an invalid path.
+    // and should never be empty; i.e., "" is an invalid path.
     //
     // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
     // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
@@ -4641,8 +4670,8 @@ class Directory final {
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
-    // which will be connected to the opened entity.
+    // `OPEN_RIGHT_*` flags provided in `flags` will restrict access rights on
+    // the `object` channel which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
@@ -4657,7 +4686,7 @@ class Directory final {
     // Opens a new object relative to this directory object.
     //
     // `path` may contain multiple segments, separated by "/" characters,
-    // and should never be empty i.e. "" is an invalid path.
+    // and should never be empty; i.e., "" is an invalid path.
     //
     // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
     // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
@@ -4666,8 +4695,8 @@ class Directory final {
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
-    // which will be connected to the opened entity.
+    // `OPEN_RIGHT_*` flags provided in `flags` will restrict access rights on
+    // the `object` channel which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
@@ -4745,17 +4774,19 @@ class Directory final {
     // offset which is updated on subsequent calls to ReadDirents.
     //
     // These dirents are of the form:
+    // ```
     // struct dirent {
     //   // Describes the inode of the entry.
     //   uint64 ino;
-    //   // Describes the length of the dirent name.
+    //   // Describes the length of the dirent name in bytes.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
+    //   // POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
     // }
+    // ```
     //
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
@@ -4768,17 +4799,19 @@ class Directory final {
     // offset which is updated on subsequent calls to ReadDirents.
     //
     // These dirents are of the form:
+    // ```
     // struct dirent {
     //   // Describes the inode of the entry.
     //   uint64 ino;
-    //   // Describes the length of the dirent name.
+    //   // Describes the length of the dirent name in bytes.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
+    //   // POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
     // }
+    // ```
     //
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
@@ -4862,15 +4895,17 @@ class Directory final {
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
     //
-    // The "watcher" handle will send messages of the form:
+    // The `watcher` handle will send messages of the form:
+    // ```
     // struct {
     //   uint8 event;
     //   uint8 len;
     //   char name[];
     // };
+    // ```
     // Where names are NOT null-terminated.
     //
-    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable; in the future, watcher will be a `DirectoryWatcher` client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -4882,15 +4917,17 @@ class Directory final {
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
     //
-    // The "watcher" handle will send messages of the form:
+    // The `watcher` handle will send messages of the form:
+    // ```
     // struct {
     //   uint8 event;
     //   uint8 len;
     //   char name[];
     // };
+    // ```
     // Where names are NOT null-terminated.
     //
-    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable; in the future, watcher will be a `DirectoryWatcher` client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -4916,6 +4953,7 @@ class Directory final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -4928,13 +4966,15 @@ class Directory final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Clone Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -4947,7 +4987,8 @@ class Directory final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Clone Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -5026,7 +5067,7 @@ class Directory final {
     // Opens a new object relative to this directory object.
     //
     // `path` may contain multiple segments, separated by "/" characters,
-    // and should never be empty i.e. "" is an invalid path.
+    // and should never be empty; i.e., "" is an invalid path.
     //
     // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
     // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
@@ -5035,8 +5076,8 @@ class Directory final {
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
-    // which will be connected to the opened entity.
+    // `OPEN_RIGHT_*` flags provided in `flags` will restrict access rights on
+    // the `object` channel which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
@@ -5051,7 +5092,7 @@ class Directory final {
     // Opens a new object relative to this directory object.
     //
     // `path` may contain multiple segments, separated by "/" characters,
-    // and should never be empty i.e. "" is an invalid path.
+    // and should never be empty; i.e., "" is an invalid path.
     //
     // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
     // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
@@ -5060,8 +5101,8 @@ class Directory final {
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
-    // which will be connected to the opened entity.
+    // `OPEN_RIGHT_*` flags provided in `flags` will restrict access rights on
+    // the `object` channel which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
@@ -5139,17 +5180,19 @@ class Directory final {
     // offset which is updated on subsequent calls to ReadDirents.
     //
     // These dirents are of the form:
+    // ```
     // struct dirent {
     //   // Describes the inode of the entry.
     //   uint64 ino;
-    //   // Describes the length of the dirent name.
+    //   // Describes the length of the dirent name in bytes.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
+    //   // POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
     // }
+    // ```
     //
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
@@ -5162,17 +5205,19 @@ class Directory final {
     // offset which is updated on subsequent calls to ReadDirents.
     //
     // These dirents are of the form:
+    // ```
     // struct dirent {
     //   // Describes the inode of the entry.
     //   uint64 ino;
-    //   // Describes the length of the dirent name.
+    //   // Describes the length of the dirent name in bytes.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
+    //   // POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
     // }
+    // ```
     //
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
@@ -5256,15 +5301,17 @@ class Directory final {
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
     //
-    // The "watcher" handle will send messages of the form:
+    // The `watcher` handle will send messages of the form:
+    // ```
     // struct {
     //   uint8 event;
     //   uint8 len;
     //   char name[];
     // };
+    // ```
     // Where names are NOT null-terminated.
     //
-    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable; in the future, watcher will be a `DirectoryWatcher` client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -5276,15 +5323,17 @@ class Directory final {
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
     //
-    // The "watcher" handle will send messages of the form:
+    // The `watcher` handle will send messages of the form:
+    // ```
     // struct {
     //   uint8 event;
     //   uint8 len;
     //   char name[];
     // };
+    // ```
     // Where names are NOT null-terminated.
     //
-    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable; in the future, watcher will be a `DirectoryWatcher` client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -5309,6 +5358,7 @@ class Directory final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -5321,7 +5371,8 @@ class Directory final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     static ::fidl::internal::StatusAndError Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
 
     // Terminates connection with object.
@@ -5357,7 +5408,7 @@ class Directory final {
     // Opens a new object relative to this directory object.
     //
     // `path` may contain multiple segments, separated by "/" characters,
-    // and should never be empty i.e. "" is an invalid path.
+    // and should never be empty; i.e., "" is an invalid path.
     //
     // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
     // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
@@ -5366,8 +5417,8 @@ class Directory final {
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
-    // which will be connected to the opened entity.
+    // `OPEN_RIGHT_*` flags provided in `flags` will restrict access rights on
+    // the `object` channel which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
@@ -5413,17 +5464,19 @@ class Directory final {
     // offset which is updated on subsequent calls to ReadDirents.
     //
     // These dirents are of the form:
+    // ```
     // struct dirent {
     //   // Describes the inode of the entry.
     //   uint64 ino;
-    //   // Describes the length of the dirent name.
+    //   // Describes the length of the dirent name in bytes.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
+    //   // POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
     // }
+    // ```
     //
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
@@ -5465,15 +5518,17 @@ class Directory final {
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
     //
-    // The "watcher" handle will send messages of the form:
+    // The `watcher` handle will send messages of the form:
+    // ```
     // struct {
     //   uint8 event;
     //   uint8 len;
     //   char name[];
     // };
+    // ```
     // Where names are NOT null-terminated.
     //
-    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable; in the future, watcher will be a `DirectoryWatcher` client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -6970,6 +7025,7 @@ class DirectoryAdmin final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -6982,13 +7038,15 @@ class DirectoryAdmin final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Clone Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -7001,7 +7059,8 @@ class DirectoryAdmin final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Clone Clone(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -7080,7 +7139,7 @@ class DirectoryAdmin final {
     // Opens a new object relative to this directory object.
     //
     // `path` may contain multiple segments, separated by "/" characters,
-    // and should never be empty i.e. "" is an invalid path.
+    // and should never be empty; i.e., "" is an invalid path.
     //
     // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
     // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
@@ -7089,8 +7148,8 @@ class DirectoryAdmin final {
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
-    // which will be connected to the opened entity.
+    // `OPEN_RIGHT_*` flags provided in `flags` will restrict access rights on
+    // the `object` channel which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
@@ -7105,7 +7164,7 @@ class DirectoryAdmin final {
     // Opens a new object relative to this directory object.
     //
     // `path` may contain multiple segments, separated by "/" characters,
-    // and should never be empty i.e. "" is an invalid path.
+    // and should never be empty; i.e., "" is an invalid path.
     //
     // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
     // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
@@ -7114,8 +7173,8 @@ class DirectoryAdmin final {
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
-    // which will be connected to the opened entity.
+    // `OPEN_RIGHT_*` flags provided in `flags` will restrict access rights on
+    // the `object` channel which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
@@ -7193,17 +7252,19 @@ class DirectoryAdmin final {
     // offset which is updated on subsequent calls to ReadDirents.
     //
     // These dirents are of the form:
+    // ```
     // struct dirent {
     //   // Describes the inode of the entry.
     //   uint64 ino;
-    //   // Describes the length of the dirent name.
+    //   // Describes the length of the dirent name in bytes.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
+    //   // POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
     // }
+    // ```
     //
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
@@ -7216,17 +7277,19 @@ class DirectoryAdmin final {
     // offset which is updated on subsequent calls to ReadDirents.
     //
     // These dirents are of the form:
+    // ```
     // struct dirent {
     //   // Describes the inode of the entry.
     //   uint64 ino;
-    //   // Describes the length of the dirent name.
+    //   // Describes the length of the dirent name in bytes.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
+    //   // POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
     // }
+    // ```
     //
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
@@ -7310,15 +7373,17 @@ class DirectoryAdmin final {
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
     //
-    // The "watcher" handle will send messages of the form:
+    // The `watcher` handle will send messages of the form:
+    // ```
     // struct {
     //   uint8 event;
     //   uint8 len;
     //   char name[];
     // };
+    // ```
     // Where names are NOT null-terminated.
     //
-    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable; in the future, watcher will be a `DirectoryWatcher` client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -7330,15 +7395,17 @@ class DirectoryAdmin final {
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
     //
-    // The "watcher" handle will send messages of the form:
+    // The `watcher` handle will send messages of the form:
+    // ```
     // struct {
     //   uint8 event;
     //   uint8 len;
     //   char name[];
     // };
+    // ```
     // Where names are NOT null-terminated.
     //
-    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable; in the future, watcher will be a `DirectoryWatcher` client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -7424,6 +7491,7 @@ class DirectoryAdmin final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -7436,13 +7504,15 @@ class DirectoryAdmin final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Clone Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -7455,7 +7525,8 @@ class DirectoryAdmin final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Clone Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -7534,7 +7605,7 @@ class DirectoryAdmin final {
     // Opens a new object relative to this directory object.
     //
     // `path` may contain multiple segments, separated by "/" characters,
-    // and should never be empty i.e. "" is an invalid path.
+    // and should never be empty; i.e., "" is an invalid path.
     //
     // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
     // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
@@ -7543,8 +7614,8 @@ class DirectoryAdmin final {
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
-    // which will be connected to the opened entity.
+    // `OPEN_RIGHT_*` flags provided in `flags` will restrict access rights on
+    // the `object` channel which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
@@ -7559,7 +7630,7 @@ class DirectoryAdmin final {
     // Opens a new object relative to this directory object.
     //
     // `path` may contain multiple segments, separated by "/" characters,
-    // and should never be empty i.e. "" is an invalid path.
+    // and should never be empty; i.e., "" is an invalid path.
     //
     // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
     // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
@@ -7568,8 +7639,8 @@ class DirectoryAdmin final {
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
-    // which will be connected to the opened entity.
+    // `OPEN_RIGHT_*` flags provided in `flags` will restrict access rights on
+    // the `object` channel which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
@@ -7647,17 +7718,19 @@ class DirectoryAdmin final {
     // offset which is updated on subsequent calls to ReadDirents.
     //
     // These dirents are of the form:
+    // ```
     // struct dirent {
     //   // Describes the inode of the entry.
     //   uint64 ino;
-    //   // Describes the length of the dirent name.
+    //   // Describes the length of the dirent name in bytes.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
+    //   // POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
     // }
+    // ```
     //
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
@@ -7670,17 +7743,19 @@ class DirectoryAdmin final {
     // offset which is updated on subsequent calls to ReadDirents.
     //
     // These dirents are of the form:
+    // ```
     // struct dirent {
     //   // Describes the inode of the entry.
     //   uint64 ino;
-    //   // Describes the length of the dirent name.
+    //   // Describes the length of the dirent name in bytes.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
+    //   // POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
     // }
+    // ```
     //
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
@@ -7764,15 +7839,17 @@ class DirectoryAdmin final {
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
     //
-    // The "watcher" handle will send messages of the form:
+    // The `watcher` handle will send messages of the form:
+    // ```
     // struct {
     //   uint8 event;
     //   uint8 len;
     //   char name[];
     // };
+    // ```
     // Where names are NOT null-terminated.
     //
-    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable; in the future, watcher will be a `DirectoryWatcher` client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -7784,15 +7861,17 @@ class DirectoryAdmin final {
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
     //
-    // The "watcher" handle will send messages of the form:
+    // The `watcher` handle will send messages of the form:
+    // ```
     // struct {
     //   uint8 event;
     //   uint8 len;
     //   char name[];
     // };
+    // ```
     // Where names are NOT null-terminated.
     //
-    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable; in the future, watcher will be a `DirectoryWatcher` client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -7877,6 +7956,7 @@ class DirectoryAdmin final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -7889,7 +7969,8 @@ class DirectoryAdmin final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     static ::fidl::internal::StatusAndError Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
 
     // Terminates connection with object.
@@ -7925,7 +8006,7 @@ class DirectoryAdmin final {
     // Opens a new object relative to this directory object.
     //
     // `path` may contain multiple segments, separated by "/" characters,
-    // and should never be empty i.e. "" is an invalid path.
+    // and should never be empty; i.e., "" is an invalid path.
     //
     // `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
     // The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
@@ -7934,8 +8015,8 @@ class DirectoryAdmin final {
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
-    // which will be connected to the opened entity.
+    // `OPEN_RIGHT_*` flags provided in `flags` will restrict access rights on
+    // the `object` channel which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
@@ -7981,17 +8062,19 @@ class DirectoryAdmin final {
     // offset which is updated on subsequent calls to ReadDirents.
     //
     // These dirents are of the form:
+    // ```
     // struct dirent {
     //   // Describes the inode of the entry.
     //   uint64 ino;
-    //   // Describes the length of the dirent name.
+    //   // Describes the length of the dirent name in bytes.
     //   uint8 size;
     //   // Describes the type of the entry. Aligned with the
-    //   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
+    //   // POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     //   uint8 type;
     //   // Unterminated name of entry.
     //   char name[0];
     // }
+    // ```
     //
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
@@ -8033,15 +8116,17 @@ class DirectoryAdmin final {
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
     //
-    // The "watcher" handle will send messages of the form:
+    // The `watcher` handle will send messages of the form:
+    // ```
     // struct {
     //   uint8 event;
     //   uint8 len;
     //   char name[];
     // };
+    // ```
     // Where names are NOT null-terminated.
     //
-    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable; in the future, watcher will be a `DirectoryWatcher` client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.

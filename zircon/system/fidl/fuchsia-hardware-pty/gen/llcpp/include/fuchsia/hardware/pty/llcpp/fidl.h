@@ -1407,6 +1407,7 @@ class Device final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -1419,13 +1420,15 @@ class Device final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Clone Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -1438,7 +1441,8 @@ class Device final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Clone Clone(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -1514,28 +1518,28 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Ioctl Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
 
-    // Reads 'count' bytes at the seek offset.
+    // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::Read Read(uint64_t count);
 
-    // Reads 'count' bytes at the seek offset.
+    // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Read Read(::fidl::BytePart _request_buffer, uint64_t count, ::fidl::BytePart _response_buffer);
 
-    // Reads 'count' bytes at the provided offset.
+    // Reads `count` bytes at the provided offset.
     // Does not affect the seek offset.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::ReadAt ReadAt(uint64_t count, uint64_t offset);
 
-    // Reads 'count' bytes at the provided offset.
+    // Reads `count` bytes at the provided offset.
     // Does not affect the seek offset.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
@@ -1596,19 +1600,19 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Truncate Truncate(::fidl::BytePart _request_buffer, uint64_t length, ::fidl::BytePart _response_buffer);
 
-    // Acquires the Directory::Open rights and flags used to access this file.
+    // Acquires the `Directory.Open` rights and flags used to access this file.
     //
     // This method does not require any rights.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetFlags GetFlags();
 
-    // Acquires the Directory::Open rights and flags used to access this file.
+    // Acquires the `Directory.Open` rights and flags used to access this file.
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetFlags GetFlags(::fidl::BytePart _response_buffer);
 
-    // Changes the Directory::Open flags used to access the file.
+    // Changes the `Directory.Open` flags used to access the file.
     // Supported flags which can be turned on / off:
     // - `OPEN_FLAG_APPEND`
     //
@@ -1616,7 +1620,7 @@ class Device final {
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetFlags SetFlags(uint32_t flags);
 
-    // Changes the Directory::Open flags used to access the file.
+    // Changes the `Directory.Open` flags used to access the file.
     // Supported flags which can be turned on / off:
     // - `OPEN_FLAG_APPEND`
     //
@@ -1630,6 +1634,7 @@ class Device final {
     // `flags` may be any of `VMO_FLAG_*`.
     //
     // This method requires following rights:
+    //
     // - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
     // - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
@@ -1641,6 +1646,7 @@ class Device final {
     // `flags` may be any of `VMO_FLAG_*`.
     //
     // This method requires following rights:
+    //
     // - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
     // - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1741,6 +1747,7 @@ class Device final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -1753,13 +1760,15 @@ class Device final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Clone Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -1772,7 +1781,8 @@ class Device final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Clone Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
@@ -1848,28 +1858,28 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
 
-    // Reads 'count' bytes at the seek offset.
+    // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::Read Read(zx::unowned_channel _client_end, uint64_t count);
 
-    // Reads 'count' bytes at the seek offset.
+    // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Read Read(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t count, ::fidl::BytePart _response_buffer);
 
-    // Reads 'count' bytes at the provided offset.
+    // Reads `count` bytes at the provided offset.
     // Does not affect the seek offset.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
     // Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::ReadAt ReadAt(zx::unowned_channel _client_end, uint64_t count, uint64_t offset);
 
-    // Reads 'count' bytes at the provided offset.
+    // Reads `count` bytes at the provided offset.
     // Does not affect the seek offset.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
@@ -1930,19 +1940,19 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Truncate Truncate(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t length, ::fidl::BytePart _response_buffer);
 
-    // Acquires the Directory::Open rights and flags used to access this file.
+    // Acquires the `Directory.Open` rights and flags used to access this file.
     //
     // This method does not require any rights.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetFlags GetFlags(zx::unowned_channel _client_end);
 
-    // Acquires the Directory::Open rights and flags used to access this file.
+    // Acquires the `Directory.Open` rights and flags used to access this file.
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetFlags GetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Changes the Directory::Open flags used to access the file.
+    // Changes the `Directory.Open` flags used to access the file.
     // Supported flags which can be turned on / off:
     // - `OPEN_FLAG_APPEND`
     //
@@ -1950,7 +1960,7 @@ class Device final {
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetFlags SetFlags(zx::unowned_channel _client_end, uint32_t flags);
 
-    // Changes the Directory::Open flags used to access the file.
+    // Changes the `Directory.Open` flags used to access the file.
     // Supported flags which can be turned on / off:
     // - `OPEN_FLAG_APPEND`
     //
@@ -1964,6 +1974,7 @@ class Device final {
     // `flags` may be any of `VMO_FLAG_*`.
     //
     // This method requires following rights:
+    //
     // - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
     // - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
@@ -1975,6 +1986,7 @@ class Device final {
     // `flags` may be any of `VMO_FLAG_*`.
     //
     // This method requires following rights:
+    //
     // - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
     // - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -2074,6 +2086,7 @@ class Device final {
     // Create another connection to the same remote object.
     //
     // `flags` may be any of:
+    //
     // - `OPEN_RIGHT_*`
     // - `OPEN_FLAG_APPEND`
     // - `OPEN_FLAG_NO_REMOTE`
@@ -2086,7 +2099,8 @@ class Device final {
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    // `CLONE_FLAG_SAME_RIGHTS`.
     static ::fidl::internal::StatusAndError Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
 
     // Terminates connection with object.
@@ -2119,13 +2133,13 @@ class Device final {
     // Deprecated. Only for use with compatibility with devhost.
     static ::fidl::DecodeResult<IoctlResponse> Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
 
-    // Reads 'count' bytes at the seek offset.
+    // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
     static ::fidl::DecodeResult<ReadResponse> Read(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer);
 
-    // Reads 'count' bytes at the provided offset.
+    // Reads `count` bytes at the provided offset.
     // Does not affect the seek offset.
     //
     // This method requires following rights: `OPEN_RIGHT_READABLE`.
@@ -2154,12 +2168,12 @@ class Device final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<TruncateResponse> Truncate(zx::unowned_channel _client_end, ::fidl::DecodedMessage<TruncateRequest> params, ::fidl::BytePart response_buffer);
 
-    // Acquires the Directory::Open rights and flags used to access this file.
+    // Acquires the `Directory.Open` rights and flags used to access this file.
     //
     // This method does not require any rights.
     static ::fidl::DecodeResult<GetFlagsResponse> GetFlags(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    // Changes the Directory::Open flags used to access the file.
+    // Changes the `Directory.Open` flags used to access the file.
     // Supported flags which can be turned on / off:
     // - `OPEN_FLAG_APPEND`
     //
@@ -2172,6 +2186,7 @@ class Device final {
     // `flags` may be any of `VMO_FLAG_*`.
     //
     // This method requires following rights:
+    //
     // - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
     // - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
     static ::fidl::DecodeResult<GetBufferResponse> GetBuffer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetBufferRequest> params, ::fidl::BytePart response_buffer);

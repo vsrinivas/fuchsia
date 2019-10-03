@@ -10,7 +10,7 @@ using zx;
 /// Describes how the connection to an should be handled, as well as
 /// how to interpret the optional handle.
 ///
-/// Refer to `Node::Describe()` and `Node::OnOpen()` for usage.
+/// Refer to `Node.Describe()` and `Node.OnOpen()` for usage.
 union NodeInfo {
     Service service;
     FileObject file;
@@ -165,6 +165,7 @@ protocol Node {
     /// Create another connection to the same remote object.
     ///
     /// `flags` may be any of:
+    ///
     /// - `OPEN_RIGHT_*`
     /// - `OPEN_FLAG_APPEND`
     /// - `OPEN_FLAG_NO_REMOTE`
@@ -177,7 +178,8 @@ protocol Node {
     /// cloned object.
     /// The cloned object must have rights less than or equal to the original object.
     /// Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
-    /// It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+    /// It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    /// `CLONE_FLAG_SAME_RIGHTS`.
     Clone(uint32 flags, request<Node> object);
 
     /// Terminates connection with object.
@@ -304,13 +306,13 @@ const uint32 VMO_FLAG_EXACT = 0x00020000;
 protocol File {
     compose Node;
 
-    /// Reads 'count' bytes at the seek offset.
+    /// Reads `count` bytes at the seek offset.
     /// The seek offset is moved forward by the number of bytes read.
     ///
     /// This method requires following rights: `OPEN_RIGHT_READABLE`.
     Read(uint64 count) -> (zx.status s, vector<uint8>:MAX_BUF data);
 
-    /// Reads 'count' bytes at the provided offset.
+    /// Reads `count` bytes at the provided offset.
     /// Does not affect the seek offset.
     ///
     /// This method requires following rights: `OPEN_RIGHT_READABLE`.
@@ -339,12 +341,12 @@ protocol File {
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     Truncate(uint64 length) -> (zx.status s);
 
-    /// Acquires the Directory::Open rights and flags used to access this file.
+    /// Acquires the `Directory.Open` rights and flags used to access this file.
     ///
     /// This method does not require any rights.
     GetFlags() -> (zx.status s, uint32 flags);
 
-    /// Changes the Directory::Open flags used to access the file.
+    /// Changes the `Directory.Open` flags used to access the file.
     /// Supported flags which can be turned on / off:
     /// - `OPEN_FLAG_APPEND`
     ///
@@ -357,6 +359,7 @@ protocol File {
     /// `flags` may be any of `VMO_FLAG_*`.
     ///
     /// This method requires following rights:
+    ///
     /// - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
     /// - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
     GetBuffer(uint32 flags) -> (zx.status s, fuchsia.mem.Buffer? buffer);
@@ -393,17 +396,17 @@ const uint8 WATCH_EVENT_EXISTING = 3;
 /// Identifies that no more `WATCH_EVENT_EXISTING` events will be sent.
 const uint8 WATCH_EVENT_IDLE = 4;
 
-/// Used by Directory::Watch. Requests transmission of `WATCH_EVENT_DELETED`.
+/// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_DELETED`.
 const uint32 WATCH_MASK_DELETED = 0x00000001;
-/// Used by Directory::Watch. Requests transmission of `WATCH_EVENT_ADDED`.
+/// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_ADDED`.
 const uint32 WATCH_MASK_ADDED = 0x00000002;
-/// Used by Directory::Watch. Requests transmission of `WATCH_EVENT_REMOVED`.
+/// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_REMOVED`.
 const uint32 WATCH_MASK_REMOVED = 0x00000004;
-/// Used by Directory::Watch. Requests transmission of `WATCH_EVENT_EXISTING`.
+/// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_EXISTING`.
 const uint32 WATCH_MASK_EXISTING = 0x00000008;
-/// Used by Directory::Watch. Requests transmission of `WATCH_EVENT_IDLE`.
+/// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_IDLE`.
 const uint32 WATCH_MASK_IDLE = 0x00000010;
-/// Used by Directory::Watch. Requests transmission of all watcher events.
+/// Used by `Directory.Watch`. Requests transmission of all watcher events.
 const uint32 WATCH_MASK_ALL = 0x0000001F;
 
 // TODO(ZX-2645): Unused.
@@ -417,7 +420,7 @@ struct WatchedEvent {
 // TODO(ZX-2645): Unused.
 /// DirectoryWatcher transmits messages from a filesystem server
 /// about events happening in the filesystem. Clients can register
-/// new watchers using the Directory "Watch" method, where they can
+/// new watchers using the `Directory.Watch` method, where they can
 /// filter which events they want to receive notifications for.
 [Layout = "Simple"]
 protocol DirectoryWatcher {
@@ -433,7 +436,7 @@ protocol Directory {
     /// Opens a new object relative to this directory object.
     ///
     /// `path` may contain multiple segments, separated by "/" characters,
-    /// and should never be empty i.e. "" is an invalid path.
+    /// and should never be empty; i.e., "" is an invalid path.
     ///
     /// `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
     /// The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
@@ -442,8 +445,8 @@ protocol Directory {
     /// If an unknown value is sent for either flags or mode, the connection should
     /// be closed.
     ///
-    /// `OPEN_RIGHTS_*` flags provided in `flags` will restrict access rights on the `object` channel
-    /// which will be connected to the opened entity.
+    /// `OPEN_RIGHT_*` flags provided in `flags` will restrict access rights on
+    /// the `object` channel which will be connected to the opened entity.
     ///
     /// Rights are never increased. When you open a nested entity within a directory, you may only
     /// request the same rights as what the directory connection already has, or a subset of those.
@@ -490,17 +493,19 @@ protocol Directory {
     /// offset which is updated on subsequent calls to ReadDirents.
     ///
     /// These dirents are of the form:
+    /// ```
     /// struct dirent {
     ///   // Describes the inode of the entry.
     ///   uint64 ino;
-    ///   // Describes the length of the dirent name.
+    ///   // Describes the length of the dirent name in bytes.
     ///   uint8 size;
     ///   // Describes the type of the entry. Aligned with the
-    ///   /// POSIX d_type values. Use `DIRENT_TYPE_*` constants.
+    ///   // POSIX d_type values. Use `DIRENT_TYPE_*` constants.
     ///   uint8 type;
     ///   // Unterminated name of entry.
     ///   char name[0];
     /// }
+    /// ```
     ///
     /// This method does not require any rights, since one could always probe for
     /// directory contents by triggering name conflicts during file creation.
@@ -547,15 +552,17 @@ protocol Directory {
     /// Watches a directory, receiving events of added messages on the
     /// watcher request channel.
     ///
-    /// The "watcher" handle will send messages of the form:
+    /// The `watcher` handle will send messages of the form:
+    /// ```
     /// struct {
     ///   uint8 event;
     ///   uint8 len;
     ///   char name[];
     /// };
+    /// ```
     /// Where names are NOT null-terminated.
     ///
-    /// This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
+    /// This API is unstable; in the future, watcher will be a `DirectoryWatcher` client.
     ///
     /// Mask specifies a bitmask of events to observe.
     /// Options must be zero; it is reserved.
