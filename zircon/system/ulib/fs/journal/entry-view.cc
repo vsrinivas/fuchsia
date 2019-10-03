@@ -9,7 +9,7 @@
 
 #include <fbl/vector.h>
 #include <fs/journal/format.h>
-#include <fs/operation/buffered_operation.h>
+#include <fs/operation/buffered-operation.h>
 
 namespace fs {
 

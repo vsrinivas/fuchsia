@@ -12,8 +12,8 @@ library("operation") {
 
   if (is_fuchsia) {
     sources += [
-      "buffered_operation.cc",
-      "unbuffered_operations_builder.cc",
+      "buffered-operation.cc",
+      "unbuffered-operations-builder.cc",
     ]
     public_deps = [
       "$zx/system/ulib/fbl:headers",
@@ -43,7 +43,7 @@ group("test") {
 test("fs-operation") {
   test_group = "fs"
   sources = [
-    "test/unbuffered_operations_builder_test.cc",
+    "test/unbuffered-operations-builder-test.cc",
   ]
   deps = [
     ":operation",

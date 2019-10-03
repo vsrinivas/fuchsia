@@ -7,7 +7,7 @@
 
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
-#include <fs/buffer/ring_buffer.h>
+#include <fs/buffer/ring-buffer.h>
 
 namespace fs {
 

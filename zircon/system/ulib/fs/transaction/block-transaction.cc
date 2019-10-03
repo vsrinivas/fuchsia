@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/transaction/block_transaction.h>
+#include <fs/transaction/block-transaction.h>
 
 #include <zircon/device/block.h>
 

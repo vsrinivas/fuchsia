@@ -14,14 +14,14 @@
 #include <algorithm>
 
 #include <fbl/vector.h>
-#include <fs/buffer/blocking_ring_buffer.h>
-#include <fs/buffer/ring_buffer.h>
+#include <fs/buffer/blocking-ring-buffer.h>
+#include <fs/buffer/ring-buffer.h>
 #include <fs/journal/background-executor.h>
 #include <fs/journal/format.h>
 #include <fs/journal/internal/journal-writer.h>
 #include <fs/journal/superblock.h>
-#include <fs/operation/buffered_operation.h>
-#include <fs/transaction/block_transaction.h>
+#include <fs/operation/buffered-operation.h>
+#include <fs/transaction/block-transaction.h>
 
 namespace fs {
 

@@ -7,8 +7,8 @@
 
 #include <lib/fzl/owned-vmo-mapper.h>
 
-#include <fs/buffer/block_buffer.h>
-#include <fs/buffer/vmoid_registry.h>
+#include <fs/buffer/block-buffer.h>
+#include <fs/buffer/vmoid-registry.h>
 
 namespace fs {
 

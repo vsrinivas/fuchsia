@@ -55,9 +55,9 @@
 #include <fs/journal/journal.h>
 #include <fs/managed-vfs.h>
 #include <fs/metrics/cobalt-metrics.h>
-#include <fs/operation/unbuffered_operations_builder.h>
+#include <fs/operation/unbuffered-operations-builder.h>
 #include <fs/trace.h>
-#include <fs/transaction/block_transaction.h>
+#include <fs/transaction/block-transaction.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <trace/event.h>

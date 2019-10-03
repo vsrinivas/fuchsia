@@ -4,7 +4,7 @@
 
 #include <fs/journal/data-streamer.h>
 
-#include <fs/buffer/vmoid_registry.h>
+#include <fs/buffer/vmoid-registry.h>
 #include <fs/journal/journal.h>
 #include <fs/transaction/writeback.h>
 #include <zircon/assert.h>

@@ -7,7 +7,7 @@
 
 #include <zircon/assert.h>
 
-#include <fs/buffer/block_buffer.h>
+#include <fs/buffer/block-buffer.h>
 
 namespace fs {
 

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/buffer/blocking_ring_buffer.h>
+#include <fs/buffer/blocking-ring-buffer.h>
 
 #include <atomic>
 #include <thread>
 
-#include <fs/operation/unbuffered_operations_builder.h>
+#include <fs/operation/unbuffered-operations-builder.h>
 #include <zxtest/zxtest.h>
 
 namespace fs {

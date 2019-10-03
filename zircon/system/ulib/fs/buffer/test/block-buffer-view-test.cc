@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/buffer/block_buffer_view.h>
+#include <fs/buffer/block-buffer-view.h>
 
 #include <array>
 
 #include <lib/zx/vmo.h>
 
-#include <fs/buffer/vmo_buffer.h>
+#include <fs/buffer/vmo-buffer.h>
 #include <zxtest/zxtest.h>
 
 namespace fs {

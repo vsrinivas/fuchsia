@@ -16,7 +16,7 @@ library("fs") {
     "fs/pseudo-dir.h",
     "fs/pseudo-file.h",
     "fs/queue.h",
-    "fs/ref_counted.h",
+    "fs/ref-counted.h",
     "fs/remote-dir.h",
     "fs/remote.h",
     "fs/service.h",

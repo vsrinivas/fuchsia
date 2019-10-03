@@ -15,7 +15,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <fs/buffer/block_buffer.h>
+#include <fs/buffer/block-buffer.h>
 #include <fs/operation/operation.h>
 #include <fs/trace.h>
 #include <minfs/format.h>

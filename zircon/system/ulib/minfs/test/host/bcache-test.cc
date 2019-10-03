@@ -10,7 +10,7 @@
 #include <vector>
 
 #include <minfs/format.h>
-#include <fs/buffer/block_buffer.h>
+#include <fs/buffer/block-buffer.h>
 #include <zxtest/zxtest.h>
 
 namespace {

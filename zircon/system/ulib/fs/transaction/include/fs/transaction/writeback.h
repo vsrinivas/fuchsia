@@ -14,9 +14,9 @@
 
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
-#include <fs/operation/buffered_operation.h>
-#include <fs/operation/unbuffered_operations_builder.h>
-#include <fs/transaction/block_transaction.h>
+#include <fs/operation/buffered-operation.h>
+#include <fs/operation/unbuffered-operations-builder.h>
+#include <fs/transaction/block-transaction.h>
 
 namespace fs {
 

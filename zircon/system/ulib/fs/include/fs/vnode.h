@@ -17,8 +17,8 @@
 #include <fbl/ref_counted_internal.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
-#include <fs/mount_channel.h>
-#include <fs/ref_counted.h>
+#include <fs/mount-channel.h>
+#include <fs/ref-counted.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <zircon/assert.h>

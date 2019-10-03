@@ -25,7 +25,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
 #include <fbl/vector.h>
-#include <fs/buffer/vmoid_registry.h>
+#include <fs/buffer/vmoid-registry.h>
 #include <fs/trace.h>
 #include <id_allocator/id_allocator.h>
 

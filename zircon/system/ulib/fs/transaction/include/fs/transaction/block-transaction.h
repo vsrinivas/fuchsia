@@ -10,7 +10,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 #include <fbl/vector.h>
-#include <fs/buffer/block_buffer.h>
+#include <fs/buffer/block-buffer.h>
 #include <fs/operation/operation.h>
 
 #ifdef __Fuchsia__

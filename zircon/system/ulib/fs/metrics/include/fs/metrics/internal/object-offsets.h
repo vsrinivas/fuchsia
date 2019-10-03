@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <fs/metrics/internal/object_generator.h>
+#include <fs/metrics/internal/object-generator.h>
 #include <fs/metrics/internal/offsets.h>
 
 namespace fs_metrics {

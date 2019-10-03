@@ -7,7 +7,7 @@
 #include <minfs/format.h>
 #include <minfs/minfs.h>
 #include <block-client/cpp/fake-device.h>
-#include <fs/buffer/vmo_buffer.h>
+#include <fs/buffer/vmo-buffer.h>
 #include <zxtest/zxtest.h>
 
 namespace minfs {

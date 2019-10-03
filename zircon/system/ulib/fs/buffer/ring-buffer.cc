@@ -8,7 +8,7 @@
 #include <utility>
 
 #include <fbl/auto_lock.h>
-#include <fs/buffer/ring_buffer.h>
+#include <fs/buffer/ring-buffer.h>
 #include <fs/trace.h>
 
 namespace fs {

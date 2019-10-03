@@ -9,10 +9,10 @@
 
 #include <fbl/macros.h>
 #include <fbl/vector.h>
-#include <fs/buffer/block_buffer_view.h>
+#include <fs/buffer/block-buffer-view.h>
 #include <fs/journal/format.h>
 #include <fs/journal/superblock.h>
-#include <fs/operation/buffered_operation.h>
+#include <fs/operation/buffered-operation.h>
 
 namespace fs {
 

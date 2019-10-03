@@ -6,7 +6,7 @@
 
 #include <blobfs/format.h>
 #include <block-client/cpp/fake-device.h>
-#include <fs/buffer/vmo_buffer.h>
+#include <fs/buffer/vmo-buffer.h>
 #include <zxtest/zxtest.h>
 
 #include "utils.h"

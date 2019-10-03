@@ -34,7 +34,7 @@
 #include <fs/journal/replay.h>
 #include <fs/journal/superblock.h>
 #include <fs/ticker.h>
-#include <fs/transaction/block_transaction.h>
+#include <fs/transaction/block-transaction.h>
 #include <fvm/client.h>
 
 #define ZXDEBUG 0

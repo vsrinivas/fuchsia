@@ -10,7 +10,7 @@
 #include <fs/journal/format.h>
 #include <fs/journal/replay.h>
 #include <fs/journal/superblock.h>
-#include <fs/operation/buffered_operation.h>
+#include <fs/operation/buffered-operation.h>
 #include <fs/transaction/writeback.h>
 
 #include "entry-view.h"

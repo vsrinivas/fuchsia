@@ -10,9 +10,9 @@
 #endif
 
 #include <fbl/mutex.h>
-#include <fs/buffer/block_buffer_view.h>
-#include <fs/buffer/vmo_buffer.h>
-#include <fs/operation/buffered_operation.h>
+#include <fs/buffer/block-buffer-view.h>
+#include <fs/buffer/vmo-buffer.h>
+#include <fs/operation/buffered-operation.h>
 
 namespace fs {
 

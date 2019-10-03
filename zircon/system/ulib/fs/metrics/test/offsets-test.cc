@@ -10,7 +10,7 @@
 
 #include <fbl/algorithm.h>
 #include <fs/metrics/internal/attributes.h>
-#include <fs/metrics/internal/object_generator.h>
+#include <fs/metrics/internal/object-generator.h>
 #include <fs/metrics/internal/offsets.h>
 #include <zxtest/zxtest.h>
 

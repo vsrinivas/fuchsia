@@ -24,7 +24,7 @@
 #include <fbl/unique_ptr.h>
 #include <fs-host/common.h>
 #include <fs/trace.h>
-#include <fs/transaction/block_transaction.h>
+#include <fs/transaction/block-transaction.h>
 #include <safemath/checked_math.h>
 
 #define ZXDEBUG 0

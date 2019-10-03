@@ -10,8 +10,8 @@
 #include <utility>
 
 #include <fs/journal/journal.h>
-#include <fs/operation/buffered_operation.h>
-#include <fs/operation/unbuffered_operations_builder.h>
+#include <fs/operation/buffered-operation.h>
+#include <fs/operation/unbuffered-operations-builder.h>
 
 namespace fs {
 

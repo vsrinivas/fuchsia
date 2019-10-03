@@ -5,8 +5,8 @@
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 
-#include <fs/buffer/ring_buffer.h>
-#include <fs/operation/unbuffered_operations_builder.h>
+#include <fs/buffer/ring-buffer.h>
+#include <fs/operation/unbuffered-operations-builder.h>
 #include <zxtest/zxtest.h>
 
 namespace fs {

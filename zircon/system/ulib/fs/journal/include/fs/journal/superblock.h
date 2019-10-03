@@ -8,7 +8,7 @@
 #include <zircon/types.h>
 
 #include <fbl/macros.h>
-#include <fs/buffer/block_buffer.h>
+#include <fs/buffer/block-buffer.h>
 #include <fs/journal/format.h>
 #include <fs/trace.h>
 

@@ -12,9 +12,9 @@ library("buffer") {
 
   if (is_fuchsia) {
     sources += [
-      "blocking_ring_buffer.cc",
-      "ring_buffer.cc",
-      "vmo_buffer.cc",
+      "blocking-ring-buffer.cc",
+      "ring-buffer.cc",
+      "vmo-buffer.cc",
     ]
     public_deps = [
       "$zx/system/ulib/fbl:headers",
@@ -44,10 +44,10 @@ group("test") {
 test("fs-buffer") {
   test_group = "fs"
   sources = [
-    "test/block_buffer_view_test.cc",
-    "test/blocking_ring_buffer_test.cc",
-    "test/ring_buffer_test.cc",
-    "test/vmo_buffer_test.cc",
+    "test/block-buffer-view-test.cc",
+    "test/blocking-ring-buffer-test.cc",
+    "test/ring-buffer-test.cc",
+    "test/vmo-buffer-test.cc",
   ]
   deps = [
     ":buffer",

@@ -8,10 +8,10 @@
 #include <zircon/types.h>
 
 #include <fbl/vector.h>
-#include <fs/buffer/vmo_buffer.h>
+#include <fs/buffer/vmo-buffer.h>
 #include <fs/journal/superblock.h>
-#include <fs/operation/buffered_operation.h>
-#include <fs/transaction/block_transaction.h>
+#include <fs/operation/buffered-operation.h>
+#include <fs/transaction/block-transaction.h>
 
 namespace fs {
 

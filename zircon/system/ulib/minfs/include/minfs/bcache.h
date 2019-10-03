@@ -18,7 +18,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fs/trace.h>
-#include <fs/transaction/block_transaction.h>
+#include <fs/transaction/block-transaction.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <minfs/format.h>
@@ -26,11 +26,11 @@
 #ifdef __Fuchsia__
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/client.h>
-#include <fs/buffer/vmoid_registry.h>
-#include <fs/buffer/vmo_buffer.h>
+#include <fs/buffer/vmoid-registry.h>
+#include <fs/buffer/vmo-buffer.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <fs/buffer/vmoid_registry.h>
+#include <fs/buffer/vmoid-registry.h>
 #include <fvm/client.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/vmo.h>
