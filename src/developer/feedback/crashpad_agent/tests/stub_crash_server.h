@@ -29,13 +29,14 @@ class StubCrashServer : public CrashServer {
                    const std::map<std::string, crashpad::FileReader*>& attachments,
                    std::string* server_report_id) override;
 
-  const std::map<std::string, std::string>& annotations() { return annotations_; }
+  // Returns the annotations that were passed to the latest MakeRequest() call.
+  const std::map<std::string, std::string>& latest_annotations() { return latest_annotations_; }
 
  private:
   const std::vector<bool> request_return_values_;
   std::vector<bool>::const_iterator next_return_value_;
 
-  std::map<std::string, std::string> annotations_;
+  std::map<std::string, std::string> latest_annotations_;
 };
 
 }  // namespace feedback

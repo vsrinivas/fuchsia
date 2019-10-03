@@ -201,9 +201,10 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
       expected_annotations[key] = value;
     }
 
-    EXPECT_EQ(crash_server_->annotations().size(), expected_annotations.size());
+    EXPECT_EQ(crash_server_->latest_annotations().size(), expected_annotations.size());
     for (const auto& [key, value] : expected_annotations) {
-      EXPECT_THAT(crash_server_->annotations(), testing::Contains(testing::Pair(key, value)));
+      EXPECT_THAT(crash_server_->latest_annotations(),
+                  testing::Contains(testing::Pair(key, value)));
     }
   }
 
