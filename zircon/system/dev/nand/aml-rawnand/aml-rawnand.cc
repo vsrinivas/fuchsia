@@ -832,9 +832,9 @@ void AmlRawNand::CleanUpIrq() {
   thrd_join(irq_thread_, nullptr);
 }
 
-void AmlRawNand::DdkUnbind() {
+void AmlRawNand::DdkUnbindDeprecated() {
   CleanUpIrq();
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 zx_status_t AmlRawNand::Init() {

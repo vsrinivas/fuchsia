@@ -57,7 +57,7 @@ zx_status_t SpiChild::SpiExchange(const uint8_t* txdata_list, size_t txdata_coun
   return ZX_OK;
 }
 
-void SpiChild::DdkUnbind() { DdkRemove(); }
+void SpiChild::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 void SpiChild::DdkRelease() { __UNUSED bool dummy = Release(); }
 

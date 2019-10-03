@@ -26,7 +26,7 @@
 namespace dwc2 {
 
 class Dwc2;
-using Dwc2Type = ddk::Device<Dwc2, ddk::Unbindable>;
+using Dwc2Type = ddk::Device<Dwc2, ddk::UnbindableDeprecated>;
 
 class Dwc2 : public Dwc2Type, public ddk::UsbDciProtocol<Dwc2, ddk::base_protocol> {
  public:
@@ -37,7 +37,7 @@ class Dwc2 : public Dwc2Type, public ddk::UsbDciProtocol<Dwc2, ddk::base_protoco
   int IrqThread();
 
   // Device protocol implementation.
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   // USB DCI protocol implementation.

@@ -41,7 +41,7 @@ bool UsbComposite::RemoveInterfaceById(uint8_t interface_id) {
   size_t index = 0;
   for (auto intf : interfaces_) {
     if (intf->ContainsInterface(interface_id)) {
-      intf->DdkRemove();
+      intf->DdkRemoveDeprecated();
       interfaces_.erase(index);
       return true;
     }
@@ -296,16 +296,16 @@ zx_status_t UsbComposite::GetAdditionalDescriptorList(uint8_t last_interface_id,
   return ZX_OK;
 }
 
-void UsbComposite::DdkUnbind() {
+void UsbComposite::DdkUnbindDeprecated() {
   {
     fbl::AutoLock lock(&lock_);
     for (auto interface : interfaces_) {
-      interface->DdkRemove();
+      interface->DdkRemoveDeprecated();
     }
     interfaces_.reset();
   }
 
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void UsbComposite::DdkRelease() { delete this; }

@@ -351,7 +351,7 @@ zx_status_t OpteeClient::DdkClose(uint32_t flags) {
 
 void OpteeClient::DdkRelease() { delete this; }
 
-void OpteeClient::DdkUnbind() { Shutdown(); }
+void OpteeClient::DdkUnbindDeprecated() { Shutdown(); }
 
 void OpteeClient::Shutdown() {
   if (controller_ != nullptr) {

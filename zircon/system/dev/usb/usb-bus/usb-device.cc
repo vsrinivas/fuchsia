@@ -237,7 +237,7 @@ zx_status_t UsbDevice::DdkGetProtocol(uint32_t proto_id, void* protocol) {
   return status;
 }
 
-void UsbDevice::DdkUnbind() { DdkRemove(); }
+void UsbDevice::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 void UsbDevice::DdkRelease() {
   StopCallbackThread();

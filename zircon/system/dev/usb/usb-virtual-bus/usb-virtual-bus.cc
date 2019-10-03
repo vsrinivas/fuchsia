@@ -92,7 +92,7 @@ zx_status_t UsbVirtualBus::Init() {
       [](void* arg) -> int { return reinterpret_cast<UsbVirtualBus*>(arg)->DeviceThread(); },
       reinterpret_cast<void*>(this), "usb-virtual-bus-device-thread");
   if (rc != thrd_success) {
-    DdkRemove();
+    DdkRemoveDeprecated();
     return ZX_ERR_INTERNAL;
   }
   return ZX_OK;
@@ -282,7 +282,7 @@ zx_status_t UsbVirtualBus::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void UsbVirtualBus::DdkUnbind() {
+void UsbVirtualBus::DdkUnbindDeprecated() {
   {
     fbl::AutoLock lock(&lock_);
     fbl::AutoLock lock2(&device_lock_);
@@ -293,11 +293,11 @@ void UsbVirtualBus::DdkUnbind() {
 
   auto* host = host_.release();
   if (host) {
-    host->DdkRemove();
+    host->DdkRemoveDeprecated();
   }
   auto* device = device_.release();
   if (device) {
-    device->DdkRemove();
+    device->DdkRemoveDeprecated();
   }
 }
 
@@ -513,10 +513,10 @@ void UsbVirtualBus::Disable(DisableCompleter::Sync completer) {
     device = device_.release();
   }
   if (host) {
-    host->DdkRemove();
+    host->DdkRemoveDeprecated();
   }
   if (device) {
-    device->DdkRemove();
+    device->DdkRemoveDeprecated();
   }
   completer.Reply(ZX_OK);
 }

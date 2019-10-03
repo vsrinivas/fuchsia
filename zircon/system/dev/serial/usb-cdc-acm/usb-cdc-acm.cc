@@ -137,11 +137,11 @@ zx_status_t UsbCdcAcmDevice::DdkWrite(const void* buf, size_t length, zx_off_t /
   return ZX_OK;
 }
 
-void UsbCdcAcmDevice::DdkUnbind() {
+void UsbCdcAcmDevice::DdkUnbindDeprecated() {
   cancel_thread_ = std::thread([this]() {
     usb_client_.CancelAll(bulk_in_addr_);
     usb_client_.CancelAll(bulk_out_addr_);
-    DdkRemove();
+    DdkRemoveDeprecated();
   });
 }
 

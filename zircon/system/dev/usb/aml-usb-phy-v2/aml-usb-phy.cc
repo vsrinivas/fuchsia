@@ -267,7 +267,7 @@ void AmlUsbPhy::RemoveXhciDevice() {
   if (xhci_device_) {
     // devmgr will own the device until it is destroyed.
     auto* dev = xhci_device_.release();
-    dev->DdkRemove();
+    dev->DdkRemoveDeprecated();
   }
 }
 
@@ -291,7 +291,7 @@ void AmlUsbPhy::RemoveDwc2Device() {
   if (dwc2_device_) {
     // devmgr will own the device until it is destroyed.
     auto* dev = dwc2_device_.release();
-    dev->DdkRemove();
+    dev->DdkRemoveDeprecated();
   }
 }
 
@@ -348,7 +348,7 @@ zx_status_t AmlUsbPhy::Init() {
       &irq_thread_, [](void* arg) -> int { return reinterpret_cast<AmlUsbPhy*>(arg)->IrqThread(); },
       reinterpret_cast<void*>(this), "amlogic-usb-thread");
   if (rc != thrd_success) {
-    DdkRemove();
+    DdkRemoveDeprecated();
     return ZX_ERR_INTERNAL;
   }
 
@@ -374,13 +374,13 @@ void AmlUsbPhy::UsbPhyConnectStatusChanged(bool connected) {
   dwc2_connected_ = connected;
 }
 
-void AmlUsbPhy::DdkUnbind() {
+void AmlUsbPhy::DdkUnbindDeprecated() {
   irq_.destroy();
   thrd_join(irq_thread_, nullptr);
 
   RemoveXhciDevice();
   RemoveDwc2Device();
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void AmlUsbPhy::DdkRelease() { delete this; }

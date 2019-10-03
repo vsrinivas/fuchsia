@@ -229,7 +229,7 @@ static void fx3_unbind(void* ctx) {
   zxlogf(INFO, "fx3_unbind\n");
   fx3_t* fx3 = ctx;
 
-  device_remove(fx3->zxdev);
+  device_remove_deprecated(fx3->zxdev);
 }
 
 static void fx3_release(void* ctx) {

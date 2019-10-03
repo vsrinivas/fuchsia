@@ -28,7 +28,7 @@ enum {
   COMPONENT_GPIO0,
 };
 
-void AmlSpi::DdkUnbind() { DdkRemove(); }
+void AmlSpi::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 void AmlSpi::DdkRelease() { delete this; }
 

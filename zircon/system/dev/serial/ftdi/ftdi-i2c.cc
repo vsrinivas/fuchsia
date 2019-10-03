@@ -88,7 +88,7 @@ zx_status_t FtdiI2c::Bind() {
   status = DdkAddMetadata(DEVICE_METADATA_I2C_CHANNELS, i2c_channels.data(),
                           i2c_channels.size() * sizeof(i2c_channel_t));
   if (status != ZX_OK) {
-    DdkRemove();
+    DdkRemoveDeprecated();
     return status;
   }
 
@@ -152,9 +152,9 @@ void FtdiI2c::WriteI2CByteReadToBuf(size_t index, bool final_byte, std::vector<u
   *bytes_written = new_index - index;
 }
 
-void FtdiI2c::DdkUnbind() {
+void FtdiI2c::DdkUnbindDeprecated() {
   thrd_join(enable_thread_, NULL);
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 zx_status_t FtdiI2c::Transact(uint8_t bus_address, std::vector<uint8_t> write_data,

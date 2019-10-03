@@ -284,7 +284,7 @@ static void usb_hub_unbind(void* ctx) {
   sync_completion_signal(&hub->completion);
   thrd_join(hub->thread, NULL);
 
-  device_remove(hub->zxdev);
+  device_remove_deprecated(hub->zxdev);
 }
 
 static zx_status_t usb_hub_free(usb_hub_t* hub) {
@@ -444,7 +444,7 @@ static int usb_hub_thread(void* arg) {
   return ZX_OK;
 
 fail:
-  device_remove(hub->zxdev);
+  device_remove_deprecated(hub->zxdev);
   return result;
 }
 
@@ -541,7 +541,7 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
 
   int ret = thrd_create_with_name(&hub->thread, usb_hub_thread, hub, "usb_hub_thread");
   if (ret != thrd_success) {
-    device_remove(hub->zxdev);
+    device_remove_deprecated(hub->zxdev);
     return ZX_ERR_NO_MEMORY;
   }
 

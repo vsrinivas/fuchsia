@@ -25,7 +25,7 @@ namespace usb_bus {
 
 class UsbDevice;
 using UsbDeviceType =
-    ddk::Device<UsbDevice, ddk::GetProtocolable, ddk::Messageable, ddk::Unbindable>;
+    ddk::Device<UsbDevice, ddk::GetProtocolable, ddk::Messageable, ddk::UnbindableDeprecated>;
 
 class UsbDevice : public UsbDeviceType,
                   public ddk::UsbProtocol<UsbDevice, ddk::base_protocol>,
@@ -47,7 +47,7 @@ class UsbDevice : public UsbDeviceType,
   // Device protocol implementation.
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   // USB protocol implementation.

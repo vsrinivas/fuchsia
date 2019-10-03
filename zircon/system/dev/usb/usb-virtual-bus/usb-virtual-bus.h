@@ -26,7 +26,7 @@ namespace usb_virtual_bus {
 class UsbVirtualBus;
 class UsbVirtualDevice;
 class UsbVirtualHost;
-using UsbVirtualBusType = ddk::Device<UsbVirtualBus, ddk::Unbindable, ddk::Messageable>;
+using UsbVirtualBusType = ddk::Device<UsbVirtualBus, ddk::UnbindableDeprecated, ddk::Messageable>;
 
 // This is the main class for the USB virtual bus.
 class UsbVirtualBus : public UsbVirtualBusType,
@@ -38,7 +38,7 @@ class UsbVirtualBus : public UsbVirtualBusType,
 
   // Device protocol implementation.
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   // USB device controller protocol implementation.

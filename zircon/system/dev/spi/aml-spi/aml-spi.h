@@ -13,7 +13,7 @@
 namespace spi {
 
 class AmlSpi;
-using DeviceType = ddk::Device<AmlSpi, ddk::Unbindable>;
+using DeviceType = ddk::Device<AmlSpi, ddk::UnbindableDeprecated>;
 
 class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_protocol> {
  public:
@@ -21,7 +21,7 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
   static zx_status_t Create(void* ctx, zx_device_t* device);
 
   // Device protocol implementation.
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   uint32_t SpiImplGetChipSelectCount() { return static_cast<uint32_t>(gpio_.size()); }

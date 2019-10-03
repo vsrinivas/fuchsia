@@ -37,7 +37,7 @@
 namespace scpi {
 
 class AmlSCPI;
-using DeviceType = ddk::Device<AmlSCPI, ddk::Unbindable>;
+using DeviceType = ddk::Device<AmlSCPI, ddk::UnbindableDeprecated>;
 
 class AmlSCPI : public DeviceType, public ddk::ScpiProtocol<AmlSCPI, ddk::base_protocol> {
  public:
@@ -49,7 +49,7 @@ class AmlSCPI : public DeviceType, public ddk::ScpiProtocol<AmlSCPI, ddk::base_p
 
   // DDK Hooks.
   void DdkRelease();
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
 
   // ZX_PROTOCOL_SCPI protocol.
   zx_status_t ScpiGetSensor(const char* name, uint32_t* out_sensor_id);

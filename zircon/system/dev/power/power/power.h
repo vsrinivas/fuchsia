@@ -12,7 +12,7 @@
 namespace power {
 
 class PowerDevice;
-using PowerDeviceType = ddk::Device<PowerDevice, ddk::Unbindable>;
+using PowerDeviceType = ddk::Device<PowerDevice, ddk::UnbindableDeprecated>;
 
 class PowerDevice : public PowerDeviceType,
                     public ddk::PowerProtocol<PowerDevice, ddk::base_protocol> {
@@ -22,7 +22,7 @@ class PowerDevice : public PowerDeviceType,
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   zx_status_t PowerEnablePowerDomain();

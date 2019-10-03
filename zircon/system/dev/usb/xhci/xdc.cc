@@ -712,7 +712,7 @@ static void xdc_unbind(void* ctx) {
   }
   mtx_unlock(&xdc->instance_list_lock);
 
-  device_remove(xdc->zxdev);
+  device_remove_deprecated(xdc->zxdev);
 }
 
 static void xdc_release(void* ctx) {
@@ -1306,7 +1306,7 @@ zx_status_t xdc_bind(zx_device_t* parent, zx_handle_t bti_handle, void* mmio) {
   int ret;
   ret = thrd_create_with_name(&xdc->start_thread, xdc_start_thread, xdc, "xdc_start_thread");
   if (ret != thrd_success) {
-    device_remove(xdc->zxdev);
+    device_remove_deprecated(xdc->zxdev);
     return ZX_ERR_BAD_STATE;
   }
   return ZX_OK;

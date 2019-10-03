@@ -34,7 +34,7 @@ enum FanLevel {
 };
 
 class AmlThermal;
-using DeviceType = ddk::Device<AmlThermal, ddk::Messageable, ddk::Unbindable>;
+using DeviceType = ddk::Device<AmlThermal, ddk::Messageable, ddk::UnbindableDeprecated>;
 
 // AmlThermal implements the s912 AmLogic thermal driver.
 class AmlThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL> {
@@ -58,7 +58,7 @@ class AmlThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THER
 
   // Ddk-required methods.
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   // Visible for testing.

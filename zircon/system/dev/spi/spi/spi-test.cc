@@ -13,7 +13,7 @@
 namespace spi {
 
 class FakeDdkSpiImpl;
-using DeviceType = ddk::Device<FakeDdkSpiImpl, ddk::Unbindable>;
+using DeviceType = ddk::Device<FakeDdkSpiImpl, ddk::UnbindableDeprecated>;
 
 class FakeDdkSpiImpl : public fake_ddk::Bind,
                        public DeviceType,
@@ -126,7 +126,7 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
     return ZX_OK;
   }
 
-  void DdkUnbind() { DdkRemove(); }
+  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
   void DdkRelease() { delete this; }
 
   SpiDevice* bus_device_;
@@ -175,7 +175,7 @@ TEST(SpiDevice, SpiTest) {
   }
 
   // clean it up
-  ddk.bus_device_->DdkUnbind();
+  ddk.bus_device_->DdkUnbindDeprecated();
   EXPECT_EQ(ddk.children_.size(), 0, "");
   EXPECT_EQ(ddk.bus_device_, nullptr, "");
 }

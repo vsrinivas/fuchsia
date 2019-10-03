@@ -127,7 +127,7 @@ NandDevice::~NandDevice() {
   if (mapped_addr_) {
     zx_vmar_unmap(zx_vmar_root_self(), mapped_addr_, DdkGetSize());
   }
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 zx_status_t NandDevice::Bind(const fuchsia_hardware_nand_RamNandInfo& info) {
@@ -210,10 +210,10 @@ zx_status_t NandDevice::Init(char name[NAME_MAX], zx::vmo vmo) {
   return ZX_OK;
 }
 
-void NandDevice::DdkUnbind() {
+void NandDevice::DdkUnbindDeprecated() {
   Kill();
   sync_completion_signal(&wake_signal_);
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 zx_status_t NandDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -227,7 +227,7 @@ zx_status_t NandDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 }
 
 zx_status_t NandDevice::Unlink() {
-  DdkUnbind();
+  DdkUnbindDeprecated();
   return ZX_OK;
 }
 

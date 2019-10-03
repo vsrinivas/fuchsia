@@ -23,16 +23,16 @@ using llcpp::fuchsia::device::DevicePowerStateInfo;
 using llcpp::fuchsia::device::power::test::TestDevice;
 
 class TestPowerDriverChild;
-using DeviceType = ddk::Device<TestPowerDriverChild, ddk::Unbindable, ddk::Messageable, ddk::SuspendableNew,
-                               ddk::ResumableNew>;
+using DeviceType = ddk::Device<TestPowerDriverChild, ddk::UnbindableDeprecated, ddk::Messageable,
+                               ddk::SuspendableNew, ddk::ResumableNew>;
 class TestPowerDriverChild : public DeviceType,
                              public TestDevice::Interface {
  public:
   TestPowerDriverChild(zx_device_t* parent) : DeviceType(parent) {}
   static zx_status_t Create(void* ctx, zx_device_t* device);
   zx_status_t Bind();
-  void DdkUnbind() {
-    DdkRemove();
+  void DdkUnbindDeprecated() {
+    DdkRemoveDeprecated();
   }
 
   void AddDeviceWithPowerArgs(::fidl::VectorView<DevicePowerStateInfo> info,

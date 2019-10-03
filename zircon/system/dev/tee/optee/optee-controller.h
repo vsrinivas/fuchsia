@@ -31,7 +31,7 @@ class OpteeClient;
 
 class OpteeController;
 using OpteeControllerBase =
-    ddk::Device<OpteeController, ddk::Messageable, ddk::Openable, ddk::Unbindable>;
+    ddk::Device<OpteeController, ddk::Messageable, ddk::Openable, ddk::UnbindableDeprecated>;
 class OpteeController : public OpteeControllerBase,
                         public ddk::TeeProtocol<OpteeController, ddk::base_protocol> {
  public:
@@ -47,7 +47,7 @@ class OpteeController : public OpteeControllerBase,
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   zx_status_t DdkOpen(zx_device_t** out_dev, uint32_t flags);
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   // ddk.protocol.Tee

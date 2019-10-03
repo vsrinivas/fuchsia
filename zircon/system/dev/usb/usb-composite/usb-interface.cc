@@ -152,7 +152,7 @@ zx_status_t UsbInterface::DdkGetProtocol(uint32_t proto_id, void* protocol) {
   }
 }
 
-void UsbInterface::DdkUnbind() { DdkRemove(); }
+void UsbInterface::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 void UsbInterface::DdkRelease() {
   // Release the reference now that devmgr no longer has a pointer to this object.

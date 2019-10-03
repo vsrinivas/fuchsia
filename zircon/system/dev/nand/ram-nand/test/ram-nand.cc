@@ -57,7 +57,7 @@ TEST(RamNandTest, DdkLifetime) {
 
   fake_ddk::Bind ddk;
   ASSERT_OK(device->Bind(BuildConfig()));
-  device->DdkUnbind();
+  device->DdkUnbindDeprecated();
   EXPECT_TRUE(ddk.Ok());
 
   // This should delete the object, which means this test should not leak.
@@ -223,7 +223,7 @@ TEST(RamNandTest, BasicDeviceProtocol) {
 
   ASSERT_EQ(kPageSize * kNumPages, device.DdkGetSize());
 
-  device.DdkUnbind();
+  device.DdkUnbindDeprecated();
 
   ASSERT_EQ(ZX_ERR_BAD_STATE, device.DdkMessage(nullptr, nullptr));
 }

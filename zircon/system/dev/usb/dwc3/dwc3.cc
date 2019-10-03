@@ -399,7 +399,7 @@ static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
     dwc3_stop(dwc);
   } else if (dwc->usb_mode == USB_MODE_HOST) {
     if (dwc->xhci_dev) {
-      device_remove(dwc->xhci_dev);
+      device_remove_deprecated(dwc->xhci_dev);
       dwc->xhci_dev = nullptr;
 
       if (mode == USB_MODE_PERIPHERAL) {
@@ -449,7 +449,7 @@ static void dwc3_unbind(void* ctx) {
   auto* dwc = static_cast<dwc3_t*>(ctx);
   dwc->irq_handle.destroy();
   thrd_join(dwc->irq_thread, nullptr);
-  device_remove(dwc->zxdev);
+  device_remove_deprecated(dwc->zxdev);
 }
 
 static zx_status_t dwc3_get_protocol(void* ctx, uint32_t proto_id, void* out) {

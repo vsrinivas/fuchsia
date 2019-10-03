@@ -53,7 +53,7 @@ TEST_F(HciTest, TestReadEndpointNumber) {
 
   EXPECT_OK(hci.Init());
   EXPECT_EQ(3, regs::INDEX::Get().ReadFrom(&v).selected_endpoint());
-  hci.DdkUnbind();
+  hci.DdkUnbindDeprecated();
 }
 
 }  // namespace mt_usb_hci

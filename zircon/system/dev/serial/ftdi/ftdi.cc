@@ -328,11 +328,11 @@ zx_status_t FtdiDevice::SerialImplSetNotifyCallback(const serial_notify_t* cb) {
 
 FtdiDevice::~FtdiDevice() {}
 
-void FtdiDevice::DdkUnbind() {
+void FtdiDevice::DdkUnbindDeprecated() {
   cancel_thread_ = std::thread([this]() {
     usb_client_.CancelAll(bulk_in_addr_);
     usb_client_.CancelAll(bulk_out_addr_);
-    DdkRemove();
+    DdkRemoveDeprecated();
   });
 }
 

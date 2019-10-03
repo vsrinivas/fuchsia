@@ -14,15 +14,15 @@
 #include "test-metadata.h"
 
 class TestCompatibilityHookDriverChild;
-using DeviceType = ddk::Device<TestCompatibilityHookDriverChild, ddk::Unbindable>;
+using DeviceType = ddk::Device<TestCompatibilityHookDriverChild, ddk::UnbindableDeprecated>;
 class TestCompatibilityHookDriverChild : public DeviceType {
  public:
   TestCompatibilityHookDriverChild(zx_device_t* parent) : DeviceType(parent) {}
   static zx_status_t Create(void* ctx, zx_device_t* device);
   zx_status_t Bind();
-  void DdkUnbind() {
+  void DdkUnbindDeprecated() {
     if (test_metadata_.remove_in_unbind) {
-      DdkRemove();
+      DdkRemoveDeprecated();
     }
   }
   void DdkRelease() { delete this; }

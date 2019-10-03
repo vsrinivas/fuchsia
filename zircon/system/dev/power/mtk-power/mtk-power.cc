@@ -289,7 +289,7 @@ zx_status_t MtkPower::PowerImplReadPmicCtrlReg(uint32_t index, uint32_t addr, ui
 
 void MtkPower::DdkRelease() { delete this; }
 
-void MtkPower::DdkUnbind() { DdkRemove(); }
+void MtkPower::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 enum MtkRegulatorType { BUCK = 1, LDO, FIXED };
 

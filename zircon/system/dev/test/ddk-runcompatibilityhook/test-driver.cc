@@ -15,13 +15,13 @@
 #include "test-metadata.h"
 
 class TestCompatibilityHookDriver;
-using DeviceType = ddk::Device<TestCompatibilityHookDriver, ddk::Unbindable>;
+using DeviceType = ddk::Device<TestCompatibilityHookDriver, ddk::UnbindableDeprecated>;
 class TestCompatibilityHookDriver : public DeviceType,
                                     public ddk::EmptyProtocol<ZX_PROTOCOL_TEST_COMPAT_CHILD> {
  public:
   TestCompatibilityHookDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();
-  void DdkUnbind() { DdkRemove(); }
+  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
   void DdkRelease() { delete this; }
 
  private:

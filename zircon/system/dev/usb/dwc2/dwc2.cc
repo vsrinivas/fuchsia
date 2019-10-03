@@ -917,7 +917,7 @@ int Dwc2::IrqThread() {
   return 0;
 }
 
-void Dwc2::DdkUnbind() {
+void Dwc2::DdkUnbindDeprecated() {
   irq_.destroy();
   thrd_join(irq_thread_, nullptr);
 }

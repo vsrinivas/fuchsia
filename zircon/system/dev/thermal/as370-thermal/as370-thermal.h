@@ -35,7 +35,7 @@ class As370Thermal : public DeviceType,
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  void DdkUnbind() { DdkRemove(); }
+  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
   void DdkRelease() { delete this; }
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);

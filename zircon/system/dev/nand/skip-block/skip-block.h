@@ -31,7 +31,8 @@ using ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation;
 using ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation;
 
 class SkipBlockDevice;
-using DeviceType = ddk::Device<SkipBlockDevice, ddk::GetSizable, ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<SkipBlockDevice, ddk::GetSizable, ddk::UnbindableDeprecated,
+                               ddk::Messageable>;
 
 class SkipBlockDevice : public DeviceType,
                         public ::llcpp::fuchsia::hardware::skipblock::SkipBlock::Interface,
@@ -45,7 +46,7 @@ class SkipBlockDevice : public DeviceType,
   // Device protocol implementation.
   zx_off_t DdkGetSize();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbind() { DdkRemove(); }
+  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
   void DdkRelease() { delete this; }
 
   // skip-block fidl implementation.

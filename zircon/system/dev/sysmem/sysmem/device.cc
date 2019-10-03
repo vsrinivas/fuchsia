@@ -327,7 +327,7 @@ zx_status_t Device::Bind() {
   status = pbus_register_protocol(&pbus, ZX_PROTOCOL_SYSMEM, &in_proc_sysmem_protocol_,
                                   sizeof(in_proc_sysmem_protocol_));
   if (status != ZX_OK) {
-    zx_status_t remove_status = device_remove(device_);
+    zx_status_t remove_status = device_remove_deprecated(device_);
     // If this failed, we're potentially leaving the device invisible in a
     // --release build, which is about the best we can do if removing fails.
     // Of course, remove shouldn't fail in the first place.

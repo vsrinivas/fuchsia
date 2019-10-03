@@ -55,7 +55,7 @@ class Operation {
 };
 
 class Broker;
-using DeviceType = ddk::Device<Broker, ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<Broker, ddk::UnbindableDeprecated, ddk::Messageable>;
 
 // Exposes a control device (nand-broker) for a nand protocol device.
 class Broker : public DeviceType {
@@ -67,7 +67,7 @@ class Broker : public DeviceType {
     void DdkRelease() { delete this; }
 
     // Device protocol implementation.
-    void DdkUnbind() { DdkRemove(); }
+    void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
     // fidl interface.

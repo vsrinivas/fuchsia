@@ -190,10 +190,10 @@ zx_status_t UsbXhci::DdkSuspend(uint32_t flags) {
   return ZX_OK;
 }
 
-void UsbXhci::DdkUnbind() {
+void UsbXhci::DdkUnbindDeprecated() {
   zxlogf(INFO, "UsbXhci::DdkUnbind\n");
   xhci_shutdown(xhci_.get());
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void UsbXhci::DdkRelease() {
@@ -238,7 +238,7 @@ int UsbXhci::CompleterThread(void* arg) {
 int UsbXhci::StartThread() {
   zxlogf(TRACE, "%s start\n", __func__);
 
-  auto cleanup = fbl::MakeAutoCall([this]() { DdkRemove(); });
+  auto cleanup = fbl::MakeAutoCall([this]() { DdkRemoveDeprecated(); });
 
   fbl::AllocChecker ac;
   completers_.reset(new (&ac) Completer[xhci_->num_interrupts], xhci_->num_interrupts);

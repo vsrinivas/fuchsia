@@ -87,7 +87,7 @@ class TestRequest {
 };
 
 class UsbTester;
-using UsbTesterBase = ddk::Device<UsbTester, ddk::Messageable, ddk::Unbindable>;
+using UsbTesterBase = ddk::Device<UsbTester, ddk::Messageable, ddk::UnbindableDeprecated>;
 
 class UsbTester : public UsbTesterBase, public ddk::EmptyProtocol<ZX_PROTOCOL_USB_TESTER> {
  public:
@@ -96,7 +96,7 @@ class UsbTester : public UsbTesterBase, public ddk::EmptyProtocol<ZX_PROTOCOL_US
 
   // Device protocol implementation.
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbind() { DdkRemove(); }
+  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
   void DdkRelease() { delete this; }
 
   // FIDL message implementation.

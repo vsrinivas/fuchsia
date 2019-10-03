@@ -602,9 +602,9 @@ zx_status_t CadenceHpnfc::RawNandGetNandInfo(nand_info_t* out_info) {
   return ZX_OK;
 }
 
-void CadenceHpnfc::DdkUnbind() {
+void CadenceHpnfc::DdkUnbindDeprecated() {
   StopInterruptThread();
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void CadenceHpnfc::DdkRelease() { delete this; }

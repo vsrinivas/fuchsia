@@ -36,13 +36,13 @@
 namespace fake_ftdi_function {
 
 class FakeFtdiFunction;
-using DeviceType = ddk::Device<FakeFtdiFunction, ddk::Unbindable>;
+using DeviceType = ddk::Device<FakeFtdiFunction, ddk::UnbindableDeprecated>;
 class FakeFtdiFunction : public DeviceType {
  public:
   FakeFtdiFunction(zx_device_t* parent) : DeviceType(parent), function_(parent) {}
   zx_status_t Bind();
   // |ddk::Device|
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   // |ddk::Device|
   void DdkRelease();
 
@@ -313,7 +313,7 @@ zx_status_t FakeFtdiFunction::Bind() {
   return ZX_OK;
 }
 
-void FakeFtdiFunction::DdkUnbind() {
+void FakeFtdiFunction::DdkUnbindDeprecated() {
   fbl::AutoLock lock(&mtx_);
   active_ = false;
   event_.Signal();
@@ -322,7 +322,7 @@ void FakeFtdiFunction::DdkUnbind() {
   int retval;
   thrd_join(thread_, &retval);
 
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void FakeFtdiFunction::DdkRelease() { delete this; }

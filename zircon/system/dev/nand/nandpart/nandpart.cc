@@ -193,13 +193,13 @@ zx_status_t NandPartDevice::Bind(const char* name, uint32_t copy_count) {
   // Add empty partition map metadata to prevent this driver from binding to its child devices
   status = DdkAddMetadata(DEVICE_METADATA_PARTITION_MAP, nullptr, 0);
   if (status != ZX_OK) {
-    DdkRemove();
+    DdkRemoveDeprecated();
     return status;
   }
 
   status = DdkAddMetadata(DEVICE_METADATA_PRIVATE, &copy_count, sizeof(copy_count));
   if (status != ZX_OK) {
-    DdkRemove();
+    DdkRemoveDeprecated();
     return status;
   }
 

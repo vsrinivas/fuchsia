@@ -19,7 +19,7 @@
 namespace aml_usb_phy {
 
 class AmlUsbPhy;
-using AmlUsbPhyType = ddk::Device<AmlUsbPhy, ddk::Unbindable>;
+using AmlUsbPhyType = ddk::Device<AmlUsbPhy, ddk::UnbindableDeprecated>;
 
 // This is the main class for the platform bus driver.
 class AmlUsbPhy : public AmlUsbPhyType, public ddk::UsbPhyProtocol<AmlUsbPhy, ddk::base_protocol> {
@@ -32,7 +32,7 @@ class AmlUsbPhy : public AmlUsbPhyType, public ddk::UsbPhyProtocol<AmlUsbPhy, dd
   void UsbPhyConnectStatusChanged(bool connected);
 
   // Device protocol implementation.
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
  private:
