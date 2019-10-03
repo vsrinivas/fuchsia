@@ -130,6 +130,7 @@ class FreezeDetector {
   bool _started = false;
   bool _isFrozen = false;
   bool _freezeHappened = false;
+  Completer _c;
 
   Duration threshold = const Duration(seconds: 5);
   static const _workInterval = Duration(seconds: 1);
@@ -144,26 +145,28 @@ class FreezeDetector {
   void _workerHandler() async {
     _lastExecution.reset();
     await inspect.retrieveHubEntries();
+
+    if (_isFrozen) {
+      _log.info('Freeze End Detected ${DateTime.now()}');
+      _isFrozen = false;
+      _log.info('Freeze Duration ${_lastExecution.elapsed}');
+      _c.complete();
+    }
+
+    final nextWork = _workInterval - _lastExecution.elapsed;
+
     if (_started) {
-      _worker = new Timer(_workInterval, _workerHandler);
+      _worker = Timer(nextWork, _workerHandler);
     }
   }
 
-  void _timerHandler(timer) async {
-    final checkTime = DateTime.now();
-    final checkDuration = _lastExecution.elapsed;
-
-    if (checkDuration > threshold) {
+  void _timerHandler(Timer timer) async {
+    if (_lastExecution.elapsed > threshold) {
       if (!_isFrozen) {
         _isFrozen = true;
-        _log.info('Freeze Start Detected $checkTime');
+        _log.info('Freeze Start Detected ${DateTime.now()}');
         _freezeHappened = true;
-      }
-    } else {
-      if (_isFrozen) {
-        _log.info('Freeze End Detected $checkTime');
-        _isFrozen = false;
-        _log.info('Freeze Duration $checkDuration');
+        _c = Completer();
       }
     }
   }
@@ -186,11 +189,7 @@ class FreezeDetector {
     _worker?.cancel();
   }
 
-  Future<void> waitUntilUnfrozen() async {
-    while (_isFrozen) {
-      await Future.delayed(_updateInterval);
-    }
-  }
+  Future<void> waitUntilUnfrozen() => _c?.future;
 
   bool isFrozen() => _isFrozen;
   bool freezeHappened() => _freezeHappened;
