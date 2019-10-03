@@ -216,7 +216,7 @@ void ConvertWlanChan(wlan_common::WlanChan* fidl_chan, const wlan_channel_t& wla
 template <typename T>
 static void ArrayToVector(::fidl::VectorPtr<T>* vecptr, const T* data, size_t len) {
   if (len > 0) {
-    (*vecptr)->assign(data, data + len);
+    (*vecptr) = std::vector<T>(data, data + len);
   }
 }
 
