@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{device::TeeDeviceConnection, service_provider_server::ServiceProviderServer},
+    crate::{device::TeeDeviceConnection, provider_server::ProviderServer},
     failure::{Error, ResultExt},
     fidl::endpoints::{ClientEnd, ServerEnd},
     fuchsia_async as fasync,
@@ -23,20 +23,20 @@ pub async fn serve_passthrough(
     dev_connection: TeeDeviceConnection,
     channel: zx::Channel,
 ) -> Result<(), Error> {
-    // Create a ServiceProviderServer to support the TEE driver
-    let service_provider = ServiceProviderServer::try_new(PathBuf::new().join(STORAGE_DIR))?;
+    // Create a ProviderServer to support the TEE driver
+    let provider = ProviderServer::try_new(PathBuf::new().join(STORAGE_DIR))?;
     let (zx_provider_server_end, zx_provider_client_end) =
-        zx::Channel::create().context("Could not create ServiceProvider channel pair")?;
+        zx::Channel::create().context("Could not create Provider channel pair")?;
 
-    // Make the ServiceProviderServer abortable on the TeeDeviceConnection dying
-    let (service_provider_server_fut, abort_handle) = abortable(
-        service_provider
+    // Make the ProviderServer abortable on the TeeDeviceConnection dying
+    let (provider_server_fut, abort_handle) = abortable(
+        provider
             .serve(fasync::Channel::from_channel(zx_provider_server_end)?)
             .unwrap_or_else(|e| fx_log_err!("{:?}", e)),
     );
 
     dev_connection.register_abort_handle_on_closed(abort_handle).await;
-    fasync::spawn(service_provider_server_fut.unwrap_or_else(|Aborted| ()));
+    fasync::spawn(provider_server_fut.unwrap_or_else(|Aborted| ()));
 
     dev_connection
         .connector_proxy

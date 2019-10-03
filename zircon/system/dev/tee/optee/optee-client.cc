@@ -583,7 +583,7 @@ std::optional<SharedMemoryView> OpteeClient::GetMemoryReference(SharedMemoryList
 zx_status_t OpteeClient::GetRootStorageChannel(zx::unowned_channel* out_root_channel) {
   ZX_DEBUG_ASSERT(out_root_channel != nullptr);
 
-  if (!service_provider_channel_.is_valid()) {
+  if (!provider_channel_.is_valid()) {
     return ZX_ERR_UNAVAILABLE;
   }
   if (root_storage_channel_.is_valid()) {
@@ -598,8 +598,8 @@ zx_status_t OpteeClient::GetRootStorageChannel(zx::unowned_channel* out_root_cha
     return status;
   }
 
-  status = fuchsia_tee_manager_ServiceProviderRequestPersistentStorage(
-      service_provider_channel_.get(), server_channel.release());
+  status = fuchsia_tee_manager_ProviderRequestPersistentStorage(provider_channel_.get(),
+                                                                server_channel.release());
   if (status != ZX_OK) {
     return status;
   }
@@ -957,8 +957,8 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystem(FileSystemRpcMessage&& messa
   // Mark that the return code will originate from driver
   message.set_return_origin(TEEC_ORIGIN_COMMS);
 
-  if (!service_provider_channel_.is_valid()) {
-    // Client did not connect with a ServiceProvider so none of these RPCs can be serviced
+  if (!provider_channel_.is_valid()) {
+    // Client did not connect with a Provider so none of these RPCs can be serviced
     message.set_return_code(TEEC_ERROR_BAD_STATE);
     return ZX_ERR_UNAVAILABLE;
   }
@@ -1038,7 +1038,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystem(FileSystemRpcMessage&& messa
 
 zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRpcMessage* message) {
   ZX_DEBUG_ASSERT(message != nullptr);
-  ZX_DEBUG_ASSERT(service_provider_channel_.is_valid());
+  ZX_DEBUG_ASSERT(provider_channel_.is_valid());
 
   zxlogf(SPEW, "optee: received RPC to open file\n");
 

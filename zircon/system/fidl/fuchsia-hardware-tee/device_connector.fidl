@@ -11,8 +11,8 @@ using fuchsia.tee.manager as manager;
 [Layout = "Simple"]
 protocol DeviceConnector {
     /// Requests service from the TEE driver while the caller provides a client end to a
-    /// ServiceProvider server that supports the driver on any RPCs.
+    /// Provider server that supports the driver on any RPCs.
     ///
     /// The sole caller of this should be the TEE Manager.
-    ConnectTee(manager.ServiceProvider? service_provider, request<tee.Device> tee_request);
+    ConnectTee(manager.Provider? service_provider, request<tee.Device> tee_request);
 };

@@ -39,10 +39,10 @@ class OpteeClient : public OpteeClientBase,
                     public OpteeClientProtocol,
                     public fbl::DoublyLinkedListable<OpteeClient*> {
  public:
-  explicit OpteeClient(OpteeController* controller, zx::channel service_provider_channel)
+  explicit OpteeClient(OpteeController* controller, zx::channel provider_channel)
       : OpteeClientBase(controller->zxdev()),
         controller_(controller),
-        service_provider_channel_(std::move(service_provider_channel)) {}
+        provider_channel_(std::move(provider_channel)) {}
 
   OpteeClient(const OpteeClient&) = delete;
   OpteeClient& operator=(const OpteeClient&) = delete;
@@ -115,15 +115,14 @@ class OpteeClient : public OpteeClientBase,
   std::optional<SharedMemoryView> GetMemoryReference(SharedMemoryList::iterator mem_iter,
                                                      zx_paddr_t base_paddr, size_t size);
 
-  // Requests the root storage channel from the `ServiceProvider` and caches it in
-  // `root_storage_channel_`.
+  // Requests the root storage channel from the `Provider` and caches it in `root_storage_channel_`.
   //
   // Subsequent calls to the function will return the cached channel.
   //
   // Returns:
   //  * ZX_OK:                The operation was successful.
-  //  * ZX_ERR_UNAVAILABLE:   The current client does not have access to a `ServiceProvider`.
-  //  * `zx_status_t` codes from `zx::channel::create` or requesting the `ServiceProvider` over
+  //  * ZX_ERR_UNAVAILABLE:   The current client does not have access to a `Provider`.
+  //  * `zx_status_t` codes from `zx::channel::create` or requesting the `Provider` over
   //    FIDL.
   zx_status_t GetRootStorageChannel(zx::unowned_channel* out_root_channel);
 
@@ -226,9 +225,9 @@ class OpteeClient : public OpteeClientBase,
   std::unordered_map<uint64_t, zx::channel> open_file_system_objects_;
   std::unordered_set<uint32_t> open_sessions_;
 
-  // The client end of a channel to the `fuchsia.tee.manager.ServiceProvider` protocol.
-  // This may be an invalid channel, which indicates the client has no service provider support.
-  zx::channel service_provider_channel_;
+  // The client end of a channel to the `fuchsia.tee.manager.Provider` protocol.
+  // This may be an invalid channel, which indicates the client has no provider support.
+  zx::channel provider_channel_;
 
   // A lazily-initialized, cached channel to the root storage channel.
   // This may be an invalid channel, which indicates it has not been initialized yet.

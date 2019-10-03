@@ -6,7 +6,7 @@
 
 mod device;
 mod device_server;
-mod service_provider_server;
+mod provider_server;
 
 use {
     crate::device::TeeDeviceConnection,

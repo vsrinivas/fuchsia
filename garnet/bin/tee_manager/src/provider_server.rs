@@ -6,30 +6,32 @@ use {
     failure::{format_err, Error, ResultExt},
     fdio,
     fidl::endpoints::RequestStream,
-    fidl_fuchsia_tee_manager::{ServiceProviderRequest, ServiceProviderRequestStream},
+    fidl_fuchsia_tee_manager::{ProviderRequest, ProviderRequestStream},
     fuchsia_async as fasync,
     futures::prelude::*,
     std::{fs, path::PathBuf},
 };
 
-/// `ServiceProviderServer` implements the fuchsia.tee.manager.ServiceProvider FIDL protocol.
-pub struct ServiceProviderServer {
+/// `ProviderServer` implements the fuchsia.tee.manager.Provider FIDL protocol.
+pub struct ProviderServer {
     storage_dir: PathBuf,
 }
 
-impl ServiceProviderServer {
+impl ProviderServer {
     pub fn try_new(storage_dir: PathBuf) -> Result<Self, Error> {
         fs::create_dir_all(&storage_dir)?;
         Ok(Self { storage_dir })
     }
 
     pub async fn serve(self, chan: fasync::Channel) -> Result<(), Error> {
-        let mut request_stream = ServiceProviderRequestStream::from_channel(chan);
+        let mut request_stream = ProviderRequestStream::from_channel(chan);
 
-        while let Some(request) = request_stream.try_next().await
-            .context("Error receiving ServiceProviderRequestStream message")?
+        while let Some(request) = request_stream
+            .try_next()
+            .await
+            .context("Error receiving ProviderRequestStream message")?
         {
-            let ServiceProviderRequest::RequestPersistentStorage { dir, .. } = request;
+            let ProviderRequest::RequestPersistentStorage { dir, .. } = request;
 
             let storage_dir_str =
                 self.storage_dir.to_str().ok_or_else(|| format_err!("Invalid storage path"))?;
