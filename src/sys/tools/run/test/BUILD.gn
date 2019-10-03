@@ -51,6 +51,7 @@ executable("run_return_value_test") {
   libs = [ "zircon" ]
 
   deps = [
+    "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fdio",
   ]
