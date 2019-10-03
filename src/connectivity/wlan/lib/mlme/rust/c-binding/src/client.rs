@@ -100,3 +100,8 @@ pub unsafe extern "C" fn client_sta_send_eapol_frame(
     let payload = utils::as_slice(payload, payload_len);
     sta.send_eapol_frame(*src, *dest, is_protected, payload)
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn client_sta_send_ps_poll_frame(sta: &mut ClientStation, aid: u16) -> i32 {
+    sta.send_ps_poll_frame(aid).into_raw_zx_status()
+}

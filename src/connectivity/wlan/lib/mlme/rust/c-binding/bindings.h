@@ -135,6 +135,8 @@ extern "C" void client_sta_send_eapol_frame(wlan_client_sta_t *sta, const uint8_
 
 extern "C" int32_t client_sta_send_open_auth_frame(wlan_client_sta_t *sta);
 
+extern "C" int32_t client_sta_send_ps_poll_frame(wlan_client_sta_t *sta, uint16_t aid);
+
 extern "C" mlme_sequence_manager_t *client_sta_seq_mgr(wlan_client_sta_t *sta);
 
 extern "C" void client_sta_timeout_fired(wlan_client_sta_t *sta,
