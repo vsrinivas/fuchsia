@@ -69,7 +69,13 @@ Stack::Stack(size_t stack_size) : stack_size_(ToFullPages(stack_size)) {
 #endif
 }
 
-Stack::~Stack() { ReleaseASAN(safe_stack_); }
+Stack::~Stack() {
+  ReleaseASAN(safe_stack_);
+
+#if __has_feature(shadow_call_stack)
+  ReleaseASAN(shadow_call_stack_);
+#endif
+}
 
 void Stack::Release() {
   ReleaseASAN(safe_stack_);
