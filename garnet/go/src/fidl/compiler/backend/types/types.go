@@ -356,10 +356,11 @@ type Union struct {
 // UnionMember represents the declaration of a field in a FIDL union.
 type UnionMember struct {
 	Attributes
-	Type         Type       `json:"type"`
-	Name         Identifier `json:"name"`
-	Offset       int        `json:"offset"`
-	MaxOutOfLine int        `json:"max_out_of_line"`
+	XUnionOrdinal int        `json:"xunion_ordinal"`
+	Type          Type       `json:"type"`
+	Name          Identifier `json:"name"`
+	Offset        int        `json:"offset"`
+	MaxOutOfLine  int        `json:"max_out_of_line"`
 }
 
 // XUnion represents the declaration of a FIDL extensible union.

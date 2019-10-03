@@ -204,6 +204,17 @@ func tagsfmt(t Tag, t2 tagNew) string {
 	return fmt.Sprintf("`%s`", strings.Join(tags, " "))
 }
 
+func tagfmt(t Tag) string {
+	var tags []string
+	if t_str := t.String(); len(t_str) != 0 {
+		tags = append(tags, t_str)
+	}
+	if len(tags) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("`%s`", strings.Join(tags, " "))
+}
+
 // StructMember represents the member of a golang struct.
 type StructMember struct {
 	types.Attributes
@@ -245,6 +256,9 @@ type Union struct {
 // UnionMember represents a FIDL union member as a golang struct member.
 type UnionMember struct {
 	types.Attributes
+
+	// The ordinal that the corresponding xunion would use, to assist in union to xunion migration.
+	XUnionOrdinal int
 
 	// Name is the exported name of the FIDL union member.
 	Name string
@@ -814,13 +828,15 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 }
 
 func (c *compiler) compileUnionMember(unionName string, val types.UnionMember) UnionMember {
-	ty, tag, tag2 := c.compileType(val.Type)
+	ty, tag, _ := c.compileType(val.Type)
+	tag.reverseOfBounds = append(tag.reverseOfBounds, val.XUnionOrdinal)
 	return UnionMember{
-		Attributes:  val.Attributes,
-		Type:        ty,
-		Name:        c.compileIdentifier(val.Name, true, ""),
-		PrivateName: c.compileIdentifier(val.Name, false, ""),
-		Tags:        tagsfmt(tag, tag2),
+		Attributes:    val.Attributes,
+		XUnionOrdinal: val.XUnionOrdinal,
+		Type:          ty,
+		Name:          c.compileIdentifier(val.Name, true, ""),
+		PrivateName:   c.compileIdentifier(val.Name, false, ""),
+		Tags:          tagfmt(tag),
 	}
 }
 
@@ -832,8 +848,8 @@ func (c *compiler) compileUnion(val types.Union) Union {
 		Size:       val.Size,
 		Alignment:  val.Alignment,
 	}
-	for _, v := range val.Members {
-		r.Members = append(r.Members, c.compileUnionMember(r.Name, v))
+	for _, member := range val.Members {
+		r.Members = append(r.Members, c.compileUnionMember(r.Name, member))
 	}
 	return r
 }

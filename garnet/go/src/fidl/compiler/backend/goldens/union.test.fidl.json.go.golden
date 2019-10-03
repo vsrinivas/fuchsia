@@ -17,9 +17,9 @@ const (
 
 type Union struct {
 	I_unionTag `fidl:"u,24,8" fidl2:"u,24,8"`
-	Primitive int32 
-	StringNeedsConstructor string 
-	VectorStringAlsoNeedsConstructor []string 
+	Primitive int32 `fidl:"910042901"`
+	StringNeedsConstructor string `fidl:"891204917,"`
+	VectorStringAlsoNeedsConstructor []string `fidl:"1452916587,,"`
 }
 
 func (u *Union) Which() I_unionTag {
@@ -67,7 +67,7 @@ const (
 
 type FieldCollision struct {
 	I_fieldCollisionTag `fidl:"u,8,4" fidl2:"u,8,4"`
-	FieldCollisionTag int32 
+	FieldCollisionTag int32 `fidl:"1574011787"`
 }
 
 func (u *FieldCollision) Which() I_fieldCollisionTag {

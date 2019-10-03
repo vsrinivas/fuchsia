@@ -69,8 +69,8 @@ const (
 
 type WithErrorSyntaxResponseAsStructResult struct {
 	I_withErrorSyntaxResponseAsStructResultTag `fidl:"u,32,8" fidl2:"u,32,8"`
-	Response WithErrorSyntaxResponseAsStructResponse 
-	Err uint32 
+	Response WithErrorSyntaxResponseAsStructResponse `fidl:"415743989"`
+	Err uint32 `fidl:"1728496323"`
 }
 
 func (u *WithErrorSyntaxResponseAsStructResult) Which() I_withErrorSyntaxResponseAsStructResultTag {
@@ -108,8 +108,8 @@ const (
 
 type WithErrorSyntaxErrorAsPrimitiveResult struct {
 	I_withErrorSyntaxErrorAsPrimitiveResultTag `fidl:"u,8,4" fidl2:"u,8,4"`
-	Response WithErrorSyntaxErrorAsPrimitiveResponse 
-	Err uint32 
+	Response WithErrorSyntaxErrorAsPrimitiveResponse `fidl:"138512668"`
+	Err uint32 `fidl:"1043053528"`
 }
 
 func (u *WithErrorSyntaxErrorAsPrimitiveResult) Which() I_withErrorSyntaxErrorAsPrimitiveResultTag {
@@ -147,8 +147,8 @@ const (
 
 type WithErrorSyntaxErrorAsEnumResult struct {
 	I_withErrorSyntaxErrorAsEnumResultTag `fidl:"u,8,4" fidl2:"u,8,4"`
-	Response WithErrorSyntaxErrorAsEnumResponse 
-	Err ErrorEnun 
+	Response WithErrorSyntaxErrorAsEnumResponse `fidl:"1951667349"`
+	Err ErrorEnun `fidl:"887935114"`
 }
 
 func (u *WithErrorSyntaxErrorAsEnumResult) Which() I_withErrorSyntaxErrorAsEnumResultTag {

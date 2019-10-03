@@ -1,0 +1,27 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+success("UnionWithBoundString") {
+	value = UnionWithBoundStringStruct {
+        v: UnionWithBoundString {
+            boundFiveStr: "abcd",
+        },
+	},
+	bytes = [
+        tag 8:num(0),
+        // envelope for string:
+        size 8:num(4),
+        ptr 8:num(-1),
+        data 4:raw('a', 'b', 'c', 'd',), 4:padding,
+	],
+}
+
+encode_failure("UnionWithBoundString_ExceedsBounds") {
+	value = UnionWithBoundStringStruct {
+        v: UnionWithBoundString {
+            boundFiveStr: "abcdef",
+        },
+	},
+	err = STRING_TOO_LONG,
+}

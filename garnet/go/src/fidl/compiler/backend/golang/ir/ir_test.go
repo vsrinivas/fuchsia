@@ -20,6 +20,7 @@ const (
 	expectEnums expectKind = iota
 	expectBits
 	expectStructs
+	expectUnion
 	expectXUnion
 	expectInterface
 	expectTable
@@ -39,6 +40,9 @@ func compileExpect(t *testing.T, testName string, kind expectKind, input types.R
 		case expectStructs:
 			actual = wrapped_actual.Structs
 			expect = wrapped_expect.Structs
+		case expectUnion:
+			actual = wrapped_actual.Unions
+			expect = wrapped_expect.Unions
 		case expectXUnion:
 			actual = wrapped_actual.XUnions
 			expect = wrapped_expect.XUnions
@@ -69,6 +73,10 @@ func compileStructsExpect(t *testing.T, testName string, input []types.Struct, e
 	compileExpect(t, testName, expectStructs, types.Root{Structs: input}, Root{Structs: expect})
 }
 
+func compileUnionExpect(t *testing.T, testName string, input types.Union, expect Union) {
+	compileExpect(t, testName, expectUnion, types.Root{Unions: []types.Union{input}}, Root{Unions: []Union{expect}})
+}
+
 func compileXUnionExpect(t *testing.T, testName string, input types.XUnion, expect XUnion) {
 	compileExpect(t, testName, expectXUnion, types.Root{XUnions: []types.XUnion{input}}, Root{XUnions: []XUnion{expect}})
 }
@@ -89,13 +97,13 @@ func TestCompileStruct(t *testing.T) {
 			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
-					Type: PrimitiveType(types.Int8),
-					Name: types.Identifier("Test"),
+					Type:   PrimitiveType(types.Int8),
+					Name:   types.Identifier("Test"),
 					Offset: 0,
 				},
 				{
-					Type: PrimitiveType(types.Float32),
-					Name: types.Identifier("Test2"),
+					Type:   PrimitiveType(types.Float32),
+					Name:   types.Identifier("Test2"),
 					Offset: 4,
 				},
 			},
@@ -125,8 +133,8 @@ func TestCompileStruct(t *testing.T) {
 			Name: types.EncodedCompoundIdentifier("test"),
 			Members: []types.StructMember{
 				{
-					Type: PrimitiveType(types.Int8),
-					Name: types.Identifier("test"),
+					Type:   PrimitiveType(types.Int8),
+					Name:   types.Identifier("test"),
 					Offset: 0,
 				},
 			},
@@ -150,13 +158,13 @@ func TestCompileStruct(t *testing.T) {
 			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
-					Type: ArrayType(PrimitiveType(types.Uint8), 10),
-					Name: types.Identifier("Flat"),
+					Type:   ArrayType(PrimitiveType(types.Uint8), 10),
+					Name:   types.Identifier("Flat"),
 					Offset: 0,
 				},
 				{
-					Type: ArrayType(ArrayType(PrimitiveType(types.Bool), 1), 27),
-					Name: types.Identifier("Nested"),
+					Type:   ArrayType(ArrayType(PrimitiveType(types.Bool), 1), 27),
+					Name:   types.Identifier("Nested"),
 					Offset: 10,
 				},
 			},
@@ -187,28 +195,28 @@ func TestCompileStruct(t *testing.T) {
 			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
-					Type: StringType(nil),
-					Name: types.Identifier("Flat"),
+					Type:   StringType(nil),
+					Name:   types.Identifier("Flat"),
 					Offset: 0,
 				},
 				{
-					Type: Nullable(StringType(nil)),
-					Name: types.Identifier("Nullable"),
+					Type:   Nullable(StringType(nil)),
+					Name:   types.Identifier("Nullable"),
 					Offset: 16,
 				},
 				{
-					Type: Nullable(StringType(&maxElems)),
-					Name: types.Identifier("Max"),
+					Type:   Nullable(StringType(&maxElems)),
+					Name:   types.Identifier("Max"),
 					Offset: 32,
 				},
 				{
-					Type: ArrayType(StringType(nil), 27),
-					Name: types.Identifier("Nested"),
+					Type:   ArrayType(StringType(nil), 27),
+					Name:   types.Identifier("Nested"),
 					Offset: 48,
 				},
 				{
-					Type: ArrayType(Nullable(StringType(&maxElems)), 27),
-					Name: types.Identifier("NestedNullableMax"),
+					Type:   ArrayType(Nullable(StringType(&maxElems)), 27),
+					Name:   types.Identifier("NestedNullableMax"),
 					Offset: 480,
 				},
 			},
@@ -256,28 +264,28 @@ func TestCompileStruct(t *testing.T) {
 			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
-					Type: VectorType(PrimitiveType(types.Uint8), nil),
-					Name: types.Identifier("Flat"),
+					Type:   VectorType(PrimitiveType(types.Uint8), nil),
+					Name:   types.Identifier("Flat"),
 					Offset: 0,
 				},
 				{
-					Type: VectorType(PrimitiveType(types.Uint8), &maxElems),
-					Name: types.Identifier("Max"),
+					Type:   VectorType(PrimitiveType(types.Uint8), &maxElems),
+					Name:   types.Identifier("Max"),
 					Offset: 16,
 				},
 				{
-					Type: VectorType(VectorType(PrimitiveType(types.Bool), nil), nil),
-					Name: types.Identifier("Nested"),
+					Type:   VectorType(VectorType(PrimitiveType(types.Bool), nil), nil),
+					Name:   types.Identifier("Nested"),
 					Offset: 32,
 				},
 				{
-					Type: VectorType(Nullable(VectorType(PrimitiveType(types.Bool), nil)), nil),
-					Name: types.Identifier("Nullable"),
+					Type:   VectorType(Nullable(VectorType(PrimitiveType(types.Bool), nil)), nil),
+					Name:   types.Identifier("Nullable"),
 					Offset: 48,
 				},
 				{
-					Type: VectorType(VectorType(VectorType(PrimitiveType(types.Uint8), &maxElems), nil), nil),
-					Name: types.Identifier("NestedMax"),
+					Type:   VectorType(VectorType(VectorType(PrimitiveType(types.Uint8), &maxElems), nil), nil),
+					Name:   types.Identifier("NestedMax"),
 					Offset: 64,
 				},
 			},
@@ -325,13 +333,13 @@ func TestCompileStruct(t *testing.T) {
 			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
-					Type: VectorType(Nullable(HandleType()), nil),
-					Name: types.Identifier("NullableHandles"),
+					Type:   VectorType(Nullable(HandleType()), nil),
+					Name:   types.Identifier("NullableHandles"),
 					Offset: 0,
 				},
 				{
-					Type: VectorType(HandleType(), &maxElems),
-					Name: types.Identifier("BoundedNonNullableHandles"),
+					Type:   VectorType(HandleType(), &maxElems),
+					Name:   types.Identifier("BoundedNonNullableHandles"),
 					Offset: 16,
 				},
 			},
@@ -362,23 +370,23 @@ func TestCompileStruct(t *testing.T) {
 			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
-					Type: VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), nil), 2), nil),
-					Name: types.Identifier("no_vec_bounds"),
+					Type:   VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), nil), 2), nil),
+					Name:   types.Identifier("no_vec_bounds"),
 					Offset: 0,
 				},
 				{
-					Type: VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), nil), 2), &one),
-					Name: types.Identifier("outer_vec_bounds"),
+					Type:   VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), nil), 2), &one),
+					Name:   types.Identifier("outer_vec_bounds"),
 					Offset: 16,
 				},
 				{
-					Type: VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), &three), 2), nil),
-					Name: types.Identifier("inner_vec_bounds"),
+					Type:   VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), &three), 2), nil),
+					Name:   types.Identifier("inner_vec_bounds"),
 					Offset: 32,
 				},
 				{
-					Type: VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), &three), 2), &one),
-					Name: types.Identifier("both_vec_bounds"),
+					Type:   VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), &three), 2), &one),
+					Name:   types.Identifier("both_vec_bounds"),
 					Offset: 48,
 				},
 			},
@@ -827,6 +835,40 @@ func TestCompileXUnion(t *testing.T) {
 					PrivateName: "second",
 					Name:        "Second",
 					Tags:        "`" + `fidl:"2,7" fidl2:"2,7"` + "`",
+				},
+			},
+		})
+}
+
+func TestCompileUnion(t *testing.T) {
+	seven := 7
+	compileUnionExpect(
+		t,
+		"Basic",
+		types.Union{
+			Name:      types.EncodedCompoundIdentifier("MyUnion"),
+			Size:      123,
+			Alignment: 456,
+			Members: []types.UnionMember{
+				{
+					XUnionOrdinal: 2,
+					Name:          "second",
+					Type:          VectorType(PrimitiveType(types.Uint32), &seven),
+				},
+			},
+		},
+		Union{
+			Name:      "MyUnion",
+			TagName:   "I_myUnionTag",
+			Size:      123,
+			Alignment: 456,
+			Members: []UnionMember{
+				{
+					Type:          "[]uint32",
+					XUnionOrdinal: 2,
+					PrivateName:   "second",
+					Name:          "Second",
+					Tags:          "`" + `fidl:"2,7"` + "`",
 				},
 			},
 		})
