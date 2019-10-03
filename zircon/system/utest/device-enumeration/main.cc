@@ -249,6 +249,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "sherlock-sd-emmc/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
       "wifi/brcmfmac-wlanphy",
       "sys/platform/05:04:15/aml-mipi",
+      "sys/platform/05:04:1c",  // nna
       "sys/platform/12:02:2/gdc",
       "sys/platform/05:04:2/ge2d",
       "imx227-sensor",

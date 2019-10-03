@@ -122,6 +122,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_AMLOGIC_SPI         25
 #define PDEV_DID_AMLOGIC_SECURE_MEM  26
 #define PDEV_DID_AMLOGIC_GE2D        27
+#define PDEV_DID_AMLOGIC_NNA         28
 
 // Broadcom
 #define PDEV_VID_BROADCOM           6

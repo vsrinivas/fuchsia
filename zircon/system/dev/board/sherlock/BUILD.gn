@@ -18,6 +18,7 @@ driver("sherlock") {
     "sherlock-i2c.cc",
     "sherlock-light.cc",
     "sherlock-mali.cc",
+    "sherlock-nna.cc",
     "sherlock-ot-radio.cc",
     "sherlock-sdio.cc",
     "sherlock-spi.cc",

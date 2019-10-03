@@ -36,6 +36,7 @@ enum {
   BTI_THERMAL,
   BTI_TEE,
   BTI_GE2D,
+  BTI_NNA,
 };
 
 // MAC address metadata indices
@@ -103,6 +104,7 @@ class Sherlock : public SherlockType {
   zx_status_t LightInit();
   zx_status_t OtRadioInit();
   zx_status_t BacklightInit();
+  zx_status_t NnaInit();
   int Thread();
 
   zx_status_t EnableWifi32K(void);

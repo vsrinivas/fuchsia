@@ -151,6 +151,10 @@ int Sherlock::Thread() {
     zxlogf(ERROR, "MaliInit() failed\n");
   }
 
+  if (NnaInit() != ZX_OK) {
+    zxlogf(ERROR, "NnaInit() failed\n");
+  }
+
   if (ButtonsInit() != ZX_OK) {
     zxlogf(ERROR, "ButtonsInit() failed\n");
   }
