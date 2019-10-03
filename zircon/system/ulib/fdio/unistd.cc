@@ -586,9 +586,11 @@ static zx_status_t __fdio_opendir_containing_at(fdio_t** io, int dirfd, const ch
   // Copy the trailing 'name' to out.
   memcpy(out, clean + i, namelen);
   if (is_dir) {
-    // TODO(smklein): Propagate this information without using
-    // the output name; it'll simplify server-side path parsing
-    // if all trailing slashes are replaced with "O_DIRECTORY".
+    // TODO(fxb/37408): Propagate whether path is directory without using
+    // trailing backslash to simplify server-side path parsing.
+    // This might require refactoring trailing backslash checks out of
+    // lower filesystem layers and associated FIDL APIs.
+
     out[namelen++] = '/';
   }
   out[namelen] = 0;
