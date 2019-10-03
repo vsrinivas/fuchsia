@@ -28,6 +28,7 @@ std::vector<std::string> RootRealmServices() {
       fuchsia::boot::FactoryItems::Name_,
       fuchsia::boot::ReadOnlyLog::Name_,
       fuchsia::boot::RootJob::Name_,
+      fuchsia::boot::RootJobForInspect::Name_,
       fuchsia::boot::RootResource::Name_,
       fuchsia::boot::WriteOnlyLog::Name_,
       fuchsia::device::NameProvider::Name_,

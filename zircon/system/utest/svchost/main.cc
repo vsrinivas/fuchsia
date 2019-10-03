@@ -26,6 +26,7 @@ constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 constexpr char kProfileProviderPath[] = "/svc/" fuchsia_scheduler_ProfileProvider_Name;
 constexpr char kReadOnlyLogPath[] = "/svc/" fuchsia_boot_ReadOnlyLog_Name;
 constexpr char kRootJobPath[] = "/svc/" fuchsia_boot_RootJob_Name;
+constexpr char kRootJobForInspectPath[] = "/svc/" fuchsia_boot_RootJobForInspect_Name;
 constexpr char kRootResourcePath[] = "/svc/" fuchsia_boot_RootResource_Name;
 constexpr char kWriteOnlyLogPath[] = "/svc/" fuchsia_boot_WriteOnlyLog_Name;
 
@@ -122,6 +123,26 @@ TEST(SvchostTest, FuchsiaRootJobPresent) {
   zx::job job;
   status = fuchsia_boot_RootJobGet(client.get(), job.reset_and_get_address());
   ASSERT_EQ(ZX_OK, status, "fuchsia_boot_RootJobGet failed");
+}
+
+TEST(SvchostTest, FuchsiaRootJobForInspectPresent) {
+  zx::channel client, server;
+  zx_status_t status = zx::channel::create(0, &client, &server);
+  ASSERT_EQ(ZX_OK, status, "zx::channel::create failed");
+
+  status = fdio_service_connect(kRootJobForInspectPath, server.release());
+  ASSERT_EQ(ZX_OK, status, "fdio_service_connect failed");
+
+  zx::job job;
+  status = fuchsia_boot_RootJobForInspectGet(client.get(), job.reset_and_get_address());
+  ASSERT_EQ(ZX_OK, status, "fuchsia_boot_RootJobForInspectGet failed");
+  ASSERT_TRUE(job.is_valid());
+  zx_info_handle_basic_t info;
+  status =
+      job.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(zx_info_handle_basic_t), nullptr, nullptr);
+  ASSERT_EQ(ZX_OK, status, "zx_object_get_info failed");
+  ASSERT_EQ(ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_INSPECT | ZX_RIGHT_ENUMERATE,
+            info.rights);
 }
 
 TEST(SvchostTest, FuchsiaKernelStatsPresent) {

@@ -28,6 +28,11 @@
       "to": [ "#devcoordinator" ],
     },
     {
+      "legacy_service": "/svc/fuchsia.boot.RootJobForInspect",
+      "from": "realm",
+      "to": [ "#devcoordinator" ],
+    },
+    {
       "legacy_service": "/svc/fuchsia.boot.RootResource",
       "from": "realm",
       "to": [ "#devcoordinator", "#console" ],

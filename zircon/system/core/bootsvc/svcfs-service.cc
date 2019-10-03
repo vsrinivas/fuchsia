@@ -150,6 +150,21 @@ constexpr fuchsia_boot_RootJob_ops kRootJobOps = {
     .Get = RootJobGet,
 };
 
+zx_status_t RootJobForInspectGet(void* ctx, fidl_txn_t* txn) {
+  zx::job dup;
+  zx_status_t status = zx::job::default_job()->duplicate(
+      ZX_RIGHT_INSPECT | ZX_RIGHT_ENUMERATE | ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER, &dup);
+  if (status != ZX_OK) {
+    printf("bootsvc: Failed to duplicate root job: %s\n", zx_status_get_string(status));
+    return status;
+  }
+  return fuchsia_boot_RootJobForInspectGet_reply(txn, dup.release());
+}
+
+constexpr fuchsia_boot_RootJobForInspect_ops kRootJobForInspectOps = {
+    .Get = RootJobForInspectGet,
+};
+
 zx_status_t RootResourceGet(void* ctx, fidl_txn_t* txn) {
   auto root_resource_handle = static_cast<const zx::resource*>(ctx);
   zx::resource root_resource_dup;
@@ -235,6 +250,13 @@ fbl::RefPtr<fs::Service> CreateRootJobService(async_dispatcher_t* dispatcher) {
   return fbl::MakeRefCounted<fs::Service>([dispatcher](zx::channel channel) {
     auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_RootJob_dispatch);
     return fidl_bind(dispatcher, channel.release(), dispatch, nullptr, &kRootJobOps);
+  });
+}
+
+fbl::RefPtr<fs::Service> CreateRootJobForInspectService(async_dispatcher_t* dispatcher) {
+  return fbl::MakeRefCounted<fs::Service>([dispatcher](zx::channel channel) {
+    auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_RootJobForInspect_dispatch);
+    return fidl_bind(dispatcher, channel.release(), dispatch, nullptr, &kRootJobForInspectOps);
   });
 }
 

@@ -92,6 +92,7 @@ TEST_F(HubTest, Services) {
                                                "fuchsia.boot.FactoryItems",
                                                "fuchsia.boot.ReadOnlyLog",
                                                "fuchsia.boot.RootJob",
+                                               "fuchsia.boot.RootJobForInspect",
                                                "fuchsia.boot.RootResource",
                                                "fuchsia.boot.WriteOnlyLog",
                                                "fuchsia.device.NameProvider",

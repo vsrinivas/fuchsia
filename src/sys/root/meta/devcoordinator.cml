@@ -8,6 +8,7 @@
     { "legacy_service": "/svc/fuchsia.boot.Items" },
     { "legacy_service": "/svc/fuchsia.boot.ReadOnlyLog" },
     { "legacy_service": "/svc/fuchsia.boot.RootJob" },
+    { "legacy_service": "/svc/fuchsia.boot.RootJobForInspect" },
     { "legacy_service": "/svc/fuchsia.boot.RootResource" },
     { "legacy_service": "/svc/fuchsia.boot.WriteOnlyLog" },
     { "legacy_service": "/svc/fuchsia.hardware.pty.Device" },
