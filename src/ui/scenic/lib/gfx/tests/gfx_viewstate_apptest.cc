@@ -16,80 +16,57 @@
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>
 
-#include <map>
-#include <string>
-
 #include <gtest/gtest.h>
 
 #include "garnet/testing/views/embedder_view.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/scenic/lib/gfx/tests/pixel_test.h"
+#include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 
 namespace {
-
-// clang-format off
-const std::map<std::string, std::pair</*url*/std::string, /*args*/std::vector<std::string>>> kServices = {
-    {"fuchsia.tracing.provider.Registry", {"fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx", {}}},
-    {"fuchsia.ui.input.ImeService", {"fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx", {}}},
-    {"fuchsia.ui.policy.Presenter", {"fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx", {}}},
-    {"fuchsia.ui.scenic.Scenic", {"fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx", {"--verbose=2"}}},
-    {"fuchsia.ui.shortcut.Manager", {"fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cmx", {}}},
-    {"fuchsia.vulkan.loader.Loader", {"fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx", {}}},
-    {"fuchsia.sysmem.Allocator", {"fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx", {}}},
-};
-// clang-format on
 
 const int64_t kTestTimeout = 60;
 
 // Test fixture that sets up an environment suitable for Scenic pixel tests
 // and provides related utilities. The environment includes Scenic and
 // RootPresenter, and their dependencies.
-class ViewEmbedderTest : public sys::testing::TestWithEnvironment {
- protected:
-  ViewEmbedderTest() {
-    std::unique_ptr<sys::testing::EnvironmentServices> services = CreateServices();
-
-    for (const auto& [service_name, url_and_args] : kServices) {
-      const auto& [url, args] = url_and_args;
-      fuchsia::sys::LaunchInfo launch_info;
-      launch_info.url = url;
-      launch_info.arguments = args;
-      services->AddServiceWithLaunchInfo(std::move(launch_info), service_name);
-    }
-
-    constexpr char kEnvironment[] = "ViewEmbedderTest";
-    environment_ = CreateNewEnclosingEnvironment(kEnvironment, std::move(services));
-
-    environment_->ConnectToService(scenic_.NewRequest());
-    scenic_.set_error_handler(
-        [](zx_status_t status) { FAIL() << "Lost connection to Scenic: " << status; });
-  }
-
-  // Create a |ViewContext| that allows us to present a view via
-  // |RootPresenter|. See also examples/ui/simplest_embedder
-  scenic::ViewContext CreatePresentationContext() {
-    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-
-    scenic::ViewContext view_context = {
-        .session_and_listener_request =
-            scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),
-        .view_token = std::move(view_token),
-    };
-
-    fuchsia::ui::policy::PresenterPtr presenter;
-    environment_->ConnectToService(presenter.NewRequest());
-    presenter->PresentView(std::move(view_holder_token), nullptr);
-
-    return view_context;
-  }
-
-  fuchsia::ui::scenic::ScenicPtr scenic_;
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
+class ViewEmbedderTest : public gfx::PixelTest {
+ public:
+  ViewEmbedderTest() : gfx::PixelTest("ViewEmbedderTest") {}
 };
 
 TEST_F(ViewEmbedderTest, BouncingBall) {
   auto info = scenic::LaunchComponentAndCreateView(
       environment_->launcher_ptr(),
       "fuchsia-pkg://fuchsia.com/bouncing_ball#meta/bouncing_ball.cmx", {});
+
+  scenic::EmbedderView embedder_view(CreatePresentationContext());
+
+  bool view_state_changed_observed = false;
+  embedder_view.EmbedView(std::move(info), [&view_state_changed_observed](auto) {
+    view_state_changed_observed = true;
+  });
+
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&view_state_changed_observed] { return view_state_changed_observed; },
+      zx::sec(kTestTimeout)));
+}
+
+TEST_F(ViewEmbedderTest, ProtectedVkcube) {
+  // vkcube_on_scenic does not produce protected content if platform does not allow. Check if
+  // protected memory is available beforehand to skip these cases.
+  {
+    if (VK_TESTS_SUPPRESSED() || !scenic_impl::gfx::test::VkSessionTest::CreateVulkanDeviceQueues(
+                                     /*use_protected_memory=*/true)) {
+      GTEST_SKIP();
+    }
+  }
+
+  auto info = scenic::LaunchComponentAndCreateView(
+      environment_->launcher_ptr(),
+      "fuchsia-pkg://fuchsia.com/vkcube_on_scenic#meta/vkcube_on_scenic.cmx",
+      {"--protected_output"});
 
   scenic::EmbedderView embedder_view(CreatePresentationContext());
 

@@ -14,16 +14,24 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-VulkanDeviceQueuesPtr VkSessionTest::CreateVulkanDeviceQueues() {
+VulkanDeviceQueuesPtr VkSessionTest::CreateVulkanDeviceQueues(bool use_protected_memory) {
   auto vulkan_instance =
       escher::test::EscherEnvironment::GetGlobalTestEnvironment()->GetVulkanInstance();
   // This extension is necessary to support exporting Vulkan memory to a VMO.
-  return VulkanDeviceQueues::New(
+  VulkanDeviceQueues::Params::Flags flags =
+      use_protected_memory ? VulkanDeviceQueues::Params::kAllowProtectedMemory : 0;
+  auto vulkan_queues = VulkanDeviceQueues::New(
       vulkan_instance,
       {{VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME, VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
-        VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME, VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME},
+        VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME},
        {},
-       vk::SurfaceKHR()});
+       vk::SurfaceKHR(),
+       flags});
+  // Some devices might not be capable of using protected memory.
+  if (use_protected_memory && !vulkan_queues->caps().allow_protected_memory) {
+    return nullptr;
+  }
+  return vulkan_queues;
 }
 
 vk::DeviceMemory VkSessionTest::AllocateExportableMemory(vk::Device device,

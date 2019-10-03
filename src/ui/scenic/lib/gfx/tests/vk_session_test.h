@@ -16,7 +16,7 @@ namespace test {
 
 class VkSessionTest : public SessionTest {
  public:
-  static escher::VulkanDeviceQueuesPtr CreateVulkanDeviceQueues();
+  static escher::VulkanDeviceQueuesPtr CreateVulkanDeviceQueues(bool use_protected_memory = false);
   static vk::DeviceMemory AllocateExportableMemory(vk::Device device,
                                                    vk::PhysicalDevice physical_device,
                                                    vk::MemoryRequirements requirements,

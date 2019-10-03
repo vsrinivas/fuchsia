@@ -103,10 +103,12 @@ class PixelTest : public sys::testing::TestWithEnvironment {
   // session. This offers more control over the camera and compositor.
   std::unique_ptr<TestSession> SetUpTestSession();
 
+ protected:
+  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
+
  private:
   const std::string environment_label_;
 
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
 };
 
