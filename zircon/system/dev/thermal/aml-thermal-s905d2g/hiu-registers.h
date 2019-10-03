@@ -2,11 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hwreg/bitfields.h>
+#ifndef ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_HIU_REGISTERS_H_
+#define ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_HIU_REGISTERS_H_
+
 #include <zircon/types.h>
 
-namespace thermal {
+#include <hwreg/bitfields.h>
 
+constexpr uint32_t kSysCpuOffset = 0x19C;
+constexpr uint32_t kSysCpuBOffset = 0x208;
+
+namespace thermal {
 class SysCpuClkControl0 : public hwreg::RegisterBase<SysCpuClkControl0, uint32_t> {
  public:
   DEF_BIT(29, busy_cnt);
@@ -26,7 +32,9 @@ class SysCpuClkControl0 : public hwreg::RegisterBase<SysCpuClkControl0, uint32_t
   DEF_BIT(2, postmux0);
   DEF_FIELD(1, 0, premux0);
 
-  static auto Get() { return hwreg::RegisterAddr<SysCpuClkControl0>(0x19C); }
+  static auto Get(uint32_t offset) { return hwreg::RegisterAddr<SysCpuClkControl0>(offset); }
 };
 
 }  // namespace thermal
+
+#endif  // ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_HIU_REGISTERS_H_

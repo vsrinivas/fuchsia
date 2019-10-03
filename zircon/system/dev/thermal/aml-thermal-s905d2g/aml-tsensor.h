@@ -2,17 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_AML_TSENSOR_H_
+#define ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_AML_TSENSOR_H_
 
-#include <atomic>
-#include <lib/device-protocol/platform-device.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddktl/device.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
+#include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
-#include <optional>
 #include <threads.h>
+
+#include <atomic>
+#include <optional>
+
+#include <ddk/protocol/platform/device.h>
+#include <ddktl/device.h>
 
 namespace thermal {
 
@@ -22,15 +25,20 @@ class AmlTSensor {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlTSensor);
   AmlTSensor() {}
+  // For testing
+  AmlTSensor(ddk::MmioBuffer pll_mmio, ddk::MmioBuffer ao_mmio, ddk::MmioBuffer hiu_mmio)
+      : pll_mmio_(std::move(pll_mmio)),
+        ao_mmio_(std::move(ao_mmio)),
+        hiu_mmio_(std::move(hiu_mmio)) {}
   float ReadTemperatureCelsius();
-  zx_status_t InitSensor(zx_device_t* parent,
-                         fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config);
+  zx_status_t Create(zx_device_t* parent,
+                     fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config);
+  zx_status_t InitSensor(fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config);
   zx_status_t GetStateChangePort(zx_handle_t* port);
   ~AmlTSensor();
 
  private:
   int TripPointIrqHandler();
-  zx_status_t InitPdev(zx_device_t* parent);
   uint32_t TempCelsiusToCode(float temp_c, bool trend);
   float CodeToTempCelsius(uint32_t temp_code);
   void SetRebootTemperatureCelsius(uint32_t temp_c);
@@ -51,3 +59,5 @@ class AmlTSensor {
   uint32_t current_trip_idx_ = 0;
 };
 }  // namespace thermal
+
+#endif  // ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_AML_TSENSOR_H_

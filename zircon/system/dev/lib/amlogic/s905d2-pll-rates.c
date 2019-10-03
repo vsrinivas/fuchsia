@@ -55,6 +55,7 @@ const hhi_pll_rate_t* s905d2_pll_get_rate_table(hhi_plls_t pll_num) {
     case PCIE_PLL:
     case HIFI_PLL:
     case SYS_PLL:
+    case SYS1_PLL:
       return s905d2_hiu_pll_rates;
   }
   return NULL;
@@ -66,6 +67,7 @@ size_t s905d2_get_rate_table_count(hhi_plls_t pll_num) {
     case PCIE_PLL:
     case HIFI_PLL:
     case SYS_PLL:
+    case SYS1_PLL:
       return countof(s905d2_hiu_pll_rates);
   }
   return 0;

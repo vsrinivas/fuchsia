@@ -7,6 +7,7 @@
 #include <zircon/types.h>
 
 #include <ddk/debug.h>
+#include <ddk/mmio-buffer.h>
 #include <hw/reg.h>
 #include <soc/aml-s905d2/s905d2-hiu.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
@@ -48,6 +49,16 @@ static zx_status_t s905d2_pll_init_regs(aml_pll_dev_t* pll_dev) {
     hiu_clk_set_reg(device, HHI_SYS_PLL_CNTL4, G12A_SYS_PLL_CNTL4);
     hiu_clk_set_reg(device, HHI_SYS_PLL_CNTL5, G12A_SYS_PLL_CNTL5);
     hiu_clk_set_reg(device, HHI_SYS_PLL_CNTL6, G12A_SYS_PLL_CNTL6);
+    zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+    return ZX_OK;
+  } else if (pll_dev->pll_num == SYS1_PLL) {
+    // write config values
+    hiu_clk_set_reg(device, HHI_SYS1_PLL_CNTL1, G12A_SYS1_PLL_CNTL1);
+    hiu_clk_set_reg(device, HHI_SYS1_PLL_CNTL2, G12A_SYS1_PLL_CNTL2);
+    hiu_clk_set_reg(device, HHI_SYS1_PLL_CNTL3, G12A_SYS1_PLL_CNTL3);
+    hiu_clk_set_reg(device, HHI_SYS1_PLL_CNTL4, G12A_SYS1_PLL_CNTL4);
+    hiu_clk_set_reg(device, HHI_SYS1_PLL_CNTL5, G12A_SYS1_PLL_CNTL5);
+    hiu_clk_set_reg(device, HHI_SYS1_PLL_CNTL6, G12A_SYS1_PLL_CNTL6);
     zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
     return ZX_OK;
   } else if (pll_dev->pll_num == GP0_PLL) {

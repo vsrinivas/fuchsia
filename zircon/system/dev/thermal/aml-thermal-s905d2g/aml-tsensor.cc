@@ -3,7 +3,13 @@
 // found in the LICENSE file.
 
 #include "aml-tsensor.h"
-#include "aml-tsensor-regs.h"
+
+#include <string.h>
+#include <threads.h>
+#include <unistd.h>
+#include <zircon/assert.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/types.h>
 
 #include <cmath>
 
@@ -11,10 +17,8 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <hw/reg.h>
-#include <string.h>
-#include <threads.h>
-#include <unistd.h>
-#include <zircon/syscalls/port.h>
+
+#include "aml-tsensor-regs.h"
 
 namespace thermal {
 
@@ -227,45 +231,6 @@ zx_status_t AmlTSensor::InitTripPoints() {
   return ZX_OK;
 }
 
-zx_status_t AmlTSensor::InitPdev(zx_device_t* parent) {
-  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // Map amlogic temperature sensor peripheral control registers.
-  mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev_, kPllMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d\n", status);
-    return status;
-  }
-  pll_mmio_ = ddk::MmioBuffer(mmio);
-
-  status = pdev_map_mmio_buffer(&pdev_, kAoMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d\n", status);
-    return status;
-  }
-  ao_mmio_ = ddk::MmioBuffer(mmio);
-
-  status = pdev_map_mmio_buffer(&pdev_, kHiuMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d\n", status);
-    return status;
-  }
-  hiu_mmio_ = ddk::MmioBuffer(mmio);
-
-  // Map tsensor interrupt.
-  status = pdev_get_interrupt(&pdev_, 0, 0, tsensor_irq_.reset_and_get_address());
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-tsensor: could not map tsensor interrupt\n");
-    return status;
-  }
-
-  return ZX_OK;
-}
-
 // Tsensor treats temperature as a mapped temperature code.
 // The temperature is converted differently depending on the calibration type.
 uint32_t AmlTSensor::TempCelsiusToCode(float temp_c, bool trend) {
@@ -353,13 +318,48 @@ zx_status_t AmlTSensor::GetStateChangePort(zx_handle_t* port) {
   return zx_handle_duplicate(port_, ZX_RIGHT_SAME_RIGHTS, port);
 }
 
-zx_status_t AmlTSensor::InitSensor(zx_device_t* parent,
-                                   fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config) {
-  zx_status_t status = InitPdev(parent);
+zx_status_t AmlTSensor::Create(zx_device_t* parent,
+                               fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config) {
+  // InitPdev
+  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
   if (status != ZX_OK) {
     return status;
   }
 
+  // Map amlogic temperature sensor peripheral control registers.
+  mmio_buffer_t mmio;
+  status = pdev_map_mmio_buffer(&pdev_, kPllMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d\n", status);
+    return status;
+  }
+  pll_mmio_ = ddk::MmioBuffer(mmio);
+
+  status = pdev_map_mmio_buffer(&pdev_, kAoMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d\n", status);
+    return status;
+  }
+  ao_mmio_ = ddk::MmioBuffer(mmio);
+
+  status = pdev_map_mmio_buffer(&pdev_, kHiuMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d\n", status);
+    return status;
+  }
+  hiu_mmio_ = ddk::MmioBuffer(mmio);
+
+  // Map tsensor interrupt.
+  status = pdev_get_interrupt(&pdev_, 0, 0, tsensor_irq_.reset_and_get_address());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "aml-tsensor: could not map tsensor interrupt\n");
+    return status;
+  }
+
+  return InitSensor(thermal_config);
+}
+
+zx_status_t AmlTSensor::InitSensor(fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config) {
   // Copy the thermal_config
   memcpy(&thermal_config_, &thermal_config, sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo));
 
@@ -380,7 +380,7 @@ zx_status_t AmlTSensor::InitSensor(zx_device_t* parent,
       .WriteTo(&*pll_mmio_);
 
   // Create a port to send messages to thermal daemon.
-  status = zx_port_create(0, &port_);
+  zx_status_t status = zx_port_create(0, &port_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-tsensor: Unable to create port\n");
     return status;

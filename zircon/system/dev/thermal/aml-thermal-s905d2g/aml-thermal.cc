@@ -3,33 +3,38 @@
 // found in the LICENSE file.
 
 #include "aml-thermal.h"
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/metadata.h>
-#include <ddktl/protocol/composite.h>
-#include <fbl/auto_call.h>
-#include <fbl/unique_ptr.h>
-#include <hw/reg.h>
+
+#include <lib/device-protocol/pdev.h>
 #include <string.h>
 #include <threads.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls/port.h>
+#include <zircon/types.h>
 
 #include <utility>
 
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/metadata.h>
+#include <fbl/auto_call.h>
+#include <fbl/unique_ptr.h>
+#include <hw/reg.h>
+
 namespace thermal {
 
-zx_status_t AmlThermal::SetTarget(uint32_t opp_idx) {
+zx_status_t AmlThermal::SetTarget(uint32_t opp_idx,
+                                  fuchsia_hardware_thermal_PowerDomain power_domain) {
   if (opp_idx >= fuchsia_hardware_thermal_MAX_DVFS_OPPS) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   // Get current settings.
-  uint32_t old_voltage = voltage_regulator_->GetVoltage();
-  uint32_t old_frequency = cpufreq_scaling_->GetFrequency();
+  uint32_t old_voltage = voltage_regulator_->GetVoltage(power_domain);
+  uint32_t old_frequency = cpufreq_scaling_->GetFrequency(power_domain);
 
   // Get new settings.
-  uint32_t new_voltage = opp_info_.opps[opp_idx].volt_uv;
-  uint32_t new_frequency = opp_info_.opps[opp_idx].freq_hz;
+  uint32_t new_voltage = thermal_config_.opps[power_domain].opp[opp_idx].volt_uv;
+  uint32_t new_frequency = thermal_config_.opps[power_domain].opp[opp_idx].freq_hz;
 
   zxlogf(INFO, "Scaling from %d MHz, %u mV, --> %d MHz, %u mV\n", old_frequency / 1000000,
          old_voltage / 1000, new_frequency / 1000000, new_voltage / 1000);
@@ -42,7 +47,7 @@ zx_status_t AmlThermal::SetTarget(uint32_t opp_idx) {
   zx_status_t status;
   // Increasing CPU Frequency from current value, so we first change the voltage.
   if (new_frequency > old_frequency) {
-    status = voltage_regulator_->SetVoltage(new_voltage);
+    status = voltage_regulator_->SetVoltage(power_domain, new_voltage);
     if (status != ZX_OK) {
       zxlogf(ERROR, "aml-thermal: Could not change CPU voltage: %d\n", status);
       return status;
@@ -50,12 +55,12 @@ zx_status_t AmlThermal::SetTarget(uint32_t opp_idx) {
   }
 
   // Now let's change CPU frequency.
-  status = cpufreq_scaling_->SetFrequency(new_frequency);
+  status = cpufreq_scaling_->SetFrequency(power_domain, new_frequency);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-thermal: Could not change CPU frequency: %d\n", status);
     // Failed to change CPU frequency, change back to old
     // voltage before returning.
-    status = voltage_regulator_->SetVoltage(old_voltage);
+    status = voltage_regulator_->SetVoltage(power_domain, old_voltage);
     if (status != ZX_OK) {
       return status;
     }
@@ -64,7 +69,7 @@ zx_status_t AmlThermal::SetTarget(uint32_t opp_idx) {
 
   // Decreasing CPU Frequency from current value, changing voltage after frequency.
   if (new_frequency < old_frequency) {
-    status = voltage_regulator_->SetVoltage(new_voltage);
+    status = voltage_regulator_->SetVoltage(power_domain, new_voltage);
     if (status != ZX_OK) {
       zxlogf(ERROR, "aml-thermal: Could not change CPU voltage: %d\n", status);
       return status;
@@ -82,19 +87,32 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   }
 
   // zeroth component is pdev
-  zx_device_t* pdev;
+  zx_device_t* component;
   size_t actual;
-  composite.GetComponents(&pdev, 1, &actual);
+  composite.GetComponents(&component, 1, &actual);
   if (actual != 1) {
     zxlogf(ERROR, "%s: failed to get pdev component\n", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // Get the voltage-table & opp metadata.
-  aml_opp_info_t opp_info;
-  zx_status_t status =
-      device_get_metadata(device, DEVICE_METADATA_PRIVATE, &opp_info, sizeof(opp_info_), &actual);
-  if (status != ZX_OK || actual != sizeof(opp_info_)) {
+  ddk::PDev pdev(component);
+  if (!pdev.is_valid()) {
+    zxlogf(ERROR, "aml-cpufreq: failed to get pdev protocol\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  pdev_device_info_t device_info;
+  zx_status_t status = pdev.GetDeviceInfo(&device_info);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "aml-cpufreq: failed to get GetDeviceInfo \n");
+    return status;
+  }
+
+  // Get the voltage-table .
+  aml_voltage_table_info_t voltage_table;
+  status = device_get_metadata(device, DEVICE_METADATA_PRIVATE, &voltage_table,
+                               sizeof(voltage_table), &actual);
+  if (status != ZX_OK || actual != sizeof(voltage_table)) {
     zxlogf(ERROR, "aml-thermal: Could not get voltage-table metadata %d\n", status);
     return status;
   }
@@ -115,7 +133,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   }
 
   // Initialize Temperature Sensor.
-  status = tsensor->InitSensor(pdev, thermal_config);
+  status = tsensor->Create(component, thermal_config);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-thermal: Could not initialize Temperature Sensor: %d\n", status);
     return status;
@@ -127,8 +145,8 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  // Initialize Temperature Sensor.
-  status = voltage_regulator->Init(pdev, &opp_info);
+  // Initialize voltage regulator.
+  status = voltage_regulator->Create(device, &voltage_table);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-thermal: Could not initialize Voltage Regulator: %d\n", status);
     return status;
@@ -141,7 +159,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   }
 
   // Initialize CPU frequency scaling.
-  status = cpufreq_scaling->Init(device);
+  status = cpufreq_scaling->Create(device);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-thermal: Could not initialize CPU freq. scaling: %d\n", status);
     return status;
@@ -149,7 +167,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
 
   auto thermal_device = fbl::make_unique_checked<AmlThermal>(
       &ac, device, std::move(tsensor), std::move(voltage_regulator), std::move(cpufreq_scaling),
-      std::move(opp_info), std::move(thermal_config));
+      std::move(thermal_config));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -163,10 +181,31 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   // Set the default CPU frequency.
   // We could be running Zircon only, or thermal daemon might not
   // run, so we manually set the CPU frequency here.
-  uint32_t opp_idx = thermal_device->thermal_config_.trip_point_info[0].big_cluster_dvfs_opp;
-  status = thermal_device->SetTarget(opp_idx);
-  if (status != ZX_OK) {
-    return status;
+  if (device_info.pid == PDEV_PID_AMLOGIC_T931) {
+    // Sherlock
+    uint32_t big_opp_idx = thermal_device->thermal_config_.trip_point_info[0].big_cluster_dvfs_opp;
+    status = thermal_device->SetTarget(
+        big_opp_idx, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    uint32_t little_opp_idx =
+        thermal_device->thermal_config_.trip_point_info[0].little_cluster_dvfs_opp;
+    status = thermal_device->SetTarget(
+        little_opp_idx, fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+  } else if (device_info.pid == PDEV_PID_AMLOGIC_S905D2) {
+    // Astro
+    uint32_t opp_idx = thermal_device->thermal_config_.trip_point_info[0].big_cluster_dvfs_opp;
+    status = thermal_device->SetTarget(
+        opp_idx, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN);
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
   // devmgr is now in charge of the memory for dev.
@@ -188,7 +227,9 @@ zx_status_t AmlThermal::GetDeviceInfo(fidl_txn_t* txn) {
 
 zx_status_t AmlThermal::GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain power_domain,
                                     fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr);
+  scpi_opp_t opps = {};
+  opps = thermal_config_.opps[power_domain];
+  return fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, ZX_OK, &opps);
 }
 
 zx_status_t AmlThermal::GetTemperatureCelsius(fidl_txn_t* txn) {
@@ -219,11 +260,8 @@ zx_status_t AmlThermal::GetDvfsOperatingPoint(fuchsia_hardware_thermal_PowerDoma
 zx_status_t AmlThermal::SetDvfsOperatingPoint(uint16_t op_idx,
                                               fuchsia_hardware_thermal_PowerDomain power_domain,
                                               fidl_txn_t* txn) {
-  if (power_domain != fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
-    return fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint_reply(txn, ZX_ERR_INVALID_ARGS);
-  }
-
-  return fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint_reply(txn, SetTarget(op_idx));
+  return fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint_reply(
+      txn, SetTarget(op_idx, power_domain));
 }
 
 zx_status_t AmlThermal::GetFanLevel(fidl_txn_t* txn) {
@@ -248,9 +286,10 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace thermal
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_thermal, thermal::driver_ops, "aml-thermal", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(aml_thermal, thermal::driver_ops, "aml-thermal", "0.1", 5)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_THERMAL),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_THERMAL),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
 ZIRCON_DRIVER_END(aml_thermal)

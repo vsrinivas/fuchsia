@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_CLK_AMLOGIC_CLK_AML_G12B_BLOCKS_H_
+#define ZIRCON_SYSTEM_DEV_CLK_AMLOGIC_CLK_AML_G12B_BLOCKS_H_
+
+#include <soc/aml-meson/g12b-clk.h>
 
 #include "aml-clk-blocks.h"
-#include <soc/aml-meson/g12b-clk.h>
 
 // TODO(braval): Use common bitfield header (ZX-2526) when available for
 //               macros used below to avoid duplication.
@@ -20,6 +22,7 @@
 #define MSR_BUSY BIT(31)
 
 #define G12B_HHI_SYS_CPU_CLK_CNTL1 (0x57 << 2)
+#define G12B_HHI_SYS_CPUB_CLK_CNTL1 (0x80 << 2)
 #define G12B_HHI_TS_CLK_CNTL (0x64 << 2)
 #define G12B_HHI_XTAL_DIVN_CNTL (0x2f << 2)
 
@@ -30,6 +33,11 @@ static constexpr meson_clk_gate_t g12b_clk_gates[] = {
     {.reg = G12B_HHI_SYS_CPU_CLK_CNTL1, .bit = 24},  // G12B_CLK_SYS_PLL_DIV16
     {.reg = G12B_HHI_SYS_CPU_CLK_CNTL1, .bit = 1},   // G12B_CLK_SYS_CPU_CLK_DIV16
     {.reg = G12B_HHI_XTAL_DIVN_CNTL, .bit = 11},     // G12B_CLK_CAM_INCK_24M
+
+    // SYS CPUB Clock gates.
+    {.reg = G12B_HHI_SYS_CPUB_CLK_CNTL1, .bit = 24},  // G12B_CLK_SYS_PLLB_DIV16
+    {.reg = G12B_HHI_SYS_CPUB_CLK_CNTL1, .bit = 1},   // G12B_CLK_SYS_CPUB_CLK_DIV16
+
 };
 
 static_assert(CLK_G12B_COUNT == countof(g12b_clk_gates),
@@ -172,3 +180,5 @@ static const char* const g12b_clk_table[] = {
     "mipi_csi_phy0_clk_out",      // 125
     "mipi_csi_phy1_clk_out",      // 126
 };
+
+#endif  // ZIRCON_SYSTEM_DEV_CLK_AMLOGIC_CLK_AML_G12B_BLOCKS_H_

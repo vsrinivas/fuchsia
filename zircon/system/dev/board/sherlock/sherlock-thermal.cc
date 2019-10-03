@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/thermal/c/fidl.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -10,7 +12,6 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/gpioimpl.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/thermal/c/fidl.h>
 #include <hw/reg.h>
 #include <soc/aml-common/aml-thermal.h>
 #include <soc/aml-meson/g12b-clk.h>
@@ -25,7 +26,7 @@ namespace {
 
 constexpr uint32_t kPwmDFn = 3;
 
-static const pbus_mmio_t thermal_mmios[] = {
+const pbus_mmio_t thermal_mmios[] = {
     {
         .base = T931_TEMP_SENSOR_BASE,
         .length = T931_TEMP_SENSOR_LENGTH,
@@ -42,16 +43,20 @@ static const pbus_mmio_t thermal_mmios[] = {
         .base = T931_AO_PWM_CD_BASE,
         .length = T931_AO_PWM_LENGTH,
     },
+    {
+        .base = T931_PWM_AB_BASE,
+        .length = T931_PWM_LENGTH,
+    },
 };
 
-static const pbus_irq_t thermal_irqs[] = {
+const pbus_irq_t thermal_irqs[] = {
     {
         .irq = T931_TS_PLL_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
 
-static const pbus_bti_t thermal_btis[] = {
+const pbus_bti_t thermal_btis[] = {
     {
         .iommu_index = 0,
         .bti_id = BTI_THERMAL,
@@ -59,7 +64,8 @@ static const pbus_bti_t thermal_btis[] = {
 };
 
 constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c,
-                                                                    uint16_t cpu_opp,
+                                                                    uint16_t cpu_opp_big,
+                                                                    uint16_t cpu_opp_little,
                                                                     uint16_t gpu_opp) {
   constexpr float kHysteresis = 2.0f;
 
@@ -67,15 +73,16 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c
       .up_temp_celsius = temp_c + kHysteresis,
       .down_temp_celsius = temp_c - kHysteresis,
       .fan_level = 0,
-      .big_cluster_dvfs_opp = cpu_opp,
-      .little_cluster_dvfs_opp = 0,
+      .big_cluster_dvfs_opp = cpu_opp_big,
+      .little_cluster_dvfs_opp = cpu_opp_little,
       .gpu_clk_freq_source = gpu_opp,
   };
 }
 
 /*
- * PASSIVE COOLING - For Astro, we have DVFS support added
- * Below is the operating point information for Big cluster
+ * PASSIVE COOLING - For Sherlock, we have DVFS support added
+ *
+ * Below is the operating point information for Small cluster
  * Operating point 0  - Freq 0.1000 Ghz Voltage 0.7310 V
  * Operating point 1  - Freq 0.2500 Ghz Voltage 0.7310 V
  * Operating point 2  - Freq 0.5000 Ghz Voltage 0.7310 V
@@ -88,6 +95,18 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c
  * Operating point 9  - Freq 1.7040 Ghz Voltage 0.8610 V
  * Operating point 10 - Freq 1.8960 Ghz Voltage 0.9810 V
  *
+ * Below is the operating point information for Big cluster
+ * Operating point 0  - Freq 0.1000 Ghz Voltage 0.7510 V
+ * Operating point 1  - Freq 0.2500 Ghz Voltage 0.7510 V
+ * Operating point 2  - Freq 0.5000 Ghz Voltage 0.7510 V
+ * Operating point 3  - Freq 0.6670 Ghz Voltage 0.7510 V
+ * Operating point 4  - Freq 1.0000 Ghz Voltage 0.7710 V
+ * Operating point 5  - Freq 1.2000 Ghz Voltage 0.7710 V
+ * Operating point 6  - Freq 1.3980 Ghz Voltage 0.7910 V
+ * Operating point 7  - Freq 1.5120 Ghz Voltage 0.8210 V
+ * Operating point 8  - Freq 1.6080 Ghz Voltage 0.8610 V
+ * Operating point 9  - Freq 1.7040 Ghz Voltage 0.8910 V
+ *
  * GPU_CLK_FREQUENCY_SOURCE -
  * 0 - 285.7 MHz
  * 1 - 400 MHz
@@ -96,100 +115,84 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c
  * 4 - 800 MHz
  */
 
-// clang-format off
-
 // NOTE: This is a very trivial policy, no data backing it up
 // As we do more testing this policy can evolve.
-static fuchsia_hardware_thermal_ThermalDeviceInfo aml_sherlock_config = {
-    .active_cooling                     = false,
-    .passive_cooling                    = true,
-    .gpu_throttling                     = true,
-    .num_trip_points                    = 7,
-    .big_little                         = false,
-    .critical_temp_celsius              = 102.0f,
-    .trip_point_info                    = {
-        TripPoint(55.0f, 10, 4),
-        TripPoint(75.0f, 9, 4),
-        TripPoint(80.0f, 7, 3),
-        TripPoint(90.0f, 6, 3),
-        TripPoint(95.0f, 5, 3),
-        TripPoint(100.0f, 4, 2),
-    },
-    .opps = {},
+fuchsia_hardware_thermal_ThermalDeviceInfo
+    aml_sherlock_config =
+        {
+            .active_cooling = false,
+            .passive_cooling = true,
+            .gpu_throttling = true,
+            .num_trip_points = 7,
+            .big_little = true,
+            .critical_temp_celsius = 102.0f,
+            .trip_point_info =
+                {
+                    TripPoint(55.0f, 9, 10, 4),
+                    TripPoint(75.0f, 8, 9, 4),
+                    TripPoint(80.0f, 7, 8, 3),
+                    TripPoint(90.0f, 6, 7, 3),
+                    TripPoint(95.0f, 5, 6, 3),
+                    TripPoint(100.0f, 4, 5, 2),
+                },
+            .opps =
+                {
+                    [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
+                        {
+                            .opp =
+                                {
+                                    [0] = {.freq_hz = 100'000'000, .volt_uv = 751'000},
+                                    [1] = {.freq_hz = 250'000'000, .volt_uv = 751'000},
+                                    [2] = {.freq_hz = 500'000'000, .volt_uv = 751'000},
+                                    [3] = {.freq_hz = 667'000'000, .volt_uv = 751'000},
+                                    [4] = {.freq_hz = 1'000'000'000, .volt_uv = 771'000},
+                                    [5] = {.freq_hz = 1'200'000'000, .volt_uv = 771'000},
+                                    [6] = {.freq_hz = 1'398'000'000, .volt_uv = 791'000},
+                                    [7] = {.freq_hz = 1'512'000'000, .volt_uv = 821'000},
+                                    [8] = {.freq_hz = 1'608'000'000, .volt_uv = 861'000},
+                                    [9] = {.freq_hz = 1'704'000'000, .volt_uv = 891'000},
+                                    [10] = {.freq_hz = 1'704'000'000, .volt_uv = 891'000},
+                                },
+                            .latency = 0,
+                            .count = 11,
+                        },
+                    [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] =
+                        {
+                            .opp =
+                                {
+                                    [0] = {.freq_hz = 100'000'000, .volt_uv = 731'000},
+                                    [1] = {.freq_hz = 250'000'000, .volt_uv = 731'000},
+                                    [2] = {.freq_hz = 500'000'000, .volt_uv = 731'000},
+                                    [3] = {.freq_hz = 667'000'000, .volt_uv = 731'000},
+                                    [4] = {.freq_hz = 1'000'000'000, .volt_uv = 731'000},
+                                    [5] = {.freq_hz = 1'200'000'000, .volt_uv = 731'000},
+                                    [6] = {.freq_hz = 1'398'000'000, .volt_uv = 761'000},
+                                    [7] = {.freq_hz = 1'512'000'000, .volt_uv = 791'000},
+                                    [8] = {.freq_hz = 1'608'000'000, .volt_uv = 831'000},
+                                    [9] = {.freq_hz = 1'704'000'000, .volt_uv = 861'000},
+                                    [10] = {.freq_hz = 1'896'000'000, .volt_uv = 1'011'000},
+                                },
+                            .latency = 0,
+                            .count = 11,
+                        },
+                },
 };
 
 // clang-format on
-static aml_opp_info_t aml_opp_info = {
-    .opps =
-        {
-            {
-                // 0
-                .freq_hz = 100000000,
-                .volt_uv = 731000,
-            },
-            {
-                // 1
-                .freq_hz = 250000000,
-                .volt_uv = 731000,
-            },
-            {
-                // 2
-                .freq_hz = 500000000,
-                .volt_uv = 731000,
-            },
-            {
-                // 3
-                .freq_hz = 667000000,
-                .volt_uv = 731000,
-            },
-            {
-                // 4
-                .freq_hz = 1000000000,
-                .volt_uv = 731000,
-            },
-            {
-                // 5
-                .freq_hz = 1200000000,
-                .volt_uv = 731000,
-            },
-            {
-                // 6
-                .freq_hz = 1398000000,
-                .volt_uv = 761000,
-            },
-            {
-                // 7
-                .freq_hz = 1512000000,
-                .volt_uv = 791000,
-            },
-            {
-                // 8
-                .freq_hz = 1608000000,
-                .volt_uv = 831000,
-            },
-            {
-                // 9
-                .freq_hz = 1704000000,
-                .volt_uv = 861000,
-            },
-            {
-                // 10
-                .freq_hz = 1896000000,
-                .volt_uv = 981000,
-            },
-        },
+aml_voltage_table_info_t aml_voltage_table = {
     .voltage_table =
         {
-            {1022000, 0},  {1011000, 3}, {1001000, 6}, {991000, 10}, {981000, 13}, {971000, 16},
-            {961000, 20},  {951000, 23}, {941000, 26}, {931000, 30}, {921000, 33}, {911000, 36},
-            {901000, 40},  {891000, 43}, {881000, 46}, {871000, 50}, {861000, 53}, {851000, 56},
-            {841000, 60},  {831000, 63}, {821000, 67}, {811000, 70}, {801000, 73}, {791000, 76},
-            {781000, 80},  {771000, 83}, {761000, 86}, {751000, 90}, {741000, 93}, {731000, 96},
-            {721000, 100},
+            {1'022'000, 0}, {1'011'000, 3}, {1'001'000, 6}, {991'000, 10}, {981'000, 13},
+            {971'000, 16},  {961'000, 20},  {951'000, 23},  {941'000, 26}, {931'000, 30},
+            {921'000, 33},  {911'000, 36},  {901'000, 40},  {891'000, 43}, {881'000, 46},
+            {871'000, 50},  {861'000, 53},  {851'000, 56},  {841'000, 60}, {831'000, 63},
+            {821'000, 67},  {811'000, 70},  {801'000, 73},  {791'000, 76}, {781'000, 80},
+            {771'000, 83},  {761'000, 86},  {751'000, 90},  {741'000, 93}, {731'000, 96},
+            {721'000, 100},
         },
 };
 
-static const pbus_metadata_t thermal_metadata[] = {
+const pbus_metadata_t thermal_metadata[] = {
     {
         .type = DEVICE_METADATA_THERMAL_CONFIG,
         .data_buffer = &aml_sherlock_config,
@@ -197,8 +200,8 @@ static const pbus_metadata_t thermal_metadata[] = {
     },
     {
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = &aml_opp_info,
-        .data_size = sizeof(aml_opp_info),
+        .data_buffer = &aml_voltage_table,
+        .data_size = sizeof(aml_voltage_table),
     },
 };
 
@@ -206,7 +209,7 @@ constexpr pbus_dev_t thermal_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "aml-thermal";
   dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_S905D2;
+  dev.pid = PDEV_PID_AMLOGIC_T931;
   dev.did = PDEV_DID_AMLOGIC_THERMAL;
   dev.mmio_list = thermal_mmios;
   dev.mmio_count = countof(thermal_mmios);
@@ -219,38 +222,66 @@ constexpr pbus_dev_t thermal_dev = []() {
   return dev;
 }();
 
-static const zx_bind_inst_t root_match[] = {
+const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
-static const zx_bind_inst_t clk1_match[] = {
+const zx_bind_inst_t clk1_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, G12B_CLK_SYS_PLL_DIV16),
 };
-static const zx_bind_inst_t clk2_match[] = {
+const zx_bind_inst_t clk2_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, G12B_CLK_SYS_CPU_CLK_DIV16),
 };
-static const device_component_part_t clk1_component[] = {
+const zx_bind_inst_t clk3_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, G12B_CLK_SYS_PLLB_DIV16),
+};
+const zx_bind_inst_t clk4_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, G12B_CLK_SYS_CPUB_CLK_DIV16),
+};
+const device_component_part_t clk1_component[] = {
     {countof(root_match), root_match},
     {countof(clk1_match), clk1_match},
 };
-static const device_component_part_t clk2_component[] = {
+const device_component_part_t clk2_component[] = {
     {countof(root_match), root_match},
     {countof(clk2_match), clk2_match},
 };
-static const device_component_t components[] = {
+const device_component_part_t clk3_component[] = {
+    {countof(root_match), root_match},
+    {countof(clk3_match), clk3_match},
+};
+const device_component_part_t clk4_component[] = {
+    {countof(root_match), root_match},
+    {countof(clk4_match), clk4_match},
+};
+const device_component_t components[] = {
     {countof(clk1_component), clk1_component},
     {countof(clk2_component), clk2_component},
+    {countof(clk3_component), clk3_component},
+    {countof(clk4_component), clk4_component},
 };
 
 }  // namespace
 
 zx_status_t Sherlock::ThermalInit() {
   // Configure the GPIO to be Output & set it to alternate
-  // function 3 which puts in PWM_D mode.
+  // function 3 which puts in PWM_D mode. A53 cluster (Small)
   gpio_impl_.SetAltFunction(T931_GPIOE(1), kPwmDFn);
 
   zx_status_t status = gpio_impl_.ConfigOut(T931_GPIOE(1), 0);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: ConfigOut failed: %d\n", __func__, status);
+    return status;
+  }
+
+  // Configure the GPIO to be Output & set it to alternate
+  // function 3 which puts in PWM_D mode. A73 cluster (Big)
+  gpio_impl_.SetAltFunction(T931_GPIOE(2), kPwmDFn);
+
+  status = gpio_impl_.ConfigOut(T931_GPIOE(2), 0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ConfigOut failed: %d\n", __func__, status);
     return status;
@@ -261,7 +292,6 @@ zx_status_t Sherlock::ThermalInit() {
     zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
     return status;
   }
-
   return status;
 }
 

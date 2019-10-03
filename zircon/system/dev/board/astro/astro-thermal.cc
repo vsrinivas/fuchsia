@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/thermal/c/fidl.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -9,7 +11,6 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/thermal/c/fidl.h>
 #include <soc/aml-common/aml-thermal.h>
 #include <soc/aml-meson/g12a-clk.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
@@ -19,22 +20,28 @@
 
 namespace astro {
 
-static const pbus_mmio_t thermal_mmios[] = {{
-                                                .base = S905D2_TEMP_SENSOR_BASE,
-                                                .length = S905D2_TEMP_SENSOR_LENGTH,
-                                            },
-                                            {
-                                                .base = S905D2_GPIO_A0_BASE,
-                                                .length = S905D2_GPIO_AO_LENGTH,
-                                            },
-                                            {
-                                                .base = S905D2_HIU_BASE,
-                                                .length = S905D2_HIU_LENGTH,
-                                            },
-                                            {
-                                                .base = S905D2_AO_PWM_CD_BASE,
-                                                .length = S905D2_AO_PWM_LENGTH,
-                                            }};
+static const pbus_mmio_t thermal_mmios[] = {
+    {
+        .base = S905D2_TEMP_SENSOR_BASE,
+        .length = S905D2_TEMP_SENSOR_LENGTH,
+    },
+    {
+        .base = S905D2_GPIO_A0_BASE,
+        .length = S905D2_GPIO_AO_LENGTH,
+    },
+    {
+        .base = S905D2_HIU_BASE,
+        .length = S905D2_HIU_LENGTH,
+    },
+    {
+        .base = S905D2_AO_PWM_CD_BASE,
+        .length = S905D2_AO_PWM_LENGTH,
+    },
+    {
+        .base = S905D2_PWM_AB_BASE,
+        .length = S905D2_PWM_AB_LENGTH,
+    },
+};
 
 static const pbus_irq_t thermal_irqs[] = {
     {
@@ -50,8 +57,7 @@ static const pbus_bti_t thermal_btis[] = {
     },
 };
 
-constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c,
-                                                                    uint16_t cpu_opp,
+constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c, uint16_t cpu_opp,
                                                                     uint16_t gpu_opp) {
   constexpr float kHysteresis = 2.0f;
 
@@ -111,76 +117,42 @@ static fuchsia_hardware_thermal_ThermalDeviceInfo astro_config = {
             TripPoint(95.0f, 5, 1),
             TripPoint(100.0f, 4, 0),
         },
-    .opps = {},
-};
-
-static aml_opp_info_t opp_info = {
     .opps =
         {
-            {
-                // 0
-                .freq_hz = 100000000,
-                .volt_uv = 731000,
-            },
-            {
-                // 1
-                .freq_hz = 250000000,
-                .volt_uv = 731000,
-            },
-            {
-                // 2
-                .freq_hz = 500000000,
-                .volt_uv = 731000,
-            },
-            {
-                // 3
-                .freq_hz = 667000000,
-                .volt_uv = 731000,
-            },
-            {
-                // 4
-                .freq_hz = 1000000000,
-                .volt_uv = 731000,
-            },
-            {
-                // 5
-                .freq_hz = 1200000000,
-                .volt_uv = 731000,
-            },
-            {
-                // 6
-                .freq_hz = 1398000000,
-                .volt_uv = 761000,
-            },
-            {
-                // 7
-                .freq_hz = 1512000000,
-                .volt_uv = 791000,
-            },
-            {
-                // 8
-                .freq_hz = 1608000000,
-                .volt_uv = 831000,
-            },
-            {
-                // 9
-                .freq_hz = 1704000000,
-                .volt_uv = 861000,
-            },
-            {
-                // 10
-                .freq_hz = 1896000000,
-                .volt_uv = 981000,
-            },
+            // Considering this as LITTLE one since in BIG-LITTLE arch for same
+            // thermal driver, these settings apply to the LITTLE cluster.
+            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
+                {
+                    .opp =
+                        {
+                            [0] = {.freq_hz = 100'000'000, .volt_uv = 731'000},
+                            [1] = {.freq_hz = 250'000'000, .volt_uv = 731'000},
+                            [2] = {.freq_hz = 500'000'000, .volt_uv = 731'000},
+                            [3] = {.freq_hz = 667'000'000, .volt_uv = 731'000},
+                            [4] = {.freq_hz = 1'000'000'000, .volt_uv = 731'000},
+                            [5] = {.freq_hz = 1'200'000'000, .volt_uv = 731'000},
+                            [6] = {.freq_hz = 1'398'000'000, .volt_uv = 761'000},
+                            [7] = {.freq_hz = 1'512'000'000, .volt_uv = 791'000},
+                            [8] = {.freq_hz = 1'608'000'000, .volt_uv = 831'000},
+                            [9] = {.freq_hz = 1'704'000'000, .volt_uv = 861'000},
+                            [10] = {.freq_hz = 1'896'000'000, .volt_uv = 981'000},
+                        },
+                    .latency = 0,
+                    .count = 11,
+                },
         },
+};
+
+static aml_voltage_table_info_t aml_voltage_table_info = {
     .voltage_table =
         {
-            {1022000, 0},  {1011000, 3}, {1001000, 6}, {991000, 10}, {981000, 13}, {971000, 16},
-            {961000, 20},  {951000, 23}, {941000, 26}, {931000, 30}, {921000, 33}, {911000, 36},
-            {901000, 40},  {891000, 43}, {881000, 46}, {871000, 50}, {861000, 53}, {851000, 56},
-            {841000, 60},  {831000, 63}, {821000, 67}, {811000, 70}, {801000, 73}, {791000, 76},
-            {781000, 80},  {771000, 83}, {761000, 86}, {751000, 90}, {741000, 93}, {731000, 96},
-            {721000, 100},
+            {1'022'000, 0}, {1'011'000, 3}, {1'001'000, 6}, {991'000, 10}, {981'000, 13},
+            {971'000, 16},  {961'000, 20},  {951'000, 23},  {941'000, 26}, {931'000, 30},
+            {921'000, 33},  {911'000, 36},  {901'000, 40},  {891'000, 43}, {881'000, 46},
+            {871'000, 50},  {861'000, 53},  {851'000, 56},  {841'000, 60}, {831'000, 63},
+            {821'000, 67},  {811'000, 70},  {801'000, 73},  {791'000, 76}, {781'000, 80},
+            {771'000, 83},  {761'000, 86},  {751'000, 90},  {741'000, 93}, {731'000, 96},
+            {721'000, 100},
         },
 };
 
@@ -192,8 +164,8 @@ static const pbus_metadata_t thermal_metadata[] = {
     },
     {
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = &opp_info,
-        .data_size = sizeof(opp_info),
+        .data_buffer = &aml_voltage_table_info,
+        .data_size = sizeof(aml_voltage_table_info),
     },
 };
 

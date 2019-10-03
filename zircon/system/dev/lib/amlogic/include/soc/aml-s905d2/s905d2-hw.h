@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_S905D2_S905D2_HW_H_
+#define ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_S905D2_S905D2_HW_H_
 
 #define S905D2_GPIO_BASE 0xff634400
 #define S905D2_GPIO_LENGTH 0x400
@@ -118,6 +119,8 @@
 
 // PWM register offsets
 // These are relative to base address S905D2_PWM_BASE and in sizeof(uint32_t)
+#define S905D2_PWM_AB_BASE 0xffd1b000
+#define S905D2_PWM_AB_LENGTH 0x1000
 #define S905D2_PWM_PWM_A 0x6c00
 #define S905D2_PWM_PWM_B 0x6c01
 #define S905D2_PWM_MISC_REG_AB 0x6c02
@@ -218,3 +221,5 @@
 
 #define HHI_GCLK_MPEG0_OFFSET 0x50
 #define HHI_SD_EMMC_CLK_CNTL_OFFSET 0x99
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_S905D2_S905D2_HW_H_

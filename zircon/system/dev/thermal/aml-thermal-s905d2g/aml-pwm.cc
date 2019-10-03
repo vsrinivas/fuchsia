@@ -3,43 +3,56 @@
 // found in the LICENSE file.
 
 #include "aml-pwm.h"
-#include "aml-pwm-regs.h"
+
+#include <threads.h>
+#include <unistd.h>
+
 #include <ddk/debug.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
-#include <threads.h>
-#include <unistd.h>
+
+#include "aml-pwm-regs.h"
 
 namespace thermal {
 
-namespace {
-
-// MMIO index.
-constexpr uint32_t kPwmMmio = 3;
-
-// Input clock frequency
-constexpr uint32_t kXtalFreq = 24000000;
-
-}  // namespace
-
-zx_status_t AmlPwm::Init(zx_device_t* parent) {
-  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
-  if (status != ZX_OK) {
-    return status;
+zx_status_t AmlPwm::Create(zx_device_t* parent, PwmType pwm_type) {
+  ddk::PDev pdev(parent);
+  if (!pdev.is_valid()) {
+    zxlogf(ERROR, "aml-pwm: failed to get pdev protocol\n");
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // Map amlogic pwm registers
-  mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev_, kPwmMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-pwm: could not map periph mmio: %d\n", status);
-    return status;
+  switch (pwm_type) {
+    case PWM_AO_CD: {
+      // Map amlogic pwm registers
+      zx_status_t status = pdev.MapMmio(kPwmAOCDMmio, &pwm_mmio_);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "aml-pwm: could not map periph mmio: %d\n", status);
+        return status;
+      }
+      break;
+    }
+    case PWM_AB: {
+      // Map amlogic pwm registers
+      zx_status_t status = pdev.MapMmio(kPwmABMmio, &pwm_mmio_);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "aml-pwm: could not map periph mmio: %d\n", status);
+        return status;
+      }
+      break;
+    }
+    default:
+      return ZX_ERR_INVALID_ARGS;
   }
 
-  pwm_mmio_ = ddk::MmioBuffer(mmio);
+  return ZX_OK;
+}
 
-  switch (hwpwm_) {
+zx_status_t AmlPwm::Init(uint32_t period, uint32_t hwpwm) {
+  period_ = period;
+
+  switch (hwpwm) {
     case 0:
       pwm_duty_cycle_offset_ = S905D2_AO_PWM_PWM_A;
       enable_bit_ = A_ENABLE;

@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_S905D2_S905D2_HIU_H_
+#define ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_S905D2_S905D2_HIU_H_
 
 #include <stdint.h>
 #include <unistd.h>
+#include <zircon/assert.h>
 
 #include <ddk/mmio-buffer.h>
 #include <hw/reg.h>
-#include <zircon/assert.h>
 
 // clang-format off
 #define SDM_FRACTIONALITY         ((uint32_t)16384)
@@ -46,6 +47,14 @@
 #define G12A_GP0_PLL_CNTL4 0x33771290
 #define G12A_GP0_PLL_CNTL5 0x39272000
 #define G12A_GP0_PLL_CNTL6 0x56540000
+
+#define G12A_SYS1_PLL_CNTL1 0x00000000
+#define G12A_SYS1_PLL_CNTL2 0x00000000
+#define G12A_SYS1_PLL_CNTL3 0x48681c00
+#define G12A_SYS1_PLL_CNTL4 0x88770290
+#define G12A_SYS1_PLL_CNTL5 0x39272000
+#define G12A_SYS1_PLL_CNTL6 0x56540000
+
 
 // HHI register offsets (all are 32-bit registers)
 #define HHI_GP0_PLL_CNTL0           (0x10 << 2)
@@ -85,6 +94,14 @@
 #define HHI_SYS_PLL_CNTL5           (0xc2 << 2)
 #define HHI_SYS_PLL_CNTL6           (0xc3 << 2)
 
+#define HHI_SYS1_PLL_CNTL0           (0xe0 << 2)
+#define HHI_SYS1_PLL_CNTL1           (0xe1 << 2)
+#define HHI_SYS1_PLL_CNTL2           (0xe2 << 2)
+#define HHI_SYS1_PLL_CNTL3           (0xe3 << 2)
+#define HHI_SYS1_PLL_CNTL4           (0xe4 << 2)
+#define HHI_SYS1_PLL_CNTL5           (0xe5 << 2)
+#define HHI_SYS1_PLL_CNTL6           (0xe6 << 2)
+
 #define HHI_GP0_PLL_CNTL0           (0x10 << 2)
 #define HHI_GP0_PLL_CNTL1           (0x11 << 2)
 #define HHI_GP0_PLL_CNTL2           (0x12 << 2)
@@ -111,6 +128,7 @@ typedef enum {
   PCIE_PLL,
   HIFI_PLL,
   SYS_PLL,
+  SYS1_PLL,
 } hhi_plls_t;
 
 typedef struct {
@@ -154,6 +172,8 @@ static inline uint32_t hiu_get_pll_offs(aml_pll_dev_t* pll_dev) {
       return HHI_HIFI_PLL_CNTL0;
     case SYS_PLL:
       return HHI_SYS_PLL_CNTL0;
+    case SYS1_PLL:
+      return HHI_SYS1_PLL_CNTL0;
     default:
       ZX_DEBUG_ASSERT(0);
   }
@@ -209,3 +229,5 @@ const hhi_pll_rate_t* s905d2_pll_get_rate_table(hhi_plls_t pll_num);
 size_t s905d2_get_rate_table_count(hhi_plls_t pll_num);
 
 __END_CDECLS
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_S905D2_S905D2_HIU_H_

@@ -2,18 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_THERMAL_H_
+#define ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_THERMAL_H_
 
-#include <ddk/io-buffer.h>
-#include <ddk/metadata.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/scpi.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <threads.h>
+
+#include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/io-buffer.h>
+#include <ddk/metadata.h>
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/gpio.h>
+#include <ddk/protocol/platform/device.h>
+#include <ddk/protocol/scpi.h>
 
 #define THERMAL_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define THERMAL_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
@@ -55,6 +57,7 @@ typedef struct {
 } aml_voltage_table_t;
 
 typedef struct {
-  fuchsia_hardware_thermal_OperatingPointEntry opps[fuchsia_hardware_thermal_MAX_TRIP_POINTS];
   aml_voltage_table_t voltage_table[MAX_VOLTAGE_TABLE];
-} aml_opp_info_t;
+} aml_voltage_table_info_t;
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_THERMAL_H_

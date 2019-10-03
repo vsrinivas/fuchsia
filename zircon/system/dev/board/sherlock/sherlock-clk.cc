@@ -34,6 +34,8 @@ static const clock_id_t clock_ids[] = {
     // For thermal driver.
     {G12B_CLK_SYS_PLL_DIV16},
     {G12B_CLK_SYS_CPU_CLK_DIV16},
+    {G12B_CLK_SYS_PLLB_DIV16},
+    {G12B_CLK_SYS_CPUB_CLK_DIV16},
 };
 
 static const pbus_metadata_t clock_metadata[] = {
@@ -46,7 +48,7 @@ static const pbus_metadata_t clock_metadata[] = {
 
 static pbus_dev_t clk_dev = []() {
   pbus_dev_t dev = {};
-  dev.name = "sherlock-clk",
+  dev.name = "sherlock-clk";
   dev.vid = PDEV_VID_AMLOGIC;
   dev.did = PDEV_DID_AMLOGIC_G12B_CLK;
   dev.mmio_list = clk_mmios;
