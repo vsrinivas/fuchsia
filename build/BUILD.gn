@@ -97,7 +97,7 @@ group("deprecated_shell_allowlist") {
     "//garnet/bin/zircon_benchmarks:zircon_benchmarks",
     "//src/lib/inspect_deprecated/integration:libinspect_integration_tests",
     "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
-    "//garnet/tests/zircon/libdriver-integration-test:libdriver-integration-test",
+    "//src/devices/tests/libdriver-integration-test",
     "//src/modular/bin/sessionctl:sessionctl",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture_test",
     "//src/modular/tests:modular_integration_tests",

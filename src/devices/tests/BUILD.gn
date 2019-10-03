@@ -2,20 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("devices") {
-  testonly = true
-  deps = [
-    "coordinator",
-    "tools",
-  ]
-}
-
 group("tests") {
   testonly = true
   deps = [
-    "coordinator:coordinator_tests",
-    "tests",
-    "tools:tests",
+    "libdriver-integration-test",
   ]
 }
-
