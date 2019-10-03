@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.bluetooth.avdtp.PeerManager",
             "fuchsia.bluetooth.bredr.Profile",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.logger.LogSink",
