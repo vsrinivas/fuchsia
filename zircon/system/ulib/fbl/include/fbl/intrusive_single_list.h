@@ -96,7 +96,7 @@
 // class Foo : public fbl::SinglyLinkedListable<fbl::RefPtr<Foo>>
 //           , public fbl::RefCounted<Foo> {
 // public:
-//     using NodeState = SinglyLinkedListNodeState<Foo>;
+//     using NodeState = SinglyLinkedListNodeState<fbl::RefPtr<Foo>>;
 //     struct TypeATraits { static NodeState& node_state(Foo& foo) { return foo.type_a_state_; } }
 //     struct TypeBTraits { static NodeState& node_state(Foo& foo) { return foo.type_b_state_; } }
 //
