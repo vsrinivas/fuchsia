@@ -179,27 +179,17 @@ function get-fuchsia-device-addr {
   fx-command-run netaddr "$(get-device-name)" --fuchsia "$@"
 }
 
-function get-netsvc-device-addr {
-  fx-command-run netaddr "$(get-device-name)" "$@"
-}
-
 # if $1 is "-d" or "--device" return
 #   - the netaddr if $2 looks like foo-bar-baz-flarg
 #     OR
 #   - $2 if it doesn't
 # else return ""
-# if -z is supplied as the third argument, get the netsvc
-# address instead of the netstack one
 function get-device-addr {
   device=""
   if [[ "$1" == "-d" || "$1" == "--device" ]]; then
     shift
     if [[ "$1" == *"-"* ]]; then
-      if [[ "$2" != "-z" ]]; then
-        device="$(fx-command-run netaddr "$1" --fuchsia)"
-      else
-        device="$(fx-command-run netaddr "$1")"
-      fi
+      device="$(fx-command-run netaddr "$1" --fuchsia)"
     else
       device="$1"
     fi
