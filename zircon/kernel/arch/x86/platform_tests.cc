@@ -19,6 +19,9 @@
 #include <lib/console.h>
 #include <lib/unittest/unittest.h>
 #include <zircon/syscalls/system.h>
+
+extern void x86_amd_set_lfence_serializing(const cpu_id::CpuId*, MsrAccess*);
+
 namespace {
 
   static bool test_x64_msrs() {
@@ -91,6 +94,7 @@ namespace {
     }
 
     void write_msr(uint32_t msr_index, uint64_t value) override {
+      DEBUG_ASSERT(no_writes_ == false);
       for (uint i = 0; i < msrs_.size(); i++) {
         if (msrs_[i].index == msr_index) {
           msrs_[i].value = value;
@@ -101,6 +105,7 @@ namespace {
     }
 
     ktl::array<FakeMsr, 3> msrs_;
+    bool no_writes_ = false;
   };
 
   static bool test_x64_cpu_uarch_config_selection() {
@@ -564,6 +569,25 @@ namespace {
 
     END_TEST;
 }
+
+static bool test_amd_platform_init() {
+  BEGIN_TEST;
+  FakeMsrAccess fake_msrs = {};
+
+  // Test that set_lfence_serializing sets the LFENCE bit when its not already set.
+  fake_msrs.msrs_[0] = { X86_MSR_AMD_F10_DE_CFG, 0 };
+  x86_amd_set_lfence_serializing(&cpu_id::kCpuIdThreadRipper2970wx, &fake_msrs);
+  EXPECT_EQ(fake_msrs.msrs_[0].value, 0x2ull, "");
+
+  // Test that set_lfence_serializing doesn't change the LFENCE bit when its set.
+  fake_msrs.msrs_[0] = { X86_MSR_AMD_F10_DE_CFG, 0x2ull };
+  fake_msrs.no_writes_ = true;
+  x86_amd_set_lfence_serializing(&cpu_id::kCpuIdThreadRipper2970wx, &fake_msrs);
+  EXPECT_EQ(fake_msrs.msrs_[0].value, 0x2ull, "");
+
+  END_TEST;
+}
+
 }  // anonymous namespace
 
 UNITTEST_START_TESTCASE(x64_platform_tests)

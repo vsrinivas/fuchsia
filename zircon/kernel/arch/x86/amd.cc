@@ -7,6 +7,7 @@
 #include <arch/x86.h>
 #include <arch/x86/cpuid.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/platform_access.h>
 
 uint32_t x86_amd_get_patch_level(void) {
   uint32_t patch_level = 0;
@@ -29,4 +30,24 @@ bool x86_amd_cpu_has_ssb(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
   return microarch_config->has_ssb;
 }
 
-void x86_amd_init_percpu(void) {}
+void x86_amd_set_lfence_serializing(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
+  // "Software Techniques for Managing Speculation on AMD Processors"
+  // Mitigation G-2: Set MSR so that LFENCE is a dispatch-serializing instruction.
+  //
+  // To mitigate certain speculative execution infoleaks (Spectre) efficiently, configure the
+  // CPU to treat LFENCE as a dispatch serializing instruction. This allows code to use LFENCE
+  // in contexts to restrict speculative execution.
+  if (cpuid->ReadProcessorId().family() >= 0x10) {
+    uint64_t de_cfg = msr->read_msr(X86_MSR_AMD_F10_DE_CFG);
+    if (!(de_cfg & X86_MSR_AMD_F10_DE_CFG_LFENCE_SERIALIZE)) {
+      msr->write_msr(X86_MSR_AMD_F10_DE_CFG, de_cfg | X86_MSR_AMD_F10_DE_CFG_LFENCE_SERIALIZE);
+    }
+  }
+}
+
+void x86_amd_init_percpu(void) {
+  cpu_id::CpuId cpuid;
+  MsrAccess msr;
+
+  x86_amd_set_lfence_serializing(&cpuid, &msr);
+}

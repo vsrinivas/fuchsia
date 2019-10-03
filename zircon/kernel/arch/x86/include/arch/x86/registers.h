@@ -92,6 +92,8 @@
 #define X86_MSR_PP1_ENERGY_STATUS 0x00000641       /* PP1 energy status */
 #define X86_MSR_PLATFORM_ENERGY_COUNTER 0x0000064d /* Platform energy counter */
 #define X86_MSR_PLATFORM_POWER_LIMIT 0x0000065c    /* Platform power limit control */
+#define X86_MSR_AMD_F10_DE_CFG 0xc0011029 /* AMD Family 10h+ decode config */
+#define X86_MSR_AMD_F10_DE_CFG_LFENCE_SERIALIZE (1 << 1)
 
 /* EFLAGS/RFLAGS */
 #define X86_FLAGS_CF (1 << 0)
