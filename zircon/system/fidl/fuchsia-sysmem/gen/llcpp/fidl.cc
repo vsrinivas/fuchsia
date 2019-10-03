@@ -600,11 +600,6 @@ constexpr uint64_t kDriverConnector_Connect_Ordinal = 0x3082e03400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDriverConnector_Connect_GenOrdinal = 0x663a49f8408b8184lu;
 extern "C" const fidl_type_t fuchsia_sysmem_DriverConnectorConnectRequestTable;
-[[maybe_unused]]
-constexpr uint64_t kDriverConnector_GetProtectedMemoryInfo_Ordinal = 0x10d8a27100000000lu;
-[[maybe_unused]]
-constexpr uint64_t kDriverConnector_GetProtectedMemoryInfo_GenOrdinal = 0x123484efa9648678lu;
-extern "C" const fidl_type_t fuchsia_sysmem_DriverConnectorGetProtectedMemoryInfoResponseTable;
 
 }  // namespace
 
@@ -671,68 +666,6 @@ DriverConnector::UnownedResultOf::Connect DriverConnector::Call::Connect(zx::uno
   }
 }
 
-template <>
-DriverConnector::ResultOf::GetProtectedMemoryInfo_Impl<DriverConnector::GetProtectedMemoryInfoResponse>::GetProtectedMemoryInfo_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetProtectedMemoryInfoRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, GetProtectedMemoryInfoRequest::PrimarySize);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetProtectedMemoryInfoRequest));
-  ::fidl::DecodedMessage<GetProtectedMemoryInfoRequest> _decoded_request(std::move(_request_bytes));
-  Super::SetResult(
-      DriverConnector::InPlace::GetProtectedMemoryInfo(std::move(_client_end), Super::response_buffer()));
-}
-
-DriverConnector::ResultOf::GetProtectedMemoryInfo DriverConnector::SyncClient::GetProtectedMemoryInfo() {
-  return ResultOf::GetProtectedMemoryInfo(zx::unowned_channel(this->channel_));
-}
-
-DriverConnector::ResultOf::GetProtectedMemoryInfo DriverConnector::Call::GetProtectedMemoryInfo(zx::unowned_channel _client_end) {
-  return ResultOf::GetProtectedMemoryInfo(std::move(_client_end));
-}
-
-template <>
-DriverConnector::UnownedResultOf::GetProtectedMemoryInfo_Impl<DriverConnector::GetProtectedMemoryInfoResponse>::GetProtectedMemoryInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetProtectedMemoryInfoRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, GetProtectedMemoryInfoRequest::PrimarySize);
-  _request_buffer.set_actual(sizeof(GetProtectedMemoryInfoRequest));
-  ::fidl::DecodedMessage<GetProtectedMemoryInfoRequest> _decoded_request(std::move(_request_buffer));
-  Super::SetResult(
-      DriverConnector::InPlace::GetProtectedMemoryInfo(std::move(_client_end), std::move(_response_buffer)));
-}
-
-DriverConnector::UnownedResultOf::GetProtectedMemoryInfo DriverConnector::SyncClient::GetProtectedMemoryInfo(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetProtectedMemoryInfo(zx::unowned_channel(this->channel_), std::move(_response_buffer));
-}
-
-DriverConnector::UnownedResultOf::GetProtectedMemoryInfo DriverConnector::Call::GetProtectedMemoryInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetProtectedMemoryInfo(std::move(_client_end), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<DriverConnector::GetProtectedMemoryInfoResponse> DriverConnector::InPlace::GetProtectedMemoryInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  constexpr uint32_t _write_num_bytes = sizeof(GetProtectedMemoryInfoRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::DecodedMessage<GetProtectedMemoryInfoRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDriverConnector_GetProtectedMemoryInfo_Ordinal;
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<DriverConnector::GetProtectedMemoryInfoResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<GetProtectedMemoryInfoRequest, GetProtectedMemoryInfoResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<DriverConnector::GetProtectedMemoryInfoResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
 
 bool DriverConnector::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
@@ -755,18 +688,6 @@ bool DriverConnector::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
         Interface::ConnectCompleter::Sync(txn));
       return true;
     }
-    case kDriverConnector_GetProtectedMemoryInfo_Ordinal:
-    case kDriverConnector_GetProtectedMemoryInfo_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<GetProtectedMemoryInfoRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      impl->GetProtectedMemoryInfo(
-        Interface::GetProtectedMemoryInfoCompleter::Sync(txn));
-      return true;
-    }
     default: {
       return false;
     }
@@ -780,39 +701,6 @@ bool DriverConnector::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
     txn->Close(ZX_ERR_NOT_SUPPORTED);
   }
   return found;
-}
-
-
-void DriverConnector::Interface::GetProtectedMemoryInfoCompleterBase::Reply(int32_t status, uint64_t base_address, uint64_t size) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetProtectedMemoryInfoResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<GetProtectedMemoryInfoResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDriverConnector_GetProtectedMemoryInfo_Ordinal;
-  _response.status = std::move(status);
-  _response.base_address = std::move(base_address);
-  _response.size = std::move(size);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetProtectedMemoryInfoResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetProtectedMemoryInfoResponse>(std::move(_response_bytes)));
-}
-
-void DriverConnector::Interface::GetProtectedMemoryInfoCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, uint64_t base_address, uint64_t size) {
-  if (_buffer.capacity() < GetProtectedMemoryInfoResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<GetProtectedMemoryInfoResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDriverConnector_GetProtectedMemoryInfo_Ordinal;
-  _response.status = std::move(status);
-  _response.base_address = std::move(base_address);
-  _response.size = std::move(size);
-  _buffer.set_actual(sizeof(GetProtectedMemoryInfoResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetProtectedMemoryInfoResponse>(std::move(_buffer)));
-}
-
-void DriverConnector::Interface::GetProtectedMemoryInfoCompleterBase::Reply(::fidl::DecodedMessage<GetProtectedMemoryInfoResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDriverConnector_GetProtectedMemoryInfo_Ordinal;
-  CompleterBase::SendReply(std::move(params));
 }
 
 

@@ -779,6 +779,18 @@ zbi("fuchsia") {
       },
     ]
   }
+  foreach(ta_uuid, fuchsia_ta_uuids) {
+    manifest += [
+      {
+        outputs = [
+          "lib/firmware/$ta_uuid$ta_dest_suffix",
+        ]
+        sources = [
+          rebase_path("$ta_path/$ta_uuid$ta_src_suffix"),
+        ]
+      },
+    ]
+  }
   if (!bootfs_only) {
     deps += [ ":zxcrypt_config.txt" ]
     manifest += [
@@ -791,19 +803,6 @@ zbi("fuchsia") {
         ]
       },
     ]
-
-    foreach(ta_uuid, fuchsia_ta_uuids) {
-      manifest += [
-        {
-          outputs = [
-            "lib/firmware/$ta_uuid$ta_dest_suffix",
-          ]
-          sources = [
-            rebase_path("$ta_path/$ta_uuid$ta_src_suffix"),
-          ]
-        },
-      ]
-    }
   }
 
   cmdline = kernel_cmdline_args + board_kernel_cmdline_args

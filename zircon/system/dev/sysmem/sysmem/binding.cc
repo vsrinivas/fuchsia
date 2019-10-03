@@ -26,7 +26,8 @@
 #include "macros.h"
 
 zx_status_t sysmem_init(void** out_driver_ctx) {
-  DRIVER_INFO("async_get_default_dispatcher(): %p\n", async_get_default_dispatcher());
+  DRIVER_TRACE("sysmem_init() - async_get_default_dispatcher(): %p",
+               async_get_default_dispatcher());
 
   auto driver = std::make_unique<Driver>();
 
@@ -38,7 +39,7 @@ zx_status_t sysmem_init(void** out_driver_ctx) {
 }
 
 zx_status_t sysmem_bind(void* driver_ctx, zx_device_t* parent_device) {
-  DRIVER_INFO("sysmem_bind()\n");
+  DRIVER_TRACE("sysmem_bind()");
   Driver* driver = reinterpret_cast<Driver*>(driver_ctx);
 
   auto device = std::make_unique<Device>(parent_device, driver);

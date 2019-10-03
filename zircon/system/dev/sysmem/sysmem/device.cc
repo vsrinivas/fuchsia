@@ -4,6 +4,8 @@
 
 #include "device.h"
 
+#include <fuchsia/sysmem/c/fidl.h>
+#include <inttypes.h>
 #include <lib/fidl-async-2/simple_binding.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/event.h>
@@ -163,7 +165,6 @@ class ExternalMemoryAllocator : public MemoryAllocator {
 
 fuchsia_sysmem_DriverConnector_ops_t driver_connector_ops = {
     .Connect = fidl::Binder<Device>::BindMember<&Device::Connect>,
-    .GetProtectedMemoryInfo = fidl::Binder<Device>::BindMember<&Device::GetProtectedMemoryInfo>,
 };
 
 zx_status_t sysmem_message(void* device_ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -190,14 +191,13 @@ zx_status_t in_proc_sysmem_RegisterHeap(void* ctx, uint64_t heap,
 }
 
 zx_status_t in_proc_sysmem_RegisterSecureMem(void* ctx, zx_handle_t secure_mem_connection) {
-  // TODO(dustingreen): Implement.  For now close the handle - also, this not actually being called
-  // yet.
-  zx::channel just_close(secure_mem_connection);
-  return ZX_ERR_NOT_SUPPORTED;
+  Device* self = static_cast<Device*>(ctx);
+  return self->RegisterSecureMem(secure_mem_connection);
 }
 
 zx_status_t in_proc_sysmem_UnregisterSecureMem(void* ctx) {
-  return ZX_ERR_NOT_SUPPORTED;
+  Device* self = static_cast<Device*>(ctx);
+  return self->UnregisterSecureMem();
 }
 
 // In-proc sysmem interface.  Essentially an in-proc version of
@@ -214,7 +214,9 @@ sysmem_protocol_ops_t in_proc_sysmem_protocol_ops = {
 Device::Device(zx_device_t* parent_device, Driver* parent_driver)
     : parent_device_(parent_device),
       parent_driver_(parent_driver),
-      in_proc_sysmem_protocol_{.ops = &in_proc_sysmem_protocol_ops, .ctx = this} {
+      in_proc_sysmem_protocol_{.ops = &in_proc_sysmem_protocol_ops, .ctx = this},
+      dispatcher_(async_get_default_dispatcher()),
+      closure_queue_(dispatcher_, thrd_current()) {
   ZX_DEBUG_ASSERT(parent_device_);
   ZX_DEBUG_ASSERT(parent_driver_);
 }
@@ -283,7 +285,7 @@ zx_status_t Device::Bind() {
       DRIVER_ERROR("Failed to init allocator for amlogic protected memory: %d", status);
       return status;
     }
-    protected_allocator_ = amlogic_allocator.get();
+    secure_allocators_[fuchsia_sysmem_HeapType_AMLOGIC_SECURE] = amlogic_allocator.get();
     allocators_[fuchsia_sysmem_HeapType_AMLOGIC_SECURE] = std::move(amlogic_allocator);
   }
 
@@ -360,29 +362,139 @@ zx_status_t Device::RegisterHeap(uint64_t heap, zx_handle_t heap_connection) {
                        const zx_packet_signal_t* signal) { allocators_.erase(heap); }));
   // It is safe to call Begin() here before adding entry to the map as
   // handler will run on current thread.
-  wait_for_close->Begin(async_get_default_dispatcher());
+  zx_status_t status = wait_for_close->Begin(async_get_default_dispatcher());
+  if (status != ZX_OK) {
+    DRIVER_ERROR("Device::RegisterHeap() failed wait_for_close->Begin()");
+    return status;
+  }
 
-  // This replaces any previously registered allocator for heap. This
-  // behavior is preferred as it avoids a potential race-condition during
-  // heap restart.
+  // This replaces any previously registered allocator for heap (also cancels the old wait). This
+  // behavior is preferred as it avoids a potential race-condition during heap restart.
   allocators_[heap] = std::make_unique<ExternalMemoryAllocator>(std::move(local_heap_connection),
                                                                 std::move(wait_for_close));
   return ZX_OK;
 }
 
-zx_status_t Device::GetProtectedMemoryInfo(fidl_txn* txn) {
-  if (!protected_allocator_) {
-    return fuchsia_sysmem_DriverConnectorGetProtectedMemoryInfo_reply(txn, ZX_ERR_NOT_SUPPORTED, 0u,
-                                                                      0u);
+zx_status_t Device::RegisterSecureMem(zx_handle_t secure_mem_connection) {
+  LOG(TRACE, "sysmem RegisterSecureMem begin");
+  zx::channel local_secure_mem_connection(secure_mem_connection);
+
+  auto wait_for_close = std::make_unique<async::Wait>(
+      local_secure_mem_connection.get(), ZX_CHANNEL_PEER_CLOSED, 0,
+      async::Wait::Handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
+                                  zx_status_t status, const zx_packet_signal_t* signal) {
+        if (secure_mem_) {
+          // The server end of this channel (the aml-securemem driver) is the driver that listens
+          // for suspend(mexec) so that soft reboot can succeed.  If that driver has failed,
+          // intentionally force a hard reboot here to get back to a known-good state.
+          //
+          // TODO(dustingreen): If there's any more direct way to intentionally trigger a hard
+          // reboot, that would probably be better here.
+          ZX_PANIC(
+              "secure_mem_ connection unexpectedly lost; secure mem in unknown state; hard reboot");
+        }
+      }));
+
+  // It is safe to call Begin() here before setting up secure_mem_ because handler will run on
+  // current thread.
+  zx_status_t status = wait_for_close->Begin(async_get_default_dispatcher());
+  if (status != ZX_OK) {
+    DRIVER_ERROR("Device::RegisterSecureMem() failed wait_for_close->Begin()");
+    return status;
   }
 
-  // TODO(dustingreen): In a later change we'll fix this being marked ready too soon.
-  protected_allocator_->set_ready();
+  secure_mem_ = std::make_unique<SecureMemConnection>(std::move(local_secure_mem_connection),
+                                                      std::move(wait_for_close));
 
-  uint64_t base;
-  uint64_t size;
-  zx_status_t status = protected_allocator_->GetPhysicalMemoryInfo(&base, &size);
-  return fuchsia_sysmem_DriverConnectorGetProtectedMemoryInfo_reply(txn, status, base, size);
+  // We can't immediately make a blocking fidl call via secure_mem_, because aml-securemem is
+  // presently making a blocking banjo call to this method, so we post here.
+  Post([this] {
+    // Else we already ZX_PANIC()ed in wait_for_close.
+    ZX_DEBUG_ASSERT(secure_mem_);
+
+    zx_status_t status;
+    // At this point secure_allocators_ has only the secure heaps that are configured via sysmem
+    // (not those configured via the TEE), and the memory for these is not yet protected.  Tell the
+    // TEE about these.
+    fuchsia_sysmem_PhysicalSecureHeaps sysmem_configured_heaps = {};
+    for (const auto& [heap_type, allocator] : secure_allocators_) {
+      uint64_t base;
+      uint64_t size;
+      status = allocator->GetPhysicalMemoryInfo(&base, &size);
+      // Should be impossible for this to fail for now.
+      ZX_ASSERT(status == ZX_OK);
+      LOG(TRACE,
+          "allocator->GetPhysicalMemoryInfo() heap_type: %08lx base: %016" PRIx64
+          " size: %016" PRIx64,
+          heap_type, base, size);
+
+      fuchsia_sysmem_PhysicalSecureHeap& heap =
+          sysmem_configured_heaps.heaps[sysmem_configured_heaps.heaps_count];
+      heap.heap = heap_type;
+      heap.physical_address = base;
+      heap.size_bytes = size;
+      ++sysmem_configured_heaps.heaps_count;
+    }
+    fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_Result set_result = {};
+    status = fuchsia_sysmem_SecureMemSetPhysicalSecureHeaps(secure_mem_->channel(),
+                                                            &sysmem_configured_heaps, &set_result);
+    // For now this is fatal.  Among the reasons is without that call succeeding, we haven't told
+    // the HW to secure/protect the physical range.
+    ZX_ASSERT(status == ZX_OK);
+    ZX_ASSERT(set_result.tag == fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResultTag_response);
+
+    for (const auto& [heap_type, allocator] : secure_allocators_) {
+      // The TEE has now told the HW about this heap's physical range being secure/protected.
+      allocator->set_ready();
+    }
+
+    // Now we get the secure heaps that are configured via the TEE.
+    fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_Result get_result = {};
+    status = fuchsia_sysmem_SecureMemGetPhysicalSecureHeaps(secure_mem_->channel(), &get_result);
+    // For now this is fatal, since this case is very unexpected, and in this case rebooting is the
+    // most plausible way to get back to a working state anyway.
+    ZX_ASSERT(status == ZX_OK);
+    ZX_ASSERT(get_result.tag == fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResultTag_response);
+    const fuchsia_sysmem_PhysicalSecureHeaps& tee_configured_heaps = get_result.response.heaps;
+
+    for (uint32_t heap_index = 0; heap_index < tee_configured_heaps.heaps_count; ++heap_index) {
+      const fuchsia_sysmem_PhysicalSecureHeap& heap = tee_configured_heaps.heaps[heap_index];
+      constexpr bool kIsCpuAccessible = false;
+      constexpr bool kIsReady = true;
+      auto secure_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
+          this, "tee_secure", heap.size_bytes, kIsCpuAccessible, kIsReady);
+      status = secure_allocator->InitPhysical(heap.physical_address);
+      // A failing status is fatal for now.
+      ZX_ASSERT(status == ZX_OK);
+      LOG(TRACE,
+          "created secure allocator: heap_type: %08lx base: %016" PRIx64 " size: %016" PRIx64,
+          heap.heap, heap.physical_address, heap.size_bytes);
+      ZX_ASSERT(secure_allocators_.find(heap.heap) == secure_allocators_.end());
+      secure_allocators_[heap.heap] = secure_allocator.get();
+      ZX_ASSERT(allocators_.find(heap.heap) == allocators_.end());
+      allocators_[heap.heap] = std::move(secure_allocator);
+    }
+
+    LOG(TRACE, "sysmem RegisterSecureMem() done (async)");
+  });
+
+  return ZX_OK;
+}
+
+// This call allows us to tell the difference between expected vs. unexpected close of the tee_
+// channel.
+zx_status_t Device::UnregisterSecureMem() {
+  // By this point, the aml-securemem driver's suspend(mexec) has already prepared for mexec.
+  //
+  // In this path, the server end of the channel hasn't closed yet, but will be closed shortly after
+  // return from UnregisterSecureMem().
+  //
+  // By deleting the SecureMemConnection here, we avoid running the SecureMemConnection's
+  // PEER_CLOSED wait handler when the server end is closed soon.
+  LOG(TRACE, "begin UnregisterSecureMem()");
+  secure_mem_.reset();
+  LOG(TRACE, "end UnregisterSecureMem()");
+  return ZX_OK;
 }
 
 const zx::bti& Device::bti() { return bti_; }
@@ -392,8 +504,8 @@ const zx::bti& Device::bti() { return bti_; }
 zx_status_t Device::CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) {
   zx::vmo result_vmo;
   // Please do not use get_root_resource() in new code. See ZX-1467.
-  zx::resource root_resource(get_root_resource());
-  zx_status_t status = zx::vmo::create_physical(root_resource, base, size, &result_vmo);
+  zx::unowned_resource root_resource(get_root_resource());
+  zx_status_t status = zx::vmo::create_physical(*root_resource, base, size, &result_vmo);
   if (status != ZX_OK) {
     return status;
   }
@@ -448,4 +560,17 @@ MemoryAllocator* Device::GetAllocator(const fuchsia_sysmem_BufferMemorySettings*
     return nullptr;
   }
   return iter->second.get();
+}
+
+void Device::Post(fit::closure to_run) { closure_queue_.Enqueue(std::move(to_run)); }
+
+Device::SecureMemConnection::SecureMemConnection(zx::channel connection,
+                                                 fbl::unique_ptr<async::Wait> wait_for_close)
+    : connection_(std::move(connection)), wait_for_close_(std::move(wait_for_close)) {
+  // nothing else to do here
+}
+
+zx_handle_t Device::SecureMemConnection::channel() {
+  ZX_DEBUG_ASSERT(connection_);
+  return connection_.get();
 }

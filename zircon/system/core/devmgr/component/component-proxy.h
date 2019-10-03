@@ -23,6 +23,7 @@
 #include <ddktl/protocol/power.h>
 #include <ddktl/protocol/spi.h>
 #include <ddktl/protocol/sysmem.h>
+#include <ddktl/protocol/tee.h>
 #include <ddktl/protocol/usb/modeswitch.h>
 
 #include "proxy-protocol.h"
@@ -45,6 +46,7 @@ class ComponentProxy : public ComponentProxyBase,
                        public ddk::PowerProtocol<ComponentProxy>,
                        public ddk::SpiProtocol<ComponentProxy>,
                        public ddk::SysmemProtocol<ComponentProxy>,
+                       public ddk::TeeProtocol<ComponentProxy>,
                        public ddk::UsbModeSwitchProtocol<ComponentProxy> {
  public:
   ComponentProxy(zx_device_t* parent, zx::channel rpc)
@@ -118,13 +120,15 @@ class ComponentProxy : public ComponentProxyBase,
   zx_status_t PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* out_value);
   zx_status_t SpiTransmit(const uint8_t* txdata_list, size_t txdata_count);
   zx_status_t SpiReceive(uint32_t size, uint8_t* out_rxdata_list, size_t rxdata_count,
-    size_t* out_rxdata_actual);
-  zx_status_t SpiExchange(const uint8_t* txdata_list, size_t txdata_count,
-    uint8_t* out_rxdata_list, size_t rxdata_count, size_t* out_rxdata_actual);
+                         size_t* out_rxdata_actual);
+  zx_status_t SpiExchange(const uint8_t* txdata_list, size_t txdata_count, uint8_t* out_rxdata_list,
+                          size_t rxdata_count, size_t* out_rxdata_actual);
   zx_status_t SysmemConnect(zx::channel allocator2_request);
   zx_status_t SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection);
   zx_status_t SysmemRegisterSecureMem(zx::channel tee_connection);
   zx_status_t SysmemUnregisterSecureMem();
+  zx_status_t TeeConnect(zx::channel tee_device_request, zx::channel service_provider);
+
   zx_status_t MipiCsiInit(const mipi_info_t* mipi_info, const mipi_adap_info_t* adap_info);
   zx_status_t MipiCsiDeInit();
 

@@ -676,7 +676,10 @@ bool LogicalBufferCollection::CheckSanitizeBufferMemoryConstraints(
     LogError("min_size_bytes > max_size_bytes");
     return false;
   }
-  bool secure_permitted = IsHeapPermitted(constraints, fuchsia_sysmem_HeapType_AMLOGIC_SECURE);
+  // TODO(37452): Generalize this by finding if there's a heap that maps to secure MemoryAllocator
+  // in the permitted heaps.
+  bool secure_permitted = IsHeapPermitted(constraints, fuchsia_sysmem_HeapType_AMLOGIC_SECURE) ||
+                          IsHeapPermitted(constraints, fuchsia_sysmem_HeapType_AMLOGIC_SECURE_VDEC);
   if (constraints->secure_required && !secure_permitted) {
     LogError("secure memory required but not permitted");
     return false;
@@ -1162,10 +1165,18 @@ bool LogicalBufferCollection::IsColorSpaceEqual(const fuchsia_sysmem_ColorSpace&
 
 static uint64_t GetHeap(const fuchsia_sysmem_BufferMemoryConstraints* constraints) {
   if (constraints->secure_required) {
+    // TODO(37452): Generalize this.
+    //
     // checked previously
-    ZX_DEBUG_ASSERT(!(constraints->secure_required &&
-                      !IsHeapPermitted(constraints, fuchsia_sysmem_HeapType_AMLOGIC_SECURE)));
-    return fuchsia_sysmem_HeapType_AMLOGIC_SECURE;
+    ZX_DEBUG_ASSERT(!constraints->secure_required ||
+                    IsHeapPermitted(constraints, fuchsia_sysmem_HeapType_AMLOGIC_SECURE) ||
+                    IsHeapPermitted(constraints, fuchsia_sysmem_HeapType_AMLOGIC_SECURE_VDEC));
+    if (IsHeapPermitted(constraints, fuchsia_sysmem_HeapType_AMLOGIC_SECURE)) {
+      return fuchsia_sysmem_HeapType_AMLOGIC_SECURE;
+    } else {
+      ZX_DEBUG_ASSERT(IsHeapPermitted(constraints, fuchsia_sysmem_HeapType_AMLOGIC_SECURE_VDEC));
+      return fuchsia_sysmem_HeapType_AMLOGIC_SECURE_VDEC;
+    }
   }
   if (IsHeapPermitted(constraints, fuchsia_sysmem_HeapType_SYSTEM_RAM)) {
     return fuchsia_sysmem_HeapType_SYSTEM_RAM;

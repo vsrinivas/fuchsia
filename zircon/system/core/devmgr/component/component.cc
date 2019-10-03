@@ -485,6 +485,7 @@ zx_status_t Component::RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint
                                  uint32_t* out_resp_size, const zx_handle_t* req_handles,
                                  uint32_t req_handle_count, zx_handle_t* resp_handles,
                                  uint32_t* resp_handle_count) {
+  // TODO(dustingreen): any handles in req_handles should be closed regardless of error.
   if (!sysmem_.is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -493,8 +494,20 @@ zx_status_t Component::RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint
     zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
     return ZX_ERR_INTERNAL;
   }
-  if (req_handle_count != 1) {
-    zxlogf(ERROR, "%s received %u handles, expecting 1\n", __func__, req_handle_count);
+  uint32_t expected_handle_count;
+  switch (req->op) {
+    case SysmemOp::CONNECT:
+    case SysmemOp::REGISTER_HEAP:
+    case SysmemOp::REGISTER_SECURE_MEM:
+      expected_handle_count = 1;
+      break;
+    case SysmemOp::UNREGISTER_SECURE_MEM:
+      expected_handle_count = 0;
+      break;
+  }
+  if (req_handle_count != expected_handle_count) {
+    zxlogf(ERROR, "%s received %u handles, expecting %u op %u\n", __func__, req_handle_count,
+           expected_handle_count, static_cast<uint32_t>(req->op));
     return ZX_ERR_INTERNAL;
   }
   *out_resp_size = sizeof(ProxyResponse);
@@ -504,6 +517,44 @@ zx_status_t Component::RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint
       return sysmem_.Connect(zx::channel(req_handles[0]));
     case SysmemOp::REGISTER_HEAP:
       return sysmem_.RegisterHeap(req->heap, zx::channel(req_handles[0]));
+    case SysmemOp::REGISTER_SECURE_MEM:
+      return sysmem_.RegisterSecureMem(zx::channel(req_handles[0]));
+    case SysmemOp::UNREGISTER_SECURE_MEM:
+      return sysmem_.UnregisterSecureMem();
+    default:
+      zxlogf(ERROR, "%s: unknown sysmem op %u\n", __func__, static_cast<uint32_t>(req->op));
+      return ZX_ERR_INTERNAL;
+  }
+}
+
+zx_status_t Component::RpcTee(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                              uint32_t* out_resp_size, const zx_handle_t* req_handles,
+                              uint32_t req_handle_count, zx_handle_t* resp_handles,
+                              uint32_t* resp_handle_count) {
+  // TODO(dustingreen): any handles in req_handles should be closed regardless of error.
+  if (!tee_.is_valid()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  auto* req = reinterpret_cast<const TeeProxyRequest*>(req_buf);
+  if (req_size < sizeof(*req)) {
+    zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
+    return ZX_ERR_INTERNAL;
+  }
+  if (req_handle_count < 1 || req_handle_count > 2) {
+    zxlogf(ERROR, "%s received %u handles, expecting 1-2\n", __func__, req_handle_count);
+    return ZX_ERR_INTERNAL;
+  }
+  *out_resp_size = sizeof(ProxyResponse);
+
+  switch (req->op) {
+    case TeeOp::CONNECT: {
+      zx::channel tee_device_request(req_handles[0]);
+      zx::channel service_provider;
+      if (req_handle_count == 2) {
+        service_provider.reset(req_handles[1]);
+      }
+      return tee_.Connect(std::move(tee_device_request), std::move(service_provider));
+    }
     default:
       zxlogf(ERROR, "%s: unknown sysmem op %u\n", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
@@ -811,6 +862,10 @@ zx_status_t Component::DdkRxrpc(zx_handle_t raw_channel) {
     case ZX_PROTOCOL_SYSMEM:
       status = RpcSysmem(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                          resp_handles, &resp_handle_count);
+      break;
+    case ZX_PROTOCOL_TEE:
+      status = RpcTee(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
+                      resp_handles, &resp_handle_count);
       break;
     case ZX_PROTOCOL_USB_MODE_SWITCH:
       status = RpcUms(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,

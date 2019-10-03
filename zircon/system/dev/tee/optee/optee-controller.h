@@ -15,6 +15,7 @@
 #include <ddk/protocol/sysmem.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
+#include <ddktl/protocol/tee.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -31,8 +32,8 @@ class OpteeClient;
 class OpteeController;
 using OpteeControllerBase =
     ddk::Device<OpteeController, ddk::Messageable, ddk::Openable, ddk::Unbindable>;
-using OpteeControllerProtocol = ddk::EmptyProtocol<ZX_PROTOCOL_TEE>;
-class OpteeController : public OpteeControllerBase, public OpteeControllerProtocol {
+class OpteeController : public OpteeControllerBase,
+                        public ddk::TeeProtocol<OpteeController, ddk::base_protocol> {
  public:
   using RpcHandler = fbl::Function<zx_status_t(const RpcFunctionArgs&, RpcFunctionResult*)>;
 
@@ -48,6 +49,9 @@ class OpteeController : public OpteeControllerBase, public OpteeControllerProtoc
   zx_status_t DdkOpen(zx_device_t** out_dev, uint32_t flags);
   void DdkUnbind();
   void DdkRelease();
+
+  // ddk.protocol.Tee
+  zx_status_t TeeConnect(zx::channel tee_device_request, zx::channel service_provider);
 
   // Connects a `fuchsia.tee.Device` protocol request.
   //

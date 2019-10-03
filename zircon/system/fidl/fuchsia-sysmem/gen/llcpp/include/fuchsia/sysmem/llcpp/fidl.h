@@ -1271,7 +1271,6 @@ class Heap final {
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_DriverConnectorConnectRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_DriverConnectorGetProtectedMemoryInfoResponseTable;
 
 // Once a channel with this interface is established to a driver (typically in
 // advance), this interface allows asynchronously sending the server end of an
@@ -1308,23 +1307,6 @@ class DriverConnector final {
         ::fidl::internal::TransactionalMessageKind::kRequest;
   };
 
-  struct GetProtectedMemoryInfoResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t status;
-    uint64_t base_address;
-    uint64_t size;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_DriverConnectorGetProtectedMemoryInfoResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  using GetProtectedMemoryInfoRequest = ::fidl::AnyZeroArgMessage;
-
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
@@ -1341,26 +1323,9 @@ class DriverConnector final {
       using Super::error;
       using Super::ok;
     };
-    template <typename ResponseType>
-    class GetProtectedMemoryInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      GetProtectedMemoryInfo_Impl(zx::unowned_channel _client_end);
-      ~GetProtectedMemoryInfo_Impl() = default;
-      GetProtectedMemoryInfo_Impl(GetProtectedMemoryInfo_Impl&& other) = default;
-      GetProtectedMemoryInfo_Impl& operator=(GetProtectedMemoryInfo_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
 
    public:
     using Connect = Connect_Impl;
-    using GetProtectedMemoryInfo = GetProtectedMemoryInfo_Impl<GetProtectedMemoryInfoResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -1379,26 +1344,9 @@ class DriverConnector final {
       using Super::error;
       using Super::ok;
     };
-    template <typename ResponseType>
-    class GetProtectedMemoryInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      GetProtectedMemoryInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~GetProtectedMemoryInfo_Impl() = default;
-      GetProtectedMemoryInfo_Impl(GetProtectedMemoryInfo_Impl&& other) = default;
-      GetProtectedMemoryInfo_Impl& operator=(GetProtectedMemoryInfo_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
 
    public:
     using Connect = Connect_Impl;
-    using GetProtectedMemoryInfo = GetProtectedMemoryInfo_Impl<GetProtectedMemoryInfoResponse>;
   };
 
   class SyncClient final {
@@ -1426,14 +1374,6 @@ class DriverConnector final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Connect Connect(::fidl::BytePart _request_buffer, ::zx::channel allocator_request);
 
-    // Get information about the physical layout of protected memory, for use by sysmem-assistant.
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::GetProtectedMemoryInfo GetProtectedMemoryInfo();
-
-    // Get information about the physical layout of protected memory, for use by sysmem-assistant.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::GetProtectedMemoryInfo GetProtectedMemoryInfo(::fidl::BytePart _response_buffer);
-
    private:
     ::zx::channel channel_;
   };
@@ -1457,14 +1397,6 @@ class DriverConnector final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Connect Connect(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel allocator_request);
 
-    // Get information about the physical layout of protected memory, for use by sysmem-assistant.
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetProtectedMemoryInfo GetProtectedMemoryInfo(zx::unowned_channel _client_end);
-
-    // Get information about the physical layout of protected memory, for use by sysmem-assistant.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetProtectedMemoryInfo GetProtectedMemoryInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -1479,9 +1411,6 @@ class DriverConnector final {
     // will close).
     static ::fidl::internal::StatusAndError Connect(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectRequest> params);
 
-    // Get information about the physical layout of protected memory, for use by sysmem-assistant.
-    static ::fidl::DecodeResult<GetProtectedMemoryInfoResponse> GetProtectedMemoryInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -1495,20 +1424,6 @@ class DriverConnector final {
     using ConnectCompleter = ::fidl::Completer<>;
 
     virtual void Connect(::zx::channel allocator_request, ConnectCompleter::Sync _completer) = 0;
-
-    class GetProtectedMemoryInfoCompleterBase : public _Base {
-     public:
-      void Reply(int32_t status, uint64_t base_address, uint64_t size);
-      void Reply(::fidl::BytePart _buffer, int32_t status, uint64_t base_address, uint64_t size);
-      void Reply(::fidl::DecodedMessage<GetProtectedMemoryInfoResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using GetProtectedMemoryInfoCompleter = ::fidl::Completer<GetProtectedMemoryInfoCompleterBase>;
-
-    virtual void GetProtectedMemoryInfo(GetProtectedMemoryInfoCompleter::Sync _completer) = 0;
 
   };
 
@@ -5507,16 +5422,6 @@ struct IsFidlMessage<::llcpp::fuchsia::sysmem::DriverConnector::ConnectRequest> 
 static_assert(sizeof(::llcpp::fuchsia::sysmem::DriverConnector::ConnectRequest)
     == ::llcpp::fuchsia::sysmem::DriverConnector::ConnectRequest::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::sysmem::DriverConnector::ConnectRequest, allocator_request) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse)
-    == ::llcpp::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse, status) == 16);
-static_assert(offsetof(::llcpp::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse, base_address) == 24);
-static_assert(offsetof(::llcpp::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse, size) == 32);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::sysmem::Allocator::AllocateNonSharedCollectionRequest> : public std::true_type {};

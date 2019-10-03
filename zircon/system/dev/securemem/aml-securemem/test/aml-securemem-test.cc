@@ -131,6 +131,26 @@ class FakeSysmem : public ddk::SysmemProtocol<FakeSysmem> {
   sysmem_protocol_t proto_;
 };
 
+// We cover the code involved in supporting non-VDEC secure memory and VDEC secure memory in
+// sysmem-test, so this fake doesn't really need to do much yet.
+class FakeTee : public ddk::TeeProtocol<FakeTee> {
+ public:
+  FakeTee() : proto_({&tee_protocol_ops_, this}) {}
+
+  const tee_protocol_t* proto() const { return &proto_; }
+
+  zx_status_t TeeConnect(zx::channel tee_device_request, zx::channel service_provider) {
+    // Currently, do nothing
+    //
+    // We don't rely on the tee_device_request channel sticking around for these tests.  See
+    // sysmem-test for a test that exercises the tee_device_request channel.
+    return ZX_OK;
+  }
+
+ private:
+  tee_protocol_t proto_;
+};
+
 class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
  public:
   explicit FakeComposite(zx_device_t* parent)
@@ -161,8 +181,8 @@ class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
 
 class AmlogicSecureMemTest : public zxtest::Test {
  protected:
-  AmlogicSecureMemTest() : composite_(parent()) {
-    static constexpr size_t kNumBindProtocols = 3;
+  AmlogicSecureMemTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread), composite_(parent()) {
+    static constexpr size_t kNumBindProtocols = 4;
 
     fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[kNumBindProtocols],
                                                   kNumBindProtocols);
@@ -171,6 +191,7 @@ class AmlogicSecureMemTest : public zxtest::Test {
     protocols[1] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
     protocols[2] = {ZX_PROTOCOL_SYSMEM,
                     *reinterpret_cast<const fake_ddk::Protocol*>(sysmem_.proto())};
+    protocols[3] = {ZX_PROTOCOL_TEE, *reinterpret_cast<const fake_ddk::Protocol*>(tee_.proto())};
 
     ddk_.SetProtocols(std::move(protocols));
 
@@ -182,10 +203,13 @@ class AmlogicSecureMemTest : public zxtest::Test {
   amlogic_secure_mem::AmlogicSecureMemDevice* dev() { return ctx_.dev; }
 
  private:
+  // Default dispatcher for the test thread.  Not used to actually dispatch in these tests so far.
+  async::Loop loop_;
   Binder ddk_;
+  FakeComposite composite_;
   FakePDev pdev_;
   FakeSysmem sysmem_;
-  FakeComposite composite_;
+  FakeTee tee_;
   Context ctx_ = {};
 };
 

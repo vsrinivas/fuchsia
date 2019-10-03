@@ -65,6 +65,9 @@ zx_status_t ComponentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_SYSMEM:
       proto->ops = &sysmem_protocol_ops_;
       return ZX_OK;
+    case ZX_PROTOCOL_TEE:
+      proto->ops = &tee_protocol_ops_;
+      return ZX_OK;
     case ZX_PROTOCOL_USB_MODE_SWITCH:
       proto->ops = &usb_mode_switch_protocol_ops_;
       return ZX_OK;
@@ -974,7 +977,6 @@ zx_status_t ComponentProxy::SpiExchange(const uint8_t* txdata_list, size_t txdat
   return ZX_OK;
 }
 
-
 zx_status_t ComponentProxy::SysmemConnect(zx::channel allocator2_request) {
   SysmemProxyRequest req = {};
   ProxyResponse resp = {};
@@ -996,14 +998,41 @@ zx_status_t ComponentProxy::SysmemRegisterHeap(uint64_t heap, zx::channel heap_c
   return Rpc(&req.header, sizeof(req), &resp, sizeof(resp), &handle, 1, nullptr, 0, nullptr);
 }
 
-zx_status_t ComponentProxy::SysmemRegisterSecureMem(zx::channel tee_connection) {
-  // TODO(dustingreen): Implement.
-  return ZX_ERR_NOT_SUPPORTED;
+zx_status_t ComponentProxy::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
+  SysmemProxyRequest req = {};
+  ProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_SYSMEM;
+  req.op = SysmemOp::REGISTER_SECURE_MEM;
+  zx_handle_t handle = secure_mem_connection.release();
+
+  return Rpc(&req.header, sizeof(req), &resp, sizeof(resp), &handle, 1, nullptr, 0, nullptr);
 }
 
 zx_status_t ComponentProxy::SysmemUnregisterSecureMem() {
-  // TODO(dustingreen): Implement.
-  return ZX_ERR_NOT_SUPPORTED;
+  SysmemProxyRequest req = {};
+  ProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_SYSMEM;
+  req.op = SysmemOp::UNREGISTER_SECURE_MEM;
+
+  return Rpc(&req.header, sizeof(req), &resp, sizeof(resp), nullptr, 0, nullptr, 0, nullptr);
+}
+
+zx_status_t ComponentProxy::TeeConnect(zx::channel tee_device_request,
+                                       zx::channel service_provider) {
+  TeeProxyRequest req = {};
+  ProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_TEE;
+  req.op = TeeOp::CONNECT;
+  zx_handle_t handles[2] = {tee_device_request.release(), service_provider.release()};
+
+  // service_provider is allowed to be ZX_HANDLE_INVALID
+  uint32_t handle_count = 1;
+  if (handles[1] != ZX_HANDLE_INVALID) {
+    handle_count += 1;
+  }
+
+  return Rpc(&req.header, sizeof(req), &resp, sizeof(resp), handles, handle_count, nullptr, 0,
+             nullptr);
 }
 
 zx_status_t ComponentProxy::UsbModeSwitchSetMode(usb_mode_t mode) {

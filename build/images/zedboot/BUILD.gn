@@ -33,7 +33,7 @@ zedboot_images = []
 
 # Construct a minimal manifest containing only the few user binaries
 # that constitute zedboot, and the libraries they depend on.
-# TODO(mcgrathr): This could be made smaller by constraining the drivers
+# TODO(36888): This could be made smaller by constraining the drivers
 # included, but we don't currently have a good way to determine the
 # subset that is useful to Zedboot.
 zedboot_binary_patterns = [

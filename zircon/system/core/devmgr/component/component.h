@@ -5,6 +5,9 @@
 #ifndef ZIRCON_SYSTEM_CORE_DEVMGR_COMPONENT_COMPONENT_H_
 #define ZIRCON_SYSTEM_CORE_DEVMGR_COMPONENT_COMPONENT_H_
 
+#include <lib/sync/completion.h>
+#include <lib/zx/channel.h>
+
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -21,9 +24,8 @@
 #include <ddktl/protocol/power.h>
 #include <ddktl/protocol/spi.h>
 #include <ddktl/protocol/sysmem.h>
+#include <ddktl/protocol/tee.h>
 #include <ddktl/protocol/usb/modeswitch.h>
-#include <lib/sync/completion.h>
-#include <lib/zx/channel.h>
 
 namespace component {
 
@@ -46,6 +48,7 @@ class Component : public ComponentBase {
         power_(parent),
         spi_(parent),
         sysmem_(parent),
+        tee_(parent),
         ums_(parent) {}
 
   static zx_status_t Bind(void* ctx, zx_device_t* parent);
@@ -104,6 +107,10 @@ class Component : public ComponentBase {
                         uint32_t* out_resp_size, const zx_handle_t* req_handles,
                         uint32_t req_handle_count, zx_handle_t* resp_handles,
                         uint32_t* resp_handle_count);
+  zx_status_t RpcTee(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                     uint32_t* out_resp_size, const zx_handle_t* req_handles,
+                     uint32_t req_handle_count, zx_handle_t* resp_handles,
+                     uint32_t* resp_handle_count);
   zx_status_t RpcUms(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                      uint32_t* out_resp_size, const zx_handle_t* req_handles,
                      uint32_t req_handle_count, zx_handle_t* resp_handles,
@@ -139,6 +146,7 @@ class Component : public ComponentBase {
   ddk::PowerProtocolClient power_;
   ddk::SpiProtocolClient spi_;
   ddk::SysmemProtocolClient sysmem_;
+  ddk::TeeProtocolClient tee_;
   ddk::UsbModeSwitchProtocolClient ums_;
 };
 

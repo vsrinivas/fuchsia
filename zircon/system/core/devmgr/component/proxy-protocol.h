@@ -269,12 +269,24 @@ struct PowerProxyResponse {
 enum class SysmemOp {
   CONNECT,
   REGISTER_HEAP,
+  REGISTER_SECURE_MEM,
+  UNREGISTER_SECURE_MEM,
 };
 
 struct SysmemProxyRequest {
   ProxyRequest header;
   SysmemOp op;
   uint64_t heap;
+};
+
+// ZX_PROTOCOL_TEE proxy support.
+enum class TeeOp {
+  CONNECT,
+};
+
+struct TeeProxyRequest {
+  ProxyRequest header;
+  TeeOp op;
 };
 
 // ZX_PROTOCOL_AMLOGIC_CANVAS proxy support.
@@ -335,7 +347,7 @@ struct I2cProxyOp {
 enum class SpiOp {
   TRANSMIT,
   RECEIVE,
-  EXCHANGE
+  EXCHANGE,
 };
 
 struct SpiProxyRequest {

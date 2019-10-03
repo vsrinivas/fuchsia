@@ -17,8 +17,11 @@
 
 #include <tee-client-api/tee_client_api.h>
 
-#define TEE_DEV_CLASS "/dev/class/tee/"
+// Most clients should use this.
 #define TEE_SERVICE_PATH "/svc/fuchsia.tee.Device"
+// Presently only used by clients that need to connect before the service is available / don't need
+// the TEE to be able to use file services.
+#define TEE_DEV_CLASS "/dev/class/tee/"
 
 #define GET_PARAM_TYPE_FOR_INDEX(param_types, index) ((param_types >> (4 * index)) & 0xF)
 

@@ -284,7 +284,7 @@ zx_status_t OpteeController::Bind() {
     return status;
   }
 
-  return status;
+  return ZX_OK;
 }
 
 zx_status_t OpteeController::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -304,6 +304,11 @@ void OpteeController::DdkUnbind() {
 void OpteeController::DdkRelease() {
   // devmgr has given up ownership, so we must clean ourself up.
   delete this;
+}
+
+zx_status_t OpteeController::TeeConnect(zx::channel tee_device_request,
+                                        zx::channel service_provider) {
+  return ConnectDevice(service_provider.release(), tee_device_request.release());
 }
 
 zx_status_t OpteeController::ConnectDevice(zx_handle_t service_provider,

@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/syscalls/smc.h>
+
 #include <cstdint>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
-#include <zircon/syscalls/smc.h>
 
 #include "astro.h"
 
@@ -59,17 +61,17 @@ static const pbus_dev_t tee_dev = []() {
 }();
 
 constexpr zx_bind_inst_t root_match[] = {
-  BI_MATCH(),
+    BI_MATCH(),
 };
 constexpr zx_bind_inst_t sysmem_match[] = {
-  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
 constexpr device_component_part_t sysmem_component[] = {
-  {countof(root_match), root_match},
-  {countof(sysmem_match), sysmem_match},
+    {countof(root_match), root_match},
+    {countof(sysmem_match), sysmem_match},
 };
 constexpr device_component_t components[] = {
-  {countof(sysmem_component), sysmem_component},
+    {countof(sysmem_component), sysmem_component},
 };
 
 zx_status_t Astro::TeeInit() {

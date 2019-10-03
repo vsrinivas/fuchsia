@@ -8,6 +8,7 @@ test("sysmem") {
     "sysmem_tests.cc",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-sysinfo:c",
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fdio",
