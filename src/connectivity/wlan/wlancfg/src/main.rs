@@ -7,6 +7,7 @@
 mod client;
 mod config;
 mod device;
+mod fuse_pending;
 mod known_ess_store;
 mod shim;
 mod state_machine;
