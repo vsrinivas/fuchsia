@@ -157,18 +157,18 @@ impl<D: ArpDevice, P: PType, DeviceId> ArpTimerId<D, P, DeviceId> {
 }
 
 /// The metadata associated with an ARP frame.
-pub(crate) struct ArpFrameMetadata<D: ArpDevice, DeviceId> {
+pub(super) struct ArpFrameMetadata<D: ArpDevice, DeviceId> {
     /// The ID of the ARP device.
-    pub(crate) device_id: DeviceId,
+    pub(super) device_id: DeviceId,
     /// The destination hardware address.
-    pub(crate) dst_addr: D::HType,
+    pub(super) dst_addr: D::HType,
 }
 
 /// Cleans up state associated with the device.
 ///
 /// The contract is that after deinitialize is called, nothing else should be done
 /// with the state.
-pub(crate) fn deinitialize<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
+pub(super) fn deinitialize<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
     ctx: &mut C,
     device_id: C::DeviceId,
 ) {
@@ -184,7 +184,7 @@ pub(crate) fn deinitialize<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
 /// used when a buffer of type `B` is provided to ARP (in particular, in
 /// [`receive_arp_packet`]), and allows ARP to reuse that buffer rather than
 /// needing to always allocate a new one.
-pub(crate) trait BufferArpContext<D: ArpDevice, P: PType, B: BufferMut>:
+pub(super) trait BufferArpContext<D: ArpDevice, P: PType, B: BufferMut>:
     ArpContext<D, P> + FrameContext<B, ArpFrameMetadata<D, <Self as ArpContext<D, P>>::DeviceId>>
 {
 }
@@ -219,7 +219,7 @@ impl<
 // for similar reasons).
 
 /// An execution context for the ARP protocol.
-pub(crate) trait ArpContext<D: ArpDevice, P: PType>:
+pub(super) trait ArpContext<D: ArpDevice, P: PType>:
     StateContext<<Self as ArpContext<D, P>>::DeviceId, ArpState<D, P>>
     + TimerContext<ArpTimerId<D, P, <Self as ArpContext<D, P>>::DeviceId>>
     + FrameContext<EmptyBuf, ArpFrameMetadata<D, <Self as ArpContext<D, P>>::DeviceId>>
@@ -250,7 +250,7 @@ pub(crate) trait ArpContext<D: ArpDevice, P: PType>:
 }
 
 /// Handle an ARP timer firing.
-pub(crate) fn handle_timer<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
+pub(super) fn handle_timer<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
     ctx: &mut C,
     id: ArpTimerId<D, P, C::DeviceId>,
 ) {
@@ -328,7 +328,7 @@ enum ArpTimerIdInner<P: PType> {
 /// types in a given context, it is the caller's responsibility to call
 /// `peek_arp_types` in order to determine which types to use in calling this
 /// function.
-pub(crate) fn receive_arp_packet<
+pub(super) fn receive_arp_packet<
     D: ArpDevice,
     P: PType,
     B: BufferMut,
@@ -483,7 +483,7 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
 ///
 /// This will cause any conflicting dynamic entry to be removed, and any future
 /// conflicting gratuitous ARPs to be ignored.
-pub(crate) fn insert_static<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
+pub(super) fn insert_static<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
     ctx: &mut C,
     device_id: C::DeviceId,
     net: P,
@@ -525,7 +525,7 @@ fn insert_dynamic<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
 }
 
 /// Look up the hardware address for a network protocol address.
-pub(crate) fn lookup<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
+pub(super) fn lookup<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
     ctx: &mut C,
     device_id: C::DeviceId,
     local_addr: D::HType,

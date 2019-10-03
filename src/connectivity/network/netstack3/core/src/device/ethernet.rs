@@ -5,6 +5,7 @@
 //! The Ethernet protocol.
 
 use std::collections::{HashMap, VecDeque};
+use std::fmt::Debug;
 use std::iter::FilterMap;
 use std::num::NonZeroU8;
 use std::slice::Iter;
@@ -19,19 +20,23 @@ use net_types::{
 use packet::{Buf, BufferMut, EmptyBuf, Nested, Serializer};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
-use crate::context::{FrameContext, StateContext, TimerContext};
+use crate::context::{FrameContext, InstantContext, StateContext};
 use crate::device::arp::{
     self, ArpContext, ArpFrameMetadata, ArpHardwareType, ArpState, ArpTimerId,
 };
 use crate::device::link::LinkDevice;
 use crate::device::ndp::{self, NdpContext, NdpState, NdpTimerId};
+#[cfg(test)]
+use crate::device::EthernetDeviceId;
 use crate::device::{
-    is_device_usable, AddressConfigurationType, AddressEntry, AddressError, AddressState,
-    DeviceLayerTimerId, EthernetDeviceId, FrameDestination, Tentative,
+    AddressConfigurationType, AddressEntry, AddressError, AddressState, BufferIpDeviceContext,
+    DeviceIdContext, FrameDestination, IpDeviceContext, RecvIpFrameMeta, Tentative,
 };
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
-use crate::{BufferDispatcher, Context, EventDispatcher, StackState, TimerId, TimerIdInner};
+use crate::Instant;
+#[cfg(test)]
+use crate::{Context, EventDispatcher};
 
 const ETHERNET_MAX_PENDING_FRAMES: usize = 10;
 
@@ -58,6 +63,51 @@ create_protocol_enum!(
         _, "EtherType {}";
     }
 );
+
+/// A shorthand for `IpDeviceContext` with all of the appropriate type arguments
+/// fixed to their Ethernet values.
+pub(super) trait EthernetIpDeviceContext:
+    IpDeviceContext<
+    EthernetLinkDevice,
+    EthernetTimerId<<Self as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+    EthernetDeviceState<<Self as InstantContext>::Instant>,
+>
+{
+}
+
+impl<
+        C: IpDeviceContext<
+            EthernetLinkDevice,
+            EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+            EthernetDeviceState<<C as InstantContext>::Instant>,
+        >,
+    > EthernetIpDeviceContext for C
+{
+}
+
+/// A shorthand for `BufferIpDeviceContext` with all of the appropriate type
+/// arguments fixed to their Ethernet values.
+pub(super) trait BufferEthernetIpDeviceContext<B: BufferMut>:
+    BufferIpDeviceContext<
+    EthernetLinkDevice,
+    EthernetTimerId<<Self as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+    EthernetDeviceState<<Self as InstantContext>::Instant>,
+    B,
+>
+{
+}
+
+impl<
+        B: BufferMut,
+        C: BufferIpDeviceContext<
+            EthernetLinkDevice,
+            EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+            EthernetDeviceState<<C as InstantContext>::Instant>,
+            B,
+        >,
+    > BufferEthernetIpDeviceContext<B> for C
+{
+}
 
 /// Builder for [`EthernetDeviceState`].
 pub(crate) struct EthernetDeviceStateBuilder {
@@ -164,7 +214,7 @@ impl EthernetDeviceStateBuilder {
     }
 
     /// Build the `EthernetDeviceState` from this builder.
-    pub(crate) fn build<D: EventDispatcher>(self) -> EthernetDeviceState<D> {
+    pub(super) fn build<I: Instant>(self) -> EthernetDeviceState<I> {
         EthernetDeviceState {
             mac: self.mac,
             mtu: self.mtu,
@@ -187,7 +237,7 @@ impl EthernetDeviceStateBuilder {
 }
 
 /// The state associated with an Ethernet device.
-pub(crate) struct EthernetDeviceState<D: EventDispatcher> {
+pub(super) struct EthernetDeviceState<I: Instant> {
     /// Mac address of the device this state is for.
     mac: Mac,
 
@@ -207,17 +257,17 @@ pub(crate) struct EthernetDeviceState<D: EventDispatcher> {
     /// Assigned IPv4 addresses.
     // TODO(ghanan): Use `AddrSubnet` instead of `AddressEntry` as IPv4 addresses do not
     //               need the extra fields in `AddressEntry`.
-    ipv4_addr_sub: Vec<AddressEntry<Ipv4Addr, D::Instant>>,
+    ipv4_addr_sub: Vec<AddressEntry<Ipv4Addr, I>>,
 
     /// Assigned IPv6 addresses.
     ///
     /// May be tentative (performing NDP's Duplicate Address Detection).
-    ipv6_addr_sub: Vec<AddressEntry<Ipv6Addr, D::Instant>>,
+    ipv6_addr_sub: Vec<AddressEntry<Ipv6Addr, I>>,
 
     /// Assigned IPv6 link-local address.
     ///
     /// May be tentative (performing NDP's Duplicate Address Detection).
-    ipv6_link_local_addr_sub: Option<AddressEntry<Ipv6Addr, D::Instant, LinkLocalAddr<Ipv6Addr>>>,
+    ipv6_link_local_addr_sub: Option<AddressEntry<Ipv6Addr, I, LinkLocalAddr<Ipv6Addr>>>,
 
     /// IPv4 multicast groups this device has joined.
     ipv4_multicast_groups: HashMap<MulticastAddr<Ipv4Addr>, usize>,
@@ -232,7 +282,7 @@ pub(crate) struct EthernetDeviceState<D: EventDispatcher> {
     ipv4_arp: ArpState<EthernetLinkDevice, Ipv4Addr>,
 
     /// (IPv6) NDP state.
-    ndp: ndp::NdpState<EthernetLinkDevice, D::Instant>,
+    ndp: ndp::NdpState<EthernetLinkDevice, I>,
 
     /// A flag indicating whether routing of IPv4 packets not destined for this device is
     /// enabled.
@@ -266,7 +316,7 @@ pub(crate) struct EthernetDeviceState<D: EventDispatcher> {
     promiscuous_mode: bool,
 }
 
-impl<D: EventDispatcher> EthernetDeviceState<D> {
+impl<I: Instant> EthernetDeviceState<I> {
     /// Adds a pending frame `frame` associated with `local_addr` to the list
     /// of pending frames in the current device state.
     ///
@@ -338,25 +388,63 @@ impl EthernetIpExt for Ipv6 {
 /// A timer ID for Ethernet devices.
 ///
 /// `D` is the type of device ID that identifies different Ethernet devices.
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub(super) enum EthernetTimerId<D> {
     Arp(ArpTimerId<EthernetLinkDevice, Ipv4Addr, D>),
     Ndp(NdpTimerId<EthernetLinkDevice, D>),
 }
+
+impl<D> From<ArpTimerId<EthernetLinkDevice, Ipv4Addr, D>> for EthernetTimerId<D> {
+    fn from(id: ArpTimerId<EthernetLinkDevice, Ipv4Addr, D>) -> EthernetTimerId<D> {
+        EthernetTimerId::Arp(id)
+    }
+}
+
+impl<D> From<NdpTimerId<EthernetLinkDevice, D>> for EthernetTimerId<D> {
+    fn from(id: NdpTimerId<EthernetLinkDevice, D>) -> EthernetTimerId<D> {
+        EthernetTimerId::Ndp(id)
+    }
+}
+
+/// Handle an Ethernet timer firing.
+pub(super) fn handle_timer<C: EthernetIpDeviceContext>(
+    ctx: &mut C,
+    id: EthernetTimerId<C::DeviceId>,
+) {
+    match id {
+        EthernetTimerId::Arp(id) => arp::handle_timer::<EthernetLinkDevice, _, _>(ctx, id),
+        EthernetTimerId::Ndp(id) => ndp::handle_timer::<EthernetLinkDevice, _>(ctx, id),
+    }
+}
+
+// If we are provided with an impl of `TimerContext<EthernetTimerId<_>>`, then
+// we can in turn provide impls of `TimerContext` for ARP and NDP timers.
+impl_timer_context!(
+    DeviceIdContext<EthernetLinkDevice>,
+    EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+    NdpTimerId<EthernetLinkDevice, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+    EthernetTimerId::Ndp(id),
+    id
+);
+impl_timer_context!(
+    DeviceIdContext<EthernetLinkDevice>,
+    EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+    ArpTimerId<EthernetLinkDevice, Ipv4Addr, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+    EthernetTimerId::Arp(id),
+    id
+);
 
 /// Initialize a device.
 ///
 /// `initialize_device` sets the link-local address for `device_id` and performs DAD on it.
 ///
 /// `device_id` MUST be ready to send packets before `initialize_device` is called.
-pub(crate) fn initialize_device<D: EventDispatcher>(
-    ctx: &mut Context<D>,
-    device_id: EthernetDeviceId,
-) {
+pub(super) fn initialize_device<C: EthernetIpDeviceContext>(ctx: &mut C, device_id: C::DeviceId) {
     //
     // Assign a link-local address.
     //
 
-    let state = get_device_state(ctx.state(), device_id);
+    let state = ctx.get_state(device_id);
 
     // Must not have a link local address yet.
     assert!(state.ipv6_link_local_addr_sub.is_none());
@@ -366,7 +454,7 @@ pub(crate) fn initialize_device<D: EventDispatcher>(
     // First, join the solicited-node multicast group for the link-local address.
     join_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
 
-    let state = get_device_state_mut(ctx.state_mut(), device_id);
+    let state = ctx.get_state_mut(device_id);
 
     // Associate the link-local address to the device, and mark it as Tentative, configured by
     // SLAAC, and not set to expire.
@@ -387,20 +475,20 @@ pub(crate) fn initialize_device<D: EventDispatcher>(
 /// `SerializationRequest`. It computes the routing information and serializes
 /// the request in a new Ethernet frame and sends it.
 #[specialize_ip_address]
-pub(crate) fn send_ip_frame<
+pub(super) fn send_ip_frame<
     B: BufferMut,
-    D: BufferDispatcher<B>,
+    C: EthernetIpDeviceContext + FrameContext<B, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
     A: IpAddress,
     S: Serializer<Buffer = B>,
 >(
-    ctx: &mut Context<D>,
-    device_id: EthernetDeviceId,
+    ctx: &mut C,
+    device_id: C::DeviceId,
     local_addr: SpecifiedAddr<A>,
     body: S,
 ) -> Result<(), S> {
     trace!("ethernet::send_ip_frame: local_addr = {:?}; device = {:?}", local_addr, device_id);
 
-    let state = get_device_state_mut(ctx.state_mut(), device_id);
+    let state = ctx.get_state_mut(device_id);
     let (local_mac, mtu) = (state.mac, state.mtu);
 
     let local_addr = local_addr.get();
@@ -420,7 +508,6 @@ pub(crate) fn send_ip_frame<
 
     match dst_mac {
         Ok(dst_mac) => ctx
-            .dispatcher_mut()
             .send_frame(
                 device_id.into(),
                 body.with_mtu(mtu as usize).encapsulate(EthernetFrameBuilder::new(
@@ -431,7 +518,7 @@ pub(crate) fn send_ip_frame<
             )
             .map_err(|ser| ser.into_inner().into_inner()),
         Err(local_addr) => {
-            let state = get_device_state_mut(ctx.state_mut(), device_id);
+            let state = ctx.get_state_mut(device_id);
             // The `serialize_vec_outer` call returns an `Either<B,
             // Buf<Vec<u8>>`. We could naively call `.as_ref().to_vec()` on it,
             // but if it were the `Buf<Vec<u8>>` variant, we'd be unnecessarily
@@ -458,9 +545,9 @@ pub(crate) fn send_ip_frame<
 }
 
 /// Receive an Ethernet frame from the network.
-pub(crate) fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
-    ctx: &mut Context<D>,
-    device_id: EthernetDeviceId,
+pub(super) fn receive_frame<B: BufferMut, C: BufferEthernetIpDeviceContext<B>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     mut buffer: B,
 ) {
     trace!("ethernet::receive_frame: device_id = {:?}", device_id);
@@ -474,7 +561,7 @@ pub(crate) fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
 
     let (src, dst) = (frame.src_mac(), frame.dst_mac());
 
-    if !get_device_state(ctx.state(), device_id).should_deliver(&dst) {
+    if !ctx.get_state(device_id).should_deliver(&dst) {
         trace!("ethernet::receive_frame: destination mac {:?} not for device {:?}", dst, device_id);
         return;
     }
@@ -497,22 +584,22 @@ pub(crate) fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
             }
         }
         Some(EtherType::Ipv4) => {
-            crate::ip::receive_ipv4_packet(ctx, device_id.into(), frame_dst, buffer)
+            ctx.receive_frame(RecvIpFrameMeta::<_, Ipv4>::new(device_id, frame_dst), buffer)
         }
         Some(EtherType::Ipv6) => {
-            crate::ip::receive_ipv6_packet(ctx, device_id.into(), frame_dst, buffer)
+            ctx.receive_frame(RecvIpFrameMeta::<_, Ipv6>::new(device_id, frame_dst), buffer)
         }
         Some(EtherType::Other(_)) | None => {} // TODO(joshlf)
     }
 }
 
 /// Set the promiscuous mode flag on `device_id`.
-pub(crate) fn set_promiscuous_mode<D: EventDispatcher>(
-    ctx: &mut Context<D>,
-    device_id: EthernetDeviceId,
+pub(super) fn set_promiscuous_mode<C: EthernetIpDeviceContext>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     enabled: bool,
 ) {
-    get_device_state_mut(ctx.state_mut(), device_id).promiscuous_mode = enabled;
+    ctx.get_state_mut(device_id).promiscuous_mode = enabled;
 }
 
 /// Get a single IP address for a device.
@@ -520,11 +607,11 @@ pub(crate) fn set_promiscuous_mode<D: EventDispatcher>(
 /// Note, tentative IP addresses (addresses which are not yet fully bound to a
 /// device) will not be returned by `get_ip_addr`.
 #[specialize_ip_address]
-pub(crate) fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
-    state: &StackState<D>,
-    device_id: EthernetDeviceId,
+pub(super) fn get_ip_addr_subnet<C: EthernetIpDeviceContext, A: IpAddress>(
+    ctx: &C,
+    device_id: C::DeviceId,
 ) -> Option<AddrSubnet<A>> {
-    get_ip_addr_subnets(state, device_id).nth(0)
+    get_ip_addr_subnets(ctx, device_id).nth(0)
 }
 
 /// Get the IP address and subnet pais associated with this device.
@@ -538,14 +625,14 @@ pub(crate) fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 ///
 /// See [`Tentative`] and [`AddrSubnet`] for more information.
 #[specialize_ip_address]
-pub(crate) fn get_ip_addr_subnets<D: EventDispatcher, A: IpAddress>(
-    state: &StackState<D>,
-    device_id: EthernetDeviceId,
+pub(super) fn get_ip_addr_subnets<C: EthernetIpDeviceContext, A: IpAddress>(
+    ctx: &C,
+    device_id: C::DeviceId,
 ) -> FilterMap<
-    Iter<AddressEntry<A, D::Instant>>,
-    fn(&AddressEntry<A, D::Instant>) -> Option<AddrSubnet<A>>,
+    Iter<AddressEntry<A, C::Instant>>,
+    fn(&AddressEntry<A, C::Instant>) -> Option<AddrSubnet<A>>,
 > {
-    let state = get_device_state(state, device_id);
+    let state = ctx.get_state(device_id);
 
     #[ipv4addr]
     let addresses = &state.ipv4_addr_sub;
@@ -575,14 +662,14 @@ pub(crate) fn get_ip_addr_subnets<D: EventDispatcher, A: IpAddress>(
 ///
 /// See [`Tentative`] and [`AddrSubnet`] for more information.
 #[specialize_ip_address]
-pub(crate) fn get_ip_addr_subnets_with_tentative<D: EventDispatcher, A: IpAddress>(
-    state: &StackState<D>,
-    device_id: EthernetDeviceId,
+pub(super) fn get_ip_addr_subnets_with_tentative<C: EthernetIpDeviceContext, A: IpAddress>(
+    ctx: &C,
+    device_id: C::DeviceId,
 ) -> FilterMap<
-    Iter<AddressEntry<A, D::Instant>>,
-    fn(&AddressEntry<A, D::Instant>) -> Option<Tentative<AddrSubnet<A>>>,
+    Iter<AddressEntry<A, C::Instant>>,
+    fn(&AddressEntry<A, C::Instant>) -> Option<Tentative<AddrSubnet<A>>>,
 > {
-    let state = get_device_state(state, device_id);
+    let state = ctx.get_state(device_id);
 
     #[ipv4addr]
     let addresses = &state.ipv4_addr_sub;
@@ -600,12 +687,12 @@ pub(crate) fn get_ip_addr_subnets_with_tentative<D: EventDispatcher, A: IpAddres
 /// Get the state of an address on a device.
 ///
 /// Returns `None` if `addr` is not associated with `device_id`.
-pub(crate) fn get_ip_addr_state<D: EventDispatcher, A: IpAddress>(
-    state: &StackState<D>,
-    device_id: EthernetDeviceId,
+pub(super) fn get_ip_addr_state<C: EthernetIpDeviceContext, A: IpAddress>(
+    ctx: &C,
+    device_id: C::DeviceId,
     addr: &SpecifiedAddr<A>,
 ) -> Option<AddressState> {
-    get_ip_addr_state_inner(state, device_id, &addr.get(), None)
+    get_ip_addr_state_inner(ctx, device_id, &addr.get(), None)
 }
 
 /// Get the state of an address on a device.
@@ -616,13 +703,13 @@ pub(crate) fn get_ip_addr_state<D: EventDispatcher, A: IpAddress>(
 /// Returns `None` if `addr` is not associated with `device_id`.
 // TODO(ghanan): Use `SpecializedAddr` for `addr`.
 #[specialize_ip_address]
-fn get_ip_addr_state_inner<D: EventDispatcher, A: IpAddress>(
-    state: &StackState<D>,
-    device_id: EthernetDeviceId,
+fn get_ip_addr_state_inner<C: EthernetIpDeviceContext, A: IpAddress>(
+    ctx: &C,
+    device_id: C::DeviceId,
     addr: &A,
     configuration_type: Option<AddressConfigurationType>,
 ) -> Option<AddressState> {
-    let state = get_device_state(state, device_id);
+    let state = ctx.get_state(device_id);
 
     #[ipv4addr]
     return state.ipv4_addr_sub.iter().find_map(|a| {
@@ -667,9 +754,9 @@ fn get_ip_addr_state_inner<D: EventDispatcher, A: IpAddress>(
 ///
 /// Panics if `addr_sub` holds a link-local address.
 // TODO(ghanan): Use a witness type to guarantee non-link-local-ness for `addr_sub`.
-pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
-    ctx: &mut Context<D>,
-    device_id: EthernetDeviceId,
+pub(super) fn add_ip_addr_subnet<C: EthernetIpDeviceContext, A: IpAddress>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     addr_sub: AddrSubnet<A>,
 ) -> Result<(), AddressError> {
     // Add the IP address and mark it as a manually added address.
@@ -685,23 +772,23 @@ pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 ///
 /// Panics if `addr_sub` holds a link-local address.
 #[specialize_ip_address]
-fn add_ip_addr_subnet_inner<D: EventDispatcher, A: IpAddress>(
-    ctx: &mut Context<D>,
-    device_id: EthernetDeviceId,
+fn add_ip_addr_subnet_inner<C: EthernetIpDeviceContext, A: IpAddress>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     addr_sub: AddrSubnet<A>,
     configuration_type: AddressConfigurationType,
-    valid_until: Option<D::Instant>,
+    valid_until: Option<C::Instant>,
 ) -> Result<(), AddressError> {
     let addr = addr_sub.addr().get();
 
     // MUST NOT be link-local.
     assert!(!addr.is_linklocal());
 
-    if get_ip_addr_state_inner(ctx.state(), device_id, &addr, None).is_some() {
+    if get_ip_addr_state_inner(ctx, device_id, &addr, None).is_some() {
         return Err(AddressError::AlreadyExists);
     }
 
-    let state = get_device_state_mut(ctx.state_mut(), device_id);
+    let state = ctx.get_state_mut(device_id);
 
     #[ipv4addr]
     state.ipv4_addr_sub.push(AddressEntry::new(
@@ -716,7 +803,7 @@ fn add_ip_addr_subnet_inner<D: EventDispatcher, A: IpAddress>(
         // First, join the solicited-node multicast group.
         join_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
 
-        let state = get_device_state_mut(ctx.state_mut(), device_id);
+        let state = ctx.get_state_mut(device_id);
 
         state.ipv6_addr_sub.push(AddressEntry::new(
             addr_sub,
@@ -738,9 +825,9 @@ fn add_ip_addr_subnet_inner<D: EventDispatcher, A: IpAddress>(
 ///
 /// Panics if `addr` is a link-local address.
 // TODO(ghanan): Use a witness type to guarantee non-link-local-ness for `addr`.
-pub(crate) fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
-    ctx: &mut Context<D>,
-    device_id: EthernetDeviceId,
+pub(super) fn del_ip_addr<C: EthernetIpDeviceContext, A: IpAddress>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     addr: &SpecifiedAddr<A>,
 ) -> Result<(), AddressError> {
     del_ip_addr_inner(ctx, device_id, &addr.get(), None)
@@ -755,9 +842,9 @@ pub(crate) fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
 ///
 /// Panics if `addr` is a link-local address.
 #[specialize_ip_address]
-fn del_ip_addr_inner<D: EventDispatcher, A: IpAddress>(
-    ctx: &mut Context<D>,
-    device_id: EthernetDeviceId,
+fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     addr: &A,
     configuration_type: Option<AddressConfigurationType>,
 ) -> Result<(), AddressError> {
@@ -766,7 +853,7 @@ fn del_ip_addr_inner<D: EventDispatcher, A: IpAddress>(
 
     #[ipv4addr]
     {
-        let state = get_device_state_mut(ctx.state_mut(), device_id);
+        let state = ctx.get_state_mut(device_id);
 
         let original_size = state.ipv4_addr_sub.len();
         if let Some(configuration_type) = configuration_type {
@@ -791,9 +878,7 @@ fn del_ip_addr_inner<D: EventDispatcher, A: IpAddress>(
 
     #[ipv6addr]
     {
-        if let Some(state) =
-            get_ip_addr_state_inner(ctx.state(), device_id, addr, configuration_type)
-        {
+        if let Some(state) = get_ip_addr_state_inner(ctx, device_id, addr, configuration_type) {
             if state.is_tentative() {
                 // Cancel current duplicate address detection for `addr` as we are
                 // removing this IP.
@@ -810,7 +895,7 @@ fn del_ip_addr_inner<D: EventDispatcher, A: IpAddress>(
             return Err(AddressError::NotFound);
         }
 
-        let state = get_device_state_mut(ctx.state_mut(), device_id);
+        let state = ctx.get_state_mut(device_id);
 
         let original_size = state.ipv6_addr_sub.len();
         state.ipv6_addr_sub.retain(|x| x.addr_sub().addr().get() != *addr);
@@ -830,15 +915,15 @@ fn del_ip_addr_inner<D: EventDispatcher, A: IpAddress>(
 /// Get the IPv6 link-local address associated with this device.
 ///
 /// Returns `None` if the address is tentative.
-pub(crate) fn get_ipv6_link_local_addr<D: EventDispatcher>(
-    ctx: &Context<D>,
-    device_id: EthernetDeviceId,
+pub(super) fn get_ipv6_link_local_addr<C: EthernetIpDeviceContext>(
+    ctx: &C,
+    device_id: C::DeviceId,
 ) -> Option<LinkLocalAddr<Ipv6Addr>> {
     // TODO(brunodalbo) the link local address is subject to the same collision
     //  verifications as prefix global addresses, we should keep a state machine
     //  about that check and cache the adopted address. For now, we just compose
     //  the link-local from the ethernet MAC.
-    get_device_state(ctx.state(), device_id)
+    ctx.get_state(device_id)
         .ipv6_link_local_addr_sub
         .as_ref()
         .map(|a| if a.state().is_assigned() { Some(a.addr_sub().addr()) } else { None })
@@ -857,12 +942,12 @@ pub(crate) fn get_ipv6_link_local_addr<D: EventDispatcher>(
 ///
 /// `join_link_multicast` is different from [`join_ip_multicast`] as `join_link_multicast` joins an
 /// L2 multicast group, whereas `join_ip_multicast` joins an L3 multicast group.
-pub(crate) fn join_link_multicast<D: EventDispatcher>(
-    ctx: &mut Context<D>,
-    device_id: EthernetDeviceId,
+pub(super) fn join_link_multicast<C: EthernetIpDeviceContext>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     multicast_addr: MulticastAddr<Mac>,
 ) {
-    let device_state = get_device_state_mut(ctx.state_mut(), device_id);
+    let device_state = ctx.get_state_mut(device_id);
 
     let groups = &mut device_state.link_multicast_groups;
 
@@ -896,12 +981,12 @@ pub(crate) fn join_link_multicast<D: EventDispatcher>(
 /// # Panics
 ///
 /// If `device_id` is not in the multicast group `multicast_addr`.
-fn leave_link_multicast<D: EventDispatcher>(
-    ctx: &mut Context<D>,
-    device_id: EthernetDeviceId,
+fn leave_link_multicast<C: EthernetIpDeviceContext>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     multicast_addr: MulticastAddr<Mac>,
 ) {
-    let device_state = get_device_state_mut(ctx.state_mut(), device_id);
+    let device_state = ctx.get_state_mut(device_id);
 
     let groups = &mut device_state.link_multicast_groups;
 
@@ -936,12 +1021,12 @@ fn leave_link_multicast<D: EventDispatcher>(
 /// `join_ip_multicast` is different from [`join_link_multicast`] as `join_ip_multicast` joins an
 /// L3 multicast group, whereas `join_link_multicast` joins an L2 multicast group.
 #[specialize_ip_address]
-pub(crate) fn join_ip_multicast<D: EventDispatcher, A: IpAddress>(
-    ctx: &mut Context<D>,
-    device_id: EthernetDeviceId,
+pub(super) fn join_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     multicast_addr: MulticastAddr<A>,
 ) {
-    let device_state = get_device_state_mut(ctx.state_mut(), device_id);
+    let device_state = ctx.get_state_mut(device_id);
 
     #[ipv4addr]
     let groups = &mut device_state.ipv4_multicast_groups;
@@ -988,12 +1073,12 @@ pub(crate) fn join_ip_multicast<D: EventDispatcher, A: IpAddress>(
 ///
 /// If `device_id` is not currently in the multicast group `multicast_addr`.
 #[specialize_ip_address]
-pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: IpAddress>(
-    ctx: &mut Context<D>,
-    device_id: EthernetDeviceId,
+pub(super) fn leave_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     multicast_addr: MulticastAddr<A>,
 ) {
-    let device_state = get_device_state_mut(ctx.state_mut(), device_id);
+    let device_state = ctx.get_state_mut(device_id);
     let mac = MulticastAddr::from(&multicast_addr);
 
     #[ipv4addr]
@@ -1031,36 +1116,29 @@ pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: IpAddress>(
 
 /// Is `device` in the IP multicast group `multicast_addr`?
 #[specialize_ip_address]
-pub(crate) fn is_in_ip_multicast<D: EventDispatcher, A: IpAddress>(
-    ctx: &Context<D>,
-    device_id: EthernetDeviceId,
+pub(super) fn is_in_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
+    ctx: &C,
+    device_id: C::DeviceId,
     multicast_addr: MulticastAddr<A>,
 ) -> bool {
     #[ipv4addr]
-    return get_device_state(ctx.state(), device_id)
-        .ipv4_multicast_groups
-        .contains_key(&multicast_addr);
+    return ctx.get_state(device_id).ipv4_multicast_groups.contains_key(&multicast_addr);
 
     #[ipv6addr]
-    return get_device_state(ctx.state(), device_id)
-        .ipv6_multicast_groups
-        .contains_key(&multicast_addr);
+    return ctx.get_state(device_id).ipv6_multicast_groups.contains_key(&multicast_addr);
 }
 
 /// Get the MTU associated with this device.
-pub(crate) fn get_mtu<D: EventDispatcher>(
-    state: &StackState<D>,
-    device_id: EthernetDeviceId,
-) -> u32 {
-    get_device_state(state, device_id).mtu
+pub(super) fn get_mtu<C: EthernetIpDeviceContext>(ctx: &C, device_id: C::DeviceId) -> u32 {
+    ctx.get_state(device_id).mtu
 }
 
 /// Get the hop limit for new IPv6 packets that will be sent out from `device_id`.
-pub(crate) fn get_ipv6_hop_limit<D: EventDispatcher>(
-    ctx: &Context<D>,
-    device_id: EthernetDeviceId,
+pub(super) fn get_ipv6_hop_limit<C: EthernetIpDeviceContext>(
+    ctx: &C,
+    device_id: C::DeviceId,
 ) -> NonZeroU8 {
-    get_device_state(ctx.state(), device_id).ipv6_hop_limit
+    ctx.get_state(device_id).ipv6_hop_limit
 }
 
 /// Is IP packet routing enabled on `device_id`?
@@ -1069,15 +1147,15 @@ pub(crate) fn get_ipv6_hop_limit<D: EventDispatcher>(
 /// only means that `device` is allowed to route packets. To route packets, this netstack must
 /// be configured to allow IP packets to be routed if it was not destined for this node.
 #[specialize_ip]
-pub(crate) fn is_routing_enabled<D: EventDispatcher, I: Ip>(
-    ctx: &Context<D>,
-    device_id: EthernetDeviceId,
+pub(super) fn is_routing_enabled<C: EthernetIpDeviceContext, I: Ip>(
+    ctx: &C,
+    device_id: C::DeviceId,
 ) -> bool {
     #[ipv4]
-    return get_device_state(ctx.state(), device_id).route_ipv4;
+    return ctx.get_state(device_id).route_ipv4;
 
     #[ipv6]
-    return get_device_state(ctx.state(), device_id).route_ipv6;
+    return ctx.get_state(device_id).route_ipv6;
 }
 
 /// Sets the IP packet routing flag on `device_id`.
@@ -1087,12 +1165,12 @@ pub(crate) fn is_routing_enabled<D: EventDispatcher, I: Ip>(
 ///
 /// See [`crate::device::set_routing_enabled`] for more information.
 #[specialize_ip]
-pub(super) fn set_routing_enabled_inner<D: EventDispatcher, I: Ip>(
-    ctx: &mut Context<D>,
-    device_id: EthernetDeviceId,
+pub(super) fn set_routing_enabled_inner<C: EthernetIpDeviceContext, I: Ip>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     enabled: bool,
 ) {
-    let state = get_device_state_mut(ctx.state_mut(), device_id);
+    let state = ctx.get_state_mut(device_id);
 
     #[ipv4]
     state.route_ipv4 = enabled;
@@ -1105,6 +1183,7 @@ pub(super) fn set_routing_enabled_inner<D: EventDispatcher, I: Ip>(
 ///
 /// This will cause any conflicting dynamic entry to be removed, and
 /// any future conflicting gratuitous ARPs to be ignored.
+#[cfg(test)]
 pub(crate) fn insert_static_arp_table_entry<D: EventDispatcher>(
     ctx: &mut Context<D>,
     device_id: EthernetDeviceId,
@@ -1133,134 +1212,61 @@ pub(crate) fn insert_ndp_table_entry<D: EventDispatcher>(
 ///
 /// After this function is called, the ethernet device should not be used and
 /// nothing else should be done with the state.
-pub(crate) fn deinitialize<D: EventDispatcher>(ctx: &mut Context<D>, device_id: EthernetDeviceId) {
+pub(super) fn deinitialize<C: EthernetIpDeviceContext>(ctx: &mut C, device_id: C::DeviceId) {
     crate::device::arp::deinitialize(ctx, device_id);
     crate::device::ndp::deinitialize(ctx, device_id);
 }
 
-fn get_device_state_mut<D: EventDispatcher>(
-    state: &mut StackState<D>,
-    device_id: EthernetDeviceId,
-) -> &mut EthernetDeviceState<D> {
-    // TODO(joshlf): Sometimes we want lookups to be infallible (if we know that
-    // the device exists), but sometimes we want to report an error to the user.
-    // Right now, this is a DoS vector.
-    state
-        .device
-        .ethernet
-        .get_mut(device_id.0)
-        .unwrap_or_else(|| panic!("no such Ethernet device: {}", device_id.0))
-        .device_mut()
-}
-
-fn get_device_state<D: EventDispatcher>(
-    state: &StackState<D>,
-    device_id: EthernetDeviceId,
-) -> &EthernetDeviceState<D> {
-    // TODO(joshlf): Sometimes we want lookups to be infallible (if we know that
-    // the device exists), but sometimes we want to report an error to the user.
-    // Right now, this is a DoS vector.
-    state
-        .device
-        .ethernet
-        .get(device_id.0)
-        .unwrap_or_else(|| panic!("no such Ethernet device: {}", device_id.0))
-        .device()
-}
-
-impl<D: EventDispatcher> StateContext<EthernetDeviceId, ArpState<EthernetLinkDevice, Ipv4Addr>>
-    for Context<D>
+impl<
+        Id,
+        C: InstantContext + StateContext<Id, EthernetDeviceState<<C as InstantContext>::Instant>>,
+    > StateContext<Id, ArpState<EthernetLinkDevice, Ipv4Addr>> for C
 {
-    fn get_state(&self, id: EthernetDeviceId) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
-        &get_device_state(self.state(), id).ipv4_arp
+    fn get_state(&self, id: Id) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
+        &self.get_state(id).ipv4_arp
     }
 
-    fn get_state_mut(
-        &mut self,
-        id: EthernetDeviceId,
-    ) -> &mut ArpState<EthernetLinkDevice, Ipv4Addr> {
-        &mut get_device_state_mut(self.state_mut(), id).ipv4_arp
+    fn get_state_mut(&mut self, id: Id) -> &mut ArpState<EthernetLinkDevice, Ipv4Addr> {
+        &mut self.get_state_mut(id).ipv4_arp
     }
 }
 
-impl<D: EventDispatcher> TimerContext<ArpTimerId<EthernetLinkDevice, Ipv4Addr, EthernetDeviceId>>
-    for Context<D>
-{
-    fn schedule_timer_instant(
-        &mut self,
-        time: D::Instant,
-        id: ArpTimerId<EthernetLinkDevice, Ipv4Addr, EthernetDeviceId>,
-    ) -> Option<D::Instant> {
-        self.dispatcher_mut()
-            .schedule_timeout_instant(time, TimerId::from(DeviceLayerTimerId::ArpEthernetIpv4(id)))
-    }
-
-    fn cancel_timer(
-        &mut self,
-        id: ArpTimerId<EthernetLinkDevice, Ipv4Addr, EthernetDeviceId>,
-    ) -> Option<D::Instant> {
-        self.dispatcher_mut().cancel_timeout(TimerId::from(DeviceLayerTimerId::ArpEthernetIpv4(id)))
-    }
-
-    fn cancel_timers_with<
-        F: FnMut(&ArpTimerId<EthernetLinkDevice, Ipv4Addr, EthernetDeviceId>) -> bool,
-    >(
-        &mut self,
-        mut f: F,
-    ) {
-        self.dispatcher_mut().cancel_timeouts_with(|id| match id {
-            TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::ArpEthernetIpv4(id))) => f(id),
-            _ => false,
-        })
-    }
-
-    fn scheduled_instant(
-        &self,
-        id: ArpTimerId<EthernetLinkDevice, Ipv4Addr, EthernetDeviceId>,
-    ) -> Option<D::Instant> {
-        self.dispatcher().scheduled_instant(TimerId::from(DeviceLayerTimerId::ArpEthernetIpv4(id)))
-    }
-}
-
-impl<B: BufferMut, D: BufferDispatcher<B>>
-    FrameContext<B, ArpFrameMetadata<EthernetLinkDevice, EthernetDeviceId>> for Context<D>
+impl<
+        B: BufferMut,
+        C: EthernetIpDeviceContext
+            + FrameContext<B, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+    > FrameContext<B, ArpFrameMetadata<EthernetLinkDevice, C::DeviceId>> for C
 {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
-        meta: ArpFrameMetadata<EthernetLinkDevice, EthernetDeviceId>,
+        meta: ArpFrameMetadata<EthernetLinkDevice, C::DeviceId>,
         body: S,
     ) -> Result<(), S> {
-        let src = get_device_state(self.state(), meta.device_id).mac;
-        self.dispatcher_mut()
-            .send_frame(
-                meta.device_id.into(),
-                body.encapsulate(EthernetFrameBuilder::new(src, meta.dst_addr, EtherType::Arp)),
-            )
-            .map_err(Nested::into_inner)
+        let src = self.get_state(meta.device_id).mac;
+        self.send_frame(
+            meta.device_id,
+            body.encapsulate(EthernetFrameBuilder::new(src, meta.dst_addr, EtherType::Arp)),
+        )
+        .map_err(Nested::into_inner)
     }
 }
 
-impl<D: EventDispatcher> ArpContext<EthernetLinkDevice, Ipv4Addr> for Context<D> {
-    type DeviceId = EthernetDeviceId;
+impl<C: EthernetIpDeviceContext> ArpContext<EthernetLinkDevice, Ipv4Addr> for C {
+    type DeviceId = C::DeviceId;
 
-    fn get_protocol_addr(&self, device_id: EthernetDeviceId) -> Option<Ipv4Addr> {
-        get_ip_addr_subnet::<_, Ipv4Addr>(self.state(), device_id).map(|a| a.addr().get())
+    fn get_protocol_addr(&self, device_id: C::DeviceId) -> Option<Ipv4Addr> {
+        get_ip_addr_subnet::<_, Ipv4Addr>(self, device_id).map(|a| a.addr().get())
     }
 
-    fn get_hardware_addr(&self, device_id: EthernetDeviceId) -> Mac {
-        get_device_state(self.state(), device_id).mac
+    fn get_hardware_addr(&self, device_id: C::DeviceId) -> Mac {
+        self.get_state(device_id).mac
     }
 
-    fn address_resolved(
-        &mut self,
-        device_id: EthernetDeviceId,
-        proto_addr: Ipv4Addr,
-        hw_addr: Mac,
-    ) {
+    fn address_resolved(&mut self, device_id: C::DeviceId, proto_addr: Ipv4Addr, hw_addr: Mac) {
         mac_resolved(self, device_id, IpAddr::V4(proto_addr), hw_addr);
     }
 
-    fn address_resolution_failed(&mut self, device_id: EthernetDeviceId, proto_addr: Ipv4Addr) {
+    fn address_resolution_failed(&mut self, device_id: C::DeviceId, proto_addr: Ipv4Addr) {
         mac_resolution_failed(self, device_id, IpAddr::V4(proto_addr));
     }
 
@@ -1269,69 +1275,34 @@ impl<D: EventDispatcher> ArpContext<EthernetLinkDevice, Ipv4Addr> for Context<D>
     }
 }
 
-impl<D: EventDispatcher> StateContext<EthernetDeviceId, NdpState<EthernetLinkDevice, D::Instant>>
-    for Context<D>
+impl<
+        Id,
+        C: InstantContext + StateContext<Id, EthernetDeviceState<<C as InstantContext>::Instant>>,
+    > StateContext<Id, NdpState<EthernetLinkDevice, <C as InstantContext>::Instant>> for C
 {
-    fn get_state(&self, id: EthernetDeviceId) -> &NdpState<EthernetLinkDevice, D::Instant> {
-        &self.state().device.ethernet.get(id.0).unwrap().device().ndp
+    fn get_state(&self, id: Id) -> &NdpState<EthernetLinkDevice, <C as InstantContext>::Instant> {
+        &self.get_state(id).ndp
     }
 
     fn get_state_mut(
         &mut self,
-        id: EthernetDeviceId,
-    ) -> &mut NdpState<EthernetLinkDevice, D::Instant> {
-        &mut self.state_mut().device.ethernet.get_mut(id.0).unwrap().device_mut().ndp
+        id: Id,
+    ) -> &mut NdpState<EthernetLinkDevice, <C as InstantContext>::Instant> {
+        &mut self.get_state_mut(id).ndp
     }
 }
 
-impl<D: EventDispatcher> TimerContext<NdpTimerId<EthernetLinkDevice, EthernetDeviceId>>
-    for Context<D>
-{
-    fn schedule_timer_instant(
-        &mut self,
-        time: D::Instant,
-        id: NdpTimerId<EthernetLinkDevice, EthernetDeviceId>,
-    ) -> Option<D::Instant> {
-        self.dispatcher_mut()
-            .schedule_timeout_instant(time, TimerId::from(DeviceLayerTimerId::NdpEthernet(id)))
+impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
+    fn get_link_layer_addr(&self, device_id: C::DeviceId) -> Mac {
+        self.get_state(device_id).mac
     }
 
-    fn cancel_timer(
-        &mut self,
-        id: NdpTimerId<EthernetLinkDevice, EthernetDeviceId>,
-    ) -> Option<D::Instant> {
-        self.dispatcher_mut().cancel_timeout(TimerId::from(DeviceLayerTimerId::NdpEthernet(id)))
+    fn get_interface_identifier(&self, device_id: C::DeviceId) -> [u8; 8] {
+        self.get_state(device_id).mac.to_eui64()
     }
 
-    fn cancel_timers_with<F: FnMut(&NdpTimerId<EthernetLinkDevice, EthernetDeviceId>) -> bool>(
-        &mut self,
-        mut f: F,
-    ) {
-        self.dispatcher_mut().cancel_timeouts_with(|id| match id {
-            TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::NdpEthernet(id))) => f(id),
-            _ => false,
-        })
-    }
-
-    fn scheduled_instant(
-        &self,
-        id: NdpTimerId<EthernetLinkDevice, EthernetDeviceId>,
-    ) -> Option<D::Instant> {
-        self.dispatcher().scheduled_instant(TimerId::from(DeviceLayerTimerId::NdpEthernet(id)))
-    }
-}
-
-impl<D: EventDispatcher> NdpContext<EthernetLinkDevice> for Context<D> {
-    fn get_link_layer_addr(&self, device_id: Self::DeviceId) -> Mac {
-        get_device_state(self.state(), device_id).mac
-    }
-
-    fn get_interface_identifier(&self, device_id: Self::DeviceId) -> [u8; 8] {
-        get_device_state(self.state(), device_id).mac.to_eui64()
-    }
-
-    fn get_link_local_addr(&self, device_id: Self::DeviceId) -> Option<Tentative<Ipv6Addr>> {
-        get_device_state(self.state(), device_id).ipv6_link_local_addr_sub.as_ref().map(|a| {
+    fn get_link_local_addr(&self, device_id: C::DeviceId) -> Option<Tentative<Ipv6Addr>> {
+        self.get_state(device_id).ipv6_link_local_addr_sub.as_ref().map(|a| {
             if a.state().is_tentative() {
                 Tentative::new_tentative(a.addr_sub().addr().get())
             } else {
@@ -1340,11 +1311,11 @@ impl<D: EventDispatcher> NdpContext<EthernetLinkDevice> for Context<D> {
         })
     }
 
-    fn get_ipv6_addr(&self, device_id: Self::DeviceId) -> Option<Ipv6Addr> {
+    fn get_ipv6_addr(&self, device_id: C::DeviceId) -> Option<Ipv6Addr> {
         // Return a non tentative global address, or the link-local address if no non-tentative
         // global addressses are associated with `device_id`.
 
-        match get_ip_addr_subnet::<_, Ipv6Addr>(self.state(), device_id) {
+        match get_ip_addr_subnet::<_, Ipv6Addr>(self, device_id) {
             Some(addr_sub) => Some(addr_sub.addr().get()),
             None => Self::get_link_local_addr(self, device_id)
                 .map(|a| a.try_into_permanent())
@@ -1354,22 +1325,18 @@ impl<D: EventDispatcher> NdpContext<EthernetLinkDevice> for Context<D> {
 
     fn get_ipv6_addr_entries(
         &self,
-        device_id: Self::DeviceId,
-    ) -> Iter<AddressEntry<Ipv6Addr, Self::Instant>> {
-        get_device_state(self.state(), device_id).ipv6_addr_sub.iter()
+        device_id: C::DeviceId,
+    ) -> Iter<AddressEntry<Ipv6Addr, C::Instant>> {
+        self.get_state(device_id).ipv6_addr_sub.iter()
     }
 
-    fn ipv6_addr_state(
-        &self,
-        device_id: Self::DeviceId,
-        address: &Ipv6Addr,
-    ) -> Option<AddressState> {
+    fn ipv6_addr_state(&self, device_id: C::DeviceId, address: &Ipv6Addr) -> Option<AddressState> {
         let address = SpecifiedAddr::new(*address)?;
 
-        if let Some(state) = get_ip_addr_state::<_, Ipv6Addr>(self.state(), device_id, &address) {
+        if let Some(state) = get_ip_addr_state::<_, Ipv6Addr>(self, device_id, &address) {
             Some(state)
         } else {
-            get_device_state(self.state(), device_id)
+            self.get_state(device_id)
                 .ipv6_link_local_addr_sub
                 .as_ref()
                 .map(|a| if a.addr_sub().addr().get() == *address { Some(a.state()) } else { None })
@@ -1377,21 +1344,16 @@ impl<D: EventDispatcher> NdpContext<EthernetLinkDevice> for Context<D> {
         }
     }
 
-    fn address_resolved(
-        &mut self,
-        device_id: Self::DeviceId,
-        address: &Ipv6Addr,
-        link_address: Mac,
-    ) {
+    fn address_resolved(&mut self, device_id: C::DeviceId, address: &Ipv6Addr, link_address: Mac) {
         mac_resolved(self, device_id, IpAddr::V6(*address), link_address);
     }
 
-    fn address_resolution_failed(&mut self, device_id: Self::DeviceId, address: &Ipv6Addr) {
+    fn address_resolution_failed(&mut self, device_id: C::DeviceId, address: &Ipv6Addr) {
         mac_resolution_failed(self, device_id, IpAddr::V6(*address));
     }
 
-    fn duplicate_address_detected(&mut self, device_id: Self::DeviceId, addr: Ipv6Addr) {
-        let state = get_device_state_mut(self.state_mut(), device_id);
+    fn duplicate_address_detected(&mut self, device_id: C::DeviceId, addr: Ipv6Addr) {
+        let state = self.get_state_mut(device_id);
 
         let original_size = state.ipv6_addr_sub.len();
         state.ipv6_addr_sub.retain(|x| x.addr_sub().addr().get() != addr);
@@ -1419,14 +1381,14 @@ impl<D: EventDispatcher> NdpContext<EthernetLinkDevice> for Context<D> {
         // TODO: we need to pick a different address depending on what flow we are using.
     }
 
-    fn unique_address_determined(&mut self, device_id: Self::DeviceId, addr: Ipv6Addr) {
+    fn unique_address_determined(&mut self, device_id: C::DeviceId, addr: Ipv6Addr) {
         trace!(
             "ethernet::unique_address_determined: device_id = {:?}; addr = {:?}",
             device_id,
             addr
         );
 
-        let state = get_device_state_mut(self.state_mut(), device_id);
+        let state = self.get_state_mut(device_id);
 
         if let Some(entry) =
             state.ipv6_addr_sub.iter_mut().find(|a| a.addr_sub().addr().get() == addr)
@@ -1441,14 +1403,14 @@ impl<D: EventDispatcher> NdpContext<EthernetLinkDevice> for Context<D> {
         }
     }
 
-    fn set_mtu(&mut self, device_id: Self::DeviceId, mut mtu: u32) {
+    fn set_mtu(&mut self, device_id: C::DeviceId, mut mtu: u32) {
         // TODO(ghanan): Should this new MTU be updated only from the netstack's perspective or
         //               be exposed to the device hardware?
 
         // `mtu` must not be less than the minimum IPv6 MTU.
         assert!(mtu >= crate::ip::path_mtu::IPV6_MIN_MTU);
 
-        let dev_state = get_device_state_mut(self.state_mut(), device_id);
+        let dev_state = self.get_state_mut(device_id);
 
         // If `mtu` is greater than what the device supports, set `mtu` to the maximum MTU the
         // device supports.
@@ -1462,7 +1424,7 @@ impl<D: EventDispatcher> NdpContext<EthernetLinkDevice> for Context<D> {
     }
 
     fn set_hop_limit(&mut self, device_id: Self::DeviceId, hop_limit: NonZeroU8) {
-        get_device_state_mut(self.state_mut(), device_id).ipv6_hop_limit = hop_limit;
+        self.get_state_mut(device_id).ipv6_hop_limit = hop_limit;
     }
 
     fn add_slaac_addr_sub(
@@ -1493,7 +1455,7 @@ impl<D: EventDispatcher> NdpContext<EthernetLinkDevice> for Context<D> {
             device_id
         );
 
-        let state = get_device_state_mut(self.state_mut(), device_id);
+        let state = self.get_state_mut(device_id);
 
         if let Some(entry) = state.ipv6_addr_sub.iter_mut().find(|a| {
             (a.addr_sub().addr().get() == *addr)
@@ -1511,10 +1473,9 @@ impl<D: EventDispatcher> NdpContext<EthernetLinkDevice> for Context<D> {
 
                     // We must have had an invalidation timeout if we just attempted to deprecate.
                     assert!(self
-                        .dispatcher_mut()
-                        .cancel_timeout(TimerId::from(DeviceLayerTimerId::NdpEthernet(
-                            ndp::NdpTimerId::new_invalidate_slaac_address(device_id, *addr)
-                        )))
+                        .cancel_timer(
+                            ndp::NdpTimerId::new_invalidate_slaac_address(device_id, *addr).into()
+                        )
                         .is_some());
 
                     Self::invalidate_slaac_addr(self, device_id, addr);
@@ -1552,7 +1513,7 @@ impl<D: EventDispatcher> NdpContext<EthernetLinkDevice> for Context<D> {
             device_id
         );
 
-        let state = get_device_state_mut(self.state_mut(), device_id);
+        let state = self.get_state_mut(device_id);
 
         if let Some(entry) = state.ipv6_addr_sub.iter_mut().find(|a| {
             (a.addr_sub().addr().get() == *addr)
@@ -1565,7 +1526,7 @@ impl<D: EventDispatcher> NdpContext<EthernetLinkDevice> for Context<D> {
     }
 
     fn is_router(&self, device_id: Self::DeviceId) -> bool {
-        crate::device::is_router_device::<_, Ipv6>(self, device_id.into())
+        self.is_router_device::<Ipv6>(device_id)
     }
 
     fn send_ipv6_frame<S: Serializer<Buffer = EmptyBuf>>(
@@ -1575,7 +1536,7 @@ impl<D: EventDispatcher> NdpContext<EthernetLinkDevice> for Context<D> {
         body: S,
     ) -> Result<(), S> {
         // `device_id` must not be uninitialized.
-        assert!(is_device_usable(self.state(), device_id.into()));
+        assert!(self.is_device_usable(device_id));
 
         // TODO(joshlf): Wire `SpecifiedAddr` through the `ndp` module.
         send_ip_frame(self, device_id, SpecifiedAddr::new(next_hop).unwrap(), body)
@@ -1584,7 +1545,7 @@ impl<D: EventDispatcher> NdpContext<EthernetLinkDevice> for Context<D> {
 
 /// An implementation of the [`LinkDevice`] trait for Ethernet devices.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub(crate) struct EthernetLinkDevice;
+pub(super) struct EthernetLinkDevice;
 
 impl LinkDevice for EthernetLinkDevice {
     type Address = Mac;
@@ -1595,13 +1556,13 @@ impl LinkDevice for EthernetLinkDevice {
 ///
 /// `mac_resolved` is the common logic used when a link layer address is
 /// resolved either by ARP or NDP.
-fn mac_resolved<D: EventDispatcher>(
-    ctx: &mut Context<D>,
-    device_id: EthernetDeviceId,
+fn mac_resolved<C: EthernetIpDeviceContext>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     address: IpAddr,
     dst_mac: Mac,
 ) {
-    let state = get_device_state_mut(ctx.state_mut(), device_id);
+    let state = ctx.get_state_mut(device_id);
     let src_mac = state.mac;
     let ether_type = match &address {
         IpAddr::V4(_) => EtherType::Ipv4,
@@ -1616,7 +1577,7 @@ fn mac_resolved<D: EventDispatcher>(
             //  but that's fine (as it stands right now) because the MTU
             //  is guaranteed to be larger than an Ethernet minimum frame
             //  body size.
-            let res = ctx.dispatcher_mut().send_frame(
+            let res = ctx.send_frame(
                 device_id.into(),
                 frame.encapsulate(EthernetFrameBuilder::new(src_mac, dst_mac, ether_type)),
             );
@@ -1633,9 +1594,9 @@ fn mac_resolved<D: EventDispatcher>(
 ///
 /// `mac_resolution_failed` is the common logic used when a link layer address
 /// fails to resolve either by ARP or NDP.
-fn mac_resolution_failed<D: EventDispatcher>(
-    ctx: &mut Context<D>,
-    device_id: EthernetDeviceId,
+fn mac_resolution_failed<C: EthernetIpDeviceContext>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     address: IpAddr,
 ) {
     // TODO(brunodalbo) what do we do here in regards to the pending frames?
@@ -1647,7 +1608,7 @@ fn mac_resolution_failed<D: EventDispatcher>(
     //  resolution."
     //  For ARP, we don't have such a clear statement on the RFC, it would make
     //  sense to do the same thing though.
-    let state = get_device_state_mut(ctx.state_mut(), device_id);
+    let state = ctx.get_state_mut(device_id);
     if let Some(pending) = state.take_pending_frames(address) {
         log_unimplemented!((), "ethernet mac resolution failed not implemented");
     }
@@ -1669,7 +1630,7 @@ mod tests {
         add_arp_or_ndp_table_entry, get_counter_val, get_dummy_config, get_other_ip_address,
         new_rng, parse_icmp_packet_in_ip_packet_in_ethernet_frame,
         parse_ip_packet_in_ethernet_frame, DummyEventDispatcher, DummyEventDispatcherBuilder,
-        DUMMY_CONFIG_V4,
+        DummyInstant, DUMMY_CONFIG_V4,
     };
     use crate::wire::icmp::{IcmpDestUnreachable, IcmpIpExt, IcmpMessage};
     use crate::wire::testdata::{dns_request_v4, dns_request_v6};
@@ -1700,7 +1661,7 @@ mod tests {
     #[test]
     fn test_pending_frames() {
         let mut state = EthernetDeviceStateBuilder::new(DUMMY_CONFIG_V4.local_mac, IPV6_MIN_MTU)
-            .build::<DummyEventDispatcher>();
+            .build::<DummyInstant>();
         let ip = IpAddr::V4(DUMMY_CONFIG_V4.local_ip.into_addr());
         state.add_pending_frame(ip, Buf::new(vec![1], ..));
         state.add_pending_frame(ip, Buf::new(vec![2], ..));
@@ -2082,45 +2043,45 @@ mod tests {
         let as1 = AddrSubnet::new(ip1.get(), prefix).unwrap();
         let as2 = AddrSubnet::new(ip2.get(), prefix).unwrap();
 
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).is_none());
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_none());
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip3).is_none());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_none());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_none());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip3).is_none());
 
         // Add ip1 (ok)
         crate::device::add_ip_addr_subnet(&mut ctx, device, as1).unwrap();
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).is_some());
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_none());
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip3).is_none());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_some());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_none());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip3).is_none());
 
         // Add ip2 (ok)
         crate::device::add_ip_addr_subnet(&mut ctx, device, as2).unwrap();
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).is_some());
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_some());
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip3).is_none());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_some());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_some());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip3).is_none());
 
         // Del ip1 (ok)
         crate::device::del_ip_addr(&mut ctx, device, &ip1).unwrap();
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).is_none());
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_some());
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip3).is_none());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_none());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_some());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip3).is_none());
 
         // Del ip1 again (ip1 not found)
         assert_eq!(
             crate::device::del_ip_addr(&mut ctx, device, &ip1).unwrap_err(),
             AddressError::NotFound
         );
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).is_none());
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_some());
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip3).is_none());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_none());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_some());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip3).is_none());
 
         // Add ip2 again (ip2 already exists)
         assert_eq!(
             crate::device::add_ip_addr_subnet(&mut ctx, device, as2).unwrap_err(),
             AddressError::AlreadyExists
         );
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).is_none());
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_some());
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip3).is_none());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_none());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_some());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip3).is_none());
 
         // Add ip2 with different subnet (ip2 already exists)
         assert_eq!(
@@ -2132,9 +2093,9 @@ mod tests {
             .unwrap_err(),
             AddressError::AlreadyExists
         );
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).is_none());
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_some());
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip3).is_none());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_none());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_some());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip3).is_none());
     }
 
     #[test]
@@ -2180,8 +2141,8 @@ mod tests {
         let ip2 = get_other_ip_address::<I::Addr>(2);
         let from_ip = get_other_ip_address::<I::Addr>(3).get();
 
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).is_none());
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_none());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_none());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_none());
 
         // Should not receive packets on any ip.
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 0);
@@ -2194,8 +2155,8 @@ mod tests {
             AddrSubnet::new(ip1.get(), I::Addr::BYTES * 8).unwrap(),
         )
         .unwrap();
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).unwrap().is_assigned());
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_none());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).unwrap().is_assigned());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_none());
 
         // Should receive packets on ip1 but not ip2
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 1);
@@ -2208,8 +2169,8 @@ mod tests {
             AddrSubnet::new(ip2.get(), I::Addr::BYTES * 8).unwrap(),
         )
         .unwrap();
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).unwrap().is_assigned());
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).unwrap().is_assigned());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).unwrap().is_assigned());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).unwrap().is_assigned());
 
         // Should receive packets on both ips
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 2);
@@ -2217,8 +2178,8 @@ mod tests {
 
         // Remove ip1
         crate::device::del_ip_addr(&mut ctx, device, &ip1).unwrap();
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip1).is_none());
-        assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).unwrap().is_assigned());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_none());
+        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).unwrap().is_assigned());
 
         // Should receive packets on ip2
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 3);

@@ -56,13 +56,15 @@ pub use crate::ip::{
 pub use crate::transport::udp::UdpEventDispatcher;
 pub use crate::transport::TransportLayerEventDispatcher;
 
+use std::fmt::Debug;
+use std::time;
+
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither};
 use packet::{Buf, BufferMut, EmptyBuf};
 use rand::{CryptoRng, RngCore};
-use std::fmt::Debug;
-use std::time;
 
+use crate::context::TimerContext;
 use crate::device::{DeviceLayerState, DeviceLayerTimerId, DeviceStateBuilder};
 use crate::ip::{IpLayerTimerId, Ipv4State, Ipv6State};
 use crate::transport::{TransportLayerState, TransportLayerTimerId};
@@ -163,7 +165,7 @@ pub struct StackState<D: EventDispatcher> {
     transport: TransportLayerState,
     ipv4: Ipv4State<D::Instant>,
     ipv6: Ipv6State<D::Instant>,
-    device: DeviceLayerState<D>,
+    device: DeviceLayerState<D::Instant>,
     #[cfg(test)]
     test_counters: testutil::TestCounters,
 }
@@ -271,6 +273,8 @@ impl From<DeviceLayerTimerId> for TimerId {
         TimerId(TimerIdInner::DeviceLayer(id))
     }
 }
+
+impl_timer_context!(TimerId, DeviceLayerTimerId, TimerId(TimerIdInner::DeviceLayer(id)), id);
 
 /// Handle a generic timer event.
 pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TimerId) {
@@ -447,14 +451,36 @@ pub trait EventDispatcher:
     fn rng(&mut self) -> &mut Self::Rng;
 }
 
+impl<D: EventDispatcher> TimerContext<TimerId> for Context<D> {
+    fn schedule_timer_instant(
+        &mut self,
+        time: Self::Instant,
+        id: TimerId,
+    ) -> Option<Self::Instant> {
+        self.dispatcher_mut().schedule_timeout_instant(time, id)
+    }
+
+    fn cancel_timer(&mut self, id: TimerId) -> Option<Self::Instant> {
+        self.dispatcher_mut().cancel_timeout(id)
+    }
+
+    fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
+        self.dispatcher_mut().cancel_timeouts_with(f)
+    }
+
+    fn scheduled_instant(&self, id: TimerId) -> Option<Self::Instant> {
+        self.dispatcher().scheduled_instant(id)
+    }
+}
+
 /// Get all IPv4 and IPv6 address/subnet pairs configured on a device
 pub fn get_all_ip_addr_subnets<'a, D: EventDispatcher>(
     ctx: &'a Context<D>,
     device: DeviceId,
 ) -> impl 'a + Iterator<Item = AddrSubnetEither> {
-    let addr_v4 = crate::device::get_ip_addr_subnets::<_, Ipv4Addr>(ctx.state(), device)
+    let addr_v4 = crate::device::get_ip_addr_subnets::<_, Ipv4Addr>(ctx, device)
         .map(|a| AddrSubnetEither::V4(a));
-    let addr_v6 = crate::device::get_ip_addr_subnets::<_, Ipv6Addr>(ctx.state(), device)
+    let addr_v6 = crate::device::get_ip_addr_subnets::<_, Ipv6Addr>(ctx, device)
         .map(|a| AddrSubnetEither::V6(a));
 
     addr_v4.chain(addr_v6)

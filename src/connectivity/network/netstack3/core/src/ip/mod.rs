@@ -1084,7 +1084,7 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
         // tentative. If the destination address is not the address assigned to
         // the device, or it is not tentative, we are okay to proceed; else, we
         // drop the packet.
-        if crate::device::is_addr_tentative_on_device(ctx.state(), &dst_ip, device) {
+        if crate::device::is_addr_tentative_on_device(ctx, &dst_ip, device) {
             // Silently drop as per RFC 4862 section 5.4
             trace!(
                 "receive_ipv6_packet: Dropping packet as it is destined for a tentative address"
@@ -1180,7 +1180,7 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 // the sender's ability to figure out the minimum path MTU. This
                 // may break other logic, though, so we should still fix it
                 // eventually.
-                let mtu = crate::device::get_mtu(ctx.state(), device);
+                let mtu = crate::device::get_mtu(ctx, device);
                 crate::ip::icmp::send_icmpv6_packet_too_big(
                     ctx,
                     device,
@@ -1238,7 +1238,7 @@ pub(crate) fn local_address_for_remote<D: EventDispatcher, A: IpAddress>(
     remote: SpecifiedAddr<A>,
 ) -> Option<SpecifiedAddr<A>> {
     let route = lookup_route(ctx, remote)?;
-    crate::device::get_ip_addr_subnet(ctx.state(), route.device).map(|a| a.addr())
+    crate::device::get_ip_addr_subnet(ctx, route.device).map(|a| a.addr())
 }
 
 // Should we deliver this IPv4 packet locally?
@@ -1259,7 +1259,7 @@ fn deliver_ipv4<D: EventDispatcher>(
     //   put real thought into what our host model should be (NET-1011).
     let dst_ip = dst_ip.get();
 
-    crate::device::get_ip_addr_subnets::<_, Ipv4Addr>(ctx.state(), device)
+    crate::device::get_ip_addr_subnets::<_, Ipv4Addr>(ctx, device)
         .map(AddrSubnet::into_addr_subnet)
         .any(|(addr, subnet)| dst_ip == addr.get() || dst_ip == subnet.broadcast())
         || dst_ip.is_global_broadcast()
@@ -1280,7 +1280,7 @@ fn deliver_ipv6<D: EventDispatcher>(
     // TODO(brunodalbo):
     // Along with the host model described above, we need to be able to have
     // multiple IPs per interface, it becomes imperative for IPv6.
-    crate::device::get_ip_addr_state(ctx.state(), device, &dst_ip).is_some()
+    crate::device::get_ip_addr_state(ctx, device, &dst_ip).is_some()
         || dst_ip.deref() == &Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS
         || MulticastAddr::new(dst_ip.get())
             .map_or(false, |a| crate::device::is_in_ip_multicast(ctx, device, a))
@@ -1448,10 +1448,9 @@ pub(crate) fn send_ipv4_packet<
         // TODO(joshlf): Are we sure that a device route can never be set for a
         // device without an IP address? At the least, this is not currently
         // enforced anywhere, and is a DoS vector.
-        let src_ip: SpecifiedAddr<Ipv4Addr> =
-            crate::device::get_ip_addr_subnet(ctx.state(), dest.device)
-                .expect("IP device route set for device without IP address")
-                .addr();
+        let src_ip: SpecifiedAddr<Ipv4Addr> = crate::device::get_ip_addr_subnet(ctx, dest.device)
+            .expect("IP device route set for device without IP address")
+            .addr();
         send_ip_packet_from_device(
             ctx,
             dest.device,
@@ -1548,10 +1547,9 @@ pub(crate) fn send_ipv6_packet<
         // TODO(joshlf): Are we sure that a device route can never be set for a
         // device without an IP address? At the least, this is not currently
         // enforced anywhere, and is a DoS vector.
-        let src_ip: SpecifiedAddr<Ipv6Addr> =
-            crate::device::get_ip_addr_subnet(ctx.state(), dest.device)
-                .expect("IP device route set for device without IP address")
-                .addr();
+        let src_ip: SpecifiedAddr<Ipv6Addr> = crate::device::get_ip_addr_subnet(ctx, dest.device)
+            .expect("IP device route set for device without IP address")
+            .addr();
         send_ip_packet_from_device(
             ctx,
             dest.device,
@@ -1604,7 +1602,7 @@ where
     // Tentative addresses are not considered bound to an interface in the traditional sense,
     // therefore, no packet should have a source IP set to a tentative address.
     debug_assert!(!SpecifiedAddr::new(src_ip).map_or(false, |src_ip| {
-        crate::device::is_addr_tentative_on_device(ctx.state(), &src_ip, device)
+        crate::device::is_addr_tentative_on_device(ctx, &src_ip, device)
     }));
 
     let builder = <A::Version as IpExt>::PacketBuilder::new(
@@ -1646,7 +1644,7 @@ impl<D: EventDispatcher> FrameContext<EmptyBuf, MldFrameMetadata<DeviceId>> for 
 
 impl<D: EventDispatcher> IgmpContext for Context<D> {
     fn get_ip_addr_subnet(&self, device: DeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
-        crate::device::get_ip_addr_subnet(self.state(), device)
+        crate::device::get_ip_addr_subnet(self, device)
     }
 }
 
@@ -1870,7 +1868,7 @@ fn get_icmp_error_message_destination<D: EventDispatcher, A: IpAddress>(
 
     if let Some(route) = lookup_route(ctx, src_ip) {
         if let Some(local_ip) =
-            crate::device::get_ip_addr_subnet(ctx.state(), route.device).map(AddrSubnet::into_addr)
+            crate::device::get_ip_addr_subnet(ctx, route.device).map(AddrSubnet::into_addr)
         {
             Some((route.device, local_ip, route.next_hop))
         } else {

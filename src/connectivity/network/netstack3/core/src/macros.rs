@@ -147,6 +147,64 @@ macro_rules! create_protocol_enum {
     () => ()
 }
 
+/// Implement [`TimerContext`] for one ID type in terms of an existing
+/// implementation for a different ID type.
+///
+/// `$outer_timer_id` is an enum where one variant contains an
+/// `$inner_timer_id`. `impl_timer_context!` generates an impl of
+/// `TimerContext<$inner_timer_id>` for any `C: TimerContext<$outer_timer_id>`.
+///
+/// An impl of `Into<$outer_timer_id> for `$inner_timer_id` must exist. `$pat`
+/// is a pattern of type `$outer_timer_id` that binds the `$inner_timer_id`.
+/// `$bound_variable` is the name of the bound `$inner_timer_id` from the
+/// pattern. For example, if `$pat` is `OuterTimerId::Inner(id)`, then
+/// `$bound_variable` would be `id`. This is required for macro hygiene.
+///
+/// If an extra first parameter, `$bound`, is provided, then it is added as an
+/// extra bound on the `C` context type.
+///
+/// [`TimerContext`]: crate::context::TimerContext
+macro_rules! impl_timer_context {
+    ($outer_timer_id:ty, $inner_timer_id:ty, $pat:pat, $bound_variable:ident) => {
+        impl<C: crate::context::TimerContext<$outer_timer_id>>
+            crate::context::TimerContext<$inner_timer_id> for C
+        {
+            impl_timer_context!(@inner $inner_timer_id, $pat, $bound_variable);
+        }
+    };
+    ($bound:path, $outer_timer_id:ty, $inner_timer_id:ty, $pat:pat, $bound_variable:ident) => {
+        impl<C: $bound + crate::context::TimerContext<$outer_timer_id>>
+            crate::context::TimerContext<$inner_timer_id> for C
+        {
+            impl_timer_context!(@inner $inner_timer_id, $pat, $bound_variable);
+        }
+    };
+    (@inner $inner_timer_id:ty, $pat:pat, $bound_variable:ident) => {
+        fn schedule_timer_instant(
+            &mut self,
+            time: Self::Instant,
+            id: $inner_timer_id,
+        ) -> Option<Self::Instant> {
+            self.schedule_timer_instant(time, id.into())
+        }
+
+        fn cancel_timer(&mut self, id: $inner_timer_id) -> Option<Self::Instant> {
+            self.cancel_timer(id.into())
+        }
+
+        fn cancel_timers_with<F: FnMut(&$inner_timer_id) -> bool>(&mut self, mut f: F) {
+            self.cancel_timers_with(|id| match id {
+                $pat => f($bound_variable),
+                _ => false,
+            })
+        }
+
+        fn scheduled_instant(&self, id: $inner_timer_id) -> Option<Self::Instant> {
+            self.scheduled_instant(id.into())
+        }
+    };
+}
+
 /// Evaluate the expression `$e` and assert that it panics with the message
 /// `$msg`. The panicked value must either have type `&'static str` or type
 /// `String`.

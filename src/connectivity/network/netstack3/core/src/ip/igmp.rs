@@ -467,7 +467,6 @@ mod tests {
     use net_types::ip::AddrSubnet;
     use packet::serialize::{Buf, Serializer};
 
-    use crate::device::ethernet::*;
     use crate::device::DeviceId;
     use crate::ip::gmp::{Action, GmpAction, MemberState};
     use crate::testutil::{self, *};
@@ -573,9 +572,9 @@ mod tests {
         let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
         let dev_id = ctx.state.add_ethernet_device(Mac::new([1, 2, 3, 4, 5, 6]), 1500);
         crate::device::initialize_device(&mut ctx, dev_id);
-        add_ip_addr_subnet(
+        crate::device::add_ip_addr_subnet(
             &mut ctx,
-            dev_id.id().into(),
+            dev_id,
             AddrSubnet::new(MY_ADDR.get(), 24).unwrap(),
         );
         (ctx, dev_id)

@@ -226,6 +226,16 @@ pub trait StateContext<Id, State> {
     fn get_state_mut(&mut self, id: Id) -> &mut State;
 }
 
+/// A context for receiving frames.
+pub trait RecvFrameContext<B: BufferMut, Meta> {
+    /// Receive a frame.
+    ///
+    /// `receive_frame` receives a frame with the given metadata.
+    fn receive_frame(&mut self, metadata: Meta, frame: B);
+}
+
+// TODO(joshlf): Rename `FrameContext` to `SendFrameContext`
+
 /// A context for sending frames.
 pub trait FrameContext<B: BufferMut, Meta> {
     // TODO(joshlf): Add an error type parameter or associated type once we need
@@ -533,30 +543,6 @@ pub(crate) mod testutil {
 
     impl<Id, T: AsMut<DummyTimerContext<Id>>> DummyTimerContextExt<Id> for T {}
 
-    impl<
-            Id: PartialEq,
-            T: AsRef<DummyInstantContext>
-                + AsRef<DummyTimerContext<Id>>
-                + AsMut<DummyTimerContext<Id>>,
-        > TimerContext<Id> for T
-    {
-        fn schedule_timer_instant(&mut self, time: DummyInstant, id: Id) -> Option<DummyInstant> {
-            self.as_mut().schedule_timer_instant(time, id)
-        }
-
-        fn cancel_timer(&mut self, id: Id) -> Option<DummyInstant> {
-            self.as_mut().cancel_timer(id)
-        }
-
-        fn cancel_timers_with<F: FnMut(&Id) -> bool>(&mut self, f: F) {
-            self.as_mut().cancel_timers_with(f);
-        }
-
-        fn scheduled_instant(&self, id: Id) -> Option<DummyInstant> {
-            <T as AsRef<DummyTimerContext<Id>>>::as_ref(self).scheduled_instant(id)
-        }
-    }
-
     /// A dummy [`FrameContext`].
     pub struct DummyFrameContext<Meta> {
         frames: Vec<(Meta, Vec<u8>)>,
@@ -586,16 +572,6 @@ pub(crate) mod testutil {
                 Err(_) => unreachable!(),
             });
             Ok(())
-        }
-    }
-
-    impl<B: BufferMut, Meta, T: AsMut<DummyFrameContext<Meta>>> FrameContext<B, Meta> for T {
-        fn send_frame<S: Serializer<Buffer = B>>(
-            &mut self,
-            metadata: Meta,
-            frame: S,
-        ) -> Result<(), S> {
-            self.as_mut().send_frame(metadata, frame)
         }
     }
 
@@ -730,6 +706,34 @@ pub(crate) mod testutil {
     impl<S, Id, Meta> AsMut<DummyCounterContext> for DummyContext<S, Id, Meta> {
         fn as_mut(&mut self) -> &mut DummyCounterContext {
             &mut self.counters
+        }
+    }
+
+    impl<S, Id: PartialEq, Meta> TimerContext<Id> for DummyContext<S, Id, Meta> {
+        fn schedule_timer_instant(&mut self, time: DummyInstant, id: Id) -> Option<DummyInstant> {
+            self.timers.schedule_timer_instant(time, id)
+        }
+
+        fn cancel_timer(&mut self, id: Id) -> Option<DummyInstant> {
+            self.timers.cancel_timer(id)
+        }
+
+        fn cancel_timers_with<F: FnMut(&Id) -> bool>(&mut self, f: F) {
+            self.timers.cancel_timers_with(f);
+        }
+
+        fn scheduled_instant(&self, id: Id) -> Option<DummyInstant> {
+            self.timers.scheduled_instant(id)
+        }
+    }
+
+    impl<B: BufferMut, S, Id, Meta> FrameContext<B, Meta> for DummyContext<S, Id, Meta> {
+        fn send_frame<SS: Serializer<Buffer = B>>(
+            &mut self,
+            metadata: Meta,
+            frame: SS,
+        ) -> Result<(), SS> {
+            self.frames.send_frame(metadata, frame)
         }
     }
 

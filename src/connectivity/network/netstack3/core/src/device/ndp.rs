@@ -3396,9 +3396,11 @@ mod tests {
     use packet::{Buf, GrowBuffer, ParseBuffer};
 
     use crate::device::{
-        add_ip_addr_subnet, del_ip_addr, ethernet::EthernetLinkDevice, get_ip_addr_state,
-        get_ip_addr_subnets, get_ipv6_hop_limit, get_mtu, is_in_ip_multicast, is_routing_enabled,
-        set_routing_enabled, DeviceId, DeviceLayerTimerId, EthernetDeviceId,
+        add_ip_addr_subnet, del_ip_addr,
+        ethernet::{EthernetLinkDevice, EthernetTimerId},
+        get_ip_addr_state, get_ip_addr_subnets, get_ipv6_hop_limit, get_mtu, is_in_ip_multicast,
+        is_routing_enabled, set_routing_enabled, DeviceId, DeviceLayerTimerId,
+        DeviceLayerTimerIdInner, EthernetDeviceId,
     };
     use crate::ip::IPV6_MIN_MTU;
     use crate::testutil::{
@@ -3416,7 +3418,9 @@ mod tests {
     // We assume Ethernet since that's what all of our tests use.
     impl From<NdpTimerId<EthernetLinkDevice, EthernetDeviceId>> for TimerId {
         fn from(id: NdpTimerId<EthernetLinkDevice, EthernetDeviceId>) -> Self {
-            TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::NdpEthernet(id)))
+            TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId(
+                DeviceLayerTimerIdInner::Ethernet(EthernetTimerId::Ndp(id)),
+            )))
         }
     }
 
@@ -4239,14 +4243,8 @@ mod tests {
 
         // they should now realize the address they intend to use has a duplicate
         // in the local network
-        assert_eq!(
-            get_ip_addr_subnets::<_, Ipv6Addr>(net.context("local").state(), device_id).count(),
-            0
-        );
-        assert_eq!(
-            get_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote").state(), device_id).count(),
-            0
-        );
+        assert_eq!(get_ip_addr_subnets::<_, Ipv6Addr>(net.context("local"), device_id).count(), 0);
+        assert_eq!(get_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id).count(), 0);
 
         // Both devices should not be in the multicast group
         assert!(!is_in_ip_multicast(net.context("local"), device_id, multicast_addr));
@@ -4315,10 +4313,7 @@ mod tests {
 
         net.step();
 
-        assert_eq!(
-            get_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote").state(), device_id).count(),
-            0
-        );
+        assert_eq!(get_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id).count(), 0);
         // let's make sure that our local node still can use that address
         assert!(NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
             net.context("local"),
@@ -4455,14 +4450,8 @@ mod tests {
 
         // they should now realize the address they intend to use has a duplicate
         // in the local network
-        assert_eq!(
-            get_ip_addr_subnets::<_, Ipv6Addr>(net.context("local").state(), device_id).count(),
-            0
-        );
-        assert_eq!(
-            get_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote").state(), device_id).count(),
-            0
-        );
+        assert_eq!(get_ip_addr_subnets::<_, Ipv6Addr>(net.context("local"), device_id).count(), 0);
+        assert_eq!(get_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id).count(), 0);
     }
 
     #[test]
@@ -4481,7 +4470,7 @@ mod tests {
         // Add an IP.
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(get_ip_addr_state(ctx.state(), dev_id, &local_ip()).unwrap().is_tentative());
+        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip()).unwrap().is_tentative());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
 
         // Send another NS.
@@ -4491,20 +4480,20 @@ mod tests {
         // Add another IP
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(remote_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(get_ip_addr_state(ctx.state(), dev_id, &local_ip()).unwrap().is_tentative());
-        assert!(get_ip_addr_state(ctx.state(), dev_id, &remote_ip()).unwrap().is_tentative());
+        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip()).unwrap().is_tentative());
+        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip()).unwrap().is_tentative());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 3);
 
         // Run to the end for DAD for local ip
         run_for(&mut ctx, Duration::from_secs(2));
-        assert!(get_ip_addr_state(ctx.state(), dev_id, &local_ip()).unwrap().is_assigned());
-        assert!(get_ip_addr_state(ctx.state(), dev_id, &remote_ip()).unwrap().is_tentative());
+        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip()).unwrap().is_assigned());
+        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip()).unwrap().is_tentative());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 6);
 
         // Run to the end for DAD for local ip
         run_for(&mut ctx, Duration::from_secs(1));
-        assert!(get_ip_addr_state(ctx.state(), dev_id, &local_ip()).unwrap().is_assigned());
-        assert!(get_ip_addr_state(ctx.state(), dev_id, &remote_ip()).unwrap().is_assigned());
+        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip()).unwrap().is_assigned());
+        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip()).unwrap().is_assigned());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 6);
 
         // No more timers.
@@ -4530,7 +4519,7 @@ mod tests {
         // Add an IP.
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(get_ip_addr_state(ctx.state(), dev_id, &local_ip()).unwrap().is_tentative());
+        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip()).unwrap().is_tentative());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
 
         // Send another NS.
@@ -4540,26 +4529,26 @@ mod tests {
         // Add another IP
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(remote_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(get_ip_addr_state(ctx.state(), dev_id, &local_ip()).unwrap().is_tentative());
-        assert!(get_ip_addr_state(ctx.state(), dev_id, &remote_ip()).unwrap().is_tentative());
+        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip()).unwrap().is_tentative());
+        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip()).unwrap().is_tentative());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 3);
 
         // Run 1s
         run_for(&mut ctx, Duration::from_secs(1));
-        assert!(get_ip_addr_state(ctx.state(), dev_id, &local_ip()).unwrap().is_tentative());
-        assert!(get_ip_addr_state(ctx.state(), dev_id, &remote_ip()).unwrap().is_tentative());
+        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip()).unwrap().is_tentative());
+        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip()).unwrap().is_tentative());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 5);
 
         // Remove local ip
         del_ip_addr(&mut ctx, dev_id, &local_ip()).unwrap();
-        assert!(get_ip_addr_state(ctx.state(), dev_id, &local_ip()).is_none());
-        assert!(get_ip_addr_state(ctx.state(), dev_id, &remote_ip()).unwrap().is_tentative());
+        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip()).is_none());
+        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip()).unwrap().is_tentative());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 5);
 
         // Run to the end for DAD for local ip
         run_for(&mut ctx, Duration::from_secs(2));
-        assert!(get_ip_addr_state(ctx.state(), dev_id, &local_ip()).is_none());
-        assert!(get_ip_addr_state(ctx.state(), dev_id, &remote_ip()).unwrap().is_assigned());
+        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip()).is_none());
+        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip()).unwrap().is_assigned());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 6);
 
         // No more timers.
@@ -5155,7 +5144,7 @@ mod tests {
                 &mut ctx, device_id,
             );
         assert!(ndp_state.has_default_router(&src_ip));
-        assert_eq!(get_mtu(ctx.state(), device), hw_mtu);
+        assert_eq!(get_mtu(&ctx, device), hw_mtu);
 
         //
         // Receive a new RA with an invalid MTU option (value is lower than IPv6 min mtu)
@@ -5173,7 +5162,7 @@ mod tests {
                 &mut ctx, device_id,
             );
         assert!(ndp_state.has_default_router(&src_ip));
-        assert_eq!(get_mtu(ctx.state(), device), hw_mtu);
+        assert_eq!(get_mtu(&ctx, device), hw_mtu);
 
         //
         // Receive a new RA with a valid MTU option (value is exactly IPv6 min mtu)
@@ -5191,7 +5180,7 @@ mod tests {
                 &mut ctx, device_id,
             );
         assert!(ndp_state.has_default_router(&src_ip));
-        assert_eq!(get_mtu(ctx.state(), device), crate::ip::path_mtu::IPV6_MIN_MTU);
+        assert_eq!(get_mtu(&ctx, device), crate::ip::path_mtu::IPV6_MIN_MTU);
     }
 
     #[test]
