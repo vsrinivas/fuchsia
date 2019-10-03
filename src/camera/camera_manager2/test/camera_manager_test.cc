@@ -93,6 +93,9 @@ class CameraManagerTest : public gtest::RealLoopFixture {
 TEST_F(CameraManagerTest, CanConnectToStream) {
   EXPECT_EQ(ZX_OK, camera_manager_->AcknowledgeDeviceEvent());
 
+// TODO(37729) Disabling flaky test while it is debugged.
+#if 0
+
   fuchsia::camera2::StreamConstraints constraints;
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
   fuchsia::camera2::StreamPtr stream;
@@ -122,6 +125,8 @@ TEST_F(CameraManagerTest, CanConnectToStream) {
   stream->Start();
   RunLoopWithTimeoutOrUntil([&passed]() { return passed; }, zx::sec(5));
   EXPECT_TRUE(passed);
+
+#endif
 }
 
 }  // namespace
