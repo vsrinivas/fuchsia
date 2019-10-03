@@ -33,12 +33,6 @@ class StoryControllerMock : public fuchsia::modular::StoryController {
   void Stop(StopCallback done) override { FXL_NOTIMPLEMENTED(); }
 
   // |fuchsia::modular::StoryController|
-  void TakeAndLoadSnapshot(fuchsia::ui::views::ViewToken view_token,
-                           TakeAndLoadSnapshotCallback done) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  // |fuchsia::modular::StoryController|
   void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) override {
     FXL_NOTIMPLEMENTED();
   }

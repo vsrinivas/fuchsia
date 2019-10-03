@@ -10,7 +10,6 @@
 #define SRC_MODULAR_BIN_SESSIONMGR_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/scenic/snapshot/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -134,8 +133,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   class StopCall;
   class StopModuleCall;
   class StopModuleAndStoryIfEmptyCall;
-  class StartSnapshotLoaderCall;
-  class UpdateSnapshotCall;
 
   // For each *running* Module in the Story, there is one RunningModInfo.
   struct RunningModInfo {
@@ -201,8 +198,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void GetInfo(GetInfoCallback callback) override;
   void GetInfo2(GetInfo2Callback callback) override;
   void RequestStart() override;
-  void TakeAndLoadSnapshot(fuchsia::ui::views::ViewToken view_token,
-                           TakeAndLoadSnapshotCallback done) override;
   void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) override;
   void GetActiveModules(GetActiveModulesCallback callback) override;
   void GetModules(GetModulesCallback callback) override;
@@ -307,9 +302,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // the story's modules.
   fidl::BindingSet<fuchsia::modular::OngoingActivity, std::unique_ptr<OngoingActivityImpl>>
       ongoing_activities_;
-
-  // Used to load snapshots.
-  fuchsia::scenic::snapshot::LoaderPtr snapshot_loader_;
 
   // Asynchronous operations are sequenced in a queue.
   OperationQueue operation_queue_;

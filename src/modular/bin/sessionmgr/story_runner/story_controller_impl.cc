@@ -56,7 +56,6 @@
 namespace modular {
 
 constexpr char kStoryEnvironmentLabelPrefix[] = "story-";
-constexpr auto kUpdateSnapshotTimeout = zx::sec(1);
 
 namespace {
 
@@ -109,7 +108,8 @@ zx_time_t GetNowUTC() {
 
 void StoryControllerImpl::RunningModInfo::InitializeInspect(
     StoryControllerImpl* const story_controller_impl) {
-  mod_inspect_node = story_controller_impl->story_inspect_node_->CreateChild(module_data->module_url());
+  mod_inspect_node =
+      story_controller_impl->story_inspect_node_->CreateChild(module_data->module_url());
 
   std::string is_embedded_str;
   if (module_data->is_embedded()) {
@@ -951,113 +951,6 @@ class StoryControllerImpl::StartCall : public Operation<> {
   OperationQueue operation_queue_;
 };
 
-class StoryControllerImpl::UpdateSnapshotCall : public Operation<> {
- public:
-  UpdateSnapshotCall(StoryControllerImpl* const story_controller_impl, fit::function<void()> done)
-      : Operation("StoryControllerImpl::UpdateSnapshotCall", std::move(done)),
-        story_controller_impl_(story_controller_impl) {}
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-
-    // If the story shell is not running, we avoid updating the snapshot.
-    if (!story_controller_impl_->IsRunning()) {
-      FXL_LOG(INFO) << "StoryControllerImpl::UpdateSnapshotCall() called when "
-                       "story shell is not initialized.";
-      return;
-    }
-
-    FlowTokenHolder branch{flow};
-    // |flow| will branch into normal and timeout paths. |flow| must go out of
-    // scope when either of the paths finishes. We pass a weak ptr of
-    // story_controller_impl to the callback in case the operation goes out of
-    // scope from timeout.
-    story_controller_impl_->story_provider_impl_->TakeSnapshot(
-        story_controller_impl_->story_id_,
-        [weak_ptr = story_controller_impl_->weak_factory_.GetWeakPtr(),
-         branch](fuchsia::mem::Buffer snapshot) {
-          if (!weak_ptr) {
-            return;
-          }
-
-          if (snapshot.size == 0) {
-            FXL_LOG(INFO) << "TakeSnapshot returned an invalid snapshot for story: "
-                          << weak_ptr->story_id_;
-            return;
-          }
-
-          // Even if the snapshot comes back after timeout, we attempt to
-          // process it by loading the snapshot and saving it to storage. This
-          // call assumes that the snapshot loader has already been connected.
-          if (!weak_ptr->snapshot_loader_.is_bound()) {
-            FXL_LOG(ERROR) << "UpdateSnapshotCall called when snapshot loader "
-                              "has not been connected for story: "
-                           << weak_ptr->story_id_;
-          } else {
-            fuchsia::mem::Buffer snapshot_copy;
-            snapshot.Clone(&snapshot_copy);
-            weak_ptr->snapshot_loader_->Load(std::move(snapshot_copy));
-          }
-
-          weak_ptr->session_storage_->WriteSnapshot(weak_ptr->story_id_, std::move(snapshot))
-              ->Then([weak_ptr, branch]() {
-                auto flow = branch.Continue();
-                if (!flow) {
-                  FXL_LOG(INFO) << "Saved snapshot for story after timeout: "
-                                << weak_ptr->story_id_;
-                } else {
-                  FXL_LOG(INFO) << "Saved snapshot for story: " << weak_ptr->story_id_;
-                }
-              });
-        });
-
-    async::PostDelayedTask(
-        async_get_default_dispatcher(),
-        [this, branch] {
-          auto flow = branch.Continue();
-          if (flow) {
-            FXL_LOG(INFO) << "Timed out while updating snapshot for story: "
-                          << story_controller_impl_->story_id_;
-          }
-        },
-        kUpdateSnapshotTimeout);
-  }
-
-  StoryControllerImpl* const story_controller_impl_;  // not owned
-};
-
-class StoryControllerImpl::StartSnapshotLoaderCall : public Operation<> {
- public:
-  StartSnapshotLoaderCall(StoryControllerImpl* const story_controller_impl,
-                          fuchsia::ui::views::ViewToken view_token)
-      : Operation("StoryControllerImpl::StartSnapshotLoaderCall", [] {}),
-        story_controller_impl_(story_controller_impl),
-        view_token_(std::move(view_token)) {}
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-
-    story_controller_impl_->story_provider_impl_->StartSnapshotLoader(
-        std::move(view_token_), story_controller_impl_->snapshot_loader_.NewRequest());
-
-    story_controller_impl_->session_storage_->ReadSnapshot(story_controller_impl_->story_id_)
-        ->Then([this, flow](fuchsia::mem::BufferPtr snapshot) {
-          if (!snapshot) {
-            FXL_LOG(INFO) << "ReadSnapshot returned a null/invalid snapshot for story: "
-                          << story_controller_impl_->story_id_;
-            return;
-          }
-
-          story_controller_impl_->snapshot_loader_->Load(std::move(*snapshot.get()));
-        });
-  }
-
-  StoryControllerImpl* const story_controller_impl_;  // not owned
-  fuchsia::ui::views::ViewToken view_token_;
-};
-
 StoryControllerImpl::StoryControllerImpl(SessionStorage* const session_storage,
                                          StoryStorage* const story_storage,
                                          std::unique_ptr<StoryMutator> story_mutator,
@@ -1245,15 +1138,6 @@ void StoryControllerImpl::Stop(StopCallback done) {
 
 void StoryControllerImpl::StopBulk(const bool bulk, StopCallback done) {
   operation_queue_.Add(std::make_unique<StopCall>(this, bulk, std::move(done)));
-}
-
-void StoryControllerImpl::TakeAndLoadSnapshot(fuchsia::ui::views::ViewToken view_token,
-                                              TakeAndLoadSnapshotCallback done) {
-  // Currently we start a new snapshot view on every TakeAndLoadSnapshot
-  // invocation. We can optimize later by connecting the snapshot loader on
-  // start and re-using it for the lifetime of the story.
-  operation_queue_.Add(std::make_unique<StartSnapshotLoaderCall>(this, std::move(view_token)));
-  operation_queue_.Add(std::make_unique<UpdateSnapshotCall>(this, std::move(done)));
 }
 
 void StoryControllerImpl::Watch(fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) {

@@ -9,7 +9,6 @@
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
-#include <fuchsia/scenic/snapshot/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
@@ -61,8 +60,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
                     fuchsia::modular::ModuleResolver* module_resolver,
                     EntityProviderRunner* entity_provider_runner,
                     modular::ModuleFacetReader* module_facet_reader,
-                    PresentationProvider* presentation_provider,
-                    fuchsia::ui::scenic::SnapshotPtr view_snapshot, bool enable_story_shell_preload,
+                    PresentationProvider* presentation_provider, bool enable_story_shell_preload,
                     inspect::Node* root_node);
 
   ~StoryProviderImpl() override;
@@ -138,18 +136,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
                        fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request);
   void WatchVisualState(fidl::StringPtr story_id,
                         fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher);
-
-  // Called by StoryControllerImpl. Takes a snapshot of the story by the given
-  // |story_id|. Callback is returned with the snapshot of the story, or an
-  // empty buffer (size == 0) if the snapshot could not be taken.
-  void TakeSnapshot(fidl::StringPtr story_id, fit::function<void(fuchsia::mem::Buffer)> callback);
-
-  // Called by StoryControllerImpl. Creates a new view with the given
-  // |view_token| and connects the snapshot loader with the given
-  // |loader_request|.
-  void StartSnapshotLoader(
-      fuchsia::ui::views::ViewToken view_token,
-      fidl::InterfaceRequest<fuchsia::scenic::snapshot::Loader> loader_request);
 
   // Creates an entity with the specified |type| and |data| in the story with
   // |story_id|.
@@ -295,21 +281,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   fuchsia::modular::FocusProviderPtr focus_provider_;
   fidl::Binding<fuchsia::modular::FocusWatcher> focus_watcher_binding_;
 
-  // Service provided by scenic to take snapshots of stories.
-  fuchsia::ui::scenic::SnapshotPtr snapshotter_;
-
   inspect::Node* session_inspect_node_;
-
-  // Cached mapping of story ID's to the story view koids. Used as a token to
-  // take snapshots of stories. This is a temporary hack because koids are
-  // guessable. The intention is to have this hack until the framework is
-  // provided with a more secure API from scenic to take snapshots, which is
-  // TBD.
-  std::map<fidl::StringPtr, zx_koid_t> view_endpoints_;
-
-  // Snapshot loader component which is used to create new snapshot views. There
-  // is only one instance of this component running per session.
-  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> snapshot_loader_app_;
 
   // This is a container of all operations that are currently enqueued to run in
   // a FIFO manner. All operations exposed via |fuchsia::modular::StoryProvider|

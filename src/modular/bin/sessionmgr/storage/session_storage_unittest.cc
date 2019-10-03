@@ -460,51 +460,5 @@ TEST_F(SessionStorageTest, GetStoryStorageNoStory) {
   RunLoopUntil([&] { return done; });
 }
 
-TEST_F(SessionStorageTest, ReadSnapshot) {
-  std::string kSnapshotData = "snapshot";
-
-  auto storage = CreateStorage("page");
-  auto story_name = CreateStory(storage.get());
-  bool done{};
-
-  fsl::SizedVmo snapshot;
-  fsl::VmoFromString(kSnapshotData, &snapshot);
-  storage->WriteSnapshot(story_name, std::move(snapshot).ToTransport())->Then([&] { done = true; });
-  RunLoopUntil([&] { return done; });
-
-  done = false;
-  storage->ReadSnapshot(story_name)->Then([&](fuchsia::mem::BufferPtr snapshot_ptr) {
-    std::string snapshot_string;
-    fsl::StringFromVmo(*snapshot_ptr.get(), &snapshot_string);
-    EXPECT_EQ(kSnapshotData, snapshot_string);
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
-}
-
-TEST_F(SessionStorageTest, DeleteStory_DeletesSnapshot) {
-  std::string kSnapshotData = "snapshot";
-
-  auto storage = CreateStorage("page");
-  auto story_name = CreateStory(storage.get());
-  bool done{};
-
-  fsl::SizedVmo snapshot;
-  fsl::VmoFromString(kSnapshotData, &snapshot);
-  storage->WriteSnapshot(story_name, std::move(snapshot).ToTransport())->Then([&] { done = true; });
-  RunLoopUntil([&] { return done; });
-
-  // Deleting the story should delete the snapshot.
-  storage->DeleteStory(story_name)->Then([&] { done = true; });
-  RunLoopUntil([&] { return done; });
-
-  done = false;
-  storage->ReadSnapshot(story_name)->Then([&](fuchsia::mem::BufferPtr snapshot_ptr) {
-    EXPECT_TRUE(snapshot_ptr == nullptr);
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
-}
-
 }  // namespace
 }  // namespace modular

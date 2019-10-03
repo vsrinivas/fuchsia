@@ -44,7 +44,6 @@ source_set("story_runner") {
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
-    "//sdk/fidl/fuchsia.scenic.snapshot",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",

@@ -523,7 +523,6 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
       discover_registry_service_.get(),
       static_cast<fuchsia::modular::ModuleResolver*>(local_module_resolver_.get()),
       entity_provider_runner_.get(), module_facet_reader_.get(), presentation_provider_impl_.get(),
-      component_context_->svc()->Connect<fuchsia::ui::scenic::Snapshot>(),
       (config_.enable_story_shell_preload()), &inspect_root_node_));
   story_provider_impl_->Connect(std::move(story_provider_request));
 

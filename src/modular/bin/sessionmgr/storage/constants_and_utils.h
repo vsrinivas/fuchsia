@@ -35,7 +35,6 @@ constexpr char kFocusKeyPrefix[] = "Focus/";
 
 // Keys under kStoryKeyPrefix
 constexpr char kStoryDataKeyPrefix[] = "Story/Data/";
-constexpr char kStorySnapshotKeyPrefix[] = "Story/Snapshot/";
 
 //    fuchsia::modular::Agent Trigger page:
 constexpr char kTriggerKeyPrefix[] = "Trigger/";

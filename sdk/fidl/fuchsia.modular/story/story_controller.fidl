@@ -4,8 +4,6 @@
 
 library fuchsia.modular;
 
-using fuchsia.ui.views;
-
 /// Used by the clients of StoryProvider (SessionShell) to interact with a single
 /// story. Created by StoryProvider.
 ///
@@ -29,13 +27,6 @@ protocol StoryController {
     /// until the Start() requests complete. Before stopping the story, a snapshot
     /// of the story will be taken and saved. Returns when the story is stopped.
     Stop() -> ();
-
-    /// Creates a new view with the given `view_owner` request to display
-    /// snapshots. Takes a snapshot for the story controlled by this
-    /// `StoryController` and then loads the snapshot to the created view such that
-    /// it is rendered. The callback will be invoked once the view has been created
-    /// and the snapshot has been loaded.
-    TakeAndLoadSnapshot(fuchsia.ui.views.ViewToken view_token) -> ();
 
     /// Registers a watcher for changes of the story state.
     ///
