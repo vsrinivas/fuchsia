@@ -744,96 +744,6 @@ async fn test_writes_recovery() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_writes_recovery_vbmeta() {
-    let mut env = TestEnv::new();
-
-    env.register_package("update", "upd4t3")
-        .add_file(
-            "packages",
-            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
-        )
-        .add_file("zedboot", "new recovery")
-        .add_file("recovery.vbmeta", "new recovery vbmeta");
-
-    env.run_system_updater(SystemUpdaterArgs {
-        initiator: "manual",
-        target: "m3rk13",
-        update: None,
-        reboot: None,
-    })
-    .await
-    .expect("success");
-
-    assert_eq!(
-        env.paver_service.take_events(),
-        vec![
-            PaverEvent::WriteAsset {
-                configuration: paver::Configuration::Recovery,
-                asset: paver::Asset::Kernel,
-                payload: b"new recovery".to_vec(),
-            },
-            PaverEvent::WriteAsset {
-                configuration: paver::Configuration::Recovery,
-                asset: paver::Asset::VerifiedBootMetadata,
-                payload: b"new recovery vbmeta".to_vec(),
-            },
-        ]
-    );
-
-    assert_eq!(*env.reboot_service.called.lock(), 1);
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_writes_fuchsia_vbmeta() {
-    let mut env = TestEnv::new();
-
-    env.register_package("update", "upd4t3")
-        .add_file(
-            "packages",
-            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
-        )
-        .add_file("zbi", "fake zbi")
-        .add_file("fuchsia.vbmeta", "fake zbi vbmeta");
-
-    env.run_system_updater(SystemUpdaterArgs {
-        initiator: "manual",
-        target: "m3rk13",
-        update: None,
-        reboot: None,
-    })
-    .await
-    .expect("success");
-
-    assert_eq!(
-        env.paver_service.take_events(),
-        vec![
-            PaverEvent::WriteAsset {
-                configuration: paver::Configuration::A,
-                asset: paver::Asset::Kernel,
-                payload: b"fake zbi".to_vec(),
-            },
-            PaverEvent::WriteAsset {
-                configuration: paver::Configuration::B,
-                asset: paver::Asset::Kernel,
-                payload: b"fake zbi".to_vec(),
-            },
-            PaverEvent::WriteAsset {
-                configuration: paver::Configuration::A,
-                asset: paver::Asset::VerifiedBootMetadata,
-                payload: b"fake zbi vbmeta".to_vec(),
-            },
-            PaverEvent::WriteAsset {
-                configuration: paver::Configuration::B,
-                asset: paver::Asset::VerifiedBootMetadata,
-                payload: b"fake zbi vbmeta".to_vec(),
-            },
-        ]
-    );
-
-    assert_eq!(*env.reboot_service.called.lock(), 1);
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn test_working_image_write() {
     let mut env = TestEnv::new();
 
@@ -869,18 +779,11 @@ async fn test_working_image_write() {
 
     assert_eq!(
         env.paver_service.take_events(),
-        vec![
-            PaverEvent::WriteAsset {
-                configuration: paver::Configuration::A,
-                asset: paver::Asset::Kernel,
-                payload: b"fake_zbi".to_vec(),
-            },
-            PaverEvent::WriteAsset {
-                configuration: paver::Configuration::B,
-                asset: paver::Asset::Kernel,
-                payload: b"fake_zbi".to_vec(),
-            }
-        ]
+        vec![PaverEvent::WriteAsset {
+            configuration: paver::Configuration::A,
+            asset: paver::Asset::Kernel,
+            payload: b"fake_zbi".to_vec(),
+        }]
     );
 
     assert_eq!(*env.reboot_service.called.lock(), 1);
