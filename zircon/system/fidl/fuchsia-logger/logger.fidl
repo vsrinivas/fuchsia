@@ -38,11 +38,16 @@ struct LogFilterOptions {
     // Passed tags should not be more than `MAX_TAG_LEN_BYTES` bytes in length
     // and max tags can be `MAX_TAGS`.
     // Listener would be discarded if the limit is not followed.
-    vector<string>:MAX_TAGS tags;
+    vector<string:MAX_TAG_LEN_BYTES>:MAX_TAGS tags;
 };
 
 // Max tags that will be attached to a LogMessage.
 const uint8 MAX_TAGS_PER_LOG_MESSAGE = 5;
+
+// Max byte size for message payload.
+// TODO(anmittal): Increase it when zircon sockets are able to support a higher
+// buffer.
+const uint32 MAX_DATAGRAM_LEN_BYTES = 2032;
 
 struct LogMessage {
     uint64 pid;
@@ -56,8 +61,8 @@ struct LogMessage {
     // can be served out of order, this should only be logged if more than last
     // count.
     uint32 dropped_logs;
-    vector<string>:MAX_TAGS_PER_LOG_MESSAGE tags;
-    string msg;
+    vector<string:MAX_TAG_LEN_BYTES>:MAX_TAGS_PER_LOG_MESSAGE tags;
+    string:MAX_DATAGRAM_LEN_BYTES msg;
 };
 
 // Interface for LogListener to register to listen to logs.
@@ -80,7 +85,11 @@ protocol LogSink {
     Connect(handle<socket> socket);
 };
 
+/// Max log bytes per call to a listener
 const uint64 MAX_LOG_MANY_SIZE_BYTES = 16384;
+
+// TODO(fxb/37281): replace with built-in constant
+const uint32 MAX = 0xFFFFFFFF;
 
 protocol LogListener {
     // Called for single messages.
@@ -88,7 +97,7 @@ protocol LogListener {
 
     // Called when `Log` service is serving cached logs.
     // Max logs size per call is `MAX_LOG_MANY_SIZE_BYTES` bytes.
-    LogMany(vector<LogMessage> log);
+    LogMany(vector<LogMessage>:MAX log);
 
     // Called in the case `DumpLogs()` function of `Log` service was called and
     // all cached logs have been dispatched to this listener.
