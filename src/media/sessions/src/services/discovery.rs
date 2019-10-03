@@ -7,51 +7,21 @@ mod watcher;
 
 use self::{player_event::PlayerEvent, watcher::*};
 use crate::{proxies::player::Player, spawn_log_error, Ref, Result};
-use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_media_sessions2::*;
-use fidl_table_validation::*;
 use fuchsia_syslog::fx_log_info;
 use futures::{self, channel::mpsc, prelude::*, stream::FuturesUnordered};
 use mpmc;
-use rand::prelude::*;
+use rand::prelude::random;
 use std::collections::hash_map::*;
-use std::convert::TryFrom;
-
-#[derive(Debug, Clone, ValidFidlTable)]
-#[fidl_table_src(PlayerRegistration)]
-pub struct ValidPlayerRegistration {
-    pub domain: String,
-}
-
-#[derive(Debug)]
-pub struct RegisteredPlayer {
-    player: Player,
-    registration: ValidPlayerRegistration,
-    active: bool,
-}
-
-impl RegisteredPlayer {
-    pub fn new(
-        client_end: ClientEnd<PlayerMarker>,
-        registration: PlayerRegistration,
-    ) -> Result<Self> {
-        let proxy = client_end.into_proxy()?;
-        Ok(Self {
-            player: Player::new(proxy),
-            registration: ValidPlayerRegistration::try_from(registration)?,
-            active: false,
-        })
-    }
-}
 
 /// Implements `fuchsia.media.session2.Discovery`.
 pub struct Discovery {
-    player_stream: mpsc::Receiver<RegisteredPlayer>,
-    players: Ref<HashMap<u64, RegisteredPlayer>>,
+    player_stream: mpsc::Receiver<Player>,
+    players: Ref<HashMap<u64, Player>>,
 }
 
 impl Discovery {
-    pub fn new(player_stream: mpsc::Receiver<RegisteredPlayer>) -> Self {
+    pub fn new(player_stream: mpsc::Receiver<Player>) -> Self {
         Self { player_stream, players: Ref::default() }
     }
 
@@ -75,7 +45,7 @@ impl Discovery {
                         } => {
                             if let Ok(requests) = session_control_request.into_stream() {
                                 self.players.lock().await.get_mut(&session_id).map(|player| {
-                                    player.player.serve_controls(requests);
+                                    player.serve_controls(requests);
                                 });
                             }
                         }
@@ -84,13 +54,13 @@ impl Discovery {
                                 watch_options,
                                 self.players.lock().await
                                     .iter()
-                                    .map(|(id, registered_player)| {
+                                    .map(|(id, player)| {
                                         (
                                             *id,
                                             PlayerEvent::Updated {
-                                                delta: registered_player.player.state().clone(),
-                                                registration: Some(registered_player.registration.clone()),
-                                                active: if registered_player.active {
+                                                delta: player.state().clone(),
+                                                registration: Some(player.registration().clone()),
+                                                active: if player.is_active() {
                                                     Some(true)
                                                 } else {
                                                     None
@@ -108,10 +78,10 @@ impl Discovery {
                 new_player = self.player_stream.select_next_some() => {
                     // TODO(turnage): Care about collisions.
                     let id = random();
-                    player_updates.push(new_player.player.poll(id));
+                    player_updates.push(new_player.poll(id));
                     sender.send((id, PlayerEvent::Updated{
-                        delta: new_player.player.state().clone(),
-                        registration: Some(new_player.registration.clone()),
+                        delta: new_player.state().clone(),
+                        registration: Some(new_player.registration().clone()),
                         active: None,
                     })).await;
                     self.players.lock().await.insert(id, new_player);
@@ -122,25 +92,22 @@ impl Discovery {
                     match delta {
                         Ok(delta) => {
                             if let Some(player) = self.players.lock().await.get_mut(&id) {
-                                player.player.update(delta.clone());
+                                player.update(delta.clone());
                                 let event = PlayerEvent::Updated {
-                                    active: delta.is_active().map(|new_active_status|{
-                                        player.active = new_active_status;
-                                        new_active_status
-                                    }),
+                                    active: delta.is_active(),
                                     delta,
                                     registration: None,
                                 };
                                 sender.send((id, event)).await;
-                                player_updates.push(player.player.poll(id));
+                                player_updates.push(player.poll(id));
                             }
                         }
                         Err(e) => {
                             fx_log_info!(
                                 tag: "discovery",
-                                "Disconnecting player: {:#?}", e);
-                            if let Some(mut player) = self.players.lock().await.remove(&id) {
-                                player.player.disconnect_proxied_clients().await;
+                                "Disconnecting  {:#?}", e);
+                            if let Some(mut player)  = self.players.lock().await.remove(&id) {
+                                player.disconnect_proxied_clients().await;
                             }
                             sender.send((id, PlayerEvent::Removed)).await;
                         }

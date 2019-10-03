@@ -4,6 +4,7 @@
 
 use crate::Result;
 use failure::Error as FError;
+use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_media_sessions2::*;
 use fidl_table_validation::*;
@@ -14,6 +15,12 @@ use futures::{
 };
 use std::convert::*;
 use waitgroup::*;
+
+#[derive(Debug, Clone, ValidFidlTable)]
+#[fidl_table_src(PlayerRegistration)]
+pub struct ValidPlayerRegistration {
+    pub domain: String,
+}
 
 #[derive(Debug, Clone, ValidFidlTable)]
 #[fidl_table_src(PlayerStatus)]
@@ -125,16 +132,29 @@ pub struct Player {
     state: ValidPlayerInfoDelta,
     server_handles: Vec<AbortHandle>,
     server_wait_group: WaitGroup,
+    registration: ValidPlayerRegistration,
 }
 
 impl Player {
-    pub fn new(proxy: PlayerProxy) -> Self {
-        Player {
-            inner: proxy,
+    pub fn new(
+        client_end: ClientEnd<PlayerMarker>,
+        registration: PlayerRegistration,
+    ) -> Result<Self> {
+        Ok(Player {
+            inner: client_end.into_proxy()?,
             state: ValidPlayerInfoDelta::default(),
             server_handles: vec![],
             server_wait_group: WaitGroup::new(),
-        }
+            registration: ValidPlayerRegistration::try_from(registration)?,
+        })
+    }
+
+    pub fn registration(&self) -> &ValidPlayerRegistration {
+        &self.registration
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.state.is_active().unwrap_or(false)
     }
 
     /// Sends the player a request for status and returns a future that will resolve when the player
@@ -229,8 +249,8 @@ mod test {
         use fidl::endpoints::*;
 
         let (player_client, _player_server) = create_endpoints::<PlayerMarker>()?;
-        let player_fidl_proxy = player_client.into_proxy()?;
-        let mut player = Player::new(player_fidl_proxy);
+        let mut player =
+            Player::new(player_client, PlayerRegistration { domain: Some(String::from("aye")) })?;
 
         let (session_control_client, session_control_server) =
             create_endpoints::<SessionControlMarker>()?;
