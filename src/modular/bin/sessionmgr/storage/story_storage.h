@@ -94,23 +94,6 @@ class StoryStorage : public PageClient {
   // =========================================================================
   // Link data
 
-  // Use with WatchLink below.
-  //
-  // Called whenever a change occurs to the link specified in
-  // WatchLink(). The receiver gets the LinkPath, the current
-  // |value| and whatever |context| was passed into the mutation call. If
-  // the new value did not originate from a call on *this, |context| will be
-  // given the special value of nullptr.
-  using LinkUpdatedCallback =
-      fit::function<void(const fidl::StringPtr& value, const void* context)>;
-  using LinkWatcherAutoCancel = fit::deferred_action<fit::function<void()>>;
-
-  // Registers |callback| to be invoked whenever a change to the link value at
-  // |link_path| occurs. See documentation for LinkUpdatedCallback above. The
-  // returned LinkWatcherAutoCancel must be kept alive as long as the callee
-  // wishes to receive link updates on |callback|.
-  LinkWatcherAutoCancel WatchLink(const LinkPath& link_path, LinkUpdatedCallback callback);
-
   // Returns the value for |link_path|.
   //
   // The returned value will be stringified JSON. If no value is found, returns
@@ -189,12 +172,6 @@ class StoryStorage : public PageClient {
   // |PageClient|
   void OnPageConflict(Conflict* conflict) override;
 
-  // Notifies any watchers in |link_watchers_|.
-  //
-  // |value| will never be a null StringPtr. |value| is always a JSON-encoded
-  // string, so a null value will be presented as the string "null".
-  void NotifyLinkWatchers(const std::string& link_key, fidl::StringPtr value, const void* context);
-
   // Notifies any watchers in |entity_watchers_[cookie]|.
   //
   // |value| is a valid fuchsia::mem::Buffer.
@@ -215,10 +192,6 @@ class StoryStorage : public PageClient {
 
   // Called when new ModuleData is encountered from the Ledger.
   fit::function<void(ModuleData)> on_module_data_updated_;
-
-  // A map of link ledger key -> watcher callback. Multiple clients can watch
-  // the same Link.
-  std::multimap<std::string, LinkUpdatedCallback> link_watchers_;
 
   // A map of Entity cookie (i.e. Ledger key) -> set of watchers. Multiple
   // watchers can watch the same entity.

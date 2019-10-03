@@ -8,7 +8,6 @@ import("//src/modular/build/tests_package.gni")
 
 hermetic_tests_package("story_runner_unittests") {
   deps = [
-    ":link_impl_unittest",
     ":story_controller_impl_unittest",  # incomplete, for now.
   ]
   environments = basic_envs
@@ -18,8 +17,6 @@ hermetic_tests_package("story_runner_unittests") {
 # constituent components. Please see MF-85.
 source_set("story_runner") {
   sources = [
-    "link_impl.cc",
-    "link_impl.h",
     "module_context_impl.cc",
     "module_context_impl.h",
     "module_controller_impl.cc",
@@ -131,22 +128,5 @@ executable("story_controller_impl_unittest") {
     ":story_runner",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/fidl:clone",
-  ]
-}
-
-executable("link_impl_unittest") {
-  testonly = true
-
-  sources = [
-    "link_impl_unittest.cc",
-  ]
-
-  deps = [
-    ":story_runner",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/modular/bin/sessionmgr/agent_runner",
-    "//src/modular/lib/entity/cpp:json",
-    "//src/modular/lib/fidl:clone",
-    "//src/modular/lib/testing:test_with_ledger",
   ]
 }

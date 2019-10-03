@@ -147,20 +147,6 @@ FuturePtr<std::vector<ModuleData>> StoryStorage::ReadAllModuleData() {
   return ret;
 }
 
-StoryStorage::LinkWatcherAutoCancel StoryStorage::WatchLink(const LinkPath& link_path,
-                                                            LinkUpdatedCallback callback) {
-  auto it = link_watchers_.emplace(MakeLinkKey(link_path), std::move(callback));
-
-  auto auto_remove = [weak_this = GetWeakPtr(), it] {
-    if (!weak_this)
-      return;
-
-    weak_this->link_watchers_.erase(it);
-  };
-
-  return LinkWatcherAutoCancel(std::move(auto_remove));
-}
-
 namespace {
 
 constexpr char kJsonNull[] = "null";
@@ -558,17 +544,8 @@ FuturePtr<StoryStorage::Status> StoryStorage::UpdateLinkValue(
 
   // We can't chain this call to the parent future chain because we do
   // not want it to happen at all in the case of errors.
-  return did_update->WeakMap(GetWeakPtr(),
-                             [this, key, context](bool did_update, StoryStorage::Status status,
-                                                  fidl::StringPtr new_value) {
-                               // if |new_value| is null, it means we didn't write any new data,
-                               // even if |status| == OK.
-                               if (status == StoryStorage::Status::OK && did_update) {
-                                 NotifyLinkWatchers(key, new_value, context);
-                               }
-
-                               return status;
-                             });
+  return did_update->WeakMap(GetWeakPtr(), [](bool did_update, StoryStorage::Status status,
+                                              fidl::StringPtr new_value) { return status; });
 }
 
 FuturePtr<StoryStorage::Status> StoryStorage::SetEntityData(const std::string& cookie,
@@ -675,15 +652,8 @@ void StoryStorage::OnPageChange(const std::string& key, fuchsia::mem::BufferPtr 
   // Find any write operations which are waiting for the notification of the
   // write being successful.
   auto pending_writes_it = pending_writes_.find({key, value_string});
-  // Link watchers are not notified of writes originating from this story
-  // storage instance.
-  bool notify_link_listeners = pending_writes_it == pending_writes_.end();
 
-  if (StartsWith(key, kLinkKeyPrefix)) {
-    if (notify_link_listeners) {
-      NotifyLinkWatchers(key, value_string, nullptr /* context */);
-    }
-  } else if (StartsWith(key, kModuleKeyPrefix)) {
+  if (StartsWith(key, kModuleKeyPrefix)) {
     if (on_module_data_updated_) {
       auto module_data = ModuleData::New();
       if (!XdrRead(value_string, &module_data, XdrModuleData)) {
@@ -722,14 +692,6 @@ void StoryStorage::OnPageConflict(Conflict* conflict) {
   // TODO(thatguy): Add basic conflict resolution. We can force a conflict for
   // link data in tests by using Page.StartTransaction() in UpdateLinkValue().
   FXL_LOG(WARNING) << "StoryStorage::OnPageConflict() for link key " << to_string(conflict->key);
-}
-
-void StoryStorage::NotifyLinkWatchers(const std::string& link_key, fidl::StringPtr value,
-                                      const void* context) {
-  auto range = link_watchers_.equal_range(link_key);
-  for (auto it = range.first; it != range.second; ++it) {
-    it->second(value, context);
-  }
 }
 
 void StoryStorage::NotifyEntityWatchers(const std::string& cookie, fuchsia::mem::Buffer value) {

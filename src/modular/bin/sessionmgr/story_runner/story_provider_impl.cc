@@ -27,7 +27,6 @@
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
-#include "src/modular/bin/sessionmgr/story_runner/link_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/fidl/array_to_string.h"
