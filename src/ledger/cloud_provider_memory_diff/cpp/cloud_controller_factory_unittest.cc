@@ -8,8 +8,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-testing/test_loop.h>
 
-#include "garnet/public/lib/callback/set_when_called.h"
 #include "garnet/public/lib/gtest/test_loop_fixture.h"
+#include "src/lib/callback/set_when_called.h"
 #include "src/lib/fxl/logging.h"
 
 namespace cloud_provider {

@@ -37,8 +37,8 @@ source_set("unittests") {
   deps = [
     ":syncable",
     ":syncable_fidl_test",
-    "//garnet/public/lib/callback",
     "//src/ledger/bin/fidl/syncable/fidl",
+    "//src/lib/callback",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-testing",
   ]

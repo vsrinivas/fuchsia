@@ -13,8 +13,8 @@ source_set("testing") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/callback",
     "//src/ledger/cloud_provider_firestore/bin/app:lib",
+    "//src/lib/callback",
     "//third_party/grpc:grpc++",
   ]
 }

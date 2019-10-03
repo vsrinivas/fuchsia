@@ -7,11 +7,11 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
-#include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
+#include "src/lib/callback/capture.h"
 
 namespace ledger {
 namespace {

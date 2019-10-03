@@ -47,9 +47,9 @@ source_set("service_account_provider") {
 
   public_deps = [
     ":service_account",
-    "//garnet/public/lib/callback",
     "//garnet/public/lib/network_wrapper",
     "//sdk/fidl/fuchsia.auth",
+    "//src/lib/callback",
     "//src/lib/fxl",
   ]
 

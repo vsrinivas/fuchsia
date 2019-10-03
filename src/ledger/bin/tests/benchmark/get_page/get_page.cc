@@ -15,7 +15,6 @@
 
 #include <trace/event.h>
 
-#include "garnet/public/lib/callback/waiter.h"
 #include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
@@ -24,6 +23,7 @@
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
 #include "src/ledger/bin/testing/quit_on_error.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
+#include "src/lib/callback/waiter.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/command_line.h"

@@ -12,7 +12,7 @@
 #include <queue>
 #include <vector>
 
-#include "garnet/public/lib/callback/destruction_sentinel.h"
+#include "src/lib/callback/destruction_sentinel.h"
 #include "src/lib/fxl/macros.h"
 
 namespace ledger {

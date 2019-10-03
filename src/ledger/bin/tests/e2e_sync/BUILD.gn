@@ -18,7 +18,6 @@ executable("e2e_sync") {
 
   deps = [
     ":ledger_e2e_sync_credentials",
-    "//garnet/public/lib/callback",
     "//garnet/public/lib/fsl",
     "//peridot/lib/convert",
     "//peridot/lib/rng:system",
@@ -31,6 +30,7 @@ executable("e2e_sync") {
     "//src/ledger/cloud_provider_firestore/bin/fidl",
     "//src/ledger/cloud_provider_firestore/bin/testing",
     "//src/ledger/lib/firebase_auth/testing",
+    "//src/lib/callback",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",

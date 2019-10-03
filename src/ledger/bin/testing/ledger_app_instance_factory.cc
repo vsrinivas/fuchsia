@@ -8,9 +8,9 @@
 #include <lib/fsl/io/fd.h>
 #include <lib/inspect_deprecated/inspect.h>
 
-#include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/testing/inspect.h"
+#include "src/lib/callback/capture.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {

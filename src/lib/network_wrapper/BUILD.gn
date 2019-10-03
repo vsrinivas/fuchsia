@@ -11,8 +11,8 @@ source_set("network_wrapper") {
 
   public_deps = [
     "//garnet/public/lib/backoff",
-    "//garnet/public/lib/callback",
     "//sdk/fidl/fuchsia.net.oldhttp",
+    "//src/lib/callback",
     "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]

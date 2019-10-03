@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <utility>
-#include <vector>
-
 #include <lib/callback/capture.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
@@ -12,9 +9,10 @@
 #include <lib/fsl/vmo/strings.h>
 #include <zircon/errors.h>
 
+#include <utility>
+#include <vector>
+
 #include "fuchsia/ledger/cpp/fidl.h"
-#include "garnet/public/lib/callback/capture.h"
-#include "garnet/public/lib/callback/waiter.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/constants.h"
@@ -23,6 +21,8 @@
 #include "src/ledger/bin/testing/ledger_matcher.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
@@ -35,8 +35,7 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
   ~PageSnapshotIntegrationTest() override = default;
 
   // Returns a snapshot of |page|, checking success.
-  PageSnapshotPtr PageGetSnapshot(
-      PagePtr* page, std::vector<uint8_t> prefix = {}) {
+  PageSnapshotPtr PageGetSnapshot(PagePtr* page, std::vector<uint8_t> prefix = {}) {
     PageSnapshotPtr snapshot;
     (*page)->GetSnapshot(snapshot.NewRequest(), std::move(prefix), nullptr);
     return snapshot;
@@ -44,9 +43,9 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
 
   // Returns all keys from |snapshot|, starting at |start|. If |num_queries| is
   // not null, stores the number of calls to GetKeys.
-  std::vector<std::vector<uint8_t>> SnapshotGetKeys(
-      PageSnapshotPtr* snapshot, std::vector<uint8_t> start = {},
-      int* num_queries = nullptr) {
+  std::vector<std::vector<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
+                                                    std::vector<uint8_t> start = {},
+                                                    int* num_queries = nullptr) {
     std::vector<std::vector<uint8_t>> result;
     std::unique_ptr<Token> token;
     if (num_queries) {
@@ -248,8 +247,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   // returns empty results.
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   int num_queries;
-  std::vector<std::vector<uint8_t>> result =
-      SnapshotGetKeys(&snapshot, {}, &num_queries);
+  std::vector<std::vector<uint8_t>> result = SnapshotGetKeys(&snapshot, {}, &num_queries);
   EXPECT_EQ(result.size(), 0u);
   EXPECT_EQ(num_queries, 1);
 
@@ -359,8 +357,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   // returns empty results.
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   int num_queries;
-  auto entries =
-      SnapshotGetEntries(this, &snapshot, {}, &num_queries);
+  auto entries = SnapshotGetEntries(this, &snapshot, {}, &num_queries);
   EXPECT_EQ(entries.size(), 0u);
   EXPECT_EQ(num_queries, 1);
 
@@ -403,8 +400,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   // returns empty results.
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   int num_queries;
-  auto entries =
-      SnapshotGetEntries(this, &snapshot, {}, &num_queries);
+  auto entries = SnapshotGetEntries(this, &snapshot, {}, &num_queries);
   EXPECT_EQ(entries.size(), 0u);
   EXPECT_EQ(num_queries, 1);
 

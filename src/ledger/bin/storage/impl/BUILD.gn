@@ -134,7 +134,6 @@ source_set("lib") {
     ":commit_storage",
     ":file_index",
     ":object_identifier_lib",
-    "//garnet/public/lib/callback",
     "//peridot/lib/base64url",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/cobalt",
@@ -146,6 +145,7 @@ source_set("lib") {
     "//src/ledger/bin/storage/impl/btree:lib",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/synchronization:lock",
+    "//src/lib/callback",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/trace",
@@ -173,10 +173,10 @@ source_set("test_utils") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/callback",
     "//src/ledger/bin/encryption/fake",
     "//src/ledger/bin/encryption/primitives",
     "//src/ledger/bin/storage/fake:lib",
+    "//src/lib/callback",
   ]
 
   public_deps = [

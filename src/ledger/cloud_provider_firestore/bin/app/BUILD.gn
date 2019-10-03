@@ -55,11 +55,11 @@ source_set("lib") {
   ]
 
   deps = [
-    "//garnet/public/lib/callback",
     "//garnet/public/lib/fsl",
     "//peridot/lib/convert",
     "//src/ledger/bin/app:serialization_version",
     "//src/ledger/lib/commit_pack",
+    "//src/lib/callback",
   ]
 }
 
@@ -76,7 +76,6 @@ source_set("unittests") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/callback",
     "//garnet/public/lib/gtest",
     "//peridot/lib/convert",
     "//peridot/lib/rng:testing",
@@ -84,6 +83,7 @@ source_set("unittests") {
     "//src/ledger/cloud_provider_firestore/bin/app/testing",
     "//src/ledger/cloud_provider_firestore/bin/firestore/testing",
     "//src/ledger/lib/firebase_auth/testing",
+    "//src/lib/callback",
     "//src/lib/fxl:printers",
     "//third_party/protobuf:protobuf_full",
   ]

@@ -13,10 +13,10 @@
 #include <utility>
 #include <vector>
 
-#include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/lib/callback/capture.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/time/time_delta.h"

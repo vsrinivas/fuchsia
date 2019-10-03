@@ -20,10 +20,10 @@ source_set("impl") {
     ":encrypted_commit",
     ":encrypted_entry",
     ":remote_commit_id",
-    "//garnet/public/lib/callback",
     "//src/ledger/bin/cache",
     "//src/ledger/bin/encryption/primitives",
     "//src/ledger/bin/environment",
+    "//src/lib/callback",
   ]
 
   public_deps = [
@@ -69,9 +69,9 @@ source_set("unittests") {
 
   deps = [
     ":impl",
-    "//garnet/public/lib/callback",
     "//src/ledger/bin/storage/fake:lib",
     "//src/ledger/bin/testing:lib",
+    "//src/lib/callback",
     "//third_party/googletest:gtest",
   ]
 

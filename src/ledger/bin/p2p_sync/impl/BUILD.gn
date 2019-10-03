@@ -39,8 +39,8 @@ source_set("impl") {
 
   deps = [
     ":message",
-    "//garnet/public/lib/callback",
     "//peridot/lib/ledger_client:constants",
+    "//src/lib/callback",
   ]
 }
 

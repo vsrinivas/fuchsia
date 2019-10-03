@@ -11,8 +11,8 @@ source_set("lock") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/callback",
     "//src/ledger/lib/coroutine",
+    "//src/lib/callback",
     "//src/lib/fxl",
   ]
 

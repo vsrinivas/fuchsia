@@ -43,9 +43,9 @@ executable("cloud_provider_memory_diff_staticlib_test") {
   ]
   deps = [
     ":cpp",
-    "//garnet/public/lib/callback",
     "//garnet/public/lib/gtest",
     "//src/ledger/bin/fidl:cloud-test",
+    "//src/lib/callback",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-testing",

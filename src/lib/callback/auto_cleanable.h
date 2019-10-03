@@ -13,7 +13,7 @@
 #include <unordered_set>
 #include <utility>
 
-#include "garnet/public/lib/callback/scoped_task_runner.h"
+#include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/logging.h"
 
 namespace callback {
