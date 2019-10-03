@@ -98,8 +98,7 @@ void EncryptionServiceImpl::EncryptCommit(std::string commit_storage,
         auto storage = CreateEncryptedCommitStorage(
             builder, key_index, convert::ToFlatBufferVector(&builder, encrypted_storage));
         builder.Finish(storage);
-        callback(Status::OK, std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()),
-                                         builder.GetSize()));
+        callback(Status::OK, convert::ToString(builder));
       });
 }
 
@@ -110,7 +109,7 @@ std::string EncryptionServiceImpl::EncodeCommitId(std::string commit_id) {
       CreateRemoteCommitId(builder, kEncryptionVersion,
                            convert::ToFlatBufferVector(&builder, SHA256WithLengthHash(commit_id)));
   builder.Finish(storage);
-  return std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()), builder.GetSize());
+  return convert::ToString(builder);
 }
 
 void EncryptionServiceImpl::GetPageId(std::string page_name,
@@ -158,8 +157,7 @@ void EncryptionServiceImpl::EncryptEntryPayload(std::string entry_storage,
         auto storage = CreateEncryptedEntryStorage(
             builder, key_index, convert::ToFlatBufferVector(&builder, encrypted_storage));
         builder.Finish(storage);
-        callback(Status::OK, std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()),
-                                         builder.GetSize()));
+        callback(Status::OK, convert::ToString(builder));
       });
 }
 

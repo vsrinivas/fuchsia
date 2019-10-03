@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <iterator>
 
+#include "peridot/lib/convert/convert.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/logging.h"
 
@@ -50,7 +51,8 @@ void P2PProviderImpl::Start(Client* client) {
   });
 }
 
-bool P2PProviderImpl::SendMessage(const P2PClientId& destination, fxl::StringView data) {
+bool P2PProviderImpl::SendMessage(const P2PClientId& destination,
+                                  convert::ExtendedStringView data) {
   auto it = connections_.find(destination);
   if (it == connections_.end()) {
     return false;
@@ -153,8 +155,7 @@ void P2PProviderImpl::ListenForNewDevices(uint64_t version) {
 
 void P2PProviderImpl::Dispatch(P2PClientId source, std::vector<uint8_t> data) {
   FXL_DCHECK(client_);
-  fxl::StringView data_view(reinterpret_cast<const char*>(data.data()), data.size());
-  client_->OnNewMessage(source, data_view);
+  client_->OnNewMessage(source, data);
 }
 
 void P2PProviderImpl::OnDeviceChange(P2PClientId remote_device, DeviceChangeType change_type) {

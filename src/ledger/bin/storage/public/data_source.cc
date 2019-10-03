@@ -169,9 +169,7 @@ class FlatBufferDataChunk : public DataSource::DataChunk {
       : value_(std::move(value)) {}
 
  private:
-  fxl::StringView Get() override {
-    return fxl::StringView(reinterpret_cast<char*>(value_->GetBufferPointer()), value_->GetSize());
-  }
+  fxl::StringView Get() override { return convert::ToStringView(*value_); }
 
   std::unique_ptr<flatbuffers::FlatBufferBuilder> value_;
 };

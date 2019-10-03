@@ -44,7 +44,7 @@ std::unique_ptr<LedgerCommunicator> UserCommunicatorImpl::GetLedgerCommunicator(
 }
 
 void UserCommunicatorImpl::OnNewMessage(const p2p_provider::P2PClientId& source,
-                                        fxl::StringView data) {
+                                        convert::ExtendedStringView data) {
   std::optional<MessageHolder<Message>> message = CreateMessageHolder<Message>(data, &ParseMessage);
   if (!message) {
     // Wrong serialization, abort.

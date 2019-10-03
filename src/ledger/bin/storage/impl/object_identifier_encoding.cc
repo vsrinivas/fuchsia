@@ -37,7 +37,7 @@ flatbuffers::Offset<ObjectIdentifierStorage> ToObjectIdentifierStorage(
 std::string EncodeObjectIdentifier(const ObjectIdentifier& object_identifier) {
   flatbuffers::FlatBufferBuilder builder;
   builder.Finish(ToObjectIdentifierStorage(&builder, object_identifier));
-  return std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()), builder.GetSize());
+  return convert::ToString(builder);
 }
 
 bool DecodeObjectIdentifier(fxl::StringView data, ObjectIdentifierFactory* factory,

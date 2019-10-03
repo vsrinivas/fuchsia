@@ -16,6 +16,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_provider/impl/make_client_id.h"
 #include "src/ledger/bin/p2p_provider/impl/static_user_id_provider.h"
 #include "src/ledger/bin/p2p_provider/public/user_id_provider.h"
@@ -55,7 +56,7 @@ class RecordingClient : public P2PProvider::Client {
     }
   }
 
-  void OnNewMessage(const P2PClientId& device_name, fxl::StringView message) override {
+  void OnNewMessage(const P2PClientId& device_name, convert::ExtendedStringView message) override {
     messages.push_back(Message{device_name, message.ToString()});
   }
 

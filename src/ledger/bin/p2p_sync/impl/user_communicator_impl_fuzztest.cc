@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <string>
 
+#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
 #include "src/ledger/bin/p2p_provider/public/p2p_provider.h"
@@ -39,7 +40,8 @@ class FuzzingP2PProvider : public p2p_provider::P2PProvider {
 
   void Start(Client* client) override { client_ = client; }
 
-  bool SendMessage(const p2p_provider::P2PClientId& client_id, fxl::StringView data) override {
+  bool SendMessage(const p2p_provider::P2PClientId& client_id,
+                   convert::ExtendedStringView data) override {
     FXL_NOTIMPLEMENTED();
     return false;
   }

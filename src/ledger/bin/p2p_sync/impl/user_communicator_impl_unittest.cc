@@ -30,7 +30,7 @@ class PageCommunicatorImplInspectorForTest {
  public:
   static const std::set<p2p_provider::P2PClientId>& GetInterestedDevices(
       const std::unique_ptr<PageCommunicator>& page) {
-    return reinterpret_cast<PageCommunicatorImpl*>(page.get())->interested_devices_;
+    return static_cast<PageCommunicatorImpl*>(page.get())->interested_devices_;
   }
 };
 

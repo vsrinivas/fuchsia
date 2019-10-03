@@ -102,7 +102,7 @@ void CoroutineServiceImpl::CoroutineHandlerImpl::Start() {
 }
 
 void CoroutineServiceImpl::CoroutineHandlerImpl::StaticRun(void* data) {
-  reinterpret_cast<CoroutineHandlerImpl*>(data)->Run();
+  static_cast<CoroutineHandlerImpl*>(data)->Run();
 }
 
 void CoroutineServiceImpl::CoroutineHandlerImpl::Run() {

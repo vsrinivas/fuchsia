@@ -111,8 +111,7 @@ TEST(EncodingTest, BackwardCompatibilityWithoutEntryId) {
 
   builder.Finish(CreateTreeNodeStorage(builder, entries_offsets, children_offsets, /*level*/ 1));
 
-  std::string bytes =
-      std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()), builder.GetSize());
+  std::string bytes = convert::ToString(builder);
 
   ObjectIdentifierFactoryImpl factory;
   uint8_t res_level;
@@ -189,11 +188,6 @@ TEST(EncodingTest, ZeroByte) {
   EXPECT_EQ(res_children, children);
 }
 
-std::string ToString(flatbuffers::FlatBufferBuilder* builder) {
-  return std::string(reinterpret_cast<const char*>(builder->GetBufferPointer()),
-                     builder->GetSize());
-}
-
 TEST(EncodingTest, Errors) {
   flatbuffers::FlatBufferBuilder builder;
 
@@ -215,14 +209,14 @@ TEST(EncodingTest, Errors) {
   builder.Finish(CreateTreeNodeStorage(
       builder, builder.CreateVector(std::vector<flatbuffers::Offset<EntryStorage>>()),
       create_children(2)));
-  EXPECT_FALSE(CheckValidTreeNodeSerialization(ToString(&builder)));
+  EXPECT_FALSE(CheckValidTreeNodeSerialization(convert::ToString(builder)));
 
   // A single child with index 1 is not a valid serialization.
   builder.Clear();
   builder.Finish(CreateTreeNodeStorage(
       builder, builder.CreateVector(std::vector<flatbuffers::Offset<EntryStorage>>()),
       create_children(1)));
-  EXPECT_FALSE(CheckValidTreeNodeSerialization(ToString(&builder)));
+  EXPECT_FALSE(CheckValidTreeNodeSerialization(convert::ToString(builder)));
 
   // 2 children with the same index is not a valid serialization.
   builder.Clear();
@@ -236,7 +230,7 @@ TEST(EncodingTest, Errors) {
                 KeyPriorityStorage::KeyPriorityStorage_EAGER);
           })),
       create_children(2)));
-  EXPECT_FALSE(CheckValidTreeNodeSerialization(ToString(&builder)));
+  EXPECT_FALSE(CheckValidTreeNodeSerialization(convert::ToString(builder)));
 
   // 2 entries not sorted.
   builder.Clear();
@@ -250,7 +244,7 @@ TEST(EncodingTest, Errors) {
                 KeyPriorityStorage::KeyPriorityStorage_EAGER);
           })),
       create_children(0)));
-  EXPECT_FALSE(CheckValidTreeNodeSerialization(ToString(&builder)));
+  EXPECT_FALSE(CheckValidTreeNodeSerialization(convert::ToString(builder)));
 }
 
 }  // namespace

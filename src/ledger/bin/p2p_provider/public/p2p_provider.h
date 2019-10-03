@@ -5,9 +5,9 @@
 #ifndef SRC_LEDGER_BIN_P2P_PROVIDER_PUBLIC_P2P_PROVIDER_H_
 #define SRC_LEDGER_BIN_P2P_PROVIDER_PUBLIC_P2P_PROVIDER_H_
 
+#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_provider/public/types.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace p2p_provider {
 // P2PProvider handles the peer-to-peer connections between devices.
@@ -20,7 +20,8 @@ class P2PProvider {
     // participating in the mesh when we connect to it.
     virtual void OnDeviceChange(const P2PClientId& device_name, DeviceChangeType change_type) = 0;
     // OnNewMessage is called for every message sent to this device.
-    virtual void OnNewMessage(const P2PClientId& device_name, fxl::StringView message) = 0;
+    virtual void OnNewMessage(const P2PClientId& device_name,
+                              convert::ExtendedStringView message) = 0;
   };
 
   P2PProvider() {}
@@ -31,7 +32,7 @@ class P2PProvider {
   virtual void Start(Client* client) = 0;
   // Sends the provided message |data| to |destination|. Returns true if the
   // message was sent, false if the destination is not available.
-  virtual bool SendMessage(const P2PClientId& destination, fxl::StringView data) = 0;
+  virtual bool SendMessage(const P2PClientId& destination, convert::ExtendedStringView data) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(P2PProvider);

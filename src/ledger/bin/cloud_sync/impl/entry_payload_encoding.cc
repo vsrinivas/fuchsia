@@ -20,7 +20,7 @@ std::string EncodeEntryPayload(const storage::Entry& entry,
       convert::ToFlatBufferVector(&builder,
                                   factory->ObjectIdentifierToStorageBytes(entry.object_identifier)),
       priority));
-  return std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()), builder.GetSize());
+  return convert::ToString(builder);
 }
 
 bool DecodeEntryPayload(convert::ExtendedStringView entry_id, convert::ExtendedStringView payload,

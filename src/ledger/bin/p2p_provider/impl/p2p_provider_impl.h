@@ -54,7 +54,7 @@ class P2PProviderImpl : public P2PProvider, public fuchsia::overnet::ServiceProv
 
   // P2PProvider:
   void Start(Client* client) override;
-  bool SendMessage(const P2PClientId& destination, fxl::StringView data) override;
+  bool SendMessage(const P2PClientId& destination, convert::ExtendedStringView data) override;
 
   // Overnet.ServiceProvider
   void ConnectToService(zx::channel chan) override;

@@ -45,7 +45,7 @@ int UseMMX(const char* format, ...) {
 }
 
 void RunInContext(void* data) {
-  auto runnable = reinterpret_cast<fit::function<void()>*>(data);
+  auto runnable = static_cast<fit::function<void()>*>(data);
   (*runnable)();
 }
 
@@ -99,7 +99,7 @@ struct ThreadLocalContext {
 thread_local char* ThreadLocalContext::thread_local_ptr = nullptr;
 
 void GetThreadLocalPointer(void* context) {
-  auto thread_local_context = reinterpret_cast<ThreadLocalContext*>(context);
+  auto thread_local_context = static_cast<ThreadLocalContext*>(context);
   thread_local_context->ptr = ThreadLocalContext::thread_local_ptr;
   SetContext(&thread_local_context->old_context);
 }
@@ -144,7 +144,7 @@ void TrashStack(void* context) {
     ForceSet(buffer + Fact(i));
   }
 
-  SetContext(reinterpret_cast<Context*>(context));
+  SetContext(static_cast<Context*>(context));
 }
 
 TEST(Context, MakeContextUnsafeStack) {
@@ -175,7 +175,7 @@ void CheckDistinctStack(void* context) {
   // least by 2 PAGE_SIZE, given that each stack has a guard.
   EXPECT_GE(std::abs(reinterpret_cast<intptr_t>(buff) - GetSafeStackPointer()), 2 * PAGE_SIZE);
 
-  SetContext(reinterpret_cast<Context*>(context));
+  SetContext(static_cast<Context*>(context));
 }
 
 TEST(Context, CheckStacksAreDifferent) {
@@ -195,7 +195,7 @@ TEST(Context, CheckStacksAreDifferent) {
 // Write some data to the shadow call stack.
 void TrashShadowCallStack(void* context) {
   [[maybe_unused]] volatile auto x = Fact(20);
-  SetContext(reinterpret_cast<Context*>(context));
+  SetContext(static_cast<Context*>(context));
 }
 
 TEST(Context, MakeContextShadowCallStack) {
@@ -239,7 +239,7 @@ void CheckDistinctShadowCallStack(void* context) {
   // The machine stack and shadow call stack should also be disjoint.
   EXPECT_GE(std::abs(GetSafeStackPointer() - GetShadowCallStackPointer()), 2 * PAGE_SIZE);
 
-  SetContext(reinterpret_cast<Context*>(context));
+  SetContext(static_cast<Context*>(context));
 }
 
 TEST(Context, CheckShadowCallStacksAreDifferent) {

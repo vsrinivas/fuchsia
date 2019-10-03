@@ -64,7 +64,7 @@ void PollEvents(const std::function<bool(void** tag, bool* ok)>& get_next_tag,
       FXL_LOG(ERROR) << "Failed to retrieve a tag from the completion queue (channel is dead?)";
       continue;
     }
-    auto callable = reinterpret_cast<fit::function<void(bool)>*>(tag);
+    auto callable = static_cast<fit::function<void(bool)>*>(tag);
     async::PostTask(dispatcher, [callable, ok] { (*callable)(ok); });
     tag = nullptr;
   }

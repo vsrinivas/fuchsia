@@ -58,7 +58,7 @@ std::string SerializeCommit(uint64_t generation, zx::time_utc timestamp,
   auto storage =
       CreateCommitStorage(builder, timestamp.get(), generation, root_node_storage, parents_id);
   builder.Finish(storage);
-  return std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()), builder.GetSize());
+  return convert::ToString(builder);
 }
 
 class SharedStorageBytes : public fxl::RefCountedThreadSafe<SharedStorageBytes> {

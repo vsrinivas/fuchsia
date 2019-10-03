@@ -161,7 +161,7 @@ std::string EncodeNode(uint8_t level, const std::vector<Entry>& entries,
 
   builder.Finish(CreateTreeNodeStorage(builder, entries_offsets, children_offsets, level));
 
-  return std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()), builder.GetSize());
+  return convert::ToString(builder);
 }
 
 bool DecodeNode(fxl::StringView data, ObjectIdentifierFactory* factory, uint8_t* level,
