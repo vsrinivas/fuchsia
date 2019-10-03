@@ -881,7 +881,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<display::Controller>* device_ptr) {
   return ZX_OK;
 }
 
-void Controller::DdkUnbind() {
+void Controller::DdkUnbindDeprecated() {
   {
     fbl::AutoLock lock(&mtx_);
     if (vc_client_) {
@@ -891,7 +891,7 @@ void Controller::DdkUnbind() {
       primary_client_->Close();
     }
   }
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void Controller::DdkRelease() { delete this; }

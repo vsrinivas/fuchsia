@@ -319,7 +319,7 @@ TEST_F(SdioControllerDeviceTest, DdkLifecycle) {
 
   Bind ddk;
   EXPECT_OK(dut_.AddDevice());
-  dut_.DdkUnbind();
+  dut_.DdkUnbindDeprecated();
 
   ddk.Ok();
   EXPECT_EQ(ddk.total_children(), 4);

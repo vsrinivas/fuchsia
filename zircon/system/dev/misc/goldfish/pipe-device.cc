@@ -165,7 +165,7 @@ zx_status_t PipeDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
   return ZX_OK;
 }
 
-void PipeDevice::DdkUnbind() { DdkRemove(); }
+void PipeDevice::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 void PipeDevice::DdkRelease() { delete this; }
 

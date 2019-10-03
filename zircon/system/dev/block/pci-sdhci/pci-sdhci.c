@@ -108,7 +108,7 @@ static sdhci_protocol_ops_t pci_sdhci_sdhci_proto = {
 
 static void pci_sdhci_unbind(void* ctx) {
   pci_sdhci_device_t* dev = ctx;
-  device_remove(dev->zxdev);
+  device_remove_deprecated(dev->zxdev);
 }
 
 static void pci_sdhci_release(void* ctx) {

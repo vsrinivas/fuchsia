@@ -285,12 +285,12 @@ zx_status_t UsbAudioStream::GetChannel(fidl_txn_t* txn) {
   return res;
 }
 
-void UsbAudioStream::DdkUnbind() {
+void UsbAudioStream::DdkUnbindDeprecated() {
   // Close all of our client event sources if we have not already.
   default_domain_->Deactivate();
 
   // Unpublish our device node.
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void UsbAudioStream::DdkRelease() {

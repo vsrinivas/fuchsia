@@ -1019,7 +1019,7 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-void AmlSdEmmc::DdkUnbind() { DdkRemove(); }
+void AmlSdEmmc::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 void AmlSdEmmc::DdkRelease() {
   irq_.destroy();

@@ -28,7 +28,8 @@ namespace audio {
 namespace gauss {
 
 class GaussPdmInputStream;
-using GaussPdmInputStreamBase = ddk::Device<GaussPdmInputStream, ddk::Messageable, ddk::Unbindable>;
+using GaussPdmInputStreamBase = ddk::Device<GaussPdmInputStream, ddk::Messageable,
+                                            ddk::UnbindableDeprecated>;
 
 class GaussPdmInputStream : public GaussPdmInputStreamBase,
                             public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_INPUT>,
@@ -37,7 +38,7 @@ class GaussPdmInputStream : public GaussPdmInputStreamBase,
   static zx_status_t Create(zx_device_t* parent);
 
   // DDK device implementation
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     return fuchsia_hardware_audio_Device_dispatch(this, txn, msg, &AUDIO_FIDL_THUNKS);

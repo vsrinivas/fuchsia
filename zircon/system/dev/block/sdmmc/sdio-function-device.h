@@ -16,7 +16,7 @@ namespace sdmmc {
 class SdioControllerDevice;
 
 class SdioFunctionDevice;
-using SdioFunctionDeviceType = ddk::Device<SdioFunctionDevice, ddk::Unbindable>;
+using SdioFunctionDeviceType = ddk::Device<SdioFunctionDevice, ddk::UnbindableDeprecated>;
 
 class SdioFunctionDevice : public SdioFunctionDeviceType,
                            public ddk::SdioProtocol<SdioFunctionDevice, ddk::base_protocol>,
@@ -28,7 +28,7 @@ class SdioFunctionDevice : public SdioFunctionDeviceType,
   static zx_status_t Create(zx_device_t* parent, SdioControllerDevice* sdio_parent,
                             fbl::RefPtr<SdioFunctionDevice>* out_dev);
 
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   zx_status_t AddDevice(const sdio_func_hw_info_t& hw_info, uint32_t func);

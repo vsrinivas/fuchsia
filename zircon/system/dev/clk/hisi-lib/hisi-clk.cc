@@ -150,9 +150,9 @@ zx_status_t HisiClock::ClockImplGetInput(uint32_t id, uint32_t* out) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void HisiClock::DdkUnbind() {
+void HisiClock::DdkUnbindDeprecated() {
   DeInit();
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void HisiClock::DdkRelease() { delete this; }

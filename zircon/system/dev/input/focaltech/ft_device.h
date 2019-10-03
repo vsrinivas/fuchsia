@@ -61,7 +61,7 @@ enum {
 // clang-format on
 
 namespace ft {
-class FtDevice : public ddk::Device<FtDevice, ddk::Unbindable>,
+class FtDevice : public ddk::Device<FtDevice, ddk::UnbindableDeprecated>,
                  public ddk::HidbusProtocol<FtDevice, ddk::base_protocol> {
  public:
   FtDevice(zx_device_t* device);
@@ -69,7 +69,7 @@ class FtDevice : public ddk::Device<FtDevice, ddk::Unbindable>,
   static zx_status_t Create(void* ctx, zx_device_t* device);
 
   void DdkRelease();
-  void DdkUnbind() __TA_EXCLUDES(client_lock_);
+  void DdkUnbindDeprecated() __TA_EXCLUDES(client_lock_);
 
   // Hidbus required methods
   void HidbusStop();

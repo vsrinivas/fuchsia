@@ -86,7 +86,7 @@ TEST(DwI2cTest, DdkLifecyle) {
   auto dut = tester.GetDUT();
   ASSERT_OK(dut->DdkAdd("dw-i2c"));
   ASSERT_OK(dut->Init());
-  dut->DdkUnbind();
+  dut->DdkUnbindDeprecated();
   ASSERT_TRUE(tester.ddk.Ok());
 }
 

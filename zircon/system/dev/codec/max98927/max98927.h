@@ -14,7 +14,7 @@ namespace audio {
 namespace max98927 {
 
 class Max98927Device;
-using DeviceType = ddk::Device<Max98927Device, ddk::Messageable, ddk::Unbindable>;
+using DeviceType = ddk::Device<Max98927Device, ddk::Messageable, ddk::UnbindableDeprecated>;
 
 class Max98927Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_CODEC> {
  public:
@@ -28,7 +28,7 @@ class Max98927Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_
 
   // Methods required by the ddk mixins
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
  private:

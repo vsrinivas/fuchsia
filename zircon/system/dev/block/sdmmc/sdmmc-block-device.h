@@ -23,7 +23,8 @@
 namespace sdmmc {
 
 class SdmmcBlockDevice;
-using SdmmcBlockDeviceType = ddk::Device<SdmmcBlockDevice, ddk::GetSizable, ddk::Unbindable>;
+using SdmmcBlockDeviceType = ddk::Device<SdmmcBlockDevice, ddk::GetSizable,
+                                         ddk::UnbindableDeprecated>;
 
 class SdmmcBlockDevice : public SdmmcBlockDeviceType,
                          public ddk::BlockImplProtocol<SdmmcBlockDevice, ddk::base_protocol>,
@@ -43,7 +44,7 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType,
 
   zx_status_t AddDevice();
 
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   zx_off_t DdkGetSize();

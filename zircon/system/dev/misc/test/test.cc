@@ -45,7 +45,7 @@ class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, d
   void SetChannel(zx::channel c);
 
  private:
-  // Lock that synchronizes calls to DdkRemove()
+  // Lock that synchronizes calls to DdkRemoveDeprecated()
   fbl::Mutex remove_lock_;
   bool has_been_removed_ TA_GUARDED(remove_lock_) = false;
 

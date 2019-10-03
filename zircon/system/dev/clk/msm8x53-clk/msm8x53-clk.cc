@@ -469,12 +469,12 @@ zx_status_t Msm8x53Clk::AwaitRcgEnableLocked(uint32_t rcgr_cmd_offset) {
 }
 
 zx_status_t Msm8x53Clk::Bind() { return ZX_OK; }
-void Msm8x53Clk::DdkUnbind() {
+void Msm8x53Clk::DdkUnbindDeprecated() {
   fbl::AutoLock lock(&lock_);
 
   mmio_.reset();
 
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void Msm8x53Clk::DdkRelease() { delete this; }

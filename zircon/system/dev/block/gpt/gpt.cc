@@ -172,7 +172,7 @@ void gpt_queue(void* ctx, block_op_t* bop, block_impl_queue_callback completion_
 
 void gpt_unbind(void* ctx) {
   gptpart_device_t* device = static_cast<gptpart_device_t*>(ctx);
-  device_remove(device->zxdev);
+  device_remove_deprecated(device->zxdev);
 }
 
 void gpt_release(void* ctx) {
@@ -316,7 +316,9 @@ int gpt_bind_thread(void* arg) {
   std::unique_ptr<ThreadArgs> thread_args(static_cast<ThreadArgs*>(arg));
   gptpart_device_t* first_dev = thread_args->first_device();
 
-  auto remove_first_dev = fbl::MakeAutoCall([&first_dev]() { device_remove(first_dev->zxdev); });
+  auto remove_first_dev = fbl::MakeAutoCall([&first_dev]() {
+    device_remove_deprecated(first_dev->zxdev);
+  });
 
   zx_device_t* parent = first_dev->parent;
 
@@ -472,7 +474,7 @@ zx_status_t gpt_bind(void* ctx, zx_device_t* parent) {
   thrd_t t;
   status = thrd_create_with_name(&t, gpt_bind_thread, thread_args.get(), "gpt-init");
   if (status != ZX_OK) {
-    device_remove(device->zxdev);
+    device_remove_deprecated(device->zxdev);
   } else {
     thread_args.release();
   }

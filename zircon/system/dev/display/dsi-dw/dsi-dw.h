@@ -33,7 +33,7 @@ namespace dsi_dw {
 
 class DsiDw;
 
-using DeviceType = ddk::Device<DsiDw, ddk::Unbindable>;
+using DeviceType = ddk::Device<DsiDw, ddk::UnbindableDeprecated>;
 
 class DsiDw : public DeviceType, public ddk::DsiImplProtocol<DsiDw, ddk::base_protocol> {
  public:
@@ -61,7 +61,7 @@ class DsiDw : public DeviceType, public ddk::DsiImplProtocol<DsiDw, ddk::base_pr
   // TODO(payamm): Implement BIST and test on Hikey
   zx_status_t DsiImplEnableBist(uint32_t pattern);
 
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
  private:

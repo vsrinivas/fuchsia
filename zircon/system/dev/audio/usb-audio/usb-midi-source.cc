@@ -57,12 +57,12 @@ void UsbMidiSource::ReadComplete(usb_request_t* req) {
   UpdateSignals();
 }
 
-void UsbMidiSource::DdkUnbind() {
+void UsbMidiSource::DdkUnbindDeprecated() {
   fbl::AutoLock al(&mutex_);
   dead_ = true;
 
   UpdateSignals();
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void UsbMidiSource::DdkRelease() { delete this; }

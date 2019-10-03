@@ -128,8 +128,8 @@ TEST_F(MbrDeviceTest, DdkLifecycle) {
   ASSERT_NOT_NULL(device1);
   EXPECT_OK(MbrDevice::Bind(std::move(devices[1])));
 
-  device0->DdkUnbind();
-  device1->DdkUnbind();
+  device0->DdkUnbindDeprecated();
+  device1->DdkUnbindDeprecated();
 
   EXPECT_TRUE(ddk_.Ok());
 }

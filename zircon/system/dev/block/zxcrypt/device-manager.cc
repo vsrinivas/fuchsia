@@ -62,13 +62,13 @@ zx_status_t DeviceManager::Bind() {
   return ZX_OK;
 }
 
-void DeviceManager::DdkUnbind() {
+void DeviceManager::DdkUnbindDeprecated() {
   fbl::AutoLock lock(&mtx_);
   if (state_ == kBinding) {
     state_ = kUnbinding;
   } else if (state_ == kSealed || state_ == kUnsealed) {
     state_ = kRemoved;
-    DdkRemove();
+    DdkRemoveDeprecated();
   }
 }
 

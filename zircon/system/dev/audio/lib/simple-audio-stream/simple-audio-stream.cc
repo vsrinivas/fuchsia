@@ -155,14 +155,14 @@ zx_status_t SimpleAudioStream::NotifyPosition(const audio_proto::RingBufPosition
   return rb_channel_->Write(&notif, sizeof(notif));
 }
 
-void SimpleAudioStream::DdkUnbind() {
+void SimpleAudioStream::DdkUnbindDeprecated() {
   Shutdown();
 
   // TODO(johngro): We need to signal our SimpleAudioStream owner to let them
   // know that we have been unbound and are in the process of shutting down.
 
   // Unpublish our device node.
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void SimpleAudioStream::DdkRelease() {

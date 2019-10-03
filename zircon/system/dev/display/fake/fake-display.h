@@ -26,7 +26,7 @@ namespace fake_display {
 
 class FakeDisplay;
 
-using DeviceType = ddk::Device<FakeDisplay, ddk::Unbindable>;
+using DeviceType = ddk::Device<FakeDisplay, ddk::UnbindableDeprecated>;
 
 class FakeDisplay : public DeviceType,
                     public ddk::DisplayControllerImplProtocol<FakeDisplay, ddk::base_protocol> {
@@ -60,7 +60,7 @@ class FakeDisplay : public DeviceType,
   }
 
   // Required functions for DeviceType
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
  private:

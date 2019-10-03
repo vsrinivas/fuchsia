@@ -66,13 +66,13 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
   return st;
 }
 
-void SdmmcBlockDevice::DdkUnbind() {
+void SdmmcBlockDevice::DdkUnbindDeprecated() {
   if (dead_) {
     // Already in middle of release.
     return;
   }
   dead_ = true;
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void SdmmcBlockDevice::StopWorkerThread() {

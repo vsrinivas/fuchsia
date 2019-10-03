@@ -24,7 +24,7 @@ namespace dw_i2c {
 class DwI2c;
 class DwI2cBus;
 
-using DeviceType = ddk::Device<DwI2c, ddk::Unbindable>;
+using DeviceType = ddk::Device<DwI2c, ddk::UnbindableDeprecated>;
 
 class DwI2c : public DeviceType, public ddk::I2cImplProtocol<DwI2c, ddk::base_protocol> {
  public:
@@ -38,7 +38,7 @@ class DwI2c : public DeviceType, public ddk::I2cImplProtocol<DwI2c, ddk::base_pr
   void ShutDown();
 
   // Methods required by the ddk mixins.
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   uint32_t I2cImplGetBusCount();

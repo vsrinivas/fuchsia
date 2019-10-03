@@ -16,7 +16,7 @@
 namespace eth {
 
 class AmlEthernet;
-using DeviceType = ddk::Device<AmlEthernet, ddk::Unbindable>;
+using DeviceType = ddk::Device<AmlEthernet, ddk::UnbindableDeprecated>;
 
 class AmlEthernet : public DeviceType,
                     public ddk::EthBoardProtocol<AmlEthernet, ddk::base_protocol> {
@@ -29,7 +29,7 @@ class AmlEthernet : public DeviceType,
 
   // DDK Hooks.
   void DdkRelease();
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
 
   // ETH_BOARD protocol.
   zx_status_t EthBoardResetPhy();

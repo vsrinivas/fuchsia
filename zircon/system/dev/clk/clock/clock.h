@@ -12,7 +12,7 @@
 namespace clock {
 
 class ClockDevice;
-using ClockDeviceType = ddk::Device<ClockDevice, ddk::Unbindable>;
+using ClockDeviceType = ddk::Device<ClockDevice, ddk::UnbindableDeprecated>;
 
 class ClockDevice : public ClockDeviceType,
                     public ddk::ClockProtocol<ClockDevice, ddk::base_protocol> {
@@ -22,7 +22,7 @@ class ClockDevice : public ClockDeviceType,
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   zx_status_t ClockEnable();

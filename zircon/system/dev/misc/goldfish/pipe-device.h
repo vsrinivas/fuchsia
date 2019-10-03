@@ -26,7 +26,7 @@
 namespace goldfish {
 
 class PipeDevice;
-using DeviceType = ddk::Device<PipeDevice, ddk::Unbindable, ddk::Openable>;
+using DeviceType = ddk::Device<PipeDevice, ddk::UnbindableDeprecated, ddk::Openable>;
 
 class PipeDevice : public DeviceType,
                    public ddk::GoldfishPipeProtocol<PipeDevice, ddk::base_protocol> {
@@ -40,7 +40,7 @@ class PipeDevice : public DeviceType,
 
   // Device protocol implementation.
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
   zx_status_t GoldfishPipeCreate(const goldfish_pipe_signal_value_t* cb_value, int32_t* out_id,
                                  zx::vmo* out_vmo);

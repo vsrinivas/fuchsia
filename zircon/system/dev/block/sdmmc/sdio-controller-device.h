@@ -24,7 +24,7 @@
 namespace sdmmc {
 
 class SdioControllerDevice;
-using SdioControllerDeviceType = ddk::Device<SdioControllerDevice, ddk::Unbindable>;
+using SdioControllerDeviceType = ddk::Device<SdioControllerDevice, ddk::UnbindableDeprecated>;
 
 class SdioControllerDevice : public SdioControllerDeviceType,
                              public fbl::RefCounted<SdioControllerDevice>,
@@ -40,7 +40,7 @@ class SdioControllerDevice : public SdioControllerDeviceType,
   static zx_status_t Create(zx_device_t* parent, const SdmmcDevice& sdmmc,
                             fbl::RefPtr<SdioControllerDevice>* out_dev);
 
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   zx_status_t ProbeSdio();

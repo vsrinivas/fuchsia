@@ -42,7 +42,7 @@ zx_status_t SdmmcRootDevice::Init() {
   if (rc != thrd_success) {
     zx_status_t st = thrd_status_to_zx_status(rc);
     if (!dead_) {
-      DdkRemove();
+      DdkRemoveDeprecated();
     }
     return st;
   }
@@ -56,7 +56,7 @@ int SdmmcRootDevice::WorkerThread() {
   if (st != ZX_OK) {
     zxlogf(ERROR, "sdmmc: failed to get host info\n");
     if (!dead_) {
-      DdkRemove();
+      DdkRemoveDeprecated();
     }
     return thrd_error;
   }
@@ -71,7 +71,7 @@ int SdmmcRootDevice::WorkerThread() {
   if ((st = SdmmcBlockDevice::Create(zxdev(), sdmmc, &block_dev_)) != ZX_OK) {
     zxlogf(ERROR, "sdmmc: Failed to create block device, retcode = %d\n", st);
     if (!dead_) {
-      DdkRemove();
+      DdkRemoveDeprecated();
     }
     return thrd_error;
   }
@@ -79,7 +79,7 @@ int SdmmcRootDevice::WorkerThread() {
   if ((st = SdioControllerDevice::Create(zxdev(), sdmmc, &sdio_dev_)) != ZX_OK) {
     zxlogf(ERROR, "sdmmc: Failed to create block device, retcode = %d\n", st);
     if (!dead_) {
-      DdkRemove();
+      DdkRemoveDeprecated();
     }
     return thrd_error;
   }
@@ -89,7 +89,7 @@ int SdmmcRootDevice::WorkerThread() {
   if ((st = sdmmc.SdmmcGoIdle()) != ZX_OK) {
     zxlogf(ERROR, "sdmmc: SDMMC_GO_IDLE_STATE failed, retcode = %d\n", st);
     if (!dead_) {
-      DdkRemove();
+      DdkRemoveDeprecated();
     }
     return thrd_error;
   }
@@ -101,13 +101,13 @@ int SdmmcRootDevice::WorkerThread() {
     }
 
     if (!dead_) {
-      DdkRemove();
+      DdkRemoveDeprecated();
     }
     return thrd_error;
   } else if ((st = block_dev_->ProbeSd()) != ZX_OK && (st = block_dev_->ProbeMmc()) != ZX_OK) {
     zxlogf(ERROR, "sdmmc: failed to probe\n");
     if (!dead_) {
-      DdkRemove();
+      DdkRemoveDeprecated();
     }
     return thrd_error;
   }
@@ -117,12 +117,12 @@ int SdmmcRootDevice::WorkerThread() {
   }
 
   if (!dead_) {
-    DdkRemove();
+    DdkRemoveDeprecated();
   }
   return thrd_error;
 }
 
-void SdmmcRootDevice::DdkUnbind() {
+void SdmmcRootDevice::DdkUnbindDeprecated() {
   if (dead_) {
     // Already in middle of release.
     return;
@@ -131,13 +131,13 @@ void SdmmcRootDevice::DdkUnbind() {
   dead_ = true;
 
   if (block_dev_) {
-    block_dev_->DdkRemove();
+    block_dev_->DdkRemoveDeprecated();
   }
   if (sdio_dev_) {
-    sdio_dev_->DdkRemove();
+    sdio_dev_->DdkRemoveDeprecated();
   }
 
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void SdmmcRootDevice::DdkRelease() {

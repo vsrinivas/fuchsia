@@ -165,7 +165,7 @@ class HidDeviceTest : public zxtest::Test {
   }
 
   void TearDown() override {
-    device_->DdkUnbind();
+    device_->DdkUnbindDeprecated();
     EXPECT_TRUE(ddk_.Ok());
 
     // This should delete the object, which means this test should not leak.

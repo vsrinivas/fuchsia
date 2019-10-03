@@ -155,12 +155,12 @@ zx_status_t Device::ExecuteCmdLocked(Locality loc, const uint8_t* cmd, size_t le
 
 void Device::DdkRelease() { delete this; }
 
-void Device::DdkUnbind() {
+void Device::DdkUnbindDeprecated() {
   {
     fbl::AutoLock guard(&lock_);
     ReleaseLocalityLocked(0);
   }
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 zx_status_t Device::DdkSuspend(uint32_t flags) {
@@ -191,7 +191,7 @@ zx_status_t Device::Bind() {
   thrd_t thread;
   int ret = thrd_create_with_name(&thread, InitThread, this, "tpm:slow_bind");
   if (ret != thrd_success) {
-    DdkRemove();
+    DdkRemoveDeprecated();
     return ZX_ERR_INTERNAL;
   }
   thrd_detach(thread);
@@ -231,7 +231,7 @@ zx_status_t Device::InitThread() {
   uint8_t buf[32] = {0};
   size_t bytes_read;
 
-  auto cleanup = fbl::MakeAutoCall([&] { DdkRemove(); });
+  auto cleanup = fbl::MakeAutoCall([&] { DdkRemoveDeprecated(); });
 
   zx_status_t status = Init();
   if (status != ZX_OK) {

@@ -361,15 +361,15 @@ void HidButtonsDevice::ShutDown() {
   fbl::AutoLock lock(&client_lock_);
   client_.clear();
 
-  hidbus_function_->DdkUnbind();
+  hidbus_function_->DdkUnbindDeprecated();
   hidbus_function_ = nullptr;
-  buttons_function_->DdkUnbind();
+  buttons_function_->DdkUnbindDeprecated();
   buttons_function_ = nullptr;
 }
 
-void HidButtonsDevice::DdkUnbind() {
+void HidButtonsDevice::DdkUnbindDeprecated() {
   ShutDown();
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void HidButtonsDevice::DdkRelease() { delete this; }

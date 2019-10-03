@@ -138,7 +138,7 @@ TEST(BlockDeviceTest, DdkLifetime) {
   ddk.SetProtocols(std::move(protocols));
 
   ASSERT_OK(device->Bind());
-  device->DdkUnbind();
+  device->DdkUnbindDeprecated();
   EXPECT_TRUE(ddk.Ok());
 
   // This should delete the object, which means this test should not leak.

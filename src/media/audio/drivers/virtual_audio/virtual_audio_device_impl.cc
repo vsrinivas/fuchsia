@@ -114,7 +114,7 @@ void VirtualAudioDeviceImpl::RemoveStream() {
     // task_queue_ points to. If calls to PostToDispatcher WERE still outstanding, then it would be
     // possible that Add could be called before task_queue_->Enqueue runs, causing us to erroneously
     // run a task associated with the older stream, in the context of the new stream.
-    stream_->DdkUnbind();
+    stream_->DdkUnbindDeprecated();
 
     // Now that the stream has done its shutdown, we release our reference.
     stream_ = nullptr;

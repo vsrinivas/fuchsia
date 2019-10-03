@@ -422,9 +422,9 @@ void Tcs3400Device::ShutDown() {
   }
 }
 
-void Tcs3400Device::DdkUnbind() {
+void Tcs3400Device::DdkUnbindDeprecated() {
   ShutDown();
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void Tcs3400Device::DdkRelease() { delete this; }

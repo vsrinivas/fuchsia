@@ -176,14 +176,14 @@ zx_status_t HidDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
   return ZX_OK;
 }
 
-void HidDevice::DdkUnbind() {
+void HidDevice::DdkUnbindDeprecated() {
   {
     fbl::AutoLock lock(&instance_lock_);
     for (auto& instance : instance_list_) {
       instance.CloseInstance();
     }
   }
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void HidDevice::IoQueue(void* cookie, const void* _buf, size_t len) {

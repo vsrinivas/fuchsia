@@ -130,7 +130,7 @@ TEST(EthernetTest, DdkLifecycleTest) {
   EthernetTester tester;
   eth::EthDev0* eth(new eth::EthDev0(fake_ddk::kFakeParent));
   EXPECT_OK(eth->AddDevice(), "AddDevice Failed");
-  eth->DdkUnbind();
+  eth->DdkUnbindDeprecated();
   EXPECT_TRUE(tester.ddk().Ok());
   eth->DdkRelease();
 }
@@ -141,7 +141,7 @@ TEST(EthernetTest, OpenTest) {
   EXPECT_OK(eth->AddDevice(), "AddDevice Failed");
   zx_device_t* eth_instance;
   EXPECT_OK(eth->DdkOpen(&eth_instance, 0), "Open Failed");
-  eth->DdkUnbind();
+  eth->DdkUnbindDeprecated();
   eth->DdkRelease();
 }
 

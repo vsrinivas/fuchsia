@@ -62,7 +62,7 @@ void UsbMassStorageDevice::DdkRelease() {
   delete this;
 }
 
-void UsbMassStorageDevice::DdkUnbind() {
+void UsbMassStorageDevice::DdkUnbindDeprecated() {
   // terminate our worker thread
   {
     fbl::AutoLock l(&txn_lock_);
@@ -76,14 +76,14 @@ void UsbMassStorageDevice::DdkUnbind() {
     auto dev = block_devs_[lun];
     const auto& params = dev->GetBlockDeviceParameters();
     if (params.device_added) {
-      dev->DdkRemove();
+      dev->DdkRemoveDeprecated();
     }
   }
   // Wait for remaining requests to complete
   while (pending_requests_.load()) {
     sync_completion_wait(&txn_completion_, ZX_SEC(1));
   }
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void UsbMassStorageDevice::RequestQueue(usb_request_t* request,
@@ -117,7 +117,7 @@ zx_status_t UsbMassStorageDevice::Init() {
     delete this;
     return status;
   }
-  auto call = fbl::MakeAutoCall([&]() { DdkRemove(); });
+  auto call = fbl::MakeAutoCall([&]() { DdkRemoveDeprecated(); });
   usb::UsbDevice usb(parent());
   if (!usb.is_valid()) {
     return ZX_ERR_PROTOCOL_NOT_SUPPORTED;
@@ -751,7 +751,7 @@ zx_status_t UsbMassStorageDevice::CheckLunsReady() {
         zxlogf(ERROR, "UMS: device_add for block device failed %d\n", status);
       }
     } else if (!ready && params.device_added) {
-      dev->DdkRemove();
+      dev->DdkRemoveDeprecated();
       params = dev->GetBlockDeviceParameters();
       params.device_added = false;
     }
@@ -768,7 +768,7 @@ int UsbMassStorageDevice::WorkerThread() {
     status = Inquiry(lun, inquiry_data);
     if (status < 0) {
       zxlogf(ERROR, "Inquiry failed for lun %d status: %d\n", lun, status);
-      DdkRemove();
+      DdkRemoveDeprecated();
       return status;
     }
     uint8_t rmb = inquiry_data[1] & 0x80;  // Removable Media Bit

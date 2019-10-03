@@ -93,7 +93,7 @@ static void bootpart_queue(void* ctx, block_op_t* bop, block_impl_queue_callback
 
 static void bootpart_unbind(void* ctx) {
   bootpart_device_t* device = ctx;
-  device_remove(device->zxdev);
+  device_remove_deprecated(device->zxdev);
 }
 
 static void bootpart_release(void* ctx) {
@@ -247,7 +247,7 @@ static zx_status_t bootpart_bind(void* ctx, zx_device_t* parent) {
     // add empty partition map metadata to prevent this driver from binding to its child devices
     status = device_add_metadata(device->zxdev, DEVICE_METADATA_PARTITION_MAP, NULL, 0);
     if (status != ZX_OK) {
-      device_remove(device->zxdev);
+      device_remove_deprecated(device->zxdev);
       free(device);
       continue;
     }

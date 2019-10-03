@@ -34,7 +34,7 @@ class Vim2Audio {
 
   // Ddk Hooks
   static zx_status_t DriverBind(zx_device_t* parent);
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   // Display driver hooks

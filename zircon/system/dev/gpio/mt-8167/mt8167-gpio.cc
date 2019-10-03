@@ -217,9 +217,9 @@ void Mt8167GpioDevice::ShutDown() {
   thrd_join(thread_, NULL);
 }
 
-void Mt8167GpioDevice::DdkUnbind() {
+void Mt8167GpioDevice::DdkUnbindDeprecated() {
   ShutDown();
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void Mt8167GpioDevice::DdkRelease() { delete this; }

@@ -41,7 +41,7 @@ struct BlockDeviceParameters {
 static_assert(std::has_unique_object_representations_v<BlockDeviceParameters>);
 
 class UmsBlockDevice;
-using DeviceType = ddk::Device<UmsBlockDevice, ddk::GetSizable, ddk::Unbindable>;
+using DeviceType = ddk::Device<UmsBlockDevice, ddk::GetSizable, ddk::UnbindableDeprecated>;
 class UmsBlockDevice : public DeviceType,
                        public ddk::BlockImplProtocol<UmsBlockDevice, ddk::base_protocol>,
                        public fbl::RefCounted<UmsBlockDevice> {
@@ -65,7 +65,7 @@ class UmsBlockDevice : public DeviceType,
 
   void BlockImplQueue(block_op_t* op, block_impl_queue_callback completion_cb, void* cookie);
 
-  void DdkUnbind() {}
+  void DdkUnbindDeprecated() {}
 
   const BlockDeviceParameters& GetBlockDeviceParameters() { return parameters_; }
 

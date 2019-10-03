@@ -461,7 +461,7 @@ bool UmsTestRead() {
                         parent_dev.last_transfer->data.size()));
   }
   // Unbind
-  dev.DdkUnbind();
+  dev.DdkUnbindDeprecated();
   EXPECT_EQ(4, parent_dev.block_devs);
   END_TEST;
 }
@@ -512,7 +512,7 @@ bool UmsTestWrite() {
                         transaction.op.rw.length * kBlockSize));
   }
   // Unbind
-  dev.DdkUnbind();
+  dev.DdkUnbindDeprecated();
   EXPECT_EQ(4, parent_dev.block_devs);
   END_TEST;
 }
@@ -543,7 +543,7 @@ bool UmsTestFlush() {
     EXPECT_EQ(xfer_type, parent_dev.transfer_type);
   }
   // Unbind
-  dev.DdkUnbind();
+  dev.DdkUnbindDeprecated();
   EXPECT_EQ(4, parent_dev.block_devs);
   END_TEST;
 }

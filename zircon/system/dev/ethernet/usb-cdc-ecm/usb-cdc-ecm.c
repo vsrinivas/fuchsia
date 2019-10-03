@@ -109,7 +109,7 @@ static void ecm_unbind(void* cookie) {
   }
   mtx_unlock(&ctx->tx_mutex);
 
-  device_remove(ctx->zxdev);
+  device_remove_deprecated(ctx->zxdev);
 }
 
 static void ecm_free(ecm_ctx_t* ctx) {

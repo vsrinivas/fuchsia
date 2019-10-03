@@ -147,7 +147,7 @@ zx_status_t AmlEthernet::Bind() {
   return DdkAdd("aml-ethernet", 0, props, fbl::count_of(props));
 }
 
-void AmlEthernet::DdkUnbind() { DdkRemove(); }
+void AmlEthernet::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 void AmlEthernet::DdkRelease() { delete this; }
 

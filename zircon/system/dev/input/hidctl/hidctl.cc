@@ -88,7 +88,7 @@ int hid_device_thread(void* arg) {
 
 HidDevice::HidDevice(zx_device_t* device, const fuchsia_hardware_hidctl_HidCtlConfig* config,
                      fbl::Array<const uint8_t> report_desc, zx::socket data)
-    : ddk::Device<HidDevice, ddk::Unbindable>(device),
+    : ddk::Device<HidDevice, ddk::UnbindableDeprecated>(device),
       boot_device_(config->boot_device),
       dev_class_(config->dev_class),
       report_desc_(std::move(report_desc)),
@@ -101,12 +101,12 @@ HidDevice::HidDevice(zx_device_t* device, const fuchsia_hardware_hidctl_HidCtlCo
 
 void HidDevice::DdkRelease() {
   zxlogf(TRACE, "hidctl: DdkRelease\n");
-  // Only the thread will call DdkRemove() when the loop exits. This detachs the thread before it
-  // exits, so no need to join.
+  // Only the thread will call DdkRemoveDeprecated() when the loop exits. This detachs the thread
+  // before it exits, so no need to join.
   delete this;
 }
 
-void HidDevice::DdkUnbind() {
+void HidDevice::DdkUnbindDeprecated() {
   zxlogf(TRACE, "hidctl: DdkUnbind\n");
   Shutdown();
   // The thread will call DdkRemove when it exits the loop.
@@ -243,7 +243,7 @@ int HidDevice::Thread() {
     data_.reset();
     thrd_detach(thread_);
   }
-  DdkRemove();
+  DdkRemoveDeprecated();
 
   return static_cast<int>(status);
 }

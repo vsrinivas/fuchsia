@@ -373,7 +373,9 @@ zx_status_t DWMacDevice::EthMacRegisterCallbacks(const eth_mac_callbacks_t* cbs)
 
 DWMacDevice::DWMacDevice(zx_device_t* device, pdev_protocol_t* pdev,
                          eth_board_protocol_t* eth_board)
-    : ddk::Device<DWMacDevice, ddk::Unbindable>(device), pdev_(pdev), eth_board_(eth_board) {}
+    : ddk::Device<DWMacDevice, ddk::UnbindableDeprecated>(device),
+      pdev_(pdev),
+      eth_board_(eth_board) {}
 
 void DWMacDevice::ReleaseBuffers() {
   // Unpin the memory used for the dma buffers
@@ -390,10 +392,10 @@ void DWMacDevice::DdkRelease() {
   delete this;
 }
 
-void DWMacDevice::DdkUnbind() {
+void DWMacDevice::DdkUnbindDeprecated() {
   zxlogf(INFO, "Ethernet DdkUnbind\n");
   ShutDown();
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 zx_status_t DWMacDevice::ShutDown() {

@@ -429,7 +429,7 @@ static void hci_unbind(void* ctx) {
 
   mtx_unlock(&hci->mutex);
 
-  device_remove(hci->zxdev);
+  device_remove_deprecated(hci->zxdev);
 }
 
 static void hci_release(void* ctx) {

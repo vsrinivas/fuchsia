@@ -41,7 +41,7 @@ struct ImageInfo : public fbl::DoublyLinkedListable<std::unique_ptr<ImageInfo>> 
 class AstroDisplay;
 
 // AstroDisplay will implement only a few subset of Device.
-using DeviceType = ddk::Device<AstroDisplay, ddk::Unbindable>;
+using DeviceType = ddk::Device<AstroDisplay, ddk::UnbindableDeprecated>;
 
 class AstroDisplay : public DeviceType,
                      public ddk::DisplayControllerImplProtocol<AstroDisplay, ddk::base_protocol> {
@@ -75,7 +75,7 @@ class AstroDisplay : public DeviceType,
   }
 
   // Required functions for DeviceType
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   void Dump();

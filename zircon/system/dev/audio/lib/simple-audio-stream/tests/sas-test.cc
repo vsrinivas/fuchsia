@@ -140,7 +140,7 @@ TEST(SimpleAudioTest, DdkLifeCycleTest) {
   ASSERT_NOT_NULL(stream);
   ASSERT_EQ(ZX_OK, stream->DdkSuspend(0));
   EXPECT_FALSE(tester.IsRemoved());
-  stream->DdkUnbind();
+  stream->DdkUnbindDeprecated();
   EXPECT_TRUE(tester.Ok());
 }
 

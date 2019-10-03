@@ -394,7 +394,7 @@ TEST_F(SdmmcBlockDeviceTest, ErrorsPropagate) {
 TEST_F(SdmmcBlockDeviceTest, DdkLifecycle) {
   fake_ddk::Bind ddk;
   EXPECT_OK(dut_.AddDevice());
-  dut_.DdkUnbind();
+  dut_.DdkUnbindDeprecated();
   EXPECT_TRUE(ddk.Ok());
 }
 

@@ -15,7 +15,7 @@ namespace hisi_clock {
 class Gate;
 
 class HisiClock;
-using DeviceType = ddk::Device<HisiClock, ddk::Unbindable>;
+using DeviceType = ddk::Device<HisiClock, ddk::UnbindableDeprecated>;
 
 class HisiClock : public DeviceType, public ddk::ClockImplProtocol<HisiClock, ddk::base_protocol> {
  public:
@@ -39,7 +39,7 @@ class HisiClock : public DeviceType, public ddk::ClockImplProtocol<HisiClock, dd
   zx_status_t ClockImplGetInput(uint32_t id, uint32_t* out);
 
   // Device Protocol Implementation.
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
  private:

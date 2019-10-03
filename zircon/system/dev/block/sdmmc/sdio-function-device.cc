@@ -24,13 +24,13 @@ zx_status_t SdioFunctionDevice::Create(zx_device_t* parent, SdioControllerDevice
   return ZX_OK;
 }
 
-void SdioFunctionDevice::DdkUnbind() {
+void SdioFunctionDevice::DdkUnbindDeprecated() {
   if (dead_) {
     return;
   }
 
   dead_ = true;
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void SdioFunctionDevice::DdkRelease() {

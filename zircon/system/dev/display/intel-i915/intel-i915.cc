@@ -1979,9 +1979,9 @@ bool Controller::DpcdWrite(registers::Ddi ddi, uint32_t addr, const uint8_t* buf
 
 // Ddk methods
 
-void Controller::DdkUnbind() {
-  device_remove(zxdev());
-  device_remove(zx_gpu_dev_);
+void Controller::DdkUnbindDeprecated() {
+  device_remove_deprecated(zxdev());
+  device_remove_deprecated(zx_gpu_dev_);
 
   fbl::AutoLock lock(&display_lock_);
   display_devices_.reset();
@@ -2230,7 +2230,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
   status = device_add(zxdev(), &args, &zx_gpu_dev_);
   if (status != ZX_OK) {
     LOG_ERROR("Failed to publish gpu core device (%d)\n", status);
-    device_remove(zxdev());
+    device_remove_deprecated(zxdev());
     return status;
   }
 
@@ -2240,7 +2240,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
   status = thrd_create_with_name(&init_thread, finish_init, this, "i915-init-thread");
   if (status != ZX_OK) {
     LOG_ERROR("Failed to create init thread\n");
-    device_remove(zxdev());
+    device_remove_deprecated(zxdev());
     return status;
   }
   init_thrd_started_ = true;

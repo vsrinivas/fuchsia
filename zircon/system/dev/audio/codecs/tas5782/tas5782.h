@@ -23,7 +23,7 @@
 namespace audio {
 
 class Tas5782;
-using DeviceType = ddk::Device<Tas5782, ddk::Unbindable>;
+using DeviceType = ddk::Device<Tas5782, ddk::UnbindableDeprecated>;
 
 class Tas5782 : public DeviceType,  // Not final for unit tests.
                 public ddk::CodecProtocol<Tas5782, ddk::base_protocol> {
@@ -37,9 +37,9 @@ class Tas5782 : public DeviceType,  // Not final for unit tests.
   zx_status_t Bind();
 
   void DdkRelease() { delete this; }
-  void DdkUnbind() {
+  void DdkUnbindDeprecated() {
     Shutdown();
-    DdkRemove();
+    DdkRemoveDeprecated();
   }
   zx_status_t DdkSuspend(uint32_t flags) {
     Shutdown();

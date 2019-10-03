@@ -492,7 +492,7 @@ zx_off_t VPartition::DdkGetSize() {
   return sz;
 }
 
-void VPartition::DdkUnbind() { DdkRemove(); }
+void VPartition::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 void VPartition::DdkRelease() { delete this; }
 

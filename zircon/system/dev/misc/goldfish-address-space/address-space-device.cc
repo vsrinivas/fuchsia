@@ -263,7 +263,7 @@ zx_status_t AddressSpaceDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
   return ZX_OK;
 }
 
-void AddressSpaceDevice::DdkUnbind() { DdkRemove(); }
+void AddressSpaceDevice::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 void AddressSpaceDevice::DdkRelease() { delete this; }
 

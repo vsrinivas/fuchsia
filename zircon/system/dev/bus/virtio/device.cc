@@ -32,7 +32,7 @@ Device::Device(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> ba
 
 Device::~Device() { LTRACE_ENTRY; }
 
-void Device::Unbind() { device_remove(device_); }
+void Device::Unbind() { device_remove_deprecated(device_); }
 
 void Device::Release() { backend_.reset(); }
 

@@ -22,7 +22,7 @@
 namespace gpio {
 
 class Mt8167GpioDevice;
-using DeviceType = ddk::Device<Mt8167GpioDevice, ddk::Unbindable>;
+using DeviceType = ddk::Device<Mt8167GpioDevice, ddk::UnbindableDeprecated>;
 
 class Mt8167GpioDevice : public DeviceType,
                          public ddk::GpioImplProtocol<Mt8167GpioDevice, ddk::base_protocol> {
@@ -45,7 +45,7 @@ class Mt8167GpioDevice : public DeviceType,
   zx_status_t Init();
 
   // Methods required by the ddk mixins
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   zx_status_t GpioImplConfigIn(uint32_t index, uint32_t flags);

@@ -24,7 +24,7 @@
 namespace goldfish {
 
 class Display;
-using DisplayType = ddk::Device<Display, ddk::Unbindable>;
+using DisplayType = ddk::Device<Display, ddk::UnbindableDeprecated>;
 
 class Display : public DisplayType,
                 public ddk::DisplayControllerImplProtocol<Display, ddk::base_protocol> {
@@ -38,7 +38,7 @@ class Display : public DisplayType,
   zx_status_t Bind();
 
   // Device protocol implementation.
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   // Display controller protocol implementation.

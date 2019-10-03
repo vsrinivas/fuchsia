@@ -21,13 +21,13 @@ namespace usb_hid_function {
 // device and sends fake HID report descriptors and HID reports. The tests for
 // this driver and the USB-HID driver are with the other usb-virtual-bus tests.
 class FakeUsbHidFunction;
-using DeviceType = ddk::Device<FakeUsbHidFunction, ddk::Unbindable>;
+using DeviceType = ddk::Device<FakeUsbHidFunction, ddk::UnbindableDeprecated>;
 class FakeUsbHidFunction : public DeviceType {
  public:
   FakeUsbHidFunction(zx_device_t* parent) : DeviceType(parent), function_(parent) {}
   zx_status_t Bind();
   // |ddk::Device|
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   // |ddk::Device|
   void DdkRelease();
 

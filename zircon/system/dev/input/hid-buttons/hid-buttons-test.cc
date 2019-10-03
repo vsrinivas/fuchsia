@@ -71,10 +71,10 @@ class HidButtonsDeviceTest : public HidButtonsDevice {
     }
   }
 
-  void DdkUnbind() { HidButtonsDevice::ShutDown(); DdkRemove(); }
+  void DdkUnbindDeprecated() { HidButtonsDevice::ShutDown(); DdkRemoveDeprecated(); }
   void DdkRelease() { delete this; }
 
-  void ShutDownTest() { DdkUnbind(); }
+  void ShutDownTest() { DdkUnbindDeprecated(); }
 
   void SetupGpio(zx::interrupt irq, size_t gpio_index) {
     auto* mock = gpio_mocks_[gpio_index];

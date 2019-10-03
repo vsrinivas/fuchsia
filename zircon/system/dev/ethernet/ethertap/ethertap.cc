@@ -111,7 +111,7 @@ static const fuchsia_hardware_ethertap_TapDevice_ops_t tap_device_ops_ = {
 
 TapDevice::TapDevice(zx_device_t* device, const fuchsia_hardware_ethertap_Config* config,
                      zx::channel server)
-    : ddk::Device<TapDevice, ddk::Unbindable>(device),
+    : ddk::Device<TapDevice, ddk::UnbindableDeprecated>(device),
       options_(config->options),
       features_(config->features | ETHERNET_FEATURE_SYNTH),
       mtu_(config->mtu),
@@ -132,7 +132,7 @@ void TapDevice::DdkRelease() {
   delete this;
 }
 
-void TapDevice::DdkUnbind() {
+void TapDevice::DdkUnbindDeprecated() {
   ethertap_trace("DdkUnbind\n");
   fbl::AutoLock lock(&lock_);
   zx_status_t status = channel_.signal(0, TAP_SHUTDOWN);
@@ -400,7 +400,7 @@ int TapDevice::Thread() {
     zxlogf(INFO, "ethertap: device '%s' destroyed\n", name());
     channel_.reset();
   }
-  DdkRemove();
+  DdkRemoveDeprecated();
 
   return static_cast<int>(status);
 }

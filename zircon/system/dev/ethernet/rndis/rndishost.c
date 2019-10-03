@@ -324,7 +324,7 @@ done:
 
 static void rndishost_unbind(void* ctx) {
   rndishost_t* eth = (rndishost_t*)ctx;
-  device_remove(eth->zxdev);
+  device_remove_deprecated(eth->zxdev);
 }
 
 static void rndishost_release(void* ctx) {
@@ -472,7 +472,7 @@ static int rndis_start_thread(void* arg) {
 
 fail:
   free(buf);
-  device_remove(eth->zxdev);
+  device_remove_deprecated(eth->zxdev);
   return status;
 }
 
@@ -611,7 +611,7 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
   if (ret != thrd_success) {
     eth->thread_started = false;
     mtx_unlock(&eth->mutex);
-    device_remove(eth->zxdev);
+    device_remove_deprecated(eth->zxdev);
     return ZX_ERR_NO_RESOURCES;
   }
 

@@ -20,7 +20,7 @@
 
 namespace i2c {
 
-void I2cDevice::DdkUnbind() { DdkRemove(); }
+void I2cDevice::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 void I2cDevice::DdkRelease() { delete this; }
 

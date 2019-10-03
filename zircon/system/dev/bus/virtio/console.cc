@@ -224,7 +224,9 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
 void ConsoleDevice::Unbind() {
   // Request all console connections be terminated.  Once that completes, finish
   // the unbind.
-  fs::Vfs::ShutdownCallback shutdown_cb = [this](zx_status_t status) { device_remove(device_); };
+  fs::Vfs::ShutdownCallback shutdown_cb = [this](zx_status_t status) {
+    device_remove_deprecated(device_);
+  };
   vfs_.Shutdown(std::move(shutdown_cb));
 }
 

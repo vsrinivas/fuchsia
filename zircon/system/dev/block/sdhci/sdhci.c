@@ -902,7 +902,7 @@ static void sdhci_unbind(void* ctx) {
   zx_interrupt_destroy(dev->irq_handle);
   thrd_join(dev->irq_thread, NULL);
 
-  device_remove(dev->zxdev);
+  device_remove_deprecated(dev->zxdev);
 }
 
 static void sdhci_release(void* ctx) {

@@ -212,7 +212,7 @@ zx_status_t FakeDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   return ZX_OK;
 }
 
-void FakeDisplay::DdkUnbind() { DdkRemove(); }
+void FakeDisplay::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 void FakeDisplay::DdkRelease() {
   vsync_shutdown_flag_.store(true);

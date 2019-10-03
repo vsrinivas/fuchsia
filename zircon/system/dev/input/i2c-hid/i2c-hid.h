@@ -37,7 +37,7 @@ struct I2cHidDesc {
 } __PACKED;
 
 class I2cHidbus;
-using DeviceType = ddk::Device<I2cHidbus, ddk::Unbindable>;
+using DeviceType = ddk::Device<I2cHidbus, ddk::UnbindableDeprecated>;
 
 class I2cHidbus : public DeviceType, public ddk::HidbusProtocol<I2cHidbus, ddk::base_protocol> {
  public:
@@ -63,7 +63,7 @@ class I2cHidbus : public DeviceType, public ddk::HidbusProtocol<I2cHidbus, ddk::
   zx_status_t HidbusGetProtocol(uint8_t* protocol) { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t HidbusSetProtocol(uint8_t protocol) { return ZX_OK; }
 
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
   zx_status_t Bind(ddk::I2cChannel i2c);
 

@@ -25,7 +25,7 @@ class InputReportBase {
 };
 
 class InputReport;
-using DeviceType = ddk::Device<InputReport, ddk::Unbindable, ddk::Openable>;
+using DeviceType = ddk::Device<InputReport, ddk::UnbindableDeprecated, ddk::Openable>;
 class InputReport : public DeviceType,
                     public InputReportBase,
                     ddk::HidReportListenerProtocol<InputReport>,
@@ -37,7 +37,7 @@ class InputReport : public DeviceType,
 
   zx_status_t Bind();
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease() { delete this; }
 
   void HidReportListenerReceiveReport(const uint8_t* report, size_t report_size);

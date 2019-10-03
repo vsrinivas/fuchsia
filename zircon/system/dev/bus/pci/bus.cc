@@ -56,7 +56,7 @@ zx_status_t Bus::Create(zx_device_t* parent) {
 
   if ((status = bus->Initialize()) != ZX_OK) {
     pci_errorf("failed to initialize bus driver: %d!\n", status);
-    bus->DdkRemove();
+    bus->DdkRemoveDeprecated();
     return status;
   }
 

@@ -33,7 +33,8 @@ namespace audio {
 namespace gauss {
 
 class TdmOutputStream;
-using TdmAudioStreamBase = ddk::Device<TdmOutputStream, ddk::Messageable, ddk::Unbindable>;
+using TdmAudioStreamBase = ddk::Device<TdmOutputStream, ddk::Messageable,
+                                       ddk::UnbindableDeprecated>;
 
 class TdmOutputStream : public TdmAudioStreamBase,
                         public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_OUTPUT>,
@@ -44,7 +45,7 @@ class TdmOutputStream : public TdmAudioStreamBase,
   // void PrintDebugPrefix() const;
 
   // DDK device implementation
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     return fuchsia_hardware_audio_Device_dispatch(this, txn, msg, &AUDIO_FIDL_THUNKS);

@@ -366,7 +366,7 @@ TEST(Alc5663, BindUnbind) {
   EXPECT_EQ(hardware.codec->state(), FakeAlc5663::State::kReady);
 
   // Shutdown
-  device->DdkRemove();
+  device->DdkRemoveDeprecated();
   device->DdkRelease();
   EXPECT_TRUE(hardware.fake_ddk->Ok());
 }
@@ -409,7 +409,7 @@ TEST(Alc5663, CheckClocksConfigured) {
   EXPECT_LE(clocks.clk_sys_i2s, static_cast<uint32_t>(256 * 48'000 * 1.05));
 
   // Shutdown
-  device->DdkRemove();
+  device->DdkRemoveDeprecated();
   device->DdkRelease();
   EXPECT_TRUE(hardware.fake_ddk->Ok());
 }
@@ -445,7 +445,7 @@ TEST(Alc5663, CheckOutputsEnabled) {
   EXPECT_EQ(hardware.codec->ReadRegister<HpAmpControl3Reg>().pow_reg_r_hp(), 1);
 
   // Shutdown
-  device->DdkRemove();
+  device->DdkRemoveDeprecated();
   device->DdkRelease();
   EXPECT_TRUE(hardware.fake_ddk->Ok());
 }

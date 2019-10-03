@@ -26,7 +26,7 @@ namespace eth {
 
 class Asix88179Ethernet;
 
-using DeviceType = ddk::Device<Asix88179Ethernet, ddk::Unbindable>;
+using DeviceType = ddk::Device<Asix88179Ethernet, ddk::UnbindableDeprecated>;
 
 class Asix88179Ethernet : public DeviceType,
                           public ddk::EthernetImplProtocol<Asix88179Ethernet, ddk::base_protocol> {
@@ -40,7 +40,7 @@ class Asix88179Ethernet : public DeviceType,
 
   // DDK Hooks.
   void DdkRelease();
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
 
   zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info);
   void EthernetImplStop();

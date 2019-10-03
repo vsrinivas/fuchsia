@@ -18,13 +18,13 @@
 namespace sdmmc {
 
 class SdmmcRootDevice;
-using SdmmcRootDeviceType = ddk::Device<SdmmcRootDevice, ddk::Unbindable>;
+using SdmmcRootDeviceType = ddk::Device<SdmmcRootDevice, ddk::UnbindableDeprecated>;
 
 class SdmmcRootDevice : public SdmmcRootDeviceType {
  public:
   static zx_status_t Bind(void* ctx, zx_device_t* parent);
 
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   zx_status_t Init();

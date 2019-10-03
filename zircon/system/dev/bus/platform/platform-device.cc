@@ -508,7 +508,7 @@ zx_status_t PlatformDevice::Start() {
       const auto& metadata = resources_.metadata(i);
       status = DdkAddMetadata(metadata.type, metadata.data_buffer, metadata.data_size);
       if (status != ZX_OK) {
-        DdkRemove();
+        DdkRemoveDeprecated();
         return status;
       }
     }

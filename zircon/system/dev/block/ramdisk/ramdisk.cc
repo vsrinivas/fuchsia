@@ -84,13 +84,13 @@ zx_status_t Ramdisk::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
 
 zx_off_t Ramdisk::DdkGetSize() { return block_size_ * block_count_; }
 
-void Ramdisk::DdkUnbind() {
+void Ramdisk::DdkUnbindDeprecated() {
   {
     fbl::AutoLock lock(&lock_);
     dead_ = true;
   }
   sync_completion_signal(&signal_);
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 zx_status_t Ramdisk::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {

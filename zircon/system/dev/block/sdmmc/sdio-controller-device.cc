@@ -200,7 +200,7 @@ zx_status_t SdioControllerDevice::AddDevice() {
   for (uint32_t i = 0; i < devices_.size(); i++) {
     if ((st = SdioFunctionDevice::Create(zxdev(), this, &devices_[i])) != ZX_OK) {
       if (!dead_) {
-        DdkRemove();
+        DdkRemoveDeprecated();
       }
 
       break;
@@ -210,7 +210,7 @@ zx_status_t SdioControllerDevice::AddDevice() {
   for (uint32_t i = 0; i < devices_.size(); i++) {
     if ((st = devices_[i]->AddDevice(funcs_[0].hw_info, i + 1)) != ZX_OK) {
       if (!dead_) {
-        DdkRemove();
+        DdkRemoveDeprecated();
       }
 
       break;
@@ -220,20 +220,20 @@ zx_status_t SdioControllerDevice::AddDevice() {
   return st;
 }
 
-void SdioControllerDevice::DdkUnbind() {
+void SdioControllerDevice::DdkUnbindDeprecated() {
   if (dead_) {
     return;
   }
 
   for (auto device : devices_) {
     if (device) {
-      device->DdkRemove();
+      device->DdkRemoveDeprecated();
     }
   }
   devices_.reset();
 
   dead_ = true;
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void SdioControllerDevice::StopSdioIrqThread() {

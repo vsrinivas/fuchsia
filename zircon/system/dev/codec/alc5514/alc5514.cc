@@ -64,7 +64,7 @@ void Alc5514Device::DumpRegs() {
   }
 }
 
-void Alc5514Device::DdkUnbind() {}
+void Alc5514Device::DdkUnbindDeprecated() {}
 
 void Alc5514Device::DdkRelease() { delete this; }
 

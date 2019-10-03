@@ -551,7 +551,7 @@ static void usb_ums_unbind(void* ctx) {
   cnd_signal(&ums->event);
   mtx_unlock(&ums->mtx);
   thrd_join(ums->thread, &retval);
-  device_remove(ums->zxdev);
+  device_remove_deprecated(ums->zxdev);
 }
 
 static void usb_ums_release(void* ctx) {

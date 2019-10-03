@@ -173,7 +173,7 @@ zx_status_t FakeUsbHidFunction::Bind() {
   return ZX_OK;
 }
 
-void FakeUsbHidFunction::DdkUnbind() { DdkRemove(); }
+void FakeUsbHidFunction::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 void FakeUsbHidFunction::DdkRelease() { delete this; }
 

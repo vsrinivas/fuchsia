@@ -236,9 +236,9 @@ void Cy8cmbr3108::ShutDown() {
   client_.clear();
 }
 
-void Cy8cmbr3108::DdkUnbind() {
+void Cy8cmbr3108::DdkUnbindDeprecated() {
   ShutDown();
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 void Cy8cmbr3108::DdkRelease() { delete this; }
 

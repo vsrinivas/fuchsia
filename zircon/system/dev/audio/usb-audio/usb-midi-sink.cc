@@ -48,13 +48,13 @@ void UsbMidiSink::WriteComplete(usb_request_t* req) {
   UpdateSignals();
 }
 
-void UsbMidiSink::DdkUnbind() {
+void UsbMidiSink::DdkUnbindDeprecated() {
   fbl::AutoLock al(&mutex_);
   dead_ = true;
 
   UpdateSignals();
   sync_completion_signal(&free_write_completion_);
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void UsbMidiSink::DdkRelease() { delete this; }

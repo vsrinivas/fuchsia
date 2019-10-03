@@ -29,7 +29,7 @@
 
 namespace hid_input_report_dev {
 
-void InputReport::DdkUnbind() { DdkRemove(); }
+void InputReport::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 zx_status_t InputReport::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
   auto inst = std::make_unique<InputReportInstance>(zxdev());

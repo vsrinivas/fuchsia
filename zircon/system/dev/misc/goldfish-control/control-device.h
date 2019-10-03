@@ -24,7 +24,8 @@
 namespace goldfish {
 
 class Control;
-using ControlType = ddk::Device<Control, ddk::Unbindable, ddk::Messageable, ddk::GetProtocolable>;
+using ControlType = ddk::Device<Control, ddk::UnbindableDeprecated, ddk::Messageable,
+                                ddk::GetProtocolable>;
 
 class Control : public ControlType,
                 public ddk::GoldfishControlProtocol<Control, ddk::base_protocol> {
@@ -44,7 +45,7 @@ class Control : public ControlType,
   zx_status_t FidlGetColorBuffer(zx_handle_t vmo_handle, fidl_txn_t* txn);
 
   // Device protocol implementation.
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);

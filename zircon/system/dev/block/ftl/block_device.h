@@ -43,8 +43,9 @@ struct FtlOp {
 };
 
 class BlockDevice;
-using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::Unbindable, ddk::Messageable,
-                               ddk::Suspendable, ddk::Resumable, ddk::GetProtocolable>;
+using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::UnbindableDeprecated,
+                               ddk::Messageable, ddk::Suspendable, ddk::Resumable,
+                               ddk::GetProtocolable>;
 
 // Provides the bulk of the functionality for a FTL-backed block device.
 class BlockDevice : public DeviceType,
@@ -57,7 +58,7 @@ class BlockDevice : public DeviceType,
 
   zx_status_t Bind();
   void DdkRelease() { delete this; }
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
 
   // Performs the object initialization.
   zx_status_t Init();

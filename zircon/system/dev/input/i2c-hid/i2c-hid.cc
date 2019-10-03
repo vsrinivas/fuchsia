@@ -302,9 +302,9 @@ void I2cHidbus::Shutdown() {
   }
 }
 
-void I2cHidbus::DdkUnbind() {
+void I2cHidbus::DdkUnbindDeprecated() {
   Shutdown();
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void I2cHidbus::DdkRelease() { delete this; }
@@ -380,7 +380,7 @@ zx_status_t I2cHidbus::Bind(ddk::I2cChannel i2c) {
       zxlogf(INFO, "i2c-hid: Retrying reading HID descriptor\n");
     }
     if (status != ZX_OK) {
-      dev->DdkRemove();
+      dev->DdkRemoveDeprecated();
       return thrd_error;
     }
     dev->DdkMakeVisible();
@@ -393,7 +393,7 @@ zx_status_t I2cHidbus::Bind(ddk::I2cChannel i2c) {
     // If |stop_worker_thread_| is not set, than we exited the worker thread because
     // of an error and not a shutdown. Call DdkRemove directly.
     if (!dev->stop_worker_thread_) {
-      dev->DdkRemove();
+      dev->DdkRemoveDeprecated();
       return thrd_error;
     }
     return thrd_success;
@@ -407,7 +407,7 @@ zx_status_t I2cHidbus::Bind(ddk::I2cChannel i2c) {
 
   int rc = thrd_create_with_name(&worker_thread_, worker_thread, this, "i2c-hid-worker-thread");
   if (rc != thrd_success) {
-    DdkRemove();
+    DdkRemoveDeprecated();
     return ZX_ERR_INTERNAL;
   }
 

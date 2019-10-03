@@ -18,7 +18,7 @@
 namespace tcs {
 
 class Tcs3400Device;
-using DeviceType = ddk::Device<Tcs3400Device, ddk::Unbindable>;
+using DeviceType = ddk::Device<Tcs3400Device, ddk::UnbindableDeprecated>;
 
 // Note: the TCS-3400 device is connected via i2c and is not a HID
 // device.  This driver reads a collection of data from the data and
@@ -47,7 +47,7 @@ class Tcs3400Device : public DeviceType,
   zx_status_t HidbusGetProtocol(uint8_t* protocol);
   zx_status_t HidbusSetProtocol(uint8_t protocol);
 
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
  private:

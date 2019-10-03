@@ -79,7 +79,7 @@ zx_status_t VPartitionManager::Bind(zx_device_t* dev) {
     // See comment in Load()
     if (!vpm->device_remove_.exchange(true)) {
       sync_completion_signal(&vpm->worker_completed_);
-      vpm->DdkRemove();
+      vpm->DdkRemoveDeprecated();
     }
     return ZX_ERR_NO_MEMORY;
   }
@@ -182,7 +182,7 @@ zx_status_t VPartitionManager::Load() {
       fbl::MakeAutoCall([this]() { sync_completion_signal(&worker_completed_); });
 
   auto auto_detach = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
-    // Need to release the lock before calling DdkRemove(), since it will
+    // Need to release the lock before calling DdkRemoveDeprecated(), since it will
     // free |this|.  Need to disable thread safety analysis since it doesn't
     // recognize that we were holding lock_.
     lock.release();
@@ -190,11 +190,11 @@ zx_status_t VPartitionManager::Load() {
     fprintf(stderr, "fvm: Aborting Driver Load\n");
     // DdkRemove will cause the Release() hook to be called, cleaning up our
     // state.  The exchange below is sufficient to protect against a
-    // use-after-free, since if DdkRemove() has already been called by
-    // another thread (via DdkUnbind()), the release hook will block on thread_join()
+    // use-after-free, since if DdkRemoveDeprecated() has already been called by
+    // another thread (via DdkUnbindDeprecated()), the release hook will block on thread_join()
     // until this method returns.
     if (!device_remove_.exchange(true)) {
-      DdkRemove();
+      DdkRemoveDeprecated();
     }
   });
 
@@ -546,7 +546,7 @@ zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, uint64_t vslice_
       }
 
       // Remove device, VPartition if this was a request to release all slices.
-      vp->DdkRemove();
+      vp->DdkRemoveDeprecated();
       auto entry = GetVPartEntryLocked(vp->GetEntryIndex());
       entry->Release();
       vp->KillLocked();
@@ -692,12 +692,12 @@ zx_status_t VPartitionManager::FIDLActivate(const fuchsia_hardware_block_partiti
   return fuchsia_hardware_block_volume_VolumeManagerActivate_reply(txn, status);
 }
 
-void VPartitionManager::DdkUnbind() {
+void VPartitionManager::DdkUnbindDeprecated() {
   // Wait untill all work has been completed, before removing the device.
   sync_completion_wait(&worker_completed_, zx::duration::infinite().get());
 
   if (!device_remove_.exchange(true)) {
-    DdkRemove();
+    DdkRemoveDeprecated();
   }
 }
 

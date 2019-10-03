@@ -34,14 +34,14 @@ class HidCtl : public ddk::Device<HidCtl, ddk::Messageable> {
                                        fidl_txn_t* txn);
 };
 
-class HidDevice : public ddk::Device<HidDevice, ddk::Unbindable>,
+class HidDevice : public ddk::Device<HidDevice, ddk::UnbindableDeprecated>,
                   public ddk::HidbusProtocol<HidDevice, ddk::base_protocol> {
  public:
   HidDevice(zx_device_t* device, const fuchsia_hardware_hidctl_HidCtlConfig* config,
             fbl::Array<const uint8_t> report_desc, zx::socket data);
 
   void DdkRelease();
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
 
   zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
   zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc);

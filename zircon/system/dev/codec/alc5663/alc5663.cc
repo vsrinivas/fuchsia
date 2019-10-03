@@ -383,7 +383,7 @@ void Alc5663Device::Shutdown() {
   }
 }
 
-void Alc5663Device::DdkUnbind() {}
+void Alc5663Device::DdkUnbindDeprecated() {}
 
 void Alc5663Device::DdkRelease() { delete this; }
 

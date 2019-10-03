@@ -272,7 +272,7 @@ static zx_status_t intel_serialio_i2c_remove_subordinate(intel_serialio_i2c_devi
     goto remove_subordinate_finish;
   }
 
-  status = device_remove(subordinate->zxdev);
+  status = device_remove_deprecated(subordinate->zxdev);
   ZX_DEBUG_ASSERT(status == ZX_OK);
 
   list_delete(&subordinate->subordinate_list_node);
@@ -574,7 +574,7 @@ static void intel_serialio_i2c_unbind(void* ctx) {
       thrd_join(dev->irq_thread, NULL);
     }
     if (dev->zxdev) {
-      device_remove(dev->zxdev);
+      device_remove_deprecated(dev->zxdev);
     }
   }
 }

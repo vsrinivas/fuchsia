@@ -104,13 +104,13 @@ finished:
   return GaussPdmInputStreamBase::DdkAdd(devname);
 }
 
-void GaussPdmInputStream::DdkUnbind() {
+void GaussPdmInputStream::DdkUnbindDeprecated() {
   zxlogf(DEBUG1, "%s\n", __func__);
   // Close all of our client event sources if we have not already.
   default_domain_->Deactivate();
 
   // Unpublish our device node.
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void GaussPdmInputStream::DdkRelease() {

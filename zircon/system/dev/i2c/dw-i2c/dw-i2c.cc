@@ -587,9 +587,9 @@ void DwI2c::ShutDown() {
   }
 }
 
-void DwI2c::DdkUnbind() {
+void DwI2c::DdkUnbindDeprecated() {
   ShutDown();
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void DwI2c::DdkRelease() { delete this; }

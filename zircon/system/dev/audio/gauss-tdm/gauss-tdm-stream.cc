@@ -190,7 +190,7 @@ zx_status_t TdmOutputStream::AddFormats(
   return ZX_OK;
 }
 
-void TdmOutputStream::DdkUnbind() {
+void TdmOutputStream::DdkUnbindDeprecated() {
   // Close all of our client event sources if we have not already.
   default_domain_->Deactivate();
   // Quiet the data being output on tdm
@@ -198,7 +198,7 @@ void TdmOutputStream::DdkUnbind() {
   // TODO(hollande) - implement more thorough teardown/reset of the hw state.
 
   // Unpublish our device node.
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void TdmOutputStream::DdkRelease() {

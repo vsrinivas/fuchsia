@@ -14,7 +14,7 @@ namespace audio {
 namespace alc5514 {
 
 class Alc5514Device;
-using DeviceType = ddk::Device<Alc5514Device, ddk::Unbindable>;
+using DeviceType = ddk::Device<Alc5514Device, ddk::UnbindableDeprecated>;
 
 class Alc5514Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_CODEC> {
  public:
@@ -26,7 +26,7 @@ class Alc5514Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_A
   zx_status_t Bind();
   zx_status_t Initialize();
 
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
  private:

@@ -143,7 +143,7 @@ void AmlCanvas::DdkRelease() {
   delete this;
 }
 
-void AmlCanvas::DdkUnbind() { DdkRemove(); }
+void AmlCanvas::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 // static funtion to create the canvas object and initialize its members
 zx_status_t AmlCanvas::Setup(zx_device_t* parent) {

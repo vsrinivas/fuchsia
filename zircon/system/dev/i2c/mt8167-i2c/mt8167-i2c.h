@@ -25,7 +25,7 @@
 namespace mt8167_i2c {
 
 class Mt8167I2c;
-using DeviceType = ddk::Device<Mt8167I2c, ddk::Unbindable>;
+using DeviceType = ddk::Device<Mt8167I2c, ddk::UnbindableDeprecated>;
 
 class Mt8167I2c : public DeviceType, public ddk::I2cImplProtocol<Mt8167I2c, ddk::base_protocol> {
  public:
@@ -36,7 +36,7 @@ class Mt8167I2c : public DeviceType, public ddk::I2cImplProtocol<Mt8167I2c, ddk:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Methods required by the ddk mixins.
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
   uint32_t I2cImplGetBusCount();
   zx_status_t I2cImplGetMaxTransferSize(uint32_t bus_id, size_t* out_size);

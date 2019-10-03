@@ -22,7 +22,7 @@
 #include <array>
 
 class Ssd1306;
-using DeviceType = ddk::Device<Ssd1306, ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<Ssd1306, ddk::UnbindableDeprecated, ddk::Messageable>;
 class Ssd1306 : public DeviceType,
                 public ddk::DotmatrixDisplayProtocol<Ssd1306, ddk::base_protocol> {
  public:
@@ -30,7 +30,7 @@ class Ssd1306 : public DeviceType,
 
   zx_status_t Bind();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease() { delete this; }
 
   void DotmatrixDisplayGetConfig(dotmatrix_display_config_t* out_config);
@@ -177,9 +177,9 @@ zx_status_t Ssd1306::EnableScreen() {
   return ZX_OK;
 }
 
-void Ssd1306::DdkUnbind() {
+void Ssd1306::DdkUnbindDeprecated() {
   thrd_join(enable_thread_, NULL);
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 zx_status_t Ssd1306::Bind() {

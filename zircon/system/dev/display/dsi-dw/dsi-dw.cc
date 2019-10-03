@@ -794,7 +794,7 @@ zx_status_t DsiDw::SendCmd(const mipi_dsi_cmd_t& cmd) {
   return status;
 }
 
-void DsiDw::DdkUnbind() { DdkRemove(); }
+void DsiDw::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 void DsiDw::DdkRelease() { delete this; }
 

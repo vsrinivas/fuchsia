@@ -183,9 +183,9 @@ zx_status_t MbrDevice::BlockPartitionGetName(char* out_name, size_t capacity) {
   return ZX_OK;
 }
 
-void MbrDevice::DdkUnbind() {
+void MbrDevice::DdkUnbindDeprecated() {
   sync_completion_wait(&bind_completed_, ZX_TIME_INFINITE);
-  DdkRemove();
+  DdkRemoveDeprecated();
 }
 
 void MbrDevice::DdkRelease() { delete this; }

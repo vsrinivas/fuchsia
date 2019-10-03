@@ -42,7 +42,7 @@ zx_status_t GpioDevice::GpioSetPolarity(gpio_polarity_t polarity) {
   return gpio_.SetPolarity(pin_, polarity);
 }
 
-void GpioDevice::DdkUnbind() { DdkRemove(); }
+void GpioDevice::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
 void GpioDevice::DdkRelease() { delete this; }
 
