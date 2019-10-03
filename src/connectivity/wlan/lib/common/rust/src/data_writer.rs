@@ -7,12 +7,12 @@ use {
         appendable::Appendable,
         big_endian::BigEndianU16,
         error::FrameWriteError,
-        mac::{self, FixedDataHdrFields, FrameControl, OptionalDataHdrFields, SequenceControl},
+        mac::{
+            self, FixedDataHdrFields, FrameControl, MacAddr, OptionalDataHdrFields, SequenceControl,
+        },
     },
     failure::Error,
 };
-
-type MacAddr = [u8; 6];
 
 pub fn data_hdr_client_to_ap(
     mut frame_ctrl: FrameControl,

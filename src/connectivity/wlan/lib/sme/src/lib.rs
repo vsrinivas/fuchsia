@@ -18,9 +18,9 @@ use futures::channel::mpsc;
 
 use crate::client::InfoEvent;
 use crate::timer::TimedEvent;
+use wlan_common::mac::MacAddr;
 
 pub type Ssid = Vec<u8>;
-pub type MacAddr = [u8; 6];
 
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Config {

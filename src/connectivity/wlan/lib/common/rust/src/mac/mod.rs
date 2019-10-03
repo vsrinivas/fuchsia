@@ -29,6 +29,7 @@ macro_rules! frame_len {
     };
 }
 
+// IEEE Std 802.11-2016, 9.4.1.8
 pub type Aid = u16;
 
 pub type MacAddr = [u8; 6];

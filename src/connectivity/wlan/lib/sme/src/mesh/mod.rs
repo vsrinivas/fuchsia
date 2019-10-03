@@ -12,7 +12,10 @@ use {
     futures::channel::{mpsc, oneshot},
     log::error,
     std::mem,
-    wlan_common::channel::{Cbw, Channel},
+    wlan_common::{
+        channel::{Cbw, Channel},
+        mac::Aid,
+    },
 };
 
 const DEFAULT_BEACON_PERIOD: u16 = 1000;
@@ -287,7 +290,7 @@ fn create_peering_params(
     device_info: &DeviceInfo,
     config: &Config,
     peer: &fidl_mlme::MeshPeeringCommon,
-    local_aid: u16,
+    local_aid: Aid,
 ) -> Option<fidl_mlme::MeshPeeringParams> {
     let band_caps = match get_device_band_info(device_info, config.channel) {
         Some(x) => x,
@@ -352,5 +355,4 @@ mod tests {
         );
         assert_eq!(Ok(()), validate_config(&Config { mesh_id: vec![], channel: 40 }));
     }
-
 }

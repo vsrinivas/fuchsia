@@ -5,10 +5,8 @@
 use crate::{
     appendable::Appendable,
     error::FrameWriteError,
-    mac::{self, FrameControl, HtControl, MgmtHdr, SequenceControl},
+    mac::{self, FrameControl, HtControl, MacAddr, MgmtHdr, SequenceControl},
 };
-
-type MacAddr = [u8; 6];
 
 pub fn mgmt_hdr_to_ap(
     frame_ctrl: FrameControl,

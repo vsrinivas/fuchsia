@@ -4,8 +4,8 @@
 
 use {
     crate::mac::{
-        FrameControl, HtControl, MacAddr, OptionalField, Presence, ReasonCode, SequenceControl,
-        StatusCode,
+        Aid, FrameControl, HtControl, MacAddr, OptionalField, Presence, ReasonCode,
+        SequenceControl, StatusCode,
     },
     wlan_bitfield::bitfield,
     zerocopy::{AsBytes, FromBytes, Unaligned},
@@ -147,5 +147,5 @@ pub struct AssocRespHdr {
     // IEEE Std 802.11-2016, 9.4.1.4
     pub capabilities: CapabilityInfo,
     pub status_code: StatusCode,
-    pub aid: u16,
+    pub aid: Aid,
 }

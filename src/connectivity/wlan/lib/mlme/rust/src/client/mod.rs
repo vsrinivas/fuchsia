@@ -20,7 +20,7 @@ use {
         big_endian::BigEndianU16,
         buffer_writer::BufferWriter,
         frame_len,
-        mac::{self, Aid, OptionalField, Presence},
+        mac::{self, Aid, MacAddr, OptionalField, Presence},
         sequence::SequenceManager,
     },
     zerocopy::ByteSlice,
@@ -28,7 +28,6 @@ use {
 
 pub use utils::*;
 
-type MacAddr = [u8; 6];
 /// Maximum size of EAPOL frames forwarded to SME.
 /// TODO(34845): Evaluate whether EAPOL size restriction is needed.
 const MAX_EAPOL_FRAME_LEN: usize = 255;

@@ -11,14 +11,12 @@ use {
         big_endian::BigEndianU16,
         buffer_writer::BufferWriter,
         data_writer,
-        mac::{self, Aid, OptionalField},
+        mac::{self, Aid, MacAddr, OptionalField},
         mgmt_writer,
         sequence::SequenceManager,
     },
     zerocopy::ByteSlice,
 };
-
-type MacAddr = [u8; 6];
 
 pub fn write_open_auth_frame<B: Appendable>(
     buf: &mut B,
