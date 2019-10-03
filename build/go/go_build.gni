@@ -96,10 +96,11 @@ template("go_build") {
       "//build/go/gen_library_metadata.py",
     ]
 
-    godepfile = "//prebuilt/tools/godepfile/${host_platform}/godepfile"
+    godepfile = "$host_out_dir/godepfile"
     inputs = [
       godepfile,
     ]
+    deps += [ "//tools/build/godepfile($host_toolchain)" ]
 
     args = [
       "--godepfile",

@@ -74,7 +74,7 @@ class TestHost(unittest.TestCase):
             return
         platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
         executable = Host.join(
-            'prebuilt', 'tools', 'symbolize', platform, 'symbolize')
+            host.get_host_out_dir(), 'symbolize')
         symbolizer = Host.join(
             'prebuilt', 'third_party', 'clang', platform, 'bin',
             'llvm-symbolizer')
@@ -129,7 +129,7 @@ class TestHost(unittest.TestCase):
         zxtools = Host.join(build_dir + '.zircon', 'tools')
         platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
         executable = Host.join(
-            'prebuilt', 'tools', 'symbolize', platform, 'symbolize')
+            host.get_host_out_dir(), 'symbolize')
         symbolizer = Host.join(
             'prebuilt', 'third_party', 'clang', platform, 'bin',
             'llvm-symbolizer')

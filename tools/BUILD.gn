@@ -12,9 +12,9 @@ group("tools") {
     "//tools/fidl/fidldoc($host_toolchain)",
     "//tools/fidlcat:fidlcat_host",
     "//tools/kazoo:kazoo_host",
-    "//tools/net:tools($host_toolchain)",
     "//tools/make-efi:host",
     "//tools/make-fuchsia-vol:host",
+    "//tools/net:tools($host_toolchain)",
   ]
 }
 
@@ -26,8 +26,8 @@ group("infratools") {
   toolchains = []
   if (host_os == "linux") {
     toolchains += [
-      linux_arm64_toolchain,
-      linux_x64_toolchain,
+      host_arm64_toolchain,
+      host_x64_toolchain,
     ]
   } else if (host_os == "mac") {
     toolchains += [ host_toolchain ]

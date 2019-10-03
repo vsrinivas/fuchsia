@@ -45,7 +45,7 @@ if [[ ! -x "$PREBUILT_DART" ]]; then
   exit 1
 fi
 
-DEV_FINDER="${PREBUILT_TOOLS_DIR}/dev_finder/${HOST_PLATFORM}/dev_finder"
+DEV_FINDER="${HOST_OUT_DIR}/dev_finder"
 
 FUCHSIA_ATTACH_BIN="${FUCHSIA_BUILD_DIR}/host_x64/dart-tools/fuchsia_attach"
 

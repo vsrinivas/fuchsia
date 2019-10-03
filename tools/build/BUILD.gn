@@ -7,7 +7,7 @@ group("tools") {
 
   public_deps = [
     "//tools/build/gndoc",
-    "//tools/build/godepfile",
+    "//tools/build/godepfile($host_toolchain)",
     "//tools/build/ninjatrace",
   ]
 }

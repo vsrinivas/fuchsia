@@ -62,5 +62,8 @@ template("sdk_prebuilt_executable") {
     }
 
     non_sdk_deps = [ ":$main_target_name" ]
+    if (defined(invoker.non_sdk_deps)) {
+      non_sdk_deps += invoker.non_sdk_deps
+    }
   }
 }

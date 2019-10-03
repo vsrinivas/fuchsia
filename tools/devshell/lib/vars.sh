@@ -43,7 +43,7 @@ function fx-symbolize {
   if [[ $# -gt 0 ]]; then
     idstxt=(-ids-rel -ids "$1")
   fi
-  local symbolize="${PREBUILT_TOOLS_DIR}/symbolize/${HOST_PLATFORM}/symbolize"
+  local symbolize="${HOST_OUT_DIR}/symbolize"
   local llvm_symbolizer="${PREBUILT_CLANG_DIR}/bin/llvm-symbolizer"
   local toolchain_dir="${PREBUILT_CLANG_DIR}/lib/debug/.build-id"
   local prebuilt_build_ids_dir="${FUCHSIA_BUILD_DIR}/gen/build/gn/prebuilt_build_ids"
