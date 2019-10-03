@@ -20,5 +20,22 @@ TEST(DestructionSentinel, CheckOnDestruction) {
       [&destruction_sentinel] { destruction_sentinel.reset(); }));
 }
 
+TEST(DestructionSentinel, CheckReEntrancy) {
+  auto destruction_sentinel = std::make_unique<callback::DestructionSentinel>();
+  EXPECT_FALSE(destruction_sentinel->DestructedWhile(
+      [&destruction_sentinel] { EXPECT_FALSE(destruction_sentinel->DestructedWhile([] {})); }));
+
+  EXPECT_TRUE(destruction_sentinel->DestructedWhile([&destruction_sentinel] {
+    EXPECT_TRUE(destruction_sentinel->DestructedWhile(
+        [&destruction_sentinel] { destruction_sentinel.reset(); }));
+  }));
+
+  destruction_sentinel = std::make_unique<callback::DestructionSentinel>();
+  EXPECT_TRUE(destruction_sentinel->DestructedWhile([&destruction_sentinel] {
+    EXPECT_FALSE(destruction_sentinel->DestructedWhile([] {}));
+    destruction_sentinel.reset();
+  }));
+}
+
 }  // namespace
 }  // namespace callback
