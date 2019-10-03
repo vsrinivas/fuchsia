@@ -159,6 +159,7 @@ source_set("get_ledger") {
   ]
 
   deps = [
+    "//garnet/public/lib/svc/cpp",
     "//src/ledger/bin/fidl",
     "//src/lib/callback",
   ]

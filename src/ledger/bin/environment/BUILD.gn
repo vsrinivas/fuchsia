@@ -42,6 +42,7 @@ source_set("unittests") {
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/timekeeper:testing",
     "//peridot/lib/rng:testing",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl",
   ]
 

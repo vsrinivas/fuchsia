@@ -31,6 +31,7 @@ source_set("testing") {
 
   deps = [
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/svc/cpp",
     "//src/lib/fxl",
   ]
 }
