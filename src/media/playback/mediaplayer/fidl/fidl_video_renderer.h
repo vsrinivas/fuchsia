@@ -187,7 +187,7 @@ class FidlVideoRenderer : public VideoRenderer {
   bool have_valid_image_info() { return image_info_.width != 0 && image_info_.height != 0; }
 
   sys::ComponentContext* component_context_;
-  fidl::InterfacePtr<fuchsia::ui::scenic::Scenic> scenic_;
+  fuchsia::ui::scenic::ScenicPtr scenic_;
 
   std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
   bool input_connection_ready_ = false;

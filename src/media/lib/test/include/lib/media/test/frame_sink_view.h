@@ -51,7 +51,7 @@ class FrameSinkView : public scenic::BaseView {
 
   scenic::ShapeNode node_;
 
-  fidl::InterfacePtr<fuchsia::images::ImagePipe> image_pipe_;
+  fuchsia::images::ImagePipePtr image_pipe_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FrameSinkView);
 };

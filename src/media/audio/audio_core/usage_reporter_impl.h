@@ -21,7 +21,7 @@ class UsageReporterImpl : public AudioAdmin::PolicyActionReporter,
 
  private:
   struct WatcherSet {
-    std::vector<fidl::InterfacePtr<fuchsia::media::UsageWatcher>> watchers;
+    std::vector<fuchsia::media::UsageWatcherPtr> watchers;
     fuchsia::media::UsageState cached_state = fuchsia::media::UsageState::WithUnadjusted({});
   };
 
