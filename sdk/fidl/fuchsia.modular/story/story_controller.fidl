@@ -72,24 +72,3 @@ protocol StoryWatcher {
     /// DEPRECATED
     OnModuleFocused(vector<string> module_path);
 };
-
-/// Implemented by the client calling StoryController.GetActiveLinks().
-///
-/// DEPRECATED: StoryController is only to be used for Story concepts
-/// (metadata about, and requesting changes to runtime state).
-protocol StoryLinksWatcher {
-    /// Called when a link becomes active in the story, i.e. when it is loaded into
-    /// memory and connected with modules and watchers. After this notification,
-    /// the Link can be obtained with GetLink() and further notifications can be
-    /// obtained from watchers on the Link and connection error handlers on the
-    /// LinkWatcher.
-    ///
-    /// Note that the Link remains active until there are no connections to it
-    /// left. Hence in order to obtain a notification when the Link becomes
-    /// inactive, a client must give up the Link connection after registering a
-    /// LinkWatcher, and listen for the LinkWatcher connection to go down.
-    ///
-    /// This is EXPERIMENTAL. We certainly can make this simpler once we know it is
-    /// what we need.
-    OnNewLink(LinkPath link_path);
-};
