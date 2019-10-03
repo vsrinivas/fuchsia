@@ -209,7 +209,6 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
   }
 
   info.gain.SetDestGain(Gain::kUnityGainDb);
-  info.gain.SetDestMute(false);
   auto width = mixer->pos_filter_width();
 
   for (uint32_t i = 0; i < kNumMixerProfilerRuns; ++i) {

@@ -148,9 +148,12 @@ zx_status_t AudioOutput::InitializeSourceLink(const fbl::RefPtr<AudioLink>& link
     AudioDeviceSettings::GainState cur_gain_state;
     settings->SnapshotGainState(&cur_gain_state);
 
-    mix_bookkeeping->gain.SetDestMute(cur_gain_state.muted);
-    mix_bookkeeping->gain.SetDestGain(cur_gain_state.gain_db);
+    mix_bookkeeping->gain.SetDestGain(
+        cur_gain_state.muted
+            ? fuchsia::media::audio::MUTED_GAIN_DB
+            : fbl::clamp(cur_gain_state.gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
   }
+
   // Settings should exist but if they don't, we use default DestGain (Unity).
 
   // Things went well. Stash a reference to our bookkeeping and get out.

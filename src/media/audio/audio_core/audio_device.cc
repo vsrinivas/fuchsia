@@ -76,9 +76,9 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_
     fbl::AutoLock links_lock(&links_lock_);
     for (auto& link : source_links_) {
       if (link.GetSource()->type() == AudioObject::Type::AudioRenderer) {
-        link.bookkeeping()->gain.SetDestMute(limited.flags &
-                                             fuchsia::media::AudioGainInfoFlag_Mute);
-        link.bookkeeping()->gain.SetDestGain(limited.gain_db);
+        const auto muted = limited.flags & fuchsia::media::AudioGainInfoFlag_Mute;
+        link.bookkeeping()->gain.SetDestGain(muted ? fuchsia::media::audio::MUTED_GAIN_DB
+                                                   : limited.gain_db);
       }
     }
   } else {

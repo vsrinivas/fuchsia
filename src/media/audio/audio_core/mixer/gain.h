@@ -144,13 +144,6 @@ class Gain {
     }
   }
 
-  void SetDestMute(bool muted) {
-    dest_mute_ = muted;
-    if constexpr (kVerboseMuteDebug) {
-      FXL_LOG(INFO) << "Gain(" << this << "): SetDestMute(" << muted << ")";
-    }
-  }
-
   // Calculate the stream's gain-scale, from cached source and dest values.
   AScale GetGainScale() {
     return GetGainScale(target_src_gain_db_.load(), target_dest_gain_db_.load());
@@ -167,13 +160,12 @@ class Gain {
   bool IsUnity() {
     float temp_db = target_src_gain_db_.load() + target_dest_gain_db_.load();
 
-    return (temp_db == 0) && !src_mute_ && !dest_mute_ && !IsRamping();
+    return (temp_db == 0) && !src_mute_ && !IsRamping();
   }
 
   bool IsSilent() {
-    return src_mute_ || dest_mute_ ||
-           (IsSilentNow() && (!IsRamping() || start_src_gain_db_ >= end_src_gain_db_ ||
-                              end_src_gain_db_ <= kMinGainDb));
+    return src_mute_ || (IsSilentNow() && (!IsRamping() || start_src_gain_db_ >= end_src_gain_db_ ||
+                                           end_src_gain_db_ <= kMinGainDb));
   }
 
   // Note: a Gain object can be considered "ramping" even if it is Muted.
@@ -200,7 +192,6 @@ class Gain {
   float current_src_gain_db_ = kUnityGainDb;
   bool src_mute_ = false;
   float current_dest_gain_db_ = kUnityGainDb;
-  bool dest_mute_ = false;
   AScale combined_gain_scale_ = kUnityScale;
 
   float start_src_scale_ = kUnityScale;

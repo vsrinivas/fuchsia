@@ -88,7 +88,7 @@ void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
   FXL_CHECK(scale_arr != nullptr);
 
   AScale scale;
-  if (src_mute_ || dest_mute_ || !IsRamping()) {
+  if (src_mute_ || !IsRamping()) {
     // Gain is flat for this mix job; retrieve gainscale once and set them all.
     scale = GetGainScale();
     for (uint32_t idx = 0; idx < num_frames; ++idx) {
@@ -121,7 +121,7 @@ void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
 // dB. Optimize to avoid doing the full calculation unless we must.
 Gain::AScale Gain::GetGainScale(float src_gain_db, float dest_gain_db) {
   TRACE_DURATION("audio", "Gain::GetGainScale");
-  if (src_mute_ || dest_mute_) {
+  if (src_mute_) {
     return kMuteScale;
   }
 

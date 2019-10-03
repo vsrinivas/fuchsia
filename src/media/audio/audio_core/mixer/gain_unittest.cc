@@ -206,15 +206,6 @@ TEST_F(MuteTest, SourceGainThenMute) {
   gain_.SetSourceMute(false);
   EXPECT_GT(gain_.GetGainScale(), Gain::kUnityScale);
   EXPECT_FALSE(gain_.IsSilent());
-
-  gain_.SetDestMute(true);
-  EXPECT_FLOAT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
-  EXPECT_FALSE(gain_.IsUnity());
-  EXPECT_TRUE(gain_.IsSilent());
-
-  gain_.SetDestMute(false);
-  EXPECT_GT(gain_.GetGainScale(), Gain::kUnityScale);
-  EXPECT_FALSE(gain_.IsSilent());
 }
 
 TEST_F(MuteTest, DestGainThenMute) {
@@ -226,40 +217,10 @@ TEST_F(MuteTest, DestGainThenMute) {
   EXPECT_FLOAT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsSilent());
-
-  gain_.SetDestMute(true);
-  EXPECT_FLOAT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
-  EXPECT_TRUE(gain_.IsSilent());
-
-  gain_.SetSourceMute(false);
-  EXPECT_FLOAT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
-  EXPECT_TRUE(gain_.IsSilent());
-
-  gain_.SetDestMute(false);
-  EXPECT_GT(gain_.GetGainScale(), Gain::kUnityScale);
-  EXPECT_FALSE(gain_.IsUnity());
-  EXPECT_FALSE(gain_.IsSilent());
 }
 
 TEST_F(MuteTest, SourceMuteThenGain) {
   gain_.SetSourceMute(true);
-  EXPECT_FLOAT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
-  EXPECT_FALSE(gain_.IsUnity());
-  EXPECT_TRUE(gain_.IsSilent());
-
-  gain_.SetDestGain(Gain::kMaxGainDb);
-  EXPECT_TRUE(gain_.IsSilent());
-
-  gain_.SetSourceGain(Gain::kMinGainDb);
-  EXPECT_TRUE(gain_.IsSilent());
-
-  gain_.SetSourceGain(Gain::kUnityGainDb);
-  EXPECT_FLOAT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
-  EXPECT_TRUE(gain_.IsSilent());
-}
-
-TEST_F(MuteTest, DestMuteThenGain) {
-  gain_.SetDestMute(true);
   EXPECT_FLOAT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsSilent());
@@ -379,26 +340,9 @@ TEST_F(RampTest, SourceMuteRampIsRampingButSilent) {
   EXPECT_TRUE(gain_.IsSilent());
 }
 
-TEST_F(RampTest, DestMuteRampIsRampingButSilent) {
-  gain_.SetDestMute(true);
-  gain_.SetSourceGainWithRamp(10.0f, ZX_MSEC(5));
-  EXPECT_TRUE(gain_.IsRamping());
-  EXPECT_FALSE(gain_.IsUnity());
-  EXPECT_TRUE(gain_.IsSilent());
-}
-
 TEST_F(RampTest, RampSourceMuteIsRampingButSilent) {
   gain_.SetSourceGainWithRamp(-20.0f, ZX_MSEC(9));
   gain_.SetSourceMute(true);
-
-  EXPECT_TRUE(gain_.IsRamping());
-  EXPECT_FALSE(gain_.IsUnity());
-  EXPECT_TRUE(gain_.IsSilent());
-}
-
-TEST_F(RampTest, RampDestMuteIsRampingButSilent) {
-  gain_.SetSourceGainWithRamp(-20.0f, ZX_MSEC(9));
-  gain_.SetDestMute(true);
 
   EXPECT_TRUE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsUnity());
