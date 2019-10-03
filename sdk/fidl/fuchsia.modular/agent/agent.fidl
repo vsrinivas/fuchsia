@@ -71,5 +71,6 @@ protocol Agent {
     /// down the entire Agent instance. Instead, we should cap task length with
     /// strategies like budgets. Also, the Task should likely have its own
     /// connection that allows for more signalling.
+    [Transitional]
     RunTask(string task_id) -> ();
 };
