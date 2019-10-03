@@ -42,7 +42,6 @@ group("tests") {
     "mpmc:tests",
     "process_builder:tests",
     "rust_backtrace:tests",
-    "streammap:tests",
     "test_util:tests",
     "ui:tests",
     "waitgroup:tests",
