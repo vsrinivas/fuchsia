@@ -18,6 +18,8 @@
 
 namespace fidl_codec {
 
+class Visitor;
+
 // Base class for all the fields we can find within a message.
 class Field {
  public:
@@ -43,13 +45,12 @@ class Field {
   // Decode the extra content of the field (in a secondary object).
   virtual void DecodeContent(MessageDecoder* decoder, uint64_t offset) = 0;
 
-  // Extract the JSON for this field.
-  virtual void ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                           rapidjson::Value& result) const;
-
   // Pretty print of the field.
   virtual void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header,
                            int tabs, int remaining_size, int max_line_size) const = 0;
+
+  // Use a visitor on this field;
+  virtual void Visit(Visitor* visitor) const = 0;
 
  private:
   const std::string name_;
@@ -65,6 +66,8 @@ class NullableField : public Field {
 
   bool DecodeNullable(MessageDecoder* decoder, uint64_t offset, uint64_t size);
 
+  void Visit(Visitor* visitor) const override;
+
  private:
   bool is_null_ = false;
 };
@@ -78,6 +81,8 @@ class InlineField : public Field {
   const uint8_t* data() const { return data_; }
 
   void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
+
+  void Visit(Visitor* visitor) const override;
 
  private:
   const uint8_t* const data_;
@@ -93,6 +98,8 @@ class RawField : public InlineField {
 
   void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
                    int remaining_size, int max_line_size) const override;
+
+  void Visit(Visitor* visitor) const override;
 
  private:
   const uint64_t size_;
@@ -126,6 +133,8 @@ class NumericField : public InlineField {
          << colors.reset;
     }
   }
+
+  void Visit(Visitor* visitor) const override;
 };
 
 // A string field.
@@ -134,15 +143,17 @@ class StringField : public NullableField {
   StringField(std::string_view name, const Type* type, uint64_t string_length)
       : NullableField(name, type), string_length_(string_length) {}
 
+  uint64_t string_length() const { return string_length_; }
+  const uint8_t* data() const { return data_; }
+
   int DisplaySize(int remaining_size) const override;
 
   void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
-  void ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                   rapidjson::Value& result) const override;
-
   void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
                    int remaining_size, int max_line_size) const override;
+
+  void Visit(Visitor* visitor) const override;
 
  private:
   const uint64_t string_length_;
@@ -159,6 +170,8 @@ class BoolField : public InlineField {
 
   void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
                    int remaining_size, int max_line_size) const override;
+
+  void Visit(Visitor* visitor) const override;
 };
 
 // An object. This represents a struct, a request or a response.
@@ -167,17 +180,21 @@ class Object : public NullableField {
   Object(std::string_view name, const Type* type, const Struct& struct_definition)
       : NullableField(name, type), struct_definition_(struct_definition) {}
 
+  const std::vector<std::unique_ptr<Field>>& fields() const { return fields_; }
+
   int DisplaySize(int remaining_size) const override;
 
   void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
   void DecodeAt(MessageDecoder* decoder, uint64_t base_offset);
 
-  void ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                   rapidjson::Value& result) const override;
-
   void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
                    int remaining_size, int max_line_size) const override;
+
+  void Visit(Visitor* visitor) const override;
+
+  // Extract the JSON for this object.
+  void ExtractJson(rapidjson::Document::AllocatorType& allocator, rapidjson::Value& result) const;
 
  private:
   const Struct& struct_definition_;
@@ -200,11 +217,10 @@ class EnvelopeField : public NullableField {
 
   void DecodeAt(MessageDecoder* decoder, uint64_t base_offset);
 
-  void ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                   rapidjson::Value& result) const override;
-
   void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
                    int remaining_size, int max_line_size) const override;
+
+  void Visit(Visitor* visitor) const override;
 
  private:
   uint32_t num_bytes_ = 0;
@@ -218,17 +234,18 @@ class TableField : public NullableField {
   TableField(std::string_view name, const Type* type, const Table& table_definition,
              uint64_t envelope_count);
 
+  const std::vector<std::unique_ptr<EnvelopeField>>& envelopes() const { return envelopes_; }
+
   int DisplaySize(int remaining_size) const override;
 
   void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
   void DecodeAt(MessageDecoder* decoder, uint64_t base_offset);
 
-  void ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                   rapidjson::Value& result) const override;
-
   void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
                    int remaining_size, int max_line_size) const override;
+
+  void Visit(Visitor* visitor) const override;
 
  private:
   const Table& table_definition_;
@@ -242,6 +259,7 @@ class UnionField : public NullableField {
   UnionField(std::string_view name, const Type* type, const Union& union_definition)
       : NullableField(name, type), union_definition_(union_definition) {}
 
+  const std::unique_ptr<Field>& field() const { return field_; }
   void set_field(std::unique_ptr<Field> field) { field_ = std::move(field); }
 
   int DisplaySize(int remaining_size) const override;
@@ -250,11 +268,10 @@ class UnionField : public NullableField {
 
   void DecodeAt(MessageDecoder* decoder, uint64_t base_offset);
 
-  void ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                   rapidjson::Value& result) const override;
-
   void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
                    int remaining_size, int max_line_size) const override;
+
+  void Visit(Visitor* visitor) const override;
 
  private:
   const Union& union_definition_;
@@ -266,6 +283,8 @@ class XUnionField : public UnionField {
  public:
   XUnionField(std::string_view name, const Type* type, const XUnion& xunion_definition)
       : UnionField(name, type, xunion_definition) {}
+
+  void Visit(Visitor* visitor) const override;
 };
 
 // An array.
@@ -273,17 +292,18 @@ class ArrayField : public Field {
  public:
   ArrayField(std::string_view name, const Type* type) : Field(name, type) {}
 
+  const std::vector<std::unique_ptr<Field>>& fields() const { return fields_; }
+
   void AddField(std::unique_ptr<Field> field) { fields_.push_back(std::move(field)); }
 
   int DisplaySize(int remaining_size) const override;
 
   void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
-  void ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                   rapidjson::Value& result) const override;
-
   void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
                    int remaining_size, int max_line_size) const override;
+
+  void Visit(Visitor* visitor) const override;
 
  private:
   std::vector<std::unique_ptr<Field>> fields_;
@@ -295,15 +315,16 @@ class VectorField : public NullableField {
   VectorField(std::string_view name, const Type* type, uint64_t size, const Type* component_type)
       : NullableField(name, type), size_(size), component_type_(component_type) {}
 
+  const std::vector<std::unique_ptr<Field>>& fields() const { return fields_; }
+
   int DisplaySize(int remaining_size) const override;
 
   void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
-  void ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                   rapidjson::Value& result) const override;
-
   void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
                    int remaining_size, int max_line_size) const override;
+
+  void Visit(Visitor* visitor) const override;
 
  private:
   const uint64_t size_;
@@ -320,13 +341,14 @@ class EnumField : public InlineField {
             const Enum& enum_definition)
       : InlineField(name, type, data), enum_definition_(enum_definition) {}
 
-  int DisplaySize(int remaining_size) const override;
+  const Enum& enum_definition() const { return enum_definition_; };
 
-  void ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                   rapidjson::Value& result) const override;
+  int DisplaySize(int remaining_size) const override;
 
   void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
                    int remaining_size, int max_line_size) const override;
+
+  void Visit(Visitor* visitor) const override;
 
  private:
   const Enum& enum_definition_;
@@ -344,6 +366,8 @@ class HandleField : public Field {
 
   void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
                    int remaining_size, int max_line_size) const override;
+
+  void Visit(Visitor* visitor) const override;
 
  private:
   const zx_handle_info_t handle_;

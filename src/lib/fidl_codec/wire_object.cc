@@ -14,12 +14,13 @@
 #include "src/lib/fidl_codec/colors.h"
 #include "src/lib/fidl_codec/display_handle.h"
 #include "src/lib/fidl_codec/library_loader.h"
+#include "src/lib/fidl_codec/visitor.h"
 #include "src/lib/fidl_codec/wire_types.h"
 
 namespace fidl_codec {
 
-#define kInvalid "invalid"
-#define kNull "null"
+constexpr char kInvalid[] = "invalid";
+constexpr char kNull[] = "null";
 
 const Colors WithoutColors("", "", "", "", "", "");
 const Colors WithColors(/*new_reset=*/"\u001b[0m", /*new_red=*/"\u001b[31m",
@@ -27,12 +28,115 @@ const Colors WithColors(/*new_reset=*/"\u001b[0m", /*new_red=*/"\u001b[31m",
                         /*new_white_on_magenta=*/"\u001b[45m\u001b[37m",
                         /*new_yellow_background=*/"\u001b[103m");
 
-void Field::ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                        rapidjson::Value& result) const {
-  std::stringstream ss;
-  PrettyPrint(ss, WithoutColors, "", 0, 0, 0);
-  result.SetString(ss.str(), allocator);
-}
+namespace {
+
+class JsonVisitor : public Visitor {
+ public:
+  explicit JsonVisitor(rapidjson::Value* result, rapidjson::Document::AllocatorType* allocator)
+      : result_(result), allocator_(allocator) {}
+
+ private:
+  void VisitField(const Field* node) override {
+    std::stringstream ss;
+    node->PrettyPrint(ss, WithoutColors, "", 0, 0, 0);
+    result_->SetString(ss.str(), *allocator_);
+  }
+
+  void VisitStringField(const StringField* node) override {
+    if (node->is_null()) {
+      result_->SetNull();
+    } else if (node->data() == nullptr) {
+      result_->SetString("(invalid)", *allocator_);
+    } else {
+      result_->SetString(reinterpret_cast<const char*>(node->data()), node->string_length(),
+                         *allocator_);
+    }
+  }
+
+  void VisitObject(const Object* node) override {
+    if (node->is_null()) {
+      result_->SetNull();
+    } else {
+      result_->SetObject();
+      for (const auto& field : node->fields()) {
+        rapidjson::Value key;
+        key.SetString(field->name().c_str(), *allocator_);
+        result_->AddMember(key, rapidjson::Value(), *allocator_);
+        JsonVisitor visitor(&(*result_)[field->name().c_str()], allocator_);
+        field->Visit(&visitor);
+      }
+    }
+  }
+
+  void VisitEnvelopeField(const EnvelopeField* node) override { node->field()->Visit(this); }
+
+  void VisitTableField(const TableField* node) override {
+    result_->SetObject();
+    for (const auto& envelope : node->envelopes()) {
+      if (!envelope->is_null()) {
+        rapidjson::Value key;
+        key.SetString(envelope->name().c_str(), *allocator_);
+        result_->AddMember(key, rapidjson::Value(), *allocator_);
+        JsonVisitor visitor(&(*result_)[envelope->name().c_str()], allocator_);
+        envelope->Visit(&visitor);
+      }
+    }
+  }
+
+  void VisitUnionField(const UnionField* node) override {
+    if (node->is_null()) {
+      result_->SetNull();
+    } else {
+      result_->SetObject();
+      rapidjson::Value key;
+      key.SetString(node->field()->name().c_str(), *allocator_);
+      result_->AddMember(key, rapidjson::Value(), *allocator_);
+      JsonVisitor visitor(&(*result_)[node->field()->name().c_str()], allocator_);
+      node->field()->Visit(&visitor);
+    }
+  }
+
+  void VisitArrayField(const ArrayField* node) override {
+    result_->SetArray();
+    for (const auto& field : node->fields()) {
+      rapidjson::Value element;
+      JsonVisitor visitor(&element, allocator_);
+      field->Visit(&visitor);
+      result_->PushBack(element, *allocator_);
+    }
+  }
+
+  void VisitVectorField(const VectorField* node) override {
+    if (node->is_null()) {
+      result_->SetNull();
+    } else {
+      result_->SetArray();
+      for (const auto& field : node->fields()) {
+        rapidjson::Value element;
+        JsonVisitor visitor(&element, allocator_);
+        field->Visit(&visitor);
+        result_->PushBack(element, *allocator_);
+      }
+    }
+  }
+
+  void VisitEnumField(const EnumField* node) override {
+    if (node->data() == nullptr) {
+      result_->SetString("(invalid)", *allocator_);
+    } else {
+      std::string name = node->enum_definition().GetNameFromBytes(node->data());
+      result_->SetString(name.c_str(), *allocator_);
+    }
+  }
+
+ private:
+  rapidjson::Value* result_;
+  rapidjson::Document::AllocatorType* allocator_;
+};
+
+}  // namespace
+
+void Field::Visit(Visitor* visitor) const { visitor->VisitField(this); }
 
 bool NullableField::DecodeNullable(MessageDecoder* decoder, uint64_t offset, uint64_t size) {
   uintptr_t data;
@@ -58,9 +162,13 @@ bool NullableField::DecodeNullable(MessageDecoder* decoder, uint64_t offset, uin
   return true;
 }
 
+void NullableField::Visit(Visitor* visitor) const { visitor->VisitNullableField(this); }
+
 void InlineField::DecodeContent(MessageDecoder* /*decoder*/, uint64_t /*offset*/) {
   FXL_LOG(FATAL) << "Field is defined inline";
 }
+
+void InlineField::Visit(Visitor* visitor) const { visitor->VisitInlineField(this); }
 
 int RawField::DisplaySize(int /*remaining_size*/) const { return static_cast<int>(size_) * 3 - 1; }
 
@@ -81,6 +189,49 @@ void RawField::PrettyPrint(std::ostream& os, const Colors& /*colors*/,
   os << buffer.data();
 }
 
+void RawField::Visit(Visitor* visitor) const { visitor->VisitRawField(this); }
+
+template <>
+void NumericField<uint8_t>::Visit(Visitor* visitor) const {
+  visitor->VisitU8Field(this);
+}
+template <>
+void NumericField<uint16_t>::Visit(Visitor* visitor) const {
+  visitor->VisitU16Field(this);
+}
+template <>
+void NumericField<uint32_t>::Visit(Visitor* visitor) const {
+  visitor->VisitU32Field(this);
+}
+template <>
+void NumericField<uint64_t>::Visit(Visitor* visitor) const {
+  visitor->VisitU64Field(this);
+}
+template <>
+void NumericField<int8_t>::Visit(Visitor* visitor) const {
+  visitor->VisitI8Field(this);
+}
+template <>
+void NumericField<int16_t>::Visit(Visitor* visitor) const {
+  visitor->VisitI16Field(this);
+}
+template <>
+void NumericField<int32_t>::Visit(Visitor* visitor) const {
+  visitor->VisitI32Field(this);
+}
+template <>
+void NumericField<int64_t>::Visit(Visitor* visitor) const {
+  visitor->VisitI64Field(this);
+}
+template <>
+void NumericField<float>::Visit(Visitor* visitor) const {
+  visitor->VisitF32Field(this);
+}
+template <>
+void NumericField<double>::Visit(Visitor* visitor) const {
+  visitor->VisitF64Field(this);
+}
+
 int StringField::DisplaySize(int /*remaining_size*/) const {
   if (is_null()) {
     return strlen(kNull);
@@ -93,17 +244,6 @@ int StringField::DisplaySize(int /*remaining_size*/) const {
 
 void StringField::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
   data_ = decoder->GetAddress(offset, string_length_);
-}
-
-void StringField::ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                              rapidjson::Value& result) const {
-  if (is_null()) {
-    result.SetNull();
-  } else if (data_ == nullptr) {
-    result.SetString("(invalid)", allocator);
-  } else {
-    result.SetString(reinterpret_cast<const char*>(data_), string_length_, allocator);
-  }
 }
 
 void StringField::PrettyPrint(std::ostream& os, const Colors& colors,
@@ -120,6 +260,8 @@ void StringField::PrettyPrint(std::ostream& os, const Colors& colors,
   os << colors.reset;
 }
 
+void StringField::Visit(Visitor* visitor) const { visitor->VisitStringField(this); }
+
 int BoolField::DisplaySize(int /*remaining_size*/) const {
   constexpr int kTrueSize = 4;
   constexpr int kFalseSize = 5;
@@ -135,6 +277,8 @@ void BoolField::PrettyPrint(std::ostream& os, const Colors& colors,
     os << colors.blue << (*data() ? "true" : "false") << colors.reset;
   }
 }
+
+void BoolField::Visit(Visitor* visitor) const { visitor->VisitBoolField(this); }
 
 int Object::DisplaySize(int remaining_size) const {
   if (is_null()) {
@@ -174,17 +318,9 @@ void Object::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
 
 void Object::ExtractJson(rapidjson::Document::AllocatorType& allocator,
                          rapidjson::Value& result) const {
-  if (is_null()) {
-    result.SetNull();
-  } else {
-    result.SetObject();
-    for (const auto& field : fields_) {
-      rapidjson::Value key;
-      key.SetString(field->name().c_str(), allocator);
-      result.AddMember(key, rapidjson::Value(), allocator);
-      field->ExtractJson(allocator, result[field->name().c_str()]);
-    }
-  }
+  JsonVisitor visitor(&result, &allocator);
+
+  Visit(&visitor);
 }
 
 void Object::PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header,
@@ -226,6 +362,8 @@ void Object::PrettyPrint(std::ostream& os, const Colors& colors, std::string_vie
   }
 }
 
+void Object::Visit(Visitor* visitor) const { visitor->VisitObject(this); }
+
 EnvelopeField::EnvelopeField(std::string_view name, const Type* type) : NullableField(name, type) {}
 
 int EnvelopeField::DisplaySize(int remaining_size) const {
@@ -253,11 +391,6 @@ void EnvelopeField::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
       return;
     }
   }
-}
-
-void EnvelopeField::ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                                rapidjson::Value& result) const {
-  field_->ExtractJson(allocator, result);
 }
 
 void EnvelopeField::PrettyPrint(std::ostream& os, const Colors& colors,
@@ -294,6 +427,8 @@ int TableField::DisplaySize(int remaining_size) const {
   return size;
 }
 
+void EnvelopeField::Visit(Visitor* visitor) const { visitor->VisitEnvelopeField(this); }
+
 void TableField::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
   for (uint64_t envelope_id = 0; envelope_id < envelope_count_; ++envelope_id) {
     const TableMember* member = (envelope_id < table_definition_.members().size() - 1)
@@ -309,19 +444,6 @@ void TableField::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
     envelope->DecodeAt(decoder, offset);
     envelopes_.push_back(std::move(envelope));
     offset += 2 * sizeof(uint64_t);
-  }
-}
-
-void TableField::ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                             rapidjson::Value& result) const {
-  result.SetObject();
-  for (const auto& envelope : envelopes_) {
-    if (!envelope->is_null()) {
-      rapidjson::Value key;
-      key.SetString(envelope->name().c_str(), allocator);
-      result.AddMember(key, rapidjson::Value(), allocator);
-      envelope->ExtractJson(allocator, result[envelope->name().c_str()]);
-    }
   }
 }
 
@@ -366,6 +488,8 @@ void TableField::PrettyPrint(std::ostream& os, const Colors& colors, std::string
   }
 }
 
+void TableField::Visit(Visitor* visitor) const { visitor->VisitTableField(this); }
+
 int UnionField::DisplaySize(int remaining_size) const {
   if (is_null()) {
     return 4;
@@ -395,19 +519,6 @@ void UnionField::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
                                         nullptr, 0);
   } else {
     field_ = member->type()->Decode(decoder, member->name(), base_offset + member->offset());
-  }
-}
-
-void UnionField::ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                             rapidjson::Value& result) const {
-  if (is_null()) {
-    result.SetNull();
-  } else {
-    result.SetObject();
-    rapidjson::Value key;
-    key.SetString(field_->name().c_str(), allocator);
-    result.AddMember(key, rapidjson::Value(), allocator);
-    field_->ExtractJson(allocator, result[field_->name().c_str()]);
   }
 }
 
@@ -448,6 +559,10 @@ void UnionField::PrettyPrint(std::ostream& os, const Colors& colors, std::string
   }
 }
 
+void UnionField::Visit(Visitor* visitor) const { visitor->VisitUnionField(this); }
+
+void XUnionField::Visit(Visitor* visitor) const { visitor->VisitXUnionField(this); }
+
 int ArrayField::DisplaySize(int remaining_size) const {
   int size = 2;
   for (const auto& field : fields_) {
@@ -462,16 +577,6 @@ int ArrayField::DisplaySize(int remaining_size) const {
 
 void ArrayField::DecodeContent(MessageDecoder* /*decoder*/, uint64_t /*offset*/) {
   FXL_LOG(FATAL) << "Field is defined inline";
-}
-
-void ArrayField::ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                             rapidjson::Value& result) const {
-  result.SetArray();
-  for (const auto& field : fields_) {
-    rapidjson::Value element;
-    field->ExtractJson(allocator, element);
-    result.PushBack(element, allocator);
-  }
 }
 
 void ArrayField::PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header,
@@ -497,6 +602,8 @@ void ArrayField::PrettyPrint(std::ostream& os, const Colors& colors, std::string
     os << line_header << std::string(tabs * kTabSize, ' ') << ']';
   }
 }
+
+void ArrayField::Visit(Visitor* visitor) const { visitor->VisitArrayField(this); }
 
 int VectorField::DisplaySize(int remaining_size) const {
   if (is_null()) {
@@ -537,20 +644,6 @@ void VectorField::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
       fields_.push_back(std::move(field));
     }
     offset += component_type_->InlineSize();
-  }
-}
-
-void VectorField::ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                              rapidjson::Value& result) const {
-  if (is_null()) {
-    result.SetNull();
-  } else {
-    result.SetArray();
-    for (const auto& field : fields_) {
-      rapidjson::Value element;
-      field->ExtractJson(allocator, element);
-      result.PushBack(element, allocator);
-    }
   }
 }
 
@@ -618,21 +711,13 @@ void VectorField::PrettyPrint(std::ostream& os, const Colors& colors, std::strin
   }
 }
 
+void VectorField::Visit(Visitor* visitor) const { visitor->VisitVectorField(this); }
+
 int EnumField::DisplaySize(int /*remaining_size*/) const {
   if (data() == nullptr) {
     return strlen(kInvalid);
   }
   return enum_definition_.GetNameFromBytes(data()).size();
-}
-
-void EnumField::ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                            rapidjson::Value& result) const {
-  if (data() == nullptr) {
-    result.SetString("(invalid)", allocator);
-  } else {
-    std::string name = enum_definition_.GetNameFromBytes(data());
-    result.SetString(name.c_str(), allocator);
-  }
 }
 
 void EnumField::PrettyPrint(std::ostream& os, const Colors& colors,
@@ -644,6 +729,8 @@ void EnumField::PrettyPrint(std::ostream& os, const Colors& colors,
     os << colors.blue << enum_definition_.GetNameFromBytes(data()) << colors.reset;
   }
 }
+
+void EnumField::Visit(Visitor* visitor) const { visitor->VisitEnumField(this); }
 
 int HandleField::DisplaySize(int /*remaining_size*/) const {
   return std::to_string(handle_.handle).size();
@@ -658,5 +745,7 @@ void HandleField::PrettyPrint(std::ostream& os, const Colors& colors,
                               int /*remaining_size*/, int /*max_line_size*/) const {
   DisplayHandle(colors, handle_, os);
 }
+
+void HandleField::Visit(Visitor* visitor) const { visitor->VisitHandleField(this); }
 
 }  // namespace fidl_codec
