@@ -8,9 +8,9 @@ fidl("fuchsia.accessibility") {
   sdk_category = "experimental"
 
   sources = [
+    "color_transform.fidl",
     "settings.fidl",
   ]
 
-  public_deps = [
-  ]
+  public_deps = []
 }
