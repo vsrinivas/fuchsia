@@ -126,12 +126,12 @@ std::unique_ptr<PerProcessGtt> PerProcessGtt::Create(Owner* owner) {
 PerProcessGtt::PerProcessGtt(Owner* owner, std::unique_ptr<Pml4Table> pml4_table)
     : AddressSpace(owner, ADDRESS_SPACE_PPGTT), pml4_table_(std::move(pml4_table)) {}
 
-bool PerProcessGtt::ClearLocked(uint64_t start, uint64_t page_count) {
+bool PerProcessGtt::ClearLocked(uint64_t start, magma::PlatformBusMapper::BusMapping* bus_mapping) {
   DASSERT((start & (PAGE_SIZE - 1)) == 0);
   if (start > Size())
     return DRETF(false, "invalid start");
 
-  uint64_t length = (page_count + kOverfetchPageCount + kGuardPageCount) * PAGE_SIZE;
+  uint64_t length = (bus_mapping->page_count() + kOverfetchPageCount + kGuardPageCount) * PAGE_SIZE;
   if (start + length > Size())
     return DRETF(false, "invalid start + length");
 

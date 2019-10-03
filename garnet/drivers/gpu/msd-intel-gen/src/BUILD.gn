@@ -8,7 +8,6 @@ source_set("src") {
   public_configs = [ "$msd_intel_gen_build_root:msd_src_include_config" ]
 
   sources = [
-    "address_space.cc",
     "address_space.h",
     "cache_config.cc",
     "cache_config.h",
@@ -18,7 +17,6 @@ source_set("src") {
     "engine_command_streamer.h",
     "global_context.cc",
     "global_context.h",
-    "gpu_mapping.cc",
     "gpu_mapping.h",
     "gtt.h",
     "gtt_shim.cc",
@@ -54,6 +52,7 @@ source_set("src") {
 
   deps = [
     "$magma_build_root/include:msd_abi",
+    "$magma_build_root/src/magma_util:address_space",
     "$magma_build_root/src/magma_util:allocator",
     "$magma_build_root/src/magma_util:common",
     "$magma_build_root/src/magma_util:registers",

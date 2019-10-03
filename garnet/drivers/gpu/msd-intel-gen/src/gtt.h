@@ -13,7 +13,7 @@
 
 class Gtt : public AddressSpace {
  public:
-  class Owner : public AddressSpace::Owner {
+  class Owner : public magma::AddressSpaceOwner {
    public:
     virtual magma::PlatformPciDevice* platform_device() = 0;
   };
@@ -22,17 +22,17 @@ class Gtt : public AddressSpace {
 
   virtual bool Init(uint64_t gtt_size) = 0;
 
-  bool GlobalGttInsert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t page_offset,
-                       uint64_t page_count) {
-    std::lock_guard<std::mutex> lock(mutex());
-    return GlobalGttInsertLocked(addr, buffer, page_offset, page_count);
+  bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override {
+    DASSERT(false);
+    return false;
+  }
+
+  bool InsertLocked(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t page_offset,
+                    uint64_t page_count) override {
+    return DRETF(false, "Must be overridden by derived class");
   }
 
   static std::unique_ptr<Gtt> CreateShim(Owner* owner);
-
- protected:
-  virtual bool GlobalGttInsertLocked(uint64_t addr, magma::PlatformBuffer* buffer,
-                                     uint64_t page_offset, uint64_t page_count) = 0;
 
   friend class TestGtt;
 };

@@ -2,14 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
-#include "mock/mock_address_space.h"
-#include "mock/mock_bus_mapper.h"
+#include <gtest/gtest.h>
+#include <mock/fake_address_space.h>
+#include <mock/mock_bus_mapper.h>
+
+#include "address_space.h"
 #include "render_init_batch.h"
+
+using AllocatingAddressSpace = FakeAllocatingAddressSpace<GpuMapping, AddressSpace>;
 
 class TestRenderInitBatch {
  public:
-  class AddressSpaceOwner : public AddressSpace::Owner {
+  class AddressSpaceOwner : public magma::AddressSpaceOwner {
    public:
     virtual ~AddressSpaceOwner() = default;
     magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
@@ -22,7 +26,7 @@ class TestRenderInitBatch {
     auto owner = std::make_unique<AddressSpaceOwner>();
 
     uint64_t base = 0x10000;
-    auto address_space = std::make_shared<MockAddressSpace>(
+    auto address_space = std::make_shared<AllocatingAddressSpace>(
         owner.get(), base, magma::round_up(batch->size(), PAGE_SIZE));
 
     std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(batch->size(), "test"));

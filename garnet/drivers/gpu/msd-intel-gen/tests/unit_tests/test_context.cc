@@ -2,20 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <gtest/gtest.h>
+#include <mock/fake_address_space.h>
+#include <mock/mock_bus_mapper.h>
+
+#include "address_space.h"
 #include "global_context.h"
-#include "gtest/gtest.h"
-#include "mock/mock_address_space.h"
-#include "mock/mock_bus_mapper.h"
 #include "msd_intel_connection.h"
 #include "msd_intel_context.h"
 #include "ringbuffer.h"
 #include "test_command_buffer.h"
 
+using AllocatingAddressSpace = FakeAllocatingAddressSpace<GpuMapping, AddressSpace>;
+
 class TestContext {
  public:
-  class AddressSpaceOwner : public AddressSpace::Owner {
+  class AddressSpaceOwner : public magma::AddressSpaceOwner {
    public:
-    virtual ~AddressSpaceOwner() = default;
     magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
 
    private:
@@ -25,7 +28,7 @@ class TestContext {
   void Init() {
     auto address_space_owner = std::make_unique<AddressSpaceOwner>();
     auto address_space =
-        std::make_shared<MockAddressSpace>(address_space_owner.get(), 0, PAGE_SIZE);
+        std::make_shared<AllocatingAddressSpace>(address_space_owner.get(), 0, PAGE_SIZE);
 
     std::weak_ptr<MsdIntelConnection> connection;
     std::unique_ptr<MsdIntelContext> context(new ClientContext(connection, address_space));
@@ -60,7 +63,7 @@ class TestContext {
         new Ringbuffer(std::unique_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "test"))));
 
     auto address_space_owner = std::make_unique<AddressSpaceOwner>();
-    auto address_space = std::make_shared<MockAddressSpace>(
+    auto address_space = std::make_shared<AllocatingAddressSpace>(
         address_space_owner.get(), base, buffer->platform_buffer()->size() + ringbuffer->size());
 
     if (global)
@@ -100,7 +103,7 @@ class TestContext {
         std::unique_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "test")));
 
     auto address_space_owner = std::make_unique<AddressSpaceOwner>();
-    auto address_space = std::make_shared<MockAddressSpace>(
+    auto address_space = std::make_shared<AllocatingAddressSpace>(
         address_space_owner.get(), base, buffer->platform_buffer()->size() + ringbuffer->size());
 
     auto context =
@@ -125,7 +128,7 @@ class TestContext {
      public:
       ConnectionOwner(std::function<void(std::unique_ptr<CommandBuffer> command_buffer)> callback)
           : callback_(callback) {
-        address_space_owner_ = std::make_unique<AddressSpaceOwner>();
+        address_space_owner_ = std::make_unique<TestContext::AddressSpaceOwner>();
       }
 
       magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override {
@@ -161,7 +164,7 @@ class TestContext {
 
     auto connection =
         std::shared_ptr<MsdIntelConnection>(MsdIntelConnection::Create(owner.get(), 0u));
-    auto address_space = std::make_shared<MockAddressSpace>(owner.get(), 0, PAGE_SIZE);
+    auto address_space = std::make_shared<AllocatingAddressSpace>(owner.get(), 0, PAGE_SIZE);
 
     auto context = std::make_shared<ClientContext>(connection, address_space);
 

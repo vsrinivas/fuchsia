@@ -2,19 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <gtest/gtest.h>
+#include <mock/fake_address_space.h>
+#include <mock/mock_bus_mapper.h>
+#include <mock/mock_mapped_batch.h>
+#include <mock/mock_mmio.h>
+
+#include "address_space.h"
 #include "device_id.h"
 #include "engine_command_streamer.h"
-#include "gtest/gtest.h"
 #include "gtt.h"
 #include "instructions.h"
-#include "mock/mock_address_space.h"
-#include "mock/mock_bus_mapper.h"
-#include "mock/mock_mapped_batch.h"
-#include "mock/mock_mmio.h"
 #include "register_tracer.h"
 #include "registers.h"
 #include "render_init_batch.h"
 #include "sequencer.h"
+
+using AllocatingAddressSpace = FakeAllocatingAddressSpace<GpuMapping, AddressSpace>;
 
 class TestContext {
  public:
@@ -47,7 +51,7 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
  public:
   static constexpr uint32_t kFirstSequenceNumber = 5;
 
-  class AddressSpaceOwner : public AddressSpace::Owner {
+  class AddressSpaceOwner : public magma::AddressSpaceOwner {
    public:
     virtual ~AddressSpaceOwner() = default;
     magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
@@ -68,7 +72,7 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
 
     address_space_owner_ = std::make_unique<AddressSpaceOwner>();
     address_space_ =
-        std::make_shared<MockAddressSpace>(address_space_owner_.get(), 0, PAGE_SIZE * 100);
+        std::make_shared<AllocatingAddressSpace>(address_space_owner_.get(), 0, PAGE_SIZE * 100);
 
     engine_cs_ = RenderEngineCommandStreamer::Create(this);
 

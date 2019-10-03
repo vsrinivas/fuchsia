@@ -24,18 +24,15 @@ class GttShim : public Gtt {
   }
   bool FreeLocked(uint64_t addr) override { return pci_device()->GetGtt()->Free(addr); }
 
-  bool ClearLocked(uint64_t addr, uint64_t page_count) override {
-    return pci_device()->GetGtt()->Clear(addr, page_count);
+  bool ClearLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override {
+    // Never a bus mapping here, GTT insertions performed via GlobalGttInsertLocked below.
+    DASSERT(!bus_mapping);
+    return pci_device()->GetGtt()->Clear(addr, nullptr);
   }
 
-  bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override {
-    DASSERT(false);
-    return false;
-  }
-
-  bool GlobalGttInsertLocked(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t page_offset,
-                             uint64_t page_count) override {
-    return pci_device()->GetGtt()->GlobalGttInsert(addr, buffer, page_offset, page_count);
+  bool InsertLocked(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t page_offset,
+                    uint64_t page_count) override {
+    return pci_device()->GetGtt()->Insert(addr, buffer, page_offset, page_count);
   }
 
   MsdIntelPciDevice* pci_device() const {

@@ -4,19 +4,22 @@
 
 #include "test_command_buffer.h"
 
+#include <gtest/gtest.h>
+#include <helper/command_buffer_helper.h>
+#include <helper/platform_device_helper.h>
+#include <mock/fake_address_space.h>
+#include <mock/mock_bus_mapper.h>
+
 #include "command_buffer.h"
-#include "gtest/gtest.h"
-#include "helper/command_buffer_helper.h"
-#include "helper/platform_device_helper.h"
-#include "mock/mock_address_space.h"
-#include "mock/mock_bus_mapper.h"
 #include "msd_intel_context.h"
 #include "msd_intel_device.h"
 #include "ppgtt.h"
 
+using AllocatingAddressSpace = FakeAllocatingAddressSpace<GpuMapping, AddressSpace>;
+
 class Test {
  public:
-  class AddressSpaceOwner : public AddressSpace::Owner {
+  class AddressSpaceOwner : public magma::AddressSpaceOwner {
    public:
     virtual ~AddressSpaceOwner() = default;
     magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
@@ -39,7 +42,7 @@ class Test {
 
     auto address_space_owner = std::make_unique<AddressSpaceOwner>();
     auto addr_space =
-        std::make_shared<MockAddressSpace>(address_space_owner.get(), 0, 1024 * PAGE_SIZE);
+        std::make_shared<AllocatingAddressSpace>(address_space_owner.get(), 0, 1024 * PAGE_SIZE);
 
     {
       std::vector<MagmaSystemBuffer*>& resources = helper_->resources();

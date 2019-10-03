@@ -179,7 +179,7 @@ bool CommandBuffer::MapResourcesGpu(std::shared_ptr<AddressSpace> address_space,
 
   for (auto res : exec_resources_) {
     std::shared_ptr<GpuMapping> mapping =
-        address_space->FindGpuMapping(res.buffer, res.offset, res.length);
+        address_space->FindGpuMapping(res.buffer->platform_buffer(), res.offset, res.length);
     if (!mapping)
       return DRETF(false, "failed to find gpu mapping for buffer %lu",
                    res.buffer->platform_buffer()->id());

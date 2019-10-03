@@ -2,18 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
-#include "mock/mock_address_space.h"
-#include "mock/mock_bus_mapper.h"
-#include "mock/mock_mapped_batch.h"
+#include <gtest/gtest.h>
+#include <mock/fake_address_space.h>
+#include <mock/mock_bus_mapper.h>
+#include <mock/mock_mapped_batch.h>
+
+#include "address_space.h"
 #include "msd_intel_context.h"
 #include "scheduler.h"
+
+using AllocatingAddressSpace = FakeAllocatingAddressSpace<GpuMapping, AddressSpace>;
 
 class TestScheduler {
  public:
   static constexpr uint32_t kNumContext = 3;
 
-  class AddressSpaceOwner : public AddressSpace::Owner {
+  class AddressSpaceOwner : public magma::AddressSpaceOwner {
    public:
     virtual ~AddressSpaceOwner() = default;
     magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
@@ -24,7 +28,7 @@ class TestScheduler {
 
   TestScheduler() {
     auto owner = std::make_unique<AddressSpaceOwner>();
-    auto address_space = std::make_shared<MockAddressSpace>(owner.get(), 0, PAGE_SIZE);
+    auto address_space = std::make_shared<AllocatingAddressSpace>(owner.get(), 0, PAGE_SIZE);
     for (uint32_t i = 0; i < kNumContext; i++) {
       context_[i] = std::make_shared<ClientContext>(connection_, address_space);
     }

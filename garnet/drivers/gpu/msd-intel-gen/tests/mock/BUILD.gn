@@ -18,7 +18,6 @@ source_set("mock") {
   ]
 
   sources = [
-    "mock_address_space.cc",
-    "mock_address_space.h",
+    "mock_mapped_batch.h",
   ]
 }

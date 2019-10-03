@@ -2,11 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <mock/fake_address_space.h>
+#include <mock/mock_bus_mapper.h>
+
+#include "address_space.h"
 #include "gtest/gtest.h"
 #include "instructions.h"
-#include "mock/mock_address_space.h"
-#include "mock/mock_bus_mapper.h"
 #include "ringbuffer.h"
+
+using AllocatingAddressSpace = FakeAllocatingAddressSpace<GpuMapping, AddressSpace>;
 
 class TestRingbuffer {
  public:
@@ -15,7 +19,7 @@ class TestRingbuffer {
 
 class TestInstructions {
  public:
-  class AddressSpaceOwner : public AddressSpace::Owner {
+  class AddressSpaceOwner : public magma::AddressSpaceOwner {
    public:
     virtual ~AddressSpaceOwner() = default;
     magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
@@ -27,8 +31,8 @@ class TestInstructions {
   TestInstructions() {
     ringbuffer_ = std::make_unique<Ringbuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "test"));
     address_space_owner_ = std::make_unique<AddressSpaceOwner>();
-    address_space_ = std::make_shared<MockAddressSpace>(address_space_owner_.get(), 0x10000,
-                                                        ringbuffer_->size());
+    address_space_ = std::make_shared<AllocatingAddressSpace>(address_space_owner_.get(), 0x10000,
+                                                              ringbuffer_->size());
 
     EXPECT_TRUE(ringbuffer_->Map(address_space_));
   }

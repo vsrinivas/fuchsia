@@ -7,6 +7,7 @@
 
 #include "address_space.h"
 #include "magma_util/register_io.h"
+#include "pagetable.h"
 #include "platform_buffer.h"
 
 using gen_pde_t = uint64_t;
@@ -27,7 +28,7 @@ static inline gen_pml4e_t gen_pml4_encode(uint64_t bus_addr) {
 
 class PerProcessGtt : public AddressSpace {
  public:
-  class Owner : public AddressSpace::Owner {};
+  class Owner : public magma::AddressSpaceOwner {};
 
   static std::unique_ptr<PerProcessGtt> Create(Owner* owner);
 
@@ -259,7 +260,7 @@ class PerProcessGtt : public AddressSpace {
   bool FreeLocked(uint64_t addr) override;
 
   bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* buffer) override;
-  bool ClearLocked(uint64_t start, uint64_t length) override;
+  bool ClearLocked(uint64_t start, magma::PlatformBusMapper::BusMapping* buffer) override;
 
   std::unique_ptr<Pml4Table> pml4_table_;
 

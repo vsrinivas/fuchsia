@@ -42,20 +42,17 @@ class GttIntelGpuCore : public Gtt {
     return true;
   }
 
-  bool ClearLocked(uint64_t addr, uint64_t page_count) override {
+  bool ClearLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override {
+    // Never a bus mapping here, GTT insertions performed via GlobalGttInsertLocked below.
+    DASSERT(!bus_mapping);
     zx_status_t status = owner_->ops()->gtt_clear(owner_->context(), addr);
     if (status != ZX_OK)
       return DRETF(false, "gtt_clear failed: %d", status);
     return true;
   }
 
-  bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override {
-    DASSERT(false);
-    return false;
-  }
-
-  bool GlobalGttInsertLocked(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t page_offset,
-                             uint64_t page_count) override {
+  bool InsertLocked(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t page_offset,
+                    uint64_t page_count) override {
     // Bus mapping will be redone in the core driver.
     uint32_t handle;
     if (!buffer->duplicate_handle(&handle))

@@ -7,12 +7,12 @@
 
 #include <memory>
 
+#include "gpu_mapping.h"
 #include "instructions.h"
 #include "magma_util/macros.h"
 #include "msd_intel_buffer.h"
 
 class AddressSpace;
-class GpuMapping;
 
 class Ringbuffer : public InstructionWriter {
  public:
