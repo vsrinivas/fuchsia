@@ -6,8 +6,6 @@
 #define SRC_LEDGER_BIN_APP_ACTIVE_PAGE_MANAGER_H_
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <lib/callback/auto_cleanable.h>
-#include <lib/callback/scoped_task_runner.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
@@ -26,6 +24,8 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
 #include "src/ledger/bin/sync_coordinator/public/page_sync.h"
+#include "src/lib/callback/auto_cleanable.h"
+#include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/time/time_delta.h"
 
 namespace ledger {

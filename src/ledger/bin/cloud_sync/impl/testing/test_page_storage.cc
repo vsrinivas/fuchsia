@@ -5,7 +5,6 @@
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_storage.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/callback/capture.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
 
@@ -17,6 +16,7 @@
 #include "src/ledger/bin/cloud_sync/impl/testing/test_commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
+#include "src/lib/callback/capture.h"
 
 namespace cloud_sync {
 

@@ -7,8 +7,6 @@
 #include <dirent.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/callback/scoped_callback.h>
-#include <lib/callback/trace_callback.h>
 #include <lib/fit/function.h>
 
 #include <iterator>
@@ -19,6 +17,8 @@
 #include "src/ledger/bin/filesystem/directory_reader.h"
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/lib/callback/scoped_callback.h"
+#include "src/lib/callback/trace_callback.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/callback/capture.h>
-#include <lib/callback/waiter.h>
 #include <lib/fidl/cpp/optional.h>
 
 #include "peridot/lib/convert/convert.h"
@@ -11,6 +9,8 @@
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/sync/test_sync_state_watcher.h"
 #include "src/ledger/bin/tests/integration/test_page_watcher.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/waiter.h"
 
 namespace ledger {
 namespace {

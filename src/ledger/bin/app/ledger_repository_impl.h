@@ -7,7 +7,6 @@
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
-#include <lib/callback/auto_cleanable.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fit/function.h>
 #include <lib/inspect_deprecated/deprecated/expose.h>
@@ -32,6 +31,7 @@
 #include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/ledger/bin/sync_coordinator/public/user_sync.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
+#include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/macros.h"
 

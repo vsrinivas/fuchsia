@@ -4,7 +4,6 @@
 
 #include "src/ledger/cloud_provider_firestore/bin/app/page_cloud_impl.h"
 
-#include <lib/callback/scoped_callback.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
@@ -14,6 +13,7 @@
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/cloud_provider_firestore/bin/app/grpc_status.h"
 #include "src/ledger/cloud_provider_firestore/bin/firestore/encoding.h"
+#include "src/lib/callback/scoped_callback.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
 namespace cloud_provider_firestore {

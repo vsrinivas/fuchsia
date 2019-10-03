@@ -7,12 +7,13 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/callback/auto_cleanable.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 
 #include <functional>
 #include <string>
+
+#include "src/lib/callback/auto_cleanable.h"
 
 namespace cloud_provider {
 

@@ -4,7 +4,6 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/callback/trace_callback.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
@@ -23,6 +22,7 @@
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
 #include "src/ledger/bin/testing/quit_on_error.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
+#include "src/lib/callback/trace_callback.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/scoped_temp_dir.h"

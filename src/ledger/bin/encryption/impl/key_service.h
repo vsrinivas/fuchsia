@@ -6,13 +6,13 @@
 #define SRC_LEDGER_BIN_ENCRYPTION_IMPL_KEY_SERVICE_H_
 
 #include <lib/async/dispatcher.h>
-#include <lib/callback/scoped_callback.h>
 #include <lib/fit/function.h>
 
 #include <string>
 
 #include "src/ledger/bin/cache/lru_cache.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
+#include "src/lib/callback/scoped_callback.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace encryption {

@@ -8,7 +8,6 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/callback/capture.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
@@ -22,6 +21,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/callback/capture.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/logging.h"
 

@@ -5,7 +5,6 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_JOURNAL_IMPL_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_JOURNAL_IMPL_H_
 
-#include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 
 #include <functional>
@@ -20,6 +19,7 @@
 #include "src/ledger/bin/storage/public/journal.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
+#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 

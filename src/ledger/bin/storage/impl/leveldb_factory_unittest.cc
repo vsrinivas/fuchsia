@@ -4,15 +4,14 @@
 
 #include "src/ledger/bin/storage/impl/leveldb_factory.h"
 
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
-
 #include <memory>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/macros.h"

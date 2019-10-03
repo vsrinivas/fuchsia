@@ -6,9 +6,6 @@
 
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/task.h>
-#include <lib/callback/auto_cleanable.h>
-#include <lib/callback/scoped_callback.h>
-#include <lib/callback/trace_callback.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/result.h>
@@ -20,6 +17,9 @@
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/callback/auto_cleanable.h"
+#include "src/lib/callback/scoped_callback.h"
+#include "src/lib/callback/trace_callback.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/logging.h"

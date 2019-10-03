@@ -5,8 +5,6 @@
 #include "src/ledger/bin/app/ledger_manager.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/callback/ensure_called.h>
-#include <lib/callback/scoped_callback.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
@@ -28,6 +26,8 @@
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/p2p_sync/public/page_communicator.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/lib/callback/ensure_called.h"
+#include "src/lib/callback/scoped_callback.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 

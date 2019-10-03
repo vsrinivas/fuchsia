@@ -6,12 +6,12 @@
 #define SRC_LEDGER_BIN_TESTS_INTEGRATION_TEST_PAGE_WATCHER_H_
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <lib/callback/capture.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
 
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
+#include "src/lib/callback/capture.h"
 #include "src/lib/fxl/macros.h"
 
 namespace ledger {

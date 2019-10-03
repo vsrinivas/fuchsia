@@ -6,8 +6,6 @@
 
 #include <lib/async-testing/test_loop.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
 #include <lib/inspect_deprecated/deprecated/expose.h>
@@ -33,6 +31,8 @@
 #include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/loop_controller.h"
 #include "src/ledger/bin/testing/loop_controller_test_loop.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 
 namespace ledger {
 namespace {

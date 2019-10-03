@@ -5,7 +5,6 @@
 #include "src/ledger/bin/app/ledger_repository_impl.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/callback/scoped_callback.h>
 #include <lib/inspect_deprecated/deprecated/expose.h>
 #include <lib/inspect_deprecated/deprecated/object_dir.h>
 
@@ -24,6 +23,7 @@
 #include "src/ledger/bin/p2p_sync/public/ledger_communicator.h"
 #include "src/ledger/bin/storage/impl/ledger_storage_impl.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
+#include "src/lib/callback/scoped_callback.h"
 
 namespace ledger {
 namespace {

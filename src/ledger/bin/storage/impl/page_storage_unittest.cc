@@ -4,8 +4,6 @@
 
 #include <dirent.h>
 #include <lib/async/cpp/task.h>
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fsl/vmo/strings.h>
@@ -44,6 +42,8 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"

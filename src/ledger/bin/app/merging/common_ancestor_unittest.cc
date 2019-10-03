@@ -4,13 +4,10 @@
 
 #include "src/ledger/bin/app/merging/common_ancestor.h"
 
+#include <lib/fit/function.h>
+
 #include <algorithm>
 #include <string>
-
-#include <lib/callback/cancellable_helper.h>
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
-#include <lib/fit/function.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -19,6 +16,9 @@
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/lib/callback/cancellable_helper.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 #include "src/lib/fxl/macros.h"
 
 using testing::ElementsAre;

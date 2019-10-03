@@ -4,9 +4,6 @@
 
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
-
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
@@ -14,6 +11,8 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

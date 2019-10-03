@@ -5,8 +5,6 @@
 #include "src/ledger/bin/app/page_eviction_manager_impl.h"
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "gmock/gmock.h"
@@ -15,6 +13,8 @@
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 
 namespace ledger {
 namespace {

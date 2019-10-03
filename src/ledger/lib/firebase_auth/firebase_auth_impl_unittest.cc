@@ -6,14 +6,14 @@
 
 #include <fuchsia/auth/cpp/fidl.h>
 #include <lib/backoff/testing/test_backoff.h>
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include <utility>
 
 #include "src/ledger/lib/firebase_auth/testing/test_token_manager.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 
 namespace firebase_auth {
 

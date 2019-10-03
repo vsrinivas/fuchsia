@@ -4,8 +4,9 @@
 
 #include "src/ledger/bin/cloud_sync/impl/page_upload.h"
 
-#include <lib/callback/scoped_callback.h>
 #include <lib/fit/function.h>
+
+#include "src/lib/callback/scoped_callback.h"
 
 namespace cloud_sync {
 

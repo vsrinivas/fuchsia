@@ -5,7 +5,6 @@
 #ifndef SRC_LEDGER_BIN_APP_HEADS_CHILDREN_MANAGER_H_
 #define SRC_LEDGER_BIN_APP_HEADS_CHILDREN_MANAGER_H_
 
-#include <lib/callback/auto_cleanable.h>
 #include <lib/fit/function.h>
 #include <lib/inspect_deprecated/inspect.h>
 
@@ -14,6 +13,7 @@
 #include "src/ledger/bin/app/inspectable_page.h"
 #include "src/ledger/bin/app/inspected_head.h"
 #include "src/ledger/bin/app/token_manager.h"
+#include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/fxl/macros.h"
 
 namespace ledger {

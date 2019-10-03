@@ -4,8 +4,6 @@
 
 #include "src/ledger/bin/app/heads_children_manager.h"
 
-#include <lib/callback/auto_cleanable.h>
-#include <lib/callback/ensure_called.h>
 #include <lib/fit/function.h>
 #include <lib/inspect_deprecated/inspect.h>
 
@@ -13,6 +11,8 @@
 #include <vector>
 
 #include "src/ledger/bin/inspect/inspect.h"
+#include "src/lib/callback/auto_cleanable.h"
+#include "src/lib/callback/ensure_called.h"
 
 namespace ledger {
 

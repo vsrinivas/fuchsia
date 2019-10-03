@@ -8,8 +8,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/backoff/exponential_backoff.h>
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
@@ -37,6 +35,8 @@
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
 #include "src/ledger/bin/sync_coordinator/testing/page_sync_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 #include "src/lib/fxl/macros.h"
 
 namespace ledger {

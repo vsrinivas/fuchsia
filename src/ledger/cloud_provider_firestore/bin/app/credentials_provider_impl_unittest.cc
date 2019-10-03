@@ -4,13 +4,13 @@
 
 #include "src/ledger/cloud_provider_firestore/bin/app/credentials_provider_impl.h"
 
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include <gtest/gtest.h>
 
 #include "src/ledger/lib/firebase_auth/testing/test_firebase_auth.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 
 namespace cloud_provider_firestore {
 

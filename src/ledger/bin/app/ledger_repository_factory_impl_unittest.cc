@@ -5,8 +5,6 @@
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
 
 #include <fuchsia/inspect/cpp/fidl.h>
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/inspect_deprecated/inspect.h>
 #include <lib/inspect_deprecated/reader.h>
@@ -18,6 +16,8 @@
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/strings/string_view.h"

@@ -6,8 +6,6 @@
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/backoff/exponential_backoff.h>
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fsl/socket/strings.h>
@@ -34,6 +32,8 @@
 #include "src/ledger/bin/storage/testing/storage_matcher.h"
 #include "src/ledger/bin/testing/ledger_matcher.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

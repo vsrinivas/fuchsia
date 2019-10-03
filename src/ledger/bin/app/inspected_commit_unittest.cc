@@ -6,7 +6,6 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/backoff/exponential_backoff.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/vector.h>
 #include <lib/inspect_deprecated/inspect.h>
@@ -29,6 +28,7 @@
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/callback/set_when_called.h"
 
 namespace ledger {
 namespace {

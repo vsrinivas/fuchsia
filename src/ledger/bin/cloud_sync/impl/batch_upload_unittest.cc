@@ -5,7 +5,6 @@
 #include "src/ledger/bin/cloud_sync/impl/batch_upload.h"
 
 #include <lib/async/dispatcher.h>
-#include <lib/callback/capture.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
@@ -25,6 +24,7 @@
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/lib/callback/capture.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 

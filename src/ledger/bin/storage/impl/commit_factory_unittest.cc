@@ -4,9 +4,6 @@
 
 #include "src/ledger/bin/storage/impl/commit_factory.h"
 
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
-
 #include <memory>
 #include <tuple>
 
@@ -21,6 +18,8 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 #include "src/lib/fxl/macros.h"
 
 namespace storage {

@@ -4,7 +4,6 @@
 
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 
-#include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
 
@@ -16,6 +15,7 @@
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"

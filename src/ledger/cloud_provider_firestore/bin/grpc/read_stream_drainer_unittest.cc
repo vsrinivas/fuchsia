@@ -4,14 +4,14 @@
 
 #include "src/ledger/cloud_provider_firestore/bin/grpc/read_stream_drainer.h"
 
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
 
 #include <functional>
 #include <vector>
 
 #include "gtest/gtest.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 
 #include <grpc++/grpc++.h>
 #include <grpc++/support/async_stream.h>

@@ -4,8 +4,6 @@
 
 #include "src/ledger/bin/app/page_impl.h"
 
-#include <lib/callback/scoped_task_runner.h>
-#include <lib/callback/trace_callback.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
@@ -14,6 +12,8 @@
 
 #include "src/ledger/bin/app/page_delegate.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/callback/scoped_task_runner.h"
+#include "src/lib/callback/trace_callback.h"
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {

@@ -4,12 +4,11 @@
 
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
 
-#include <lib/callback/set_when_called.h>
-
 #include <algorithm>
 #include <iterator>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/lib/callback/set_when_called.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/logging.h"
 

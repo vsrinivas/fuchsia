@@ -5,7 +5,6 @@
 #ifndef SRC_LEDGER_BIN_APP_PAGE_IMPL_H_
 #define SRC_LEDGER_BIN_APP_PAGE_IMPL_H_
 
-#include <lib/callback/scoped_task_runner.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
@@ -15,6 +14,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/macros.h"
 
 namespace ledger {

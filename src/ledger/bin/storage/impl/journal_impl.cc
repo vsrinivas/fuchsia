@@ -4,7 +4,6 @@
 
 #include "src/ledger/bin/storage/impl/journal_impl.h"
 
-#include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 
 #include <functional>
@@ -19,6 +18,7 @@
 #include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/public/commit.h"
+#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace storage {

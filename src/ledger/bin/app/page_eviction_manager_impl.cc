@@ -5,7 +5,6 @@
 #include "src/ledger/bin/app/page_eviction_manager_impl.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
 
@@ -20,6 +19,7 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
+#include "src/lib/callback/waiter.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/fxl/strings/concatenate.h"
 

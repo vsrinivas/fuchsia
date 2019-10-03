@@ -4,12 +4,11 @@
 
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 
-#include <lib/callback/set_when_called.h>
-
 #include <memory>
 
 #include "gtest/gtest.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
+#include "src/lib/callback/set_when_called.h"
 
 namespace coroutine {
 namespace {
@@ -71,13 +70,13 @@ TEST(CoroutineManager, Shutdown) {
   bool executed_callback = false;
   CoroutineHandler* handler = nullptr;
   manager.StartCoroutine(callback::SetWhenCalled(&called),
-                          [&](CoroutineHandler* current_handler, fit::function<void()> callback) {
-                            handler = current_handler;
-                            EXPECT_EQ(ContinuationStatus::INTERRUPTED, handler->Yield());
-                            reached_callback = true;
-                            callback();
-                            executed_callback = true;
-                          });
+                         [&](CoroutineHandler* current_handler, fit::function<void()> callback) {
+                           handler = current_handler;
+                           EXPECT_EQ(ContinuationStatus::INTERRUPTED, handler->Yield());
+                           reached_callback = true;
+                           callback();
+                           executed_callback = true;
+                         });
 
   ASSERT_TRUE(handler);
   EXPECT_FALSE(called);
@@ -90,10 +89,10 @@ TEST(CoroutineManager, Shutdown) {
 
   bool coroutine_started = false;
   manager.StartCoroutine(callback::SetWhenCalled(&called),
-                          [&](CoroutineHandler* current_handler, fit::function<void()> callback) {
-                            coroutine_started = true;
-                            callback();
-                          });
+                         [&](CoroutineHandler* current_handler, fit::function<void()> callback) {
+                           coroutine_started = true;
+                           callback();
+                         });
   EXPECT_FALSE(called);
   EXPECT_FALSE(coroutine_started);
 }

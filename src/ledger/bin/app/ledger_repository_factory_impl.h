@@ -8,9 +8,6 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
-#include <lib/callback/auto_cleanable.h>
-#include <lib/callback/cancellable.h>
-#include <lib/callback/managed_container.h>
 #include <lib/inspect_deprecated/deprecated/expose.h>
 #include <lib/inspect_deprecated/inspect.h>
 
@@ -25,6 +22,9 @@
 #include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/p2p_sync/public/user_communicator_factory.h"
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
+#include "src/lib/callback/auto_cleanable.h"
+#include "src/lib/callback/cancellable.h"
+#include "src/lib/callback/managed_container.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/macros.h"
 

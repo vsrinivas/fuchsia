@@ -3,9 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/backoff/testing/test_backoff.h>
-#include <lib/callback/cancellable_helper.h>
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
 #include <zircon/errors.h>
 
@@ -21,6 +18,9 @@
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/lib/callback/cancellable_helper.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/macros.h"
 

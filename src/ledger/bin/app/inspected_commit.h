@@ -5,7 +5,6 @@
 #ifndef SRC_LEDGER_BIN_APP_INSPECTED_COMMIT_H_
 #define SRC_LEDGER_BIN_APP_INSPECTED_COMMIT_H_
 
-#include <lib/callback/auto_cleanable.h>
 #include <lib/fit/function.h>
 #include <lib/inspect_deprecated/inspect.h>
 
@@ -19,6 +18,7 @@
 #include "src/ledger/bin/app/inspected_entry.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/storage/public/commit.h"
+#include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {

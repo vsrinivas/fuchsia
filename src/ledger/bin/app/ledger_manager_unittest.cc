@@ -5,9 +5,6 @@
 #include "src/ledger/bin/app/ledger_manager.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
-#include <lib/callback/waiter.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/inspect_deprecated/inspect.h>
@@ -42,6 +39,9 @@
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
 #include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
+#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/strings/string_view.h"

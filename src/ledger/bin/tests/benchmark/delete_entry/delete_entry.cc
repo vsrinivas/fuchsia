@@ -5,7 +5,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/sys/cpp/component_context.h>
@@ -27,6 +26,7 @@
 #include "src/ledger/bin/testing/page_data_generator.h"
 #include "src/ledger/bin/testing/quit_on_error.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
+#include "src/lib/callback/waiter.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/command_line.h"

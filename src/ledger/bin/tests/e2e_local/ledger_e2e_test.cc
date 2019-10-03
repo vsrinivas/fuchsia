@@ -4,7 +4,6 @@
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/callback/capture.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/fit/function.h>
@@ -29,6 +28,7 @@
 #include "src/ledger/bin/testing/ledger_matcher.h"
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
+#include "src/lib/callback/capture.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 

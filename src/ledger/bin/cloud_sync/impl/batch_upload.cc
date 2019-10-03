@@ -4,9 +4,6 @@
 
 #include "src/ledger/bin/cloud_sync/impl/batch_upload.h"
 
-#include <lib/callback/scoped_callback.h>
-#include <lib/callback/trace_callback.h>
-#include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 
@@ -20,6 +17,9 @@
 #include "src/ledger/bin/cloud_sync/impl/status.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/lib/commit_pack/commit_pack.h"
+#include "src/lib/callback/scoped_callback.h"
+#include "src/lib/callback/trace_callback.h"
+#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 

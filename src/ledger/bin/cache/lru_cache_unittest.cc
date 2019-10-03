@@ -4,11 +4,11 @@
 
 #include "src/ledger/bin/cache/lru_cache.h"
 
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 
 namespace cache {
 namespace {

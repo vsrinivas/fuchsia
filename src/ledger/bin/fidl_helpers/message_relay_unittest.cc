@@ -4,15 +4,15 @@
 
 #include "src/ledger/bin/fidl_helpers/message_relay.h"
 
-#include <memory>
-
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/zx/channel.h>
+
+#include <memory>
 
 #include "garnet/public/lib/gtest/test_loop_fixture.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 
 namespace ledger {
 namespace fidl_helpers {

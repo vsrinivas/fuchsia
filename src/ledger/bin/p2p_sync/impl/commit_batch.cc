@@ -4,12 +4,11 @@
 
 #include "src/ledger/bin/p2p_sync/impl/commit_batch.h"
 
-#include <lib/callback/scoped_callback.h>
-#include <lib/callback/waiter.h>
-
 #include <utility>
 #include <vector>
 
+#include "src/lib/callback/scoped_callback.h"
+#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 

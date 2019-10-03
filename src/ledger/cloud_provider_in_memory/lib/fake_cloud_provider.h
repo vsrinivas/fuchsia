@@ -6,13 +6,13 @@
 #define SRC_LEDGER_CLOUD_PROVIDER_IN_MEMORY_LIB_FAKE_CLOUD_PROVIDER_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <lib/callback/auto_cleanable.h>
 #include <lib/fidl/cpp/binding.h>
 
 #include "src/ledger/bin/fidl_helpers/bound_interface_set.h"
 #include "src/ledger/cloud_provider_in_memory/lib/fake_device_set.h"
 #include "src/ledger/cloud_provider_in_memory/lib/fake_page_cloud.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
+#include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/fxl/macros.h"
 
 namespace ledger {

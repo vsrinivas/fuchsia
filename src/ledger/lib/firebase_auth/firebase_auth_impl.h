@@ -8,8 +8,6 @@
 #include <fuchsia/auth/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/backoff/backoff.h>
-#include <lib/callback/cancellable.h>
-#include <lib/callback/scoped_task_runner.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -19,6 +17,8 @@
 
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/lib/firebase_auth/firebase_auth.h"
+#include "src/lib/callback/cancellable.h"
+#include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 
 namespace firebase_auth {

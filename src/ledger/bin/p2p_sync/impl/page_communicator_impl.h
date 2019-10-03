@@ -5,9 +5,6 @@
 #ifndef SRC_LEDGER_BIN_P2P_SYNC_IMPL_PAGE_COMMUNICATOR_IMPL_H_
 #define SRC_LEDGER_BIN_P2P_SYNC_IMPL_PAGE_COMMUNICATOR_IMPL_H_
 
-#include <lib/callback/auto_cleanable.h>
-#include <lib/callback/cancellable.h>
-#include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 
 #include <flatbuffers/flatbuffers.h>
@@ -26,6 +23,9 @@
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
+#include "src/lib/callback/auto_cleanable.h"
+#include "src/lib/callback/cancellable.h"
+#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace p2p_sync {

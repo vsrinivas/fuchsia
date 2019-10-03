@@ -4,9 +4,6 @@
 
 #include "src/ledger/bin/app/active_page_manager_container.h"
 
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
-
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/fidl/include/types.h"
@@ -14,6 +11,8 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {

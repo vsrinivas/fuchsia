@@ -5,7 +5,6 @@
 #ifndef SRC_LEDGER_BIN_APP_MERGING_LEDGER_MERGE_MANAGER_H_
 #define SRC_LEDGER_BIN_APP_MERGING_LEDGER_MERGE_MANAGER_H_
 
-#include <lib/callback/auto_cleanable.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fit/function.h>
 
@@ -16,6 +15,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/fxl/macros.h"
 
 namespace ledger {

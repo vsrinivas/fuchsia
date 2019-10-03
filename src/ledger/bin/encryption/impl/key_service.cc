@@ -5,12 +5,12 @@
 #include "src/ledger/bin/encryption/impl/key_service.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/callback/scoped_callback.h>
 #include <lib/fit/function.h>
 
 #include <string>
 
 #include "src/ledger/bin/encryption/primitives/kdf.h"
+#include "src/lib/callback/scoped_callback.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
 namespace encryption {

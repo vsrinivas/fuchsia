@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <lib/callback/waiter.h>
 #include <lib/inspect_deprecated/inspect.h>
 #include <lib/inspect_deprecated/testing/inspect.h>
 
@@ -18,6 +17,7 @@
 #include "src/ledger/bin/testing/ledger_matcher.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
+#include "src/lib/callback/waiter.h"
 
 namespace ledger {
 namespace {

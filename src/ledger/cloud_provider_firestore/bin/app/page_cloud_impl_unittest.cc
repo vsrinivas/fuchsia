@@ -5,8 +5,6 @@
 #include "src/ledger/cloud_provider_firestore/bin/app/page_cloud_impl.h"
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/vector.h>
 #include <lib/fsl/socket/strings.h>
@@ -25,6 +23,8 @@
 #include "src/ledger/cloud_provider_firestore/bin/firestore/testing/encoding.h"
 #include "src/ledger/cloud_provider_firestore/bin/firestore/testing/test_firestore_service.h"
 #include "src/ledger/lib/commit_pack/commit_pack.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 
 namespace cloud_provider_firestore {
 namespace {

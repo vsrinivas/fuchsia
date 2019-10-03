@@ -5,7 +5,6 @@
 #ifndef SRC_LEDGER_BIN_P2P_SYNC_IMPL_USER_COMMUNICATOR_IMPL_H_
 #define SRC_LEDGER_BIN_P2P_SYNC_IMPL_USER_COMMUNICATOR_IMPL_H_
 
-#include <lib/callback/auto_cleanable.h>
 #include <lib/component/cpp/service_provider_impl.h>
 
 #include <memory>
@@ -20,6 +19,7 @@
 #include "src/ledger/bin/p2p_sync/impl/device_mesh.h"
 #include "src/ledger/bin/p2p_sync/public/user_communicator.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/lib/callback/auto_cleanable.h"
 
 namespace p2p_sync {
 class LedgerCommunicatorImpl;

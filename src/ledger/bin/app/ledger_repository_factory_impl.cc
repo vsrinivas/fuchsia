@@ -7,8 +7,6 @@
 #include <fcntl.h>
 #include <lib/async/wait.h>
 #include <lib/backoff/exponential_backoff.h>
-#include <lib/callback/scoped_callback.h>
-#include <lib/callback/waiter.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -35,6 +33,8 @@
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
 #include "src/ledger/bin/storage/impl/leveldb_factory.h"
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
+#include "src/lib/callback/scoped_callback.h"
+#include "src/lib/callback/waiter.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/eintr_wrapper.h"
 #include "src/lib/files/file.h"

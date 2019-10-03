@@ -4,9 +4,6 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
-#include <lib/callback/auto_cleanable.h>
-#include <lib/callback/capture.h>
-#include <lib/callback/waiter.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
@@ -22,6 +19,9 @@
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
 #include "src/ledger/bin/testing/ledger_app_instance_factory.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
+#include "src/lib/callback/auto_cleanable.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/strings/concatenate.h"
 

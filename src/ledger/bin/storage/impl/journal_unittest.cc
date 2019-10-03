@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/callback/set_when_called.h>
-
 #include <memory>
 #include <vector>
 
@@ -17,6 +15,7 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/testing/storage_matcher.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/callback/set_when_called.h"
 
 namespace storage {
 namespace {

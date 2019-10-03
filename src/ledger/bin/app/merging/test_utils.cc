@@ -5,8 +5,6 @@
 #include "src/ledger/bin/app/merging/test_utils.h"
 
 #include <lib/async/dispatcher.h>
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
@@ -15,6 +13,8 @@
 #include "src/ledger/bin/storage/impl/leveldb.h"
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 
 namespace ledger {
 

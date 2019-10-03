@@ -5,8 +5,6 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 
 #include <inttypes.h>
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
 #include <zircon/syscalls.h>
 
 #include <algorithm>
@@ -24,6 +22,8 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace storage {

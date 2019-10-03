@@ -5,8 +5,6 @@
 #include "src/ledger/bin/p2p_sync/impl/page_communicator_impl.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/test_loop_fixture.h>
 
@@ -15,6 +13,9 @@
 #include <memory>
 #include <string>
 #include <vector>
+
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 
 // gtest matchers are in gmock and we cannot include the specific header file
 // directly as it is private to the library.

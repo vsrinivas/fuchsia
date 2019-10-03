@@ -5,8 +5,6 @@
 #ifndef SRC_LEDGER_BIN_APP_MERGING_CONFLICT_RESOLVER_CLIENT_H_
 #define SRC_LEDGER_BIN_APP_MERGING_CONFLICT_RESOLVER_CLIENT_H_
 
-#include <lib/callback/operation_serializer.h>
-#include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 
 #include <memory>
@@ -18,6 +16,8 @@
 #include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/lib/callback/operation_serializer.h"
+#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 

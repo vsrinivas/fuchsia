@@ -5,19 +5,20 @@
 #include "src/ledger/bin/app/ledger_impl.h"
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <lib/callback/trace_callback.h>
 #include <lib/fidl/cpp/optional.h>
-#include <trace/event.h>
 #include <zircon/syscalls.h>
 
 #include <memory>
 #include <string>
 #include <utility>
 
+#include <trace/event.h>
+
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/page_impl.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/lib/callback/trace_callback.h"
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {

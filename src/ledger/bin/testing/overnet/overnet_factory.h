@@ -6,12 +6,12 @@
 #define SRC_LEDGER_BIN_TESTING_OVERNET_OVERNET_FACTORY_H_
 
 #include <fuchsia/overnet/cpp/fidl.h>
-#include <lib/callback/auto_cleanable.h>
 #include <lib/fit/function.h>
 
 #include "src/ledger/bin/fidl_helpers/bound_interface.h"
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/testing/overnet/fake_overnet.h"
+#include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/fxl/macros.h"
 
 namespace ledger {

@@ -4,7 +4,6 @@
 
 #include "src/ledger/bin/cloud_sync/impl/page_download.h"
 
-#include <lib/callback/waiter.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 
@@ -15,6 +14,7 @@
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/read_data_source.h"
 #include "src/ledger/lib/commit_pack/commit_pack.h"
+#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
 namespace cloud_sync {

@@ -4,11 +4,11 @@
 
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 
-#include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
+#include "src/lib/callback/waiter.h"
 
 namespace coroutine {
 namespace {

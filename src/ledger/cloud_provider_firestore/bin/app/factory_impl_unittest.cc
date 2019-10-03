@@ -5,13 +5,13 @@
 #include "src/ledger/cloud_provider_firestore/bin/app/factory_impl.h"
 
 #include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "peridot/lib/rng/test_random.h"
 #include "src/ledger/lib/firebase_auth/testing/test_token_manager.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 
 namespace cloud_provider_firestore {
 

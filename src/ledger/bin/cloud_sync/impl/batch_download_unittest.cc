@@ -5,7 +5,6 @@
 #include "src/ledger/bin/cloud_sync/impl/batch_download.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/callback/capture.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/test_loop_fixture.h>
 
@@ -16,6 +15,7 @@
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_cloud.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
+#include "src/lib/callback/capture.h"
 #include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {

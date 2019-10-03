@@ -4,9 +4,6 @@
 
 #include "src/ledger/bin/app/merging/merge_resolver.h"
 
-#include <lib/callback/scoped_callback.h>
-#include <lib/callback/trace_callback.h>
-#include <lib/callback/waiter.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 
@@ -24,6 +21,9 @@
 #include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
+#include "src/lib/callback/scoped_callback.h"
+#include "src/lib/callback/trace_callback.h"
+#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 

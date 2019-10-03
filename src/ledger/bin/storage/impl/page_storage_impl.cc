@@ -6,9 +6,6 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <lib/callback/scoped_callback.h>
-#include <lib/callback/trace_callback.h>
-#include <lib/callback/waiter.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
@@ -50,6 +47,9 @@
 #include "src/ledger/bin/synchronization/lock.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
+#include "src/lib/callback/scoped_callback.h"
+#include "src/lib/callback/trace_callback.h"
+#include "src/lib/callback/waiter.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/file_descriptor.h"

@@ -5,14 +5,14 @@
 #include "src/ledger/bin/app/token_manager.h"
 
 #include <fuchsia/ledger/cpp/fidl.h>
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
 
 #include <random>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 
 namespace ledger {
 namespace {

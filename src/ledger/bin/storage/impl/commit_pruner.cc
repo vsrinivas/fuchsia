@@ -4,9 +4,8 @@
 
 #include "src/ledger/bin/storage/impl/commit_pruner.h"
 
-#include <lib/callback/waiter.h>
-
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
+#include "src/lib/callback/waiter.h"
 
 namespace storage {
 namespace {

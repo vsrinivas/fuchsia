@@ -4,7 +4,6 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/callback/waiter.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
@@ -28,6 +27,7 @@
 #include "src/ledger/bin/testing/run_with_tracing.h"
 #include "src/ledger/bin/testing/sync_params.h"
 #include "src/ledger/cloud_provider_firestore/bin/testing/cloud_provider_factory.h"
+#include "src/lib/callback/waiter.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"

@@ -4,7 +4,6 @@
 
 #include "src/ledger/cloud_provider_firestore/bin/app/cloud_provider_impl.h"
 
-#include <lib/callback/scoped_callback.h>
 #include <lib/fit/function.h>
 
 #include <utility>
@@ -14,6 +13,7 @@
 #include "src/ledger/cloud_provider_firestore/bin/app/credentials_provider_impl.h"
 #include "src/ledger/cloud_provider_firestore/bin/app/grpc_status.h"
 #include "src/ledger/cloud_provider_firestore/bin/firestore/encoding.h"
+#include "src/lib/callback/scoped_callback.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/string_view.h"

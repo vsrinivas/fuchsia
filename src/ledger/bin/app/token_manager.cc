@@ -4,10 +4,10 @@
 
 #include "src/ledger/bin/app/token_manager.h"
 
-#include <lib/callback/scoped_callback.h>
 #include <lib/fit/function.h>
 
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/callback/scoped_callback.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {

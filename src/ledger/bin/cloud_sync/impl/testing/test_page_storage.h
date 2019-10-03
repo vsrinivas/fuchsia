@@ -6,7 +6,6 @@
 #define SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_TESTING_TEST_PAGE_STORAGE_H_
 
 #include <lib/async/dispatcher.h>
-#include <lib/callback/capture.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
 
@@ -20,6 +19,7 @@
 #include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
+#include "src/lib/callback/capture.h"
 
 namespace cloud_sync {
 // Fake implementation of storage::PageStorage. Injects the data that PageSync

@@ -5,7 +5,6 @@
 #ifndef SRC_LEDGER_BIN_APP_PAGE_USAGE_DB_H_
 #define SRC_LEDGER_BIN_APP_PAGE_USAGE_DB_H_
 
-#include <lib/callback/operation_serializer.h>
 #include <lib/timekeeper/clock.h>
 
 #include <functional>
@@ -20,6 +19,7 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/synchronization/completer.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/lib/callback/operation_serializer.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
 namespace ledger {

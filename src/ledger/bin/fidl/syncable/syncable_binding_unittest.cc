@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/callback/capture.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/fidl/syncable/syncable_fidl_test.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 
 namespace ledger {
 namespace {

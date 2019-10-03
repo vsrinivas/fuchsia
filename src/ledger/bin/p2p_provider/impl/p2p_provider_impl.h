@@ -6,7 +6,6 @@
 #define SRC_LEDGER_BIN_P2P_PROVIDER_IMPL_P2P_PROVIDER_IMPL_H_
 
 #include <fuchsia/overnet/cpp/fidl.h>
-#include <lib/callback/auto_cleanable.h>
 #include <lib/component/cpp/service_provider_impl.h>
 
 #include <memory>
@@ -21,6 +20,7 @@
 #include "src/ledger/bin/p2p_provider/impl/remote_connection.h"
 #include "src/ledger/bin/p2p_provider/public/p2p_provider.h"
 #include "src/ledger/bin/p2p_provider/public/user_id_provider.h"
+#include "src/lib/callback/auto_cleanable.h"
 
 namespace p2p_provider {
 

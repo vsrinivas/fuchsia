@@ -8,7 +8,6 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/backoff/backoff.h>
-#include <lib/callback/scoped_task_runner.h>
 #include <lib/fit/function.h>
 
 #include <functional>
@@ -24,6 +23,7 @@
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/storage/public/commit_watcher.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/time/time_delta.h"
 

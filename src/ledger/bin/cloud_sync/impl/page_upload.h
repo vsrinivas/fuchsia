@@ -7,7 +7,6 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/backoff/backoff.h>
-#include <lib/callback/scoped_task_runner.h>
 #include <lib/fit/function.h>
 
 #include <memory>
@@ -19,6 +18,7 @@
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/commit_watcher.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace cloud_sync {

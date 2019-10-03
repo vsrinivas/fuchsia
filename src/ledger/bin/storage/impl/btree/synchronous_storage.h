@@ -5,8 +5,6 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_BTREE_SYNCHRONOUS_STORAGE_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_BTREE_SYNCHRONOUS_STORAGE_H_
 
-#include <lib/callback/waiter.h>
-
 #include <memory>
 #include <vector>
 
@@ -14,6 +12,7 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/lib/callback/waiter.h"
 
 namespace storage {
 namespace btree {

@@ -8,12 +8,12 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/callback/auto_cleanable.h>
-#include <lib/callback/cancellable.h>
 #include <lib/fit/function.h>
 
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/cloud_provider_firestore/bin/app/cloud_provider_impl.h"
+#include "src/lib/callback/auto_cleanable.h"
+#include "src/lib/callback/cancellable.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 

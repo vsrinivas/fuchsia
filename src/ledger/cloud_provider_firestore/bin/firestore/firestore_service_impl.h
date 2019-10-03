@@ -6,7 +6,6 @@
 #define SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_FIRESTORE_FIRESTORE_SERVICE_IMPL_H_
 
 #include <lib/async/dispatcher.h>
-#include <lib/callback/auto_cleanable.h>
 #include <lib/fit/function.h>
 
 #include <memory>
@@ -15,6 +14,7 @@
 #include "src/ledger/cloud_provider_firestore/bin/firestore/firestore_service.h"
 #include "src/ledger/cloud_provider_firestore/bin/firestore/listen_call.h"
 #include "src/ledger/cloud_provider_firestore/bin/grpc/read_stream_drainer.h"
+#include "src/lib/callback/auto_cleanable.h"
 
 namespace cloud_provider_firestore {
 

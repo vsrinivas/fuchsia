@@ -6,7 +6,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/backoff/exponential_backoff.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/handles/object_info.h>
@@ -35,6 +34,7 @@
 #include "src/ledger/bin/testing/overnet/overnet_factory.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/ledger/cloud_provider_memory_diff/cpp/cloud_controller_factory.h"
+#include "src/lib/callback/set_when_called.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/strings/concatenate.h"
 

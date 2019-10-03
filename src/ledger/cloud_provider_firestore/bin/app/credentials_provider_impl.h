@@ -5,7 +5,6 @@
 #ifndef SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_APP_CREDENTIALS_PROVIDER_IMPL_H_
 #define SRC_LEDGER_CLOUD_PROVIDER_FIRESTORE_BIN_APP_CREDENTIALS_PROVIDER_IMPL_H_
 
-#include <lib/callback/cancellable.h>
 #include <lib/fit/function.h>
 
 #include <functional>
@@ -13,6 +12,7 @@
 
 #include "src/ledger/cloud_provider_firestore/bin/app/credentials_provider.h"
 #include "src/ledger/lib/firebase_auth/firebase_auth.h"
+#include "src/lib/callback/cancellable.h"
 
 #include <grpc++/grpc++.h>
 

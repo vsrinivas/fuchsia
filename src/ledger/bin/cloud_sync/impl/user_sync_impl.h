@@ -7,7 +7,6 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/backoff/backoff.h>
-#include <lib/callback/scoped_task_runner.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 
@@ -18,6 +17,7 @@
 #include "src/ledger/bin/cloud_sync/impl/ledger_sync_impl.h"
 #include "src/ledger/bin/cloud_sync/public/user_sync.h"
 #include "src/ledger/bin/environment/environment.h"
+#include "src/lib/callback/scoped_task_runner.h"
 
 namespace cloud_sync {
 

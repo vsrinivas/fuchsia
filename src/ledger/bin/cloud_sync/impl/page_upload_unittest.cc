@@ -6,7 +6,6 @@
 
 #include <lib/backoff/backoff.h>
 #include <lib/backoff/testing/test_backoff.h>
-#include <lib/callback/capture.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
@@ -26,6 +25,7 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
+#include "src/lib/callback/capture.h"
 #include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
