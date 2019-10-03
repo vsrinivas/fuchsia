@@ -8,6 +8,9 @@ import("//build/package.gni")
 
 declare_args() {
   amlogic_decoder_tests = false
+
+  # Path to the amlogic decoder firmware file. Overrides the default in the build.
+  amlogic_decoder_firmware_path = ""
 }
 
 # These targets only compile for arm64.
@@ -156,15 +159,6 @@ if (target_cpu == "arm64") {
     ]
   }
 
-  copy("video-ucode") {
-    sources = [
-      "firmware/video_ucode.bin",
-    ]
-    outputs = [
-      "$root_out_dir/firmware/amlogic_video_ucode.bin",
-    ]
-  }
-
   copy("test_files") {
     sources = [
       "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264",
@@ -181,22 +175,23 @@ if (target_cpu == "arm64") {
   package("amlogic_video_decoder") {
     deprecated_system_image = true
 
-    # internal access is needed to get the firmware
-    if (target_cpu == "arm64" && internal_access) {
+    # internal access is needed to get the firmware from the default path
+    if (target_cpu == "arm64" && (internal_access || amlogic_decoder_firmware_path != "")) {
       if (amlogic_decoder_tests) {
         testonly = true
       }
 
-      deps = [
-        ":video-ucode($shlib_toolchain)",
-      ]
-
+      if (amlogic_decoder_firmware_path == "") {
+        amlogic_decoder_firmware_path = "firmware/video_ucode.bin"
+      }
       libraries = [
         {
+          source = rebase_path(amlogic_decoder_firmware_path)
           name = "firmware/amlogic_video_ucode.bin"
         },
       ]
 
+      deps = []
       if (amlogic_decoder_tests) {
         deps += [
           ":amlogic_decoder_test",
