@@ -59,6 +59,8 @@ test_package("tests") {
       name = "fuchsia_bluetooth_lib_test"
       dest = "bluetooth-crate-unittests"
       environments = basic_envs
+      # TODO(35077) Re-enable once test flake is resolved
+      disabled = true
     },
   ]
 }
