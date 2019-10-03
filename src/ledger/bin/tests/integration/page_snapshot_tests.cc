@@ -239,6 +239,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   EXPECT_EQ(result.size(), 2u);
 }
 
+/* Disabled due to test flake (fxb/36011)
 TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   auto instance = NewLedgerAppInstance();
   PagePtr page = instance->GetTestPage();
@@ -278,6 +279,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
     EXPECT_EQ(result.at(i), keys[i]);
   }
 }
+*/
 
 TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   auto instance = NewLedgerAppInstance();
@@ -348,6 +350,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   EXPECT_EQ(entries.size(), 0u);
 }
 
+/* Disabled due to test flake (fxb/36011)
 TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   auto instance = NewLedgerAppInstance();
   PagePtr page = instance->GetTestPage();
@@ -431,6 +434,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
     EXPECT_EQ(ToArray(entries[i].value), values[i]);
   }
 }
+*/
 
 TEST_P(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
   auto instance = NewLedgerAppInstance();
