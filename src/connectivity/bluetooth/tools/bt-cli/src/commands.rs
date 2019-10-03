@@ -94,7 +94,7 @@ gen_commands! {
         SetAdapterName = ("set-local-name", ["name"], "Set the name of the Active Adapter"),
         SetAdapterDeviceClass = ("set-device-class", ["Major Class", "Minor Class", "Service Classes..."], "Set the device class of the Active Adapter"),
         GetAdapters = ("list-adapters", [], "Show all known bluetooth adapters"),
-        GetPeers = ("list-peers", [], "Show all known peers"),
+        GetPeers = ("list-peers", ["filter"], "Show all known peers (optionally filtered)"),
         GetPeer = ("peer", ["id|addr"], "Show details for a known peer"),
         StartDiscovery = ("start-discovery", [], "Start Discovery"),
         StopDiscovery = ("stop-discovery", [], "Stop Discovery"),

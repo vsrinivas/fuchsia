@@ -110,13 +110,25 @@ async fn set_adapter_device_class<'a>(
     }
 }
 
-fn get_peers(state: &Mutex<State>) -> String {
+fn match_peer<'a>(pattern: &'a str, peer: &Peer) -> bool {
+    peer.identifier.contains(pattern)
+        || peer.address.contains(pattern)
+        || peer.name.as_ref().map_or(false, |p| p.contains(pattern))
+}
+
+fn get_peers<'a>(args: &'a [&'a str], state: &Mutex<State>) -> String {
+    let find = match args.len() {
+        0 => "",
+        1 => args[0],
+        _ => return format!("usage: {}", Cmd::GetPeers.cmd_help()),
+    };
     let state = state.lock();
     if state.peers.is_empty() {
-        String::from("No known peers")
-    } else {
-        String::from_iter(state.peers.values().map(|peer| peer.to_string()))
+        return String::from("No known peers");
     }
+    let peers: Vec<&Peer> = state.peers.values().filter(|p| match_peer(&find, p)).collect();
+    let matched = format!("Showing {}/{} peers\n", peers.len(), state.peers.len());
+    String::from_iter(std::iter::once(matched).chain(peers.iter().map(|p| p.to_string())))
 }
 
 /// Get the string representation of a peer from either an identifier or address
@@ -352,7 +364,7 @@ async fn handle_cmd(
         Cmd::StopDiscovery => set_discovery(false, &bt_svc).await,
         Cmd::Discoverable => set_discoverable(true, &bt_svc).await,
         Cmd::NotDiscoverable => set_discoverable(false, &bt_svc).await,
-        Cmd::GetPeers => Ok(get_peers(&state)),
+        Cmd::GetPeers => Ok(get_peers(args, &state)),
         Cmd::GetPeer => Ok(get_peer(args, &state)),
         Cmd::GetAdapters => get_adapters(&bt_svc).await,
         Cmd::SetActiveAdapter => set_active_adapter(args, &bt_svc).await,
@@ -486,10 +498,71 @@ mod tests {
         .into()
     }
 
+    fn named_peer(identifier: &str, address: &str, name: Option<String>) -> Peer {
+        control::RemoteDevice {
+            identifier: identifier.to_string(),
+            address: address.to_string(),
+            technology: control::TechnologyType::LowEnergy,
+            name,
+            appearance: control::Appearance::Phone,
+            rssi: None,
+            tx_power: None,
+            connected: false,
+            bonded: false,
+            service_uuids: vec![],
+        }
+        .into()
+    }
+
     fn state_with(p: Peer) -> State {
         let mut peers = HashMap::new();
         peers.insert(p.identifier.clone(), p);
         State { peers }
+    }
+
+    #[test]
+    fn test_match_peer() {
+        let nameless_peer = named_peer("Fuchsia", "01:23:45:67:89:AB", None);
+        let named_peer = named_peer("Fuchsia2", "AD:DE:7E:55:00:11", Some("Sapphire".to_string()));
+
+        assert!(match_peer("23", &nameless_peer));
+        assert!(!match_peer("23", &named_peer));
+
+        assert!(match_peer("sia", &nameless_peer));
+        assert!(match_peer("sia", &named_peer));
+
+        assert!(!match_peer("Sapphire", &nameless_peer));
+        assert!(match_peer("Sapphire", &named_peer));
+
+        assert!(match_peer("", &nameless_peer));
+        assert!(match_peer("", &named_peer));
+    }
+
+    #[test]
+    fn test_get_peers() {
+        let mut state = State { peers: HashMap::new() };
+        state.peers.insert("Fuchsia".to_string(), named_peer("Fuchsia", "01:23:45:67:89:AB", None));
+        state.peers.insert(
+            "Fuchsia2".to_string(),
+            named_peer("Fuchsia2", "AD:DE:7E:55:00:11", Some("Sapphire".to_string())),
+        );
+        let state = Mutex::new(state);
+
+        // Empty arguments matches everything
+        assert!(get_peers(&[], &state).contains("2/2 peers"));
+        assert!(get_peers(&[], &state).contains("01:23:45"));
+        assert!(get_peers(&[], &state).contains("AD:DE:7E"));
+
+        // No matches prints nothing.
+        assert!(get_peers(&["nomatch"], &state).contains("0/2 peers"));
+        assert!(!get_peers(&["nomatch"], &state).contains("01:23:45"));
+        assert!(!get_peers(&["nomatch"], &state).contains("AD:DE:7E"));
+
+        // We can match either one
+        assert!(get_peers(&["01:23"], &state).contains("1/2 peers"));
+        assert!(get_peers(&["01:23"], &state).contains("01:23:45"));
+        assert!(get_peers(&["Fuchsia2"], &state).contains("1/2 peers"));
+        assert!(get_peers(&["Fuchsia2"], &state).contains("AD:DE:7E"));
     }
 
     #[test]
