@@ -26,21 +26,21 @@ if (host_toolchain == current_toolchain) {
     ]
     with_unit_tests = true
   }
-}
 
-copy("fidldoc_copy_config") {
-  sources = [
-    "src/fidldoc.config.json",
-  ]
-  outputs = [
-    "${root_build_dir}/tools/fidldoc.config.json",
-  ]
+  copy("fidldoc_copy_config") {
+    sources = [
+      "src/fidldoc.config.json",
+    ]
+    outputs = [
+      "${host_tools_dir}/fidldoc.config.json",
+    ]
+  }
 }
 
 install_host_tools("fidldoc") {
   deps = [
     ":fidldoc_bin($host_toolchain)",
-    ":fidldoc_copy_config",
+    ":fidldoc_copy_config($host_toolchain)",
   ]
 
   outputs = [
