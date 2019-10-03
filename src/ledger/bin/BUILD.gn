@@ -4,6 +4,7 @@
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/package.gni")
+import("//build/test.gni")
 
 visibility = [ "//src/ledger/*" ]
 
@@ -24,9 +25,7 @@ package("bin") {
   ]
 }
 
-executable("ledger_unittests") {
-  testonly = true
-
+test("ledger_unittests") {
   deps = [
     "//src/ledger/bin/app:unittests",
     "//src/ledger/bin/cache:unittests",
