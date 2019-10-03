@@ -10,9 +10,6 @@ import 'package:sl4f/sl4f.dart';
 import 'package:webdriver/sync_core.dart' show WebDriver;
 import 'package:webdriver/sync_io.dart' as sync_io;
 
-/// Port Chromedriver listens on.
-const _chromedriverPort = 9072;
-
 final _log = Logger('Webdriver');
 
 /// `WebDriverConnector` is a utility for host-driven tests that control Chrome
@@ -26,13 +23,7 @@ final _log = Logger('Webdriver');
 /// communicate with ChromeDriver, which in turn communicates with Chrome
 /// instances on the DuT.
 ///
-/// Note that the latest version of Chromedriver currently needs to be manually
-/// downloaded and placed in the location passed when constructing
-/// `WebDriverConnector`.  This is necessary as the automatically downloaded
-/// version in prebuilt is not kept up to date with the Chrome version. Effort
-/// for this is tracked in IN-1321.
-/// TODO(satsukiu): Remove notice and add e2e test for facade functionality
-/// on completion of IN-1321
+/// TODO(satsukiu): Add e2e test for facade functionality
 class WebDriverConnector {
   /// Relative path of chromedriver binary.
   final String _chromedriverPath;
@@ -49,8 +40,11 @@ class WebDriverConnector {
   /// A handle to the process running Chromedriver.
   io.Process _chromedriverProcess;
 
-  /// A mapping from an exposed port number to an open WebDriver session.
-  Map<int, WebDriver> _webDriverSessions;
+  /// The port Chromedriver is listening on.
+  int _chromedriverPort;
+
+  /// A mapping from an exposed port number on the DUT to an open WebDriver session.
+  Map<int, WebDriverSession> _webDriverSessions;
 
   WebDriverConnector(String chromeDriverPath, Sl4f sl4f,
       {ProcessHelper processHelper, WebDriverHelper webDriverHelper})
@@ -65,23 +59,35 @@ class WebDriverConnector {
   /// contexts, `initialize` must be called prior to the instantiation of the
   /// Chrome context that needs to be driven.
   Future<void> initialize() async {
-    await _sl4f.request('webdriver_facade.EnableDevTools');
     await _startChromedriver();
+    // TODO(satsukiu): return a nicer error, or don't fail if devtools is already enabled
+    await _sl4f.request('webdriver_facade.EnableDevTools');
   }
 
   /// Stops Chromedriver and removes any connections that are still open.
-  void tearDown() {
-    _chromedriverProcess?.kill();
-    _chromedriverProcess = null;
+  Future<void> tearDown() async {
+    if (_chromedriverProcess != null) {
+      _log.info('Stopping chromedriver');
+      _chromedriverProcess.kill();
+      await _chromedriverProcess.exitCode.timeout(Duration(seconds: 5),
+          onTimeout: () {
+        _log.warning('Chromedriver did not shut down, killing it.');
+        _chromedriverProcess.kill(io.ProcessSignal.sigkill);
+        return _chromedriverProcess.exitCode;
+      });
+      _chromedriverProcess = null;
+    }
+
     for (final session in _webDriverSessions.entries) {
-      _sl4f.ssh.cancelPortForward(port: session.key, remotePort: session.key);
+      await _sl4f.ssh.cancelPortForward(
+          port: session.value.localPort, remotePort: session.key);
     }
     _webDriverSessions = {};
   }
 
   /// Get all nonEmpty Urls obtained from current _webDriverSessions.
   Iterable<String> get sessionsUrls => _webDriverSessions.values
-      .map((webDriver) => webDriver.currentUrl)
+      .map((session) => session.webDriver.currentUrl)
       .where((url) => url.isNotEmpty);
 
   /// Searches for Chrome contexts based on the host of the currently displayed
@@ -91,13 +97,16 @@ class WebDriverConnector {
     await _updateWebDriverSessions();
 
     return List.from(_webDriverSessions.values
-        .where((webDriver) => Uri.parse(webDriver.currentUrl).host == host)
-        .map((webDriver) => webDriver));
+        .where(
+            (session) => Uri.parse(session.webDriver.currentUrl).host == host)
+        .map((session) => session.webDriver));
   }
 
   /// Starts Chromedriver on the host.
   Future<void> _startChromedriver() async {
     if (_chromedriverProcess == null) {
+      _chromedriverPort = await _sl4f.ssh.pickUnusedPort();
+
       final chromedriver =
           io.Platform.script.resolve(_chromedriverPath).toFilePath();
       final args = ['--port=$_chromedriverPort'];
@@ -120,31 +129,45 @@ class WebDriverConnector {
 
   /// Updates the set of open WebDriver connections.
   Future<void> _updateWebDriverSessions() async {
-    var portsResult = await _sl4f.request('webdriver_facade.GetDevToolsPorts');
-    var ports = Set.from(portsResult['ports']);
+    final remotePortsResult =
+        await _sl4f.request('webdriver_facade.GetDevToolsPorts');
+    final remotePorts = Set.from(remotePortsResult['ports']);
 
     // Remove port forwarding for any ports that aren't open anymore.
-    _webDriverSessions.removeWhere((port, session) {
-      if (!ports.contains(port)) {
-        _sl4f.ssh.cancelPortForward(port: port, remotePort: port);
+    _webDriverSessions.removeWhere((remotePort, session) {
+      if (!remotePorts.contains(remotePort)) {
+        _sl4f.ssh
+            .cancelPortForward(port: session.localPort, remotePort: remotePort);
         return true;
       }
       return false;
     });
 
     // Add new sessions for new ports.  For a given Chrome context listening on
-    // port p on the DuT, we forward localhost:p to DuT:p, and create a
-    // WebDriver instance pointing to localhost:p.
-    for (final port in ports) {
-      if (!_webDriverSessions.containsKey(port)) {
-        await _sl4f.ssh.forwardPort(port: port, remotePort: port);
+    // port p on the DuT, we choose an unused local port x, and forward
+    // localhost:x to DuT:p, and create a WebDriver instance pointing to localhost:x.
+    for (final remotePort in remotePorts) {
+      if (!_webDriverSessions.containsKey(remotePort)) {
+        final localPort = await _sl4f.ssh.forwardPort(remotePort: remotePort);
         final webDriver =
-            _webDriverHelper.createDriver(port, _chromedriverPort);
+            _webDriverHelper.createDriver(localPort, _chromedriverPort);
 
-        _webDriverSessions.putIfAbsent(port, () => webDriver);
+        _webDriverSessions.putIfAbsent(
+            remotePort, () => WebDriverSession(localPort, webDriver));
       }
     }
   }
+}
+
+/// A representation of a `WebDriver` connection from a host device to a DUT.
+class WebDriverSession {
+  /// The local port forwarded to the DUT.
+  final int localPort;
+
+  /// The webdriver connection.
+  final WebDriver webDriver;
+
+  WebDriverSession(this.localPort, this.webDriver);
 }
 
 /// A wrapper around static dart:io Process methods.
@@ -163,12 +186,12 @@ class WebDriverHelper {
 
   /// Create a new WebDriver pointing to Chromedriver on the given uri and with
   /// given desired capabilities.
-  WebDriver createDriver(int devToolsPort, int chromedriverPort) {
-    final chromeOptions = {'debuggerAddress': 'localhost:$devToolsPort'};
+  WebDriver createDriver(int localPort, int chromedriverPort) {
+    final chromeOptions = {'debuggerAddress': 'localhost:$localPort'};
     final capabilities = sync_io.Capabilities.chrome;
     capabilities[sync_io.Capabilities.chromeOptions] = chromeOptions;
     return sync_io.createDriver(
         desired: capabilities,
-        uri: Uri.parse('http://localhost:$_chromedriverPort'));
+        uri: Uri.parse('http://localhost:$chromedriverPort'));
   }
 }

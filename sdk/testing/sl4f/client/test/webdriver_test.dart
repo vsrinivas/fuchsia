@@ -20,17 +20,15 @@ class MockWebDriver extends Mock implements WebDriver {}
 
 void main(List<String> args) {
   MockSl4f sl4f;
+  MockSsh ssh;
   MockProcessHelper processHelper;
   MockWebDriverHelper webDriverHelper;
   WebDriverConnector webDriverConnector;
 
   setUp(() {
     sl4f = MockSl4f();
-    final mockSsh = MockSsh();
-    when(sl4f.ssh).thenReturn(mockSsh);
-    when(mockSsh.forwardPort(
-            port: anyNamed('port'), remotePort: anyNamed('remotePort')))
-        .thenAnswer((inv) => Future.value(inv.namedArguments[#port]));
+    ssh = MockSsh();
+    when(sl4f.ssh).thenReturn(ssh);
     processHelper = MockProcessHelper();
     webDriverHelper = MockWebDriverHelper();
     webDriverConnector = WebDriverConnector('path/to/chromedriver', sl4f,
@@ -44,7 +42,7 @@ void main(List<String> args) {
       20002: 'https://www.test.com/path/2',
       20003: 'https://www.example.com/path/2'
     };
-    mockAvailableWebDrivers(webDriverHelper, sl4f, openContexts);
+    mockAvailableWebDrivers(webDriverHelper, sl4f, ssh, openContexts);
     final webDrivers =
         await webDriverConnector.webDriversForHost('www.test.com');
     expect(webDrivers.length, 2);
@@ -55,7 +53,7 @@ void main(List<String> args) {
   });
 
   test('webDriversForHost no contexts', () async {
-    mockAvailableWebDrivers(webDriverHelper, sl4f, {});
+    mockAvailableWebDrivers(webDriverHelper, sl4f, ssh, {});
     var webDrivers = await webDriverConnector.webDriversForHost('www.test.com');
     expect(webDrivers.length, 0);
   });
@@ -63,15 +61,24 @@ void main(List<String> args) {
 
 /// Set up mocks as if there are chrome contexts with the given ports exposing a url.
 void mockAvailableWebDrivers(MockWebDriverHelper webDriverHelper, MockSl4f sl4f,
-    Map<int, String> portToUrl) {
-  final portList = {'ports': List.from(portToUrl.keys)};
-  print(portList);
+    MockSsh ssh, Map<int, String> remotePortToUrl) {
+  final remotePortList = {'ports': List.from(remotePortToUrl.keys)};
   when(sl4f.request('webdriver_facade.GetDevToolsPorts'))
-      .thenAnswer((_) => Future.value(portList));
+      .thenAnswer((_) => Future.value(remotePortList));
+
+  // Pretend that local port == remote port + 10, this lets us easily convert
+  // between the two for mocking.
+  when(ssh.forwardPort(remotePort: anyNamed('remotePort')))
+      .thenAnswer((invocation) {
+    final remotePort = invocation.namedArguments[#remotePort];
+    return Future.value(remotePort + 10);
+  });
+
   when(webDriverHelper.createDriver(any, any)).thenAnswer((invocation) {
-    final devToolsPort = invocation.positionalArguments.first;
+    final localPort = invocation.positionalArguments.first;
+    final remotePort = localPort - 10;
     WebDriver webDriver = MockWebDriver();
-    when(webDriver.currentUrl).thenReturn(portToUrl[devToolsPort]);
+    when(webDriver.currentUrl).thenReturn(remotePortToUrl[remotePort]);
     return webDriver;
   });
 }

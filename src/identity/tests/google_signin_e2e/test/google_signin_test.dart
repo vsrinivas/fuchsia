@@ -48,7 +48,7 @@ void main() {
   tearDown(() async {
     await sl4fDriver.stopServer();
     sl4fDriver.close();
-    webdriverConnector.tearDown();
+    await webdriverConnector.tearDown();
     await sl4fDriver.ssh.run('tiles_ctl quit');
   });
 

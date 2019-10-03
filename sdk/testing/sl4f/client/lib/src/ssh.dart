@@ -126,7 +126,7 @@ class Ssh {
   /// The return value is the local forwarded port, or [PortForwardException] is
   /// thrown in case of error.
   Future<int> forwardPort({@required int remotePort, int port}) async {
-    port ??= await _pickUnusedPort();
+    port ??= await pickUnusedPort();
     _log.fine('Forwarding TCP port: localhost:$port -> $target:$remotePort');
     final result = await Process.run(
         'ssh', makeForwardArgs(port, remotePort, cancel: false),
@@ -201,9 +201,11 @@ class Ssh {
         '-O', cancel ? 'cancel' : 'forward',
       ];
 
-  Future<int> _pickUnusedPort() async {
-    // Use bind to allocate an unused port in the local port range (see ip(7)).
-    // Then we unbind from that port to allow SSH to use it.
+  /// Finds and returns an unused port on the test host in the local port range
+  /// (see ip(7)).
+  Future<int> pickUnusedPort() async {
+    // Use bind to allocate an unused port, then unbind from that port to
+    // make it available for use.
     final socket = await ServerSocket.bind('localhost', 0);
     final port = socket.port;
     await socket.close();
