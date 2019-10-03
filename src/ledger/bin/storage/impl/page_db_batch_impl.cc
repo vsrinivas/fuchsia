@@ -120,12 +120,16 @@ Status PageDbBatchImpl::DeleteObject(coroutine::CoroutineHandler* handler,
   // |seen_status| is used to ensure that we call |IsGarbageCollectable| only once per status.
   std::set<PageDbObjectStatus> seen_status;
   for (const auto& [object_status_key, object_status] : keys) {
-    if (seen_status.insert(object_status).second &&
-        !IsGarbageCollectable(handler, object_digest, object_status)) {
-      // Abort the deletion.
-      (void)factory_->UntrackDeletion(object_digest);
-      FXL_VLOG(1) << "Object is not garbage collectable, cannot be deleted: " << object_digest;
-      return Status::CANCELED;
+    if (seen_status.insert(object_status).second) {
+      bool is_garbage_collectable = false;
+      RETURN_ON_ERROR(
+          IsGarbageCollectable(handler, object_digest, object_status, &is_garbage_collectable));
+      if (!is_garbage_collectable) {
+        // Abort the deletion.
+        (void)factory_->UntrackDeletion(object_digest);
+        FXL_VLOG(1) << "Object is not garbage collectable, cannot be deleted: " << object_digest;
+        return Status::CANCELED;
+      }
     }
     RETURN_ON_ERROR(batch_->Delete(handler, object_status_key));
   }
@@ -139,14 +143,16 @@ Status PageDbBatchImpl::DeleteObject(coroutine::CoroutineHandler* handler,
   return Status::OK;
 }
 
-bool PageDbBatchImpl::IsGarbageCollectable(coroutine::CoroutineHandler* handler,
+Status PageDbBatchImpl::IsGarbageCollectable(coroutine::CoroutineHandler* handler,
                                            const ObjectDigest& digest,
-                                           PageDbObjectStatus object_status) {
+                                           PageDbObjectStatus object_status,
+                                           bool *result) {
+  *result = false;
   std::string prefix;
   switch (object_status) {
     case PageDbObjectStatus::UNKNOWN:
       FXL_NOTREACHED();
-      return false;
+      return Status::INTERNAL_ERROR;
     case PageDbObjectStatus::SYNCED:
       // object-object links only for synced objects: even if referenced by on-disk commits,
       // it is safe to discard them (and recover them later from the cloud).
@@ -159,17 +165,11 @@ bool PageDbBatchImpl::IsGarbageCollectable(coroutine::CoroutineHandler* handler,
       break;
   }
   Status status = db_->HasPrefix(handler, prefix);
-  switch (status) {
-    case Status::INTERNAL_NOT_FOUND:
-      // The object is garbage collectable if nothing references it.
-      return true;
-    case Status::OK:
-      // Some references have been found, the object is not collectable.
-      return false;
-    default:
-      // In case of unexpected errors, be conservative.
-      return false;
+  if (status == Status::INTERNAL_NOT_FOUND) {
+    *result = true;
+    status = Status::OK;
   }
+  return status;
 }
 
 Status PageDbBatchImpl::SetObjectStatus(CoroutineHandler* handler,

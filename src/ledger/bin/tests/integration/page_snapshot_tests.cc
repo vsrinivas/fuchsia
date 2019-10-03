@@ -238,8 +238,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   EXPECT_EQ(result.size(), 2u);
 }
 
-// Disabled due to test flake (fxb/36011)
-TEST_P(PageSnapshotIntegrationTest, DISABLED_PageSnapshotGetKeysMultiPart) {
+TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   auto instance = NewLedgerAppInstance();
   PagePtr page = instance->GetTestPage();
 
@@ -347,8 +346,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   EXPECT_EQ(entries.size(), 0u);
 }
 
-// Disabled due to test flake (fxb/36011)
-TEST_P(PageSnapshotIntegrationTest, DISABLED_PageSnapshotGetEntriesMultiPartSize) {
+TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   auto instance = NewLedgerAppInstance();
   PagePtr page = instance->GetTestPage();
 
@@ -391,8 +389,7 @@ TEST_P(PageSnapshotIntegrationTest, DISABLED_PageSnapshotGetEntriesMultiPartSize
   }
 }
 
-// Disabled due to test flake (fxb/36011)
-TEST_P(PageSnapshotIntegrationTest, DISABLED_PageSnapshotGetEntriesMultiPartHandles) {
+TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   auto instance = NewLedgerAppInstance();
   PagePtr page = instance->GetTestPage();
 

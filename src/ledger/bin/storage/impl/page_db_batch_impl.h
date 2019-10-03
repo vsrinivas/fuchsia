@@ -67,9 +67,9 @@ class PageDbBatchImpl : public PageDb::Batch {
   Status Execute(coroutine::CoroutineHandler* handler) override;
 
  private:
-  // Returns true if the object can be garbage collected.
-  bool IsGarbageCollectable(coroutine::CoroutineHandler* handler, const ObjectDigest& digest,
-                            PageDbObjectStatus object_status);
+  // Sets |result| to |true| if the object can be garbage collected.
+  Status IsGarbageCollectable(coroutine::CoroutineHandler* handler, const ObjectDigest& digest,
+                            PageDbObjectStatus object_status, bool* result);
 
   // Stops tracking all deletions for this batch and clears |pending_deletions_|.
   // Returns false if any of the pending deletions was aborted by the object identifier factory
