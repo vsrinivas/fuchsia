@@ -124,16 +124,18 @@ class Vp9Decoder : public VideoDecoder {
 
   class WorkingBuffer {
    public:
-    WorkingBuffer(BufferAllocator* allocator, size_t size);
+    WorkingBuffer(BufferAllocator* allocator, size_t size, const char* name);
 
     ~WorkingBuffer();
 
     uint32_t addr32();
     size_t size() const { return size_; }
+    const char* name() const { return name_; }
     io_buffer_t& buffer() { return buffer_; }
 
    private:
     size_t size_;
+    const char* name_;
     io_buffer_t buffer_ = {};
   };
 
@@ -141,7 +143,7 @@ class Vp9Decoder : public VideoDecoder {
     WorkingBuffers() {}
 
 // Sizes are large enough for 4096x2304.
-#define DEF_BUFFER(name, size) WorkingBuffer name = WorkingBuffer(this, size)
+#define DEF_BUFFER(name, size) WorkingBuffer name = WorkingBuffer(this, size, #name)
     DEF_BUFFER(rpm, 0x400 * 2);
     DEF_BUFFER(short_term_rps, 0x800);
     DEF_BUFFER(picture_parameter_set, 0x2000);

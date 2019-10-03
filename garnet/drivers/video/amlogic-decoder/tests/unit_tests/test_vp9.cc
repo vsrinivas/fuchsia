@@ -44,7 +44,7 @@ class FakeOwner : public VideoDecoder::Owner {
   }
   DecoderCore* core() override { return &core_; }
   zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size, uint32_t alignment_log2,
-                               uint32_t flags) override {
+                               uint32_t flags, const char* name) override {
     zx_status_t status = io_buffer_init(buffer, ZX_HANDLE_INVALID, size, flags & ~IO_BUFFER_CONTIG);
     if (status != ZX_OK)
       return status;

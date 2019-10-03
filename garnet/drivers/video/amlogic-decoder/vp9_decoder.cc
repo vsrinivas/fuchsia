@@ -7,14 +7,15 @@
 #include <lib/media/codec_impl/codec_buffer.h>
 #include <lib/media/codec_impl/codec_packet.h>
 
+#include <algorithm>
+
 #include "firmware_blob.h"
 #include "macros.h"
 #include "memory_barriers.h"
 #include "pts_manager.h"
 #include "third_party/libvpx/vp9/common/vp9_loopfilter.h"
 #include "third_party/vp9_adapt_probs/vp9_coefficient_adaptation.h"
-
-#include <algorithm>
+#include "util.h"
 
 using HevcDecStatusReg = HevcAssistScratch0;
 using HevcRpmBuffer = HevcAssistScratch1;
@@ -87,7 +88,7 @@ zx_status_t Vp9Decoder::BufferAllocator::AllocateBuffers(VideoDecoder::Owner* ow
   for (auto* buffer : buffers_) {
     zx_status_t status =
         owner->AllocateIoBuffer(&buffer->buffer(), buffer->size() + kBufferOverrunPaddingBytes, 0,
-                                IO_BUFFER_CONTIG | IO_BUFFER_RW);
+                                IO_BUFFER_CONTIG | IO_BUFFER_RW, buffer->name());
     if (status != ZX_OK) {
       DECODE_ERROR("VP9 working buffer allocation failed: %d\n", status);
       return status;
@@ -130,7 +131,8 @@ void Vp9Decoder::BufferAllocator::CheckBuffers() {
   }
 }
 
-Vp9Decoder::WorkingBuffer::WorkingBuffer(BufferAllocator* allocator, size_t size) : size_(size) {
+Vp9Decoder::WorkingBuffer::WorkingBuffer(BufferAllocator* allocator, size_t size, const char* name)
+    : size_(size), name_(name) {
   allocator->Register(this);
 }
 
@@ -407,9 +409,8 @@ void Vp9Decoder::ProcessCompletedFrames() {
   last_mpred_buffer_ = std::move(current_mpred_buffer_);
 }
 
-void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames,
-                                   uint32_t coded_width, uint32_t coded_height,
-                                   uint32_t stride) {
+void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t coded_width,
+                                   uint32_t coded_height, uint32_t stride) {
   ZX_DEBUG_ASSERT(state_ == DecoderState::kPausedAtHeader);
   uint32_t frame_vmo_bytes = stride * coded_height * 3 / 2;
   for (uint32_t i = 0; i < frames_.size(); i++) {
@@ -422,8 +423,7 @@ void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames,
     video_frame->coded_width = coded_width;
     video_frame->coded_height = coded_height;
     video_frame->stride = stride;
-    video_frame->uv_plane_offset =
-        video_frame->stride * video_frame->coded_height;
+    video_frame->uv_plane_offset = video_frame->stride * video_frame->coded_height;
     video_frame->index = i;
 
     video_frame->codec_buffer = frames[i].codec_buffer_ptr;
@@ -684,12 +684,11 @@ void Vp9Decoder::ConfigureMotionPrediction() {
       .FromValue(working_buffers_.motion_prediction_above.addr32())
       .WriteTo(owner_->dosbus());
 
-  bool last_frame_has_mv =
-      last_frame_ && !last_frame_data_.keyframe &&
-      !last_frame_data_.intra_only &&
-      current_frame_->frame->hw_width == last_frame_->frame->hw_width &&
-      current_frame_->frame->hw_height == last_frame_->frame->hw_height &&
-      !current_frame_data_.error_resilient_mode && last_frame_data_.show_frame;
+  bool last_frame_has_mv = last_frame_ && !last_frame_data_.keyframe &&
+                           !last_frame_data_.intra_only &&
+                           current_frame_->frame->hw_width == last_frame_->frame->hw_width &&
+                           current_frame_->frame->hw_height == last_frame_->frame->hw_height &&
+                           !current_frame_data_.error_resilient_mode && last_frame_data_.show_frame;
   HevcMpredCtrl4::Get()
       .ReadFrom(owner_->dosbus())
       .set_use_prev_frame_mvs(last_frame_has_mv)
@@ -720,20 +719,17 @@ void Vp9Decoder::ConfigureFrameOutput(bool bit_depth_8) {
       .set_mode_8_bits(bit_depth_8)
       .WriteTo(owner_->dosbus());
 
-  HevcdMppDecompCtl1::Get().FromValue(0).set_paged_mode(1).WriteTo(
-      owner_->dosbus());
+  HevcdMppDecompCtl1::Get().FromValue(0).set_paged_mode(1).WriteTo(owner_->dosbus());
 
-  ZX_DEBUG_ASSERT(fbl::round_up(current_frame_->frame->hw_width, 2u) == current_frame_->frame->coded_width);
-  ZX_DEBUG_ASSERT(fbl::round_up(current_frame_->frame->hw_height, 2u) == current_frame_->frame->coded_height);
+  ZX_DEBUG_ASSERT(fbl::round_up(current_frame_->frame->hw_width, 2u) ==
+                  current_frame_->frame->coded_width);
+  ZX_DEBUG_ASSERT(fbl::round_up(current_frame_->frame->hw_height, 2u) ==
+                  current_frame_->frame->coded_height);
 
   uint32_t compressed_body_size = ComputeCompressedBodySize(
-      current_frame_->frame->coded_width,
-      current_frame_->frame->coded_height,
-      !bit_depth_8);
+      current_frame_->frame->coded_width, current_frame_->frame->coded_height, !bit_depth_8);
   uint32_t compressed_header_size = ComputeCompressedHeaderSize(
-      current_frame_->frame->coded_width,
-      current_frame_->frame->coded_height,
-      !bit_depth_8);
+      current_frame_->frame->coded_width, current_frame_->frame->coded_height, !bit_depth_8);
 
   HevcdMppDecompCtl2::Get().FromValue(compressed_body_size >> 5).WriteTo(owner_->dosbus());
   HevcCmBodyLength::Get().FromValue(compressed_body_size).WriteTo(owner_->dosbus());
@@ -758,6 +754,7 @@ void Vp9Decoder::ConfigureFrameOutput(bool bit_depth_8) {
       DECODE_ERROR("Couldn't allocate compressed frame data: %d\n", status);
       return;
     }
+    SetIoBufferName(&current_frame_->compressed_data, "Vp9CompressedFrame");
 
     status = io_buffer_physmap(&current_frame_->compressed_data);
     if (status != ZX_OK) {
@@ -950,9 +947,7 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
 
   uint32_t hw_width = params.hw_width;
   uint32_t hw_height = params.hw_height;
-  HevcParserPictureSize::Get()
-      .FromValue((hw_height << 16) | hw_width)
-      .WriteTo(owner_->dosbus());
+  HevcParserPictureSize::Get().FromValue((hw_height << 16) | hw_width).WriteTo(owner_->dosbus());
 
   ConfigureReferenceFrameHardware();
   ConfigureMotionPrediction();
@@ -971,9 +966,7 @@ void Vp9Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {
   notifier_ = std::move(notifier);
 }
 
-void Vp9Decoder::SetEosHandler(EosHandler eos_handler) {
-  eos_handler_ = std::move(eos_handler);
-}
+void Vp9Decoder::SetEosHandler(EosHandler eos_handler) { eos_handler_ = std::move(eos_handler); }
 
 void Vp9Decoder::SetCheckOutputReady(CheckOutputReady check_output_ready) {
   check_output_ready_ = std::move(check_output_ready);
@@ -1013,13 +1006,8 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
   uint32_t stride = fbl::round_up(params->hw_width, 32u);
 
   if (!is_current_output_buffer_collection_usable_ ||
-      !is_current_output_buffer_collection_usable_(
-          frames_.size(),
-          coded_width,
-          coded_height,
-          stride,
-          display_width,
-          display_height)) {
+      !is_current_output_buffer_collection_usable_(frames_.size(), coded_width, coded_height,
+                                                   stride, display_width, display_height)) {
     if (params_checked_previously) {
       // If we get here, it means we're seeing rejection of
       // BufferCollectionInfo_2 settings/constraints vs. params on a thread
@@ -1092,8 +1080,8 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
       // those potential sources don't provide sample_aspect_ratio, then 1:1 is
       // a reasonable default.
       zx_status_t initialize_result = initialize_frames_handler_(
-          std::move(duplicated_bti), frames_.size(), coded_width,
-          coded_height, stride, display_width, display_height, false, 1, 1);
+          std::move(duplicated_bti), frames_.size(), coded_width, coded_height, stride,
+          display_width, display_height, false, 1, 1);
       if (initialize_result != ZX_OK) {
         if (initialize_result != ZX_ERR_STOP) {
           DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n", initialize_result);
@@ -1183,6 +1171,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
       DECODE_ERROR("Alloc buffer error: %d\n", status);
       return false;
     }
+    SetIoBufferName(&current_mpred_buffer_->mv_mpred_buffer, "Vp9MpredData");
     io_buffer_cache_flush_invalidate(&current_mpred_buffer_->mv_mpred_buffer, 0,
                                      kLcuCount * kLcuMvBytes);
     BarrierAfterFlush();
@@ -1230,12 +1219,8 @@ void Vp9Decoder::ConfigureReferenceFrameHardware() {
     Frame* frame = current_reference_frames_[i];
     if (!frame)
       continue;
-    Vp9dMppRefinfoData::Get()
-        .FromValue(frame->frame->hw_width)
-        .WriteTo(owner_->dosbus());
-    Vp9dMppRefinfoData::Get()
-        .FromValue(frame->frame->hw_height)
-        .WriteTo(owner_->dosbus());
+    Vp9dMppRefinfoData::Get().FromValue(frame->frame->hw_width).WriteTo(owner_->dosbus());
+    Vp9dMppRefinfoData::Get().FromValue(frame->frame->hw_height).WriteTo(owner_->dosbus());
 
     if (current_frame_->frame->hw_width != frame->frame->hw_width ||
         current_frame_->frame->hw_height != frame->frame->hw_height) {
@@ -1260,8 +1245,9 @@ zx_status_t Vp9Decoder::AllocateFrames() {
   for (uint32_t i = 0; i < 16; i++) {
     auto frame = std::make_unique<Frame>();
     constexpr uint32_t kCompressedHeaderSize = 0x48000;
-    zx_status_t status = owner_->AllocateIoBuffer(&frame->compressed_header, kCompressedHeaderSize,
-                                                  16, IO_BUFFER_CONTIG | IO_BUFFER_RW);
+    zx_status_t status =
+        owner_->AllocateIoBuffer(&frame->compressed_header, kCompressedHeaderSize, 16,
+                                 IO_BUFFER_CONTIG | IO_BUFFER_RW, "Vp9CompressedFrameHeader");
     if (status != ZX_OK) {
       DECODE_ERROR("Alloc buffer error: %d\n", status);
       return status;
@@ -1298,7 +1284,8 @@ void Vp9Decoder::InitializeHardwarePictureList() {
 
 void Vp9Decoder::SetIsCurrentOutputBufferCollectionUsable(
     IsCurrentOutputBufferCollectionUsable is_current_output_buffer_collection_usable) {
-  is_current_output_buffer_collection_usable_ = std::move(is_current_output_buffer_collection_usable);
+  is_current_output_buffer_collection_usable_ =
+      std::move(is_current_output_buffer_collection_usable);
 }
 
 void Vp9Decoder::SetInitializeFramesHandler(InitializeFramesHandler handler) {

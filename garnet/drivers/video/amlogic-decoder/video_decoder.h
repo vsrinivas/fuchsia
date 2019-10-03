@@ -5,10 +5,6 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_DECODER_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_DECODER_H_
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/media/codec_impl/codec_frame.h>
@@ -18,6 +14,11 @@
 #include <zircon/syscalls.h>
 
 #include <functional>
+
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
 
 #include "decoder_core.h"
 #include "pts_manager.h"
@@ -62,25 +63,19 @@ class CodecPacket;
 class VideoDecoder {
  public:
   using IsCurrentOutputBufferCollectionUsable =
-      fit::function<bool(
-        uint32_t frame_count,
-        uint32_t coded_width,
-        uint32_t coded_height,
-        uint32_t stride,
-        uint32_t display_width,
-        uint32_t display_height)>;
-  using InitializeFramesHandler =
-      fit::function<zx_status_t(::zx::bti,
-                                uint32_t,  // frame_count
-                                uint32_t,  // width
-                                uint32_t,  // height
-                                uint32_t,  // stride
-                                uint32_t,  // display_width
-                                uint32_t,  // display_height
-                                bool,      // has_sar
-                                uint32_t,  // sar_width
-                                uint32_t   // sar_height
-                                )>;
+      fit::function<bool(uint32_t frame_count, uint32_t coded_width, uint32_t coded_height,
+                         uint32_t stride, uint32_t display_width, uint32_t display_height)>;
+  using InitializeFramesHandler = fit::function<zx_status_t(::zx::bti,
+                                                            uint32_t,  // frame_count
+                                                            uint32_t,  // width
+                                                            uint32_t,  // height
+                                                            uint32_t,  // stride
+                                                            uint32_t,  // display_width
+                                                            uint32_t,  // display_height
+                                                            bool,      // has_sar
+                                                            uint32_t,  // sar_width
+                                                            uint32_t   // sar_height
+                                                            )>;
   // In actual operation, the FrameReadyNotifier must not keep a reference on
   // the frame shared_ptr<>, as that would interfere with muting calls to
   // ReturnFrame().  See comment on Vp9Decoder::Frame::frame field.
@@ -106,7 +101,7 @@ class VideoDecoder {
     virtual __WARN_UNUSED_RESULT DecoderCore* core() = 0;
     virtual __WARN_UNUSED_RESULT zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size,
                                                               uint32_t alignement_log2,
-                                                              uint32_t flags) = 0;
+                                                              uint32_t flags, const char* name) = 0;
     virtual __WARN_UNUSED_RESULT bool IsDecoderCurrent(VideoDecoder* decoder) = 0;
     // Sets whether a particular hardware unit can read/write protected or
     // unprotected memory.

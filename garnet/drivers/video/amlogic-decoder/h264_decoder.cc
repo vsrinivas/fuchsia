@@ -13,6 +13,7 @@
 #include "macros.h"
 #include "memory_barriers.h"
 #include "pts_manager.h"
+#include "util.h"
 
 static const uint32_t kBufferAlignShift = 4 + 12;
 
@@ -247,6 +248,7 @@ zx_status_t H264Decoder::LoadSecondaryFirmware(const uint8_t* data, uint32_t fir
       DECODE_ERROR("Failed to make second firmware buffer: %d", status);
       return status;
     }
+    SetIoBufferName(&secondary_firmware_, "H264SecondaryFirmware");
 
     auto addr = static_cast<uint8_t*>(io_buffer_virt(&secondary_firmware_));
     // The secondary firmware is in a different order in the file than the main
@@ -305,6 +307,7 @@ zx_status_t H264Decoder::Initialize() {
     DECODE_ERROR("Failed to make codec data buffer: %d\n", status);
     return status;
   }
+  SetIoBufferName(&codec_data_, "H264CodecData");
 
   io_buffer_cache_flush(&codec_data_, 0, kCodecDataSize);
 
@@ -346,6 +349,7 @@ zx_status_t H264Decoder::Initialize() {
     DECODE_ERROR("Failed to make sei data buffer: %d", status);
     return status;
   }
+  SetIoBufferName(&sei_data_buffer_, "H264SeiData");
   io_buffer_cache_flush(&sei_data_buffer_, 0, io_buffer_size(&sei_data_buffer_, 0));
 
   BarrierAfterFlush();
@@ -371,9 +375,8 @@ void H264Decoder::SetErrorHandler(fit::closure error_handler) {
   error_handler_ = std::move(error_handler);
 }
 
-void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames,
-                                    uint32_t coded_width, uint32_t coded_height,
-                                    uint32_t stride) {
+void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t coded_width,
+                                    uint32_t coded_height, uint32_t stride) {
   ZX_DEBUG_ASSERT(state_ == DecoderState::kWaitingForNewFrames);
   ZX_DEBUG_ASSERT(coded_width == stride);
   uint32_t frame_count = frames.size();
@@ -418,11 +421,10 @@ void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames,
 
     // The ConfigureCanvas() calls validate that the VMO is physically
     // contiguous, regardless of how the VMO was created.
-    auto y_canvas = owner_->ConfigureCanvas(&frame->buffer, 0, frame->stride,
-                                            frame->coded_height, 0, 0);
-    auto uv_canvas =
-        owner_->ConfigureCanvas(&frame->buffer, frame->uv_plane_offset,
-                                frame->stride, frame->coded_height / 2, 0, 0);
+    auto y_canvas =
+        owner_->ConfigureCanvas(&frame->buffer, 0, frame->stride, frame->coded_height, 0, 0);
+    auto uv_canvas = owner_->ConfigureCanvas(&frame->buffer, frame->uv_plane_offset, frame->stride,
+                                             frame->coded_height / 2, 0, 0);
     if (!y_canvas || !uv_canvas) {
       OnFatalError();
       return;
@@ -437,13 +439,9 @@ void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames,
   state_ = DecoderState::kRunning;
 }
 
-zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count,
-                                          uint32_t coded_width,
-                                          uint32_t coded_height,
-                                          uint32_t display_width,
-                                          uint32_t display_height,
-                                          bool has_sar,
-                                          uint32_t sar_width,
+zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t coded_width,
+                                          uint32_t coded_height, uint32_t display_width,
+                                          uint32_t display_height, bool has_sar, uint32_t sar_width,
                                           uint32_t sar_height) {
   DLOG("InitializeFrames() display_width: %u display_height: %u", display_width, display_height);
   video_frames_.clear();
@@ -468,8 +466,8 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count,
       return dup_result;
     }
     zx_status_t initialize_result = initialize_frames_handler_(
-        std::move(duplicated_bti), frame_count, coded_width, coded_height,
-        stride, display_width, display_height, has_sar, sar_width, sar_height);
+        std::move(duplicated_bti), frame_count, coded_width, coded_height, stride, display_width,
+        display_height, has_sar, sar_width, sar_height);
     if (initialize_result != ZX_OK) {
       if (initialize_result != ZX_ERR_STOP) {
         DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n", initialize_result);
@@ -585,6 +583,7 @@ zx_status_t H264Decoder::InitializeStream() {
     DECODE_ERROR("Couldn't allocate reference mv buffer\n");
     return status;
   }
+  SetIoBufferName(&reference_mv_buffer_, "H264ReferenceMvs");
   io_buffer_cache_flush(&reference_mv_buffer_, 0, io_buffer_size(&reference_mv_buffer_, 0));
 
   BarrierAfterFlush();
@@ -654,9 +653,8 @@ zx_status_t H264Decoder::InitializeStream() {
   // decode to proceed without tending to leave the decoder idle for long if the
   // client immediately releases each frame (just barely enough to decode as
   // long as the client never camps on even one frame).
-  status =
-      InitializeFrames(kActualDPBSize, coded_width, coded_height, display_width,
-                       display_height, has_sar, sar_width, sar_height);
+  status = InitializeFrames(kActualDPBSize, coded_width, coded_height, display_width,
+                            display_height, has_sar, sar_width, sar_height);
   if (status != ZX_OK) {
     if (status != ZX_ERR_STOP) {
       DECODE_ERROR("InitializeFrames() failed: status: %d\n", status);

@@ -4,16 +4,6 @@
 
 #include "amlogic-video.h"
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
-#include <ddk/protocol/platform/device.h>
-#include <hw/reg.h>
-#include <hwreg/bitfields.h>
-#include <hwreg/mmio.h>
 #include <lib/zx/channel.h>
 #include <memory.h>
 #include <stdint.h>
@@ -25,6 +15,17 @@
 #include <memory>
 #include <thread>
 
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/composite.h>
+#include <ddk/protocol/platform/device.h>
+#include <hw/reg.h>
+#include <hwreg/bitfields.h>
+#include <hwreg/mmio.h>
+
 #include "device_ctx.h"
 #include "device_fidl.h"
 #include "hevcdec.h"
@@ -34,6 +35,7 @@
 #include "mpeg12_decoder.h"
 #include "pts_manager.h"
 #include "registers.h"
+#include "util.h"
 #include "vdec1.h"
 
 // These match the regions exported when the bus device was added.
@@ -245,8 +247,15 @@ void AmlogicVideo::FreeCanvas(CanvasEntry* canvas) {
 }
 
 zx_status_t AmlogicVideo::AllocateIoBuffer(io_buffer_t* buffer, size_t size,
-                                           uint32_t alignment_log2, uint32_t flags) {
-  return io_buffer_init_aligned(buffer, bti_.get(), size, alignment_log2, flags);
+                                           uint32_t alignment_log2, uint32_t flags,
+                                           const char* name) {
+  zx_status_t status = io_buffer_init_aligned(buffer, bti_.get(), size, alignment_log2, flags);
+  if (status != ZX_OK)
+    return status;
+
+  SetIoBufferName(buffer, name);
+
+  return ZX_OK;
 }
 
 // This parser handles MPEG elementary streams.
@@ -303,6 +312,7 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
     DECODE_ERROR("Failed to create search pattern buffer");
     return status;
   }
+  SetIoBufferName(&search_pattern_, "ParserSearchPattern");
 
   uint8_t input_search_pattern[kSearchPatternSize] = {0, 0, 1, 0xff};
 
@@ -362,6 +372,7 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
       DECODE_ERROR("Failed to create input file");
       return ZX_ERR_NO_MEMORY;
     }
+    SetIoBufferName(parser_input_.get(), "ParserInput");
   }
 
   PfifoRdPtr::Get().FromValue(0).WriteTo(parser_.get());

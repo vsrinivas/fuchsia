@@ -4,12 +4,13 @@
 
 #include "vdec1.h"
 
-#include <ddk/io-buffer.h>
-
 #include <algorithm>
+
+#include <ddk/io-buffer.h>
 
 #include "macros.h"
 #include "memory_barriers.h"
+#include "util.h"
 #include "video_decoder.h"
 
 zx_status_t Vdec1::LoadFirmware(const uint8_t* data, uint32_t size) {
@@ -25,6 +26,7 @@ zx_status_t Vdec1::LoadFirmware(const uint8_t* data, uint32_t size) {
     DECODE_ERROR("Failed to make firmware buffer");
     return status;
   }
+  SetIoBufferName(&firmware_buffer, "Vdec1Firmware");
 
   memcpy(io_buffer_virt(&firmware_buffer), data, std::min(size, kFirmwareSize));
   io_buffer_cache_flush(&firmware_buffer, 0, kFirmwareSize);

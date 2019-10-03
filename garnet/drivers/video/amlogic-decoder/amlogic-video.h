@@ -5,13 +5,6 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/protocol/amlogiccanvas.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/sysmem.h>
 #include <lib/zx/handle.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
@@ -21,6 +14,14 @@
 #include <memory>
 #include <mutex>
 #include <thread>
+
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/protocol/amlogiccanvas.h>
+#include <ddk/protocol/platform/device.h>
+#include <ddk/protocol/sysmem.h>
 
 #include "decoder_core.h"
 #include "decoder_instance.h"
@@ -53,8 +54,8 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   __WARN_UNUSED_RESULT DecoderCore* core() override { return core_; }
   __WARN_UNUSED_RESULT zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size,
-                                                    uint32_t alignment_log2,
-                                                    uint32_t flags) override;
+                                                    uint32_t alignment_log2, uint32_t flags,
+                                                    const char* name) override;
   __WARN_UNUSED_RESULT bool IsDecoderCurrent(VideoDecoder* decoder) override
       __TA_NO_THREAD_SAFETY_ANALYSIS {
     assert(decoder);
