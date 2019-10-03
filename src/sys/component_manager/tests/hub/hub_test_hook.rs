@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    async_trait::*,
     cm_rust::FrameworkCapabilityDecl,
     component_manager_lib::{framework::FrameworkCapability, model::*},
     fidl::endpoints::ServerEnd,
@@ -140,25 +139,26 @@ impl HubTestHook {
     }
 }
 
-#[async_trait]
 impl Hook for HubTestHook {
-    async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
-        match event {
-            Event::RouteFrameworkCapability { realm: _, capability_decl, capability } => {
-                let mut capability = capability.lock().await;
-                *capability = self
-                    .on_route_framework_capability_async(capability_decl, capability.take())
-                    .await?;
-            }
-            Event::StopInstance { realm } => {
-                self.breakpoints.send(BreakpointEvent::OnStop, realm.clone()).await?;
-            }
-            Event::DestroyInstance { realm } => {
-                self.breakpoints.send(BreakpointEvent::OnDestroy, realm.clone()).await?;
-            }
-            _ => (),
-        };
-        Ok(())
+    fn on<'a>(self: Arc<Self>, event: &'a Event<'_>) -> BoxFuture<'a, Result<(), ModelError>> {
+        Box::pin(async move {
+            match event {
+                Event::RouteFrameworkCapability { realm: _, capability_decl, capability } => {
+                    let mut capability = capability.lock().await;
+                    *capability = self
+                        .on_route_framework_capability_async(capability_decl, capability.take())
+                        .await?;
+                }
+                Event::StopInstance { realm } => {
+                    self.breakpoints.send(BreakpointEvent::OnStop, realm.clone()).await?;
+                }
+                Event::DestroyInstance { realm } => {
+                    self.breakpoints.send(BreakpointEvent::OnDestroy, realm.clone()).await?;
+                }
+                _ => (),
+            };
+            Ok(())
+        })
     }
 }
 

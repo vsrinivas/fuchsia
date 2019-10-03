@@ -4,16 +4,14 @@
 
 use {
     crate::{framework::FrameworkCapability, model::*},
-    async_trait::*,
     by_addr::ByAddr,
     cm_rust::FrameworkCapabilityDecl,
     futures::{future::BoxFuture, lock::Mutex},
     std::{collections::HashMap, sync::Arc},
 };
 
-#[async_trait]
 pub trait Hook {
-    async fn on(&self, event: &Event<'_>) -> Result<(), ModelError>;
+    fn on<'a>(self: Arc<Self>, event: &'a Event<'_>) -> BoxFuture<'a, Result<(), ModelError>>;
 }
 
 #[derive(Debug, Eq, PartialEq, Hash)]
@@ -115,7 +113,7 @@ impl Hooks {
             };
             if let Some(hooks) = hooks {
                 for hook in hooks.iter() {
-                    hook.0.on(event).await?;
+                    hook.0.clone().on(event).await?;
                 }
             }
             if let Some(parent) = &self.parent {
@@ -185,13 +183,14 @@ mod tests {
         }
     }
 
-    #[async_trait]
     impl Hook for CallCounter {
-        async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
-            if let Event::AddDynamicChild { .. } = event {
-                self.on_add_dynamic_child_async().await?;
-            }
-            Ok(())
+        fn on<'a>(self: Arc<Self>, event: &'a Event<'_>) -> BoxFuture<'a, Result<(), ModelError>> {
+            Box::pin(async move {
+                if let Event::AddDynamicChild { .. } = event {
+                    self.on_add_dynamic_child_async().await?;
+                }
+                Ok(())
+            })
         }
     }
 

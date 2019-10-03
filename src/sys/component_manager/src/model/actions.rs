@@ -311,7 +311,6 @@ mod tests {
         crate::klog,
         crate::model::testing::{mocks::*, test_helpers::*, test_hook::*},
         crate::startup::{Arguments, BuiltinRootServices},
-        async_trait::*,
         cm_rust::{ChildDecl, CollectionDecl, ComponentDecl, NativeIntoFidl},
         fidl::endpoints,
         fidl_fuchsia_sys2 as fsys,
@@ -979,13 +978,17 @@ mod tests {
             }
         }
 
-        #[async_trait]
         impl Hook for StopErrorHook {
-            async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
-                if let Event::StopInstance { realm } = event {
-                    self.on_shutdown_instance_async(realm.clone()).await?;
-                }
-                Ok(())
+            fn on<'a>(
+                self: Arc<Self>,
+                event: &'a Event<'_>,
+            ) -> BoxFuture<'a, Result<(), ModelError>> {
+                Box::pin(async move {
+                    if let Event::StopInstance { realm } = event {
+                        self.on_shutdown_instance_async(realm.clone()).await?;
+                    }
+                    Ok(())
+                })
             }
         }
 
@@ -1660,13 +1663,17 @@ mod tests {
             }
         }
 
-        #[async_trait]
         impl Hook for DestroyErrorHook {
-            async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
-                if let Event::DestroyInstance { realm } = event {
-                    self.on_destroy_instance_async(realm.clone()).await?;
-                }
-                Ok(())
+            fn on<'a>(
+                self: Arc<Self>,
+                event: &'a Event<'_>,
+            ) -> BoxFuture<'a, Result<(), ModelError>> {
+                Box::pin(async move {
+                    if let Event::DestroyInstance { realm } = event {
+                        self.on_destroy_instance_async(realm.clone()).await?;
+                    }
+                    Ok(())
+                })
             }
         }
 

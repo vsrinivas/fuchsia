@@ -4,7 +4,6 @@
 
 use {
     crate::model::*,
-    async_trait::*,
     cm_rust::ComponentDecl,
     fidl_fidl_examples_echo as echo, fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{
@@ -13,7 +12,7 @@ use {
     },
     files_async, fuchsia_zircon as zx,
     futures::prelude::*,
-    futures::{channel::mpsc, lock::Mutex},
+    futures::{channel::mpsc, future::BoxFuture, lock::Mutex},
     std::collections::HashSet,
     std::path::Path,
     std::sync::Arc,
@@ -182,18 +181,19 @@ impl DestroyHook {
     }
 }
 
-#[async_trait]
 impl Hook for DestroyHook {
-    async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
-        match event {
-            Event::DestroyInstance { realm } => {
-                self.on_destroy_instance_async(realm.clone()).await?;
-            }
-            Event::StopInstance { realm } => {
-                self.on_stop_instance_async(realm.clone()).await?;
-            }
-            _ => (),
-        };
-        Ok(())
+    fn on<'a>(self: Arc<Self>, event: &'a Event<'_>) -> BoxFuture<'a, Result<(), ModelError>> {
+        Box::pin(async move {
+            match event {
+                Event::DestroyInstance { realm } => {
+                    self.on_destroy_instance_async(realm.clone()).await?;
+                }
+                Event::StopInstance { realm } => {
+                    self.on_stop_instance_async(realm.clone()).await?;
+                }
+                _ => (),
+            };
+            Ok(())
+        })
     }
 }

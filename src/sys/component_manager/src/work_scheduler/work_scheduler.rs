@@ -7,7 +7,6 @@ use {
         framework::FrameworkCapability,
         model::{error::ModelError, hooks::*, AbsoluteMoniker, Realm},
     },
-    async_trait::*,
     cm_rust::{CapabilityPath, ExposeDecl, ExposeTarget, FrameworkCapabilityDecl},
     failure::{format_err, Error},
     fidl::endpoints::ServerEnd,
@@ -117,77 +116,20 @@ impl WorkSchedulerState {
 /// items to make global scheduling decisions.
 #[derive(Clone)]
 pub struct WorkScheduler {
-    state: Arc<Mutex<WorkSchedulerState>>,
+    inner: Arc<WorkSchedulerInner>,
 }
 
-impl WorkScheduler {
+struct WorkSchedulerInner {
+    state: Mutex<WorkSchedulerState>,
+}
+
+impl WorkSchedulerInner {
     pub fn new() -> Self {
-        Self { state: Arc::new(Mutex::new(WorkSchedulerState::new())) }
-    }
-
-    pub fn hooks(&self) -> Vec<HookRegistration> {
-        vec![HookRegistration {
-            event_type: EventType::RouteFrameworkCapability,
-            callback: Arc::new(self.clone()),
-        }]
-    }
-
-    pub async fn schedule_work(
-        &self,
-        abs_moniker: &AbsoluteMoniker,
-        work_id: &str,
-        work_request: &fsys::WorkRequest,
-    ) -> Result<(), fsys::Error> {
-        let mut state = self.state.lock().await;
-        let work_items = &mut state.work_items;
-        let work_item = WorkItem::try_new(abs_moniker, work_id, work_request)?;
-
-        if work_items.contains(&work_item) {
-            return Err(fsys::Error::InstanceAlreadyExists);
-        }
-
-        work_items.push(work_item);
-        work_items.sort_by(WorkItem::deadline_order);
-        Ok(())
-    }
-
-    pub async fn cancel_work(
-        &self,
-        abs_moniker: &AbsoluteMoniker,
-        work_id: &str,
-    ) -> Result<(), fsys::Error> {
-        let mut state = self.state.lock().await;
-        let work_items = &mut state.work_items;
-        let work_item = WorkItem::new_by_identity(abs_moniker, work_id);
-
-        // TODO(markdittmer): Use `work_items.remove_item(work_item)` if/when it becomes stable.
-        let mut found = false;
-        work_items.retain(|item| {
-            let matches = &work_item == item;
-            found = found || matches;
-            !matches
-        });
-
-        if !found {
-            return Err(fsys::Error::InstanceNotFound);
-        }
-
-        Ok(())
-    }
-
-    pub async fn get_batch_period(&self) -> Result<i64, fsys::Error> {
-        let state = self.state.lock().await;
-        Ok(state.period)
-    }
-
-    pub async fn set_batch_period(&mut self, period: i64) -> Result<(), fsys::Error> {
-        let mut state = self.state.lock().await;
-        state.period = period;
-        Ok(())
+        Self { state: Mutex::new(WorkSchedulerState::new()) }
     }
 
     async fn on_route_capability_async<'a>(
-        &'a self,
+        self: Arc<Self>,
         realm: Arc<Realm>,
         capability_decl: &'a FrameworkCapabilityDecl,
         capability: Option<Box<dyn FrameworkCapability>>,
@@ -199,36 +141,11 @@ impl WorkScheduler {
                 Self::check_for_worker(&*realm).await?;
                 Ok(Some(Box::new(WorkSchedulerCapability::new(
                     realm.abs_moniker.clone(),
-                    self.clone(),
+                    WorkScheduler { inner: self.clone() },
                 )) as Box<dyn FrameworkCapability>))
             }
             _ => Ok(capability),
         }
-    }
-
-    pub async fn serve_root_work_scheduler_control(
-        mut stream: fsys::WorkSchedulerControlRequestStream,
-    ) -> Result<(), Error> {
-        while let Some(request) = stream.try_next().await? {
-            match request {
-                fsys::WorkSchedulerControlRequest::GetBatchPeriod { responder, .. } => {
-                    let root_work_scheduler = ROOT_WORK_SCHEDULER.lock().await;
-                    let mut result = root_work_scheduler.get_batch_period().await;
-                    responder.send(&mut result)?;
-                }
-                fsys::WorkSchedulerControlRequest::SetBatchPeriod {
-                    responder,
-                    batch_period,
-                    ..
-                } => {
-                    let mut root_work_scheduler = ROOT_WORK_SCHEDULER.lock().await;
-                    let mut result = root_work_scheduler.set_batch_period(batch_period).await;
-                    responder.send(&mut result)?;
-                }
-            }
-        }
-
-        Ok(())
     }
 
     async fn check_for_worker(realm: &Realm) -> Result<(), ModelError> {
@@ -265,16 +182,109 @@ impl WorkScheduler {
     }
 }
 
-#[async_trait]
-impl Hook for WorkScheduler {
-    async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
-        if let Event::RouteFrameworkCapability { realm, capability_decl, capability } = event {
-            let mut capability = capability.lock().await;
-            *capability = self
-                .on_route_capability_async(realm.clone(), capability_decl, capability.take())
-                .await?;
+impl WorkScheduler {
+    pub fn new() -> Self {
+        Self { inner: Arc::new(WorkSchedulerInner::new()) }
+    }
+
+    pub fn hooks(&self) -> Vec<HookRegistration> {
+        vec![HookRegistration {
+            event_type: EventType::RouteFrameworkCapability,
+            callback: self.inner.clone(),
+        }]
+    }
+
+    pub async fn schedule_work(
+        &self,
+        abs_moniker: &AbsoluteMoniker,
+        work_id: &str,
+        work_request: &fsys::WorkRequest,
+    ) -> Result<(), fsys::Error> {
+        let mut state = self.inner.state.lock().await;
+        let work_items = &mut state.work_items;
+        let work_item = WorkItem::try_new(abs_moniker, work_id, work_request)?;
+
+        if work_items.contains(&work_item) {
+            return Err(fsys::Error::InstanceAlreadyExists);
         }
+
+        work_items.push(work_item);
+        work_items.sort_by(WorkItem::deadline_order);
         Ok(())
+    }
+
+    pub async fn cancel_work(
+        &self,
+        abs_moniker: &AbsoluteMoniker,
+        work_id: &str,
+    ) -> Result<(), fsys::Error> {
+        let mut state = self.inner.state.lock().await;
+        let work_items = &mut state.work_items;
+        let work_item = WorkItem::new_by_identity(abs_moniker, work_id);
+
+        // TODO(markdittmer): Use `work_items.remove_item(work_item)` if/when it becomes stable.
+        let mut found = false;
+        work_items.retain(|item| {
+            let matches = &work_item == item;
+            found = found || matches;
+            !matches
+        });
+
+        if !found {
+            return Err(fsys::Error::InstanceNotFound);
+        }
+
+        Ok(())
+    }
+
+    pub async fn get_batch_period(&self) -> Result<i64, fsys::Error> {
+        let state = self.inner.state.lock().await;
+        Ok(state.period)
+    }
+
+    pub async fn set_batch_period(&mut self, period: i64) -> Result<(), fsys::Error> {
+        let mut state = self.inner.state.lock().await;
+        state.period = period;
+        Ok(())
+    }
+
+    pub async fn serve_root_work_scheduler_control(
+        mut stream: fsys::WorkSchedulerControlRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(request) = stream.try_next().await? {
+            match request {
+                fsys::WorkSchedulerControlRequest::GetBatchPeriod { responder, .. } => {
+                    let root_work_scheduler = ROOT_WORK_SCHEDULER.lock().await;
+                    let mut result = root_work_scheduler.get_batch_period().await;
+                    responder.send(&mut result)?;
+                }
+                fsys::WorkSchedulerControlRequest::SetBatchPeriod {
+                    responder,
+                    batch_period,
+                    ..
+                } => {
+                    let mut root_work_scheduler = ROOT_WORK_SCHEDULER.lock().await;
+                    let mut result = root_work_scheduler.set_batch_period(batch_period).await;
+                    responder.send(&mut result)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl Hook for WorkSchedulerInner {
+    fn on<'a>(self: Arc<Self>, event: &'a Event<'_>) -> BoxFuture<'a, Result<(), ModelError>> {
+        Box::pin(async move {
+            if let Event::RouteFrameworkCapability { realm, capability_decl, capability } = event {
+                let mut capability = capability.lock().await;
+                *capability = self
+                    .on_route_capability_async(realm.clone(), capability_decl, capability.take())
+                    .await?;
+            }
+            Ok(())
+        })
     }
 }
 
@@ -364,7 +374,7 @@ mod tests {
         abs_moniker: &AbsoluteMoniker,
         work_id: &str,
     ) -> Result<(i64, Option<i64>), fsys::Error> {
-        let state = work_scheduler.state.lock().await;
+        let state = work_scheduler.inner.state.lock().await;
         let work_items = &state.work_items;
         match work_items
             .iter()
@@ -376,7 +386,7 @@ mod tests {
     }
 
     async fn get_all_by_deadline(work_scheduler: &WorkScheduler) -> Vec<WorkItem> {
-        let state = work_scheduler.state.lock().await;
+        let state = work_scheduler.inner.state.lock().await;
         state.work_items.clone()
     }
 

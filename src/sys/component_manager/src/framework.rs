@@ -4,7 +4,6 @@
 
 use {
     crate::model::*,
-    async_trait::*,
     cm_fidl_validator,
     cm_rust::{CapabilityPath, FidlIntoNative, FrameworkCapabilityDecl},
     failure::Error,
@@ -103,7 +102,7 @@ impl RealmServiceHost {
     pub fn hooks(&self) -> Vec<HookRegistration> {
         vec![HookRegistration {
             event_type: EventType::RouteFrameworkCapability,
-            callback: Arc::new(self.clone()),
+            callback: self.inner.clone(),
         }]
     }
 
@@ -113,44 +112,6 @@ impl RealmServiceHost {
         stream: fsys::RealmRequestStream,
     ) -> Result<(), Error> {
         self.inner.serve(realm, stream).await
-    }
-
-    pub async fn on_route_framework_capability_async<'a>(
-        &'a self,
-        realm: Arc<Realm>,
-        capability_decl: &'a FrameworkCapabilityDecl,
-        capability: Option<Box<dyn FrameworkCapability>>,
-    ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
-        // If some other capability has already been installed, then there's nothing to
-        // do here.
-        match (&capability, capability_decl) {
-            (None, FrameworkCapabilityDecl::LegacyService(capability_path))
-                if *capability_path == *REALM_SERVICE =>
-            {
-                return Ok(Some(
-                    Box::new(RealmServiceCapability::new(realm.clone(), self.clone()))
-                        as Box<dyn FrameworkCapability>,
-                ));
-            }
-            _ => return Ok(capability),
-        }
-    }
-}
-
-#[async_trait]
-impl Hook for RealmServiceHost {
-    async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
-        if let Event::RouteFrameworkCapability { realm, capability_decl, capability } = event {
-            let mut capability = capability.lock().await;
-            *capability = self
-                .on_route_framework_capability_async(
-                    realm.clone(),
-                    capability_decl,
-                    capability.take(),
-                )
-                .await?;
-        }
-        Ok(())
     }
 }
 
@@ -344,6 +305,45 @@ impl RealmServiceHostInner {
             }
         }
         Ok(())
+    }
+
+    async fn on_route_framework_capability_async<'a>(
+        self: Arc<Self>,
+        realm: Arc<Realm>,
+        capability_decl: &'a FrameworkCapabilityDecl,
+        capability: Option<Box<dyn FrameworkCapability>>,
+    ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
+        // If some other capability has already been installed, then there's nothing to
+        // do here.
+        match (&capability, capability_decl) {
+            (None, FrameworkCapabilityDecl::LegacyService(capability_path))
+                if *capability_path == *REALM_SERVICE =>
+            {
+                return Ok(Some(Box::new(RealmServiceCapability::new(
+                    realm.clone(),
+                    RealmServiceHost { inner: self.clone() },
+                )) as Box<dyn FrameworkCapability>));
+            }
+            _ => return Ok(capability),
+        }
+    }
+}
+
+impl Hook for RealmServiceHostInner {
+    fn on<'a>(self: Arc<Self>, event: &'a Event<'_>) -> BoxFuture<'a, Result<(), ModelError>> {
+        Box::pin(async move {
+            if let Event::RouteFrameworkCapability { realm, capability_decl, capability } = event {
+                let mut capability = capability.lock().await;
+                *capability = self
+                    .on_route_framework_capability_async(
+                        realm.clone(),
+                        capability_decl,
+                        capability.take(),
+                    )
+                    .await?;
+            }
+            Ok(())
+        })
     }
 }
 

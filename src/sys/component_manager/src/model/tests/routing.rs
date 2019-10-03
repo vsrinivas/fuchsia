@@ -11,7 +11,6 @@ use {
             testing::{routing_test_helpers::*, test_helpers::*},
         },
     },
-    async_trait::*,
     cm_rust::{
         self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
         ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeSource, ExposeTarget,
@@ -81,20 +80,23 @@ async fn use_framework_service() {
         }
     }
 
-    #[async_trait]
     impl Hook for MockRealmServiceHost {
-        async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
-            if let Event::RouteFrameworkCapability { realm, capability_decl, capability } = event {
-                let mut capability = capability.lock().await;
-                *capability = self
-                    .on_route_framework_capability_async(
-                        realm.clone(),
-                        capability_decl,
-                        capability.take(),
-                    )
-                    .await?;
-            }
-            Ok(())
+        fn on<'a>(self: Arc<Self>, event: &'a Event<'_>) -> BoxFuture<'a, Result<(), ModelError>> {
+            Box::pin(async move {
+                if let Event::RouteFrameworkCapability { realm, capability_decl, capability } =
+                    event
+                {
+                    let mut capability = capability.lock().await;
+                    *capability = self
+                        .on_route_framework_capability_async(
+                            realm.clone(),
+                            capability_decl,
+                            capability.take(),
+                        )
+                        .await?;
+                }
+                Ok(())
+            })
         }
     }
 
@@ -107,13 +109,6 @@ async fn use_framework_service() {
     impl MockRealmServiceHost {
         pub fn new() -> Self {
             Self { bind_calls: Arc::new(Mutex::new(vec![])) }
-        }
-
-        pub fn hooks(&self) -> Vec<HookRegistration> {
-            vec![HookRegistration {
-                event_type: EventType::RouteFrameworkCapability,
-                callback: Arc::new(self.clone()),
-            }]
         }
 
         pub fn bind_calls(&self) -> Arc<Mutex<Vec<String>>> {
@@ -194,8 +189,15 @@ async fn use_framework_service() {
     let test = RoutingTest::new("a", components).await;
     // RoutingTest installs the real RealmServiceHost. Installing the
     // MockRealmServiceHost here overrides the previously installed one.
-    let realm_service_host = MockRealmServiceHost::new();
-    test.model.root_realm.hooks.install(realm_service_host.hooks()).await;
+    let realm_service_host = Arc::new(MockRealmServiceHost::new());
+    test.model
+        .root_realm
+        .hooks
+        .install(vec![HookRegistration {
+            event_type: EventType::RouteFrameworkCapability,
+            callback: realm_service_host.clone(),
+        }])
+        .await;
     test.check_use_realm(vec!["b:0"].into(), realm_service_host.bind_calls()).await;
 }
 

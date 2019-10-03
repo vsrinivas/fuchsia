@@ -13,7 +13,6 @@ use {
             hooks::*,
         },
     },
-    async_trait::*,
     cm_rust::FrameworkCapabilityDecl,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
@@ -119,7 +118,7 @@ impl Hub {
             HookRegistration { event_type: EventType::BindInstance, callback: self.inner.clone() },
             HookRegistration {
                 event_type: EventType::RouteFrameworkCapability,
-                callback: Arc::new(self.clone()),
+                callback: self.inner.clone(),
             },
             HookRegistration { event_type: EventType::StopInstance, callback: self.inner.clone() },
             HookRegistration {
@@ -133,31 +132,6 @@ impl Hub {
         let root_moniker = model::AbsoluteMoniker::root();
         self.inner.open(&root_moniker, flags, MODE_TYPE_DIRECTORY, vec![], server_end).await?;
         Ok(())
-    }
-
-    async fn on_route_framework_capability_async<'a>(
-        &'a self,
-        realm: Arc<model::Realm>,
-        capability_decl: &'a FrameworkCapabilityDecl,
-        capability: Option<Box<dyn FrameworkCapability>>,
-    ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
-        // If this capability is not a directory, then it's not a hub capability.
-        let mut relative_path = match (&capability, capability_decl) {
-            (None, FrameworkCapabilityDecl::Directory(source_path)) => source_path.split(),
-            _ => return Ok(capability),
-        };
-
-        // If this capability's source path doesn't begin with 'hub', then it's
-        // not a hub capability.
-        if relative_path.is_empty() || relative_path.remove(0) != "hub" {
-            return Ok(capability);
-        }
-
-        Ok(Some(Box::new(HubCapability::new(
-            realm.abs_moniker.clone(),
-            relative_path,
-            self.clone(),
-        ))))
     }
 }
 
@@ -473,6 +447,31 @@ impl HubInner {
         Ok(())
     }
 
+    async fn on_route_framework_capability_async<'a>(
+        self: Arc<Self>,
+        realm: Arc<model::Realm>,
+        capability_decl: &'a FrameworkCapabilityDecl,
+        capability: Option<Box<dyn FrameworkCapability>>,
+    ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
+        // If this capability is not a directory, then it's not a hub capability.
+        let mut relative_path = match (&capability, capability_decl) {
+            (None, FrameworkCapabilityDecl::Directory(source_path)) => source_path.split(),
+            _ => return Ok(capability),
+        };
+
+        // If this capability's source path doesn't begin with 'hub', then it's
+        // not a hub capability.
+        if relative_path.is_empty() || relative_path.remove(0) != "hub" {
+            return Ok(capability);
+        }
+
+        Ok(Some(Box::new(HubCapability::new(
+            realm.abs_moniker.clone(),
+            relative_path,
+            Hub { inner: self.clone() },
+        ))))
+    }
+
     // TODO(fsamuel): We should probably preserve the original error messages
     // instead of dropping them.
     fn clone_dir(dir: Option<&DirectoryProxy>) -> Option<DirectoryProxy> {
@@ -480,43 +479,41 @@ impl HubInner {
     }
 }
 
-#[async_trait]
 impl model::Hook for HubInner {
-    async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
-        match event {
-            Event::BindInstance { realm, realm_state, routing_facade } => {
-                self.on_bind_instance_async(realm.clone(), *realm_state, routing_facade.clone())
+    fn on<'a>(self: Arc<Self>, event: &'a Event<'_>) -> BoxFuture<'a, Result<(), ModelError>> {
+        Box::pin(async move {
+            match event {
+                Event::BindInstance { realm, realm_state, routing_facade } => {
+                    self.on_bind_instance_async(
+                        realm.clone(),
+                        *realm_state,
+                        routing_facade.clone(),
+                    )
                     .await?;
-            }
-            Event::AddDynamicChild { realm } => {
-                self.on_add_dynamic_child_async(realm.clone()).await?;
-            }
-            Event::StopInstance { realm } => {
-                self.on_stop_instance_async(realm.clone()).await?;
-            }
-            Event::DestroyInstance { realm } => {
-                self.on_destroy_instance_async(realm.clone()).await?;
-            }
-            _ => (),
-        };
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl model::Hook for Hub {
-    async fn on(&self, event: &Event<'_>) -> Result<(), ModelError> {
-        if let Event::RouteFrameworkCapability { realm, capability_decl, capability } = event {
-            let mut capability = capability.lock().await;
-            *capability = self
-                .on_route_framework_capability_async(
-                    realm.clone(),
-                    capability_decl,
-                    capability.take(),
-                )
-                .await?;
-        }
-        Ok(())
+                }
+                Event::AddDynamicChild { realm } => {
+                    self.on_add_dynamic_child_async(realm.clone()).await?;
+                }
+                Event::StopInstance { realm } => {
+                    self.on_stop_instance_async(realm.clone()).await?;
+                }
+                Event::DestroyInstance { realm } => {
+                    self.on_destroy_instance_async(realm.clone()).await?;
+                }
+                Event::RouteFrameworkCapability { realm, capability_decl, capability } => {
+                    let mut capability = capability.lock().await;
+                    *capability = self
+                        .on_route_framework_capability_async(
+                            realm.clone(),
+                            capability_decl,
+                            capability.take(),
+                        )
+                        .await?;
+                }
+                _ => (),
+            };
+            Ok(())
+        })
     }
 }
 
