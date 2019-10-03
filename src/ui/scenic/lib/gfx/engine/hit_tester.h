@@ -102,6 +102,10 @@ class GlobalHitTester : public HitTester {
   bool should_participate(Node* node) override { return true; }
 };
 
+// Takes a distance-sorted list of hits, and if there are distance collisions in the list returns a
+// warning message to be piped to FXL_LOG. If there are no collision, returns an empty string.
+std::string GetDistanceCollisionsWarning(const std::vector<Hit>& hits);
+
 }  // namespace gfx
 }  // namespace scenic_impl
 

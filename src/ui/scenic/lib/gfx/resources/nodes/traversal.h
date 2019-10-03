@@ -18,10 +18,6 @@ namespace gfx {
 // This is the order in which they should be drawn to ensure that objects
 // at the same elevation correctly obscure one another.
 //
-// This is also the order in which hit testing should be performed to ensure
-// that the objects at the same elevation are evaluated from most to least
-// specifically hit.
-//
 // The functor's signature must be |void(Node* node)|.
 //
 template <typename Callable>

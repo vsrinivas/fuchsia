@@ -27,6 +27,7 @@
 #include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
+#include "src/ui/scenic/lib/gfx/resources/nodes/shape_node.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
@@ -190,6 +191,44 @@ TEST_F(SingleSessionHitTestTest, ViewClippingHitTest) {
       EXPECT_EQ(hits2.size(), 0u) << "Should see no hits since its outside the view bounds";
     }
   }
+}
+
+// Test to ensure the collision debug messages are correct.
+TEST(HitTestTest, CollisionsWarningTest) {
+  // Empty list should have no collisions.
+  EXPECT_EQ(GetDistanceCollisionsWarning({}), "");
+
+  // Setup fake nodes.
+  std::vector<fxl::RefPtr<ShapeNode>> nodes;
+  const size_t num_nodes = 6;
+  for (size_t i = 0; i < num_nodes; ++i) {
+    nodes.push_back(fxl::MakeRefCounted<ShapeNode>(/*session=*/nullptr,
+                                                   /*session_id=*/num_nodes - i, /*node_id=*/i));
+  }
+
+  // Nodes at same distance should collide.
+  std::vector<Hit> collisions_list;
+  const float distance1 = 100.0f;
+  const float distance2 = 200.0f;
+  const float distance3 = 300.0f;
+  collisions_list.push_back(Hit{.node = nodes[0].get(), .distance = distance1});
+  collisions_list.push_back(Hit{.node = nodes[1].get(), .distance = distance1});
+  collisions_list.push_back(Hit{.node = nodes[2].get(), .distance = distance1});
+  collisions_list.push_back(Hit{.node = nodes[3].get(), .distance = distance2});
+  collisions_list.push_back(Hit{.node = nodes[4].get(), .distance = distance3});
+  collisions_list.push_back(Hit{.node = nodes[5].get(), .distance = distance3});
+
+  EXPECT_EQ(GetDistanceCollisionsWarning(collisions_list),
+            "Input-hittable nodes with ids [ 6-0 5-1 4-2 ] [ 2-4 1-5 ] are at equal distance and "
+            "overlapping. See https://fuchsia.dev/fuchsia-src/the-book/ui/view_bounds#collisions");
+
+  // Nodes at different distances should have no collisions.
+  std::vector<Hit> no_collisions_list;
+  for (size_t i = 0; i < num_nodes; ++i) {
+    no_collisions_list.push_back(Hit{.node = nodes[i].get(), .distance = distance1 + i * 1.0f});
+  }
+
+  EXPECT_EQ(GetDistanceCollisionsWarning(no_collisions_list), "");
 }
 
 // A unit test to see what happens when a child view is bigger than its parent view,

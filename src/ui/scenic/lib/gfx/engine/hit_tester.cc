@@ -7,7 +7,9 @@
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
+#include "src/ui/scenic/lib/gfx/resources/nodes/shape_node.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/traversal.h"
+#include "src/ui/scenic/lib/gfx/resources/nodes/view_node.h"
 #include "src/ui/scenic/lib/gfx/resources/view.h"
 
 namespace scenic_impl {
@@ -63,6 +65,12 @@ Node::IntersectionInfo GetTransformedIntersection(const Node::IntersectionInfo& 
   }
   return local_intersection;
 }
+
+// TODO(37712): Remove when parent propagation is removed and we no longer have false nodes.
+bool IsHittableNode(const Node* node) {
+  return node->IsKindOf<ViewNode>() || node->IsKindOf<ShapeNode>();
+}
+
 }  // namespace
 
 std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
@@ -88,6 +96,13 @@ std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
   // Sort by distance, preserving traversal order in case of ties.
   std::stable_sort(hits_.begin(), hits_.end(),
                    [](const Hit& a, const Hit& b) { return a.distance < b.distance; });
+
+  // Warn if there are objects at the same distance as that is a user error.
+  const std::string warning_message = GetDistanceCollisionsWarning(hits_);
+  if (!warning_message.empty()) {
+    FXL_LOG(WARNING) << warning_message;
+  }
+
   return std::move(hits_);
 }
 
@@ -164,6 +179,50 @@ void HitTester::AccumulateHitsInner(Node* node) {
   }
 
   intersection_info_ = outer_intersection;
+}
+
+std::string GetDistanceCollisionsWarning(const std::vector<Hit>& hits) {
+  std::stringstream warning_message;
+
+  bool message_started = false;
+  for (size_t i = 0; i < hits.size();) {
+    // Compare distances of adjacent hits.
+    size_t num_colliding_nodes = IsHittableNode(hits[i].node) ? 1 : 0;
+    size_t count = 1;
+    while (i + count < hits.size() && hits[i].distance == hits[i + count].distance) {
+      // Filter out false hits.
+      // TODO(37712): Remove when we no longer have false hits.
+      num_colliding_nodes += IsHittableNode(hits[i + count].node) ? 1 : 0;
+
+      ++count;
+    }
+
+    // Create warning message if there were any collisions.
+    if (num_colliding_nodes > 1) {
+      if (!message_started) {
+        warning_message << "Input-hittable nodes with ids ";
+        message_started = true;
+      }
+
+      warning_message << "[ ";
+      for (size_t j = 0; j < count; ++j) {
+        if (IsHittableNode(hits[i + j].node)) {
+          warning_message << hits[i + j].node->global_id() << " ";
+        }
+      }
+      warning_message << "] ";
+    }
+
+    // Skip past collisions.
+    i += count;
+  }
+
+  if (message_started) {
+    warning_message << "are at equal distance and overlapping. See "
+                       "https://fuchsia.dev/fuchsia-src/the-book/ui/view_bounds#collisions";
+  }
+
+  return warning_message.str();
 }
 
 }  // namespace gfx

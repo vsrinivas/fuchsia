@@ -159,6 +159,20 @@ In debug mode, a null bounding box will trigger an FXL_DCHECK in the escher::Bou
 
  Situations where a ray is perpendicular to a side of a bounding box and just grazes its edge will not count as a hit. Since the six planes that constitute the bounding box are themselves the clip planes, it follows that anything that is directly on a clip plane would also get clipped.
 
+### Collisions
+
+A collision occurs when a ray cast detects two or more hits at the same distance. A collision indicates that hittable targets are overlapping and occupying the same position in the scene. This is considered incorrect behavior and Scenic does not provide hit test ordering guarantees in case of collisions. The client must prevent collisions.
+
+There are two ways collisions can occur:
+
+* Collision between nodes in the same view. The owning view must ensure the proper placement of elements within a view.
+
+* Collision between nodes in separate views. The parent view must prevent any intersection between the clip bounds of its children.
+
+It is also best practice to follow these rules to avoid Z-fighting for visual content.
+
+When a collision is detected, a warning is logged of the colliding nodes by session id and resource id.
+
 ### Pixel Offsets
 
 When issuing input commands in screen space, pixel values are jittered by (0.5, 0.5) so that commands are issued from the center of the pixel and not the top-left corner. This is important to take into account when testing ray-hit tests with bounding boxes, as it will affect the ray origins in world space after they have been transformed, and thus whether or not it results in an intersection.
