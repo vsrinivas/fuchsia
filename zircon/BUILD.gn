@@ -279,6 +279,9 @@ build_api_module("packages") {
 #       which this test is intended.
 #     - Type: string
 #
+#   * disabled
+#     - Optional: a string indicating a reason for the test being disabled.
+#
 build_api_module("tests") {
   testonly = true
   data_keys = [ "test_specs" ]

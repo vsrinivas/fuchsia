@@ -78,7 +78,9 @@ foreach(entry, zircon_test_specs) {
   zircon_test = {  # Clear from previous iteration.
   }
   zircon_test = entry.test
-  if (zircon_test.os == host_os && zircon_test.cpu == host_cpu) {
+  is_disabled = defined(zircon_test.disabled) && zircon_test.disabled != ""
+  if (!is_disabled &&
+      (zircon_test.os == host_os && zircon_test.cpu == host_cpu)) {
     # We need a unique target name derived from the test entry, and slashes are
     # bad.
     copy_target_name =
@@ -98,6 +100,7 @@ foreach(entry, zircon_test_specs) {
               forward_variables_from(zircon_test,
                                      "*",
                                      [
+                                       "disabled",
                                        "name",
                                        "path",
                                      ])

@@ -1420,6 +1420,11 @@ template("executable") {
 #     Type: string
 #     Default: "sys"
 #
+#   disabled
+#     Optional: A nonempty value indicates that the test is disabled, and the
+#       value gives the reason.
+#     Type: string
+#
 # See executable() for additional parameters and details.
 template("test") {
   if (is_kernel) {
@@ -1436,6 +1441,7 @@ template("test") {
       forward_variables_from(invoker,
                              "*",
                              [
+                               "disabled",
                                "metadata",
                                "target_type",
                                "test_group",
@@ -1486,6 +1492,7 @@ template("test") {
                 # path.
                 path = install_path
               }
+              forward_variables_from(invoker, [ "disabled" ])
             }
           },
         ]

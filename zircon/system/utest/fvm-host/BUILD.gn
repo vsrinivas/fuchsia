@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 test("fvm-host") {
+  disabled = "fxbug.dev/37779: 20min+ run-time"
   sources = [
     "main.cc",
   ]
