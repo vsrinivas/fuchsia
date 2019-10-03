@@ -39,10 +39,10 @@ template("banjo_rust") {
 
     visibility = [ ":*" ]
 
-    tool = "//tools/banjo/banjo:banjo_bin"
+    tool = "//src/devices/tools/banjo:banjo_bin"
 
     inputs = [
-      "//tools/banjo/banjo/zx.banjo",
+      "//src/devices/tools/banjo/zx.banjo",
     ]
     inputs += invoker.sources
 

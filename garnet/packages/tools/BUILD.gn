@@ -141,7 +141,7 @@ group("bluetooth") {
 group("banjo_toolchain") {
   testonly = true
   public_deps = [
-    "//tools/banjo/banjo:banjo_bin",
+    "//src/devices/tools/banjo:banjo_bin",
   ]
 }
 

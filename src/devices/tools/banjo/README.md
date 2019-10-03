@@ -9,7 +9,7 @@ TODO(surajmalhotra): Explain banjo's purpose and usage.
 Run the following commands:
 
 ```
-fx build tools/banjo/banjo
+fx build src/devices/tools/banjo
 cp out/default/host_x64/banjo_bin prebuilt/tools/banjo/linux-x64/ # or mac-x64/
 fx build
 ```

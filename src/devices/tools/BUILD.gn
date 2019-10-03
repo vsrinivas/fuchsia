@@ -2,19 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("devices") {
+group("tools") {
   testonly = true
   deps = [
-    "coordinator",
-    "tools",
+    "banjo"
   ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    "coordinator:coordinator_tests",
-    "tools:tests",
+    "banjo:tests"
   ]
 }
 

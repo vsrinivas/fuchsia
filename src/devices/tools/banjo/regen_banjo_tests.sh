@@ -5,7 +5,7 @@
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 FUCHSIA="$SCRIPT_DIR/../../"
-BANJO_DIR="$FUCHSIA/tools/banjo/banjo/"
+BANJO_DIR="$FUCHSIA/src/devices/tools/banjo/"
 BANJO_FILES="$BANJO_DIR/test/banjo"
 C_FILES="$BANJO_DIR/test/c"
 CPP_FILES="$BANJO_DIR/test/cpp"

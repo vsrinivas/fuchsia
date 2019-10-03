@@ -173,7 +173,6 @@ group("all") {
     "//garnet/packages/prod:appmgr",
     "//garnet/packages/prod:atheros",
     "//garnet/packages/prod:auth",
-    "//garnet/packages/prod:banjo",
     "//garnet/packages/prod:battery_manager",
     "//garnet/packages/prod:bindc",
     "//garnet/packages/prod:bluetooth_a2dp",
@@ -532,13 +531,6 @@ group("media_codec_sw_ffmpeg") {
   public_deps = [
     "//src/media/codec:codec_factory",
     "//src/media/codec:codec_runner_sw_ffmpeg",
-  ]
-}
-
-group("banjo") {
-  testonly = true
-  public_deps = [
-    "//tools/banjo/banjo",
   ]
 }
 

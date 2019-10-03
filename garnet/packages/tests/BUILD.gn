@@ -301,7 +301,6 @@ group("all") {
     ":amber",
     ":asio",
     ":ath10k",
-    ":banjo",
     ":battery_manager",
     ":bluetooth",
     ":boringssl",
@@ -738,13 +737,6 @@ group("cobalt_client") {
   public_deps = [
     "//garnet/packages/prod:cobalt_client",
     "//src/cobalt/bin:cobalt_tests",
-  ]
-}
-
-group("banjo") {
-  testonly = true
-  public_deps = [
-    "//tools/banjo/banjo:banjo_unittests($host_toolchain)",
   ]
 }
 
