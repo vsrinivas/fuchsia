@@ -24,5 +24,6 @@ group("tests") {
     "//tools/debug/dump_breakpad_symbols:dump_breakpad_symbols_tests",
     "//tools/debug/elflib:tools_debug_elflib_tests",
     "//tools/debug/symbolize:symbolize_tests",
+    "//tools/debug/upload_debug_symbols:upload_debug_symbols_tests",
   ]
 }

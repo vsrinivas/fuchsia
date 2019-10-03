@@ -4,6 +4,7 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
 
 go_library("main") {
   name = "go.fuchsia.dev/fuchsia/tools/debug/upload_debug_symbols/cmd"
@@ -16,6 +17,14 @@ go_library("main") {
 
 go_binary("upload_debug_symbols") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/debug/upload_debug_symbols/cmd"
+
+  deps = [
+    ":main",
+  ]
+}
+
+go_test("upload_debug_symbols_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/upload_debug_symbols/cmd" ]
 
   deps = [
     ":main",

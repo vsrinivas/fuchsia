@@ -12,10 +12,11 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
 )
 
-// job is a description of some BinaryFileRef to upload to GCS. The object's name in GCS
-// is formed by concatenating the ref's BuildID with elflib.DebugFileSuffix.
+// job is a description of some BinaryFileRef to ensure existence in GCS.
+// The object's name in GCS is formed by concatenating the ref's BuildID with
+// elflib.DebugFileSuffix.
 type job struct {
-	// The BinaryFileRef to upload to GCS.
+	// The BinaryFileRef to ensure existence in GCS.
 	bfr elflib.BinaryFileRef
 
 	// dstBucket is the destination GCS bucket.
@@ -39,22 +40,30 @@ func newJob(bfr elflib.BinaryFileRef, dstBucket string) job {
 	}
 }
 
-// Returns the GCS path for a bfr upload.
+// Returns the GCS path for a bfr ensure call.
 func gcsPath(bfr elflib.BinaryFileRef, dstBucket string) string {
 	return fmt.Sprintf("gs://%s/%s%s", dstBucket, bfr.BuildID, elflib.DebugFileSuffix)
 }
 
-// Returns a human-readable display name for a bfr upload.
+// Returns a human-readable display name for a bfr ensure call.
 func name(bfr elflib.BinaryFileRef, gcsPath string) string {
-	return fmt.Sprintf("upload %q to %s", bfr.BuildID, gcsPath)
+	return fmt.Sprintf("ensure %q in %s", bfr.BuildID, gcsPath)
 }
 
-func (j *job) execute(ctx context.Context, bkt *GCSBucket) error {
+func (j *job) ensure(ctx context.Context, bkt bucket) error {
 	object := j.bfr.BuildID + elflib.DebugFileSuffix
+	exists, err := bkt.objectExists(ctx, object)
+	if err != nil {
+		return fmt.Errorf("failed to determine object %s existence: %v", object, err)
+	}
+	if exists {
+		return nil
+	}
 	filepath := j.bfr.Filepath
 	reader, err := os.Open(filepath)
 	if err != nil {
 		return fmt.Errorf("failed to open %q: %v", filepath, err)
 	}
+	defer reader.Close()
 	return bkt.upload(ctx, object, reader)
 }

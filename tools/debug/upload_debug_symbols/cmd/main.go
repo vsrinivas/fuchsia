@@ -181,7 +181,7 @@ func worker(ctx context.Context, bkt *GCSBucket, wg *sync.WaitGroup, jobs <-chan
 	defer wg.Done()
 	for job := range jobs {
 		log.Printf("executing %s", job.name)
-		err := job.execute(context.Background(), bkt)
+		err := job.ensure(context.Background(), bkt)
 		if err != nil {
 			errs <- fmt.Errorf("job %s failed: %v", job.name, err)
 		} else {

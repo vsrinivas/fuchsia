@@ -13,9 +13,26 @@ import (
 	"cloud.google.com/go/storage"
 )
 
-// GCSBucket provides access to a cloud storage bucket.
+// Abstract bucket storage interface.
+type bucket interface {
+	objectExists(context.Context, string) (bool, error)
+	upload(context.Context, string, io.Reader) error
+}
+
+// GCSBucket implements the Bucket interface using cloud storage.
 type GCSBucket struct {
 	bkt *storage.BucketHandle
+}
+
+func (bkt *GCSBucket) objectExists(ctx context.Context, object string) (bool, error) {
+	obj := bkt.bkt.Object(object)
+	_, err := obj.Attrs(ctx)
+	if err == storage.ErrObjectNotExist {
+		return false, nil
+	} else if err != nil {
+		return false, fmt.Errorf("object possibly exists, but is in unknown state: %v", err)
+	}
+	return true, nil
 }
 
 func (bkt *GCSBucket) upload(ctx context.Context, object string, r io.Reader) error {
