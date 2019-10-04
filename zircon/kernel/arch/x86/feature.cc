@@ -44,6 +44,8 @@ bool g_has_mds;
 bool g_has_swapgs_bug;
 bool g_swapgs_bug_mitigated;
 bool g_has_ssb;
+bool g_has_ssbd;
+bool g_ssb_mitigated;
 bool g_has_md_clear;
 bool g_md_clear_on_user_return;
 // True if we should disable all speculative execution mitigations.
@@ -169,9 +171,14 @@ void x86_feature_init(void) {
                                                  /*default_value=*/false);
     g_has_swapgs_bug = x86_intel_cpu_has_swapgs_bug(&cpuid);
     g_has_ssb = x86_intel_cpu_has_ssb(&cpuid, &msr);
+    g_has_ssbd = x86_intel_cpu_has_ssbd(&cpuid, &msr);
   } else if (x86_vendor == X86_VENDOR_AMD) {
     g_has_ssb = x86_amd_cpu_has_ssb(&cpuid, &msr);
+    g_has_ssbd = x86_amd_cpu_has_ssbd(&cpuid, &msr);
   }
+  g_ssb_mitigated = (x86_get_disable_spec_mitigations() == false) && g_has_ssb && g_has_ssbd &&
+                    gCmdline.GetBool("kernel.x86.spec_store_bypass_disable",
+                                     /*default_value=*/false);
   g_x86_feature_has_smap = x86_feature_test(X86_FEATURE_SMAP);
 }
 
@@ -386,6 +393,10 @@ void x86_feature_debug(void) {
   }
   if (g_has_ssb)
     printf("ssb ");
+  if (g_has_ssbd)
+    printf("ssbd ");
+  if (g_ssb_mitigated)
+    printf("ssb_mitigated ");
   printf("\n");
 }
 

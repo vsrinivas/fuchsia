@@ -290,6 +290,19 @@ CPUs vulnerable to Meltdown.
 
 This option only affects x86 systems.
 
+## kernel.x86.spec_store_bypass_disable=\<bool>
+
+Spec-store-bypass (Spectre V4) is a speculative execution information leak
+vulnerability that affects many Intel and AMD x86 CPUs. It targets memory
+disambiguation hardware to infer the contents of recent stores. The attack
+only affects same-privilege-level, intra-process data.
+
+This command line option controls whether a mitigation is enabled. The
+mitigation has negative performance impacts.
+
+* If true, the mitigation is enabled on CPUs that need it.
+* If false (the default), the mitigation is not enabled.
+
 ## kernel.mexec-pci-shutdown=\<bool>
 
 If false, this option leaves PCI devices running when calling mexec. Defaults

@@ -345,6 +345,11 @@ static inline bool x86_get_disable_spec_mitigations(void) {
   return g_disable_spec_mitigations;
 }
 
+static inline bool x86_cpu_should_mitigate_ssb(void) {
+  extern bool g_ssb_mitigated;
+  return g_ssb_mitigated;
+}
+
 // Vendor-specific per-cpu init functions, in amd.cpp/intel.cpp
 void x86_amd_init_percpu(void);
 void x86_intel_init_percpu(void);
@@ -355,6 +360,10 @@ bool x86_intel_cpu_has_mds(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_swapgs_bug(const cpu_id::CpuId* cpuid);
 bool x86_intel_cpu_has_ssb(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_amd_cpu_has_ssb(const cpu_id::CpuId* cpuid, MsrAccess* msr);
+bool x86_intel_cpu_has_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
+bool x86_amd_cpu_has_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
+void x86_intel_cpu_set_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
+void x86_amd_cpu_set_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 #endif
 uint32_t x86_amd_get_patch_level(void);
 uint32_t x86_intel_get_patch_level(void);

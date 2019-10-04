@@ -45,9 +45,49 @@ void x86_amd_set_lfence_serializing(const cpu_id::CpuId* cpuid, MsrAccess* msr) 
   }
 }
 
+bool x86_amd_cpu_has_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
+  // SSBD is available if:
+  // 1. AMD_SSBD is in CPUID (same as Intel)
+  // 2. AMD_VIRT_SSBD is in CPUID (uses different MSR to control)
+  // 3. Non-architecturally, on family 15h, 16h, 17h
+  return cpuid->ReadFeatures().HasFeature(cpu_id::Features::AMD_SSBD) |
+         cpuid->ReadFeatures().HasFeature(cpu_id::Features::AMD_VIRT_SSBD) |
+         (cpuid->ReadProcessorId().family() == 0x15) |
+         (cpuid->ReadProcessorId().family() == 0x16) |
+         (cpuid->ReadProcessorId().family() == 0x17);
+}
+
+// Disable memory disambiguation hardware
+void x86_amd_cpu_set_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
+  if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::AMD_SSBD)) {
+    uint64_t value = msr->read_msr(/*index=*/X86_MSR_IA32_SPEC_CTRL);
+    msr->write_msr(/*index=*/X86_MSR_IA32_SPEC_CTRL, value | X86_SPEC_CTRL_SSBD);
+  } else if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::AMD_VIRT_SSBD)) {
+    uint64_t value = msr->read_msr(/*index=*/X86_MSR_AMD_VIRT_SPEC_CTRL);
+    msr->write_msr(/*index=*/X86_MSR_AMD_VIRT_SPEC_CTRL, value | X86_SPEC_CTRL_SSBD);
+  } else {
+    // Non-architectural mechanism to enable SSBD
+    uint64_t value = msr->read_msr(/*index=*/X86_MSR_AMD_LS_CFG);
+    switch (cpuid->ReadProcessorId().family()) {
+      case 0x15:
+        msr->write_msr(/*index=*/X86_MSR_AMD_LS_CFG, value | X86_AMD_LS_CFG_F15H_SSBD);
+        break;
+      case 0x16:
+        msr->write_msr(/*index=*/X86_MSR_AMD_LS_CFG, value | X86_AMD_LS_CFG_F16H_SSBD);
+        break;
+      case 0x17:
+        msr->write_msr(/*index=*/X86_MSR_AMD_LS_CFG, value | X86_AMD_LS_CFG_F17H_SSBD);
+        break;
+    }
+  }
+}
+
 void x86_amd_init_percpu(void) {
   cpu_id::CpuId cpuid;
   MsrAccess msr;
 
   x86_amd_set_lfence_serializing(&cpuid, &msr);
+  if (x86_cpu_should_mitigate_ssb()) {
+    x86_amd_cpu_set_ssbd(&cpuid, &msr);
+  }
 }

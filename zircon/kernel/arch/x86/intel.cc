@@ -171,7 +171,22 @@ bool x86_intel_cpu_has_ssb(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
   return microarch_config->has_ssb;
 }
 
+bool x86_intel_cpu_has_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
+  return cpuid->ReadFeatures().HasFeature(cpu_id::Features::SSBD);
+}
+
+void x86_intel_cpu_set_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
+  if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::SSBD)) {
+    uint64_t spec_ctrl = msr->read_msr(X86_MSR_IA32_SPEC_CTRL);
+    spec_ctrl |= X86_SPEC_CTRL_SSBD;
+    msr->write_msr(/*msr_index=*/X86_MSR_IA32_SPEC_CTRL, /*value=*/spec_ctrl);
+  }
+}
+
 void x86_intel_init_percpu(void) {
+  cpu_id::CpuId cpuid;
+  MsrAccess msr;
+
   // Some intel cpus support auto-entering C1E state when all cores are at C1. In
   // C1E state the voltage is reduced on all cores as well as clock gated. There is
   // a latency associated with ramping the voltage on wake. Disable this feature here
@@ -180,6 +195,10 @@ void x86_intel_init_percpu(void) {
   if (!x86_feature_test(X86_FEATURE_HYPERVISOR) && x86_get_microarch_config()->disable_c1e) {
     uint64_t power_ctl_msr = read_msr(X86_MSR_POWER_CTL);
     write_msr(0x1fc, power_ctl_msr & ~0x2);
+  }
+
+  if (x86_cpu_should_mitigate_ssb()) {
+    x86_intel_cpu_set_ssbd(&cpuid, &msr);
   }
 }
 

@@ -36,6 +36,8 @@
 #define X86_MSR_IA32_PLATFORM_ID 0x00000017     /* platform id */
 #define X86_MSR_IA32_APIC_BASE 0x0000001b       /* APIC base physical address */
 #define X86_MSR_IA32_TSC_ADJUST 0x0000003b      /* TSC adjust */
+#define X86_MSR_IA32_SPEC_CTRL 0x00000048       /* Speculative Execution Controls */
+#define X86_SPEC_CTRL_SSBD (1ull << 2)
 #define X86_MSR_IA32_BIOS_UPDT_TRIG 0x00000079u /* Microcode Patch Loader */
 #define X86_MSR_IA32_BIOS_SIGN_ID 0x0000008b    /* BIOS update signature */
 #define X86_MSR_IA32_MTRRCAP 0x000000fe         /* MTRR capability */
@@ -74,6 +76,8 @@
 #define X86_MSR_IA32_PM_ENABLE 0x00000770          /* enable/disable HWP */
 #define X86_MSR_IA32_HWP_CAPABILITIES 0x00000771   /* HWP performance range enumeration */
 #define X86_MSR_IA32_HWP_REQUEST 0x00000774        /* power manage control hints */
+#define X86_MSR_AMD_VIRT_SPEC_CTRL 0xc001011f      /* AMD speculative execution controls */
+                                                   /* See IA32_SPEC_CTRL */
 #define X86_CR4_PSE 0xffffffef                     /* Disabling PSE bit in the CR4 */
 
 // Non-architectural MSRs
@@ -94,6 +98,11 @@
 #define X86_MSR_PLATFORM_POWER_LIMIT 0x0000065c    /* Platform power limit control */
 #define X86_MSR_AMD_F10_DE_CFG 0xc0011029 /* AMD Family 10h+ decode config */
 #define X86_MSR_AMD_F10_DE_CFG_LFENCE_SERIALIZE (1 << 1)
+
+#define X86_MSR_AMD_LS_CFG 0xc0011020              /* Load/store unit configuration */
+#define X86_AMD_LS_CFG_F15H_SSBD (1ull << 54)
+#define X86_AMD_LS_CFG_F16H_SSBD (1ull << 33)
+#define X86_AMD_LS_CFG_F17H_SSBD (1ull << 10)
 
 /* EFLAGS/RFLAGS */
 #define X86_FLAGS_CF (1 << 0)

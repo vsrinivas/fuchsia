@@ -401,6 +401,7 @@ namespace {
       // Test an Intel Xeon E5-2690 V4 w/ older microcode (no ARCH_CAPABILITIES)
       FakeMsrAccess fake_msrs;
       EXPECT_TRUE(x86_intel_cpu_has_ssb(&cpu_id::kCpuIdXeon2690v4, &fake_msrs));
+      EXPECT_TRUE(x86_intel_cpu_has_ssbd(&cpu_id::kCpuIdXeon2690v4, &fake_msrs));
     }
 
     {
@@ -409,10 +410,12 @@ namespace {
       ASSERT_TRUE(ac.check(), "");
       data->leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
           (1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
+      data->leaf7.reg[cpu_id::Features::SSBD.reg] |= (1 << cpu_id::Features::SSBD.bit);
       cpu_id::FakeCpuId cpu(*data.get());
       FakeMsrAccess fake_msrs = {};
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0};
       EXPECT_TRUE(x86_intel_cpu_has_ssb(&cpu, &fake_msrs));
+      EXPECT_TRUE(x86_intel_cpu_has_ssbd(&cpu, &fake_msrs));
     }
 
     {
@@ -421,17 +424,71 @@ namespace {
       // 0x19 = RDCL_NO | SKIP_VMENTRY_L1DFLUSH | SSB_NO
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x19};
       EXPECT_FALSE(x86_intel_cpu_has_ssb(&cpu_id::kCpuIdCeleronJ3455, &fake_msrs));
+      EXPECT_FALSE(x86_intel_cpu_has_ssbd(&cpu_id::kCpuIdCeleronJ3455, &fake_msrs));
     }
 
     {
        // AMD Threadripper (Zen1) has SSB
        FakeMsrAccess fake_msrs;
        EXPECT_TRUE(x86_amd_cpu_has_ssb(&cpu_id::kCpuIdThreadRipper2970wx, &fake_msrs));
+       EXPECT_TRUE(x86_amd_cpu_has_ssbd(&cpu_id::kCpuIdThreadRipper2970wx, &fake_msrs));
     }
     {
        // AMD A4-9120C (Stoney Ridge) has SSB
        FakeMsrAccess fake_msrs;
        EXPECT_TRUE(x86_amd_cpu_has_ssb(&cpu_id::kCpuIdAmdA49120C, &fake_msrs));
+       EXPECT_TRUE(x86_amd_cpu_has_ssbd(&cpu_id::kCpuIdAmdA49120C, &fake_msrs));
+    }
+
+    END_TEST;
+  }
+
+  static bool test_x64_ssb_disable() {
+    fbl::AllocChecker ac;
+    BEGIN_TEST;
+
+    // Test SSBD control on Intel Xeon E5-2690 V4
+    {
+      auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac, cpu_id::kTestDataXeon2690v4);
+      ASSERT_TRUE(ac.check());
+      data->leaf7.reg[cpu_id::Features::SSBD.reg] |= (1 << cpu_id::Features::SSBD.bit);
+      cpu_id::FakeCpuId cpu(*data.get());
+      FakeMsrAccess fake_msrs = {};
+      fake_msrs.msrs_[0] = {X86_MSR_IA32_SPEC_CTRL, 0};
+      x86_intel_cpu_set_ssbd(&cpu, &fake_msrs);
+      EXPECT_EQ(fake_msrs.msrs_[0].value, X86_SPEC_CTRL_SSBD);
+    }
+
+    // Test SSBD control on AMD Zen1; the non-architectural mechanism will be used as
+    // neither AMD_SSBD nor AMD_VIRT_SSBD are set.
+    {
+      FakeMsrAccess fake_msrs = {};
+      fake_msrs.msrs_[0] = {X86_MSR_AMD_LS_CFG, 0x0};
+      x86_amd_cpu_set_ssbd(&cpu_id::kCpuIdThreadRipper2970wx, &fake_msrs);
+      EXPECT_EQ(fake_msrs.msrs_[0].value, X86_AMD_LS_CFG_F17H_SSBD);
+    }
+
+    // Test SSBD Control on AMD A4-9120C (Stoney Ridge)
+    {
+      FakeMsrAccess fake_msrs = {};
+      fake_msrs.msrs_[0] = {X86_MSR_AMD_LS_CFG, 0x0};
+      x86_amd_cpu_set_ssbd(&cpu_id::kCpuIdAmdA49120C, &fake_msrs);
+      EXPECT_EQ(fake_msrs.msrs_[0].value, X86_AMD_LS_CFG_F15H_SSBD);
+    }
+
+    // Test SSBD Control on AMD A4-9120C (Stoney Ridge) with VIRT_SSBD available. This is
+    // what you see an an APU running a KVM hypervisor guest.
+    {
+      auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac, cpu_id::kTestDataAmdA49120C);
+      ASSERT_TRUE(ac.check());
+      data->leaf8_8.reg[cpu_id::Features::AMD_VIRT_SSBD.reg] |=
+        (1 << cpu_id::Features::AMD_VIRT_SSBD.bit);
+      cpu_id::FakeCpuId cpu(*data.get());
+      FakeMsrAccess fake_msrs = {};
+      EXPECT_TRUE(x86_amd_cpu_has_ssbd(&cpu, &fake_msrs));
+      fake_msrs.msrs_[0] = {X86_MSR_AMD_VIRT_SPEC_CTRL, 0x0};
+      x86_amd_cpu_set_ssbd(&cpu, &fake_msrs);
+      EXPECT_EQ(fake_msrs.msrs_[0].value, X86_SPEC_CTRL_SSBD);
     }
 
     END_TEST;
@@ -599,6 +656,7 @@ UNITTEST("test enumeration of x64 L1TF vulnerability", test_x64_l1tf_enumeration
 UNITTEST("test enumeration of x64 MDS vulnerability", test_x64_mds_enumeration)
 UNITTEST("test enumeration of x64 SWAPGS vulnerability", test_x64_swapgs_bug_enumeration)
 UNITTEST("test enumeration of x64 SSB vulnerability", test_x64_ssb_enumeration)
+UNITTEST("test mitigation of x64 SSB vulnerability", test_x64_ssb_disable)
 UNITTEST("test Intel x86 microcode patch loader match and load logic", test_x64_intel_ucode_loader)
 UNITTEST("test Intel x86 microcode patch loader mechanism", test_x64_intel_ucode_patch_loader)
 UNITTEST("test pkg power limit change", test_x64_power_limits)
