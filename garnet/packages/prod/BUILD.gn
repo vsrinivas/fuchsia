@@ -890,7 +890,6 @@ group("iquery") {
 group("bluetooth_core") {
   testonly = true
   public_deps = [
-    "//garnet/packages/prod:bluetooth_hci",
     "//src/connectivity/bluetooth/core/bt-gap",
     "//src/connectivity/bluetooth/core/bt-host",
     "//src/connectivity/bluetooth/core/bt-init",
@@ -945,6 +944,7 @@ group("bluetooth_all") {
   public_deps = [
     "//garnet/packages/prod:bluetooth_atheros",
     "//garnet/packages/prod:bluetooth_core",
+    "//garnet/packages/prod:bluetooth_hci",
     "//garnet/packages/prod:bluetooth_intel",
     "//garnet/packages/prod:bluetooth_profiles",
   ]
