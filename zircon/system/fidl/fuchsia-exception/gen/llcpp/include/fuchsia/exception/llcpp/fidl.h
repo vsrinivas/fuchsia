@@ -239,6 +239,10 @@ class ProcessException::Builder {
   ::fidl::Array<fidl_envelope_t, 4> envelopes_ = {};
 };
 
+// The maximum amount of exceptions that will be listed at any given time by a
+// call to |ListProcessesWaitingOnException|.
+constexpr uint64_t MAX_EXCEPTIONS_PER_CALL = 32u;
+
 extern "C" const fidl_type_t fuchsia_exception_ExceptionInfoTable;
 
 // Basic exception information associated with a particular exception.
@@ -594,9 +598,9 @@ class ProcessLimbo final {
     ::fidl::VectorView<ProcessExceptionMetadata> exception_list;
 
     static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionResponseTable;
-    static constexpr uint32_t MaxNumHandles = 4294967295;
+    static constexpr uint32_t MaxNumHandles = 64;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t MaxOutOfLine = 3328;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;

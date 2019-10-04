@@ -1,5 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 library fuchsia.exception;
 
@@ -19,7 +20,7 @@ protocol Handler {
     ///
     /// `info` represents basic exception information as provided by the
     /// exception channel.
-    OnException(handle<exception> exception, ExceptionInfo info) ->();
+    OnException(handle<exception> exception, ExceptionInfo info) -> ();
 };
 
 /// Basic exception information associated with a particular exception.
@@ -28,28 +29,28 @@ protocol Handler {
 //                 llcpp bindings, which would make this API very cumbersome to
 //                 use. When better support lands, move this to a table.
 struct ExceptionInfo {
-  // Process ID or pid.
-  zx.koid process_koid;
+    // Process ID or pid.
+    zx.koid process_koid;
 
-  // Thread ID or tid.
-  zx.koid thread_koid;
+    // Thread ID or tid.
+    zx.koid thread_koid;
 
-  ExceptionType type;
+    ExceptionType type;
 };
 
 /// Generic wrapper over a thread exception. Mirrors closely the information
 /// given by an exception channel.
 table ProcessException {
-  // |exception| is guaranteed to be valid.
-  1: handle<exception> exception;
-  2: ExceptionInfo info;
+    // |exception| is guaranteed to be valid.
+    1: handle<exception> exception;
+    2: ExceptionInfo info;
 
-  // Both |process| and |thread| will be valid if present.
-  3: handle<process> process;
+    // Both |process| and |thread| will be valid if present.
+    3: handle<process> process;
 
-  // The thread that generated the exception.
-  // The process may have other threads that are not reflected here.
-  4: handle<thread> thread;
+    // The thread that generated the exception.
+    // The process may have other threads that are not reflected here.
+    4: handle<thread> thread;
 };
 
 /// What type of exception was triggered.
@@ -59,14 +60,14 @@ table ProcessException {
 // TODO(FIDL-478): Once there is a way to better generate zx bindings, move this
 //                 definitions to a common library.
 enum ExceptionType : uint32 {
-  GENERAL = 0x8;
-  FATAL_PAGE_FAULT = 0x108;
-  UNDEFINED_INSTRUCTION = 0x208;
-  SW_BREAKPOINT = 0x308;
-  HW_BREAKPOINT = 0x408;
-  UNALIGNED_ACCESS = 0x508;
-  THREAD_STARTING = 0x8008;
-  THREAD_EXITING = 0x8108;
-  POLICY_ERROR = 0x8208;
-  PROCESS_STARTING = 0x8308;
+    GENERAL = 0x8;
+    FATAL_PAGE_FAULT = 0x108;
+    UNDEFINED_INSTRUCTION = 0x208;
+    SW_BREAKPOINT = 0x308;
+    HW_BREAKPOINT = 0x408;
+    UNALIGNED_ACCESS = 0x508;
+    THREAD_STARTING = 0x8008;
+    THREAD_EXITING = 0x8108;
+    POLICY_ERROR = 0x8208;
+    PROCESS_STARTING = 0x8308;
 };

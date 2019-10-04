@@ -93,7 +93,10 @@ void ExceptionBroker::OnException(zx::exception exception, ExceptionInfo info,
 
 void ExceptionBroker::ListProcessesWaitingOnException(ListProcessesWaitingOnExceptionCallback cb) {
   std::vector<ProcessExceptionMetadata> exceptions;
-  exceptions.reserve(limbo_.size());
+
+  size_t max_size = limbo_.size() <= MAX_EXCEPTIONS_PER_CALL ? limbo_.size() :
+                                                               MAX_EXCEPTIONS_PER_CALL;
+  exceptions.reserve(max_size);
 
   // The new rights of the handles we're going to duplicate.
   zx_rights_t rights = ZX_RIGHT_READ | ZX_RIGHT_GET_PROPERTY;
@@ -117,6 +120,9 @@ void ExceptionBroker::ListProcessesWaitingOnException(ListProcessesWaitingOnExce
     metadata.set_thread(std::move(thread));
 
     exceptions.push_back(std::move(metadata));
+
+    if (exceptions.size() >= MAX_EXCEPTIONS_PER_CALL)
+      break;
   }
 
   cb(std::move(exceptions));
