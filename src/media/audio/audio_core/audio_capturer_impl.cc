@@ -1657,8 +1657,10 @@ zx_status_t AudioCapturerImpl::ChooseMixer(const fbl::RefPtr<AudioLink>& link) {
     fuchsia::media::AudioDeviceInfo device_info;
     device.GetDeviceInfo(&device_info);
 
-    info.gain.SetSourceMute(device_info.gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
-    info.gain.SetSourceGain(device_info.gain_info.gain_db);
+    const auto muted = device_info.gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute;
+    info.gain.SetSourceGain(
+        muted ? fuchsia::media::audio::MUTED_GAIN_DB
+              : std::clamp(device_info.gain_info.gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
   }
   // Else (if device is an Audio Output), use default SourceGain (Unity). Device
   // gain has already been applied "on the way down" during the render mix.

@@ -212,8 +212,7 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
   auto width = mixer->pos_filter_width();
 
   for (uint32_t i = 0; i < kNumMixerProfilerRuns; ++i) {
-    info.gain.SetSourceGain(gain_db);
-    info.gain.SetSourceMute(source_mute);
+    info.gain.SetSourceGain(source_mute ? gain_db : fuchsia::media::audio::MUTED_GAIN_DB);
 
     if (gain_type == GainType::Ramped) {
       // Ramp within the "greater than Mute but less than Unity" range. Ramp duration assumes a mix

@@ -24,7 +24,6 @@ constexpr bool kVerboseMuteDebug = false;
 constexpr bool kVerboseRampDebug = false;
 
 // A class containing factors used for software scaling in the mixer pipeline.
-// TODO(36445): Remove mutes and gain value clamping
 class Gain {
  public:
   // Audio gains for AudioRenderers/AudioCapturers and output devices are
@@ -109,13 +108,6 @@ class Gain {
     }
   }
 
-  void SetSourceMute(bool muted) {
-    src_mute_ = muted;
-    if constexpr (kVerboseMuteDebug) {
-      FXL_LOG(INFO) << "Gain(" << this << "): SetSourceMute(" << muted << ")";
-    }
-  }
-
   // Smoothly change the source gain over the specified period of playback time.
   void SetSourceGainWithRamp(
       float gain_db, zx_duration_t duration_ns,
@@ -160,15 +152,14 @@ class Gain {
   bool IsUnity() {
     float temp_db = target_src_gain_db_.load() + target_dest_gain_db_.load();
 
-    return (temp_db == 0) && !src_mute_ && !IsRamping();
+    return (temp_db == 0) && !IsRamping();
   }
 
   bool IsSilent() {
-    return src_mute_ || (IsSilentNow() && (!IsRamping() || start_src_gain_db_ >= end_src_gain_db_ ||
-                                           end_src_gain_db_ <= kMinGainDb));
+    return (IsSilentNow() && (!IsRamping() || start_src_gain_db_ >= end_src_gain_db_ ||
+                              end_src_gain_db_ <= kMinGainDb));
   }
 
-  // Note: a Gain object can be considered "ramping" even if it is Muted.
   // TODO(perley/mpuryear): Handle usage ramping.
   bool IsRamping() { return (source_ramp_duration_ns_ > 0); }
 
@@ -190,7 +181,6 @@ class Gain {
   std::atomic<float> target_dest_gain_db_;
 
   float current_src_gain_db_ = kUnityGainDb;
-  bool src_mute_ = false;
   float current_dest_gain_db_ = kUnityGainDb;
   AScale combined_gain_scale_ = kUnityScale;
 
