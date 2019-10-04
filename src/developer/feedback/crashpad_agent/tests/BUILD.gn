@@ -130,9 +130,9 @@ test_package("crashpad_agent_tests") {
     ":config_unittest",
     ":crashpad_agent_integration_test",
     ":crashpad_agent_unittest",
-    ":queue_unittest",
     ":inspect_manager_unittest",
     ":privacy_settings_ptr_unittest",
+    ":queue_unittest",
   ]
 }
 

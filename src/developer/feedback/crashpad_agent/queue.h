@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CRASHPAD_REPORT_PENDING_QUEUE_H_
-#define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CRASHPAD_REPORT_PENDING_QUEUE_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_QUEUE_H_
+#define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_QUEUE_H_
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
@@ -29,8 +29,8 @@ class Queue {
     uint64_t max_upload_attempts;
   };
 
-  Queue(Config config, crashpad::CrashReportDatabase* database,
-                             CrashServer* crash_server, InspectManager* inspect_manager)
+  Queue(Config config, crashpad::CrashReportDatabase* database, CrashServer* crash_server,
+        InspectManager* inspect_manager)
       : config_(config),
         database_(database),
         crash_server_(crash_server),
@@ -97,4 +97,4 @@ class Queue {
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CRASHPAD_REPORT_PENDING_QUEUE_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_QUEUE_H_

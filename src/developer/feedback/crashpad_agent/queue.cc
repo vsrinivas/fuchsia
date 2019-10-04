@@ -21,9 +21,8 @@ bool Queue::Contains(const UUID& uuid) const {
          pending_report_request_parameters_.end();
 }
 
-bool Queue::Add(UUID local_report_id,
-                                     std::map<std::string, std::string> annotations,
-                                     std::map<std::string, FileReader*> attachments) {
+bool Queue::Add(UUID local_report_id, std::map<std::string, std::string> annotations,
+                std::map<std::string, FileReader*> attachments) {
   if (Contains(local_report_id)) {
     FX_LOGS(ERROR) << "report " << local_report_id.ToString() << " already in the queue";
     return false;
