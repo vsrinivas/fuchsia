@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <stdlib.h>
+#include <zircon/assert.h>
 
 #include <algorithm>
 #include <memory>
@@ -11,7 +12,7 @@
 #include <blobfs/compression/compressor.h>
 #include <blobfs/compression/lz4.h>
 #include <blobfs/compression/zstd.h>
-#include <zircon/assert.h>
+#include <blobfs/format.h>
 #include <zxtest/zxtest.h>
 
 namespace blobfs {
@@ -77,11 +78,11 @@ void DecompressionHelper(CompressionAlgorithm algorithm, const void* compressed,
       ASSERT_OK(ZSTDDecompress(output.get(), &target_size, compressed, &src_size));
       break;
     default:
-      ASSERT_TRUE(false, "Bad algorithm");
+      FAIL("Bad algorithm");
   }
   EXPECT_EQ(expected_size, target_size);
   EXPECT_EQ(compressed_size, src_size);
-  EXPECT_EQ(0, memcmp(expected, output.get(), expected_size));
+  EXPECT_BYTES_EQ(expected, output.get(), expected_size);
 }
 
 // Tests a contained case of compression and decompression.
@@ -192,11 +193,84 @@ TEST(CompressorTests, UpdateNoDataLZ4) { RunUpdateNoDataTest(CompressionAlgorith
 
 TEST(CompressorTests, UpdateNoDataZSTD) { RunUpdateNoDataTest(CompressionAlgorithm::ZSTD); }
 
-// TODO(smklein): Add a test of:
-// - Compress
-// - Round up compressed size to block
-// - Decompress
-// (This mimics blobfs' usage, where the exact compressed size is not stored explicitly)
+void DecompressionRoundHelper(CompressionAlgorithm algorithm, const void* compressed,
+                              size_t rounded_compressed_size, const void* expected,
+                              size_t expected_size) {
+  std::unique_ptr<char[]> output(new char[expected_size]);
+  size_t target_size = expected_size;
+  size_t src_size = rounded_compressed_size;
+  switch (algorithm) {
+    case CompressionAlgorithm::LZ4:
+      ASSERT_OK(LZ4Decompress(output.get(), &target_size, compressed, &src_size));
+      break;
+    case CompressionAlgorithm::ZSTD:
+      ASSERT_OK(ZSTDDecompress(output.get(), &target_size, compressed, &src_size));
+      break;
+    default:
+      FAIL("Bad algorithm");
+  }
+  EXPECT_EQ(expected_size, target_size);
+  EXPECT_GE(rounded_compressed_size, src_size);
+  EXPECT_BYTES_EQ(expected, output.get(), expected_size);
+}
+
+// Tests decompression's ability to handle receiving a compressed size that is rounded
+// up to the nearest block size. This mimics blobfs' usage, where the exact compressed size
+// is not stored explicitly.
+//
+// size: The size of the input buffer.
+// step: The step size of updating the compression buffer.
+void RunCompressRoundDecompressTest(CompressionAlgorithm algorithm, DataType data_type, size_t size,
+                                    size_t step) {
+  ASSERT_LE(step, size, "Step size too large");
+
+  // Generate input.
+  std::unique_ptr<char[]> input(GenerateInput(data_type, 0, size));
+
+  // Compress a buffer.
+  std::optional<BlobCompressor> compressor;
+  ASSERT_NO_FAILURES(CompressionHelper(algorithm, input.get(), size, step, &compressor));
+  ASSERT_TRUE(compressor);
+
+  // Round up compressed size to nearest block size;
+  size_t rounded_size = fbl::round_up(compressor->Size(), kBlobfsBlockSize);
+
+  // Decompress the buffer while giving the rounded compressed size.
+  ASSERT_NO_FAILURES(
+      DecompressionRoundHelper(algorithm, compressor->Data(), rounded_size, input.get(), size));
+}
+
+TEST(CompressorTests, CompressRoundDecompressLZ4Random1) {
+  RunCompressRoundDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 0, 1 << 0);
+}
+
+TEST(CompressorTests, CompressRoundDecompressLZ4Random2) {
+  RunCompressRoundDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 1, 1 << 0);
+}
+
+TEST(CompressorTests, CompressRoundDecompressLZ4Random3) {
+  RunCompressRoundDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 10, 1 << 5);
+}
+
+TEST(CompressorTests, CompressRoundDecompressLZ4Random4) {
+  RunCompressRoundDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 15, 1 << 10);
+}
+
+TEST(CompressorTests, CompressRoundDecompressZSTDRandom1) {
+  RunCompressRoundDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 0, 1 << 0);
+}
+
+TEST(CompressorTests, CompressRoundDecompressZSTDRandom2) {
+  RunCompressRoundDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 1, 1 << 0);
+}
+
+TEST(CompressorTests, CompressRoundDecompressZSTDRandom3) {
+  RunCompressRoundDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 10, 1 << 5);
+}
+
+TEST(CompressorTests, CompressRoundDecompressZSTDRandom4) {
+  RunCompressRoundDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 15, 1 << 10);
+}
 
 }  // namespace
 }  // namespace blobfs
