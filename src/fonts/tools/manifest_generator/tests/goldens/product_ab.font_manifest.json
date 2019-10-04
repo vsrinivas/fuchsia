@@ -100,6 +100,10 @@
       "name": "Beta Sans",
       "aliases": [
         "Beta",
+        {
+          "alias": "Beta Condensed",
+          "width": "condensed"
+        },
         "BetaSans",
         "β Sans"
       ],

@@ -25,7 +25,9 @@
           "file_name": "AlphaSans-Bold.ttf",
           "typefaces": [
             {
-              "languages": ["en"],
+              "languages": [
+                "en"
+              ],
               "weight": 700
             }
           ]
@@ -34,7 +36,9 @@
           "file_name": "AlphaSans-BoldItalic.ttf",
           "typefaces": [
             {
-              "languages": ["en"],
+              "languages": [
+                "en"
+              ],
               "slant": "italic",
               "weight": 700
             }
@@ -44,18 +48,24 @@
           "file_name": "AlphaSans-Italic.ttf",
           "typefaces": [
             {
-              "languages": ["en"],
+              "languages": [
+                "en"
+              ],
               "slant": "italic"
             }
           ]
         }
       ]
     },
-     {
+    {
       "name": "Beta Sans",
       "aliases": [
         "BetaSans",
-        "Beta"
+        "Beta",
+        {
+          "alias": "Beta Condensed",
+          "width": "condensed"
+        }
       ],
       "generic_family": "sans-serif",
       "fallback": true,
@@ -74,7 +84,9 @@
           "file_name": "BetaSans-Bold.ttf",
           "typefaces": [
             {
-              "languages": ["en"],
+              "languages": [
+                "en"
+              ],
               "weight": 700
             }
           ]
@@ -83,7 +95,9 @@
           "file_name": "BetaSans-BoldItalic.ttf",
           "typefaces": [
             {
-              "languages": ["en"],
+              "languages": [
+                "en"
+              ],
               "slant": "italic",
               "weight": 700
             }
@@ -93,7 +107,9 @@
           "file_name": "BetaSans-Italic.ttf",
           "typefaces": [
             {
-              "languages": ["en"],
+              "languages": [
+                "en"
+              ],
               "slant": "italic"
             }
           ]

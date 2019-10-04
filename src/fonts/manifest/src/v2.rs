@@ -13,7 +13,8 @@ use {
         ser::{Serialize, Serializer},
     },
     serde_derive::{Deserialize, Serialize},
-    std::{convert::TryFrom, path::PathBuf},
+    std::{cmp::Ordering, convert::TryFrom, path::PathBuf},
+    unicase::UniCase,
 };
 
 /// Version 2 of the Font Manifest schema.
@@ -33,7 +34,7 @@ pub struct Family {
     /// Alternate names for the font family.
     // During de/serialization, omitted `aliases` are treated as an empty array and vice-versa.
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub aliases: Vec<String>,
+    pub aliases: Vec<FontFamilyAlias>,
     /// The generic font family that this font belongs to. If this is a specialty font (e.g. for
     /// custom icons), this should be set to `None`.
     #[serde(with = "OptGenericFontFamily", default)]
@@ -43,6 +44,122 @@ pub struct Family {
     pub fallback: bool,
     /// Collection of font files that make up the font family.
     pub assets: Vec<Asset>,
+}
+
+/// Represents a font family alias and optional style properties that should be applied when
+/// treating the alias as the canonical family.
+///
+/// For example, the font family "Roboto" might have an alias of the form:
+/// ```text
+/// FontFamilyAlias {
+///     name: "Roboto Condensed",
+///     style: StyleOptions {
+///         width: Width::Condensed
+///     }
+/// }
+/// ```
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Deserialize, Serialize)]
+#[serde(from = "StringOrFontFamilyAliasHelper", into = "StringOrFontFamilyAliasHelper")]
+pub struct FontFamilyAlias {
+    alias: UniCase<String>,
+    style: StyleOptions,
+}
+
+impl FontFamilyAlias {
+    /// Creates a new `FontFamilyAlias` without any style overrides.
+    pub fn new(name: impl AsRef<str>) -> Self {
+        Self::with_style(name, StyleOptions::default())
+    }
+
+    /// Creates a new `FontFamilyAlias` with style overrides.
+    pub fn with_style(name: impl AsRef<str>, style: impl Into<StyleOptions>) -> Self {
+        FontFamilyAlias { alias: UniCase::new(name.as_ref().to_string()), style: style.into() }
+    }
+
+    pub fn alias(&self) -> &str {
+        self.alias.as_ref()
+    }
+
+    pub fn style(&self) -> &StyleOptions {
+        &self.style
+    }
+
+    pub fn has_style(&self) -> bool {
+        self.style != StyleOptions::default()
+    }
+}
+
+impl Ord for FontFamilyAlias {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.alias.cmp(&other.alias)
+    }
+}
+
+impl PartialOrd for FontFamilyAlias {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<T: AsRef<str>> From<T> for FontFamilyAlias {
+    fn from(s: T) -> Self {
+        FontFamilyAlias::new(s)
+    }
+}
+
+/// Serialization helper for `FontFamilyAlias`.
+#[derive(Deserialize, Serialize)]
+struct FontFamilyAliasHelper {
+    alias: String,
+    #[serde(flatten)]
+    style: StyleOptions,
+}
+
+/// Serialization helper for `FontFamilyAlias`. Allows aliases to be either plain strings or structs
+/// with style options.
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum StringOrFontFamilyAliasHelper {
+    String(String),
+    // We can't directly use `FontFamilyAlias` here because that would create an infinite loop in
+    // the serde deserializer.
+    Alias(FontFamilyAliasHelper),
+}
+
+impl From<StringOrFontFamilyAliasHelper> for FontFamilyAlias {
+    fn from(wrapper: StringOrFontFamilyAliasHelper) -> Self {
+        match wrapper {
+            StringOrFontFamilyAliasHelper::String(s) => FontFamilyAlias::new(s),
+            StringOrFontFamilyAliasHelper::Alias(a) => {
+                FontFamilyAlias::with_style(a.alias, a.style)
+            }
+        }
+    }
+}
+
+impl From<FontFamilyAlias> for StringOrFontFamilyAliasHelper {
+    fn from(source: FontFamilyAlias) -> Self {
+        if source.has_style() {
+            StringOrFontFamilyAliasHelper::Alias(FontFamilyAliasHelper {
+                alias: source.alias.to_string(),
+                style: source.style.clone(),
+            })
+        } else {
+            StringOrFontFamilyAliasHelper::String(source.alias.to_string())
+        }
+    }
+}
+
+impl Serialize for StringOrFontFamilyAliasHelper {
+    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            StringOrFontFamilyAliasHelper::String(s) => s.serialize(serializer),
+            StringOrFontFamilyAliasHelper::Alias(a) => a.serialize(serializer),
+        }
+    }
 }
 
 /// Represents a single font file, which contains one or more [`Typeface`]s.
@@ -188,5 +305,38 @@ impl Style {
 
     fn default_width() -> Width {
         Width::Normal
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use failure::Error;
+
+    #[test]
+    fn test_deserialize_font_family_alias_flat_alias() -> Result<(), Error> {
+        let json = r#""Beta Sans""#;
+        let result: FontFamilyAlias = serde_json::from_str(json)?;
+        assert_eq!(result, FontFamilyAlias::new("Beta Sans"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_deserialize_font_family_alias_with_style() -> Result<(), Error> {
+        let json = r#"
+        {
+            "alias": "Beta Condensed",
+            "width": "condensed"
+        }
+        "#;
+        let result: FontFamilyAlias = serde_json::from_str(json)?;
+        assert_eq!(
+            result,
+            FontFamilyAlias::with_style(
+                "Beta Condensed",
+                StyleOptions { width: Some(Width::Condensed), ..Default::default() }
+            )
+        );
+        Ok(())
     }
 }

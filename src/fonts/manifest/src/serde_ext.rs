@@ -6,7 +6,7 @@
 //! See https://serde.rs/remote-derive.html.
 
 use {
-    fidl_fuchsia_fonts::{GenericFontFamily, Slant, Width},
+    fidl_fuchsia_fonts::{GenericFontFamily, Slant, Style2 as FidlStyle, Width},
     serde_derive::{Deserialize, Serialize},
 };
 
@@ -52,13 +52,12 @@ use {
 /// }
 ///
 /// ```
-/// ```
 ///
 /// Parameters:
 /// - `module`: Name of the generated module, e.g. `OptFidlTypeSerde`.
 /// - `remote_type`: Name of the remote type being mirrored, e.g. `SomeFidlType`.
 /// - `local_type`: Name of the local type that's mirroring the remote type, e.g. `SomeFidlTypeDef`.
-/// - `local_type_str`: The same
+/// - `local_type_str`: The same as `local_type`, but wrapped in quotes.
 macro_rules! derive_opt {
     ($module:ident, $remote_type:ty, $local_type:ty, $local_type_str:expr) => {
         #[allow(non_snake_case, dead_code)]
@@ -97,10 +96,30 @@ macro_rules! derive_opt {
     };
 }
 
+/// Local mirror of [`fidl_fuchsia_fonts::Style2`], for use in JSON serialization.
+///
+/// We can't just use a Serde remote type for `Style2` here because there are lots of other required
+/// traits that are not derived for FIDL tables.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq, Hash)]
+pub struct StyleOptions {
+    #[serde(default, with = "OptSlant", skip_serializing_if = "Option::is_none")]
+    pub slant: Option<Slant>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weight: Option<u16>,
+    #[serde(default, with = "OptWidth", skip_serializing_if = "Option::is_none")]
+    pub width: Option<Width>,
+}
+
+impl From<FidlStyle> for StyleOptions {
+    fn from(fidl_style: FidlStyle) -> Self {
+        StyleOptions { slant: fidl_style.slant, weight: fidl_style.weight, width: fidl_style.width }
+    }
+}
+
 /// Local mirror of [`fidl_fuchsia_fonts::GenericFontFamily`], for use in JSON serialization.
 ///
 /// Serialized values are in _kebab-case_, e.g. `"sans-serif"`.
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 #[serde(remote = "GenericFontFamily", rename_all = "kebab-case")]
 pub enum GenericFontFamilyDef {
     Serif,
@@ -118,8 +137,8 @@ derive_opt!(OptGenericFontFamily, GenericFontFamily, GenericFontFamilyDef, "Gene
 
 /// Local mirror of [`fidl_fuchsia_fonts::Slant`], for use in JSON serialization.
 ///
-/// Serialize values are _lowercase_, e.g. `"italic"`.
-#[derive(Serialize, Deserialize)]
+/// Serialized values are _lowercase_, e.g. `"italic"`.
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 #[serde(remote = "Slant", rename_all = "lowercase")]
 pub enum SlantDef {
     Upright,
@@ -127,10 +146,12 @@ pub enum SlantDef {
     Oblique,
 }
 
+derive_opt!(OptSlant, Slant, SlantDef, "SlantDef");
+
 /// Local mirror of [`fidl_fuchsia_fonts::Width`], for use in JSON serialization.
 ///
 /// Serialized values are in _kebab-case_, e.g. `"semi-condensed"`.
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 #[serde(remote = "Width", rename_all = "kebab-case")]
 pub enum WidthDef {
     UltraCondensed,
@@ -143,3 +164,5 @@ pub enum WidthDef {
     ExtraExpanded,
     UltraExpanded,
 }
+
+derive_opt!(OptWidth, Width, WidthDef, "WidthDef");

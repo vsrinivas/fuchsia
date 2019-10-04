@@ -11,15 +11,16 @@ use {
     },
     failure::Error,
     fidl_fuchsia_fonts::GenericFontFamily,
-    itertools::Itertools,
-    manifest::{serde_ext::*, v2::Style},
+    manifest::{
+        serde_ext::*,
+        v2::{FontFamilyAlias, Style},
+    },
     rayon::prelude::*,
     serde_derive::Deserialize,
     std::{
         collections::BTreeSet,
         path::{Path, PathBuf},
     },
-    unicase::UniCase,
 };
 
 /// Possible versions of [FontCatalog].
@@ -53,7 +54,7 @@ impl FontCatalog {
     /// Loads a single catalog.
     pub fn load_from_path<T: AsRef<Path>>(path: T) -> Result<Self, LoadError> {
         match serde_ext::load_from_path(path) {
-            Ok(FontCatalogWrapper::Version1(index)) => Ok(index),
+            Ok(FontCatalogWrapper::Version1(catalog)) => Ok(catalog),
             Err(err) => Err(err),
         }
     }
@@ -64,7 +65,7 @@ impl FontCatalog {
         T: IntoIterator<Item = Self>,
     {
         let families: Vec<Family> =
-            catalogs.into_iter().flat_map(|index| index.families).try_merge_groups()?;
+            catalogs.into_iter().flat_map(|catalog| catalog.families).try_merge_groups()?;
 
         Ok(FontCatalog { families })
     }
@@ -74,7 +75,7 @@ impl FontCatalog {
 pub(crate) struct Family {
     pub name: String,
     #[serde(default)]
-    pub aliases: BTreeSet<String>,
+    pub aliases: BTreeSet<FontFamilyAlias>,
     #[serde(with = "OptGenericFontFamily", default)] // Default to `None`
     pub generic_family: Option<GenericFontFamily>,
     pub fallback: bool,
@@ -97,13 +98,7 @@ impl TryMerge for Family {
         let name = (&group[0].name).to_string();
         let generic_family = (&group[0]).generic_family;
         let fallback = (&group[0]).fallback;
-        let aliases = group
-            .iter()
-            .flat_map(|family| family.aliases.iter().map(|s| UniCase::new(s)))
-            .sorted()
-            .dedup()
-            .map(|unicase| unicase.to_string())
-            .collect();
+        let aliases = group.iter().flat_map(|family| family.aliases.iter()).cloned().collect();
 
         let assets = group.into_iter().flat_map(|family| family.assets).try_merge_groups()?;
 
@@ -314,9 +309,12 @@ mod tests {
             FontCatalog {
                 families: vec![Family {
                     name: "Family A".to_string(),
-                    aliases: vec!["Family Ay".to_string(), "A Family".to_string()]
-                        .into_iter()
-                        .collect(),
+                    aliases: vec![
+                        FontFamilyAlias::new("Family Ay"),
+                        FontFamilyAlias::new("A Family"),
+                    ]
+                    .into_iter()
+                    .collect(),
                     generic_family: Some(GenericFontFamily::Serif),
                     fallback: true,
                     assets: vec![
@@ -363,9 +361,9 @@ mod tests {
                     Family {
                         name: "Family A".to_string(),
                         aliases: vec![
-                            "Family Ayyyy".to_string(),
-                            "FamilyA".to_string(),
-                            "a family".to_string(),
+                            FontFamilyAlias::new("Family Ayyyy"),
+                            FontFamilyAlias::new("FamilyA"),
+                            FontFamilyAlias::new("a family"),
                         ]
                         .into_iter()
                         .collect(),
@@ -400,9 +398,12 @@ mod tests {
                     },
                     Family {
                         name: "Family B".to_string(),
-                        aliases: vec!["FamilyB".to_string(), "BFamily".to_string()]
-                            .into_iter()
-                            .collect(),
+                        aliases: vec![
+                            FontFamilyAlias::new("FamilyB"),
+                            FontFamilyAlias::new("BFamily"),
+                        ]
+                        .into_iter()
+                        .collect(),
                         generic_family: Some(GenericFontFamily::Serif),
                         fallback: true,
                         assets: vec![Asset {
@@ -427,10 +428,10 @@ mod tests {
                 Family {
                     name: "Family A".to_string(),
                     aliases: vec![
-                        "A Family".to_string(),
-                        "Family Ay".to_string(),
-                        "Family Ayyyy".to_string(),
-                        "FamilyA".to_string(),
+                        FontFamilyAlias::new("A Family"),
+                        FontFamilyAlias::new("Family Ay"),
+                        FontFamilyAlias::new("Family Ayyyy"),
+                        FontFamilyAlias::new("FamilyA"),
                     ]
                     .into_iter()
                     .collect(),
@@ -488,7 +489,7 @@ mod tests {
                 },
                 Family {
                     name: "Family B".to_string(),
-                    aliases: vec!["BFamily".to_string(), "FamilyB".to_string()]
+                    aliases: vec![FontFamilyAlias::new("BFamily"), FontFamilyAlias::new("FamilyB")]
                         .into_iter()
                         .collect(),
                     generic_family: Some(GenericFontFamily::Serif),

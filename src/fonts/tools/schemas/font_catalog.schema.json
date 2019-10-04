@@ -31,14 +31,35 @@
       }
     },
     "typeface": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/style"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "index": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "description": "The index of the typeface within a multi-font file (e.g. TrueType Collections [.ttc])"
+            },
+            "languages": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "$comment": "The pattern is not very precise.",
+                "pattern": "^[A-Za-z0-9\\-]+$",
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "style": {
       "type": "object",
       "properties": {
-        "index": {
-          "type": "integer",
-          "minimum": 0,
-          "default": 0,
-          "description": "The index of the typeface within a multi-font file (e.g. TrueType Collections [.ttc])"
-        },
         "weight": {
           "type": "integer",
           "minimum": 0,
@@ -67,15 +88,6 @@
             "oblique"
           ],
           "default": "upright"
-        },
-        "languages": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "$comment": "The pattern is not very precise.",
-            "pattern": "^[A-Za-z0-9\\-]+$",
-            "minItems": 1
-          }
         }
       }
     },
@@ -91,7 +103,14 @@
         "aliases": {
           "type": "array",
           "items": {
-            "type": "string",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/family_alias"
+              }
+            ],
             "minItems": 1
           }
         },
@@ -114,7 +133,7 @@
             "fangsong"
           ]
         },
-        "assets" : {
+        "assets": {
           "type": "array",
           "description": "List of font assets in the family",
           "minItems": 1,
@@ -123,6 +142,23 @@
           }
         }
       }
+    },
+    "family_alias": {
+      "allOf": [
+        {
+          "properties": {
+            "alias": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "alias"
+          ]
+        },
+        {
+          "$ref": "#/definitions/style"
+        }
+      ]
     }
   },
   "required": [
