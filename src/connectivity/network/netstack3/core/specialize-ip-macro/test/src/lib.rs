@@ -15,32 +15,44 @@ pub(crate) mod net_types {
         /// Simple trait with the identifier `Ip` to test that the `specialize_ip`
         /// attribute specializes function for the various types that implement
         /// this trait.
-        pub(crate) trait Ip {}
+        pub(crate) trait Ip {
+            const VERSION: usize;
+        }
 
         /// Simple trait with the identifier `IpAddress` to test that the
         /// `specialize_ip_address` attribute specializes function for the various
         /// types that implement this trait.
-        pub(crate) trait IpAddress {}
+        pub(crate) trait IpAddress {
+            const VERSION: usize;
+        }
 
         /// Test type with the identifier `Ipv4` that the `specialize_ip`
         /// attribute can specialize a function for.
         pub(crate) struct Ipv4;
-        impl Ip for Ipv4 {}
+        impl Ip for Ipv4 {
+            const VERSION: usize = 4;
+        }
 
         /// Test type with the identifier `Ipv6` that the `specialize_ip`
         /// attribute can specialize a function for.
         pub(crate) struct Ipv6;
-        impl Ip for Ipv6 {}
+        impl Ip for Ipv6 {
+            const VERSION: usize = 6;
+        }
 
         /// Test type with the identifier `Ipv4Addr` that the `specialize_ip_address`
         /// attribute can specialize a function for.
         pub(crate) struct Ipv4Addr;
-        impl IpAddress for Ipv4Addr {}
+        impl IpAddress for Ipv4Addr {
+            const VERSION: usize = 4;
+        }
 
         /// Test type with the identifier `Ipv6Addr` that the `specialize_ip_address`
         /// attribute can specialize a function for.
         pub(crate) struct Ipv6Addr;
-        impl IpAddress for Ipv6Addr {}
+        impl IpAddress for Ipv6Addr {
+            const VERSION: usize = 6;
+        }
     }
 }
 
@@ -70,7 +82,7 @@ mod tests {
     // as `net_types` (where it expects it) rather than as `crate::net_types`.
     use crate::net_types;
     use crate::net_types::ip::*;
-    use specialize_ip_macro::{specialize_ip, specialize_ip_address};
+    use specialize_ip_macro::{ip_addr_test, ip_test, specialize_ip, specialize_ip_address};
 
     trait TraitA {
         fn ret_vala(&self) -> i32;
@@ -583,5 +595,78 @@ mod tests {
         assert_eq!(match_arms_specialized_for_ip_address::<Ipv6Addr>(5), 0);
         assert_eq!(match_arms_specialized_for_ip_address::<Ipv6Addr>(6), 8);
         assert_eq!(match_arms_specialized_for_ip_address::<Ipv6Addr>(7), 0);
+    }
+
+    #[ip_test]
+    fn test_ip_test<I: Ip>() {
+        let x = simple_specialized_for_ip::<I>();
+        if I::VERSION == 4 {
+            assert!(x == 1);
+        } else {
+            assert!(x == 2);
+        }
+    }
+
+    // test that we can stack both macros:
+    #[ip_test]
+    #[specialize_ip]
+    fn test_specialize_ip_test<I: Ip>() {
+        let x = simple_specialized_for_ip::<I>();
+        #[ipv4]
+        assert!(x == 1);
+        #[ipv6]
+        assert!(x == 2);
+    }
+
+    // test that we can stack both macros (in reverse order):
+    #[specialize_ip]
+    #[ip_test]
+    fn test_specialize_ip_test_different_order<I: Ip>() {
+        let x = simple_specialized_for_ip::<I>();
+        #[ipv4]
+        assert!(x == 1);
+        #[ipv6]
+        assert!(x == 2);
+    }
+
+    #[ip_addr_test]
+    fn test_ip_addr_test<A: IpAddress>() {
+        let x = simple_specialized_for_ip_address::<A>();
+        if A::VERSION == 4 {
+            assert!(x == 3);
+        } else {
+            assert!(x == 4);
+        }
+    }
+
+    #[ip_addr_test]
+    #[specialize_ip_address]
+    fn test_specialize_ip_addr_test<A: IpAddress>() {
+        let x = simple_specialized_for_ip_address::<A>();
+        #[ipv4addr]
+        assert!(x == 3);
+        #[ipv6addr]
+        assert!(x == 4);
+    }
+
+    // test that all the `ip_[addr]_test` functions were generated
+    #[test]
+    fn test_all_tests_generation() {
+        test_ip_test_v4();
+        test_ip_test_v6();
+        test_specialize_ip_test_v4();
+        test_specialize_ip_test_v6();
+        test_specialize_ip_test_different_order_v4();
+        test_specialize_ip_test_different_order_v6();
+        test_ip_addr_test_v4();
+        test_ip_addr_test_v6();
+        test_specialize_ip_addr_test_v4();
+        test_specialize_ip_addr_test_v6();
+    }
+
+    #[ip_test]
+    #[should_panic]
+    fn test_should_panic<I: Ip>() {
+        assert_eq!(0, simple_specialized_for_ip::<I>());
     }
 }

@@ -15,9 +15,9 @@ use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::ToTokens;
 use syn::visit_mut::{self, VisitMut};
 use syn::{
-    punctuated::Punctuated, ArgCaptured, AttrStyle, Attribute, Block, Error, Expr, ExprMatch,
-    FnArg, FnDecl, GenericParam, Ident, Item, ItemFn, Pat, Path, Stmt, TypeImplTrait,
-    TypeParamBound,
+    punctuated::Punctuated, spanned::Spanned, ArgCaptured, AttrStyle, Attribute, Block, Error,
+    Expr, ExprMatch, FnArg, FnDecl, GenericParam, Ident, Item, ItemFn, Pat, Path, Stmt,
+    TypeImplTrait, TypeParamBound,
 };
 
 #[proc_macro_attribute]
@@ -87,6 +87,16 @@ pub fn ipv6addr(attr: TokenStream, _input: TokenStream) -> TokenStream {
     .into()
 }
 
+#[proc_macro_attribute]
+pub fn ip_test(attr: TokenStream, input: TokenStream) -> TokenStream {
+    ip_test_inner(attr, input, "ip_test", "Ip", "Ipv4", "Ipv6")
+}
+
+#[proc_macro_attribute]
+pub fn ip_addr_test(attr: TokenStream, input: TokenStream) -> TokenStream {
+    ip_test_inner(attr, input, "ip_addr_test", "IpAddress", "Ipv4Addr", "Ipv6Addr")
+}
+
 fn specialize_ip_inner(
     attr: TokenStream,
     input: TokenStream,
@@ -109,6 +119,106 @@ fn specialize_ip_inner(
     };
     let parsed = parse_input(f, &cfg);
     serialize(parsed, &cfg)
+}
+
+fn ip_test_inner(
+    attr: TokenStream,
+    input: TokenStream,
+    attr_name: &'static str,
+    trait_name: &'static str,
+    ipv4_type_name: &'static str,
+    ipv6_type_name: &'static str,
+) -> TokenStream {
+    assert!(attr.is_empty(), "#[ip_test]: unexpected attribute argument");
+
+    let item = parse_macro_input!(input as syn::ItemFn);
+    let syn::ItemFn { attrs, vis, constness, unsafety, asyncness, abi, ident, decl, block } = item;
+    if let Err(e) = (|| {
+        if let Some(gen) = decl.generics.params.first() {
+            match gen.value() {
+                GenericParam::Type(tp) => {
+                    if !tp.bounds.iter().any(|b| match b {
+                        TypeParamBound::Trait(t) => t.path.is_ident(trait_name),
+                        _ => false,
+                    }) {
+                        return Err(Error::new(
+                            tp.bounds.span(),
+                            format!("{} entry must have an {} type bound", attr_name, trait_name),
+                        ));
+                    }
+                }
+                _ => {
+                    return Err(Error::new(
+                        decl.generics.span(),
+                        format!("{} entry must ONLY have a single type parameter", attr_name),
+                    ))
+                }
+            }
+        } else {
+            return Err(Error::new(
+                decl.fn_token.span,
+                format!("{} entry must have exactly one type parameter", attr_name),
+            ));
+        }
+
+        if !decl.inputs.is_empty() {
+            return Err(Error::new(
+                decl.inputs.span(),
+                format!("{} entry takes no arguments", attr_name),
+            ));
+        }
+        if let Some(dot3) = decl.variadic {
+            return Err(Error::new(
+                dot3.spans[0],
+                format!("{} entry may not be variadic", attr_name),
+            ));
+        }
+        Ok(())
+    })() {
+        return e.to_compile_error().into();
+    }
+
+    fn quote_fn_decl(decl: &FnDecl) -> TokenStream2 {
+        let generics_params = &decl.generics.params;
+        let generics_where = &decl.generics.where_clause;
+        quote!(<#generics_params>() #generics_where)
+    }
+
+    // we need to check the attributes given to the function, test attributes
+    // like `should_panic` need to go to the concrete test definitions instead.
+    let (test_attrs, attrs) =
+        attrs.into_iter().partition::<Vec<_>, _>(|attr| attr.path.is_ident("should_panic"));
+    // borrow here because `test_attrs` is used twice in `quote_spanned!` below.
+    let test_attrs = &test_attrs;
+
+    let span = ident.span();
+    let fn_decl = quote_fn_decl(&decl);
+    let output = decl.output;
+    let v4_test = Ident::new(&format!("{}_v4", ident), Span::call_site());
+    let v6_test = Ident::new(&format!("{}_v6", ident), Span::call_site());
+
+    let ipv4_type_ident = Ident::new(ipv4_type_name, Span::call_site());
+    let ipv6_type_ident = Ident::new(ipv6_type_name, Span::call_site());
+
+    let output = quote_spanned! { span =>
+        #(#attrs)*
+        #vis #constness #unsafety #asyncness #abi fn #ident #fn_decl #output {
+            #block
+        }
+
+        #[test]
+        #(#test_attrs)*
+        fn #v4_test () #output {
+           #ident::<#ipv4_type_ident>()
+        }
+
+        #[test]
+        #(#test_attrs)*
+        fn #v6_test () #output {
+           #ident::<#ipv6_type_ident>()
+        }
+    };
+    output.into()
 }
 
 // A configuration that allows us to implement most of the logic agnostic to
