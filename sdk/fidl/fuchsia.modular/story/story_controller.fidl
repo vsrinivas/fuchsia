@@ -35,12 +35,6 @@ protocol StoryController {
     Watch(StoryWatcher watcher);
 
     /// DEPRECATED
-    GetActiveModules() -> (vector<ModuleData> module_data);
-
-    /// DEPRECATED
-    GetModules() -> (vector<ModuleData> module_data);
-
-    /// DEPRECATED
     /// (metadata about, and requesting changes to runtime state).
     GetModuleController(vector<string> module_path, request<ModuleController> request);
 

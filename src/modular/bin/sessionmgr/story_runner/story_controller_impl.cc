@@ -1166,27 +1166,6 @@ void StoryControllerImpl::Watch(fidl::InterfaceHandle<fuchsia::modular::StoryWat
   watchers_.AddInterfacePtr(std::move(ptr));
 }
 
-void StoryControllerImpl::GetActiveModules(GetActiveModulesCallback callback) {
-  // We execute this in a SyncCall so that we are sure we don't fall in a
-  // crack between a module being created and inserted in the connections
-  // collection during some Operation.
-  operation_queue_.Add(std::make_unique<SyncCall>([this, callback = std::move(callback)]() mutable {
-    std::vector<fuchsia::modular::ModuleData> result;
-    result.resize(running_mod_infos_.size());
-    for (size_t i = 0; i < running_mod_infos_.size(); i++) {
-      running_mod_infos_[i].module_data->Clone(&result.at(i));
-    }
-    callback(std::move(result));
-  }));
-}
-
-void StoryControllerImpl::GetModules(GetModulesCallback callback) {
-  auto on_run = Future<>::Create("StoryControllerImpl.GetModules.on_run");
-  auto done = on_run->AsyncMap([this] { return story_storage_->ReadAllModuleData(); });
-  operation_queue_.Add(WrapFutureAsOperation("StoryControllerImpl.GetModules.op", on_run, done,
-                                             std::move(callback)));
-}
-
 void StoryControllerImpl::GetModuleController(
     std::vector<std::string> module_path,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) {

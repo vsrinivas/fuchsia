@@ -202,8 +202,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void GetInfo2(GetInfo2Callback callback) override;
   void RequestStart() override;
   void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) override;
-  void GetActiveModules(GetActiveModulesCallback callback) override;
-  void GetModules(GetModulesCallback callback) override;
   void GetModuleController(
       std::vector<std::string> module_path,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) override;

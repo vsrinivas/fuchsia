@@ -113,30 +113,3 @@ TEST_F(StoryShellEmbeddedModTest, SurfaceRelationships) {
   EmbeddedModuleLaunchesModule();
 }
 
-// Checks that embedded modules are not reinflated when stories are retarted.
-TEST_F(StoryShellEmbeddedModTest, ReinflateModules) {
-  LaunchParentModule();
-  ParentModuleEmbedsModule();
-  EmbeddedModuleLaunchesModule();
-
-  fuchsia::modular::StoryControllerPtr story_controller;
-  fake_session_shell_->story_provider()->GetController(kStoryName, story_controller.NewRequest());
-  bool modules_reinflated_correctly{false};
-
-  // Stop and restart the story
-  story_controller->Stop([&] {
-    story_controller->RequestStart();
-    story_controller->GetActiveModules(
-        [&](std::vector<fuchsia::modular::ModuleData> active_modules) mutable {
-          size_t num_embedded_mods = 0u;
-          for (const fuchsia::modular::ModuleData& mod : active_modules) {
-            num_embedded_mods += mod.is_embedded();
-          }
-          if (num_embedded_mods == 0 && active_modules.size() == 2u) {
-            modules_reinflated_correctly = true;
-          }
-        });
-  });
-
-  RunLoopUntil([&] { return modules_reinflated_correctly; });
-}

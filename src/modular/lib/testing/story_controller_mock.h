@@ -38,12 +38,6 @@ class StoryControllerMock : public fuchsia::modular::StoryController {
   }
 
   // |fuchsia::modular::StoryController|
-  void GetActiveModules(GetActiveModulesCallback callback) override { FXL_NOTIMPLEMENTED(); }
-
-  // |fuchsia::modular::StoryController|
-  void GetModules(GetModulesCallback callback) override { FXL_NOTIMPLEMENTED(); }
-
-  // |fuchsia::modular::StoryController|
   void GetModuleController(
       std::vector<std::string> module_path,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) override {
