@@ -33,7 +33,7 @@ bool AddAttachment(const std::string& attachment_filename,
     return false;
   }
   if (!WriteVMO(attachment_content, writer)) {
-    FX_LOGS(ERROR) << "error writing " << attachment_filename << " to file";
+    FX_LOGS(ERROR) << "error attaching " << attachment_filename << " to Crashpad report";
     return false;
   }
   return true;
@@ -50,13 +50,12 @@ std::string ReadStringFromFile(const std::string& filepath) {
   return fxl::TrimString(content, "\r\n").ToString();
 }
 
-void AddCrashServerAnnotations(const fuchsia::feedback::CrashReport& report,
-                               const bool has_minidump,
+void AddCrashServerAnnotations(const std::string& program_name, const bool has_minidump,
                                std::map<std::string, std::string>* annotations) {
   (*annotations)["product"] = "Fuchsia";
   (*annotations)["version"] = ReadStringFromFile("/config/build-info/version");
   // We use ptype to benefit from Chrome's "Process type" handling in the crash server UI.
-  (*annotations)["ptype"] = report.program_name();
+  (*annotations)["ptype"] = program_name;
   (*annotations)["osName"] = "Fuchsia";
   (*annotations)["osVersion"] = "0.0.0";
   // Only the minidump file needs to be processed by the crash server. Reports without a
@@ -74,33 +73,35 @@ void AddFeedbackAnnotations(const fuchsia::feedback::Data& feedback_data,
   }
 }
 
-void AddFeedbackAttachments(const fuchsia::feedback::Data& feedback_data,
-                            crashpad::CrashReportDatabase::NewReport* report) {
+void AddFeedbackAttachments(fuchsia::feedback::Data feedback_data,
+                            std::map<std::string, fuchsia::mem::Buffer>* attachments) {
   if (!feedback_data.has_attachment_bundle()) {
     return;
   }
-  AddAttachment(feedback_data.attachment_bundle().key, feedback_data.attachment_bundle().value,
-                report);
+  auto* attachment_bundle = feedback_data.mutable_attachment_bundle();
+  (*attachments)[attachment_bundle->key] = std::move(attachment_bundle->value);
 }
 
 }  // namespace
 
-void BuildAnnotationsAndAttachments(const fuchsia::feedback::CrashReport& report,
-                                    const fuchsia::feedback::Data& feedback_data,
+void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
+                                    fuchsia::feedback::Data feedback_data,
                                     std::map<std::string, std::string>* annotations,
-                                    crashpad::CrashReportDatabase::NewReport* crashpad_report,
-                                    bool* has_minidump) {
+                                    std::map<std::string, fuchsia::mem::Buffer>* attachments,
+                                    std::optional<fuchsia::mem::Buffer>* minidump) {
+  const std::string program_name = report.program_name();
+
   // Optional annotations and attachments filled by the client.
-  ExtractAnnotationsAndAttachments(report, annotations, crashpad_report, has_minidump);
+  ExtractAnnotationsAndAttachments(std::move(report), annotations, attachments, minidump);
 
   // Crash server annotations common to all crash reports.
-  AddCrashServerAnnotations(report, *has_minidump, annotations);
+  AddCrashServerAnnotations(program_name, minidump->has_value(), annotations);
 
   // Feedback annotations common to all crash reports.
   AddFeedbackAnnotations(feedback_data, annotations);
 
   // Feedback attachments common to all crash reports.
-  AddFeedbackAttachments(feedback_data, crashpad_report);
+  AddFeedbackAttachments(std::move(feedback_data), attachments);
 }
 
 }  // namespace feedback

@@ -5,6 +5,7 @@
 #include "src/developer/feedback/crashpad_agent/crashpad_agent.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fit/result.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
@@ -12,6 +13,7 @@
 
 #include <cstdio>
 #include <map>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -133,6 +135,45 @@ CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
   inspect_manager_->ExposeSettings(&settings_);
 }
 
+namespace {
+
+// TODO(fxb/6442): turn this helper into one of the public methods of the Database wrapper.
+bool MakeNewReport(crashpad::CrashReportDatabase* database,
+                   const std::map<std::string, fuchsia::mem::Buffer>& attachments,
+                   const std::optional<fuchsia::mem::Buffer>& minidump,
+                   crashpad::UUID* local_report_id) {
+  // Create local Crashpad report.
+  std::unique_ptr<crashpad::CrashReportDatabase::NewReport> report;
+  if (const auto status = database->PrepareNewCrashReport(&report);
+      status != crashpad::CrashReportDatabase::kNoError) {
+    FX_LOGS(ERROR) << "Error creating local Crashpad report (" << status << ")";
+    return false;
+  }
+
+  // Write attachments.
+  for (const auto& [filename, content] : attachments) {
+    AddAttachment(filename, content, report.get());
+  }
+
+  // Optionally write minidump.
+  if (minidump.has_value()) {
+    if (!WriteVMO(minidump.value(), report->Writer())) {
+      FX_LOGS(WARNING) << "error attaching minidump to Crashpad report";
+    }
+  }
+
+  // Finish new local Crashpad report.
+  if (const auto status = database->FinishedWritingCrashReport(std::move(report), local_report_id);
+      status != crashpad::CrashReportDatabase::kNoError) {
+    FX_LOGS(ERROR) << "error writing local Crashpad report (" << status << ")";
+    return false;
+  }
+
+  return true;
+}
+
+}  // namespace
+
 void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
   if (!report.has_program_name()) {
     FX_LOGS(ERROR) << "Invalid crash report. No program name. Won't file.";
@@ -141,44 +182,34 @@ void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback cal
   }
   FX_LOGS(INFO) << "generating crash report for " << report.program_name();
 
-  // Create local Crashpad report.
-  std::unique_ptr<crashpad::CrashReportDatabase::NewReport> crashpad_report;
-  if (const auto status = database_->PrepareNewCrashReport(&crashpad_report);
-      status != crashpad::CrashReportDatabase::kNoError) {
-    FX_LOGS(ERROR) << "Error creating local Crashpad report (" << status << ")";
-    callback(fit::error(ZX_ERR_INTERNAL));
-    return;
-  }
-
   using UploadArgs = std::tuple<crashpad::UUID, std::map<std::string, std::string>, bool>;
 
   auto promise =
       GetFeedbackData(dispatcher_, services_, /*timeout=*/zx::sec(10))
-          .then([this, report = std::move(report), crashpad_report = std::move(crashpad_report)](
+          .then([this, report = std::move(report)](
                     fit::result<Data>& result) mutable -> fit::result<UploadArgs> {
             Data feedback_data;
             if (result.is_ok()) {
               feedback_data = result.take_value();
             }
 
-            bool has_minidump = false;
-            std::map<std::string, std::string> annotations;
-            BuildAnnotationsAndAttachments(report, feedback_data, &annotations,
-                                           crashpad_report.get(), &has_minidump);
+            const std::string program_name = report.program_name();
 
-            // Finish new local crash report.
+            std::map<std::string, std::string> annotations;
+            std::map<std::string, fuchsia::mem::Buffer> attachments;
+            std::optional<fuchsia::mem::Buffer> minidump;
+            BuildAnnotationsAndAttachments(std::move(report), std::move(feedback_data),
+                                           &annotations, &attachments, &minidump);
+
             crashpad::UUID local_report_id;
-            if (const auto status = database_->FinishedWritingCrashReport(
-                    std::move(crashpad_report), &local_report_id);
-                status != crashpad::CrashReportDatabase::kNoError) {
-              FX_LOGS(ERROR) << "error writing local Crashpad report (" << status << ")";
+            if (!MakeNewReport(database_.get(), attachments, minidump, &local_report_id)) {
               return fit::error();
             }
 
-            inspect_manager_->AddReport(report.program_name(), local_report_id.ToString());
+            inspect_manager_->AddReport(program_name, local_report_id.ToString());
 
-            return fit::ok(
-                std::make_tuple(std::move(local_report_id), std::move(annotations), has_minidump));
+            return fit::ok(std::make_tuple(std::move(local_report_id), std::move(annotations),
+                                           minidump.has_value()));
           })
           .then([callback = std::move(callback), this](fit::result<UploadArgs>& result) {
             if (result.is_error()) {
