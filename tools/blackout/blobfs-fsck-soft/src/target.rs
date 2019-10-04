@@ -34,6 +34,12 @@ struct Opts {
     commands: CommonCommand,
 }
 
+fn setup(blobfs: &mut Filesystem<Blobfs>) -> Result<(), Error> {
+    println!("formatting provided block device with blobfs");
+    blobfs.format().context("failed to format blobfs")?;
+    Ok(())
+}
+
 /// the meat of the test run. the wrapping [`test`] function simply blocks on the process
 /// terminating, and will never return except for an error, so it's not suitable for testing the
 /// test.
@@ -43,9 +49,6 @@ fn test_spawn(
     num_ops: u64,
 ) -> Result<zx::Process, Error> {
     let root = format!("/test-fs-root-{}", seed);
-
-    println!("formatting provided block device with blobfs");
-    blobfs.format().context("failed to format blobfs")?;
 
     println!("mounting blobfs into default namespace");
     blobfs.mount(&root).context("failed to mount blobfs")?;
@@ -76,9 +79,11 @@ fn verify(blobfs: &mut Filesystem<Blobfs>) -> Result<(), Error> {
 fn main() -> Result<(), Error> {
     let opts = Opts::from_args();
 
+    println!("blobfs block device: {}", opts.common.block_device);
     let mut blobfs = Blobfs::new(&opts.common.block_device)?;
 
     match opts.commands {
+        CommonCommand::Setup => setup(&mut blobfs),
         CommonCommand::Test => test(&mut blobfs, opts.common.seed),
         CommonCommand::Verify => verify(&mut blobfs),
     }
@@ -117,7 +122,7 @@ fn launch_generator_process(seed: u64, root: &str, num_ops: u64) -> Result<zx::P
 #[cfg(test)]
 mod tests {
     use {
-        super::{test_spawn, verify},
+        super::{setup, test_spawn, verify},
         fs_management::Blobfs,
         fuchsia_zircon::{self as zx, AsHandleRef, Task},
         ramdevice_client::RamdiskClient,
@@ -137,6 +142,9 @@ mod tests {
 
         println!("creating blobfs manager");
         let mut blobfs = Blobfs::new(device_path).expect("failed to create blobfs manager");
+
+        println!("setting up blobfs");
+        setup(&mut blobfs).expect("failed to set up blobfs");
 
         println!("running generator"); // with a "random" seed
         let process = test_spawn(&mut blobfs, 1234, 0).expect("failed to run process");
@@ -161,6 +169,9 @@ mod tests {
 
         println!("creating blobfs manager");
         let mut blobfs = Blobfs::new(device_path).expect("failed to create blobfs manager");
+
+        println!("setting up blobfs");
+        setup(&mut blobfs).expect("failed to set up blobfs");
 
         println!("running generator"); // with a "random" seed
         let process = test_spawn(&mut blobfs, 4321, 1000).expect("failed to run process");

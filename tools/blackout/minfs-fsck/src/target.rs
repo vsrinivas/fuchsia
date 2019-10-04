@@ -23,13 +23,19 @@ struct Opts {
     commands: CommonCommand,
 }
 
+fn setup(opts: Opts) -> Result<(), Error> {
+    let minfs = Minfs::new(&opts.common.block_device)?;
+
+    println!("formatting {} with minfs", opts.common.block_device);
+    minfs.format().context("failed to format minfs")?;
+
+    Ok(())
+}
+
 fn test(opts: Opts) -> Result<(), Error> {
     let mut minfs = Minfs::new(&opts.common.block_device)?;
 
     let root = format!("/test-fs-root-{}", opts.common.seed);
-
-    println!("formatting {} with minfs", opts.common.block_device);
-    minfs.format().context("failed to format minfs")?;
 
     println!("mounting minfs into default namespace at {}", root);
     minfs.mount(&root).context("failed to mount minfs")?;
@@ -71,6 +77,7 @@ fn main() -> Result<(), Error> {
     let opts = Opts::from_args();
 
     match opts.commands {
+        CommonCommand::Setup => setup(opts),
         CommonCommand::Test => test(opts),
         CommonCommand::Verify => verify(opts),
     }

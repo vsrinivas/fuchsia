@@ -14,7 +14,7 @@ use {
 };
 
 pub mod steps;
-use steps::{LoadStep, OperationStep, RebootStep, RebootType, TestStep, VerifyStep};
+use steps::{LoadStep, OperationStep, RebootStep, RebootType, SetupStep, TestStep, VerifyStep};
 
 /// Common options for the host-side test runners
 #[derive(StructOpt)]
@@ -101,6 +101,19 @@ impl Test {
     /// command line.
     pub fn new(package: &'static str) -> UnconfiguredTest {
         UnconfiguredTest { package }
+    }
+
+    /// Add a test step for setting up the filesystem in the way we want it for the test. This
+    /// executes the `setup` subcommand on the target binary and waits for completion, checking the
+    /// result.
+    pub fn setup_step(mut self) -> Self {
+        self.steps.push(Box::new(SetupStep::new(
+            &self.target,
+            &self.bin,
+            self.seed,
+            &self.block_device,
+        )));
+        self
     }
 
     /// Add a test step for generating load on the device using the `test` subcommand on the target

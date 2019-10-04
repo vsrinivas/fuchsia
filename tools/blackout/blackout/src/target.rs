@@ -26,12 +26,15 @@ pub struct CommonOpts {
 /// A set of common subcommands for the target test binary
 #[derive(Debug, StructOpt)]
 pub enum CommonCommand {
-    /// Run the verification step.
-    #[structopt(name = "verify")]
-    Verify,
+    /// Run the setup step.
+    #[structopt(name = "setup")]
+    Setup,
     /// Run the test step.
     #[structopt(name = "test")]
     Test,
+    /// Run the verification step.
+    #[structopt(name = "verify")]
+    Verify,
 }
 
 /// Generate a random file name. It will be 17 characters long, start with an 'a' to confirm it's a

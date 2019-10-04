@@ -118,6 +118,27 @@ pub trait TestStep {
     fn execute(&self) -> Result<(), Error>;
 }
 
+/// A test step for setting up the filesystem in the way we want it for the test. This executes the
+/// `setup` subcommand on the target binary and waits for completion, checking the result.
+pub struct SetupStep {
+    runner: Runner,
+}
+
+impl SetupStep {
+    /// Create a new operation step.
+    pub fn new(target: &str, bin: &str, seed: u32, block_device: &str) -> Self {
+        Self { runner: Runner::new(target, bin, seed, block_device) }
+    }
+}
+
+impl TestStep for SetupStep {
+    fn execute(&self) -> Result<(), Error> {
+        println!("setting up test...");
+        self.runner.run_success("setup").expect("failed to set up test");
+        Ok(())
+    }
+}
+
 /// A test step for generating load on a filesystem. This executes the `test` subcommand on the
 /// target binary and then checks to make sure it didn't exit after `duration`.
 pub struct LoadStep {
