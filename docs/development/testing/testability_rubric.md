@@ -114,6 +114,14 @@ receiving Testability+1.
     Additions or modifications to manual tests therefore do not require
     automated tests. However, it is strongly recommended that manual tests be
     paired with a README.md or TESTING.md document describing how to run them.
+*   **Hardcoded values.** Additions or changes to hardcoded values do not
+    necessarily require tests. Oftentimes, these values control behaviors that
+    are not easily observable, such as unexposed implementation
+    details, heuristics, or "cosmetic" changes (e.g. background color of a UI).
+    Tests of the style `assert_eq!(CONFIG_PARAM, 5);` are not considered useful
+    and are not required by testability. However, if the CL results in an easily
+    observable behavioral change, the CL should include a test for the new
+    behavior.
 
 ## Temporary testability exemptions
 
