@@ -35,6 +35,7 @@
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/util/string_escape.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
+#include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/find_modules_call.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/get_types_from_entity_call.h"
@@ -194,6 +195,33 @@ void StoryControllerImpl::RunningModInfo::InitializeInspect(
         modular_config::kInspectSurfaceRelationDependency, dependency);
     module_surface_relation_emphasis = mod_inspect_node.CreateDouble(
         modular_config::kInspectSurfaceRelationEmphasis, module_data->surface_relation().emphasis);
+  }
+  ResetInspect();
+}
+
+void StoryControllerImpl::RunningModInfo::ResetInspect() {
+  module_intent_action_property.Set(module_data->intent().action.value_or(""));
+  module_intent_handler_property.Set(module_data->intent().handler.value_or(""));
+
+  std::string param_names_str = "";
+  if (module_data->intent().parameters.has_value()) {
+    for (auto& param : *module_data->intent().parameters) {
+      param_names_str.append("name : " + param.name.value_or("") + " ");
+    }
+  }
+  module_intent_params_property.Set(param_names_str);
+
+  if (module_data->has_annotations()) {
+    for (const fuchsia::modular::Annotation& annotation : module_data->annotations()) {
+      std::string value_str = modular::annotations::ToInspect(*annotation.value.get());
+      std::string key_with_prefix = "annotation: " + annotation.key;
+      if (annotation_properties.find(key_with_prefix) != annotation_properties.end()) {
+        annotation_properties[key_with_prefix].Set(value_str);
+      } else {
+        annotation_properties.insert(std::pair<const std::string, inspect::StringProperty>(
+            key_with_prefix, mod_inspect_node.CreateString(key_with_prefix, value_str)));
+      }
+    }
   }
 }
 
@@ -722,7 +750,6 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
     // Check for existing module at the given path.
     auto* const running_mod_info =
         story_controller_impl_->FindRunningModInfo(module_data_.module_path());
-
     if (module_data_.module_deleted()) {
       // If the module is running, kill it.
       if (running_mod_info) {
@@ -735,18 +762,11 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
 
     // Update the inspect properties of a mod.
     if (running_mod_info) {
-      running_mod_info->module_intent_action_property.Set(
-          module_data_.intent().action.value_or(""));
-      running_mod_info->module_intent_handler_property.Set(
-          module_data_.intent().handler.value_or(""));
-
-      std::string param_names_str = "";
-      if (module_data_.intent().parameters.has_value()) {
-        for (auto& param : *module_data_.intent().parameters) {
-          param_names_str.append("name : " + param.name.value_or("") + " ");
-        }
+      if (module_data_.has_annotations()) {
+        fidl::Clone(module_data_.annotations(),
+                    running_mod_info->module_data->mutable_annotations());
       }
-      running_mod_info->module_intent_params_property.Set(param_names_str);
+      running_mod_info->ResetInspect();
     }
 
     // We do not auto-start Modules that were added through ModuleContext on

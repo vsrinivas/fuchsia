@@ -90,5 +90,36 @@ TEST(AnnotationsTest, MergeDisjoint) {
       UnorderedElementsAre(AnnotationEq(ByRef(annotation_1)), AnnotationEq(ByRef(annotation_2))));
 }
 
+// TODO(fxb/37645): Return the proper properties instead of text strings.
+TEST(AnnotationsTest, TextToInspect) {
+  auto annotation_text = MakeAnnotation("string_key", "string_text");
+  EXPECT_THAT(ToInspect(*annotation_text.value.get()), "string_text");
+}
+
+// TODO(fxb/37645): Return the proper properties instead of text strings.
+TEST(AnnotationsTest, BufferToInspect) {
+  fuchsia::mem::Buffer buffer{};
+  std::string buffer_str = "x";
+  ASSERT_TRUE(fsl::VmoFromString(buffer_str, &buffer));
+  AnnotationValue annotation_value_buffer;
+  annotation_value_buffer.set_buffer(std::move(buffer));
+  auto annotation_buffer =
+      Annotation{.key = std::move("buffer_key"),
+                 .value = fidl::MakeOptional(std::move(annotation_value_buffer))};
+
+  EXPECT_THAT(ToInspect(*annotation_buffer.value.get()), "buffer");
+}
+
+// TODO(fxb/37645): Return the proper properties instead of text strings.
+TEST(AnnotationsTest, BytesToInspect) {
+  AnnotationValue annotation_value_bytes;
+  annotation_value_bytes.set_bytes({0x01, 0x02, 0x03, 0x04});
+  auto annotation_bytes =
+      Annotation{.key = std::move("bytes_key"),
+                 .value = fidl::MakeOptional(std::move(annotation_value_bytes))};
+
+  EXPECT_THAT(ToInspect(*annotation_bytes.value.get()), "bytes");
+}
+
 }  // namespace
 }  // namespace modular::annotations

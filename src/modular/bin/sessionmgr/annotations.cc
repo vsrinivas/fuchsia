@@ -50,4 +50,23 @@ std::vector<Annotation> Merge(std::vector<Annotation> a, std::vector<Annotation>
   return result;
 }
 
+std::string ToInspect(const fuchsia::modular::AnnotationValue& value) {
+  std::string text;
+  switch (value.Which()) {
+    case fuchsia::modular::AnnotationValue::Tag::kText:
+      text = value.text();
+      break;
+    case fuchsia::modular::AnnotationValue::Tag::kBytes:
+      text = "bytes";
+      break;
+    case fuchsia::modular::AnnotationValue::Tag::kBuffer:
+      text = "buffer";
+      break;
+    case fuchsia::modular::AnnotationValue::Tag::kUnknown:
+      text = "unknown";
+      break;
+  }
+  return text;
+}
+
 }  // namespace modular::annotations

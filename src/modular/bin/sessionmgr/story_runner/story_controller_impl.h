@@ -181,8 +181,11 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
     inspect::StringProperty module_surface_relation_dependency;
     inspect::DoubleProperty module_surface_relation_emphasis;
     inspect::StringProperty module_path_property;
+    std::map<std::string, inspect::StringProperty> annotation_properties;
+
     // Helper for initializing inspect nodes and properties.
     void InitializeInspect(StoryControllerImpl* const story_controller_impl);
+    void ResetInspect();
   };
 
   // A module's story shell-related information that we pend until we are able

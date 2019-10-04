@@ -185,16 +185,16 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
 
   puppet_master->ControlStory(kStoryId, story_master.NewRequest());
 
-  auto annotation_value = fuchsia::modular::AnnotationValue{};
-  annotation_value.set_text("test_value");
+  auto text_story_annotation_value = fuchsia::modular::AnnotationValue{};
+  text_story_annotation_value.set_text("test_value");
 
-  auto annotation = fuchsia::modular::Annotation{
-      .key = "test_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+  auto text_story_annotation = fuchsia::modular::Annotation{
+      .key = "test_key", .value = fidl::MakeOptional(std::move(text_story_annotation_value))};
 
-  std::vector<fuchsia::modular::Annotation> annotations;
-  annotations.push_back(std::move(annotation));
+  std::vector<fuchsia::modular::Annotation> story_annotations;
+  story_annotations.push_back(std::move(text_story_annotation));
   bool done{false};
-  story_master->Annotate(std::move(annotations),
+  story_master->Annotate(std::move(story_annotations),
                          [&](fuchsia::modular::StoryPuppetMaster_Annotate_Result result) {
                            EXPECT_FALSE(result.is_err());
                            done = true;
@@ -225,12 +225,28 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
 
   std::vector<StoryCommand> commands;
   commands.push_back(std::move(command));
-
   story_master->Enqueue(std::move(commands));
   bool execute_called = false;
   story_master->Execute(
       [&execute_called](fuchsia::modular::ExecuteResult result) { execute_called = true; });
   RunLoopUntil([&] { return execute_called; });
+
+  // Annotate the module.
+  auto text_mod_annotation_value = fuchsia::modular::AnnotationValue{};
+  text_mod_annotation_value.set_text("text_value");
+  auto text_mod_annotation = fuchsia::modular::Annotation{
+      .key = "text_key", .value = fidl::MakeOptional(fidl::Clone(text_mod_annotation_value))};
+  std::vector<fuchsia::modular::Annotation> mod_annotations;
+  mod_annotations.push_back(fidl::Clone(text_mod_annotation));
+
+  bool annotate_done = false;
+  story_master->AnnotateModule(
+      "mod1", std::move(mod_annotations),
+      [&](fuchsia::modular::StoryPuppetMaster_AnnotateModule_Result result) {
+        EXPECT_FALSE(result.is_err());
+        annotate_done = true;
+      });
+  RunLoopUntil([&] { return annotate_done && execute_called; });
 
   zx::vmo vmo_inspect;
   ASSERT_EQ(ZX_OK, GetInspectVmo(&vmo_inspect));
@@ -259,7 +275,8 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
                   StringIs(modular_config::kInspectSurfaceRelationArrangement, "NONE"),
                   StringIs(modular_config::kInspectSurfaceRelationDependency, "NONE"),
                   DoubleIs(modular_config::kInspectSurfaceRelationEmphasis, 1.0),
-                  StringIs(modular_config::kInspectModulePath, "mod1"))))));
+                  StringIs(modular_config::kInspectModulePath, "mod1"),
+                  StringIs("annotation: text_key", "text_value"))))));
 
   bool story_deleted = false;
   puppet_master->DeleteStory(kStoryId, [&] { story_deleted = true; });

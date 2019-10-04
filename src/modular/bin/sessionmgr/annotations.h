@@ -21,6 +21,9 @@ using Annotation = fuchsia::modular::Annotation;
 // * Order is not guaranteed.
 std::vector<Annotation> Merge(std::vector<Annotation> a, std::vector<Annotation> b);
 
+// Helper function for translating annotation values to types ingestable by Inpect framework.
+// TODO(fxb/37645): Template this to return the proper properties
+std::string ToInspect(const fuchsia::modular::AnnotationValue& value);
 }  // namespace modular::annotations
 
 #endif  // SRC_MODULAR_BIN_SESSIONMGR_ANNOTATIONS_H_

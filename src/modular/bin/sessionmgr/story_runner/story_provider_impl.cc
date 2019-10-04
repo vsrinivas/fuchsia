@@ -21,6 +21,7 @@
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
+#include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/bin/sessionmgr/focus.h"
 #include "src/modular/bin/sessionmgr/presentation_provider.h"
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
@@ -727,27 +728,6 @@ fuchsia::modular::StoryInfo StoryProviderImpl::StoryInfo2ToStoryInfo(
   return story_info;
 }
 
-std::string AnnotationTranslation(const fuchsia::modular::AnnotationValue* value) {
-  std::string text;
-  switch (value->Which()) {
-    case fuchsia::modular::AnnotationValue::Tag::kText:
-      text = value->text();
-      break;
-    case fuchsia::modular::AnnotationValue::Tag::kBytes:
-      // TODO: translate this data to an inspect property format
-      text = "bytes";
-      break;
-    case fuchsia::modular::AnnotationValue::Tag::kBuffer:
-      // TODO: translate this data to an inspect property format
-      text = "buffer";
-      break;
-    case fuchsia::modular::AnnotationValue::Tag::kUnknown:
-      text = "unknown";
-      break;
-  }
-  return text;
-}
-
 void StoryProviderImpl::StoryRuntimeContainer::InitializeInspect(
     fidl::StringPtr story_id, inspect::Node* session_inspect_node) {
   story_node =
@@ -762,7 +742,7 @@ void StoryProviderImpl::StoryRuntimeContainer::ResetInspect() {
   if (current_data->story_info().has_annotations()) {
     for (const fuchsia::modular::Annotation& annotation :
          current_data->story_info().annotations()) {
-      std::string value_str = AnnotationTranslation(annotation.value.get());
+      std::string value_str = modular::annotations::ToInspect(*annotation.value.get());
       std::string key_with_prefix = "annotation: " + annotation.key;
       if (annotation_inspect_properties.find(key_with_prefix) !=
           annotation_inspect_properties.end()) {
