@@ -8,7 +8,6 @@
 extern crate failure;
 
 pub mod audio;
-pub mod auth;
 pub mod basemgr;
 pub mod bluetooth;
 pub mod common_utils;

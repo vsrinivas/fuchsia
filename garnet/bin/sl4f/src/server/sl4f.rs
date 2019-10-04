@@ -24,9 +24,6 @@ use crate::server::sl4f_types::{
 // Audio related includes
 use crate::audio::facade::AudioFacade;
 
-// Auth related includes
-use crate::auth::facade::AuthFacade;
-
 // Session related includes
 use crate::basemgr::facade::BaseManagerFacade;
 
@@ -78,9 +75,6 @@ use crate::wlan::facade::WlanFacade;
 pub struct Sl4f {
     // audio_facade: Thread safe object for state for Audio tests
     audio_facade: Arc<AudioFacade>,
-
-    // auth_facade: Thread safe object for injecting credentials for tests.
-    auth_facade: Arc<AuthFacade>,
 
     // basemgr_facade: Thread safe object for restarting sessions for tests.
     basemgr_facade: Arc<BaseManagerFacade>,
@@ -142,7 +136,6 @@ pub struct Sl4f {
 impl Sl4f {
     pub fn new() -> Result<Arc<RwLock<Sl4f>>, Error> {
         let audio_facade = Arc::new(AudioFacade::new()?);
-        let auth_facade = Arc::new(AuthFacade::new());
         let basemgr_facade = Arc::new(BaseManagerFacade::new());
         let ble_advertise_facade = Arc::new(BleAdvertiseFacade::new());
         let bt_control_facade = Arc::new(BluetoothControlFacade::new());
@@ -161,7 +154,6 @@ impl Sl4f {
         let wlan_facade = Arc::new(WlanFacade::new()?);
         Ok(Arc::new(RwLock::new(Sl4f {
             audio_facade,
-            auth_facade,
             basemgr_facade,
             ble_advertise_facade,
             bt_facade: BluetoothFacade::new(),
@@ -189,10 +181,6 @@ impl Sl4f {
 
     pub fn get_audio_facade(&self) -> Arc<AudioFacade> {
         self.audio_facade.clone()
-    }
-
-    pub fn get_auth_facade(&self) -> Arc<AuthFacade> {
-        self.auth_facade.clone()
     }
 
     pub fn get_basemgr_facade(&self) -> Arc<BaseManagerFacade> {
