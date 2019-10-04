@@ -156,7 +156,8 @@ struct ArgumentValueMaker<T, typename std::enable_if<std::is_floating_point<T>::
 template <size_t n>
 struct ArgumentValueMaker<char[n]> {
   static trace_arg_value_t Make(const char* value) {
-    return trace_make_string_arg_value(trace_make_inline_string_ref(value, n));
+    return trace_make_string_arg_value(
+        trace_make_inline_string_ref(value, value[n - 1] ? n : n - 1));
   }
 };
 
