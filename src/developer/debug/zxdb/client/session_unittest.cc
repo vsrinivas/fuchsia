@@ -42,6 +42,8 @@ class SessionSink : public RemoteAPI {
     resume_count_ = 0;
   }
 
+  void AppendProcessRecord(const debug_ipc::ProcessRecord& record) { records_.push_back(record); }
+
   // Adds all current system breakpoints to the exception notification. The
   // calling code doesn't have easy access to the backend IDs so this is where
   // they come from. We assume the breakpoints will all be hit at the same time
@@ -86,11 +88,16 @@ class SessionSink : public RemoteAPI {
   void JobFilter(const debug_ipc::JobFilterRequest& request,
                  fit::callback<void(const Err&, debug_ipc::JobFilterReply)> cb) override;
 
+  void Status(const debug_ipc::StatusRequest& request,
+              fit::callback<void(const Err&, debug_ipc::StatusReply)> cb) override;
+
  private:
   SessionTest* session_test_;
   debug_ipc::ResumeRequest resume_request_;
   int resume_count_ = 0;
   std::set<uint32_t> set_breakpoint_ids_;
+
+  std::vector<debug_ipc::ProcessRecord> records_;
 };
 
 class SessionThreadObserver : public ThreadObserver {
@@ -118,6 +125,19 @@ class SessionThreadObserver : public ThreadObserver {
  private:
   int stop_count_ = 0;
   std::vector<Breakpoint*> breakpoints_;
+};
+
+class TestSessionObserver : public SessionObserver {
+ public:
+  void HandlePreviousConnectedProcesses(
+      const std::vector<debug_ipc::ProcessRecord>& processes) override {
+    records_.insert(records_.end(), processes.begin(), processes.end());
+  }
+
+  const std::vector<debug_ipc::ProcessRecord>& records() const { return records_; }
+
+ private:
+  std::vector<debug_ipc::ProcessRecord> records_;
 };
 
 class SessionTest : public RemoteAPITest {
@@ -171,6 +191,13 @@ void SessionSink::JobFilter(const debug_ipc::JobFilterRequest& request,
   }
   Err err;
   cb(err, reply);
+}
+
+void SessionSink::Status(const debug_ipc::StatusRequest& request,
+                         fit::callback<void(const Err&, debug_ipc::StatusReply)> cb) {
+  debug_ipc::StatusReply reply = {};
+  reply.processes = records_;
+  cb(Err(), std::move(reply));
 }
 
 }  // namespace
@@ -301,6 +328,33 @@ TEST_F(SessionTest, FilterExistingProcesses) {
   ASSERT_EQ(session().system().GetTargets().size(), 2UL);
   ASSERT_NE(session().system().GetTargets()[0]->GetState(), zxdb::Target::State::kNone);
   ASSERT_NE(session().system().GetTargets()[1]->GetState(), zxdb::Target::State::kNone);
+}
+
+TEST_F(SessionTest, StatusRequest) {
+  TestSessionObserver observer;
+
+  constexpr uint64_t kProcessKoid1 = 1;
+  constexpr uint64_t kProcessKoid2 = 2;
+  const std::string kProcessName1 = "process-1";
+  const std::string kProcessName2 = "process-2";
+
+  sink()->AppendProcessRecord({kProcessKoid1, kProcessName1, {}});
+  sink()->AppendProcessRecord({kProcessKoid2, kProcessName2, {}});
+
+
+  bool called = false;
+  debug_ipc::StatusReply status = {};
+  sink()->Status({}, [&called, &status](const Err& err, debug_ipc::StatusReply reply) {
+    called = true;
+    status = std::move(reply);
+  });
+
+  ASSERT_TRUE(called);
+  ASSERT_EQ(status.processes.size(), 2u);
+  EXPECT_EQ(status.processes[0].process_koid, kProcessKoid1);
+  EXPECT_EQ(status.processes[0].process_name, kProcessName1);
+  EXPECT_EQ(status.processes[1].process_koid, kProcessKoid2);
+  EXPECT_EQ(status.processes[1].process_name, kProcessName2);
 }
 
 }  // namespace zxdb

@@ -63,6 +63,8 @@ class RemoteAPI {
       fit::callback<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb);
   virtual void SysInfo(const debug_ipc::SysInfoRequest& request,
                        fit::callback<void(const Err&, debug_ipc::SysInfoReply)> cb);
+  virtual void Status(const debug_ipc::StatusRequest& request,
+                      fit::callback<void(const Err&, debug_ipc::StatusReply)> cb);
   virtual void ProcessStatus(const debug_ipc::ProcessStatusRequest& request,
                              fit::callback<void(const Err&, debug_ipc::ProcessStatusReply)> cb);
   virtual void ThreadStatus(const debug_ipc::ThreadStatusRequest& request,

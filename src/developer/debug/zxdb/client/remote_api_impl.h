@@ -58,6 +58,8 @@ class RemoteAPIImpl : public RemoteAPI {
       fit::callback<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb) override;
   void SysInfo(const debug_ipc::SysInfoRequest& request,
                fit::callback<void(const Err&, debug_ipc::SysInfoReply)> cb) override;
+  void Status(const debug_ipc::StatusRequest& request,
+              fit::callback<void(const Err&, debug_ipc::StatusReply)> cb) override;
   void ProcessStatus(const debug_ipc::ProcessStatusRequest& request,
                      fit::callback<void(const Err&, debug_ipc::ProcessStatusReply)> cb) override;
   void ThreadStatus(const debug_ipc::ThreadStatusRequest& request,

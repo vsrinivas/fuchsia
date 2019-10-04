@@ -762,6 +762,26 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const E
 
   // Send whatever configurations the agent should know about.
   SendAgentConfiguration();
+
+  // Query which processes the debug agent is already connected to.
+  remote_api()->Status(
+      debug_ipc::StatusRequest{},
+      [this, session = GetWeakPtr()](const Err& err, debug_ipc::StatusReply reply) {
+        if (!session)
+          return;
+
+        if (err.has_error()) {
+          SendSessionNotification(SessionObserver::NotificationType::kError,
+                                  "Could not get debug agent status: %s", err.msg().c_str());
+          return;
+        }
+
+        if (!reply.processes.empty()) {
+          for (auto& observer : observers_) {
+            observer.HandlePreviousConnectedProcesses(reply.processes);
+          }
+        }
+      });
 }
 
 void Session::AddObserver(SessionObserver* observer) { observers_.AddObserver(observer); }

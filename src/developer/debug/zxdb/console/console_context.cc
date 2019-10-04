@@ -425,6 +425,17 @@ void ConsoleContext::HandleNotification(NotificationType type, const std::string
   Console::get()->Output(std::move(out));
 }
 
+void ConsoleContext::HandlePreviousConnectedProcesses(
+    const std::vector<debug_ipc::ProcessRecord>& processes) {
+  OutputBuffer out(OutputBuffer{Syntax::kHeading, "Connected processes:\n"});
+  for (auto& process : processes) {
+    out.Append(
+        fxl::StringPrintf("%" PRIu64 ": %s\n", process.process_koid, process.process_name.c_str()));
+  }
+
+  Console::get()->Output(std::move(out));
+}
+
 void ConsoleContext::DidCreateTarget(Target* target) {
   target->AddObserver(this);
 

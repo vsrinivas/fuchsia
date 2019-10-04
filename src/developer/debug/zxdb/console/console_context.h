@@ -143,6 +143,7 @@ class ConsoleContext : public ProcessObserver,
 
   // SessionObserver implementation:
   void HandleNotification(NotificationType, const std::string&) override;
+  void HandlePreviousConnectedProcesses(const std::vector<debug_ipc::ProcessRecord>&) override;
 
   // SystemObserver implementation:
   void DidCreateTarget(Target* target) override;

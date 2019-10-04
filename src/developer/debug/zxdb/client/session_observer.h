@@ -6,6 +6,9 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SESSION_OBSERVER_H_
 
 #include <string>
+#include <vector>
+
+#include "src/developer/debug/ipc/records.h"
 
 namespace zxdb {
 
@@ -29,6 +32,8 @@ class SessionObserver {
   static const char* NotificationTypeToString(NotificationType);
 
   virtual void HandleNotification(NotificationType, const std::string&) {}
+
+  virtual void HandlePreviousConnectedProcesses(const std::vector<debug_ipc::ProcessRecord>&) {}
 };
 
 }  // namespace zxdb

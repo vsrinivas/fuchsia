@@ -114,6 +114,11 @@ void RemoteAPIImpl::SysInfo(const debug_ipc::SysInfoRequest& request,
   Send(request, std::move(cb));
 }
 
+void RemoteAPIImpl::Status(const debug_ipc::StatusRequest& request,
+                           fit::callback<void(const Err&, debug_ipc::StatusReply)> cb) {
+  Send(request, std::move(cb));
+}
+
 void RemoteAPIImpl::ProcessStatus(
     const debug_ipc::ProcessStatusRequest& request,
     fit::callback<void(const Err&, debug_ipc::ProcessStatusReply)> cb) {
