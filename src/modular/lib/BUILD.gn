@@ -13,7 +13,6 @@ group("lib") {
     ":services",
     "app_driver",
     "async",
-    "bound_set",
     "common",
     "device_info",
     "entity",
