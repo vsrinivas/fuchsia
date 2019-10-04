@@ -32,12 +32,14 @@ class CommitPruner {
     virtual Status UpdateSelfClockEntry(coroutine::CoroutineHandler* handler,
                                         const ClockEntry& entry) = 0;
   };
-  CommitPruner(CommitPrunerDelegate* delegate, LiveCommitTracker* commit_tracker,
-               CommitPruningPolicy policy);
+  CommitPruner(ledger::Environment* environment, CommitPrunerDelegate* delegate,
+               LiveCommitTracker* commit_tracker, CommitPruningPolicy policy);
   ~CommitPruner();
 
-  // Performs a pruning cycle.
-  Status Prune(coroutine::CoroutineHandler* handler);
+  // Schedule a pruning cycle. If no pruning cycle is in progress, a task is posted to start pruning
+  // immediately. Otherwise, a cycle will start when the current cycle stops. Only one cycle may be
+  // scheduled at a time.
+  void SchedulePruning();
 
  private:
   // Finds the latest unique common ancestor among the live commits, as given by the
@@ -49,11 +51,31 @@ class CommitPruner {
                          std::unique_ptr<const storage::Commit> base,
                          std::vector<std::unique_ptr<const storage::Commit>>* result);
 
+  // Performs a pruning cycle. Only one pruning cycle may be run at a time.
+  void Prune();
+  Status SynchronousPrune(coroutine::CoroutineHandler* handler);
+
+  ledger::Environment* environment_;
   CommitPrunerDelegate* const delegate_;
   LiveCommitTracker* const commit_tracker_;
 
   // Policy for pruning commits. By default, we don't prune.
   CommitPruningPolicy const policy_;
+
+  enum class PruningState {
+    // Pruning can start immediately.
+    IDLE,
+    // A pruning cycle is in progress.
+    PRUNING,
+    // A pruning cycle is in progress, and a new pruning cycle should be run once it completes.
+    PRUNING_AND_SCHEDULED,
+  };
+
+  PruningState state_ = PruningState::IDLE;
+
+  coroutine::CoroutineManager coroutine_manager_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(CommitPruner);
 };
 
 }  // namespace storage

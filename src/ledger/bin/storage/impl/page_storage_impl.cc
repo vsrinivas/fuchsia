@@ -111,8 +111,8 @@ PageStorageImpl::PageStorageImpl(ledger::Environment* environment,
       encryption_service_(encryption_service),
       page_id_(std::move(page_id)),
       commit_factory_(&object_identifier_factory_),
-      commit_pruner_(this, &commit_factory_, policy),
       db_(std::move(page_db)),
+      commit_pruner_(environment, this, &commit_factory_, policy),
       page_sync_(nullptr),
       coroutine_manager_(environment->coroutine_service()),
       weak_factory_(this) {}
@@ -1670,8 +1670,8 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
   commit_factory_.AddHeads(std::move(new_heads));
   NotifyWatchersOfNewCommits(commits_to_send, source);
 
-  // TODO(etiennej): Consider spinning another coroutine to do the work out-of-band.
-  return commit_pruner_.Prune(handler);
+  commit_pruner_.SchedulePruning();
+  return Status::OK;
 }
 
 Status PageStorageImpl::SynchronousAddPiece(CoroutineHandler* handler, const Piece& piece,

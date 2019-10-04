@@ -247,6 +247,9 @@ TEST_P(InspectTest, ConflictInCommitHistory) {
 
   // Mutate the page.
   page->Put(key, value);
+  // Get a snapshot of the page. This prevents all commit pruning.
+  PageSnapshotPtr page_snapshot_ptr;
+  page->GetSnapshot(page_snapshot_ptr.NewRequest(), {}, nullptr);
   waiter = NewWaiter();
   page->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());

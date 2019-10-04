@@ -4,6 +4,8 @@
 
 #include "src/ledger/bin/storage/impl/commit_pruner.h"
 
+#include <lib/async/cpp/task.h>
+
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/lib/callback/waiter.h"
 
@@ -36,13 +38,56 @@ Status ExploreGeneration(
 }
 }  // namespace
 
-CommitPruner::CommitPruner(CommitPrunerDelegate* delegate, LiveCommitTracker* commit_tracker,
-                           CommitPruningPolicy policy)
-    : delegate_(delegate), commit_tracker_(commit_tracker), policy_(policy) {}
+CommitPruner::CommitPruner(ledger::Environment* environment, CommitPrunerDelegate* delegate,
+                           LiveCommitTracker* commit_tracker, CommitPruningPolicy policy)
+    : environment_(environment),
+      delegate_(delegate),
+      commit_tracker_(commit_tracker),
+      policy_(policy),
+      coroutine_manager_(environment_->coroutine_service()) {}
 
 CommitPruner::~CommitPruner() = default;
 
-Status CommitPruner::Prune(coroutine::CoroutineHandler* handler) {
+void CommitPruner::SchedulePruning() {
+  if (state_ == PruningState::IDLE) {
+    Prune();
+  } else if (state_ == PruningState::PRUNING) {
+    state_ = PruningState::PRUNING_AND_SCHEDULED;
+  } else {
+    FXL_DCHECK(state_ == PruningState::PRUNING_AND_SCHEDULED);
+  }
+}
+
+void CommitPruner::Prune() {
+  FXL_DCHECK(state_ == PruningState::IDLE);
+  state_ = PruningState::PRUNING;
+
+  coroutine_manager_.StartCoroutine([this](coroutine::CoroutineHandler* handler) {
+    // Yield to be resumed as a task.
+    if (coroutine::SyncCall(handler, [this](fit::closure on_done) {
+          async::PostTask(environment_->dispatcher(), std::move(on_done));
+        }) == coroutine::ContinuationStatus::INTERRUPTED) {
+      return;
+    }
+    Status s = SynchronousPrune(handler);
+    if (s != Status::OK) {
+      if (s != Status::INTERRUPTED) {
+        FXL_LOG(ERROR) << "Commit pruning failed with status " << s;
+      }
+      state_ = PruningState::IDLE;
+      return;
+    }
+    if (state_ == PruningState::PRUNING_AND_SCHEDULED) {
+      state_ = PruningState::IDLE;
+      Prune();
+    } else {
+      FXL_DCHECK(state_ == PruningState::PRUNING);
+      state_ = PruningState::IDLE;
+    }
+  });
+}
+
+Status CommitPruner::SynchronousPrune(coroutine::CoroutineHandler* handler) {
   if (policy_ == CommitPruningPolicy::NEVER) {
     return Status::OK;
   }

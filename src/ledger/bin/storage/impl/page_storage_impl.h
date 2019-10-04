@@ -289,8 +289,9 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
   // Objects currently handled by |DeleteObject|.
   std::set<ObjectDigest> pending_garbage_collection_;
   CommitFactory commit_factory_;
-  CommitPruner commit_pruner_;
   std::unique_ptr<PageDb> db_;
+  // The commit pruner accesses the database, it must be destructed before |db_|.
+  CommitPruner commit_pruner_;
   fxl::ObserverList<CommitWatcher> watchers_;
   callback::ManagedContainer managed_container_;
   PageSyncDelegate* page_sync_;
