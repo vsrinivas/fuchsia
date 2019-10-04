@@ -7,12 +7,15 @@
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
 
+#include <condition_variable>
 #include <iostream>
+#include <mutex>
 
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
 #include <trace-provider/fdio_connect.h>
 #include <trace-provider/provider.h>
+#include <trace/observer.h>
 
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/printer.h"
@@ -20,36 +23,7 @@
 
 using namespace memory;
 
-int main(int argc, const char** argv) {
-  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-
-  if (command_line.HasOption("help")) {
-    std::cout << "Usage: mem [options]\n"
-                 "  Prints system-wide task and memory\n\n"
-                 "  Memory numbers are triplets P,S,T\n"
-                 "  P: Private bytes\n"
-                 "  S: Total bytes scaled by 1/# processes sharing each byte\n"
-                 "  T: Total bytes\n"
-                 "     S and T are inclusive of P\n\n"
-                 " Options:\n"
-                 " [default] Human readable representation of process and vmo groups\n"
-                 " --trace   Enable tracing support\n"
-                 " --print   Machine readable representation of proccess and vmos\n"
-                 " --output  CSV of process memory\n"
-                 "           --repeat=N Runs forever, outputing every N seconds\n"
-                 "           --pid=N    Output vmo groups of process pid instead\n";
-    return EXIT_SUCCESS;
-  }
-
-  std::unique_ptr<async::Loop> loop;
-  std::unique_ptr<trace::TraceProviderWithFdio> provider;
-
-  if (command_line.HasOption("trace")) {
-    loop.reset(new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread));
-    loop->StartThread("provider loop");
-    provider.reset(new trace::TraceProviderWithFdio(loop->dispatcher(), "mem"));
-  }
-
+int Mem(const fxl::CommandLine& command_line) {
   CaptureState capture_state;
   auto s = Capture::GetCaptureState(&capture_state);
   Printer printer(std::cout);
@@ -138,4 +112,45 @@ int main(int argc, const char** argv) {
   }
   printer.PrintSummary(Summary(capture, Summary::kNameMatches), VMO, SORTED);
   return EXIT_SUCCESS;
+}
+
+int main(int argc, const char** argv) {
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+
+  if (command_line.HasOption("help")) {
+    std::cout << "Usage: mem [options]\n"
+                 "  Prints system-wide task and memory\n\n"
+                 "  Memory numbers are triplets P,S,T\n"
+                 "  P: Private bytes\n"
+                 "  S: Total bytes scaled by 1/# processes sharing each byte\n"
+                 "  T: Total bytes\n"
+                 "     S and T are inclusive of P\n\n"
+                 " Options:\n"
+                 " [default] Human readable representation of process and vmo groups\n"
+                 " --trace   Enable tracing support\n"
+                 " --print   Machine readable representation of proccess and vmos\n"
+                 " --output  CSV of process memory\n"
+                 "           --repeat=N Runs forever, outputing every N seconds\n"
+                 "           --pid=N    Output vmo groups of process pid instead\n";
+    return EXIT_SUCCESS;
+  }
+
+  if (command_line.HasOption("trace")) {
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    loop.StartThread("provider loop");
+    trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), "mem");
+    trace::TraceObserver trace_observer;
+    std::mutex m;
+    std::condition_variable cv;
+    bool got_start = false;
+    trace_observer.Start(loop.dispatcher(), [&m, &cv, &got_start] {
+      std::unique_lock<std::mutex> lock(m);
+      got_start = true;
+      cv.notify_all();
+    });
+    std::unique_lock<std::mutex> l(m);
+    cv.wait(l, [&got_start] { return got_start; });
+    return Mem(command_line);
+  }
+  return Mem(command_line);
 }
