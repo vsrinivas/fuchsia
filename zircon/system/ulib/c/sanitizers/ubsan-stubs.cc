@@ -18,7 +18,7 @@
 #if __has_feature(undefined_behavior_sanitizer)
 
 #define STUB_HANDLER(name, ...) \
-  [[gnu::weak]] extern "C" void __ubsan_handle_##name(__VA_ARGS__) { __builtin_trap(); }
+  [[gnu::weak]] __EXPORT extern "C" void __ubsan_handle_##name(__VA_ARGS__) { __builtin_trap(); }
 
 #define UNRECOVERABLE(name, ...) STUB_HANDLER(name)
 #define RECOVERABLE(name, ...) \

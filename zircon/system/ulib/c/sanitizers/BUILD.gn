@@ -34,8 +34,4 @@ source_set("sancov-stubs") {
     "sancov-stubs.cc",
   ]
   configs += [ "$zx/public/gn/config:no_sanitizers" ]
-
-  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
-  # have default visibility.
-  configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }

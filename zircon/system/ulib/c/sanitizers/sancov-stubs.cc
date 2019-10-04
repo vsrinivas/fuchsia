@@ -4,6 +4,8 @@
 
 #include "sancov-stubs.h"
 
+#include <zircon/compiler.h>
+
 // This file defines all the entry points that -fsanitize-coverage=...
 // instrumentation calls.  Unfortunately, LLVM does not publish any header
 // file declaring those signatures, though they are all given in
@@ -20,7 +22,7 @@
 
 // This should never be called, because the runtime should have been
 // loaded before any module initializers get called.
-[[gnu::weak]] extern "C" void __sanitizer_cov_trace_pc_guard_init(uint32_t*, uint32_t*) {
+[[gnu::weak]] __EXPORT extern "C" void __sanitizer_cov_trace_pc_guard_init(uint32_t*, uint32_t*) {
   __builtin_trap();
 }
 
@@ -29,7 +31,7 @@
 // loaded that's outside dynlink.c, where _dynlink_sancov_trampoline
 // short-circuits before calling here.  Just sanity-check that we
 // aren't getting here after module initializers have run.
-[[gnu::weak]] extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t* guard) {
+[[gnu::weak]] __EXPORT extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t* guard) {
   if (*guard != 0) {
     __builtin_trap();
   }
@@ -39,7 +41,7 @@
 // just do nothing.
 
 #define SANCOV_STUB(name) \
-  [[gnu::weak]] extern "C" void __sanitizer_cov_##name() {}
+  [[gnu::weak]] __EXPORT extern "C" void __sanitizer_cov_##name() {}
 
 SANCOV_NOOP_STUBS
 
