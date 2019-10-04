@@ -65,6 +65,20 @@ class StringPtr final : public fit::optional<std::string> {
     return *this;
   }
 
+  // Override unchecked accessors with versions that check.
+  constexpr std::string* operator->() {
+    if (!fit::optional<std::string>::has_value()) {
+      __builtin_trap();
+    }
+    return fit::optional<std::string>::operator->();
+  }
+  constexpr const std::string* operator->() const {
+    if (!fit::optional<std::string>::has_value()) {
+      __builtin_trap();
+    }
+    return fit::optional<std::string>::operator->();
+  }
+
   // Destructor.
   ~StringPtr() = default;
 };
