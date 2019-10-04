@@ -12,6 +12,8 @@ fidl("fuchsia.bluetooth.control") {
     "vector-bounds-not-specified",
   ]
 
+  sdk_category = "partner"
+
   sources = [
     "bonding.fidl",
     "control.fidl",
