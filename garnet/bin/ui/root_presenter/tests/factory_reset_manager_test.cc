@@ -16,24 +16,6 @@
 namespace root_presenter {
 namespace testing {
 
-class MockWatcher : public fuchsia::recovery::FactoryResetStateWatcher {
- public:
-  MockWatcher(fidl::InterfaceRequest<fuchsia::recovery::FactoryResetStateWatcher> watcher_request)
-      : binding_(this, std::move(watcher_request)) {}
-  void OnStateChanged(fuchsia::recovery::FactoryResetState response,
-                      OnStateChangedCallback callback) override {
-    state_ = std::move(response);
-    callback();
-  }
-
-  fuchsia::recovery::FactoryResetState& state() { return state_; }
-
- private:
-  fuchsia::recovery::FactoryResetState state_;
-
-  fidl::Binding<fuchsia::recovery::FactoryResetStateWatcher> binding_;
-};
-
 class FakeFactoryReset : public fuchsia::recovery::testing::FactoryReset_TestBase {
  public:
   void NotImplemented_(const std::string& name) final {}
@@ -65,18 +47,12 @@ class FactoryResetManagerTest : public component::testing::TestWithContext {
 
     startup_context_ = TakeContext();
     factory_reset_manager_ = std::make_unique<FactoryResetManager>(startup_context_.get());
-
-    fidl::InterfaceHandle<fuchsia::recovery::FactoryResetStateWatcher> watcher_handle;
-    watcher_ = std::make_unique<MockWatcher>(watcher_handle.NewRequest());
-    factory_reset_manager_->SetWatcher(std::move(watcher_handle));
   }
 
   bool triggered() const { return factory_reset_.triggered(); }
 
  protected:
   std::unique_ptr<FactoryResetManager> factory_reset_manager_;
-
-  std::unique_ptr<MockWatcher> watcher_;
 
  private:
   std::unique_ptr<component::StartupContext> startup_context_;
@@ -115,60 +91,51 @@ TEST_F(FactoryResetManagerTest, FactoryResetButtonHeldAndTrigger) {
   EXPECT_TRUE(triggered());
 }
 
-TEST_F(FactoryResetManagerTest, FactoryResetStateNotifierCancelCallback) {
-  EXPECT_TRUE(watcher_->state().IsEmpty());
+TEST_F(FactoryResetManagerTest, WatchHandler) {
+  const int scheduled_reset_time = 200;
 
-  fuchsia::ui::input::MediaButtonsReport report;
-  report.reset = true;
-  factory_reset_manager_->OnMediaButtonReport(report);
+  fuchsia::recovery::ui::FactoryResetCountdownState inputState;
+  fuchsia::recovery::ui::FactoryResetCountdownState outputState;
 
-  // The reset deadline should be set 10 seconds from now.
-  const zx_time_t deadline = Now().get() + kCountdownDuration.get();
-  RunLoopUntilIdle();
-  EXPECT_TRUE(watcher_->state().has_reset_deadline());
-  EXPECT_EQ(deadline, watcher_->state().reset_deadline());
-  EXPECT_TRUE(watcher_->state().has_counting_down());
-  EXPECT_TRUE(watcher_->state().counting_down());
+  FactoryResetManager::WatchHandler watchHandler(inputState);
 
-  // Factory reset should cancel if the button is released.
-  report.reset = false;
-  factory_reset_manager_->OnMediaButtonReport(report);
+  bool watchReturned = false;
 
-  RunLoopUntilIdle();
-  EXPECT_FALSE(watcher_->state().has_reset_deadline());
-  EXPECT_TRUE(watcher_->state().has_counting_down());
-  EXPECT_FALSE(watcher_->state().counting_down());
+  auto watchCallback =
+      [&outputState, &watchReturned](fuchsia::recovery::ui::FactoryResetCountdownState newState) {
+        watchReturned = true;
+        newState.Clone(&outputState);
+      };
 
-  // No changes after the countdown duration.
-  RunLoopFor(kCountdownDuration);
-  RunLoopUntilIdle();
-  EXPECT_FALSE(watcher_->state().has_reset_deadline());
-  EXPECT_TRUE(watcher_->state().has_counting_down());
-  EXPECT_FALSE(watcher_->state().counting_down());
-}
+  watchHandler.Watch(watchCallback);
 
-TEST_F(FactoryResetManagerTest, FactoryResetStateNotifierTriggerCallback) {
-  EXPECT_TRUE(watcher_->state().IsEmpty());
+  // Initial watch should return immediately, with no scheduled reset.
+  EXPECT_TRUE(watchReturned);
+  EXPECT_FALSE(outputState.has_scheduled_reset_time());
+  watchReturned = false;
 
-  fuchsia::ui::input::MediaButtonsReport report;
-  report.reset = true;
-  factory_reset_manager_->OnMediaButtonReport(report);
+  watchHandler.Watch(watchCallback);
 
-  // The reset deadline should be set 10 seconds from now.
-  const zx_time_t deadline = Now().get() + kCountdownDuration.get();
-  RunLoopUntilIdle();
-  EXPECT_TRUE(watcher_->state().has_reset_deadline());
-  EXPECT_EQ(deadline, watcher_->state().reset_deadline());
-  EXPECT_TRUE(watcher_->state().has_counting_down());
-  EXPECT_TRUE(watcher_->state().counting_down());
+  // Subsequent watch should hang until state changes.
+  EXPECT_FALSE(watchReturned);
 
-  // The deadline should not be changed if the factory reset was triggered.
-  RunLoopFor(kCountdownDuration);
-  RunLoopUntilIdle();
-  EXPECT_TRUE(watcher_->state().has_reset_deadline());
-  EXPECT_EQ(deadline, watcher_->state().reset_deadline());
-  EXPECT_TRUE(watcher_->state().has_counting_down());
-  EXPECT_TRUE(watcher_->state().counting_down());
+  inputState.set_scheduled_reset_time(scheduled_reset_time);
+  watchHandler.OnStateChange(inputState);
+
+  // On the state change, the watch should return with the new scheduled reset time.
+  EXPECT_TRUE(watchReturned);
+  EXPECT_TRUE(outputState.has_scheduled_reset_time());
+  EXPECT_EQ(outputState.scheduled_reset_time(), scheduled_reset_time);
+  watchReturned = false;
+
+  inputState.clear_scheduled_reset_time();
+  watchHandler.OnStateChange(inputState);
+
+  watchHandler.Watch(watchCallback);
+
+  // When state changes before watch is called, watch should return immediately.
+  EXPECT_TRUE(watchReturned);
+  EXPECT_FALSE(outputState.has_scheduled_reset_time());
 }
 
 }  // namespace testing

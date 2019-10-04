@@ -13,59 +13,41 @@
 
 namespace root_presenter {
 
-namespace {
-
-bool AreStatesEqual(fuchsia::recovery::FactoryResetState& state,
-                    fuchsia::recovery::FactoryResetState& state2) {
-  if (state.has_reset_deadline() != state2.has_reset_deadline() ||
-      state.has_counting_down() != state2.has_counting_down()) {
-    return false;
-  }
-
-  if (state.has_reset_deadline() && state.reset_deadline() != state2.reset_deadline()) {
-    return false;
-  }
-
-  if (state.has_counting_down() && state.counting_down() != state2.counting_down()) {
-    return false;
-  }
-
-  return true;
+FactoryResetManager::WatchHandler::WatchHandler(
+    const fuchsia::recovery::ui::FactoryResetCountdownState& state){
+  state.Clone(&current_state_);
 }
 
-}  // namespace
-
-FactoryResetManager::Notifier::Notifier(fuchsia::recovery::FactoryResetStateWatcherPtr watcher)
-    : watcher_(std::move(watcher)) {
-  ZX_ASSERT(watcher_);
+void FactoryResetManager::WatchHandler::Watch(WatchCallback callback) {
+  hanging_get_ = std::move(callback);
+  SendIfChanged();
 }
 
-void FactoryResetManager::Notifier::Notify(fuchsia::recovery::FactoryResetState state) {
-  pending_ = std::move(state);
-  SendIfPending();
+void FactoryResetManager::WatchHandler::OnStateChange(
+    const fuchsia::recovery::ui::FactoryResetCountdownState& state) {
+  state.Clone(&current_state_);
+  last_state_sent_ = false;
+  SendIfChanged();
 }
 
-void FactoryResetManager::Notifier::SendIfPending() {
-  if (notification_in_progress_ || AreStatesEqual(last_, pending_)) {
-    return;
+void FactoryResetManager::WatchHandler::SendIfChanged() {
+  if (hanging_get_ && !last_state_sent_) {
+    fuchsia::recovery::ui::FactoryResetCountdownState state_to_send;
+    current_state_.Clone(&state_to_send);
+    hanging_get_(std::move(state_to_send));
+    last_state_sent_ = true;
+    hanging_get_ = nullptr;
   }
-
-  Send();
-}
-
-void FactoryResetManager::Notifier::Send() {
-  notification_in_progress_ = true;
-  last_ = std::move(pending_);
-
-  watcher_->OnStateChanged(fidl::Clone(last_), [this]() {
-    notification_in_progress_ = false;
-    SendIfPending();
-  });
 }
 
 FactoryResetManager::FactoryResetManager(component::StartupContext* context) {
   FXL_DCHECK(context);
-  context->outgoing().AddPublicService(notifier_bindings_.GetHandler(this));
+  context->outgoing().AddPublicService<fuchsia::recovery::ui::FactoryResetCountdown>(
+      [this](fidl::InterfaceRequest<fuchsia::recovery::ui::FactoryResetCountdown> request) {
+        auto handler = std::make_unique<WatchHandler>(State());
+        countdown_bindings_.AddBinding(std::move(handler), std::move(request));
+      });
+
   context->ConnectToEnvironmentService<fuchsia::recovery::FactoryReset>(
       factory_reset_.NewRequest());
   FXL_DCHECK(factory_reset_);
@@ -76,20 +58,14 @@ bool FactoryResetManager::OnMediaButtonReport(
   if (report.reset) {
     StartFactoryResetCountdown();
     return true;
-  } else {
-    if (countdown_started_) {
-      CancelFactoryResetCountdown();
-      return true;
-    }
+  }
+
+  if (countdown_started_) {
+    CancelFactoryResetCountdown();
+    return true;
   }
 
   return false;
-}
-
-void FactoryResetManager::SetWatcher(
-    fidl::InterfaceHandle<fuchsia::recovery::FactoryResetStateWatcher> watcher) {
-  notifier_ = std::make_unique<Notifier>(watcher.Bind());
-  NotifyStateChange();
 }
 
 void FactoryResetManager::TriggerFactoryReset() {
@@ -105,15 +81,19 @@ void FactoryResetManager::TriggerFactoryReset() {
 }
 
 void FactoryResetManager::NotifyStateChange() {
-  if (notifier_) {
-    fuchsia::recovery::FactoryResetState state;
-    state.set_counting_down(countdown_started_);
-
-    if (countdown_started_) {
-      state.set_reset_deadline(deadline_);
+  for (auto& binding : countdown_bindings_.bindings()) {
+    if (binding->is_bound()) {
+      binding->impl()->OnStateChange(State());
     }
-    notifier_->Notify(std::move(state));
   }
+}
+
+fuchsia::recovery::ui::FactoryResetCountdownState FactoryResetManager::State() const {
+  fuchsia::recovery::ui::FactoryResetCountdownState state;
+  if (countdown_started_) {
+    state.set_scheduled_reset_time(deadline_);
+  }
+  return state;
 }
 
 void FactoryResetManager::StartFactoryResetCountdown() {

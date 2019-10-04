@@ -43,6 +43,7 @@ source_set("lib") {
     "//garnet/public/lib/ui/input",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.recovery",
+    "//sdk/fidl/fuchsia.recovery.ui",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input.accessibility",
@@ -127,7 +128,9 @@ source_set("factory_reset_manager") {
     "factory_reset_manager.cc",
     "factory_reset_manager.h",
   ]
-
+  public_deps = [
+    "//sdk/fidl/fuchsia.recovery.ui",
+  ]
   deps = [
     "//garnet/public/lib/component/cpp",
     "//sdk/fidl/fuchsia.recovery",

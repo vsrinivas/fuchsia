@@ -1,0 +1,26 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.recovery.ui;
+
+using zx;
+
+/// Information provided through the FactoryResetCountdown protocol on the
+/// current factory reset state.
+table FactoryResetCountdownState {
+    /// The time of when factory reset is scheduled to be triggered when a
+    /// countdown for factory reset is in progress with respect to the monotonic
+    /// clock. This field is left unpopulated if no reset is scheduled.
+    1: zx.time scheduled_reset_time;
+};
+
+/// Protocol to watch for changes when a factory reset countdown is started or
+/// cancelled. An immediate factory reset does not start a countdown.
+[Discoverable]
+protocol FactoryResetCountdown {
+    /// Hanging get that returns when a factory reset is scheduled or a
+    /// scheduled factory reset is cancelled. Will return immediately on first
+    /// call per connection and then on change after that.
+    Watch() -> (FactoryResetCountdownState state);
+};
