@@ -7,9 +7,7 @@ use {
     cm_rust::{data, CapabilityPath},
     failure::format_err,
     fidl::endpoints::{Proxy, ServerEnd},
-    fidl_fuchsia_io::{
-        DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io::{self as fio, DirectoryProxy},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::join_all,
     std::sync::Arc,
@@ -175,10 +173,14 @@ impl Model {
                 .as_ref()
                 .expect("bind_instance_open_exposed: no runtime")
                 .exposed_dir;
-            let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
+
+            // TODO(fxb/36541): Until directory capabilities specify rights, we always open
+            // directories using OPEN_FLAG_POSIX which automatically opens the new connection using
+            // the same directory rights as the parent directory connection.
+            let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
             exposed_dir
                 .root_dir
-                .open(flags, MODE_TYPE_DIRECTORY, vec![], server_end)
+                .open(flags, fio::MODE_TYPE_DIRECTORY, vec![], server_end)
                 .await
                 .map_err(|e| {
                     ModelError::capability_discovery_error(format_err!(

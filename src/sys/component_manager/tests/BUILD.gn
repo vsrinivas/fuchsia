@@ -2,11 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package/component.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":elf_runner_test",
+    ":no_pkg_resolver_test",
+    ":shutdown_integration_test",
+    "collections:collections_integration_test",
+    "destruction:destruction_integration_test",
+    "hub:hub_integration_test",
+    "routing:tests",
+    "storage:storage_integration_test",
+  ]
+}
 
 rustc_library("test_utils") {
   name = "test_utils"
@@ -16,24 +30,10 @@ rustc_library("test_utils") {
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//third_party/rust_crates:failure",
-  ]
-}
-
-rustc_test("routing_integration_test_bin") {
-  name = "routing_integration_test"
-  edition = "2018"
-  source_root = "routing_integration_test.rs"
-  deps = [
-    ":test_utils",
-    "//garnet/lib/rust/cm_fidl_translator",
-    "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-runtime",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:parking_lot",
   ]
 }
 
@@ -124,57 +124,6 @@ test_package("shutdown_integration_test") {
   ]
 }
 
-test_package("routing_integration_test") {
-  deps = [
-    ":mock_pkg_resolver_bin",
-    ":routing_integration_test_bin",
-    ":test_utils",
-    "//examples/components/routing/echo_client",
-    "//examples/components/routing/echo_server",
-  ]
-
-  components =
-      [ "//src/sys/component_manager:component_manager_as_v1_component" ]
-
-  meta = [
-    {
-      path =
-          rebase_path("meta/mock_pkg_resolver_for_routing_integration_test.cmx")
-      dest = "mock_pkg_resolver.cmx"
-    },
-    {
-      path = rebase_path("//examples/components/routing/meta/echo_server.cml")
-      dest = "echo_server.cm"
-    },
-    {
-      path = rebase_path("//examples/components/routing/meta/echo_client.cml")
-      dest = "echo_client.cm"
-    },
-    {
-      path = rebase_path("meta/echo_realm.cml")
-      dest = "echo_realm.cm"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "mock_pkg_resolver"
-    },
-    {
-      name = "echo_server"
-    },
-    {
-      name = "echo_client"
-    },
-  ]
-
-  tests = [
-    {
-      name = "routing_integration_test"
-    },
-  ]
-}
-
 rustc_test("elf_runner_test_bin") {
   name = "elf_runner_test"
   edition = "2018"
@@ -260,20 +209,5 @@ test_package("no_pkg_resolver_test") {
     {
       name = "no_pkg_resolver_test"
     },
-  ]
-}
-
-group("tests") {
-  testonly = true
-
-  deps = [
-    ":elf_runner_test",
-    ":no_pkg_resolver_test",
-    ":routing_integration_test",
-    ":shutdown_integration_test",
-    "collections:collections_integration_test",
-    "destruction:destruction_integration_test",
-    "hub:hub_integration_test",
-    "storage:storage_integration_test",
   ]
 }

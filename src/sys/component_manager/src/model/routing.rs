@@ -11,12 +11,11 @@ use {
     },
     failure::format_err,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::lock::Mutex,
     std::{convert::TryFrom, sync::Arc},
 };
-const FLAGS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
+const SERVICE_OPEN_FLAGS: u32 = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
 
 /// Describes the source of a capability, for any type of capability.
 enum OfferSource<'a> {
@@ -106,7 +105,7 @@ async fn open_capability_at_source<'a>(
                 .map_err(ModelError::capability_discovery_error)?;
         }
         CapabilitySource::ComponentManagerNamespace(path) => {
-            io_util::connect_in_namespace(&path.to_string(), server_chan, FLAGS)
+            io_util::connect_in_namespace(&path.to_string(), server_chan, flags)
                 .map_err(|e| ModelError::capability_discovery_error(e))?;
         }
         CapabilitySource::Component(source_capability, realm) => {
@@ -128,7 +127,7 @@ async fn open_capability_at_source<'a>(
         }
         CapabilitySource::Framework(capability_decl, realm) => {
             open_framework_capability(
-                FLAGS,
+                SERVICE_OPEN_FLAGS,
                 open_mode,
                 relative_path,
                 realm,
@@ -199,7 +198,7 @@ pub async fn route_and_open_storage_capability<'a>(
 
     // clone the final connection to connect the channel we're routing to its destination
     storage_dir_proxy
-        .clone(FLAGS, ServerEnd::new(server_chan))
+        .clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_chan))
         .map_err(|e| ModelError::capability_discovery_error(format_err!("failed clone {}", e)))?;
     Ok(())
 }

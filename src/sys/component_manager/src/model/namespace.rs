@@ -8,10 +8,7 @@ use {
     crate::model::*,
     cm_rust::{self, ComponentDecl, UseDecl, UseStorageDecl},
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
-    fidl_fuchsia_io::{
-        DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io::{self as fio, DirectoryProxy, NodeMarker},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_vfs_pseudo_fs as fvfs,
     fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
     fuchsia_zircon as zx,
@@ -116,7 +113,7 @@ impl IncomingNamespace {
         ns: &mut fsys::ComponentNamespace,
         package_dir: &DirectoryProxy,
     ) -> Result<(), ModelError> {
-        let clone_dir_proxy = io_util::clone_directory(package_dir, CLONE_FLAG_SAME_RIGHTS)
+        let clone_dir_proxy = io_util::clone_directory(package_dir, fio::CLONE_FLAG_SAME_RIGHTS)
             .map_err(|e| ModelError::namespace_creation_failed(e))?;
         let cloned_dir = ClientEnd::new(
             clone_dir_proxy
@@ -188,12 +185,16 @@ impl IncomingNamespace {
                 .expect("failed to convert server_end into async channel");
             let on_signal_fut = fasync::OnSignals::new(&server_end, zx::Signals::CHANNEL_READABLE);
             on_signal_fut.await.unwrap();
+
             // Route this capability to the right component
-            let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
+            // TODO(fxb/36541): Until directory capabilities specify rights, we always open
+            // directories using OPEN_FLAG_POSIX which automatically opens the new connection using
+            // the same directory rights as the parent directory connection.
+            let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
             let res = route_use_capability(
                 &model,
                 flags,
-                MODE_TYPE_DIRECTORY,
+                fio::MODE_TYPE_DIRECTORY,
                 String::new(),
                 &use_,
                 abs_moniker.clone(),
@@ -300,8 +301,8 @@ impl IncomingNamespace {
             let (client_end, server_end) =
                 create_endpoints::<NodeMarker>().expect("could not create node proxy endpoints");
             pseudo_dir.open(
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                MODE_TYPE_DIRECTORY,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_DIRECTORY,
                 &mut iter::empty(),
                 server_end,
             );
