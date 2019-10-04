@@ -39,9 +39,11 @@ source_set("barriers") {
     "platform_barriers.h",
   ]
 
-  public_deps = [
-    "//zircon/public/lib/ddk",
-  ]
+  if (is_fuchsia) {
+    public_deps = [
+      "//zircon/public/lib/ddk",
+    ]
+  }
 }
 
 source_set("buffer_header") {

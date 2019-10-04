@@ -5,7 +5,14 @@
 #ifndef GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_BARRIERS_H_
 #define GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_BARRIERS_H_
 
-#include "hw/arch_ops.h"
+// For aarch64 we use assembly directly; otherwise we call out to platform
+// specific implementation.
+#if defined(__aarch64__)
+#elif defined(__Fuchsia__)
+#include <hw/arch_ops.h>
+#else
+#error Platform not handled.
+#endif
 
 namespace magma {
 namespace barriers {
