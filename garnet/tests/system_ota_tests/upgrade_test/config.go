@@ -22,26 +22,27 @@ import (
 )
 
 type Config struct {
-	OutputDir              string
-	FuchsiaDir             string
-	sshKeyFile             string
-	netaddrPath            string
-	DeviceName             string
-	deviceHostname         string
-	LkgbPath               string
-	ArtifactsPath          string
-	PackagesPath           string
-	downgradeBuilderName   string
-	downgradeBuildID       string
-	downgradeAmberFilesDir string
-	downgradePaver         string
-	upgradeBuilderName     string
-	upgradeBuildID         string
-	upgradeAmberFilesDir   string
-	LongevityTest          bool
-	cleanupOutputDir       bool
-	archive                *artifacts.Archive
-	sshPrivateKey          ssh.Signer
+	OutputDir                string
+	FuchsiaDir               string
+	sshKeyFile               string
+	netaddrPath              string
+	DeviceName               string
+	deviceHostname           string
+	LkgbPath                 string
+	ArtifactsPath            string
+	PackagesPath             string
+	downgradeBuilderName     string
+	downgradeBuildID         string
+	downgradeAmberFilesDir   string
+	downgradePaveZedbootPath string
+	downgradePavePath        string
+	upgradeBuilderName       string
+	upgradeBuildID           string
+	upgradeAmberFilesDir     string
+	LongevityTest            bool
+	cleanupOutputDir         bool
+	archive                  *artifacts.Archive
+	sshPrivateKey            ssh.Signer
 }
 
 func NewConfig(fs *flag.FlagSet) (*Config, error) {
@@ -60,7 +61,8 @@ func NewConfig(fs *flag.FlagSet) (*Config, error) {
 	fs.StringVar(&c.downgradeBuilderName, "downgrade-builder-name", "", "downgrade to the latest version of this builder")
 	fs.StringVar(&c.downgradeBuildID, "downgrade-build-id", "", "downgrade to this specific build id")
 	fs.StringVar(&c.downgradeAmberFilesDir, "downgrade-amber-files", "", "Path to the downgrade amber-files repository")
-	fs.StringVar(&c.downgradePaver, "downgrade-paver", "", "Path to the downgrade paver.sh script")
+	fs.StringVar(&c.downgradePaveZedbootPath, "downgrade-pave-zedboot-script", "", "Path to the downgrade pave-zedboot.sh script")
+	fs.StringVar(&c.downgradePavePath, "downgrade-pave-script", "", "Path to the downgrade pave.sh script")
 	fs.StringVar(&c.upgradeBuilderName, "upgrade-builder-name", "", "upgrade to the latest version of this builder")
 	fs.StringVar(&c.upgradeBuildID, "upgrade-build-id", os.Getenv("BUILDBUCKET_ID"), "upgrade to this build id (default is $BUILDBUCKET_ID)")
 	fs.StringVar(&c.upgradeAmberFilesDir, "upgrade-amber-files", "", "Path to the upgrade amber-files repository")
@@ -87,6 +89,16 @@ func (c *Config) Validate() error {
 	}
 	if defined > 1 {
 		return fmt.Errorf("-downgrade-builder-name, -downgrade-build-id, and -downgrade-amber-files are mutually exclusive")
+	}
+
+	defined = 0
+	for _, s := range []string{c.downgradePaveZedbootPath, c.downgradePavePath} {
+		if s != "" {
+			defined += 1
+		}
+	}
+	if defined == 1 {
+		return fmt.Errorf("-downgrade-pave-zedboot and -downgrade-pave must be specified together")
 	}
 
 	defined = 0
@@ -157,7 +169,7 @@ func (c *Config) BuildArchive() *artifacts.Archive {
 }
 
 func (c *Config) ShouldRepaveDevice() bool {
-	return c.downgradeBuildID != "" || c.downgradeBuilderName != "" || c.downgradePaver != ""
+	return c.downgradeBuildID != "" || c.downgradeBuilderName != "" || c.downgradePaveZedbootPath != "" || c.downgradePavePath != ""
 }
 
 func (c *Config) GetDowngradeBuildID() (string, error) {
@@ -262,8 +274,8 @@ func (c *Config) GetDowngradePaver() (*paver.Paver, error) {
 		return build.GetPaver(sshPublicKey)
 	}
 
-	if c.downgradePaver != "" {
-		return paver.NewPaver(c.downgradePaver, sshPublicKey), nil
+	if c.downgradePaveZedbootPath != "" && c.downgradePavePath != "" {
+		return paver.NewPaver(c.downgradePaveZedbootPath, c.downgradePavePath, sshPublicKey), nil
 	}
 
 	return nil, fmt.Errorf("downgrade paver not specified")

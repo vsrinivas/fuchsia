@@ -78,9 +78,10 @@ func (b *Build) GetPaver(publicKey ssh.PublicKey) (*paver.Paver, error) {
 		return nil, err
 	}
 
-	script := filepath.Join(buildArchiveDir, "pave.sh")
+	paveScript := filepath.Join(buildArchiveDir, "pave.sh")
+	paveZedbootScript := filepath.Join(buildArchiveDir, "pave-zedboot.sh")
 
-	return paver.NewPaver(script, publicKey), nil
+	return paver.NewPaver(paveZedbootScript, paveScript, publicKey), nil
 }
 
 // SystemSnapshot describes the data in the system.snapshot.json file.
