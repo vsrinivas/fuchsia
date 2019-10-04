@@ -147,10 +147,12 @@
     }                                                                                            \
   } while (0)
 
-#define _ASSERT_VAR_COERCE(op, expected, actual, type, fatal, file, line, desc, ...)            \
+#define _ASSERT_VAR_COERCE(op, expected, actual, coerce_type, fatal, file, line, desc, ...)     \
   do {                                                                                          \
     auto buffer_compare = [&](const auto& expected_, const auto& actual_) {                     \
-      return op(static_cast<type>(actual_), static_cast<type>(expected_));                      \
+      using DecayType = typename std::decay<coerce_type>::type;                                 \
+      return op(static_cast<const DecayType&>(actual_),                                         \
+                static_cast<const DecayType&>(expected_));                                      \
     };                                                                                          \
     if (!zxtest::internal::EvaluateCondition(actual, expected, #actual, #expected,              \
                                              {.filename = file, .line_number = line}, fatal,    \
