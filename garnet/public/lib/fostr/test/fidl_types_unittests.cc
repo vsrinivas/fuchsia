@@ -541,7 +541,7 @@ TEST(FidlTypes, StructFormatting) {
   MyXunion xu;
   xu.set_b(false);
 
-  fidl::VectorPtr<int32_t> nums;
+  fidl::VectorPtr<int32_t> nums{std::vector<int32_t>{}};
   for (int32_t i = 0; i < 3; ++i) {
     nums->push_back(static_cast<int32_t>(i));
   }
