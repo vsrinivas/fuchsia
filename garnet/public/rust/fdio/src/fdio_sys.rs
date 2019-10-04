@@ -655,6 +655,17 @@ extern "C" {
         flags: u32,
         h: zx_handle_t,
     ) -> zx_status_t;
+    pub fn fdio_open_fd(
+        path: *const raw::c_char,
+        flags: u32,
+        fd_out: *mut raw::c_int,
+    ) -> zx_status_t;
+    pub fn fdio_open_fd_at(
+        dir_fd: raw::c_int,
+        path: *const raw::c_char,
+        flags: u32,
+        fd_out: *mut raw::c_int,
+    ) -> zx_status_t;
     pub fn fdio_spawn(
         job: zx_handle_t,
         flags: u32,

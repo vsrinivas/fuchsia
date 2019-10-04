@@ -91,7 +91,10 @@ pub fn service_connect_at(
 
 /// Opens the remote object at the given `path` with the given `flags` asynchronously.
 /// ('asynchronous' here is refering to fuchsia.io.Directory.Open not having a return value).
-/// `flags` is a bit field of |fuchsia.io.OPEN_*| options. Wraps fdio_open.
+///
+/// `flags` is a bit field of |fuchsia.io.OPEN_*| options.
+///
+/// Wraps fdio_open.
 pub fn open(path: &str, flags: u32, channel: zx::Channel) -> Result<(), zx::Status> {
     let c_path = CString::new(path).map_err(|_| zx::Status::INVALID_ARGS)?;
 
@@ -106,8 +109,12 @@ pub fn open(path: &str, flags: u32, channel: zx::Channel) -> Result<(), zx::Stat
 
 /// Opens the remote object at the given `path` relative to the given `dir` with the given `flags`
 /// asynchronously. ('asynchronous' here is refering to fuchsia.io.Directory.Open not having a
-/// return value). `flags` is a bit field of |fuchsia.io.OPEN_*| options. `dir` must be a directory
-/// protocol channel. Wraps fdio_open_at.
+/// return value).
+///
+/// `flags` is a bit field of |fuchsia.io.OPEN_*| options. `dir` must be a directory protocol
+/// channel.
+///
+/// Wraps fdio_open_at.
 pub fn open_at(
     dir: &zx::Channel,
     path: &str,
@@ -125,6 +132,55 @@ pub fn open_at(
     zx::ok(unsafe {
         fdio_sys::fdio_open_at(dir.raw_handle(), c_path.as_ptr(), flags, channel.into_raw())
     })
+}
+
+/// Opens the remote object at the given `path` with the given `flags` synchronously, and on
+/// success, binds that channel to a file descriptor and returns it.
+///
+/// `flags` is a bit field of |fuchsia.io.OPEN_*| options.
+///
+/// Wraps fdio_open_fd.
+pub fn open_fd(
+    path: &str,
+    flags: u32,
+) -> Result<File, zx::Status> {
+    let c_path = CString::new(path).map_err(|_| zx::Status::INVALID_ARGS)?;
+
+    // fdio_open_fd takes a *const c_char service path, flags, and on success returns the opened
+    // file descriptor through the provided pointer arguument.
+    let mut raw_fd = -1;
+    unsafe {
+        let status = fdio_sys::fdio_open_fd(c_path.as_ptr(), flags, &mut raw_fd);
+        zx::Status::ok(status)?;
+        Ok(File::from_raw_fd(raw_fd))
+    }
+}
+
+/// Opens the remote object at the given `path` relative to the given `dir` with the given `flags`
+/// synchronously, and on success, binds that channel to a file descriptor and returns it.
+///
+/// `flags` is a bit field of |fuchsia.io.OPEN_*| options. `dir` must be backed by a directory
+/// protocol channel (even though it is wrapped in a std::fs::File).
+///
+/// Wraps fdio_open_fd_at.
+pub fn open_fd_at(
+    dir: &File,
+    path: &str,
+    flags: u32,
+) -> Result<File, zx::Status> {
+    let c_path = CString::new(path).map_err(|_| zx::Status::INVALID_ARGS)?;
+
+    // fdio_open_fd_at takes a directory file descriptor, a *const c_char service path,
+    // flags, and on success returns the opened file descriptor through the provided pointer
+    // arguument.
+    // The directory file descriptor is never consumed, so we borrow the raw handle.
+    let dir_fd = dir.as_raw_fd();
+    let mut raw_fd = -1;
+    unsafe {
+        let status = fdio_sys::fdio_open_fd_at(dir_fd, c_path.as_ptr(), flags, &mut raw_fd);
+        zx::Status::ok(status)?;
+        Ok(File::from_raw_fd(raw_fd))
+    }
 }
 
 pub fn transfer_fd(file: std::fs::File) -> Result<zx::Handle, zx::Status> {
@@ -819,5 +875,31 @@ mod tests {
 
         let (_, bin_server) = zx::Channel::create().unwrap();
         assert_eq!(open_at(&pkg_client, "bin", fio::OPEN_RIGHT_READABLE, bin_server), Ok(()));
+    }
+
+    // Simple tests of the fdio_open_fd and fdio_open_fd_at wrappers. These aren't intended to
+    // exhaustively test the fdio functions - there are separate tests for that - but they do
+    // exercise one success and one failure case for each function.
+    #[test]
+    fn fdio_open_fd_and_open_fd_at() {
+        // fdio_open_fd requires paths to be absolute
+        match open_fd("pkg", fio::OPEN_RIGHT_READABLE) {
+            Err(zx::Status::NOT_FOUND) => {},
+            Ok(_) => panic!("fdio_open_fd with relative path unexpectedly succeeded"),
+            Err(err) => panic!("Unexpected error from fdio_open_fd: {}", err),
+        }
+
+        let pkg_fd = open_fd("/pkg", fio::OPEN_RIGHT_READABLE)
+            .expect("Failed to open /pkg using fdio_open_fd");
+
+        // Trying to open a non-existent directory should fail.
+        match open_fd_at(&pkg_fd, "blahblah", fio::OPEN_RIGHT_READABLE) {
+            Err(zx::Status::NOT_FOUND) => {},
+            Ok(_) => panic!("fdio_open_fd_at with greater rights unexpectedly succeeded"),
+            Err(err) => panic!("Unexpected error from fdio_open_fd_at: {}", err),
+        }
+
+        open_fd_at(&pkg_fd, "bin", fio::OPEN_RIGHT_READABLE)
+            .expect("Failed to open bin/ subdirectory using fdio_open_fd_at");
     }
 }
