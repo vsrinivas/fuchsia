@@ -6,6 +6,7 @@
 
 use {
     crate::inspect_types::{RemoteCapabilitiesInspect, RemotePeerInspect, StreamingInspectData},
+    bt_a2dp::media_types::*,
     bt_a2dp_sink_metrics as metrics, bt_avdtp as avdtp,
     failure::{format_err, Error, ResultExt},
     fidl::endpoints::RequestStream,
@@ -197,6 +198,18 @@ impl Streams {
             fx_log_warn!("Can't play required SBC audio: {}", e);
             return Err(e);
         }
+        let sbc_media_codec_info: SbcCodecInfo = SbcCodecInfo::new(
+            SbcSamplingFrequency::MANDATORY_SNK,
+            SbcChannelMode::MANDATORY_SNK,
+            SbcBlockCount::MANDATORY_SNK,
+            SbcSubBands::MANDATORY_SNK,
+            SbcAllocation::MANDATORY_SNK,
+            SbcCodecInfo::BITPOOL_MIN,
+            SbcCodecInfo::BITPOOL_MAX,
+        )
+        .expect("Couldn't create sbc media codec info.");
+        fx_log_info!("Supported codec parameters: {:?}.", sbc_media_codec_info);
+
         let sbc_stream = avdtp::StreamEndpoint::new(
             SBC_SEID,
             avdtp::MediaType::Audio,
@@ -206,18 +219,7 @@ impl Streams {
                 avdtp::ServiceCapability::MediaCodec {
                     media_type: avdtp::MediaType::Audio,
                     codec_type: avdtp::MediaCodecType::new(AUDIO_CODEC_SBC),
-                    // SBC Codec Specific Information Elements:
-                    // These are the mandatory support in sink.
-                    // Byte 0:
-                    //  - Sampling Frequencies: 44.1kHz, 48.0kHz
-                    //  - Channel modes: All (MONO, DUAL CHANNEL, STEREO, JOINT STEREO)
-                    // Byte 1:
-                    //  - Block length: all (4, 8, 12, 16)
-                    //  - Subbands: all (4, 8)
-                    //  - Allocation Method: all (SNR and loudness)
-                    // Byte 2-3: Minimum and maximum bitpool value. This is just the minimum to the max.
-                    // TODO(jamuraa): there should be a way to build this data in a structured way (bt-a2dp?)
-                    codec_extra: vec![0x3F, 0xFF, 2, 250],
+                    codec_extra: sbc_media_codec_info.to_bytes(),
                 },
             ],
         )?;
