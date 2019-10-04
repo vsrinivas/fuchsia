@@ -208,6 +208,7 @@ if (current_cpu != "") {
       "closure-queue",
       "compiler",
       "core",
+      "core-display",
       "cprng",
       "ctor",
       "debugger",
