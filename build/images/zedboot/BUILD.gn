@@ -16,7 +16,7 @@ declare_args() {
   # List of kernel command line arguments to bake into the Zedboot image.
   # See //docs/zircon/kernel_cmdline.md and
   # [`zedboot_devmgr_config`](#zedboot_devmgr_config).
-  zedboot_cmdline_args = []
+  zedboot_cmdline_args = [ "netsvc.disable=false" ]
 
   # Files containing additional kernel command line arguments to bake into
   # the Zedboot image.  The contents of these files (in order) come after any

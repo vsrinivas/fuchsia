@@ -706,7 +706,7 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
   bool vruncmd = false;
   fbl::String vcmd;
   const char* interface = coordinator->boot_args().Get("netsvc.interface");
-  if (!(coordinator->boot_args().GetBool("netsvc.disable", false) ||
+  if (!(coordinator->boot_args().GetBool("netsvc.disable", true) ||
         coordinator->disable_netsvc())) {
     const char* args[] = {"/boot/bin/netsvc", nullptr, nullptr, nullptr, nullptr, nullptr};
     int argc = 1;

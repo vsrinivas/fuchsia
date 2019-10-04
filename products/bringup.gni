@@ -7,7 +7,7 @@ bootfs_only = true
 zircon_enable_kernel_debugging_features = true
 zircon_enable_netsvc_debugging_features = true
 
-kernel_cmdline_args = []
+kernel_cmdline_args = [ "netsvc.disable=false" ]
 
 meta_package_labels = [ "//build/images:config-data" ]
 
