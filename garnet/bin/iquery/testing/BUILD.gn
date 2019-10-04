@@ -44,7 +44,7 @@ executable("test") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
-    "//zircon/system/fidl/fuchsia-inspect",
+    "//zircon/system/fidl/fuchsia-inspect-deprecated",
   ]
 }
 

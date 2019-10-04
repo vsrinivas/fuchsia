@@ -23,7 +23,7 @@ import (
 	"netstack/link/eth"
 
 	"fidl/fuchsia/device"
-	"fidl/fuchsia/inspect"
+	inspect "fidl/fuchsia/inspect/deprecated"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"

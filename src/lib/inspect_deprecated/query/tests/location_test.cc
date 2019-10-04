@@ -21,7 +21,7 @@ std::vector<Location> GetTestLocations() {
   return std::vector<Location>{
       {.type = Location::Type::INSPECT_FIDL,
        .directory_path = "./file/path",
-       .file_name = "fuchsia.inspect.Inspect",
+       .file_name = "fuchsia.inspect.deprecated.Inspect",
        .inspect_path_components = {"child", "a"}},
       {.type = Location::Type::INSPECT_FILE_FORMAT,
        .directory_path = "./file/path2",
@@ -29,7 +29,7 @@ std::vector<Location> GetTestLocations() {
        .inspect_path_components = {"child", "a"}},
       {.type = Location::Type::INSPECT_FIDL,
        .directory_path = "/hub/path",
-       .file_name = "fuchsia.inspect.Inspect"},
+       .file_name = "fuchsia.inspect.deprecated.Inspect"},
       {.type = Location::Type::INSPECT_FILE_FORMAT,
        .directory_path = "/hub/path",
        .file_name = "root.inspect"},
@@ -40,9 +40,9 @@ TEST(Location, RelativePaths) {
   auto locations = GetTestLocations();
 
   std::vector<std::string> expected = {
-      "./file/path/fuchsia.inspect.Inspect",
+      "./file/path/fuchsia.inspect.deprecated.Inspect",
       "./file/path2/root.inspect",
-      "/hub/path/fuchsia.inspect.Inspect",
+      "/hub/path/fuchsia.inspect.deprecated.Inspect",
       "/hub/path/root.inspect",
   };
 
@@ -59,9 +59,9 @@ TEST(Location, AbsolutePaths) {
   auto locations = GetTestLocations();
 
   std::vector<std::string> expected = {
-      files::JoinPath(files::GetCurrentDirectory(), "file/path/fuchsia.inspect.Inspect"),
+      files::JoinPath(files::GetCurrentDirectory(), "file/path/fuchsia.inspect.deprecated.Inspect"),
       files::JoinPath(files::GetCurrentDirectory(), "file/path2/root.inspect"),
-      "/hub/path/fuchsia.inspect.Inspect",
+      "/hub/path/fuchsia.inspect.deprecated.Inspect",
       "/hub/path/root.inspect",
   };
 
@@ -132,9 +132,9 @@ TEST(Location, Parse) {
   };
 
   std::vector<std::string> paths2 = {
-      "./file/path/fuchsia.inspect.Inspect#child/a",
+      "./file/path/fuchsia.inspect.deprecated.Inspect#child/a",
       "./file/path2/root.inspect#child/a",
-      "/hub/path/fuchsia.inspect.Inspect#",
+      "/hub/path/fuchsia.inspect.deprecated.Inspect#",
       "/hub/path/root.inspect#",
   };
 

@@ -21,7 +21,7 @@
 #include <src/lib/fxl/strings/join_strings.h>
 
 #include "fixture.h"
-#include "fuchsia/inspect/cpp/fidl.h"
+#include "fuchsia/inspect/deprecated/cpp/fidl.h"
 #include "lib/inspect_deprecated/hierarchy.h"
 #include "lib/inspect_deprecated/query/location.h"
 #include "lib/inspect_deprecated/reader.h"
@@ -56,7 +56,7 @@ class ReadTest : public TestFixture {
     // Host a FIDL and VMO inspect interface under /test in the global
     // namespace.
     root_dir_.AddEntry(
-        fuchsia::inspect::Inspect::Name_,
+        fuchsia::inspect::deprecated::Inspect::Name_,
         std::make_unique<vfs::Service>(bindings_.GetHandler(fidl_dir_.object().get())));
 
     root_dir_.AddEntry("root.inspect",
@@ -75,7 +75,7 @@ class ReadTest : public TestFixture {
   inspect_deprecated::Tree tree_;
   component::ObjectDir fidl_dir_;
   TestDataWrapper fidl_test_data_, vmo_test_data_;
-  fidl::BindingSet<fuchsia::inspect::Inspect> bindings_;
+  fidl::BindingSet<fuchsia::inspect::deprecated::Inspect> bindings_;
   fdio_ns_t* ns_;
   // Ensure ns is cleaned up after the root_dir is destroyed and no longer
   // depending on it.

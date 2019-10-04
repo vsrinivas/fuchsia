@@ -94,7 +94,7 @@ class App : public ledger_internal::LedgerController {
 
     component_context_->outgoing()
         ->GetOrCreateDirectory(kInspectNodesDirectory.ToString())
-        ->AddEntry(fuchsia::inspect::Inspect::Name_,
+        ->AddEntry(fuchsia::inspect::deprecated::Inspect::Name_,
                    std::make_unique<vfs::Service>(
                        inspect_bindings_.GetHandler(object_dir.object().get())));
     inspect_objects_.top_level_node = inspect_deprecated::Node(std::move(object_dir));
@@ -144,7 +144,7 @@ class App : public ledger_internal::LedgerController {
 
   const AppParams app_params_;
   InspectObjects inspect_objects_;
-  fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings_;
+  fidl::BindingSet<fuchsia::inspect::deprecated::Inspect> inspect_bindings_;
   async::Loop loop_;
   async::Loop io_loop_;
   trace::TraceProviderWithFdio trace_provider_;

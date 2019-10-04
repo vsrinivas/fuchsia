@@ -223,7 +223,7 @@ TEST_F(HubTest, SystemObjectsThreadsInUseWhileFreed) {
 
   async::Executor executor_(dispatcher());
 
-  fuchsia::inspect::InspectPtr inspect;
+  fuchsia::inspect::deprecated::InspectPtr inspect;
   auto endpoint = paths[0].AbsoluteFilePath();
   zx_status_t status =
       fdio_service_connect(endpoint.c_str(), inspect.NewRequest().TakeChannel().get());
@@ -231,8 +231,8 @@ TEST_F(HubTest, SystemObjectsThreadsInUseWhileFreed) {
   auto reader = std::make_unique<inspect_deprecated::ObjectReader>(std::move(inspect));
 
   bool reader_open = false;
-  executor_.schedule_task(
-      reader->Read().and_then([&](fuchsia::inspect::Object& unused) { reader_open = true; }));
+  executor_.schedule_task(reader->Read().and_then(
+      [&](fuchsia::inspect::deprecated::Object& unused) { reader_open = true; }));
   RunLoopUntil([&] { return reader_open; });
 
   auto open_child = reader->OpenChild("threads");
@@ -261,9 +261,9 @@ TEST_F(HubTest, SystemObjectsThreadsInUseWhileFreed) {
   // At this point in time we have an open FIDL connection to a node in the
   // SystemObjectsDirectory. Accessing that node should not cause a crash and
   // will give no visible error.
-  fit::result<fuchsia::inspect::Object> result;
+  fit::result<fuchsia::inspect::deprecated::Object> result;
   executor_.schedule_task(all_stack_reader->Read().then(
-      [&](fit::result<fuchsia::inspect::Object>& res) { result = std::move(res); }));
+      [&](fit::result<fuchsia::inspect::deprecated::Object>& res) { result = std::move(res); }));
 
   RunLoopUntil([&] { return !!result; });
   EXPECT_TRUE(result.is_ok());

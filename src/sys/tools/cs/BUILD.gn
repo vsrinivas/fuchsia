@@ -16,7 +16,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:structopt",
-    "//zircon/system/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
+    "//zircon/system/fidl/fuchsia-inspect-deprecated:fuchsia-inspect-deprecated-rustc",
   ]
 }
 

@@ -60,7 +60,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:void",
     "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
-    "//zircon/system/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
+    "//zircon/system/fidl/fuchsia-inspect-deprecated:fuchsia-inspect-deprecated-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }

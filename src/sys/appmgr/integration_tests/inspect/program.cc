@@ -98,9 +98,9 @@ int main(int argc, const char** argv) {
     dir.set_prop("version", "1");
     out->push_back(dir.object());
   });
-  fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings_;
+  fidl::BindingSet<fuchsia::inspect::deprecated::Inspect> inspect_bindings_;
   context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
-      fuchsia::inspect::Inspect::Name_,
+      fuchsia::inspect::deprecated::Inspect::Name_,
       std::make_unique<vfs::Service>(inspect_bindings_.GetHandler(root_object.object().get())));
 
   loop.Run();

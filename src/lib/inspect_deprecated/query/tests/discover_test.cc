@@ -36,7 +36,7 @@ class DiscoverTest : public TestFixture {
 
       {
         auto nest = std::make_unique<vfs::PseudoDir>();
-        nest->AddEntry("fuchsia.inspect.Inspect", MakePseudoFile());
+        nest->AddEntry("fuchsia.inspect.deprecated.Inspect", MakePseudoFile());
 
         hub->AddEntry("nest", std::move(nest));
       }
@@ -45,7 +45,7 @@ class DiscoverTest : public TestFixture {
     }
     {
       auto other = std::make_unique<vfs::PseudoDir>();
-      other->AddEntry("fuchsia.inspect.Inspect", MakePseudoFile());
+      other->AddEntry("fuchsia.inspect.deprecated.Inspect", MakePseudoFile());
       other->AddEntry("root.inspect", MakePseudoFile());
 
       root_dir_->AddEntry("other", std::move(other));
@@ -78,7 +78,7 @@ TEST_F(DiscoverTest, SyncFindPaths) {
   EXPECT_THAT(locations, ::testing::UnorderedElementsAre(
                              Location{
                                  .directory_path = "/test/other",
-                                 .file_name = "fuchsia.inspect.Inspect",
+                                 .file_name = "fuchsia.inspect.deprecated.Inspect",
                                  .type = Location::Type::INSPECT_FIDL,
                                  .inspect_path_components = {},
                              },
@@ -102,7 +102,7 @@ TEST_F(DiscoverTest, SyncFindPaths) {
                              },
                              Location{
                                  .directory_path = "/test/hub/nest",
-                                 .file_name = "fuchsia.inspect.Inspect",
+                                 .file_name = "fuchsia.inspect.deprecated.Inspect",
                                  .type = Location::Type::INSPECT_FIDL,
                                  .inspect_path_components = {},
                              }));
@@ -122,7 +122,7 @@ TEST_F(DiscoverTest, SyncFindNestedPath) {
 
   EXPECT_THAT(locations1, ::testing::UnorderedElementsAre(Location{
                               .directory_path = "/test/hub",
-                              .file_name = "fuchsia.inspect.Inspect",
+                              .file_name = "fuchsia.inspect.deprecated.Inspect",
                               .type = Location::Type::INSPECT_FIDL,
                               .inspect_path_components = {"child", "a"},
                           }));
@@ -163,7 +163,7 @@ TEST_F(DiscoverTest, SyncFindGlobs) {
                              },
                              Location{
                                  .directory_path = "/test/hub/nest",
-                                 .file_name = "fuchsia.inspect.Inspect",
+                                 .file_name = "fuchsia.inspect.deprecated.Inspect",
                                  .type = Location::Type::INSPECT_FIDL,
                                  .inspect_path_components = {},
                              }));

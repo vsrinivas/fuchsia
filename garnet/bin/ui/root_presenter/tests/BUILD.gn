@@ -50,8 +50,8 @@ executable("root_presenter_tests") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/lib/settings",
-    "//zircon/system/fidl/fuchsia-inspect",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/hid",
+    "//zircon/system/fidl/fuchsia-inspect-deprecated",
   ]
 }

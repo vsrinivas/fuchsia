@@ -4,7 +4,7 @@
 
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
 
-#include <fuchsia/inspect/cpp/fidl.h>
+#include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/inspect_deprecated/inspect.h>
 #include <lib/inspect_deprecated/reader.h>

@@ -18,7 +18,7 @@ namespace ledger {
 LedgerAppInstanceFactory::LedgerAppInstance::LedgerAppInstance(
     LoopController* loop_controller, std::vector<uint8_t> test_ledger_name,
     ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
-    fuchsia::inspect::InspectPtr inspect)
+    fuchsia::inspect::deprecated::InspectPtr inspect)
     : loop_controller_(loop_controller),
       test_ledger_name_(std::move(test_ledger_name)),
       ledger_repository_factory_(std::move(ledger_repository_factory)),

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"fidl/fuchsia/inspect"
+	inspect "fidl/fuchsia/inspect/deprecated"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"

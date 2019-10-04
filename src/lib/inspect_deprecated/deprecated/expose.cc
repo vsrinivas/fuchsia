@@ -22,8 +22,8 @@ void Property::Set(VectorValueCallback callback) {
   value_.emplace<VectorValueCallback>(std::move(callback));
 }
 
-fuchsia::inspect::Property Property::ToFidl(const std::string& name) const {
-  fuchsia::inspect::Property ret;
+fuchsia::inspect::deprecated::Property Property::ToFidl(const std::string& name) const {
+  fuchsia::inspect::deprecated::Property ret;
   ret.key = name;
   if (std::holds_alternative<std::string>(value_)) {
     ret.value.set_str(std::get<std::string>(value_));
@@ -78,8 +78,8 @@ std::string Metric::ToString() const {
   }
 }
 
-fuchsia::inspect::Metric Metric::ToFidl(const std::string& name) const {
-  fuchsia::inspect::Metric ret;
+fuchsia::inspect::deprecated::Metric Metric::ToFidl(const std::string& name) const {
+  fuchsia::inspect::deprecated::Metric ret;
   switch (type_) {
     case INT:
       ret.value.set_int_value(int_value_);
@@ -144,7 +144,7 @@ Object::~Object() {
   FX_CHECK(detachers_.empty());
 }
 
-void Object::InnerAddBinding(fidl::InterfaceRequest<fuchsia::inspect::Inspect> chan) {
+void Object::InnerAddBinding(fidl::InterfaceRequest<fuchsia::inspect::deprecated::Inspect> chan) {
   if (!self_if_bindings_) {
     FX_DCHECK(bindings_.size() == 0);
     self_if_bindings_ = self_weak_ptr_.lock();
@@ -380,9 +380,9 @@ bool Object::SetMetric(const std::string& name, Metric metric) {
   return true;
 }
 
-fuchsia::inspect::Object Object::ToFidl() {
+fuchsia::inspect::deprecated::Object Object::ToFidl() {
   std::lock_guard lock(mutex_);
-  fuchsia::inspect::Object ret;
+  fuchsia::inspect::deprecated::Object ret;
   ret.name = name_.data();
   for (const auto& it : properties_) {
     ret.properties.push_back(it.second.ToFidl(it.first));

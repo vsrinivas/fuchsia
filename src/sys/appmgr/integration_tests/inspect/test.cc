@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/inspect/cpp/fidl.h>
+#include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
@@ -57,14 +57,14 @@ class InspectTest : public sys::testing::TestWithEnvironment {
 
   // Open the root object connection on the given sync pointer.
   // Returns ZX_OK on success.
-  zx_status_t GetInspectConnection(fuchsia::inspect::InspectSyncPtr* out_ptr) {
+  zx_status_t GetInspectConnection(fuchsia::inspect::deprecated::InspectSyncPtr* out_ptr) {
     files::Glob glob(Substitute("/hub/r/test/*/c/$0/*/out/objects", kTestProcessName));
     if (glob.size() == 0) {
       return ZX_ERR_NOT_FOUND;
     }
 
     std::string path = Substitute("$0/$1", std::string(*glob.begin()),
-                                  std::string(fuchsia::inspect::Inspect::Name_));
+                                  std::string(fuchsia::inspect::deprecated::Inspect::Name_));
 
     return fdio_service_connect(path.c_str(), out_ptr->NewRequest().TakeChannel().release());
   }
@@ -73,8 +73,8 @@ class InspectTest : public sys::testing::TestWithEnvironment {
   // with the given name.
   // Returns true on success, otherwise false is returned and ptr is not
   // changed.
-  bool Traverse(fuchsia::inspect::InspectSyncPtr* ptr, const std::string& name) {
-    fuchsia::inspect::InspectSyncPtr child;
+  bool Traverse(fuchsia::inspect::deprecated::InspectSyncPtr* ptr, const std::string& name) {
+    fuchsia::inspect::deprecated::InspectSyncPtr child;
     bool ret;
     (*ptr)->OpenChild(name, child.NewRequest(), &ret);
     if (ret) {
@@ -89,7 +89,7 @@ class InspectTest : public sys::testing::TestWithEnvironment {
 };
 
 TEST_F(InspectTest, InspectTopLevel) {
-  fuchsia::inspect::InspectSyncPtr inspect;
+  fuchsia::inspect::deprecated::InspectSyncPtr inspect;
   ASSERT_EQ(ZX_OK, GetInspectConnection(&inspect));
 
   std::vector<std::string> children;
@@ -114,7 +114,7 @@ MATCHER_P2(IntMetric, name, value, "") {
 }
 
 TEST_F(InspectTest, InspectOpenRead) {
-  fuchsia::inspect::InspectSyncPtr inspect;
+  fuchsia::inspect::deprecated::InspectSyncPtr inspect;
 
   ASSERT_EQ(ZX_OK, GetInspectConnection(&inspect));
   ASSERT_TRUE(Traverse(&inspect, "table-t1"));
@@ -123,7 +123,7 @@ TEST_F(InspectTest, InspectOpenRead) {
   ASSERT_EQ(ZX_OK, inspect->ListChildren(&children));
   EXPECT_THAT(children, UnorderedElementsAre("item-0x0", "item-0x1"));
 
-  fuchsia::inspect::Object obj;
+  fuchsia::inspect::deprecated::Object obj;
   ASSERT_EQ(ZX_OK, inspect->ReadData(&obj));
   EXPECT_EQ("table-t1", obj.name);
   EXPECT_THAT(obj.properties,
@@ -140,11 +140,11 @@ TEST_F(InspectTest, InspectOpenRead) {
   ASSERT_EQ(ZX_OK, inspect->ListChildren(&children));
   EXPECT_THAT(children, UnorderedElementsAre("item-0x2", "table-subtable"));
 
-  obj = fuchsia::inspect::Object();
+  obj = fuchsia::inspect::deprecated::Object();
   ASSERT_EQ(ZX_OK, inspect->ReadData(&obj));
   EXPECT_EQ("table-t2", obj.name);
-  fuchsia::inspect::Object subtable;
-  fuchsia::inspect::InspectSyncPtr child_request;
+  fuchsia::inspect::deprecated::Object subtable;
+  fuchsia::inspect::deprecated::InspectSyncPtr child_request;
   bool ok = false;
   ASSERT_EQ(ZX_OK, inspect->OpenChild("table-subtable", child_request.NewRequest(), &ok));
   ASSERT_TRUE(ok);
@@ -157,11 +157,11 @@ TEST_F(InspectTest, InspectOpenRead) {
               UnorderedElementsAre(UIntMetric("item_size", 16), IntMetric("\x10", -10)));
 
   ASSERT_EQ(ZX_OK, GetInspectConnection(&inspect));
-  fuchsia::inspect::InspectSyncPtr lazy_child;
+  fuchsia::inspect::deprecated::InspectSyncPtr lazy_child;
   bool open_ok;
   inspect->OpenChild("lazy_child", lazy_child.NewRequest(), &open_ok);
   ASSERT_TRUE(open_ok);
-  obj = fuchsia::inspect::Object();
+  obj = fuchsia::inspect::deprecated::Object();
   lazy_child->ReadData(&obj);
   EXPECT_THAT(obj.properties, UnorderedElementsAre(StringProperty("version", "1")));
 }

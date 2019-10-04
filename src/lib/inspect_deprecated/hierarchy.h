@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_INSPECT_DEPRECATED_HIERARCHY_H_
 #define SRC_LIB_INSPECT_DEPRECATED_HIERARCHY_H_
 
-#include <fuchsia/inspect/cpp/fidl.h>
+#include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <lib/fit/optional.h>
 #include <lib/fit/variant.h>
 

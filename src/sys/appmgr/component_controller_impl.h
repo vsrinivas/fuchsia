@@ -5,7 +5,7 @@
 #ifndef SRC_SYS_APPMGR_COMPONENT_CONTROLLER_IMPL_H_
 #define SRC_SYS_APPMGR_COMPONENT_CONTROLLER_IMPL_H_
 
-#include <fuchsia/inspect/cpp/fidl.h>
+#include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/process.h>
@@ -131,7 +131,7 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
 
   fuchsia::io::DirectoryPtr exported_dir_;
 
-  fuchsia::inspect::InspectPtr inspect_checker_;
+  fuchsia::inspect::deprecated::InspectPtr inspect_checker_;
 };
 
 class ComponentControllerImpl : public ComponentControllerBase {
@@ -168,7 +168,7 @@ class ComponentControllerImpl : public ComponentControllerBase {
 
   SystemObjectsDirectory system_objects_directory_;
 
-  fidl::BindingSet<fuchsia::inspect::Inspect, std::shared_ptr<component::Object>>
+  fidl::BindingSet<fuchsia::inspect::deprecated::Inspect, std::shared_ptr<component::Object>>
       system_directory_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentControllerImpl);

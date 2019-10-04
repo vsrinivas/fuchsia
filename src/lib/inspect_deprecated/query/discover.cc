@@ -22,7 +22,7 @@ namespace inspect_deprecated {
 namespace {
 
 fit::result<Location> FileToLocation(std::string directory_path, std::string file_name) {
-  if (file_name.compare(fuchsia::inspect::Inspect::Name_) == 0) {
+  if (file_name.compare(fuchsia::inspect::deprecated::Inspect::Name_) == 0) {
     return fit::ok(Location{.type = Location::Type::INSPECT_FIDL,
                             .directory_path = std::move(directory_path),
                             .file_name = std::move(file_name),

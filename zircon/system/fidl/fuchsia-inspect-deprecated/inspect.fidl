@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.inspect;
+// DEPRECATED: This library is being replaced. Do not add new dependencies
+// to this interface.
+
+library fuchsia.inspect.deprecated;
 
 const uint16 MAX_KEY_LENGTH = 1024;
 const uint16 MAX_VALUE_LENGTH = 16384;

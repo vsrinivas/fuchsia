@@ -8,7 +8,7 @@
 #include <lib/inspect_deprecated/inspect.h>
 #include <lib/inspect_deprecated/reader.h>
 
-#include "fuchsia/inspect/cpp/fidl.h"
+#include "fuchsia/inspect/deprecated/cpp/fidl.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

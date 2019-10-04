@@ -169,13 +169,13 @@ TEST_F(PageManagerTest, OnDiscardableCalledWhenHeadDetacherCalled) {
   RunLoopUntilIdle();
   EXPECT_FALSE(on_discardable_called);
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> page_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> page_node;
   EXPECT_TRUE(
       OpenChild(&attachment_node_, convert::ToString(page_id_.id), &page_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> heads_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> heads_node;
   EXPECT_TRUE(
       OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &heads_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> head_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> head_node;
   EXPECT_TRUE(OpenChild(&heads_node, CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()),
                         &head_node, &test_loop()));
 
@@ -218,13 +218,13 @@ TEST_F(PageManagerTest, OnDiscardableCalledWhenCommitDetacherCalled) {
   RunLoopUntilIdle();
   EXPECT_FALSE(on_discardable_called);
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> page_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> page_node;
   EXPECT_TRUE(
       OpenChild(&attachment_node_, convert::ToString(page_id_.id), &page_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> commits_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commits_node;
   EXPECT_TRUE(
       OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &commits_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> commit_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commit_node;
   EXPECT_TRUE(OpenChild(&commits_node,
                         CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()), &commit_node,
                         &test_loop()));
@@ -267,19 +267,19 @@ TEST_F(PageManagerTest, OnDiscardableCalledInspectEarlierAndLaterThanPageBinding
   page_manager_->SetOnDiscardable(
       callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> page_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> page_node;
   EXPECT_TRUE(
       OpenChild(&attachment_node_, convert::ToString(page_id_.id), &page_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> heads_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> heads_node;
   EXPECT_TRUE(
       OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &heads_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> head_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> head_node;
   EXPECT_TRUE(OpenChild(&heads_node, CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()),
                         &head_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> commits_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commits_node;
   EXPECT_TRUE(
       OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &commits_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> commit_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commit_node;
   EXPECT_TRUE(OpenChild(&commits_node,
                         CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()), &commit_node,
                         &test_loop()));
@@ -339,19 +339,19 @@ TEST_F(PageManagerTest, OnDiscardableCalledInspectEarlierAndPageBindingLater) {
   page_manager_->SetOnDiscardable(
       callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> page_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> page_node;
   EXPECT_TRUE(
       OpenChild(&attachment_node_, convert::ToString(page_id_.id), &page_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> heads_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> heads_node;
   EXPECT_TRUE(
       OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &heads_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> head_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> head_node;
   EXPECT_TRUE(OpenChild(&heads_node, CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()),
                         &head_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> commits_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commits_node;
   EXPECT_TRUE(
       OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &commits_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> commit_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commit_node;
   EXPECT_TRUE(OpenChild(&commits_node,
                         CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()), &commit_node,
                         &test_loop()));
@@ -423,19 +423,19 @@ TEST_F(PageManagerTest, OnDiscardableCalledPageBindingEarlierAndInspectLater) {
   EXPECT_EQ(Status::OK, get_page_status);
   EXPECT_FALSE(on_discardable_called);
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> page_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> page_node;
   EXPECT_TRUE(
       OpenChild(&attachment_node_, convert::ToString(page_id_.id), &page_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> heads_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> heads_node;
   EXPECT_TRUE(
       OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &heads_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> head_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> head_node;
   EXPECT_TRUE(OpenChild(&heads_node, CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()),
                         &head_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> commits_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commits_node;
   EXPECT_TRUE(
       OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &commits_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> commit_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commit_node;
   EXPECT_TRUE(OpenChild(&commits_node,
                         CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()), &commit_node,
                         &test_loop()));
@@ -495,19 +495,19 @@ TEST_F(PageManagerTest, OnDiscardableCalledPageBindingEarlierAndLaterThanInspect
   EXPECT_EQ(Status::OK, get_page_status);
   EXPECT_FALSE(on_discardable_called);
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> page_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> page_node;
   EXPECT_TRUE(
       OpenChild(&attachment_node_, convert::ToString(page_id_.id), &page_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> heads_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> heads_node;
   EXPECT_TRUE(
       OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &heads_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> head_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> head_node;
   EXPECT_TRUE(OpenChild(&heads_node, CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()),
                         &head_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> commits_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commits_node;
   EXPECT_TRUE(
       OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &commits_node, &test_loop()));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> commit_node;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commit_node;
   EXPECT_TRUE(OpenChild(&commits_node,
                         CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()), &commit_node,
                         &test_loop()));

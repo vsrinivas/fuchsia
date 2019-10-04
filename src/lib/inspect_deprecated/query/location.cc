@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/inspect/cpp/fidl.h>
+#include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <lib/inspect_deprecated/query/location.h>
 
 #include <src/lib/files/path.h>
@@ -80,7 +80,7 @@ fit::result<Location, std::string> Location::Parse(const std::string& path) {
                             .directory_path = files::GetDirectoryName(parts[0]),
                             .file_name = files::GetBaseName(parts[0]),
                             .inspect_path_components = std::move(inspect_parts)});
-  } else if (files::GetBaseName(parts[0]) == fuchsia::inspect::Inspect::Name_) {
+  } else if (files::GetBaseName(parts[0]) == fuchsia::inspect::deprecated::Inspect::Name_) {
     // The file seems to be an inspect FIDL interface.
     return fit::ok(Location{.directory_path = files::GetDirectoryName(parts[0]),
                             .file_name = files::GetBaseName(parts[0]),
@@ -89,7 +89,7 @@ fit::result<Location, std::string> Location::Parse(const std::string& path) {
     // Default to treating the path as a directory, and look for the FIDL
     // interface inside.
     return fit::ok(Location{.directory_path = parts[0],
-                            .file_name = fuchsia::inspect::Inspect::Name_,
+                            .file_name = fuchsia::inspect::deprecated::Inspect::Name_,
                             .inspect_path_components = std::move(inspect_parts)});
   }
 }

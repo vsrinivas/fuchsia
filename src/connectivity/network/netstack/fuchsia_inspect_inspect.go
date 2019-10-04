@@ -13,8 +13,7 @@ import (
 
 	"app/context"
 
-	"fidl/fuchsia/inspect"
-
+	inspect "fidl/fuchsia/inspect/deprecated"
 	"github.com/google/netstack/tcpip"
 )
 

@@ -4,7 +4,7 @@
 
 #include "read.h"
 
-#include <fuchsia/inspect/cpp/fidl.h>
+#include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
@@ -16,9 +16,9 @@
 
 namespace inspect_deprecated {
 namespace {
-fit::result<fidl::InterfaceHandle<fuchsia::inspect::Inspect>, std::string> OpenInspectAtPath(
-    const std::string& path) {
-  fuchsia::inspect::InspectPtr inspect;
+fit::result<fidl::InterfaceHandle<fuchsia::inspect::deprecated::Inspect>, std::string>
+OpenInspectAtPath(const std::string& path) {
+  fuchsia::inspect::deprecated::InspectPtr inspect;
   auto endpoint = files::AbsolutePath(path);
   zx_status_t status =
       fdio_service_connect(endpoint.c_str(), inspect.NewRequest().TakeChannel().get());

@@ -29,12 +29,12 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
  public:
   LedgerAppInstanceImpl(LoopController* loop_controller, rng::Random* random,
                         ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
-                        fuchsia::inspect::InspectPtr inspect, SyncParams sync_params,
+                        fuchsia::inspect::deprecated::InspectPtr inspect, SyncParams sync_params,
                         cloud_provider_firestore::CloudProviderFactory::UserId user_id);
 
   void Init(
       fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> repository_factory_request,
-      fidl::InterfaceRequest<fuchsia::inspect::Inspect> inspect_request);
+      fidl::InterfaceRequest<fuchsia::inspect::deprecated::Inspect> inspect_request);
 
  private:
   cloud_provider::CloudProviderPtr MakeCloudProvider() override;
@@ -51,7 +51,7 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     LoopController* loop_controller, rng::Random* random,
     ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
-    fuchsia::inspect::InspectPtr inspect, SyncParams sync_params,
+    fuchsia::inspect::deprecated::InspectPtr inspect, SyncParams sync_params,
     cloud_provider_firestore::CloudProviderFactory::UserId user_id)
     : LedgerAppInstanceFactory::LedgerAppInstance(loop_controller, convert::ToArray(kLedgerName),
                                                   std::move(ledger_repository_factory),
@@ -64,7 +64,7 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
 
 void LedgerAppInstanceImpl::Init(
     fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> repository_factory_request,
-    fidl::InterfaceRequest<fuchsia::inspect::Inspect> inspect_request) {
+    fidl::InterfaceRequest<fuchsia::inspect::deprecated::Inspect> inspect_request) {
   cloud_provider_factory_.Init();
 
   // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=12278): Connect |inspect_request| to
@@ -105,8 +105,9 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   ledger_internal::LedgerRepositoryFactoryPtr repository_factory;
   fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> repository_factory_request =
       repository_factory.NewRequest();
-  fuchsia::inspect::InspectPtr inspect;
-  fidl::InterfaceRequest<fuchsia::inspect::Inspect> inspect_request = inspect.NewRequest();
+  fuchsia::inspect::deprecated::InspectPtr inspect;
+  fidl::InterfaceRequest<fuchsia::inspect::deprecated::Inspect> inspect_request =
+      inspect.NewRequest();
   auto result = std::make_unique<LedgerAppInstanceImpl>(loop_controller_.get(), &random_,
                                                         std::move(repository_factory),
                                                         std::move(inspect), sync_params_, user_id_);

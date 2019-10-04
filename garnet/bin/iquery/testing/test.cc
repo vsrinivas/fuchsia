@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/inspect/cpp/fidl.h>
+#include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>

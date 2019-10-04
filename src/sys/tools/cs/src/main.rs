@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use failure::{err_msg, Error};
-use fidl_fuchsia_inspect::{InspectMarker, MetricValue, PropertyValue};
+use fidl_fuchsia_inspect_deprecated::{InspectMarker, MetricValue, PropertyValue};
 use inspect::{generate_inspect_object_tree, InspectObject};
 use std::{
     fmt, fs,

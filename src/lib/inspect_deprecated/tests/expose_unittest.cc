@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/inspect/cpp/fidl.h>
+#include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <lib/inspect_deprecated/deprecated/expose.h>
 #include <lib/inspect_deprecated/testing/inspect.h>
 
@@ -20,64 +20,66 @@ using testing::UnorderedElementsAre;
 // the FIDL Inspect API.
 // TODO(crjohns): Delete this file when FIDL Inspect is removed.
 
-::testing::Matcher<const fuchsia::inspect::Property&> StringPropertyIs(const std::string& name,
-                                                                       const std::string& value) {
+::testing::Matcher<const fuchsia::inspect::deprecated::Property&> StringPropertyIs(
+    const std::string& name, const std::string& value) {
   return ::testing::AllOf(
-      ::testing::Field(&fuchsia::inspect::Property::key, ::testing::StrEq(name)),
-      ::testing::Field(
-          &fuchsia::inspect::Property::value,
-          ::testing::Property(&fuchsia::inspect::PropertyValue::is_str, ::testing::IsTrue())),
-      ::testing::Field(
-          &fuchsia::inspect::Property::value,
-          ::testing::Property(&fuchsia::inspect::PropertyValue::str, ::testing::StrEq(value))));
+      ::testing::Field(&fuchsia::inspect::deprecated::Property::key, ::testing::StrEq(name)),
+      ::testing::Field(&fuchsia::inspect::deprecated::Property::value,
+                       ::testing::Property(&fuchsia::inspect::deprecated::PropertyValue::is_str,
+                                           ::testing::IsTrue())),
+      ::testing::Field(&fuchsia::inspect::deprecated::Property::value,
+                       ::testing::Property(&fuchsia::inspect::deprecated::PropertyValue::str,
+                                           ::testing::StrEq(value))));
 }
 
-::testing::Matcher<const fuchsia::inspect::Property&> ByteVectorPropertyIs(
+::testing::Matcher<const fuchsia::inspect::deprecated::Property&> ByteVectorPropertyIs(
     const std::string& name, const inspect_deprecated::VectorValue& value) {
   return ::testing::AllOf(
-      ::testing::Field(&fuchsia::inspect::Property::key, ::testing::StrEq(name)),
-      ::testing::Field(
-          &fuchsia::inspect::Property::value,
-          ::testing::Property(&fuchsia::inspect::PropertyValue::is_bytes, ::testing::IsTrue())),
-      ::testing::Field(
-          &fuchsia::inspect::Property::value,
-          ::testing::Property(&fuchsia::inspect::PropertyValue::bytes, ::testing::Eq(value))));
-}
-
-::testing::Matcher<const fuchsia::inspect::Metric&> IntMetricIs(const std::string& name,
-                                                                int64_t value) {
-  return ::testing::AllOf(
-      ::testing::Field(&fuchsia::inspect::Metric::key, ::testing::StrEq(name)),
-      ::testing::Field(
-          &fuchsia::inspect::Metric::value,
-          ::testing::Property(&fuchsia::inspect::MetricValue::is_int_value, ::testing::IsTrue())),
-      ::testing::Field(
-          &fuchsia::inspect::Metric::value,
-          ::testing::Property(&fuchsia::inspect::MetricValue::int_value, ::testing::Eq(value))));
-}
-
-::testing::Matcher<const fuchsia::inspect::Metric&> UIntMetricIs(const std::string& name,
-                                                                 uint64_t value) {
-  return ::testing::AllOf(
-      ::testing::Field(&fuchsia::inspect::Metric::key, ::testing::StrEq(name)),
-      ::testing::Field(
-          &fuchsia::inspect::Metric::value,
-          ::testing::Property(&fuchsia::inspect::MetricValue::is_uint_value, ::testing::IsTrue())),
-      ::testing::Field(
-          &fuchsia::inspect::Metric::value,
-          ::testing::Property(&fuchsia::inspect::MetricValue::uint_value, ::testing::Eq(value))));
-}
-
-::testing::Matcher<const fuchsia::inspect::Metric&> DoubleMetricIs(const std::string& name,
-                                                                   double value) {
-  return ::testing::AllOf(
-      ::testing::Field(&fuchsia::inspect::Metric::key, ::testing::StrEq(name)),
-      ::testing::Field(&fuchsia::inspect::Metric::value,
-                       ::testing::Property(&fuchsia::inspect::MetricValue::is_double_value,
+      ::testing::Field(&fuchsia::inspect::deprecated::Property::key, ::testing::StrEq(name)),
+      ::testing::Field(&fuchsia::inspect::deprecated::Property::value,
+                       ::testing::Property(&fuchsia::inspect::deprecated::PropertyValue::is_bytes,
                                            ::testing::IsTrue())),
+      ::testing::Field(&fuchsia::inspect::deprecated::Property::value,
+                       ::testing::Property(&fuchsia::inspect::deprecated::PropertyValue::bytes,
+                                           ::testing::Eq(value))));
+}
+
+::testing::Matcher<const fuchsia::inspect::deprecated::Metric&> IntMetricIs(const std::string& name,
+                                                                            int64_t value) {
+  return ::testing::AllOf(
+      ::testing::Field(&fuchsia::inspect::deprecated::Metric::key, ::testing::StrEq(name)),
+      ::testing::Field(&fuchsia::inspect::deprecated::Metric::value,
+                       ::testing::Property(&fuchsia::inspect::deprecated::MetricValue::is_int_value,
+                                           ::testing::IsTrue())),
+      ::testing::Field(&fuchsia::inspect::deprecated::Metric::value,
+                       ::testing::Property(&fuchsia::inspect::deprecated::MetricValue::int_value,
+                                           ::testing::Eq(value))));
+}
+
+::testing::Matcher<const fuchsia::inspect::deprecated::Metric&> UIntMetricIs(
+    const std::string& name, uint64_t value) {
+  return ::testing::AllOf(
+      ::testing::Field(&fuchsia::inspect::deprecated::Metric::key, ::testing::StrEq(name)),
       ::testing::Field(
-          &fuchsia::inspect::Metric::value,
-          ::testing::Property(&fuchsia::inspect::MetricValue::double_value, ::testing::Eq(value))));
+          &fuchsia::inspect::deprecated::Metric::value,
+          ::testing::Property(&fuchsia::inspect::deprecated::MetricValue::is_uint_value,
+                              ::testing::IsTrue())),
+      ::testing::Field(&fuchsia::inspect::deprecated::Metric::value,
+                       ::testing::Property(&fuchsia::inspect::deprecated::MetricValue::uint_value,
+                                           ::testing::Eq(value))));
+}
+
+::testing::Matcher<const fuchsia::inspect::deprecated::Metric&> DoubleMetricIs(
+    const std::string& name, double value) {
+  return ::testing::AllOf(
+      ::testing::Field(&fuchsia::inspect::deprecated::Metric::key, ::testing::StrEq(name)),
+      ::testing::Field(
+          &fuchsia::inspect::deprecated::Metric::value,
+          ::testing::Property(&fuchsia::inspect::deprecated::MetricValue::is_double_value,
+                              ::testing::IsTrue())),
+      ::testing::Field(&fuchsia::inspect::deprecated::Metric::value,
+                       ::testing::Property(&fuchsia::inspect::deprecated::MetricValue::double_value,
+                                           ::testing::Eq(value))));
 }
 
 TEST(Property, StringValue) {
@@ -193,8 +195,8 @@ TEST(Object, ReadData) {
   object->SetMetric("uint metric", component::UIntMetric(0xFF));
   object->SetMetric("double metric", component::DoubleMetric(0.25));
 
-  fuchsia::inspect::Object obj;
-  object->ReadData([&obj](fuchsia::inspect::Object val) { obj = std::move(val); });
+  fuchsia::inspect::deprecated::Object obj;
+  object->ReadData([&obj](fuchsia::inspect::deprecated::Object val) { obj = std::move(val); });
 
   EXPECT_THAT(obj.name, ::testing::Eq("test"));
   EXPECT_THAT(obj.properties, UnorderedElementsAre(StringPropertyIs("property", "value")));

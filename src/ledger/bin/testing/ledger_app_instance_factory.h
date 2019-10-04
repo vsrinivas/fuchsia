@@ -5,7 +5,7 @@
 #ifndef SRC_LEDGER_BIN_TESTING_LEDGER_APP_INSTANCE_FACTORY_H_
 #define SRC_LEDGER_BIN_TESTING_LEDGER_APP_INSTANCE_FACTORY_H_
 
-#include <fuchsia/inspect/cpp/fidl.h>
+#include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_ptr.h>
@@ -47,7 +47,7 @@ class LedgerAppInstanceFactory {
    public:
     LedgerAppInstance(LoopController* loop_controller, std::vector<uint8_t> test_ledger_name,
                       ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
-                      fidl::InterfacePtr<fuchsia::inspect::Inspect> inspect_ptr);
+                      fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> inspect_ptr);
     virtual ~LedgerAppInstance();
 
     // Returns the LedgerRepositoryFactory associated with this application
@@ -73,7 +73,7 @@ class LedgerAppInstanceFactory {
     LoopController* loop_controller_;
     std::vector<uint8_t> test_ledger_name_;
     ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;
-    fidl::InterfacePtr<fuchsia::inspect::Inspect> inspect_;
+    fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> inspect_;
 
     scoped_tmpfs::ScopedTmpFS tmpfs_;
 

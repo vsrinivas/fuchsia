@@ -10,7 +10,7 @@
 #include <stack>
 #include <unordered_map>
 
-#include "fuchsia/inspect/cpp/fidl.h"
+#include "fuchsia/inspect/deprecated/cpp/fidl.h"
 #include "lib/fit/bridge.h"
 #include "lib/fit/result.h"
 #include "lib/inspect_deprecated/hierarchy.h"
@@ -19,7 +19,7 @@ namespace inspect_deprecated {
 
 namespace {
 
-hierarchy::Node FidlObjectToNode(fuchsia::inspect::Object obj) {
+hierarchy::Node FidlObjectToNode(fuchsia::inspect::deprecated::Object obj) {
   std::vector<hierarchy::Property> properties;
   std::vector<hierarchy::Metric> metrics;
 
@@ -127,13 +127,14 @@ ObjectHierarchy ReadFromObject(const Node& object, int depth) {
   return Read(object.object_dir().object(), depth);
 }
 
-ObjectReader::ObjectReader(fidl::InterfaceHandle<fuchsia::inspect::Inspect> inspect_handle)
+ObjectReader::ObjectReader(
+    fidl::InterfaceHandle<fuchsia::inspect::deprecated::Inspect> inspect_handle)
     : state_(std::make_shared<internal::ObjectReaderState>()) {
   state_->inspect_ptr_.Bind(std::move(inspect_handle));
 }
 
-fit::promise<fuchsia::inspect::Object> ObjectReader::Read() const {
-  fit::bridge<fuchsia::inspect::Object> bridge;
+fit::promise<fuchsia::inspect::deprecated::Object> ObjectReader::Read() const {
+  fit::bridge<fuchsia::inspect::deprecated::Object> bridge;
   state_->inspect_ptr_->ReadData(bridge.completer.bind());
   return bridge.consumer.promise_or(fit::error());
 }
@@ -145,7 +146,7 @@ fit::promise<ChildNameVector> ObjectReader::ListChildren() const {
 }
 
 fit::promise<ObjectReader> ObjectReader::OpenChild(std::string child_name) const {
-  fuchsia::inspect::InspectPtr child_ptr;
+  fuchsia::inspect::deprecated::InspectPtr child_ptr;
 
   fit::bridge<bool> bridge;
 
@@ -186,7 +187,7 @@ fit::promise<std::vector<ObjectReader>> ObjectReader::OpenChildren() const {
 fit::promise<ObjectHierarchy> ReadFromFidl(ObjectReader reader, int depth) {
   auto reader_promise = reader.Read();
   if (depth == 0) {
-    return reader_promise.and_then([reader](fuchsia::inspect::Object& obj) {
+    return reader_promise.and_then([reader](fuchsia::inspect::deprecated::Object& obj) {
       return fit::ok(ObjectHierarchy(FidlObjectToNode(std::move(obj)), {}));
     });
   } else {
@@ -212,7 +213,7 @@ fit::promise<ObjectHierarchy> ReadFromFidl(ObjectReader reader, int depth) {
             });
 
     return fit::join_promises(std::move(reader_promise), std::move(children_promise))
-        .and_then([reader](std::tuple<fit::result<fuchsia::inspect::Object>,
+        .and_then([reader](std::tuple<fit::result<fuchsia::inspect::deprecated::Object>,
                                       fit::result<std::vector<ObjectHierarchy>>>& result) mutable
                   -> fit::result<ObjectHierarchy> {
           if (!std::get<0>(result).is_ok() || !std::get<0>(result).is_ok()) {
@@ -249,7 +250,7 @@ fit::result<ObjectHierarchy> ReadFromBuffer(std::vector<uint8_t> buffer) {
   return ::inspect_deprecated::ReadFromSnapshot(std::move(snapshot));
 }
 
-ObjectHierarchy ReadFromFidlObject(fuchsia::inspect::Object object) {
+ObjectHierarchy ReadFromFidlObject(fuchsia::inspect::deprecated::Object object) {
   return ObjectHierarchy(FidlObjectToNode(std::move(object)), {});
 }
 

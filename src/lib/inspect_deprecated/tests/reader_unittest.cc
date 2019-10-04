@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/inspect/cpp/fidl.h>
+#include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
@@ -36,12 +36,12 @@ class TestReader : public gtest::RealLoopFixture {
         root_object_(component::ObjectDir(object_)),
         executor_(dispatcher()),
         server_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-    fuchsia::inspect::InspectSyncPtr ptr;
+    fuchsia::inspect::deprecated::InspectSyncPtr ptr;
     zx::channel server_channel = ptr.NewRequest().TakeChannel();
     server_thread_ = std::thread([this, server_channel = std::move(server_channel)]() mutable {
       async_set_default_dispatcher(server_loop_.dispatcher());
-      fidl::Binding<fuchsia::inspect::Inspect> binding(object_.get(), std::move(server_channel),
-                                                       server_loop_.dispatcher());
+      fidl::Binding<fuchsia::inspect::deprecated::Inspect> binding(
+          object_.get(), std::move(server_channel), server_loop_.dispatcher());
 
       server_loop_.Run();
     });
@@ -58,7 +58,7 @@ class TestReader : public gtest::RealLoopFixture {
  protected:
   std::shared_ptr<component::Object> object_;
   inspect_deprecated::Node root_object_;
-  fidl::InterfaceHandle<fuchsia::inspect::Inspect> client_;
+  fidl::InterfaceHandle<fuchsia::inspect::deprecated::Inspect> client_;
 
  private:
   async::Executor executor_;
@@ -69,9 +69,9 @@ class TestReader : public gtest::RealLoopFixture {
 TEST_F(TestReader, Empty) {
   inspect_deprecated::ObjectReader reader(std::move(client_));
 
-  fit::result<fuchsia::inspect::Object> result;
+  fit::result<fuchsia::inspect::deprecated::Object> result;
   SchedulePromise(reader.Read().then(
-      [&](fit::result<fuchsia::inspect::Object>& res) { result = std::move(res); }));
+      [&](fit::result<fuchsia::inspect::deprecated::Object>& res) { result = std::move(res); }));
 
   RunLoopUntil([&] { return !!result; });
   EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(result.take_value()),
@@ -88,9 +88,9 @@ TEST_F(TestReader, Values) {
       root_object_.CreateByteVectorProperty("bytes", inspect_deprecated::VectorValue(3, 'a'));
 
   inspect_deprecated::ObjectReader reader(std::move(client_));
-  fit::result<fuchsia::inspect::Object> result;
+  fit::result<fuchsia::inspect::deprecated::Object> result;
   SchedulePromise(reader.Read().then(
-      [&](fit::result<fuchsia::inspect::Object>& res) { result = std::move(res); }));
+      [&](fit::result<fuchsia::inspect::deprecated::Object>& res) { result = std::move(res); }));
 
   RunLoopUntil([&] { return !!result; });
 
@@ -126,12 +126,14 @@ TEST_F(TestReader, OpenChild) {
   auto child_b = root_object_.CreateChild("child b");
 
   inspect_deprecated::ObjectReader reader(std::move(client_));
-  fit::result<fuchsia::inspect::Object> result;
-  SchedulePromise(
-      reader.OpenChild("child a")
-          .and_then(
-              [](inspect_deprecated::ObjectReader& child_reader) { return child_reader.Read(); })
-          .then([&](fit::result<fuchsia::inspect::Object>& res) { result = std::move(res); }));
+  fit::result<fuchsia::inspect::deprecated::Object> result;
+  SchedulePromise(reader.OpenChild("child a")
+                      .and_then([](inspect_deprecated::ObjectReader& child_reader) {
+                        return child_reader.Read();
+                      })
+                      .then([&](fit::result<fuchsia::inspect::deprecated::Object>& res) {
+                        result = std::move(res);
+                      }));
 
   RunLoopUntil([&] { return !!result; });
 
@@ -147,22 +149,23 @@ TEST_F(TestReader, OpenChildren) {
   auto metric_b = child_b.CreateIntMetric("value", 1);
 
   inspect_deprecated::ObjectReader reader(std::move(client_));
-  std::vector<fit::result<fuchsia::inspect::Object>> result;
-  SchedulePromise(reader.OpenChildren()
-                      .and_then([](std::vector<inspect_deprecated::ObjectReader>& child_reader) {
-                        std::vector<fit::promise<fuchsia::inspect::Object>> promises;
+  std::vector<fit::result<fuchsia::inspect::deprecated::Object>> result;
+  SchedulePromise(
+      reader.OpenChildren()
+          .and_then([](std::vector<inspect_deprecated::ObjectReader>& child_reader) {
+            std::vector<fit::promise<fuchsia::inspect::deprecated::Object>> promises;
 
-                        for (auto& child : child_reader) {
-                          promises.emplace_back(child.Read());
-                        }
+            for (auto& child : child_reader) {
+              promises.emplace_back(child.Read());
+            }
 
-                        return fit::join_promise_vector(std::move(promises));
-                      })
-                      .and_then([&](std::vector<fit::result<fuchsia::inspect::Object>>& res) {
-                        for (auto& r : res) {
-                          result.emplace_back(std::move(r));
-                        }
-                      }));
+            return fit::join_promise_vector(std::move(promises));
+          })
+          .and_then([&](std::vector<fit::result<fuchsia::inspect::deprecated::Object>>& res) {
+            for (auto& r : res) {
+              result.emplace_back(std::move(r));
+            }
+          }));
 
   RunLoopUntil([&] { return result.size() == 2; });
 

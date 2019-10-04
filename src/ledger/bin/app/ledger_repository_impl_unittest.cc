@@ -4,7 +4,7 @@
 
 #include "src/ledger/bin/app/ledger_repository_impl.h"
 
-#include <fuchsia/inspect/cpp/fidl.h>
+#include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>

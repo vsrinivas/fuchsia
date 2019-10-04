@@ -146,11 +146,11 @@ Node::~Node() {
   }
 };
 
-fuchsia::inspect::Object Node::object() const {
+fuchsia::inspect::deprecated::Object Node::object() const {
   if (object_.index() == kComponentVariant) {
     return object_.template get<kComponentVariant>().object()->ToFidl();
   }
-  return fuchsia::inspect::Object();
+  return fuchsia::inspect::deprecated::Object();
 }
 
 component::ObjectDir Node::object_dir() const {

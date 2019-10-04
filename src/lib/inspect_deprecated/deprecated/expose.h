@@ -8,7 +8,7 @@
 #ifndef SRC_LIB_INSPECT_DEPRECATED_DEPRECATED_EXPOSE_H_
 #define SRC_LIB_INSPECT_DEPRECATED_DEPRECATED_EXPOSE_H_
 
-#include <fuchsia/inspect/cpp/fidl.h>
+#include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
@@ -55,7 +55,7 @@ class Property {
   void Set(StringValueCallback callback);
   void Set(VectorValueCallback callback);
 
-  fuchsia::inspect::Property ToFidl(const std::string& name) const;
+  fuchsia::inspect::deprecated::Property ToFidl(const std::string& name) const;
 
  private:
   // Variants of possible values for this property.
@@ -106,7 +106,7 @@ class Metric {
 
   // Converts the value of this metric into its FIDL representation,
   // using the given name for the |name| field.
-  fuchsia::inspect::Metric ToFidl(const std::string& name) const;
+  fuchsia::inspect::deprecated::Metric ToFidl(const std::string& name) const;
 
   // Adds a numeric type to the value of this metric. The type of
   // the metric will not be affected by this operation regardless of the
@@ -232,7 +232,7 @@ class ChildrenManager {
 // utilities must communicate over the FIDL interface.
 //
 // This class is thread safe.
-class Object : public fuchsia::inspect::Inspect {
+class Object : public fuchsia::inspect::deprecated::Inspect {
  public:
   using ObjectVector = std::vector<std::shared_ptr<Object>>;
   using ChildrenCallback = fit::function<void(ObjectVector*)>;
@@ -338,7 +338,7 @@ class Object : public fuchsia::inspect::Inspect {
                  OpenChildCallback callback) override;
 
   // Turn this |Object| into its FIDL representation.
-  fuchsia::inspect::Object ToFidl();
+  fuchsia::inspect::deprecated::Object ToFidl();
 
   // Returns the names of this Object's children in a vector.
   StringOutputVector GetChildren();
@@ -397,7 +397,7 @@ class Object : public fuchsia::inspect::Inspect {
 
   // The bindings for channels connected to this |Inspect|. The object itself is
   // owned by |self_if_bindings_| below.
-  fidl::BindingSet<fuchsia::inspect::Inspect, Object*> bindings_ __TA_GUARDED(mutex_);
+  fidl::BindingSet<fuchsia::inspect::deprecated::Inspect, Object*> bindings_ __TA_GUARDED(mutex_);
   std::vector<fit::deferred_callback> detachers_ __TA_GUARDED(mutex_);
 
   // A self shared_ptr, held only if |bindings_| is non-empty. Allows avoiding

@@ -21,5 +21,5 @@ TEST_F(GatherInspectableTest, Inspectable) {
   std::string test_string;
   EXPECT_TRUE(dockyard_proxy.CheckStringPrefixSent(
       "inspectable:/hub/c/system_monitor_harvester_test.cmx/", &test_string));
-  EXPECT_EQ("fuchsia.inspect.Inspect", test_string);
+  EXPECT_EQ("fuchsia.inspect.deprecated.Inspect", test_string);
 }

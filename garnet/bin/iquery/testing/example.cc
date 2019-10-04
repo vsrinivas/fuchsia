@@ -6,12 +6,13 @@
 #include <lib/async-loop/default.h>
 #include <lib/inspect_deprecated/component.h>
 #include <lib/sys/cpp/component_context.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/strings/string_printf.h>
 
 #include <variant>
 #include <vector>
+
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/log_settings_command_line.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 #include "lib/inspect_deprecated/inspect.h"
 
@@ -125,9 +126,9 @@ int main(int argc, char** argv) {
 
   // Legacy work required to expose an object tree over FIDL.
   auto root = component::ObjectDir::Make("root");
-  fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings_;
+  fidl::BindingSet<fuchsia::inspect::deprecated::Inspect> inspect_bindings_;
   component_context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
-      fuchsia::inspect::Inspect::Name_,
+      fuchsia::inspect::deprecated::Inspect::Name_,
       std::make_unique<vfs::Service>(inspect_bindings_.GetHandler(root.object().get())));
   auto root_object_fidl = inspect_deprecated::Node(root);
 

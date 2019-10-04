@@ -87,8 +87,8 @@ class SourceTestFidl : public TestFixture {
  protected:
   component::ObjectDir fidl_dir_;
   TestDataWrapper test_data_;
-  fidl::Binding<fuchsia::inspect::Inspect> binding_;
-  fuchsia::inspect::InspectPtr ptr_;
+  fidl::Binding<fuchsia::inspect::deprecated::Inspect> binding_;
+  fuchsia::inspect::deprecated::InspectPtr ptr_;
 };
 
 class SourceTestVmo : public TestFixture {

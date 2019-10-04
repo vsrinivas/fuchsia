@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_INSPECT_DEPRECATED_READER_H_
 #define SRC_LIB_INSPECT_DEPRECATED_READER_H_
 
-#include <fuchsia/inspect/cpp/fidl.h>
+#include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <lib/fit/promise.h>
 #include <lib/inspect/cpp/vmo/snapshot.h>
 
@@ -23,7 +23,7 @@ namespace internal {
 // Wraps the state of the ObjectReader so that ObjectReader remains copyable.
 struct ObjectReaderState {
   // The interface used to communicate with Inspect.
-  fuchsia::inspect::InspectPtr inspect_ptr_;
+  fuchsia::inspect::deprecated::InspectPtr inspect_ptr_;
 };
 }  // namespace internal
 
@@ -34,7 +34,8 @@ struct ObjectReaderState {
 class ObjectReader {
  public:
   // Construct a new Reader that wraps the given handle.
-  explicit ObjectReader(fidl::InterfaceHandle<fuchsia::inspect::Inspect> inspect_handle);
+  explicit ObjectReader(
+      fidl::InterfaceHandle<fuchsia::inspect::deprecated::Inspect> inspect_handle);
 
   // Allow moving and copying.
   ObjectReader(ObjectReader&&) = default;
@@ -46,7 +47,7 @@ class ObjectReader {
 
   // Reads and returns the value of this Object.
   // Returns a promise to the inspect object value.
-  fit::promise<fuchsia::inspect::Object> Read() const;
+  fit::promise<fuchsia::inspect::deprecated::Object> Read() const;
 
   // Lists the children of this Object.
   // Returns a promise to a list of child names.
@@ -100,7 +101,7 @@ fit::result<ObjectHierarchy> ReadFromBuffer(std::vector<uint8_t> buffer);
 ObjectHierarchy ReadFromObject(const Node& object_root, int depth = -1);
 
 // Construct a new object hierarchy by reading the contents of a FIDL wrapper.
-ObjectHierarchy ReadFromFidlObject(const fuchsia::inspect::Object object);
+ObjectHierarchy ReadFromFidlObject(const fuchsia::inspect::deprecated::Object object);
 
 }  // namespace inspect_deprecated
 

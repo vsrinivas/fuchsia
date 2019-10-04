@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/inspect/cpp/fidl.h>
+#include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
@@ -242,9 +242,9 @@ class Element final : public inspect_deprecated::ChildrenManager {
     auto it = children_.find(child_short_name);
     if (it == children_.end()) {
       inspect_deprecated::Node child_inspect_node = inspect_node_.CreateChild(child_short_name);
-      auto emplacement = children_.try_emplace(child_short_name, test_loop_, random_,
-                                           table_->children.find(child_short_name)->second.get(),
-                                           std::move(child_inspect_node));
+      auto emplacement = children_.try_emplace(
+          child_short_name, test_loop_, random_,
+          table_->children.find(child_short_name)->second.get(), std::move(child_inspect_node));
       return &emplacement.first->second;
     } else {
       return &it->second;
@@ -410,14 +410,17 @@ class ChildrenManagerTest : public gtest::TestLoopFixture {
 
  protected:
   ::testing::AssertionResult OpenElementsNode(
-      fidl::InterfacePtr<fuchsia::inspect::Inspect>* elements);
-  ::testing::AssertionResult ReadData(fidl::InterfacePtr<fuchsia::inspect::Inspect>* node,
-                                      fuchsia::inspect::Object* object);
-  ::testing::AssertionResult ListChildren(fidl::InterfacePtr<fuchsia::inspect::Inspect>* node,
-                                          std::vector<std::string>* child_names);
-  ::testing::AssertionResult OpenChild(fidl::InterfacePtr<fuchsia::inspect::Inspect>* parent,
-                                       const std::string& child_name,
-                                       fidl::InterfacePtr<fuchsia::inspect::Inspect>* child);
+      fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* elements);
+  ::testing::AssertionResult ReadData(
+      fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* node,
+      fuchsia::inspect::deprecated::Object* object);
+  ::testing::AssertionResult ListChildren(
+      fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* node,
+      std::vector<std::string>* child_names);
+  ::testing::AssertionResult OpenChild(
+      fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* parent,
+      const std::string& child_name,
+      fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* child);
   ::testing::AssertionResult Activate(Application* application, std::vector<std::string> full_name,
                                       fit::closure* retainer);
   ::testing::AssertionResult ReadWithReaderAPI(inspect_deprecated::ObjectHierarchy* hierarchy);
@@ -429,7 +432,7 @@ class ChildrenManagerTest : public gtest::TestLoopFixture {
 };
 
 ::testing::AssertionResult ChildrenManagerTest::OpenElementsNode(
-    fidl::InterfacePtr<fuchsia::inspect::Inspect>* elements) {
+    fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* elements) {
   bool callback_called;
   bool success;
   top_level_node_.object_dir().object()->OpenChild(
@@ -447,7 +450,8 @@ class ChildrenManagerTest : public gtest::TestLoopFixture {
 }
 
 ::testing::AssertionResult ChildrenManagerTest::ReadData(
-    fidl::InterfacePtr<fuchsia::inspect::Inspect>* node, fuchsia::inspect::Object* object) {
+    fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* node,
+    fuchsia::inspect::deprecated::Object* object) {
   bool callback_called;
   (*node)->ReadData(callback::Capture(callback::SetWhenCalled(&callback_called), object));
   RunLoopUntilIdle();
@@ -459,7 +463,8 @@ class ChildrenManagerTest : public gtest::TestLoopFixture {
 }
 
 ::testing::AssertionResult ChildrenManagerTest::ListChildren(
-    fidl::InterfacePtr<fuchsia::inspect::Inspect>* node, std::vector<std::string>* child_names) {
+    fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* node,
+    std::vector<std::string>* child_names) {
   bool callback_called;
   (*node)->ListChildren(callback::Capture(callback::SetWhenCalled(&callback_called), child_names));
   RunLoopUntilIdle();
@@ -471,8 +476,9 @@ class ChildrenManagerTest : public gtest::TestLoopFixture {
 }
 
 ::testing::AssertionResult ChildrenManagerTest::OpenChild(
-    fidl::InterfacePtr<fuchsia::inspect::Inspect>* parent, const std::string& child_name,
-    fidl::InterfacePtr<fuchsia::inspect::Inspect>* child) {
+    fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* parent,
+    const std::string& child_name,
+    fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* child) {
   bool callback_called;
   bool success;
   (*parent)->OpenChild(child_name, child->NewRequest(),
@@ -509,7 +515,7 @@ class ChildrenManagerTest : public gtest::TestLoopFixture {
     inspect_deprecated::ObjectHierarchy* hierarchy) {
   bool callback_called;
   bool success;
-  fidl::InterfaceHandle<fuchsia::inspect::Inspect> inspect_handle;
+  fidl::InterfaceHandle<fuchsia::inspect::deprecated::Inspect> inspect_handle;
   top_level_node_.object_dir().object()->OpenChild(
       kElementsInspectPathComponent, inspect_handle.NewRequest(),
       callback::Capture(callback::SetWhenCalled(&callback_called), &success));
@@ -549,20 +555,20 @@ TEST_F(ChildrenManagerTest, SingleDynamicElement) {
   fit::closure a_retainer;
   ASSERT_TRUE(Activate(&application, {dynamic_child_full_name[0]}, &a_retainer));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> elements_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> elements_ptr;
   ASSERT_TRUE(OpenElementsNode(&elements_ptr));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> a_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_ptr;
   ASSERT_TRUE(OpenChild(&elements_ptr, dynamic_child_full_name[0], &a_ptr));
 
   ASSERT_EQ(Activity::INACTIVE, application.DebugGetActivity(dynamic_child_full_name));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> a_b_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_b_ptr;
   ASSERT_TRUE(OpenChild(&a_ptr, dynamic_child_full_name[1], &a_b_ptr));
 
   ASSERT_EQ(Activity::ACTIVE, application.DebugGetActivity(dynamic_child_full_name));
 
-  fuchsia::inspect::Object object;
+  fuchsia::inspect::deprecated::Object object;
   ASSERT_TRUE(ReadData(&a_b_ptr, &object));
   ASSERT_EQ(dynamic_child_full_name[1], object.name);
 
@@ -586,10 +592,10 @@ TEST_F(ChildrenManagerTest, SingleElementInspectInsideUse) {
   fit::closure a_retainer;
   ASSERT_TRUE(Activate(&application, {dynamic_child_full_name[0]}, &a_retainer));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> elements_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> elements_ptr;
   ASSERT_TRUE(OpenElementsNode(&elements_ptr));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> a_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_ptr;
   ASSERT_TRUE(OpenChild(&elements_ptr, dynamic_child_full_name[0], &a_ptr));
 
   ASSERT_EQ(Activity::INACTIVE, application.DebugGetActivity(dynamic_child_full_name));
@@ -599,12 +605,12 @@ TEST_F(ChildrenManagerTest, SingleElementInspectInsideUse) {
 
   ASSERT_EQ(Activity::ACTIVE, application.DebugGetActivity(dynamic_child_full_name));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> a_b_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_b_ptr;
   ASSERT_TRUE(OpenChild(&a_ptr, dynamic_child_full_name[1], &a_b_ptr));
 
   ASSERT_EQ(Activity::ACTIVE, application.DebugGetActivity(dynamic_child_full_name));
 
-  fuchsia::inspect::Object object;
+  fuchsia::inspect::deprecated::Object object;
   ASSERT_TRUE(ReadData(&a_b_ptr, &object));
   ASSERT_EQ(dynamic_child_full_name[1], object.name);
 
@@ -632,15 +638,15 @@ TEST_F(ChildrenManagerTest, SingleElementInspectBeforeAndIntoUse) {
   fit::closure a_retainer;
   ASSERT_TRUE(Activate(&application, {dynamic_child_full_name[0]}, &a_retainer));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> elements_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> elements_ptr;
   ASSERT_TRUE(OpenElementsNode(&elements_ptr));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> a_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_ptr;
   ASSERT_TRUE(OpenChild(&elements_ptr, dynamic_child_full_name[0], &a_ptr));
 
   ASSERT_EQ(Activity::INACTIVE, application.DebugGetActivity(dynamic_child_full_name));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> a_b_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_b_ptr;
   ASSERT_TRUE(OpenChild(&a_ptr, dynamic_child_full_name[1], &a_b_ptr));
 
   ASSERT_EQ(Activity::ACTIVE, application.DebugGetActivity(dynamic_child_full_name));
@@ -650,7 +656,7 @@ TEST_F(ChildrenManagerTest, SingleElementInspectBeforeAndIntoUse) {
 
   ASSERT_EQ(Activity::ACTIVE, application.DebugGetActivity(dynamic_child_full_name));
 
-  fuchsia::inspect::Object object;
+  fuchsia::inspect::deprecated::Object object;
   ASSERT_TRUE(ReadData(&a_b_ptr, &object));
   ASSERT_EQ(dynamic_child_full_name[1], object.name);
 
@@ -678,15 +684,15 @@ TEST_F(ChildrenManagerTest, SingleElementUseInsideInspect) {
   fit::closure a_retainer;
   ASSERT_TRUE(Activate(&application, {dynamic_child_full_name[0]}, &a_retainer));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> elements_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> elements_ptr;
   ASSERT_TRUE(OpenElementsNode(&elements_ptr));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> a_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_ptr;
   ASSERT_TRUE(OpenChild(&elements_ptr, dynamic_child_full_name[0], &a_ptr));
 
   ASSERT_EQ(Activity::INACTIVE, application.DebugGetActivity(dynamic_child_full_name));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> a_b_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_b_ptr;
   ASSERT_TRUE(OpenChild(&a_ptr, dynamic_child_full_name[1], &a_b_ptr));
 
   ASSERT_EQ(Activity::ACTIVE, application.DebugGetActivity(dynamic_child_full_name));
@@ -701,7 +707,7 @@ TEST_F(ChildrenManagerTest, SingleElementUseInsideInspect) {
 
   ASSERT_EQ(Activity::ACTIVE, application.DebugGetActivity(dynamic_child_full_name));
 
-  fuchsia::inspect::Object object;
+  fuchsia::inspect::deprecated::Object object;
   ASSERT_TRUE(ReadData(&a_b_ptr, &object));
   ASSERT_EQ(dynamic_child_full_name[1], object.name);
 
@@ -724,10 +730,10 @@ TEST_F(ChildrenManagerTest, SingleElementUseBeforeAndIntoInspect) {
   fit::closure a_retainer;
   ASSERT_TRUE(Activate(&application, {dynamic_child_full_name[0]}, &a_retainer));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> elements_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> elements_ptr;
   ASSERT_TRUE(OpenElementsNode(&elements_ptr));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> a_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_ptr;
   ASSERT_TRUE(OpenChild(&elements_ptr, dynamic_child_full_name[0], &a_ptr));
 
   ASSERT_EQ(Activity::INACTIVE, application.DebugGetActivity(dynamic_child_full_name));
@@ -737,12 +743,12 @@ TEST_F(ChildrenManagerTest, SingleElementUseBeforeAndIntoInspect) {
 
   ASSERT_EQ(Activity::ACTIVE, application.DebugGetActivity(dynamic_child_full_name));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> a_b_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_b_ptr;
   ASSERT_TRUE(OpenChild(&a_ptr, dynamic_child_full_name[1], &a_b_ptr));
 
   ASSERT_EQ(Activity::ACTIVE, application.DebugGetActivity(dynamic_child_full_name));
 
-  fuchsia::inspect::Object object;
+  fuchsia::inspect::deprecated::Object object;
   ASSERT_TRUE(ReadData(&a_b_ptr, &object));
   ASSERT_EQ(dynamic_child_full_name[1], object.name);
 
@@ -770,12 +776,12 @@ TEST_F(ChildrenManagerTest, ElementsDeletedDuringInspection) {
   fit::closure a_retainer;
   ASSERT_TRUE(Activate(&application, {deepest_child_full_name[0]}, &a_retainer));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> elements_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> elements_ptr;
   ASSERT_TRUE(OpenElementsNode(&elements_ptr));
 
   bool a_error_callback_called;
   zx_status_t a_error_status;
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> a_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_ptr;
   a_ptr.set_error_handler(
       callback::Capture(callback::SetWhenCalled(&a_error_callback_called), &a_error_status));
   ASSERT_TRUE(OpenChild(&elements_ptr, deepest_child_full_name[0], &a_ptr));
@@ -784,7 +790,7 @@ TEST_F(ChildrenManagerTest, ElementsDeletedDuringInspection) {
 
   bool a_b_error_callback_called;
   zx_status_t a_b_error_status;
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> a_b_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_b_ptr;
   a_b_ptr.set_error_handler(
       callback::Capture(callback::SetWhenCalled(&a_b_error_callback_called), &a_b_error_status));
   ASSERT_TRUE(OpenChild(&a_ptr, deepest_child_full_name[1], &a_b_ptr));
@@ -793,14 +799,14 @@ TEST_F(ChildrenManagerTest, ElementsDeletedDuringInspection) {
 
   bool a_b_c_error_callback_called;
   zx_status_t a_b_c_error_status;
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> a_b_c_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_b_c_ptr;
   a_b_c_ptr.set_error_handler(callback::Capture(
       callback::SetWhenCalled(&a_b_c_error_callback_called), &a_b_c_error_status));
   ASSERT_TRUE(OpenChild(&a_b_ptr, deepest_child_full_name[2], &a_b_c_ptr));
 
   ASSERT_EQ(Activity::ACTIVE, application.DebugGetActivity(deepest_child_full_name));
 
-  fuchsia::inspect::Object object;
+  fuchsia::inspect::deprecated::Object object;
   ASSERT_TRUE(ReadData(&a_b_c_ptr, &object));
   ASSERT_EQ(deepest_child_full_name[2], object.name);
 
@@ -859,29 +865,29 @@ TEST_F(ChildrenManagerTest, FiveLevelsOfDynamicism) {
   fit::closure a_retainer;
   ASSERT_TRUE(Activate(&application, {"a"}, &a_retainer));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> elements_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> elements_ptr;
   ASSERT_TRUE(OpenElementsNode(&elements_ptr));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> a_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_ptr;
   ASSERT_TRUE(OpenChild(&elements_ptr, "a", &a_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> b_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> b_ptr;
   ASSERT_TRUE(OpenChild(&a_ptr, "b", &b_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> c_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> c_ptr;
   ASSERT_TRUE(OpenChild(&b_ptr, "c", &c_ptr));
 
   std::vector<std::string> c_child_names;
   ASSERT_TRUE(ListChildren(&c_ptr, &c_child_names));
   ASSERT_THAT(c_child_names, ElementsAre("1", "d"));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> d_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> d_ptr;
   ASSERT_TRUE(OpenChild(&c_ptr, "d", &d_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> e_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> e_ptr;
   ASSERT_TRUE(OpenChild(&d_ptr, "e", &e_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> one_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> one_ptr;
   ASSERT_TRUE(OpenChild(&c_ptr, "1", &one_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> two_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> two_ptr;
   ASSERT_TRUE(OpenChild(&one_ptr, "2", &two_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> three_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> three_ptr;
   ASSERT_TRUE(OpenChild(&two_ptr, "3", &three_ptr));
 
   ASSERT_EQ(Activity::ACTIVE, application.DebugGetActivity(deep_child_full_name));
@@ -927,52 +933,52 @@ TEST_F(ChildrenManagerTest, ConcurrentInspections) {
   fit::closure a_retainer;
   ASSERT_TRUE(Activate(&application, {"a"}, &a_retainer));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> first_elements_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> first_elements_ptr;
   ASSERT_TRUE(OpenElementsNode(&first_elements_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> second_elements_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> second_elements_ptr;
   ASSERT_TRUE(OpenElementsNode(&second_elements_ptr));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> first_a_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> first_a_ptr;
   ASSERT_TRUE(OpenChild(&first_elements_ptr, "a", &first_a_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> first_b_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> first_b_ptr;
   ASSERT_TRUE(OpenChild(&first_a_ptr, "b", &first_b_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> first_c_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> first_c_ptr;
   ASSERT_TRUE(OpenChild(&first_b_ptr, "c", &first_c_ptr));
 
   std::vector<std::string> c_child_names;
   ASSERT_TRUE(ListChildren(&first_c_ptr, &c_child_names));
   ASSERT_THAT(c_child_names, ElementsAre("1", "d"));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> first_d_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> first_d_ptr;
   ASSERT_TRUE(OpenChild(&first_c_ptr, "d", &first_d_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> first_e_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> first_e_ptr;
   ASSERT_TRUE(OpenChild(&first_d_ptr, "e", &first_e_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> first_one_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> first_one_ptr;
   ASSERT_TRUE(OpenChild(&first_c_ptr, "1", &first_one_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> first_two_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> first_two_ptr;
   ASSERT_TRUE(OpenChild(&first_one_ptr, "2", &first_two_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> first_three_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> first_three_ptr;
   ASSERT_TRUE(OpenChild(&first_two_ptr, "3", &first_three_ptr));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> second_a_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> second_a_ptr;
   ASSERT_TRUE(OpenChild(&second_elements_ptr, "a", &second_a_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> second_b_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> second_b_ptr;
   ASSERT_TRUE(OpenChild(&second_a_ptr, "b", &second_b_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> second_c_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> second_c_ptr;
   ASSERT_TRUE(OpenChild(&second_b_ptr, "c", &second_c_ptr));
 
   ASSERT_TRUE(ListChildren(&second_c_ptr, &c_child_names));
   ASSERT_THAT(c_child_names, ElementsAre("1", "d"));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> second_d_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> second_d_ptr;
   ASSERT_TRUE(OpenChild(&second_c_ptr, "d", &second_d_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> second_e_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> second_e_ptr;
   ASSERT_TRUE(OpenChild(&second_d_ptr, "e", &second_e_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> second_one_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> second_one_ptr;
   ASSERT_TRUE(OpenChild(&second_c_ptr, "1", &second_one_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> second_two_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> second_two_ptr;
   ASSERT_TRUE(OpenChild(&second_one_ptr, "2", &second_two_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> second_three_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> second_three_ptr;
   ASSERT_TRUE(OpenChild(&second_two_ptr, "3", &second_three_ptr));
 
   ASSERT_EQ(Activity::ACTIVE, application.DebugGetActivity(deep_child_full_name));
@@ -1083,27 +1089,27 @@ TEST_F(ChildrenManagerTest, ReaderAPIConcurrentInspection) {
   fit::closure c_retainer;
   ASSERT_TRUE(Activate(&application, {"c"}, &c_retainer));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> elements_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> elements_ptr;
   ASSERT_TRUE(OpenElementsNode(&elements_ptr));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> a_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_ptr;
   ASSERT_TRUE(OpenChild(&elements_ptr, "a", &a_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> a_a_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_a_ptr;
   ASSERT_TRUE(OpenChild(&a_ptr, "a", &a_a_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> a_a_a_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_a_a_ptr;
   ASSERT_TRUE(OpenChild(&a_a_ptr, "a", &a_a_a_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> b_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> b_ptr;
   ASSERT_TRUE(OpenChild(&elements_ptr, "b", &b_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> b_b_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> b_b_ptr;
   ASSERT_TRUE(OpenChild(&b_ptr, "b", &b_b_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> c_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> c_ptr;
   ASSERT_TRUE(OpenChild(&elements_ptr, "c", &c_ptr));
 
   // And for the heck of it: keep a connection to b-a-b without keeping a
   // connection to b-a:
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> b_a_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> b_a_ptr;
   ASSERT_TRUE(OpenChild(&b_ptr, "a", &b_a_ptr));
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> b_a_b_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> b_a_b_ptr;
   ASSERT_TRUE(OpenChild(&b_a_ptr, "b", &b_a_b_ptr));
   b_a_ptr.Unbind();
   RunLoopUntilIdle();
@@ -1135,10 +1141,10 @@ TEST_F(ChildrenManagerTest, AbsentChildDoesNotDeadlock) {
   });
   auto children_manager_retainer = elements_node_.SetChildrenManager(&children_manager);
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> elements_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> elements_ptr;
   ASSERT_TRUE(OpenElementsNode(&elements_ptr));
 
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> no_such_child_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> no_such_child_ptr;
   ASSERT_FALSE(OpenChild(&elements_ptr, "no_such_child", &no_such_child_ptr));
   ASSERT_TRUE(on_detachment_called);
 }

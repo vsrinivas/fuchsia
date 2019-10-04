@@ -180,11 +180,12 @@ ComponentControllerImpl::ComponentControllerImpl(
   // Serve connections to the system_objects interface.
   auto system_objects = fbl::MakeRefCounted<fs::PseudoDir>();
   system_objects->AddEntry(
-      fuchsia::inspect::Inspect::Name_,
+      fuchsia::inspect::deprecated::Inspect::Name_,
       fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
         system_directory_bindings_.AddBinding(
             system_objects_directory_.object(),
-            fidl::InterfaceRequest<fuchsia::inspect::Inspect>(std::move(channel)), nullptr);
+            fidl::InterfaceRequest<fuchsia::inspect::deprecated::Inspect>(std::move(channel)),
+            nullptr);
         return ZX_OK;
       }));
 

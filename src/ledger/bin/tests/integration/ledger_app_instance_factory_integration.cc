@@ -89,8 +89,8 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
       fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory> repository_factory_ptr,
       cloud_provider::CloudControllerPtr* cloud_controller,
       std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
-      fidl::InterfaceRequest<fuchsia::inspect::Inspect> inspect_request,
-      fidl::InterfacePtr<fuchsia::inspect::Inspect> inspect_ptr);
+      fidl::InterfaceRequest<fuchsia::inspect::deprecated::Inspect> inspect_request,
+      fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> inspect_ptr);
   ~LedgerAppInstanceImpl() override;
 
  private:
@@ -101,8 +101,8 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
         fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> request,
         std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
         inspect_deprecated::Node repositories_node,
-        fidl::InterfaceRequest<fuchsia::inspect::Inspect> inspect_request,
-        fuchsia::inspect::Inspect* inspect_impl)
+        fidl::InterfaceRequest<fuchsia::inspect::deprecated::Inspect> inspect_request,
+        fuchsia::inspect::deprecated::Inspect* inspect_impl)
         : environment_(environment),
           factory_impl_(environment_, std::move(user_communicator_factory),
                         std::move(repositories_node)),
@@ -116,7 +116,7 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
     Environment* environment_;
     LedgerRepositoryFactoryImpl factory_impl_;
     SyncableBinding<fuchsia::ledger::internal::LedgerRepositoryFactorySyncableDelegate> binding_;
-    fidl::Binding<fuchsia::inspect::Inspect> inspect_binding_;
+    fidl::Binding<fuchsia::inspect::deprecated::Inspect> inspect_binding_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryContainer);
   };
@@ -145,8 +145,8 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory> repository_factory_ptr,
     cloud_provider::CloudControllerPtr* cloud_controller,
     std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
-    fidl::InterfaceRequest<fuchsia::inspect::Inspect> inspect_request,
-    fidl::InterfacePtr<fuchsia::inspect::Inspect> inspect_ptr)
+    fidl::InterfaceRequest<fuchsia::inspect::deprecated::Inspect> inspect_request,
+    fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> inspect_ptr)
     : LedgerAppInstanceFactory::LedgerAppInstance(loop_controller, convert::ToArray(kLedgerName),
                                                   std::move(repository_factory_ptr),
                                                   std::move(inspect_ptr)),
@@ -299,8 +299,9 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   ledger_internal::LedgerRepositoryFactoryPtr repository_factory_ptr;
   fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> repository_factory_request =
       repository_factory_ptr.NewRequest();
-  fuchsia::inspect::InspectPtr inspect_ptr;
-  fidl::InterfaceRequest<fuchsia::inspect::Inspect> inspect_request = inspect_ptr.NewRequest();
+  fuchsia::inspect::deprecated::InspectPtr inspect_ptr;
+  fidl::InterfaceRequest<fuchsia::inspect::deprecated::Inspect> inspect_request =
+      inspect_ptr.NewRequest();
   auto loop = loop_controller_.StartNewLoop();
   auto io_loop = loop_controller_.StartNewLoop();
   auto environment = std::make_unique<Environment>(

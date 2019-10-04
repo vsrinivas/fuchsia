@@ -5,7 +5,7 @@
 use {
     failure::{bail, Error},
     fdio, fidl,
-    fidl_fuchsia_inspect::{InspectMarker, InspectProxy, MetricValue, PropertyValue},
+    fidl_fuchsia_inspect_deprecated::{InspectMarker, InspectProxy, MetricValue, PropertyValue},
     fidl_fuchsia_io::NodeInfo,
     fuchsia_async as fasync,
     fuchsia_inspect::reader::{NodeHierarchy, Property},
@@ -106,7 +106,9 @@ mod tests {
 
     use {
         super::*,
-        fidl_fuchsia_inspect::{InspectRequest, InspectRequestStream, Metric, Object, Property},
+        fidl_fuchsia_inspect_deprecated::{
+            InspectRequest, InspectRequestStream, Metric, Object, Property,
+        },
         fuchsia_inspect::assert_inspect_tree,
         futures::{TryFutureExt, TryStreamExt},
         lazy_static::lazy_static,

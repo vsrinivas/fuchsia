@@ -463,7 +463,7 @@ class Node final {
 
   // Output the contents of this node as a FIDL struct.
   // For Nodes stored in a VMO, this method returns a default value.
-  fuchsia::inspect::Object object() const;
+  fuchsia::inspect::deprecated::Object object() const;
 
   // Get an ObjectDir wrapping this Node's state.
   // For Nodes stored in a VMO, this method returns a default value.

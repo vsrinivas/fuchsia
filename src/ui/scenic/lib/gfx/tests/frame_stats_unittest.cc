@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/gfx/engine/frame_stats.h"
 
-#include <fuchsia/inspect/cpp/fidl.h>
+#include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
@@ -47,12 +47,12 @@ class FrameStatsTest : public gtest::RealLoopFixture {
         root_object_(component::ObjectDir(object_)),
         executor_(dispatcher()),
         server_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-    fuchsia::inspect::InspectSyncPtr ptr;
+    fuchsia::inspect::deprecated::InspectSyncPtr ptr;
     zx::channel server_channel = ptr.NewRequest().TakeChannel();
     server_thread_ = std::thread([this, server_channel = std::move(server_channel)]() mutable {
       async_set_default_dispatcher(server_loop_.dispatcher());
-      fidl::Binding<fuchsia::inspect::Inspect> binding(object_.get(), std::move(server_channel),
-                                                       server_loop_.dispatcher());
+      fidl::Binding<fuchsia::inspect::deprecated::Inspect> binding(
+          object_.get(), std::move(server_channel), server_loop_.dispatcher());
 
       server_loop_.Run();
     });
@@ -67,14 +67,16 @@ class FrameStatsTest : public gtest::RealLoopFixture {
   void SchedulePromise(fit::pending_task promise) { executor_.schedule_task(std::move(promise)); }
 
   // Helper function for test boiler plate.
-  fit::result<fuchsia::inspect::Object> ReadInspectVmo() {
+  fit::result<fuchsia::inspect::deprecated::Object> ReadInspectVmo() {
     inspect_deprecated::ObjectReader reader(std::move(client_));
-    fit::result<fuchsia::inspect::Object> result;
-    SchedulePromise(
-        reader.OpenChild(kFrameStatsNodeName)
-            .and_then(
-                [](inspect_deprecated::ObjectReader& child_reader) { return child_reader.Read(); })
-            .then([&](fit::result<fuchsia::inspect::Object>& res) { result = std::move(res); }));
+    fit::result<fuchsia::inspect::deprecated::Object> result;
+    SchedulePromise(reader.OpenChild(kFrameStatsNodeName)
+                        .and_then([](inspect_deprecated::ObjectReader& child_reader) {
+                          return child_reader.Read();
+                        })
+                        .then([&](fit::result<fuchsia::inspect::deprecated::Object>& res) {
+                          result = std::move(res);
+                        }));
     RunLoopUntil([&] { return !!result; });
 
     return result;
@@ -83,7 +85,7 @@ class FrameStatsTest : public gtest::RealLoopFixture {
  protected:
   std::shared_ptr<component::Object> object_;
   inspect_deprecated::Node root_object_;
-  fidl::InterfaceHandle<fuchsia::inspect::Inspect> client_;
+  fidl::InterfaceHandle<fuchsia::inspect::deprecated::Inspect> client_;
 
  private:
   async::Executor executor_;
@@ -94,7 +96,7 @@ class FrameStatsTest : public gtest::RealLoopFixture {
 TEST_F(FrameStatsTest, SmokeTest_TriggerLazyStringProperties) {
   FrameStats stats(root_object_.CreateChild(kFrameStatsNodeName));
 
-  fit::result<fuchsia::inspect::Object> result = ReadInspectVmo();
+  fit::result<fuchsia::inspect::deprecated::Object> result = ReadInspectVmo();
 
   EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(result.take_value()),
               NodeMatches(AllOf(NameMatches(kFrameStatsNodeName), MetricList(IsEmpty()),
@@ -157,7 +159,7 @@ TEST_F(FrameStatsTest, SmokeTest_DummyFrameTimings) {
     delayed_times.actual_presentation_time += zx::msec(32);
   }
 
-  fit::result<fuchsia::inspect::Object> result = ReadInspectVmo();
+  fit::result<fuchsia::inspect::deprecated::Object> result = ReadInspectVmo();
 
   EXPECT_THAT(inspect_deprecated::ReadFromFidlObject(result.take_value()),
               NodeMatches(AllOf(NameMatches(kFrameStatsNodeName), MetricList(IsEmpty()),

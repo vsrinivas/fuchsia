@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use failure::Error;
-use fidl_fuchsia_inspect::Object;
+use fidl_fuchsia_inspect_deprecated::Object;
 use fuchsia_zircon as zx;
 use std::path::Path;
 
@@ -17,7 +17,8 @@ impl InspectObject {
         exclude_objects: &Vec<String>,
         client_channel: zx::Channel,
     ) -> Result<InspectObject, Error> {
-        let mut inspect = fidl_fuchsia_inspect::InspectSynchronousProxy::new(client_channel);
+        let mut inspect =
+            fidl_fuchsia_inspect_deprecated::InspectSynchronousProxy::new(client_channel);
         let inspect_object = inspect.read_data(zx::Time::INFINITE)?;
 
         let children = inspect.list_children(zx::Time::INFINITE)?;

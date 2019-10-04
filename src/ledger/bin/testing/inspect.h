@@ -31,29 +31,29 @@ inline constexpr fxl::StringView kSystemUnderTestAttachmentPointPathComponent = 
 // Given an |inspect_deprecated::Node| under which another |inspect_deprecated::Node| is available
 // at |child_name|, binds |child| to the child node.
 testing::AssertionResult OpenChild(inspect_deprecated::Node* parent, const std::string& child_name,
-                                   fidl::InterfacePtr<fuchsia::inspect::Inspect>* child,
+                                   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* child,
                                    LoopController* loop_controller);
 
 // Given an |inspect_deprecated::Node| under which another |inspect_deprecated::Node| is available
 // at |child_name|, binds |child| to the child node.
 testing::AssertionResult OpenChild(inspect_deprecated::Node* parent, const std::string& child_name,
-                                   fidl::InterfacePtr<fuchsia::inspect::Inspect>* child,
+                                   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* child,
                                    async::TestLoop* test_loop);
 
-// Given a |fidl::InterfaceHandle<fuchsia::inspect_deprecated::Inspect>| to an
+// Given a |fidl::InterfaceHandle<fuchsia::inspect::deprecated::Inspect>| to an
 // |inspect_deprecated::Node| under which another |inspect_deprecated::Node| is available at
 // |child_name|, binds |child| to the child node.
-testing::AssertionResult OpenChild(fidl::InterfacePtr<fuchsia::inspect::Inspect>* parent,
-                                   const std::string& child_name,
-                                   fidl::InterfacePtr<fuchsia::inspect::Inspect>* child,
-                                   async::TestLoop* test_loop);
+testing::AssertionResult OpenChild(
+    fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* parent,
+    const std::string& child_name, fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* child,
+    async::TestLoop* test_loop);
 
-// Given a |fidl::InterfacePtr<fuchsia::inspect::Inspect>*| under which the system under test's
-// Inspect hierarchy is available, reads the exposed Inspect data of the system under test and
-// assigned to |hierarchy| the |inspect_deprecated::ObjectHierarchy| of the read data.
-testing::AssertionResult Inspect(fidl::InterfacePtr<fuchsia::inspect::Inspect>* top_level,
-                                 LoopController* loop_controller,
-                                 inspect_deprecated::ObjectHierarchy* hierarchy);
+// Given a |fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>*| under which the system under
+// test's Inspect hierarchy is available, reads the exposed Inspect data of the system under test
+// and assigned to |hierarchy| the |inspect_deprecated::ObjectHierarchy| of the read data.
+testing::AssertionResult Inspect(
+    fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* top_level,
+    LoopController* loop_controller, inspect_deprecated::ObjectHierarchy* hierarchy);
 
 // Given an |inspect_deprecated::Node| under which another |inspect_deprecated::Node| is available
 // at |kSystemUnderTestAttachmentPointPathComponent|, reads the exposed Inspect data of the system

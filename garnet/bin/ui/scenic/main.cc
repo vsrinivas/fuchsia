@@ -7,9 +7,10 @@
 #include <lib/fsl/syslogger/init.h>
 #include <lib/inspect_deprecated/inspect.h>
 #include <lib/sys/cpp/component_context.h>
-#include <trace-provider/provider.h>
 
 #include <memory>
+
+#include <trace-provider/provider.h>
 
 #include "garnet/bin/ui/scenic/app.h"
 #include "src/lib/fxl/command_line.h"
@@ -29,9 +30,9 @@ int main(int argc, const char** argv) {
 
   // Set up an inspect_deprecated::Node to inject into the App.
   auto object_dir = component::ObjectDir(component::Object::Make("objects"));
-  fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings;
+  fidl::BindingSet<fuchsia::inspect::deprecated::Inspect> inspect_bindings;
   app_context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
-      fuchsia::inspect::Inspect::Name_,
+      fuchsia::inspect::deprecated::Inspect::Name_,
       std::make_unique<vfs::Service>(inspect_bindings.GetHandler(object_dir.object().get())));
 
   scenic_impl::App app(std::move(app_context), inspect_deprecated::Node(std::move(object_dir)),

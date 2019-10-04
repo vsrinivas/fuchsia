@@ -50,7 +50,7 @@ using ::testing::UnorderedElementsAreArray;
 
 template <typename P>
 testing::AssertionResult OpenChild(P parent, const std::string& child_name,
-                                   fidl::InterfacePtr<fuchsia::inspect::Inspect>* child,
+                                   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* child,
                                    LoopController* loop_controller) {
   bool success;
   std::unique_ptr<CallbackWaiter> waiter = loop_controller->NewWaiter();
@@ -68,32 +68,32 @@ testing::AssertionResult OpenChild(P parent, const std::string& child_name,
 }  // namespace
 
 testing::AssertionResult OpenChild(inspect_deprecated::Node* parent, const std::string& child_name,
-                                   fidl::InterfacePtr<fuchsia::inspect::Inspect>* child,
+                                   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* child,
                                    LoopController* loop_controller) {
   std::shared_ptr<component::Object> parent_object = parent->object_dir().object();
   return OpenChild(&parent_object, child_name, child, loop_controller);
 }
 
 testing::AssertionResult OpenChild(inspect_deprecated::Node* parent, const std::string& child_name,
-                                   fidl::InterfacePtr<fuchsia::inspect::Inspect>* child,
+                                   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* child,
                                    async::TestLoop* test_loop) {
   std::shared_ptr<component::Object> parent_object = parent->object_dir().object();
   LoopControllerTestLoop loop_controller(test_loop);
   return OpenChild(&parent_object, child_name, child, &loop_controller);
 }
 
-testing::AssertionResult OpenChild(fidl::InterfacePtr<fuchsia::inspect::Inspect>* parent,
-                                   const std::string& child_name,
-                                   fidl::InterfacePtr<fuchsia::inspect::Inspect>* child,
-                                   async::TestLoop* test_loop) {
+testing::AssertionResult OpenChild(
+    fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* parent,
+    const std::string& child_name, fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* child,
+    async::TestLoop* test_loop) {
   LoopControllerTestLoop loop_controller(test_loop);
   return OpenChild(parent, child_name, child, &loop_controller);
 }
 
-testing::AssertionResult Inspect(fuchsia::inspect::InspectPtr* top_level,
+testing::AssertionResult Inspect(fuchsia::inspect::deprecated::InspectPtr* top_level,
                                  LoopController* loop_controller,
                                  inspect_deprecated::ObjectHierarchy* hierarchy) {
-  fidl::InterfaceHandle<fuchsia::inspect::Inspect> handle = top_level->Unbind();
+  fidl::InterfaceHandle<fuchsia::inspect::deprecated::Inspect> handle = top_level->Unbind();
   inspect_deprecated::ObjectReader object_reader =
       inspect_deprecated::ObjectReader(std::move(handle));
   async::Executor executor(loop_controller->dispatcher());
@@ -121,7 +121,7 @@ testing::AssertionResult Inspect(inspect_deprecated::Node* top_level_node,
                                  async::TestLoop* test_loop,
                                  inspect_deprecated::ObjectHierarchy* hierarchy) {
   LoopControllerTestLoop loop_controller(test_loop);
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> inspect_ptr;
+  fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> inspect_ptr;
   testing::AssertionResult open_child_result =
       OpenChild(top_level_node, kSystemUnderTestAttachmentPointPathComponent.ToString(),
                 &inspect_ptr, &loop_controller);

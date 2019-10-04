@@ -97,9 +97,9 @@ by replacing the setup code with the following:
 
 // Legacy work required to expose an inspect hierarchy over FIDL.
 auto root = component::ObjectDir::Make("root");
-fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings_;
+fidl::BindingSet<fuchsia::inspect::deprecated::Inspect> inspect_bindings_;
 component_context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
-    fuchsia::inspect::Inspect::Name_,
+    fuchsia::inspect::deprecated::Inspect::Name_,
     std::make_unique<vfs::Service>(
         inspect_bindings_.GetHandler(root.object().get())));
 auto root_node = inspect::Node(root);
