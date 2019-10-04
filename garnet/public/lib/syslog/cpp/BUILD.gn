@@ -10,9 +10,9 @@ group("tests") {
   testonly = true
 }
 
-# Do not use this target directly, instead depend on //src/lib/syslog/cpp:cpp.
+# Do not use this target directly, instead depend on //src/lib/syslog/cpp.
 group("cpp") {
   public_deps = [
-    "//src/lib/syslog/cpp:cpp",
+    "//src/lib/syslog/cpp",
   ]
 }
