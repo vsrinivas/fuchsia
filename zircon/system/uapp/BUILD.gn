@@ -57,7 +57,6 @@ group("uapp") {
     "spawn",
     "spiutil",
     "storage-metrics",
-    "strerror",
     "suspendtest",
     "system-version",
     "tee-test",
