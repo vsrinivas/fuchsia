@@ -49,7 +49,6 @@ void main(List<String> args) {
     expect(result, equals(contentsRoot));
   });
 
-
   test('inspectComponentRoot fails if multiple components with same name',
       () async {
     const componentName = 'foo';
@@ -125,45 +124,58 @@ void main(List<String> args) {
 
   group(FreezeDetector, () {
     test('no freeze', () async {
-      final inspect = FakeInspect()..delay = const Duration(milliseconds: 10);
-      final freezeDetector = FreezeDetector(inspect)
-        ..threshold = const Duration(seconds: 1)
-        ..start();
+      FakeAsync().run((fakeAsync) {
+        final inspect = FakeInspect()..delay = const Duration(milliseconds: 10);
+        final freezeDetector = FreezeDetector(inspect)
+          ..threshold = const Duration(seconds: 1)
+          ..start();
 
-      await Future.delayed(Duration(seconds: 1));
-      freezeDetector.stop();
+        fakeAsync.elapse(Duration(seconds: 1));
+        freezeDetector.stop();
+        fakeAsync.flushMicrotasks();
 
-      expect(freezeDetector.freezeHappened(), isFalse);
+        expect(freezeDetector.freezeHappened(), isFalse);
+      });
     });
 
     test('freeze', () async {
-      final inspect = FakeInspect()..delay = const Duration(seconds: 1);
-      final freezeDetector = FreezeDetector(inspect)
-        ..threshold = const Duration(milliseconds: 10)
-        ..start();
+      FakeAsync().run((fakeAsync) {
+        final inspect = FakeInspect()..delay = const Duration(seconds: 1);
+        final freezeDetector = FreezeDetector(inspect)
+          ..threshold = const Duration(milliseconds: 10)
+          ..start();
 
-      await Future.delayed(Duration(seconds: 1));
-      freezeDetector.stop();
+        fakeAsync.elapse(Duration(seconds: 1));
+        freezeDetector.stop();
+        fakeAsync.flushMicrotasks();
 
-      expect(freezeDetector.freezeHappened(), isTrue);
+        expect(freezeDetector.freezeHappened(), isTrue);
+      });
     });
 
     test('waitUntilUnfrozen', () async {
-      final inspect = FakeInspect()..delay = const Duration(seconds: 1);
-      final freezeDetector = FreezeDetector(inspect)
-        ..threshold = const Duration(milliseconds: 10);
-      expect(freezeDetector.freezeHappened(), isFalse);
+      FakeAsync().run((fakeAsync) async {
+        final inspect = FakeInspect()..delay = const Duration(seconds: 1);
+        final freezeDetector = FreezeDetector(inspect)
+          ..threshold = const Duration(milliseconds: 10);
 
-      freezeDetector.start();
+        expect(freezeDetector.freezeHappened(), isFalse);
+        freezeDetector.start();
 
-      await Future.delayed(Duration(milliseconds: 300));
-      expect(freezeDetector.freezeHappened(), isTrue);
-      freezeDetector.threshold = const Duration(seconds: 10);
-      await freezeDetector.waitUntilUnfrozen();
+        fakeAsync.elapse(Duration(milliseconds: 300));
+        expect(freezeDetector.freezeHappened(), isTrue);
+        expect(freezeDetector.isFrozen(), isTrue);
+        freezeDetector.threshold = const Duration(seconds: 10);
 
-      freezeDetector.stop();
+        final unblocked = freezeDetector.waitUntilUnfrozen();
+        fakeAsync.elapse(Duration(seconds: 5));
+        await unblocked;
 
-      expect(freezeDetector.isFrozen(), isFalse);
+        freezeDetector.stop();
+        fakeAsync.flushMicrotasks();
+
+        expect(freezeDetector.isFrozen(), isFalse);
+      });
     });
   });
 }
