@@ -5,10 +5,12 @@
 #include "src/developer/memory/metrics/capture.h"
 
 #include <fcntl.h>
+#include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/kernel/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/job.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
 
@@ -45,7 +47,23 @@ class OSImpl : public OS, public TaskEnumerator {
   zx_status_t GetProcesses(
       fit::function<zx_status_t(int, zx_handle_t, zx_koid_t, zx_koid_t)> cb) override {
     cb_ = std::move(cb);
-    return WalkRootJobTree();
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    if (status != ZX_OK) {
+      return status;
+    }
+    const char* root_job_svc = "/svc/fuchsia.boot.RootJobForInspect";
+    status = fdio_service_connect(root_job_svc, remote.release());
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    zx::job root_job;
+    status = fuchsia_boot_RootJobForInspectGet(local.get(), root_job.reset_and_get_address());
+    if (status != ZX_OK) {
+      return status;
+    }
+    return WalkJobTree(root_job.get());
   }
 
   zx_status_t OnProcess(int depth, zx_handle_t handle, zx_koid_t koid,

@@ -28,5 +28,6 @@ source_set("metrics") {
     "//src/lib/fxl",
     "//zircon/public/lib/task-utils",
     "//zircon/public/lib/trace",
+    "//zircon/system/fidl/fuchsia-boot:c",
   ]
 }
