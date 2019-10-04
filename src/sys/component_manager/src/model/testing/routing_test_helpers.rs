@@ -7,7 +7,6 @@ use {
         directory_broker,
         framework::RealmServiceHost,
         klog,
-        model::testing::memfs::Memfs,
         model::testing::mocks::*,
         model::testing::test_helpers::{self, DestroyHook},
         model::*,
@@ -39,6 +38,7 @@ use {
         ptr,
         sync::Arc,
     },
+    tempfile::TempDir,
 };
 
 /// Construct a capability path for the hippo service.
@@ -78,7 +78,8 @@ pub struct RoutingTest {
     pub model: Model,
     pub realm_service_host: RealmServiceHost,
     pub namespaces: Namespaces,
-    memfs: Memfs,
+    _test_dir: TempDir,
+    test_dir_proxy: DirectoryProxy,
 }
 
 impl RoutingTest {
@@ -106,11 +107,46 @@ impl RoutingTest {
         let mut resolver = ResolverRegistry::new();
         let mut runner = MockRunner::new();
 
-        let memfs = Memfs::new();
+        if !Path::new("/memfs").exists() {
+            // "/svc/fuchsia.io.Directory" is a memfs instance injected by the fuchsia test stuff,
+            // but this is a service node from "/svc"'s perspective and thus doesn't properly
+            // handle directory traversal over that boundary. This breaks Tempdir's ability to
+            // create a temp directory inside of it. To get around this, we open a handle to
+            // "/svc/fuchsia.io.Directory" and install that handle in our namespace under "/memfs",
+            // which we can then use properly.
+            let node = io_util::open_node_in_namespace(
+                "/svc/fuchsia.io.Directory",
+                io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+            )
+            .expect("failed to open memfs directory");
+            let chan = node.into_channel().unwrap().into_zx_channel();
+
+            let mut ns_ptr: *mut fdio::fdio_sys::fdio_ns_t = ptr::null_mut();
+            let status = unsafe { fdio::fdio_sys::fdio_ns_get_installed(&mut ns_ptr) };
+            if status != zx::sys::ZX_OK {
+                panic!(
+                    "bad status returned for fdio_ns_get_installed: {}",
+                    zx::Status::from_raw(status)
+                );
+            }
+            let cstr = CString::new("/memfs").unwrap();
+            let status =
+                unsafe { fdio::fdio_sys::fdio_ns_bind(ns_ptr, cstr.as_ptr(), chan.into_raw()) };
+            if status != zx::sys::ZX_OK && status != zx::sys::ZX_ERR_ALREADY_EXISTS {
+                panic!("bad status returned for fdio_ns_bind: {}", zx::Status::from_raw(status));
+            }
+        }
+
+        let test_dir = TempDir::new_in("/memfs").expect("failed to create temp directory");
+        let test_dir_proxy = io_util::open_directory_in_namespace(
+            test_dir.path().to_str().unwrap(),
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+        )
+        .expect("failed to open temp directory");
 
         let mut mock_resolver = MockResolver::new();
         for (name, decl) in &components {
-            Self::host_capabilities(name, decl.clone(), &mut runner, &memfs);
+            Self::host_capabilities(name, decl.clone(), &mut runner, &test_dir_proxy);
             mock_resolver.add_component(name, decl.clone());
         }
         resolver.register("test".to_string(), Box::new(mock_resolver));
@@ -131,7 +167,14 @@ impl RoutingTest {
         let realm_service_host = RealmServiceHost::new(model.clone());
         model.root_realm.hooks.install(realm_service_host.hooks()).await;
         model.root_realm.hooks.install(additional_hooks).await;
-        Self { components, model, realm_service_host, namespaces, memfs }
+        Self {
+            components,
+            model,
+            realm_service_host,
+            namespaces,
+            _test_dir: test_dir,
+            test_dir_proxy,
+        }
     }
 
     /// Installs a new directory at /hippo in our namespace. Does nothing if this directory already
@@ -155,7 +198,7 @@ impl RoutingTest {
         }
         let mut out_dir = OutDir::new();
         out_dir.add_service();
-        out_dir.add_directory(&self.memfs);
+        out_dir.add_directory(&self.test_dir_proxy);
         out_dir.host_fn()(ServerEnd::new(server_chan));
     }
 
@@ -253,7 +296,7 @@ impl RoutingTest {
                     capability_util::check_file_in_storage(
                         fsys::StorageType::Meta,
                         relative_moniker,
-                        &self.memfs,
+                        &self.test_dir_proxy,
                     )
                     .await;
                 }
@@ -267,8 +310,12 @@ impl RoutingTest {
                 )
                 .await;
                 if let Some(relative_moniker) = storage_relation {
-                    capability_util::check_file_in_storage(type_, relative_moniker, &self.memfs)
-                        .await;
+                    capability_util::check_file_in_storage(
+                        type_,
+                        relative_moniker,
+                        &self.test_dir_proxy,
+                    )
+                    .await;
                 }
             }
         }
@@ -307,18 +354,20 @@ impl RoutingTest {
         relation: RelativeMoniker,
         relative_path: &str,
     ) -> Vec<String> {
-        let memfs_proxy = self.memfs.clone_root_handle();
         let mut dir_path = capability_util::generate_storage_path(None, &relation);
         if !relative_path.is_empty() {
             dir_path.push(relative_path);
         }
         if !dir_path.parent().is_none() {
-            let dir_proxy =
-                io_util::open_directory(&memfs_proxy, &dir_path, io_util::OPEN_RIGHT_READABLE)
-                    .expect("failed to open directory");
+            let dir_proxy = io_util::open_directory(
+                &self.test_dir_proxy,
+                &dir_path,
+                io_util::OPEN_RIGHT_READABLE,
+            )
+            .expect("failed to open directory");
             test_helpers::list_directory(&dir_proxy).await
         } else {
-            test_helpers::list_directory(&memfs_proxy).await
+            test_helpers::list_directory(&self.test_dir_proxy).await
         }
     }
 
@@ -398,7 +447,12 @@ impl RoutingTest {
     }
 
     /// Host all capabilities in `decl` that come from `self`.
-    fn host_capabilities(name: &str, decl: ComponentDecl, runner: &mut MockRunner, memfs: &Memfs) {
+    fn host_capabilities(
+        name: &str,
+        decl: ComponentDecl,
+        runner: &mut MockRunner,
+        test_dir_proxy: &DirectoryProxy,
+    ) {
         // if this decl is offering/exposing something from `Self`, let's host it
         let mut out_dir = None;
         for expose in decl.exposes.iter() {
@@ -408,7 +462,7 @@ impl RoutingTest {
                     out_dir.get_or_insert(OutDir::new()).add_service()
                 }
                 ExposeDecl::Directory(d) if d.source == ExposeSource::Self_ => {
-                    out_dir.get_or_insert(OutDir::new()).add_directory(memfs)
+                    out_dir.get_or_insert(OutDir::new()).add_directory(test_dir_proxy)
                 }
                 _ => (),
             }
@@ -420,7 +474,7 @@ impl RoutingTest {
                     out_dir.get_or_insert(OutDir::new()).add_service()
                 }
                 OfferDecl::Directory(d) if d.source == OfferDirectorySource::Self_ => {
-                    out_dir.get_or_insert(OutDir::new()).add_directory(memfs)
+                    out_dir.get_or_insert(OutDir::new()).add_directory(test_dir_proxy)
                 }
                 _ => (),
             }
@@ -431,7 +485,7 @@ impl RoutingTest {
             // capability in the manifest, so we must host the directory structure for this case in
             // addition to directory offers.
             if storage.source == StorageDirectorySource::Self_ {
-                out_dir.get_or_insert(OutDir::new()).add_directory(memfs)
+                out_dir.get_or_insert(OutDir::new()).add_directory(test_dir_proxy)
             }
         }
         if let Some(out_dir) = out_dir {
@@ -541,13 +595,13 @@ pub mod capability_util {
     pub async fn check_file_in_storage(
         type_: fsys::StorageType,
         relation: RelativeMoniker,
-        memfs: &Memfs,
+        test_dir_proxy: &DirectoryProxy,
     ) {
-        let memfs_proxy = memfs.clone_root_handle();
         let mut dir_path = generate_storage_path(Some(type_), &relation);
         dir_path.push("hippos");
-        let file_proxy = io_util::open_file(&memfs_proxy, &dir_path, io_util::OPEN_RIGHT_READABLE)
-            .expect("failed to open file");
+        let file_proxy =
+            io_util::open_file(&test_dir_proxy, &dir_path, io_util::OPEN_RIGHT_READABLE)
+                .expect("failed to open file");
         let res = io_util::read_file(&file_proxy).await;
         assert_eq!("hippos can be stored here".to_string(), res.expect("failed to read file"));
     }
@@ -824,12 +878,12 @@ pub struct OutDir {
     // function by `host_fn`. This logic should be updated to directly work on a directory once a
     // multithreaded rust vfs is implemented.
     host_service: bool,
-    memfs_proxy: Option<Arc<DirectoryProxy>>,
+    test_dir_proxy: Option<Arc<DirectoryProxy>>,
 }
 
 impl OutDir {
     pub fn new() -> OutDir {
-        OutDir { host_service: false, memfs_proxy: None }
+        OutDir { host_service: false, test_dir_proxy: None }
     }
     /// Adds `svc/foo` to the out directory, which implements `fidl.examples.echo.Echo`.
     pub fn add_service(&mut self) {
@@ -837,16 +891,21 @@ impl OutDir {
     }
     /// Adds `data/foo/hippo` to the out directory, which contains the string `hippo`, and adds
     /// `storage` to the out directory, which contains a directory broker that reroutes connections
-    /// to a locally hosted memfs.
-    pub fn add_directory(&mut self, memfs: &Memfs) {
-        self.memfs_proxy = Some(Arc::new(memfs.clone_root_handle()));
+    /// to an injected memfs directory.
+    pub fn add_directory(&mut self, test_dir_proxy: &DirectoryProxy) {
+        let test_dir_proxy = io_util::clone_directory(
+            test_dir_proxy,
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+        )
+        .expect("failed to clone test dir proxy");
+        self.test_dir_proxy = Some(Arc::new(test_dir_proxy));
     }
     /// Returns a function that will host this outgoing directory on the given ServerEnd.
     pub fn host_fn(&self) -> Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync> {
         let host_service = self.host_service;
-        let memfs_proxy = self.memfs_proxy.clone();
+        let test_dir_proxy = self.test_dir_proxy.clone();
         Box::new(move |server_end: ServerEnd<DirectoryMarker>| {
-            let memfs_proxy = memfs_proxy.clone();
+            let test_dir_proxy = test_dir_proxy.clone();
             fasync::spawn(async move {
                 let mut pseudo_dir = directory::simple::empty();
                 if host_service {
@@ -863,25 +922,25 @@ impl OutDir {
                         .map_err(|(s, _)| s)
                         .expect("failed to add svc entry");
                 }
-                if let Some(memfs_proxy) = memfs_proxy {
-                    Self::initialize_foo_hippo_in_memfs(&memfs_proxy).await;
+                if let Some(test_dir_proxy) = test_dir_proxy {
+                    Self::initialize_foo_hippo_in_test_dir(&test_dir_proxy).await;
 
-                    let memfs_proxy =
-                        io_util::clone_directory(&memfs_proxy, CLONE_FLAG_SAME_RIGHTS).unwrap();
+                    let test_dir_proxy =
+                        io_util::clone_directory(&test_dir_proxy, CLONE_FLAG_SAME_RIGHTS).unwrap();
                     pseudo_dir
                         .add_entry(
                             "data",
                             directory_broker::DirectoryBroker::new(Box::new(
                                 move |flags, mode, path, server_end| {
                                     if path == "" {
-                                        memfs_proxy
+                                        test_dir_proxy
                                             .clone(
                                                 OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                                                 server_end,
                                             )
                                             .expect("failed to clone cache subdir");
                                     } else {
-                                        memfs_proxy
+                                        test_dir_proxy
                                             .open(flags, mode, &path, server_end)
                                             .expect("failed to open cache subdir");
                                     }
@@ -905,9 +964,9 @@ impl OutDir {
         })
     }
 
-    async fn initialize_foo_hippo_in_memfs(memfs_proxy: &DirectoryProxy) {
+    async fn initialize_foo_hippo_in_test_dir(test_dir_proxy: &DirectoryProxy) {
         let foo_proxy = io_util::open_directory(
-            &memfs_proxy,
+            &test_dir_proxy,
             &Path::new("foo"),
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )

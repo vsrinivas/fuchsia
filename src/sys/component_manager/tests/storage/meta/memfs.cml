@@ -7,8 +7,9 @@
     ],
     "expose": [
         {
-            "directory": "/memfs",
+            "directory": "/svc/fuchsia.io.Directory",
             "from": "self",
+            "as": "/memfs",
         }
     ],
 }

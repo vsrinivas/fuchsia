@@ -398,6 +398,7 @@ async fn storage_from_parent_dir_from_sibling() {
 /// [c]: uses storage as /storage
 /// [c]: destroyed and storage goes away
 #[fuchsia_async::run_singlethreaded(test)]
+#[ignore] // TODO(dgonyeo): reenable this test
 async fn use_in_collection_from_parent() {
     let components = vec![
         (

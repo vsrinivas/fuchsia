@@ -1,6 +1,9 @@
 {
     "facets": {
         "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.io.Directory": "fuchsia-pkg://fuchsia.com/component_manager_tests#meta/memfs.cmx"
+            },
             "system-services": [
                 "fuchsia.boot.RootJob",
                 "fuchsia.boot.RootResource"
@@ -21,7 +24,8 @@
             "fuchsia.boot.RootJob",
             "fuchsia.boot.RootResource",
             "fuchsia.process.Launcher",
-            "fidl.examples.echo.Echo"
+            "fidl.examples.echo.Echo",
+            "fuchsia.io.Directory"
         ]
     }
 }

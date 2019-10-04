@@ -47,6 +47,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:url",
     "//third_party/rust_crates:void",
     "//zircon/system/fidl/fuchsia-boot:fuchsia-boot-rustc",
@@ -65,15 +66,6 @@ rustc_library("lib") {
   # above, which has the benefit of keeping unneeded deps out of the production
   # binary and allows depending on 'testonly' targets.
   test_deps = [ "//src/lib/process_builder:test-util-fidl-rustc" ]
-
-  non_rust_deps = [
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/async-default",
-    "//zircon/public/lib/async-loop",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/memfs",
-  ]
 }
 
 rustc_binary("bin") {
@@ -96,14 +88,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:log",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-  ]
-  non_rust_deps = [
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/async-default",
-    "//zircon/public/lib/async-loop",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/memfs",
   ]
 }
 
@@ -141,6 +125,7 @@ test_package("component_manager_tests") {
     "//examples/components/basic:hello_world_bin",
     "//src/lib/process_builder:root_job_test_runner",
     "//src/lib/process_builder:test_util",
+    "//src/sys/component_manager/tests/memfs",
   ]
 
   components =
@@ -171,6 +156,10 @@ test_package("component_manager_tests") {
       path = rebase_path("meta/component_manager_tests_hello_world.cml")
       dest = "component_manager_tests_hello_world.cm"
     },
+    {
+      path = rebase_path("meta/memfs.cmx")
+      dest = "memfs.cmx"
+    },
   ]
 
   binaries = [
@@ -182,6 +171,9 @@ test_package("component_manager_tests") {
     },
     {
       name = "root_job_test_runner"
+    },
+    {
+      name = "memfs"
     },
   ]
 }
