@@ -21,11 +21,27 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bcdc.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_d11.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim.h"
 
 namespace wlan::brcmfmac {
+
+SimFirmware::SimFirmware(brcmf_simdev* simdev, simulation::Environment* env)
+    : simdev_(simdev), hw_(env) {
+  // Configure the chanspec encode/decoder
+  d11_inf_.io_type = kIoType;
+  brcmu_d11_attach(&d11_inf_);
+
+  // Configure the (simulated) hardware => (simulated) firmware callbacks
+  SimHardware::EventHandlers handlers = {
+      .rx_beacon_handler = std::bind(&SimFirmware::RxBeacon, this, std::placeholders::_1,
+                                     std::placeholders::_2, std::placeholders::_3),
+  };
+  hw_.SetCallbacks(handlers);
+}
 
 void SimFirmware::GetChipInfo(uint32_t* chip, uint32_t* chiprev) {
   *chip = BRCM_CC_4356_CHIP_ID;
@@ -42,6 +58,28 @@ void SimFirmware::BusStop() { ZX_PANIC("%s unimplemented", __FUNCTION__); }
 zx_status_t SimFirmware::BusTxData(struct brcmf_netbuf* netbuf) {
   ZX_PANIC("%s unimplemented", __FUNCTION__);
   return ZX_ERR_NOT_SUPPORTED;
+}
+
+// Returns a bufer that can be used for BCDC-formatted communications, with the requested
+// payload size and an initialized BCDC header. "offset_out" represents the offset of the
+// payload within the returned buffer.
+std::unique_ptr<std::vector<uint8_t>> SimFirmware::CreateBcdcBuffer(size_t requested_size,
+                                                                    size_t* offset_out) {
+  size_t header_size = sizeof(brcmf_proto_bcdc_header);
+  size_t total_size = header_size + requested_size;
+
+  auto buf = std::make_unique<std::vector<uint8_t>>(total_size);
+  auto header = reinterpret_cast<brcmf_proto_bcdc_header*>(buf->data());
+
+  header->flags = (BCDC_PROTO_VER << BCDC_FLAG_VER_SHIFT) & BCDC_FLAG_VER_MASK;
+  header->priority = 0xff & BCDC_PRIORITY_MASK;
+  header->flags2 = 0;
+
+  // Data immediately follows the header
+  header->data_offset = 0;
+
+  *offset_out = header_size;
+  return buf;
 }
 
 // Set or get the value of an iovar. The format of the message is a null-terminated string
@@ -92,8 +130,8 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
   uint8_t* data = reinterpret_cast<uint8_t*>(dcmd) + hdr_size;
 
   if (dcmd->len > (len - hdr_size)) {
-    BRCMF_ERR("BCDC total message length (%zd) exceeds buffer size (%u)\n",
-              dcmd->len + hdr_size, len);
+    BRCMF_ERR("BCDC total message length (%zd) exceeds buffer size (%u)\n", dcmd->len + hdr_size,
+              len);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -121,17 +159,24 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
     case BRCMF_C_GET_VERSION: {
       // GET_VERSION is a bit of a misnomer. It's really the 802.11 supported spec
       // (e.g., n or ac).
-      constexpr uint32_t iotype = BRCMU_D11AC_IOTYPE;
-      if (dcmd->len < sizeof(iotype)) {
+      if (dcmd->len < sizeof(kIoType)) {
         BRCMF_ERR(
             "Insufficient space (%u bytes) in message buffer to save iotype "
             "info (%zu bytes)\n",
-            dcmd->len, sizeof(iotype));
+            dcmd->len, sizeof(kIoType));
       }
-      std::memcpy(data, &iotype, sizeof(iotype));
+      std::memcpy(data, &kIoType, sizeof(kIoType));
       bcdc_response_.Set(msg, len);
       break;
     }
+    case BRCMF_C_SET_SCAN_PASSIVE_TIME:
+      if (dcmd->len != sizeof(default_passive_time_)) {
+        BRCMF_ERR("Invalid args size to BRCMF_C_SET_SCAN_PASSIVE_TIME (expected %d, saw %d)\n",
+                  sizeof(default_passive_time_), dcmd->len);
+        return ZX_ERR_INVALID_ARGS;
+      }
+      default_passive_time_ = *(reinterpret_cast<uint32_t*>(data));
+      break;
     case BRCMF_C_SET_SCAN_CHANNEL_TIME:
     case BRCMF_C_SET_SCAN_UNASSOC_TIME:
       BRCMF_ERR("Ignoring firmware message %d\n", dcmd->cmd);
@@ -200,7 +245,7 @@ zx_status_t SimFirmware::BcdcResponse::Get(uint8_t* data, size_t len, size_t* le
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
-  std::memcpy(data, msg_, len_);
+  memcpy(data, msg_, len_);
   *len_out = len_;
   return ZX_OK;
 }
@@ -216,10 +261,12 @@ void SimFirmware::BcdcResponse::Set(uint8_t* data, size_t new_len) {
 zx_status_t SimFirmware::IovarsSet(const char* name, const void* value, size_t value_len) {
   if (!std::strcmp(name, "cur_etheraddr")) {
     if (value_len == ETH_ALEN) {
-      return hw_.SetMacAddr(static_cast<const uint8_t*>(value));
+      return SetMacAddr(static_cast<const uint8_t*>(value));
     } else {
       return ZX_ERR_INVALID_ARGS;
     }
+  } else if (!std::strcmp(name, "escan")) {
+    return HandleEscanRequest(static_cast<const brcmf_escan_params_le*>(value), value_len);
   }
 
   // FIXME: For now, just pretend that we successfully set the value even when we did nothing
@@ -242,6 +289,237 @@ zx_status_t SimFirmware::IovarsGet(const char* name, void* value_out, size_t val
     memset(value_out, 0, value_len);
   }
   return ZX_OK;
+}
+
+zx_status_t SimFirmware::SetMacAddr(const uint8_t* mac_addr) {
+  memcpy(mac_addr_.data(), mac_addr, ETH_ALEN);
+  return ZX_OK;
+}
+
+zx_status_t SimFirmware::HandleEscanRequest(const brcmf_escan_params_le* escan_params,
+                                            size_t params_len) {
+  if (escan_params->version != BRCMF_ESCAN_REQ_VERSION) {
+    BRCMF_ERR("Mismatched escan version (expected %d, saw %d) - ignoring request\n",
+              BRCMF_ESCAN_REQ_VERSION, escan_params->version);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  switch (escan_params->action) {
+    case WL_ESCAN_ACTION_START:
+      return EscanStart(escan_params->sync_id, &escan_params->params_le,
+                        params_len - offsetof(brcmf_escan_params_le, params_le));
+    case WL_ESCAN_ACTION_CONTINUE:
+      BRCMF_ERR("Unimplemented escan option WL_ESCAN_ACTION_CONTINUE - ignoring\n");
+      return ZX_ERR_NOT_SUPPORTED;
+    case WL_ESCAN_ACTION_ABORT:
+      BRCMF_ERR("Unimplemented escan option WL_ESCAN_ACTION_ABORT - ignoring\n");
+      return ZX_ERR_NOT_SUPPORTED;
+    default:
+      BRCMF_ERR("Unrecognized escan option %d - ignoring\n", escan_params->action);
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  return ZX_OK;
+}
+
+// When asked to start an escan, we will listen on each of the specified channels for the requested
+// duration (dwell time). We accomplish this by setting up a future event for the next channel,
+// iterating until we have scanned all channels.
+zx_status_t SimFirmware::EscanStart(uint16_t sync_id, const brcmf_scan_params_le* params,
+                                    size_t params_len) {
+  constexpr size_t channels_offset = offsetof(brcmf_scan_params_le, channel_list);
+
+  if (scan_state_.state_ != ScanState::STOPPED) {
+    // Can't start a scan while another is in progress
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  if (params->scan_type != BRCMF_SCANTYPE_PASSIVE) {
+    BRCMF_ERR("Only explicit passive scanning is supported. Ignoring request (scan_type = %d)\n",
+              params->scan_type);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  size_t num_channels = (params_len - channels_offset) / sizeof(uint16_t);
+  if (num_channels <= 1) {
+    // No channels provided. I'm not sure what will happen here on real firmware -- either it will
+    // use default channels or refuse to scan.
+    BRCMF_ERR("No channels provided to escan start request - ignoring\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // Configure state
+  scan_state_.sync_id_ = sync_id;
+  scan_state_.params_ = static_cast<brcmf_scan_params_le*>(std::calloc(params_len, 1));
+  memcpy(scan_state_.params_, params, params_len);
+  scan_state_.params_len_ = params_len;
+  scan_state_.channel_index_ = 0;
+  scan_state_.channel_count_ = (params_len - channels_offset) / sizeof(uint16_t);
+  scan_state_.state_ = ScanState::SCANNING;
+
+  // Determine dwell time. If specified in the request, use that value. Otherwise, if a default
+  // dwell time has been specified, use that value. Otherwise, fail.
+  if (scan_state_.params_->passive_time == static_cast<uint32_t>(-1)) {
+    if (default_passive_time_ == static_cast<uint32_t>(-1)) {
+      BRCMF_ERR("Attempt to use default passive time, iovar hasn't been set yet\n");
+      return ZX_ERR_INVALID_ARGS;
+    }
+    scan_state_.params_->passive_time = default_passive_time_;
+  }
+
+  // Start scan
+  brcmu_chan chan = {.chspec = scan_state_.params_->channel_list[scan_state_.channel_index_++]};
+  d11_inf_.decchspec(&chan);
+  hw_.SetChannel(chan.chnum);
+  hw_.EnableRx();
+  std::function<void()>* callback = new std::function<void()>;
+  *callback = std::bind(&SimFirmware::EscanNextChannel, this);
+  hw_.RequestCallback(callback, zx::msec(scan_state_.params_->passive_time));
+
+  return ZX_OK;
+}
+
+// If a scan is in progress, switch to the next channel.
+void SimFirmware::EscanNextChannel() {
+  switch (scan_state_.state_) {
+    case ScanState::STOPPED:
+      // We may see this event if a scan was cancelled -- just ignore it
+      return;
+    case ScanState::HOME:
+      // We don't yet support intermittent scanning
+      return;
+    case ScanState::SCANNING:
+      if (scan_state_.channel_index_ >= scan_state_.channel_count_) {
+        // Scanning complete
+        hw_.DisableRx();
+        EscanComplete();
+      } else {
+        // Scan next channel
+        brcmu_chan chan = {.chspec =
+                               scan_state_.params_->channel_list[scan_state_.channel_index_++]};
+        d11_inf_.decchspec(&chan);
+        hw_.SetChannel(chan.chnum);
+        std::function<void()>* callback = new std::function<void()>;
+        *callback = std::bind(&SimFirmware::EscanNextChannel, this);
+        hw_.RequestCallback(callback, zx::msec(scan_state_.params_->passive_time));
+      }
+  }
+}
+
+// Send an event to the firmware notifying them that the scan has completed.
+void SimFirmware::EscanComplete() {
+  brcmf_event_msg_be* msg_be;
+
+  auto buf = CreateEventBuffer(0, &msg_be, nullptr);
+  msg_be->event_type = htobe32(BRCMF_E_ESCAN_RESULT);
+  msg_be->status = htobe32(BRCMF_E_STATUS_SUCCESS);
+
+  SendEventToDriver(std::move(buf));
+}
+
+// Handle an Rx Beacon sent to us from the hardware, using it to fill in all of the fields in a
+// brcmf_escan_result.
+void SimFirmware::RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
+                           const common::MacAddr& bssid) {
+  // For now, the only IE we will include will be for the SSID
+  size_t ssid_ie_size = 2 + ssid.len;
+
+  // scan_result_size includes all BSS info structures (each including IEs). We (like the firmware)
+  // only send one result back at a time.
+  size_t scan_result_size = roundup(sizeof(brcmf_escan_result_le) + ssid_ie_size, 4);
+  size_t scan_result_offset;
+
+  brcmf_event_msg_be* msg_be;
+
+  // Buffer is returned zeroed out with scan_result_offset set
+  auto buf = CreateEventBuffer(scan_result_size, &msg_be, &scan_result_offset);
+
+  // Set the scan-specific fields of the event message
+  msg_be->event_type = htobe32(BRCMF_E_ESCAN_RESULT);
+  msg_be->status = htobe32(BRCMF_E_STATUS_PARTIAL);
+
+  uint8_t* buffer_data = buf->data();
+  auto scan_result = reinterpret_cast<brcmf_escan_result_le*>(&buffer_data[scan_result_offset]);
+  scan_result->buflen = scan_result_size;
+  scan_result->version = BRCMF_BSS_INFO_VERSION;
+  scan_result->sync_id = scan_state_.sync_id_;
+  scan_result->bss_count = 1;
+
+  struct brcmf_bss_info_le* bss_info = &scan_result->bss_info_le;
+  bss_info->version = BRCMF_BSS_INFO_VERSION;
+
+  // length of this record (includes IEs)
+  bss_info->length = roundup(sizeof(brcmf_bss_info_le) + ssid_ie_size, 4);
+
+  // channel
+  bss_info->chanspec = channel_to_chanspec(&d11_inf_, &channel);
+
+  // ssid
+  ZX_ASSERT(sizeof(bss_info->SSID) == sizeof(ssid.ssid));
+  ZX_ASSERT(ssid.len <= sizeof(ssid.ssid));
+  bss_info->SSID_len = 0;  // SSID will go into an IE
+
+  // bssid
+  ZX_ASSERT(sizeof(bss_info->BSSID) == common::kMacAddrLen);
+  memcpy(bss_info->BSSID, bssid.byte, common::kMacAddrLen);
+
+  // IEs
+  bss_info->ie_offset = sizeof(brcmf_bss_info_le);
+
+  // IE: SSID
+  size_t ie_offset = scan_result_offset + sizeof(brcmf_escan_result_le);
+  size_t ie_len = 0;
+  uint8_t* ie_data = &buffer_data[ie_offset];
+  ie_data[ie_len++] = IEEE80211_ASSOC_TAG_SSID;
+  ie_data[ie_len++] = ssid.len;
+  memcpy(&ie_data[ie_len], ssid.ssid, ssid.len);
+  ie_len += ssid.len;
+
+  bss_info->ie_length = ie_len;
+
+  // Wrap this in an event and send it back to the driver
+  SendEventToDriver(std::move(buf));
+}
+
+std::unique_ptr<std::vector<uint8_t>> SimFirmware::CreateEventBuffer(
+    size_t requested_size, brcmf_event_msg_be** msg_out_be, size_t* payload_offset_out) {
+  size_t total_size = sizeof(brcmf_event) + requested_size;
+  size_t event_data_offset;
+  auto buf = CreateBcdcBuffer(total_size, &event_data_offset);
+
+  uint8_t* buffer_data = buf->data();
+  auto event = reinterpret_cast<brcmf_event*>(&buffer_data[event_data_offset]);
+
+  memcpy(event->eth.h_dest, mac_addr_.data(), ETH_ALEN);
+  memcpy(event->eth.h_source, mac_addr_.data(), ETH_ALEN);
+
+  // Disable local bit - we do this because, well, the real firmware does this.
+  event->eth.h_source[0] &= ~0x2;
+  event->eth.h_proto = htobe16(ETH_P_LINK_CTL);
+
+  auto hdr_be = &event->hdr;
+  // hdr_be->subtype unused
+  hdr_be->length = htobe16(total_size);
+  hdr_be->version = 0;
+  memcpy(&hdr_be->oui, BRCM_OUI, sizeof(hdr_be->oui));
+  hdr_be->usr_subtype = htobe16(BCMILCP_BCM_SUBTYPE_EVENT);
+
+  // Set the generic fields of the event msg
+  *msg_out_be = &event->msg;
+  (*msg_out_be)->version = htobe16(2);
+  (*msg_out_be)->datalen = htobe32(requested_size);
+  memcpy((*msg_out_be)->ifname, kDefaultIfcName, strlen(kDefaultIfcName));
+
+  // Payload immediately follows the brcmf_event structure
+  if (payload_offset_out != nullptr) {
+    *payload_offset_out = event_data_offset + sizeof(brcmf_event);
+  }
+
+  return buf;
+}
+
+void SimFirmware::SendEventToDriver(std::unique_ptr<std::vector<uint8_t>> buffer) {
+  brcmf_sim_rx_event(simdev_, std::move(buffer));
 }
 
 }  // namespace wlan::brcmfmac

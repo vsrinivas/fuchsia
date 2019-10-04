@@ -25,16 +25,40 @@
 
 namespace wlan::brcmfmac {
 
-class SimHardware {
- public:
-  explicit SimHardware(simulation::Environment* env) : env_(env) {}
+using RxBeaconHandler = std::function<void(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
+                                           const common::MacAddr& bssid)>;
 
-  zx_status_t SetMacAddr(const uint8_t* mac_addr);
+class SimHardware : simulation::StationIfc {
+ public:
+  struct EventHandlers {
+    RxBeaconHandler rx_beacon_handler;
+  };
+
+  explicit SimHardware(simulation::Environment* env);
+
+  // Tells us how to call the SimFirmware instance
+  void SetCallbacks(const EventHandlers& handlers);
+
+  void EnableRx() { rx_enabled_ = true; }
+  void DisableRx() { rx_enabled_ = false; }
+
+  void SetChannel(uint8_t channel) { channel_ = channel; }
+
   void GetRevInfo(brcmf_rev_info_le* rev_info);
 
+  void RequestCallback(std::function<void()>* callback, zx::duration delay);
+
+  // StationIfc methods
+  void Rx(void* pkt) override {}
+  void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
+                const common::MacAddr& bssid) override;
+  void ReceiveNotification(void* payload) override;
+
  private:
-  simulation::Environment* env_ __UNUSED;
-  uint8_t mac_addr_[ETH_ALEN];
+  bool rx_enabled_ = false;
+  uint8_t channel_;
+  simulation::Environment* env_;
+  EventHandlers event_handlers_;
 };
 
 }  // namespace wlan::brcmfmac

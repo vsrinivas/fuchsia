@@ -19,20 +19,26 @@
 
 #include <memory>
 
-#include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
-
 #include "bus.h"
 #include "sim-fw/sim_fw.h"
+#include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 
 struct brcmf_simdev {
   std::unique_ptr<::wlan::brcmfmac::SimFirmware> sim_fw;
   ::wlan::simulation::FakeDevMgr* dev_mgr;
   struct brcmf_mp_device* settings;
+  brcmf_pub* drvr;
 };
 
+// Perform simulator-specific intiialization
 zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_bus,
                                ::wlan::simulation::FakeDevMgr* dev_mgr,
                                ::wlan::simulation::Environment* env);
+
+// Pass an event to the driver from the simulated firmware
+void brcmf_sim_rx_event(brcmf_simdev* simdev, std::unique_ptr<std::vector<uint8_t>> buffer);
+
+// Simulator cleanup
 void brcmf_sim_exit(brcmf_bus* bus);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_H_

@@ -85,7 +85,8 @@ zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_
   auto bus_if = std::make_unique<brcmf_bus>();
 
   // Initialize inter-structure pointers
-  simdev->sim_fw = std::make_unique<::wlan::brcmfmac::SimFirmware>(env);
+  simdev->drvr = drvr;
+  simdev->sim_fw = std::make_unique<::wlan::brcmfmac::SimFirmware>(simdev.get(), env);
   simdev->dev_mgr = dev_mgr;
   bus_if->bus_priv.sim = simdev.get();
 
@@ -115,6 +116,23 @@ zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_
   simdev.release();
   *out_bus = std::move(bus_if);
   return ZX_OK;
+}
+
+// Handle a simulator event: allocate a netbuf, copy the data, and pass it to the driver,
+// which takes ownership of the memory. Copying the data isn't ideal, but performance isn't
+// an issue in the simulator and it's cleaner to draw a line between memory owned by the
+// simulator and memory owned by the driver, with this file being the only thing that straddles
+// that boundary.
+void brcmf_sim_rx_event(brcmf_simdev* simdev, std::unique_ptr<std::vector<uint8_t>> buffer) {
+  uint32_t packet_len = buffer->size();
+  if (packet_len < ETH_HLEN) {
+    BRCMF_ERR("Malformed packet\n");
+    return;
+  }
+  brcmf_netbuf* netbuf = brcmf_netbuf_allocate(packet_len);
+  memcpy(netbuf->data, buffer->data(), packet_len);
+  brcmf_netbuf_set_length_to(netbuf, packet_len);
+  brcmf_rx_event(simdev->drvr, netbuf);
 }
 
 void brcmf_sim_exit(brcmf_bus* bus) {

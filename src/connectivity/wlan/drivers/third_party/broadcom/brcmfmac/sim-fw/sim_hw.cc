@@ -19,12 +19,28 @@
 #include <cstring>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_d11.h"
 
 namespace wlan::brcmfmac {
 
-zx_status_t SimHardware::SetMacAddr(const uint8_t* mac_addr) {
-  std::memcpy(mac_addr_, mac_addr, ETH_ALEN);
-  return ZX_OK;
+SimHardware::SimHardware(simulation::Environment* env) : env_(env) { env->AddStation(this); }
+
+void SimHardware::SetCallbacks(const EventHandlers& handlers) { event_handlers_ = handlers; }
+
+void SimHardware::RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
+                           const common::MacAddr& bssid) {
+  if (rx_enabled_ && (channel_ == channel.primary)) {
+    // Pass beacons to firmware if they are on the channel we are tuned to.
+    event_handlers_.rx_beacon_handler(channel, ssid, bssid);
+  }
+}
+
+// For now, all sim-env notifications are simple callbacks. If we need something more flexible
+// in the future, we could always wrap the callback into a struct with a void* for associated data.
+void SimHardware::ReceiveNotification(void* payload) {
+  auto callback = static_cast<std::function<void()>*>(payload);
+  (*callback)();
+  delete callback;
 }
 
 void SimHardware::GetRevInfo(brcmf_rev_info_le* rev_info) {
@@ -46,6 +62,10 @@ void SimHardware::GetRevInfo(brcmf_rev_info_le* rev_info) {
   rev_info->anarev = 0;
   rev_info->chippkg = 2;
   rev_info->nvramrev = 0x5b2b4;
+}
+
+void SimHardware::RequestCallback(std::function<void()>* callback, zx::duration delay) {
+  env_->ScheduleNotification(this, delay, static_cast<void*>(callback));
 }
 
 }  // namespace wlan::brcmfmac
