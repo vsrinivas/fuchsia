@@ -49,22 +49,6 @@ class VectorPtr : public fit::optional<std::vector<T>> {
     return *this;
   }
 
-  explicit VectorPtr(size_t size) : fit::optional<std::vector<T>>(size) {}
-
-  // Override unchecked accessors with versions that check.
-  constexpr std::vector<T>* operator->() {
-    if (!fit::optional<std::vector<T>>::has_value()) {
-      __builtin_trap();
-    }
-    return fit::optional<std::vector<T>>::operator->();
-  }
-  constexpr const std::vector<T>* operator->() const {
-    if (!fit::optional<std::vector<T>>::has_value()) {
-      __builtin_trap();
-    }
-    return fit::optional<std::vector<T>>::operator->();
-  }
-
   FIDL_FIT_OPTIONAL_DEPRECATED("Assign an empty std::vector")
   VectorPtr& emplace() {
     *this = std::move(std::vector<T>());
@@ -73,7 +57,7 @@ class VectorPtr : public fit::optional<std::vector<T>> {
 
   FIDL_FIT_OPTIONAL_DEPRECATED("Assign an std::vector")
   VectorPtr& emplace(std::initializer_list<std::vector<T>>&& ilist) {
-    *this = (std::move(std::vector<T>(ilist)));
+    *this = (std::move(std::vector(ilist)));
     return *this;
   }
 
