@@ -6,7 +6,8 @@
 #include <lib/async-loop/default.h>
 #include <lib/inspect_deprecated/component.h>
 #include <lib/sys/cpp/component_context.h>
-#include <stdint.h>
+
+#include <cstdint>
 
 #include <fs/vmo-file.h>
 

@@ -7,11 +7,10 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/fit/result.h>
 #include <lib/syslog/cpp/logger.h>
-#include <stdio.h>
-#include <unistd.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <cstdio>
 #include <map>
 #include <string>
 #include <utility>

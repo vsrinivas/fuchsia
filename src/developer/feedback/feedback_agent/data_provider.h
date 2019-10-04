@@ -10,8 +10,8 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/async/dispatcher.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <stdint.h>
 
+#include <cstdint>
 #include <memory>
 
 #include "src/developer/feedback/feedback_agent/config.h"

@@ -9,10 +9,11 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/logger.h>
-#include <stdlib.h>
 #include <zircon/errors.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
+
+#include <cstdlib>
 
 #include "src/lib/fxl/strings/string_printf.h"
 

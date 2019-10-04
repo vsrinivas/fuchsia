@@ -7,7 +7,6 @@
 
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
-#include <inttypes.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/bridge.h>
@@ -15,6 +14,7 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <zircon/time.h>
 
+#include <cinttypes>
 #include <vector>
 
 #include "src/lib/fxl/functional/cancelable_callback.h"

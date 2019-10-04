@@ -4,11 +4,11 @@
 
 #include "src/developer/feedback/feedback_agent/tests/zx_object_util.h"
 
-#include <stdint.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <cstdint>
 #include <vector>
 
 #include "src/lib/fxl/logging.h"

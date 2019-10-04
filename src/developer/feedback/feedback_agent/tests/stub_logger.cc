@@ -8,7 +8,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
-#include <stdint.h>
+
+#include <cstdint>
 
 #include "src/lib/fxl/logging.h"
 

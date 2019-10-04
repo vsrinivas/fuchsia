@@ -5,7 +5,6 @@
 #include "src/developer/feedback/feedback_agent/attachments.h"
 
 #include <fuchsia/mem/cpp/fidl.h>
-#include <inttypes.h>
 #include <lib/fit/promise.h>
 #include <lib/fsl/vmo/file.h>
 #include <lib/fsl/vmo/sized_vmo.h>
@@ -14,6 +13,7 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
+#include <cinttypes>
 #include <string>
 #include <vector>
 

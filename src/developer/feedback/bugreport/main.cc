@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/sys/cpp/component_context.h>
-#include <stdio.h>
-#include <stdlib.h>
 
+#include <cstdio>
+#include <cstdlib>
 #include <set>
 #include <string>
 

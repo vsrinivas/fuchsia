@@ -6,7 +6,8 @@
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <lib/zx/vmo.h>
-#include <stdint.h>
+
+#include <cstdint>
 
 #include "src/lib/fxl/logging.h"
 

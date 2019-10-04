@@ -17,11 +17,10 @@
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
-#include <stdint.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <regex>
+#include <cstdint>
 
 #include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
 #include "src/developer/feedback/feedback_agent/constants.h"

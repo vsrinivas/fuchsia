@@ -4,10 +4,7 @@
 
 #include "src/developer/feedback/boot_log_checker/reboot_log_handler.h"
 
-#include <fcntl.h>
 #include <lib/fit/result.h>
-#include <lib/fsl/vmo/file.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/types.h>
 
@@ -17,7 +14,8 @@
 
 #include "src/developer/feedback/boot_log_checker/metrics_registry.cb.h"
 #include "src/lib/files/file.h"
-#include "src/lib/files/unique_fd.h"
+#include "src/lib/fsl/vmo/file.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 
 namespace feedback {
@@ -98,13 +96,12 @@ fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
   has_called_handle_ = true;
 
   // We first check for the existence of the reboot log and attempt to parse it.
-  fbl::unique_fd fd(open(filepath.c_str(), O_RDONLY));
-  if (!fd.is_valid()) {
+  if (!files::IsFile(filepath)) {
     FX_LOGS(INFO) << "no reboot log found";
     return fit::make_ok_promise();
   }
 
-  if (!fsl::VmoFromFd(std::move(fd), &reboot_log_)) {
+  if (!fsl::VmoFromFilename(filepath, &reboot_log_)) {
     FX_LOGS(ERROR) << "error loading reboot log into VMO";
     return fit::make_result_promise<void>(fit::error());
   }

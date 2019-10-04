@@ -9,12 +9,12 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/channel.h>
-#include <stdlib.h>
 #include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
+#include <cstdlib>
 #include <memory>
 
 #include "src/developer/feedback/feedback_agent/data_provider.h"

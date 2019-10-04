@@ -5,9 +5,10 @@
 #include "src/developer/feedback/bugreport/bug_reporter.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <stdio.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
+
+#include <cstdio>
 
 namespace feedback {
 

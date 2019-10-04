@@ -9,8 +9,8 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <stdint.h>
 
+#include <cstdint>
 #include <vector>
 
 #include "src/lib/fxl/logging.h"

@@ -5,7 +5,6 @@
 #include "src/developer/feedback/feedback_agent/system_log_ptr.h"
 
 #include <fuchsia/mem/cpp/fidl.h>
-#include <inttypes.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/interface_handle.h>
@@ -16,6 +15,7 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
+#include <cinttypes>
 #include <string>
 #include <vector>
 
