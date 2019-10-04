@@ -88,8 +88,6 @@ constexpr size_t kFVMBlockInodeStart            = 0x30000;
 constexpr size_t kFVMBlockJournalStart          = kFvmSuperblockBackup + kBackupSuperblockBlocks;
 constexpr size_t kFVMBlockDataStart             = 0x50000;
 
-constexpr blk_t kJournalEntryHeaderMaxBlocks = 2040;
-
 //TODO(ZX-4623): Remove this code after migration to version 8.
 struct SuperblockOld {
     uint64_t magic0;

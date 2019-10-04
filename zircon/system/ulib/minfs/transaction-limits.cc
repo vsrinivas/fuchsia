@@ -5,6 +5,7 @@
 #include <zircon/assert.h>
 
 #include <fbl/algorithm.h>
+#include <fs/journal/format.h>
 #include <minfs/transaction-limits.h>
 
 namespace minfs {
@@ -98,8 +99,8 @@ void TransactionLimits::CalculateIntegrityBlocks(blk_t block_bitmap_blocks) {
   // Ensure we have enough space to fit all the block numbers that may be updated in one
   // transaction. This may spill over into multiple blocks.
   blk_t header_blocks = 1;
-  if (max_entry_data_blocks_ > kJournalEntryHeaderMaxBlocks) {
-    header_blocks += fbl::round_up((max_entry_data_blocks_ - kJournalEntryHeaderMaxBlocks),
+  if (max_entry_data_blocks_ > fs::kMaxBlockDescriptors) {
+    header_blocks += fbl::round_up((max_entry_data_blocks_ - fs::kMaxBlockDescriptors),
                                    kMinfsDirectPerIndirect) /
                      kMinfsDirectPerIndirect;
   }
