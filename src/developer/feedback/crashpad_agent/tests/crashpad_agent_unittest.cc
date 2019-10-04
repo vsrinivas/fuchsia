@@ -694,7 +694,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnFeedbackDataProviderTakingTooLong) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderNeverReturning>());
 
   fit::result<void, zx_status_t> result = FileOneCrashReportWithSingleAttachment();
-  RunLoopFor(zx::sec(10));
+  RunLoopFor(zx::sec(10) + zx::sec(1));
 
   EXPECT_TRUE(result.is_ok());
   CheckAttachmentsInDatabase({kSingleAttachmentKey});

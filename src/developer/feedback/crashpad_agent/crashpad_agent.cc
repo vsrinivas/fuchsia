@@ -8,6 +8,7 @@
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fit/result.h>
 #include <lib/syslog/cpp/logger.h>
+#include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -40,6 +41,12 @@ using fuchsia::feedback::Data;
 
 const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
 const char kOverrideConfigPath[] = "/config/data/override_config.json";
+
+// This should be kept higher than the timeout the component serving fuchsia.feedback.DataProvider
+// has on its side for each feedback data as we pay the price for making the request (establishing
+// the connection, potentially spawning the serving component for the first time, getting the
+// response, etc.) .
+constexpr zx::duration kFeedbackDataCollectionTimeout = zx::sec(10) + /*some slack*/ zx::sec(1);
 
 }  // namespace
 
@@ -185,7 +192,7 @@ void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback cal
   using UploadArgs = std::tuple<crashpad::UUID, std::map<std::string, std::string>, bool>;
 
   auto promise =
-      GetFeedbackData(dispatcher_, services_, /*timeout=*/zx::sec(10))
+      GetFeedbackData(dispatcher_, services_, kFeedbackDataCollectionTimeout)
           .then([this, report = std::move(report)](
                     fit::result<Data>& result) mutable -> fit::result<UploadArgs> {
             Data feedback_data;
