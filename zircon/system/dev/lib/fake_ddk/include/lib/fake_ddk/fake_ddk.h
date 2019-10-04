@@ -28,6 +28,10 @@ struct ProtocolEntry {
 extern zx_device_t* kFakeDevice;
 extern zx_device_t* kFakeParent;
 
+// Return above instances, after first checking that Bind() instance was initialized.
+extern zx_device_t* FakeDevice();
+extern zx_device_t* FakeParent();
+
 // Mocks the bind/unbind functionality provided by the DDK(TL).
 //
 // The typical use of this class is something like:

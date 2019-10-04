@@ -17,6 +17,20 @@ namespace fake_ddk {
 zx_device_t* kFakeDevice = reinterpret_cast<zx_device_t*>(0x55);
 zx_device_t* kFakeParent = reinterpret_cast<zx_device_t*>(0xaa);
 
+zx_device_t* FakeDevice() {
+  ZX_ASSERT_MSG(Bind::Instance() != nullptr,
+                "Attemping to access FakeDevice before fake_ddk::Bind instance was initialized. "
+                "Double check initialization ordering!");
+  return kFakeDevice;
+}
+
+zx_device_t* FakeParent() {
+  ZX_ASSERT_MSG(Bind::Instance() != nullptr,
+                "Attemping to access FakeParent before fake_ddk::Bind instance was initialized. "
+                "Double check initialization ordering!");
+  return kFakeParent;
+}
+
 Bind* Bind::instance_ = nullptr;
 
 Bind::Bind() {
