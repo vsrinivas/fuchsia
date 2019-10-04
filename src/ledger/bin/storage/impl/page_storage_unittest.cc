@@ -197,7 +197,7 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
   void GetDiff(CommitId commit_id, std::vector<CommitId> possible_bases,
                fit::function<void(Status status, CommitId base_commit,
                                   std::vector<EntryChange> diff_entries)>
-                   callback) {
+                   callback) override {
     FXL_NOTIMPLEMENTED();
     callback(ledger::Status::NOT_IMPLEMENTED, {}, {});
   }

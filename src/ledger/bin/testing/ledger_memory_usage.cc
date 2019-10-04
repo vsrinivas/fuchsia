@@ -68,7 +68,7 @@ class Walker final : public TaskEnumerator {
     test_env_koid_ = info.related_koid;
   }
 
-  ~Walker() = default;
+  ~Walker() override = default;
 
   // TaskEnumerator:
   zx_status_t OnJob(int /*depth*/, zx_handle_t /*job*/, zx_koid_t koid,

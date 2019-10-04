@@ -78,7 +78,8 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
 
 class FakeDelegate : public CommitBatch::Delegate {
  public:
-  void RequestCommits(const p2p_provider::P2PClientId& device, std::vector<storage::CommitId> ids) {
+  void RequestCommits(const p2p_provider::P2PClientId& device,
+                      std::vector<storage::CommitId> ids) override {
     requested_commits_.emplace_back(device, std::move(ids));
   }
 

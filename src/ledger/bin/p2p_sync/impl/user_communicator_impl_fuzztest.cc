@@ -27,11 +27,11 @@ p2p_provider::P2PClientId MakeP2PClientId(uint8_t id) { return p2p_provider::P2P
 class TestPageStorage : public storage::PageStorageEmptyImpl {
  public:
   TestPageStorage() = default;
-  ~TestPageStorage() = default;
+  ~TestPageStorage() override = default;
 
   storage::PageId GetId() override { return "page"; }
 
-  void SetSyncDelegate(storage::PageSyncDelegate* page_sync) override { return; }
+  void SetSyncDelegate(storage::PageSyncDelegate* page_sync) override {}
 };
 
 class FuzzingP2PProvider : public p2p_provider::P2PProvider {

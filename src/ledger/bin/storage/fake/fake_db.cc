@@ -99,7 +99,7 @@ class PrefixIterator
     UpdateCurrentElement();
   }
 
-  ~PrefixIterator() = default;
+  ~PrefixIterator() override = default;
 
   storage::Iterator<const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>>&
   Next() override {

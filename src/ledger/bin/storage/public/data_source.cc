@@ -52,7 +52,7 @@ class VmoDataChunk : public DataSource::DataChunk {
  public:
   explicit VmoDataChunk(fsl::SizedVmo vmo) : vmo_(std::move(vmo)) {}
 
-  ~VmoDataChunk() {
+  ~VmoDataChunk() override {
     if (vmar_) {
       vmar_.destroy();
     }

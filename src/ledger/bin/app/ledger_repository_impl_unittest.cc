@@ -87,7 +87,7 @@ class FakeUserSync : public sync_coordinator::UserSync {
   FakeUserSync() = default;
   FakeUserSync(const FakeUserSync&) = delete;
   FakeUserSync& operator=(const FakeUserSync&) = delete;
-  ~FakeUserSync() = default;
+  ~FakeUserSync() override = default;
 
   // Returns the number of times synchronization was started for the given page.
   int GetSyncCallsCount(storage::PageId page_id) {
