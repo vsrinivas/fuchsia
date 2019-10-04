@@ -3,13 +3,10 @@
 // found in the LICENSE file.
 
 use failure::{Error, ResultExt};
-use fidl_fuchsia_update_channelcontrol::{
-    ChannelControlMarker,
-};
 use fidl_fuchsia_update::{
-    Initiator, ManagerMarker, MonitorEvent, MonitorMarker, MonitorProxy,
-    Options, State,
+    Initiator, ManagerMarker, MonitorEvent, MonitorMarker, MonitorProxy, Options, State,
 };
+use fidl_fuchsia_update_channelcontrol::ChannelControlMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::client::{launch, launcher};
 use futures::prelude::*;
@@ -63,6 +60,8 @@ async fn main() -> Result<(), Error> {
         SetTarget {
             channel: String,
         },
+        /// Get the list of known target channels.
+        GetTargetList,
 
         // fuchsia.update Manager protocol:
         GetState,
@@ -84,7 +83,10 @@ async fn main() -> Result<(), Error> {
     let app =
         launch(&launcher, server_url, None).context("Failed to launch omaha client service")?;
     match cmd {
-        Command::GetCurrent | Command::GetTarget | Command::SetTarget { .. } => {
+        Command::GetCurrent
+        | Command::GetTarget
+        | Command::SetTarget { .. }
+        | Command::GetTargetList => {
             let channel_control = app
                 .connect_to_service::<ChannelControlMarker>()
                 .context("Failed to connect to channel control service")?;
@@ -100,6 +102,17 @@ async fn main() -> Result<(), Error> {
                 }
                 Command::SetTarget { channel } => {
                     channel_control.set_target(&channel).await?;
+                }
+                Command::GetTargetList => {
+                    let channels = channel_control.get_target_list().await?;
+                    if channels.is_empty() {
+                        println!("known channels list is empty.");
+                    } else {
+                        println!("known channels:");
+                        for channel in channels {
+                            println!("{}", channel);
+                        }
+                    }
                 }
                 _ => {}
             }

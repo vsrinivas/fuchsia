@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::channel::ChannelConfigs;
 use failure::{bail, Error, ResultExt};
-use fidl_fuchsia_update_channelcontrol::{
-    ChannelControlRequest, ChannelControlRequestStream,
-};
 use fidl_fuchsia_update::{
-    CheckStartedResult, Initiator, ManagerRequest, ManagerRequestStream,
-    ManagerState, MonitorControlHandle, State,
+    CheckStartedResult, Initiator, ManagerRequest, ManagerRequestStream, ManagerState,
+    MonitorControlHandle, State,
 };
+use fidl_fuchsia_update_channelcontrol::{ChannelControlRequest, ChannelControlRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use futures::{lock::Mutex, prelude::*};
@@ -51,6 +50,8 @@ where
 
     app_set: AppSet,
 
+    channel_configs: Option<ChannelConfigs>,
+
     // The current State table, defined in fuchsia.update.fidl.
     state: State,
 
@@ -80,11 +81,13 @@ where
         state_machine_ref: Rc<RefCell<StateMachine<PE, HR, IN, TM, MR, ST>>>,
         storage_ref: Rc<Mutex<ST>>,
         app_set: AppSet,
+        channel_configs: Option<ChannelConfigs>,
     ) -> Self {
         FidlServer {
             state_machine_ref,
             storage_ref,
             app_set,
+            channel_configs,
             state: State { state: Some(ManagerState::Idle), version_available: None },
             monitor_handles: vec![],
             current_monitor_handles: vec![],
@@ -230,8 +233,14 @@ where
                 responder.send(&channel).context("error sending response")?;
             }
             ChannelControlRequest::GetTargetList { responder } => {
+                let channel_names: Vec<&str> = match &server.channel_configs {
+                    Some(channel_configs) => {
+                        channel_configs.known_channels.iter().map(|cfg| cfg.name.as_ref()).collect()
+                    }
+                    None => Vec::new(),
+                };
                 responder
-                    .send(&mut vec!["some-channel", "some-other-channel"].iter().copied())
+                    .send(&mut channel_names.iter().copied())
                     .context("error sending channel list response")?;
             }
         }
@@ -281,67 +290,83 @@ fn clone(state: &State) -> State {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::configuration;
+    use crate::{channel::ChannelConfig, configuration};
     use fidl::endpoints::{create_proxy, create_proxy_and_stream};
-    use fidl_fuchsia_update_channelcontrol::{ChannelControlMarker};
-    use fidl_fuchsia_update::{
-        ManagerMarker, MonitorEvent, MonitorMarker, Options,
-    };
+    use fidl_fuchsia_update::{ManagerMarker, MonitorEvent, MonitorMarker, Options};
+    use fidl_fuchsia_update_channelcontrol::ChannelControlMarker;
     use omaha_client::{
         common::App, http_request::StubHttpRequest, installer::stub::StubInstaller,
         metrics::StubMetricsReporter, policy::StubPolicyEngine, protocol::Cohort,
         state_machine::StubTimer, storage::MemStorage,
     };
 
-    async fn new_fidl_server() -> FidlServer<
-        StubPolicyEngine,
-        StubHttpRequest,
-        StubInstaller,
-        StubTimer,
-        StubMetricsReporter,
-        MemStorage,
-    > {
-        new_fidl_server_with_apps(vec![App::new("id", [1, 0], Cohort::default())]).await
+    struct FidlServerBuilder {
+        apps: Vec<App>,
+        channel_configs: Option<ChannelConfigs>,
     }
 
-    async fn new_fidl_server_with_apps(
-        apps: Vec<App>,
-    ) -> FidlServer<
-        StubPolicyEngine,
-        StubHttpRequest,
-        StubInstaller,
-        StubTimer,
-        StubMetricsReporter,
-        MemStorage,
-    > {
-        let config = configuration::get_config("0.1.2");
-        let storage_ref = Rc::new(Mutex::new(MemStorage::new()));
-        let app_set = AppSet::new(apps);
-        let state_machine = StateMachine::new(
+    impl FidlServerBuilder {
+        fn new() -> Self {
+            Self { apps: Vec::new(), channel_configs: None }
+        }
+
+        fn with_apps(mut self, mut apps: Vec<App>) -> Self {
+            self.apps.append(&mut apps);
+            self
+        }
+
+        fn with_channel_configs(mut self, channel_configs: ChannelConfigs) -> Self {
+            self.channel_configs = Some(channel_configs);
+            self
+        }
+
+        async fn build(
+            self,
+        ) -> FidlServer<
             StubPolicyEngine,
             StubHttpRequest,
-            StubInstaller::default(),
-            &config,
+            StubInstaller,
             StubTimer,
             StubMetricsReporter,
-            storage_ref.clone(),
-            app_set.clone(),
-        )
-        .await;
-
-        FidlServer::new(Rc::new(RefCell::new(state_machine)), storage_ref, app_set)
+            MemStorage,
+        > {
+            let config = configuration::get_config("0.1.2");
+            let storage_ref = Rc::new(Mutex::new(MemStorage::new()));
+            let app_set = if self.apps.is_empty() {
+                AppSet::new(vec![App::new("id", [1, 0], Cohort::default())])
+            } else {
+                AppSet::new(self.apps)
+            };
+            let state_machine = StateMachine::new(
+                StubPolicyEngine,
+                StubHttpRequest,
+                StubInstaller::default(),
+                &config,
+                StubTimer,
+                StubMetricsReporter,
+                storage_ref.clone(),
+                app_set.clone(),
+            )
+            .await;
+            FidlServer::new(
+                Rc::new(RefCell::new(state_machine)),
+                storage_ref,
+                app_set,
+                self.channel_configs,
+            )
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_on_state_change() {
-        let mut fidl = new_fidl_server().await;
+        let mut fidl = FidlServerBuilder::new().build().await;
         fidl.on_state_change(state_machine::State::CheckingForUpdates);
         assert_eq!(Some(ManagerState::CheckingForUpdates), fidl.state.state);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_state() {
-        let fidl = Rc::new(RefCell::new(new_fidl_server().await));
+        let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
         let (proxy, stream) = create_proxy_and_stream::<ManagerMarker>().unwrap();
         fasync::spawn_local(
             FidlServer::handle_client(fidl.clone(), IncomingServices::Manager(stream))
@@ -354,7 +379,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_monitor() {
-        let fidl = Rc::new(RefCell::new(new_fidl_server().await));
+        let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
         let (proxy, stream) = create_proxy_and_stream::<ManagerMarker>().unwrap();
         fasync::spawn_local(
             FidlServer::handle_client(fidl.clone(), IncomingServices::Manager(stream))
@@ -375,7 +400,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_check_now() {
-        let fidl = Rc::new(RefCell::new(new_fidl_server().await));
+        let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
         let (proxy, stream) = create_proxy_and_stream::<ManagerMarker>().unwrap();
         fasync::spawn_local(
             FidlServer::handle_client(fidl.clone(), IncomingServices::Manager(stream))
@@ -388,7 +413,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_check_now_with_monitor() {
-        let fidl = Rc::new(RefCell::new(new_fidl_server().await));
+        let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
         FidlServer::setup_state_callback(fidl.clone());
         let (proxy, stream) = create_proxy_and_stream::<ManagerMarker>().unwrap();
         fasync::spawn_local(
@@ -425,7 +450,7 @@ mod tests {
             [1, 0],
             Cohort { name: Some("current-channel".to_string()), ..Cohort::default() },
         )];
-        let fidl = Rc::new(RefCell::new(new_fidl_server_with_apps(apps).await));
+        let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().with_apps(apps).build().await));
 
         let (proxy, stream) = create_proxy_and_stream::<ChannelControlMarker>().unwrap();
         fasync::spawn_local(
@@ -438,7 +463,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_get_target() {
         let apps = vec![App::new("id", [1, 0], Cohort::from_hint("target-channel"))];
-        let fidl = Rc::new(RefCell::new(new_fidl_server_with_apps(apps).await));
+        let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().with_apps(apps).build().await));
 
         let (proxy, stream) = create_proxy_and_stream::<ChannelControlMarker>().unwrap();
         fasync::spawn_local(
@@ -450,7 +475,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_target() {
-        let fidl = Rc::new(RefCell::new(new_fidl_server().await));
+        let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
 
         let (proxy, stream) = create_proxy_and_stream::<ChannelControlMarker>().unwrap();
         fasync::spawn_local(
@@ -468,7 +493,18 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_target_list() {
-        let fidl = Rc::new(RefCell::new(new_fidl_server().await));
+        let fidl = Rc::new(RefCell::new(
+            FidlServerBuilder::new()
+                .with_channel_configs(ChannelConfigs {
+                    default_channel: None,
+                    known_channels: vec![
+                        ChannelConfig::new("some-channel"),
+                        ChannelConfig::new("some-other-channel"),
+                    ],
+                })
+                .build()
+                .await,
+        ));
 
         let (proxy, stream) = create_proxy_and_stream::<ChannelControlMarker>().unwrap();
         fasync::spawn_local(
@@ -480,5 +516,19 @@ mod tests {
         assert_eq!(2, response.len());
         assert!(response.contains(&"some-channel".to_string()));
         assert!(response.contains(&"some-other-channel".to_string()));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_target_list_when_no_channels_configured() {
+        let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
+
+        let (proxy, stream) = create_proxy_and_stream::<ChannelControlMarker>().unwrap();
+        fasync::spawn_local(
+            FidlServer::handle_client(fidl.clone(), IncomingServices::ChannelControl(stream))
+                .unwrap_or_else(|e| panic!(e)),
+        );
+        let response = proxy.get_target_list().await.unwrap();
+
+        assert!(response.is_empty());
     }
 }

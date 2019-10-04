@@ -27,9 +27,9 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol-rustc",
     "//sdk/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
-    "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/sys/lib/fuchsia_url:fuchsia_url",
     "//third_party/rust_crates:failure",
@@ -37,6 +37,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:hyper-rustls",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
@@ -114,6 +115,17 @@ config_data("omaha_client_test_config") {
   ]
   sources = [
     rebase_path("test_data/omaha_test_app_id"),
+  ]
+}
+
+config_data("omaha_client_channels_test_config") {
+  testonly = true
+  for_pkg = "omaha_client_service_bin_tests"
+  outputs = [
+    "channel_config.json",
+  ]
+  sources = [
+    rebase_path("test_data/test_channel_config.json"),
   ]
 }
 

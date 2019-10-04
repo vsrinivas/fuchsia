@@ -52,6 +52,12 @@ impl Cohort {
         self.id = omaha_cohort.id;
         self.name = omaha_cohort.name;
     }
+
+    /// A validation function to test that a given Cohort hint or name is valid per the Omaha spec:
+    ///  1-1024 ascii characters, with values in the range [\u20-\u7e].
+    pub fn validate_name(name: &str) -> bool {
+        name.len() > 0 && name.len() <= 1024 && name.chars().all(|c| c >= '\u{20}' && c <= '\u{7e}')
+    }
 }
 
 #[cfg(test)]
@@ -76,4 +82,27 @@ mod tests {
         assert_eq!(None, cohort.name);
     }
 
+    #[test]
+    fn test_valid_cohort_names() {
+        assert_eq!(true, Cohort::validate_name("some-channel"));
+        assert_eq!(true, Cohort::validate_name("a"));
+
+        let max_len_name = "a".repeat(1024);
+        assert_eq!(true, Cohort::validate_name(&max_len_name));
+    }
+
+    #[test]
+    fn test_invalid_cohort_name_length() {
+        assert_eq!(false, Cohort::validate_name(""));
+
+        let too_long_name = "a".repeat(1025);
+        assert_eq!(false, Cohort::validate_name(&too_long_name));
+    }
+
+    #[test]
+    fn test_invalid_cohort_name_chars() {
+        assert_eq!(false, Cohort::validate_name("some\u{09}channel"));
+        assert_eq!(false, Cohort::validate_name("some\u{07f}channel"));
+        assert_eq!(false, Cohort::validate_name("some\u{080}channel"));
+    }
 }

@@ -1166,6 +1166,7 @@ group("omaha_client") {
   testonly = true
   public_deps = [
     "//garnet/bin/fake_channel_writer",
+    "//garnet/bin/omaha_client:omaha_client_channels_test_config",
     "//garnet/bin/omaha_client:omaha_client_service_bin_tests",
     "//garnet/bin/omaha_client:omaha_client_test_config",
     "//garnet/lib/rust/omaha_client:omaha_client_lib_tests",

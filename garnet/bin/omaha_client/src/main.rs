@@ -33,6 +33,8 @@ fn main() -> Result<(), Error> {
         let version = configuration::get_version().context("Failed to get version")?;
         let app_set = configuration::get_app_set(&version).context("Failed to get app set")?;
         info!("Omaha app set: {:?}", app_set.to_vec().await);
+        let channel_configs = channel::get_configs().ok();
+        info!("Omaha channel config: {:?}", channel_configs);
         let config = configuration::get_config(&version);
         info!("Update config: {:?}", config);
 
@@ -54,7 +56,8 @@ fn main() -> Result<(), Error> {
         )
         .await;
         let state_machine_ref = Rc::new(RefCell::new(state_machine));
-        let fidl = fidl::FidlServer::new(state_machine_ref.clone(), stash_ref, app_set);
+        let fidl =
+            fidl::FidlServer::new(state_machine_ref.clone(), stash_ref, app_set, channel_configs);
         let mut fs = ServiceFs::new_local();
         fs.take_and_serve_directory_handle()?;
         // `.boxed_local()` was added to workaround stack overflow when we have too many levels of

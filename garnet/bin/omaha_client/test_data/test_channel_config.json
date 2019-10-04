@@ -1,0 +1,16 @@
+{
+  "version": "1",
+  "content": {
+    "channels": [
+      {
+        "name": "some-channel",
+        "repo": "some-channel-repo"
+      },
+      {
+        "name": "some-other-channel",
+        "repo": "some-other-channel-repo"
+      }
+    ],
+    "default_channel": "some-other-channel"
+  }
+}
