@@ -4,10 +4,9 @@
 
 use {
     fidl_fuchsia_wlan_service::{ErrCode, ScanRequest, ScanResult, WlanMarker, WlanProxy},
-    fidl_fuchsia_wlan_tap::{WlantapPhyEvent, WlantapPhyProxy},
+    fidl_fuchsia_wlan_tap::WlantapPhyProxy,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
-    wlan_common::bss::Protection,
     wlan_hw_sim::*,
 };
 
@@ -27,21 +26,15 @@ async fn scan(
         .run_until_complete_or_timeout(
             10.seconds(),
             "receive a scan response",
-            |event| {
-                if let WlantapPhyEvent::SetChannel { args } = event {
-                    println!("set channel to {:?}", args.chan);
-                    let network = match args.chan.primary {
-                        1 => Some((&BSS_FOO, SSID_FOO)),
-                        6 => Some((&BSS_BAR, SSID_BAR)),
-                        11 => Some((&BSS_BAZ, SSID_BAZ)),
-                        _ => None,
-                    };
-                    if let Some((bssid, ssid)) = network {
-                        send_beacon(&mut vec![], &args.chan, bssid, ssid, &Protection::Open, &phy)
-                            .unwrap();
-                    }
-                }
-            },
+            EventHandlerBuilder::new()
+                .on_set_channel(
+                    MatchChannel::new()
+                        .on_primary(1, Beacon::send(&phy).bssid(BSS_FOO).ssid(SSID_FOO.to_vec()))
+                        .on_primary(6, Beacon::send(&phy).bssid(BSS_BAR).ssid(SSID_BAR.to_vec()))
+                        .on_primary(11, Beacon::send(&phy).bssid(BSS_BAZ).ssid(SSID_BAZ.to_vec()),
+                        ),
+                )
+                .build(),
             wlan_service.scan(&mut ScanRequest { timeout: 5 }),
         )
         .await
