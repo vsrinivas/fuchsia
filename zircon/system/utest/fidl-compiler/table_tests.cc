@@ -262,9 +262,31 @@ table Foo {
   END_TEST;
 }
 
+bool must_be_dense() {
+  BEGIN_TEST;
+
+  std::vector<std::string> errors;
+  EXPECT_FALSE(Compiles(R"FIDL(
+library example;
+
+table Example {
+    1: int64 first;
+    3: int64 third;
+};
+
+)FIDL",
+                        &errors));
+  ASSERT_EQ(errors.size(), 1u);
+  ASSERT_STR_STR(errors.at(0).c_str(),
+    "missing ordinal 2 (ordinals must be dense); consider marking it reserved");
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(table_tests)
 RUN_TEST(compiling)
 RUN_TEST(default_not_allowed)
+RUN_TEST(must_be_dense)
 END_TEST_CASE(table_tests)

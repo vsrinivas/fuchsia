@@ -3268,9 +3268,12 @@ bool Library::CompileTable(Table* table_declaration) {
 
   uint64_t last_ordinal_seen = 0;
   for (const auto& ordinal_and_loc : ordinal_scope) {
-    if (ordinal_and_loc.first != last_ordinal_seen + 1) {
-      return Fail(ordinal_and_loc.second,
-                  "Missing ordinal (table ordinals do not form a dense space)");
+    uint64_t next_expected_ordinal = last_ordinal_seen + 1;
+    if (ordinal_and_loc.first != next_expected_ordinal) {
+      std::ostringstream msg_stream;
+      msg_stream << "missing ordinal " << next_expected_ordinal;
+      msg_stream << " (ordinals must be dense); consider marking it reserved";
+      return Fail(ordinal_and_loc.second, msg_stream.str());
     }
     last_ordinal_seen = ordinal_and_loc.first;
   }

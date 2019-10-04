@@ -166,7 +166,7 @@ fidlc tests are at:
 
 ```sh
 # build & run fidlc tests
-fx build zircon/system/utest:host
+fx build system/utest:host
 $FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug
 
 # build & run fidl-coding-tables tests
