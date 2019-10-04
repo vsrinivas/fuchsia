@@ -287,9 +287,85 @@ static zx_status_t bcm_get_bdaddr_from_bootloader(bcm_hci_t* hci, uint8_t macadd
   return ZX_OK;
 }
 
+static zx_status_t bcm_load_firmware(bcm_hci_t* hci) {
+  zx_handle_t fw_vmo;
+  size_t fw_size;
+  zx_status_t status = load_firmware(hci->zxdev, FIRMWARE_PATH, &fw_vmo, &fw_size);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "bcm-hci: no firmware file found\n");
+    return status;
+  }
+
+  status = bcm_hci_send_command(hci, &START_FIRMWARE_DOWNLOAD_CMD,
+                                sizeof(START_FIRMWARE_DOWNLOAD_CMD), NULL, 0);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "bcm-hci: could not load firmware file\n");
+    return status;
+  }
+
+  // give time for placing firmware in download mode
+  zx_nanosleep(zx_deadline_after(FIRMWARE_DOWNLOAD_DELAY));
+
+  zx_off_t offset = 0;
+  while (offset < fw_size) {
+    uint8_t buffer[255 + 3];
+
+    size_t remaining = fw_size - offset;
+    size_t read_amount = (remaining > sizeof(buffer) ? sizeof(buffer) : remaining);
+
+    if (read_amount < 3) {
+      zxlogf(ERROR, "short HCI command in firmware download\n");
+      status = ZX_ERR_INTERNAL;
+      goto vmo_close_fail;
+    }
+
+    status = zx_vmo_read(fw_vmo, buffer, offset, read_amount);
+    if (status != ZX_OK) {
+      goto vmo_close_fail;
+    }
+
+    hci_command_header_t* header = (hci_command_header_t*)buffer;
+    size_t length = header->parameter_total_size + sizeof(*header);
+    if (read_amount < length) {
+      zxlogf(ERROR, "short HCI command in firmware download\n");
+      status = ZX_ERR_INTERNAL;
+      goto vmo_close_fail;
+    }
+    status = bcm_hci_send_command(hci, header, length, NULL, 0);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "bcm_hci_send_command failed in firmware download: %s\n",
+             zx_status_get_string(status));
+      goto vmo_close_fail;
+    }
+    offset += length;
+  }
+
+  zx_handle_close(fw_vmo);
+
+  if (hci->is_uart) {
+    // firmware switched us back to 115200. switch back to TARGET_BAUD_RATE
+    status = serial_config(&hci->serial, 115200, SERIAL_SET_BAUD_RATE_ONLY);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    // switch baud rate to TARGET_BAUD_RATE after DELAY
+    zx_nanosleep(zx_deadline_after(BAUD_RATE_SWITCH_DELAY));
+    status = bcm_hci_set_baud_rate(hci, TARGET_BAUD_RATE);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+  zxlogf(INFO, "bcm-hci: firmware loaded\n");
+  return ZX_OK;
+
+vmo_close_fail:
+  zx_handle_close(fw_vmo);
+  return status;
+}
+
 static int bcm_hci_start_thread(void* arg) {
   bcm_hci_t* hci = arg;
-  zx_handle_t fw_vmo;
 
   zx_handle_t theirs;
   zx_status_t status = zx_channel_create(0, &hci->command_channel, &theirs);
@@ -315,71 +391,8 @@ static int bcm_hci_start_thread(void* arg) {
     }
   }
 
-  size_t fw_size;
-  status = load_firmware(hci->zxdev, FIRMWARE_PATH, &fw_vmo, &fw_size);
-  if (status == ZX_OK) {
-    status = bcm_hci_send_command(hci, &START_FIRMWARE_DOWNLOAD_CMD,
-                                  sizeof(START_FIRMWARE_DOWNLOAD_CMD), NULL, 0);
-    if (status != ZX_OK) {
-      goto fail;
-    }
-
-    // give time for placing firmware in download mode
-    zx_nanosleep(zx_deadline_after(FIRMWARE_DOWNLOAD_DELAY));
-
-    zx_off_t offset = 0;
-    while (offset < fw_size) {
-      uint8_t buffer[255 + 3];
-
-      size_t remaining = fw_size - offset;
-      size_t read_amount = (remaining > sizeof(buffer) ? sizeof(buffer) : remaining);
-
-      if (read_amount < 3) {
-        zxlogf(ERROR, "short HCI command in firmware download\n");
-        status = ZX_ERR_INTERNAL;
-        goto vmo_close_fail;
-      }
-
-      status = zx_vmo_read(fw_vmo, buffer, offset, read_amount);
-      if (status != ZX_OK) {
-        goto vmo_close_fail;
-      }
-
-      hci_command_header_t* header = (hci_command_header_t*)buffer;
-      size_t length = header->parameter_total_size + sizeof(*header);
-      if (read_amount < length) {
-        zxlogf(ERROR, "short HCI command in firmware download\n");
-        status = ZX_ERR_INTERNAL;
-        goto vmo_close_fail;
-      }
-      status = bcm_hci_send_command(hci, header, length, NULL, 0);
-      if (status != ZX_OK) {
-        zxlogf(ERROR, "bcm_hci_send_command failed in firmware download: %s\n",
-               zx_status_get_string(status));
-        goto vmo_close_fail;
-      }
-      offset += length;
-    }
-
-    zx_handle_close(fw_vmo);
-
-    if (hci->is_uart) {
-      // firmware switched us back to 115200. switch back to TARGET_BAUD_RATE
-      status = serial_config(&hci->serial, 115200, SERIAL_SET_BAUD_RATE_ONLY);
-      if (status != ZX_OK) {
-        goto fail;
-      }
-
-      // switch baud rate to TARGET_BAUD_RATE after DELAY
-      zx_nanosleep(zx_deadline_after(BAUD_RATE_SWITCH_DELAY));
-      status = bcm_hci_set_baud_rate(hci, TARGET_BAUD_RATE);
-      if (status != ZX_OK) {
-        goto fail;
-      }
-    }
-    zxlogf(INFO, "bcm-hci: firmware loaded\n");
-  } else {
-    zxlogf(ERROR, "bcm-hci: could not load firmware file: %s\n", zx_status_get_string(status));
+  status = bcm_load_firmware(hci);
+  if (status != ZX_OK) {
     goto fail;
   }
 
@@ -418,8 +431,6 @@ static int bcm_hci_start_thread(void* arg) {
   device_make_visible(hci->zxdev);
   return 0;
 
-vmo_close_fail:
-  zx_handle_close(fw_vmo);
 fail:
   zxlogf(ERROR, "bcm_hci_start_thread: device initialization failed: %s\n",
          zx_status_get_string(status));
