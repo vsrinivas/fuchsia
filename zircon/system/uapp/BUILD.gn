@@ -47,7 +47,6 @@ group("uapp") {
     "lz4",
     "minfs",
     "mutex_pi_exerciser",
-    "namespace",
     "nand-loader",
     "nand-util",
     "ping",
