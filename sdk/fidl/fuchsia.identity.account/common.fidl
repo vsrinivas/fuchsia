@@ -59,7 +59,7 @@ enum Error {
     UNKNOWN = 1;
 
     /// An internal error occurred. This usually indicates a bug within the
-    /// Account Manager itself. Retry is optional.
+    /// account system itself. Retry is optional.
     INTERNAL = 2;
 
     /// The requested operation is not supported. This generally indicates that
@@ -87,6 +87,11 @@ enum Error {
     /// removal. The removal is not guaranteed to suceed and so retry, after
     /// a delay, is recommended.
     REMOVAL_IN_PROGRESS = 8;
+
+    /// The server is not in the state required to perform the requested
+    /// operation. The request should not be retried unless the server state
+    /// has been corrected before the retry.
+    FAILED_PRECONDITION = 9;
 
     // This enumeration may expand to include additional statuses in the future.
     // Examples are likely to include: MAX_LISTENERS, NO_SUITABLE_AUTHENTICATOR,

@@ -73,6 +73,7 @@ impl From<fidl_fuchsia_identity_account::Error> for AccountManagerError {
             fidl_fuchsia_identity_account::Error::Network => Status::NetworkError,
             fidl_fuchsia_identity_account::Error::NotFound => Status::NotFound,
             fidl_fuchsia_identity_account::Error::RemovalInProgress => Status::RemovalInProgress,
+            fidl_fuchsia_identity_account::Error::FailedPrecondition => Status::InvalidRequest,
         };
         AccountManagerError::new(status)
     }
@@ -108,8 +109,7 @@ impl From<TokenManagerStatus> for AccountManagerError {
 impl Into<fidl_fuchsia_identity_account::Error> for AccountManagerError {
     fn into(self) -> fidl_fuchsia_identity_account::Error {
         match self.status {
-            Status::Ok
-            | Status::InternalError => fidl_fuchsia_identity_account::Error::Internal,
+            Status::Ok | Status::InternalError => fidl_fuchsia_identity_account::Error::Internal,
             Status::InvalidRequest => fidl_fuchsia_identity_account::Error::InvalidRequest,
             Status::IoError => fidl_fuchsia_identity_account::Error::Resource,
             Status::NetworkError => fidl_fuchsia_identity_account::Error::Network,
