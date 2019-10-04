@@ -21,6 +21,7 @@ group("session_framework") {
 group("tests") {
   testonly = true
   deps = [
+    "//src/session/realm_management:realm_management_tests",
     "//src/session/session_manager:session_manager_tests",
   ]
 }

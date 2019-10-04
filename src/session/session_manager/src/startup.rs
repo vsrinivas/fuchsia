@@ -4,10 +4,10 @@
 
 use {
     argh::FromArgs,
-    failure::{self, format_err, Error, ResultExt},
-    fidl_fuchsia_io::DirectoryMarker,
+    failure::{self, Error, ResultExt},
     fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::connect_to_service,
+    realm_management,
 };
 
 #[derive(FromArgs)]
@@ -58,19 +58,7 @@ pub async fn launch_session() -> Result<(), Error> {
 /// # Returns
 /// `Ok` if the child was successfully added to the realm.
 async fn add_session_to_realm(session_url: &str, realm: &fsys::RealmProxy) -> Result<(), Error> {
-    let mut collection_ref = fsys::CollectionRef { name: SESSION_CHILD_COLLECTION.to_string() };
-    let child_decl = fsys::ChildDecl {
-        name: Some(SESSION_NAME.to_string()),
-        url: Some(session_url.to_string()),
-        startup: Some(fsys::StartupMode::Lazy), // Dynamic children can only be started lazily.
-    };
-
-    realm
-        .create_child(&mut collection_ref, child_decl)
-        .await?
-        .map_err(|err: fsys::Error| format_err!("Failed to create session child: {:?}", err))?;
-
-    Ok(())
+    realm_management::create_child(SESSION_NAME, session_url, SESSION_CHILD_COLLECTION, realm).await
 }
 
 /// Binds the session child which runs the session component.
@@ -81,17 +69,5 @@ async fn add_session_to_realm(session_url: &str, realm: &fsys::RealmProxy) -> Re
 /// # Returns
 /// `Ok` if the session child was successfully bound.
 async fn bind_session(realm: &fsys::RealmProxy) -> Result<(), Error> {
-    let mut child_ref = fsys::ChildRef {
-        name: SESSION_NAME.to_string(),
-        collection: Some(SESSION_CHILD_COLLECTION.to_string()),
-    };
-
-    let (_, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()
-        .context("Could not create directory proxy.")?;
-    realm
-        .bind_child(&mut child_ref, server_end)
-        .await?
-        .map_err(|err: fsys::Error| format_err!("Failed to bind session child: {:?}", err))?;
-
-    Ok(())
+    realm_management::bind_child(SESSION_NAME, SESSION_CHILD_COLLECTION, realm).await
 }

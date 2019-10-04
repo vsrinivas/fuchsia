@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_test as ftest, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::{StreamExt, TryStreamExt},
-    session_manager_lib::startup,
+    session_manager,
 };
 
 /// The name of this test.
@@ -37,7 +37,7 @@ fn main() -> Result<(), Error> {
 ///
 /// `outcome`: The outcome of running a session, either Ok(()) or an Err()
 async fn run_session(outcome: &mut ftest::Outcome) -> Result<(), Error> {
-    match startup::launch_session().await {
+    match session_manager::startup::launch_session().await {
         Ok(_) => {}
         Err(e) => {
             outcome.status = Some(ftest::Status::Failed);

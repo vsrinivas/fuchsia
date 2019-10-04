@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/realm_management_lib_test"
+    }
+}
