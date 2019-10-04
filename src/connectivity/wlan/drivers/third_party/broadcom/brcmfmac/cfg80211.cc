@@ -1180,6 +1180,12 @@ static zx_status_t brcmf_cfg80211_disconnect(struct net_device* ndev,
 
   BRCMF_DBG(CONN, "Disconnecting\n");
 
+  // Set the timer before notifying firmware as this thread might get preempted to
+  // handle the response event back from firmware. Timer can be stopped if the command
+  // fails.
+  brcmf_timer_init(&cfg->disconnect_timeout, ifp->drvr->dispatcher, brcmf_disconnect_timeout, cfg);
+  brcmf_timer_set(&cfg->disconnect_timeout, BRCMF_DISCONNECT_TIMEOUT);
+
   memcpy(&scbval.ea, peer_sta_address, ETH_ALEN);
   scbval.val = reason_code;
   cfg->disconnect_mode = deauthenticate ? BRCMF_DISCONNECT_DEAUTH : BRCMF_DISCONNECT_DISASSOC;
@@ -1188,11 +1194,8 @@ static zx_status_t brcmf_cfg80211_disconnect(struct net_device* ndev,
   if (status != ZX_OK) {
     BRCMF_ERR("Failed to disassociate: %s, fw err %s\n", zx_status_get_string(status),
               brcmf_fil_get_errstr(fw_err));
-    goto done;
+    brcmf_timer_stop(&cfg->disconnect_timeout);
   }
-
-  brcmf_timer_init(&cfg->disconnect_timeout, ifp->drvr->dispatcher, brcmf_disconnect_timeout, cfg);
-  brcmf_timer_set(&cfg->disconnect_timeout, BRCMF_DISCONNECT_TIMEOUT);
 
 done:
   BRCMF_DBG(TRACE, "Exit\n");
