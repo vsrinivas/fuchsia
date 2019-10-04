@@ -33,8 +33,15 @@ To build a package:
    pm -o $PACKAGE_DIR -n $PACKAGE_NAME init
    ```
 
-   The package ID file is generated as `$PACKAGE_DIR/meta/package` and contains
-   the following data:
+   This generates the package ID file implicitly as
+   `$PACKAGE_DIR/meta/package`.  Set `$PACKAGE_ID_FILE` accordingly
+   for use in subsequent steps:
+
+   ```
+   export PACKAGE_ID_FILE=${PACKAGE_DIR}/meta/package
+   ```
+
+   `$PACKAGE_ID_FILE` will contain the following data:
 
    ```
    {
@@ -43,7 +50,7 @@ To build a package:
    }
    ```
 
-2. Create a manifest file, `$MANIFEST_FILE`, that provides the path to
+2. Create the manifest file, `$MANIFEST_FILE`, that provides the path to
    the package ID file.  Each line of a manifest file maps a single file that
    is contained in the package and is in the form of `destination=source` where:
 
@@ -63,7 +70,7 @@ To build a package:
    pm -o $PACKAGE_DIR -m $MANIFEST_FILE build
    ```
 
-   This creates  the metadata archive at `$PACKAGE_DIR/meta.far`.
+   This creates the metadata archive at `$PACKAGE_DIR/meta.far`.
 
 4. Create the package archive `$PACKAGE_ARCHIVE`:
 
@@ -71,8 +78,16 @@ To build a package:
    pm -o $PACKAGE_DIR -m $MANIFEST_FILE archive
    ```
 
-   This creates the package archive as `$PACKAGE_DIR/$PACKAGE_NAME-0.far`. If
-   the contents of the package change, you need to re-run this command.
+   This command creates the package archive implicitly as
+   `$PACKAGE_DIR/$PACKAGE_NAME-0.far`.  Set `$PACKAGE_ARCHIVE` accordingly
+   for use in subsequent steps:
+
+   ```
+   export PACKAGE_ARCHIVE=${PACKAGE_DIR}/${PACKAGE_NAME}-0.far
+   ```
+
+   If the contents of the package change, you need to re-run the
+   `pm -o $PACKAGE_DIR -m $MANIFEST_FILE archive` command.
 
 You have succesfully built a package. You are now ready to publish the package.
 
@@ -86,10 +101,10 @@ To publish a package:
    pm newrepo -repo $REPO
    ```
 
-   This creates a directory structure at `$REPO` that is ready for
+   This creates a directory structure named `$REPO` that is ready for
    publishing packages.
 
-2.  Publish packages to the repository `$REPO`:
+2. Publish packages to the repository `$REPO`:
 
    ```
    pm publish -a -r $REPO -f $PACKAGE_ARCHIVE
@@ -97,7 +112,7 @@ To publish a package:
 
    `pm publish` parses `$PACKAGE_ARCHIVE` and publishes the package in the
    provided `$REPO` directory. If you run this command multiple times with
-   different package archives, `pm publish` publish the packages to the same
+   different package archives, `pm publish` publishes the packages to the same
    repository. New versions of a same package can be published using the same
    command.
 
@@ -120,7 +135,7 @@ To install a package:
    `amberctl`:
 
    ```
-   amberctl add_repo_config -n $REPO -f http://$HOST_ADDRESS:8083/config.json
+   amberctl add_repo_cfg -n $REPO -f http://$HOST_ADDRESS:8083/config.json
    ```
 
    If the component is not already on the system, `amberctl` installs the package.
