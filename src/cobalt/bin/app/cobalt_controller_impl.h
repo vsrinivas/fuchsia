@@ -8,7 +8,6 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
-#include "third_party/cobalt/src/lib/util/consistent_proto_store.h"
 #include "third_party/cobalt/src/logger/event_aggregator.h"
 #include "third_party/cobalt/src/observation_store/observation_store.h"
 #include "third_party/cobalt/src/uploader/shipping_manager.h"
@@ -19,13 +18,9 @@ class CobaltControllerImpl : public fuchsia::cobalt::Controller {
  public:
   // All of the pointers passed to the constructor must be non-null.
   //
-  // There may be more than one ShippingManager because we maintain a
-  // ShippingManager for each backend to which we ship Observations.
-  //
   // |observation_store| should be the same ObservationStore which is used by
   // by |event_aggregator| and by the Cobalt v1.0 ShippingManager.
-  CobaltControllerImpl(async_dispatcher_t* dispatcher,
-                       std::vector<encoder::ShippingManager*> shipping_managers,
+  CobaltControllerImpl(async_dispatcher_t* dispatcher, encoder::ShippingManager* shipping_manager,
                        logger::EventAggregator* event_aggregator,
                        observation_store::ObservationStore* observation_store);
 
@@ -44,7 +39,7 @@ class CobaltControllerImpl : public fuchsia::cobalt::Controller {
                                       GenerateAggregatedObservationsCallback callback) override;
 
   async_dispatcher_t* const dispatcher_;
-  std::vector<encoder::ShippingManager*> shipping_managers_;
+  encoder::ShippingManager* shipping_manager_;
   logger::EventAggregator* event_aggregator_;
   observation_store::ObservationStore* observation_store_;
 

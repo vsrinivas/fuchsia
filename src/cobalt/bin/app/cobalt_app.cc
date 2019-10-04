@@ -121,7 +121,7 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
       // intervals.
       event_aggregator_(&logger_encoder_, &observation_writer_, &local_aggregate_proto_store_,
                         &obs_history_proto_store_, event_aggregator_backfill_days),
-      controller_impl_(new CobaltControllerImpl(dispatcher, {&clearcut_shipping_manager_},
+      controller_impl_(new CobaltControllerImpl(dispatcher, &clearcut_shipping_manager_,
                                                 &event_aggregator_, observation_store_.get())) {
   auto global_project_context_factory =
       std::make_shared<ProjectContextFactory>(ReadGlobalMetricsRegistryBytes(kMetricsRegistryPath));
