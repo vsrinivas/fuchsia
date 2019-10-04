@@ -25,6 +25,7 @@ zx_status_t SineSource::Init(float freq, float amp, float duration_secs, uint32_
   frames_to_produce_ = (duration_secs == 0.0)
                            ? std::numeric_limits<uint64_t>::max()
                            : static_cast<uint64_t>(duration_secs * static_cast<float>(frame_rate_));
+  frames_produced_ = 0;
   sine_scalar_ = (freq * 2.0 * M_PI) / frame_rate_;
   amp_ = fbl::clamp<double>(amp, 0.0, 1.0);
 

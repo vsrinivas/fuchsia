@@ -2,20 +2,58 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("audio") {
+group("audio") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":src",
+    ":test",
+  ]
+}
+
+source_set("src") {
+  visibility = [ ":*" ]
   sources = [
-    "audio.cc",
     "sine-source.cc",
     "wav-common.cc",
     "wav-sink.cc",
     "wav-source.cc",
   ]
-  deps = [
+  public_deps = [
     "$zx/system/ulib/audio-proto-utils",
     "$zx/system/ulib/audio-utils",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+  ]
+  deps = [
+    "$zx/system/ulib/fdio",
+  ]
+}
+
+executable("bin") {
+  output_name = "audio"
+  sources = [
+    "audio.cc",
+  ]
+  deps = [
+    ":src",
+  ]
+}
+
+test("test") {
+  output_name = "audio-test"
+  sources = [
+    "sine-source-test.cc",
+  ]
+  include_dirs = [ "." ]
+  deps = [
+    ":src",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }
