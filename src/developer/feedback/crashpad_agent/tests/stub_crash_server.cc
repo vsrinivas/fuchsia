@@ -25,6 +25,10 @@ bool StubCrashServer::MakeRequest(const std::map<std::string, std::string>& anno
                                   const std::map<std::string, crashpad::FileReader*>& attachments,
                                   std::string* server_report_id) {
   latest_annotations_ = annotations;
+  latest_attachment_keys_.clear();
+  for (const auto& [key, unused_value] : attachments) {
+    latest_attachment_keys_.push_back(key);
+  }
 
   FXL_CHECK(next_return_value_ != request_return_values_.cend())
       << fxl::StringPrintf("no more calls to MakeRequest() expected (%lu/%lu calls made)",

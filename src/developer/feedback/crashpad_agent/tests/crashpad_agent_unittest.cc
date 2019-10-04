@@ -150,14 +150,15 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   //   * the set of attachment filenames matches the concatenation of
   //     |expected_extra_attachments| and feedback_data_provider_->attachment_bundle_key()
   //   * no attachment is empty
-  void CheckAttachmentsInDatabase(const std::vector<std::string>& expected_extra_attachments = {}) {
+  void CheckAttachmentsInDatabase(
+      const std::vector<std::string>& expected_extra_attachment_filenames = {}) {
     const std::vector<std::string> subdirs = GetAttachmentSubdirsInDatabase();
     // We expect a single crash report to have been generated.
     ASSERT_EQ(subdirs.size(), 1u);
 
     // We expect as attachments the ones returned by the feedback::DataProvider and the extra ones
     // specific to the crash analysis flow under test.
-    std::vector<std::string> expected_attachments = expected_extra_attachments;
+    std::vector<std::string> expected_attachments = expected_extra_attachment_filenames;
     if (feedback_data_provider_ && feedback_data_provider_->has_attachment_bundle_key()) {
       expected_attachments.push_back(feedback_data_provider_->attachment_bundle_key());
     }
@@ -205,6 +206,25 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
     for (const auto& [key, value] : expected_annotations) {
       EXPECT_THAT(crash_server_->latest_annotations(),
                   testing::Contains(testing::Pair(key, value)));
+    }
+  }
+
+  // Checks that on the stub crash server the keys for the attachments received match the
+  // concatenation of:
+  //   * |expected_extra_attachment_keys|
+  //   * feedback_data_provider_->attachment_bundle_key()
+  void CheckAttachmentsOnServer(
+      const std::vector<std::string>& expected_extra_attachment_keys = {}) {
+    FXL_CHECK(crash_server_);
+
+    std::vector<std::string> expected_attachment_keys = expected_extra_attachment_keys;
+    if (feedback_data_provider_ && feedback_data_provider_->has_attachment_bundle_key()) {
+      expected_attachment_keys.push_back(feedback_data_provider_->attachment_bundle_key());
+    }
+
+    EXPECT_EQ(crash_server_->latest_attachment_keys().size(), expected_attachment_keys.size());
+    for (const auto& key : expected_attachment_keys) {
+      EXPECT_THAT(crash_server_->latest_attachment_keys(), testing::Contains(key));
     }
   }
 
@@ -361,9 +381,11 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
 TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReport) {
   ResetAgentDefaultConfig({kUploadSuccessful});
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+
   ASSERT_TRUE(FileOneCrashReport().is_ok());
   CheckAttachmentsInDatabase();
   CheckAnnotationsOnServer();
+  CheckAttachmentsOnServer();
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithAdditionalData) {
@@ -371,6 +393,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithAdditionalData) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   std::vector<Attachment> attachments;
   attachments.emplace_back(BuildAttachment(kSingleAttachmentKey, kSingleAttachmentValue));
+
   ASSERT_TRUE(FileOneCrashReport(
                   /*annotations=*/
                   {
@@ -382,6 +405,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithAdditionalData) {
   CheckAnnotationsOnServer({
       {"annotation.key", "annotation.value"},
   });
+  CheckAttachmentsOnServer({kSingleAttachmentKey});
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithEventId) {
@@ -390,29 +414,35 @@ TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithEventId) {
   CrashReport report;
   report.set_program_name(kProgramName);
   report.set_event_id("some-event-id");
+
   ASSERT_TRUE(FileOneCrashReport(std::move(report)).is_ok());
   CheckAttachmentsInDatabase();
   CheckAnnotationsOnServer({
       {"comments", "some-event-id"},
   });
+  CheckAttachmentsOnServer();
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReport) {
   ResetAgentDefaultConfig({kUploadSuccessful});
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+
   ASSERT_TRUE(FileOneGenericCrashReport(std::nullopt).is_ok());
   CheckAttachmentsInDatabase();
   CheckAnnotationsOnServer();
+  CheckAttachmentsOnServer();
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReportWithSignature) {
   ResetAgentDefaultConfig({kUploadSuccessful});
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+
   ASSERT_TRUE(FileOneGenericCrashReport("some-signature").is_ok());
   CheckAttachmentsInDatabase();
   CheckAnnotationsOnServer({
       {"signature", "some-signature"},
   });
+  CheckAttachmentsOnServer();
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReport) {
@@ -420,19 +450,23 @@ TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReport) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   fuchsia::mem::Buffer minidump;
   fsl::VmoFromString("minidump", &minidump);
+
   ASSERT_TRUE(FileOneNativeCrashReport(std::move(minidump)).is_ok());
   CheckAttachmentsInDatabase();
   CheckAnnotationsOnServer({
       {"should_process", "true"},
   });
+  CheckAttachmentsOnServer({"uploadFileMinidump"});
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
   ResetAgentDefaultConfig({kUploadSuccessful});
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+
   ASSERT_TRUE(FileOneNativeCrashReport(std::nullopt).is_ok());
   CheckAttachmentsInDatabase();
   CheckAnnotationsOnServer();
+  CheckAttachmentsOnServer();
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReport) {
@@ -440,6 +474,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReport) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   fuchsia::mem::Buffer stack_trace;
   fsl::VmoFromString("#0", &stack_trace);
+
   ASSERT_TRUE(
       FileOneDartCrashReport("FileSystemException", "cannot open file", std::move(stack_trace))
           .is_ok());
@@ -449,16 +484,19 @@ TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReport) {
       {"error_message", "cannot open file"},
       {"type", "DartError"},
   });
+  CheckAttachmentsOnServer({"DartError"});
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
   ResetAgentDefaultConfig({kUploadSuccessful});
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+
   ASSERT_TRUE(FileOneDartCrashReport(std::nullopt, std::nullopt, std::nullopt).is_ok());
   CheckAttachmentsInDatabase();
   CheckAnnotationsOnServer({
       {"type", "DartError"},
   });
+  CheckAttachmentsOnServer();
 }
 
 TEST_F(CrashpadAgentTest, Fail_OnInvalidInputCrashReport) {
@@ -613,44 +651,55 @@ TEST_F(CrashpadAgentTest, Succeed_OnDisabledUpload) {
 TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackAttachments) {
   ResetAgentDefaultConfig({kUploadSuccessful});
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoAttachment>());
+
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAttachmentsInDatabase({kSingleAttachmentKey});
   CheckAnnotationsOnServer();
+  CheckAttachmentsOnServer({kSingleAttachmentKey});
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackAnnotations) {
   ResetAgentDefaultConfig({kUploadSuccessful});
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoAnnotation>());
+
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAttachmentsInDatabase({kSingleAttachmentKey});
   CheckAnnotationsOnServer();
+  CheckAttachmentsOnServer({kSingleAttachmentKey});
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackData) {
   ResetAgentDefaultConfig({kUploadSuccessful});
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoData>());
+
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAttachmentsInDatabase({kSingleAttachmentKey});
   CheckAnnotationsOnServer();
+  CheckAttachmentsOnServer({kSingleAttachmentKey});
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackDataProvider) {
   ResetAgentDefaultConfig({kUploadSuccessful});
   // We pass a nullptr stub so there will be no fuchsia.feedback.DataProvider service to connect to.
   ResetFeedbackDataProvider(nullptr);
+
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAttachmentsInDatabase({kSingleAttachmentKey});
   CheckAnnotationsOnServer();
+  CheckAttachmentsOnServer({kSingleAttachmentKey});
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnFeedbackDataProviderTakingTooLong) {
   ResetAgentDefaultConfig({kUploadSuccessful});
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderNeverReturning>());
+
   fit::result<void, zx_status_t> result = FileOneCrashReportWithSingleAttachment();
   RunLoopFor(zx::sec(10));
+
   EXPECT_TRUE(result.is_ok());
   CheckAttachmentsInDatabase({kSingleAttachmentKey});
   CheckAnnotationsOnServer();
+  CheckAttachmentsOnServer({kSingleAttachmentKey});
 }
 
 TEST_F(CrashpadAgentTest, Check_OneFeedbackDataProviderConnectionPerAnalysis) {

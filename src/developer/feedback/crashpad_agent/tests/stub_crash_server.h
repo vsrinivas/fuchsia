@@ -32,11 +32,15 @@ class StubCrashServer : public CrashServer {
   // Returns the annotations that were passed to the latest MakeRequest() call.
   const std::map<std::string, std::string>& latest_annotations() { return latest_annotations_; }
 
+  // Returns the keys for the attachments that were passed to the latest MakeRequest() call.
+  const std::vector<std::string>& latest_attachment_keys() { return latest_attachment_keys_; }
+
  private:
   const std::vector<bool> request_return_values_;
   std::vector<bool>::const_iterator next_return_value_;
 
   std::map<std::string, std::string> latest_annotations_;
+  std::vector<std::string> latest_attachment_keys_;
 };
 
 }  // namespace feedback
