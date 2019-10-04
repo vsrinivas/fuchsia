@@ -28,8 +28,8 @@ zx_status_t Component::Bind(void* ctx, zx_device_t* parent) {
 }
 
 zx_status_t Component::RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                                 uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                                 uint32_t req_handle_count, zx_handle_t* resp_handles,
+                                 uint32_t* out_resp_size, zx::handle* req_handles,
+                                 uint32_t req_handle_count, zx::handle* resp_handles,
                                  uint32_t* resp_handle_count) {
   if (!canvas_.is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -48,7 +48,8 @@ zx_status_t Component::RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint
         zxlogf(ERROR, "%s received %u handles, expecting 1\n", __func__, req_handle_count);
         return ZX_ERR_INTERNAL;
       }
-      return canvas_.Config(zx::vmo(req_handles[0]), req->offset, &req->info, &resp->canvas_idx);
+      return canvas_.Config(zx::vmo(std::move(req_handles[0])), req->offset, &req->info,
+                            &resp->canvas_idx);
     case AmlogicCanvasOp::FREE:
       if (req_handle_count != 0) {
         zxlogf(ERROR, "%s received %u handles, expecting 0\n", __func__, req_handle_count);
@@ -62,8 +63,8 @@ zx_status_t Component::RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint
 }
 
 zx_status_t Component::RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                                uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                                uint32_t req_handle_count, zx_handle_t* resp_handles,
+                                uint32_t* out_resp_size, zx::handle* req_handles,
+                                uint32_t req_handle_count, zx::handle* resp_handles,
                                 uint32_t* resp_handle_count) {
   if (!clock_.is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -102,8 +103,8 @@ zx_status_t Component::RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8
 }
 
 zx_status_t Component::RpcEthBoard(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                                   uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                                   uint32_t req_handle_count, zx_handle_t* resp_handles,
+                                   uint32_t* out_resp_size, zx::handle* req_handles,
+                                   uint32_t req_handle_count, zx::handle* resp_handles,
                                    uint32_t* resp_handle_count) {
   if (!eth_board_.is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -126,8 +127,8 @@ zx_status_t Component::RpcEthBoard(const uint8_t* req_buf, uint32_t req_size, ui
 }
 
 zx_status_t Component::RpcGdc(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                              uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                              uint32_t req_handle_count, zx_handle_t* resp_handles,
+                              uint32_t* out_resp_size, zx::handle* req_handles,
+                              uint32_t req_handle_count, zx::handle* resp_handles,
                               uint32_t* resp_handle_count) {
   if (!gdc_.is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -146,18 +147,18 @@ zx_status_t Component::RpcGdc(const uint8_t* req_buf, uint32_t req_size, uint8_t
       auto* resp = reinterpret_cast<GdcProxyResponse*>(resp_buf);
       *out_resp_size = sizeof(*resp);
       uint32_t handle_count = 0;
-      auto config_vmo = req_handles[handle_count++];
+      zx::vmo config_vmo(std::move(req_handles[handle_count++]));
       auto output_buffer_collection = req->output_buffer_collection;
       auto input_buffer_collection = req->input_buffer_collection;
       for (uint32_t i = 0; i < input_buffer_collection.buffer_count; i++) {
-        input_buffer_collection.vmos[i] = req_handles[handle_count++];
+        input_buffer_collection.vmos[i] = req_handles[handle_count++].release();
       }
 
       for (uint32_t i = 0; i < output_buffer_collection.buffer_count; i++) {
-        output_buffer_collection.vmos[i] = req_handles[handle_count++];
+        output_buffer_collection.vmos[i] = req_handles[handle_count++].release();
       }
 
-      return gdc_.InitTask(&input_buffer_collection, &output_buffer_collection, zx::vmo(config_vmo),
+      return gdc_.InitTask(&input_buffer_collection, &output_buffer_collection, std::move(config_vmo),
                            &req->callback, &resp->task_index);
     }
     case GdcOp::REMOVE_TASK:
@@ -175,8 +176,8 @@ zx_status_t Component::RpcGdc(const uint8_t* req_buf, uint32_t req_size, uint8_t
 }
 
 zx_status_t Component::RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                               uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                               uint32_t req_handle_count, zx_handle_t* resp_handles,
+                               uint32_t* out_resp_size, zx::handle* req_handles,
+                               uint32_t req_handle_count, zx::handle* resp_handles,
                                uint32_t* resp_handle_count) {
   if (!gpio_.is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -204,7 +205,7 @@ zx_status_t Component::RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_
       zx::interrupt irq;
       auto status = gpio_.GetInterrupt(req->flags, &irq);
       if (status == ZX_OK) {
-        resp_handles[0] = irq.release();
+        resp_handles[0] = std::move(irq);
         *resp_handle_count = 1;
       }
       return status;
@@ -273,8 +274,8 @@ void Component::CodecTransactCallback(void* cookie, zx_status_t status,
 }
 
 zx_status_t Component::RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                              uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                              uint32_t req_handle_count, zx_handle_t* resp_handles,
+                              uint32_t* out_resp_size, zx::handle* req_handles,
+                              uint32_t req_handle_count, zx::handle* resp_handles,
                               uint32_t* resp_handle_count) {
   if (!i2c_.is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -331,7 +332,7 @@ zx_status_t Component::RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t
       zx::interrupt irq;
       auto status = i2c_.GetInterrupt(req->flags, &irq);
       if (status == ZX_OK) {
-        resp_handles[0] = irq.release();
+        resp_handles[0] = std::move(irq);
         *resp_handle_count = 1;
       }
       return status;
@@ -343,8 +344,8 @@ zx_status_t Component::RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t
 }
 
 zx_status_t Component::RpcPdev(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                               uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                               uint32_t req_handle_count, zx_handle_t* resp_handles,
+                               uint32_t* out_resp_size, zx::handle* req_handles,
+                               uint32_t req_handle_count, zx::handle* resp_handles,
                                uint32_t* resp_handle_count) {
   if (!pdev_.is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -364,7 +365,7 @@ zx_status_t Component::RpcPdev(const uint8_t* req_buf, uint32_t req_size, uint8_
       if (status == ZX_OK) {
         resp->offset = mmio.offset;
         resp->size = mmio.size;
-        resp_handles[0] = mmio.vmo;
+        resp_handles[0].reset(mmio.vmo);
         *resp_handle_count = 1;
       }
       return status;
@@ -373,7 +374,7 @@ zx_status_t Component::RpcPdev(const uint8_t* req_buf, uint32_t req_size, uint8_
       zx::interrupt irq;
       auto status = pdev_.GetInterrupt(req->index, req->flags, &irq);
       if (status == ZX_OK) {
-        resp_handles[0] = irq.release();
+        resp_handles[0] = std::move(irq);
         *resp_handle_count = 1;
       }
       return status;
@@ -382,7 +383,7 @@ zx_status_t Component::RpcPdev(const uint8_t* req_buf, uint32_t req_size, uint8_
       zx::bti bti;
       auto status = pdev_.GetBti(req->index, &bti);
       if (status == ZX_OK) {
-        resp_handles[0] = bti.release();
+        resp_handles[0] = std::move(bti);
         *resp_handle_count = 1;
       }
       return status;
@@ -391,7 +392,7 @@ zx_status_t Component::RpcPdev(const uint8_t* req_buf, uint32_t req_size, uint8_
       zx::resource resource;
       auto status = pdev_.GetSmc(req->index, &resource);
       if (status == ZX_OK) {
-        resp_handles[0] = resource.release();
+        resp_handles[0] = std::move(resource);
         *resp_handle_count = 1;
       }
       return status;
@@ -407,8 +408,8 @@ zx_status_t Component::RpcPdev(const uint8_t* req_buf, uint32_t req_size, uint8_
 }
 
 zx_status_t Component::RpcPower(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                                uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                                uint32_t req_handle_count, zx_handle_t* resp_handles,
+                                uint32_t* out_resp_size, zx::handle* req_handles,
+                                uint32_t req_handle_count, zx::handle* resp_handles,
                                 uint32_t* resp_handle_count) {
   if (!power_.is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -443,8 +444,8 @@ zx_status_t Component::RpcPower(const uint8_t* req_buf, uint32_t req_size, uint8
 }
 
 zx_status_t Component::RpcSpi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                              uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                              uint32_t req_handle_count, zx_handle_t* resp_handles,
+                              uint32_t* out_resp_size, zx::handle* req_handles,
+                              uint32_t req_handle_count, zx::handle* resp_handles,
                               uint32_t* resp_handle_count) {
   if (!spi_.is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -482,10 +483,9 @@ zx_status_t Component::RpcSpi(const uint8_t* req_buf, uint32_t req_size, uint8_t
 }
 
 zx_status_t Component::RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                                 uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                                 uint32_t req_handle_count, zx_handle_t* resp_handles,
+                                 uint32_t* out_resp_size, zx::handle* req_handles,
+                                 uint32_t req_handle_count, zx::handle* resp_handles,
                                  uint32_t* resp_handle_count) {
-  // TODO(dustingreen): any handles in req_handles should be closed regardless of error.
   if (!sysmem_.is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -514,11 +514,11 @@ zx_status_t Component::RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint
 
   switch (req->op) {
     case SysmemOp::CONNECT:
-      return sysmem_.Connect(zx::channel(req_handles[0]));
+      return sysmem_.Connect(zx::channel(std::move(req_handles[0])));
     case SysmemOp::REGISTER_HEAP:
-      return sysmem_.RegisterHeap(req->heap, zx::channel(req_handles[0]));
+      return sysmem_.RegisterHeap(req->heap, zx::channel(std::move(req_handles[0])));
     case SysmemOp::REGISTER_SECURE_MEM:
-      return sysmem_.RegisterSecureMem(zx::channel(req_handles[0]));
+      return sysmem_.RegisterSecureMem(zx::channel(std::move(req_handles[0])));
     case SysmemOp::UNREGISTER_SECURE_MEM:
       return sysmem_.UnregisterSecureMem();
     default:
@@ -528,10 +528,9 @@ zx_status_t Component::RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint
 }
 
 zx_status_t Component::RpcTee(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                              uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                              uint32_t req_handle_count, zx_handle_t* resp_handles,
+                              uint32_t* out_resp_size, zx::handle* req_handles,
+                              uint32_t req_handle_count, zx::handle* resp_handles,
                               uint32_t* resp_handle_count) {
-  // TODO(dustingreen): any handles in req_handles should be closed regardless of error.
   if (!tee_.is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -548,10 +547,10 @@ zx_status_t Component::RpcTee(const uint8_t* req_buf, uint32_t req_size, uint8_t
 
   switch (req->op) {
     case TeeOp::CONNECT: {
-      zx::channel tee_device_request(req_handles[0]);
+      zx::channel tee_device_request(std::move(req_handles[0]));
       zx::channel service_provider;
       if (req_handle_count == 2) {
-        service_provider.reset(req_handles[1]);
+        service_provider.reset(req_handles[1].release());
       }
       return tee_.Connect(std::move(tee_device_request), std::move(service_provider));
     }
@@ -562,8 +561,8 @@ zx_status_t Component::RpcTee(const uint8_t* req_buf, uint32_t req_size, uint8_t
 }
 
 zx_status_t Component::RpcUms(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                              uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                              uint32_t req_handle_count, zx_handle_t* resp_handles,
+                              uint32_t* out_resp_size, zx::handle* req_handles,
+                              uint32_t req_handle_count, zx::handle* resp_handles,
                               uint32_t* resp_handle_count) {
   if (!ums_.is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -587,8 +586,8 @@ zx_status_t Component::RpcUms(const uint8_t* req_buf, uint32_t req_size, uint8_t
 }
 
 zx_status_t Component::RpcMipiCsi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                                  uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                                  uint32_t req_handle_count, zx_handle_t* resp_handles,
+                                  uint32_t* out_resp_size, zx::handle* req_handles,
+                                  uint32_t req_handle_count, zx::handle* resp_handles,
                                   uint32_t* resp_handle_count) {
   if (!mipicsi_.is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -614,8 +613,8 @@ zx_status_t Component::RpcMipiCsi(const uint8_t* req_buf, uint32_t req_size, uin
 }
 
 zx_status_t Component::RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                                uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                                uint32_t req_handle_count, zx_handle_t* resp_handles,
+                                uint32_t* out_resp_size, zx::handle* req_handles,
+                                uint32_t req_handle_count, zx::handle* resp_handles,
                                 uint32_t* resp_handle_count) {
   static constexpr uint32_t kTimeoutSecs = 1;
   if (!codec_.is_valid()) {
@@ -811,17 +810,28 @@ zx_status_t Component::DdkRxrpc(zx_handle_t raw_channel) {
   auto* req_header = reinterpret_cast<ProxyRequest*>(&req_buf);
   auto* resp_header = reinterpret_cast<ProxyResponse*>(&resp_buf);
   uint32_t actual;
-  zx_handle_t req_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  zx_handle_t resp_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t req_handle_count;
-  uint32_t resp_handle_count = 0;
 
-  auto status = zx_channel_read(raw_channel, 0, &req_buf, req_handles, sizeof(req_buf),
-                                fbl::count_of(req_handles), &actual, &req_handle_count);
+  zx_handle_t req_handles_raw[ZX_CHANNEL_MAX_MSG_HANDLES];
+  uint32_t req_handle_count;
+
+  auto status = zx_channel_read(raw_channel, 0, &req_buf, req_handles_raw, sizeof(req_buf),
+                                fbl::count_of(req_handles_raw), &actual, &req_handle_count);
   if (status != ZX_OK) {
     zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_read failed %d\n", status);
     return status;
   }
+
+  // There is some expense in constructing/destructing these.  If that becomes an issue, we could
+  // create an incremental construction array type to prevent constructing the extras.
+  zx::handle req_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  for (uint32_t handle_index = 0; handle_index < req_handle_count; ++handle_index) {
+    // req_handles_raw handle values are ignored after this point, so no need to clear them.
+    req_handles[handle_index].reset(req_handles_raw[handle_index]);
+  }
+
+  constexpr uint32_t kMaxRespHandles = 1;
+  zx::handle resp_handles[kMaxRespHandles];
+  uint32_t resp_handle_count = 0;
 
   resp_header->txid = req_header->txid;
   uint32_t resp_len = 0;
@@ -888,10 +898,18 @@ zx_status_t Component::DdkRxrpc(zx_handle_t raw_channel) {
       return ZX_ERR_INTERNAL;
   }
 
+  ZX_DEBUG_ASSERT(resp_handle_count <= kMaxRespHandles);
+
+  zx_handle_t resp_handles_raw[kMaxRespHandles];
+  for (uint32_t handle_index = 0; handle_index < resp_handle_count; ++handle_index) {
+    // Will be transferred or closed by zx_channel_write().
+    resp_handles_raw[handle_index] = resp_handles[handle_index].release();
+  }
+
   // set op to match request so zx_channel_write will return our response
   resp_header->status = status;
   status = zx_channel_write(raw_channel, 0, resp_header, resp_len,
-                            (resp_handle_count ? resp_handles : nullptr), resp_handle_count);
+                            (resp_handle_count ? resp_handles_raw : nullptr), resp_handle_count);
   if (status != ZX_OK) {
     zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_write failed %d\n", status);
   }

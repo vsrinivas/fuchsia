@@ -72,60 +72,60 @@ class Component : public ComponentBase {
   };
 
   zx_status_t RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                        uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                        uint32_t req_handle_count, zx_handle_t* resp_handles,
+                        uint32_t* out_resp_size, zx::handle* req_handles,
+                        uint32_t req_handle_count, zx::handle* resp_handles,
                         uint32_t* resp_handle_count);
   zx_status_t RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                       uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                       uint32_t req_handle_count, zx_handle_t* resp_handles,
+                       uint32_t* out_resp_size, zx::handle* req_handles,
+                       uint32_t req_handle_count, zx::handle* resp_handles,
                        uint32_t* resp_handle_count);
   zx_status_t RpcEthBoard(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                          uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                          uint32_t req_handle_count, zx_handle_t* resp_handles,
+                          uint32_t* out_resp_size, zx::handle* req_handles,
+                          uint32_t req_handle_count, zx::handle* resp_handles,
                           uint32_t* resp_handle_count);
   zx_status_t RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                      uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                      uint32_t req_handle_count, zx_handle_t* resp_handles,
+                      uint32_t* out_resp_size, zx::handle* req_handles,
+                      uint32_t req_handle_count, zx::handle* resp_handles,
                       uint32_t* resp_handle_count);
   zx_status_t RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                     uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                     uint32_t req_handle_count, zx_handle_t* resp_handles,
+                     uint32_t* out_resp_size, zx::handle* req_handles,
+                     uint32_t req_handle_count, zx::handle* resp_handles,
                      uint32_t* resp_handle_count);
   zx_status_t RpcPdev(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                      uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                      uint32_t req_handle_count, zx_handle_t* resp_handles,
+                      uint32_t* out_resp_size, zx::handle* req_handles,
+                      uint32_t req_handle_count, zx::handle* resp_handles,
                       uint32_t* resp_handle_count);
   zx_status_t RpcPower(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                       uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                       uint32_t req_handle_count, zx_handle_t* resp_handles,
+                       uint32_t* out_resp_size, zx::handle* req_handles,
+                       uint32_t req_handle_count, zx::handle* resp_handles,
                        uint32_t* resp_handle_count);
   zx_status_t RpcSpi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                     uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                     uint32_t req_handle_count, zx_handle_t* resp_handles,
+                     uint32_t* out_resp_size, zx::handle* req_handles,
+                     uint32_t req_handle_count, zx::handle* resp_handles,
                      uint32_t* resp_handle_count);
   zx_status_t RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                        uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                        uint32_t req_handle_count, zx_handle_t* resp_handles,
+                        uint32_t* out_resp_size, zx::handle* req_handles,
+                        uint32_t req_handle_count, zx::handle* resp_handles,
                         uint32_t* resp_handle_count);
   zx_status_t RpcTee(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                     uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                     uint32_t req_handle_count, zx_handle_t* resp_handles,
+                     uint32_t* out_resp_size, zx::handle* req_handles,
+                     uint32_t req_handle_count, zx::handle* resp_handles,
                      uint32_t* resp_handle_count);
   zx_status_t RpcUms(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                     uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                     uint32_t req_handle_count, zx_handle_t* resp_handles,
+                     uint32_t* out_resp_size, zx::handle* req_handles,
+                     uint32_t req_handle_count, zx::handle* resp_handles,
                      uint32_t* resp_handle_count);
   zx_status_t RpcMipiCsi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                         uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                         uint32_t req_handle_count, zx_handle_t* resp_handles,
+                         uint32_t* out_resp_size, zx::handle* req_handles,
+                         uint32_t req_handle_count, zx::handle* resp_handles,
                          uint32_t* resp_handle_count);
   zx_status_t RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                       uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                       uint32_t req_handle_count, zx_handle_t* resp_handles,
+                       uint32_t* out_resp_size, zx::handle* req_handles,
+                       uint32_t req_handle_count, zx::handle* resp_handles,
                        uint32_t* resp_handle_count);
   zx_status_t RpcGdc(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                     uint32_t* out_resp_size, const zx_handle_t* req_handles,
-                     uint32_t req_handle_count, zx_handle_t* resp_handles,
+                     uint32_t* out_resp_size, zx::handle* req_handles,
+                     uint32_t req_handle_count, zx::handle* resp_handles,
                      uint32_t* resp_handle_count);
 
   static void I2cTransactCallback(void* cookie, zx_status_t status, const i2c_op_t* op_list,
