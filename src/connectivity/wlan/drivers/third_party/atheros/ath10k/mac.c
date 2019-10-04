@@ -4628,6 +4628,9 @@ zx_status_t ath10k_start(struct ath10k* ar, wlanmac_ifc_t* ifc, zx_handle_t* out
     ath10k_thermal_set_throttling(ar);
 #endif  // NEEDS PORTING
 
+    *out_sme_channel = ar->sme_channel;
+    ar->sme_channel = ZX_HANDLE_INVALID;
+
     mtx_unlock(&ar->conf_mutex);
     return ZX_OK;
 
@@ -4643,6 +4646,11 @@ err_off:
 #endif  // NEEDS PORTING
 
 err:
+    if (ar->sme_channel != ZX_HANDLE_INVALID) {
+        zx_handle_close(ar->sme_channel);
+        ar->sme_channel = ZX_HANDLE_INVALID;
+    }
+    *out_sme_channel = ZX_HANDLE_INVALID;
     mtx_unlock(&ar->conf_mutex);
     return ret;
 }

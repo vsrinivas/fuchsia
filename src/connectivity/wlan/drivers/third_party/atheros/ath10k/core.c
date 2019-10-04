@@ -2273,6 +2273,7 @@ static zx_status_t ath10k_core_create_iface(void* ctx, const wlanphy_impl_create
     // We have to review this when we want to support mulitple interfaces.
     // TODO(WLAN-641): for support multiple.
     ar->mac_role = req->role;
+    ar->sme_channel = req->sme_channel;
 
     // Add MAC interface
     device_add_args_t mac_args = {
