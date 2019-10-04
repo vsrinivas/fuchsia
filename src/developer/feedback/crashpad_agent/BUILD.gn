@@ -80,6 +80,8 @@ source_set("src") {
     "crash_server.h",
     "crashpad_agent.cc",
     "crashpad_agent.h",
+    "queue.cc",
+    "queue.h",
     "crashpad_report_util.cc",
     "crashpad_report_util.h",
     "feedback_data_provider_ptr.cc",

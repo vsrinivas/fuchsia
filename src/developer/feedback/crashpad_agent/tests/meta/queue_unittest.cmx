@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/queue_unittest"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
