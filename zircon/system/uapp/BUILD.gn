@@ -42,7 +42,6 @@ group("uapp") {
     "kcounter",
     "kstress",
     "ktrace",
-    "light",
     "loadgen",
     "lsblk",
     "lsdev",
