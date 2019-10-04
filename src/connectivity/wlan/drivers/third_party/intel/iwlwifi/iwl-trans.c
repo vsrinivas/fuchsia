@@ -93,7 +93,6 @@ zx_status_t iwl_trans_send_cmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd
   return ret;
 }
 
-#if 0   // NEEDS_PORTING
 /* Comparator for struct iwl_hcmd_names.
  * Used in the binary search over a list of host commands.
  *
@@ -103,34 +102,34 @@ zx_status_t iwl_trans_send_cmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd
  * @return 0 iff equal.
  */
 static int iwl_hcmd_names_cmp(const void* key, const void* elt) {
-    const struct iwl_hcmd_names* name = elt;
-    uint8_t cmd1 = *(uint8_t*)key;
-    uint8_t cmd2 = name->cmd_id;
+  const struct iwl_hcmd_names* name = elt;
+  uint8_t cmd1 = *(uint8_t*)key;
+  uint8_t cmd2 = name->cmd_id;
 
-    return (cmd1 - cmd2);
+  return (cmd1 - cmd2);
 }
 
 const char* iwl_get_cmd_string(struct iwl_trans* trans, uint32_t id) {
-    uint8_t grp, cmd;
-    struct iwl_hcmd_names* ret;
-    const struct iwl_hcmd_arr* arr;
-    size_t size = sizeof(struct iwl_hcmd_names);
+  uint8_t grp, cmd;
+  struct iwl_hcmd_names* ret;
+  const struct iwl_hcmd_arr* arr;
+  size_t size = sizeof(struct iwl_hcmd_names);
 
-    grp = iwl_cmd_groupid(id);
-    cmd = iwl_cmd_opcode(id);
+  grp = iwl_cmd_groupid(id);
+  cmd = iwl_cmd_opcode(id);
 
-    if (!trans->command_groups || grp >= trans->command_groups_size ||
-        !trans->command_groups[grp].arr) {
-        return "UNKNOWN";
-    }
+  if (!trans->command_groups || grp >= trans->command_groups_size ||
+      !trans->command_groups[grp].arr) {
+    return "UNKNOWN";
+  }
 
-    arr = &trans->command_groups[grp];
-    ret = bsearch(&cmd, arr->arr, arr->size, size, iwl_hcmd_names_cmp);
-    if (!ret) { return "UNKNOWN"; }
-    return ret->cmd_name;
+  arr = &trans->command_groups[grp];
+  ret = bsearch(&cmd, arr->arr, arr->size, size, iwl_hcmd_names_cmp);
+  if (!ret) {
+    return "UNKNOWN";
+  }
+  return ret->cmd_name;
 }
-IWL_EXPORT_SYMBOL(iwl_get_cmd_string);
-#endif  // NEEDS_PORTING
 
 int iwl_cmd_groups_verify_sorted(const struct iwl_trans_config* trans) {
   int i, j;
