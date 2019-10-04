@@ -4,6 +4,8 @@
 
 #include <block-client/cpp/fake-device.h>
 
+#include <array>
+
 #include <fvm/format.h>
 #include <zxtest/zxtest.h>
 
@@ -224,6 +226,146 @@ TEST(FakeBlockDeviceTest, FifoTransactionUnsupportedTrim) {
   request.vmo_offset = 0;
   request.dev_offset = 0;
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device->FifoTransaction(&request, 1));
+}
+
+TEST(FakeBlockDeviceTest, BlockLimitPartialyFailTransaction) {
+  auto device = std::make_unique<FakeBlockDevice>(kBlockCountDefault, kBlockSizeDefault);
+
+  const size_t kVmoBlocks = 4;
+  const size_t kLimitBlocks = 2;
+  zx::vmo vmo;
+  fuchsia_hardware_block_VmoID vmoid;
+  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
+
+  // Pre-fill the source buffer.
+  std::array<uint8_t, kBlockSizeDefault> block;
+  memset(block.data(), 'a', block.size());
+  for (size_t i = 0; i < kVmoBlocks; i++) {
+    ASSERT_OK(vmo.write(block.data(), i * block.size(), block.size()));
+  }
+
+  block_fifo_request_t request;
+  request.opcode = BLOCKIO_WRITE;
+  request.vmoid = vmoid.id;
+  request.length = kVmoBlocks;
+  request.vmo_offset = 0;
+  request.dev_offset = 0;
+
+  // First, set the transaction limit.
+  EXPECT_EQ(0, device->GetWriteBlockCount());
+  device->SetWriteBlockLimit(2);
+
+  ASSERT_EQ(ZX_ERR_IO, device->FifoTransaction(&request, 1));
+  EXPECT_EQ(2, device->GetWriteBlockCount());
+
+  // Read from the device, an observe that the operation was only partially
+  // successful.
+  std::array<uint8_t, kBlockSizeDefault> zero_block;
+  memset(zero_block.data(), 0, zero_block.size());
+  for (size_t i = 0; i < kVmoBlocks; i++) {
+    ASSERT_OK(vmo.write(zero_block.data(), i * zero_block.size(), zero_block.size()));
+  }
+
+  request.opcode = BLOCKIO_READ;
+  ASSERT_OK(device->FifoTransaction(&request, 1));
+
+  // Expect to see valid data for the two blocks that were written.
+  for (size_t i = 0; i < kLimitBlocks; i++) {
+    std::array<uint8_t, kBlockSizeDefault> dst;
+    ASSERT_OK(vmo.read(dst.data(), i * dst.size(), dst.size()));
+    ASSERT_BYTES_EQ(block.data(), dst.data(), dst.size());
+  }
+  // Expect to see zero for the two blocks that were not written.
+  for (size_t i = kLimitBlocks; i < kVmoBlocks; i++) {
+    std::array<uint8_t, kBlockSizeDefault> dst;
+    ASSERT_OK(vmo.read(dst.data(), i * dst.size(), dst.size()));
+    ASSERT_BYTES_EQ(zero_block.data(), dst.data(), dst.size());
+  }
+
+}
+TEST(FakeBlockDeviceTest, BlockLimitFailsDistinctTransactions) {
+  auto device = std::make_unique<FakeBlockDevice>(kBlockCountDefault, kBlockSizeDefault);
+
+  const size_t kVmoBlocks = 1;
+  zx::vmo vmo;
+  fuchsia_hardware_block_VmoID vmoid;
+  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
+
+  block_fifo_request_t request;
+  request.opcode = BLOCKIO_WRITE;
+  request.vmoid = vmoid.id;
+  request.length = kVmoBlocks;
+  request.vmo_offset = 0;
+  request.dev_offset = 0;
+
+  // First, set the transaction limit.
+  EXPECT_EQ(0, device->GetWriteBlockCount());
+  device->SetWriteBlockLimit(3);
+
+  // Observe that we can fulfill three transactions...
+  EXPECT_EQ(ZX_OK, device->FifoTransaction(&request, 1));
+  EXPECT_EQ(ZX_OK, device->FifoTransaction(&request, 1));
+  EXPECT_EQ(ZX_OK, device->FifoTransaction(&request, 1));
+
+  // ... But then we see an I/O failure.
+  EXPECT_EQ(3, device->GetWriteBlockCount());
+  EXPECT_EQ(ZX_ERR_IO, device->FifoTransaction(&request, 1));
+}
+
+TEST(FakeBlockDeviceTest, BlockLimitFailsMergedTransactions) {
+  auto device = std::make_unique<FakeBlockDevice>(kBlockCountDefault, kBlockSizeDefault);
+
+  const size_t kVmoBlocks = 1;
+  zx::vmo vmo;
+  fuchsia_hardware_block_VmoID vmoid;
+  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
+
+  constexpr size_t kRequests = 3;
+  block_fifo_request_t requests[kRequests];
+  for (size_t i = 0; i < kRequests; i++) {
+    requests[i].opcode = BLOCKIO_WRITE;
+    requests[i].vmoid = vmoid.id;
+    requests[i].length = kVmoBlocks;
+    requests[i].vmo_offset = 0;
+    requests[i].dev_offset = 0;
+  }
+
+  // First, set the transaction limit.
+  device->SetWriteBlockLimit(3);
+
+  // Observe that we can fulfill three transactions...
+  EXPECT_EQ(ZX_OK, device->FifoTransaction(requests, kRequests));
+
+  // ... But then we see an I/O failure.
+  EXPECT_EQ(ZX_ERR_IO, device->FifoTransaction(requests, 1));
+}
+
+TEST(FakeBlockDeviceTest, BlockLimitResetsDevice) {
+  auto device = std::make_unique<FakeBlockDevice>(kBlockCountDefault, kBlockSizeDefault);
+
+  const size_t kVmoBlocks = 1;
+  zx::vmo vmo;
+  fuchsia_hardware_block_VmoID vmoid;
+  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
+
+  block_fifo_request_t request;
+  request.opcode = BLOCKIO_WRITE;
+  request.vmoid = vmoid.id;
+  request.length = kVmoBlocks;
+  request.vmo_offset = 0;
+  request.dev_offset = 0;
+
+  // First, set the transaction limit.
+  device->SetWriteBlockLimit(2);
+
+  // Observe that we can fail the device...
+  EXPECT_EQ(ZX_OK, device->FifoTransaction(&request, 1));
+  EXPECT_EQ(ZX_OK, device->FifoTransaction(&request, 1));
+  EXPECT_EQ(ZX_ERR_IO, device->FifoTransaction(&request, 1));
+
+  // ... But we can reset the device by supplying a different transaction limit.
+  device->ResetWriteBlockLimit();
+  EXPECT_EQ(ZX_OK, device->FifoTransaction(&request, 1));
 }
 
 TEST(FakeFVMBlockDeviceTest, QueryVolume) {

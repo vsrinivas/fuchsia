@@ -18,6 +18,26 @@ FakeBlockDevice::FakeBlockDevice(uint64_t block_count, uint32_t block_size)
   ASSERT_OK(zx::vmo::create(block_count * block_size, ZX_VMO_RESIZABLE, &block_device_));
 }
 
+void FakeBlockDevice::SetWriteBlockLimit(uint64_t limit) {
+  fbl::AutoLock lock(&lock_);
+  write_block_limit_ = limit;
+}
+
+void FakeBlockDevice::ResetWriteBlockLimit() {
+  fbl::AutoLock lock(&lock_);
+  write_block_limit_ = std::nullopt;
+}
+
+uint64_t FakeBlockDevice::GetWriteBlockCount() const {
+  fbl::AutoLock lock(&lock_);
+  return write_block_count_;
+}
+
+void FakeBlockDevice::ResetBlockCounts() {
+  fbl::AutoLock lock(&lock_);
+  write_block_count_ = 0;
+}
+
 void FakeBlockDevice::SetInfoFlags(uint32_t flags) {
   fbl::AutoLock lock(&lock_);
   block_info_flags_ = flags;
@@ -86,10 +106,16 @@ zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
         uint8_t buffer[block_size_];
         memset(buffer, 0, block_size_);
         for (size_t j = 0; j < requests[i].length; j++) {
+          if (write_block_limit_.has_value()) {
+            if (write_block_count_ >= write_block_limit_) {
+              return ZX_ERR_IO;
+            }
+          }
           uint64_t offset = (requests[i].vmo_offset + j) * block_size_;
           EXPECT_OK(target_vmoid.read(buffer, offset, block_size_));
           offset = (requests[i].dev_offset + j) * block_size_;
           EXPECT_OK(block_device_.write(buffer, offset, block_size_));
+          write_block_count_++;
         }
         break;
       }

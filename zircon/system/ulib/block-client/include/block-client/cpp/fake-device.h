@@ -5,6 +5,7 @@
 #pragma once
 
 #include <map>
+#include <optional>
 
 #include <block-client/cpp/block-device.h>
 #include <fbl/mutex.h>
@@ -30,6 +31,17 @@ class FakeBlockDevice : public BlockDevice {
   FakeBlockDevice& operator=(FakeBlockDevice&& other) = delete;
 
   virtual ~FakeBlockDevice() = default;
+
+  // Sets the number of blocks which may be written to the block device. Once |limit| is reached,
+  // all following operations will return ZX_ERR_IO.
+  //
+  // May be "std::nullopt" to allow an unlimited count of blocks.
+  void SetWriteBlockLimit(uint64_t limit);
+
+  // Turns off the "write block limit".
+  void ResetWriteBlockLimit();
+  uint64_t GetWriteBlockCount() const;
+  void ResetBlockCounts();
 
   void SetInfoFlags(uint32_t flags);
   void SetBlockCount(uint64_t block_count);
@@ -72,6 +84,11 @@ class FakeBlockDevice : public BlockDevice {
   void AdjustBlockDeviceSizeLocked(uint64_t new_size) __TA_REQUIRES(lock_);
 
   mutable fbl::Mutex lock_ = {};
+  // The number of transactions which may occur before I/O errors are returned
+  // to callers. If "nullopt", no limit is set.
+  std::optional<uint64_t> write_block_limit_ __TA_GUARDED(lock_) = std::nullopt;
+  uint64_t write_block_count_ __TA_GUARDED(lock_) = 0;
+
   uint64_t block_count_ __TA_GUARDED(lock_) = 0;
   uint32_t block_size_ __TA_GUARDED(lock_) = 0;
   uint32_t block_info_flags_ __TA_GUARDED(lock_) = 0;
