@@ -25,7 +25,7 @@ use std::str;
 /// Creates a `router_config::PortRange` from a port range string.
 fn make_port_range(input_range: &str) -> Result<PortRange, Error> {
     let port_range = input_range
-        .split("-")
+        .split('-')
         .map(|s| s.parse::<u16>())
         .filter_map(Result::ok)
         .collect::<Vec<u16>>();
@@ -48,7 +48,7 @@ fn make_port_range(input_range: &str) -> Result<PortRange, Error> {
 /// The format of `input_ranges` is: "<from>-<to>,<from>-<to>,...".
 fn to_port_ranges(input_ranges: &str) -> Result<Vec<PortRange>, Error> {
     let (oks, fails): (Vec<_>, Vec<_>) =
-        input_ranges.split(",").map(|range| make_port_range(range)).partition(Result::is_ok);
+        input_ranges.split(',').map(|range| make_port_range(range)).partition(Result::is_ok);
     if !fails.is_empty() {
         let errors: Vec<_> = fails.into_iter().map(Result::unwrap_err).collect();
         return Err(format_err!("Invalid port range: {:?}", errors));
@@ -80,7 +80,7 @@ fn supports_network_manager(peer: &Peer) -> bool {
         Some(ref services) => [RouterAdminMarker::NAME, RouterStateMarker::NAME]
             .iter()
             .map(|svc| services.contains(&svc.to_string()))
-            .fold(true, |acc, v| acc && v),
+            .all(|v| v),
     }
 }
 
@@ -409,10 +409,7 @@ async fn do_set<T: Write>(
                             }
                             wan_properties.connection_type = Some(WanConnection::PpPoE);
                             let pppoe_config = Pppoe {
-                                credentials: Some(Credentials {
-                                    user: username,
-                                    password: password,
-                                }),
+                                credentials: Some(Credentials { user: username, password }),
                             };
                             // Applying the configurations to the wan_properties data structure
                             wan_properties.connection_parameters =
@@ -444,10 +441,7 @@ async fn do_set<T: Write>(
                             // Wrapping username and password in "Credentials" structure and
                             // constructing the Pptp structure
                             let pptp_config = Pptp {
-                                credentials: Some(Credentials {
-                                    user: username,
-                                    password: password,
-                                }),
+                                credentials: Some(Credentials { user: username, password }),
                                 server: Some(fidl_fuchsia_net::IpAddress::Ipv4(server_ipv4)),
                             };
                             wan_properties.connection_parameters = Some(
@@ -474,19 +468,18 @@ async fn do_set<T: Write>(
                             wan_properties.connection_type = Some(WanConnection::L2Tp);
                             let server_ipv4 = Ipv4Address { addr: server.unwrap().octets() };
                             let l2tp_config = L2tp {
-                                credentials: Some(Credentials {
-                                    user: username,
-                                    password: password,
-                                }),
+                                credentials: Some(Credentials { user: username, password }),
                                 server: Some(fidl_fuchsia_net::IpAddress::Ipv4(server_ipv4)),
                             };
                             wan_properties.connection_parameters = Some(
                                 fidl_fuchsia_router_config::ConnectionParameters::L2tp(l2tp_config),
                             );
                         }
-                        _ => return Err(format_err!(
+                        _ => {
+                            return Err(format_err!(
                             "Please provide a valid connection type: direct, pppoe, pptp or l2tp"
-                        )),
+                        ))
+                        }
                     }
                 }
                 None => {
@@ -511,12 +504,12 @@ async fn do_set<T: Write>(
                     match m.as_ref() {
                         // handling DHCP IP configuration
                         "dhcp" => {
-                            if !ipv4.is_none() {
+                            if ipv4.is_some() {
                                 return Err(format_err!(
                                     "Cannot provide IP address when enabling dhcp"
                                 ));
                             }
-                            if !gateway.is_none() {
+                            if gateway.is_some() {
                                 return Err(format_err!(
                                     "Cannot provide gateway IP aadress when enabling dhcp"
                                 ));
@@ -651,8 +644,8 @@ async fn do_set<T: Write>(
             }
 
             // TODO: Populate these fields with the values received from the user
-            if !lease_time_sec.is_none() {}
-            if !gateway.is_none() {}
+            if lease_time_sec.is_some() {}
+            if gateway.is_some() {}
 
             printer.println(format!("Sending: {:?} ID: {:?}", lan_properties, lan_id));
             let response = router_admin

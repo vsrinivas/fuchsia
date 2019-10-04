@@ -44,7 +44,7 @@ fn supports_network_manager(peer: &Peer) -> bool {
         Some(ref services) => [RouterAdminMarker::NAME, RouterStateMarker::NAME]
             .iter()
             .map(|svc| services.contains(&svc.to_string()))
-            .fold(true, |acc, v| acc && v),
+            .all(|v| v),
     }
 }
 
@@ -84,16 +84,15 @@ fn main() -> Result<(), Error> {
     let Opt { overnet, cmd } = Opt::from_args();
     let mut exec = fasync::Executor::new().context("error creating event loop")?;
     let fut = async {
-        let (router_admin, router_state) = match overnet {
-            true => {
-                connect_overnet()
-                    .on_timeout(fasync::Time::after(OVERNET_TIMEOUT_SEC.seconds()), || {
-                        syslog::fx_log_err!("no suitable overnet peers found");
-                        Err(format_err!("could not find a suitable overnet peer"))
-                    })
-                    .await?
-            }
-            false => connect()?,
+        let (router_admin, router_state) = if overnet {
+            connect_overnet()
+                .on_timeout(fasync::Time::after(OVERNET_TIMEOUT_SEC.seconds()), || {
+                    syslog::fx_log_err!("no suitable overnet peers found");
+                    Err(format_err!("could not find a suitable overnet peer"))
+                })
+                .await?
+        } else {
+            connect()?
         };
         let mut printer = Printer::new(io::stdout());
         run_cmd(cmd, router_admin, router_state, &mut printer).await

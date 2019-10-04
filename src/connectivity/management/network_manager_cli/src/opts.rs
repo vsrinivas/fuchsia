@@ -52,7 +52,7 @@ impl FromStr for Ipv4AddrPrefix {
             Ok(n) => n,
             Err(_err) => return Err(format_err!("Error parsing IP address")),
         };
-        let ipv4_addr_prefix = Ipv4AddrPrefix { address: ipv4_addr, prefix: prefix };
+        let ipv4_addr_prefix = Ipv4AddrPrefix { address: ipv4_addr, prefix };
         Ok(ipv4_addr_prefix)
     }
 }
