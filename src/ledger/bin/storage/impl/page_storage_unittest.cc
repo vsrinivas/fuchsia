@@ -2423,7 +2423,8 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
   EXPECT_THAT(returned_object_identifiers, UnorderedElementsAreArray(object_identifiers));
 }
 
-TEST_F(PageStorageTest, PageIsSynced) {
+// TODO(fxb/37875) Test is flaky.
+TEST_F(PageStorageTest, DISABLED_PageIsSynced) {
   ObjectData data_array[] = {
       MakeObject("Some data", InlineBehavior::PREVENT),
       MakeObject("Some more data", InlineBehavior::PREVENT),
