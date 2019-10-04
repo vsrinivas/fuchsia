@@ -7,6 +7,7 @@ import 'dart:io' as io;
 
 import 'package:logging/logging.dart';
 import 'package:sl4f/sl4f.dart';
+import 'package:retry/retry.dart';
 import 'package:webdriver/sync_core.dart' show WebDriver;
 import 'package:webdriver/sync_io.dart' as sync_io;
 
@@ -143,19 +144,29 @@ class WebDriverConnector {
       return false;
     });
 
-    // Add new sessions for new ports.  For a given Chrome context listening on
-    // port p on the DuT, we choose an unused local port x, and forward
-    // localhost:x to DuT:p, and create a WebDriver instance pointing to localhost:x.
+    // Add new sessions for new ports.
     for (final remotePort in remotePorts) {
       if (!_webDriverSessions.containsKey(remotePort)) {
-        final localPort = await _sl4f.ssh.forwardPort(remotePort: remotePort);
-        final webDriver =
-            _webDriverHelper.createDriver(localPort, _chromedriverPort);
-
-        _webDriverSessions.putIfAbsent(
-            remotePort, () => WebDriverSession(localPort, webDriver));
+        final webDriverSession = await _createWebDriverSession(remotePort);
+        _webDriverSessions.putIfAbsent(remotePort, () => webDriverSession);
       }
     }
+  }
+
+  /// Creates a `Webdriver` connection using the specified port.  Retries
+  /// on errors that may occur due to network issues.
+  Future<WebDriverSession> _createWebDriverSession(int remotePort,
+      {int tries = 5}) async {
+    // For a given Chrome context listening on
+    // port p on the DuT, we choose an unused local port x, and forward
+    // localhost:x to DuT:p, and create a WebDriver instance pointing to localhost:x.
+    final localPort = await _sl4f.ssh.forwardPort(remotePort: remotePort);
+    final webDriver = await retry(
+      () => _webDriverHelper.createDriver(localPort, _chromedriverPort),
+      maxAttempts: tries,
+    );
+
+    return WebDriverSession(localPort, webDriver);
   }
 }
 

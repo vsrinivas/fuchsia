@@ -7,6 +7,7 @@ import 'dart:io';
 
 import 'package:logging/logging.dart';
 import 'package:meta/meta.dart';
+import 'package:retry/retry.dart';
 
 import 'exceptions.dart';
 
@@ -125,9 +126,20 @@ class Ssh {
   /// If [port] is not provided, an unused port will be allocated.
   /// The return value is the local forwarded port, or [PortForwardException] is
   /// thrown in case of error.
-  Future<int> forwardPort({@required int remotePort, int port}) async {
+  Future<int> forwardPort(
+      {@required int remotePort, int port, int tries = 5}) async {
     port ??= await pickUnusedPort();
     _log.fine('Forwarding TCP port: localhost:$port -> $target:$remotePort');
+    await retry(
+      () => _forwardPort(remotePort, port),
+      retryIf: (e) => e is PortForwardException,
+      maxAttempts: tries,
+    );
+    return port;
+  }
+
+  /// Forwards a port to the DUT without retries.
+  Future<void> _forwardPort(int remotePort, int port) async {
     final result = await Process.run(
         'ssh', makeForwardArgs(port, remotePort, cancel: false),
         runInShell: true);
@@ -138,7 +150,6 @@ class Ssh {
           'Failed to initiate Port Forward. '
               'STDOUT: "${result.stdout}". STDERR: "${result.stderr}".');
     }
-    return port;
   }
 
   /// Cancels a TCP port forward.
