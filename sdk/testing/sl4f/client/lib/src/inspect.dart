@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:pedantic/pedantic.dart';
 import 'package:logging/logging.dart';
 
 import 'ssh.dart';
@@ -135,23 +136,28 @@ class FreezeDetector {
   Duration threshold = const Duration(seconds: 5);
   static const _workInterval = Duration(seconds: 1);
 
-  Timer _checker;
   Timer _worker;
   final _lastExecution = Stopwatch();
 
   FreezeDetector(this.inspect);
 
   void _workerHandler() async {
-    _checker = Timer(threshold, () {
+    _lastExecution.reset();
+
+    // Start the query we use to detect a freeze
+    final retrieveHub = inspect.retrieveHubEntries();
+
+    // Schedule some work to happen if it doesn't complete in time.
+    unawaited(retrieveHub.timeout(threshold, onTimeout: () {
       _isFrozen = true;
       _log.info('Freeze Start Detected ${DateTime.now()}');
       _freezeHappened = true;
       _c = Completer();
-    });
+      return ['timeout'];
+    }));
 
-    _lastExecution.reset();
-    await inspect.retrieveHubEntries();
-    _checker.cancel();
+    // Wait for the query to finish.
+    await retrieveHub;
 
     if (_isFrozen) {
       _log.info('Freeze End Detected ${DateTime.now()}');
@@ -179,7 +185,6 @@ class FreezeDetector {
       return;
     }
     _log.info('Stopping FreezeDetector');
-    _checker?.cancel();
     _started = false;
     _worker?.cancel();
   }
