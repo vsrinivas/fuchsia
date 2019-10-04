@@ -58,25 +58,29 @@ TEST(DirectoryTest, OpenFD) {
   int fd = -1;
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, fdio_open_fd(nullptr, fuchsia_io_OPEN_RIGHT_READABLE, &fd));
   ASSERT_EQ(ZX_ERR_NOT_FOUND, fdio_open_fd("/x/y/z", fuchsia_io_OPEN_RIGHT_READABLE, &fd));
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, fdio_open_fd("/", fuchsia_io_OPEN_RIGHT_READABLE, &fd));
+
+  // Opening local directories, like the root of the namespace, should be supported.
+  ASSERT_OK(fdio_open_fd("/", fuchsia_io_OPEN_RIGHT_READABLE, &fd));
+  // But empty path segments don't need to be supported.
+  ASSERT_EQ(ZX_ERR_BAD_PATH, fdio_open_fd("//", fuchsia_io_OPEN_RIGHT_READABLE, &fd));
 
   std::string test_sys_path = new_path("test/sys");
   ASSERT_OK(fdio_open_fd(test_sys_path.c_str(), fuchsia_io_OPEN_RIGHT_READABLE, &fd));
   ASSERT_TRUE(fd >= 0);
 
   int fd2 = -1;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, fdio_open_fd_at(fd, nullptr, fuchsia_io_OPEN_RIGHT_READABLE,
-                                                 &fd2));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            fdio_open_fd_at(fd, nullptr, fuchsia_io_OPEN_RIGHT_READABLE, &fd2));
   ASSERT_EQ(fd2, -1);
-  ASSERT_EQ(ZX_ERR_PEER_CLOSED, fdio_open_fd_at(fd, "some-nonexistent-file",
-                                                fuchsia_io_OPEN_RIGHT_READABLE, &fd2));
+  ASSERT_EQ(ZX_ERR_NOT_FOUND,
+            fdio_open_fd_at(fd, "some-nonexistent-file", fuchsia_io_OPEN_RIGHT_READABLE, &fd2));
   ASSERT_EQ(fd2, -1);
 
   // We expect the binary that this file is compiled into to exist
   ASSERT_OK(fdio_open_fd_at(fd, "fdio-test", fuchsia_io_OPEN_RIGHT_READABLE, &fd2));
   ASSERT_TRUE(fd >= 0);
 
-  // Verify that we can actually read from that file, since opens are async.
+  // Verify that we can actually read from that file.
   char buf[256];
   ssize_t bytes_read = read(fd2, buf, 256);
   ASSERT_EQ(bytes_read, 256);

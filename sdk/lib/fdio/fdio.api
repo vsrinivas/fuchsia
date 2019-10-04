@@ -1,5 +1,5 @@
 {
-  "pkg/fdio/include/lib/fdio/directory.h": "829116246642dd7efa59521cabead1e1",
+  "pkg/fdio/include/lib/fdio/directory.h": "cdc6e2c722d046714fbb100894e76c62",
   "pkg/fdio/include/lib/fdio/fd.h": "f5ea3105b3d7d00dac9cef5b34ac5283",
   "pkg/fdio/include/lib/fdio/fdio.h": "5b681e52ef4ea80d54a495b139f953bc",
   "pkg/fdio/include/lib/fdio/io.h": "9502298f6e459b4f07faa6db1c48cdd4",

@@ -66,7 +66,9 @@ static zx_status_t fdio_validate_path(const char* path, size_t* out_length) {
   if (length >= PATH_MAX) {
     return ZX_ERR_INVALID_ARGS;
   }
-  *out_length = length;
+  if (out_length != nullptr) {
+    *out_length = length;
+  }
   return ZX_OK;
 }
 
@@ -161,33 +163,50 @@ zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags,
       .status();
 }
 
-__EXPORT
-zx_status_t fdio_open_fd(const char* path, uint32_t flags, int* out_fd) {
-  zx::channel client, server;
-  zx_status_t status = zx::channel::create(0, &client, &server);
-  if (status != ZX_OK) {
-    return status;
-  }
+static zx_status_t fdio_open_fd_common(fdio_t* iodir, const char* path, uint32_t flags,
+                                       int* out_fd) {
+  // We're opening a file descriptor rather than just a channel (like fdio_open), so we always want
+  // to Describe (or listen for an OnOpen event on) the opened connection. This ensures that the fd
+  // is valid before returning from here, and mimics how open() and openat() behave
+  // (fdio_flags_to_zxio always add _FLAG_DESCRIBE).
+  flags |= ZX_FS_FLAG_DESCRIBE;
 
-  status = fdio_open(path, flags, server.release());
+  fdio_t* io;
+  zx_status_t status = fdio_get_ops(iodir)->open(iodir, path, flags, FDIO_CONNECT_MODE, &io);
   if (status != ZX_OK) {
     return status;
   }
 
   int fd;
-  status = fdio_fd_create(client.release(), &fd);
-  if (status != ZX_OK) {
-    return status;
+  if ((fd = fdio_bind_to_fd(io, -1, 0)) < 0) {
+    fdio_get_ops(io)->close(io);
+    fdio_release(io);
+    return ZX_ERR_BAD_STATE;
   }
-
   *out_fd = fd;
   return ZX_OK;
 }
 
 __EXPORT
+zx_status_t fdio_open_fd(const char* path, uint32_t flags, int* out_fd) {
+  zx_status_t status = fdio_validate_path(path, nullptr);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Since we are sending a request to the root handle, require that we start at '/'. (In fdio_open
+  // above this is done by fdio_ns_connect.)
+  if (path[0] != '/') {
+    return ZX_ERR_NOT_FOUND;
+  }
+  path++;
+
+  return fdio_open_fd_common(fdio_root_handle, path, flags, out_fd);
+}
+
+__EXPORT
 zx_status_t fdio_open_fd_at(int dir_fd, const char* path, uint32_t flags, int* out_fd) {
-  zx::channel client, server;
-  zx_status_t status = zx::channel::create(0, &client, &server);
+  zx_status_t status = fdio_validate_path(path, nullptr);
   if (status != ZX_OK) {
     return status;
   }
@@ -197,26 +216,9 @@ zx_status_t fdio_open_fd_at(int dir_fd, const char* path, uint32_t flags, int* o
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx_handle_t dir_channel = fdio_unsafe_borrow_channel(iodir);
-  if (dir_channel == ZX_HANDLE_INVALID) {
-    fdio_unsafe_release(iodir);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  status = fdio_open_at(dir_channel, path, flags, server.release());
+  status = fdio_open_fd_common(iodir, path, flags, out_fd);
   fdio_unsafe_release(iodir);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  int fd;
-  status = fdio_fd_create(client.release(), &fd);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  *out_fd = fd;
-  return ZX_OK;
+  return status;
 }
 
 __EXPORT
