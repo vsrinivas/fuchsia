@@ -7,6 +7,7 @@ import("//build/testing/environments.gni")
 source_set("mixer") {
   public_configs = [ "..:audio_core_config" ]
   sources = [
+    "channel_strip.h",
     "constants.h",
     "gain.cc",
     "gain.h",
@@ -65,6 +66,7 @@ executable("unittest_bin") {
 
   sources = [
     "bookkeeping_unittest.cc",
+    "channel_strip_unittest.cc",
     "gain_unittest.cc",
     "output_producer_unittest.cc",
     "position_manager_unittest.cc",
