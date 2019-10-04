@@ -20,17 +20,18 @@ namespace {
 
 // ISP Debug Stream Parameters
 constexpr uint32_t kIspStreamMinBufferForCamping = 5;
-constexpr uint32_t kIspStreamMinWidth = 640;
+constexpr uint32_t kIspStreamMinWidth = 1920;
 constexpr uint32_t kIspStreamMaxWidth = 2048;
-constexpr uint32_t kIspStreamMinHeight = 480;
+constexpr uint32_t kIspStreamMinHeight = 1080;
 constexpr uint32_t kIspStreamMaxHeight = 1280;
-constexpr uint32_t kIspStreamMinBytesPerRow = 480;
+constexpr uint32_t kIspStreamMinBytesPerRow = 1920;
 constexpr uint32_t kIspStreamMaxBytesPerRow = 0xfffffff;
 constexpr uint32_t kIspStreamLayers = 1;
 constexpr uint32_t kIspStreamBytesPerRowDivisor = 128;
 constexpr uint32_t kIspStreamColorSpaceCount = 1;
 constexpr uint32_t kIspStreamWidth = 1920;
 constexpr uint32_t kIspStreamHeight = 1080;
+constexpr uint32_t kIspStreamStride = 1920;
 constexpr uint32_t kIspStreamFrameRate = 30;
 constexpr ::fuchsia::sysmem::PixelFormatType kIspStreamPixelFormat =
     fuchsia::sysmem::PixelFormatType::NV12;
@@ -41,6 +42,8 @@ constexpr ::fuchsia::sysmem::ColorSpaceType kIspStreamColorSpaceType =
 static constexpr fuchsia::sysmem::BufferCollectionConstraints IspStreamConstraints() {
   fuchsia::sysmem::BufferCollectionConstraints constraints;
   constraints.min_buffer_count_for_camping = kIspStreamMinBufferForCamping;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.physically_contiguous_required = true;
   constraints.image_format_constraints_count = 1;
   auto& image_constraints = constraints.image_format_constraints[0];
   image_constraints.pixel_format.type = kIspStreamPixelFormat;
@@ -62,6 +65,7 @@ static std::vector<fuchsia::sysmem::ImageFormat_2> IspImageFormats() {
   fuchsia::sysmem::ImageFormat_2 ret;
   ret.coded_width = kIspStreamWidth;
   ret.coded_height = kIspStreamHeight;
+  ret.bytes_per_row = kIspStreamStride;
   ret.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
   std::vector<fuchsia::sysmem::ImageFormat_2> ret_vec;
   ret_vec.push_back(ret);
