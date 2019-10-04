@@ -24,6 +24,7 @@
 #include <fbl/algorithm.h>
 #include <kernel/auto_lock.h>
 #include <kernel/mutex.h>
+#include <kernel/thread.h>
 #include <lk/init.h>
 
 #define LOCAL_TRACE 0
@@ -130,7 +131,7 @@ static void EarlyBootSeed(uint level) {
   // TODO(security): Have the PRNG reseed based on usage
 
   unsigned int successful = 0;  // number of successful entropy sources
-  entropy::Collector* collector;
+  entropy::Collector* collector = nullptr;
   if (entropy::HwRngCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
     successful++;
   }
@@ -161,6 +162,37 @@ static void EarlyBootSeed(uint level) {
 // Migrate the global PRNG to enter thread-safe mode.
 static void BecomeThreadSafe(uint level) { GetInstance()->BecomeThreadSafe(); }
 
+// PRNG reseeding loop.
+static int ReseedPRNG(void* arg) {
+  for (;;) {
+    thread_sleep_relative(ZX_SEC(30));
+
+    unsigned int successful = 0;  // number of successful entropy sources
+    entropy::Collector* collector = nullptr;
+    // Reseed using HW RNG and jitterentropy;
+    if (entropy::HwRngCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
+      successful++;
+    }
+    if (entropy::JitterentropyCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
+      successful++;
+    }
+
+    if (successful == 0) {
+      kGlobalPrng->SelfReseed();
+      LTRACEF("Reseed PRNG with no new entropy source\n");
+    } else {
+      LTRACEF("Successfully reseed PRNG from %u sources.\n", successful);
+    }
+  }
+  return 0;
+}
+
+// Start a thread to reseed PRNG.
+static void StartReseedThread(uint level) {
+  thread_t* t = thread_create("prng-reseed", ReseedPRNG, nullptr, HIGHEST_PRIORITY);
+  thread_detach_and_resume(t);
+}
+
 }  // namespace GlobalPRNG
 
 }  // namespace crypto
@@ -169,3 +201,5 @@ LK_INIT_HOOK(global_prng_seed, crypto::GlobalPRNG::EarlyBootSeed, LK_INIT_LEVEL_
 
 LK_INIT_HOOK(global_prng_thread_safe, crypto::GlobalPRNG::BecomeThreadSafe,
              LK_INIT_LEVEL_THREADING - 1)
+
+LK_INIT_HOOK(global_prng_reseed, crypto::GlobalPRNG::StartReseedThread, LK_INIT_LEVEL_THREADING)

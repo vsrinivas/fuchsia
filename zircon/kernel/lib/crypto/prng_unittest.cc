@@ -60,6 +60,42 @@ bool non_thread_safe_prng_same_behavior() {
   END_TEST;
 }
 
+bool reseed() {
+  BEGIN_TEST;
+
+  static const char kSeed1[32] = {'1', '2', '3'};
+  static const int kSeed1Size = sizeof(kSeed1);
+  static const char kSeed2[32] = {'a', 'b', 'c'};
+  static const int kSeed2Size = sizeof(kSeed2);
+  static const int kDrawSize = 13;
+
+  PRNG prng1(kSeed1, kSeed1Size);
+  PRNG prng2(kSeed1, kSeed1Size);
+  PRNG prng3(kSeed1, kSeed1Size);
+
+  uint8_t out1[kDrawSize] = {0};
+  uint8_t out2[kDrawSize] = {0};
+  uint8_t out3[kDrawSize] = {0};
+  prng1.Draw(out1, sizeof(out1));
+  prng2.Draw(out2, sizeof(out2));
+  prng3.Draw(out3, sizeof(out3));
+  EXPECT_EQ(0, memcmp(out1, out2, sizeof(out1)), "inconsistent prng");
+  EXPECT_EQ(0, memcmp(out1, out3, sizeof(out1)), "inconsistent prng");
+
+  // Verify state changed after reseeding.
+  prng2.AddEntropy(kSeed2, kSeed2Size);
+  prng3.SelfReseed();
+
+  prng1.Draw(out1, sizeof(out1));
+  prng2.Draw(out2, sizeof(out2));
+  prng3.Draw(out3, sizeof(out3));
+  EXPECT_NE(0, memcmp(out1, out2, sizeof(out1)), "same output after reseeding");
+  EXPECT_NE(0, memcmp(out1, out3, sizeof(out1)), "same output after reseeding");
+  EXPECT_NE(0, memcmp(out3, out2, sizeof(out1)), "same output after reseeding");
+
+  END_TEST;
+}
+
 bool prng_output() {
   BEGIN_TEST;
 
@@ -142,6 +178,7 @@ bool prng_randint() {
 UNITTEST_START_TESTCASE(prng_tests)
 UNITTEST("Instantiate", instantiate)
 UNITTEST("NonThreadSafeMode", non_thread_safe_prng_same_behavior)
+UNITTEST("Reseed", reseed)
 UNITTEST("Test Output", prng_output)
 UNITTEST("Test RandInt", prng_randint)
 UNITTEST_END_TESTCASE(prng_tests, "prng", "Test pseudo-random number generator implementation.");

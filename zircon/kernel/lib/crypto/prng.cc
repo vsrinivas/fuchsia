@@ -75,6 +75,9 @@ void PRNG::AddEntropy(const void* data, size_t size) {
   }
 }
 
+// AddEntropy() with NULL input effectively reseeds with hash of current key.
+void PRNG::SelfReseed() { AddEntropy(NULL, 0); }
+
 void PRNG::Draw(void* out, size_t size) {
   DEBUG_ASSERT(out || size == 0);
   ASSERT(size <= kMaxDrawLen);

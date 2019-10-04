@@ -38,10 +38,14 @@ class PRNG {
 
   ~PRNG();
 
-  // Re-seed the PRNG by mixing-in new entropy. |size| is in bytes.  |data|
-  // should be high-quality entropy, i.e. each bit should have equal
-  // probability of being 0 or 1. |size| MUST NOT be greater than kMaxEntropy.
+  // Re-seed the PRNG by mixing-in new entropy. |size| is in bytes.
+  // |size| MUST NOT be greater than kMaxEntropy.
+  // If size is 0, only hash of the current key is used to re-seed.
   void AddEntropy(const void* data, size_t size) TA_EXCL(mutex_) TA_EXCL(spinlock_);
+
+  // Re-seed the PRNG by hash of the current key. This does not mix in new
+  // entropy.
+  void SelfReseed();
 
   // Get pseudo-random output of |size| bytes.  Blocks until at least
   // kMinEntropy bytes of entropy have been added to this PRNG.  |size| MUST
