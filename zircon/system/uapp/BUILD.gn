@@ -12,7 +12,6 @@ group("uapp") {
     "blktest",
     "blobfs",
     "blobfs-load-generator",
-    "channel-perf",
     "clock",
     "clock:clkctl",
     "crasher",
