@@ -11,11 +11,29 @@
 
 namespace harvester {
 
+void GatherMemory::GatherDeviceProperties() {
+  const std::string DEVICE_TOTAL = "memory:device_total_bytes";
+  zx_info_kmem_stats_t stats;
+  zx_status_t err = zx_object_get_info(RootResource(), ZX_INFO_KMEM_STATS,
+                                       &stats, sizeof(stats),
+                                       /*actual=*/nullptr, /*avail=*/nullptr);
+  if (err != ZX_OK) {
+    FXL_LOG(ERROR) << ZxErrorString("ZX_INFO_KMEM_STATS", err);
+    return;
+  }
+  SampleList list;
+  list.emplace_back(DEVICE_TOTAL, stats.total_bytes);
+  DockyardProxyStatus status = Dockyard().SendSampleList(list);
+  if (status != DockyardProxyStatus::OK) {
+    FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";
+  }
+}
+
 void GatherMemory::Gather() {
   zx_info_kmem_stats_t stats;
-  zx_status_t err = zx_object_get_info(
-      RootResource(), ZX_INFO_KMEM_STATS, &stats, sizeof(stats),
-      /*actual=*/nullptr, /*available=*/nullptr);
+  zx_status_t err = zx_object_get_info(RootResource(), ZX_INFO_KMEM_STATS,
+                                       &stats, sizeof(stats),
+                                       /*actual=*/nullptr, /*avail=*/nullptr);
   if (err != ZX_OK) {
     FXL_LOG(ERROR) << "ZX_INFO_KMEM_STATS error " << zx_status_get_string(err);
     return;
@@ -26,7 +44,6 @@ void GatherMemory::Gather() {
               << ", mmu " << stats.mmu_overhead_bytes << ", ipc "
               << stats.ipc_bytes;
 
-  const std::string DEVICE_TOTAL = "memory:device_total_bytes";
   const std::string DEVICE_FREE = "memory:device_free_bytes";
 
   const std::string KERNEL_TOTAL = "memory:kernel_total_bytes";
@@ -40,7 +57,7 @@ void GatherMemory::Gather() {
 
   SampleList list;
   // Memory for the entire machine.
-  list.push_back(std::make_pair(DEVICE_TOTAL, stats.total_bytes));
+  // Note: stats.total_bytes is recorded by InitialData().
   list.push_back(std::make_pair(DEVICE_FREE, stats.free_bytes));
   // Memory in the kernel.
   list.push_back(std::make_pair(KERNEL_TOTAL, stats.total_heap_bytes));

@@ -38,6 +38,14 @@ Harvester::Harvester(zx_handle_t root_resource, async_dispatcher_t* dispatcher,
       dispatcher_(dispatcher),
       dockyard_proxy_(std::move(dockyard_proxy)) {}
 
+void Harvester::GatherDeviceProperties() {
+  gather_cpu_.GatherDeviceProperties();
+  gather_inspectable_.GatherDeviceProperties();
+  gather_introspection_.GatherDeviceProperties();
+  gather_memory_.GatherDeviceProperties();
+  gather_tasks_.GatherDeviceProperties();
+}
+
 void Harvester::GatherData() {
   zx::time now = async::Now(dispatcher_);
 

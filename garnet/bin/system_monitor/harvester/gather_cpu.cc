@@ -16,7 +16,7 @@ namespace {
 // Utility function to label and append a cpu sample to the |list|. |cpu| is the
 // index returned from the kernel. |path| is the kind of sample, e.g.
 // "interrupt_count".
-void AddCpuValue(SampleList* list, size_t cpu, const std::string path,
+void AddCpuValue(SampleList* list, size_t cpu, const std::string& path,
                  dockyard::SampleValue value) {
   std::ostringstream label;
   label << "cpu:" << cpu << ":" << path;
@@ -25,6 +25,24 @@ void AddCpuValue(SampleList* list, size_t cpu, const std::string path,
 
 }  // namespace
 
+void GatherCpu::GatherDeviceProperties() {
+  const std::string CPU_COUNT = "cpu:count";
+  zx_info_cpu_stats_t stats[1];
+  size_t actual, avail;
+  zx_status_t err = zx_object_get_info(RootResource(), ZX_INFO_CPU_STATS,
+                                       &stats, sizeof(stats), &actual, &avail);
+  if (err != ZX_OK) {
+    FXL_LOG(ERROR) << ZxErrorString("ZX_INFO_CPU_STATS", err);
+    return;
+  }
+  SampleList list;
+  list.emplace_back(CPU_COUNT, avail);
+  DockyardProxyStatus status = Dockyard().SendSampleList(list);
+  if (status != DockyardProxyStatus::OK) {
+    FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";
+  }
+}
+
 void GatherCpu::Gather() {
   // TODO(smbug.com/34): Determine the array size at runtime (32 is arbitrary).
   zx_info_cpu_stats_t stats[32];
@@ -32,8 +50,7 @@ void GatherCpu::Gather() {
   zx_status_t err = zx_object_get_info(RootResource(), ZX_INFO_CPU_STATS,
                                        &stats, sizeof(stats), &actual, &avail);
   if (err != ZX_OK) {
-    FXL_LOG(ERROR) << "ZX_INFO_CPU_STATS returned " << err << "("
-                   << zx_status_get_string(err) << ")";
+    FXL_LOG(ERROR) << ZxErrorString("ZX_INFO_CPU_STATS", err);
     return;
   }
   auto now = std::chrono::high_resolution_clock::now();

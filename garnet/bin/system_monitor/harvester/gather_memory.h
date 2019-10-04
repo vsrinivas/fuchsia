@@ -15,6 +15,8 @@ class GatherMemory : public GatherCategory {
                harvester::DockyardProxy* dockyard_proxy)
       : GatherCategory(root_resource, dockyard_proxy) {}
 
+  // GatherCategory.
+  void GatherDeviceProperties() override;
   void Gather() override;
 };
 

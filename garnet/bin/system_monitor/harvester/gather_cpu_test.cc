@@ -17,8 +17,13 @@ TEST_F(GatherCpuTest, CheckValues) {
   harvester::DockyardProxyFake dockyard_proxy;
 
   harvester::GatherCpu gatherer(root_resource, &dockyard_proxy);
-  gatherer.Gather();
   uint64_t test_value;
+
+  gatherer.GatherDeviceProperties();
+  EXPECT_TRUE(dockyard_proxy.CheckValueSent("cpu:count", &test_value));
+  EXPECT_LT(1ULL, test_value);
+
+  gatherer.Gather();
   EXPECT_TRUE(dockyard_proxy.CheckValueSent("cpu:0:busy_time", &test_value));
   EXPECT_LT(1000ULL, test_value);  // Test value is arbitrary.
   const uint64_t NSEC_YEAR = 31536000000000000ULL;

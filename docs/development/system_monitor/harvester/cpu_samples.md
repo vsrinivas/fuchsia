@@ -20,6 +20,10 @@ grouped in four broad categories.
 The busy and idle times are complementary. The busy time is derived from the
 idle time.
 
+##### cpu:count
+The number of main CPUs. For the "cpu:\*:" sample paths the "\*" will be a
+number from 0 to (cpu:count - 1).
+
 ##### cpu:\*:busy_time
 The total accumulated time this processor has been busy.
 

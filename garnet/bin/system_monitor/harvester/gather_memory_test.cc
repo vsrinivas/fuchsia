@@ -17,9 +17,9 @@ TEST_F(GatherMemoryTest, Inspectable) {
   harvester::DockyardProxyFake dockyard_proxy;
 
   harvester::GatherMemory gatherer(root_resource, &dockyard_proxy);
-  gatherer.Gather();
   uint64_t test_value;
 
+  gatherer.GatherDeviceProperties();
   // Test device_total_bytes.
   EXPECT_TRUE(
       dockyard_proxy.CheckValueSent("memory:device_total_bytes", &test_value));
@@ -27,6 +27,7 @@ TEST_F(GatherMemoryTest, Inspectable) {
   const uint64_t TB = 1024ULL * 1024 * 1024 * 1024;
   EXPECT_GT(TB, test_value);  // Test value is arbitrary.
 
+  gatherer.Gather();
   // Test device_free_bytes.
   EXPECT_TRUE(
       dockyard_proxy.CheckValueSent("memory:device_free_bytes", &test_value));

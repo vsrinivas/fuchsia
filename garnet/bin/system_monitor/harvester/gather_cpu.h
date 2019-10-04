@@ -14,6 +14,8 @@ class GatherCpu : public GatherCategory {
   GatherCpu(zx_handle_t root_resource, harvester::DockyardProxy* dockyard_proxy)
       : GatherCategory(root_resource, dockyard_proxy) {}
 
+  // GatherCategory.
+  void GatherDeviceProperties() override;
   void Gather() override;
 };
 

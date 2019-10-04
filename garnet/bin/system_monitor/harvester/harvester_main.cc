@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
   std::unique_ptr<harvester::DockyardProxy> dockyard_proxy;
   if (use_grpc) {
     const auto& positional_args = command_line.positional_args();
-    if (positional_args.size() < 1) {
+    if (positional_args.empty()) {
       // TODO(smbug.com/30): Adhere to CLI tool requirements for --help.
       std::cerr << "Please specify an IP:Port, such as localhost:50051"
                 << std::endl;
@@ -83,6 +83,7 @@ int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   harvester::Harvester harvester(root_resource, loop.dispatcher(),
                                  std::move(dockyard_proxy));
+  harvester.GatherDeviceProperties();
   harvester.GatherData();
   loop.Run();
 

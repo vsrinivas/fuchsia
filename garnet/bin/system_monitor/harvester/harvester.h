@@ -24,6 +24,10 @@ class Harvester {
   Harvester(zx_handle_t root_resource, async_dispatcher_t* dispatcher,
             std::unique_ptr<DockyardProxy> dockyard_proxy);
 
+  // Gather one-time data that doesn't vary over time. E.g. total RAM.
+  void GatherDeviceProperties();
+
+  // Gather a snapshot of data that may vary over time. E.g. used RAM.
   void GatherData();
 
  private:

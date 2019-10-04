@@ -20,6 +20,9 @@ namespace harvester {
 
 class DockyardProxy;
 
+// Utility for error output.
+std::string ZxErrorString(const std::string& cmd, zx_status_t err);
+
 // Gather Samples for a given subject. These are grouped to make the code more
 // manageable and enabling/disabling categories.
 class GatherCategory {
@@ -31,6 +34,9 @@ class GatherCategory {
 
   // The dockyard proxy is used to send data to the remote Dockyard.
   harvester::DockyardProxy& Dockyard() { return *dockyard_proxy_; }
+
+  // Gather one-time data that doesn't vary over time. E.g. total RAM.
+  virtual void GatherDeviceProperties(){};
 
   // Override this in a base class to gather sample data.
   virtual void Gather() = 0;

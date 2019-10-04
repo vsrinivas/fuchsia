@@ -16,6 +16,7 @@ class GatherTasks : public GatherCategory {
               harvester::DockyardProxy* dockyard_proxy)
       : GatherCategory(root_resource, dockyard_proxy) {}
 
+  // GatherCategory.
   void Gather() override;
 };
 

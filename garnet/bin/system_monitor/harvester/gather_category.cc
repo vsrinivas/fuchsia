@@ -11,6 +11,12 @@
 
 namespace harvester {
 
+std::string ZxErrorString(const std::string& cmd, zx_status_t err) {
+  std::ostringstream os;
+  os << cmd << " returned " << err << "(" << zx_status_get_string(err) << ")";
+  return os.str();
+}
+
 void GatherCategory::PostUpdate(async_dispatcher_t* dispatcher, zx::time start,
                                 zx::duration period) {
   task_method_.Cancel();
@@ -24,7 +30,8 @@ void GatherCategory::PostUpdate(async_dispatcher_t* dispatcher, zx::time start,
 }
 
 void GatherCategory::TaskHandler(async_dispatcher_t* dispatcher,
-                                 async::TaskBase* task, zx_status_t status) {
+                                 async::TaskBase* /*task*/,
+                                 zx_status_t /*status*/) {
   Gather();
   PostUpdate(dispatcher, async::Now(dispatcher), update_period_);
 };
