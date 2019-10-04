@@ -171,7 +171,6 @@ zx_status_t Station::HandleDataFrame(DataFrame<>&& frame) {
   }
 
   // Ignore "more_data" bit if RSNA was not yet established.
-  // TODO(29886): Handle PS-POLL in Rust.
   if (controlled_port_ == eapol::PortState::kOpen) {
     // PS-POLL if there are more buffered unicast frames.
     auto data_hdr = frame.View().hdr();
@@ -914,24 +913,7 @@ zx_status_t Station::SendPsPoll() {
     return ZX_OK;
   }
 
-  constexpr size_t len = CtrlFrameHdr::max_len() + PsPollFrame::max_len();
-  auto packet = GetWlanPacket(len);
-  if (packet == nullptr) {
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  BufferWriter w(*packet);
-  auto fc = w.Write<FrameControl>();
-  fc->set_type(FrameType::kControl);
-  fc->set_subtype(ControlSubtype::kPsPoll);
-
-  auto ps_poll = w.Write<PsPollFrame>();
-  ps_poll->aid = assoc_ctx_.aid;
-  ps_poll->bssid = join_ctx_->bssid();
-  ps_poll->ta = self_addr();
-
-  packet->set_len(w.WrittenBytes());
-  auto status = SendCtrlFrame(std::move(packet));
+  auto status = client_sta_send_ps_poll_frame(rust_client_.get(), assoc_ctx_.aid);
   if (status != ZX_OK) {
     errorf("could not send power management packet: %d\n", status);
     return status;

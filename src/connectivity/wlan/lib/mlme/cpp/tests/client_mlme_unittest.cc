@@ -10,6 +10,8 @@
 #include <gtest/gtest.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/element_splitter.h>
+#include <wlan/common/write_element.h>
+#include <wlan/mlme/ap/tim.h>
 #include <wlan/mlme/client/client_mlme.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
@@ -979,6 +981,69 @@ TEST_F(ClientTest, ProcessZeroRssiFrame) {
   // Send a data frame with 0 rssi and verify that we *do* increment stats.
   ASSERT_EQ(ZX_OK, client.HandleFramePacket(std::move(rssi_pkt)));
   ASSERT_EQ(client.GetMlmeStats().client_mlme_stats().assoc_data_rssi.hist[0], 1u);
+}
+
+TEST_F(ClientTest, PsPollWithMoreData) {
+  Connect();
+
+  auto more_data_pkt = CreateDataFrame(kTestPayload);
+  more_data_pkt->mut_field<DataFrameHeader>(0)->fc.set_more_data(true);
+  more_data_pkt->mut_field<DataFrameHeader>(0)->addr1 = common::MacAddr(kClientAddress);
+
+  ASSERT_EQ(ZX_OK, client.HandleFramePacket(std::move(more_data_pkt)));
+
+  ASSERT_EQ(device.wlan_queue.size(), 1ULL);
+  auto frame = TypeCheckWlanFrame<CtrlFrameView<PsPollFrame>>(device.wlan_queue[0].pkt.get());
+  ASSERT_TRUE(frame);
+
+  EXPECT_EQ(ControlSubtype::kPsPoll, frame.hdr()->fc.subtype());
+  EXPECT_EQ(kAid | 0xc000, frame.body()->aid);
+  EXPECT_EQ(common::MacAddr(kBssid1), frame.body()->bssid);
+  EXPECT_EQ(common::MacAddr(kClientAddress), frame.body()->ta);
+}
+
+TEST_F(ClientTest, PsPollWithBeacon) {
+  Connect();
+
+  constexpr size_t reserved_ie_len = 256;
+  constexpr size_t max_frame_len =
+      MgmtFrameHeader::max_len() + ProbeRequest::max_len() + reserved_ie_len;
+  auto beacon_pkt = GetWlanPacket(max_frame_len);
+
+  BufferWriter w(*beacon_pkt);
+  w.Write(*CreateBeaconFrame(common::MacAddr(kBssid1)));
+
+  TrafficIndicationMap tim;
+  tim.SetTrafficIndication(kAid, true);
+
+  size_t bitmap_len;
+  uint8_t bitmap_offset;
+  uint8_t pvb[kMaxTimBitmapLen];
+  EXPECT_EQ(ZX_OK, tim.WritePartialVirtualBitmap(pvb, sizeof(pvb), &bitmap_len, &bitmap_offset));
+
+  TimHeader header;
+  header.dtim_count = 0;
+  header.dtim_period = 0;
+  header.bmp_ctrl.set_offset(bitmap_offset);
+
+  common::WriteTim(&w, header, {pvb, bitmap_len});
+
+  beacon_pkt->set_len(w.WrittenBytes());
+
+  // rx_info is out of band, so we have to copy it back into beacon_pkt here.
+  wlan_rx_info_t rx_info{.rx_flags = 0};
+  beacon_pkt->CopyCtrlFrom(rx_info);
+
+  client.HandleFramePacket(std::move(beacon_pkt));
+
+  ASSERT_EQ(device.wlan_queue.size(), 1ULL);
+  auto frame = TypeCheckWlanFrame<CtrlFrameView<PsPollFrame>>(device.wlan_queue[0].pkt.get());
+  ASSERT_TRUE(frame);
+
+  EXPECT_EQ(ControlSubtype::kPsPoll, frame.hdr()->fc.subtype());
+  EXPECT_EQ(kAid | 0xc000, frame.body()->aid);
+  EXPECT_EQ(common::MacAddr(kBssid1), frame.body()->bssid);
+  EXPECT_EQ(common::MacAddr(kClientAddress), frame.body()->ta);
 }
 
 // Add additional tests for (tracked in NET-801):
