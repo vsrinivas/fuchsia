@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/library_loader_tests"
+        "binary": "test/has_ambient_executable"
     },
     "sandbox": {
         "features": [

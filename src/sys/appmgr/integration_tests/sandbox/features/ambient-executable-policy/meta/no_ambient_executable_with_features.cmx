@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "test/no_ambient_executable_with_features"
+    },
+    "sandbox": {
+        "features": []
+    }
+}

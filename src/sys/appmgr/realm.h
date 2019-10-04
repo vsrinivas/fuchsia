@@ -11,6 +11,7 @@
 #include <lib/fsl/vmo/file.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/channel.h>
+#include <zircon/syscalls/policy.h>
 
 #include <iosfwd>
 #include <memory>
@@ -151,6 +152,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
                                            zx::channel loader_service, fdio_flat_namespace_t* flat,
                                            ComponentRequestWrapper component_request,
                                            fxl::RefPtr<Namespace> ns,
+                                           const std::vector<zx_policy_basic_t>& policies,
                                            ComponentObjectCreatedCallback callback);
 
   void CreateRunnerComponentFromPackage(

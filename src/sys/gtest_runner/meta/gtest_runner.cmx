@@ -3,6 +3,9 @@
         "binary": "bin/gtest_runner"
     },
     "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
         "services": [
             "fuchsia.process.Launcher",
             "fuchsia.logger.LogSink"

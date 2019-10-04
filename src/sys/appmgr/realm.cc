@@ -805,6 +805,9 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
 
   // If meta/*.cmx exists, attempt to read sandbox data from it.
   const std::vector<std::string>* service_whitelist = nullptr;
+  std::vector<zx_policy_basic_t> policies;
+
+  bool should_have_ambient_executable = false;
   if (!cmx.sandbox_meta().IsNull()) {
     const auto& sandbox = cmx.sandbox_meta();
     service_whitelist = &sandbox.services();
@@ -818,6 +821,14 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
         [&] { return IsolatedPathForPackage(data_path(), fp); },
         [&] { return IsolatedPathForPackage(cache_path(), fp); },
         [&] { return IsolatedPathForPackage(temp_path(), fp); });
+
+    if (sandbox.HasFeature("deprecated-ambient-replace-as-executable")) {
+      should_have_ambient_executable = true;
+    }
+  }
+  if (!should_have_ambient_executable) {
+    policies.push_back(
+        zx_policy_basic_t{.condition = ZX_POL_AMBIENT_MARK_VMO_EXEC, .policy = ZX_POL_ACTION_DENY});
   }
 
   fxl::RefPtr<Namespace> ns = fxl::MakeRefCounted<Namespace>(
@@ -838,9 +849,10 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
 
   if (runtime.IsNull()) {
     // Use the default runner: ELF binaries.
-    CreateElfBinaryComponentFromPackage(
-        std::move(launch_info), app_data, app_argv0, program.env_vars(), std::move(loader_service),
-        builder.Build(), std::move(component_request), std::move(ns), std::move(callback));
+    CreateElfBinaryComponentFromPackage(std::move(launch_info), app_data, app_argv0,
+                                        program.env_vars(), std::move(loader_service),
+                                        builder.Build(), std::move(component_request),
+                                        std::move(ns), policies, std::move(callback));
   } else {
     // Use other component runners.
     CreateRunnerComponentFromPackage(std::move(package), std::move(launch_info), runtime,
@@ -853,14 +865,23 @@ void Realm::CreateElfBinaryComponentFromPackage(
     fuchsia::sys::LaunchInfo launch_info, fsl::SizedVmo& app_data, const std::string& app_argv0,
     const std::vector<std::string>& env_vars, zx::channel loader_service,
     fdio_flat_namespace_t* flat, ComponentRequestWrapper component_request,
-    fxl::RefPtr<Namespace> ns, ComponentObjectCreatedCallback callback) {
+    fxl::RefPtr<Namespace> ns, const std::vector<zx_policy_basic_t>& policies,
+    ComponentObjectCreatedCallback callback) {
   TRACE_DURATION("appmgr", "Realm::CreateElfBinaryComponentFromPackage", "launch_info.url",
                  launch_info.url);
 
   zx::job child_job;
   zx_status_t status = zx::job::create(job_, 0u, &child_job);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return;
+  }
+  if (!policies.empty()) {
+    status = child_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, policies.data(),
+                                  policies.size());
+    if (status != ZX_OK) {
+      return;
+    }
+  }
 
   const std::string args = Util::GetArgsString(launch_info.arguments);
   const std::string url = launch_info.url;  // Keep a copy before moving it.
