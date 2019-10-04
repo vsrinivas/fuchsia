@@ -694,8 +694,10 @@ func (p *Parser) parseCommaSeparated(beginTok, endTok tokenKind, handler func() 
 		if err := handler(); err != nil {
 			return err
 		}
-		if tok, ok := p.consumeToken(tComma); !ok {
-			return p.failExpectedToken(tComma, tok)
+		if !p.peekTokenKind(endTok) {
+			if tok, ok := p.consumeToken(tComma); !ok {
+				return p.failExpectedToken(tComma, tok)
+			}
 		}
 	}
 	if tok, ok := p.consumeToken(endTok); !ok {

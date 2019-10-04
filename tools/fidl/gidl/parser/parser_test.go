@@ -206,6 +206,13 @@ func TestParseBytes(t *testing.T) {
 				ir.TestWireFormat: {4, 4, 4},
 			},
 		},
+		// final comma aren't required
+		{
+			gidl: `[3:raw(1, 2, 3)]`,
+			expectedValue: map[ir.WireFormat][]byte{
+				ir.FidlWireFormat: []byte{1, 2, 3},
+			},
+		},
 	}
 	for _, tc := range testCases {
 		p := NewParser("", strings.NewReader(tc.gidl))
@@ -260,7 +267,7 @@ func TestParseSuccessCase(t *testing.T) {
 				0, 0, 0, 0, 0, 0, 0, 0, // length
 				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 			),
-		],
+		]
 	}`
 	all, err := parse(gidl)
 	expectedAll := ir.All{
