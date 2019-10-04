@@ -520,6 +520,7 @@ async fn run_overnet_server(mut stream: OvernetRequestStream) -> Result<(), Erro
             OvernetRequest::ConnectToService { node, service_name, chan, .. } => {
                 app.connect_to_service(node.id.into(), &service_name, chan)
             }
+            OvernetRequest::AttachSocketLink { .. } => unimplemented!(),
         });
         match result {
             Ok(()) => (),

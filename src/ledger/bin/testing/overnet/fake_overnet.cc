@@ -84,4 +84,8 @@ void FakeOvernet::ListPeers(uint64_t version_last_seen, ListPeersCallback callba
                        });
 }
 
+void FakeOvernet::AttachSocketLink(zx::socket socket, fuchsia::overnet::SocketLinkOptions options) {
+  FXL_NOTIMPLEMENTED();
+}
+
 }  // namespace ledger

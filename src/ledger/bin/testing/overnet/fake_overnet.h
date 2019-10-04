@@ -73,6 +73,7 @@ class FakeOvernet : public fuchsia::overnet::Overnet {
   void ConnectToService(fuchsia::overnet::protocol::NodeId node, std::string service_name,
                         zx::channel channel) override;
   void ListPeers(uint64_t version_last_seen, ListPeersCallback callback) override;
+  void AttachSocketLink(zx::socket socket, fuchsia::overnet::SocketLinkOptions options) override;
 
   uint64_t const self_id_;
   Delegate* const delegate_;
