@@ -44,6 +44,17 @@ File::~File() {
 
 #ifdef __Fuchsia__
 
+// AllocateData does the following operations.
+//  - Allocate data block
+//  - Free old data block, if this is an overwrite
+//  - Issue data and metadata write
+//  - Update inode to reflect new size and modification time.
+//      Write or fragment of a write may change inode's size, block_count or
+//      file block table (dnum, inum, dinum).
+// Above operations are done in iterations to handle large writes because bundled
+// operation may exceed journal limits (how many blocks a journal entry can hold or
+// journal capacity). This also helps to prevent one large operation ending up
+// hogging all of journal resources.
 void File::AllocateData() {
   // Calculate the maximum number of data blocks we can update within one transaction. This is
   // the smallest between half the capacity of the writeback buffer, and the number of direct
@@ -298,8 +309,16 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
     return status;
   }
   if (*out_actual != 0) {
+#ifndef __Fuchsia__
+    // In Fuchsia, InodeSync happens through file->AllocateData(). AllocateData() needs
+    // to update inode attributes after allocating/freeing blocks. While
+    // updating those attributes, mtime gets updated.
+    // On host, we need to do this explicitly because AllocateData() is called
+    // on Fuchsia only.
+    // Also see comments for AllocateData().
+    InodeSync(transaction.get(), kMxFsSyncMtime);  // Successful writes updates mtime.
+#endif
     // Enqueue metadata allocated via write.
-    InodeSync(transaction.get(), kMxFsSyncMtime);  // Successful writes updates mtime
     transaction->PinVnode(fbl::RefPtr(this));
     fs_->CommitTransaction(std::move(transaction));
 
