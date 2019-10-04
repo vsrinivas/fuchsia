@@ -10,6 +10,6 @@ fn main() -> Result<(), Error> {
         .setup_step()
         .load_step(Duration::from_secs(10))
         .reboot_step()
-        .verify_step()
+        .verify_step(10, Duration::from_secs(1))
         .run()
 }

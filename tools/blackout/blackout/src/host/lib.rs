@@ -152,13 +152,17 @@ impl Test {
     }
 
     /// Add a verify step. This runs the `verify` subcommand on the target binary, waiting for
-    /// completion, and checks the result.
-    pub fn verify_step(mut self) -> Self {
+    /// completion, and checks the result. The verification is done in a retry loop, attempting to
+    /// run the verification command `num_retries` times, sleeping for `retry_timeout` duration
+    /// between each attempt.
+    pub fn verify_step(mut self, num_retries: u32, retry_timeout: Duration) -> Self {
         self.steps.push(Box::new(VerifyStep::new(
             &self.target,
             &self.bin,
             self.seed,
             &self.block_device,
+            num_retries,
+            retry_timeout,
         )));
         self
     }

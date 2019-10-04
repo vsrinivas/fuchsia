@@ -220,14 +220,6 @@ impl TestStep for RebootStep {
             RebootType::Hardware(relay) => hard_reboot(&relay),
         }
         .expect("failed to reboot device");
-
-        // wait a bit for the device to reboot. ssh is supposed to block until the connection succeeds,
-        // but that was not the observed behavior (the connection failed or instantly terminated when
-        // the network came up on the target). 30 seconds is long enough to be sure we have fully booted
-        // up.
-        // TODO(34504): remove this sleep when ssh operations use a retry loop.
-        sleep(Duration::from_secs(30));
-
         Ok(())
     }
 }
@@ -236,20 +228,49 @@ impl TestStep for RebootStep {
 /// and waits for completion, checking the result.
 pub struct VerifyStep {
     runner: Runner,
+    num_retries: u32,
+    retry_timeout: Duration,
 }
 
 impl VerifyStep {
-    /// Create a new verify step.
-    pub fn new(target: &str, bin: &str, seed: u32, block_device: &str) -> Self {
-        Self { runner: Runner::new(target, bin, seed, block_device) }
+    /// Create a new verify step. Verification is done in a retry loop, attempting to run the
+    /// verification command `num_retries` times and sleeping for `retry_timeout` duration in between
+    /// each attempt.
+    pub fn new(
+        target: &str,
+        bin: &str,
+        seed: u32,
+        block_device: &str,
+        num_retries: u32,
+        retry_timeout: Duration,
+    ) -> Self {
+        Self { runner: Runner::new(target, bin, seed, block_device), num_retries, retry_timeout }
     }
 }
 
 impl TestStep for VerifyStep {
     fn execute(&self) -> Result<(), Error> {
-        println!("verifying device...");
-        self.runner.run_success("verify").expect("failed to verify device");
-        println!("verification successful.");
-        Ok(())
+        for i in 1..self.num_retries {
+            println!("verifying device...(attempt #{})", i);
+            let out = self.runner.run_output("verify").expect("failed to run verify command");
+            if out.status.success() {
+                println!("verification successful.");
+                return Ok(());
+            } else {
+                println!("stdout:");
+                std::io::stdout().write_all(&out.stdout)?;
+                println!("stderr:");
+                std::io::stdout().write_all(&out.stderr)?;
+                // ssh returns error code 255 for it's own failures. if it's anything else, it's a
+                // real error, otherwise try again.
+                if out.status.code().unwrap() != 255 {
+                    bail!("non-ssh related exit code returned: {}", out.status);
+                }
+            }
+            sleep(self.retry_timeout);
+        }
+
+        // we failed to ssh into the device too many times in a row. something's wrong.
+        bail!("failed to ssh into target");
     }
 }

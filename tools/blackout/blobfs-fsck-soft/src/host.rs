@@ -9,7 +9,7 @@ fn main() -> Result<(), Error> {
         .collect_options()
         .load_step(Duration::from_secs(5))
         .reboot_step()
-        .verify_step()
+        .verify_step(10, Duration::from_secs(1))
         .run()
 }
 
