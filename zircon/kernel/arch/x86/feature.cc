@@ -544,7 +544,6 @@ static const x86_microarch_config_t kbl_config{
                     {.name = "C7s", .mwait_hint = 0x33, .exit_latency = 124, .flushes_tlb = true},
                     {.name = "C6", .mwait_hint = 0x20, .exit_latency = 85, .flushes_tlb = true},
                     {.name = "C3", .mwait_hint = 0x10, .exit_latency = 70, .flushes_tlb = true},
-                    {.name = "C1E", .mwait_hint = 0x01, .exit_latency = 10, .flushes_tlb = false},
                     X86_CSTATE_C1(0),
                 },
             .default_state_mask = kX86IdleStateMaskC1Only,
