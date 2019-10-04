@@ -5,15 +5,18 @@
 #include "util.h"
 
 #include <ctype.h>
-#include <fbl/algorithm.h>
-#include <fs/connection.h>
-#include <safemath/checked_math.h>
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
+
+#include <fbl/algorithm.h>
+#include <fs/connection.h>
+#include <safemath/checked_math.h>
+
+#include "zircon/device/vfs.h"
 
 namespace {
 
@@ -210,16 +213,16 @@ zx_status_t ParseBootArgs(std::string_view str, fbl::Vector<char>* buf) {
   return ZX_OK;
 }
 
-zx_status_t CreateVnodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel* out) {
+zx_status_t CreateVnodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, uint32_t flags,
+                                  zx::channel* out) {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
     return status;
   }
 
-  auto conn = std::make_unique<fs::Connection>(
-      vfs, vnode, std::move(local),
-      ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE);
+  flags |= ZX_FS_FLAG_DIRECTORY;
+  auto conn = std::make_unique<fs::Connection>(vfs, vnode, std::move(local), flags);
   status = vfs->ServeConnection(std::move(conn));
   if (status != ZX_OK) {
     return status;

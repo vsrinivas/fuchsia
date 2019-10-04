@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_SYSTEM_INSTANCE_H_
-#define SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_SYSTEM_INSTANCE_H_
+#ifndef SRC_DEVICES_COORDINATOR_SYSTEM_INSTANCE_H_
+#define SRC_DEVICES_COORDINATOR_SYSTEM_INSTANCE_H_
 
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/ldsvc/llcpp/fidl.h>
@@ -57,6 +57,11 @@ class SystemInstance : public devmgr::FsProvider {
   // TODO(ZX-4860): DEPRECATED. Do not add new dependencies on the fshost loader service!
   zx_status_t clone_fshost_ldsvc(zx::channel* loader);
 
+ protected:
+  // Protected constructor for SystemInstance that allows injecting a filesystem root, primarily for
+  // use in unit tests.
+  explicit SystemInstance(zx::channel fs_root);
+
  private:
   // Private helper functions.
   void do_autorun(const char* name, const char* cmd);
@@ -64,48 +69,48 @@ class SystemInstance : public devmgr::FsProvider {
                     zx::channel fshost_server);
 
   // The handle used to transmit messages to appmgr.
-  zx::channel appmgr_client;
+  zx::channel appmgr_client_;
 
   // The handle used by appmgr to serve incoming requests.
   // If appmgr cannot be launched within a timeout, this handle is closed.
-  zx::channel appmgr_server;
+  zx::channel appmgr_server_;
 
   // The handle used to transmit messages to miscsvc.
-  zx::channel miscsvc_client;
+  zx::channel miscsvc_client_;
 
   // The handle used by miscsvc to serve incoming requests.
-  zx::channel miscsvc_server;
+  zx::channel miscsvc_server_;
 
   // The handle used to transmit messages to device_name_provider.
-  zx::channel device_name_provider_client;
+  zx::channel device_name_provider_client_;
 
   // The handle used by device_name_provider to serve incoming requests.
-  zx::channel device_name_provider_server;
+  zx::channel device_name_provider_server_;
 
   // The outgoing (exposed) connection to the svchost.
-  zx::channel svchost_outgoing;
+  zx::channel svchost_outgoing_;
 
   // Handle to the loader service hosted in fshost, which allows loading from /boot and /system
   // rather than specific packages.
   // This isn't actually "optional", it's just initialized later.
   // TODO(ZX-4860): Delete this once all dependencies have been removed.
-  fit::optional<llcpp::fuchsia::ldsvc::Loader::SyncClient> fshost_ldsvc;
+  fit::optional<llcpp::fuchsia::ldsvc::Loader::SyncClient> fshost_ldsvc_;
 
   // The root of the filesystem host.
-  zx::channel fs_root;
+  zx::channel fs_root_;
 
   // The job in which we run "svc" realm services, like svchost, fshost,
   // miscsvc, netsvc, the consoles, autorun, and others.
-  zx::job svc_job;
+  zx::job svc_job_;
 
   // The job in which we run appmgr.
-  zx::job fuchsia_job;
+  zx::job fuchsia_job_;
 
   // Used to bind the svchost to the virtual-console binary to provide fidl
   // services.
-  zx::channel virtcon_fidl;
+  zx::channel virtcon_fidl_;
 
   devmgr::DevmgrLauncher launcher_;
 };
 
-#endif  // SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_SYSTEM_INSTANCE_H_
+#endif  // SRC_DEVICES_COORDINATOR_SYSTEM_INSTANCE_H_

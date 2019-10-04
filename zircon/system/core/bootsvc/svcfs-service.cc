@@ -196,7 +196,7 @@ void SvcfsService::AddService(const char* service_name, fbl::RefPtr<fs::Service>
 }
 
 zx_status_t SvcfsService::CreateRootConnection(zx::channel* out) {
-  return CreateVnodeConnection(&vfs_, root_, out);
+  return CreateVnodeConnection(&vfs_, root_, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, out);
 }
 
 fbl::RefPtr<fs::Service> CreateArgumentsService(async_dispatcher_t* dispatcher, zx::vmo vmo,
@@ -238,7 +238,7 @@ fbl::RefPtr<fs::Service> CreateReadOnlyLogService(async_dispatcher_t* dispatcher
 }
 
 fbl::RefPtr<fs::Service> CreateWriteOnlyLogService(async_dispatcher_t* dispatcher,
-                                                  const zx::debuglog& log) {
+                                                   const zx::debuglog& log) {
   return fbl::MakeRefCounted<fs::Service>([dispatcher, &log](zx::channel channel) {
     auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_WriteOnlyLog_dispatch);
     return fidl_bind(dispatcher, channel.release(), dispatch, const_cast<zx::debuglog*>(&log),

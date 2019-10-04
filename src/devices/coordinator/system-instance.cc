@@ -88,16 +88,19 @@ zx_status_t get_ramdisk(zx::vmo* ramdisk_vmo) {
                                ramdisk_vmo->reset_and_get_address(), &length);
 }
 
-SystemInstance::SystemInstance() : fshost_ldsvc(zx::channel()), launcher_(this) {}
+SystemInstance::SystemInstance() : SystemInstance(zx::channel()) {}
+
+SystemInstance::SystemInstance(zx::channel fs_root)
+    : fshost_ldsvc_(zx::channel()), fs_root_(std::move(fs_root)), launcher_(this) {}
 
 zx_status_t SystemInstance::CreateSvcJob(const zx::job& root_job) {
-  zx_status_t status = zx::job::create(root_job, 0u, &svc_job);
+  zx_status_t status = zx::job::create(root_job, 0u, &svc_job_);
   if (status != ZX_OK) {
     fprintf(stderr, "devcoordinator: failed to create service job: %s\n",
             zx_status_get_string(status));
     return 1;
   }
-  status = svc_job.set_property(ZX_PROP_NAME, "zircon-services", 16);
+  status = svc_job_.set_property(ZX_PROP_NAME, "zircon-services", 16);
   if (status != ZX_OK) {
     fprintf(stderr, "devcoordinator: failed to set service job name: %s\n",
             zx_status_get_string(status));
@@ -108,21 +111,21 @@ zx_status_t SystemInstance::CreateSvcJob(const zx::job& root_job) {
 }
 
 zx_status_t SystemInstance::CreateFuchsiaJob(const zx::job& root_job) {
-  zx_status_t status = zx::job::create(root_job, 0u, &fuchsia_job);
+  zx_status_t status = zx::job::create(root_job, 0u, &fuchsia_job_);
   if (status != ZX_OK) {
     printf("devcoordinator: unable to create fuchsia job: %d (%s)\n", status,
            zx_status_get_string(status));
     return status;
   }
 
-  fuchsia_job.set_property(ZX_PROP_NAME, "fuchsia", 7);
+  fuchsia_job_.set_property(ZX_PROP_NAME, "fuchsia", 7);
 
   const zx_policy_basic_t basic_policy[] = {
       // Lock down process creation. Child tasks must use fuchsia.process.Launcher.
       {.condition = ZX_POL_NEW_PROCESS, .policy = ZX_POL_ACTION_DENY}};
 
-  status = fuchsia_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, basic_policy,
-                                  fbl::count_of(basic_policy));
+  status = fuchsia_job_.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, basic_policy,
+                                   fbl::count_of(basic_policy));
   if (status != ZX_OK) {
     printf("devcoordinator: unable to set basic policy for fuchsia job: %d (%s)\n", status,
            zx_status_get_string(status));
@@ -139,7 +142,7 @@ zx_status_t SystemInstance::CreateFuchsiaJob(const zx::job& root_job) {
   const zx_policy_timer_slack_t timer_slack_policy{ZX_USEC(500), ZX_TIMER_SLACK_LATE};
 
   status =
-      fuchsia_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &timer_slack_policy, 1);
+      fuchsia_job_.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &timer_slack_policy, 1);
   if (status != ZX_OK) {
     printf("devcoordinator: unable to set timer slack policy for fuchsia job: %d (%s)\n", status,
            zx_status_get_string(status));
@@ -151,15 +154,15 @@ zx_status_t SystemInstance::CreateFuchsiaJob(const zx::job& root_job) {
 
 zx_status_t SystemInstance::PrepareChannels() {
   zx_status_t status;
-  status = zx::channel::create(0, &appmgr_client, &appmgr_server);
+  status = zx::channel::create(0, &appmgr_client_, &appmgr_server_);
   if (status != ZX_OK) {
     return status;
   }
-  status = zx::channel::create(0, &miscsvc_client, &miscsvc_server);
+  status = zx::channel::create(0, &miscsvc_client_, &miscsvc_server_);
   if (status != ZX_OK) {
     return status;
   }
-  status = zx::channel::create(0, &device_name_provider_client, &device_name_provider_server);
+  status = zx::channel::create(0, &device_name_provider_client_, &device_name_provider_server_);
   if (status != ZX_OK) {
     return status;
   }
@@ -190,7 +193,7 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, bool require_s
       return status;
     }
 
-    status = fdio_service_connect_at(appmgr_client.get(), "svc", appmgr_svc_req.release());
+    status = fdio_service_connect_at(appmgr_client_.get(), "svc", appmgr_svc_req.release());
     if (status != ZX_OK) {
       return status;
     }
@@ -242,7 +245,7 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, bool require_s
   }
 
   zx::channel virtcon_client;
-  status = zx::channel::create(0, &virtcon_client, &virtcon_fidl);
+  status = zx::channel::create(0, &virtcon_client, &virtcon_fidl_);
   if (status != ZX_OK) {
     printf("Unable to create virtcon channel.\n");
     return status;
@@ -256,7 +259,7 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, bool require_s
       return status;
     }
 
-    status = fdio_service_connect_at(miscsvc_client.get(), "svc", miscsvc_svc_req.release());
+    status = fdio_service_connect_at(miscsvc_client_.get(), "svc", miscsvc_svc_req.release());
     if (status != ZX_OK) {
       return status;
     }
@@ -270,7 +273,7 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, bool require_s
       return status;
     }
 
-    status = fdio_service_connect_at(device_name_provider_client.get(), "svc",
+    status = fdio_service_connect_at(device_name_provider_client_.get(), "svc",
                                      device_name_provider_svc_req.release());
     if (status != ZX_OK) {
       return status;
@@ -293,8 +296,8 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, bool require_s
   }
 
   zx::job svc_job_copy;
-  status = svc_job.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_MANAGE_JOB | ZX_RIGHT_MANAGE_PROCESS,
-                             &svc_job_copy);
+  status = svc_job_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_MANAGE_JOB | ZX_RIGHT_MANAGE_PROCESS,
+                              &svc_job_copy);
   if (status != ZX_OK) {
     return status;
   }
@@ -413,7 +416,7 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, bool require_s
   }
 
   zx::channel svchost_public_remote;
-  status = zx::channel::create(0, &svchost_public_remote, &svchost_outgoing);
+  status = zx::channel::create(0, &svchost_public_remote, &svchost_outgoing_);
   if (status != ZX_OK) {
     return status;
   }
@@ -430,7 +433,7 @@ zx_status_t SystemInstance::ReuseExistingSvchost() {
   // TODO(bryanhenry): This can go away once we move the processes devcoordinator spawns today out
   // into separate components.
   zx::channel dir_request;
-  zx_status_t status = zx::channel::create(0, &dir_request, &svchost_outgoing);
+  zx_status_t status = zx::channel::create(0, &dir_request, &svchost_outgoing_);
   if (status != ZX_OK) {
     fprintf(stderr, "devcoordinator: failed to create svchost_outgoing channel\n");
     return 1;
@@ -475,7 +478,7 @@ int SystemInstance::PwrbtnMonitorStarter(devmgr::Coordinator* coordinator) {
 
   zx::job job_copy;
   zx_status_t status =
-      svc_job.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &job_copy);
+      svc_job_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &job_copy);
   if (status != ZX_OK) {
     printf("devcoordinator: svc_job.duplicate failed %s\n", zx_status_get_string(status));
     return 1;
@@ -631,8 +634,9 @@ int SystemInstance::ConsoleStarter(const devmgr::BootArgs* arg) {
 
     const char* argv_sh[] = {"/boot/bin/sh", nullptr};
     zx::process proc;
-    status = launcher_.LaunchWithLoader(svc_job, "sh:console", zx::vmo(), std::move(ldsvc), argv_sh,
-                                        envp, fd.release(), nullptr, nullptr, 0, &proc, FS_ALL);
+    status =
+        launcher_.LaunchWithLoader(svc_job_, "sh:console", zx::vmo(), std::move(ldsvc), argv_sh,
+                                   envp, fd.release(), nullptr, nullptr, 0, &proc, FS_ALL);
     if (status != ZX_OK) {
       printf("devcoordinator: failed to launch console shell (%s)\n", zx_status_get_string(status));
       return 1;
@@ -679,7 +683,7 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
   // * /boot to dynamically load drivers (zxcrypt)
   // * /svc to call launch processes (minfs)
   // * /volume to mount (minfs)
-  const zx_handle_t handles[] = {miscsvc_server.release()};
+  const zx_handle_t handles[] = {miscsvc_server_.release()};
   const uint32_t types[] = {PA_DIRECTORY_REQUEST};
   const char* args[] = {"/boot/bin/miscsvc", nullptr};
 
@@ -693,7 +697,7 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
       return -1;
     }
 
-    launcher_.LaunchWithLoader(svc_job, "miscsvc", zx::vmo(), std::move(ldsvc), args, nullptr, -1,
+    launcher_.LaunchWithLoader(svc_job_, "miscsvc", zx::vmo(), std::move(ldsvc), args, nullptr, -1,
                                handles, types, countof(handles), nullptr,
                                FS_BOOT | FS_DEV | FS_SVC | FS_VOLUME);
   }
@@ -724,7 +728,7 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
 
     zx::process proc;
     zx_status_t status =
-        launcher_.Launch(svc_job, "netsvc", args, nullptr, -1, nullptr, nullptr, 0, &proc, FS_ALL);
+        launcher_.Launch(svc_job_, "netsvc", args, nullptr, -1, nullptr, nullptr, 0, &proc, FS_ALL);
     if (status == ZX_OK) {
       if (vruncmd) {
         zx_info_handle_basic_t info = {};
@@ -740,7 +744,7 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
 
   {
     // Launch device-name-provider with access to /dev, to discover network interfaces.
-    const zx_handle_t handles[] = {device_name_provider_server.release()};
+    const zx_handle_t handles[] = {device_name_provider_server_.release()};
     const uint32_t types[] = {PA_DIRECTORY_REQUEST};
     const char* nodename = coordinator->boot_args().Get("zircon.nodename");
     const char* args[] = {
@@ -757,7 +761,7 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
       args[argc++] = nodename;
     }
 
-    launcher_.Launch(svc_job, "device-name-provider", args, nullptr, -1, handles, types,
+    launcher_.Launch(svc_job_, "device-name-provider", args, nullptr, -1, handles, types,
                      countof(handles), nullptr, FS_DEV);
   }
 
@@ -772,7 +776,7 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
     zx_handle_t handles[2];
     uint32_t types[2];
 
-    handles[handle_count] = virtcon_fidl.release();
+    handles[handle_count] = virtcon_fidl_.release();
     types[handle_count] = PA_HND(PA_USER0, 0);
     ++handle_count;
 
@@ -791,8 +795,8 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
       args[3] = "--run";
       args[4] = vcmd.data();
     }
-    launcher_.Launch(svc_job, "virtual-console", args, env.data(), -1, handles, types, handle_count,
-                     nullptr, FS_ALL);
+    launcher_.Launch(svc_job_, "virtual-console", args, env.data(), -1, handles, types,
+                     handle_count, nullptr, FS_ALL);
   }
 
   const char* backstop = coordinator->boot_args().Get("clock.backstop");
@@ -828,12 +832,12 @@ int SystemInstance::FuchsiaStarter(devmgr::Coordinator* coordinator) {
     zx_status_t status =
         coordinator->fshost_event().wait_one(FSHOST_SIGNAL_READY, deadline, nullptr);
     if (status == ZX_ERR_TIMED_OUT) {
-      if (appmgr_server.is_valid()) {
+      if (appmgr_server_.is_valid()) {
         if (coordinator->require_system()) {
           fprintf(stderr, "devcoordinator: appmgr not launched in %zus, closing appmgr handle\n",
                   appmgr_timeout);
         }
-        appmgr_server.reset();
+        appmgr_server_.reset();
       }
       deadline = zx::time::infinite();
       continue;
@@ -873,13 +877,13 @@ int SystemInstance::FuchsiaStarter(devmgr::Coordinator* coordinator) {
       unsigned int appmgr_hnd_count = 0;
       zx_handle_t appmgr_hnds[2] = {};
       uint32_t appmgr_ids[2] = {};
-      if (appmgr_server.is_valid()) {
+      if (appmgr_server_.is_valid()) {
         ZX_ASSERT(appmgr_hnd_count < fbl::count_of(appmgr_hnds));
-        appmgr_hnds[appmgr_hnd_count] = appmgr_server.release();
+        appmgr_hnds[appmgr_hnd_count] = appmgr_server_.release();
         appmgr_ids[appmgr_hnd_count] = PA_DIRECTORY_REQUEST;
         appmgr_hnd_count++;
       }
-      launcher_.LaunchWithLoader(fuchsia_job, "appmgr", zx::vmo(), std::move(ldsvc), argv_appmgr,
+      launcher_.LaunchWithLoader(fuchsia_job_, "appmgr", zx::vmo(), std::move(ldsvc), argv_appmgr,
                                  nullptr, -1, appmgr_hnds, appmgr_ids, appmgr_hnd_count, nullptr,
                                  FS_FOR_APPMGR);
       appmgr_started = true;
@@ -894,15 +898,15 @@ int SystemInstance::FuchsiaStarter(devmgr::Coordinator* coordinator) {
 
 // TODO(ZX-4860): DEPRECATED. Do not add new dependencies on the fshost loader service!
 zx_status_t SystemInstance::clone_fshost_ldsvc(zx::channel* loader) {
-  // Only valid to call this after fshost_ldsvc has been wired up.
-  ZX_ASSERT_MSG(fshost_ldsvc.has_value(), "clone_fshost_ldsvc called too early");
+  // Only valid to call this after fshost_ldsvc_ has been wired up.
+  ZX_ASSERT_MSG(fshost_ldsvc_.has_value(), "clone_fshost_ldsvc called too early");
 
   zx::channel remote;
   zx_status_t status = zx::channel::create(0, loader, &remote);
   if (status != ZX_OK) {
     return status;
   }
-  auto result = fshost_ldsvc->Clone(std::move(remote));
+  auto result = fshost_ldsvc_->Clone(std::move(remote));
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -921,8 +925,8 @@ void SystemInstance::do_autorun(const char* name, const char* cmd) {
       return;
     }
 
-    launcher_.LaunchWithLoader(svc_job, name, zx::vmo(), std::move(ldsvc), args.argv(), nullptr, -1,
-                               nullptr, nullptr, 0, nullptr, FS_ALL);
+    launcher_.LaunchWithLoader(svc_job_, name, zx::vmo(), std::move(ldsvc), args.argv(), nullptr,
+                               -1, nullptr, nullptr, 0, nullptr, FS_ALL);
   }
 }
 
@@ -934,9 +938,9 @@ void SystemInstance::fshost_start(devmgr::Coordinator* coordinator,
   uint32_t types[fbl::count_of(handles)];
   size_t n = 0;
 
-  // Pass server ends of fs_root and ldsvc handles to fshost.
+  // Pass server ends of fs_root_ and ldsvc handles to fshost.
   zx::channel fs_root_server;
-  if (zx::channel::create(0, &fs_root, &fs_root_server) == ZX_OK) {
+  if (zx::channel::create(0, &fs_root_, &fs_root_server) == ZX_OK) {
     handles[n] = fs_root_server.release();
     types[n++] = PA_HND(PA_USER0, 0);
   }
@@ -945,7 +949,7 @@ void SystemInstance::fshost_start(devmgr::Coordinator* coordinator,
     handles[n] = ldsvc_server.release();
     types[n++] = PA_HND(PA_USER0, 2);
   }
-  fshost_ldsvc.emplace(std::move(ldsvc_client));
+  fshost_ldsvc_.emplace(std::move(ldsvc_client));
 
   // The "public directory" of the fshost service.
   handles[n] = fshost_server.release();
@@ -995,7 +999,7 @@ void SystemInstance::fshost_start(devmgr::Coordinator* coordinator,
   coordinator->boot_args().Collect("zircon.system", &env);
   env.push_back(nullptr);
 
-  launcher_.Launch(svc_job, "fshost", args.data(), env.data(), -1, handles, types, n, nullptr,
+  launcher_.Launch(svc_job_, "fshost", args.data(), env.data(), -1, handles, types, n, nullptr,
                    FS_BOOT | FS_DEV | FS_SVC);
 }
 
@@ -1015,18 +1019,20 @@ zx::channel SystemInstance::CloneFs(const char* path) {
     }
     return h0;
   }
-  zx::unowned_channel fs(fs_root);
+  zx::unowned_channel fs(fs_root_);
   int flags = FS_READ_WRITE_DIR_FLAGS;
   if (!strcmp(path, "hub")) {
-    fs = zx::unowned_channel(appmgr_client);
+    fs = zx::unowned_channel(appmgr_client_);
   } else if (!strcmp(path, "svc")) {
     flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
-    fs = zx::unowned_channel(svchost_outgoing);
+    fs = zx::unowned_channel(svchost_outgoing_);
     path = ".";
   } else if (!strncmp(path, "dev/", 4)) {
     fs = devmgr::devfs_root_borrow();
     path += 4;
-  } else if (!strcmp(path, "system")) {
+  } else if (!strcmp(path, "pkgfs") || !strcmp(path, "system") || !strcmp(path, "bin")) {
+    // pkgfs itself plus these two other paths, which are really just paths into pkgfs, all should
+    // be cloned with READ|EXEC rights.
     flags = FS_READ_EXEC_DIR_FLAGS;
   }
   zx_status_t status = fdio_open_at(fs->get(), path, flags, h1.release());

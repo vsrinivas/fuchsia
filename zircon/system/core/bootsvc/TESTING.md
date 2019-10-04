@@ -1,5 +1,4 @@
-The bootsvc integration tests can currently only be run manually (pending
-completion of ZX-4000). To run these tests, follow these steps:
+To run the bootsvc integration tests manually, follow these steps:
 
 1) Build any product configuration (such as 'bringup' or 'core') or reuse an
 existing build directory. Ideally, build for your host architecture so that KVM

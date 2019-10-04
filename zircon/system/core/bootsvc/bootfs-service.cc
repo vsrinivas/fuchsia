@@ -54,7 +54,8 @@ zx_status_t BootfsService::AddBootfs(zx::vmo bootfs_vmo) {
 }
 
 zx_status_t BootfsService::CreateRootConnection(zx::channel* out) {
-  return CreateVnodeConnection(vfs_.get(), root_, out);
+  return CreateVnodeConnection(vfs_.get(), root_, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
+                               out);
 }
 
 zx_status_t BootfsService::Open(const char* path, zx::vmo* vmo, size_t* size) {

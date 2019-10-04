@@ -6,6 +6,7 @@
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
@@ -30,6 +31,8 @@
 #include <unittest/unittest.h>
 
 #include "util.h"
+
+namespace fio = ::llcpp::fuchsia::io;
 
 static fbl::Vector<fbl::String> arguments;
 
@@ -81,8 +84,7 @@ void print_test_success_string() {
   }
 
   // print the success string to the debug log
-  zx_debuglog_write(log.get(), 0, ZBI_TEST_SUCCESS_STRING,
-                    sizeof(ZBI_TEST_SUCCESS_STRING));
+  zx_debuglog_write(log.get(), 0, ZBI_TEST_SUCCESS_STRING, sizeof(ZBI_TEST_SUCCESS_STRING));
 }
 
 int main(int argc, char** argv) {
@@ -134,8 +136,23 @@ bool TestNamespace() {
   ASSERT_EQ(ns->count, 2);
   EXPECT_STR_EQ(ns->path[0], "/boot");
   EXPECT_STR_EQ(ns->path[1], "/svc");
-
   free(ns);
+
+  // /boot should be RX and /svc should be RW. This uses a roundabout way to check connection rights
+  // on a fuchsia.io.Directory, since GetFlags is only on fuchsia.io/File
+  // TODO(fxb/37419): Once fuchsia.io/Node supports GetFlags, we should update this to use that
+  // instead of just testing rights through a Directory.Open
+  int fd;
+  EXPECT_EQ(ZX_OK,
+            fdio_open_fd("/boot", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, &fd));
+  EXPECT_EQ(ZX_ERR_ACCESS_DENIED, fdio_open_fd("/boot",
+                                               fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE |
+                                                   fio::OPEN_RIGHT_EXECUTABLE,
+                                               &fd));
+  EXPECT_EQ(ZX_OK, fdio_open_fd("/svc", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, &fd));
+  EXPECT_EQ(ZX_ERR_ACCESS_DENIED,
+            fdio_open_fd("/svc", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, &fd));
+
   END_TEST;
 }
 

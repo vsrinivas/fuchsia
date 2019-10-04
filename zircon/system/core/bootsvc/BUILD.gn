@@ -106,6 +106,7 @@ executable("bootsvc-integration-test") {
   deps = [
     ":util",
     "$zx/system/fidl/fuchsia-boot:c",
+    "$zx/system/fidl/fuchsia-io:llcpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",
