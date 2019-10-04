@@ -7,7 +7,7 @@
 #include <helper/platform_device_helper.h>
 
 int main(int argc, char** argv) {
-  int fd = open("/dev/dri/renderD128", O_RDONLY);
+  int fd = open("/dev/dri/renderD128", O_RDWR);
   if (fd < 0) {
     fprintf(stderr, "Failed to open gpu device\n");
     return -1;
