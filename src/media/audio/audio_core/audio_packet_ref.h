@@ -31,8 +31,8 @@ class AudioPacketRef : public fbl::RefCounted<AudioPacketRef>,
                        public fbl::DoublyLinkedListable<std::unique_ptr<AudioPacketRef>> {
  public:
   AudioPacketRef(fbl::RefPtr<RefCountedVmoMapper> vmo_ref, async_dispatcher_t* callback_dispatcher,
-                 fuchsia::media::AudioRenderer::SendPacketCallback callback,
-                 fuchsia::media::StreamPacket packet, uint32_t frac_frame_len, int64_t start_pts);
+                 fit::closure callback, fuchsia::media::StreamPacket packet,
+                 uint32_t frac_frame_len, int64_t start_pts);
 
   // Accessors for starting and ending presentation time stamps expressed in
   // units of audio frames (note, not media time), as signed 50.13 fixed point
@@ -69,7 +69,7 @@ class AudioPacketRef : public fbl::RefCounted<AudioPacketRef>,
   friend class std::default_delete<AudioPacketRef>;
 
   fbl::RefPtr<RefCountedVmoMapper> vmo_ref_;
-  fuchsia::media::AudioRenderer::SendPacketCallback callback_;
+  fit::closure callback_;
   fuchsia::media::StreamPacket packet_;
 
   uint32_t frac_frame_len_;

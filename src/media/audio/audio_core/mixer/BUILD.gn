@@ -4,11 +4,16 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+source_set("constants") {
+  sources = [
+    "constants.h",
+  ]
+}
+
 source_set("mixer") {
   public_configs = [ "..:audio_core_config" ]
   sources = [
     "channel_strip.h",
-    "constants.h",
     "gain.cc",
     "gain.h",
     "linear_sampler.cc",
@@ -27,6 +32,7 @@ source_set("mixer") {
   ]
 
   public_deps = [
+    ":constants",
     "//sdk/fidl/fuchsia.media",
     "//src/media/audio/lib/logging",
     "//zircon/public/lib/fbl",

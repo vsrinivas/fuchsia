@@ -8,16 +8,24 @@
 
 #include <fbl/ref_ptr.h>
 #include <fbl/span.h>
+#include <gmock/gmock.h>
 
 #include "src/media/audio/audio_core/audio_device_settings_serialization_impl.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
+#include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
 #include "src/media/audio/audio_core/testing/fake_object_registry.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 
+using testing::Each;
+using testing::Eq;
+using testing::FloatEq;
+
 namespace media::audio {
 namespace {
-constexpr size_t kRingBufferSizeBytes = 4 * PAGE_SIZE;
+constexpr size_t kRingBufferSizeBytes = 8 * PAGE_SIZE;
+constexpr zx::duration kExpectedMixInterval =
+    DriverOutput::kDefaultHighWaterNsec - DriverOutput::kDefaultLowWaterNsec;
 
 class DriverOutputTest : public testing::ThreadingModelFixture {
  protected:
@@ -34,15 +42,24 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
     ASSERT_NE(output_, nullptr);
 
     ring_buffer_mapper_ = driver_->CreateRingBuffer(kRingBufferSizeBytes);
-    ASSERT_NE(ring_buffer<uint8_t>().data(), nullptr);
+    ASSERT_NE(ring_buffer_mapper_.start(), nullptr);
   }
 
-  // Obtain a view of the ring buffer as a span of a given type. Requires that sizeof(T) be a factor
-  // of |kRingBufferSizeBytes|.
+  // Use len = -1 for the end of the buffer.
   template <typename T>
-  fbl::Span<T> ring_buffer() const {
+  fbl::Span<T> RingBufferSlice(size_t first, ssize_t maybe_len) const {
     static_assert(kRingBufferSizeBytes % sizeof(T) == 0);
-    return {static_cast<T*>(ring_buffer_mapper_.start()), kRingBufferSizeBytes / sizeof(T)};
+    T* array = static_cast<T*>(ring_buffer_mapper_.start());
+    size_t len = maybe_len >= 0 ? maybe_len : (kRingBufferSizeBytes / sizeof(T)) - first;
+    FXL_CHECK((first + len) * sizeof(T) <= kRingBufferSizeBytes);
+    return {&array[first], len};
+  }
+
+  template <typename T>
+  std::array<T, kRingBufferSizeBytes / sizeof(T)>& RingBuffer() const {
+    static_assert(kRingBufferSizeBytes % sizeof(T) == 0);
+    return reinterpret_cast<std::array<T, kRingBufferSizeBytes / sizeof(T)>&>(
+        static_cast<T*>(ring_buffer_mapper_.start())[0]);
   }
 
   // Updates the driver to advertise the given format. This will be the only audio format that the
@@ -69,7 +86,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
 // Simple sanity test that the DriverOutput properly initializes the driver.
 TEST_F(DriverOutputTest, DriverOutputStartsDriver) {
   // Fill the ring buffer with some bytes so we can detect if we've written to the buffer.
-  auto rb_bytes = ring_buffer<uint8_t>();
+  auto rb_bytes = RingBuffer<uint8_t>();
   memset(rb_bytes.data(), 0xff, rb_bytes.size());
 
   // Setup our driver to advertise support for only 16-bit/2-channel/48khz audio.
@@ -94,11 +111,52 @@ TEST_F(DriverOutputTest, DriverOutputStartsDriver) {
 
   // We expect the driver has filled the buffer with silence. For 16-bit/2-channel audio, we can
   // represent each frame as a single uint32_t.
-  auto frames = ring_buffer<uint32_t>();
   const uint32_t kSilentFrame = 0;
-  for (size_t i = 0; i < frames.size(); ++i) {
-    ASSERT_EQ(frames[i], kSilentFrame);
-  }
+  EXPECT_THAT(RingBuffer<float>(), Each(FloatEq(kSilentFrame)));
+
+  threading_model().FidlDomain().ScheduleTask(output_->Shutdown());
+  RunLoopUntilIdle();
+}
+
+TEST_F(DriverOutputTest, RendererOutput) {
+  // Setup our driver to advertise support for a single format.
+  constexpr uint8_t kSupportedChannels = 2;
+  constexpr uint32_t kSupportedSampleRate = 48000;
+  constexpr audio_sample_format_t kSupportedSampleFormat = AUDIO_SAMPLE_FORMAT_16BIT;
+  ConfigureDriverForSampleFormat(kSupportedChannels, kSupportedSampleRate, kSupportedSampleFormat,
+                                 ASF_RANGE_FLAG_FPS_48000_FAMILY);
+
+  threading_model().FidlDomain().ScheduleTask(output_->Startup());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(driver_->is_running());
+
+  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher());
+  AudioObject::LinkObjects(renderer, output_);
+  renderer->EnqueueAudioPacket(1.0, zx::msec(5));
+  renderer->EnqueueAudioPacket(1.0, zx::msec(5));
+
+  // Run the loop for just before we expect the mix to occur to validate we're mixing on the correct
+  // interval.
+  RunLoopFor(kExpectedMixInterval - zx::nsec(1));
+  const uint32_t kSilentFrame = 0;
+  EXPECT_THAT(RingBuffer<uint32_t>(), Each(Eq(kSilentFrame)));
+
+  // Now run for that last instant and expect a mix has occurred.
+  RunLoopFor(zx::nsec(1));
+  // Expect 3 sections of the ring:
+  //   [0, first_non_silent_frame) - Silence (corresponds to the mix lead time.
+  //   [first_non_silent_frame, first_silent_frame) - Non silent samples, corresponds to the 1.0
+  //       samples provided by the renderer. This corresponds to 0x7fff in uint16.
+  //   [first_silent_frame, ring_buffer.size()) - Silence again (we did not provide any data to
+  //       mix at this point in the ring buffer.
+  const uint32_t kNonSilentFrame = 0x7fff7fff;
+  size_t first_non_silent_frame =
+      (kSupportedSampleRate * output_->min_clock_lead_time_nsec()) / 1'000'000'000;
+  size_t first_silent_frame = first_non_silent_frame + 480;
+
+  EXPECT_THAT(RingBufferSlice<uint32_t>(0, first_non_silent_frame), Each(Eq(kSilentFrame)));
+  EXPECT_THAT(RingBufferSlice<uint32_t>(first_non_silent_frame, 480), Each(Eq(kNonSilentFrame)));
+  EXPECT_THAT(RingBufferSlice<uint32_t>(first_silent_frame, -1), Each(Eq(kSilentFrame)));
 
   threading_model().FidlDomain().ScheduleTask(output_->Shutdown());
   RunLoopUntilIdle();

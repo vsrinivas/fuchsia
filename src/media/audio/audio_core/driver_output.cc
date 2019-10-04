@@ -22,10 +22,6 @@ static constexpr uint32_t kDefaultFramesPerSec = 48000;
 static constexpr uint32_t kDefaultChannelCount = 2;
 static constexpr fuchsia::media::AudioSampleFormat kDefaultAudioFmt =
     fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
-// TODO(MTWN-269): Revert these to 20/30 instead of 50/60.
-//                 In the long term, get these into the range of 5/10.
-static constexpr zx_duration_t kDefaultLowWaterNsec = ZX_MSEC(50);
-static constexpr zx_duration_t kDefaultHighWaterNsec = ZX_MSEC(60);
 static constexpr zx_duration_t kDefaultMaxRetentionNsec = ZX_MSEC(60);
 static constexpr zx_duration_t kDefaultRetentionGapNsec = ZX_MSEC(10);
 static constexpr zx_duration_t kUnderflowCooldown = ZX_SEC(1);
@@ -180,7 +176,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
       underflow_cooldown_deadline_ = zx_deadline_after(kUnderflowCooldown);
     }
 
-    int64_t fill_target = cm2rd_pos.Apply(uptime + kDefaultHighWaterNsec);
+    int64_t fill_target = cm2rd_pos.Apply(uptime + kDefaultHighWaterNsec.get());
 
     // Are we in the middle of an underflow cooldown? If so, check whether we have recovered yet.
     if (underflow_start_time_) {
@@ -314,7 +310,7 @@ void DriverOutput::OnDriverInfoFetched() {
   uint32_t pref_chan = kDefaultChannelCount;
   fuchsia::media::AudioSampleFormat pref_fmt = kDefaultAudioFmt;
   zx_duration_t min_rb_duration =
-      kDefaultHighWaterNsec + kDefaultMaxRetentionNsec + kDefaultRetentionGapNsec;
+      kDefaultHighWaterNsec.get() + kDefaultMaxRetentionNsec + kDefaultRetentionGapNsec;
 
   res = SelectBestFormat(driver()->format_ranges(), &pref_fps, &pref_chan, &pref_fmt);
 
@@ -389,7 +385,7 @@ void DriverOutput::OnDriverConfigComplete() {
   int64_t fifo_depth_nsec =
       TimelineRate::Scale(driver()->fifo_depth_frames(), ZX_SEC(1), driver()->frames_per_sec());
   min_clock_lead_time_nsec_ =
-      driver()->external_delay_nsec() + fifo_depth_nsec + kDefaultHighWaterNsec;
+      driver()->external_delay_nsec() + fifo_depth_nsec + kDefaultHighWaterNsec.get();
 
   // Fill our brand new ring buffer with silence
   FXL_CHECK(driver_ring_buffer() != nullptr);
@@ -449,7 +445,7 @@ void DriverOutput::OnDriverStartComplete() {
 
   const TimelineFunction& trans = clock_mono_to_ring_buf_pos_frames_;
   uint32_t fd_frames = driver()->fifo_depth_frames();
-  low_water_frames_ = fd_frames + trans.rate().Scale(kDefaultLowWaterNsec);
+  low_water_frames_ = fd_frames + trans.rate().Scale(kDefaultLowWaterNsec.get());
   frames_sent_ = low_water_frames_;
   frames_to_mix_ = 0;
 

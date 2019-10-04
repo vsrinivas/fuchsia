@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_DRIVER_OUTPUT_H_
 
 #include <lib/zx/channel.h>
+#include <lib/zx/time.h>
 
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/audio_output.h"
@@ -17,6 +18,11 @@ constexpr bool kEnableFinalMixWavWriter = false;
 
 class DriverOutput : public AudioOutput {
  public:
+  // TODO(MTWN-269): Revert these to 20/30 instead of 50/60.
+  //                 In the long term, get these into the range of 5/10.
+  static constexpr zx::duration kDefaultLowWaterNsec = zx::msec(50);
+  static constexpr zx::duration kDefaultHighWaterNsec = zx::msec(60);
+
   static fbl::RefPtr<AudioOutput> Create(zx::channel channel, ThreadingModel* threading_model,
                                          ObjectRegistry* registry);
   ~DriverOutput();
