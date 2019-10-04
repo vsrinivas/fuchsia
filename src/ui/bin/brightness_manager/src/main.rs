@@ -46,15 +46,19 @@ async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), E
     let mut auto_brightness_abort_handle =
         start_auto_brightness_task(sensor.clone(), backlight.clone());
 
+    let mut auto_brightness_on = true;
+
     while let Some(request) = stream.try_next().await.context("error running brightness server")? {
         // TODO(kpt): (b/138802653) Use try_for_each_concurrent and short circuit set-brightness_slowly
         // TODO(kpt): Make each match a testable function when hanging gets are implemented
         match request {
             BrightnessControlRequest::SetAutoBrightness { control_handle: _ } => {
-                fx_log_info!("Auto-brightness turned on");
-                auto_brightness_abort_handle.abort();
-                auto_brightness_abort_handle =
-                    start_auto_brightness_task(sensor.clone(), backlight.clone());
+                if !auto_brightness_on {
+                    fx_log_info!("Auto-brightness turned on");
+                    auto_brightness_abort_handle =
+                        start_auto_brightness_task(sensor.clone(), backlight.clone());
+                    auto_brightness_on = true;
+                }
             }
             BrightnessControlRequest::WatchAutoBrightness { responder } => {
                 // Hanging get is not implemented yet. We want to get autobrightness into team-food.
@@ -63,9 +67,11 @@ async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), E
                 responder.send(true)?;
             }
             BrightnessControlRequest::SetManualBrightness { value, control_handle: _ } => {
-                fx_log_info!("Auto-brightness off, brightness set to {}", value);
-                // Stop the background auto-brightness task, if any
-                auto_brightness_abort_handle.abort();
+                if auto_brightness_on {
+                    fx_log_info!("Auto-brightness off, brightness set to {}", value);
+                    auto_brightness_abort_handle.abort();
+                    auto_brightness_on = false;
+                }
                 // TODO(b/138455663): remove this when the driver changes.
                 let adjusted_value = convert_to_old_backlight_value(value);
                 let nits = num_traits::clamp(adjusted_value, 0, 255);
@@ -73,7 +79,7 @@ async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), E
                 let mut backlight = backlight_clone.lock().await;
                 backlight
                     .set_brightness(nits)
-                    .unwrap_or_else(|e| fx_log_err!("Failed to set backlight: {}", e))
+                    .unwrap_or_else(|e| fx_log_err!("Failed to set backlight: {}", e));
             }
             BrightnessControlRequest::WatchCurrentBrightness { responder } => {
                 // Hanging get is not implemented yet. We want to get autobrightness into team-food.
