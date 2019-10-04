@@ -134,7 +134,6 @@ class FreezeDetector {
 
   Duration threshold = const Duration(seconds: 5);
   static const _workInterval = Duration(seconds: 1);
-  static const _updateInterval = Duration(milliseconds: 100);
 
   Timer _checker;
   Timer _worker;
@@ -143,8 +142,16 @@ class FreezeDetector {
   FreezeDetector(this.inspect);
 
   void _workerHandler() async {
+    _checker = Timer(threshold, () {
+      _isFrozen = true;
+      _log.info('Freeze Start Detected ${DateTime.now()}');
+      _freezeHappened = true;
+      _c = Completer();
+    });
+
     _lastExecution.reset();
     await inspect.retrieveHubEntries();
+    _checker.cancel();
 
     if (_isFrozen) {
       _log.info('Freeze End Detected ${DateTime.now()}');
@@ -160,23 +167,11 @@ class FreezeDetector {
     }
   }
 
-  void _timerHandler(Timer timer) async {
-    if (_lastExecution.elapsed > threshold) {
-      if (!_isFrozen) {
-        _isFrozen = true;
-        _log.info('Freeze Start Detected ${DateTime.now()}');
-        _freezeHappened = true;
-        _c = Completer();
-      }
-    }
-  }
-
   void start() {
     _log.info('Starting FreezeDetector');
     _started = true;
-    _worker = Timer(_workInterval, _workerHandler);
+    Timer.run(_workerHandler);
     _lastExecution.start();
-    _checker = Timer.periodic(_updateInterval, _timerHandler);
   }
 
   void stop() async {
