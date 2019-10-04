@@ -2,6 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+declare_args() {
+  fidlc_union_not_simple = false
+}
+
+config("fidlc_config") {
+  defines = []
+  if (defined(fidlc_union_not_simple) && fidlc_union_not_simple) {
+    defines += [ "FIDLC_UNION_NOT_SIMPLE" ]
+  }
+}
+
 if (defined(zx)) {
   library("fidl") {
     host = true
@@ -42,6 +53,7 @@ if (defined(zx)) {
       "$zx/system/ulib/fit",
       "$zx/third_party/ulib/uboringssl",
     ]
+    configs += [ ":fidlc_config" ]
   }
 
   source_set("json_schema") {

@@ -434,6 +434,11 @@ bool IsSimple(const Type* type, const TypeShape& typeshape) {
       return typeshape.Depth() == 0u;
     case Type::Kind::kIdentifier: {
       auto identifier_type = static_cast<const IdentifierType*>(type);
+#if defined(FIDLC_UNION_NOT_SIMPLE)
+      if (identifier_type->type_decl->kind == Decl::Kind::kUnion) {
+        return false;
+      }
+#endif
       switch (identifier_type->nullability) {
         case types::Nullability::kNullable:
           // If the identifier is nullable, then we can handle a depth of 1
