@@ -2,16 +2,16 @@
 
 [TOC]
 
-## Generating Cargo.toml files for use by editors
+## Generating Cargo.toml files for use by editors {#generating-cargo-toml}
 
 Many editors require Cargo.toml files in order to understand how your Rust
 project is structured. These files can be generated using the following
 commands, where `//garnet/foo/path/to/target:label` is the GN target that
 you want to work on:
 
-```
-fx build //garnet/foo/path/to/target:label_cargo
-fx gen-cargo //garnet/foo/path/to/target:label
+```sh
+you@computer:/path/to/fuchsia $ fx build garnet/foo/path/to/target:some_label
+you@computer:/path/to/fuchsia $ fx gen-cargo garnet/foo/path/to/target:some_label
 ```
 
 Note that this label must point to a `rustc_...` GN template, not a Fuchsia package or other GN
@@ -22,15 +22,6 @@ rustc_binary("some_label") {
    ...
 }
 ```
-
-The above target, declared in `//src/bin/foo/BUILD.gn`, could be used with `gen-cargo`
-via the following commands:
-
-```
-fx build //src/bin/foo:some_label_cargo
-fx gen-cargo //src/bin/foo:some_label
-```
-
 ## Intellij
 
 See instructions on [the Intellij Rust site](https://intellij-rust.github.io/).
@@ -55,11 +46,41 @@ rustup toolchain link fuchsia $(scripts/youcompleteme/paths.py VSCODE_RUST_TOOLC
 rustup default fuchsia
 ```
 
-Run this command to get the paths to use in the following step.
+Follow [the steps above](#generating-cargo-toml) to generate a `Cargo.toml` file
+for use by VSCode.
+
+Open VS Code and ensure that the directory where the generated `Cargo.toml` file
+resides is added as a directory in your workspace (even though you probably have
+its ancestor `fuchsia` directory already in your workspace). For example:
 
 ```sh
-./scripts/youcompleteme/paths.py FUCHSIA_ROOT
-./scripts/youcompleteme/paths.py VSCODE_RUST_TOOLCHAIN
+you@computer:/path/to/fuchsia $ fx build src/rusty/component:bin
+you@computer:/path/to/fuchsia $ fx gen-cargo src/rusty/component:bin
+```
+
+In a new VS Code workspace, in this example, add both `/path/to/fuchsia` and
+`/path/to/fuchsia/src/rusty/component` to the workspace. Saving the
+workspace would yield something like:
+
+`fuchsia_rusty_component.code-workspace`
+```javascript
+{
+  "folders": [
+    {
+      "path": "/path/to/fuchsia"
+    },
+    {
+      "path": "/path/to/fuchsia/src/rusty/component"
+    }
+  ]
+}
+```
+
+Next, take note of the paths output by the following:
+
+```sh
+you@computer:/path/to/fuchsia $ ./scripts/youcompleteme/paths.py FUCHSIA_ROOT
+you@computer:/path/to/fuchsia $ ./scripts/youcompleteme/paths.py VSCODE_RUST_TOOLCHAIN
 ```
 
 Open VS Code settings
@@ -73,19 +94,27 @@ Add the following settings:
 
 ```javascript
 {
+  // General rust and RLS configuration.
   "rust.target": "x86_64-fuchsia",
   "rust.target_dir": "<FUCHSIA_ROOT>/out/cargo_target",
   "rust.unstable_features": true,
   "rust-client.rlsPath": "<VS_CODE_TOOLCHAIN>/bin/rls",
   "rust-client.disableRustup": true,
+  "rust.mode": "rls",
 
-  // Some optional settings that may help:
-  "rust.goto_def_racer_fallback": true,
+  // Read `Cargo.toml` from innermost root workspace directory.
+  "rust-client.nestedMultiRootConfigInOutermost": false,
+
+  // Optional extras:
+
+  // Log RLS info/warning/error messages to a VSCode Output Panel.
+  "rust-client.revealOutputChannelOn": "info",
+
+  // Create `rls[numeric-id].log` in your project directory. Errors from RLS
+  // will be logged there.
   "rust-client.logToFile": true,
 }
 ```
-
-Finally, follow the steps above to generate a Cargo.toml file for use by VSCode.
 
 [this VSCode plugin]: https://marketplace.visualstudio.com/items?itemName=rust-lang.rust
 
