@@ -13,6 +13,7 @@ fidl("fuchsia.ui.input2") {
     "keys.fidl",
     "layout.fidl",
     "modifiers.fidl",
+    "semantic_keys.fidl",
   ]
 
   public_deps = [

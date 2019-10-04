@@ -64,7 +64,13 @@ impl Store {
             let (key, modifiers, phase) = (event.key, event.modifiers, event.phase);
             move |was_handled, subscriber| {
                 async move {
-                    let event = ui_input::KeyEvent { key, modifiers, phase };
+                    let event = ui_input::KeyEvent {
+                        key,
+                        modifiers,
+                        phase,
+                        physical_key: None,
+                        semantic_key: None,
+                    };
                     let subscriber = subscriber.lock().await;
                     let handled = subscriber
                         .listener

@@ -28,7 +28,7 @@ protocol KeyboardLayoutState {
 table KeyboardLayout {
     1: PhysicalKeyMap key_map;
 
-    2: vector<KeySymbolMap>:MAX_MAPS_PER_LAYOUT symbol_map;
+    2: vector<SemanticKeyMap>:MAX_MAPS_PER_LAYOUT semantic_key_map;
 };
 
 /// Key map describes a conversion of a physical key to a key.
@@ -76,7 +76,7 @@ struct PhysicalKeyMapEntry {
 ///
 /// Map3 should be ignored, since "NumLock" is enabled but not included in
 /// `modifiers` or `optional_modifiers`.
-table KeySymbolMap {
+table SemanticKeyMap {
     /// Combination of modifiers required for this map to be applied.
     /// E.g. if CAPS_LOCK bit is set for this map, the map will be
     /// applied if the Caps Lock state is ON.
@@ -88,4 +88,16 @@ table KeySymbolMap {
     /// applied if Caps Lock state is ON.
     /// Also it may be applied if Caps Lock is off.
     2: Modifiers optional_modifiers;
+
+    /// Collection of key to semantic meaning mappings.
+    3: vector<SemanticKeyMapEntry>:MAX_ENTRIES_PER_MAP entries;
+};
+
+/// A mapping of a key to the semantic meaning.
+struct SemanticKeyMapEntry {
+    /// Key that's being mapped.
+    Key key;
+
+    /// Semantic key corresponding to the key.
+    SemanticKey semantic_key;
 };

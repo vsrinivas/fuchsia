@@ -164,6 +164,8 @@ mod test {
                 key: Some(key),
                 modifiers: modifiers,
                 phase: Some(ui_input::KeyEventPhase::Pressed),
+                physical_key: None,
+                semantic_key: None,
             };
 
             manager.handle_key_event(event)

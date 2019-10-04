@@ -13,6 +13,27 @@ enum KeyEventPhase {
     RELEASED = 1;
 };
 
+/// Semantic for a physical key typed by the user.
+/// For letter or symbolic keys, is a string representation of the key typed.
+/// For non-symbolic keys, is a SemanticKeyAction value corresponding to the key pressed.
+///
+/// Examples:
+///   Key.A:
+///     "a" or "A" in US key layout, depending on CapsLock and Shift
+///   Key.SPACE:
+///     " "
+///   Key.TAB:
+///     SemanticKeyAction.TAB
+///   Key.GRAVE_ACCENT:
+///     "`" or "]" or "<", depending on key layout
+xunion SemanticKey {
+    /// For symbolic keys: string representing character typed.
+    string:16 symbol;
+
+    /// For non-symbolic keys: meaning of the key pressed.
+    SemanticKeyAction action;
+};
+
 /// Direct key mapping from hardware code (USB HID).
 ///
 /// Example:
@@ -38,4 +59,28 @@ table KeyEvent {
 
     /// Modifier keys being held.
     3: Modifiers modifiers;
+
+    /// The semantic meaning of the key that was pressed or released, taking the keyboard
+    /// layout and modifiers into account.
+    ///
+    /// Use this value for the following purposes:
+    /// - typing text when implementing an input method editor (IME) or when IME services
+    ///   are not available (this won’t work for languages that require composition)
+    ///
+    /// The input system derives this value from the combination of `physical_key` and
+    /// `modifiers` by consulting the key symbol map of `KeyboardLayout` that was active
+    /// for the keyboard when the key was pressed. Note that the same value will be reported
+    /// when the key is released even if the keyboard layout or modifiers change in the
+    /// interim between press and release.
+    4: SemanticKey semantic_key;
+
+    /// Identifies the physical key, ignoring modifiers and layout.
+    ///
+    /// Use this value for the following purposes:
+    /// - applying keyboard layout translations
+    /// - synthesizing input events into virtual machines, since VMs will do own layout mapping
+    ///
+    /// The input system derives this value from the data reported by the keyboard itself
+    /// without taking into account the keyboard’s current `KeyboardLayout` or modifiers.
+    5: PhysicalKey physical_key;
 };

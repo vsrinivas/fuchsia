@@ -1,0 +1,168 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.input2;
+
+/// Semantic Key represents the meaning of a non-symbolic key on a keyboard.
+///
+/// Definition of each key is derived from W3C named values of a key attribute:
+/// https://www.w3.org/TR/uievents-key/#named-key-attribute-values
+enum SemanticKeyAction : uint32 {
+    // Modifier keys
+    // Reserved range: 0x00000001 - 0x00000020
+
+    /// The Alt (Alternative) key.
+    /// This key enables the alternate modifier function for interpreting
+    /// concurrent or subsequent keyboard input.
+    /// This key value is also used for the Apple Option key.
+    ALT = 0x00000001;
+
+    /// The Alternate Graphics (AltGr or AltGraph) key.
+    /// This key is used enable the ISO Level 3 shift modifier (the standard
+    /// Shift key is the level 2 modifier). See [ISO9995-1].
+    ALT_GRAPH = 0x00000002;
+
+    /// The Caps Lock (Capital) key.
+    /// Toggle capital character lock function for interpreting subsequent
+    /// keyboard input event.
+    CAPS_LOCK = 0x00000003;
+
+    /// The Control or Ctrl key, to enable control modifier function for
+    /// interpreting concurrent or subsequent keyboard input.
+    CONTROL = 0x00000004;
+
+    /// The Meta key, to enable meta modifier function for interpreting
+    /// concurrent or subsequent keyboard input.
+    /// This key value is used for the Windows Logo key and the Apple Command
+    /// or ⌘ key.
+    META = 0x00000005;
+
+    /// The NumLock or Number Lock key, to toggle numpad mode function for
+    /// interpreting subsequent keyboard input.
+    NUM_LOCK = 0x00000006;
+
+    /// "ScrollLock" The Scroll Lock key, to toggle between scrolling and cursor
+    /// movement modes.
+    SCROLL_LOCK = 0x00000007;
+
+    /// The Shift key, to enable shift modifier function for interpreting
+    /// concurrent or subsequent keyboard input.
+    SHIFT = 0x00000008;
+
+    // Navigation keys
+    // Reserved range: 0x00000021 - 0x00000030
+
+    /// The down arrow key, to navigate or traverse downward.
+    ARROW_DOWN = 0x00000021;
+
+    /// The left arrow key, to navigate or traverse leftward.
+    ARROW_LEFT = 0x00000022;
+
+    /// The right arrow key, to navigate or traverse rightward.
+    ARROW_RIGHT = 0x00000023;
+
+    /// The up arrow key, to navigate or traverse upward.
+    ARROW_UP = 0x00000024;
+
+    /// The End key, used with keyboard entry to go to the end of content.
+    END = 0x00000025;
+
+    /// The Home key, used with keyboard entry, to go to start of content.
+    /// For the mobile phone Home key (which goes to the phone’s main screen),
+    /// use "GO_HOME".
+    HOME = 0x00000026;
+
+    // The Page Down key, to scroll down or display next page of content.
+    PAGE_DOWN = 0x00000027;
+
+    // The Page Up key, to scroll up or display previous page of content.
+    PAGE_UP = 0x00000028;
+
+    // Whitespace keys
+    // Reserved range: 0x00000031 - 0x00000040
+
+    /// The Enter or ↵ key, to activate current selection or accept current input.
+    /// This key value is also used for the Return (Macintosh numpad) key.
+    ENTER = 0x00000031;
+
+    /// The Horizontal Tabulation Tab key.
+    TAB = 0x00000032;
+
+    // Editing keys
+    // Reserved range: 0x00000041 - 0x00000060
+
+    /// The Backspace key. This key value is also used for the key labeled Delete
+    /// on MacOS keyboards.
+    BACKSPACE = 0x00000041;
+
+    /// The Delete (Del) Key.
+    /// This key value is also used for the key labeled Delete on MacOS keyboards
+    /// when modified by the Fn key.
+    DELETE = 0x00000042;
+
+    /// The Insert (Ins) key, to toggle between text modes for insertion or
+    /// overtyping.
+    INSERT = 0x00000043;
+
+    // General-purpose function keys
+    // Reserved range: 0x00000061 - 0x00000080
+
+    // The F1 key, a general purpose function key, as index 1.
+    F1 = 0x00000061;
+
+    // The F2 key, a general purpose function key, as index 2.
+    F2 = 0x00000062;
+
+    // The F3 key, a general purpose function key, as index 3.
+    F3 = 0x00000063;
+
+    // The F4 key, a general purpose function key, as index 4.
+    F4 = 0x00000064;
+
+    // The F5 key, a general purpose function key, as index 5.
+    F5 = 0x00000065;
+
+    // The F6 key, a general purpose function key, as index 6.
+    F6 = 0x00000066;
+
+    // The F7 key, a general purpose function key, as index 7.
+    F7 = 0x00000067;
+
+    // The F8 key, a general purpose function key, as index 8.
+    F8 = 0x00000068;
+
+    // The F9 key, a general purpose function key, as index 9.
+    F9 = 0x00000069;
+
+    // The F10 key, a general purpose function key, as index 10.
+    F10 = 0x0000006A;
+
+    // The F11 key, a general purpose function key, as index 11.
+    F11 = 0x0000006B;
+
+    // The F12 key, a general purpose function key, as index 12.
+    F12 = 0x0000006C;
+
+    // UI Keys
+    // Reserved range: 0x00000081 - 0x000000B0
+
+    /// Show the application’s context menu.
+    /// This key is commonly found between the right Meta key and the right
+    /// Control key.
+    CONTEXT_MENU = 0x00000081;
+
+    /// The Esc key. This key was originally used to initiate an escape sequence,
+    /// but is now more generally used to exit or "escape" the current context,
+    /// such as closing a dialog or exiting full screen mode.
+    ESCAPE = 0x00000082;
+
+    // Mobile Phone Keys
+    // Reserved range: 0x000000B1 - 0x000000D0
+
+    /// The Back key.
+    GO_BACK = 0x000000B1;
+
+    /// The Home key, which goes to the phone’s main screen.
+    GO_HOME = 0x000000B2;
+};
