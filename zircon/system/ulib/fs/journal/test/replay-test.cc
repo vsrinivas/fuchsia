@@ -73,11 +73,25 @@ class ParseJournalTestFixture : public zxtest::Test {
 
 using ParseJournalTest = ParseJournalTestFixture;
 
-TEST_F(ParseJournalTest, ParseBadJournalExpectError) {
+TEST_F(ParseJournalTest, ParseBadJournalChecksumExpectError) {
+  // Don't bother setting the checksum on the info block.
   fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   EXPECT_EQ(ZX_ERR_IO,
+            ParseJournalEntries(info_block(), journal_buffer(), &operations,
+                                &sequence_number, &next_entry_start));
+}
+
+TEST_F(ParseJournalTest, ParseBadJournalStartExpectError) {
+  // Set the start field to a too-large value.
+  uint64_t start = journal_buffer()->capacity();
+  info_block()->Update(start, 0);
+
+  fbl::Vector<fs::BufferedOperation> operations;
+  uint64_t sequence_number = 0;
+  uint64_t next_entry_start = 0;
+  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY,
             ParseJournalEntries(info_block(), journal_buffer(), &operations,
                                 &sequence_number, &next_entry_start));
 }

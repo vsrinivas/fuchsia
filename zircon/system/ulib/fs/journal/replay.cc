@@ -156,6 +156,11 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, fs::VmoBuffer* jo
     FS_TRACE_ERROR("Journal Superblock does not validate: %d\n", status);
     return status;
   }
+  if (info->start() >= journal_buffer->capacity()) {
+    FS_TRACE_ERROR("Journal entries start beyond end of journal capacity (%zu vs %zu)\n",
+                   info->start(), journal_buffer->capacity());
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
 
   // Start parsing the journal, and replay as many entries as possible.
   uint64_t entry_start = info->start();
