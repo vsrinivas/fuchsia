@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{iter, rc::Rc};
+use std::{
+    fmt,
+    iter::{self, FromIterator},
+    ops::Range,
+    rc::Rc,
+};
 
 #[cfg(feature = "tracing")]
 use fuchsia_trace::duration;
@@ -14,10 +19,153 @@ use crate::{
     tile::{TileContour, TileContourBuilder},
 };
 
+const COMPACT_DIFF_MASK: i32 = 0b111111;
+const COMPACT_DIFF_DX_SHIFT: u16 = 6;
+const COMPACT_DIFF_SHIFT_TO_I32: i32 = 32 - COMPACT_DIFF_DX_SHIFT as i32;
+
+struct CompactDiff {
+    value: u16,
+}
+
+impl CompactDiff {
+    pub fn new(dx: i32, dy: i32) -> Self {
+        let mut value = (RASTER_COMMAND_SEGMENT as u16) << 8;
+
+        value |= ((dx & COMPACT_DIFF_MASK) as u16) << COMPACT_DIFF_DX_SHIFT;
+        value |= (dy & COMPACT_DIFF_MASK) as u16;
+
+        Self { value }
+    }
+
+    pub fn dx(&self) -> i32 {
+        let shifted = self.value >> COMPACT_DIFF_DX_SHIFT;
+        let dx = (shifted as i32 & COMPACT_DIFF_MASK) << COMPACT_DIFF_SHIFT_TO_I32;
+
+        dx >> COMPACT_DIFF_SHIFT_TO_I32
+    }
+
+    pub fn dy(&self) -> i32 {
+        let dy = (self.value as i32 & COMPACT_DIFF_MASK) << COMPACT_DIFF_SHIFT_TO_I32;
+
+        dy >> COMPACT_DIFF_SHIFT_TO_I32
+    }
+}
+
+const RASTER_COMMAND_MASK: u8 = 0b1000000;
+const RASTER_COMMAND_MOVE: u8 = 0b0000000;
+const RASTER_COMMAND_SEGMENT: u8 = 0b1000000;
+
+pub struct RasterEdges {
+    commands: Vec<u8>,
+}
+
+impl RasterEdges {
+    pub fn new() -> Self {
+        Self { commands: vec![] }
+    }
+
+    pub fn iter(&self) -> RasterEdgesIter {
+        RasterEdgesIter { commands: &self.commands, index: 0, end_point: None }
+    }
+
+    pub fn from(&self, start_point: Point<i32>, range: Range<usize>) -> RasterEdgesIter {
+        RasterEdgesIter { commands: &self.commands[range], index: 0, end_point: Some(start_point) }
+    }
+}
+
+impl FromIterator<Edge<i32>> for RasterEdges {
+    fn from_iter<T: IntoIterator<Item = Edge<i32>>>(iter: T) -> Self {
+        let mut commands = vec![];
+        let mut end_point = None;
+
+        for edge in iter {
+            if end_point != Some(edge.p0) {
+                commands.push(RASTER_COMMAND_MOVE);
+
+                commands.extend(&edge.p0.x.to_be_bytes());
+                commands.extend(&edge.p0.y.to_be_bytes());
+            }
+
+            let diff = CompactDiff::new(edge.p1.x - edge.p0.x, edge.p1.y - edge.p0.y);
+            commands.extend(&diff.value.to_be_bytes());
+
+            end_point = Some(edge.p1);
+        }
+
+        Self { commands }
+    }
+}
+
+impl fmt::Debug for RasterEdges {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_list().entries(self.iter()).finish()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct RasterEdgesIter<'c> {
+    commands: &'c [u8],
+    index: usize,
+    end_point: Option<Point<i32>>,
+}
+
+impl RasterEdgesIter<'_> {
+    pub fn index(&self) -> usize {
+        self.index
+    }
+}
+
+impl Iterator for RasterEdgesIter<'_> {
+    type Item = Edge<i32>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(command) = self.commands.get(self.index) {
+            match command & RASTER_COMMAND_MASK {
+                RASTER_COMMAND_MOVE => {
+                    self.index += 1;
+
+                    let mut bytes = [0u8; 4];
+
+                    bytes.copy_from_slice(&self.commands[self.index..self.index + 4]);
+                    let x = i32::from_be_bytes(bytes);
+                    self.index += 4;
+
+                    bytes.copy_from_slice(&self.commands[self.index..self.index + 4]);
+                    let y = i32::from_be_bytes(bytes);
+                    self.index += 4;
+
+                    self.end_point = Some(Point::new(x, y));
+
+                    self.next()
+                }
+                RASTER_COMMAND_SEGMENT => {
+                    let mut bytes = [0u8; 2];
+
+                    bytes.copy_from_slice(&self.commands[self.index..self.index + 2]);
+                    let value = u16::from_be_bytes(bytes);
+                    self.index += 2;
+
+                    let diff = CompactDiff { value };
+
+                    let start_point =
+                        self.end_point.expect("RASTER_COMMAND_MOVE expected as first command");
+                    self.end_point =
+                        Some(Point::new(start_point.x + diff.dx(), start_point.y + diff.dy()));
+
+                    Some(Edge::new(start_point, self.end_point.unwrap()))
+                }
+                _ => unreachable!(),
+            }
+        } else {
+            None
+        }
+    }
+}
+
 #[doc(hidden)]
 #[derive(Debug)]
 pub struct RasterInner {
-    edges: Vec<Edge<i32>>,
+    edges: RasterEdges,
     tile_contour: TileContour,
 }
 
@@ -30,19 +178,19 @@ pub struct Raster {
 }
 
 impl Raster {
-    fn rasterize(edges: impl Iterator<Item = Edge<i32>>) -> Vec<Edge<i32>> {
+    fn rasterize(edges: impl Iterator<Item = Edge<i32>>) -> RasterEdges {
         #[cfg(feature = "tracing")]
         duration!("gfx", "Raster::rasterize");
         edges.collect()
     }
 
-    fn build_contour(edges: &[Edge<i32>]) -> TileContour {
+    fn build_contour(edges: &RasterEdges) -> TileContour {
         #[cfg(feature = "tracing")]
         duration!("gfx", "Raster::tile_contour");
         let mut tile_contour_builder = TileContourBuilder::new();
 
-        for edge in edges {
-            tile_contour_builder.enclose(edge);
+        for edge in edges.iter() {
+            tile_contour_builder.enclose(&edge);
         }
 
         tile_contour_builder.build()
@@ -72,7 +220,8 @@ impl Raster {
     }
 
     pub(crate) fn maxed() -> Self {
-        let inner = RasterInner { edges: vec![], tile_contour: TileContourBuilder::maxed() };
+        let inner =
+            RasterInner { edges: RasterEdges::new(), tile_contour: TileContourBuilder::maxed() };
 
         Self { inner: Rc::new(inner), translation: Point::new(0, 0), translated_tile_contour: None }
     }
@@ -129,9 +278,8 @@ impl Raster {
         let edges = inner
             .edges
             .iter()
-            .cloned()
             .map(|edge| edge.translate(self.translation))
-            .chain(other_inner.edges.iter().cloned().map(|edge| edge.translate(other.translation)))
+            .chain(other_inner.edges.iter().map(|edge| edge.translate(other.translation)))
             .collect();
         let tile_contour = inner.tile_contour.union(&other_inner.tile_contour);
 
@@ -142,8 +290,8 @@ impl Raster {
         }
     }
 
-    pub(crate) fn edges(&self) -> &[Edge<i32>] {
-        &self.inner.edges[..]
+    pub(crate) fn edges(&self) -> &RasterEdges {
+        &self.inner.edges
     }
 
     pub(crate) fn tile_contour(&self) -> &TileContour {
@@ -160,5 +308,60 @@ impl Eq for Raster {}
 impl PartialEq for Raster {
     fn eq(&self, other: &Self) -> bool {
         Rc::ptr_eq(&self.inner, &other.inner) && self.translation == other.translation
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::PIXEL_WIDTH;
+
+    fn to_and_fro(edges: &[Edge<i32>]) -> Vec<Edge<i32>> {
+        edges.into_iter().cloned().collect::<RasterEdges>().iter().collect()
+    }
+
+    #[test]
+    fn raster_edges_one_edge_all_end_point_combinations() {
+        for x in -PIXEL_WIDTH..=PIXEL_WIDTH {
+            for y in -PIXEL_WIDTH..=PIXEL_WIDTH {
+                let edges = vec![Edge::new(Point::new(0, 0), Point::new(x, y))];
+
+                assert_eq!(to_and_fro(&edges), edges);
+            }
+        }
+    }
+
+    #[test]
+    fn raster_edges_one_edge_negative() {
+        let edges = vec![Edge::new(Point::new(0, 0), Point::new(-PIXEL_WIDTH, -PIXEL_WIDTH))];
+
+        assert_eq!(to_and_fro(&edges), edges);
+    }
+
+    #[test]
+    fn raster_edges_two_edges_common() {
+        let edges = vec![
+            Edge::new(Point::new(0, 0), Point::new(PIXEL_WIDTH, PIXEL_WIDTH)),
+            Edge::new(
+                Point::new(PIXEL_WIDTH, PIXEL_WIDTH),
+                Point::new(PIXEL_WIDTH * 2, PIXEL_WIDTH * 2),
+            ),
+        ];
+
+        assert_eq!(to_and_fro(&edges), edges);
+    }
+
+    #[test]
+    fn raster_edges_two_edges_different() {
+        let edges = vec![
+            Edge::new(Point::new(0, 0), Point::new(PIXEL_WIDTH, PIXEL_WIDTH)),
+            Edge::new(
+                Point::new(PIXEL_WIDTH * 5, PIXEL_WIDTH * 5),
+                Point::new(PIXEL_WIDTH * 6, PIXEL_WIDTH * 6),
+            ),
+        ];
+
+        assert_eq!(to_and_fro(&edges), edges);
     }
 }

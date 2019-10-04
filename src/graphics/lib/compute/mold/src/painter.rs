@@ -10,6 +10,7 @@ use fuchsia_trace::duration;
 use crate::{
     edge::Edge,
     point::Point,
+    raster::{RasterEdges, RasterEdgesIter},
     tile::{LayerNode, Tile, TileOp, TILE_SIZE},
     PIXEL_SHIFT, PIXEL_WIDTH,
 };
@@ -38,7 +39,7 @@ pub(crate) struct Context<'m, B: ColorBuffer> {
     pub index: usize,
     pub width: usize,
     pub height: usize,
-    pub edges: &'m HashMap<u32, &'m [Edge<i32>]>,
+    pub edges: &'m HashMap<u32, &'m RasterEdges>,
     pub ops: &'m HashMap<u32, &'m [TileOp]>,
     pub buffer: B,
 }
@@ -81,9 +82,9 @@ pub struct Painter {
 #[derive(Clone, Debug)]
 struct Edges<'t> {
     tile: &'t Tile,
-    edges: &'t [Edge<i32>],
+    edges: &'t RasterEdges,
     index: usize,
-    inner_index: Option<usize>,
+    inner_edges: Option<RasterEdgesIter<'t>>,
     pub translation: Point<i32>,
 }
 
@@ -91,19 +92,17 @@ impl<'t> Iterator for Edges<'t> {
     type Item = Edge<i32>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(LayerNode::Edges(range)) = self.tile.layers.get(self.index) {
-            let inner_index = self.inner_index.unwrap_or(range.start);
-
-            if inner_index < range.end {
-                let edge = Some(self.edges[inner_index].clone());
-                self.inner_index = Some(inner_index + 1);
-                return edge;
-            } else {
-                self.index += 1;
-                self.inner_index = None;
-
-                return self.next();
+        if let Some(edges) = self.inner_edges.as_mut() {
+            if let Some(edge) = edges.next() {
+                return Some(edge);
             }
+        }
+
+        if let Some(LayerNode::Edges(start_point, range)) = self.tile.layers.get(self.index) {
+            self.index += 1;
+            self.inner_edges = Some(self.edges.from(*start_point, range.clone()));
+
+            return self.next();
         }
 
         None
@@ -422,7 +421,7 @@ impl Painter {
             };
 
             let edges =
-                Edges { tile, edges, index: self.layer_index, inner_index: None, translation };
+                Edges { tile, edges, index: self.layer_index, inner_edges: None, translation };
 
             self.layer_index += next_index;
             return Some((edges, &ops));
@@ -559,7 +558,7 @@ mod tests {
     fn get_cover(width: usize, height: usize, raster: &Raster, fill_rule: FillRule) -> Vec<u8> {
         let mut painter = Painter::new();
 
-        painter.cover_wip(raster.edges().iter().cloned(), Point::new(0, 0), 0, 0, fill_rule);
+        painter.cover_wip(raster.edges().iter(), Point::new(0, 0), 0, 0, fill_rule);
 
         let mut cover = Vec::with_capacity(width * height);
 
