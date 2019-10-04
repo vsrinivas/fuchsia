@@ -95,12 +95,18 @@ int As370::Thread() {
   if (NandInit() != ZX_OK) {
     zxlogf(ERROR, "%s: NandInit() failed\n", __func__);
   }
+
   if (PowerInit() != ZX_OK) {
     zxlogf(ERROR, "%s: PowerInit() failed\n", __func__);
     // In case of error report it and keep going.
   }
+
   if (ThermalInit() != ZX_OK) {
     zxlogf(ERROR, "%s: ThermalInit() failed\n", __func__);
+  }
+
+  if (SdioInit() != ZX_OK) {
+    zxlogf(ERROR, "%s: SdioInit() failed\n", __func__);
   }
 
   return 0;

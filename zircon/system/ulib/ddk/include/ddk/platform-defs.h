@@ -268,6 +268,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_AS370_POWER         7
 #define PDEV_DID_AS370_THERMAL       8
 #define PDEV_DID_AS370_TOUCH         9
+#define PDEV_DID_AS370_SDHCI0       10
 
 // Maxim
 #define PDEV_VID_MAXIM              21
@@ -277,6 +278,11 @@ __BEGIN_CDECLS
 #define PDEV_VID_NORDIC             22
 #define PDEV_PID_NORDIC_NRF52840     1
 #define PDEV_DID_NORDIC_THREAD       1
+
+// Marvell
+#define PDEV_VID_MARVELL            23
+#define PDEV_PID_MARVELL_88W8987     1
+#define PDEV_DID_MARVELL_WIFI        1
 // clang-format on
 
 __END_CDECLS

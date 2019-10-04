@@ -1075,7 +1075,7 @@ static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent) {
 
   // Ensure that we're SDv3.
   const uint16_t vrsn = (dev->regs->slotirqversion >> 16) & 0xff;
-  if (vrsn != SDHCI_VERSION_3) {
+  if (vrsn < SDHCI_VERSION_3) {
     zxlogf(ERROR, "sdhci: SD version is %u, only version %u is supported\n", vrsn, SDHCI_VERSION_3);
     status = ZX_ERR_NOT_SUPPORTED;
     goto fail;
@@ -1119,6 +1119,7 @@ static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent) {
   // initialize the controller
   status = sdhci_controller_init(dev);
   if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: SDHCI Controller init failed\n", __func__);
     goto fail;
   }
 
@@ -1134,6 +1135,7 @@ static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent) {
 
   status = device_add(parent, &args, &dev->zxdev);
   if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: SDMMC device_add failed.\n", __func__);
     goto fail;
   }
   return ZX_OK;
@@ -1154,4 +1156,4 @@ static zx_driver_ops_t sdhci_driver_ops = {
 ZIRCON_DRIVER_BEGIN(sdhci, sdhci_driver_ops, "zircon", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SDHCI),
 ZIRCON_DRIVER_END(sdhci)
-    // clang-format on
+// clang-format on

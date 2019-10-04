@@ -6,6 +6,7 @@ group("block") {
   deps = [
     "ahci",
     "aml-sd-emmc",
+    "as370-sdhci",
     "bootpart",
     "core",
     "ftl",

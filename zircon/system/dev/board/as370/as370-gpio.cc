@@ -30,6 +30,7 @@ zx_status_t As370::GpioInit() {
       {17},  // AMP_EN.
       {4},   // LED_RESET / TOUCH_RESET
       {5},   // TOUCH_IRQ
+      {63},  // WLAN_EN
   };
 
   const pbus_metadata_t gpio_metadata[] = {{
