@@ -6,6 +6,7 @@ import("$zx_build/public/gn/library_shim.gni")
 
 library("block-client") {
   sources = [
+    "block-group-registry.cc",
     "client.c",
     "client.cc",
     "remote-block-device.cc",
