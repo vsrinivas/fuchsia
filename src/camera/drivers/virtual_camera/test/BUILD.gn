@@ -5,17 +5,17 @@
 import("//build/package.gni")
 import("//build/test.gni")
 
-executable("virtual-camera-test") {
+executable("virtual_camera_test") {
   testonly = true
   sources = [
-    "stream-test.cc",
-    "virtual-camera-test.cc",
+    "stream_tester.cc",
+    "virtual_camera_test.cc",
   ]
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
-    "//src/camera/drivers/virtual_camera/:virtual-camera-source",
+    "//src/camera/drivers/virtual_camera/:virtual_camera_source",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",

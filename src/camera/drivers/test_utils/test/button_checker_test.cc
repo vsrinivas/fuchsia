@@ -6,14 +6,15 @@
 
 #include <iostream>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 TEST(ButtonCheckerTest, CheckMuteState) {
   auto checker = ButtonChecker::Create();
   if (!checker) {
     std::cerr << "ButtonChecker not created. Board may lack input devices." << std::endl;
     // This is not a failure, but the test cannot meaningfully continue.
-    return;
+  } else {
+    // TODO(37896): Not exactly the same as zxtest's ASSERT_NO_DEATH.
+    ASSERT_NO_FATAL_FAILURE( checker->GetMuteState() );
   }
-  ASSERT_NO_DEATH([&]() { checker->GetMuteState(); });
 }

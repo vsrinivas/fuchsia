@@ -17,7 +17,7 @@
 
 #include "color_source.h"
 
-namespace virtual_camera {
+namespace camera {
 
 class VirtualCameraControlImpl : public fuchsia::camera::Control {
  public:
@@ -93,6 +93,6 @@ class VirtualCameraControlImpl : public fuchsia::camera::Control {
       this};
 };
 
-}  // namespace virtual_camera
+}  // namespace camera
 
 #endif  // SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_VIRTUAL_CAMERA_CONTROL_H_

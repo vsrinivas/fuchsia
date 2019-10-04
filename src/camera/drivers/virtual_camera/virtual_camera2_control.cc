@@ -8,7 +8,7 @@
 #include <src/lib/fxl/log_level.h>
 #include <src/lib/fxl/logging.h>
 
-namespace virtual_camera {
+namespace camera {
 
 static constexpr uint32_t kBufferCountForCamping = 5;
 static constexpr uint32_t kFakeImageCodedWidth = 640;
@@ -208,4 +208,4 @@ VirtualCamera2ControllerImpl::VirtualCamera2StreamImpl::VirtualCamera2StreamImpl
   });
 }
 
-}  // namespace virtual_camera
+}  // namespace camera

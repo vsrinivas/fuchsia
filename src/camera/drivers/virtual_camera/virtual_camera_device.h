@@ -16,7 +16,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 
-namespace virtual_camera {
+namespace camera {
 
 class VirtualCameraDevice {
  public:
@@ -45,6 +45,6 @@ class VirtualCameraDevice {
   static std::unique_ptr<async::Loop> fidl_dispatch_loop_;
 };
 
-}  // namespace virtual_camera
+}  // namespace camera
 
 #endif  // SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_VIRTUAL_CAMERA_DEVICE_H_

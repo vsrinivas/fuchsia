@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "stream-test.h"
+#include "stream_tester.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
@@ -70,16 +70,16 @@ static bool RunLoopWithTimeoutOrUntil(async::Loop* loop, fit::function<bool()> c
   return condition();
 }
 
-StreamTest::StreamTest(zx::channel stream) : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+StreamTester::StreamTester(zx::channel stream) : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   stream_.Bind(std::move(stream), loop_.dispatcher());
   zx_status_t status = loop_.StartThread(nullptr);
   EXPECT_EQ(status, ZX_OK) << "Failed to StartThread for tests. status: " << status;
 }
 
 // Just tests that the channel can give 10 frames
-void StreamTest::TestGetFrames() {
+void StreamTester::TestGetFrames() {
   ResetStream();
-  stream_.events().OnFrameAvailable = fbl::BindMember(this, &StreamTest::DefaultOnFrameAvailable);
+  stream_.events().OnFrameAvailable = fbl::BindMember(this, &StreamTester::DefaultOnFrameAvailable);
   stream_->Start();
 
   RunLoopWithTimeoutOrUntil(
@@ -89,7 +89,7 @@ void StreamTest::TestGetFrames() {
   stream_->Stop();
 }
 
-void StreamTest::DefaultOnFrameAvailable(fuchsia::camera2::FrameAvailableInfo frame) {
+void StreamTester::DefaultOnFrameAvailable(fuchsia::camera2::FrameAvailableInfo frame) {
   FXL_LOG(INFO) << "Received FrameNotify Event " << frame_counter_
                 << " at index: " << frame.buffer_id;
   switch (frame.frame_status) {
@@ -108,7 +108,7 @@ void StreamTest::DefaultOnFrameAvailable(fuchsia::camera2::FrameAvailableInfo fr
   }
 }
 
-void StreamTest::ResetStream() {
+void StreamTester::ResetStream() {
   stream_->Stop();
   loop_.RunUntilIdle();
   loop_.ResetQuit();

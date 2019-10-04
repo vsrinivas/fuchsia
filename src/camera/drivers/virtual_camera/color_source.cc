@@ -13,7 +13,7 @@
 #include <src/lib/fxl/log_level.h>
 #include <src/lib/fxl/logging.h>
 
-namespace virtual_camera {
+namespace camera {
 
 // To fill an ARGB32 image, you have the following offsets:
 static constexpr uint8_t kAlphaShift = 24;
@@ -73,4 +73,4 @@ void ColorSource::hsv_color(uint32_t index, uint8_t* r, uint8_t* g, uint8_t* b) 
   *b = phases[(phase + kBluePhaseOffset) % phases.size()];
 }
 
-}  // namespace virtual_camera
+}  // namespace camera

@@ -8,7 +8,7 @@
 #include <src/lib/fxl/log_level.h>
 #include <src/lib/fxl/logging.h>
 
-namespace virtual_camera {
+namespace camera {
 
 static const char* kVirtualCameraVendorName = "Google Inc.";
 static const char* kVirtualCameraProductName = "Fuchsia Virtual Camera";
@@ -158,4 +158,4 @@ VirtualCameraControlImpl::VirtualCameraStreamImpl::VirtualCameraStreamImpl(
   });
 }
 
-}  // namespace virtual_camera
+}  // namespace camera

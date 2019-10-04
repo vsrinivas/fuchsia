@@ -12,8 +12,9 @@
 
 #include "../virtual_camera2_control.h"
 #include "gtest/gtest.h"
-#include "stream-test.h"
+#include "stream_tester.h"
 
+namespace camera {
 namespace {
 
 // Test the controller part of the virtual camera
@@ -26,7 +27,7 @@ class CameraHalTest : public ::testing::Test {
     EXPECT_EQ(status, ZX_OK) << "Failed to StartThread for tests. status: " << status;
   }
 
-  ~CameraHalTest() { loop_.Shutdown(); }
+  ~CameraHalTest() override { loop_.Shutdown(); }
 
   void TestGetConfigs() {
     zx_status_t out_status;
@@ -53,8 +54,8 @@ class CameraHalTest : public ::testing::Test {
     fuchsia::camera2::DeviceInfo device_info;
     zx_status_t fidl_status = camera_client_->GetDeviceInfo(&device_info);
     ASSERT_EQ(fidl_status, ZX_OK) << "Couldn't get device info. fidl status: " << fidl_status;
-    EXPECT_EQ(virtual_camera::kVirtualCameraVendorName, device_info.vendor_name());
-    EXPECT_EQ(virtual_camera::kVirtualCameraProductName, device_info.product_name());
+    EXPECT_EQ(kVirtualCameraVendorName, device_info.vendor_name());
+    EXPECT_EQ(kVirtualCameraProductName, device_info.product_name());
     EXPECT_EQ(fuchsia::camera2::DeviceType::VIRTUAL, device_info.type());
   }
 
@@ -69,18 +70,16 @@ class CameraHalTest : public ::testing::Test {
     // Assert that the channel is open:
     ASSERT_TRUE(stream.is_bound());
     ASSERT_TRUE(camera_client_.is_bound());
-    camera::StreamTest stream_test(stream.Unbind().TakeChannel());
-    stream_test.TestGetFrames();
+    camera::StreamTester stream_tester(stream.Unbind().TakeChannel());
+    stream_tester.TestGetFrames();
   }
 
  private:
   async::Loop loop_;
   std::vector<fuchsia::camera2::hal::Config> configs_;
   fuchsia::camera2::hal::ControllerSyncPtr camera_client_;
-  virtual_camera::VirtualCamera2ControllerImpl virtual_camera2_;
+  VirtualCamera2ControllerImpl virtual_camera2_;
 };
-
-}  // namespace
 
 TEST_F(CameraHalTest, GetStartupInfo) {
   TestGetConfigs();
@@ -88,3 +87,6 @@ TEST_F(CameraHalTest, GetStartupInfo) {
 }
 
 TEST_F(CameraHalTest, ConnectToStream0) { TestCreateStream0(); }
+
+}  // namespace
+}  // namespace camera

@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-namespace virtual_camera {
+namespace camera {
 
 // ColorSource steps through hue at a constant rate in HSV colorspace,
 // with saturation and value remaining constant. An RGB color is written to
@@ -25,6 +25,6 @@ class ColorSource {
   uint32_t frame_color_ = kStartingFrameColor;
 };
 
-}  // namespace virtual_camera
+}  // namespace camera
 
 #endif  // SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_COLOR_SOURCE_H_

@@ -18,7 +18,7 @@
 
 #include "color_source.h"
 
-namespace virtual_camera {
+namespace camera {
 
 class VirtualCamera2ControllerImpl : public fuchsia::camera2::hal::Controller {
  public:
@@ -128,6 +128,6 @@ class VirtualCamera2ControllerImpl : public fuchsia::camera2::hal::Controller {
 
 inline const char* kVirtualCameraVendorName = "Google Inc.";
 inline const char* kVirtualCameraProductName = "Fuchsia Virtual Camera";
-}  // namespace virtual_camera
+}  // namespace camera
 
 #endif  // SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_VIRTUAL_CAMERA2_CONTROL_H_

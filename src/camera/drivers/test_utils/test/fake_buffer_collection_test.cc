@@ -11,21 +11,22 @@
 #include <unistd.h>
 
 #include <ddk/debug.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 namespace camera {
 namespace {
+
 constexpr uint32_t kWidth = 1080;
 constexpr uint32_t kHeight = 764;
 constexpr uint32_t kNumberOfBuffers = 8;
 
 TEST(CreateContiguousBufferCollectionInfo, CreatesCollection) {
   zx_handle_t bti_handle;
-  ASSERT_OK(fake_bti_create(&bti_handle));
+  ASSERT_EQ(fake_bti_create(&bti_handle), ZX_OK);
 
   fuchsia_sysmem_BufferCollectionInfo buffer_collection;
-  ASSERT_OK(CreateContiguousBufferCollectionInfo(&buffer_collection, bti_handle, kWidth, kHeight,
-                                                 kNumberOfBuffers));
+  ASSERT_EQ(CreateContiguousBufferCollectionInfo(&buffer_collection, bti_handle, kWidth, kHeight,
+                                                 kNumberOfBuffers), ZX_OK);
 
   // Check it made the buffer collection like we want:
   EXPECT_EQ(buffer_collection.buffer_count, kNumberOfBuffers);
@@ -43,10 +44,10 @@ TEST(CreateContiguousBufferCollectionInfo, CreatesCollection) {
 TEST(CreateContiguousBufferCollectionInfo, FailsOnBadHandle) {
   zx_handle_t bti_handle = ZX_HANDLE_INVALID;
   fuchsia_sysmem_BufferCollectionInfo buffer_collection;
-  ASSERT_DEATH(([&buffer_collection, bti_handle]() {
+  ASSERT_DEATH(
     camera::CreateContiguousBufferCollectionInfo(&buffer_collection, bti_handle, kWidth, kHeight,
-                                                 kNumberOfBuffers);
-  }));
+                                                 kNumberOfBuffers),
+    "fake bti_pin: Bad handle 0");
 }
 
 }  // namespace

@@ -8,17 +8,17 @@
 
 #include "gtest/gtest.h"
 
-#ifndef SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_TEST_STREAM_TEST_H_
-#define SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_TEST_STREAM_TEST_H_
+#ifndef SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_TEST_STREAM_TESTER_H_
+#define SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_TEST_STREAM_TESTER_H_
 
 namespace camera {
 
 // This class takes a stream channel and runs tests on it.
-class StreamTest {
+class StreamTester {
  public:
-  explicit StreamTest(zx::channel stream);
+  explicit StreamTester(zx::channel stream);
 
-  ~StreamTest() { loop_.Shutdown(); }
+  ~StreamTester() { loop_.Shutdown(); }
 
   // Just tests that the channel can give 10 frames
   void TestGetFrames();
@@ -37,4 +37,4 @@ class StreamTest {
 
 }  // namespace camera
 
-#endif  // SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_TEST_STREAM_TEST_H_
+#endif  // SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_TEST_STREAM_TESTER_H_

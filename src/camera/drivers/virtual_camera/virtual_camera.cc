@@ -12,7 +12,7 @@
 
 #include "src/camera/drivers/virtual_camera/virtual_camera_device.h"
 
-namespace virtual_camera {
+namespace camera {
 
 static zx_status_t bind(void* /*ctx*/, zx_device_t* device) {
   auto dev = std::make_unique<VirtualCameraDevice>();
@@ -35,8 +35,8 @@ static constexpr zx_driver_ops_t driver_ops = []() {
   return ops;
 }();
 
-}  // namespace virtual_camera
+}  // namespace camera
 
 // clang-format: off
-ZIRCON_DRIVER_BEGIN(virtual_camera, virtual_camera::driver_ops, "fuchsia", "0.1", 1)
+ZIRCON_DRIVER_BEGIN(virtual_camera, camera::driver_ops, "fuchsia", "0.1", 1)
 BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT), ZIRCON_DRIVER_END(virtual_camera)

@@ -8,7 +8,7 @@
 #include "src/camera/drivers/virtual_camera/virtual_camera_control.h"
 #include "src/lib/fxl/logging.h"
 
-namespace virtual_camera {
+namespace camera {
 
 std::unique_ptr<async::Loop> VirtualCameraDevice::fidl_dispatch_loop_ = nullptr;
 
@@ -108,4 +108,4 @@ const fuchsia_hardware_camera_Device_ops_t VirtualCameraDevice::CAMERA_FIDL_THUN
     },
 };
 
-}  // namespace virtual_camera
+}  // namespace camera

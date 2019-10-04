@@ -10,11 +10,12 @@ import("//build/testing/environments.gni")
 executable("test_utils_test") {
   testonly = true
   sources = [
-    "button_checker-test.cc",
-    "fake-buffer-collection-test.cc",
+    "button_checker_test.cc",
+    "fake_buffer_collection_test.cc",
   ]
   deps = [
     "//src/camera/drivers/test_utils",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fake-bti",
     "//zircon/public/lib/fbl",
