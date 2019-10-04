@@ -7,6 +7,7 @@
 
 pub use wlan_common as common;
 
+pub mod ap;
 pub mod auth;
 pub mod buffer;
 pub mod client;
