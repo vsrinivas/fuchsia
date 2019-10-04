@@ -17,6 +17,7 @@ fuzzers_package("example_fuzzers") {
     ":overflow_fuzzer",
     ":trap_fuzzer",
     ":fuzzed_data_provider_fuzzer",
+    ":corpus_fuzzer",
   ]
   fuzz_host = true
 }
@@ -36,6 +37,12 @@ fuzzer("trap_fuzzer") {
 fuzzer("fuzzed_data_provider_fuzzer") {
   sources = [
     "fuzzed-data-provider.cc",
+  ]
+}
+
+fuzzer("corpus_fuzzer") {
+  sources = [
+    "corpus.cc",
   ]
 }
 
