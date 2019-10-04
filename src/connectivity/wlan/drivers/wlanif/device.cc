@@ -889,6 +889,18 @@ void Device::EapolConf(const wlanif_eapol_confirm_t* resp) {
   binding_.events().EapolConf(std::move(fidl_resp));
 }
 
+void Device::OnChannelSwitched(wlanif_channel_switch_info_t* info) {
+  std::lock_guard<std::mutex> lock(lock_);
+  if (!binding_.is_bound()) {
+    return;
+  }
+
+  wlan_mlme::ChannelSwitchInfo fidl_info;
+  fidl_info.new_channel = info->new_channel;
+
+  binding_.events().OnChannelSwitched(fidl_info);
+}
+
 void Device::SignalReport(const wlanif_signal_report_indication_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
   if (!binding_.is_bound()) {

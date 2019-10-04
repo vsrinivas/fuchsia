@@ -496,6 +496,10 @@ struct WlanifCapturedFrameResult {
     vector<uint8> data;
 };
 
+struct WlanifChannelSwitchInfo {
+    uint8 new_channel;
+};
+
 [Layout = "ddk-interface"]
 protocol WlanifImplIfc {
     // MLME operations

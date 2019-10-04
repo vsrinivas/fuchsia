@@ -965,6 +965,8 @@ protocol MLME {
     StartCaptureFrames(StartCaptureFramesRequest req) -> (StartCaptureFramesResponse resp);
     StopCaptureFrames();
     -> RelayCapturedFrame(CapturedFrameResult result);
+
+    -> OnChannelSwitched(ChannelSwitchInfo info);
 };
 
 // Temporary interface for bridging between the devhost-owned channel model and

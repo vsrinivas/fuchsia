@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent};
+use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, ChannelSwitchInfo, MlmeEvent};
 use fuchsia_inspect_contrib::{inspect_log, log::InspectBytes};
 use fuchsia_zircon as zx;
 use log::{error, warn};
@@ -415,6 +415,10 @@ impl State {
                             }
                         }
                     }
+                }
+                MlmeEvent::OnChannelSwitched { info } => {
+                    let bss = process_channel_switch(bss, info);
+                    State::Associated { cfg, bss, last_rssi, link_state, radio_cfg }
                 }
                 _ => State::Associated { cfg, bss, last_rssi, link_state, radio_cfg },
             },
@@ -988,6 +992,17 @@ fn to_associating_state(cfg: ClientConfig, cmd: ConnectCommand, mlme_sink: &Mlme
     };
     State::Associating { cfg, cmd }
 }
+
+pub fn process_channel_switch(
+    mut bss: Box<BssDescription>,
+    ind: ChannelSwitchInfo,
+) -> Box<BssDescription> {
+    // Right now we just update the stored bss description, but we may want to provide some notice
+    // or metric for this in the future.
+    bss.chan.primary = ind.new_channel;
+    bss
+}
+
 
 fn handle_supplicant_start_failure(
     responder: Option<Responder<ConnectResult>>,
@@ -1781,6 +1796,24 @@ mod tests {
         let _state = state.on_mlme_event(deauth_ind, &mut h.context);
         assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionLost(info))) => {
             assert_eq!(info.last_rssi, 60);
+        });
+    }
+
+    #[test]
+    fn bss_channel_switch_ind() {
+        let mut h = TestHelper::new();
+        let state = link_up_state(Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])));
+
+        let switch_ind = MlmeEvent::OnChannelSwitched {
+            info: fidl_mlme::ChannelSwitchInfo { new_channel: 36 },
+        };
+
+        assert_variant!(&state, State::Associated { bss, ..} => {
+            assert_eq!(bss.chan.primary, 1);
+        });
+        let state = state.on_mlme_event(switch_ind, &mut h.context);
+        assert_variant!(state, State::Associated { bss, ..} => {
+            assert_eq!(bss.chan.primary, 36);
         });
     }
 
