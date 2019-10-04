@@ -4,12 +4,12 @@
 
 #include "src/media/playback/mediaplayer/core/player_core.h"
 
-#include <queue>
-#include <unordered_set>
-
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 #include <lib/zx/clock.h>
+
+#include <queue>
+#include <unordered_set>
 
 #include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
@@ -96,7 +96,7 @@ void PlayerCore::SetSinkSegment(std::unique_ptr<SinkSegment> sink_segment,
   auto old_sink_segment = TakeSinkSegment(medium);
   if (old_sink_segment) {
     old_sink_segment->Deprovision();
-    old_sink_segment.reset();
+    old_sink_segment = nullptr;
   }
 
   if (!sink_segment) {

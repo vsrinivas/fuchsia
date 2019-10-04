@@ -36,7 +36,7 @@ std::unique_ptr<FrameSink> FrameSink::Create(
 FrameSink::~FrameSink() {
   // Only after ~view_provider_component_ do we know there will be zero views_
   // left.
-  view_provider_component_.reset();
+  view_provider_component_ = nullptr;
   FXL_DCHECK(views_.empty());
 }
 

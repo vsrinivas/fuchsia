@@ -106,7 +106,7 @@ TEST_F(AudioLinkPacketSourceTest, LockUnlockPendingQueue) {
   ASSERT_EQ(0u, packet->payload_buffer_id());
   ASSERT_FALSE(link->pending_queue_empty());
   ASSERT_EQ(0u, released_packet_count());
-  packet.reset();
+  packet = nullptr;
   link->UnlockPendingQueueFront(true);
   RunLoopUntilIdle();
   ASSERT_FALSE(link->pending_queue_empty());
@@ -117,7 +117,7 @@ TEST_F(AudioLinkPacketSourceTest, LockUnlockPendingQueue) {
   ASSERT_FALSE(was_flushed);
   ASSERT_NE(nullptr, packet);
   ASSERT_EQ(1u, packet->payload_buffer_id());
-  packet.reset();
+  packet = nullptr;
   link->UnlockPendingQueueFront(true);
   RunLoopUntilIdle();
   ASSERT_FALSE(link->pending_queue_empty());
@@ -128,7 +128,7 @@ TEST_F(AudioLinkPacketSourceTest, LockUnlockPendingQueue) {
   ASSERT_FALSE(was_flushed);
   ASSERT_NE(nullptr, packet);
   ASSERT_EQ(2u, packet->payload_buffer_id());
-  packet.reset();
+  packet = nullptr;
   link->UnlockPendingQueueFront(true);
   RunLoopUntilIdle();
   ASSERT_TRUE(link->pending_queue_empty());

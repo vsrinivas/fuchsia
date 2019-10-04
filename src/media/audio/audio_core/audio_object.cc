@@ -63,7 +63,7 @@ fbl::RefPtr<AudioLink> AudioObject::LinkObjects(const fbl::RefPtr<AudioObject>& 
       source->dest_links_.insert(link);
       dest->source_links_.insert(link);
     } else {
-      link.reset();
+      link = nullptr;
     }
   }
 
@@ -182,7 +182,7 @@ void AudioObject::UnlinkCleanup(typename AudioLink::Set<TagType>* links) {
   while (!links->is_empty()) {
     auto link = links->pop_front();
     RemoveLink(link);
-    link.reset();
+    link = nullptr;
   }
 }
 

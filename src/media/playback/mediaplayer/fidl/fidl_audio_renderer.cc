@@ -200,7 +200,7 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
   }
 
   if (packet->size() == 0) {
-    packet.reset();
+    packet = nullptr;
   } else {
     fuchsia::media::StreamPacket audioPacket;
     audioPacket.pts = start_pts;

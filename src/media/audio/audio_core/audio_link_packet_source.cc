@@ -85,7 +85,7 @@ void AudioLinkPacketSource::FlushPendingQueue(const fbl::RefPtr<PendingFlushToke
 
   // Release the packets, front to back.
   for (auto& ptr : flushed_packets) {
-    ptr.reset();
+    ptr = nullptr;
   }
 }
 
@@ -131,11 +131,11 @@ void AudioLinkPacketSource::UnlockPendingQueueFront(bool release_packet) {
     // be flushed back to the service thread, then release each of the flush tokens.
     if (!pending_flush_packet_queue_.empty() || !pending_flush_token_queue_.empty()) {
       for (auto& ptr : pending_flush_packet_queue_) {
-        ptr.reset();
+        ptr = nullptr;
       }
 
       for (auto& ptr : pending_flush_token_queue_) {
-        ptr.reset();
+        ptr = nullptr;
       }
 
       pending_flush_packet_queue_.clear();

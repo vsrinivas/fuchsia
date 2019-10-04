@@ -12,6 +12,8 @@
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
 
+#include <memory>
+
 #include <hid/usages.h>
 
 #include "src/lib/url/gurl.h"
@@ -88,9 +90,9 @@ MediaPlayerTestUtilView::MediaPlayerTestUtilView(scenic::ViewContext view_contex
 
   player_->CreateView(std::move(view_token));
 
-  video_host_node_.reset(new scenic::EntityNode(session()));
-  video_view_holder_.reset(
-      new scenic::ViewHolder(session(), std::move(view_holder_token), "video view"));
+  video_host_node_ = std::make_unique<scenic::EntityNode>(session());
+  video_view_holder_ =
+      std::make_unique<scenic::ViewHolder>(session(), std::move(view_holder_token), "video view");
   video_host_node_->Attach(*video_view_holder_);
 
   root_node().AddChild(*video_host_node_);
@@ -370,8 +372,8 @@ void MediaPlayerTestUtilView::OnChildUnavailable(uint32_t view_holder_id) {
   FXL_LOG(ERROR) << "Video view died unexpectedly, quitting.";
 
   video_host_node_->Detach();
-  video_host_node_.reset();
-  video_view_holder_.reset();
+  video_host_node_ = nullptr;
+  video_view_holder_ = nullptr;
 
   quit_callback_(0);
 }

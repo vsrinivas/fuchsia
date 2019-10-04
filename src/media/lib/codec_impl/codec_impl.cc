@@ -156,7 +156,7 @@ CodecImpl::~CodecImpl() {
     // We care about the order because a client is fairly likely to immediately retry on seeing
     // the channel close, and we don't want that to ever bounce off the CodecAdmission for the
     // instance associated with that same channel.
-    codec_admission.reset();
+    codec_admission = nullptr;
 
     // ~codec_to_close (after ~CodecAdmission above).
   });
@@ -1739,7 +1739,7 @@ void CodecImpl::EnsureBuffersNotConfigured(std::unique_lock<std::mutex>& lock, C
     // closed by all participants, vs. potentially getting failed by a
     // participant exiting or non-cleanly closing.  A Sync() by the client is
     // sufficient to ensure this async close is done.
-    port_settings_[port].reset();
+    port_settings_[port] = nullptr;
   }
 
   // Ensure that buffers aren't with the core codec.

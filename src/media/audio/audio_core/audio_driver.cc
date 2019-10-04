@@ -94,7 +94,7 @@ void AudioDriver::Cleanup() {
     clock_mono_to_ring_pos_bytes_ = TimelineFunction();
     ring_buffer_state_gen_.Next();
   }
-  ring_buffer.reset();
+  ring_buffer = nullptr;
 
   stream_channel_wait_.Cancel();
   ring_buffer_channel_wait_.Cancel();

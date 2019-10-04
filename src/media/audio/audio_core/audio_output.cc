@@ -170,7 +170,7 @@ void AudioOutput::SetupMixBuffer(uint32_t max_mix_frames) {
              std::numeric_limits<uint32_t>::max());
 
   mix_buf_frames_ = max_mix_frames;
-  mix_buf_.reset(new float[mix_buf_frames_ * output_producer_->channels()]);
+  mix_buf_ = std::make_unique<float[]>(mix_buf_frames_ * output_producer_->channels());
 }
 
 void AudioOutput::ForEachLink(TaskType task_type) {
@@ -263,12 +263,12 @@ void AudioOutput::ForEachLink(TaskType task_type) {
         break;
       }
       // We did consume this entire source packet, and we should keep mixing.
-      pkt_ref.reset();
+      pkt_ref = nullptr;
       packet_link->UnlockPendingQueueFront(release_packet);
     }
 
     // Unlock queue (completing packet if needed) and proceed to the next source.
-    pkt_ref.reset();
+    pkt_ref = nullptr;
     packet_link->UnlockPendingQueueFront(release_packet);
 
     // Note: there is no point in doing this for Trim tasks, but it doesn't hurt anything, and it's

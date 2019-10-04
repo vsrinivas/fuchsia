@@ -9,6 +9,8 @@
 #include <lib/media/audio/cpp/types.h>
 #include <lib/zx/clock.h>
 
+#include <memory>
+
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/utils.h"
@@ -200,7 +202,7 @@ fit::promise<> AudioCapturerImpl::Cleanup() {
         TRACE_FLOW_END("audio.debug", "AudioCapturerImpl.capture_cleanup", nonce);
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
         self->CleanupFromMixThread();
-        self.reset();
+        self = nullptr;
         completer.complete_ok();
       });
 
@@ -211,7 +213,7 @@ void AudioCapturerImpl::CleanupFromMixThread() {
   TRACE_DURATION("audio", "AudioCapturerImpl::CleanupFromMixThread");
   mix_wakeup_.Deactivate();
   mix_timer_.Cancel();
-  mix_domain_.reset();
+  mix_domain_ = nullptr;
   state_.store(State::Shutdown);
 }
 
@@ -368,7 +370,7 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   //
   // TODO(johngro): This does not need to be as long (in frames) as the user
   // supplied VMO. Limit this to something more reasonable.
-  mix_buf_.reset(new float[payload_buf_frames_]);
+  mix_buf_ = std::make_unique<float[]>(payload_buf_frames_);
 
   // Map the VMO into our process.
   uintptr_t tmp;

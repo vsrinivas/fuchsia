@@ -50,18 +50,18 @@ class CodecRunnerApp {
                     codec_instance_->BindAsync([this] {
                       // Drop codec implementation and close channel on
                       // error.
-                      codec_instance_.reset();
+                      codec_instance_ = nullptr;
                       // The codec_instance_ channel is the only reason for
                       // the isolate to exist.
                       loop_.Quit();
                     });
                     // Drop factory and close factory channel.
-                    codec_factory_.reset();
+                    codec_factory_ = nullptr;
                   },
                   codec_admission_control,
                   [this](zx_status_t error) {
                     // Drop factory and close factory channel on error.
-                    codec_factory_.reset();
+                    codec_factory_ = nullptr;
                     // The codec_instance_ channel is the only reason for
                     // the isolate to exist.  If codec_instance_ wasn't
                     // created via the codec_factory_ before this point,

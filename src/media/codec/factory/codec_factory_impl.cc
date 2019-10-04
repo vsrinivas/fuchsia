@@ -167,7 +167,7 @@ void CodecFactoryImpl::OwnSelf(std::unique_ptr<CodecFactoryImpl> self) {
   binding_->set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "CodecFactoryImpl channel failed (INFO) - status: " << status;
     // this will also ~this
-    binding_.reset();
+    binding_ = nullptr;
   });
 }
 

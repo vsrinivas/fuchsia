@@ -44,7 +44,7 @@ void AudioDeviceServiceTest::TearDown() {
     devices_.clear();
   };
 
-  driver_.reset();
+  driver_ = nullptr;
   ExpectCondition([this]() { return devices().empty(); });
 
   ASSERT_TRUE(audio_device_enumerator_.is_bound());

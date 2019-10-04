@@ -56,7 +56,7 @@ class CodecImplFailures : public gtest::RealLoopFixture {
  public:
   using StreamProcessorPtr = ::fuchsia::media::StreamProcessorPtr;
 
-  void TearDown() override { token_request_.reset(); }
+  void TearDown() override { token_request_ = nullptr; }
 
   void Create(fidl::InterfaceRequest<fuchsia::media::StreamProcessor> request) {
     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem;
@@ -72,7 +72,7 @@ class CodecImplFailures : public gtest::RealLoopFixture {
 
     codec_impl_->BindAsync([this]() {
       error_handler_ran_ = true;
-      codec_impl_.reset();
+      codec_impl_ = nullptr;
     });
   }
 
@@ -202,7 +202,7 @@ TEST_F(CodecImplFailures, InputBufferCollectionSysmemFailure) {
 
   TestAllocator allocator;
   allocator.Bind(std::move(sysmem_request_.value()));
-  sysmem_request_.reset();
+  sysmem_request_ = nullptr;
 
   RunLoopWithTimeoutOrUntil([&allocator]() { return allocator.collection().is_waiting(); });
   ASSERT_TRUE(error_handler_ran_ == 0);

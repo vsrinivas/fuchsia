@@ -846,12 +846,12 @@ fbl::RefPtr<PayloadBuffer> PayloadManager::AllocateUsingAllocateCallback(uint64_
 // PayloadManager::Connector implementation.
 
 void PayloadManager::Connector::EnsureNoAllocator() {
-  local_memory_allocator_.reset();
-  vmo_allocator_.reset();
+  local_memory_allocator_ = nullptr;
+  vmo_allocator_ = nullptr;
 }
 
 void PayloadManager::Connector::EnsureLocalMemoryAllocator() {
-  vmo_allocator_.reset();
+  vmo_allocator_ = nullptr;
 
   if (!local_memory_allocator_) {
     local_memory_allocator_ = LocalMemoryPayloadAllocator::Create();
@@ -859,7 +859,7 @@ void PayloadManager::Connector::EnsureLocalMemoryAllocator() {
 }
 
 void PayloadManager::Connector::EnsureEmptyVmoAllocator(VmoAllocation vmo_allocation) {
-  local_memory_allocator_.reset();
+  local_memory_allocator_ = nullptr;
 
   if (!vmo_allocator_) {
     vmo_allocator_ = VmoPayloadAllocator::Create();

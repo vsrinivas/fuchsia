@@ -21,7 +21,7 @@ std::optional<uint64_t> TimestampExtrapolator::Extrapolate(size_t offset) {
   }
 
   auto last_information = *last_information_;
-  last_information_.reset();
+  last_information_ = std::nullopt;
 
   ZX_DEBUG_ASSERT_MSG(last_information.offset <= offset,
                       "offset %lu behind last informed timestamp's offset %lu", offset,

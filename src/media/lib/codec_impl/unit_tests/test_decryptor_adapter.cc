@@ -191,7 +191,7 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
     decryptor_adapter_ = adapter.get();
     codec_impl_->SetCoreCodecAdapter(std::move(adapter));
 
-    codec_impl_->BindAsync([this]() { codec_impl_.reset(); });
+    codec_impl_->BindAsync([this]() { codec_impl_ = nullptr; });
   }
 
   bool RunUntil(fit::function<bool()> condition) {

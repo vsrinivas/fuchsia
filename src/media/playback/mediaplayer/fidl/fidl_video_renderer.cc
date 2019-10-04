@@ -477,7 +477,7 @@ FidlVideoRenderer::View::View(scenic::ViewContext context,
       image_pipe_id, image_pipe_.NewRequest(renderer_->dispatcher())));
 
   image_pipe_.set_error_handler([this](zx_status_t status) {
-    images_.reset();
+    images_ = nullptr;
     image_pipe_ = nullptr;
   });
 

@@ -528,7 +528,7 @@ ChunkInputStream::ControlFlow CodecAdapterAacEncoder::ProcessInputBlock(
 
   auto flush_timestamp = [timestamp = input_block.flush_timestamp_ish]() mutable {
     auto value = timestamp;
-    timestamp.reset();
+    timestamp = std::nullopt;
     return value;
   };
 

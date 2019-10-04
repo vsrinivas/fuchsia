@@ -151,7 +151,7 @@ void HttpReader::ReadFromSocket() {
       break;
     }
 
-    waiter_.reset();
+    waiter_ = nullptr;
 
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "zx::socket::read failed, status " << status;

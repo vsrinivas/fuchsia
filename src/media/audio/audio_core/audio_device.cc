@@ -126,7 +126,7 @@ void AudioDevice::Cleanup() {
     // Instruct the driver to release all its resources (channels, timer).
     driver_->Cleanup();
   }
-  mix_domain_.reset();
+  mix_domain_ = nullptr;
 }
 
 void AudioDevice::ActivateSelf() {

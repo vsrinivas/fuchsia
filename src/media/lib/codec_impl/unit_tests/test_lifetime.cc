@@ -58,7 +58,7 @@ class CodecImplLifetime : public gtest::RealLoopFixture {
   }
   void TearDown() override {
     // Force any failure during ~CodecImpl to have more obvious stack.
-    codec_impl_.reset();
+    codec_impl_ = nullptr;
   }
 
   bool RunLoopUntilOrGiveUp(fit::function<bool()> condition) {
@@ -85,9 +85,9 @@ class CodecImplLifetime : public gtest::RealLoopFixture {
           }
           codec_impl->BindAsync([this, delete_async] {
             if (!delete_async) {
-              codec_impl_.reset();
+              codec_impl_ = nullptr;
             } else {
-              zx_status_t status = async::PostTask(dispatcher(), [this] { codec_impl_.reset(); });
+              zx_status_t status = async::PostTask(dispatcher(), [this] { codec_impl_ = nullptr; });
               ZX_DEBUG_ASSERT(status == ZX_OK);
             }
             error_handler_ran_ = true;
@@ -135,14 +135,14 @@ class CodecImplLifetime : public gtest::RealLoopFixture {
 
 TEST_F(CodecImplLifetime, CreateDelete) {
   Create(false);
-  codec_impl_.reset();
+  codec_impl_ = nullptr;
   RunLoopUntilIdle();
   EXPECT_FALSE(error_handler_ran_);
 }
 
 TEST_F(CodecImplLifetime, CreateBindDelete) {
   Create();
-  codec_impl_.reset();
+  codec_impl_ = nullptr;
   RunLoopUntilIdle();
   EXPECT_FALSE(error_handler_ran_);
 }
@@ -198,14 +198,14 @@ TEST_F(CodecImplLifetime, CreateBindChannelCloseDeleteAsyncWithOngoingSyncs) {
 
 TEST_F(CodecImplLifetime, CreateBindDeleteEncoder) {
   Create(true, false, CreateEncoderParams());
-  codec_impl_.reset();
+  codec_impl_ = nullptr;
   RunLoopUntilIdle();
   EXPECT_FALSE(error_handler_ran_);
 }
 
 TEST_F(CodecImplLifetime, CreateBindDeleteDecryptor) {
   Create(true, false, CreateDecryptorParams());
-  codec_impl_.reset();
+  codec_impl_ = nullptr;
   RunLoopUntilIdle();
   EXPECT_FALSE(error_handler_ran_);
 }

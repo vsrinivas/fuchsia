@@ -30,7 +30,7 @@ void SoftwareProcessor::FlushInput(bool hold_frame, size_t input_index, fit::clo
   FXL_DCHECK(callback);
 
   flushing_ = true;
-  input_packet_.reset();
+  input_packet_ = nullptr;
   end_of_input_stream_ = false;
 
   // If we were waiting for an input packet, we aren't anymore.

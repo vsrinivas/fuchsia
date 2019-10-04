@@ -272,7 +272,7 @@ void AudioRendererImpl::UnlinkThrottle() {
   TRACE_DURATION("audio", "AudioRendererImpl::UnlinkThrottle");
   if (throttle_output_link_ != nullptr) {
     RemoveLink(throttle_output_link_);
-    throttle_output_link_.reset();
+    throttle_output_link_ = nullptr;
   }
 }
 
