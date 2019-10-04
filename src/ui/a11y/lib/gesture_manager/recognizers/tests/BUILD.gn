@@ -5,22 +5,24 @@
 group("tests") {
   testonly = true
   public_deps = [
-    ":gesture_arena_tests",
+    ":gesture_recognizers_tests",
   ]
 }
 
-executable("gesture_arena_tests") {
+executable("gesture_recognizers_tests") {
   testonly = true
 
   sources = [
-    "gesture_arena_unittest.cc",
+    "one_finger_tap_recognizer_test.cc",
   ]
 
   deps = [
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/gtest",
+    "//garnet/public/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/lib/gesture_manager/arena:gesture_arena",
     "//src/ui/a11y/lib/gesture_manager/arena/tests/mocks",
+    "//src/ui/a11y/lib/gesture_manager/recognizers:gesture_recognizers",
   ]
 }

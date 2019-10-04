@@ -25,6 +25,7 @@ group("tests") {
 test_package("a11y_lib_tests") {
   deps = [
     "gesture_manager/arena/tests",
+    "gesture_manager/recognizers/tests",
     "gesture_manager/tests",
     "screen_reader/tests",
     "semantics/tests",
@@ -82,6 +83,10 @@ test_package("a11y_lib_tests") {
     },
     {
       name = "screen_reader_tests"
+      environments = basic_envs
+    },
+    {
+      name = "gesture_recognizers_tests"
       environments = basic_envs
     },
   ]

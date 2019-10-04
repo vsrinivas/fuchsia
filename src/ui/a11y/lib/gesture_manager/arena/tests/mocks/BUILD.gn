@@ -1,0 +1,19 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("mocks") {
+  testonly = true
+
+  sources = [
+    "mock_arena_member.cc",
+    "mock_arena_member.h",
+  ]
+
+  public_deps = []
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//src/ui/a11y/lib/gesture_manager/arena:gesture_arena",
+  ]
+}

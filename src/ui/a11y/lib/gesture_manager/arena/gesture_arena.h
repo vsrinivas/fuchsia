@@ -36,7 +36,7 @@ class ArenaMember {
     kDefeated,    // Lost the arena for this gesture.
   };
   ArenaMember(GestureArena* arena, PointerEventRouter* router, GestureRecognizer* recognizer);
-  ~ArenaMember() = default;
+  virtual ~ArenaMember() = default;
 
   // Returns the status of this member in the Arena. Once the gesture has been
   // handled, the arena is responsible for calling Reset() on this object to
@@ -58,7 +58,7 @@ class ArenaMember {
   // Leave this arena. The recognizer then receive a call to
   // OnDefeat(), to indicate that it has lost the arena. Returns false if a
   // winner member tries to call DeclareDefeat(), after winning.
-  bool DeclareDefeat();
+  virtual bool DeclareDefeat();
 
   // Only a member that has won the arena can stop routing pointer events.
   // When it has won the arena and finished processing pointer events, it
@@ -70,7 +70,7 @@ class ArenaMember {
   // recognized, and, if it is, calls this method when it has done processing.
   // If, for some reason the winner decides not to consume the pointer events,
   // it calls at any time rejecting the rest of pointer events.
-  bool StopRoutingPointerEvents(fuchsia::ui::input::accessibility::EventHandling handled);
+  virtual bool StopRoutingPointerEvents(fuchsia::ui::input::accessibility::EventHandling handled);
 
   GestureRecognizer* recognizer() { return recognizer_; }
 
