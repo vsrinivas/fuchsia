@@ -45,7 +45,6 @@ group("uapp") {
     "lspwr",
     "lsusb",
     "lz4",
-    "midiecho",
     "minfs",
     "mutex_pi_exerciser",
     "namespace",
