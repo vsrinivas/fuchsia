@@ -28,7 +28,6 @@ group("uapp") {
     "fs-mount",
     "fs-umount",
     "fvm-check",
-    "gfxtest",
     "goldfish-benchmark",
     "gpt",
     "hid",
