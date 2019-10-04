@@ -19,8 +19,8 @@
 
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
-#include "src/developer/feedback/crashpad_agent/crashpad_report_util.h"
 #include "src/developer/feedback/crashpad_agent/feedback_data_provider_ptr.h"
+#include "src/developer/feedback/crashpad_agent/report_util.h"
 #include "src/developer/feedback/crashpad_agent/scoped_unlink.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CRASHPAD_REPORT_UTIL_H_
-#define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CRASHPAD_REPORT_UTIL_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_REPORT_UTIL_H_
+#define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_REPORT_UTIL_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
@@ -21,8 +21,7 @@ namespace feedback {
 bool WriteVMO(const fuchsia::mem::Buffer& vmo, crashpad::FileWriter* writer);
 
 // Adds a file attachment to a Crashpad report.
-bool AddAttachment(const std::string& attachment_filename,
-                   const fuchsia::mem::Buffer& attachment_content,
+bool AddAttachment(const std::string& filename, const fuchsia::mem::Buffer& content,
                    crashpad::CrashReportDatabase::NewReport* crashpad_report);
 
 // Builds the final set of annotations and attachments to attach to the Crashpad report.
@@ -43,4 +42,4 @@ void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CRASHPAD_REPORT_UTIL_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_REPORT_UTIL_H_
