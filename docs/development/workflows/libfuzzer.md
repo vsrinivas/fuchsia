@@ -110,50 +110,51 @@ mutations, trial and error, and code coverage data.
 
 ### Q: How do I fuzz more complex interfaces?  {#q-how-do-i-fuzz-more-complex-interfaces}
 
-A: It is easy to map portions of the provided `Data` to ["plain old data" (POD)][pod] types.  The
-data can also be sliced into variable length arrays. More complex objects can almost always be
-(eventually) built out of POD types and variable arrays. If `Size` isn't long enough for your needs,
-you can simply return `0`.  The fuzzer will quickly learn that inputs below that length aren't
-interesting and will stop generating them.
+A: The [`FuzzedDataProvider`][fuzzed-data-provider] library helps you map portions of the provided
+`Data` to ["plain old data" (POD)][pod] types. More complex objects can almost
+always be (eventually) built out of POD types and variable arrays.
 
 ```cpp
-  uint32_t flags;
-  char name[MAX_NAME_LEN];
-  if (Size < sizeof(flags)) {
+  #include <fuzzer/FuzzedDataProvider.h>
+
+  extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+    FuzzedDataProvider fuzzed_data(Data, Size);
+
+    auto flags = fuzzed_data.ConsumeIntegral<uint32_t>();
+    auto name_len =
+         fuzzed_data.ConsumeIntegralInRange<size_t>(0, MAX_NAME_LEN - 1);
+
+    std::string name = fuzzed_data.ConsumeBytesAsString(name_len);
+
+    Parser parser(name.c_str(), flags);
+
+    auto remaining = fuzzed_data.ConsumeRemainingBytes<char>();
+    parser.Parse(remaining.data(), remaining.size());
     return 0;
   }
-  memcpy(&flags, Data, sizeof(flags));
-  Data += sizeof(flags);
-  Size -= sizeof(flags);
-
-  size_t name_len;
-  if (Size < sizeof(name_len)) {
-    return 0;
-  }
-  memcpy(&name_len, Data, sizeof(name_len));
-  Data += sizeof(name_len);
-  Size -= sizeof(name_len);
-  name_len %= sizeof(name_len) - 1;
-
-  if (Size < name_len) {
-    return 0;
-  }
-  memcpy(name, Data, name_len);
-  Data += name_len;
-  Size -= name_len;
-  name[name_len] = '\0';
-
-  Parser parser(name, flags);
-  parser.Parse(Data, Size);
 ```
 
-Note: A small library to make this easier is under development.
+Note that using this library for splitting your data might make it harder for
+you to provide a corpus for your fuzzer, as the splitting happens dynamically.
+Other alternatives are explored in the [split inputs] documentation.
+
 
 In some cases, you may have expensive set-up operations that you would like to do once.  The
 libFuzzer documentation has tips on how to do [startup initialization].  Be aware though that such
 state will be carried over from iteration to iteration.  This can be useful as it may expose new
 bugs that depend on the library's persisted state, but it may also make bugs harder to reproduce
 when they depend on a sequence of inputs rather than a single one.
+
+### Q: What if my object expects more `Data` than what libfuzzer provides? {#q-what-if-size-is-too-small}
+
+If `Size` isn't long enough for your needs, you can simply `return 0;`. The
+fuzzer will quickly learn that inputs below that length aren't interesting and
+will stop generating them.
+
+By default, libfuzzer generates inputs with a maximum size of 4096. If you
+need to generate larger inputs, you can provide the `-max_len` flag to `fx fuzz
+start`. If you provide a corpus input large enough, libfuzzer will increase the
+maximum size to that corpus size.
 
 ### Q: How should I scope my fuzzer? {#q-how-should-i-scope-my-fuzzer}
 
@@ -457,40 +458,42 @@ not typically be run executed from the shell in the long term.
 We will continue to work on these features and others, and update this document accordingly as they
 become available.
 
-[libFuzzer]: https://llvm.org/docs/LibFuzzer.html
-[compiler-rt]: https://compiler-rt.llvm.org/
-[sanitizers]: https://github.com/google/sanitizers
-[asan]: https://clang.llvm.org/docs/AddressSanitizer.html
-[sancov]: https://clang.llvm.org/docs/SanitizerCoverage.html
-[fuzz target]: https://llvm.org/docs/LibFuzzer.html#fuzz-target
-[afl]: http://lcamtuf.coredump.cx/afl/
-[FIDL]: ../languages/fidl/README.md
-[syzkaller]: https://github.com/google/syzkaller
-[todo]: #q-what-can-i-expect-in-the-future-for-fuzzing-in-fuchsia
-[thin-air]: https://lcamtuf.blogspot.com/2014/11/pulling-jpegs-out-of-thin-air.html
-[startup initialization]: https://llvm.org/docs/LibFuzzer.html#startup-initialization
-[fuzzer.gni]: /build/fuzzing/fuzzer.gni
-[build macro]: https://llvm.org/docs/LibFuzzer.html#fuzzer-friendly-build-mode
-[compiler flags]: /build/config/sanitizers/BUILD.gn
-[corpus]: https://llvm.org/docs/LibFuzzer.html#corpus
 [3p-corpus]: #q-can-i-use-an-existing-third-party-corpus
+[afl]: http://lcamtuf.coredump.cx/afl/
+[asan]: https://clang.llvm.org/docs/AddressSanitizer.html
+[build macro]: https://llvm.org/docs/LibFuzzer.html#fuzzer-friendly-build-mode
+[cipd]: https://chrome-infra-packages.appspot.com/p/fuchsia/test_data/fuzzing
+[clusterfuzz]: https://github.com/google/oss-fuzz/blob/master/docs/further-reading/clusterfuzz.md
+[compiler flags]: /build/config/sanitizers/BUILD.gn
+[compiler-rt]: https://compiler-rt.llvm.org/
+[corpus]: https://llvm.org/docs/LibFuzzer.html#corpus
 [dictionaries]: https://llvm.org/docs/LibFuzzer.html#dictionaries
-[options]: https://llvm.org/docs/LibFuzzer.html#options
+[FIDL]: ../languages/fidl/README.md
+[fuzz target]: https://llvm.org/docs/LibFuzzer.html#fuzz-target
 [fuzz tool]: #q-how-do-i-run-a-fuzzer
+[fuzzed-data-provider]: https://github.com/llvm/llvm-project/blob/master/compiler-rt/include/fuzzer/FuzzedDataProvider.h
+[fuzzer scope]: #q-how-should-i-scope-my-fuzzer
+[fuzzer.gni]: /build/fuzzing/fuzzer.gni
+[fx fuzz tool]: #q-how-do-i-run-a-fuzzer
 [gn fuzzer]: #the-fuzzer-gn-template
 [gn fuzzers package]: #the-fuzzers-package-gn-template
-[source-based code coverage]: https://clang.llvm.org/docs/SourceBasedCodeCoverage.html
-[clusterfuzz]: https://github.com/google/oss-fuzz/blob/master/docs/further-reading/clusterfuzz.md
-[rust-fuzzing]: https://github.com/rust-fuzz/libFuzzer-sys
 [go-fuzzing]: https://github.com/dvyukov/go-fuzz
-[ubsan]: https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
-[oss-fuzz]: https://github.com/google/oss-fuzz
-[cipd]: https://chrome-infra-packages.appspot.com/p/fuchsia/test_data/fuzzing
 [issue 24866]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=24866
 [issue 27001]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=27001
-[pod]: http://www.cplusplus.com/reference/type_traits/is_pod/
-[security component]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=component%3ASecurity
 [latest corpus]: #q-how-do-i-manage-my-corpus
-[fx fuzz tool]: #q-how-do-i-run-a-fuzzer
-[fuzzer scope]: #q-how-should-i-scope-my-fuzzer
+[libFuzzer]: https://llvm.org/docs/LibFuzzer.html
+[pod]: http://www.cplusplus.com/reference/type_traits/is_pod/
+[options]: https://llvm.org/docs/LibFuzzer.html#options
+[oss-fuzz]: https://github.com/google/oss-fuzz
+[rust-fuzzing]: https://github.com/rust-fuzz/libFuzzer-sys
+[sancov]: https://clang.llvm.org/docs/SanitizerCoverage.html
+[sanitizers]: https://github.com/google/sanitizers
+[security component]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=component%3ASecurity
+[source-based code coverage]: https://clang.llvm.org/docs/SourceBasedCodeCoverage.html
+[split inputs]: https://github.com/google/fuzzing/blob/master/docs/split-inputs.md
+[startup initialization]: https://llvm.org/docs/LibFuzzer.html#startup-initialization
+[syzkaller]: https://github.com/google/syzkaller
+[thin-air]: https://lcamtuf.blogspot.com/2014/11/pulling-jpegs-out-of-thin-air.html
+[todo]: #q-what-can-i-expect-in-the-future-for-fuzzing-in-fuchsia
+[ubsan]: https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
 [zircon_fuzzer.gni]: /zircon/public/gn/fuzzer.gni
