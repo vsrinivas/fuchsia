@@ -8,7 +8,9 @@ use crate::error;
 use crate::lifmgr::{self, subnet_mask_to_prefix_length, to_ip_addr, LIFProperties, LifIpAddr};
 use failure::{Error, ResultExt};
 use fidl_fuchsia_net as net;
-use fidl_fuchsia_net_stack::{self as stack, InterfaceInfo, StackMarker, StackProxy};
+use fidl_fuchsia_net_stack::{
+    self as stack, ForwardingDestination, ForwardingEntry, InterfaceInfo, StackMarker, StackProxy,
+};
 use fidl_fuchsia_net_stack_ext::FidlReturn;
 use fidl_fuchsia_netstack::{self as netstack, NetstackMarker, NetstackProxy};
 use fuchsia_component::client::connect_to_service;
@@ -77,6 +79,34 @@ impl PortId {
                 warn!("overflow converting StackPortId {:?}: {:?}", self.0, e);
                 self.0 as u32
             }
+        }
+    }
+}
+
+/// `Route` is route table entry.
+#[derive(PartialEq, Debug)]
+pub struct Route {
+    /// `target` is the target network address.
+    pub target: LifIpAddr,
+    /// `gateway` is the next hop to reach `target`.
+    pub gateway: Option<IpAddr>,
+    /// `port_id` is the port to reach `gateway`.
+    pub port_id: Option<PortId>,
+    /// `metric` represents the route priority.
+    pub metric: Option<u32>,
+}
+
+impl From<&ForwardingEntry> for Route {
+    fn from(r: &ForwardingEntry) -> Self {
+        let (gateway, port_id) = match r.destination {
+            ForwardingDestination::DeviceId(id) => (None, Some(PortId::from(id))),
+            ForwardingDestination::NextHop(gateway) => (Some(to_ip_addr(gateway)), None),
+        };
+        Route {
+            target: LifIpAddr { address: to_ip_addr(r.subnet.addr), prefix: r.subnet.prefix_len },
+            gateway: gateway,
+            port_id: port_id,
+            metric: None,
         }
     }
 }
@@ -370,6 +400,24 @@ impl NetCfg {
         }
         Ok(())
     }
+
+    /// `routes` returns the running routing table (as seen by the network stack).
+    pub async fn routes(&mut self) -> Option<Vec<Route>> {
+        let table = self.stack.get_forwarding_table().await;
+        match table {
+            Ok(entries) => Some(
+                entries
+                    .iter()
+                    .map(|r| Route::from(r))
+                    .filter(|r| !r.target.address.is_loopback())
+                    .collect(),
+            ),
+            _ => {
+                info!("no entries present in forwarding table.");
+                None
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -534,5 +582,101 @@ mod tests {
                 enabled: true,
             }
         )
+    }
+
+    #[test]
+    fn test_route_from_forwarding_entry() {
+        assert_eq!(
+            Route::from(&ForwardingEntry {
+                subnet: fidl_fuchsia_net::Subnet {
+                    addr: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                        addr: [1, 2, 3, 0],
+                    }),
+                    prefix_len: 23,
+                },
+                destination: stack::ForwardingDestination::NextHop(
+                    fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                        addr: [1, 2, 3, 4]
+                    },)
+                ),
+            }),
+            Route {
+                target: lifmgr::LifIpAddr { address: "1.2.3.0".parse().unwrap(), prefix: 23 },
+                gateway: Some("1.2.3.4".parse().unwrap()),
+                metric: None,
+                port_id: None,
+            },
+            "valid IPv4 entry, with gateway"
+        );
+
+        assert_eq!(
+            Route::from(&ForwardingEntry {
+                subnet: fidl_fuchsia_net::Subnet {
+                    addr: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                        addr: [1, 2, 3, 0],
+                    }),
+                    prefix_len: 23,
+                },
+                destination: stack::ForwardingDestination::DeviceId(3)
+            }),
+            Route {
+                target: lifmgr::LifIpAddr { address: "1.2.3.0".parse().unwrap(), prefix: 23 },
+                gateway: None,
+                metric: None,
+                port_id: Some(PortId(3))
+            },
+            "valid IPv4 entry, no gateway"
+        );
+
+        assert_eq!(
+            Route::from(&ForwardingEntry {
+                subnet: fidl_fuchsia_net::Subnet {
+                    addr: fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                        addr: [0x26, 0x20, 0, 0, 0x10, 0, 0x50, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                    }),
+                    prefix_len: 64,
+                },
+                destination: stack::ForwardingDestination::NextHop(
+                    fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                        addr: [
+                            0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x02, 0x0, 0x5e, 0xff, 0xfe, 0x0, 0x02,
+                            0x65
+                        ],
+                    })
+                ),
+            }),
+            Route {
+                target: lifmgr::LifIpAddr {
+                    address: "2620:0:1000:5000::".parse().unwrap(),
+                    prefix: 64
+                },
+                gateway: Some("fe80::200:5eff:fe00:265".parse().unwrap()),
+                metric: None,
+                port_id: None,
+            },
+            "valid IPv6 entry, with gateway"
+        );
+
+        assert_eq!(
+            Route::from(&ForwardingEntry {
+                subnet: fidl_fuchsia_net::Subnet {
+                    addr: fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                        addr: [0x26, 0x20, 0, 0, 0x10, 0, 0x50, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                    }),
+                    prefix_len: 58,
+                },
+                destination: stack::ForwardingDestination::DeviceId(3)
+            }),
+            Route {
+                target: lifmgr::LifIpAddr {
+                    address: "2620:0:1000:5000::".parse().unwrap(),
+                    prefix: 58
+                },
+                gateway: None,
+                metric: None,
+                port_id: Some(PortId(3))
+            },
+            "valid IPv6 entry, no gateway"
+        );
     }
 }

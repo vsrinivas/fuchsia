@@ -13,7 +13,7 @@ use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_stack::{self as stack, InterfaceAddress};
 use fidl_fuchsia_router_config;
 use std::collections::{HashMap, HashSet};
-use std::net::IpAddr;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 /// `LIFType` denotes the supported types of Logical Interfaces.
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
@@ -205,7 +205,7 @@ impl LIF {
 // TODO(dpradilla): Move struct declarations to the top.
 
 /// LifIpAddr is an IP address and its prefix.
-#[derive(Eq, PartialEq, Debug, Clone)]
+#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
 pub struct LifIpAddr {
     pub address: IpAddr,
     pub prefix: u8,
@@ -244,6 +244,37 @@ impl From<&fidl_fuchsia_router_config::CidrAddress> for LifIpAddr {
                 LifIpAddr { address: to_ip_addr(addr), prefix: a.prefix_length.unwrap_or(0) }
             }
             None => LifIpAddr { address: IpAddr::from([0, 0, 0, 0]), prefix: 0 },
+        }
+    }
+}
+
+/// `strip_host` takes an IP address and its prefix length and returns an address with the
+/// host part stripped.
+fn strip_host(address: &IpAddr, prefix: u8) -> IpAddr {
+    match address {
+        IpAddr::V4(a) => {
+            if prefix == 0 {
+                IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0))
+            } else if prefix > 32 {
+                address.clone()
+            } else {
+                IpAddr::V4(Ipv4Addr::from(
+                    (u32::from_be_bytes(a.octets()) >> (32 - prefix) << (32 - prefix))
+                        .to_be_bytes(),
+                ))
+            }
+        }
+        IpAddr::V6(a) => {
+            if prefix == 0 {
+                IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0))
+            } else if prefix > 128 {
+                address.clone()
+            } else {
+                IpAddr::V6(Ipv6Addr::from(
+                    (u128::from_be_bytes(a.octets()) >> (128 - prefix) << (128 - prefix))
+                        .to_be_bytes(),
+                ))
+            }
         }
     }
 }
@@ -297,6 +328,13 @@ impl LifIpAddr {
                 prefix_len: self.prefix,
             },
         }
+    }
+
+    /// `is_in_same_subnet` returns true if `address` is in the same subnet as `LifIpAddr`.
+    pub fn is_in_same_subnet(&self, address: &IpAddr) -> bool {
+        let local_subnet = strip_host(&self.address, self.prefix);
+        let address_subnet = strip_host(address, self.prefix);
+        local_subnet == address_subnet
     }
 }
 
@@ -883,5 +921,48 @@ mod tests {
 
         let (lifip, expected_subnet) = build_lif_subnet("16.25.12.25", "16.16.0.0", 12);
         assert_eq!(lifip.to_fidl_subnet(), expected_subnet);
+    }
+
+    #[test]
+    fn test_strip_host() {
+        let got = strip_host(&"85.170.255.170".parse().unwrap(), 23);
+        let want: IpAddr = "85.170.254.0".parse().unwrap();
+        assert_eq!(want, got, "valid ipv4 prefix");
+
+        let got = strip_host(&"1200:5555:aaaa:aaaa:aaaa:aaaa:5555:aaaa".parse().unwrap(), 57);
+        let want: IpAddr = "1200:5555:aaaa:aa80:0:0:0:0".parse().unwrap();
+        assert_eq!(want, got, "valid ipv6 prefix");
+
+        let got = strip_host(&"85.170.170.85".parse().unwrap(), 58);
+        let want: IpAddr = "85.170.170.85".parse().unwrap();
+        assert_eq!(want, got, "invalid ipv4 prefix");
+
+        let got = strip_host(&"1200:0:0:0:aaaa:5555:aaaa:5555".parse().unwrap(), 129);
+        let want: IpAddr = "1200:0:0:0:aaaa:5555:aaaa:5555".parse().unwrap();
+        assert_eq!(want, got, "invalid ipv6 prefix");
+
+        let got = strip_host(&"85.170.170.85".parse().unwrap(), 0);
+        let want: IpAddr = "0.0.0.0".parse().unwrap();
+        assert_eq!(want, got, "ipv4 prefix 0");
+
+        let got = strip_host(&"1200:0:0:0:aaaa:5555:aaaa:5555".parse().unwrap(), 0);
+        let want: IpAddr = "::".parse().unwrap();
+        assert_eq!(want, got, "ipv6 prefix 0");
+    }
+
+    #[test]
+    fn test_is_in_same_subnet() {
+        let address = LifIpAddr { address: "1.2.3.26".parse().unwrap(), prefix: 27 };
+        assert!(address.is_in_same_subnet(&"1.2.3.26".parse().unwrap()));
+        assert!(address.is_in_same_subnet(&"1.2.3.30".parse().unwrap()));
+        assert!(!address.is_in_same_subnet(&"1.2.3.32".parse().unwrap()));
+        let address = LifIpAddr {
+            address: "2401:fa00:480:16:1295:6946:837:373a".parse().unwrap(),
+            prefix: 58,
+        };
+        assert!(address.is_in_same_subnet(&"2401:fa00:480:16:1295:6946:837:373a".parse().unwrap()));
+        assert!(address.is_in_same_subnet(&"2401:fa00:480:16:2345:6946:837:373a".parse().unwrap()));
+        assert!(address.is_in_same_subnet(&"2401:fa00:480:26:1295:6946:837:373a".parse().unwrap()));
+        assert!(!address.is_in_same_subnet(&"2401:fa00:480:46:2345:6946:837:373a".parse().unwrap()));
     }
 }
