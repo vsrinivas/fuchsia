@@ -2,20 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("ui") {
+group("tools") {
   deps = [
-    "a11y",
-    "bin",
-    "policy",
-    "tools",
-  ]
-}
-
-group("tests") {
-  testonly = true
-
-  deps = [
-    "bin:tests",
-    "tests",
+    "print-input-report",
   ]
 }

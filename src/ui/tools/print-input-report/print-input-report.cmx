@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/print_input_report"
+    },
+    "sandbox": {
+        "dev": [
+            "class/input-report"
+        ]
+    }
+}
