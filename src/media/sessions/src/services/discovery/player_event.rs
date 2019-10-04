@@ -6,7 +6,7 @@ use crate::proxies::player::*;
 use fidl::encoding::Decodable;
 use fidl_fuchsia_media_sessions2::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 /// A change to the state of a published media player.
 pub enum PlayerEvent {
     Updated {

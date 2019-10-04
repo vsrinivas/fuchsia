@@ -12,13 +12,10 @@ mod test;
 use failure::Error;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
-use futures::{channel::mpsc, lock::Mutex, prelude::*};
+use futures::{channel::mpsc, prelude::*};
 use mpmc;
-use std::rc::Rc;
 
 type Result<T> = std::result::Result<T, Error>;
-
-type Ref<T> = Rc<Mutex<T>>;
 
 const CHANNEL_BUFFER_SIZE: usize = 100;
 

@@ -52,7 +52,10 @@ impl TestWatcher {
     async fn wait_for_n_updates(&mut self, n: usize) -> Result<Vec<(u64, SessionInfoDelta)>> {
         let mut updates: Vec<(u64, SessionInfoDelta)> = vec![];
         for i in 0..n {
-            let (id, delta, responder) = self.watcher.try_next().await?
+            let (id, delta, responder) = self
+                .watcher
+                .try_next()
+                .await?
                 .and_then(|r| r.into_session_updated())
                 .expect(&format!("Unwrapping watcher request {:?}", i));
             responder.send()?;
@@ -62,7 +65,10 @@ impl TestWatcher {
     }
 
     async fn wait_for_removal(&mut self) -> Result<u64> {
-        let (id, responder) = self.watcher.try_next().await?
+        let (id, responder) = self
+            .watcher
+            .try_next()
+            .await?
             .and_then(|r| r.into_session_removed())
             .expect("Unwrapping watcher request");
         responder.send()?;
@@ -127,10 +133,12 @@ fn delta_with_state(state: PlayerState) -> PlayerInfoDelta {
 async fn can_publish_players() -> Result<()> {
     let service = TestService::new()?;
 
-    let _player = TestPlayer::new(&service)?;
-
+    let mut player = TestPlayer::new(&service)?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
+
+    player.emit_delta(delta_with_state(PlayerState::Playing)).await?;
     let mut sessions = watcher.wait_for_n_updates(1).await?;
+
     let (_id, delta) = sessions.remove(0);
     assert_eq!(delta.domain, Some(test_domain()));
 
@@ -142,15 +150,22 @@ async fn can_publish_players() -> Result<()> {
 async fn can_receive_deltas() -> Result<()> {
     let service = TestService::new()?;
 
-    let mut player = TestPlayer::new(&service)?;
+    let mut player1 = TestPlayer::new(&service)?;
     let mut player2 = TestPlayer::new(&service)?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
+
+    player1.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    player2.emit_delta(delta_with_state(PlayerState::Playing)).await?;
     let _ = watcher.wait_for_n_updates(2).await?;
 
-    player2.emit_delta(PlayerInfoDelta {
-        player_capabilities: Some(PlayerCapabilities { flags: Some(PlayerCapabilityFlags::Play) }),
-        ..Decodable::new_empty()
-    }).await?;
+    player2
+        .emit_delta(PlayerInfoDelta {
+            player_capabilities: Some(PlayerCapabilities {
+                flags: Some(PlayerCapabilityFlags::Play),
+            }),
+            ..Decodable::new_empty()
+        })
+        .await?;
     let mut updates = watcher.wait_for_n_updates(1).await?;
     let (_id, delta) = updates.remove(0);
     assert_eq!(
@@ -158,10 +173,14 @@ async fn can_receive_deltas() -> Result<()> {
         Some(PlayerCapabilities { flags: Some(PlayerCapabilityFlags::Play) })
     );
 
-    player.emit_delta(PlayerInfoDelta {
-        player_capabilities: Some(PlayerCapabilities { flags: Some(PlayerCapabilityFlags::Pause) }),
-        ..Decodable::new_empty()
-    }).await?;
+    player1
+        .emit_delta(PlayerInfoDelta {
+            player_capabilities: Some(PlayerCapabilities {
+                flags: Some(PlayerCapabilityFlags::Pause),
+            }),
+            ..Decodable::new_empty()
+        })
+        .await?;
     let mut updates = watcher.wait_for_n_updates(1).await?;
     let (_id, delta) = updates.remove(0);
     assert_eq!(
@@ -177,20 +196,23 @@ async fn can_receive_deltas() -> Result<()> {
 async fn active_status() -> Result<()> {
     let service = TestService::new()?;
 
-    let mut player = TestPlayer::new(&service)?;
+    let mut player1 = TestPlayer::new(&service)?;
     let mut player2 = TestPlayer::new(&service)?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
+
+    player1.emit_delta(delta_with_state(PlayerState::Idle)).await?;
+    player2.emit_delta(delta_with_state(PlayerState::Idle)).await?;
     let _ = watcher.wait_for_n_updates(2).await?;
 
-    player.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    player1.emit_delta(delta_with_state(PlayerState::Playing)).await?;
     let mut updates = watcher.wait_for_n_updates(1).await?;
     let (active_id, delta) = updates.remove(0);
     assert_eq!(delta.is_locally_active, Some(true));
 
-    player2.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    player2.emit_delta(delta_with_state(PlayerState::Paused)).await?;
     let mut updates = watcher.wait_for_n_updates(1).await?;
     let (new_active_id, delta) = updates.remove(0);
-    assert_eq!(delta.is_locally_active, Some(true));
+    assert_eq!(delta.is_locally_active, Some(false));
 
     assert_ne!(new_active_id, active_id);
 
@@ -204,6 +226,8 @@ async fn player_controls_are_proxied() -> Result<()> {
 
     let mut player = TestPlayer::new(&service)?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
+
+    player.emit_delta(delta_with_state(PlayerState::Playing)).await?;
     let mut updates = watcher.wait_for_n_updates(1).await?;
     let (id, _) = updates.remove(0);
 
@@ -216,10 +240,12 @@ async fn player_controls_are_proxied() -> Result<()> {
     session.play()?;
     service.discovery.connect_to_session(id, session_server)?;
 
-    player.wait_for_request(|request| match request {
-        PlayerRequest::Play { .. } => true,
-        _ => false,
-    }).await
+    player
+        .wait_for_request(|request| match request {
+            PlayerRequest::Play { .. } => true,
+            _ => false,
+        })
+        .await
 }
 
 #[fasync::run_singlethreaded]
@@ -227,8 +253,10 @@ async fn player_controls_are_proxied() -> Result<()> {
 async fn player_disconnection_propagates() -> Result<()> {
     let service = TestService::new()?;
 
-    let player = TestPlayer::new(&service)?;
+    let mut player = TestPlayer::new(&service)?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
+
+    player.emit_delta(delta_with_state(PlayerState::Playing)).await?;
     let mut updates = watcher.wait_for_n_updates(1).await?;
     let (id, _) = updates.remove(0);
 
@@ -277,6 +305,9 @@ async fn disconnected_player_results_in_removal_event() -> Result<()> {
     let mut player1 = TestPlayer::new(&service)?;
     let _player2 = TestPlayer::new(&service)?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
+
+    player1.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    player1.emit_delta(delta_with_state(PlayerState::Playing)).await?;
     let _updates = watcher.wait_for_n_updates(2).await?;
 
     player1.emit_delta(delta_with_state(PlayerState::Playing)).await?;

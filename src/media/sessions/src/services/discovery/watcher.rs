@@ -46,20 +46,11 @@ pub struct Watcher {
 }
 
 impl Watcher {
-    pub async fn new(
+    pub fn new(
         options: WatchOptions,
-        catch_up_events: HashMap<u64, PlayerEvent>,
         event_stream: mpmc::Receiver<(u64, PlayerEvent)>,
     ) -> Self {
-        let players = catch_up_events
-            .iter()
-            .map(|(id, event)| {
-                let mut filter = PlayerState::default();
-                filter.update(event);
-                (*id, filter)
-            })
-            .collect();
-        Self { staged: catch_up_events, players, options, event_stream }
+        Self { staged: HashMap::new(), players: HashMap::new(), options, event_stream }
     }
 
     pub async fn serve(mut self, proxy: ClientEnd<SessionsWatcherMarker>) -> Result<()> {

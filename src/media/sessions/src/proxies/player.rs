@@ -2,27 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::Result;
+use crate::{services::discovery::player_event::PlayerEvent, Result};
 use failure::Error as FError;
+use fidl::client::QueryResponseFut;
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_media_sessions2::*;
 use fidl_table_validation::*;
 use fuchsia_async as fasync;
+use fuchsia_syslog::fx_log_info;
 use futures::{
     future::{AbortHandle, Abortable},
-    prelude::*,
+    stream::FusedStream,
+    task::{Context, Poll},
+    Future, FutureExt, Stream, TryStreamExt,
 };
+use rand::random;
 use std::convert::*;
+use std::pin::Pin;
 use waitgroup::*;
 
-#[derive(Debug, Clone, ValidFidlTable)]
+#[derive(Debug, Clone, ValidFidlTable, PartialEq)]
 #[fidl_table_src(PlayerRegistration)]
 pub struct ValidPlayerRegistration {
     pub domain: String,
 }
 
-#[derive(Debug, Clone, ValidFidlTable)]
+#[derive(Debug, Clone, ValidFidlTable, PartialEq)]
 #[fidl_table_src(PlayerStatus)]
 pub struct ValidPlayerStatus {
     #[fidl_field_type(optional)]
@@ -37,13 +43,13 @@ pub struct ValidPlayerStatus {
     pub error: Option<Error>,
 }
 
-#[derive(Debug, Clone, ValidFidlTable)]
+#[derive(Debug, Clone, ValidFidlTable, PartialEq)]
 #[fidl_table_src(PlayerCapabilities)]
 pub struct ValidPlayerCapabilities {
     pub flags: PlayerCapabilityFlags,
 }
 
-#[derive(Debug, Clone, ValidFidlTable)]
+#[derive(Debug, Clone, ValidFidlTable, PartialEq)]
 #[fidl_table_src(MediaImage)]
 #[fidl_table_validator(MediaImageValidator)]
 pub struct ValidMediaImage {
@@ -69,7 +75,7 @@ impl Validate<ValidMediaImage> for MediaImageValidator {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct ValidPlayerInfoDelta {
     pub local: Option<bool>,
     pub player_status: Option<ValidPlayerStatus>,
@@ -128,11 +134,14 @@ impl ValidPlayerInfoDelta {
 /// A proxy for published `fuchsia.media.sessions2.Player` protocols.
 #[derive(Debug)]
 pub struct Player {
+    id: u64,
     inner: PlayerProxy,
     state: ValidPlayerInfoDelta,
     server_handles: Vec<AbortHandle>,
     server_wait_group: WaitGroup,
     registration: ValidPlayerRegistration,
+    hanging_get: Option<QueryResponseFut<PlayerInfoDelta>>,
+    terminated: bool,
 }
 
 impl Player {
@@ -141,45 +150,24 @@ impl Player {
         registration: PlayerRegistration,
     ) -> Result<Self> {
         Ok(Player {
+            id: random(), // TODO(37877): Care about collisions.
             inner: client_end.into_proxy()?,
             state: ValidPlayerInfoDelta::default(),
             server_handles: vec![],
             server_wait_group: WaitGroup::new(),
             registration: ValidPlayerRegistration::try_from(registration)?,
+            hanging_get: None,
+            terminated: false,
         })
     }
 
-    pub fn registration(&self) -> &ValidPlayerRegistration {
-        &self.registration
-    }
-
-    pub fn is_active(&self) -> bool {
-        self.state.is_active().unwrap_or(false)
-    }
-
-    /// Sends the player a request for status and returns a future that will resolve when the player
-    /// replies.
-    pub fn poll(&self, id: u64) -> impl Future<Output = (u64, Result<ValidPlayerInfoDelta>)> {
-        let proxy = self.inner.clone();
-        async move {
-            (
-                id,
-                proxy
-                    .watch_info_change()
-                    .await
-                    .map_err(Into::into)
-                    .and_then(|delta| ValidPlayerInfoDelta::try_from(delta).map_err(Into::into)),
-            )
-        }
+    pub fn id(&self) -> u64 {
+        self.id
     }
 
     /// Updates state with the latest delta published by the player.
     pub fn update(&mut self, delta: ValidPlayerInfoDelta) {
         self.state = ValidPlayerInfoDelta::apply(self.state.clone(), delta);
-    }
-
-    pub fn state(&self) -> &ValidPlayerInfoDelta {
-        &self.state
     }
 
     /// Spawns a task to serve requests from `fuchsia.media.sessions2.SessionControl` with the
@@ -239,18 +227,85 @@ impl Player {
     }
 }
 
+/// The Stream implementation for Player is a stream of full player states. A new state is emitted
+/// when the backing player implementation sends us an update.
+impl Stream for Player {
+    type Item = (u64, PlayerEvent);
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+        let proxy = self.inner.clone();
+        let hanging_get = self.hanging_get.get_or_insert_with(move || proxy.watch_info_change());
+
+        match Pin::new(hanging_get).poll(cx) {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(r) => {
+                let event = match r {
+                    Err(e) => match e {
+                        fidl::Error::ClientRead(_) | fidl::Error::ClientWrite(_) => {
+                            PlayerEvent::Removed
+                        }
+                        e => {
+                            fx_log_info!(tag: "player_proxy", "Player update failed: {:#?}", e);
+                            PlayerEvent::Removed
+                        }
+                    },
+                    Ok(delta) => match ValidPlayerInfoDelta::try_from(delta) {
+                        Ok(delta) => {
+                            self.update(delta);
+                            self.hanging_get = None;
+                            PlayerEvent::Updated {
+                                delta: self.state.clone(),
+                                registration: Some(self.registration.clone()),
+                                active: self.state.is_active(),
+                            }
+                        }
+                        Err(e) => {
+                            fx_log_info!(
+                                tag: "player_proxy",
+                                "Player sent invalid update: {:#?}", e);
+                            PlayerEvent::Removed
+                        }
+                    },
+                };
+                self.terminated = event.is_removal();
+                Poll::Ready(Some((self.id, event)))
+            }
+        }
+    }
+}
+
+impl FusedStream for Player {
+    fn is_terminated(&self) -> bool {
+        self.terminated
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+    use fidl::encoding::Decodable;
+    use fidl::endpoints::*;
+    use futures::stream::StreamExt;
+    use futures_test::task::noop_waker;
+    use test_util::assert_matches;
+
+    static TEST_DOMAIN: &str = "test_domain";
+
+    fn test_player() -> (Player, ServerEnd<PlayerMarker>) {
+        let (player_client, player_server) =
+            create_endpoints::<PlayerMarker>().expect("Creating endpoints for test");
+        let player = Player::new(
+            player_client,
+            PlayerRegistration { domain: Some(TEST_DOMAIN.to_string()) },
+        )
+        .expect("Creating player from valid prereqs");
+        (player, player_server)
+    }
 
     #[fasync::run_singlethreaded]
     #[test]
-    async fn stream_ends_when_backing_player_disconnects() -> Result<()> {
-        use fidl::endpoints::*;
-
-        let (player_client, _player_server) = create_endpoints::<PlayerMarker>()?;
-        let mut player =
-            Player::new(player_client, PlayerRegistration { domain: Some(String::from("aye")) })?;
+    async fn client_channel_closes_when_backing_player_disconnects() -> Result<()> {
+        let (mut player, _player_server) = test_player();
 
         let (session_control_client, session_control_server) =
             create_endpoints::<SessionControlMarker>()?;
@@ -265,6 +320,84 @@ mod test {
         player.disconnect_proxied_clients().await;
 
         assert!(session_control_fidl_proxy.pause().is_err());
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
+    async fn update_stream_relays_player_state() -> Result<()> {
+        let (mut player, player_server) = test_player();
+        let mut requests = player_server.into_stream()?;
+
+        let waker = noop_waker();
+        let mut ctx = Context::from_waker(&waker);
+
+        // Poll the stream so that it sends a watch request to the backing player.
+        let poll_result = Pin::new(&mut player).poll_next(&mut ctx);
+        assert_matches!(poll_result, Poll::Pending);
+
+        let info_change_responder = requests
+            .try_next()
+            .await?
+            .expect("Receiving a request")
+            .into_watch_info_change()
+            .expect("Receiving info change responder");
+        info_change_responder.send(Decodable::new_empty())?;
+
+        let mut player_stream = Pin::new(&mut player);
+        let (_, event) = player_stream.next().await.expect("Polling player event");
+        assert_eq!(
+            event,
+            PlayerEvent::Updated {
+                delta: ValidPlayerInfoDelta::default(),
+                registration: Some(ValidPlayerRegistration { domain: TEST_DOMAIN.to_string() }),
+                active: None,
+            }
+        );
+        assert!(!player_stream.is_terminated());
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
+    async fn update_stream_terminates_when_backing_player_disconnects() {
+        let (mut player, _) = test_player();
+        let mut player_stream = Pin::new(&mut player);
+        let (_, event) = player_stream.next().await.expect("Polling player event");
+        assert_matches!(event, PlayerEvent::Removed);
+        assert!(player_stream.is_terminated());
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
+    async fn update_stream_terminates_on_invalid_delta() -> Result<()> {
+        let (mut player, player_server) = test_player();
+        let mut requests = player_server.into_stream()?;
+
+        let waker = noop_waker();
+        let mut ctx = Context::from_waker(&waker);
+
+        // Poll the stream so that it sends a watch request to the backing player.
+        let poll_result = Pin::new(&mut player).poll_next(&mut ctx);
+        assert_matches!(poll_result, Poll::Pending);
+
+        let info_change_responder = requests
+            .try_next()
+            .await?
+            .expect("Receiving a request")
+            .into_watch_info_change()
+            .expect("Receiving info change responder");
+        info_change_responder.send(PlayerInfoDelta {
+            player_capabilities: Some(Decodable::new_empty()),
+            ..Decodable::new_empty()
+        })?;
+
+        let mut player_stream = Pin::new(&mut player);
+        let (_, event) = player_stream.next().await.expect("Polling player event");
+        assert_matches!(event, PlayerEvent::Removed);
+        assert!(player_stream.is_terminated());
 
         Ok(())
     }
