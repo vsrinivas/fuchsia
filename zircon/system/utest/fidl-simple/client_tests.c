@@ -10,6 +10,8 @@
 #include <fidl/test/echo/c/fidl.h>
 #include <unittest/unittest.h>
 
+#include "zircon/types.h"
+
 static int echo_server(void* ctx) {
   zx_handle_t server = *(zx_handle_t*)ctx;
   zx_status_t status = ZX_OK;
@@ -77,6 +79,35 @@ static bool echo_test(void) {
   END_TEST;
 }
 
+bool magic_number_request_test(void) {
+  BEGIN_TEST;
+  zx_handle_t client, server;
+  zx_status_t status = zx_channel_create(0, &client, &server);
+  ASSERT_EQ(ZX_OK, status, "");
+
+  status = fidl_test_echo_EchoPing(client);
+  ASSERT_EQ(ZX_OK, status, "");
+
+  char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl_msg_t msg = {
+      .bytes = bytes,
+      .handles = handles,
+      .num_bytes = 0u,
+      .num_handles = 0u,
+  };
+  status = zx_channel_read(server, 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
+                           ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
+  ASSERT_EQ(ZX_OK, status, "");
+  ASSERT_EQ(msg.num_bytes, sizeof(fidl_message_header_t), "");
+
+  fidl_message_header_t* hdr = (fidl_message_header_t*)msg.bytes;
+  ASSERT_EQ(hdr->magic_number, kFidlWireFormatMagicNumberInitial, "");
+
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(client_tests)
 RUN_NAMED_TEST("fidl.test.echo.Echo test", echo_test)
+RUN_NAMED_TEST("fidl.test.echo.Echo magic number request", magic_number_request_test);
 END_TEST_CASE(client_tests);

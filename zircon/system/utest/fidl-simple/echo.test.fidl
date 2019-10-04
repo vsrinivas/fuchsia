@@ -9,4 +9,5 @@ using zx;
 [Layout = "Simple"]
 protocol Echo {
     Echo(handle<process> process, handle<thread> thread) -> () error zx.status;
+    Ping();
 };

@@ -321,6 +321,15 @@ size_t CountSecondaryObjects(const std::vector<CGenerator::Member>& params) {
   return count;
 }
 
+void EmitTxnHeader(std::ostream* file, const std::string& msg_name,
+                              const std::string& ordinal_name) {
+  *file << kIndent << msg_name << "->hdr.ordinal = " << ordinal_name << ";\n";
+  *file << kIndent << msg_name << "->hdr.flags[0] = 0;\n";
+  *file << kIndent << msg_name << "->hdr.flags[1] = 0;\n";
+  *file << kIndent << msg_name << "->hdr.flags[2] = 0;\n";
+  *file << kIndent << msg_name << "->hdr.magic_number = kFidlWireFormatMagicNumberInitial;\n";
+}
+
 void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::string_view bytes,
                           const std::vector<CGenerator::Member>& request) {
   if (CountSecondaryObjects(request) > 0)
@@ -917,8 +926,8 @@ void CGenerator::ProduceProtocolForwardDeclaration(const NamedProtocol& named_pr
   for (const auto& method_info : named_protocol.methods) {
     {
       IOFlagsGuard reset_flags(&file_);
-      file_ << "#define " << method_info.ordinal_name << " ((uint64_t)0x"
-            << std::uppercase << std::hex << method_info.ordinal << std::dec << ")\n";
+      file_ << "#define " << method_info.ordinal_name << " ((uint64_t)0x" << std::uppercase
+            << std::hex << method_info.ordinal << std::dec << ")\n";
       file_ << "#define " << method_info.generated_ordinal_name << " ((uint64_t)0x"
             << std::uppercase << std::hex << method_info.generated_ordinal << std::dec << ")\n";
     }
@@ -1097,7 +1106,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
     file_ << kIndent << method_info.request->c_name << "* _request = ("
           << method_info.request->c_name << "*)_wr_bytes;\n";
     file_ << kIndent << "memset(_wr_bytes, 0, sizeof(_wr_bytes));\n";
-    file_ << kIndent << "_request->hdr.ordinal = " << method_info.ordinal_name << ";\n";
+    EmitTxnHeader(&file_, "_request", method_info.ordinal_name);
     EmitLinearizeMessage(&file_, "_request", "_wr_bytes", request);
     const char* handles_value = "NULL";
     if (max_hcount > 0) {
@@ -1448,7 +1457,7 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
     file_ << kIndent << method_info.response->c_name << "* _response = ("
           << method_info.response->c_name << "*)_wr_bytes;\n";
     file_ << kIndent << "memset(_wr_bytes, 0, sizeof(_wr_bytes));\n";
-    file_ << kIndent << "_response->hdr.ordinal = " << method_info.ordinal_name << ";\n";
+    EmitTxnHeader(&file_, "_response", method_info.ordinal_name);
     EmitLinearizeMessage(&file_, "_response", "_wr_bytes", response);
     const char* handle_value = "NULL";
     if (hcount > 0) {

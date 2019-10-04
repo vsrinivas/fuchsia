@@ -163,6 +163,7 @@ fidlc tests are at:
 * [//zircon/system/utest/fidl-compiler/][fidlc-compiler-tests].
 * [//zircon/system/utest/fidl/][fidlc-tests].
 * [//zircon/system/utest/fidl-coding/tables/][fidlc-coding-tables-tests].
+* [//zircon/system/utest/fidl-simple][fidl-simple (C runtime tests)].
 
 ```sh
 # build & run fidlc tests
@@ -232,10 +233,21 @@ fx exec topaz/bin/fidlgen_dart/regen.sh
 fx set bringup.x64 --with-base //garnet/packages/tests:zircon
 fx build
 fx run -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-test
+fx run -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-simple-test
 ```
 
 When the test completes, you're running in the QEMU emulator.
 To exit, use **`Ctrl-A x`**.
+
+Alternatively, if you build including the shell you can run these commands from
+the shell:
+```sh
+Tab 1> fx set core.x64 --with-base //garnet/packages/tests:zircon
+Tab 1> fx build && fx run -kN
+Tab 2> fx shell
+Tab 2(shell)> runtests -t fidl-simple-test
+Tab 2(shell)> runtests -t fidl-test
+```
 
 ### C++ runtime
 
@@ -354,6 +366,7 @@ The following requires: fx set bringup.x64 --with-base //garnet/packages/tests:z
 | fidlc host test           | $FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug | zircon/system/host/fidl |
 | fidl coding tables test   | fx run -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-coding-tables-test                               | zircon/system/host/fidl |
 | fidl c runtime test       | fx run -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-test                                             | zircon/system/ulib/fidl |
+| fidl c runtime test       | fx run -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-simple-test                                      | zircon/system/ulib/fidl |
 | fidl c-llcpp interop test | fx run -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-llcpp-interop-test                               | zircon/system/ulib/fidl |
 
 ### All Regen Commands
