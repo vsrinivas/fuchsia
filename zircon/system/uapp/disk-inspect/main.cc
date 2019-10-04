@@ -23,7 +23,7 @@ void ProcessDiskObjects(std::unique_ptr<disk_inspector::DiskObject> obj, uint32_
     printf("\t");
   }
 
-  printf("Name: %s", obj->GetName());
+  printf("Name: %-25s", obj->GetName());
   size_t num_elements = obj->GetNumElements();
 
   // Non scalar types.
@@ -42,22 +42,22 @@ void ProcessDiskObjects(std::unique_ptr<disk_inspector::DiskObject> obj, uint32_
   switch (size) {
     case sizeof(uint64_t): {
       const uint64_t *val = reinterpret_cast<const uint64_t *>(buffer);
-      printf(" Value:0x%lx\n", *val);
+      printf(" Value:0x%lx", *val);
     } break;
 
     case sizeof(uint32_t): {
       const uint32_t *val = reinterpret_cast<const uint32_t *>(buffer);
-      printf(" Value:0x%x\n", *val);
+      printf(" Value:0x%x", *val);
     } break;
 
     case sizeof(uint16_t): {
       const uint16_t *val = reinterpret_cast<const uint16_t *>(buffer);
-      printf(" Value:0x%x\n", *val);
+      printf(" Value:0x%x", *val);
     } break;
 
     case sizeof(uint8_t): {
       const char *val = reinterpret_cast<const char *>(buffer);
-      printf(" Value:%c\n", *val);
+      printf(" Value:%c", *val);
     } break;
 
     default:
@@ -71,6 +71,7 @@ int Inspect(fbl::unique_fd fd) {
 
   if (inspector.GetRoot(&root) == ZX_OK) {
     ProcessDiskObjects(std::move(root), 0);
+    printf("\n");
     return 0;
   }
   fprintf(stderr, "ERROR: GetRoot failed\n");
