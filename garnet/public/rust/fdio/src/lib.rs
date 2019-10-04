@@ -89,6 +89,44 @@ pub fn service_connect_at(
     })
 }
 
+/// Opens the remote object at the given `path` with the given `flags` asynchronously.
+/// ('asynchronous' here is refering to fuchsia.io.Directory.Open not having a return value).
+/// `flags` is a bit field of |fuchsia.io.OPEN_*| options. Wraps fdio_open.
+pub fn open(path: &str, flags: u32, channel: zx::Channel) -> Result<(), zx::Status> {
+    let c_path = CString::new(path).map_err(|_| zx::Status::INVALID_ARGS)?;
+
+    // fdio_open_at takes a directory handle, a *const c_char service path,
+    // flags, and a channel to connect.
+    // The directory handle is never consumed, so we borrow the raw handle.
+    // On success, the channel is connected, and on failure, it is closed.
+    // In either case, we do not need to clean up the channel so we use
+    // `into_raw` so that Rust forgets about it.
+    zx::ok(unsafe { fdio_sys::fdio_open(c_path.as_ptr(), flags, channel.into_raw()) })
+}
+
+/// Opens the remote object at the given `path` relative to the given `dir` with the given `flags`
+/// asynchronously. ('asynchronous' here is refering to fuchsia.io.Directory.Open not having a
+/// return value). `flags` is a bit field of |fuchsia.io.OPEN_*| options. `dir` must be a directory
+/// protocol channel. Wraps fdio_open_at.
+pub fn open_at(
+    dir: &zx::Channel,
+    path: &str,
+    flags: u32,
+    channel: zx::Channel,
+) -> Result<(), zx::Status> {
+    let c_path = CString::new(path).map_err(|_| zx::Status::INVALID_ARGS)?;
+
+    // fdio_open_at takes a directory handle, a *const c_char service path,
+    // flags, and a channel to connect.
+    // The directory handle is never consumed, so we borrow the raw handle.
+    // On success, the channel is connected, and on failure, it is closed.
+    // In either case, we do not need to clean up the channel so we use
+    // `into_raw` so that Rust forgets about it.
+    zx::ok(unsafe {
+        fdio_sys::fdio_open_at(dir.raw_handle(), c_path.as_ptr(), flags, channel.into_raw())
+    })
+}
+
 pub fn transfer_fd(file: std::fs::File) -> Result<zx::Handle, zx::Status> {
     unsafe {
         let mut fd_handle = zx::sys::ZX_HANDLE_INVALID;
@@ -154,10 +192,8 @@ pub fn pipe_half() -> Result<(std::fs::File, zx::Socket), zx::Status> {
     unsafe {
         let mut fd = -1;
         let mut handle = zx::sys::ZX_HANDLE_INVALID;
-        let status = fdio_sys::fdio_pipe_half(
-            &mut fd as *mut i32,
-            &mut handle as *mut zx::sys::zx_handle_t,
-        );
+        let status =
+            fdio_sys::fdio_pipe_half(&mut fd as *mut i32, &mut handle as *mut zx::sys::zx_handle_t);
         if status != zx::sys::ZX_OK {
             return Err(zx::Status::from_raw(status));
         }
@@ -628,8 +664,11 @@ impl Namespace {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fuchsia_zircon::{object_wait_many, Signals, Status, Time, WaitItem};
+    use {
+        super::*,
+        fidl_fuchsia_io as fio,
+        fuchsia_zircon::{object_wait_many, Signals, Status, Time, WaitItem},
+    };
 
     #[test]
     fn namespace_get_installed() {
@@ -754,4 +793,31 @@ mod tests {
         assert_eq!(String::from_utf8(output).expect("unable to decode stdout"), "hello world\n");
     }
 
+    // Simple tests of the fdio_open and fdio_open_at wrappers. These aren't intended to
+    // exhaustively test the fdio functions - there are separate tests for that - but they do
+    // exercise one success and one failure case for each function.
+    #[test]
+    fn fdio_open_and_open_at() {
+        // fdio_open requires paths to be absolute
+        let (_, pkg_server) = zx::Channel::create().unwrap();
+        assert_eq!(open("pkg", fio::OPEN_RIGHT_READABLE, pkg_server), Err(zx::Status::NOT_FOUND));
+
+        let (pkg_client, pkg_server) = zx::Channel::create().unwrap();
+        assert_eq!(open("/pkg", fio::OPEN_RIGHT_READABLE, pkg_server), Ok(()));
+
+        // fdio_open/fdio_open_at do not support OPEN_FLAG_DESCRIBE
+        let (_, bin_server) = zx::Channel::create().unwrap();
+        assert_eq!(
+            open_at(
+                &pkg_client,
+                "bin",
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE,
+                bin_server
+            ),
+            Err(zx::Status::INVALID_ARGS)
+        );
+
+        let (_, bin_server) = zx::Channel::create().unwrap();
+        assert_eq!(open_at(&pkg_client, "bin", fio::OPEN_RIGHT_READABLE, bin_server), Ok(()));
+    }
 }

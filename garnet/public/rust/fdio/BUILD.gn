@@ -18,6 +18,8 @@ rustc_library("fdio") {
     "//third_party/rust_crates:bitflags",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",
   ]
+
+  test_deps = [ "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc" ]
 }
 
 rustc_binary("spawn_test_target_bin") {

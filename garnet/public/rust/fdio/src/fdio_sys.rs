@@ -648,6 +648,13 @@ extern "C" {
         h: zx_handle_t,
     ) -> zx_status_t;
     pub fn fdio_service_clone(h: zx_handle_t) -> zx_handle_t;
+    pub fn fdio_open(path: *const raw::c_char, flags: u32, h: zx_handle_t) -> zx_status_t;
+    pub fn fdio_open_at(
+        dir: zx_handle_t,
+        path: *const raw::c_char,
+        flags: u32,
+        h: zx_handle_t,
+    ) -> zx_status_t;
     pub fn fdio_spawn(
         job: zx_handle_t,
         flags: u32,
