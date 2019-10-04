@@ -9,6 +9,7 @@ use {
     crate::registry::device_storage::DeviceStorageFactory,
     crate::registry::service_context::ServiceContext,
     crate::switchboard::base::{SettingType, SystemInfo, SystemLoginOverrideMode},
+    crate::tests::fakes::device_admin_service::{Action, DeviceAdminService},
     crate::tests::fakes::device_settings_service::DeviceSettingsService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     fidl_fuchsia_settings::*,
@@ -44,6 +45,8 @@ async fn test_system() {
     let service_registry = ServiceRegistry::create();
     let device_settings_service_handle = Arc::new(RwLock::new(DeviceSettingsService::new()));
     service_registry.write().register_service(device_settings_service_handle.clone());
+    let device_admin_service_handle = Arc::new(RwLock::new(DeviceAdminService::new()));
+    service_registry.write().register_service(device_admin_service_handle.clone());
 
     create_fidl_service(
         fs.root_dir(),
@@ -86,4 +89,7 @@ async fn test_system() {
     } else {
         panic!("factory reset flag should have been set");
     }
+
+    // Ensure reboot was requested by the controller
+    assert!(device_admin_service_handle.read().verify_action_sequence([Action::Reboot].to_vec()));
 }

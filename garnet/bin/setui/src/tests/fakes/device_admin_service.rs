@@ -26,8 +26,17 @@ impl DeviceAdminService {
         Self { recorded_actions: Arc::new(RwLock::new(Vec::new())) }
     }
 
-    pub fn get_actions(&self) -> Arc<RwLock<Vec<Action>>> {
-        return self.recorded_actions.clone();
+    pub fn verify_action_sequence(&self, actions: Vec<Action>) -> bool {
+        let recorded_actions = self.recorded_actions.read();
+
+        for iter in recorded_actions.iter().zip(actions.iter()) {
+            let (action1, action2) = iter;
+            if action1 != action2 {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
 

@@ -64,8 +64,8 @@ pub fn spawn_system_fidl_handler(
     });
 }
 
-/// Sets the login mode and schedules accounts to be cleared so the mode will
-/// take effect.
+/// Sets the login mode and schedules accounts to be cleared. Upon success, the
+/// device is scheduled to reboot so the change will take effect.
 fn change_login_override(
     switchboard: Arc<RwLock<dyn Switchboard + Send + Sync>>,
     mode: SystemLoginOverrideMode,
@@ -93,6 +93,15 @@ fn change_login_override(
         .await;
 
         if schedule_account_clear_result.is_err() {
+            responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
+            return;
+        }
+
+        let restart_result =
+            request(switchboard.clone(), SettingType::Power, SettingRequest::Reboot, "rebooting")
+                .await;
+
+        if restart_result.is_err() {
             responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
             return;
         }

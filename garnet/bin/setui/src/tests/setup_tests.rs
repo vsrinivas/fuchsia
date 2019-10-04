@@ -125,14 +125,5 @@ async fn test_setup() {
     }
 
     // Ensure reboot was requested by the controller
-    let actions_lock = device_admin_service_handle.read().get_actions();
-    let actions = actions_lock.read();
-
-    assert_eq!(actions.len(), 1);
-
-    if let Some(action) = actions.get(0) {
-        assert_eq!(*action, Action::Reboot);
-    } else {
-        panic!("Should have an action");
-    }
+    assert!(device_admin_service_handle.read().verify_action_sequence([Action::Reboot].to_vec()));
 }
