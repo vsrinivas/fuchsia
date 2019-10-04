@@ -7,7 +7,6 @@ source_set("mocks") {
 
   public = [
     "mock_semantic_provider.h",
-    "mock_semantic_provider_new.h",
   ]
 
   sources = [
