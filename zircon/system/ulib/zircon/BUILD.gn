@@ -109,9 +109,6 @@ if (current_toolchain == default_toolchain) {
     ]
 
     configs += [ ":config" ]
-
-    # TODO(31763): Remove this and manually add __EXPORT to symbols that should
-    # have default visibility.
     configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 
     deps = [

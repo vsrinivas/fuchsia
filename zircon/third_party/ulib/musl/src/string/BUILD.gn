@@ -38,8 +38,6 @@ source_set("compiler") {
     ]
   }
 
-  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
-  # have default visibility.
   configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
@@ -71,8 +69,6 @@ source_set("stdmem") {
     }
   }
 
-  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
-  # have default visibility.
   configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
@@ -91,8 +87,6 @@ source_set("extmem") {
     sources += [ "mempcpy.c" ]
   }
 
-  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
-  # have default visibility.
   configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
@@ -114,8 +108,6 @@ source_set("minimal_str") {
     ]
   }
 
-  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
-  # have default visibility.
   configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
@@ -154,8 +146,6 @@ source_set("stdstr") {
     ]
   }
 
-  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
-  # have default visibility.
   configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
@@ -190,8 +180,6 @@ source_set("extstr") {
     ]
   }
 
-  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
-  # have default visibility.
   configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
@@ -208,8 +196,6 @@ source_set("bsd") {
     "swab.c",
   ]
 
-  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
-  # have default visibility.
   configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
@@ -241,8 +227,6 @@ source_set("wcs") {
     "wcswcs.c",
   ]
 
-  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
-  # have default visibility.
   configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
 
@@ -258,7 +242,5 @@ source_set("wmem") {
     "wmemset.c",
   ]
 
-  # TODO(31763): Remove this and manually add __EXPORT to symbols that should
-  # have default visibility.
   configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 }
