@@ -1764,10 +1764,6 @@ constexpr uint64_t kDeviceController_CompleteRemoval_Ordinal = 0x1554eba80000000
 [[maybe_unused]]
 constexpr uint64_t kDeviceController_CompleteRemoval_GenOrdinal = 0x25d6d94c85d60771lu;
 [[maybe_unused]]
-constexpr uint64_t kDeviceController_RemoveDevice_Ordinal = 0x5db4ce200000000lu;
-[[maybe_unused]]
-constexpr uint64_t kDeviceController_RemoveDevice_GenOrdinal = 0x7b9cb8cf970eb164lu;
-[[maybe_unused]]
 constexpr uint64_t kDeviceController_Suspend_Ordinal = 0x4490901a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDeviceController_Suspend_GenOrdinal = 0x77bf98a1d5d4adbblu;
@@ -2000,49 +1996,6 @@ DeviceController::ResultOf::CompleteRemoval DeviceController::Call::CompleteRemo
   }
 }
 
-
-DeviceController::ResultOf::RemoveDevice_Impl::RemoveDevice_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RemoveDeviceRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, RemoveDeviceRequest::PrimarySize);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(RemoveDeviceRequest));
-  ::fidl::DecodedMessage<RemoveDeviceRequest> _decoded_request(std::move(_request_bytes));
-  Super::operator=(
-      DeviceController::InPlace::RemoveDevice(std::move(_client_end)));
-}
-
-DeviceController::ResultOf::RemoveDevice DeviceController::SyncClient::RemoveDevice() {
-  return ResultOf::RemoveDevice(zx::unowned_channel(this->channel_));
-}
-
-DeviceController::ResultOf::RemoveDevice DeviceController::Call::RemoveDevice(zx::unowned_channel _client_end) {
-  return ResultOf::RemoveDevice(std::move(_client_end));
-}
-
-::fidl::internal::StatusAndError DeviceController::InPlace::RemoveDevice(zx::unowned_channel _client_end) {
-  constexpr uint32_t _write_num_bytes = sizeof(RemoveDeviceRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::DecodedMessage<RemoveDeviceRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDeviceController_RemoveDevice_Ordinal;
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::internal::StatusAndError::FromFailure(
-        std::move(_encode_request_result));
-  }
-  zx_status_t _write_status =
-      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
-  if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(_write_status, ::fidl::internal::kErrorWriteFailed);
-  } else {
-    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
-  }
-}
-
 template <>
 DeviceController::ResultOf::Suspend_Impl<DeviceController::SuspendResponse>::Suspend_Impl(zx::unowned_channel _client_end, uint32_t flags) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SuspendRequest, ::fidl::MessageDirection::kSending>();
@@ -2227,18 +2180,6 @@ bool DeviceController::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
       }
       impl->CompleteRemoval(
         Interface::CompleteRemovalCompleter::Sync(txn));
-      return true;
-    }
-    case kDeviceController_RemoveDevice_Ordinal:
-    case kDeviceController_RemoveDevice_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<RemoveDeviceRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      impl->RemoveDevice(
-        Interface::RemoveDeviceCompleter::Sync(txn));
       return true;
     }
     case kDeviceController_Suspend_Ordinal:

@@ -110,10 +110,6 @@ protocol DeviceController {
     /// once |device_remove| invokes |unbind|.
     CompleteRemoval();
 
-    /// Ask the devhost to remove this device.  On success, the remote end of
-    /// this interface channel will close instead of returning a result.
-    RemoveDevice();
-
     /// Ask devhost to suspend this device, using the target state indicated by `flags`.
     Suspend(uint32 flags) -> (zx.status status);
 

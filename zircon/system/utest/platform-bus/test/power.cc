@@ -18,7 +18,7 @@
 namespace power {
 
 class TestPowerDevice;
-using DeviceType = ddk::Device<TestPowerDevice, ddk::Unbindable>;
+using DeviceType = ddk::Device<TestPowerDevice, ddk::UnbindableDeprecated>;
 
 class TestPowerDevice : public DeviceType,
                         public ddk::PowerImplProtocol<TestPowerDevice, ddk::base_protocol> {
@@ -31,7 +31,7 @@ class TestPowerDevice : public DeviceType,
   zx_status_t Init();
 
   // Methods required by the ddk mixins
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   zx_status_t PowerImplEnablePowerDomain(uint32_t index);
@@ -95,7 +95,7 @@ zx_status_t TestPowerDevice::Create(zx_device_t* parent) {
   return ptr->Init();
 }
 
-void TestPowerDevice::DdkUnbind() {}
+void TestPowerDevice::DdkUnbindDeprecated() {}
 
 void TestPowerDevice::DdkRelease() { delete this; }
 

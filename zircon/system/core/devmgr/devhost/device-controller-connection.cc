@@ -70,10 +70,6 @@ void DeviceControllerConnection::ConnectProxy(::zx::channel shadow,
   ProxyIostate::Create(this->dev(), std::move(shadow), DevhostAsyncLoop()->dispatcher());
 }
 
-void DeviceControllerConnection::RemoveDevice(RemoveDeviceCompleter::Sync completer) {
-  device_remove(this->dev().get());
-}
-
 void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view, zx::vmo driver,
                                             BindDriverCompleter::Sync completer) {
   const auto& dev = this->dev();

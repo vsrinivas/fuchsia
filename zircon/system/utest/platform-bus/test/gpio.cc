@@ -18,7 +18,7 @@
 namespace gpio {
 
 class TestGpioDevice;
-using DeviceType = ddk::Device<TestGpioDevice, ddk::Unbindable>;
+using DeviceType = ddk::Device<TestGpioDevice, ddk::UnbindableDeprecated>;
 
 class TestGpioDevice : public DeviceType,
                        public ddk::GpioImplProtocol<TestGpioDevice, ddk::base_protocol> {
@@ -31,7 +31,7 @@ class TestGpioDevice : public DeviceType,
   zx_status_t Init();
 
   // Methods required by the ddk mixins
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   zx_status_t GpioImplConfigIn(uint32_t pin, uint32_t flags);
@@ -94,7 +94,7 @@ zx_status_t TestGpioDevice::Create(zx_device_t* parent) {
   return ptr->Init();
 }
 
-void TestGpioDevice::DdkUnbind() {}
+void TestGpioDevice::DdkUnbindDeprecated() {}
 
 void TestGpioDevice::DdkRelease() { delete this; }
 

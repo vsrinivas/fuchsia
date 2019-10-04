@@ -49,7 +49,7 @@ class CompositeDeviceInstance {
       component->take_composite();
     }
     components_.reset();
-    device_remove(zxdev_);
+    device_remove_deprecated(zxdev_);
   }
 
   const CompositeComponents& components() { return components_; }

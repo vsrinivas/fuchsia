@@ -18,7 +18,7 @@
 namespace clock {
 
 class TestClockDevice;
-using DeviceType = ddk::Device<TestClockDevice, ddk::Unbindable>;
+using DeviceType = ddk::Device<TestClockDevice, ddk::UnbindableDeprecated>;
 
 class TestClockDevice : public DeviceType,
                         public ddk::ClockImplProtocol<TestClockDevice, ddk::base_protocol> {
@@ -31,7 +31,7 @@ class TestClockDevice : public DeviceType,
   zx_status_t Init();
 
   // Methods required by the ddk mixins
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   zx_status_t ClockImplEnable(uint32_t clock_id);
@@ -94,7 +94,7 @@ zx_status_t TestClockDevice::Create(zx_device_t* parent) {
   return ptr->Init();
 }
 
-void TestClockDevice::DdkUnbind() {}
+void TestClockDevice::DdkUnbindDeprecated() {}
 
 void TestClockDevice::DdkRelease() { delete this; }
 

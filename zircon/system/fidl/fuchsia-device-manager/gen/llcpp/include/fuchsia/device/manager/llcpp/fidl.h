@@ -2845,8 +2845,6 @@ class DeviceController final {
 
   using CompleteRemovalRequest = ::fidl::AnyZeroArgMessage;
 
-  using RemoveDeviceRequest = ::fidl::AnyZeroArgMessage;
-
   struct SuspendResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
@@ -2943,17 +2941,6 @@ class DeviceController final {
       using Super::error;
       using Super::ok;
     };
-    class RemoveDevice_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
-     public:
-      RemoveDevice_Impl(zx::unowned_channel _client_end);
-      ~RemoveDevice_Impl() = default;
-      RemoveDevice_Impl(RemoveDevice_Impl&& other) = default;
-      RemoveDevice_Impl& operator=(RemoveDevice_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-    };
     template <typename ResponseType>
     class Suspend_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
@@ -2987,7 +2974,6 @@ class DeviceController final {
     using ConnectProxy = ConnectProxy_Impl;
     using Unbind = Unbind_Impl;
     using CompleteRemoval = CompleteRemoval_Impl;
-    using RemoveDevice = RemoveDevice_Impl;
     using Suspend = Suspend_Impl<SuspendResponse>;
     using CompleteCompatibilityTests = CompleteCompatibilityTests_Impl;
   };
@@ -3046,17 +3032,6 @@ class DeviceController final {
       using Super::error;
       using Super::ok;
     };
-    class RemoveDevice_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
-     public:
-      RemoveDevice_Impl(zx::unowned_channel _client_end);
-      ~RemoveDevice_Impl() = default;
-      RemoveDevice_Impl(RemoveDevice_Impl&& other) = default;
-      RemoveDevice_Impl& operator=(RemoveDevice_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-    };
     template <typename ResponseType>
     class Suspend_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
@@ -3090,7 +3065,6 @@ class DeviceController final {
     using ConnectProxy = ConnectProxy_Impl;
     using Unbind = Unbind_Impl;
     using CompleteRemoval = CompleteRemoval_Impl;
-    using RemoveDevice = RemoveDevice_Impl;
     using Suspend = Suspend_Impl<SuspendResponse>;
     using CompleteCompatibilityTests = CompleteCompatibilityTests_Impl;
   };
@@ -3143,12 +3117,6 @@ class DeviceController final {
     // once |device_remove| invokes |unbind|.
     // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::CompleteRemoval CompleteRemoval();
-
-
-    // Ask the devhost to remove this device.  On success, the remote end of
-    // this interface channel will close instead of returning a result.
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::RemoveDevice RemoveDevice();
 
 
     // Ask devhost to suspend this device, using the target state indicated by `flags`.
@@ -3217,12 +3185,6 @@ class DeviceController final {
     static ResultOf::CompleteRemoval CompleteRemoval(zx::unowned_channel _client_end);
 
 
-    // Ask the devhost to remove this device.  On success, the remote end of
-    // this interface channel will close instead of returning a result.
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::RemoveDevice RemoveDevice(zx::unowned_channel _client_end);
-
-
     // Ask devhost to suspend this device, using the target state indicated by `flags`.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Suspend Suspend(zx::unowned_channel _client_end, uint32_t flags);
@@ -3269,10 +3231,6 @@ class DeviceController final {
     // once |device_remove| invokes |unbind|.
     static ::fidl::internal::StatusAndError CompleteRemoval(zx::unowned_channel _client_end);
 
-    // Ask the devhost to remove this device.  On success, the remote end of
-    // this interface channel will close instead of returning a result.
-    static ::fidl::internal::StatusAndError RemoveDevice(zx::unowned_channel _client_end);
-
     // Ask devhost to suspend this device, using the target state indicated by `flags`.
     static ::fidl::DecodeResult<SuspendResponse> Suspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
 
@@ -3315,10 +3273,6 @@ class DeviceController final {
     using CompleteRemovalCompleter = ::fidl::Completer<>;
 
     virtual void CompleteRemoval(CompleteRemovalCompleter::Sync _completer) = 0;
-
-    using RemoveDeviceCompleter = ::fidl::Completer<>;
-
-    virtual void RemoveDevice(RemoveDeviceCompleter::Sync _completer) = 0;
 
     class SuspendCompleterBase : public _Base {
      public:

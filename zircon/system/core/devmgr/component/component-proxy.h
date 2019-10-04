@@ -31,7 +31,8 @@
 namespace component {
 
 class ComponentProxy;
-using ComponentProxyBase = ddk::Device<ComponentProxy, ddk::Unbindable, ddk::GetProtocolable>;
+using ComponentProxyBase = ddk::Device<ComponentProxy, ddk::UnbindableDeprecated,
+                                       ddk::GetProtocolable>;
 
 class ComponentProxy : public ComponentProxyBase,
                        public ddk::AmlogicCanvasProtocol<ComponentProxy>,
@@ -56,7 +57,7 @@ class ComponentProxy : public ComponentProxyBase,
                             zx_handle_t raw_rpc);
 
   zx_status_t DdkGetProtocol(uint32_t, void*);
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
   zx_status_t Rpc(const ProxyRequest* req, size_t req_length, ProxyResponse* resp,

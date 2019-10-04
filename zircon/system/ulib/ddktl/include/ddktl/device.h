@@ -392,7 +392,7 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
     // device's reference count when successful.
     zx_device_t* dev = this->zxdev_;
     this->zxdev_ = nullptr;
-    return device_remove(dev);
+    return device_remove_deprecated(dev);
   }
 
   // DEPRECATED (fxb/34574).

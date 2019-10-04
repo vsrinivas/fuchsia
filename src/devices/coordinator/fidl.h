@@ -15,7 +15,6 @@ class Devhost;
 class Device;
 
 // Methods for composing FIDL RPCs to the devhosts
-zx_status_t dh_send_remove_device(const Device* dev);
 zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel rpc, zx::vmo driver,
                                   const char* args, zx::handle rpc_proxy);
 zx_status_t dh_send_create_device_stub(Device* dev, Devhost* dh, zx::channel rpc,

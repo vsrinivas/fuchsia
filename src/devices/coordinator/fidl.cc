@@ -12,20 +12,6 @@
 
 namespace devmgr {
 
-zx_status_t dh_send_remove_device(const Device* dev) {
-  FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_device_manager_DeviceControllerRemoveDeviceRequest)];
-  fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
-
-  auto req = builder.New<fuchsia_device_manager_DeviceControllerRemoveDeviceRequest>();
-  ZX_ASSERT(req != nullptr);
-  req->hdr.ordinal = fuchsia_device_manager_DeviceControllerRemoveDeviceOrdinal;
-  // TODO(teisenbe): Allocate and track txids
-  req->hdr.txid = 1;
-
-  fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
-  return msg.Write(dev->channel()->get(), 0);
-}
-
 zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel rpc, zx::vmo driver,
                                   const char* args, zx::handle rpc_proxy) {
   size_t driver_path_size = dev->libname().size();

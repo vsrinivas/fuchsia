@@ -62,12 +62,12 @@ zx_status_t ddktl_test_func(void* cookie, test_report_t* report) {
 }
 
 class ChildDevice;
-using ChildDeviceType = ddk::Device<ChildDevice, ddk::Unbindable>;
+using ChildDeviceType = ddk::Device<ChildDevice, ddk::UnbindableDeprecated>;
 
 class ChildDevice : public ChildDeviceType {
  public:
   ChildDevice(zx_device_t* parent) : ChildDeviceType(parent) {}
-  void DdkUnbind() { DdkRemove(); }
+  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
   void DdkRelease() { delete this; }
 };
 

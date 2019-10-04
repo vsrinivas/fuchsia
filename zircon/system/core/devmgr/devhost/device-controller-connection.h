@@ -41,7 +41,6 @@ class DeviceControllerConnection
   void BindDriver(::fidl::StringView driver_path, ::zx::vmo driver,
                   BindDriverCompleter::Sync _completer) override;
   void ConnectProxy(::zx::channel shadow, ConnectProxyCompleter::Sync _completer) override;
-  void RemoveDevice(RemoveDeviceCompleter::Sync _completer) override;
   void Suspend(uint32_t flags, SuspendCompleter::Sync _completer) override;
   void Unbind(UnbindCompleter::Sync _completer) override;
   void CompleteRemoval(CompleteRemovalCompleter::Sync _completer) override;

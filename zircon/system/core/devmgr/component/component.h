@@ -30,7 +30,7 @@
 namespace component {
 
 class Component;
-using ComponentBase = ddk::Device<Component, ddk::Rxrpcable, ddk::Unbindable>;
+using ComponentBase = ddk::Device<Component, ddk::Rxrpcable, ddk::UnbindableDeprecated>;
 
 class Component : public ComponentBase {
  public:
@@ -54,7 +54,7 @@ class Component : public ComponentBase {
   static zx_status_t Bind(void* ctx, zx_device_t* parent);
 
   zx_status_t DdkRxrpc(zx_handle_t channel);
-  void DdkUnbind();
+  void DdkUnbindDeprecated();
   void DdkRelease();
 
  private:
