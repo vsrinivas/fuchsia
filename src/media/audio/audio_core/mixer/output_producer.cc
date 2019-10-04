@@ -37,7 +37,7 @@ template <typename DType>
 class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, uint8_t>>> {
  public:
   static inline constexpr DType Convert(float sample) {
-    return fbl::clamp<int32_t>(round(sample * kFloatToInt8) + kOffsetInt8ToUint8,
+    return std::clamp<int32_t>(round(sample * kFloatToInt8) + kOffsetInt8ToUint8,
                                std::numeric_limits<uint8_t>::min(),
                                std::numeric_limits<uint8_t>::max());
   }
@@ -47,7 +47,7 @@ template <typename DType>
 class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, int16_t>>> {
  public:
   static inline constexpr DType Convert(float sample) {
-    return fbl::clamp<int32_t>(round(sample * kFloatToInt16), std::numeric_limits<int16_t>::min(),
+    return std::clamp<int32_t>(round(sample * kFloatToInt16), std::numeric_limits<int16_t>::min(),
                                std::numeric_limits<int16_t>::max());
   }
 };
@@ -56,7 +56,7 @@ template <typename DType>
 class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, int32_t>>> {
  public:
   static inline constexpr DType Convert(float sample) {
-    return fbl::clamp<int64_t>(round(sample * kFloatToInt24In32), kMinInt24In32, kMaxInt24In32);
+    return std::clamp<int64_t>(round(sample * kFloatToInt24In32), kMinInt24In32, kMaxInt24In32);
   }
 };
 
@@ -64,7 +64,7 @@ template <typename DType>
 class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, float>>> {
  public:
   // This will emit +1.0 values, which are legal per WAV format custom.
-  static inline constexpr DType Convert(float sample) { return fbl::clamp(sample, -1.0f, 1.0f); }
+  static inline constexpr DType Convert(float sample) { return std::clamp(sample, -1.0f, 1.0f); }
 };
 
 // Template to fill samples with silence based on sample type.

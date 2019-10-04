@@ -61,7 +61,7 @@ class Gain {
       return kMinGainDb;
     }
 
-    return fbl::clamp(gain_db_a + gain_db_b, kMinGainDb, max_gain_db);
+    return std::clamp(gain_db_a + gain_db_b, kMinGainDb, max_gain_db);
   }
 
   // Helper constant values in the gain-scale domain.
