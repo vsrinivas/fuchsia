@@ -28,3 +28,35 @@ TEST(RegisterIo, Read) {
   DLOG("read rbbm_status 0x%x", rbbm_status);
   EXPECT_NE(0u, rbbm_status);
 }
+
+TEST(RegisterIo, Write) {
+  magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+  ASSERT_TRUE(platform_device);
+
+  constexpr uint32_t kScratchRegisterOffset = 0x883 << 2;
+  uint32_t original;
+
+  {
+    auto platform_mmio =
+        platform_device->CpuMapMmio(0, magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE);
+    ASSERT_TRUE(platform_mmio);
+
+    auto register_io = std::make_unique<magma::RegisterIo>(std::move(platform_mmio));
+
+    original = register_io->Read32(kScratchRegisterOffset);
+    register_io->Write32(kScratchRegisterOffset, ~original);
+  }
+
+  {
+    auto platform_mmio =
+        platform_device->CpuMapMmio(0, magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE);
+    ASSERT_TRUE(platform_mmio);
+
+    auto register_io = std::make_unique<magma::RegisterIo>(std::move(platform_mmio));
+
+    uint32_t value = register_io->Read32(kScratchRegisterOffset);
+    EXPECT_EQ(value, ~original);
+
+    register_io->Write32(kScratchRegisterOffset, original);
+  }
+}

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+
 #include <gtest/gtest.h>
 #include <helper/platform_device_helper.h>
 

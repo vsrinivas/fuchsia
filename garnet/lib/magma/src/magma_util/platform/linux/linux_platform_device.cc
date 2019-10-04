@@ -152,7 +152,7 @@ std::unique_ptr<PlatformMmio> LinuxPlatformDevice::CpuMapMmio(
     return DRETP(nullptr, "MagmaGetParam failed");
 
   void* cpu_addr = mmap(nullptr,  // desired addr
-                        length, PROT_READ | PROT_WRITE, MAP_PRIVATE, handle_.get(),
+                        length, PROT_READ | PROT_WRITE, MAP_SHARED, handle_.get(),
                         0  // offset
   );
 
