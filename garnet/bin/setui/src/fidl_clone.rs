@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fuchsia_settings::*, fidl_fuchsia_setui::*, fidl_fuchsia_ui_input::MediaButtonsEvent};
+use {fidl_fuchsia_settings::*, fidl_fuchsia_setui::*};
 
 /// A placeholder for real cloning support in FIDL generated Rust code.
 /// TODO(QA-715): Remove
@@ -127,11 +127,5 @@ impl FIDLClone for CaptionFontStyle {
         style.relative_size = self.relative_size;
         style.char_edge_style = self.char_edge_style;
         style
-    }
-}
-
-impl FIDLClone for MediaButtonsEvent {
-    fn clone(&self) -> Self {
-        MediaButtonsEvent { volume: self.volume, mic_mute: self.mic_mute }
     }
 }

@@ -19,11 +19,9 @@ use {
     },
     crate::switchboard::switchboard_impl::SwitchboardImpl,
     crate::tests::fakes::audio_core_service::AudioCoreService,
-    crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::*,
-    fidl_fuchsia_ui_input::MediaButtonsEvent,
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj},
     futures::prelude::*,
@@ -65,27 +63,11 @@ fn verify_audio_stream(settings: AudioSettings, stream: AudioStreamSettings) {
         .expect("contains stream");
 }
 
-// Returns a registry and audio related services it is populated with
-fn create_services() -> (
-    Arc<RwLock<ServiceRegistry>>,
-    Arc<RwLock<AudioCoreService>>,
-    Arc<RwLock<InputDeviceRegistryService>>,
-) {
-    let service_registry = ServiceRegistry::create();
-    let audio_core_service_handle = Arc::new(RwLock::new(AudioCoreService::new()));
-    service_registry.write().register_service(audio_core_service_handle.clone());
-    let input_device_registry_service_handle =
-        Arc::new(RwLock::new(InputDeviceRegistryService::new()));
-    service_registry.write().register_service(input_device_registry_service_handle.clone());
-
-    return (service_registry, audio_core_service_handle, input_device_registry_service_handle);
-}
-
 // This function is created so that we can manipulate the |pair_media_and_system_agent| flag.
 // TODO(go/fxb/37493): Remove this function and the related tests when the hack is removed.
 fn create_audio_fidl_service<'a>(
     mut service_dir: ServiceFsDir<ServiceObj<'a, ()>>,
-    service_registry_handle: Arc<RwLock<ServiceRegistry>>,
+    service_context_handle: Arc<RwLock<ServiceContext>>,
     pair_media_and_system_agent: bool,
 ) {
     let (action_tx, action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();
@@ -93,10 +75,6 @@ fn create_audio_fidl_service<'a>(
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.
     let (switchboard_handle, event_tx) = SwitchboardImpl::create(action_tx);
-
-    let service_context_handle = Arc::new(RwLock::new(ServiceContext::new(
-        ServiceRegistry::serve(service_registry_handle.clone()),
-    )));
 
     // Creates registry, used to register handlers for setting types.
     let registry_handle = RegistryImpl::create(event_tx, action_rx);
@@ -116,7 +94,9 @@ fn create_audio_fidl_service<'a>(
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_audio() {
-    let (service_registry, audio_core_service_handle, _) = create_services();
+    let service_registry = ServiceRegistry::create();
+    let audio_core_service_handle = Arc::new(RwLock::new(AudioCoreService::new()));
+    service_registry.write().register_service(audio_core_service_handle.clone());
 
     let mut fs = ServiceFs::new();
 
@@ -147,43 +127,6 @@ async fn test_audio() {
     );
 }
 
-// Test to ensure mic input change events are received.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_audio_input() {
-    let (service_registry, _, input_service_handle) = create_services();
-
-    let mut fs = ServiceFs::new();
-
-    create_fidl_service(
-        fs.root_dir(),
-        [SettingType::Audio].iter().cloned().collect(),
-        Arc::new(RwLock::new(ServiceContext::new(ServiceRegistry::serve(
-            service_registry.clone(),
-        )))),
-        Box::new(InMemoryStorageFactory::create()),
-    );
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
-
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
-
-    let buttons_event = MediaButtonsEvent { volume: Some(1), mic_mute: Some(true) };
-    input_service_handle.read().send_media_button_event(buttons_event.clone());
-
-    let updated_settings =
-        audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    if let Some(input) = updated_settings.input {
-        if let Some(mic_mute) = input.muted {
-            assert!(mic_mute);
-        } else {
-            panic!("should have mic mute value");
-        }
-    } else {
-        panic!("should have input settings");
-    }
-}
-
 // Test to ensure that when |pair_media_and_system_agent| is enabled, setting the media volume
 // without a system agent volume will change the system agent volume.
 #[fuchsia_async::run_singlethreaded(test)]
@@ -191,11 +134,19 @@ async fn test_audio_pair_media_system() {
     let mut changed_system_stream = CHANGED_MEDIA_STREAM.clone();
     changed_system_stream.stream = Some(fidl_fuchsia_media::AudioRenderUsage::SystemAgent);
 
-    let (service_registry, audio_core_service_handle, _) = create_services();
+    let service_registry = ServiceRegistry::create();
+    let audio_core_service_handle = Arc::new(RwLock::new(AudioCoreService::new()));
+    service_registry.write().register_service(audio_core_service_handle.clone());
 
     let mut fs = ServiceFs::new();
 
-    create_audio_fidl_service(fs.root_dir(), service_registry.clone(), true);
+    create_audio_fidl_service(
+        fs.root_dir(),
+        Arc::new(RwLock::new(ServiceContext::new(ServiceRegistry::serve(
+            service_registry.clone(),
+        )))),
+        true,
+    );
 
     let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
     fasync::spawn(fs.collect());
@@ -226,11 +177,19 @@ async fn test_audio_pair_media_system() {
 // not affect the system agent volume.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_audio_pair_media_system_off() {
-    let (service_registry, audio_core_service_handle, _) = create_services();
+    let service_registry = ServiceRegistry::create();
+    let audio_core_service_handle = Arc::new(RwLock::new(AudioCoreService::new()));
+    service_registry.write().register_service(audio_core_service_handle.clone());
 
     let mut fs = ServiceFs::new();
 
-    create_audio_fidl_service(fs.root_dir(), service_registry.clone(), false);
+    create_audio_fidl_service(
+        fs.root_dir(),
+        Arc::new(RwLock::new(ServiceContext::new(ServiceRegistry::serve(
+            service_registry.clone(),
+        )))),
+        false,
+    );
 
     let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
     fasync::spawn(fs.collect());
@@ -262,11 +221,19 @@ async fn test_audio_pair_media_system_off() {
 // with the system agent volume will not set to the system agent volume to the media volume.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_audio_pair_media_system_with_system_agent_change() {
-    let (service_registry, audio_core_service_handle, _) = create_services();
+    let service_registry = ServiceRegistry::create();
+    let audio_core_service_handle = Arc::new(RwLock::new(AudioCoreService::new()));
+    service_registry.write().register_service(audio_core_service_handle.clone());
 
     let mut fs = ServiceFs::new();
 
-    create_audio_fidl_service(fs.root_dir(), service_registry.clone(), true);
+    create_audio_fidl_service(
+        fs.root_dir(),
+        Arc::new(RwLock::new(ServiceContext::new(ServiceRegistry::serve(
+            service_registry.clone(),
+        )))),
+        true,
+    );
 
     let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
     fasync::spawn(fs.collect());

@@ -3,11 +3,9 @@
 // found in the LICENSE file.
 use {
     crate::audio::StreamVolumeControl,
-    crate::input::monitor_mic_mute,
     crate::registry::base::{Command, Notifier, State},
     crate::registry::service_context::ServiceContext,
     crate::switchboard::base::*,
-    fidl_fuchsia_ui_input::MediaButtonsEvent,
     fuchsia_async as fasync,
     futures::StreamExt,
     parking_lot::RwLock,
@@ -60,30 +58,10 @@ pub fn spawn_audio_controller(
     let (audio_handler_tx, mut audio_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
 
     let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));
-    let mic_mute_state = Arc::<RwLock<bool>>::new(RwLock::new(DEFAULT_MIC_MUTE));
 
     // TODO(go/fxb/35878): Add persistent storage.
     // TODO(go/fxb/35983): Load default values from a config.
     let mut stream_volume_controls = HashMap::new();
-
-    let (input_tx, mut input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
-
-    monitor_mic_mute(service_context_handle.clone(), input_tx);
-
-    let mic_mute_state_clone = mic_mute_state.clone();
-    let notifier_lock_clone = notifier_lock.clone();
-    fasync::spawn(async move {
-        while let Some(event) = input_rx.next().await {
-            if let Some(mic_mute) = event.mic_mute {
-                if *mic_mute_state_clone.read() != mic_mute {
-                    *mic_mute_state_clone.write() = mic_mute;
-                    if let Some(notifier) = (*notifier_lock_clone.read()).clone() {
-                        notifier.unbounded_send(SettingType::Audio).unwrap();
-                    }
-                }
-            }
-        }
-    });
 
     fasync::spawn(async move {
         // Connect to the audio core service.
@@ -145,7 +123,7 @@ pub fn spawn_audio_controller(
                             let _ = responder
                                 .send(Ok(Some(SettingResponse::Audio(AudioInfo {
                                     streams: get_streams_array_from_map(&stream_volume_controls),
-                                    input: AudioInputInfo { mic_mute: *mic_mute_state.read() },
+                                    input: AudioInputInfo { mic_mute: DEFAULT_MIC_MUTE },
                                 }))))
                                 .ok();
                         }

@@ -6,5 +6,4 @@ pub mod audio_core_service;
 pub mod base;
 pub mod device_admin_service;
 pub mod device_settings_service;
-pub mod input_device_registry_service;
 pub mod service_registry;

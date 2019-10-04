@@ -3,12 +3,12 @@
         "data": "data/setui_service"
     },
     "sandbox": {
-        "dev": [
-            "class/input"
-        ],
         "features": [
             "isolated-persistent-storage",
             "build-info"
+        ],
+        "dev": [
+        "class/input"
         ],
         "services": [
             "fuchsia.accessibility.SettingsManager",
@@ -22,8 +22,7 @@
             "fuchsia.stash.Store",
             "fuchsia.sys.Environment",
             "fuchsia.timezone.Timezone",
-            "fuchsia.ui.brightness.Control",
-            "fuchsia.ui.policy.DeviceListenerRegistry"
+            "fuchsia.ui.brightness.Control"
         ]
     }
 }
