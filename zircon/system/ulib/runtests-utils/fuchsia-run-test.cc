@@ -4,9 +4,11 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/debugdata/debugdata.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
@@ -26,6 +28,8 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
+#include <string>
 #include <utility>
 
 #include <fbl/auto_call.h>
@@ -36,6 +40,8 @@
 #include <loader-service/loader-service.h>
 #include <runtests-utils/fuchsia-run-test.h>
 #include <runtests-utils/service-proxy-dir.h>
+
+namespace fio = ::llcpp::fuchsia::io;
 
 namespace runtests {
 
@@ -147,6 +153,32 @@ std::optional<DumpFile> ProcessDataSinkDump(debugdata::DataSinkDump& data,
   }
 
   return DumpFile{name, dump_file.c_str()};
+}
+
+// TODO(fxb/37529): Remove this along with ugly hack below that uses it
+bool EndsWith(const char* value_cstr, const char* suffix_cstr) {
+  std::string value(value_cstr);
+  std::string suffix(suffix_cstr);
+  if (suffix.size() > value.size()) {
+    return false;
+  }
+  return std::equal(suffix.rbegin(), suffix.rend(), value.rbegin());
+}
+
+// TODO(fxb/37529): Remove this along with ugly hack below that uses it
+zx_status_t OpenAndReplaceExecutable(const char* path, zx::vmo* vmo) {
+  int fd;
+  zx_status_t status = fdio_open_fd(path, fio::OPEN_RIGHT_READABLE, &fd);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = fdio_get_vmo_clone(fd, vmo->reset_and_get_address());
+  close(fd);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return vmo->replace_as_executable(zx::handle(), vmo);
 }
 
 }  // namespace
@@ -370,9 +402,29 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[], const char* output_di
   zx::process process;
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   const zx::time start_time = zx::clock::get_monotonic();
-  status = fdio_spawn_etc(test_job.get(), FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_NAMESPACE,
-                          args[0], args, env_vars_p, fdio_actions.size(), fdio_actions.data(),
-                          process.reset_and_get_address(), err_msg);
+
+  // This is an ugly, temporary hack to workaround runtests-utils-test loading 'executables' from a
+  // test memfs, which violates VX policy and thus doesn't work with VMO_FLAG_EXEC.
+  // TODO(fxb/37529): Replace this hack with a proper fix in runtests-utils-test
+  char name[ZX_MAX_NAME_LEN];
+  status = zx::process::self()->get_property(ZX_PROP_NAME, name, sizeof(name));
+  if (status == ZX_OK && EndsWith(name, "/runtests-utils-test")) {
+    zx::vmo executable;
+    status = OpenAndReplaceExecutable(args[0], &executable);
+    if (status != ZX_OK) {
+      fprintf(stderr, "FAILURE: Failed to load test executable %s: %d (%s)\n", test_name, status,
+              zx_status_get_string(status));
+      return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0, 0);
+    }
+
+    status = fdio_spawn_vmo(test_job.get(), FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_NAMESPACE,
+                            executable.release(), args, env_vars_p, fdio_actions.size(),
+                            fdio_actions.data(), process.reset_and_get_address(), err_msg);
+  } else {
+    status = fdio_spawn_etc(test_job.get(), FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_NAMESPACE,
+                            args[0], args, env_vars_p, fdio_actions.size(), fdio_actions.data(),
+                            process.reset_and_get_address(), err_msg);
+  }
   if (status != ZX_OK) {
     fprintf(stderr, "FAILURE: Failed to launch %s: %d (%s): %s\n", test_name, status,
             zx_status_get_string(status), err_msg);
@@ -465,6 +517,6 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[], const char* output_di
   }
 
   return result;
-}
+}  // namespace runtests
 
 }  // namespace runtests

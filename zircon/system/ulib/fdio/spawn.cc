@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/process/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -32,6 +33,8 @@
 #include <vector>
 
 #include "private.h"
+
+namespace fio = ::llcpp::fuchsia::io;
 
 #define FDIO_RESOLVE_PREFIX "#!resolve "
 #define FDIO_RESOLVE_PREFIX_LEN 10
@@ -81,20 +84,16 @@ static_assert(offsetof(fdio_spawn_action_t, name.data) == 8,
               "fdio_spawn_action_t must have a stable ABI");
 
 static zx_status_t load_path(const char* path, zx::vmo* out_vmo) {
-  int fd = open(path, O_RDONLY);
-  if (fd < 0)
-    return ZX_ERR_NOT_FOUND;
-
-  zx::vmo vmo;
-  zx::vmo exec_vmo;
-  zx_status_t status = fdio_get_vmo_clone(fd, vmo.reset_and_get_address());
-  close(fd);
-
+  int fd;
+  zx_status_t status =
+      fdio_open_fd(path, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, &fd);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = vmo.replace_as_executable(zx::handle(), &exec_vmo);
+  zx::vmo vmo;
+  status = fdio_get_vmo_exec(fd, vmo.reset_and_get_address());
+  close(fd);
   if (status != ZX_OK) {
     return status;
   }
@@ -106,12 +105,12 @@ static zx_status_t load_path(const char* path, zx::vmo* out_vmo) {
     }
   }
 
-  status = exec_vmo.set_property(ZX_PROP_NAME, path, strlen(path));
+  status = vmo.set_property(ZX_PROP_NAME, path, strlen(path));
   if (status != ZX_OK) {
     return status;
   }
 
-  *out_vmo = std::move(exec_vmo);
+  *out_vmo = std::move(vmo);
   return status;
 }
 

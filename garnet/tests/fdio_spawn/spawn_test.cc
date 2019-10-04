@@ -5,6 +5,7 @@
 // General fdio_spawn tests
 
 #include <fcntl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -15,6 +16,7 @@
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/socket.h>
+#include <lib/zx/vmo.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <zircon/limits.h>
@@ -24,6 +26,8 @@
 #include <gtest/gtest.h>
 
 #include "fake_launcher_util.h"
+
+namespace fio = ::llcpp::fuchsia::io;
 
 namespace {
 
@@ -738,18 +742,17 @@ TEST(SpawnTest, SpawnVmo) {
   const char* bin_path = kSpawnChild;
 
   {
-    int fd = open(bin_path, O_RDONLY);
+    int fd;
+    zx::vmo vmo;
+    ASSERT_EQ(ZX_OK,
+              fdio_open_fd(bin_path, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, &fd));
     ASSERT_GE(fd, 0);
-    zx_handle_t vmo;
-    ASSERT_EQ(ZX_OK, fdio_get_vmo_clone(fd, &vmo));
+    ASSERT_EQ(ZX_OK, fdio_get_vmo_exec(fd, vmo.reset_and_get_address()));
     close(fd);
 
-    zx_handle_t exec_vmo;
-    ASSERT_EQ(ZX_OK, zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &exec_vmo));
-
     const char* argv[] = {bin_path, nullptr};
-    status = fdio_spawn_vmo(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, exec_vmo, argv, nullptr, 0,
-                            nullptr, process.reset_and_get_address(), nullptr);
+    status = fdio_spawn_vmo(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, vmo.release(), argv, nullptr,
+                            0, nullptr, process.reset_and_get_address(), nullptr);
     ASSERT_EQ(ZX_OK, status);
     join(process, &return_code);
     EXPECT_EQ(return_code, 43);

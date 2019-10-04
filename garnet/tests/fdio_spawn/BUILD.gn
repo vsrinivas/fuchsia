@@ -24,6 +24,7 @@ executable("bin") {
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io_llcpp",
   ]
 }
 
