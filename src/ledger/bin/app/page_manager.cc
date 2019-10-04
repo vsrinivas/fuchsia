@@ -62,10 +62,7 @@ PageManager::PageManager(Environment* environment, std::string ledger_name, stor
   commits_children_manager_.SetOnDiscardable([this] { CheckDiscardable(); });
 }
 
-PageManager::~PageManager() {
-  heads_children_manager_retainer_.cancel();
-  commits_children_manager_retainer_.cancel();
-}
+PageManager::~PageManager() = default;
 
 fit::closure PageManager::CreateDetacher() {
   outstanding_detachers_++;

@@ -42,7 +42,7 @@ InspectedCommit::InspectedCommit(async_dispatcher_t* dispatcher, inspect_depreca
   inspected_entry_containers_.SetOnDiscardable([this] { CheckDiscardable(); });
 }
 
-InspectedCommit::~InspectedCommit() { entries_children_manager_retainer_.cancel(); }
+InspectedCommit::~InspectedCommit() = default;
 
 void InspectedCommit::SetOnDiscardable(fit::closure on_discardable) {
   on_discardable_ = std::move(on_discardable);
