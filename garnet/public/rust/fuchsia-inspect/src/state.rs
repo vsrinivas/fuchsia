@@ -35,6 +35,38 @@ macro_rules! with_header_lock {
     }};
 }
 
+trait SafeOp {
+    fn safe_sub(&self, other: Self) -> Self;
+    fn safe_add(&self, other: Self) -> Self;
+}
+
+impl SafeOp for u64 {
+    fn safe_sub(&self, other: u64) -> u64 {
+        self.checked_sub(other).unwrap_or(0)
+    }
+    fn safe_add(&self, other: u64) -> u64 {
+        self.checked_add(other).unwrap_or(std::u64::MAX)
+    }
+}
+
+impl SafeOp for i64 {
+    fn safe_sub(&self, other: i64) -> i64 {
+        self.checked_sub(other).unwrap_or(std::i64::MIN)
+    }
+    fn safe_add(&self, other: i64) -> i64 {
+        self.checked_add(other).unwrap_or(std::i64::MAX)
+    }
+}
+
+impl SafeOp for f64 {
+    fn safe_sub(&self, other: f64) -> f64 {
+        self - other
+    }
+    fn safe_add(&self, other: f64) -> f64 {
+        self + other
+    }
+}
+
 /// Generate create, set, add and subtract methods for a metric.
 macro_rules! metric_fns {
     ($name:ident, $type:ident) => {
@@ -67,7 +99,7 @@ macro_rules! metric_fns {
                 with_header_lock!(self, {
                     let block = self.heap.get_block(block_index)?;
                     let current_value = block.[<$name _value>]()?;
-                    block.[<set_ $name _value>](current_value + value)?;
+                    block.[<set_ $name _value>](current_value.safe_add(value))?;
                     Ok(())
                 })
             }
@@ -77,7 +109,8 @@ macro_rules! metric_fns {
                 with_header_lock!(self, {
                     let block = self.heap.get_block(block_index)?;
                     let current_value = block.[<$name _value>]()?;
-                    block.[<set_ $name _value>](current_value - value)?;
+                    let new_value = current_value.safe_sub(value);
+                    block.[<set_ $name _value>](new_value)?;
                     Ok(())
                 })
             }
@@ -133,7 +166,8 @@ macro_rules! array_fns {
                 with_header_lock!(self, {
                     let block = self.heap.get_block(block_index)?;
                     let previous_value = block.[<array_get_ $name _slot>](slot_index)?;
-                    block.[<array_set_ $name _slot>](slot_index, previous_value + value)?;
+                    let new_value = previous_value.safe_add(value);
+                    block.[<array_set_ $name _slot>](slot_index, new_value)?;
                     Ok(())
                 })
             }
@@ -144,7 +178,8 @@ macro_rules! array_fns {
                 with_header_lock!(self, {
                     let block = self.heap.get_block(block_index)?;
                     let previous_value = block.[<array_get_ $name _slot>](slot_index)?;
-                    block.[<array_set_ $name _slot>](slot_index, previous_value - value)?;
+                    let new_value = previous_value.safe_sub(value);
+                    block.[<array_set_ $name _slot>](slot_index, new_value)?;
                     Ok(())
                 })
             }
@@ -458,6 +493,13 @@ mod tests {
         assert_eq!(block.int_value().unwrap(), -6);
         assert_eq!(state.get_int_metric(block.index()).unwrap(), -6);
 
+        assert!(state.subtract_int_metric(block.index(), std::i64::MAX).is_ok());
+        assert_eq!(block.int_value().unwrap(), std::i64::MIN);
+        assert!(state.set_int_metric(block.index(), std::i64::MAX).is_ok());
+
+        assert!(state.add_int_metric(block.index(), 2).is_ok());
+        assert_eq!(block.int_value().unwrap(), std::i64::MAX);
+
         // Free metric.
         assert!(state.free_value(block.index()).is_ok());
         let bytes = &state.heap.bytes()[..];
@@ -498,9 +540,16 @@ mod tests {
         assert!(state.subtract_uint_metric(block.index(), 5).is_ok());
         assert_eq!(block.uint_value().unwrap(), 8);
 
-        assert!(state.set_uint_metric(block.index(), 6).is_ok());
-        assert_eq!(block.uint_value().unwrap(), 6);
-        assert_eq!(state.get_uint_metric(block.index()).unwrap(), 6);
+        assert!(state.set_uint_metric(block.index(), 0).is_ok());
+        assert_eq!(block.uint_value().unwrap(), 0);
+        assert_eq!(state.get_uint_metric(block.index()).unwrap(), 0);
+
+        assert!(state.subtract_uint_metric(block.index(), std::u64::MAX).is_ok());
+        assert_eq!(block.uint_value().unwrap(), 0);
+
+        assert!(state.set_uint_metric(block.index(), 3).is_ok());
+        assert!(state.add_uint_metric(block.index(), std::u64::MAX).is_ok());
+        assert_eq!(block.uint_value().unwrap(), std::u64::MAX);
 
         // Free metric.
         assert!(state.free_value(block.index()).is_ok());
