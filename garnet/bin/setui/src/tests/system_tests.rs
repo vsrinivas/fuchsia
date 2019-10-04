@@ -9,6 +9,8 @@ use {
     crate::registry::device_storage::DeviceStorageFactory,
     crate::registry::service_context::ServiceContext,
     crate::switchboard::base::{SettingType, SystemInfo, SystemLoginOverrideMode},
+    crate::tests::fakes::device_settings_service::DeviceSettingsService,
+    crate::tests::fakes::service_registry::ServiceRegistry,
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -18,6 +20,7 @@ use {
 };
 
 const ENV_NAME: &str = "settings_service_system_test_environment";
+const FACTORY_RESET_FLAG: &str = "FactoryReset";
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_system() {
@@ -38,10 +41,14 @@ async fn test_system() {
         store_lock.write(initial_value, false).await.ok();
     }
 
+    let service_registry = ServiceRegistry::create();
+    let device_settings_service_handle = Arc::new(RwLock::new(DeviceSettingsService::new()));
+    service_registry.write().register_service(device_settings_service_handle.clone());
+
     create_fidl_service(
         fs.root_dir(),
         [SettingType::System].iter().cloned().collect(),
-        Arc::new(RwLock::new(ServiceContext::new(None))),
+        Arc::new(RwLock::new(ServiceContext::new(ServiceRegistry::serve(service_registry)))),
         storage_factory,
     );
 
@@ -68,5 +75,15 @@ async fn test_system() {
             SystemInfo { login_override_mode: SystemLoginOverrideMode::from(CHANGED_LOGIN_MODE) };
         let mut store_lock = store.lock().await;
         assert_eq!(expected, store_lock.get().await);
+    }
+
+    let device_settings_lock = device_settings_service_handle.read();
+
+    if let Some(account_reset_flag) =
+        device_settings_lock.get_integer(FACTORY_RESET_FLAG.to_string())
+    {
+        assert_eq!(account_reset_flag, 1);
+    } else {
+        panic!("factory reset flag should have been set");
     }
 }

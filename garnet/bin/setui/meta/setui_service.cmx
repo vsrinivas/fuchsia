@@ -13,6 +13,7 @@
         "services": [
             "fuchsia.accessibility.SettingsManager",
             "fuchsia.device.manager.Administrator",
+            "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.logger.LogSink",
             "fuchsia.media.AudioCore",
             "fuchsia.media.audio.VolumeControl",

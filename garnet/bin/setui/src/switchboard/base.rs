@@ -21,6 +21,7 @@ pub type SettingRequestResponder = Sender<SettingResponseResult>;
 pub enum SettingType {
     Unknown,
     Accessibility,
+    Account,
     Audio,
     Device,
     Display,
@@ -60,6 +61,9 @@ pub enum SettingRequest {
 
     // Accessibility requests.
     SetAccessibilityInfo(AccessibilityInfo),
+
+    // Account requests
+    ScheduleClearAccounts,
 
     // Audio requests.
     SetVolume(Vec<AudioStream>),

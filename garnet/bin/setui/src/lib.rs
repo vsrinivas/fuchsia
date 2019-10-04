@@ -5,6 +5,7 @@
 use {
     crate::accessibility::spawn_accessibility_controller,
     crate::accessibility::spawn_accessibility_fidl_handler,
+    crate::account::spawn_account_controller,
     crate::audio::spawn_audio_controller,
     crate::audio::spawn_audio_fidl_handler,
     crate::device::spawn_device_controller,
@@ -40,6 +41,7 @@ use {
 };
 
 mod accessibility;
+mod account;
 mod audio;
 mod device;
 mod display;
@@ -81,6 +83,14 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
         .register(
             switchboard::base::SettingType::Power,
             spawn_power_controller(service_context_handle.clone()),
+        )
+        .unwrap();
+
+    registry_handle
+        .write()
+        .register(
+            switchboard::base::SettingType::Account,
+            spawn_account_controller(service_context_handle.clone()),
         )
         .unwrap();
 

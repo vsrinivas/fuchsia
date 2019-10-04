@@ -5,8 +5,10 @@ use {
     crate::switchboard::base::*,
     crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender},
     crate::switchboard::switchboard_impl::SwitchboardImpl,
+    failure::format_err,
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,
+    fuchsia_syslog::fx_log_err,
     futures::lock::Mutex,
     futures::prelude::*,
     parking_lot::RwLock,
@@ -45,7 +47,7 @@ pub fn spawn_system_fidl_handler(
             match req {
                 SystemRequest::Set { settings, responder } => {
                     if let Some(mode) = settings.mode {
-                        set_login_override(
+                        change_login_override(
                             switchboard_handle.clone(),
                             SystemLoginOverrideMode::from(mode),
                             responder,
@@ -62,32 +64,66 @@ pub fn spawn_system_fidl_handler(
     });
 }
 
-fn set_login_override(
+/// Sets the login mode and schedules accounts to be cleared so the mode will
+/// take effect.
+fn change_login_override(
     switchboard: Arc<RwLock<dyn Switchboard + Send + Sync>>,
     mode: SystemLoginOverrideMode,
     responder: SystemSetResponder,
 ) {
+    fasync::spawn(async move {
+        let login_override_result = request(
+            switchboard.clone(),
+            SettingType::System,
+            SettingRequest::SetLoginOverrideMode(mode),
+            "set login override",
+        )
+        .await;
+        if login_override_result.is_err() {
+            responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
+            return;
+        }
+
+        let schedule_account_clear_result = request(
+            switchboard.clone(),
+            SettingType::Account,
+            SettingRequest::ScheduleClearAccounts,
+            "clear accounts",
+        )
+        .await;
+
+        if schedule_account_clear_result.is_err() {
+            responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
+            return;
+        }
+
+        responder.send(&mut Ok(())).ok();
+    });
+}
+
+async fn request(
+    switchboard: Arc<RwLock<dyn Switchboard + Send + Sync>>,
+    setting_type: SettingType,
+    setting_request: SettingRequest,
+    description: &str,
+) -> SettingResponseResult {
     let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
-    if switchboard
-        .write()
-        .request(SettingType::System, SettingRequest::SetLoginOverrideMode(mode), response_tx)
-        .is_ok()
-    {
-        fasync::spawn(
-            async move {
-                // Return success if we get a Ok result from the
-                // switchboard.
-                if let Ok(Ok(_optional_response)) = response_rx.await {
-                    responder.send(&mut Ok(())).ok();
-                    return Ok(());
-                }
-                responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
-                Ok(())
+    let result = switchboard.clone().write().request(setting_type, setting_request, response_tx);
+
+    match result {
+        Ok(()) => match response_rx.await {
+            Ok(result) => {
+                return result;
             }
-                .unwrap_or_else(|_e: failure::Error| {}),
-        );
-    } else {
-        responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
+            Err(error) => {
+                fx_log_err!("request failed: {} error: {}", description, error);
+                return Err(format_err!("request failed: {} error: {}", description, error));
+            }
+        },
+        Err(error) => {
+            fx_log_err!("request failed: {} error: {}", description, error);
+            return Err(error);
+        }
     }
 }
 
