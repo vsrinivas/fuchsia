@@ -100,27 +100,14 @@ void ActivePageManagerContainer::SetActivePageManager(
         internal_request_callback(status, ExpiringToken(), nullptr);
       }
     } else {
+      // Create a token before calling the callbacks to ensure this class is not
+      // discardable until this is done.
+      auto token = token_manager_.CreateToken();
       for (PageUsageListener* page_usage_listener : page_usage_listeners_) {
         page_usage_listener->OnInternallyUsed(ledger_name_, page_id_);
       }
-      // We allocate all the tokens to be passed to the internal request callbacks before making the
-      // calls to the internal request callbacks because some internal request callbacks destroy
-      // their tokens during their call and when looping over multiple such callbacks an "allocate
-      // one for one call, then make the call, then allocate another for the next call, then make
-      // that next call..." strategy would cause the outstanding token count to dither between zero
-      // and one which would then cause token_manager_'s on-empty callback to be called several
-      // times. Calling all the internal request callbacks should cause token_manager_'s on-empty
-      // callback to be called at most once (specifically in the case of every internal request
-      // callback destroying its token during its call).
-      std::vector<ExpiringToken> tokens;
-      tokens.reserve(internal_request_callbacks_.size());
-      for (size_t index = 0; index < internal_request_callbacks_.size(); index++) {
-        tokens.emplace_back(token_manager_.CreateToken());
-      }
-      size_t index = 0;
       for (auto& internal_request_callback : internal_request_callbacks_) {
-        internal_request_callback(status, std::move(tokens[index]), active_page_manager.get());
-        index++;
+        internal_request_callback(status, token_manager_.CreateToken(), active_page_manager.get());
       }
     }
     internal_request_callbacks_.clear();
