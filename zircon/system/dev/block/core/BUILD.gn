@@ -4,6 +4,40 @@
 
 driver("core") {
   output_name = "block.core"
+  deps = [
+    ":shared",
+  ]
+}
+
+group("test") {
+  testonly = true
+  deps = [
+    ":core-unittest",
+  ]
+}
+
+test("core-unittest") {
+  output_name = "blockcore"
+  include_dirs = [ "." ]
+  sources = [
+    "test/main.cc",
+  ]
+  deps = [
+    ":shared",
+    "$zx/system/banjo/ddk.protocol.block",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/io-scheduler",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+source_set("shared") {
+  visibility = [ "./*" ]
   sources = [
     "block-device.cc",
     "iobuffer.cc",
