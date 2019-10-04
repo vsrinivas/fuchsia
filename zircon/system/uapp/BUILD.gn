@@ -22,7 +22,6 @@ group("uapp") {
     "display-test",
     "dlog",
     "driverctl",
-    "ethtool",
     "fs-fsck",
     "fs-mkfs",
     "fs-mount",
