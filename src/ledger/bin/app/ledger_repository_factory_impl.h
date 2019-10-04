@@ -16,6 +16,7 @@
 
 #include "src/ledger/bin/app/disk_cleanup_manager_impl.h"
 #include "src/ledger/bin/app/ledger_repository_impl.h"
+#include "src/ledger/bin/cloud_sync/impl/user_sync_impl.h"
 #include "src/ledger/bin/cloud_sync/public/user_config.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/fidl/include/types.h"
@@ -64,6 +65,9 @@ class LedgerRepositoryFactoryImpl
       const RepositoryInformation& repository_information,
       fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
       SyncWatcherSet* watchers);
+  std::unique_ptr<cloud_sync::UserSyncImpl> CreateCloudSync(
+      const RepositoryInformation& repository_information,
+      fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider);
   std::unique_ptr<p2p_sync::UserCommunicator> CreateP2PSync(
       const RepositoryInformation& repository_information);
   void OnVersionMismatch(RepositoryInformation repository_information);

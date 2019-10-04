@@ -10,7 +10,9 @@ namespace sync_coordinator {
 
 UserSyncImpl::UserSyncImpl(std::unique_ptr<cloud_sync::UserSync> cloud_sync,
                            std::unique_ptr<p2p_sync::UserCommunicator> p2p_sync)
-    : cloud_sync_(std::move(cloud_sync)), p2p_sync_(std::move(p2p_sync)) {}
+    : cloud_sync_(std::move(cloud_sync)), p2p_sync_(std::move(p2p_sync)) {
+  FXL_DCHECK(cloud_sync_ || p2p_sync_);
+}
 
 UserSyncImpl::~UserSyncImpl() = default;
 

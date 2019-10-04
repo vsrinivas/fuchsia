@@ -312,10 +312,9 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
 
   std::unique_ptr<SyncWatcherSet> watchers =
       std::make_unique<SyncWatcherSet>(environment_->dispatcher());
-  std::unique_ptr<sync_coordinator::UserSyncImpl> user_sync;
-  if (cloud_provider || user_communicator_factory_) {
-    user_sync = CreateUserSync(repository_information, std::move(cloud_provider), watchers.get());
-  } else {
+  std::unique_ptr<sync_coordinator::UserSyncImpl> user_sync =
+      CreateUserSync(repository_information, std::move(cloud_provider), watchers.get());
+  if (!user_sync) {
     FXL_LOG(WARNING) << "No cloud provider nor P2P communicator - Ledger will work locally but "
                      << "not sync. (running in Guest mode?)";
   }
@@ -336,30 +335,42 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
 std::unique_ptr<sync_coordinator::UserSyncImpl> LedgerRepositoryFactoryImpl::CreateUserSync(
     const RepositoryInformation& repository_information,
     fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider, SyncWatcherSet* watchers) {
-  std::unique_ptr<cloud_sync::UserSyncImpl> cloud_sync;
-  if (cloud_provider) {
-    auto cloud_provider_ptr = cloud_provider.Bind();
-    cloud_provider_ptr.set_error_handler([](zx_status_t status) {
-      FXL_LOG(ERROR) << "Lost connection to cloud provider; cloud sync will no longer work.";
-    });
-
-    cloud_sync::UserConfig user_config;
-    user_config.user_directory = repository_information.content_path;
-    user_config.cloud_provider = std::move(cloud_provider_ptr);
-    fit::closure on_version_mismatch = [this, repository_information]() mutable {
-      OnVersionMismatch(repository_information);
-    };
-    cloud_sync = std::make_unique<cloud_sync::UserSyncImpl>(environment_, std::move(user_config),
-                                                            environment_->MakeBackoff(),
-                                                            std::move(on_version_mismatch));
-  }
+  std::unique_ptr<cloud_sync::UserSyncImpl> cloud_sync =
+      CreateCloudSync(repository_information, std::move(cloud_provider));
   std::unique_ptr<p2p_sync::UserCommunicator> p2p_sync = CreateP2PSync(repository_information);
+
+  if (!cloud_sync && !p2p_sync) {
+    return nullptr;
+  }
 
   auto user_sync =
       std::make_unique<sync_coordinator::UserSyncImpl>(std::move(cloud_sync), std::move(p2p_sync));
   user_sync->SetWatcher(watchers);
   user_sync->Start();
   return user_sync;
+}
+
+std::unique_ptr<cloud_sync::UserSyncImpl> LedgerRepositoryFactoryImpl::CreateCloudSync(
+    const RepositoryInformation& repository_information,
+    fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider) {
+  if (!cloud_provider) {
+    return nullptr;
+  }
+
+  auto cloud_provider_ptr = cloud_provider.Bind();
+  cloud_provider_ptr.set_error_handler([](zx_status_t status) {
+    FXL_LOG(ERROR) << "Lost connection to cloud provider; cloud sync will no longer work.";
+  });
+
+  cloud_sync::UserConfig user_config;
+  user_config.user_directory = repository_information.content_path;
+  user_config.cloud_provider = std::move(cloud_provider_ptr);
+  fit::closure on_version_mismatch = [this, repository_information]() mutable {
+    OnVersionMismatch(repository_information);
+  };
+  return std::make_unique<cloud_sync::UserSyncImpl>(environment_, std::move(user_config),
+                                                    environment_->MakeBackoff(),
+                                                    std::move(on_version_mismatch));
 }
 
 std::unique_ptr<p2p_sync::UserCommunicator> LedgerRepositoryFactoryImpl::CreateP2PSync(
