@@ -18,7 +18,7 @@
   "pkg/fit/include/lib/fit/sequencer.h": "aa1a4a6420203c48109dfaeb3a00177f",
   "pkg/fit/include/lib/fit/single_threaded_executor.h": "6040a4323c700f6e437d3ca161cc372e",
   "pkg/fit/include/lib/fit/storage_internal.h": "e17565ed15e22bdb13ac18471ae00c5e",
-  "pkg/fit/include/lib/fit/string_view.h": "c4bac4bd0be9979edd080eac8bd175a7",
+  "pkg/fit/include/lib/fit/string_view.h": "7735e854e24abdfd94fd94ae4a90d9ab",
   "pkg/fit/include/lib/fit/thread_safety.h": "0df6c9f73fc6b7e13c9cedd8cdcac250",
   "pkg/fit/include/lib/fit/traits.h": "e06740b5e5b49281344c6533d51b5def",
   "pkg/fit/include/lib/fit/utility_internal.h": "52e9462519eb2542d472b7a773e2fb77",

@@ -5,6 +5,7 @@
 #ifndef LIB_FIT_STRING_VIEW_H_
 #define LIB_FIT_STRING_VIEW_H_
 
+#include <cassert>
 #include <cstdlib>
 #include <ios>
 #include <iterator>

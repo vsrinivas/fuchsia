@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #import <algorithm>
+#import <cassert>
 #import <iterator>
 
 #import "generator.h"

@@ -5,6 +5,7 @@
 #ifndef ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_RAW_AST_H_
 #define ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_RAW_AST_H_
 
+#include <cassert>
 #include <memory>
 #include <optional>
 #include <utility>

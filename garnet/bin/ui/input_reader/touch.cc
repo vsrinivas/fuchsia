@@ -4,6 +4,7 @@
 
 #include "garnet/bin/ui/input_reader/touch.h"
 
+#include <cassert>
 #include <hid-parser/parser.h>
 #include <hid-parser/report.h>
 #include <hid-parser/units.h>

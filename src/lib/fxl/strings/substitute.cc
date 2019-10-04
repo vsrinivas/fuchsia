@@ -5,6 +5,7 @@
 #include "src/lib/fxl/strings/substitute.h"
 
 #include <array>
+#include <cassert>
 #include <tuple>
 #include <utility>
 
