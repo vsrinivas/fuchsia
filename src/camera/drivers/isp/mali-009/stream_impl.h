@@ -19,7 +19,7 @@ class StreamImpl : public fuchsia::camera::common::Stream {
  public:
   StreamImpl() : binding_(this){};
   static zx_status_t Create(zx::channel channel, async_dispatcher_t* dispatcher,
-                            StreamImpl** stream_out);
+                            std::unique_ptr<StreamImpl>* stream_out);
 
   void FrameAvailable(uint32_t id);
 

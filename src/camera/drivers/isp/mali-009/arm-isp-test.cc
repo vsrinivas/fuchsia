@@ -293,16 +293,12 @@ zx_status_t ArmIspDeviceTester::RunTests(fidl_txn_t* txn) {
 }
 
 zx_status_t ArmIspDeviceTester::CreateStreamServer() {
-  zx_status_t status = ZX_OK;
-  StreamServer* server = nullptr;
-
   fuchsia_sysmem_BufferCollectionInfo buffers{};
-  status = StreamServer::Create(this, &server, &buffers);
+  zx_status_t status = StreamServer::Create(this, &server_, &buffers);
   if (status != ZX_OK) {
     FXL_PLOG(ERROR, status) << "Failed to create StreamServer";
     return status;
   }
-  server_.reset(server);
 
   fuchsia_camera_common_FrameRate rate = {.frames_per_sec_numerator = 30,
                                           .frames_per_sec_denominator = 1};
@@ -318,7 +314,7 @@ zx_status_t ArmIspDeviceTester::CreateStreamServer() {
       if (status != ZX_OK) {
         FXL_PLOG(ERROR, status) << "Failed to stop streaming";
       }
-      tester->server_.reset();
+      tester->server_ = nullptr;
     }
   };
   cb.ctx = this;

@@ -52,7 +52,7 @@ zx_status_t ControllerDevice::GetChannel2(zx_handle_t handle) {
   if (control_interface.is_valid()) {
     controller_ = std::make_unique<ControllerImpl>(std::move(control_interface),
                                                    controller_loop_.dispatcher(),
-                                                   [this] { controller_.reset(); });
+                                                   [this] { controller_ = nullptr; });
 
     return ZX_OK;
   }

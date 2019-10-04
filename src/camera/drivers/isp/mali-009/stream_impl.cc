@@ -15,9 +15,7 @@
 namespace camera {
 
 zx_status_t StreamImpl::Create(zx::channel channel, async_dispatcher_t* dispatcher,
-                               StreamImpl** stream_out) {
-  *stream_out = nullptr;
-
+                               std::unique_ptr<StreamImpl>* stream_out) {
   auto stream = std::make_unique<StreamImpl>();
   zx_status_t status = stream->binding_.Bind(
       fidl::InterfaceRequest<fuchsia::camera::common::Stream>(std::move(channel)), dispatcher);
@@ -29,7 +27,7 @@ zx_status_t StreamImpl::Create(zx::channel channel, async_dispatcher_t* dispatch
   stream->binding_.set_error_handler(
       [](zx_status_t status) { FXL_PLOG(ERROR, status) << "Client disconnected"; });
 
-  *stream_out = stream.release();
+  *stream_out = std::move(stream);
   return ZX_OK;
 }
 

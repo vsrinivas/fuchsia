@@ -69,7 +69,7 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream_EventS
     // Manually delete Wait instances before their corresponding events to avoid a failed assert.
     // TODO(36367): revisit async::Wait object lifetime requirements
     while (waiters_.size() > 0) {
-      waiters_.front().first.reset();
+      waiters_.front().first = nullptr;
       waiters_.pop();
     }
   };

@@ -113,9 +113,9 @@ void VirtualCameraControlImpl::CreateStream(fuchsia::sysmem::BufferCollectionInf
   stream_token_waiter_ = std::make_unique<async::Wait>(
       stream_token_.get(), ZX_EVENTPAIR_PEER_CLOSED, 0, std::bind([this]() {
         stream_->Stop();
-        stream_.reset();
+        stream_ = nullptr;
         stream_token_.reset();
-        stream_token_waiter_.reset();
+        stream_token_waiter_ = nullptr;
       }));
 
   zx_status_t status = stream_token_waiter_->Begin(async_get_default_dispatcher());

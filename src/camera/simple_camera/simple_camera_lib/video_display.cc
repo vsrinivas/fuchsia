@@ -249,7 +249,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
 
 void VideoDisplay::DisconnectFromCamera() {
   image_pipe_.Unbind();
-  camera_client_.reset();
+  camera_client_ = nullptr;
 }
 
 }  // namespace simple_camera

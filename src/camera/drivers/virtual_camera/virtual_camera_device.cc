@@ -57,9 +57,9 @@ zx_status_t VirtualCameraDevice::GetChannel(zx_handle_t handle) {
   }
 
   // CameraStream FIDL interface
-  static std::unique_ptr<VirtualCameraControlImpl> virtual_camera_camera_control_server_ = nullptr;
+  static std::unique_ptr<VirtualCameraControlImpl> server_ = nullptr;
 
-  if (virtual_camera_camera_control_server_ != nullptr) {
+  if (server_ != nullptr) {
     FXL_LOG(ERROR) << "Camera Control already running";
     return ZX_ERR_INTERNAL;
   }
@@ -68,9 +68,8 @@ zx_status_t VirtualCameraDevice::GetChannel(zx_handle_t handle) {
   fidl::InterfaceRequest<fuchsia::camera::Control> control_interface(std::move(channel));
 
   if (control_interface.is_valid()) {
-    virtual_camera_camera_control_server_ = std::make_unique<VirtualCameraControlImpl>(
-        std::move(control_interface), fidl_dispatch_loop_->dispatcher(),
-        [] { virtual_camera_camera_control_server_.reset(); });
+    server_ = std::make_unique<VirtualCameraControlImpl>(
+        std::move(control_interface), fidl_dispatch_loop_->dispatcher(), [] { server_ = nullptr; });
 
     return ZX_OK;
   }
@@ -83,10 +82,8 @@ zx_status_t VirtualCameraDevice::GetChannel2(zx_handle_t handle) {
   }
 
   // CameraStream FIDL interface
-  static std::unique_ptr<VirtualCamera2ControllerImpl> virtual_camera_camera_control_server_ =
-      nullptr;
-
-  if (virtual_camera_camera_control_server_ != nullptr) {
+  static std::unique_ptr<VirtualCamera2ControllerImpl> server_ = nullptr;
+  if (server_ != nullptr) {
     FXL_LOG(ERROR) << "Camera2 Controller already running";
     return ZX_ERR_INTERNAL;
   }
@@ -95,10 +92,8 @@ zx_status_t VirtualCameraDevice::GetChannel2(zx_handle_t handle) {
   fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control_interface(std::move(channel));
 
   if (control_interface.is_valid()) {
-    virtual_camera_camera_control_server_ = std::make_unique<VirtualCamera2ControllerImpl>(
-        std::move(control_interface), fidl_dispatch_loop_->dispatcher(),
-        [] { virtual_camera_camera_control_server_.reset(); });
-
+    server_ = std::make_unique<VirtualCamera2ControllerImpl>(
+        std::move(control_interface), fidl_dispatch_loop_->dispatcher(), [] { server_ = nullptr; });
     return ZX_OK;
   }
   return ZX_ERR_INTERNAL;

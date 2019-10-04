@@ -28,7 +28,7 @@ class StreamServer {
   StreamServer() : loop_(&kAsyncLoopConfigNoAttachToThread) {}
 
   // Create a server and return writable buffer handles.
-  static zx_status_t Create(ArmIspDeviceTester* tester, StreamServer** server_out,
+  static zx_status_t Create(ArmIspDeviceTester* tester, std::unique_ptr<StreamServer>* server_out,
                             fuchsia_sysmem_BufferCollectionInfo* buffers_out);
 
   // Add a client and return read-only buffer handles.

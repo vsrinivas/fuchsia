@@ -285,7 +285,7 @@ zx_status_t UsbVideoStream::GetChannel(zx_handle_t handle) {
       this, std::move(control_interface), fidl_dispatch_loop_->dispatcher(), [this] {
         fbl::AutoLock lock(&lock_);
 
-        camera_control_.reset();
+        camera_control_ = nullptr;
       });
   return ZX_OK;
 }

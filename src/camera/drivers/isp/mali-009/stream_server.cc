@@ -4,6 +4,8 @@
 
 #include "stream_server.h"
 
+#include <memory>
+
 #include <ddktl/protocol/isp.h>
 #include <fbl/auto_lock.h>
 #include <src/lib/fxl/logging.h>
@@ -24,9 +26,9 @@ static const uint32_t kFramesToHold = kBufferCount - 2;
 
 namespace camera {
 
-zx_status_t StreamServer::Create(ArmIspDeviceTester* tester, StreamServer** server_out,
+zx_status_t StreamServer::Create(ArmIspDeviceTester* tester,
+                                 std::unique_ptr<StreamServer>* server_out,
                                  fuchsia_sysmem_BufferCollectionInfo* buffers_out) {
-  *server_out = nullptr;
   *buffers_out = fuchsia_sysmem_BufferCollectionInfo{};
 
   auto server = std::make_unique<StreamServer>();
@@ -86,7 +88,7 @@ zx_status_t StreamServer::Create(ArmIspDeviceTester* tester, StreamServer** serv
     return status;
   }
 
-  *server_out = server.release();
+  *server_out = std::move(server);
 
   return ZX_OK;
 }
@@ -94,14 +96,11 @@ zx_status_t StreamServer::Create(ArmIspDeviceTester* tester, StreamServer** serv
 zx_status_t StreamServer::AddClient(zx::channel channel,
                                     fuchsia_sysmem_BufferCollectionInfo* buffers_out) {
   std::unique_ptr<camera::StreamImpl> stream;
-  camera::StreamImpl* stream_ptr;
-  zx_status_t status =
-      camera::StreamImpl::Create(std::move(channel), loop_.dispatcher(), &stream_ptr);
+  zx_status_t status = camera::StreamImpl::Create(std::move(channel), loop_.dispatcher(), &stream);
   if (status != ZX_OK) {
     FXL_PLOG(ERROR, status) << "Error creating StreamImpl";
     return status;
   }
-  stream.reset(stream_ptr);
   status = GetBuffers(buffers_out);
   if (status != ZX_OK) {
     FXL_PLOG(ERROR, status) << "Error getting read-only buffers";
