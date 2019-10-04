@@ -7,14 +7,109 @@
 #![deny(missing_docs)]
 
 use {
-    failure::Error,
+    failure::{self, Fail},
     rand::random,
-    std::{fmt, path::PathBuf, time::Duration},
+    std::{
+        fmt,
+        path::PathBuf,
+        process::{ExitStatus, Output},
+        time::Duration,
+    },
     structopt::StructOpt,
 };
 
 pub mod steps;
 use steps::{LoadStep, OperationStep, RebootStep, RebootType, SetupStep, TestStep, VerifyStep};
+
+/// An error occured running a command on the target system. Contains the exit status, stdout, and
+/// stderr of the command.
+#[derive(Debug, Fail)]
+#[fail(
+    display = "failed to run command: {}\n\
+               stdout:\n\
+               {}\n\
+               stderr:\n\
+               {}",
+    _0, _1, _2
+)]
+pub struct CommandError(ExitStatus, String, String);
+
+impl From<Output> for CommandError {
+    /// Convert the std::process::Output of a command to an error. Mostly takes care of converting
+    /// the stdout and stderr into strings from Vec<u8>.
+    fn from(out: Output) -> Self {
+        let stdout = String::from_utf8(out.stdout).expect("stdout not utf8");
+        let stderr = String::from_utf8(out.stderr).expect("stderr not utf8");
+        CommandError(out.status, stdout, stderr)
+    }
+}
+
+/// An error occured while attempting to reboot the system.
+#[derive(Debug, Fail)]
+pub enum RebootError {
+    /// The path to the relay device required for hard-rebooting the target doesn't exist.
+    #[fail(display = "device does not exist: {:?}", _0)]
+    MissingDevice(PathBuf),
+
+    /// An io error occured during rebooting. Maybe we failed to write to the device.
+    #[fail(display = "io error: {:?}", _0)]
+    IoError(#[cause] std::io::Error),
+
+    /// The command we executed on the target failed.
+    #[fail(display = "command error: {:?}", _0)]
+    Command(#[cause] CommandError),
+}
+
+impl From<std::io::Error> for RebootError {
+    fn from(error: std::io::Error) -> Self {
+        RebootError::IoError(error)
+    }
+}
+
+impl From<CommandError> for RebootError {
+    fn from(error: CommandError) -> Self {
+        RebootError::Command(error)
+    }
+}
+
+/// Error used for the host-side of the blackout library.
+#[derive(Debug, Fail)]
+pub enum Error {
+    /// We got an error when trying to reboot.
+    #[fail(display = "failed to reboot: {:?}", _0)]
+    Reboot(#[cause] RebootError),
+
+    /// We failed to run the command on the host. Specifically, when the spawm or something fails,
+    /// not when the command itself returns a non-zero exit code.
+    #[fail(display = "host command failed: {:?}", _0)]
+    HostCommand(#[cause] std::io::Error),
+
+    /// We got an ssh failure. We know it's an ssh failure because it returned 255.
+    #[fail(display = "failed to ssh into '{}': {:?}", _0, _1)]
+    Ssh(String, #[cause] CommandError),
+
+    /// The command run on the target device failed to run. Either it returned a non-zero exit code
+    /// or it exited when it shouldn't have.
+    #[fail(display = "target command failed: {}", _0)]
+    TargetCommand(#[cause] CommandError),
+
+    /// Specifically the verification step failed. This indicates an actual test failure as opposed
+    /// to a failure of the test framework or environmental failure.
+    #[fail(display = "verification failed: {}", _0)]
+    Verification(#[cause] CommandError),
+}
+
+impl From<RebootError> for Error {
+    fn from(error: RebootError) -> Self {
+        Error::Reboot(error)
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(error: std::io::Error) -> Self {
+        Error::HostCommand(error)
+    }
+}
 
 /// Common options for the host-side test runners
 #[derive(StructOpt)]

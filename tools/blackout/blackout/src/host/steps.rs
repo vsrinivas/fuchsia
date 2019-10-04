@@ -5,7 +5,7 @@
 //! test steps
 
 use {
-    failure::{bail, Error, ResultExt},
+    crate::{Error, RebootError},
     std::{
         fs::OpenOptions,
         io::Write,
@@ -36,9 +36,9 @@ pub enum RebootType {
 
 // TODO(sdemos): the final implementation will also have to handle a CI environment where hard
 // rebooting is done by calling a script that will be in our environment.
-fn hard_reboot(dev: impl AsRef<Path>) -> Result<(), Error> {
+fn hard_reboot(dev: impl AsRef<Path>) -> Result<(), RebootError> {
     if !dev.as_ref().exists() {
-        bail!("provided device does not exist: {:?}", dev.as_ref());
+        return Err(RebootError::MissingDevice(dev.as_ref().to_path_buf()));
     }
     let mut relay = OpenOptions::new().read(false).write(true).create(false).open(dev)?;
     relay.write_all(&[0x01])?;
@@ -48,9 +48,9 @@ fn hard_reboot(dev: impl AsRef<Path>) -> Result<(), Error> {
 }
 
 /// Reboot the target system using `dm reboot`.
-fn soft_reboot(target: &str) -> Result<(), Error> {
-    let _ = ssh(target).arg("dm").arg("reboot").status().context("failed to reboot")?;
-
+fn soft_reboot(target: &str) -> Result<(), RebootError> {
+    // ignore the return value because it's garbage
+    let _ = ssh(target).arg("dm").arg("reboot").status()?;
     Ok(())
 }
 
@@ -77,37 +77,26 @@ impl Runner {
     /// separate process, and a reference to the child process is returned. stdout and stderr are
     /// piped (see [`std::process::Stdio::piped()`] for details).
     pub fn run_spawn(&self, subc: &str) -> Result<Child, Error> {
-        let child = self
-            .run_bin()
-            .arg(subc)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .context("failed to spawn command")?;
+        let child =
+            self.run_bin().arg(subc).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
 
         Ok(child)
     }
 
     /// Run a subcommand to completion and collect the output from the process.
     pub fn run_output(&self, subc: &str) -> Result<Output, Error> {
-        let out = self.run_bin().arg(subc).output().context("failed to run command")?;
-
-        Ok(out)
+        let out = self.run_bin().arg(subc).output()?;
+        if out.status.success() {
+            Ok(out)
+        } else if out.status.code().unwrap() == 255 {
+            Err(Error::Ssh(self.target.clone(), out.into()))
+        } else {
+            Err(Error::TargetCommand(out.into()))
+        }
     }
 
-    pub fn run_success(&self, subc: &str) -> Result<(), Error> {
-        let out = self.run_output(subc)?;
-
-        if !out.status.success() {
-            println!("stdout:");
-            std::io::stdout().write_all(&out.stdout)?;
-            println!("stderr:");
-            std::io::stdout().write_all(&out.stderr)?;
-
-            bail!("command returned non-zero exit code: {}", out.status);
-        }
-
-        Ok(())
+    pub fn run(&self, subc: &str) -> Result<(), Error> {
+        self.run_output(subc).map(|_| ())
     }
 }
 
@@ -134,8 +123,7 @@ impl SetupStep {
 impl TestStep for SetupStep {
     fn execute(&self) -> Result<(), Error> {
         println!("setting up test...");
-        self.runner.run_success("setup").expect("failed to set up test");
-        Ok(())
+        self.runner.run("setup")
     }
 }
 
@@ -161,14 +149,9 @@ impl TestStep for LoadStep {
         sleep(self.duration);
 
         // make sure child process is still running
-        if let Ok(Some(_)) = child.try_wait() {
-            let out = child.wait_with_output().expect("failed to wait for child process");
-            println!("stdout:");
-            std::io::stdout().write_all(&out.stdout)?;
-            println!("stderr:");
-            std::io::stdout().write_all(&out.stderr)?;
-
-            bail!("failed to run command: {}", out.status);
+        if let Some(_) = child.try_wait()? {
+            let out = child.wait_with_output()?;
+            return Err(Error::TargetCommand(out.into()));
         }
 
         Ok(())
@@ -191,8 +174,7 @@ impl OperationStep {
 impl TestStep for OperationStep {
     fn execute(&self) -> Result<(), Error> {
         println!("running filesystem operation...");
-        self.runner.run_success("test").expect("failed to run test");
-        Ok(())
+        self.runner.run("test")
     }
 }
 
@@ -216,10 +198,9 @@ impl TestStep for RebootStep {
     fn execute(&self) -> Result<(), Error> {
         println!("rebooting device...");
         match &self.reboot_type {
-            RebootType::Software => soft_reboot(&self.target),
-            RebootType::Hardware(relay) => hard_reboot(&relay),
+            RebootType::Software => soft_reboot(&self.target)?,
+            RebootType::Hardware(relay) => hard_reboot(&relay)?,
         }
-        .expect("failed to reboot device");
         Ok(())
     }
 }
@@ -250,27 +231,27 @@ impl VerifyStep {
 
 impl TestStep for VerifyStep {
     fn execute(&self) -> Result<(), Error> {
-        for i in 1..self.num_retries {
+        let mut last_ssh_error = Ok(());
+        for i in 1..self.num_retries + 1 {
             println!("verifying device...(attempt #{})", i);
-            let out = self.runner.run_output("verify").expect("failed to run verify command");
-            if out.status.success() {
-                println!("verification successful.");
-                return Ok(());
-            } else {
-                println!("stdout:");
-                std::io::stdout().write_all(&out.stdout)?;
-                println!("stderr:");
-                std::io::stdout().write_all(&out.stderr)?;
-                // ssh returns error code 255 for it's own failures. if it's anything else, it's a
-                // real error, otherwise try again.
-                if out.status.code().unwrap() != 255 {
-                    bail!("non-ssh related exit code returned: {}", out.status);
+            match self.runner.run("verify") {
+                Ok(()) => {
+                    println!("verification successful.");
+                    return Ok(());
                 }
+                Err(ssh_error @ Error::Ssh(..)) => {
+                    // always print out the ssh error so it doesn't get buried to help with debugging.
+                    println!("{}", ssh_error);
+                    last_ssh_error = Err(ssh_error);
+                    sleep(self.retry_timeout);
+                }
+                // during the verification stage, we expect that any time the target command fails,
+                // it's a verification failure.
+                Err(Error::TargetCommand(e)) => return Err(Error::Verification(e)),
+                Err(e) => return Err(e),
             }
-            sleep(self.retry_timeout);
         }
-
         // we failed to ssh into the device too many times in a row. something's wrong.
-        bail!("failed to ssh into target");
+        last_ssh_error
     }
 }
