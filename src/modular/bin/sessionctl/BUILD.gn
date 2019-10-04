@@ -26,8 +26,6 @@ executable("sessionctl_bin") {
 }
 
 package("sessionctl") {
-  deprecated_shell = "//build"
-
   deps = [
     ":sessionctl_bin",
   ]
