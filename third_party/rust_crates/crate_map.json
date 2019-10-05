@@ -86,6 +86,11 @@
             "package_name": "derp"
         },
         {
+            "crate_name": "difference",
+            "crate_type": "lib",
+            "package_name": "difference"
+        },
+        {
             "crate_name": "euclid",
             "crate_type": "lib",
             "package_name": "euclid"

@@ -674,6 +674,7 @@ dependencies = [
  "data-encoding 2.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "derivative 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "derp 0.0.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "difference 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "euclid 0.19.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "eui48 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
