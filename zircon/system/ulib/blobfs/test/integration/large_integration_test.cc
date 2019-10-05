@@ -613,7 +613,6 @@ class LargeBlobTest : public BlobfsFixedDiskSizeTest {
   }
 };
 
-/* Disabled temporarily to unblock CQ (fxb/37294).
 TEST_F(LargeBlobTest, UseSecondBitmap) {
   // Create (and delete) a blob large enough to overflow into the second bitmap block.
   std::unique_ptr<fs_test_utils::BlobInfo> info;
@@ -626,7 +625,6 @@ TEST_F(LargeBlobTest, UseSecondBitmap) {
   ASSERT_EQ(close(fd.release()), 0);
   ASSERT_EQ(unlink(info->path), 0);
 }
-*/
 
 }  // namespace
 
