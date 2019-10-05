@@ -17,7 +17,6 @@
 #include <ddk/protocol/clock.h>
 #include <ddk/protocol/codec.h>
 #include <ddk/protocol/composite.h>
-#include <ddk/protocol/gdc.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform/device.h>
@@ -36,7 +35,6 @@ enum Components_1 {
   COMPONENT_POWER_1,
   COMPONENT_CHILD4_1,
   COMPONENT_CODEC_1,
-  COMPONENT_GDC_1,
   COMPONENT_COUNT_1,
 };
 
@@ -167,7 +165,7 @@ static zx_status_t test_i2c(i2c_protocol_t* i2c) {
 }
 
 static zx_status_t test_spi(spi_protocol_t* spi) {
-  const uint8_t txbuf[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+  const uint8_t txbuf[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
   uint8_t rxbuf[sizeof txbuf];
 
   // tx should just succeed
@@ -383,96 +381,6 @@ static zx_status_t test_codec(codec_protocol_t* codec) {
   return ZX_OK;
 }
 
-static const uint32_t kWidth = 1080;
-static const uint32_t kHeight = 764;
-static const uint32_t kNumBuffers = 10;
-static const uint32_t kConfigSize = 1000;
-static const uint32_t kVmoSize = 0x1000;
-static const uint32_t kTaskId = 123;
-static const uint32_t kBufferId = 777;
-
-static zx_status_t CreateContiguousBufferCollectionInfo(
-    buffer_collection_info_t* buffer_collection) {
-  // set all the vmo handles to invalid:
-  for (uint32_t i = 0; i < countof(buffer_collection->vmos); ++i) {
-    buffer_collection->vmos[i] = ZX_HANDLE_INVALID;
-  }
-  buffer_collection->format.image.width = kWidth;
-  buffer_collection->format.image.height = kHeight;
-  buffer_collection->buffer_count = kNumBuffers;
-
-  // Get the image size for the vmo:
-  buffer_collection->vmo_size = kVmoSize;
-  zx_status_t status;
-  for (uint32_t i = 0; i < buffer_collection->buffer_count; ++i) {
-    status = zx_vmo_create(buffer_collection->vmo_size, 0, &buffer_collection->vmos[i]);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to allocate Buffer Collection");
-      return status;
-    }
-  }
-  return ZX_OK;
-}
-
-static void frame_ready(void* ctx, const frame_available_info_t *info) {}
-
-static zx_status_t test_gdc(gdc_protocol_t* gdc) {
-  zx_status_t status = ZX_OK;
-  buffer_collection_info_t input_buffer_collection;
-  buffer_collection_info_t output_buffer_collection;
-  zx_handle_t config_vmo = ZX_HANDLE_INVALID;
-  hw_accel_callback_t callback;
-  uint32_t task_index;
-
-  callback.frame_ready = frame_ready;
-  callback.ctx = NULL;
-
-  status = CreateContiguousBufferCollectionInfo(&input_buffer_collection);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not create buffer collection\n", DRIVER_NAME);
-    return status;
-  }
-
-  status = CreateContiguousBufferCollectionInfo(&output_buffer_collection);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not create buffer collection\n", DRIVER_NAME);
-    return status;
-  }
-
-  status = zx_vmo_create(kConfigSize, 0, &config_vmo);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not create config vmo\n", DRIVER_NAME);
-    return status;
-  }
-
-  status = gdc_init_task(gdc, &input_buffer_collection, &output_buffer_collection, config_vmo,
-                         &callback, &task_index);
-  if (status != ZX_OK || task_index != kTaskId) {
-    zxlogf(ERROR, "%s: gdc_init_task failed \n", DRIVER_NAME);
-    return status;
-  }
-
-  gdc_remove_task(gdc, task_index);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: gdc_remove_task failed \n", DRIVER_NAME);
-    return status;
-  }
-
-  status = gdc_process_frame(gdc, kTaskId, kBufferId);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: gdc_process_frame failed \n", DRIVER_NAME);
-    return status;
-  }
-
-  gdc_release_frame(gdc, task_index, kBufferId);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: gdc_release_frame failed \n", DRIVER_NAME);
-    return status;
-  }
-
-  return status;
-}
-
 static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   composite_protocol_t composite;
   zx_status_t status;
@@ -527,7 +435,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   gpio_protocol_t gpio;
   i2c_protocol_t i2c;
   codec_protocol_t codec;
-  gdc_protocol_t gdc;
   spi_protocol_t spi;
 
   if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_1) {
@@ -569,11 +476,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CODEC\n", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(components[COMPONENT_GDC_1], ZX_PROTOCOL_GDC, &gdc);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GDC\n", DRIVER_NAME);
-      return status;
-    }
 
     if ((status = test_clock(&clock)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_clock failed: %d\n", DRIVER_NAME, status);
@@ -599,10 +501,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       return status;
     }
 
-    if ((status = test_gdc(&gdc)) != ZX_OK) {
-      zxlogf(ERROR, "%s: test_gdc failed: %d\n", DRIVER_NAME, status);
-      return status;
-    }
   } else if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_2) {
     if (count != COMPONENT_COUNT_2) {
       zxlogf(ERROR, "%s: got the wrong number of components (%u, %zu)\n", DRIVER_NAME, count,

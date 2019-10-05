@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BOARD_TEST_TEST_H_
-#define ZIRCON_SYSTEM_DEV_BOARD_TEST_TEST_H_
+#ifndef ZIRCON_SYSTEM_UTEST_PLATFORM_BUS_TEST_H_
+#define ZIRCON_SYSTEM_UTEST_PLATFORM_BUS_TEST_H_
 
 #include <threads.h>
 
@@ -39,7 +39,6 @@ class TestBoard : public TestBoardType {
   zx_status_t ClockInit();
   zx_status_t AudioCodecInit();
   zx_status_t TestInit();
-  zx_status_t GdcInit();
   int Thread();
 
   ddk::PBusProtocolClient pbus_;
@@ -52,4 +51,4 @@ __BEGIN_CDECLS
 zx_status_t test_bind(void* ctx, zx_device_t* parent);
 __END_CDECLS
 
-#endif  // ZIRCON_SYSTEM_DEV_BOARD_TEST_TEST_H_
+#endif  // ZIRCON_SYSTEM_UTEST_PLATFORM_BUS_TEST_H_

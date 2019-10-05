@@ -26,6 +26,12 @@ namespace {
 
 constexpr uint32_t kGe2d = 0;
 
+enum {
+  COMPONENT_PDEV,
+  COMPONENT_SENSOR,
+  COMPONENT_COUNT,
+};
+
 }  // namespace
 
 zx_status_t Ge2dDevice::Ge2dInitTaskResize(
@@ -207,7 +213,21 @@ zx_status_t Ge2dDevice::WaitForInterrupt(zx_port_packet_t* packet) {
 
 // static
 zx_status_t Ge2dDevice::Setup(zx_device_t* parent, std::unique_ptr<Ge2dDevice>* out) {
-  ddk::PDev pdev(parent);
+  ddk::CompositeProtocolClient composite(parent);
+  if (!composite.is_valid()) {
+    FX_LOGF(ERROR, "", "%s: could not get composite protocol\n", __func__);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_device_t* components[COMPONENT_COUNT];
+  size_t actual;
+  composite.GetComponents(components, COMPONENT_COUNT, &actual);
+  if (actual != COMPONENT_COUNT) {
+    FX_LOGF(ERROR, "", "%s Could not get components\n", __func__);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  ddk::PDev pdev(components[COMPONENT_PDEV]);
   if (!pdev.is_valid()) {
     FX_LOGF(ERROR, "", "%s: ZX_PROTOCOL_PDEV not available\n", __func__);
     return ZX_ERR_NO_RESOURCES;

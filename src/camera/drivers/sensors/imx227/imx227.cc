@@ -404,7 +404,7 @@ zx_status_t imx227_bind(void* ctx, zx_device_t* device) {
     }
 #endif
 
-  status = sensor_device->DdkAdd("imx227", 0, props, countof(props));
+  status = sensor_device->DdkAdd("imx227", DEVICE_ADD_ALLOW_MULTI_COMPOSITE, props, countof(props));
   if (status != ZX_OK) {
     zxlogf(ERROR, "imx227: Could not add imx227 sensor device: %d\n", status);
     return status;

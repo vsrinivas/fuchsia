@@ -30,6 +30,12 @@ constexpr uint32_t kHiu = 0;
 constexpr uint32_t kGdc = 1;
 constexpr uint32_t kAxiAlignment = 16;
 
+enum {
+  COMPONENT_PDEV,
+  COMPONENT_SENSOR,
+  COMPONENT_COUNT,
+};
+
 }  // namespace
 
 static inline uint32_t AxiWordAlign(uint32_t value) { return fbl::round_up(value, kAxiAlignment); }
@@ -332,7 +338,21 @@ void GdcDevice::GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index) {
 
 // static
 zx_status_t GdcDevice::Setup(void* /*ctx*/, zx_device_t* parent, std::unique_ptr<GdcDevice>* out) {
-  ddk::PDev pdev(parent);
+  ddk::CompositeProtocolClient composite(parent);
+  if (!composite.is_valid()) {
+    FX_LOGF(ERROR, "", "%s: could not get composite protocol\n", __func__);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_device_t* components[COMPONENT_COUNT];
+  size_t actual;
+  composite.GetComponents(components, COMPONENT_COUNT, &actual);
+  if (actual != COMPONENT_COUNT) {
+    FX_LOGF(ERROR, "", "%s Could not get components\n", __func__);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  ddk::PDev pdev(components[COMPONENT_PDEV]);
   if (!pdev.is_valid()) {
     FX_LOGF(ERROR, "", "%s: ZX_PROTOCOL_PDEV not available\n", __func__);
     return ZX_ERR_NO_RESOURCES;
@@ -452,7 +472,8 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace gdc
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(gdc, gdc::driver_ops, "gdc", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(gdc, gdc::driver_ops, "gdc", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_ARM),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GDC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_ARM_MALI_IV010),

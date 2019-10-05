@@ -67,11 +67,6 @@ int TestBoard::Thread() {
     zxlogf(ERROR, "%s: CodecInit failed: %d\n", __func__, status);
   }
 
-  status = GdcInit();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GdcInit failed: %d\n", __func__, status);
-  }
-
   return 0;
 }
 
@@ -133,9 +128,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   const zx_bind_inst_t codec_match[] = {
       BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_CODEC),
   };
-  const zx_bind_inst_t gdc_match[] = {
-      BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GDC),
-  };
   const zx_bind_inst_t child2_match[] = {
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
@@ -172,10 +164,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(codec_match), codec_match},
   };
-  device_component_part_t gdc_component[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(gdc_match), gdc_match},
-  };
   device_component_part_t spi_component[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(spi_match), spi_match},
@@ -188,7 +176,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       {fbl::count_of(power_component), power_component},
       {fbl::count_of(child4_component), child4_component},
       {fbl::count_of(codec_component), codec_component},
-      {fbl::count_of(gdc_component), gdc_component},
   };
 
   struct composite_test_metadata metadata_1 = {

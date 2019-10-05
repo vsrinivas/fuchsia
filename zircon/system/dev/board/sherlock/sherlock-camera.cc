@@ -200,6 +200,16 @@ static const device_component_t isp_components[] = {
     {countof(camera_sensor_component), camera_sensor_component},
 };
 
+// Compisite binding rules for GDC
+static const device_component_t gdc_components[] = {
+    {countof(camera_sensor_component), camera_sensor_component},
+};
+
+// Composite binding rules for GE2D
+static const device_component_t ge2d_components[] = {
+    {countof(camera_sensor_component), camera_sensor_component},
+};
+
 // Composite binding rules for IMX227 Sensor.
 static const zx_bind_inst_t i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
@@ -365,13 +375,13 @@ zx_status_t Sherlock::CameraInit() {
     return status;
   }
 
-  status = pbus_.DeviceAdd(&gdc_dev);
+  status = pbus_.CompositeDeviceAdd(&gdc_dev, gdc_components, countof(gdc_components), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: GDC DeviceAdd failed %d\n", __func__, status);
     return status;
   }
 
-  status = pbus_.DeviceAdd(&ge2d_dev);
+  status = pbus_.CompositeDeviceAdd(&ge2d_dev, ge2d_components, countof(ge2d_components), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: GE2D DeviceAdd failed %d\n", __func__, status);
     return status;
