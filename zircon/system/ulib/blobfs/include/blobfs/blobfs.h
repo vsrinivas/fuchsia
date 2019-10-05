@@ -43,6 +43,7 @@
 #include <blobfs/node-reserver.h>
 #include <blobfs/transaction-manager.h>
 #include <block-client/cpp/block-device.h>
+#include <block-client/cpp/block-group-registry.h>
 #include <block-client/cpp/client.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
@@ -272,7 +273,7 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
 
   std::unique_ptr<BlockDevice> block_device_;
   fuchsia_hardware_block_BlockInfo block_info_ = {};
-  std::atomic<groupid_t> next_group_ = {};
+  block_client::BlockGroupRegistry group_registry_;
 
   fbl::unique_ptr<Allocator> allocator_;
 

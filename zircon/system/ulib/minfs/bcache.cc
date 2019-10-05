@@ -123,9 +123,7 @@ zx_status_t Bcache::Create(std::unique_ptr<block_client::BlockDevice> device,
 }
 
 groupid_t Bcache::BlockGroupID() {
-  thread_local groupid_t group = next_group_.fetch_add(1);
-  ZX_ASSERT_MSG(group < MAX_TXN_GROUP_COUNT, "Too many threads accessing block device");
-  return group;
+  return group_registry_.GroupID();
 }
 
 uint32_t Bcache::DeviceBlockSize() const { return info_.block_size; }

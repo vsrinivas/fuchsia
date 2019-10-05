@@ -359,9 +359,7 @@ zx_status_t Blobfs::RunOperation(const fs::Operation& operation, fs::BlockBuffer
 }
 
 groupid_t Blobfs::BlockGroupID() {
-  thread_local groupid_t group_ = next_group_.fetch_add(1);
-  ZX_ASSERT_MSG(group_ < MAX_TXN_GROUP_COUNT, "Too many threads accessing block device");
-  return group_;
+  return group_registry_.GroupID();
 }
 
 zx_status_t Blobfs::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {

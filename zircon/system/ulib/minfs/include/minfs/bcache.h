@@ -25,6 +25,7 @@
 
 #ifdef __Fuchsia__
 #include <block-client/cpp/block-device.h>
+#include <block-client/cpp/block-group-registry.h>
 #include <block-client/cpp/client.h>
 #include <fs/buffer/vmoid-registry.h>
 #include <fs/buffer/vmo-buffer.h>
@@ -114,7 +115,7 @@ class Bcache : public fs::TransactionHandler, public fs::VmoidRegistry {
 
   uint32_t max_blocks_;
   fuchsia_hardware_block_BlockInfo info_ = {};
-  std::atomic<groupid_t> next_group_ = 0;
+  block_client::BlockGroupRegistry group_registry_;
   std::unique_ptr<block_client::BlockDevice> device_;
   // This buffer is used as internal scratch space for the "Readblk/Writeblk" methods.
   fs::VmoBuffer buffer_;
