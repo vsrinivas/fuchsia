@@ -1557,12 +1557,6 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
       typespace_->AddTemplate(std::move(type_template));
       break;
     }
-    case Decl::Kind::kConst: {
-      auto const_decl = static_cast<Const*>(decl_ptr);
-      const auto name = &const_decl->name;
-      constants_.emplace(name, const_decl);
-      break;
-    }
     case Decl::Kind::kTypeAlias: {
       auto type_alias_decl = static_cast<TypeAlias*>(decl_ptr);
       auto type_alias_template = std::make_unique<TypeAliasTypeTemplate>(
@@ -1571,6 +1565,8 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
       typespace_->AddTemplate(std::move(type_alias_template));
       break;
     }
+    case Decl::Kind::kConst:
+      break;
   }  // switch
   return true;
 }
@@ -1701,10 +1697,7 @@ bool Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_
                                 bits_declaration->location(), &type_ctor))
       return false;
   } else {
-    type_ctor = std::make_unique<TypeConstructor>(
-        Name(nullptr, "uint32"), nullptr /* maybe_arg_type */,
-        std::optional<types::HandleSubtype>(), nullptr /* maybe_size */,
-        types::Nullability::kNonnullable);
+    type_ctor = TypeConstructor::CreateSizeType();
   }
 
   return RegisterDecl(std::make_unique<Bits>(
@@ -1747,10 +1740,7 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
                                 enum_declaration->location(), &type_ctor))
       return false;
   } else {
-    type_ctor = std::make_unique<TypeConstructor>(
-        Name(nullptr, "uint32"), nullptr /* maybe_arg_type */,
-        std::optional<types::HandleSubtype>(), nullptr /* maybe_size */,
-        types::Nullability::kNonnullable);
+    type_ctor = TypeConstructor::CreateSizeType();
   }
 
   return RegisterDecl(std::make_unique<Enum>(
@@ -2162,8 +2152,8 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
     return false;
   }
 
-  const TypeConstructor* const_type_ctor;
-  const ConstantValue* const_val;
+  const TypeConstructor* const_type_ctor = nullptr;
+  const ConstantValue* const_val = nullptr;
   switch (decl->kind) {
     case Decl::Kind::kConst: {
       auto const_decl = static_cast<Const*>(decl);
@@ -2172,29 +2162,40 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
       break;
     }
     case Decl::Kind::kEnum: {
-      auto enum_decl = static_cast<Enum*>(decl);
-      const_type_ctor = enum_decl->subtype_ctor.get();
-      for (auto& member : enum_decl->members) {
-        if (member.name.data() == identifier_constant->name.member_name()) {
-          const_val = &member.value->Value();
+      // If there is no member name, fallthrough to default.
+      if (auto member_name = identifier_constant->name.member_name(); member_name) {
+        auto enum_decl = static_cast<Enum*>(decl);
+        const_type_ctor = enum_decl->subtype_ctor.get();
+        for (auto& member : enum_decl->members) {
+          if (member.name.data() == member_name) {
+            const_val = &member.value->Value();
+          }
         }
+        break;
       }
-      break;
     }
     case Decl::Kind::kBits: {
-      auto bits_decl = static_cast<Bits*>(decl);
-      const_type_ctor = bits_decl->subtype_ctor.get();
-      for (auto& member : bits_decl->members) {
-        if (member.name.data() == identifier_constant->name.member_name()) {
-          const_val = &member.value->Value();
+      // If there is no member name, fallthrough to default.
+      if (auto member_name = identifier_constant->name.member_name(); member_name) {
+        auto bits_decl = static_cast<Bits*>(decl);
+        const_type_ctor = bits_decl->subtype_ctor.get();
+        for (auto& member : bits_decl->members) {
+          if (member.name.data() == member_name) {
+            const_val = &member.value->Value();
+          }
         }
+        break;
       }
-      break;
     }
     default: {
-      assert(false && "unexpected kind");
+      std::ostringstream msg_stream;
+      msg_stream << NameFlatConstant(identifier_constant) << " is a type, but a value was expected";
+      return Fail(identifier_constant->name.maybe_location(), msg_stream.str());
     }
   }
+
+  assert(const_val && "Compiler bug: did not set const_val");
+  assert(const_type_ctor && "Compiler bug: did not set const_type_ctor");
 
   auto constant_kind = [](const types::PrimitiveSubtype primitive_subtype) {
     switch (primitive_subtype) {
@@ -3391,19 +3392,10 @@ bool Library::CompileTypeAlias(TypeAlias* decl) {
                                 nullptr /* out_typeshape */))
       return false;
   }
-  if (decl->partial_type_ctor->maybe_size) {
-    auto maybe_location = decl->partial_type_ctor->name.maybe_location();
-    if (!ResolveConstant(decl->partial_type_ctor->maybe_size.get(), &kSizeType))
-      return Fail(maybe_location, "unable to parse size bound");
-  }
-  return true;
+  return ResolveSizeBound(decl->partial_type_ctor.get(), nullptr /* out_size */);
 }
 
 bool Library::Compile() {
-  for (const auto& dep_library : dependencies_.dependencies()) {
-    constants_.insert(dep_library->constants_.begin(), dep_library->constants_.end());
-  }
-
   if (!SortDeclarations()) {
     return false;
   }
@@ -3470,16 +3462,40 @@ bool Library::CompileTypeConstructor(TypeConstructor* type_ctor, TypeShape* out_
     maybe_arg_type = type_ctor->maybe_arg_type_ctor->type;
   }
   const Size* size = nullptr;
-  if (type_ctor->maybe_size != nullptr) {
-    if (!ResolveConstant(type_ctor->maybe_size.get(), &kSizeType))
-      return Fail(type_ctor->name.maybe_location(), "unable to parse size bound");
-    size = static_cast<const Size*>(&type_ctor->maybe_size->Value());
+  if (!ResolveSizeBound(type_ctor, &size)) {
+    return false;
   }
   if (!typespace_->Create(type_ctor->name, maybe_arg_type, type_ctor->handle_subtype, size,
                           type_ctor->nullability, &type_ctor->type, &type_ctor->from_type_alias))
     return false;
   if (out_typeshape)
     *out_typeshape = type_ctor->type->shape;
+  return true;
+}
+
+bool Library::ResolveSizeBound(TypeConstructor* type_ctor, const Size** out_size) {
+  if (!type_ctor->maybe_size) {
+    if (out_size) {
+      *out_size = nullptr;
+    }
+    return true;
+  }
+
+  Constant* size_constant = type_ctor->maybe_size.get();
+  if (!ResolveConstant(size_constant, &kSizeType)) {
+    if (size_constant->kind == Constant::Kind::kIdentifier) {
+      auto name = static_cast<IdentifierConstant*>(size_constant)->name;
+      if (name.library() == this && name.name_part() == "MAX" && !name.member_name()) {
+        size_constant->ResolveTo(std::make_unique<Size>(Size::Max()));
+      }
+    }
+  }
+  if (!size_constant->IsResolved()) {
+    return Fail(type_ctor->name.maybe_location(), "unable to parse size bound");
+  }
+  if (out_size) {
+    *out_size = static_cast<const Size*>(&size_constant->Value());
+  }
   return true;
 }
 
@@ -3586,6 +3602,12 @@ bool Library::HasAttribute(std::string_view name) const {
 }
 
 const std::set<Library*>& Library::dependencies() const { return dependencies_.dependencies(); }
+
+std::unique_ptr<TypeConstructor> TypeConstructor::CreateSizeType() {
+  return std::make_unique<TypeConstructor>(
+      Name(nullptr, "uint32"), nullptr /* maybe_arg_type */, std::optional<types::HandleSubtype>(),
+      nullptr /* maybe_size */, types::Nullability::kNonnullable);
+}
 
 }  // namespace flat
 }  // namespace fidl

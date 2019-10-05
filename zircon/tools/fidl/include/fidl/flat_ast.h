@@ -102,7 +102,7 @@ struct Name final {
   }
 
   bool operator==(const Name& other) const {
-    // can't use the library name yet, not necesserily compiled!
+    // can't use the library name yet, not necessarily compiled!
     auto library_ptr = reinterpret_cast<uintptr_t>(library_);
     auto other_library_ptr = reinterpret_cast<uintptr_t>(other.library_);
     return (library_ptr == other_library_ptr) && name_part() == other.name_part() &&
@@ -111,7 +111,7 @@ struct Name final {
   bool operator!=(const Name& other) const { return !operator==(other); }
 
   bool operator<(const Name& other) const {
-    // can't use the library name yet, not necesserily compiled!
+    // can't use the library name yet, not necessarily compiled!
     auto library_ptr = reinterpret_cast<uintptr_t>(library_);
     auto other_library_ptr = reinterpret_cast<uintptr_t>(other.library_);
     if (library_ptr != other_library_ptr)
@@ -134,6 +134,9 @@ struct Name final {
   std::optional<std::string> member_name_;
 };
 
+// ConstantValue represents the concrete _value_ of a constant. (For the
+// _declaration_, see Const. For the _use_, see Constant.) ConstantValue has
+// derived classes for all the different kinds of constants.
 struct ConstantValue {
   virtual ~ConstantValue() {}
 
@@ -396,6 +399,11 @@ struct StringConstantValue final : ConstantValue {
   std::string_view value;
 };
 
+// Constant represents the _use_ of a constant. (For the _declaration_, see
+// Const. For the _value_, see ConstantValue.) A Constant can either be a
+// reference to another constant (IdentifierConstant), a literal value
+// (LiteralConstant), or synthesized by the compiler (SynthesizedConstant).
+// Every Constant resolves to a concrete ConstantValue.
 struct Constant {
   virtual ~Constant() {}
 
@@ -684,6 +692,9 @@ struct TypeConstructor final {
         maybe_size(std::move(maybe_size)),
         nullability(nullability) {}
 
+  // Returns a type constructor for the size type (used for bounds).
+  static std::unique_ptr<TypeConstructor> CreateSizeType();
+
   // Set during construction.
   const Name name;
   const std::unique_ptr<TypeConstructor> maybe_arg_type_ctor;
@@ -705,6 +716,9 @@ struct Using final {
   const PrimitiveType* type;
 };
 
+// Const represents the _declaration_ of a constant. (For the _use_, see
+// Constant. For the _value_, see ConstantValue.) A Const consists of a
+// left-hand-side Name (found in Decl) and a right-hand-side Constant.
 struct Const final : public Decl {
   Const(std::unique_ptr<raw::AttributeList> attributes, Name name,
         std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Constant> value)
@@ -1047,9 +1061,9 @@ class Typespace {
 
   void AddTemplate(std::unique_ptr<TypeTemplate> type_template);
 
-  // BoostrapRootTypes creates a instance with all primitive types. It is
-  // meant to be used as the top-level types lookup mechanism, providing
-  // definitional meaning to names such as `int64`, or `bool`.
+  // RootTypes creates a instance with all primitive types. It is meant to be
+  // used as the top-level types lookup mechanism, providing definitional
+  // meaning to names such as `int64`, or `bool`.
   static Typespace RootTypes(ErrorReporter* error_reporter);
 
  private:
@@ -1061,11 +1075,7 @@ class Typespace {
                       std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias);
   const TypeTemplate* LookupTemplate(const flat::Name& name) const;
 
-  struct cmpName {
-    bool operator()(const flat::Name* a, const flat::Name* b) const { return *a < *b; }
-  };
-
-  std::map<const flat::Name*, std::unique_ptr<TypeTemplate>, cmpName> templates_;
+  std::map<const flat::Name*, std::unique_ptr<TypeTemplate>, PtrCompare<Name>> templates_;
   std::vector<std::unique_ptr<Type>> types_;
 
   ErrorReporter* error_reporter_;
@@ -1292,7 +1302,9 @@ class Library {
   // information for the type. In particular, we validate that
   // optional identifier types refer to things that can in fact be
   // nullable (ie not enums).
-  bool CompileTypeConstructor(TypeConstructor* type, TypeShape* out_type_metadata);
+  bool CompileTypeConstructor(TypeConstructor* type_ctor, TypeShape* out_typeshape);
+
+  bool ResolveSizeBound(TypeConstructor* type_ctor, const Size** out_size);
 
   bool ResolveConstant(Constant* constant, const Type* type);
   bool ResolveIdentifierConstant(IdentifierConstant* identifier_constant, const Type* type);
@@ -1355,7 +1367,6 @@ class Library {
   // All Name, Constant, Using, and Decl pointers here are non-null and are
   // owned by the various foo_declarations_.
   std::map<const Name*, Decl*, PtrCompare<Name>> declarations_;
-  std::map<const Name*, Const*, PtrCompare<Name>> constants_;
 
   ErrorReporter* error_reporter_;
   Typespace* typespace_;

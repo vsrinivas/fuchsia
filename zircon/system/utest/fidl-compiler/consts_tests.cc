@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <sstream>
+
 #include <unittest/unittest.h>
 
 // #include <fidl/flat_ast.h>
@@ -329,7 +331,7 @@ const string:4 EXPLICIT = "four";
   ASSERT_NOT_NULL(inferred_const->type_ctor->type);
   ASSERT_EQ(inferred_const->type_ctor->type->kind, fidl::flat::Type::Kind::kString);
   auto inferred_string_type =
-    static_cast<const fidl::flat::StringType*>(inferred_const->type_ctor->type);
+      static_cast<const fidl::flat::StringType*>(inferred_const->type_ctor->type);
   ASSERT_NOT_NULL(inferred_string_type->max_size);
   ASSERT_EQ(static_cast<uint32_t>(*inferred_string_type->max_size), 4294967295u);
 
@@ -337,7 +339,7 @@ const string:4 EXPLICIT = "four";
   ASSERT_NOT_NULL(explicit_const->type_ctor->type);
   ASSERT_EQ(explicit_const->type_ctor->type->kind, fidl::flat::Type::Kind::kString);
   auto explicit_string_type =
-    static_cast<const fidl::flat::StringType*>(explicit_const->type_ctor->type);
+      static_cast<const fidl::flat::StringType*>(explicit_const->type_ctor->type);
   ASSERT_NOT_NULL(explicit_string_type->max_size);
   ASSERT_EQ(static_cast<uint32_t>(*explicit_string_type->max_size), 4u);
 
@@ -613,6 +615,125 @@ const MyBits c = 5;
   END_TEST;
 }
 
+bool GoodMaxBoundTest() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+const string:MAX S = "";
+
+struct Example {
+    string:MAX s;
+    vector<bool>:MAX v;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  END_TEST;
+}
+
+bool GoodMaxBoundTestConvertToUnbounded() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+const string:MAX A = "foo";
+const string B = A;
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  END_TEST;
+}
+
+bool GoodMaxBoundTestConvertFromUnbounded() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+const string A = "foo";
+const string:MAX B = A;
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  END_TEST;
+}
+
+bool BadMaxBoundTestAssignToConst() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+const uint32 FOO = MAX;
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "Unable to find the constant named: MAX");
+
+  END_TEST;
+}
+
+bool BadMaxBoundTestLibraryQualified() {
+  BEGIN_TEST;
+
+  SharedAmongstLibraries shared;
+  TestLibrary dependency("dependency.fidl", R"FIDL(
+library dependency;
+
+struct Example {};
+)FIDL",
+                         &shared);
+  ASSERT_TRUE(dependency.Compile());
+
+  TestLibrary library(R"FIDL(
+library example;
+
+using dependency;
+
+struct Example { string:dependency.MAX s; };
+)FIDL");
+  ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "unable to parse size bound");
+
+  END_TEST;
+}
+
+bool BadConstTestAssignTypeName() {
+  BEGIN_TEST;
+
+  for (auto type_declaration : {
+           "struct Example {};",
+           "table Example {};",
+           "service Example {};",
+           "protocol Example {};",
+           "bits Example { A = 1; };",
+           "enum Example { A = 1; };",
+           "union Example { bool A; };",
+           "xunion Example { bool A; };",
+           "using Example = string;",
+       }) {
+    std::ostringstream ss;
+    ss << "library example;\n";
+    ss << type_declaration << "\n";
+    ss << "const uint32 FOO = Example;\n";
+
+    TestLibrary library(ss.str());
+    ASSERT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_GE(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "is a type, but a value was expected");
+  }
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(consts_tests)
@@ -663,5 +784,13 @@ RUN_TEST(BadConstDifferentEnumMemberReference)
 RUN_TEST(BadConstDifferentBitsMemberReference)
 RUN_TEST(BadConstAssignPrimitiveToEnum)
 RUN_TEST(BadConstAssignPrimitiveToBits)
+
+RUN_TEST(GoodMaxBoundTest)
+RUN_TEST(GoodMaxBoundTestConvertToUnbounded)
+RUN_TEST(GoodMaxBoundTestConvertFromUnbounded)
+RUN_TEST(BadMaxBoundTestAssignToConst)
+RUN_TEST(BadMaxBoundTestLibraryQualified)
+
+RUN_TEST(BadConstTestAssignTypeName)
 
 END_TEST_CASE(consts_tests)

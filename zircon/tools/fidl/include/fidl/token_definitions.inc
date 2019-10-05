@@ -55,6 +55,10 @@ KEYWORD(Request, "request")
 KEYWORD(String, "string")
 KEYWORD(Vector, "vector")
 
+// KEYWORD(Max, "MAX")
+// MAX is not a real keyword, but it effectively works like one. It can be used
+// as vector<T>:MAX or string:MAX. See Library::ResolveSizeBound in flat_ast.cc.
+
 KEYWORD(Bits, "bits")
 KEYWORD(Const, "const")
 KEYWORD(Enum, "enum")
