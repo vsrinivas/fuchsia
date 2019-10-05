@@ -9,6 +9,7 @@ mod config;
 mod device;
 mod fuse_pending;
 mod known_ess_store;
+mod policy;
 mod shim;
 mod state_machine;
 
@@ -28,11 +29,14 @@ async fn serve_fidl(
     ess_store: Arc<KnownEssStore>,
 ) -> Result<Void, Error> {
     let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service(move |stream| {
-        let fut = shim::serve_legacy(stream, _client_ref.clone(), Arc::clone(&ess_store))
-            .unwrap_or_else(|e| eprintln!("error serving legacy wlan API: {}", e));
-        fasync::spawn(fut)
-    });
+    fs.dir("svc")
+        .add_fidl_service(move |stream| {
+            let fut = shim::serve_legacy(stream, _client_ref.clone(), Arc::clone(&ess_store))
+                .unwrap_or_else(|e| eprintln!("error serving legacy wlan API: {}", e));
+            fasync::spawn(fut)
+        })
+        .add_fidl_service(move |reqs| policy::client::spawn_provider_server(reqs))
+        .add_fidl_service(move |reqs| policy::client::spawn_listener_server(reqs));
     fs.take_and_serve_directory_handle()?;
     let () = fs.collect().await;
     Err(format_err!("FIDL server future exited unexpectedly"))
