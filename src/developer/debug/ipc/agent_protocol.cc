@@ -150,6 +150,7 @@ bool ReadRequest(MessageReader* reader, StatusRequest* request, uint32_t* transa
 void WriteReply(const StatusReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kStatus, transaction_id);
   Serialize(reply.processes, writer);
+  Serialize(reply.limbo, writer);
 }
 
 // ProcessStatus -----------------------------------------------------------------------------------

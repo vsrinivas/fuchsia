@@ -32,6 +32,8 @@ static_library("lib") {
     "debugged_thread.h",
     "hardware_breakpoint.cc",
     "hardware_breakpoint.h",
+    "limbo_provider.cc",
+    "limbo_provider.h",
     "object_provider.cc",
     "object_provider.h",
     "process_breakpoint.cc",
@@ -90,6 +92,7 @@ static_library("lib") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/ngunwind",
     "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
+    "//zircon/system/fidl/fuchsia-exception",
   ]
 }
 

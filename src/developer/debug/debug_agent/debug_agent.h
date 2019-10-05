@@ -16,6 +16,7 @@
 #include "src/developer/debug/debug_agent/component_launcher.h"
 #include "src/developer/debug/debug_agent/debugged_job.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
+#include "src/developer/debug/debug_agent/limbo_provider.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/remote_api.h"
 #include "src/developer/debug/debug_agent/watchpoint.h"
@@ -66,6 +67,10 @@ class DebugAgent : public RemoteAPI,
   void InjectProcessForTest(std::unique_ptr<DebuggedProcess> process);
 
   bool should_quit() const { return configuration_.quit_on_exit; }
+
+  // TODO(donosoc): This should be provided as a dependency, but this clash with in-flight CLs that
+  //                also inject providers to the debug agent. Merge when those are done.
+  void set_limbo_provider(std::shared_ptr<LimboProvider> lp) { limbo_provider_ = std::move(lp); }
 
  private:
   // RemoteAPI implementation.
@@ -186,6 +191,9 @@ class DebugAgent : public RemoteAPI,
   AgentConfiguration configuration_;
 
   fxl::WeakPtrFactory<DebugAgent> weak_factory_;
+
+
+  std::shared_ptr<LimboProvider> limbo_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebugAgent);
 };

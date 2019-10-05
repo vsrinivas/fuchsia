@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 16;
+constexpr uint32_t kProtocolVersion = 17;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -108,6 +108,11 @@ struct StatusRequest {};
 struct StatusReply {
   // All the processes that the debug agent is currently attached.
   std::vector<ProcessRecord> processes;
+
+  // List of processes waiting on limbo. Limbo are the processes that triggered an exception with
+  // no exception handler attached. If the system is configured to keep those around in order to
+  // wait for a debugger, it is said that those processes are in "limbo".
+  std::vector<ProcessRecord> limbo;
 };
 
 // Triggers the system to send the notifications (process starting, modules) for an already

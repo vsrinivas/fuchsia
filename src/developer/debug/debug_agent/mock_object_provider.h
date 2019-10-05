@@ -29,18 +29,28 @@ struct MockObject {
   zx_koid_t koid;
   std::string name;
   Type type = Type::kLast;
+
+  bool is_valid() const { return type != Type::kLast; }
+
 };
 
-struct MockThreadObject : public MockObject {};
+struct MockThreadObject : public MockObject {
+  zx::thread GetHandle() const { return zx::thread(koid); }
+};
 
 struct MockProcessObject : public MockObject {
   std::vector<std::unique_ptr<MockThreadObject>> child_threads;
+
+  zx::process GetHandle() const { return zx::process(koid); }
+  const MockThreadObject* GetThread(const std::string& thread_name) const;
 };
 
 struct MockJobObject : public MockObject {
   // Unique pointers so that they're fixed in memory and can cache the pointers.
   std::vector<std::unique_ptr<MockJobObject>> child_jobs;
   std::vector<std::unique_ptr<MockProcessObject>> child_processes;
+
+  zx::job GetHandle() const { return zx::job(koid); }
 };
 
 // This objects permits to create your own job hierarchy using the |AppendJob| and |AppendProcess|

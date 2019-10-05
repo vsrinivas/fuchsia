@@ -183,7 +183,9 @@ bool ReadReply(MessageReader* reader, StatusReply* reply, uint32_t* transaction_
     return false;
   *transaction_id = header.transaction_id;
 
-  return Deserialize(reader, &reply->processes);
+  if (!Deserialize(reader, &reply->processes))
+    return false;
+  return Deserialize(reader, &reply->limbo);
 }
 
 // ProcessStatus -----------------------------------------------------------------------------------

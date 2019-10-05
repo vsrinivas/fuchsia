@@ -125,6 +125,7 @@ void DebugAgent::OnHello(const debug_ipc::HelloRequest& request, debug_ipc::Hell
 }
 
 void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::StatusReply* reply) {
+  // Get the attached processes.
   reply->processes.reserve(procs_.size());
   for (auto& [process_koid, proc] : procs_) {
     debug_ipc::ProcessRecord process_record = {};
@@ -141,6 +142,34 @@ void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::St
     }
 
     reply->processes.emplace_back(std::move(process_record));
+  }
+
+  // Get the limbo processes.
+  if (limbo_provider_) {
+    std::vector<fuchsia::exception::ProcessExceptionMetadata> limbo_processes;
+    zx_status_t status = limbo_provider_->ListProcessesOnLimbo(&limbo_processes);
+    if (status != ZX_OK) {
+      FXL_LOG(WARNING) << "Could not get processes on limbo: " << zx_status_get_string(status);
+    } else {
+      reply->limbo.reserve(limbo_processes.size());
+      for (auto& process_metadata : limbo_processes) {
+        debug_ipc::ProcessRecord process_record = {};
+        process_record.process_koid = process_metadata.info().process_koid;
+        process_record.process_name = object_provider_->NameForObject(process_metadata.process());
+
+        // For now, only fill the thread on exception.
+        debug_ipc::ThreadRecord thread_record = {};
+        thread_record.process_koid = process_record.process_koid;
+        thread_record.thread_koid = process_metadata.info().thread_koid;
+        thread_record.name = object_provider_->NameForObject(process_metadata.thread());
+        thread_record.state = debug_ipc::ThreadRecord::State::kBlocked;
+        thread_record.blocked_reason = debug_ipc::ThreadRecord::BlockedReason::kException;
+
+        process_record.threads.push_back(std::move(thread_record));
+
+        reply->limbo.push_back(std::move(process_record));
+      }
+    }
   }
 }
 

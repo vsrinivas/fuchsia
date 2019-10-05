@@ -16,8 +16,12 @@
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
+using namespace fuchsia::exception;
+
 namespace debug_agent {
 namespace {
+
+// Setup -------------------------------------------------------------------------------------------
 
 class DebugAgentMessageLoop : public debug_ipc::MessageLoopTarget {
  public:
@@ -91,9 +95,48 @@ class DebugAgentMockProcess : public MockProcess {
   DebugAgent* debug_agent_ = nullptr;
 };
 
+class MockLimboProvider : public LimboProvider {
+ public:
+  zx_status_t ListProcessesOnLimbo(std::vector<ProcessExceptionMetadata>* out) override {
+    *out = std::move(processes_);
+    return ZX_OK;
+  }
+
+  void AppendException(const MockProcessObject* process, const MockThreadObject* thread,
+                       ExceptionType exception_type) {
+    ExceptionInfo info = {};
+    info.process_koid = process->koid;
+    info.thread_koid = thread->koid;
+    info.type = exception_type;
+
+    ProcessExceptionMetadata metadata = {};
+    metadata.set_info(std::move(info));
+    metadata.set_process(process->GetHandle());
+    metadata.set_thread(thread->GetHandle());
+
+    processes_.push_back(std::move(metadata));
+  }
+
+  const std::vector<ProcessExceptionMetadata>& processes() const { return processes_; }
+
+ private:
+  std::vector<ProcessExceptionMetadata> processes_;
+};
+
+std::pair<const MockProcessObject*, const MockThreadObject*> GetProcessThread(
+    const MockObjectProvider& object_provider, const std::string& process_name,
+    const std::string& thread_name) {
+  const MockProcessObject* process = object_provider.ProcessByName(process_name);
+  FXL_DCHECK(process);
+  const MockThreadObject* thread = process->GetThread(thread_name);
+  FXL_DCHECK(thread);
+
+  return {process, thread};
+}
+
 struct TestContext {
   DebugAgentMessageLoop loop;
-  std::shared_ptr<ObjectProvider> object_provider;
+  std::shared_ptr<MockObjectProvider> object_provider;
   DebugAgentStreamBackend stream_backend;
 };
 
@@ -102,6 +145,8 @@ std::unique_ptr<TestContext> CreateTestContext() {
   context->object_provider = CreateDefaultMockObjectProvider();
   return context;
 }
+
+// Tests -------------------------------------------------------------------------------------------
 
 TEST(DebugAgent, OnGlobalStatus) {
   auto test_context = CreateTestContext();
@@ -163,6 +208,47 @@ TEST(DebugAgent, OnGlobalStatus) {
   EXPECT_EQ(reply.processes[1].threads[0].thread_koid, kProcess2ThreadKoid1);
   EXPECT_EQ(reply.processes[1].threads[1].process_koid, kProcessKoid2);
   EXPECT_EQ(reply.processes[1].threads[1].thread_koid, kProcess2ThreadKoid2);
+
+  // Set a limbo provider.
+  const MockObjectProvider& object_provider = *test_context->object_provider;
+
+  const std::string kLimboProcess1 = "job1-p1";
+  const std::string kLimboProcess1Thread = "initial-thread";
+  constexpr ExceptionType kLimboException1 = ExceptionType::FATAL_PAGE_FAULT;
+  auto [limbo_proc1, limbo_thread1] =
+      GetProcessThread(object_provider, kLimboProcess1, kLimboProcess1Thread);
+
+  const std::string kLimboProcess2 = "job121-p2";
+  const std::string kLimboProcess2Thread = "second-thread";
+  constexpr ExceptionType kLimboException2 = ExceptionType::UNALIGNED_ACCESS;
+  auto [limbo_proc2, limbo_thread2] =
+      GetProcessThread(object_provider, kLimboProcess2, kLimboProcess2Thread);
+
+  auto limbo_provider = std::make_shared<MockLimboProvider>();
+  limbo_provider->AppendException(limbo_proc1, limbo_thread1, kLimboException1);
+  limbo_provider->AppendException(limbo_proc2, limbo_thread2, kLimboException2);
+
+  debug_agent.set_limbo_provider(limbo_provider);
+
+  reply = {};
+  remote_api->OnStatus(request, &reply);
+
+  // The attached processes should still be there.
+  ASSERT_EQ(reply.processes.size(), 2u);
+
+  // The limbo processes should be there.
+  ASSERT_EQ(reply.limbo.size(), 2u);
+  EXPECT_EQ(reply.limbo[0].process_koid, limbo_proc1->koid);
+  EXPECT_EQ(reply.limbo[0].process_name, limbo_proc1->name);
+  ASSERT_EQ(reply.limbo[0].threads.size(), 1u);
+  EXPECT_EQ(reply.limbo[0].threads[0].process_koid, limbo_proc1->koid);
+  EXPECT_EQ(reply.limbo[0].threads[0].thread_koid, limbo_thread1->koid);
+  EXPECT_EQ(reply.limbo[0].threads[0].name, limbo_thread1->name);
+  EXPECT_EQ(reply.limbo[0].threads[0].state, debug_ipc::ThreadRecord::State::kBlocked);
+  EXPECT_EQ(reply.limbo[0].threads[0].blocked_reason,
+            debug_ipc::ThreadRecord::BlockedReason::kException);
+
+  // TODO(donosoc): Add exception type.
 }
 
 TEST(DebugAgent, OnProcessStatus) {

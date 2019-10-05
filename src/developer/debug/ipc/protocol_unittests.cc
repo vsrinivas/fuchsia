@@ -151,6 +151,8 @@ TEST(Protocol, StatusReply) {
   one.processes.push_back(CreateProcessRecord(0x1, 1));
   one.processes.push_back(CreateProcessRecord(0x2, 2));
 
+  one.limbo.push_back(CreateProcessRecord(0x3, 3));
+
   StatusReply two;
   ASSERT_TRUE(SerializeDeserializeReply(one, &two));
 
@@ -162,7 +164,6 @@ TEST(Protocol, StatusReply) {
   ASSERT_EQ(two.processes[0].threads[0].thread_koid,  one.processes[0].threads[0].thread_koid);
   ASSERT_EQ(two.processes[0].threads[0].name,         one.processes[0].threads[0].name);
 
-  ASSERT_EQ(two.processes.size(), 2u);
   EXPECT_EQ(two.processes[1].process_koid,            one.processes[1].process_koid);
   EXPECT_EQ(two.processes[1].process_name,            one.processes[1].process_name);
   ASSERT_EQ(two.processes[1].threads.size(), 2u);
@@ -172,6 +173,20 @@ TEST(Protocol, StatusReply) {
   ASSERT_EQ(two.processes[1].threads[1].process_koid, one.processes[1].threads[1].process_koid);
   ASSERT_EQ(two.processes[1].threads[1].thread_koid,  one.processes[1].threads[1].thread_koid);
   ASSERT_EQ(two.processes[1].threads[1].name,         one.processes[1].threads[1].name);
+
+  ASSERT_EQ(two.limbo.size(), 1u);
+  EXPECT_EQ(two.limbo[0].process_koid,            one.limbo[0].process_koid);
+  EXPECT_EQ(two.limbo[0].process_name,            one.limbo[0].process_name);
+  ASSERT_EQ(two.limbo[0].threads.size(), 3u);
+  ASSERT_EQ(two.limbo[0].threads[0].process_koid, one.limbo[0].threads[0].process_koid);
+  ASSERT_EQ(two.limbo[0].threads[0].thread_koid,  one.limbo[0].threads[0].thread_koid);
+  ASSERT_EQ(two.limbo[0].threads[0].name,         one.limbo[0].threads[0].name);
+  ASSERT_EQ(two.limbo[0].threads[1].process_koid, one.limbo[0].threads[1].process_koid);
+  ASSERT_EQ(two.limbo[0].threads[1].thread_koid,  one.limbo[0].threads[1].thread_koid);
+  ASSERT_EQ(two.limbo[0].threads[1].name,         one.limbo[0].threads[1].name);
+  ASSERT_EQ(two.limbo[0].threads[2].process_koid, one.limbo[0].threads[2].process_koid);
+  ASSERT_EQ(two.limbo[0].threads[2].thread_koid,  one.limbo[0].threads[2].thread_koid);
+  ASSERT_EQ(two.limbo[0].threads[2].name,         one.limbo[0].threads[2].name);
 }
 
 // ProcessStatus -----------------------------------------------------------------------------------

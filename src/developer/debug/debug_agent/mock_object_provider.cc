@@ -188,4 +188,13 @@ const MockProcessObject* MockObjectProvider::ProcessByName(const std::string& na
   return it->second;
 }
 
+const MockThreadObject* MockProcessObject::GetThread(const std::string& thread_name) const {
+  for (auto& thread : child_threads) {
+    if (thread->name == thread_name)
+      return thread.get();
+  }
+
+  return nullptr;
+}
+
 }  // namespace debug_agent
