@@ -130,6 +130,7 @@ pub struct Interface {
     pub name: String,
     pub addr: Option<LifIpAddr>,
     pub enabled: bool,
+    pub dhcp_client_enabled: Option<bool>,
 }
 
 fn address_is_valid_unicast(addr: &IpAddr) -> bool {
@@ -161,6 +162,7 @@ impl From<&InterfaceInfo> for Interface {
                 stack::AdministrativeStatus::Enabled => true,
                 stack::AdministrativeStatus::Disabled => false,
             },
+            dhcp_client_enabled: None,
         }
     }
 }
@@ -174,21 +176,31 @@ fn valid_unicast_address_or_none(addr: LifIpAddr) -> Option<LifIpAddr> {
 
 impl From<netstack::NetInterface> for Interface {
     fn from(iface: netstack::NetInterface) -> Self {
+        let addr = if iface.flags & netstack::NET_INTERFACE_FLAG_DHCP != 0 {
+            None
+        } else {
+            valid_unicast_address_or_none(LifIpAddr {
+                address: to_ip_addr(iface.addr),
+                prefix: subnet_mask_to_prefix_length(iface.netmask),
+            })
+        };
         Interface {
             id: PortId(iface.id.into()),
             name: iface.name,
-            addr: valid_unicast_address_or_none(LifIpAddr {
-                address: to_ip_addr(iface.addr),
-                prefix: subnet_mask_to_prefix_length(iface.netmask),
-            }),
+            addr: addr,
             enabled: (iface.flags & netstack::NET_INTERFACE_FLAG_UP) != 0,
+            dhcp_client_enabled: Some((iface.flags & netstack::NET_INTERFACE_FLAG_DHCP) != 0),
         }
     }
 }
 
 impl Into<LIFProperties> for Interface {
     fn into(self) -> LIFProperties {
-        LIFProperties { dhcp: false, address: self.addr, enabled: self.enabled }
+        LIFProperties {
+            dhcp: self.dhcp_client_enabled.unwrap_or_default(),
+            address: self.addr,
+            enabled: self.enabled,
+        }
     }
 }
 
@@ -449,6 +461,7 @@ mod tests {
             name: "test/interface/info".to_string(),
             addr: addr,
             enabled: true,
+            dhcp_client_enabled: None,
         }
     }
 
@@ -578,8 +591,9 @@ mod tests {
             Interface {
                 id: PortId(5),
                 name: "test_if".to_string(),
-                addr: Some(LifIpAddr { address: IpAddr::from([1, 2, 3, 4]), prefix: 24 }),
+                addr: None,
                 enabled: true,
+                dhcp_client_enabled: Some(true),
             }
         )
     }

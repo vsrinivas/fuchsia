@@ -90,9 +90,11 @@ impl DeviceState {
     }
 
     /// Update internal state with information about an LIF that was added or updated externally.
+    /// When an interface not known before is found, it will add it.
+    /// If it's a know interface, it will log the new operational state.
     fn notify_lif_added_or_updated(&mut self, iface: hal::Interface) -> error::Result<()> {
         match self.lif_manager.lif_at_port(iface.id) {
-            Some(lif) => lif.update_with_address(iface.addr, iface.enabled)?,
+            Some(lif) => log_property_change(lif, iface),
             None => self.notify_lif_added(iface)?,
         };
         Ok(())
@@ -518,6 +520,28 @@ impl DeviceState {
     }
 }
 
+/// Log that the lif properties have changed.
+/// This will be later use to update the operational state, but not the configuration state.
+/// (we are not currently caching operational state, just querying for it).
+fn log_property_change(lif: &mut lifmgr::LIF, iface: hal::Interface) {
+    let properties = lif.properties();
+    let new_properties: lifmgr::LIFProperties = iface.into();
+    if properties != &new_properties {
+        info!("Properties have changed {:?}: new properties {:?}", properties, new_properties);
+    }
+}
+
+// Version represent the version of the configuration associated to a device object (i.e. an
+// interface, and ACL, etc)
+// It should only be updated when configuration state is updated. It should never be updated due to
+// operational state changes.
+// For example, if an interface is configured to get it's IP address via DHCP, the configuration is
+// changed to enable dhcp client on the interface. The address received from DHCP is an
+// operational state change. It is not to be saved in the configuration.
+// Adding a static neighbor entry to the neighbor table is a configuration change.
+// Learning  an entry dynamically and adding it to the neighbor table is an operational change.
+// For a good definition of configuration vs. operational state, please see:
+// https://tools.ietf.org/html/rfc6244#section-4.3
 type Version = u64;
 type UUID = u128;
 
@@ -582,6 +606,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_until_stalled(test)]
+    #[ignore]
     async fn test_update_state_for_netstack_event() {
         let mut device_state = DeviceState::new(
             hal::NetCfg::new().unwrap(),
