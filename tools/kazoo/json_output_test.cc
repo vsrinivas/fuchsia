@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
 #include "tools/kazoo/outputs.h"
 #include "tools/kazoo/syscall_library.h"
+#include "tools/kazoo/test.h"
 #include "tools/kazoo/test_ir_test_kernel_cases.test.h"
+#include "tools/kazoo/test_ir_test_rights_specs.test.h"
 #include "tools/kazoo/test_ir_test_rust_selection.test.h"
 #include "tools/kazoo/test_ir_test_selection.test.h"
-#include "tools/kazoo/test_ir_test_rights_specs.test.h"
 
 namespace {
 

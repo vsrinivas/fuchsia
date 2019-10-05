@@ -4,10 +4,12 @@
 
 #include "tools/kazoo/writer.h"
 
+#include <unistd.h>
+
 #include <string>
 
-#include "gtest/gtest.h"
 #include "tools/kazoo/string_util.h"
+#include "tools/kazoo/test.h"
 
 namespace {
 

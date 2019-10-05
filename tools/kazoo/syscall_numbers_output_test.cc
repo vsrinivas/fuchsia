@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
 #include "tools/kazoo/outputs.h"
 #include "tools/kazoo/syscall_library.h"
+#include "tools/kazoo/test.h"
 #include "tools/kazoo/test_ir_test_one_protocol_two_methods.test.h"
 
 namespace {

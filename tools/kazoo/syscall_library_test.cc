@@ -4,7 +4,7 @@
 
 #include "tools/kazoo/syscall_library.h"
 
-#include "gtest/gtest.h"
+#include "tools/kazoo/test.h"
 #include "tools/kazoo/test_ir_test_no_methods.test.h"
 #include "tools/kazoo/test_ir_test_one_protocol_one_method.test.h"
 #include "tools/kazoo/test_ir_test_pointers_and_vectors.test.h"

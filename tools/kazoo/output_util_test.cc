@@ -4,7 +4,7 @@
 
 #include "tools/kazoo/output_util.h"
 
-#include "gtest/gtest.h"
+#include "tools/kazoo/test.h"
 
 namespace {
 

@@ -61,8 +61,6 @@ if (current_toolchain == host_toolchain) {
     deps = [
       ":generate_test_files",
       ":lib",
-      "//src/lib/fxl/test:gtest_main",
-      "//third_party/googletest:gtest",
     ]
 
     include_dirs = [ "$target_gen_dir" ]
@@ -80,6 +78,7 @@ if (current_toolchain == host_toolchain) {
       "rust_output_test.cc",
       "syscall_library_test.cc",
       "syscall_numbers_output_test.cc",
+      "test_main.cc",
       "user_header_output_test.cc",
       "vdso_header_output_test.cc",
       "vdso_wrappers_output_test.cc",
