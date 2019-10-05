@@ -44,8 +44,8 @@ TEST_F(InputLocationParserTest, ParseGlobal) {
   // Valid symbol (including colons).
   Err err = ParseGlobalInputLocation(nullptr, "Foo::Bar", &location);
   EXPECT_FALSE(err.has_error());
-  EXPECT_EQ(InputLocation::Type::kSymbol, location.type);
-  EXPECT_EQ(R"("Foo"; ::"Bar")", location.symbol.GetDebugName());
+  EXPECT_EQ(InputLocation::Type::kName, location.type);
+  EXPECT_EQ(R"("Foo"; ::"Bar")", location.name.GetDebugName());
 
   // Valid file/line.
   location = InputLocation();
@@ -116,7 +116,7 @@ TEST_F(InputLocationParserTest, ResolveInputLocation) {
   Location output;
   Err err = ResolveUniqueInputLocation(&symbols_.process(), nullptr, "Foo", false, &output);
   EXPECT_TRUE(err.has_error());
-  EXPECT_EQ("Nothing matching this symbol was found.", err.msg());
+  EXPECT_EQ("Nothing matching this name was found.", err.msg());
 
   Location expected(0x12345678, FileLine("file.cc", 12), 0, symbol_context_);
 
@@ -180,8 +180,8 @@ TEST_F(InputLocationParserTest, ParseLocalInputLocation) {
   Err err = ParseLocalInputLocation(nullptr, kFunctionName, &results);
   ASSERT_TRUE(err.ok());
   ASSERT_EQ(1u, results.size());
-  EXPECT_EQ(InputLocation::Type::kSymbol, results[0].type);
-  EXPECT_EQ(R"("Foo")", results[0].symbol.GetDebugName());
+  EXPECT_EQ(InputLocation::Type::kName, results[0].type);
+  EXPECT_EQ(R"("Foo")", results[0].name.GetDebugName());
 
   // Make a class.
   const char kClassName[] = "MyClass";
@@ -218,10 +218,10 @@ TEST_F(InputLocationParserTest, ParseLocalInputLocation) {
   err = ParseLocalInputLocation(&frame, kFunctionName, &results);
   ASSERT_TRUE(err.ok());
   ASSERT_EQ(2u, results.size());
-  EXPECT_EQ(InputLocation::Type::kSymbol, results[0].type);
-  EXPECT_EQ(R"(::"MyClass"; ::"Foo")", results[0].symbol.GetDebugName());
-  EXPECT_EQ(InputLocation::Type::kSymbol, results[1].type);
-  EXPECT_EQ(R"("Foo")", results[1].symbol.GetDebugName());
+  EXPECT_EQ(InputLocation::Type::kName, results[0].type);
+  EXPECT_EQ(R"(::"MyClass"; ::"Foo")", results[0].name.GetDebugName());
+  EXPECT_EQ(InputLocation::Type::kName, results[1].type);
+  EXPECT_EQ(R"("Foo")", results[1].name.GetDebugName());
 
   // A fully qualified function name ("::Foo") should not match the current class and only the
   // global version should be returned.
@@ -229,8 +229,8 @@ TEST_F(InputLocationParserTest, ParseLocalInputLocation) {
   err = ParseLocalInputLocation(&frame, std::string("::") + kFunctionName, &results);
   ASSERT_TRUE(err.ok());
   ASSERT_EQ(1u, results.size());
-  EXPECT_EQ(InputLocation::Type::kSymbol, results[0].type);
-  EXPECT_EQ(R"(::"Foo")", results[0].symbol.GetDebugName());
+  EXPECT_EQ(InputLocation::Type::kName, results[0].type);
+  EXPECT_EQ(R"(::"Foo")", results[0].name.GetDebugName());
 }
 
 // Most of the prefix searching is tested by the FindName tests. This just tests the integration of

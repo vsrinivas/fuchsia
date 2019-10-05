@@ -91,7 +91,7 @@ Err ReadLocation(const Command& cmd, const char* command_name, Location* locatio
 
   // Some symbols can give us sizes. All input locations will have the same type (matching the user
   // input type).
-  if (input_locations[0].type == InputLocation::Type::kSymbol) {
+  if (input_locations[0].type == InputLocation::Type::kName) {
     if (location->symbol()) {
       if (const CodeBlock* block = location->symbol().Get()->AsCodeBlock()) {
         *location_size = block->GetFullRange(location->symbol_context()).size();

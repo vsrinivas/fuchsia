@@ -42,15 +42,15 @@ std::vector<InputLocation> ExpandPermissiveInputLocationNames(
 
   std::vector<FoundName> found;  // Keep outside to avoid reallocation.
   for (const auto& in : input) {
-    if (in.type == InputLocation::Type::kSymbol) {
+    if (in.type == InputLocation::Type::kName) {
       // Needs expansion.
       found.clear();
 
-      if (IsSpecialSymbolName(in.symbol)) {
+      if (IsSpecialSymbolName(in.name)) {
         // Pass special names through, don't look in the index because they won't be there.
         result.push_back(in);
       } else {
-        FindName(context, opts, ToParsedIdentifier(in.symbol), &found);
+        FindName(context, opts, ToParsedIdentifier(in.name), &found);
         for (const auto& f : found)
           result.emplace_back(ToIdentifier(f.GetName()));
       }

@@ -74,10 +74,10 @@ bool SameFileLine(const llvm::DWARFDebugLine::Row& a, const llvm::DWARFDebugLine
 // Determines if the given input location references a PLT symbol. If it does, returns the name of
 // that symbol (with the "@plt" annotation stripped). If it does not, returns a null optional.
 std::optional<std::string> GetPLTInputLocation(const InputLocation& loc) {
-  if (loc.type != InputLocation::Type::kSymbol || loc.symbol.components().size() != 1)
+  if (loc.type != InputLocation::Type::kName || loc.name.components().size() != 1)
     return std::nullopt;
 
-  const IdentifierComponent& comp = loc.symbol.components()[0];
+  const IdentifierComponent& comp = loc.name.components()[0];
   if (!StringEndsWith(comp.name(), "@plt"))
     return std::nullopt;
 
@@ -86,9 +86,9 @@ std::optional<std::string> GetPLTInputLocation(const InputLocation& loc) {
 
 // Returns true if the given input references the special "main" function annotation.
 bool ReferencesMainFunction(const InputLocation& loc) {
-  if (loc.type != InputLocation::Type::kSymbol || loc.symbol.components().size() != 1)
+  if (loc.type != InputLocation::Type::kName || loc.name.components().size() != 1)
     return false;
-  return loc.symbol.components()[0].name() == "@main";
+  return loc.name.components()[0].name() == "@main";
 }
 
 }  // namespace
@@ -168,7 +168,7 @@ std::vector<Location> ModuleSymbolsImpl::ResolveInputLocation(const SymbolContex
       return std::vector<Location>();
     case InputLocation::Type::kLine:
       return ResolveLineInputLocation(symbol_context, input_location, options);
-    case InputLocation::Type::kSymbol:
+    case InputLocation::Type::kName:
       return ResolveSymbolInputLocation(symbol_context, input_location, options);
     case InputLocation::Type::kAddress:
       return ResolveAddressInputLocation(symbol_context, input_location, options);
@@ -308,7 +308,7 @@ std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
 
   std::vector<Location> result;
 
-  auto symbol_to_find = input_location.symbol;
+  auto symbol_to_find = input_location.name;
 
   // Special-case for main functions.
   if (ReferencesMainFunction(input_location)) {

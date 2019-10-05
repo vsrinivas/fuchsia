@@ -75,17 +75,17 @@ void InterceptingThreadObserver::OnThreadStopped(
   for (auto& bp_ptr : hit_breakpoints) {
     zxdb::BreakpointSettings settings = bp_ptr->GetSettings();
     if (settings.locations.size() == 1u &&
-        settings.locations[0].type == zxdb::InputLocation::Type::kSymbol &&
-        settings.locations[0].symbol.components().size() == 1u) {
+        settings.locations[0].type == zxdb::InputLocation::Type::kName &&
+        settings.locations[0].name.components().size() == 1u) {
       threads_in_error_.erase(thread->GetKoid());
       for (auto& syscall : workflow_->syscall_decoder_dispatcher()->syscalls()) {
-        if (settings.locations[0].symbol.components()[0].name() == syscall->breakpoint_name()) {
+        if (settings.locations[0].name.components()[0].name() == syscall->breakpoint_name()) {
           workflow_->syscall_decoder_dispatcher()->DecodeSyscall(this, thread, syscall.get());
           return;
         }
       }
       FXL_LOG(INFO) << "Internal error: breakpoint "
-                    << settings.locations[0].symbol.components()[0].name() << " not managed";
+                    << settings.locations[0].name.components()[0].name() << " not managed";
       thread->Continue();
       return;
     }

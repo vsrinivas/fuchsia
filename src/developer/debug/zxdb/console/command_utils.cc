@@ -281,8 +281,8 @@ OutputBuffer FormatInputLocation(const InputLocation& location) {
       // the full file name as passed-in by the user (as this is an "input"
       // location object). It is surprising if the debugger deletes some input.
       return OutputBuffer(DescribeFileLine(nullptr, location.line));
-    case InputLocation::Type::kSymbol:
-      return FormatIdentifier(location.symbol, true, true);
+    case InputLocation::Type::kName:
+      return FormatIdentifier(location.name, true, true);
     case InputLocation::Type::kAddress:
       return OutputBuffer(fxl::StringPrintf("0x%" PRIx64, location.address));
   }

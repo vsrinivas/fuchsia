@@ -57,8 +57,8 @@ TEST(PermissiveInputLocation, ExpandAndResolve) {
   InputLocation foo_input(Identifier(IdentifierComponent("Foo")));
   auto expanded = ExpandPermissiveInputLocationNames(context, {foo_input});
   ASSERT_EQ(2u, expanded.size());
-  EXPECT_EQ("::Foo", expanded[0].symbol.GetFullName());
-  EXPECT_EQ("::std::Foo", expanded[1].symbol.GetFullName());
+  EXPECT_EQ("::Foo", expanded[0].name.GetFullName());
+  EXPECT_EQ("::std::Foo", expanded[1].name.GetFullName());
 
   // Additionally gives an address-based input.
   InputLocation addr_input(ProcessSymbolsTestSetup::kDefaultLoadAddress + 0x9999);

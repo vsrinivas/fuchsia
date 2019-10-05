@@ -272,7 +272,7 @@ Err ParseListLocation(const TargetSymbols* target_symbols, const ProcessSymbols*
     switch (input_locations[0].type) {
       case InputLocation::Type::kLine:
         return Err("There are no files matching \"%s\".", input_locations[0].line.file().c_str());
-      case InputLocation::Type::kSymbol:
+      case InputLocation::Type::kName:
         return Err("There are no symbols matching \"%s\".",
                    FormatInputLocation(input_locations[0]).AsString().c_str());
       case InputLocation::Type::kAddress:

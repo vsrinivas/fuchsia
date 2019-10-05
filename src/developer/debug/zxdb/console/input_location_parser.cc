@@ -137,11 +137,11 @@ Err ParseGlobalInputLocation(const Frame* frame, const std::string& input,
 
   // Anything else, assume its an identifier.
   Identifier ident;
-  err = ExprParser::ParseIdentifier(input, &location->symbol);
+  err = ExprParser::ParseIdentifier(input, &location->name);
   if (err.has_error())
     return err;
 
-  location->type = InputLocation::Type::kSymbol;
+  location->type = InputLocation::Type::kName;
   return Err();
 }
 
@@ -153,15 +153,15 @@ Err ParseLocalInputLocation(const Frame* frame, const std::string& input,
   if (Err err = ParseGlobalInputLocation(frame, input, &global); err.has_error())
     return err;
 
-  if (frame && global.type == InputLocation::Type::kSymbol) {
+  if (frame && global.type == InputLocation::Type::kName) {
     // See if there are matches on the current class. It is not necessary to do a full lexical
     // search beyond the local class because unqualified names will match any namespace in
     // ResolveInputLocations(). That will catch all other instances of the symbol.
     for (const auto& matched_ident :
-         GetIdentifierMatchesOnThis(frame, ToParsedIdentifier(global.symbol))) {
+         GetIdentifierMatchesOnThis(frame, ToParsedIdentifier(global.name))) {
       Identifier ident = ToIdentifier(matched_ident);
       // Don't duplicate the global one which will always be added below.
-      if (!ident.EqualsIgnoringQualification(global.symbol))
+      if (!ident.EqualsIgnoringQualification(global.name))
         locations->emplace_back(std::move(ident));
     }
   }

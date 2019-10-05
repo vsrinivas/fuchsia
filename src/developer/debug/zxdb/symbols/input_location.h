@@ -12,6 +12,8 @@
 
 #include "src/developer/debug/zxdb/symbols/file_line.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
+#include "src/developer/debug/zxdb/symbols/symbol.h"
+#include "src/developer/debug/zxdb/symbols/symbol_context.h"
 
 namespace zxdb {
 
@@ -21,25 +23,29 @@ namespace zxdb {
 // See also the "Location" object which is an output location that provides all information
 // (address, symbols, etc.) for some state.
 //
-// For the symbol and file name options, the symbol name and file name must match exactly the full
-// version of that from the symbol system. The caller will need to have resolve file names with the
+// For the symbol name and file name options, the name name must match exactly the full version of
+// that from the symbol system. The caller will need to have resolve file names with the
 // symbol system prior to setting.
 struct InputLocation {
-  enum class Type { kNone, kLine, kSymbol, kAddress };
+  enum class Type {
+    kNone,     // Default initialized, unusable for lookup.
+    kLine,     // File/line query.
+    kName,     // Identifier-based query (names of symbols like functions).
+    kAddress,  // Address in a running process.
+  };  // Symbol object from a running process.
 
   InputLocation() = default;
   explicit InputLocation(FileLine file_line) : type(Type::kLine), line(std::move(file_line)) {}
-  explicit InputLocation(Identifier symbol) : type(Type::kSymbol), symbol(std::move(symbol)) {}
+  explicit InputLocation(Identifier name) : type(Type::kName), name(std::move(name)) {}
   explicit InputLocation(uint64_t address) : type(Type::kAddress), address(address) {}
 
-  // Converts the input location type to a string. This is intended to be used
-  // in error messages.
+  // Converts the input location type to a string. This is intended to be used in error messages.
   static const char* TypeToString(Type type) {
     switch (type) {
       case Type::kLine:
         return "file/line";
-      case Type::kSymbol:
-        return "symbol";
+      case Type::kName:
+        return "name";
       case Type::kAddress:
         return "address";
       case Type::kNone:
@@ -53,8 +59,8 @@ struct InputLocation {
   // Valid when type == kLine;
   FileLine line;
 
-  // Valid when type == kSymbol.
-  Identifier symbol;
+  // Valid when type == kName.
+  Identifier name;
 
   // Valid when type == kAddress;
   uint64_t address;
