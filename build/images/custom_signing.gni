@@ -37,7 +37,6 @@ declare_args() {
 #
 #   deps (usually required)
 #   visibility (optional)
-#   metadata (optional)
 #   testonly (optional)
 #       Same as for any GN `action` target.  `deps` must list labels that
 #       produce all the `inputs`, `cmdline_inputs`, and `ramdisk_inputs`
@@ -58,18 +57,17 @@ template("custom_signed_zbi") {
     output_file += ".signed"
   }
 
+  forward_variables_from(invoker,
+                         [
+                           "testonly",
+                           "deps",
+                           "zbi",
+                         ])
+
+  assert([ zbi[0] ] == zbi, "zbi parameter must contain a single entry")
+
+  output_file = "$root_out_dir/$output_file"
   action(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "deps",
-                             "zbi",
-                             "metadata",
-                           ])
-
-    assert([ zbi[0] ] == zbi, "zbi parameter must contain a single entry")
-
-    output_file = "$root_out_dir/$output_file"
     script = custom_signing_script
 
     inputs = zbi

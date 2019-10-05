@@ -45,7 +45,6 @@ template("vboot") {
     forward_variables_from(invoker,
                            [
                              "deps",
-                             "metadata",
                              "testonly",
                              "visibility",
                            ])
@@ -144,7 +143,6 @@ template("esp") {
     forward_variables_from(invoker,
                            [
                              "deps",
-                             "metadata",
                              "testonly",
                              "visibility",
                            ])

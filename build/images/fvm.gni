@@ -77,15 +77,13 @@ declare_args() {
 #   deps (optional)
 #   testonly (optional)
 #   visibility (optional)
-#   metadata (optional)
 #     Same as for any GN `action()` target.
 template("generate_fvm") {
   zircon_tool_action(target_name) {
     forward_variables_from(invoker,
                            [
-                             "deps",
-                             "metadata",
                              "testonly",
+                             "deps",
                              "visibility",
                            ])
     tool = "fvm"

@@ -6,6 +6,7 @@ import("//build/config/fuchsia/zbi.gni")
 import("//build/images/boot.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/custom_signing.gni")
+import("//build/images/json.gni")
 import("//build/images/manifest.gni")
 import("//build/images/ta.gni")
 import("//build/images/vbmeta.gni")
@@ -26,6 +27,9 @@ declare_args() {
   # List of arguments to populate /boot/config/devmgr in the Zedboot image.
   zedboot_devmgr_config = [ "netsvc.netboot=true" ]
 }
+
+# This parallels the `images` list in //build/images/BUILD.gn, which see.
+zedboot_images = []
 
 # Construct a minimal manifest containing only the few user binaries
 # that constitute zedboot, and the libraries they depend on.
@@ -183,25 +187,27 @@ zbi("zbi") {
   }
   cmdline = zedboot_cmdline_args
   cmdline_inputs = zedboot_cmdline_files
-
-  metadata = {
-    images = [
-      {
-        if (custom_signing_script == "" && !use_vboot) {
-          bootserver_pave = [ "--zirconr" ]
-          bootserver_pave_zedboot = [ "--zircona" ]
-        }
-        name = "zircon-r"
-        path = "zedboot.zbi"
-        type = "zbi"
-      },
-    ]
-    image_paths = [
-      "IMAGE_ZEDBOOT_ZBI=zedboot.zbi",
-      "IMAGE_ZIRCONR_ZBI=zedboot.zbi",
-    ]
-  }
 }
+
+zedboot_images += [
+  {
+    deps = [
+      ":zbi",
+    ]
+    public = [
+      "IMAGE_ZEDBOOT_ZBI",
+      "IMAGE_ZIRCONR_ZBI",
+    ]
+    json = {
+      name = "zircon-r"
+      type = "zbi"
+      if (custom_signing_script == "" && !use_vboot) {
+        bootserver_pave = [ "--zirconr" ]
+        bootserver_pave_zedboot = [ "--zircona" ]
+      }
+    }
+  },
+]
 
 if (custom_signing_script != "") {
   custom_signed_zbi("signed") {
@@ -210,39 +216,48 @@ if (custom_signing_script != "") {
       ":zbi",
     ]
     zbi = get_target_outputs(":zbi")
-
-    metadata = {
-      images = [
-        {
-          bootserver_pave = [ "--zirconr" ]
-          bootserver_pave_zedboot = [ "--zircona" ]
-          name = "zircon-r.signed"
-          path = "zedboot.zbi"
-          type = "zbi.signed"
-        },
-      ]
-      image_paths = [ "IMAGE_ZIRCONR_SIGNEDZBI=zedboot.zbi" ]
-    }
   }
+
+  zedboot_images += [
+    {
+      deps = [
+        ":signed",
+      ]
+      public = [
+        "IMAGE_ZIRCONR_SIGNEDZBI",
+      ]
+      json = {
+        name = "zircon-r.signed"
+        type = "zbi.signed"
+        bootserver_pave = [ "--zirconr" ]
+        bootserver_pave_zedboot = [ "--zircona" ]
+      }
+    },
+  ]
 } else if (use_vboot) {
   vboot("signed") {
     output_name = "zedboot"
     deps = [
       ":zbi",
     ]
-    metadata = {
-      images = [
-        {
-          bootserver_pave = [ "--zirconr" ]
-          bootserver_pave_zedboot = [ "--zircona" ]
-          name = "zircon-r.signed"
-          path = "zedboot.vboot"
-          type = "zbi.signed"
-        },
-      ]
-      image_paths = [ "IMAGE_ZIRCONR_SIGNEDZBI=zedboot.vboot" ]
-    }
   }
+
+  zedboot_images += [
+    {
+      deps = [
+        ":signed",
+      ]
+      public = [
+        "IMAGE_ZIRCONR_SIGNEDZBI",
+      ]
+      json = {
+        name = "zircon-r.signed"
+        type = "zbi.signed"
+        bootserver_pave = [ "--zirconr" ]
+        bootserver_pave_zedboot = [ "--zircona" ]
+      }
+    },
+  ]
 }
 
 if (use_vbmeta) {
@@ -277,24 +292,30 @@ if (use_vbmeta) {
         },
       ]
     }
-
-    metadata = {
-      images = [
-        {
-          archive = true
-
-          # TODO (dmitryya@) netsvc does not support correct
-          # flashing vbmeta images to a device.
-          # Comment out this till this will be fixed.
-          #bootserver_pave = [ "--vbmetar" ]
-          name = "zircon-r"
-          path = "zedboot.vbmeta"
-          type = "vbmeta"
-        },
-      ]
-      image_paths = [ "IMAGE_VBMETAR_RAW=zedboot.vbmeta" ]
-    }
   }
+  zedboot_images += [
+    {
+      deps = [
+        ":zedboot.vbmeta",
+      ]
+      sources = [
+        "$root_out_dir/zedboot.vbmeta",
+      ]
+      json = {
+        name = "zircon-r"
+        type = "vbmeta"
+        archive = true
+
+        # TODO (dmitryya@) netsvc does not support correct
+        # flashing vbmeta images to a device.
+        # Comment out this till this will be fixed.
+        #bootserver_pave = [ "--vbmetar" ]
+      }
+      public = [
+        "IMAGE_VBMETAR_RAW",
+      ]
+    },
+  ]
 }
 
 if (target_cpu != "arm64" && !use_vboot) {
@@ -306,18 +327,21 @@ if (target_cpu != "arm64" && !use_vboot) {
     ]
     zedboot_zbi_outputs = get_target_outputs(":zbi")
     zedboot = zedboot_zbi_outputs[0]
-
-    metadata = {
-      images = [
-        {
-          name = "zedboot-efi"
-          path = "zedboot.esp.blk"
-          type = "blk"
-        },
-      ]
-      image_paths = [ "IMAGE_ZEDBOOT_ESP=zedboot.esp.blk" ]
-    }
   }
+  zedboot_images += [
+    {
+      deps = [
+        ":esp",
+      ]
+      public = [
+        "IMAGE_ZEDBOOT_ESP",
+      ]
+      json = {
+        name = "zedboot-efi"
+        type = "blk"
+      }
+    },
+  ]
 }
 
 group("zedboot") {
@@ -330,4 +354,12 @@ group("zedboot") {
   if (custom_signing_script != "" || use_vboot) {
     deps += [ ":signed" ]
   }
+}
+
+write_images_manifest("zedboot-manifest") {
+  images = zedboot_images
+  outputs = [
+    "$root_build_dir/zedboot_images.json",
+    "$root_build_dir/zedboot_image_paths.sh",
+  ]
 }
