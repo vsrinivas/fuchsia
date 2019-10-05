@@ -39,7 +39,6 @@
 //! `insecure` module is added to the crate root. All insecure primitives are
 //! exposed through this module.
 
-#![doc(html_root_url = "https://joshlf.com/rustdoc/mundane")]
 #![deny(missing_docs)]
 #![deny(warnings)]
 // just in case we forget to add #[forbid(unsafe_code)] on new module
