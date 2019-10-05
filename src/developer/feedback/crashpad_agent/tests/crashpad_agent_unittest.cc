@@ -483,6 +483,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReport) {
       {"error_runtime_type", "FileSystemException"},
       {"error_message", "cannot open file"},
       {"type", "DartError"},
+      {"should_process", "true"},
   });
   CheckAttachmentsOnServer({"DartError"});
 }

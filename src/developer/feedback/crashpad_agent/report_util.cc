@@ -55,7 +55,8 @@ const char kDartExceptionStackTraceKey[] = "DartError";
 void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
                                       std::map<std::string, std::string>* annotations,
                                       std::map<std::string, fuchsia::mem::Buffer>* attachments,
-                                      std::optional<fuchsia::mem::Buffer>* minidump) {
+                                      std::optional<fuchsia::mem::Buffer>* minidump,
+                                      bool* should_process) {
   // Default annotations common to all crash reports.
   if (report.has_annotations()) {
     for (const auto& annotation : report.annotations()) {
@@ -108,6 +109,7 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
     auto& native_report = report.mutable_specific_report()->native();
     if (native_report.has_minidump()) {
       *minidump = std::move(*native_report.mutable_minidump());
+      *should_process = true;
     } else {
       FX_LOGS(WARNING) << "no minidump to attach to Crashpad report";
     }
@@ -119,6 +121,7 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
     if (dart_report.has_exception_stack_trace()) {
       (*attachments)[kDartExceptionStackTraceKey] =
           std::move(*dart_report.mutable_exception_stack_trace());
+      *should_process = true;
     } else {
       FX_LOGS(WARNING) << "no Dart exception stack trace to attach to Crashpad report";
     }
@@ -134,7 +137,7 @@ std::string ReadStringFromFile(const std::string& filepath) {
   return fxl::TrimString(content, "\r\n").ToString();
 }
 
-void AddCrashServerAnnotations(const std::string& program_name, const bool has_minidump,
+void AddCrashServerAnnotations(const std::string& program_name, const bool should_process,
                                std::map<std::string, std::string>* annotations) {
   (*annotations)["product"] = "Fuchsia";
   (*annotations)["version"] = ReadStringFromFile("/config/build-info/version");
@@ -142,9 +145,9 @@ void AddCrashServerAnnotations(const std::string& program_name, const bool has_m
   (*annotations)["ptype"] = program_name;
   (*annotations)["osName"] = "Fuchsia";
   (*annotations)["osVersion"] = "0.0.0";
-  // Only the minidump file needs to be processed by the crash server. Reports without a
-  // minidump should not have their file attachments processed.
-  (*annotations)["should_process"] = has_minidump ? "true" : "false";
+  // Not all reports need to be processed by the crash server.
+  // Typically only reports with a minidump or a Dart stack trace file need to be processed.
+  (*annotations)["should_process"] = should_process ? "true" : "false";
 }
 
 void AddFeedbackAnnotations(const fuchsia::feedback::Data& feedback_data,
@@ -175,11 +178,14 @@ void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
                                     std::optional<fuchsia::mem::Buffer>* minidump) {
   const std::string program_name = report.program_name();
 
+  bool should_process = false;
+
   // Optional annotations and attachments filled by the client.
-  ExtractAnnotationsAndAttachments(std::move(report), annotations, attachments, minidump);
+  ExtractAnnotationsAndAttachments(std::move(report), annotations, attachments, minidump,
+                                   &should_process);
 
   // Crash server annotations common to all crash reports.
-  AddCrashServerAnnotations(program_name, minidump->has_value(), annotations);
+  AddCrashServerAnnotations(program_name, should_process, annotations);
 
   // Feedback annotations common to all crash reports.
   AddFeedbackAnnotations(feedback_data, annotations);
