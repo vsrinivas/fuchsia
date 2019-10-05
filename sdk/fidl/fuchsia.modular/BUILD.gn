@@ -7,7 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.modular") {
   # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [
-    "invalid-case-for-decl-member",
     "invalid-case-for-decl-name",
     "string-bounds-not-specified",
     "vector-bounds-not-specified",
@@ -53,7 +52,6 @@ fidl("fuchsia.modular") {
     "story/story_shell_factory.fidl",
     "story/story_state.fidl",
     "story/story_visibility_state.fidl",
-    "surface/container.fidl",
     "surface/surface.fidl",
     "user_intelligence/user_intelligence_provider.fidl",
   ]

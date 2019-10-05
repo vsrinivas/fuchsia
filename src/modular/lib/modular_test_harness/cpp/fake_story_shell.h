@@ -81,17 +81,7 @@ class FakeStoryShell : public modular::testing::FakeComponent, fuchsia::modular:
   }
 
   // |fuchsia::modular::StoryShell|
-  void AddContainer(std::string /* container_name */, fidl::StringPtr /* parent_id */,
-                    fuchsia::modular::SurfaceRelation /* relation */,
-                    std::vector<fuchsia::modular::ContainerLayout> /* layout */,
-                    std::vector<fuchsia::modular::ContainerRelationEntry> /* relationships */,
-                    std::vector<fuchsia::modular::ContainerView> /* views */) override {}
-
-  // |fuchsia::modular::StoryShell|
   void RemoveSurface(std::string /* surface_id */) override {}
-
-  // |fuchsia::modular::StoryShell|
-  void ReconnectView(fuchsia::modular::ViewConnection view_connection) override {}
 
   // |fuchsia::modular::StoryShell|
   void UpdateSurface(fuchsia::modular::ViewConnection view_connection,
