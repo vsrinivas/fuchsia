@@ -724,7 +724,7 @@ mod tests {
     use net_types::ip::{IpAddress, Ipv4, Ipv6};
     use net_types::Witness;
     use packet::{Buf, ParseBuffer, Serializer};
-    use specialize_ip_macro::specialize_ip;
+    use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
     use crate::ip::{IpProto, Ipv6ExtHdrType};
@@ -1008,6 +1008,7 @@ mod tests {
         process_fragment::<Ipv6, _, &[u8]>(&mut ctx, packet);
     }
 
+    #[ip_test]
     fn test_ip_reassembly<I: Ip>() {
         let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
             .build::<DummyEventDispatcher>();
@@ -1027,16 +1028,7 @@ mod tests {
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 2, 3, ExpectedResult::ReadyReassemble);
     }
 
-    #[test]
-    fn test_ipv4_reassembly() {
-        test_ip_reassembly::<Ipv4>();
-    }
-
-    #[test]
-    fn test_ipv6_reassembly() {
-        test_ip_reassembly::<Ipv6>();
-    }
-
+    #[ip_test]
     fn test_ip_reassemble_with_missing_blocks<I: Ip>() {
         let dummy_config = get_dummy_config::<I::Addr>();
         let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone())
@@ -1067,16 +1059,7 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_ipv4_reassemble_with_missing_blocks() {
-        test_ip_reassemble_with_missing_blocks::<Ipv4>();
-    }
-
-    #[test]
-    fn test_ipv6_reassemble_with_missing_blocks() {
-        test_ip_reassemble_with_missing_blocks::<Ipv6>();
-    }
-
+    #[ip_test]
     fn test_ip_reassemble_after_timer<I: Ip>() {
         let dummy_config = get_dummy_config::<I::Addr>();
         let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone())
@@ -1127,16 +1110,7 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_ipv4_reassemble_after_timer() {
-        test_ip_reassemble_after_timer::<Ipv4>();
-    }
-
-    #[test]
-    fn test_ipv6_reassemble_after_timer() {
-        test_ip_reassemble_after_timer::<Ipv6>();
-    }
-
+    #[ip_test]
     fn test_ip_overlapping_single_fragment<I: Ip>() {
         let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
             .build::<DummyEventDispatcher>();
@@ -1151,16 +1125,6 @@ mod tests {
 
         // Process fragment #0 (overlaps original fragment #0 completely)
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 0, 3, ExpectedResult::Invalid);
-    }
-
-    #[test]
-    fn test_ipv4_overlapping_single_fragment() {
-        test_ip_overlapping_single_fragment::<Ipv4>();
-    }
-
-    #[test]
-    fn test_ipv6_overlapping_single_fragment() {
-        test_ip_overlapping_single_fragment::<Ipv6>();
     }
 
     #[test]
@@ -1287,6 +1251,7 @@ mod tests {
         assert_eq!(packet.body(), &expected_body[..]);
     }
 
+    #[ip_test]
     fn test_ip_reassembly_with_multiple_intertwined_packets<I: Ip>() {
         let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
             .build::<DummyEventDispatcher>();
@@ -1317,16 +1282,7 @@ mod tests {
         process_ip_fragment::<I, _>(&mut ctx, fragment_id_1, 2, 3, ExpectedResult::ReadyReassemble);
     }
 
-    #[test]
-    fn test_ipv4_reassembly_with_multiple_intertwined_packets() {
-        test_ip_reassembly_with_multiple_intertwined_packets::<Ipv4>();
-    }
-
-    #[test]
-    fn test_ipv6_reassembly_with_multiple_intertwined_packets() {
-        test_ip_reassembly_with_multiple_intertwined_packets::<Ipv6>();
-    }
-
+    #[ip_test]
     fn test_ip_reassembly_timer_with_multiple_intertwined_packets<I: Ip>() {
         let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
             .build::<DummyEventDispatcher>();
@@ -1404,15 +1360,5 @@ mod tests {
         // since even though we technically received all the fragments, the last
         // fragment didn't arrive until after the reassembly timer.
         process_ip_fragment::<I, _>(&mut ctx, fragment_id_1, 2, 3, ExpectedResult::NeedMore);
-    }
-
-    #[test]
-    fn test_ipv4_reassembly_timer_with_multiple_intertwined_packets() {
-        test_ip_reassembly_timer_with_multiple_intertwined_packets::<Ipv4>();
-    }
-
-    #[test]
-    fn test_ipv6_reassembly_timer_with_multiple_intertwined_packets() {
-        test_ip_reassembly_timer_with_multiple_intertwined_packets::<Ipv6>();
     }
 }

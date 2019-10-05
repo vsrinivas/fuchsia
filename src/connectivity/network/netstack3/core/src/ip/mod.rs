@@ -1923,6 +1923,7 @@ mod tests {
     use net_types::ip::{Ipv4Addr, Ipv6Addr};
     use packet::{Buf, ParseBuffer};
     use rand::Rng;
+    use specialize_ip_macro::ip_test;
 
     use crate::device::ethernet::EthernetIpExt;
     use crate::device::{receive_frame, set_routing_enabled, FrameDestination};
@@ -2332,6 +2333,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 1);
     }
 
+    #[ip_test]
     fn test_ip_packet_reassembly_not_needed<I: Ip>() {
         let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
             .build::<DummyEventDispatcher>();
@@ -2350,16 +2352,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
     }
 
-    #[test]
-    fn test_ipv4_packet_reassembly_not_needed() {
-        test_ip_packet_reassembly_not_needed::<Ipv4>();
-    }
-
-    #[test]
-    fn test_ipv6_packet_reassembly_not_needed() {
-        test_ip_packet_reassembly_not_needed::<Ipv6>();
-    }
-
+    #[ip_test]
     fn test_ip_packet_reassembly<I: Ip>() {
         let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
             .build::<DummyEventDispatcher>();
@@ -2388,16 +2381,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
     }
 
-    #[test]
-    fn test_ipv4_packet_reassembly() {
-        test_ip_packet_reassembly::<Ipv4>();
-    }
-
-    #[test]
-    fn test_ipv6_packet_reassembly() {
-        test_ip_packet_reassembly::<Ipv6>();
-    }
-
+    #[ip_test]
     fn test_ip_packet_reassembly_with_packets_arriving_out_of_order<I: Ip>() {
         let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
             .build::<DummyEventDispatcher>();
@@ -2451,16 +2435,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 3);
     }
 
-    #[test]
-    fn test_ipv4_packet_reassembly_with_packets_arriving_out_of_order() {
-        test_ip_packet_reassembly_with_packets_arriving_out_of_order::<Ipv4>();
-    }
-
-    #[test]
-    fn test_ipv6_packet_reassembly_with_packets_arriving_out_of_order() {
-        test_ip_packet_reassembly_with_packets_arriving_out_of_order::<Ipv6>();
-    }
-
+    #[ip_test]
     fn test_ip_packet_reassembly_timeout<I: Ip>() {
         let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
             .build::<DummyEventDispatcher>();
@@ -2497,16 +2472,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 0);
     }
 
-    #[test]
-    fn test_ipv4_packet_reassembly_timeout() {
-        test_ip_packet_reassembly_timeout::<Ipv4>();
-    }
-
-    #[test]
-    fn test_ipv6_packet_reassembly_timeout() {
-        test_ip_packet_reassembly_timeout::<Ipv6>();
-    }
-
+    #[ip_test]
     fn test_ip_reassembly_only_at_destination_host<I: Ip>() {
         // Create a new network with two parties (alice & bob) and
         // enable IP packet routing for alice.
@@ -2578,16 +2544,6 @@ mod tests {
 
         // Make sure there are no more events.
         assert!(net.step().is_idle());
-    }
-
-    #[test]
-    fn test_ipv4_reassembly_only_at_destination_host() {
-        test_ip_reassembly_only_at_destination_host::<Ipv4>();
-    }
-
-    #[test]
-    fn test_ipv6_reassembly_only_at_destination_host() {
-        test_ip_reassembly_only_at_destination_host::<Ipv6>();
     }
 
     #[test]
@@ -2701,6 +2657,7 @@ mod tests {
         ret.into_inner()
     }
 
+    #[ip_test]
     fn test_ip_update_pmtu<I: Ip>() {
         //
         // Test receiving a Packet Too Big (IPv6) or Dest Unreachable Fragmentation
@@ -2791,16 +2748,7 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_ipv4_update_pmtu() {
-        test_ip_update_pmtu::<Ipv4>();
-    }
-
-    #[test]
-    fn test_ipv6_update_pmtu() {
-        test_ip_update_pmtu::<Ipv6>();
-    }
-
+    #[ip_test]
     fn test_ip_update_pmtu_too_low<I: Ip>() {
         //
         // Test receiving a Packet Too Big (IPv6) or Dest Unreachable Fragmentation
@@ -2836,16 +2784,6 @@ mod tests {
         assert!(
             get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).is_none(),
         );
-    }
-
-    #[test]
-    fn test_ipv4_update_pmtu_too_low() {
-        test_ip_update_pmtu_too_low::<Ipv4>();
-    }
-
-    #[test]
-    fn test_ipv6_update_pmtu_too_low() {
-        test_ip_update_pmtu_too_low::<Ipv6>();
     }
 
     /// Create buffer to be used as the ICMPv4 message body
@@ -3057,7 +2995,8 @@ mod tests {
         assert_eq!(code, Icmpv4DestUnreachableCode::DestProtocolUnreachable);
     }
 
-    fn test_joining_leaving_ip_multicast_group<I: Ip>() {
+    #[ip_test]
+    fn test_joining_leaving_ip_multicast_group<I: Ip + IpExt>() {
         #[specialize_ip_address]
         fn get_multicast_addr<A: IpAddress>() -> A {
             #[ipv4addr]
@@ -3079,7 +3018,7 @@ mod tests {
         let multi_addr = get_multicast_addr::<I::Addr>();
         let dst_mac = Mac::from(&MulticastAddr::new(multi_addr).unwrap());
         let buf = Buf::new(vec![0; 10], ..)
-            .encapsulate(<I as IpExt>::PacketBuilder::new(
+            .encapsulate(I::PacketBuilder::new(
                 config.remote_ip.get(),
                 multi_addr,
                 64,
@@ -3111,35 +3050,14 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
     }
 
-    #[test]
-    fn test_joining_leaving_ipv4_multicast_groups() {
-        test_joining_leaving_ip_multicast_group::<Ipv4>();
-    }
-
-    #[test]
-    fn test_joining_leaving_ipv6_multicast_groups() {
-        test_joining_leaving_ip_multicast_group::<Ipv6>();
-    }
-
-    #[test]
+    #[ip_test]
     #[should_panic]
-    fn test_lookup_table_ipv4_loopback_panic() {
-        test_lookup_table_address(get_dummy_config::<Ipv4Addr>(), Ipv4::LOOPBACK_ADDRESS);
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_lookup_table_ipv6_loopback_panic() {
-        test_lookup_table_address(get_dummy_config::<Ipv6Addr>(), Ipv6::LOOPBACK_ADDRESS);
-    }
-
-    fn test_lookup_table_address<A: IpAddress>(
-        cfg: DummyEventDispatcherConfig<A>,
-        ip_address: SpecifiedAddr<A>,
-    ) -> Option<Destination<A, DeviceId>> {
+    fn test_lookup_table_address<I: Ip>() {
+        let cfg = get_dummy_config::<I::Addr>();
+        let ip_address = I::LOOPBACK_ADDRESS;
         let mut ctx =
             DummyEventDispatcherBuilder::from_config(cfg.clone()).build::<DummyEventDispatcher>();
-        lookup_route(&ctx, ip_address)
+        lookup_route(&ctx, ip_address);
     }
 
     #[test]

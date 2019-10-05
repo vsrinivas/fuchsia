@@ -478,7 +478,7 @@ mod tests {
 
     use net_types::ip::{Ipv4, Ipv6};
     use net_types::{SpecifiedAddr, Witness};
-    use specialize_ip_macro::specialize_ip_address;
+    use specialize_ip_macro::{ip_test, specialize_ip_address};
 
     use crate::testutil::{
         get_dummy_config, run_for, DummyEventDispatcher, DummyEventDispatcherBuilder,
@@ -522,6 +522,7 @@ mod tests {
         assert_eq!(next_lower_pmtu_plateau(0), None);
     }
 
+    #[ip_test]
     fn test_ip_path_mtu_cache_ctx<I: Ip>() {
         let dummy_config = get_dummy_config::<I::Addr>();
         let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone())
@@ -741,22 +742,13 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_ipv4_path_mtu_cache_ctx() {
-        test_ip_path_mtu_cache_ctx::<Ipv4>();
-    }
-
-    #[test]
-    fn test_ipv6_path_mtu_cache_ctx() {
-        test_ip_path_mtu_cache_ctx::<Ipv6>();
-    }
-
     /// Get an IPv4 or IPv6 address within the same subnet as that of `DUMMY_CONFIG_*`,
     /// but with the last octet set to `3`.
     fn get_other_ip_address<A: IpAddress>() -> SpecifiedAddr<A> {
         crate::testutil::get_other_ip_address::<A>(3)
     }
 
+    #[ip_test]
     fn test_ip_pmtu_task<I: Ip>() {
         let dummy_config = get_dummy_config::<I::Addr>();
         let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone())
@@ -930,15 +922,5 @@ mod tests {
         // Should not have a task scheduled since there is no more PMTU
         // data.
         assert_eq!(ctx.dispatcher.timer_events().count(), 0);
-    }
-
-    #[test]
-    fn test_ipv4_pmtu_task() {
-        test_ip_pmtu_task::<Ipv4>();
-    }
-
-    #[test]
-    fn test_ipv6_pmtu_task() {
-        test_ip_pmtu_task::<Ipv6>();
     }
 }

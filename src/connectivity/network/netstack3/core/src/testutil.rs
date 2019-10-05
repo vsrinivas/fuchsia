@@ -1418,6 +1418,7 @@ where
 mod tests {
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
     use packet::{Buf, Serializer};
+    use specialize_ip_macro::ip_test;
     use std::time::Duration;
 
     use super::*;
@@ -1726,6 +1727,7 @@ mod tests {
         assert!(net.step().is_idle());
     }
 
+    #[ip_test]
     fn test_send_to_many<I: Ip>() {
         fn send_packet<A: IpAddress>(
             ctx: &mut Context<DummyEventDispatcher>,
@@ -1848,15 +1850,5 @@ mod tests {
         assert_eq!(net.context("bob").dispatcher().frames_sent().len(), 0);
         assert_eq!(net.context("calvin").dispatcher().frames_sent().len(), 0);
         assert_eq!(net.pending_frames.len(), 0);
-    }
-
-    #[test]
-    fn test_send_to_many_ipv4() {
-        test_send_to_many::<Ipv4>();
-    }
-
-    #[test]
-    fn test_send_to_many_ipv6() {
-        test_send_to_many::<Ipv6>();
     }
 }

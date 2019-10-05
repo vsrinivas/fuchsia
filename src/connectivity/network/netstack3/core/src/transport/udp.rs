@@ -453,6 +453,7 @@ pub(crate) fn listen_udp<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Vers
 mod tests {
     use net_types::ip::{Ipv4, Ipv6};
     use packet::serialize::Buf;
+    use specialize_ip_macro::ip_test;
 
     use super::*;
     use crate::ip::IpProto;
@@ -562,6 +563,7 @@ mod tests {
     /// Tests that a listener can be created, that the context receives
     /// packet notifications for that listener, and that we can send data using
     /// that listener.
+    #[ip_test]
     fn test_listen_udp<I: Ip>() {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
@@ -621,21 +623,12 @@ mod tests {
         assert_eq!(packet.body(), &body[..]);
     }
 
-    #[test]
-    fn test_listen_udp_v4() {
-        test_listen_udp::<Ipv4>();
-    }
-
-    #[test]
-    fn test_listen_udp_v6() {
-        test_listen_udp::<Ipv6>();
-    }
-
     /// Helper function to test that UDP packets without a connection are
     /// dropped.
     ///
     /// Tests that receiving a UDP packet on a port over which there isn't a
     /// listener causes the packet to be dropped correctly.
+    #[ip_test]
     fn test_udp_drop<I: Ip>() {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
@@ -655,20 +648,11 @@ mod tests {
         assert_eq!(ctx.get_ref().conn_data.len(), 0);
     }
 
-    #[test]
-    fn test_udp_drop_v4() {
-        test_udp_drop::<Ipv4>();
-    }
-
-    #[test]
-    fn test_udp_drop_v6() {
-        test_udp_drop::<Ipv6>();
-    }
-
     /// Helper function to test that udp connections can be created and data can
     /// be transmitted over it.
     ///
     /// Only tests with specified local port and address bounds.
+    #[ip_test]
     fn test_udp_conn_basic<I: Ip>() {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
@@ -719,18 +703,9 @@ mod tests {
         assert_eq!(packet.body(), &body[..]);
     }
 
-    #[test]
-    fn test_udp_conn_basic_v4() {
-        test_udp_conn_basic::<Ipv4>();
-    }
-
-    #[test]
-    fn test_udp_conn_basic_v6() {
-        test_udp_conn_basic::<Ipv6>();
-    }
-
     /// Tests that if we have multiple listeners and connections, demuxing the
     /// flows is performed correctly.
+    #[ip_test]
     fn test_udp_demux<I: Ip>() {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
@@ -846,17 +821,8 @@ mod tests {
         assert_eq!(pkt.body, &body_wildcard_list[..]);
     }
 
-    #[test]
-    fn test_udp_demux_v4() {
-        test_udp_demux::<Ipv4>();
-    }
-
-    #[test]
-    fn test_udp_demux_v6() {
-        test_udp_demux::<Ipv6>();
-    }
-
     /// Tests UDP wildcard listeners for different IP versions.
+    #[ip_test]
     fn test_wildcard_listeners<I: Ip>() {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
@@ -904,17 +870,8 @@ mod tests {
         assert_eq!(pkt.body, &body[..]);
     }
 
-    #[test]
-    fn test_wildcard_listeners_v4() {
-        test_wildcard_listeners::<Ipv4>();
-    }
-
-    #[test]
-    fn test_wildcard_listeners_v6() {
-        test_wildcard_listeners::<Ipv6>();
-    }
-
     /// Tests establishing a UDP connection without providing a local IP
+    #[ip_test]
     fn test_conn_unspecified_local_ip<I: Ip>() {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
@@ -933,15 +890,5 @@ mod tests {
         assert_eq!(connid.local_port, local_port);
         assert_eq!(connid.remote_addr, remote_addr::<I>());
         assert_eq!(connid.remote_port, remote_port);
-    }
-
-    #[test]
-    fn test_conn_unspecified_local_ip_v4() {
-        test_conn_unspecified_local_ip::<Ipv4>();
-    }
-
-    #[test]
-    fn test_conn_unspecified_local_ip_v6() {
-        test_conn_unspecified_local_ip::<Ipv6>();
     }
 }

@@ -1618,7 +1618,7 @@ fn mac_resolution_failed<C: EthernetIpDeviceContext>(
 mod tests {
     use packet::Buf;
     use rand::Rng;
-    use specialize_ip_macro::specialize_ip;
+    use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
     use crate::device::{is_routing_enabled, set_routing_enabled, DeviceId};
@@ -1632,7 +1632,7 @@ mod tests {
         parse_ip_packet_in_ethernet_frame, DummyEventDispatcher, DummyEventDispatcherBuilder,
         DummyInstant, DUMMY_CONFIG_V4,
     };
-    use crate::wire::icmp::{IcmpDestUnreachable, IcmpIpExt, IcmpMessage};
+    use crate::wire::icmp::{IcmpDestUnreachable, IcmpIpExt};
     use crate::wire::testdata::{dns_request_v4, dns_request_v6};
     use crate::StackStateBuilder;
 
@@ -1716,26 +1716,15 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "receive_ipv6_packet"), 1);
     }
 
-    #[test]
+    #[ip_test]
     #[should_panic]
-    fn receive_frame_ipv4_uninitialized() {
-        test_receive_ip_frame::<Ipv4>(false);
+    fn receive_frame_uninitialized<I: Ip>() {
+        test_receive_ip_frame::<I>(false);
     }
 
-    #[test]
-    #[should_panic]
-    fn receive_frame_ipv6_uninitialized() {
-        test_receive_ip_frame::<Ipv6>(false);
-    }
-
-    #[test]
-    fn receive_frame_ipv4_initialized() {
-        test_receive_ip_frame::<Ipv4>(true);
-    }
-
-    #[test]
-    fn receive_frame_ipv6_initialized() {
-        test_receive_ip_frame::<Ipv6>(true);
+    #[ip_test]
+    fn receive_frame_initialized<I: Ip>() {
+        test_receive_ip_frame::<I>(true);
     }
 
     #[specialize_ip]
@@ -1765,26 +1754,15 @@ mod tests {
         crate::device::send_ip_frame(&mut ctx, device, config.remote_ip, Buf::new(bytes, ..));
     }
 
-    #[test]
+    #[ip_test]
     #[should_panic]
-    fn send_frame_ipv4_uninitialized() {
-        test_send_ip_frame::<Ipv4>(false);
+    fn test_send_frame_uninitialized<I: Ip>() {
+        test_send_ip_frame::<I>(false);
     }
 
-    #[test]
-    #[should_panic]
-    fn send_frame_ipv6_uninitialized() {
-        test_send_ip_frame::<Ipv6>(false);
-    }
-
-    #[test]
-    fn send_frame_ipv4_initialized() {
-        test_send_ip_frame::<Ipv4>(true);
-    }
-
-    #[test]
-    fn send_frame_ipv6_initialized() {
-        test_send_ip_frame::<Ipv6>(true);
+    #[ip_test]
+    fn test_send_frame_initialized<I: Ip>() {
+        test_send_ip_frame::<I>(true);
     }
 
     #[test]
@@ -1807,11 +1785,8 @@ mod tests {
         crate::device::initialize_device(&mut ctx, device);
     }
 
-    fn test_set_ip_routing<I: Ip>()
-    where
-        I: IcmpIpExt,
-        IcmpDestUnreachable: for<'a> IcmpMessage<I, &'a [u8]>,
-    {
+    #[ip_test]
+    fn test_set_ip_routing<I: Ip + IcmpIpExt + IpExt>() {
         #[specialize_ip]
         fn check_other_is_routing_enabled<I: Ip>(
             ctx: &Context<DummyEventDispatcher>,
@@ -1852,7 +1827,7 @@ mod tests {
         let mut rng = new_rng(70812476915813);
         let mut body: Vec<u8> = std::iter::repeat_with(|| rng.gen()).take(100).collect();
         let buf = Buf::new(&mut body[..], ..)
-            .encapsulate(<I as IpExt>::PacketBuilder::new(
+            .encapsulate(I::PacketBuilder::new(
                 src_ip.get(),
                 config.remote_ip.get(),
                 64,
@@ -1945,17 +1920,8 @@ mod tests {
         check_icmp::<I>(&ctx.dispatcher().frames_sent()[2].1);
     }
 
-    #[test]
-    fn test_set_ipv4_routing() {
-        test_set_ip_routing::<Ipv4>();
-    }
-
-    #[test]
-    fn test_set_ipv6_routing() {
-        test_set_ip_routing::<Ipv6>();
-    }
-
-    fn test_promiscuous_mode<I: Ip>() {
+    #[ip_test]
+    fn test_promiscuous_mode<I: Ip + IpExt>() {
         //
         // Test that frames not destined for a device will still be accepted when
         // the device is put into promiscuous mode. In all cases, frames that are
@@ -1969,7 +1935,7 @@ mod tests {
         let other_mac = Mac::new([13, 14, 15, 16, 17, 18]);
 
         let buf = Buf::new(Vec::new(), ..)
-            .encapsulate(<I as IpExt>::PacketBuilder::new(
+            .encapsulate(I::PacketBuilder::new(
                 config.remote_ip.get(),
                 config.local_ip.get(),
                 64,
@@ -1996,7 +1962,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 2);
 
         let buf = Buf::new(Vec::new(), ..)
-            .encapsulate(<I as IpExt>::PacketBuilder::new(
+            .encapsulate(I::PacketBuilder::new(
                 config.remote_ip.get(),
                 config.local_ip.get(),
                 64,
@@ -2019,16 +1985,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 3);
     }
 
-    #[test]
-    fn test_promiscuous_mode_ipv4() {
-        test_promiscuous_mode::<Ipv4>();
-    }
-
-    #[test]
-    fn test_promiscuous_mode_ipv6() {
-        test_promiscuous_mode::<Ipv6>();
-    }
-
+    #[ip_test]
     fn test_add_remove_ip_addresses<I: Ip>() {
         let config = get_dummy_config::<I::Addr>();
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
@@ -2098,16 +2055,6 @@ mod tests {
         assert!(crate::device::get_ip_addr_state(&ctx, device, &ip3).is_none());
     }
 
-    #[test]
-    fn test_add_remove_ipv4_addresses() {
-        test_add_remove_ip_addresses::<Ipv4>();
-    }
-
-    #[test]
-    fn test_add_remove_ipv6_addresses() {
-        test_add_remove_ip_addresses::<Ipv6>();
-    }
-
     fn receive_simple_ip_packet_test<A: IpAddress>(
         ctx: &mut Context<DummyEventDispatcher>,
         device: DeviceId,
@@ -2131,6 +2078,7 @@ mod tests {
         assert_eq!(get_counter_val(ctx, dispatch_receive_ip_packet_name::<A::Version>()), expected);
     }
 
+    #[ip_test]
     fn test_multiple_ip_addresses<I: Ip>() {
         let config = get_dummy_config::<I::Addr>();
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
@@ -2186,16 +2134,6 @@ mod tests {
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip2.get(), 4);
     }
 
-    #[test]
-    fn test_multiple_ipv4_addresses() {
-        test_multiple_ip_addresses::<Ipv4>();
-    }
-
-    #[test]
-    fn test_multiple_ipv6_addresses() {
-        test_multiple_ip_addresses::<Ipv6>();
-    }
-
     /// Get a multicast address.
     #[specialize_ip]
     fn get_multicast_addr<I: Ip>() -> MulticastAddr<I::Addr> {
@@ -2211,6 +2149,7 @@ mod tests {
 
     /// Test that we can join and leave a multicast group, but we only truly leave it after
     /// calling `leave_ip_multicast` the same number of times as `join_ip_multicast`.
+    #[ip_test]
     fn test_ip_join_leave_multicast_addr_ref_count<I: Ip>() {
         let config = get_dummy_config::<I::Addr>();
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
@@ -2247,22 +2186,14 @@ mod tests {
         assert!(!crate::device::is_in_ip_multicast(&mut ctx, device, multicast_addr));
     }
 
-    #[test]
-    fn test_ipv4_join_leave_multicast_addr_ref_count() {
-        test_ip_join_leave_multicast_addr_ref_count::<Ipv4>();
-    }
-
-    #[test]
-    fn test_ipv6_join_leave_multicast_addr_ref_count() {
-        test_ip_join_leave_multicast_addr_ref_count::<Ipv6>();
-    }
-
     /// Test leaving a multicast group a device has not yet joined.
     ///
     /// # Panics
     ///
     /// This method should always panic as leaving an unjoined multicast group is a panic
     /// condition.
+    #[ip_test]
+    #[should_panic]
     fn test_ip_leave_unjoined_multicast<I: Ip>() {
         let config = get_dummy_config::<I::Addr>();
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
@@ -2276,18 +2207,6 @@ mod tests {
 
         // Leave it (this should panic.
         crate::device::leave_ip_multicast(&mut ctx, device, multicast_addr);
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_ipv4_leave_unjoined_multicast() {
-        test_ip_leave_unjoined_multicast::<Ipv4>();
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_ipv6_leave_unjoined_multicast() {
-        test_ip_leave_unjoined_multicast::<Ipv6>();
     }
 
     #[test]

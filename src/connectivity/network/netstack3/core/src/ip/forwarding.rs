@@ -426,6 +426,8 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
 
 #[cfg(test)]
 mod tests {
+    use specialize_ip_macro::ip_test;
+
     use super::*;
 
     use crate::device::DeviceId;
@@ -511,6 +513,7 @@ mod tests {
         .unwrap();
     }
 
+    #[ip_test]
     fn test_add_del_lookup_simple_ip<I: Ip>() {
         let mut table = ForwardingTable::<I, DeviceId>::default();
 
@@ -607,16 +610,7 @@ mod tests {
         assert!(table.lookup(config.remote_ip).is_none());
     }
 
-    #[test]
-    fn test_add_del_lookup_simple_ipv4() {
-        test_add_del_lookup_simple_ip::<Ipv4>();
-    }
-
-    #[test]
-    fn test_add_del_lookup_simple_ipv6() {
-        test_add_del_lookup_simple_ip::<Ipv6>();
-    }
-
+    #[ip_test]
     fn test_max_depth_for_forwarding_table_ip<I: Ip>() {
         let mut table = ForwardingTable::<I, DeviceId>::default();
         let device0 = DeviceId::new_ethernet(0);
@@ -779,16 +773,7 @@ mod tests {
         assert_eq!(table.del_next_hop_route(sub1, addr5).unwrap_err(), NotFoundError);
     }
 
-    #[test]
-    fn test_max_depth_for_forwarding_table_ipv4() {
-        test_max_depth_for_forwarding_table_ip::<Ipv4>();
-    }
-
-    #[test]
-    fn test_max_depth_for_forwarding_table_ipv6() {
-        test_max_depth_for_forwarding_table_ip::<Ipv6>();
-    }
-
+    #[ip_test]
     fn test_find_active_route_if_it_exists_ip<I: Ip>() {
         let mut table = ForwardingTable::<I, DeviceId>::default();
         let device0 = DeviceId::new_ethernet(0);
@@ -935,16 +920,7 @@ mod tests {
         assert_eq!(table.lookup(addr5).unwrap(), Destination { next_hop: addr5, device: device1 });
     }
 
-    #[test]
-    fn test_find_active_route_if_it_exists_ipv4() {
-        test_find_active_route_if_it_exists_ip::<Ipv4>();
-    }
-
-    #[test]
-    fn test_find_active_route_if_it_exists_ipv6() {
-        test_find_active_route_if_it_exists_ip::<Ipv6>();
-    }
-
+    #[ip_test]
     fn test_use_most_specific_route_ip<I: Ip>() {
         let mut table = ForwardingTable::<I, DeviceId>::default();
         let device0 = DeviceId::new_ethernet(0);
@@ -1278,16 +1254,7 @@ mod tests {
             .any(|x| (x.subnet == sub14_s25) && (x.dest == EntryDest::Local { device: device0 })));
     }
 
-    #[test]
-    fn test_use_most_specific_route_ipv4() {
-        test_use_most_specific_route_ip::<Ipv4>();
-    }
-
-    #[test]
-    fn test_use_most_specific_route_ipv6() {
-        test_use_most_specific_route_ip::<Ipv6>();
-    }
-
+    #[ip_test]
     fn test_cycle_ip<I: Ip>() {
         let mut table = ForwardingTable::<I, DeviceId>::default();
         let device0 = DeviceId::new_ethernet(0);
@@ -1392,16 +1359,7 @@ mod tests {
         assert!(table.lookup(addr5).is_none());
     }
 
-    #[test]
-    fn test_cycle_ipv4() {
-        test_cycle_ip::<Ipv4>();
-    }
-
-    #[test]
-    fn test_cycle_ipv6() {
-        test_cycle_ip::<Ipv4>();
-    }
-
+    #[ip_test]
     fn test_default_route_ip<I: Ip>() {
         let mut table = ForwardingTable::<I, DeviceId>::default();
         let device0 = DeviceId::new_ethernet(0);
@@ -1455,15 +1413,5 @@ mod tests {
         assert_eq!(table.lookup(addr1).unwrap(), Destination { next_hop: addr1, device: device0 });
         assert_eq!(table.lookup(addr2).unwrap(), Destination { next_hop: addr1, device: device0 });
         assert_eq!(table.lookup(addr3).unwrap(), Destination { next_hop: addr1, device: device0 });
-    }
-
-    #[test]
-    fn test_default_route_ipv4() {
-        test_default_route_ip::<Ipv4>();
-    }
-
-    #[test]
-    fn test_default_route_ipv6() {
-        test_default_route_ip::<Ipv4>();
     }
 }

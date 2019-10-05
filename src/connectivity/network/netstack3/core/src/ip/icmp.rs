@@ -1569,7 +1569,7 @@ mod tests {
 
     use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
     use packet::{Buf, Serializer};
-    use specialize_ip_macro::specialize_ip;
+    use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
     use crate::context::testutil::{DummyContext, DummyInstant};
@@ -1893,8 +1893,14 @@ mod tests {
     }
 
     #[specialize_ip]
-    fn test_icmp_connections<I: Ip>(recv_icmp_packet_name: &str) {
+    #[ip_test]
+    fn test_icmp_connections<I: Ip>() {
         crate::testutil::set_logger_for_test();
+        #[ipv4]
+        let recv_icmp_packet_name = "receive_icmpv4_packet";
+        #[ipv6]
+        let recv_icmp_packet_name = "receive_icmpv6_packet";
+
         let config = crate::testutil::get_dummy_config::<I::Addr>();
         let mut net =
             crate::testutil::new_dummy_network_from_config("alice", "bob", config.clone());
@@ -1936,16 +1942,6 @@ mod tests {
         let (seq, body) = &replies[0];
         assert_eq!(*seq, 7);
         assert_eq!(*body, echo_body);
-    }
-
-    #[test]
-    fn test_icmp_connections_v4() {
-        test_icmp_connections::<Ipv4>("receive_icmpv4_packet");
-    }
-
-    #[test]
-    fn test_icmp_connections_v6() {
-        test_icmp_connections::<Ipv6>("receive_icmpv6_packet");
     }
 
     //
