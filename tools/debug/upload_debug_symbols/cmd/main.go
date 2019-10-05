@@ -20,6 +20,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
 )
@@ -35,6 +36,9 @@ const (
 	// symbol files we'll have to upload. 100 is chosen as a sensible default. This can be
 	// overriden on the command line.
 	defaultConccurrentUploadCount = 100
+
+	// The default timeout duration per upload.
+	defaultTimeout = 10 * time.Minute
 )
 
 // Command line flags.
@@ -47,6 +51,9 @@ var (
 
 	// The maximum number of files to upload at once.
 	concurrentUploadCount int
+
+	// The timeout for a single upload.
+	timeout time.Duration
 )
 
 func init() {
@@ -58,6 +65,7 @@ func init() {
 	flag.StringVar(&gcsBucket, "bucket", "", "GCS bucket to upload symbols to")
 	flag.StringVar(&uploadRecord, "upload-record", "", "Path to write record of uploaded symbols")
 	flag.IntVar(&concurrentUploadCount, "j", defaultConccurrentUploadCount, "Number of concurrent threads to use to upload files")
+	flag.DurationVar(&timeout, "timeout", defaultTimeout, "Timeout duration per upload")
 }
 
 func main() {
@@ -87,7 +95,7 @@ func execute(ctx context.Context, paths []string) error {
 	if err != nil {
 		return err
 	}
-	succeeded, uploadPaths := upload(ctx, bkt, jobs)
+	succeeded, uploadPaths := upload(ctx, bkt, timeout, jobs)
 	if !succeeded {
 		return errors.New("completed with errors")
 	}
@@ -143,7 +151,7 @@ func queueJobs(bfrs []elflib.BinaryFileRef) (<-chan job, error) {
 
 // Upload executes all of the jobs to upload files from the input channel. Returns true
 // iff all uploads succeeded without error, and a record of all uploads as a string.
-func upload(ctx context.Context, bkt *GCSBucket, jobs <-chan job) (bool, string) {
+func upload(ctx context.Context, bkt *GCSBucket, timeout time.Duration, jobs <-chan job) (bool, string) {
 	errs := make(chan error, concurrentUploadCount)
 	defer close(errs)
 	uploadPaths := make(chan string, concurrentUploadCount)
@@ -154,15 +162,17 @@ func upload(ctx context.Context, bkt *GCSBucket, jobs <-chan job) (bool, string)
 	var wg sync.WaitGroup
 	wg.Add(workerCount)
 	for i := 0; i < workerCount; i++ {
-		go worker(ctx, bkt, &wg, jobs, errs, uploadPaths)
+		go worker(ctx, bkt, &wg, context.WithTimeout, timeout, jobs, errs, uploadPaths)
 	}
 
 	// Let the caller know whether any errors were emitted.
 	succeeded := true
 	go func() {
 		for e := range errs {
-			succeeded = false
-			log.Printf("error: %v", e)
+			if e != nil {
+				succeeded = false
+				log.Printf("error: %v", e)
+			}
 		}
 	}()
 	// Receive from uploadPaths channel to build upload record.
@@ -174,20 +184,6 @@ func upload(ctx context.Context, bkt *GCSBucket, jobs <-chan job) (bool, string)
 	}()
 	wg.Wait()
 	return succeeded, builder.String()
-}
-
-// worker processes all jobs on the input channel, emitting any errors on errs.
-func worker(ctx context.Context, bkt *GCSBucket, wg *sync.WaitGroup, jobs <-chan job, errs chan<- error, uploadPaths chan<- string) {
-	defer wg.Done()
-	for job := range jobs {
-		log.Printf("executing %s", job.name)
-		err := job.ensure(context.Background(), bkt)
-		if err != nil {
-			errs <- fmt.Errorf("job %s failed: %v", job.name, err)
-		} else {
-			uploadPaths <- job.gcsPath
-		}
-	}
 }
 
 // Write upload paths to local file.
