@@ -1628,7 +1628,20 @@ impl<D: EventDispatcher> FrameContext<EmptyBuf, IgmpPacketMetadata<DeviceId>> fo
         meta: IgmpPacketMetadata<DeviceId>,
         body: S,
     ) -> Result<(), S> {
-        send_igmp_packet(self, meta.device, meta.src_ip, meta.dst_ip, body)
+        let builder = match Ipv4PacketBuilderWithOptions::new(
+            Ipv4PacketBuilder::new(meta.src_ip, meta.dst_ip, 1, IpProto::Igmp),
+            &[Ipv4Option {
+                copied: true,
+                data: crate::ip::Ipv4OptionData::RouterAlert { data: 0 },
+            }],
+        ) {
+            None => return Err(body),
+            Some(builder) => builder,
+        };
+
+        let body = body.encapsulate(builder);
+        crate::device::send_ip_frame(self, meta.device, meta.dst_ip.into_specified(), body)
+            .map_err(|ser| ser.into_inner())
     }
 }
 
@@ -1652,33 +1665,6 @@ impl<D: EventDispatcher> MldContext for Context<D> {
     fn get_ipv6_link_local_addr(&self, device: DeviceId) -> Option<LinkLocalAddr<Ipv6Addr>> {
         crate::device::get_ipv6_link_local_addr(self, device)
     }
-}
-
-/// Send an IGMP packet.
-///
-/// IGMP packet must have a TTL of 1 and have RouterAlert set.
-fn send_igmp_packet<B: BufferMut, D: BufferDispatcher<B>, S>(
-    ctx: &mut Context<D>,
-    device: DeviceId,
-    src_ip: SpecifiedAddr<Ipv4Addr>,
-    dst_ip: MulticastAddr<Ipv4Addr>,
-    body: S,
-) -> Result<(), S>
-where
-    S: Serializer<Buffer = B>,
-{
-    let ipv4 = Ipv4PacketBuilder::new(src_ip, dst_ip, 1, IpProto::Igmp);
-    let with_options = match Ipv4PacketBuilderWithOptions::new(
-        ipv4,
-        &[Ipv4Option { copied: true, data: crate::ip::Ipv4OptionData::RouterAlert { data: 0 } }],
-    ) {
-        None => return Err(body),
-        Some(builder) => builder,
-    };
-
-    let body = body.encapsulate(with_options);
-    crate::device::send_ip_frame(ctx, device, dst_ip.into_specified(), body)
-        .map_err(|ser| ser.into_inner())
 }
 
 impl<D: EventDispatcher> StateContext<(), Icmpv4State<D::Instant>> for Context<D> {
