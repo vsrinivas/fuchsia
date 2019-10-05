@@ -34,7 +34,6 @@ unlinted_libraries = [
   "fuchsia.hardware.usb.virtual.bus",
   "fuchsia.hardware.zxcrypt",
   "fuchsia.kernel",
-  "fuchsia.metricbroker",
   "fuchsia.net",
   "fuchsia.net.stack",
   "fuchsia.posix.socket",
