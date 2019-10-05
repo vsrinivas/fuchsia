@@ -49,8 +49,8 @@ declare_args() {
 #       as ZBI_TYPE_|type| items in 'zbi' property.
 #
 #   deps (usually required)
-#   testonly (optional)
-#       Same as for any GN `action` target.
+#   testonly, metadata
+#       Usual GN meaning.
 template("vbmeta") {
   if (defined(invoker.output_name)) {
     output_file = invoker.output_name
@@ -151,6 +151,7 @@ template("vbmeta") {
                              "testonly",
                              "visibility",
                              "deps",
+                             "metadata",
                            ])
 
     deps += [ ":${target_name}__vb_desc" ]
