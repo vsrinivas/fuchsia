@@ -99,6 +99,20 @@ class Location {
   // addresses to global ones by adding the module load address.
   void AddAddressOffset(uint64_t offset);
 
+  // Returns if this location is the same as the other one, ignoring the symbol() object. Comparing
+  // symbol objects is dicy because the same symbol can result in a different object depending on
+  // how it is found or whether it was re-queried.
+  //
+  // This function is primarily used for tests, in which case comparing object pointer equality
+  // might be good enough. For non-tests, one might compare symbols by name.
+  bool EqualsIgnoringSymbol(const Location& other) const;
+
+  // Returns a string version of the State enum for debugging purposes.
+  static const char* StateToString(State state);
+
+  // Returns a description of this Location for debugging purposes.
+  std::string GetDebugString() const;
+
  private:
   State state_ = State::kInvalid;
   uint64_t address_ = 0;

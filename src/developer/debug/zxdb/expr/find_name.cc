@@ -403,10 +403,13 @@ FindNameContext::FindNameContext(const ProcessSymbols* ps, const SymbolContext& 
 
     // Find the module that corresponds to the symbol context.
     uint64_t module_load_address = symbol_context.RelativeToAbsolute(0);
-    for (const LoadedModuleSymbols* mod : ps->GetLoadedModuleSymbols()) {
-      if (mod->load_address() == module_load_address) {
-        module_symbols = mod->module_symbols();
-        break;
+    if (module_load_address) {
+      // Valid symbol context was given, try to find the corresponding module.
+      for (const LoadedModuleSymbols* mod : ps->GetLoadedModuleSymbols()) {
+        if (mod->load_address() == module_load_address) {
+          module_symbols = mod->module_symbols();
+          break;
+        }
       }
     }
   }

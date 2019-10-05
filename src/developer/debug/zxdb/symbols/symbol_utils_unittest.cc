@@ -24,21 +24,21 @@ TEST(SymbolUtils, GetSymbolScopePrefix) {
   fxl::RefPtr<Namespace> ns2 = fxl::MakeRefCounted<Namespace>();
   ns2->set_parent(ns1);
   EXPECT_EQ("::ns1", GetSymbolScopePrefix(ns2.get()).GetFullName());
-  EXPECT_EQ("ns1::(anon)", ns2->GetFullName());
+  EXPECT_EQ("ns1::$anon", ns2->GetFullName());
 
   // Struct inside anonymous namespace.
   fxl::RefPtr<Collection> st = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType);
   st->set_parent(ns2);
   st->set_assigned_name("Struct");
-  EXPECT_EQ("::ns1::(anon)", GetSymbolScopePrefix(st.get()).GetFullName());
-  EXPECT_EQ("ns1::(anon)::Struct", st->GetFullName());
+  EXPECT_EQ("::ns1::$anon", GetSymbolScopePrefix(st.get()).GetFullName());
+  EXPECT_EQ("ns1::$anon::Struct", st->GetFullName());
 
   // Data member inside structure.
   fxl::RefPtr<DataMember> dm = fxl::MakeRefCounted<DataMember>();
   dm->set_parent(st);
   dm->set_assigned_name("data_");
-  EXPECT_EQ("::ns1::(anon)::Struct", GetSymbolScopePrefix(dm.get()).GetFullName());
-  EXPECT_EQ("ns1::(anon)::Struct::data_", dm->GetFullName());
+  EXPECT_EQ("::ns1::$anon::Struct", GetSymbolScopePrefix(dm.get()).GetFullName());
+  EXPECT_EQ("ns1::$anon::Struct::data_", dm->GetFullName());
 }
 
 // Tests some symbol scope descriptions with respect to functions.

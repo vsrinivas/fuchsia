@@ -19,6 +19,7 @@
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/expr/permissive_input_location.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
@@ -172,9 +173,11 @@ void BreakpointImpl::DidLoadModuleSymbols(Process* process, LoadedModuleSymbols*
   // Should only get this notification for relevant processes.
   FXL_DCHECK(CouldApplyToProcess(process));
 
+  FindNameContext find_context(process->GetSymbols());
+
   ResolveOptions options = GetResolveOptions();
   bool needs_sync = false;
-  for (const auto& loc : settings_.locations) {
+  for (const auto& loc : ExpandPermissiveInputLocationNames(find_context, settings_.locations)) {
     needs_sync |=
         procs_[process].AddLocations(this, process, module->ResolveInputLocation(loc, options));
   }
@@ -384,10 +387,12 @@ bool BreakpointImpl::RegisterProcess(Process* process) {
 
   // Resolve addresses.
   ResolveOptions options = GetResolveOptions();
-  for (const auto& loc : settings_.locations) {
-    changed |= record.AddLocations(this, process,
-                                   process->GetSymbols()->ResolveInputLocation(loc, options));
-  }
+  FindNameContext find_context(process->GetSymbols());
+
+  changed |=
+      record.AddLocations(this, process,
+                          ResolvePermissiveInputLocations(process->GetSymbols(), options,
+                                                          find_context, settings_.locations));
   return changed;
 }
 

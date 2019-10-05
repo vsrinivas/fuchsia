@@ -25,6 +25,9 @@ class SymbolContext {
 
   explicit SymbolContext(uint64_t load_address) : load_address_(load_address) {}
 
+  bool operator==(const SymbolContext& other) const { return load_address_ == other.load_address_; }
+  bool operator!=(const SymbolContext& other) const { return load_address_ != other.load_address_; }
+
   // Address conversion.
   uint64_t RelativeToAbsolute(uint64_t relative) const { return load_address_ + relative; }
   uint64_t AbsoluteToRelative(uint64_t absolute) const { return absolute - load_address_; }

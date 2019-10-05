@@ -57,9 +57,16 @@ std::vector<Location> MockModuleSymbols::ResolveInputLocation(const SymbolContex
       }
       break;
     case InputLocation::Type::kSymbol: {
+      // The input may be qualified or unqualified globally. Allow either to match an unqualified
+      // expected value.
       auto found = named_symbols_.find(input_location.symbol.GetFullName());
-      if (found != named_symbols_.end())
+      if (found != named_symbols_.end()) {
         result = found->second;
+      } else {
+        found = named_symbols_.find(input_location.symbol.GetFullNameNoQual());
+        if (found != named_symbols_.end())
+          result = found->second;
+      }
       break;
     }
     default:

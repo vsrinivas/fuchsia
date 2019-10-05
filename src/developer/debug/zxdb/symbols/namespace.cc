@@ -20,10 +20,7 @@ Identifier Namespace::ComputeIdentifier() const {
   const std::string& assigned = GetAssignedName();
 
   Identifier result = GetSymbolScopePrefix(this);
-  if (assigned.empty())
-    result.AppendComponent(IdentifierComponent("(anon)"));
-  else
-    result.AppendComponent(IdentifierComponent(assigned));
+  result.AppendComponent(IdentifierComponent(assigned));
   return result;
 }
 

@@ -18,6 +18,11 @@ class MockModuleSymbols : public ModuleSymbols {
  public:
   // Adds a mock mapping from the given name/address to the list of locations. The addresses are
   // mapped exactly to queries, we don't do anything fancy with ranges.
+  //
+  // The input name will be matched against both the globally qualified (including leading "::" if
+  // present) and unqualified names which matches the implementation behavior of ignoring the
+  // qualification when doing an index search. As a result, the input name should not have a
+  // leading "::".
   void AddSymbolLocations(const std::string& name, std::vector<Location> locs);
   void AddSymbolLocations(uint64_t address, std::vector<Location> locs);
 

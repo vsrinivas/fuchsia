@@ -5,10 +5,12 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_FIND_NAME_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_FIND_NAME_H_
 
+#include <limits>
 #include <string>
 
 #include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
+#include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/developer/debug/zxdb/symbols/visit_scopes.h"
 
 namespace zxdb {
@@ -33,11 +35,12 @@ struct FindNameContext {
   FindNameContext() = default;
 
   // Search everything given a live context. The current module is extracted from the given symbol
-  // context if possible.
+  // context if possible. This can be SymbolContext::ForRelativeAddresses() to skip this.
   //
   // Note that this tolerates a null ProcessSymbols which sets no symbol paths. This is useful for
   // some tests.
-  FindNameContext(const ProcessSymbols* ps, const SymbolContext& symbol_context,
+  FindNameContext(const ProcessSymbols* ps,
+                  const SymbolContext& symbol_context = SymbolContext::ForRelativeAddresses(),
                   const CodeBlock* cb = nullptr);
 
   // Searches a target's symbols. This is used to search for symbols in a non-running program.
@@ -112,7 +115,9 @@ struct FindNameOptions {
   bool find_templates = true;  // Templatized types without <...>.
   bool find_namespaces = true;
 
-  size_t max_results = 1;
+  constexpr static size_t kAllResults = std::numeric_limits<size_t>::max();
+
+  size_t max_results = 1;  // Use kAllResults to get everything.
 };
 
 // Main variable and type name finding function. Searches the local, "this", and global scopes for

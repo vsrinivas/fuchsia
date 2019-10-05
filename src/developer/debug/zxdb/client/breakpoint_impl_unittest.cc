@@ -12,7 +12,10 @@
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/target_impl.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/index_test_support.h"
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
 
 namespace zxdb {
 
@@ -88,8 +91,18 @@ class BreakpointImplTest : public RemoteAPITest {
 TEST_F(BreakpointImplTest, DynamicLoading) {
   BreakpointImpl bp(&session(), false);
 
-  // Make a disabled symbolic breakpoint.
+  ProcessSymbolsTestSetup setup;
+  auto module_symbols1 = fxl::MakeRefCounted<MockModuleSymbols>("myfile1.so");
+  auto module_symbols2 = fxl::MakeRefCounted<MockModuleSymbols>("myfile2.so");
+
+  // The function to find the breakpoint for is in module1.
   const std::string kFunctionName = "DoThings";
+  auto function_symbol = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  function_symbol->set_assigned_name(kFunctionName);
+  TestIndexedSymbol function_indexed(module_symbols1.get(), &module_symbols1->index().root(),
+                                     kFunctionName, function_symbol);
+
+  // Make a disabled symbolic breakpoint.
   BreakpointSettings in;
   in.enabled = false;
   in.scope = BreakpointSettings::Scope::kSystem;
@@ -120,17 +133,16 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   const uint64_t kModule1Base = 0x1000000;
   const uint64_t kAddress1 = 0x78456345;
   const uint64_t kAddress2 = 0x12345678;
-  auto module1 = fxl::MakeRefCounted<MockModuleSymbols>("myfile1.so");
-  auto module2 = fxl::MakeRefCounted<MockModuleSymbols>("myfile2.so");
-  module1->AddSymbolLocations(kFunctionName, {Location(Location::State::kSymbolized, kAddress1),
-                                              Location(Location::State::kSymbolized, kAddress2)});
+  module_symbols1->AddSymbolLocations(kFunctionName,
+                                      {Location(Location::State::kSymbolized, kAddress1),
+                                       Location(Location::State::kSymbolized, kAddress2)});
 
   // Cause the process to load the module. We have to keep the module_ref
   // alive for this to stay cached in the SystemSymbols.
   const std::string kBuildID1 = "abcd";
   const std::string kBuildID2 = "zyxw";
-  session().system().GetSymbols()->InjectModuleForTesting(kBuildID1, module1.get());
-  session().system().GetSymbols()->InjectModuleForTesting(kBuildID2, module2.get());
+  session().system().GetSymbols()->InjectModuleForTesting(kBuildID1, module_symbols1.get());
+  session().system().GetSymbols()->InjectModuleForTesting(kBuildID2, module_symbols2.get());
 
   // Before modules no thread request should be made.
   EXPECT_FALSE(sink().thread_request_made);

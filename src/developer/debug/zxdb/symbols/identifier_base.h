@@ -16,6 +16,8 @@ namespace zxdb {
 // can still include class or namespace qualifications.
 enum class IdentifierQualification { kGlobal, kRelative };
 
+extern const char kAnonIdentifierComponentName[];
+
 // Base class for identifiers that have different types of components. Different languages might
 // want to represent different aspects of an identifier. This class encapsulates the core
 // hierarchical part of an identifier.
@@ -134,7 +136,11 @@ class IdentifierBase {
         result += GetSeparator();
       }
 
-      result += c.GetName(include_debug);
+      std::string component_name = c.GetName(include_debug);
+      if (component_name.empty())
+        result += kAnonIdentifierComponentName;
+      else
+        result += component_name;
     }
     return result;
   }

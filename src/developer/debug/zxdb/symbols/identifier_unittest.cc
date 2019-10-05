@@ -26,7 +26,12 @@ TEST(Identifier, GetName) {
   // Append some template stuff (not parsed in any way).
   qualified.AppendComponent(IdentifierComponent("Second<int, Foo>"));
   EXPECT_EQ("::First::Second<int, Foo>", qualified.GetFullName());
-  expected_index.push_back("Second<int, Foo>");
+
+  // One with an anoynymous name in it.
+  Identifier anon(IdentifierQualification::kGlobal, IdentifierComponent(std::string()));
+  EXPECT_EQ("::$anon", anon.GetFullName());
+  anon.AppendComponent(IdentifierComponent("SomeFunction"));
+  EXPECT_EQ("::$anon::SomeFunction", anon.GetFullName());
 }
 
 TEST(Identifier, GetScope) {

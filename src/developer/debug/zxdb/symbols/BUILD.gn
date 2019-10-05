@@ -89,6 +89,7 @@ static_library("symbols") {
     "function.cc",
     "function_type.cc",
     "identifier.cc",
+    "identifier_base.cc",
     "index.cc",
     "index_node.cc",
     "inherited_from.cc",

@@ -159,6 +159,15 @@ TEST(CommandUtils, FormatIdentifier) {
 
   // Hide global qualification.
   EXPECT_EQ("Foo<int, char*>::Bar<Baz>", FormatIdentifier(ident, false, true).AsString());
+
+  // With an anonymous namespace.
+  ParsedIdentifier anon(ParsedIdentifierComponent(""));
+  anon.AppendComponent(ParsedIdentifierComponent("Function"));
+  EXPECT_EQ(
+      "kComment \"$anon\", "
+      "kNormal \"::\", "
+      "kHeading \"Function\"",
+      FormatIdentifier(anon, false, true).GetDebugString());
 }
 
 TEST(CommandUtils, FormatInputLocation) {

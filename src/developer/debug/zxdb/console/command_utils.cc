@@ -326,10 +326,16 @@ OutputBuffer FormatIdentifier(const ParsedIdentifier& identifier, bool show_glob
       result.Append(identifier.GetSeparator());
 
     // Name.
-    if (bold_last && i == comps.size() - 1)
-      result.Append(Syntax::kHeading, comp.name());
-    else
-      result.Append(Syntax::kNormal, comp.name());
+    std::string name = comp.name();
+    if (name.empty()) {
+      // Provide names for anonymous components.
+      result.Append(Syntax::kComment, kAnonIdentifierComponentName);
+    } else {
+      if (bold_last && i == comps.size() - 1)
+        result.Append(Syntax::kHeading, name);
+      else
+        result.Append(Syntax::kNormal, name);
+    }
 
     // Template.
     if (comp.has_template()) {

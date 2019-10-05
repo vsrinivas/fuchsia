@@ -639,13 +639,20 @@ TEST(FindName, FindRecursiveNamespace) {
   // - ::Foo()
   // - ::std::Foo()
   // - ::std::bar::Foo()
+  // - ::std::$anon::Foo()
 
   const char kStdName[] = "std";
   auto std_ns_symbol = fxl::MakeRefCounted<Namespace>(kStdName);
   auto std_ns = index_root.AddChild(IndexNode::Kind::kNamespace, kStdName);
 
   const char kBarName[] = "bar";
+  auto std_bar_ns_symbol = fxl::MakeRefCounted<Namespace>(kBarName);
+  std_bar_ns_symbol->set_parent(std_ns_symbol);
   auto std_bar_ns = std_ns->AddChild(IndexNode::Kind::kNamespace, kBarName);
+
+  auto std_anon_ns_symbol = fxl::MakeRefCounted<Namespace>(std::string());
+  std_anon_ns_symbol->set_parent(std_ns_symbol);
+  auto std_anon_ns = std_ns->AddChild(IndexNode::Kind::kNamespace, "");
 
   // ::Foo().
   const char kFooName[] = "Foo";
@@ -653,9 +660,7 @@ TEST(FindName, FindRecursiveNamespace) {
   foo->set_assigned_name(kFooName);
   TestIndexedSymbol foo_indexed(module_symbols, &index_root, kFooName, foo);
 
-  // ::std::Foo(). Note this symbol and the next don't have a parent so their reported full name
-  // won't have the namespace qualification. But this test needs only that they're indexed in the
-  // right place.
+  // ::std::Foo().
   auto std_foo = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   std_foo->set_parent(std_ns_symbol);
   std_foo->set_assigned_name(kFooName);
@@ -663,8 +668,15 @@ TEST(FindName, FindRecursiveNamespace) {
 
   // ::std::bar::Foo().
   auto std_bar_foo = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  std_bar_foo->set_parent(std_bar_ns_symbol);
   std_bar_foo->set_assigned_name(kFooName);
   TestIndexedSymbol std_bar_foo_indexed(module_symbols, std_bar_ns, kFooName, std_bar_foo);
+
+  // ::std::$anon::Foo().
+  auto std_anon_foo = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  std_anon_foo->set_parent(std_anon_ns_symbol);
+  std_anon_foo->set_assigned_name(kFooName);
+  TestIndexedSymbol std_anon_foo_indexed(module_symbols, std_anon_ns, kFooName, std_anon_foo);
 
   // Search for "Foo" in all namespaces.
   ParsedIdentifier foo_ident((ParsedIdentifierComponent(kFooName)));
@@ -675,10 +687,11 @@ TEST(FindName, FindRecursiveNamespace) {
   FindName(context, opts, foo_ident, &results);
 
   // It should have found all 3 Foo's in order.
-  ASSERT_EQ(3u, results.size());
+  ASSERT_EQ(4u, results.size());
   EXPECT_EQ(foo.get(), results[0].function().get());
   EXPECT_EQ(std_foo.get(), results[1].function().get());
-  EXPECT_EQ(std_bar_foo.get(), results[2].function().get());
+  EXPECT_EQ(std_anon_foo.get(), results[2].function().get());
+  EXPECT_EQ(std_bar_foo.get(), results[3].function().get());
 
   // Now find by prefix recursively.
   FindNameOptions prefix_opts = opts;
@@ -687,10 +700,11 @@ TEST(FindName, FindRecursiveNamespace) {
   FindName(context, prefix_opts, ParsedIdentifier(ParsedIdentifierComponent("F")), &results);
 
   // Should have found the same matches.
-  ASSERT_EQ(3u, results.size());
+  ASSERT_EQ(4u, results.size());
   EXPECT_EQ(foo.get(), results[0].function().get());
   EXPECT_EQ(std_foo.get(), results[1].function().get());
-  EXPECT_EQ(std_bar_foo.get(), results[2].function().get());
+  EXPECT_EQ(std_anon_foo.get(), results[2].function().get());
+  EXPECT_EQ(std_bar_foo.get(), results[3].function().get());
 
   // Find "bar::Foo" should find only the one match, using the implicit toplevel namespace.
   ParsedIdentifier bar_foo;
@@ -708,14 +722,15 @@ TEST(FindName, FindRecursiveNamespace) {
   ASSERT_EQ(1u, results.size());
   EXPECT_EQ(foo.get(), results[0].function().get());
 
-  // Find "::std::Foo" should work.
+  // Find "::std::Foo" should find both ::std::Foo and the anonymous namespace one.
   ParsedIdentifier abs_std_foo(IdentifierQualification::kGlobal,
                                ParsedIdentifierComponent(kStdName));
   abs_std_foo.AppendComponent(ParsedIdentifierComponent(kFooName));
   results.clear();
   FindName(context, opts, abs_std_foo, &results);
-  ASSERT_EQ(1u, results.size());
+  ASSERT_EQ(2u, results.size());
   EXPECT_EQ(std_foo.get(), results[0].function().get());
+  EXPECT_EQ(std_anon_foo.get(), results[1].function().get());
 }
 
 }  // namespace zxdb
