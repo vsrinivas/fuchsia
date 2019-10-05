@@ -21,11 +21,17 @@ class Breakpoint;
 class HardwareBreakpoint;
 class SoftwareBreakpoint;
 
-// Represents one breakpoint address in a single process. One Breakpoint object
-// can expand to many ProcessBreakpoints across multiple processes and within a
-// single one (when a symbolic breakpoint expands to multiple addresses). Also,
-// multiple Breakpoint objects can refer to the same ProcessBreakpoint when
-// they refer to the same address.
+// Low-level implementations of the breakpoints.
+// A ProcessBreakpoint represents the actual "installation" of a Breakpoint in a particular location
+// (address). A Breakpoint can have many locations:
+//
+// b Foo() -> If Foo() is inlined, you can get 2+ locations.
+//
+// In that base, that Breakpoint will have two locations, which means two "installations", or
+// ProcessBreakpoint.
+//
+// A Breakpoint can be a software or hardware one. That will define what kind of specialization the
+// ProcessBreakpoint implements.
 class ProcessBreakpoint {
  public:
   // Given the initial Breakpoint object this corresponds to. Breakpoints
@@ -34,12 +40,16 @@ class ProcessBreakpoint {
   // Call Init() immediately after construction to initialize the parts that
   // can report errors.
   explicit ProcessBreakpoint(Breakpoint* breakpoint, DebuggedProcess* debugged_process,
-                             ProcessMemoryAccessor* memory_accessor, uint64_t address);
-  ~ProcessBreakpoint();
+                             uint64_t address);
+  virtual ~ProcessBreakpoint();
+
+  virtual debug_ipc::BreakpointType Type() const = 0;
 
   // Call immediately after construction. If it returns failure, the breakpoint
   // will not work.
   zx_status_t Init();
+
+  virtual bool Installed() const = 0;
 
   fxl::WeakPtr<ProcessBreakpoint> GetWeakPtr();
 
@@ -47,7 +57,7 @@ class ProcessBreakpoint {
   DebuggedProcess* process() const { return process_; }
   uint64_t address() const { return address_; }
 
-  const std::vector<Breakpoint*> breakpoints() const { return breakpoints_; }
+  const std::vector<Breakpoint*>& breakpoints() const { return breakpoints_; }
 
   // Adds or removes breakpoints associated with this process/address.
   // Unregister returns whether there are still any breakpoints referring to
@@ -55,11 +65,9 @@ class ProcessBreakpoint {
   zx_status_t RegisterBreakpoint(Breakpoint* breakpoint);
   bool UnregisterBreakpoint(Breakpoint* breakpoint);
 
-  // Writing debug breakpoints changes memory contents. If an unmodified
-  // virtual picture of memory is needed, this function will replace the
-  // replacement from this breakpoint if it appears in the given block.
-  // Otherwise does nothing.
-  void FixupMemoryBlock(debug_ipc::MemoryBlock* block);
+  // virtual picture of memory is needed, this function will replace the replacement from this
+  // breakpoint if it appears in the given block. Otherwise does nothing.
+  virtual void FixupMemoryBlock(debug_ipc::MemoryBlock* block);
 
   // When a thread receives a breakpoint exception installed by a process
   // breakpoint, it must check if the breakpoint was indeed intended to apply
@@ -86,10 +94,9 @@ class ProcessBreakpoint {
   //
   // The actual stepping over logic is done by |ExecuteStepOver|, which is called by the process.
   //
-  // NOTE: From this moment, the breakpoint "takes over" the "run-lifetime" of
-  //       the thread. This means that it will suspend and resume it according
-  //       to what threads are stepping over it.
-  void BeginStepOver(DebuggedThread* thread);
+  // NOTE: From this moment, the breakpoint "takes over" the "run-lifetime" of the thread. This
+  //       means that it will suspend and resume it according to what threads are stepping over it.
+  virtual void BeginStepOver(DebuggedThread* thread);
 
   // When a thread has a "current breakpoint" its handling and gets a single
   // step exception, it means that it's done stepping over it and calls this
@@ -110,27 +117,20 @@ class ProcessBreakpoint {
   //       With the new order, the process will first call the next process |ExecuteStepOver|, which
   //       will suspend the corresponding threads and then |StepOverCleanup| will free the
   //       threads suspended by the current one.
-  void EndStepOver(DebuggedThread* thread);
+  virtual void EndStepOver(DebuggedThread* thread);
 
   // Called by the queue-owning process.
   //
   // This function actually sets up the stepping over and suspend *all* other threads.
   // When the thread is done stepping over, it will call the process
   //|OnBreakpointFinishedSteppingOver| function.
-  void ExecuteStepOver(DebuggedThread* thread);
+  virtual void ExecuteStepOver(DebuggedThread* thread);
 
   // Frees all the suspension and exception resources held by the breakpoint. This is called by the
   // process.
   //
   // See the comments of |EndStepOver| for more details.
   void StepOverCleanup(DebuggedThread* thread);
-
-  // As stepping over are queued, only one thread should be left running at a time. This makes the
-  // breakpoint get a suspend token for each other thread within the system.
-  void SuspendAllOtherThreads(zx_koid_t stepping_over_koid);
-
-  bool SoftwareBreakpointInstalled() const;
-  bool HardwareBreakpointInstalled() const;
 
   const DebuggedThread* currently_stepping_over_thread() const {
     return currently_stepping_over_thread_.get();
@@ -143,40 +143,20 @@ class ProcessBreakpoint {
   std::vector<zx_koid_t> CurrentlySuspendedThreads() const;
 
  private:
-  // A breakpoint could be removed in the middle of single-stepping it. We
-  // need to track this to handle the race between deleting it and the
-  // step actually happening.
-  enum class StepStatus {
-    kCurrent,  // Single-step currently valid.
-    kObsolete  // Breakpoint was removed while single-stepping over.
-  };
+  virtual zx_status_t Update() = 0;
 
-  // Install or uninstall this breakpoint.
-  zx_status_t Update();  // Will add/remove breakpoints as needed/
-  void Uninstall();
+  // TODO(donosoc): These are private to each breakpoint implementation, move them over once the
+  //                transition from process breakpoint -> each individual breakpoint is done.
+  virtual zx_status_t Install() = 0;
+  virtual void Uninstall() = 0;
 
-  DebuggedProcess* process_;                // Not-owning.
-  ProcessMemoryAccessor* memory_accessor_;  // Non-owning.
+  // As stepping over are queued, only one thread should be left running at a time. This makes the
+  // breakpoint get a suspend token for each other thread within the system.
+  void SuspendAllOtherThreads(zx_koid_t stepping_over_koid);
+
+  DebuggedProcess* process_;  // Not-owning.
 
   uint64_t address_;
-
-  // Low-level implementations of the breakpoints.
-  // A ProcessBreakpoint represents the actual "installation" of a Breakpoint
-  // in a particular location (address). A Breakpoint can have many locations:
-  //
-  // b Foo() -> If Foo() is inlined, you can get 2+ locations.
-  //
-  // In that base, that Breakpoint will have two locations, which means two
-  // "installations", or ProcessBreakpoint.
-  //
-  // A Breakpoint can be a software or a hardware one. That will define what
-  // kind of installation the ProcessBreakpoint implements. Now, if a software
-  // and a separate hardware breakpoint install to the same memory address, they
-  // will implement the same ProcessBreakpoint, which will have both
-  // |software_breakpoint_| and |hardware_breakpoint_| members instanced.
-  // Null means that that particular installation is not used.
-  std::unique_ptr<SoftwareBreakpoint> software_breakpoint_;
-  std::unique_ptr<HardwareBreakpoint> hardware_breakpoint_;
 
   // Breakpoints that refer to this ProcessBreakpoint. More than one Breakpoint
   // can refer to the same memory address.

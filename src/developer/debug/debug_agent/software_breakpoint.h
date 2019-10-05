@@ -8,25 +8,33 @@
 #include <zircon/status.h>
 
 #include "src/developer/debug/debug_agent/arch.h"
+#include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/ipc/protocol.h"
 
 namespace debug_agent {
 
-class ProcessBreakpoint;
 class ProcessMemoryAccessor;
 
-class SoftwareBreakpoint {
+class SoftwareBreakpoint : public ProcessBreakpoint {
  public:
-  SoftwareBreakpoint(ProcessBreakpoint*, ProcessMemoryAccessor*);
+  explicit SoftwareBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process,
+                              ProcessMemoryAccessor* memory_accessor, uint64_t address);
+
+  SoftwareBreakpoint(ProcessMemoryAccessor*);
   ~SoftwareBreakpoint();
 
-  zx_status_t Install();
-  void Uninstall();
+  debug_ipc::BreakpointType Type() const override { return debug_ipc::BreakpointType::kSoftware; }
 
-  void FixupMemoryBlock(debug_ipc::MemoryBlock* block);
+  bool Installed() const override { return installed_; }
+
+  void FixupMemoryBlock(debug_ipc::MemoryBlock* block) override;
 
  private:
-  ProcessBreakpoint* process_bp_;           // Not-owning.
+  // ProcessBreakpoint overrides.
+  zx_status_t Update() override;
+  zx_status_t Install() override;
+  void Uninstall() override;
+
   ProcessMemoryAccessor* memory_accessor_;  // Not-owning.
 
   // Set to true when the instruction has been replaced.

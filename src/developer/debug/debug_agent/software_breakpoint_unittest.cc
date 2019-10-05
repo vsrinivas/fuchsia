@@ -1,8 +1,7 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/developer/debug/debug_agent/process_breakpoint.h"
+#include "src/developer/debug/debug_agent/software_breakpoint.h"
 
 #include <gtest/gtest.h>
 #include <string.h>
@@ -104,7 +103,7 @@ class TestProcessDelegate : public Breakpoint::ProcessDelegate {
     auto found = bps_.find(address);
     if (found == bps_.end()) {
       auto pbp =
-          std::make_unique<ProcessBreakpoint>(bp, procs_[koid].get(), mem_.memory(), address);
+          std::make_unique<SoftwareBreakpoint>(bp, procs_[koid].get(), mem_.memory(), address);
 
       zx_status_t status = pbp->Init();
       if (status != ZX_OK) {
@@ -175,7 +174,7 @@ TEST(ProcessBreakpoint, InstallAndFixup) {
   zx_koid_t process_koid = 0x1234;
   MockProcess process(process_koid, ObjectProvider::Get());
 
-  ProcessBreakpoint bp(&main_breakpoint, &process, process_delegate.mem().memory(),
+  SoftwareBreakpoint bp(&main_breakpoint, &process, process_delegate.mem().memory(),
                        BreakpointFakeMemory::kAddress);
   ASSERT_EQ(ZX_OK, bp.Init());
 
@@ -230,7 +229,7 @@ TEST(ProcessBreakpoint, StepSingle) {
   mock_thread5->set_client_state(DebuggedThread::ClientState::kPaused);
   mock_thread5->Suspend();
 
-  ProcessBreakpoint bp(&main_breakpoint, &process, process_delegate.mem().memory(),
+  SoftwareBreakpoint bp(&main_breakpoint, &process, process_delegate.mem().memory(),
                        BreakpointFakeMemory::kAddress);
   ASSERT_EQ(ZX_OK, bp.Init());
 
@@ -458,12 +457,13 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
   DebuggedThread* mock_thread4 = process.AddThread(kThread4Koid);
   DebuggedThread* mock_thread5 = process.AddThread(kThread5Koid);
 
-  ProcessBreakpoint breakpoint1(&main_breakpoint1, &process, process_delegate1.mem().memory(),
-                                BreakpointFakeMemory::kAddress);
-  ProcessBreakpoint breakpoint2(&main_breakpoint2, &process, process_delegate2.mem().memory(),
-                                BreakpointFakeMemory::kAddress);
-  ProcessBreakpoint breakpoint3(&main_breakpoint3, &process, process_delegate3.mem().memory(),
-                                BreakpointFakeMemory::kAddress);
+  SoftwareBreakpoint breakpoint1(&main_breakpoint1, &process, process_delegate1.mem().memory(),
+                                 BreakpointFakeMemory::kAddress);
+
+  SoftwareBreakpoint breakpoint2(&main_breakpoint2, &process, process_delegate2.mem().memory(),
+                                 BreakpointFakeMemory::kAddress);
+  SoftwareBreakpoint breakpoint3(&main_breakpoint3, &process, process_delegate3.mem().memory(),
+                                 BreakpointFakeMemory::kAddress);
 
   ASSERT_EQ(ZX_OK, breakpoint1.Init());
   ASSERT_EQ(ZX_OK, breakpoint2.Init());
@@ -824,6 +824,8 @@ TEST(ProcessBreakpoint, HitCount) {
   ASSERT_EQ(0u, process_delegate.bps().size());
 }
 
+#ifdef PROCESS_BREAKPOINT_TRANSITION
+
 TEST(ProcessBreakpoint, HWBreakpointForAllThreads) {
   constexpr zx_koid_t kProcessId = 0x1234;
   constexpr zx_koid_t kThreadId1 = 0x1;
@@ -971,5 +973,7 @@ TEST(ProcessBreakpoint, HWBreakpointWithThreadId) {
   ASSERT_EQ(arch_provider->TotalBreakpointUninstallCalls(), 3u);
   EXPECT_EQ(process_delegate.bps().size(), 0u);
 }
+
+#endif
 
 }  // namespace debug_agent

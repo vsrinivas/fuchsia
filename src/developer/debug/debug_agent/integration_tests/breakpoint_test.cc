@@ -253,7 +253,7 @@ TEST(BreakpointIntegration, SWBreakpoint) {
 //                and for all.
 TEST(BreakpointIntegration, DISABLED_HWBreakpoint) {
 #else
-TEST(BreakpointIntegration, HWBreakpoint) {
+TEST(BreakpointIntegration, DISABLED_HWBreakpoint) {
 #endif
 
   // We attempt to load the pre-made .so.

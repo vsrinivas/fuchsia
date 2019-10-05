@@ -17,6 +17,7 @@
 #include "src/developer/debug/debug_agent/process_info.h"
 #include "src/developer/debug/debug_agent/process_memory_accessor.h"
 #include "src/developer/debug/debug_agent/process_watchpoint.h"
+#include "src/developer/debug/debug_agent/software_breakpoint.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
@@ -376,9 +377,22 @@ zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp, uint64_t address
 
   auto found = breakpoints_.find(address);
   if (found == breakpoints_.end()) {
-    auto process_breakpoint = std::make_unique<ProcessBreakpoint>(bp, this, this, address);
-    zx_status_t status = process_breakpoint->Init();
-    if (status != ZX_OK)
+    std::unique_ptr<ProcessBreakpoint> process_breakpoint;
+    switch (bp->type()) {
+      case debug_ipc::BreakpointType::kSoftware:
+        process_breakpoint = std::make_unique<SoftwareBreakpoint>(bp, this, this, address);
+        break;
+      case debug_ipc::BreakpointType::kHardware:
+      case debug_ipc::BreakpointType::kWatchpoint:
+        // TODO(donosoc): Reactivate once the transition is complete.
+        return ZX_ERR_NOT_SUPPORTED;
+      case debug_ipc::BreakpointType::kLast:
+        FXL_NOTREACHED();
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    FXL_DCHECK(process_breakpoint);
+    if (zx_status_t status = process_breakpoint->Init(); status != ZX_OK)
       return status;
 
     breakpoints_[address] = std::move(process_breakpoint);
