@@ -20,6 +20,8 @@ use {
 };
 
 struct TestRunner {
+    pub model: Model,
+    pub hub: Hub,
     hub_test_hook: Arc<HubTestHook>,
     hub_proxy: DirectoryProxy,
 }
@@ -36,7 +38,7 @@ async fn create_model(root_component_url: &str) -> Result<Model, Error> {
     Ok(model)
 }
 
-async fn install_hub(model: &Model) -> Result<DirectoryProxy, Error> {
+async fn install_hub(model: &Model) -> Result<(Hub, DirectoryProxy), Error> {
     let (client_chan, server_chan) = zx::Channel::create()?;
     let root_component_url = model.root_realm.component_url.clone();
     let hub = Hub::new(root_component_url)?;
@@ -44,7 +46,7 @@ async fn install_hub(model: &Model) -> Result<DirectoryProxy, Error> {
     hub.open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, server_chan.into()).await?;
     model.root_realm.hooks.install(hub.hooks()).await;
     let hub_proxy = ClientEnd::<DirectoryMarker>::new(client_chan).into_proxy()?;
-    Ok(hub_proxy)
+    Ok((hub, hub_proxy))
 }
 
 async fn install_hub_test_hook(model: &Model) -> Arc<HubTestHook> {
@@ -70,7 +72,7 @@ impl TestRunner {
         breakpoints: Vec<BreakpointEvent>,
     ) -> Result<Self, Error> {
         let model = create_model(root_component_url).await?;
-        let hub_proxy = install_hub(&model).await?;
+        let (hub, hub_proxy) = install_hub(&model).await?;
         let hub_test_hook = install_hub_test_hook(&model).await;
 
         let hooks = breakpoints
@@ -92,7 +94,7 @@ impl TestRunner {
         let expected_res: Result<(), model::ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
 
-        Ok(Self { hub_proxy, hub_test_hook })
+        Ok(Self { model, hub, hub_proxy, hub_test_hook })
     }
 
     async fn expect_breakpoint(&self, event: BreakpointEvent, component_url: &str) -> Breakpoint {

@@ -244,7 +244,7 @@ impl RoutingTest {
             .hooks
             .install(vec![HookRegistration {
                 event_type: EventType::DestroyInstance,
-                callback: destroy_hook,
+                callback: destroy_hook.clone(),
             }])
             .await;
         capability_util::call_destroy_child(

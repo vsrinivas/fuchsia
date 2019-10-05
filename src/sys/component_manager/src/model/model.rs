@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{model::*, startup::BuiltinRootServices},
+    crate::{framework::*, model::*, startup::BuiltinRootServices},
     cm_rust::{data, CapabilityPath},
     failure::format_err,
     fidl::endpoints::{Proxy, ServerEnd},
@@ -43,6 +43,7 @@ pub struct Model {
     pub config: ModelConfig,
     /// Builtin services that are available in the root realm.
     pub builtin_services: Arc<BuiltinRootServices>,
+    pub realm_service_host: Option<RealmServiceHost>,
 }
 
 /// Holds configuration options for the model.
@@ -74,6 +75,7 @@ impl Model {
             )),
             config: params.config,
             builtin_services: params.builtin_services,
+            realm_service_host: None,
         }
     }
 

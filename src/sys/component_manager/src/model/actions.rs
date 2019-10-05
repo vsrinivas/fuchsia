@@ -170,12 +170,8 @@ impl Action {
                 Action::DeleteChild(moniker) => {
                     do_delete_child(model, realm.clone(), moniker.clone()).await
                 }
-                Action::Destroy => {
-                    do_destroy(model, realm.clone()).await
-                }
-                Action::Shutdown => {
-                    do_shutdown(model, realm.clone()).await
-                }
+                Action::Destroy => do_destroy(model, realm.clone()).await,
+                Action::Shutdown => do_shutdown(model, realm.clone()).await,
             };
             Realm::finish_action(realm, &action, res).await;
         });

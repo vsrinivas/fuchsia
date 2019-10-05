@@ -287,9 +287,12 @@ pub async fn model_setup(args: &Arguments) -> Result<Model, Error> {
         config: ModelConfig::default(),
         builtin_services: Arc::new(BuiltinRootServices::new(&args).unwrap()),
     };
-    let model = Model::new(params);
+    let mut model = Model::new(params);
     let realm_service_host = RealmServiceHost::new(model.clone());
     model.root_realm.hooks.install(realm_service_host.hooks()).await;
+    // TODO(geb, fsamuel): model refers to a RealmServiceHost and RealmServiceHost
+    // refers to model. We need to break this cycle.
+    model.realm_service_host = Some(realm_service_host);
     Ok(model)
 }
 

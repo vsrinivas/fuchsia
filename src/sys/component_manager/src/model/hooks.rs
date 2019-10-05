@@ -7,7 +7,10 @@ use {
     by_addr::ByAddr,
     cm_rust::FrameworkCapabilityDecl,
     futures::{future::BoxFuture, lock::Mutex},
-    std::{collections::HashMap, sync::Arc},
+    std::{
+        collections::HashMap,
+        sync::{Arc, Weak},
+    },
 };
 
 pub trait Hook {
@@ -78,15 +81,6 @@ pub struct Hooks {
     inner: Arc<Mutex<HooksInner>>,
 }
 
-fn install_hook<T>(hooks: &mut Vec<T>, hook: T)
-where
-    T: Sized + PartialEq,
-{
-    if !hooks.contains(&hook) {
-        hooks.push(hook);
-    }
-}
-
 impl Hooks {
     pub fn new(parent: Option<&Hooks>) -> Self {
         Self {
@@ -98,24 +92,44 @@ impl Hooks {
     pub async fn install(&self, hooks: Vec<HookRegistration>) {
         let mut inner = self.inner.lock().await;
         for hook in hooks {
-            install_hook(
-                &mut inner.hooks.entry(hook.event_type).or_insert(vec![]),
-                ByAddr::new(hook.callback),
-            );
+            let hooks = &mut inner.hooks.entry(hook.event_type).or_insert(vec![]);
+            // We cannot compare weak pointers, so we won't dedup pointers at
+            // install time but at dispatch time when we go to upgrade pointers.
+            hooks.push(Arc::downgrade(&hook.callback));
         }
     }
 
     pub fn dispatch<'a>(&'a self, event: &'a Event<'a>) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             let hooks = {
-                let inner = self.inner.lock().await;
-                inner.hooks.get(&event.type_()).cloned()
-            };
-            if let Some(hooks) = hooks {
-                for hook in hooks.iter() {
-                    hook.0.clone().on(event).await?;
+                // We must upgrade our weak references to hooks to strong ones before we can
+                // call out to them. While we're upgrading references, we dedup references
+                // here as well. Ideally this would be done at installation time, not
+                // dispatch time but comparing weak references is not yet supported.
+                let mut strong_hooks: Vec<ByAddr<dyn Hook + Send + Sync>> = vec![];
+                let mut inner = self.inner.lock().await;
+                if let Some(hooks) = inner.hooks.get_mut(&event.type_()) {
+                    hooks.retain(|hook| match hook.upgrade() {
+                        Some(hook) => {
+                            let hook = ByAddr::new(hook);
+                            if !strong_hooks.contains(&hook) {
+                                strong_hooks.push(hook);
+                                true
+                            } else {
+                                // Don't retain a weak pointer if it is a duplicate.
+                                false
+                            }
+                        }
+                        // Don't retain a weak pointer if it cannot be upgraded.
+                        None => false,
+                    });
                 }
+                strong_hooks
+            };
+            for hook in hooks.into_iter() {
+                hook.0.on(event).await?;
             }
+
             if let Some(parent) = &self.parent {
                 parent.dispatch(event).await?;
             }
@@ -125,7 +139,7 @@ impl Hooks {
 }
 
 pub struct HooksInner {
-    hooks: HashMap<EventType, Vec<ByAddr<dyn Hook + Send + Sync>>>,
+    hooks: HashMap<EventType, Vec<Weak<dyn Hook + Send + Sync>>>,
 }
 
 impl HooksInner {
@@ -254,6 +268,9 @@ mod tests {
             }])
             .await;
 
+        assert_eq!(1, Arc::strong_count(&parent_call_counter));
+        assert_eq!(1, Arc::strong_count(&child_call_counter));
+
         let realm = {
             let resolver = ResolverRegistry::new();
             let runner = Arc::new(mocks::MockRunner::new());
@@ -268,11 +285,20 @@ mod tests {
         // child_call_counter should be called only once.
         assert_eq!(1, child_call_counter.count().await);
 
+        // Dropping the child_call_counter should drop the weak pointer to it in hooks
+        // as well.
+        drop(child_call_counter);
+
+        // Dispatching an event on child_hooks will not call out to child_call_counter
+        // because it has been destroyed by the call to drop above.
+        child_hooks.dispatch(&event).await.expect("Unable to call hooks.");
+
         // ChildCallCounter should be called before ParentCallCounter.
         assert_eq!(
             log(vec![
                 "ChildCallCounter::OnAddDynamicChild",
-                "ParentCallCounter::OnAddDynamicChild"
+                "ParentCallCounter::OnAddDynamicChild",
+                "ParentCallCounter::OnAddDynamicChild",
             ]),
             event_log.get().await
         );

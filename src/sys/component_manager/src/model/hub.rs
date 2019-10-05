@@ -615,7 +615,7 @@ mod tests {
     async fn start_component_manager_with_hub(
         root_component_url: String,
         components: Vec<ComponentDescriptor>,
-    ) -> (Arc<model::Model>, DirectoryProxy) {
+    ) -> (Arc<model::Model>, Arc<Hub>, DirectoryProxy) {
         start_component_manager_with_hub_and_hooks(root_component_url, components, vec![]).await
     }
 
@@ -623,7 +623,7 @@ mod tests {
         root_component_url: String,
         components: Vec<ComponentDescriptor>,
         additional_hooks: Vec<HookRegistration>,
-    ) -> (Arc<model::Model>, DirectoryProxy) {
+    ) -> (Arc<model::Model>, Arc<Hub>, DirectoryProxy) {
         let resolved_root_component_url = format!("{}_resolved", root_component_url);
         let mut resolver = model::ResolverRegistry::new();
         let mut runner = mocks::MockRunner::new();
@@ -671,13 +671,13 @@ mod tests {
             .into_proxy()
             .expect("failed to create directory proxy");
 
-        (model, hub_proxy)
+        (model, hub, hub_proxy)
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn hub_basic() {
         let root_component_url = "test:///root".to_string();
-        let (_model, hub_proxy) = start_component_manager_with_hub(
+        let (_model, _hub, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
             vec![
                 ComponentDescriptor {
@@ -714,7 +714,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn hub_out_directory() {
         let root_component_url = "test:///root".to_string();
-        let (_model, hub_proxy) = start_component_manager_with_hub(
+        let (_model, _hub, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
             vec![ComponentDescriptor {
                 name: "root".to_string(),
@@ -742,7 +742,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn hub_runtime_directory() {
         let root_component_url = "test:///root".to_string();
-        let (_model, hub_proxy) = start_component_manager_with_hub(
+        let (_model, _hub, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
             vec![ComponentDescriptor {
                 name: "root".to_string(),
@@ -766,7 +766,8 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn hub_test_hook_interception() {
         let root_component_url = "test:///root".to_string();
-        let (_model, hub_proxy) = start_component_manager_with_hub_and_hooks(
+        let hub_injection_test_hook = Arc::new(HubInjectionTestHook::new());
+        let (_model, _hub, hub_proxy) = start_component_manager_with_hub_and_hooks(
             root_component_url.clone(),
             vec![ComponentDescriptor {
                 name: "root".to_string(),
@@ -788,7 +789,7 @@ mod tests {
             }],
             vec![HookRegistration {
                 event_type: EventType::RouteFrameworkCapability,
-                callback: Arc::new(HubInjectionTestHook::new()),
+                callback: hub_injection_test_hook.clone(),
             }],
         )
         .await;
@@ -823,7 +824,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn hub_in_directory() {
         let root_component_url = "test:///root".to_string();
-        let (_model, hub_proxy) = start_component_manager_with_hub(
+        let (_model, _hub, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
             vec![ComponentDescriptor {
                 name: "root".to_string(),
@@ -882,7 +883,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn hub_expose_directory() {
         let root_component_url = "test:///root".to_string();
-        let (_model, hub_proxy) = start_component_manager_with_hub(
+        let (_model, _hub, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
             vec![ComponentDescriptor {
                 name: "root".to_string(),
