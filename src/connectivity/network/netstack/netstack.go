@@ -48,7 +48,7 @@ const (
 	ipv4Loopback tcpip.Address = "\x7f\x00\x00\x01"
 	ipv6Loopback tcpip.Address = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
 
-	dhcpAcquireTimeout = 3 * time.Second
+	dhcpAcquireTimeout = 15 * time.Second
 	dhcpRetryTime      = 1 * time.Second
 )
 
