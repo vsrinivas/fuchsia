@@ -1,14 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
-//! The collection module consists of methods and structures around two
-//! different types of event streams: ComponentEvent and HubEvent.
-//!
-//! HubEvents are used internally for the HubCollector to attach watchers
-//! for various different types in the Hub hierarchy. ComponentEvents are
-//! exposed externally over a stream for use by the Archivist.
-
 use {
     crate::collection::*,
     crate::selectors,

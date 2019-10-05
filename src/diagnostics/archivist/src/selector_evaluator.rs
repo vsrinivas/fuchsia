@@ -1,0 +1,266 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
+
+use {
+    crate::collection::RealmPath,
+    failure::{format_err, Error},
+    fidl_fuchsia_diagnostics::{PathSelectionNode, PatternMatcher},
+    fidl_fuchsia_diagnostics_inspect::Selector,
+    std::collections::HashSet,
+    std::path::PathBuf,
+};
+
+/// Struct that encodes the information needed to
+/// represent a component selector as a DFA. This DFA representation
+/// is used to evaluate a component_hierarchy path against a selector
+/// to determine if the data under the path is being selected for.
+struct SelectorAutomata<'a> {
+    // The individual states that make up
+    // the selector state-machine.
+    states: &'a Vec<PathSelectionNode>,
+    // The set of states that the automata is currently
+    // validly at, based on its evaluatation of some input.
+    state_indices: Option<HashSet<usize>>,
+}
+
+impl<'a> SelectorAutomata<'a> {
+    pub fn new(states: &'a Vec<PathSelectionNode>) -> Self {
+        SelectorAutomata { states: states, state_indices: None }
+    }
+
+    /// Given a tokenized realmpath through the hub
+    /// to a target component, evaluates a SelectorAutomata
+    /// representing a component selector to see if the
+    /// tokenized realm path is selected for by the automata.
+    fn evaluate_automata_against_path(&mut self, hierarchy_path: &Vec<String>) -> bool {
+        debug_assert!(&self.state_indices.is_none());
+
+        // Initialize the DFA to be staged for execution starting
+        // at the entry state. Note that we start at the end of the selector
+        // and work backwards, since the most common usecase will have specified
+        // target components that can be quickly filtered out.
+        let entry_state_index = self.states.len() - 1;
+        let mut curr_state_set = HashSet::new();
+        curr_state_set.insert(entry_state_index);
+        self.state_indices = Some(curr_state_set);
+
+        for (path_index, path_value) in hierarchy_path.iter().enumerate().rev() {
+            // We have to do extra state analysis on the final path value, to make
+            // sure that there are not only stateful matches, but that atleast one
+            // of those stateful matches is an exit state in the DFA.
+            if path_index > 0 {
+                let next_generation_states = match &self.state_indices {
+                    Some(state_indices) => {
+                        evaluate_single_generation(path_value, state_indices, self.states)
+                    }
+                    None => unreachable!(
+                        "state indices should always be initialized at start of execution."
+                    ),
+                };
+                if next_generation_states.is_empty() {
+                    return false;
+                } else {
+                    self.state_indices = Some(next_generation_states);
+                }
+            } else {
+                let final_generation_states = match &self.state_indices {
+                    Some(state_indices) => state_indices,
+                    None => unreachable!(
+                        "even in the final generation, the state indices should not be None."
+                    ),
+                };
+
+                // If we're at the final path value and not sitting at the exit
+                // node, there's no way for us to match.
+                if !final_generation_states.contains(&0) {
+                    return false;
+                }
+
+                // If we're at the final path value and the exit node is present, the only
+                // match result we care about is the result of the exit node.
+                if !evaluate_path_state_with_selector_node(path_value, &self.states[0]) {
+                    return false;
+                }
+
+                return true;
+            }
+        }
+        unreachable!("There is no way to reach this point.");
+    }
+}
+
+/// Evaluates a hierarchy path against a list of selectors, returning
+/// all of the selectors for which that component is validly matched.
+///
+/// Requires: hierarchy_path is not empty.
+///           selectors contains valid Selectors.
+fn match_component_moniker_against_selectors<'a>(
+    hierarchy_path: &Vec<String>,
+    selectors: &'a Vec<Selector>,
+) -> Result<Vec<&'a Selector>, Error> {
+    if hierarchy_path.is_empty() {
+        return Err(format_err!(
+            "Cannot have empty hierarchy paths, at least the component name is required."
+        ));
+    }
+
+    let matching_selectors: Vec<&Selector> = selectors
+        .iter()
+        // TODO(4601): Run these DFA executions concurrently with async.
+        .filter(|selector| {
+            let component_selector = &selector.component_selector;
+            let component_moniker: &Vec<PathSelectionNode> =
+                match &component_selector.component_moniker {
+                    Some(path_vec) => &path_vec,
+                    None => panic!("This is an invalid component selector."),
+                };
+
+            if component_moniker.is_empty() {
+                panic!("This is an invalid component selector.")
+            }
+
+            let mut automata = SelectorAutomata::new(component_moniker);
+            automata.evaluate_automata_against_path(hierarchy_path)
+        })
+        .collect();
+
+    return Ok(matching_selectors);
+}
+
+// Checks to see whether a given tokenized value
+// in the hub path can be selected for by a given
+// PathSelectionNode.
+fn evaluate_path_state_with_selector_node(
+    path_state: &str,
+    selector_node: &PathSelectionNode,
+) -> bool {
+    match selector_node {
+        // TODO(4601): String patterns that contain wildcards must be pattern matched on.
+        //             Can we convert these to regex to avoid another custom state machine?
+        PathSelectionNode::StringPattern(string_pattern) => string_pattern == path_state,
+        PathSelectionNode::PatternMatcher(enum_pattern) => match enum_pattern {
+            PatternMatcher::Wildcard | PatternMatcher::Glob => true,
+        },
+        _ => false,
+    }
+}
+
+// Evaluate a single generation of a given
+// automata, and return the states of the next generation.
+fn evaluate_single_generation(
+    path_value: &String,
+    state_indices: &HashSet<usize>,
+    states: &Vec<PathSelectionNode>,
+) -> HashSet<usize> {
+    let mut next_generation_state_indices: HashSet<usize> = HashSet::new();
+    for state_index in state_indices {
+        let state_node = &states[*state_index as usize];
+        if evaluate_path_state_with_selector_node(&path_value, state_node) {
+            match state_node {
+                PathSelectionNode::PatternMatcher(PatternMatcher::Glob) => {
+                    // Globs are special because this state can repeat.
+                    next_generation_state_indices.insert(*state_index);
+                }
+                _ => {}
+            }
+            // Always provide the next state in the automata if the current
+            // state was a match, assuming it's not the exit state that was
+            // arrived at early.
+            if *state_index > 0 {
+                next_generation_state_indices.insert(state_index - 1);
+            }
+        }
+    }
+    next_generation_state_indices
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*, fidl_fuchsia_diagnostics::ComponentSelector,
+        fidl_fuchsia_diagnostics_inspect::TreeSelector,
+    };
+
+    #[test]
+    fn canonical_automata_simulator_test() {
+        let test_vector: Vec<(Vec<String>, Vec<PathSelectionNode>, bool)> = vec![
+            (
+                vec!["a".to_string(), "b".to_string(), "c".to_string()],
+                vec![
+                    PathSelectionNode::StringPattern("a".to_string()),
+                    PathSelectionNode::StringPattern("b".to_string()),
+                    PathSelectionNode::StringPattern("c".to_string()),
+                ],
+                true,
+            ),
+            (
+                vec!["a".to_string(), "b".to_string(), "c".to_string()],
+                vec![
+                    PathSelectionNode::PatternMatcher(PatternMatcher::Wildcard),
+                    PathSelectionNode::StringPattern("b".to_string()),
+                    PathSelectionNode::StringPattern("c".to_string()),
+                ],
+                true,
+            ),
+            (
+                vec!["a".to_string(), "b".to_string(), "c".to_string()],
+                vec![PathSelectionNode::PatternMatcher(PatternMatcher::Glob)],
+                true,
+            ),
+            (
+                vec!["a".to_string(), "b".to_string(), "c".to_string()],
+                vec![
+                    PathSelectionNode::StringPattern("a".to_string()),
+                    PathSelectionNode::PatternMatcher(PatternMatcher::Wildcard),
+                    PathSelectionNode::PatternMatcher(PatternMatcher::Wildcard),
+                ],
+                true,
+            ),
+            (
+                vec!["a".to_string(), "b".to_string(), "c".to_string()],
+                vec![
+                    PathSelectionNode::StringPattern("b".to_string()),
+                    PathSelectionNode::PatternMatcher(PatternMatcher::Wildcard),
+                    PathSelectionNode::PatternMatcher(PatternMatcher::Wildcard),
+                ],
+                false,
+            ),
+            (
+                vec!["a".to_string(), "b".to_string(), "c".to_string()],
+                vec![
+                    PathSelectionNode::StringPattern("a".to_string()),
+                    PathSelectionNode::PatternMatcher(PatternMatcher::Glob),
+                ],
+                true,
+            ),
+            (
+                vec!["a".to_string(), "b".to_string(), "c".to_string()],
+                vec![
+                    PathSelectionNode::StringPattern("b".to_string()),
+                    PathSelectionNode::PatternMatcher(PatternMatcher::Glob),
+                ],
+                false,
+            ),
+            // TODO(4601): This should pass once wildcarded string literals
+            //             are supported.
+            (
+                vec!["a".to_string(), "bob".to_string(), "c".to_string()],
+                vec![
+                    PathSelectionNode::StringPattern("a".to_string()),
+                    PathSelectionNode::StringPattern("b*".to_string()),
+                    PathSelectionNode::StringPattern("c".to_string()),
+                ],
+                false,
+            ),
+        ];
+
+        for (test_path, component_node_vec, result) in test_vector {
+            let mut automata = SelectorAutomata::new(&component_node_vec);
+            assert_eq!(result, automata.evaluate_automata_against_path(&test_path));
+        }
+    }
+}

@@ -24,6 +24,7 @@ mod configs;
 mod diagnostics;
 mod inspect;
 mod logs;
+mod selector_evaluator;
 mod selectors;
 mod trie;
 
