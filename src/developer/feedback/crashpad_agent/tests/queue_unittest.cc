@@ -35,6 +35,7 @@ using testing::ElementsAre;
 using testing::IsEmpty;
 using testing::IsSupersetOf;
 using testing::Not;
+using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
 
 constexpr uint64_t kMaxUploadAttempts = 9;
@@ -125,17 +126,15 @@ class QueueTest : public ::testing::Test {
     EXPECT_EQ(queue_->Size(), expected_queue_contents_.size());
   }
 
-  // TODO(pankurst): uncomment these lines once change to StubCrashServer lands
   void CheckAnnotationsOnServer() {
     FXL_CHECK(crash_server_);
-    // EXPECT_THAT(crash_server_.latest_annotations(),
-    // UnorderedElementsAre(testing::Pair(kAnnotationKey, kAnnotationValue)));
+    EXPECT_THAT(crash_server_->latest_annotations(),
+                UnorderedElementsAre(testing::Pair(kAnnotationKey, kAnnotationValue)));
   }
 
-  // TODO(pankurst): uncomment these lines once change to StubCrashServer lands
   void CheckAttachmentKeysOnServer() {
     FXL_CHECK(crash_server_);
-    // EXPECT_THAT(crash_server_.latest_attachment_keys(), UnorderedElementsAre(kAttachmentKey));
+    EXPECT_THAT(crash_server_->latest_attachment_keys(), UnorderedElementsAre(kAttachmentKey));
   }
 
   inspect::Hierarchy InspectTree() {
@@ -214,8 +213,6 @@ TEST_F(QueueTest, Check_IsEmptyQueue_OnStateSetToArchive_MultipleReports) {
       QueueOps::AddNewReport,
   });
   CheckQueueContents();
-  CheckAnnotationsOnServer();
-  CheckAttachmentKeysOnServer();
   EXPECT_TRUE(queue_->IsEmpty());
 }
 
@@ -230,8 +227,6 @@ TEST_F(QueueTest, Check_IsEmptyQueue_OnStateSetToArchive_MultipleReports_OnePrun
       QueueOps::ProcessAll,
   });
   CheckQueueContents();
-  CheckAnnotationsOnServer();
-  CheckAttachmentKeysOnServer();
   EXPECT_TRUE(queue_->IsEmpty());
 }
 

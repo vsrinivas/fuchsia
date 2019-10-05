@@ -5,10 +5,6 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_QUEUE_H_
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_QUEUE_H_
 
-#include <lib/async/cpp/task.h>
-#include <lib/async/dispatcher.h>
-#include <lib/zx/time.h>
-
 #include <map>
 #include <unordered_map>
 #include <vector>
