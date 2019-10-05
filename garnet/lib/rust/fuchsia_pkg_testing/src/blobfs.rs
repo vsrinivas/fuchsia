@@ -305,7 +305,9 @@ mod tests {
         .await?;
         drop(blob);
 
-        create_blob(&root_dir, BLOB_MERKLE, BLOB_CONTENTS).await
+        create_blob(&root_dir, BLOB_MERKLE, BLOB_CONTENTS).await?;
+
+        blobfs_server.stop().await
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -322,7 +324,9 @@ mod tests {
         Status::ok(blob.truncate(BLOB_CONTENTS.len() as u64).await?)?;
         drop(blob);
 
-        create_blob(&root_dir, BLOB_MERKLE, BLOB_CONTENTS).await
+        create_blob(&root_dir, BLOB_MERKLE, BLOB_CONTENTS).await?;
+
+        blobfs_server.stop().await
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -340,7 +344,9 @@ mod tests {
         write_blob(&blob, &BLOB_CONTENTS[0..1]).await?;
         drop(blob);
 
-        create_blob(&root_dir, BLOB_MERKLE, BLOB_CONTENTS).await
+        create_blob(&root_dir, BLOB_MERKLE, BLOB_CONTENTS).await?;
+
+        blobfs_server.stop().await
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -358,7 +364,9 @@ mod tests {
         write_blob(&blob, &BLOB_CONTENTS[0..1]).await?;
         Status::ok(blob.close().await?)?;
 
-        create_blob(&root_dir, BLOB_MERKLE, BLOB_CONTENTS).await
+        create_blob(&root_dir, BLOB_MERKLE, BLOB_CONTENTS).await?;
+
+        blobfs_server.stop().await
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -382,7 +390,8 @@ mod tests {
         .await;
 
         assert_matches!(res, Err(zx::Status::ACCESS_DENIED));
-        Ok(())
+
+        blobfs_server.stop().await
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -407,7 +416,8 @@ mod tests {
         let res = Status::ok(blob1.truncate(BLOB_CONTENTS.len() as u64).await?);
 
         assert_matches!(res, Err(zx::Status::BAD_STATE));
-        Ok(())
+
+        blobfs_server.stop().await
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -429,7 +439,7 @@ mod tests {
 
         assert_eq!(Status::from_raw(status), zx::Status::BAD_STATE);
 
-        Ok(())
+        blobfs_server.stop().await
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -457,7 +467,9 @@ mod tests {
                 .wait_handle(zx::Signals::all(), zx::Time::after(zx::Duration::from_seconds(0)))?,
             zx::Signals::USER_0
         );
-        verify_blob(&blob1, BLOB_CONTENTS).await
+        verify_blob(&blob1, BLOB_CONTENTS).await?;
+
+        blobfs_server.stop().await
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -485,7 +497,9 @@ mod tests {
                 .wait_handle(zx::Signals::all(), zx::Time::after(zx::Duration::from_seconds(0)))?,
             zx::Signals::USER_0
         );
-        verify_blob(&blob1, BLOB_CONTENTS).await
+        verify_blob(&blob1, BLOB_CONTENTS).await?;
+
+        blobfs_server.stop().await
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -496,6 +510,7 @@ mod tests {
         let res = open_blob(&root_dir, BLOB_MERKLE, fidl_fuchsia_io::OPEN_RIGHT_READABLE).await;
 
         assert_matches!(res, Err(zx::Status::NOT_FOUND));
-        Ok(())
+
+        blobfs_server.stop().await
     }
 }
