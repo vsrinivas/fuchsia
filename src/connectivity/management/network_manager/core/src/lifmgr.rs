@@ -646,8 +646,7 @@ mod tests {
         assert_eq!(got, Some(&l))
     }
 
-    // #[test]
-    #[allow(dead_code)] // TODO(37694): Re-enable when flake is tracked down.
+    #[test]
     fn test_lif_manager_get_inexisting() {
         let mut lm = LIFManager::new();
         let l = LIF::new(
@@ -671,7 +670,8 @@ mod tests {
                 .unwrap(),
         )
         .unwrap();
-        let got = lm.lif(&9);
+        // Look for an entry that we know doesn't exist.
+        let got = lm.lif(&std::u128::MAX);
         assert_eq!(got, None)
     }
 
