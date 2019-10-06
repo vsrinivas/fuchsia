@@ -14,7 +14,6 @@ import("//build/images/collect_blob_manifest.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/filesystem_limits.gni")
 import("//build/images/fvm.gni")
-import("//build/images/json.gni")
 import("//build/images/manifest.gni")
 import("//build/images/max_fvm_size.gni")
 import("//build/images/pkgfs.gni")
@@ -71,48 +70,15 @@ assert(
     !include_devmgr_config_in_vbmeta || use_vbmeta,
     "include_devmgr_config_in_vbmeta cannot be used if use_vbmeta is not set!")
 
+# update_manifest is for the "update.manifest" target below.
+update_manifest = []
+
+# Dependencies for all image targets referenced by paver_targets, i.e., the
+# images needed by the generated pave and netboot scripts.
+default_image_deps = []
+
 board_name_file = "$root_build_dir/board_name"
 write_file(board_name_file, "${board_name}")
-
-# This will collect a list of scopes describing each image exported.
-# See json.gni.
-images = [
-  {
-    sources = [
-      "$root_build_dir/args.gn",
-    ]
-    json = {
-      name = "buildargs"
-      type = "gn"
-      archive = true
-    }
-    deps = []
-  },
-  {
-    sources = [
-      "//.jiri_root/update_history/latest",
-    ]
-    json = {
-      name = "jiri_snapshot"
-      type = "xml"
-      archive = true
-    }
-    deps = []
-  },
-  {
-    json = {
-      name = "bootserver"
-      type = "exe.$host_platform"
-      archive = true
-    }
-    sources = [
-      "$zircon_tools_dir/bootserver",
-    ]
-    deps = [
-      "//zircon/public/tool/bootserver($host_toolchain)",
-    ]
-  },
-]
 
 group("meta_packages") {
   testonly = true
@@ -458,6 +424,7 @@ if (!bootfs_only) {
   }
 
   blob_image_path = "$target_out_dir/blob.blk"
+  rebased_blob_image_path = rebase_path(blob_image_path, root_build_dir)
 
   # Pack up all the blobs!
   zircon_tool_action("blob.blk") {
@@ -488,21 +455,19 @@ if (!bootfs_only) {
       "--manifest",
       rebase_path(blob_manifest, root_build_dir),
     ]
+
+    metadata = {
+      images = [
+        {
+          name = "blob"
+          path = rebased_blob_image_path
+          type = "blk"
+        },
+      ]
+      image_paths = [ "IMAGE_BLOB_RAW=$rebased_blob_image_path" ]
+    }
   }
-  images += [
-    {
-      deps = [
-        ":blob.blk",
-      ]
-      public = [
-        "IMAGE_BLOB_RAW",
-      ]
-      json = {
-        name = "blob"
-        type = "blk"
-      }
-    },
-  ]
+  default_image_deps += [ ":blob.blk" ]
 }
 
 # The prime images are used to have an alternate known-compatible OTA
@@ -557,28 +522,38 @@ declare_args() {
   bootloader_hw_revision = ""
 }
 
-images += [
-  {
-    # This is the file to give QEMU's `-kernel` switch with a complete
-    # ZBI (some `IMAGE_*_ZBI` file) for its `-initrd` switch.
-    public = [
-      "IMAGE_QEMU_KERNEL_RAW",
-    ]
-    json = {
-      name = "qemu-kernel"
-      type = "kernel"
-      archive = add_qemu_to_build_archives
+# Copy the QEMU kernel from the Zircon build directory to keep invariant that
+# all image paths are relative to the Fuchsia root_build_dir without the
+# leading "../".
+copy("qemu-kernel") {
+  sources = []
+  outputs = []
+  image_metadata = []
+  image_path_metadata = []
+
+  # GN's copy() itself will enforce that there is only one QEMU kernel
+  # found, as else length(outputs) != 1 which is illegal.
+  foreach(image, zircon_images) {
+    if (image.name == "qemu-kernel" && image.cpu == target_cpu) {
+      sources += [ "$zircon_root_build_dir/${image.path}" ]
+      outputs += [ "$root_build_dir/${image.path}" ]
+      image_metadata += [
+        {
+          archive = add_qemu_to_build_archives
+          name = "qemu-kernel"
+          path = image.path
+          type = "kernel"
+        },
+      ]
+      image_path_metadata += [ "IMAGE_QEMU_KERNEL_RAW=${image.path}" ]
     }
-    deps = []
-    foreach(image, zircon_images) {
-      if (image.name == "qemu-kernel" && image.cpu == target_cpu) {
-        sources = [
-          "$zircon_root_build_dir/${image.path}",
-        ]
-      }
-    }
-  },
-]
+  }
+  metadata = {
+    images = image_metadata
+    image_paths = image_path_metadata
+  }
+}
+default_image_deps += [ ":qemu-kernel" ]
 
 # Generate the /boot/config/devmgr file.  This looks like a kernel command
 # line file, but is read by devmgr (in addition to kernel command line
@@ -808,6 +783,70 @@ zbi("fuchsia") {
   cmdline = kernel_cmdline_args + board_kernel_cmdline_args
   cmdline_inputs = kernel_cmdline_files
   manifest += bootfs_extra
+
+  metadata = {
+    images = [
+      {
+        name = "zircon-a"
+        path = "fuchsia.zbi"
+        type = "zbi"
+
+        bootserver_pave = []
+
+        # TODO(ZX-2069): we want to reduce the usage of mexec, but currently we
+        # do not have sufficient boot control on x64.
+        if (target_cpu == "x64") {
+          bootserver_pave += [ "--boot" ]
+        }
+        if (custom_signing_script == "" && !use_vboot) {
+          bootserver_pave += [
+            "--zircona",
+            # TODO(ZX-2625): `dm reboot-recovery` boots from zircon-b instead of
+            # zircon-r, so for now zedboot is being paved to this slot.
+            # "--zirconb",
+          ]
+        }
+      },
+    ]
+
+    image_paths = [
+      "IMAGE_ZIRCONA_ZBI=fuchsia.zbi",
+
+      # TODO(mcgrathr): The complete ZBI can be used with a separate
+      # kernel too, the kernel image in it will just be ignored.  So
+      # just use the primary ZBI for this until all uses are
+      # converted to using the ZBI alone.  Then remove this as
+      # IMAGE_BOOT_RAM variable should no longer be in use.
+      "IMAGE_BOOT_RAM=fuchsia.zbi",
+    ]
+
+    if (bootfs_only) {
+      images += [
+        {
+          bootserver_netboot = [ "--boot" ]
+          name = "fuchsia"
+          path = "fuchsia.zbi"
+          type = "zbi"
+        },
+      ]
+      image_paths += [
+        "IMAGE_NETBOOT_RAM=fuchsia.zbi",
+        "IMAGE_NETBOOT_ZBI=fuchsia.zbi",
+      ]
+    }
+  }
+}
+default_image_deps += [ ":fuchsia" ]
+
+if (!use_vboot && custom_signing_script == "") {
+  update_manifest += [
+    {
+      target = "zbi"
+      deps = [
+        ":fuchsia",
+      ]
+    },
+  ]
 }
 
 # Generate the prime fuchsia.zbi.
@@ -836,45 +875,6 @@ zbi("fuchsia_prime") {
   }
 }
 
-images += [
-  {
-    deps = [
-      ":fuchsia",
-    ]
-    if (!use_vboot && custom_signing_script == "") {
-      updater = "zbi"
-    }
-    json = {
-      name = "zircon-a"
-      type = "zbi"
-
-      bootserver_pave = []
-
-      # TODO(ZX-2069): we want to reduce the usage of mexec, but currently we
-      # do not have sufficient boot control on x64.
-      if (target_cpu == "x64") {
-        bootserver_pave += [ "--boot" ]
-      }
-
-      if (custom_signing_script == "" && !use_vboot) {
-        bootserver_pave += [
-          "--zircona",
-        ]
-      }
-    }
-    public = [
-      "IMAGE_ZIRCONA_ZBI",
-
-      # TODO(mcgrathr): The complete ZBI can be used with a separate
-      # kernel too, the kernel image in it will just be ignored.  So
-      # just use the primary ZBI for this until all uses are
-      # converted to using the ZBI alone.  Then remove this as
-      # IMAGE_BOOT_RAM variable should no longer be in use.
-      "IMAGE_BOOT_RAM",
-    ]
-  },
-]
-
 unsigned_zbi_prime = {
   dep = ":fuchsia_prime"
   updater = "zbi"
@@ -888,23 +888,18 @@ if (custom_signing_script != "") {
       ":fuchsia",
     ]
     zbi = get_target_outputs(":fuchsia")
+    metadata = {
+      images = [
+        {
+          bootserver_pave = [ "--zircona" ]
+          name = "zircon-a.signed"
+          path = "$output_name.signed"
+          type = "zbi.signed"
+        },
+      ]
+      image_paths = [ "IMAGE_ZIRCONA_SIGNEDZBI=$output_name" ]
+    }
   }
-  images += [
-    {
-      deps = [
-        ":signed",
-      ]
-      updater = "zbi.signed"
-      json = {
-        name = "zircon-a.signed"
-        type = "zbi.signed"
-        bootserver_pave = [ "--zircona" ]
-      }
-      public = [
-        "IMAGE_ZIRCONA_SIGNEDZBI",
-      ]
-    },
-  ]
 } else if (use_vboot) {
   # ChromeOS vboot images.
   vboot("signed") {
@@ -913,20 +908,28 @@ if (custom_signing_script != "") {
     deps = [
       ":fuchsia",
     ]
+
+    metadata = {
+      images = [
+        {
+          bootserver_pave = [ "--zircona" ]
+          name = "zircon-a.signed"
+          path = "$output_name.vboot"
+          type = "zbi.signed"
+        },
+      ]
+      image_paths = [ "IMAGE_ZIRCONA_SIGNEDZBI=$output_name" ]
+    }
   }
-  images += [
+}
+
+if (custom_signing_script != "" || use_vboot) {
+  default_image_deps += [ ":signed" ]
+  update_manifest += [
     {
+      target = "zbi.signed"
       deps = [
         ":signed",
-      ]
-      updater = "zbi.signed"
-      json = {
-        name = "zircon-a.signed"
-        type = "zbi.signed"
-        bootserver_pave = [ "--zircona" ]
-      }
-      public = [
-        "IMAGE_ZIRCONA_SIGNEDZBI",
       ]
     },
   ]
@@ -1000,29 +1003,35 @@ if (use_vbmeta) {
         },
       ]
     }
+
+    metadata = {
+      images = [
+        {
+          archive = true
+          name = "zircon-a"
+          path = "fuchsia.vbmeta"
+          type = "vbmeta"
+
+          # TODO (dmitryya@) netsvc does not support correct
+          # flashing vbmeta images to a device.
+          # Comment out this till this will be fixed.
+          #bootserver_pave = [ "--vbmetaa" ]
+        },
+      ]
+      image_paths = [ "IMAGE_VBMETAA_RAW=fuchsia.vbmeta" ]
+    }
   }
 
-  images += [
+  default_image_deps += [ ":fuchsia.vbmeta" ]
+
+  update_manifest += [
     {
+      target = "fuchsia.vbmeta"
+      sources = [
+        "$root_build_dir/fuchsia.vbmeta",
+      ]
       deps = [
         ":fuchsia.vbmeta",
-      ]
-      sources = [
-        "$root_out_dir/fuchsia.vbmeta",
-      ]
-      updater = "fuchsia.vbmeta"
-      json = {
-        name = "zircon-a"
-        type = "vbmeta"
-        archive = true
-
-        # TODO (dmitryya@) netsvc does not support correct
-        # flashing vbmeta images to a device.
-        # Comment out this till this will be fixed.
-        #bootserver_pave = [ "--vbmetaa" ]
-      }
-      public = [
-        "IMAGE_VBMETAA_RAW",
       ]
     },
   ]
@@ -1030,7 +1039,7 @@ if (use_vbmeta) {
 
 # The updater also wants the zedboot zbi as recovery.
 if (custom_signing_script != "") {
-  images += [
+  update_manifest += [
     {
       deps = [
         "zedboot:signed",
@@ -1038,11 +1047,11 @@ if (custom_signing_script != "") {
       sources = [
         "$root_out_dir/zedboot.zbi.signed",
       ]
-      updater = "zedboot.signed"
+      target = "zedboot.signed"
     },
   ]
 } else if (use_vboot) {
-  images += [
+  update_manifest += [
     {
       deps = [
         "zedboot:signed",
@@ -1051,11 +1060,11 @@ if (custom_signing_script != "") {
         "$root_out_dir/zedboot.vboot",
       ]
 
-      updater = "zedboot.signed"
+      target = "zedboot.signed"
     },
   ]
 } else {
-  images += [
+  update_manifest += [
     {
       deps = [
         "zedboot:zbi",
@@ -1063,12 +1072,12 @@ if (custom_signing_script != "") {
       sources = [
         "$root_out_dir/zedboot.zbi",
       ]
-      updater = "zedboot"
+      target = "zedboot"
     },
   ]
 }
 if (use_vbmeta) {
-  images += [
+  update_manifest += [
     {
       deps = [
         "zedboot:zedboot.vbmeta",
@@ -1076,7 +1085,7 @@ if (use_vbmeta) {
       sources = [
         "$root_out_dir/zedboot.vbmeta",
       ]
-      updater = "recovery.vbmeta"
+      target = "recovery.vbmeta"
     },
   ]
 }
@@ -1107,6 +1116,9 @@ if (!bootfs_only) {
   # fvm images using |fvm_image_size|.
   zircon_tool_action("data.blk") {
     testonly = true
+
+    rebased_data_image_path = rebase_path(data_image_path, root_build_dir)
+
     tool = "minfs"
     outputs = [
       data_image_path,
@@ -1129,21 +1141,19 @@ if (!bootfs_only) {
         rebase_path(data_partition_manifest),
       ]
     }
+
+    metadata = {
+      images = [
+        {
+          name = "data"
+          path = rebased_data_image_path
+          type = "blk"
+        },
+      ]
+      image_paths = [ "IMAGE_DATA_RAW=$rebased_data_image_path" ]
+    }
   }
-  images += [
-    {
-      public = [
-        "IMAGE_DATA_RAW",
-      ]
-      json = {
-        name = "data"
-        type = "blk"
-      }
-      deps = [
-        ":data.blk",
-      ]
-    },
-  ]
+  default_image_deps += [ ":data.blk" ]
 
   # Record the maximum allowable FVM size in the build directory for later steps
   # to check against.
@@ -1155,7 +1165,10 @@ if (!bootfs_only) {
   # invoked and used by the qemu run, via `fx run`.
   generate_fvm("fvm.blk") {
     testonly = true
+
     output_name = "$target_out_dir/fvm.blk"
+    rebased_output_name = rebase_path(output_name, root_build_dir)
+
     args = fvm_create_args
     if (fvm_image_size != "") {
       args += [
@@ -1179,22 +1192,19 @@ if (!bootfs_only) {
         maximum_bytes = minfs_maximum_bytes
       },
     ]
+    metadata = {
+      images = [
+        {
+          archive = add_qemu_to_build_archives
+          name = "storage-full"
+          path = rebased_output_name
+          type = "blk"
+        },
+      ]
+      image_paths = [ "IMAGE_FVM_RAW=$rebased_output_name" ]
+    }
   }
-  images += [
-    {
-      deps = [
-        ":fvm.blk",
-      ]
-      json = {
-        name = "storage-full"
-        type = "blk"
-        archive = add_qemu_to_build_archives
-      }
-      public = [
-        "IMAGE_FVM_RAW",
-      ]
-    },
-  ]
+  default_image_deps += [ ":fvm.blk" ]
 
   fvm_sparse_blk_path = "$target_out_dir/fvm.sparse.blk"
 
@@ -1204,7 +1214,10 @@ if (!bootfs_only) {
   # pave`.
   generate_fvm("fvm.sparse.blk") {
     testonly = true
+
     output_name = fvm_sparse_blk_path
+    rebased_output_name = rebase_path(output_name, root_build_dir)
+
     deps = [
       ":blob.blk",
       ":data.blk",
@@ -1226,22 +1239,20 @@ if (!bootfs_only) {
         maximum_bytes = minfs_maximum_bytes
       },
     ]
+
+    metadata = {
+      images = [
+        {
+          bootserver_pave = [ "--fvm" ]
+          name = "storage-sparse"
+          path = rebased_output_name
+          type = "blk"
+        },
+      ]
+      image_paths = [ "IMAGE_FVM_SPARSE=$rebased_output_name" ]
+    }
   }
-  images += [
-    {
-      deps = [
-        ":fvm.sparse.blk",
-      ]
-      json = {
-        name = "storage-sparse"
-        type = "blk"
-        bootserver_pave = [ "--fvm" ]
-      }
-      public = [
-        "IMAGE_FVM_SPARSE",
-      ]
-    },
-  ]
+  default_image_deps += [ ":fvm.sparse.blk" ]
 
   filesystem_sizes_deps += [
     ":blob.blk",
@@ -1283,9 +1294,12 @@ if (!bootfs_only) {
 
   # fvm.blob.sparse.blk creates a sprase FVM partition image containing the blob
   # partition produced by blob.blk.
+  fvm_blob_sparse_blk_path = "$target_out_dir/fvm.blob.sparse.blk"
+  rebased_fvm_blob_sparse_blk_path =
+      rebase_path(fvm_blob_sparse_blk_path, root_build_dir)
   generate_fvm("fvm.blob.sparse.blk") {
     testonly = true
-    output_name = "$target_out_dir/$target_name"
+    output_name = fvm_blob_sparse_blk_path
     deps = [
       ":blob.blk",
     ]
@@ -1299,18 +1313,13 @@ if (!bootfs_only) {
         maximum_bytes = blob_blobfs_maximum_bytes
       },
     ]
+
+    metadata = {
+      image_paths =
+          [ "IMAGE_FVM_BLOB_SPARSE=$rebased_fvm_blob_sparse_blk_path" ]
+    }
   }
-  images += [
-    {
-      default = false
-      deps = [
-        ":fvm.blob.sparse.blk",
-      ]
-      public = [
-        "IMAGE_FVM_BLOB_SPARSE",
-      ]
-    },
-  ]
+  default_image_deps += [ ":fvm.blob.sparse.blk" ]
 
   # This rolls the primary ZBI together with a compressed RAMDISK image of
   # fvm.blk into a fat ZBI that boots the full system without using any real
@@ -1324,54 +1333,39 @@ if (!bootfs_only) {
     ]
     inputs = get_target_outputs(":fuchsia")
     ramdisk_inputs = get_target_outputs(":fvm.blk")
-  }
-  images += [
-    {
-      default = false
-      json = {
-        bootserver_netboot = [ "--boot" ]
-        name = "netboot"
-        type = "zbi"
-      }
-      public = [
-        "IMAGE_NETBOOT_ZBI",
+
+    metadata = {
+      images = [
+        {
+          bootserver_netboot = [ "--boot" ]
+          name = "netboot"
+          path = "netboot.zbi"
+          type = "zbi"
+        },
+      ]
+      image_paths = [
+        "IMAGE_NETBOOT_ZBI=netboot.zbi",
 
         # TODO(mcgrathr): The complete ZBI can be used with a separate kernel
         # too, the kernel image in it will just be ignored.  So just use the
         # primary ZBI for this until all uses are converted to using the ZBI
         # alone.  Then remove this as IMAGE_BOOT_RAM variable should no
         # longer be in use.
-        "IMAGE_NETBOOT_RAM",
+        "IMAGE_NETBOOT_RAM=netboot.zbi",
       ]
-      deps = [
-        ":netboot",
-      ]
-    },
-  ]
+    }
+  }
+  default_image_deps += [ ":netboot" ]
 } else {
   # The bootfs_only image is already a netboot'able image.
   group("netboot") {
     testonly = true
+
+    # netboot-specific metadata is attached to :fuchsia when bootfs_only os true.
     deps = [
       ":fuchsia",
     ]
   }
-  images += [
-    {
-      json = {
-        bootserver_netboot = [ "--boot" ]
-        name = "fuchsia"
-        type = "zbi"
-      }
-      public = [
-        "IMAGE_NETBOOT_RAM",
-        "IMAGE_NETBOOT_ZBI",
-      ]
-      deps = [
-        ":fuchsia",
-      ]
-    },
-  ]
 }
 
 if (target_cpu != "arm64" && !use_vboot) {
@@ -1382,18 +1376,18 @@ if (target_cpu != "arm64" && !use_vboot) {
     deps = [
       ":fuchsia",
     ]
-  }
-  images += [
-    {
-      json = {
-        name = "zircon-vboot"
-        type = "vboot"
-      }
-      deps = [
-        ":vboot",
+
+    metadata = {
+      images = [
+        {
+          name = "zircon-vboot"
+          path = "fuchsia.vboot"
+          type = "vboot"
+        },
       ]
-    },
-  ]
+    }
+  }
+  default_image_deps += [ ":vboot" ]
 
   # EFI ESP images.
   esp("esp") {
@@ -1404,34 +1398,31 @@ if (target_cpu != "arm64" && !use_vboot) {
     } else {
       cmdline = "efi_local_cmdline.txt"
     }
+    metadata = {
+      images = [
+        {
+          bootserver_pave = [ "--bootloader" ]
+          bootserver_pave_zedboot = [ "--bootloader" ]
+          name = "efi"
+          path = "fuchsia.esp.blk"
+          type = "blk"
+        },
+      ]
+      image_paths = [ "IMAGE_ESP_RAW=fuchsia.esp.blk" ]
+    }
   }
-  images += [
-    {
-      deps = [
-        ":esp",
-      ]
-      json = {
-        name = "efi"
-        type = "blk"
-        bootserver_pave = [ "--bootloader" ]
-        bootserver_pave_zedboot = [ "--bootloader" ]
-      }
-      if (!use_vboot && custom_signing_script == "") {
-        updater = "bootloader"
-      }
-      public = [
-        "IMAGE_ESP_RAW",
-      ]
-    },
-    {
-      deps = [
-        "zedboot:esp",
-      ]
-      sources = [
-        "$root_out_dir/zedboot.esp.blk",
-      ]
-    },
-  ]
+  default_image_deps += [ ":esp" ]
+
+  if (!use_vboot && custom_signing_script == "") {
+    update_manifest += [
+      {
+        deps = [
+          ":esp",
+        ]
+        target = "bootloader"
+      },
+    ]
+  }
 } else {
   if (bootloader_prebuilt != "") {
     copy("bootloader_image") {
@@ -1443,21 +1434,26 @@ if (target_cpu != "arm64" && !use_vboot) {
       outputs = [
         "$root_out_dir/bootloader.img",
       ]
-    }
-    images += [
-      {
-        deps = []
-        json = {
-          name = "efi"
-          type = "blk"
-          bootserver_pave = [ "--bootloader" ]
-          bootserver_pave_zedboot = [ "--bootloader" ]
-        }
-        sdk = "bootloader.img"
-        updater = "bootloader"
-        public = [
-          "IMAGE_BOOTLOADER_RAW",
+
+      metadata = {
+        images = [
+          {
+            bootserver_pave = [ "--bootloader" ]
+            bootserver_pave_zedboot = [ "--bootloader" ]
+            name = "efi"
+            path = "bootloader.img"
+            type = "blk"
+          },
         ]
+        image_paths = [ "IMAGE_BOOTLOADER_RAW=bootloader.img" ]
+      }
+    }
+
+    default_image_deps += [ ":bootloader_image" ]
+
+    update_manifest += [
+      {
+        target = "bootloader"
         deps = [
           ":bootloader_image",
         ]
@@ -1519,30 +1515,6 @@ group("nil-archives") {
   ]
 }
 
-group("images") {
-  testonly = true
-  deps = [
-    ":ids.txt",
-    ":nil-archives",
-    ":package_lists",
-    ":paver-script",
-    ":record_filesystem_sizes",
-    ":root_component_index_metadata",
-    ":zedboot-script",
-    "zedboot",
-  ]
-}
-
-group("default-images") {
-  testonly = true
-  deps = []
-  foreach(image, images) {
-    if (!defined(image.default) || image.default) {
-      deps += image.deps
-    }
-  }
-}
-
 ###
 ### Paver and flash scripts, and archives using those images and zedboot's images.
 ###
@@ -1575,8 +1547,9 @@ paver_targets = [
       "$root_build_dir/netboot.sh",
     ]
     switch = "--netboot="
-    json = {
+    metadata = {
       name = "netboot"
+      path = "netboot.sh"
       type = "sh"
     }
   },
@@ -1590,8 +1563,9 @@ paver_targets = [
     } else {
       switch = "--pave_zedboot="
     }
-    json = {
+    metadata = {
       name = "pave-zedboot"
+      path = "pave-zedboot.sh"
       type = "sh"
     }
   },
@@ -1605,8 +1579,9 @@ paver_targets = [
     } else {
       switch = "--pave="
     }
-    json = {
+    metadata = {
       name = "pave"
+      path = "pave.sh"
       type = "sh"
     }
   },
@@ -1625,8 +1600,9 @@ foreach(format,
         "$root_build_dir/build-archive.$format",
       ]
       switch = "--archive="
-      json = {
+      metadata = {
         name = "archive"
+        path = "build-archive.$format"
         type = "$format"
       }
     },
@@ -1636,25 +1612,17 @@ foreach(format,
         "$root_build_dir/symbol-archive.$format",
       ]
       switch = "--symbol-archive="
-      json = {
+      metadata = {
         name = "symbol-archive"
+        path = "symbol-archive.$format"
         type = "$format"
       }
     },
   ]
 }
 
+archive_deps = []
 foreach(target, paver_targets) {
-  images += [
-    {
-      path = rebase_path(target.outputs, root_build_dir)
-      path = path[0]
-      json = target.json
-      deps = [
-        ":${target.name}",
-      ]
-    },
-  ]
   action(target.name) {
     deps = [
       ":default-images",
@@ -1664,10 +1632,6 @@ foreach(target, paver_targets) {
       "zedboot",
     ]
     testonly = true
-    sources = [
-      "$root_build_dir/images.json",
-      "$root_build_dir/zedboot_images.json",
-    ]
     outputs = target.outputs
     depfile = "${outputs[0]}.d"
     script = "pack-images.py"
@@ -1683,8 +1647,19 @@ foreach(target, paver_targets) {
       ]
     }
 
-    args += rebase_path(sources, root_build_dir)
+    args += [ "images.json" ]
+
+    metadata = {
+      # TODO(fxbug.dev/9708): include these in a build API module of archives instead.
+      images = [ target.metadata ]
+    }
   }
+  archive_deps += [ ":${target.name}" ]
+}
+
+group("archives") {
+  testonly = true
+  deps = archive_deps
 }
 
 ###
@@ -1737,7 +1712,7 @@ action("update.manifest") {
   visibility = [ ":*" ]
   testonly = true
 
-  update_manifest = [
+  additional_update_manifest_entries = [
     {
       target = "packages"
       deps = [
@@ -1752,31 +1727,12 @@ action("update.manifest") {
         "update_package.json",
       ]
     },
-
     {
       target = "version"
       sources = [
         rebase_path(build_info_files.version, "", root_build_dir),
       ]
     },
-  ]
-
-  foreach(image, images) {
-    if (defined(image.updater)) {
-      update_manifest += [
-        {
-          target = image.updater
-          forward_variables_from(image,
-                                 [
-                                   "deps",
-                                   "sources",
-                                 ])
-        },
-      ]
-    }
-  }
-
-  update_manifest += [
     {
       target = "board"
       sources = [
@@ -1801,7 +1757,10 @@ action("update.manifest") {
     "//build/info:build-info",
   ]
 
-  foreach(entry, update_manifest) {
+  # Each entry optionally specifies deps or sources that are added to that of
+  # this action, as well as a `target` to be included in the generated
+  # manifest.
+  foreach(entry, update_manifest + additional_update_manifest_entries) {
     entry_source = ""
     if (defined(entry.deps)) {
       deps += entry.deps
@@ -2250,26 +2209,83 @@ action("ids.txt") {
            "-u",
            "-o",
          ] + rebase_path(outputs + sources, root_build_dir)
+
+  metadata = {
+    images = [
+      {
+        name = "build-id"
+        path = "ids.txt"
+        type = "txt"
+      },
+    ]
+  }
+}
+default_image_deps += [ ":ids.txt" ]
+
+group("bootserver") {
+  deps = [
+    "//zircon/public/tool/bootserver($host_toolchain)",
+  ]
+
+  metadata = {
+    images = [
+      {
+        archive = true
+        name = "bootserver"
+        path = rebase_path("$zircon_tools_dir/bootserver", root_build_dir)
+        type = "exe.$host_platform"
+      },
+    ]
+  }
+}
+default_image_deps += [ ":bootserver" ]
+
+group("images") {
+  testonly = true
+  deps = [
+    ":default-images",
+    ":nil-archives",
+    ":package_lists",
+    ":paver-script",
+    ":record_filesystem_sizes",
+    ":root_component_index_metadata",
+    ":zedboot-script",
+    "//build/images/zedboot",
+  ]
 }
 
-images += [
-  {
-    deps = [
-      ":ids.txt",
-    ]
-    json = {
-      name = "build-id"
-      type = "txt"
-    }
-  },
-]
+group("default-images") {
+  testonly = true
+  deps = default_image_deps
 
-write_images_manifest("images-manifest") {
-  public = [
-    "FUCHSIA_BOARD_NAME=${board_name}",
-  ]
+  metadata = {
+    # Not actually images, but historically required entries to be included in
+    # the relevant build archives.
+    images = [
+      {
+        archive = true
+        name = "buildargs"
+        type = "gn"
+        path = "args.gn"
+      },
+      {
+        archive = true
+        name = "jiri_snapshot"
+        path = rebase_path("//.jiri_root/update_history/latest", root_build_dir)
+        type = "xml"
+      },
+    ]
+  }
+}
+
+generated_file("image_paths") {
+  testonly = true
   outputs = [
-    "$root_build_dir/images.json",
     "$root_build_dir/image_paths.sh",
+  ]
+  output_conversion = "list lines"
+  data_keys = [ "image_paths" ]
+  deps = [
+    ":images",
   ]
 }
