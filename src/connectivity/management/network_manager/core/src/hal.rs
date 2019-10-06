@@ -360,7 +360,7 @@ impl NetCfg {
     ) -> error::Result<()> {
         match (current, desired) {
             (Some(current_ip), Some(desired_ip)) => {
-                if current_ip != current_ip {
+                if current_ip != desired_ip {
                     // There has been a change.
                     // Remove the old one and add the new one.
                     self.unset_ip_address(pid, &current_ip).await?;

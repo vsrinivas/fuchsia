@@ -656,8 +656,7 @@ async fn test_wan_ip() {
          "address_method: Some\\(Automatic\\), address_v4: None, gateway_v4: None",
          "set it back to dhcp."),
         ("show wan 5",
-         // TODO(b/35643) FIX - Still in manual ip mode.
-         "address_method: Some\\(Manual\\), address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[2, 2, 2, 2\\] \\}\\)\\), prefix_length: Some\\(24\\) \\}\\), gateway_v4: None",
+         "address_method: Some\\(Automatic\\), address_v4: None, gateway_v4: None",
          "dhcp configured, no ip"),
     ]).await;
 }
