@@ -44,9 +44,6 @@ test_package("network_manager_integration_tests") {
     {
       name = "network_manager_integration_test"
       environments = basic_envs
-
-      # TODO(dpradilla) Reenable once test flake is resolved. See fxb/37491
-      disabled = true
     },
   ]
 }
