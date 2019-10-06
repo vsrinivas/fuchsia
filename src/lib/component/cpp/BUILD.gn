@@ -58,9 +58,6 @@ source_set("cpp") {
     "//src/virtualization/bin/guest_manager:lib",
     "//src/virtualization/bin/guest_runner:lib",
     "//src/virtualization/bin/vmm:lib",
-
-    # TODO(34711): make the below more specific or delete it entirely
-    "//vendor/*",
   ]
 }
 
