@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![recursion_limit = "128"]
+#![recursion_limit = "256"]
 
 /// Implementation of the `FromArgs` and `argh(...)` derive attributes.
 ///
@@ -22,6 +22,7 @@ use {
     },
     proc_macro2::{Span, TokenStream},
     quote::{ToTokens, quote, quote_spanned},
+    syn::spanned::Spanned,
     std::str::FromStr,
 };
 
@@ -65,6 +66,20 @@ enum Optionality {
     None,
     Defaulted(TokenStream),
     Optional,
+    Repeating,
+}
+
+impl PartialEq<Optionality> for Optionality {
+    fn eq(&self, other: &Optionality) -> bool {
+        use Optionality::*;
+        match (self, other) {
+            (None, None)
+            | (Optional, Optional)
+            | (Repeating, Repeating) => true,
+            // NB: (Defaulted, Defaulted) can't contain the same token streams
+            _ => false,
+        }
+    }
 }
 
 impl Optionality {
@@ -111,7 +126,7 @@ impl<'a> StructField<'a> {
     fn new(errors: &Errors, field: &'a syn::Field, attrs: FieldAttrs) -> Option<Self> {
         let name = field.ident.as_ref().expect("missing ident for named field");
 
-        // Ensure that one "kind" is present (switch, option, subcommand)
+        // Ensure that one "kind" is present (switch, option, subcommand, positional)
         let kind = if let Some(field_type) = &attrs.field_type {
             field_type.kind
         } else {
@@ -119,7 +134,7 @@ impl<'a> StructField<'a> {
                 field,
                 concat!(
                     "Missing `argh` field kind attribute.\n",
-                    "Expected one of: `switch`, `option`, `subcommand",
+                    "Expected one of: `switch`, `option`, `subcommand`, `positional`",
                 ),
             );
             return None
@@ -136,7 +151,7 @@ impl<'a> StructField<'a> {
                 optionality = Optionality::Optional;
                 ty_without_wrapper = &field.ty;
             },
-            FieldKind::Option => {
+            FieldKind::Option | FieldKind::Positional => {
                 if let Some(default) = &attrs.default {
                     let tokens = match TokenStream::from_str(&default.value()) {
                         Ok(tokens) => tokens,
@@ -155,9 +170,13 @@ impl<'a> StructField<'a> {
                     optionality = Optionality::Defaulted(tokens);
                     ty_without_wrapper = &field.ty;
                 } else {
-                    let inner = ty_inner(&["Option", "Vec"], &field.ty);
-                    optionality = if inner.is_some() {
+                    let mut inner = None;
+                    optionality = if let Some(x) = ty_inner(&["Option"], &field.ty) {
+                        inner = Some(x);
                         Optionality::Optional
+                    } else if let Some(x) = ty_inner(&["Vec"], &field.ty) {
+                        inner = Some(x);
+                        Optionality::Repeating
                     } else {
                         Optionality::None
                     };
@@ -188,7 +207,7 @@ impl<'a> StructField<'a> {
                 let long_name = format!("--{}", long_name);
                 Some(long_name)
             }
-            FieldKind::SubCommand => None,
+            FieldKind::SubCommand | FieldKind::Positional => None,
         };
 
         Some(StructField {
@@ -227,16 +246,26 @@ fn impl_from_args_struct(
         StructField::new(errors, field, attrs)
     }).collect();
 
+    ensure_only_last_positional_is_optional(errors, &fields);
     let top_or_sub_cmd_impl = top_or_sub_cmd_impl(errors, name, type_attrs);
     let init_fields = declare_local_storage_for_fields(&fields);
     let unwrap_fields = unwrap_fields(&fields);
+    let positional_fields: Vec<&StructField<'_>> = fields.iter()
+        .filter(|field| field.kind == FieldKind::Positional)
+        .collect();
+    let positional_field_idents = positional_fields.iter().map(|field| &field.field.ident);
+    let positional_field_names = positional_fields.iter().map(|field| field.name.to_string());
+    let last_positional_is_repeating = positional_fields
+        .last()
+        .map(|field| field.optionality == Optionality::Repeating)
+        .unwrap_or(false);
 
     let flag_output_table = fields.iter().filter_map(|field| {
         let field_name = &field.field.ident;
         match field.kind {
             FieldKind::Option => Some(quote! { argh::CmdOption::Value(&mut #field_name) }),
-            FieldKind::SubCommand => None,
             FieldKind::Switch => Some(quote! { argh::CmdOption::Flag(&mut #field_name) }),
+            FieldKind::SubCommand | FieldKind::Positional => None,
         }
     });
 
@@ -300,8 +329,16 @@ fn impl_from_args_struct(
                     #( #flag_output_table, )*
                 ];
 
+                let __positional_output_table = &mut [
+                    #( (
+                        &mut #positional_field_idents as &mut argh::ParseValueSlot,
+                        #positional_field_names
+                    ), )*
+                ];
+
                 let mut __help = false;
                 let mut __remaining_args = __args;
+                let mut __positional_index = 0;
                 'parse_args: while let Some(&__next_arg) = __remaining_args.get(0) {
                     __remaining_args = &__remaining_args[1..];
                     if __next_arg == "--help" || __next_arg == "help" {
@@ -328,6 +365,28 @@ fn impl_from_args_struct(
                     }
 
                     #check_subcommands
+
+                    if __positional_index < __positional_output_table.len() {
+                        argh::parse_positional(
+                            __next_arg,
+                            &mut __positional_output_table[__positional_index],
+                        )?;
+
+                        // Don't increment position if we're at the last arg
+                        // *and* the last arg is repeating.
+                        let __skip_increment =
+                            #last_positional_is_repeating &&
+                             __positional_index == __positional_output_table.len() - 1;
+
+                        if !__skip_increment {
+                            __positional_index += 1;
+                        }
+                    } else {
+                        return std::result::Result::Err(argh::EarlyExit {
+                            output: argh::unrecognized_arg(__next_arg),
+                            status: std::result::Result::Err(()),
+                        });
+                    }
                 }
 
                 if __help {
@@ -353,6 +412,26 @@ fn impl_from_args_struct(
     };
 
     trait_impl.into()
+}
+
+/// Ensures that only the last positional arg is non-required.
+fn ensure_only_last_positional_is_optional(errors: &Errors, fields: &[StructField<'_>]) {
+    let mut first_non_required_span = None;
+    for field in fields {
+        if field.kind == FieldKind::Positional {
+            if let Some(first) = first_non_required_span {
+                errors.err_span(
+                    first,
+                    "Only the last positional argument may be `Option`, `Vec`, or defaulted.",
+                );
+                errors.err(&field.field, "Later positional argument declared here.");
+                return;
+            }
+            if !field.optionality.is_required() {
+                first_non_required_span = Some(field.field.span());
+            }
+        }
+    }
 }
 
 /// Implement `argh::TopLevelCommand` or `argh::SubCommand` as appropriate.
@@ -397,14 +476,16 @@ fn declare_local_storage_for_fields<'a>(fields: &'a [StructField<'a>]) -> impl I
 
         // Wrap field types in `Option` if they aren't already `Option` or `Vec`-wrapped.
         let field_slot_type = match field.optionality {
-            Optionality::Optional => (&field.field.ty).into_token_stream(),
+            Optionality::Optional | Optionality::Repeating => {
+                (&field.field.ty).into_token_stream()
+            }
             Optionality::None | Optionality::Defaulted(_) => {
                 quote! { std::option::Option<#field_type> }
             }
         };
 
         match field.kind {
-            FieldKind::Option => {
+            FieldKind::Option | FieldKind::Positional => {
                 let from_str_fn = match &field.attrs.from_str_fn {
                     Some(from_str_fn) => from_str_fn.into_token_stream(),
                     None => {
@@ -437,10 +518,12 @@ fn unwrap_fields<'a>(fields: &'a [StructField<'a>]) -> impl Iterator<Item = Toke
     fields.iter().map(|field| {
         let field_name = field.name;
         match field.kind {
-            FieldKind::Option => {
+            FieldKind::Option | FieldKind::Positional => {
                 match &field.optionality {
                     Optionality::None => quote! { #field_name: #field_name.slot.unwrap() },
-                    Optionality::Optional => quote! { #field_name: #field_name.slot },
+                    Optionality::Optional | Optionality::Repeating => {
+                        quote! { #field_name: #field_name.slot }
+                    }
                     Optionality::Defaulted(tokens) => {
                         quote! {
                             #field_name: #field_name.slot.unwrap_or_else(|| #tokens)
@@ -452,7 +535,9 @@ fn unwrap_fields<'a>(fields: &'a [StructField<'a>]) -> impl Iterator<Item = Toke
             FieldKind::SubCommand => {
                 match field.optionality {
                     Optionality::None => quote! { #field_name: #field_name.unwrap() },
-                    Optionality::Optional => field_name.into_token_stream(),
+                    Optionality::Optional | Optionality::Repeating => {
+                        field_name.into_token_stream()
+                    }
                     Optionality::Defaulted(_) => unreachable!(),
                 }
             }
@@ -489,6 +574,14 @@ fn append_missing_requirements<'a>(
         let field_name = field.name;
         match field.kind {
             FieldKind::Switch => unreachable!("switches are always optional"),
+            FieldKind::Positional => {
+                let name = field.name.to_string();
+                quote! {
+                    if #field_name.slot.is_none() {
+                        #mri.missing_positional_arg(#name)
+                    }
+                }
+            }
             FieldKind::Option => {
                 let name = field.long_name.as_ref().expect("options always have a long name");
                 quote! {

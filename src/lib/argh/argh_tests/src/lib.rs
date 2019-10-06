@@ -4,7 +4,10 @@
 
 #![cfg(test)]
 
-use argh::FromArgs;
+use {
+    argh::FromArgs,
+    std::fmt::Debug,
+};
 
 #[test]
 fn basic_example() {
@@ -195,7 +198,7 @@ fn missing_option_value() {
 
     let e = Cmd::from_args(&["cmdname"], &["--msg"])
         .expect_err("Parsing missing option value should fail");
-    assert_eq!(e.output, "No value provided for option \'--msg\'.");
+    assert_eq!(e.output, "No value provided for option \'--msg\'.\n");
     assert!(e.status.is_err());
 }
 
@@ -206,6 +209,171 @@ fn assert_help_string<T: FromArgs>(help_str: &str) {
             assert_eq!(help_str, e.output);
             e.status.expect("help returned an error");
         }
+    }
+}
+
+fn assert_output<T: FromArgs + Debug + PartialEq>(args: &[&str], expected: T) {
+    let t = T::from_args(&["cmd"], args).expect("failed to parse");
+    assert_eq!(t, expected);
+}
+
+fn assert_error<T: FromArgs + Debug>(args: &[&str], err_msg: &str) {
+    let e = T::from_args(&["cmd"], args).expect_err("unexpectedly succeeded parsing");
+    assert_eq!(err_msg, e.output);
+    e.status.expect_err("error had a positive status");
+}
+
+mod positional {
+    use super::*;
+
+    #[derive(FromArgs, Debug, PartialEq)]
+    /// Woot
+    struct LastRepeating {
+        #[argh(positional)]
+        /// fooey
+        a: u32,
+        #[argh(positional)]
+        /// fooey
+        b: Vec<String>,
+    }
+
+    #[test]
+    fn repeating() {
+        assert_output(&["5"], LastRepeating { a: 5, b: vec![] });
+        assert_output(&["5", "foo"], LastRepeating { a: 5, b: vec!["foo".into()] });
+        assert_output(
+            &["5", "foo", "bar"],
+            LastRepeating { a: 5, b: vec!["foo".into(), "bar".into()] },
+        );
+        assert_help_string::<LastRepeating>(
+r###"Usage: test_arg_0 <a> [<b...>]
+
+Woot
+
+Options:
+  --help            display usage information
+"###
+        );
+    }
+
+    #[derive(FromArgs, Debug, PartialEq)]
+    /// Woot
+    struct LastOptional {
+        #[argh(positional)]
+        /// fooey
+        a: u32,
+        #[argh(positional)]
+        /// fooey
+        b: Option<String>,
+    }
+
+    #[test]
+    fn optional() {
+        assert_output(&["5"], LastOptional { a: 5, b: None });
+        assert_output(&["5", "6"], LastOptional { a: 5, b: Some("6".into()) });
+        assert_error::<LastOptional>(&["5", "6", "7"], "Unrecognized argument: 7\n");
+    }
+
+    #[derive(FromArgs, Debug, PartialEq)]
+    /// Woot
+    struct LastDefaulted {
+        #[argh(positional)]
+        /// fooey
+        a: u32,
+        #[argh(positional, default = "5")]
+        /// fooey
+        b: u32,
+    }
+
+    #[test]
+    fn defaulted() {
+        assert_output(&["5"], LastDefaulted { a: 5, b: 5 });
+        assert_output(&["5", "6"], LastDefaulted { a: 5, b: 6 });
+        assert_error::<LastDefaulted>(&["5", "6", "7"], "Unrecognized argument: 7\n");
+    }
+
+    #[derive(FromArgs, Debug, PartialEq)]
+    /// Woot
+    struct LastRequired {
+        #[argh(positional)]
+        /// fooey
+        a: u32,
+        #[argh(positional)]
+        /// fooey
+        b: u32,
+    }
+
+    #[test]
+    fn required() {
+        assert_output(&["5", "6"], LastRequired { a: 5, b: 6 });
+        assert_error::<LastRequired>(&[],
+r###"Required positional arguments not provided:
+    a
+    b
+"###
+        );
+        assert_error::<LastRequired>(&["5"],
+r###"Required positional arguments not provided:
+    b
+"###
+        );
+    }
+
+    #[derive(FromArgs, Debug, PartialEq)]
+    /// Woot
+    struct WithSubcommand {
+        #[argh(positional)]
+        /// fooey
+        a: String,
+        #[argh(subcommand)]
+        /// fooey
+        b: Subcommand,
+        #[argh(positional)]
+        /// fooey
+        c: Vec<String>,
+    }
+
+    #[derive(FromArgs, Debug, PartialEq)]
+    #[argh(subcommand, name = "a")]
+    /// Subcommand of positional::WithSubcommand.
+    struct Subcommand {
+        #[argh(positional)]
+        /// fooey
+        a: String,
+        #[argh(positional)]
+        /// fooey
+        b: Vec<String>,
+    }
+
+    #[test]
+    fn mixed_with_subcommand() {
+        assert_output(
+            &["first", "a", "a"],
+            WithSubcommand {
+                a: "first".into(),
+                b: Subcommand { a: "a".into(), b: vec![] },
+                c: vec![],
+            },
+        );
+
+        assert_error::<WithSubcommand>(
+            &["a", "a", "a"],
+r###"Required positional arguments not provided:
+    a
+"###,
+        );
+
+        assert_output(
+            &["1", "2", "3", "a", "b", "c"],
+            WithSubcommand {
+                a: "1".into(),
+                b: Subcommand {
+                    a: "b".into(),
+                    b: vec!["c".into()],
+                },
+                c: vec!["2".into(), "3".into()],
+            },
+        );
     }
 }
 
@@ -307,7 +475,7 @@ mod fuchsia_commandline_tools_rubric {
 
         let e = OneOption::from_args(&["cmdname"], &["--foo=bar"])
             .expect_err("Parsing option value using `=` should fail");
-        assert_eq!(e.output, "Unrecognized argument: --foo=bar");
+        assert_eq!(e.output, "Unrecognized argument: --foo=bar\n");
         assert!(e.status.is_err());
     }
 
@@ -595,7 +763,7 @@ Options:
                 "One of the following subcommands must be present:\n",
                 "    help\n",
                 "    blow-up\n",
-                "    grind",
+                "    grind\n",
             ),
         );
     }

@@ -31,6 +31,11 @@ pub enum FieldKind {
     /// containing one of several potential subcommands. They may be optional
     /// (using `Option`) or required (no `Option`).
     SubCommand,
+    /// Positional arguments are parsed literally if the input
+    /// does not begin with `-` or `--` and is not a subcommand.
+    /// They are parsed in declaration order, and only the last positional
+    /// argument in a type may be an `Option`, `Vec`, or have a default value.
+    Positional,
 }
 
 /// The type of a field on a `#![derive(FromArgs)]` struct.
@@ -102,6 +107,8 @@ impl FieldAttrs {
                     parse_attr_field_type(errors, meta, FieldKind::SubCommand, &mut this.field_type);
                 } else if name == "switch" {
                     parse_attr_field_type(errors, meta, FieldKind::Switch, &mut this.field_type);
+                } else if name == "positional" {
+                    parse_attr_field_type(errors, meta, FieldKind::Positional, &mut this.field_type);
                 } else {
                     errors.err(
                         &meta,
@@ -117,8 +124,14 @@ impl FieldAttrs {
 
         if let (Some(default), Some(field_type)) = (&this.default, &this.field_type) {
             match field_type.kind {
-                FieldKind::Option => {}
-                _ => errors.err(default, "`default` may only be specified on `#[argh(option)]` fields"),
+                FieldKind::Option | FieldKind::Positional => {}
+                FieldKind::SubCommand | FieldKind::Switch => {
+                    errors.err(
+                        default,
+                        "`default` may only be specified on `#[argh(option)]` \
+                        or `#[argh(subcommand)]` fields",
+                    )
+                }
             }
         }
 

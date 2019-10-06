@@ -82,6 +82,22 @@
 //! }
 //! ```
 //!
+//! Positional arguments can be declared using `#[argh(positional)]`.
+//! These arguments will be parsed in order of their declaration in
+//! the structure:
+//!
+//! ```rust
+//!//! #[derive(FromArgs, PartialEq, Debug)]
+//! /// A command with positional arguments.
+//! struct WithPositional {
+//!     #[argh(positional)]
+//!     first: String,
+//! }
+//! ```
+//!
+//! The last positional argument may include a default, or be wrapped in
+//! `Option` or `Vec` to indicate an optional or repeating positional arugment.
+//!
 //! Subcommands are also supported. To use a subcommand, declare a separate
 //! `FromArgs` type for each subcommand as well as an enum that cases
 //! over each command:
@@ -312,38 +328,9 @@ pub enum CmdOption<'a> {
     Value(&'a mut dyn ParseValueSlot),
 }
 
-// The reason no more positional arguments will be provided.
-#[doc(hidden)]
-pub enum PositionalCompletionCause {
-    // A subcommand was provided, which will cause positional arguments
-    // to cease being parsed.
-    SubCommand(&'static str),
-    // The end of arguments was reached.
-    EndOfArguments,
-}
-
-// Create an error pointing at a missing positional argument.
-#[doc(hidden)]
-pub fn missing_required_positional_argument(
-    next_req_arg: &str,
-    positional_completion_cause: PositionalCompletionCause,
-) -> String {
-    let expected = "Expected positional argument `";
-    let found = "`, found ";
-
-    match positional_completion_cause {
-        PositionalCompletionCause::EndOfArguments => {
-            [expected, next_req_arg, found, "end of arguments."].concat()
-        }
-        PositionalCompletionCause::SubCommand(s) => {
-            [expected, next_req_arg, found, "subcommand `", s, "`."].concat()
-        }
-    }
-}
-
 #[doc(hidden)]
 pub fn unrecognized_argument(x: &str) -> String {
-    ["Unrecognized argument: ", x].concat()
+    ["Unrecognized argument: ", x, "\n"].concat()
 }
 
 // A sentinel value that indicates that there is no
@@ -384,16 +371,31 @@ pub fn parse_option(
         CmdOption::Flag(b) => b.set_flag(),
         CmdOption::Value(pvs) => {
             let value = remaining_args.get(0).ok_or_else(|| {
-                ["No value provided for option '", arg, "'."].concat()
+                ["No value provided for option '", arg, "'.\n"].concat()
             })?;
             *remaining_args = &remaining_args[1..];
             pvs.fill_slot(value).map_err(|s| {
-                ["Error parsing argument '", arg, "' with value '", value, "': ", &s].concat()
+                ["Error parsing option '", arg, "' with value '", value, "': ", &s, "\n"].concat()
             })?;
         }
     }
 
     Ok(())
+}
+
+/// Parse a positional argument.
+///
+/// arg: the argument supplied by the user
+/// positional: a tuple containing slot to parse into and the name of the argument
+#[doc(hidden)]
+pub fn parse_positional(
+    arg: &str,
+    positional: &mut (&mut dyn ParseValueSlot, &'static str),
+) -> Result<(), String> {
+    let (slot, name) = positional;
+    slot.fill_slot(arg).map_err(|s| {
+        ["Error parsing positional argument '", name, "' with value '", arg, ": ", &s].concat()
+    })
 }
 
 // Prepend `help` to a list of arguments.
@@ -414,7 +416,12 @@ pub fn print_subcommands(commands: &[&CommandInfo]) -> String {
 
 #[doc(hidden)]
 pub fn expected_subcommand(commands: &[&str]) -> String {
-    ["Expected one of the following subcommands: ", &commands.join(", ")].concat()
+    ["Expected one of the following subcommands: ", &commands.join(", "), "\n"].concat()
+}
+
+#[doc(hidden)]
+pub fn unrecognized_arg(arg: &str) -> String {
+    ["Unrecognized argument: ", arg, "\n"].concat()
 }
 
 // An error string builder to report missing required options and subcommands.
@@ -423,6 +430,7 @@ pub fn expected_subcommand(commands: &[&str]) -> String {
 pub struct MissingRequirements {
     options: Vec<&'static str>,
     subcommands: Option<&'static [&'static CommandInfo]>,
+    positional_args: Vec<&'static str>,
 }
 
 const NEWLINE_INDENT: &str = "\n    ";
@@ -440,15 +448,32 @@ impl MissingRequirements {
         self.subcommands = Some(commands);
     }
 
+    // Add a missing positional argument.
+    #[doc(hidden)]
+    pub fn missing_positional_arg(&mut self, name: &'static str) {
+        self.positional_args.push(name)
+    }
+
     // If any missing options or subcommands were provided, returns an error string
     // describing the missing args.
     #[doc(hidden)]
     pub fn err_on_any(&self) -> Result<(), String> {
-        if self.options.is_empty() && self.subcommands.is_none() {
+        if self.options.is_empty()
+            && self.subcommands.is_none()
+            && self.positional_args.is_empty()
+        {
             return Ok(());
         }
 
         let mut output = String::new();
+
+        if !self.positional_args.is_empty() {
+            output.push_str("Required positional arguments not provided:");
+            for arg in &self.positional_args {
+                output.push_str(NEWLINE_INDENT);
+                output.push_str(arg);
+            }
+        }
 
         if !self.options.is_empty() {
             output.push_str("Required options not provided:");
@@ -470,6 +495,8 @@ impl MissingRequirements {
                 output.push_str(subcommand.name);
             }
         }
+
+        output.push('\n');
 
         Err(output)
     }

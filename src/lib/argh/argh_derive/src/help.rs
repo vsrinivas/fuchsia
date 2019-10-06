@@ -10,6 +10,7 @@ use {
             FieldKind,
             TypeAttrs,
         },
+        Optionality,
         StructField,
     },
     argh_shared::INDENT,
@@ -31,12 +32,19 @@ pub(crate) fn help(
     subcommand: Option<&StructField<'_>>,
 ) -> TokenStream {
     let mut format_lit = "Usage: {command_name}".to_string();
+
+    let positional = fields.iter().filter(|f| f.kind == FieldKind::Positional);
+    for arg in positional {
+        format_lit.push(' ');
+        positional_usage(&mut format_lit, arg);
+    }
+
     let options = fields.iter().filter(|f| f.long_name.is_some());
-    // TODO: add positional args first
     for option in options.clone() {
         format_lit.push(' ');
         option_usage(&mut format_lit, option);
     }
+
     if let Some(subcommand) = subcommand {
         format_lit.push(' ');
         if !subcommand.optionality.is_required() {
@@ -127,6 +135,22 @@ fn lits_section(out: &mut String, heading: &str, lits: &[syn::LitStr]) {
     }
 }
 
+/// Add positional arguments like `[<foo>...]` to a help format string.
+fn positional_usage(out: &mut String, field: &StructField<'_>) {
+    if !field.optionality.is_required() {
+        out.push('[');
+    }
+    out.push('<');
+    out.push_str(&field.name.to_string());
+    if field.optionality == Optionality::Repeating {
+        out.push_str("...");
+    }
+    out.push('>');
+    if !field.optionality.is_required() {
+        out.push(']');
+    }
+}
+
 /// Add options like `[-f <foo>]` to a help format string.
 /// This function must only be called on options (things with `long_name.is_some()`)
 fn option_usage(out: &mut String, field: &StructField<'_>) {
@@ -144,7 +168,7 @@ fn option_usage(out: &mut String, field: &StructField<'_>) {
     }
 
     match field.kind {
-        FieldKind::SubCommand => unreachable!(), // subs don't have long_name
+        FieldKind::SubCommand | FieldKind::Positional => unreachable!(), // don't have long_name
         FieldKind::Switch => {},
         FieldKind::Option => {
             out.push_str(" <");
