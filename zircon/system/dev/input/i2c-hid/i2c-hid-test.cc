@@ -58,8 +58,18 @@ class FakeI2cHid : public fake_i2c::FakeI2c {
   void SetHidDescriptorFailure(zx_status_t status) { hiddesc_status_ = status; }
 
   void SendReport(std::vector<uint8_t> report) {
+    SendReportWithLength(report, report.size() + sizeof(uint16_t));
+  }
+
+  // This lets us send a report with an incorrect length.
+  void SendReportWithLength(std::vector<uint8_t> report, size_t len) {
+    fbl::AutoLock lock(&report_read_lock_);
+
     report_ = std::move(report);
+    report_len_ = len;
     irq_.trigger(0, zx::clock::get_monotonic());
+    sync_completion_wait_deadline(&report_read_, zx::time::infinite().get());
+    sync_completion_reset(&report_read_);
   }
 
   zx_status_t WaitUntilReset() {
@@ -78,9 +88,12 @@ class FakeI2cHid : public fake_i2c::FakeI2c {
         sync_completion_signal(&is_reset_);
         return ZX_OK;
       }
-      *reinterpret_cast<uint16_t*>(read_buffer) = htole16(report_.size() + sizeof(uint16_t));
+      // First two bytes are the report length.
+      *reinterpret_cast<uint16_t*>(read_buffer) = htole16(report_len_);
+
       memcpy(read_buffer + sizeof(uint16_t), report_.data(), report_.size());
       *read_buffer_size = report_.size() + sizeof(uint16_t);
+      sync_completion_signal(&report_read_);
       return ZX_OK;
     }
     // Reset command.
@@ -142,8 +155,11 @@ class FakeI2cHid : public fake_i2c::FakeI2c {
   std::atomic<bool> pending_reset_ = false;
   sync_completion_t is_reset_;
 
+  fbl::Mutex report_read_lock_;
+  sync_completion_t report_read_;
   std::vector<uint8_t> report_desc_;
   std::vector<uint8_t> report_;
+  size_t report_len_ = 0;
 };
 
 class I2cHidTest : public zxtest::Test {
@@ -252,6 +268,32 @@ TEST_F(I2cHidTest, HidTestReadReport) {
   for (size_t i = 0; i < returned_rpt.size(); i++) {
     EXPECT_EQ(returned_rpt[i], rpt[i]);
   }
+}
+
+TEST_F(I2cHidTest, HidTestBadReportLen) {
+  ASSERT_OK(device_->Bind(channel_));
+  ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
+
+  StartHidBus();
+
+  // Send a report with a length that's too long.
+  std::vector<uint8_t> too_long_rpt{0xAA};
+  fake_i2c_hid_.SendReportWithLength(too_long_rpt, UINT16_MAX);
+
+  // Send a normal report.
+  std::vector<uint8_t> normal_rpt{0xBB};
+  fake_i2c_hid_.SendReport(normal_rpt);
+
+  // Wait until the reports are in.
+  std::vector<uint8_t> returned_rpt;
+  ASSERT_OK(fake_hid_bus_.WaitUntilNextReport(&returned_rpt));
+
+  // We should've only seen one report since the too long report will cause an error.
+  ASSERT_EQ(fake_hid_bus_.NumReportsSeen(), 1);
+
+  // Double check that the returned report is the normal one.
+  ASSERT_EQ(returned_rpt.size(), normal_rpt.size());
+  ASSERT_EQ(returned_rpt[0], normal_rpt[0]);
 }
 
 TEST_F(I2cHidTest, HidTestReadReportNoIrq) {

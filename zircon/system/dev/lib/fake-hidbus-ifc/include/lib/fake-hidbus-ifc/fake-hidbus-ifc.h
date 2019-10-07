@@ -32,7 +32,10 @@ class FakeHidbusIfc : public ddk::HidbusIfcProtocol<FakeHidbusIfc> {
  public:
   FakeHidbusIfc() : proto_({&hidbus_ifc_protocol_ops_, this}) {}
 
+  size_t NumReportsSeen() { return reports_seen_; }
+
   void HidbusIfcIoQueue(const void* buf_buffer, size_t buf_size) {
+    reports_seen_++;
     auto buf = reinterpret_cast<const uint8_t*>(buf_buffer);
     {
       fbl::AutoLock lock(&report_lock_);
@@ -42,7 +45,7 @@ class FakeHidbusIfc : public ddk::HidbusIfcProtocol<FakeHidbusIfc> {
   }
 
   // Waits until a report is seen, then puts a copy of the report in |report|.
-  // Will timeout eventually if no reports are sent.
+  // Will wait indefinitely.
   zx_status_t WaitUntilNextReport(std::vector<uint8_t>* report) {
     zx_status_t status = sync_completion_wait_deadline(&report_queued_, zx::time::infinite().get());
     if (status == ZX_OK) {
@@ -66,6 +69,7 @@ class FakeHidbusIfc : public ddk::HidbusIfcProtocol<FakeHidbusIfc> {
   std::vector<uint8_t> last_report_ __TA_GUARDED(report_lock_);
 
   sync_completion_t report_queued_;
+  size_t reports_seen_ = 0;
 
   hidbus_ifc_protocol_t proto_ = {};
 };

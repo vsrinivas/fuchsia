@@ -180,7 +180,7 @@ int I2cHidbus::WorkerThreadNoIrq() {
       // nothing to read
       continue;
     }
-    if (report_len < 2) {
+    if ((report_len < 2) || (report_len > len)) {
       zxlogf(ERROR, "i2c-hid: bad report len (rlen %hu, bytes read %d)!!!\n", report_len, len);
       continue;
     }
@@ -271,8 +271,9 @@ int I2cHidbus::WorkerThreadIrq() {
         continue;
       }
 
-      if (report_len < 2) {
-        zxlogf(ERROR, "i2c-hid: bad report len (rlen %hu, bytes read %d)!!!\n", report_len, len);
+      if ((report_len < 2) || (report_len > len)) {
+        zxlogf(ERROR, "i2c-hid: bad report len (report_len %hu, bytes_read %d)!!!\n", report_len,
+               len);
         continue;
       }
     }
