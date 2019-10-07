@@ -6,5 +6,6 @@ component framework.
 Capabilities grant the ability to a component to connect to and access resources
 from other components.
 
+- [Directory capabilities](directory.md)
 - [Service capabilities](service.md)
 - [Storage capabilities](storage.md)

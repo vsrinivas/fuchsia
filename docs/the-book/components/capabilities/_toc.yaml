@@ -6,5 +6,7 @@ toc:
   path: /docs/the-book/components/capabilities
 - title: "Service capabilities"
   path: /docs/the-book/components/capabilities/service.md
+- title: "Directory capabilities"
+  path: /docs/the-book/components/capabilities/directory.md
 - title: "Storage capabilities"
   path: /docs/the-book/components/capabilities/storage.md

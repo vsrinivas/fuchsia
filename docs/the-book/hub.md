@@ -31,6 +31,9 @@ parts of the hub particular clients can access.
 
 ## Schema
 
+_Note: this document is describing the hub provided by `appmgr`. Hub directories
+provided by component manager have a different schema._
+
 The hub is organized as follows:
 
 **\<realm name\>/\<realm id\>/**: realm directory

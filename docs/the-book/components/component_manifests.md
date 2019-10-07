@@ -118,11 +118,21 @@ component instance's namespace:
 
 A *framework service* is a service provided by the component framework. Because
 the component framework itself is the provider of the service, any component may
-`use` it without an explicit `offer`.  Fuchsia supports the following framework
+`use` it without an explicit `offer`. Fuchsia supports the following framework
 services:
 
 - [`fuchsia.sys2.Realm`](/sdk/fidl/fuchsia.sys2/realm.fidl): Allows a component
   to manage and bind to its children. Scoped to the component's realm.
+
+#### Framework directories {#framework-directories}
+
+A *framework directory* is a directory provided by the component framework.
+Because the component framework itself is the provider of the directory, any
+component may `use` it without an explicit `offer`. Fuchsia supports the
+following framework directories:
+
+- [`/hub`](../../glossary.md#hub): Allows a component to perform runtime
+  introspection of itself and its children.
 
 #### Capability paths {#capability-paths}
 
