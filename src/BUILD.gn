@@ -131,3 +131,10 @@ group("zircon_host_tests") {
   testonly = true
   deps = zircon_host_test_deps
 }
+
+group("host_tests") {
+  testonly = true
+  public_deps = [
+    "//src/ledger:host_tests",
+  ]
+}

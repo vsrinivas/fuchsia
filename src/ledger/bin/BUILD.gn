@@ -58,6 +58,13 @@ test("ledger_unittests") {
   configs += [ "//src/ledger:ledger_config" ]
 }
 
+test("ledger_host_tests") {
+  deps = [
+    "//src/ledger/bin/cache:unittests",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
 fuzzers_package("ledger_fuzzers") {
   fuzzers = [
     "//src/ledger/bin/p2p_sync/impl:p2p_sync_fuzzer",

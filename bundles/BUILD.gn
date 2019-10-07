@@ -29,6 +29,7 @@ group("tests") {
     "//examples:tests",
     "//garnet/packages/tests:all",
     "//peridot:tests",
+    "//src:host_tests",
     "//src:tests",
     "//tools:tests",
     "//topaz:tests",

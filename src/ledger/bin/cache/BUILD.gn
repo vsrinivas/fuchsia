@@ -12,6 +12,7 @@ source_set("cache") {
 
   public_deps = [
     "//src/lib/fxl",
+    "//zircon/public/lib/fit:fit",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
@@ -26,8 +27,9 @@ source_set("unittests") {
 
   deps = [
     ":cache",
-    "//src/lib/callback",
+    "//src/lib/callback:crossplatform",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/fit:fit",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
