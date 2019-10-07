@@ -5,14 +5,16 @@
 #ifndef GARNET_BIN_UI_INPUT_READER_INPUT_INTERPRETER_H_
 #define GARNET_BIN_UI_INPUT_READER_INPUT_INTERPRETER_H_
 
+#include <fuchsia/hardware/input/c/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <hid/acer12.h>
 #include <lib/zx/event.h>
 #include <zircon/types.h>
 
 #include <array>
 #include <string>
 #include <vector>
+
+#include <hid/acer12.h>
 
 #include "garnet/bin/ui/input_reader/buttons.h"
 #include "garnet/bin/ui/input_reader/hardcoded.h"

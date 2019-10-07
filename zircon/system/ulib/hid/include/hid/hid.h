@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef HID_HID_H_
+#define HID_HID_H_
 
-#include <zircon/compiler.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
@@ -23,7 +24,7 @@ typedef struct keychar {
 extern const keychar_t qwerty_map[KEYMAP_SIZE];
 extern const keychar_t dvorak_map[KEYMAP_SIZE];
 
-void hid_kbd_parse_report(uint8_t buf[8], hid_keys_t* keys);
+void hid_kbd_parse_report(const uint8_t buf[8], hid_keys_t* keys);
 void hid_kbd_pressed_keys(const hid_keys_t* prev, const hid_keys_t* cur, hid_keys_t* pressed);
 void hid_kbd_released_keys(const hid_keys_t* prev, const hid_keys_t* cur, hid_keys_t* released);
 uint8_t hid_kbd_next_key(hid_keys_t* keys);
@@ -34,3 +35,5 @@ uint8_t hid_map_key(uint32_t usage, bool shift, const keychar_t* keymap);
 #define hid_for_every_key(keys, keycode) \
   for (keycode = hid_kbd_next_key(keys); keycode; keycode = hid_kbd_next_key(keys))
 __END_CDECLS
+
+#endif  // HID_HID_H_

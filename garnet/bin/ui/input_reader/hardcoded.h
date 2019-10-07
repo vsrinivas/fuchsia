@@ -6,13 +6,14 @@
 #define GARNET_BIN_UI_INPUT_READER_HARDCODED_H_
 
 #include <fuchsia/ui/input/cpp/fidl.h>
+
+#include <array>
+#include <cstddef>
+
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
 #include <hid/acer12.h>
 #include <hid/paradise.h>
-
-#include <array>
-#include <cstddef>
 
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
 #include "garnet/bin/ui/input_reader/protocols.h"
@@ -29,7 +30,7 @@ class Hardcoded {
   Protocol MatchProtocol(const std::vector<uint8_t> desc, HidDecoder* hid_decoder);
   void Initialize(Protocol protocol);
   void NotifyRegistry(fuchsia::ui::input::InputDeviceRegistry* registry);
-  void Read(const std::vector<uint8_t> report, int report_len, bool discard);
+  void Read(const uint8_t* report, int report_len, bool discard);
 
   bool ParseGamepadDescriptor(const hid::ReportField* fields, size_t count);
   bool ParseAmbientLightDescriptor(const hid::ReportField* fields, size_t count);
@@ -53,12 +54,13 @@ class Hardcoded {
     int16_t illuminance;
   };
 
-  bool ParseKeyboardReport(uint8_t* report, size_t len,
+  bool ParseKeyboardReport(const uint8_t* report, size_t len,
                            fuchsia::ui::input::InputReport* keyboard_report);
-  void ParseMouseReport(uint8_t* report, size_t len, fuchsia::ui::input::InputReport* mouse_report);
-  bool ParseGamepadMouseReport(uint8_t* report, size_t len,
+  void ParseMouseReport(const uint8_t* report, size_t len,
+                        fuchsia::ui::input::InputReport* mouse_report);
+  bool ParseGamepadMouseReport(const uint8_t* report, size_t len,
                                fuchsia::ui::input::InputReport* mouse_report);
-  bool ParseParadiseSensorReport(uint8_t* report, size_t len, uint8_t* sensor_idx,
+  bool ParseParadiseSensorReport(const uint8_t* report, size_t len, uint8_t* sensor_idx,
                                  fuchsia::ui::input::InputReport* sensor_report);
   bool ParseAmbientLightSensorReport(const uint8_t* report, size_t len, uint8_t* sensor_idx,
                                      fuchsia::ui::input::InputReport* sensor_report);

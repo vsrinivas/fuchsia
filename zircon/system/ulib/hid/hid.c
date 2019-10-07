@@ -11,7 +11,7 @@
 #define KEYSET(bitmap, n) (bitmap[(n) >> 5] |= (1 << ((n)&31)))
 #define KEYCLR(bitmap, n) (bitmap[(n) >> 5] &= ~(1 << ((n)&31)))
 
-void hid_kbd_parse_report(uint8_t buf[8], hid_keys_t* keys) {
+void hid_kbd_parse_report(const uint8_t buf[8], hid_keys_t* keys) {
   memset(keys, 0, sizeof(hid_keys_t));
   // modifiers start at bit 224
   keys->keymask[7] = buf[0];

@@ -45,7 +45,7 @@ class MockHidDecoder : public HidDecoder {
   // |HidDecoder|
   const std::vector<uint8_t>& ReadReportDescriptor(int* bytes_read) override;
   // |HidDecoder|
-  const std::vector<uint8_t>& Read(int* bytes_read) override;
+  int Read(uint8_t* data, size_t data_size) override;
   // |HidDecoder|
   zx_status_t Send(ReportType type, uint8_t report_id, const std::vector<uint8_t>& report) override;
   // |HidDecoder|
@@ -70,7 +70,7 @@ class MockHidDecoder : public HidDecoder {
   struct Report {
     std::vector<uint8_t> data;
     // This can be shorter than the length of the |data| vector.
-    int length;
+    size_t length;
   };
 
   void Signal();

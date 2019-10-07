@@ -5,12 +5,13 @@
 #ifndef GARNET_BIN_UI_INPUT_READER_FDIO_HID_DECODER_H_
 #define GARNET_BIN_UI_INPUT_READER_FDIO_HID_DECODER_H_
 
-#include <fbl/unique_fd.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/fzl/fdio.h>
 
 #include <string>
 #include <vector>
+
+#include <fbl/unique_fd.h>
 
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
 #include "garnet/bin/ui/input_reader/mouse.h"
@@ -47,7 +48,7 @@ class FdioHidDecoder : public HidDecoder {
   // |HidDecoder|
   const std::vector<uint8_t>& ReadReportDescriptor(int* bytes_read) override;
   // |HidDecoder|
-  const std::vector<uint8_t>& Read(int* bytes_read) override;
+  int Read(uint8_t* data, size_t data_size) override;
   // |HidDecoder|
   zx_status_t Send(ReportType type, uint8_t report_id, const std::vector<uint8_t>& report) override;
   // |HidDecoder|
@@ -57,7 +58,6 @@ class FdioHidDecoder : public HidDecoder {
   fzl::FdioCaller caller_;
   const std::string name_;
   BootMode boot_mode_ = BootMode::NONE;
-  std::vector<uint8_t> report_;
   std::vector<uint8_t> report_descriptor_;
 
   uint32_t trace_id_ = 0;

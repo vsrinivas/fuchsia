@@ -6,6 +6,9 @@
 
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/input/c/fidl.h>
+#include <unistd.h>
+#include <zircon/status.h>
+
 #include <hid/acer12.h>
 #include <hid/egalax.h>
 #include <hid/eyoyo.h>
@@ -15,8 +18,6 @@
 #include <src/lib/fxl/arraysize.h>
 #include <src/lib/fxl/logging.h>
 #include <trace/event.h>
-#include <unistd.h>
-#include <zircon/status.h>
 
 namespace {
 
@@ -38,11 +39,7 @@ FdioHidDecoder::FdioHidDecoder(const std::string& name, fbl::unique_fd fd)
 FdioHidDecoder::~FdioHidDecoder() = default;
 
 bool FdioHidDecoder::Init() {
-  uint16_t max_len = 0;
-  zx_status_t status =
-      fuchsia_hardware_input_DeviceGetMaxInputReportSize(caller_.borrow_channel(), &max_len);
-  report_.resize(max_len);
-
+  zx_status_t status;
   zx_handle_t svc = caller_.borrow_channel();
 
   // Get the Boot Protocol if there is one.
@@ -106,13 +103,13 @@ const std::vector<uint8_t>& FdioHidDecoder::ReadReportDescriptor(int* bytes_read
   return report_descriptor_;
 }
 
-const std::vector<uint8_t>& FdioHidDecoder::Read(int* bytes_read) {
-  *bytes_read = read(caller_.fd().get(), report_.data(), report_.size());
+int FdioHidDecoder::Read(uint8_t* data, size_t data_size) {
+  int bytes_read = read(caller_.fd().get(), data, data_size);
 
   TRACE_FLOW_END("input", "hid_report", HID_REPORT_TRACE_ID(trace_id_, reports_read_));
   ++reports_read_;
 
-  return report_;
+  return bytes_read;
 }
 
 zx_status_t FdioHidDecoder::Send(ReportType type, uint8_t report_id,

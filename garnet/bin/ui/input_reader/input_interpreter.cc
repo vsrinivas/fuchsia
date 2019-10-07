@@ -4,20 +4,22 @@
 
 #include "garnet/bin/ui/input_reader/input_interpreter.h"
 
+#include <fuchsia/hardware/input/c/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <lib/fidl/cpp/clone.h>
+#include <lib/ui/input/cpp/formatting.h>
+#include <sys/types.h>
+#include <sys/uio.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
+
 #include <hid-parser/parser.h>
 #include <hid-parser/report.h>
 #include <hid-parser/usages.h>
-#include <lib/fidl/cpp/clone.h>
-#include <lib/ui/input/cpp/formatting.h>
 #include <src/lib/fxl/arraysize.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/time/time_point.h>
-#include <sys/types.h>
-#include <sys/uio.h>
 #include <trace/event.h>
-#include <zircon/errors.h>
-#include <zircon/types.h>
 
 #include "garnet/bin/ui/input_reader/device.h"
 #include "garnet/bin/ui/input_reader/fdio_hid_decoder.h"
@@ -114,26 +116,26 @@ void InputInterpreter::NotifyRegistry() {
 
 bool InputInterpreter::Read(bool discard) {
   TRACE_DURATION("input", "hid_read");
+  std::array<uint8_t, fuchsia_hardware_input_MAX_REPORT_DATA> report_data;
 
-  // If positive |rc| is the number of bytes read. If negative the error
+  // If positive |bytes_read| is the number of bytes read. If negative the error
   // while reading.
-  int rc = 1;
-  auto report = hid_decoder_->Read(&rc);
+  int bytes_read = hid_decoder_->Read(report_data.data(), report_data.size());
 
-  if (rc < 1) {
-    FXL_LOG(ERROR) << "Failed to read from input: " << rc << " for " << name();
+  if (bytes_read < 1) {
+    FXL_LOG(ERROR) << "Failed to read from input: " << bytes_read << " for " << name();
     // TODO(cpu) check whether the device was actually closed or not.
     return false;
   }
 
-  hardcoded_.Read(report, rc, discard);
+  hardcoded_.Read(report_data.data(), bytes_read, discard);
 
   for (size_t i = 0; i < devices_.size(); i++) {
     InputDevice& device = devices_[i];
-    if (device.device->ReportId() != 0 && device.device->ReportId() != report[0]) {
+    if (device.device->ReportId() != 0 && device.device->ReportId() != report_data[0]) {
       continue;
     }
-    if (device.device->ParseReport(report.data(), rc, device.report.get())) {
+    if (device.device->ParseReport(report_data.data(), bytes_read, device.report.get())) {
       if (!discard) {
         device.report->event_time = InputEventTimestampNow();
         device.report->trace_id = TRACE_NONCE();

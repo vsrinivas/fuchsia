@@ -57,7 +57,7 @@ class HidDecoder {
 
   // Reads a single Report from the device. This will block unless the
   // device has signaled that it is ready to be read.
-  virtual const std::vector<uint8_t>& Read(int* bytes_read) = 0;
+  virtual int Read(uint8_t* data, size_t data_size) = 0;
 
   // Sends a single Report to the device. |type| must be either
   // OUTPUT or FEATURE.

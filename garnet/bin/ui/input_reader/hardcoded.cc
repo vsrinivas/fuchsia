@@ -6,6 +6,12 @@
 
 #include <fuchsia/hardware/input/c/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <lib/ui/input/cpp/formatting.h>
+#include <sys/types.h>
+#include <sys/uio.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
+
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
 #include <hid/acer12.h>
@@ -18,15 +24,10 @@
 #include <hid/paradise.h>
 #include <hid/samsung.h>
 #include <hid/usages.h>
-#include <lib/ui/input/cpp/formatting.h>
 #include <src/lib/fxl/arraysize.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/time/time_point.h>
-#include <sys/types.h>
-#include <sys/uio.h>
 #include <trace/event.h>
-#include <zircon/errors.h>
-#include <zircon/types.h>
 
 namespace {
 
@@ -165,7 +166,7 @@ bool Hardcoded::ParseAmbientLightDescriptor(const hid::ReportField* fields, size
   return false;
 }
 
-bool Hardcoded::ParseKeyboardReport(uint8_t* report, size_t len,
+bool Hardcoded::ParseKeyboardReport(const uint8_t* report, size_t len,
                                     fuchsia::ui::input::InputReport* keyboard_report) {
   hid_keys_t key_state;
   uint8_t keycode;
@@ -187,9 +188,9 @@ bool Hardcoded::ParseKeyboardReport(uint8_t* report, size_t len,
   return true;
 }
 
-void Hardcoded::ParseMouseReport(uint8_t* r, size_t len,
+void Hardcoded::ParseMouseReport(const uint8_t* r, size_t len,
                                  fuchsia::ui::input::InputReport* mouse_report) {
-  auto report = reinterpret_cast<hid_boot_mouse_report_t*>(r);
+  auto report = reinterpret_cast<const hid_boot_mouse_report_t*>(r);
   mouse_report->event_time = InputEventTimestampNow();
   mouse_report->trace_id = TRACE_NONCE();
 
@@ -224,7 +225,7 @@ bool Hardcoded::ParseReport(const uint8_t* report, size_t len, HidGamepadSimple*
   return true;
 }
 
-bool Hardcoded::ParseGamepadMouseReport(uint8_t* report, size_t len,
+bool Hardcoded::ParseGamepadMouseReport(const uint8_t* report, size_t len,
                                         fuchsia::ui::input::InputReport* mouse_report) {
   HidGamepadSimple gamepad = {};
   if (!ParseReport(report, len, &gamepad))
@@ -237,7 +238,7 @@ bool Hardcoded::ParseGamepadMouseReport(uint8_t* report, size_t len,
   mouse_report->mouse->pressed_buttons = gamepad.hat_switch;
   return true;
 }
-bool Hardcoded::ParseParadiseSensorReport(uint8_t* r, size_t len, uint8_t* sensor_idx,
+bool Hardcoded::ParseParadiseSensorReport(const uint8_t* r, size_t len, uint8_t* sensor_idx,
                                           fuchsia::ui::input::InputReport* sensor_report) {
   if (len != sizeof(paradise_sensor_vector_data_t) &&
       len != sizeof(paradise_sensor_scalar_data_t)) {
@@ -253,7 +254,7 @@ bool Hardcoded::ParseParadiseSensorReport(uint8_t* r, size_t len, uint8_t* senso
   switch (*sensor_idx) {
     case kParadiseAccLid:
     case kParadiseAccBase: {
-      const auto& report = *(reinterpret_cast<paradise_sensor_vector_data_t*>(r));
+      const auto& report = *(reinterpret_cast<const paradise_sensor_vector_data_t*>(r));
       std::array<int16_t, 3> data;
       data[0] = report.vector[0];
       data[1] = report.vector[1];
@@ -421,9 +422,9 @@ void Hardcoded::NotifyRegistry(fuchsia::ui::input::InputDeviceRegistry* registry
   }
 }
 
-void Hardcoded::Read(std::vector<uint8_t> report, int report_len, bool discard) {
+void Hardcoded::Read(const uint8_t* report, int report_len, bool discard) {
   if (has_keyboard_) {
-    bool parsed = ParseKeyboardReport(report.data(), report_len, keyboard_report_.get());
+    bool parsed = ParseKeyboardReport(report, report_len, keyboard_report_.get());
     if (!discard && parsed) {
       TRACE_FLOW_BEGIN("input", "hid_read_to_listener", keyboard_report_->trace_id);
       input_device_->DispatchReport(CloneReport(*keyboard_report_));
@@ -432,7 +433,7 @@ void Hardcoded::Read(std::vector<uint8_t> report, int report_len, bool discard) 
 
   switch (mouse_device_type_) {
     case MouseDeviceType::BOOT:
-      ParseMouseReport(report.data(), report_len, mouse_report_.get());
+      ParseMouseReport(report, report_len, mouse_report_.get());
       if (!discard) {
         TRACE_FLOW_BEGIN("input", "hid_read_to_listener", mouse_report_->trace_id);
         input_device_->DispatchReport(CloneReport(*mouse_report_));
@@ -440,7 +441,7 @@ void Hardcoded::Read(std::vector<uint8_t> report, int report_len, bool discard) 
       break;
     case MouseDeviceType::GAMEPAD:
       // TODO(cpu): remove this once we have a good way to test gamepad.
-      if (ParseGamepadMouseReport(report.data(), report_len, mouse_report_.get())) {
+      if (ParseGamepadMouseReport(report, report_len, mouse_report_.get())) {
         if (!discard) {
           TRACE_FLOW_BEGIN("input", "hid_read_to_listener", mouse_report_->trace_id);
           input_device_->DispatchReport(CloneReport(*mouse_report_));
@@ -455,8 +456,7 @@ void Hardcoded::Read(std::vector<uint8_t> report, int report_len, bool discard) 
 
   switch (sensor_device_type_) {
     case SensorDeviceType::PARADISE:
-      if (ParseParadiseSensorReport(report.data(), report_len, &sensor_idx_,
-                                    sensor_report_.get())) {
+      if (ParseParadiseSensorReport(report, report_len, &sensor_idx_, sensor_report_.get())) {
         if (!discard) {
           FXL_DCHECK(sensor_idx_ < kMaxSensorCount);
           FXL_DCHECK(sensor_devices_[sensor_idx_]);
@@ -466,8 +466,7 @@ void Hardcoded::Read(std::vector<uint8_t> report, int report_len, bool discard) 
       }
       break;
     case SensorDeviceType::AMBIENT_LIGHT:
-      if (ParseAmbientLightSensorReport(report.data(), report_len, &sensor_idx_,
-                                        sensor_report_.get())) {
+      if (ParseAmbientLightSensorReport(report, report_len, &sensor_idx_, sensor_report_.get())) {
         if (!discard) {
           FXL_DCHECK(sensor_idx_ < kMaxSensorCount);
           FXL_DCHECK(sensor_devices_[sensor_idx_]);
