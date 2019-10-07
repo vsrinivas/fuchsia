@@ -19,6 +19,10 @@ extern const fxl::StringView kFirstPageCommitId;
 
 // The size of a device id in number of bytes.
 inline constexpr uint64_t kDeviceIdSize = 32;
+
+// Maximum number of concurrent piece downloads for an opened page.
+inline constexpr size_t kMaxConcurrentDownloads = 5;
+
 }  // namespace storage
 
 #endif  // SRC_LEDGER_BIN_STORAGE_PUBLIC_CONSTANTS_H_

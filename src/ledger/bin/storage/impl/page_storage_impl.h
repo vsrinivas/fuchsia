@@ -304,6 +304,7 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
   DeviceId device_id_;
 
   callback::OperationSerializer commit_serializer_;
+  coroutine::CoroutineManager download_manager_;
   coroutine::CoroutineManager coroutine_manager_;
 
   // This must be the last member of the class.

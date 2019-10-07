@@ -114,6 +114,8 @@ PageStorageImpl::PageStorageImpl(ledger::Environment* environment,
       db_(std::move(page_db)),
       commit_pruner_(environment, this, &commit_factory_, policy),
       page_sync_(nullptr),
+      download_manager_(environment->coroutine_service(),
+                        /*max_coroutines=*/kMaxConcurrentDownloads),
       coroutine_manager_(environment->coroutine_service()),
       weak_factory_(this) {}
 
@@ -1171,7 +1173,7 @@ void PageStorageImpl::GetOrDownloadPiece(
       callback(Status::NETWORK_ERROR, nullptr, {});
       return;
     }
-    coroutine_manager_.StartCoroutine(
+    download_manager_.StartCoroutine(
         std::move(callback),
         [this, object_identifier = std::move(object_identifier), location = std::move(location)](
             CoroutineHandler* handler,

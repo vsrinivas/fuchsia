@@ -2085,6 +2085,64 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSyncNegativeOffset) {
   TryGetPiece(object_identifier);
 }
 
+TEST_F(PageStorageTest, GetHugeObjectFromSyncMaxConcurrentDownloads) {
+  // In practice, a string that long yields between 30 and 60 pieces.
+  std::string data_str = RandomString(environment_.random(), 2 << 18);
+
+  // Create a fake sync delegate that will accumulate pending calls in |sync_delegate_calls|.
+  std::vector<fit::closure> sync_delegate_calls;
+  DelayingFakeSyncDelegate sync([&sync_delegate_calls](fit::closure callback) {
+    sync_delegate_calls.push_back(std::move(callback));
+  });
+  storage_->SetSyncDelegate(&sync);
+
+  // Initialize the sync delegate with the pieces of |data|.
+  std::map<ObjectDigest, ObjectIdentifier> digest_to_identifier;
+  ObjectIdentifier object_identifier =
+      ForEachPiece(data_str, ObjectType::BLOB, &fake_factory_,
+                   [&sync, &digest_to_identifier](std::unique_ptr<const Piece> piece) {
+                     ObjectIdentifier object_identifier = piece->GetIdentifier();
+                     if (GetObjectDigestInfo(object_identifier.object_digest()).is_inlined()) {
+                       return;
+                     }
+                     digest_to_identifier[object_identifier.object_digest()] = object_identifier;
+                     sync.AddObject(std::move(object_identifier), piece->GetData().ToString());
+                   });
+  ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
+  // Check that we created a part big enough to require at least two batches of pending calls.
+  ASSERT_GT(sync.GetNumberOfObjectsStored(), 2 * kMaxConcurrentDownloads);
+  RetrackIdentifier(&object_identifier);
+
+  // Fetch the whole object from the delegate. This should block repeateadly whenever we have
+  // accumulated the maximum number of concurrent connections, ie. pending calls.
+  bool called;
+  Status status;
+  fsl::SizedVmo object_part;
+  storage_->GetObjectPart(
+      object_identifier, /*offset=*/0, /*max_size=*/-1, PageStorage::Location::ValueFromNetwork(),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &object_part));
+  RunLoopUntilIdle();
+
+  // Unblock the pending calls until GetObjectPart returns.
+  do {
+    EXPECT_LE(sync_delegate_calls.size(), kMaxConcurrentDownloads);
+    for (auto& sync_delegate_call : sync_delegate_calls) {
+      async::PostTask(dispatcher(), [sync_delegate_call = std::move(sync_delegate_call)]() {
+        sync_delegate_call();
+      });
+    }
+    sync_delegate_calls.clear();
+    RunLoopUntilIdle();
+  } while (!called);
+
+  EXPECT_EQ(status, Status::OK);
+  std::string object_part_data;
+  ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+  EXPECT_EQ(convert::ToString(object_part_data), data_str);
+  EXPECT_EQ(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
+  EXPECT_THAT(sync.object_requests, Contains(Pair(object_identifier, RetrievedObjectType::BLOB)));
+}
+
 TEST_F(PageStorageTest, GetObjectFromSync) {
   ObjectData data = MakeObject("Some data", InlineBehavior::PREVENT);
   FakeSyncDelegate sync;
