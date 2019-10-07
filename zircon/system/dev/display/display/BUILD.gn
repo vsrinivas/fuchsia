@@ -21,6 +21,7 @@ source_set("shared") {
     "image.cc",
   ]
   public_deps = [
+    "$zx/system/banjo/ddk.protocol.display.capture",
     "$zx/system/banjo/ddk.protocol.display.controller",
     "$zx/system/banjo/ddk.protocol.i2cimpl",
     "$zx/system/dev/lib/mmio",

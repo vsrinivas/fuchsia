@@ -1,0 +1,39 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.display.capture;
+
+using zx;
+
+// using ZxUnownedHandle = uint32;
+// TODO(bug:33170) replace with normal banjo type.
+enum ZxUnownedHandle : uint32 {
+};
+
+[Layout = "ddk-interface"]
+protocol DisplayCaptureInterface {
+  OnCaptureComplete() -> ();
+};
+
+[Layout = "ddk-protocol"]
+protocol DisplayCaptureImpl {
+    /// The function will only be called once, and it will be called before any other
+    /// functions are called.
+    SetDisplayCaptureInterface(DisplayCaptureInterface intf) -> ();
+
+    /// Import BufferCollection backed VMO pointed to by index.
+    /// Importing the VMO usually involves pinning the VMO and updating display
+    /// controller hardware registers with the physical address of the VMO to be
+    /// used for capture. Returns out_capture_handle which maps to the allocated
+    /// resource
+    ImportImageForCapture(ZxUnownedHandle collection, uint32 index)
+        -> (zx.status s, uint64 out_capture_handle);
+
+    /// Starts capture into the resource mapped by capture_handle (non-blocking)
+    StartCapture(uint64 capture_handle) -> (zx.status s);
+
+    /// Releases resources allocated by capture_handle
+    ReleaseCapture(uint64 capture_handle) -> (zx.status s);
+};
+

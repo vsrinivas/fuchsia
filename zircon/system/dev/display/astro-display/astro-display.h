@@ -5,6 +5,13 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_ASTRO_DISPLAY_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_ASTRO_DISPLAY_H_
 
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/interrupt.h>
+#include <unistd.h>
+#include <zircon/compiler.h>
+#include <zircon/pixelformat.h>
+
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/amlogiccanvas.h>
@@ -19,18 +26,13 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
-#include <lib/zx/bti.h>
-#include <lib/zx/interrupt.h>
-#include <unistd.h>
-#include <zircon/compiler.h>
-#include <zircon/pixelformat.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 #include "aml-dsi-host.h"
 #include "astro-clock.h"
 #include "common.h"
 #include "osd.h"
 #include "vpu.h"
+#include "zircon/errors.h"
 
 namespace astro_display {
 
