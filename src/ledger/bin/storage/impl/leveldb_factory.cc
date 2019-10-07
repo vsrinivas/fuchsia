@@ -305,6 +305,7 @@ fit::promise<> LevelDbFactory::IOLevelDbFactory::GetOrCreateDbOnIOThread(
 fit::result<std::unique_ptr<Db>, Status>
 LevelDbFactory::IOLevelDbFactory::GetOrCreateDbAtPathOnIOThread(
     ledger::DetachedPath db_path, CreateInStagingPath create_in_staging_path) {
+  TRACE_DURATION("ledger", "new_db_creation");
   std::unique_ptr<LevelDb> leveldb;
   Status status;
   if (create_in_staging_path == CreateInStagingPath::YES) {
