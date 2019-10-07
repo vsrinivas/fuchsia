@@ -10,9 +10,10 @@
 #include <lib/fit/result.h>
 #include <lib/fostr/fidl/fuchsia/mem/formatting.h>
 #include <lib/fostr/indent.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include <ostream>
+
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace fit {
 

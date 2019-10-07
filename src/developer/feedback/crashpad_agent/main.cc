@@ -9,12 +9,12 @@
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/inspect/cpp/component.h>
-#include <lib/syslog/cpp/logger.h>
 #include <lib/timekeeper/system_clock.h>
 
 #include <utility>
 
 #include "src/developer/feedback/crashpad_agent/crashpad_agent.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, const char** argv) {
   syslog::InitLogger({"feedback"});

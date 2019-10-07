@@ -14,10 +14,10 @@ source_set("archive") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/syslog/cpp",
     "//src/lib/files",
+    "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//third_party/zlib:minizip",
   ]
 

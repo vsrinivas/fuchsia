@@ -6,10 +6,10 @@
 #define SRC_DEVELOPER_FEEDBACK_TESTING_GMATCHERS_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include <string>
 
+#include "src/lib/fsl/vmo/strings.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 

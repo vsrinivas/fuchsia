@@ -35,12 +35,12 @@ executable("bugreport_unittest") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/feedback/bugreport:src",
     "//src/lib/files",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
@@ -58,10 +58,10 @@ executable("bugreport_integration_test") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//src/developer/feedback/bugreport:src",
     "//src/developer/feedback/utils:archive",
     "//src/lib/files",
+    "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/system/fidl/fuchsia-mem",

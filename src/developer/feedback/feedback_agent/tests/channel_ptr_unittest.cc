@@ -8,7 +8,6 @@
 #include <lib/fit/single_threaded_executor.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
-#include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 
@@ -18,6 +17,7 @@
 #include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 

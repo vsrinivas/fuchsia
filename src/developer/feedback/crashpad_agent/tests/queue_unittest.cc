@@ -5,7 +5,6 @@
 #include "src/developer/feedback/crashpad_agent/queue.h"
 
 #include <lib/inspect/cpp/inspect.h>
-#include <lib/syslog/cpp/logger.h>
 #include <lib/timekeeper/test_clock.h>
 
 #include "sdk/lib/inspect/testing/cpp/inspect.h"
@@ -17,6 +16,7 @@
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/test/test_settings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 

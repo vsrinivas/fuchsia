@@ -44,14 +44,14 @@ executable("archive_unittest") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.feedback",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/utils:archive",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
+    "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/fidl/fuchsia-mem",

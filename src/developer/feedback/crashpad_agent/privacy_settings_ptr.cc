@@ -6,13 +6,13 @@
 
 #include <lib/fit/result.h>
 #include <lib/fostr/fidl/fuchsia/settings/formatting.h>
-#include <lib/syslog/cpp/logger.h>
 #include <zircon/types.h>
 
 #include <optional>
 
 #include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 

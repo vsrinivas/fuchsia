@@ -63,11 +63,11 @@ executable("main") {
   ]
 
   deps = [
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
@@ -81,11 +81,11 @@ executable("data_provider") {
 
   deps = [
     ":src",
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
@@ -133,14 +133,14 @@ source_set("src") {
   deps = [
     ":constants",
     "//garnet/public/lib/fostr/fidl/fuchsia.images",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/inspect_deprecated/query",
     "//garnet/public/lib/inspect_deprecated/query:json_formatter",
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/fidl/cpp",
     "//src/developer/feedback/utils:archive",
     "//src/developer/feedback/utils:time",
     "//src/lib/files",
+    "//src/lib/fsl",
+    "//src/lib/syslog/cpp",
     "//third_party/libpng",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",

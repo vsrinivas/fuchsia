@@ -8,7 +8,6 @@
 #include <lib/fostr/fidl/fuchsia/settings/formatting.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
-#include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 
 #include <memory>
@@ -19,6 +18,7 @@
 #include "src/developer/feedback/crashpad_agent/tests/fake_privacy_settings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {

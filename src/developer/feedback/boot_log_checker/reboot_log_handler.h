@@ -10,12 +10,13 @@
 #include <fuchsia/net/cpp/fidl.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
-#include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <sys/stat.h>
 
 #include <memory>
 #include <string>
+
+#include "src/lib/fsl/vmo/sized_vmo.h"
 
 namespace feedback {
 

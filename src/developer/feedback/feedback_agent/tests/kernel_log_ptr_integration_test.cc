@@ -9,10 +9,8 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/single_threaded_executor.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
-#include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 
@@ -20,9 +18,11 @@
 #include <vector>
 
 #include "src/developer/feedback/feedback_agent/kernel_log_ptr.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/test/test_settings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 

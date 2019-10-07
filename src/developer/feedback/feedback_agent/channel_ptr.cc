@@ -6,10 +6,10 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 
 #include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 

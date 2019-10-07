@@ -6,11 +6,6 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
-#include <lib/fsl/vmo/file.h>
-#include <lib/fsl/vmo/sized_vmo.h>
-#include <lib/fsl/vmo/strings.h>
-#include <lib/fsl/vmo/vector.h>
-#include <lib/syslog/cpp/logger.h>
 
 #include <map>
 #include <string>
@@ -18,8 +13,13 @@
 
 #include "src/developer/feedback/testing/gmatchers.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
+#include "src/lib/fsl/vmo/file.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
+#include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 

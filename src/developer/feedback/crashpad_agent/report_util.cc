@@ -4,13 +4,13 @@
 
 #include "src/developer/feedback/crashpad_agent/report_util.h"
 
-#include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 
 #include <string>
 
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 

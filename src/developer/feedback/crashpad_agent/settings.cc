@@ -4,9 +4,8 @@
 
 #include "src/developer/feedback/crashpad_agent/settings.h"
 
-#include <lib/syslog/cpp/logger.h>
-
 #include "src/developer/feedback/crashpad_agent/config.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 

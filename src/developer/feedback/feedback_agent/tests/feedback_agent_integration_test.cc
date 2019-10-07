@@ -9,12 +9,9 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/result.h>
-#include <lib/fsl/handles/object_info.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
-#include <lib/syslog/cpp/logger.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <zircon/errors.h>
@@ -27,7 +24,10 @@
 #include "src/developer/feedback/feedback_agent/tests/zx_object_util.h"
 #include "src/developer/feedback/testing/gmatchers.h"
 #include "src/developer/feedback/utils/archive.h"
+#include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"

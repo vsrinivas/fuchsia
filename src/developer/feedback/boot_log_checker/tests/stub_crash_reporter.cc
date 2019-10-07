@@ -5,11 +5,11 @@
 #include "src/developer/feedback/boot_log_checker/tests/stub_crash_reporter.h"
 
 #include <lib/fit/result.h>
-#include <lib/fsl/vmo/strings.h>
-#include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 

@@ -9,8 +9,6 @@
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fsl/vmo/strings.h>
-#include <lib/syslog/cpp/logger.h>
 #include <lib/syslog/logger.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -19,9 +17,11 @@
 #include <string>
 #include <vector>
 
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 

@@ -4,10 +4,10 @@
 
 #include "src/developer/feedback/feedback_agent/config.h"
 
-#include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 
 #include "src/lib/fxl/test/test_settings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 

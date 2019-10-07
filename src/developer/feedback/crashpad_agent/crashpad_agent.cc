@@ -7,7 +7,6 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fit/result.h>
-#include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -27,6 +26,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/client/prune_crash_reports.h"
 #include "third_party/crashpad/util/misc/metrics.h"

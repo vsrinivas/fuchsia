@@ -4,7 +4,6 @@
 
 #include "src/developer/feedback/crashpad_agent/inspect_manager.h"
 
-#include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>

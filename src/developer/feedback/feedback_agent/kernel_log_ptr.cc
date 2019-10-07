@@ -4,12 +4,12 @@
 
 #include "src/developer/feedback/feedback_agent/kernel_log_ptr.h"
 
-#include <lib/fsl/vmo/strings.h>
-#include <lib/syslog/cpp/logger.h>
 #include <zircon/syscalls/log.h>
 
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 

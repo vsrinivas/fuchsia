@@ -6,12 +6,12 @@
 
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
 
 #include <cstdint>
 
 #include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

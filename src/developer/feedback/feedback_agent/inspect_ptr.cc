@@ -8,13 +8,11 @@
 #include <lib/async/default.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/inspect_deprecated/query/discover.h>
 #include <lib/inspect_deprecated/query/json_formatter.h>
 #include <lib/inspect_deprecated/query/location.h>
 #include <lib/inspect_deprecated/query/read.h>
 #include <lib/inspect_deprecated/query/source.h>
-#include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
@@ -23,8 +21,10 @@
 #include <thread>
 #include <vector>
 
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"
 #include "src/lib/inspect_deprecated/query/source.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 

@@ -6,10 +6,6 @@
 
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fit/promise.h>
-#include <lib/fsl/vmo/file.h>
-#include <lib/fsl/vmo/sized_vmo.h>
-#include <lib/fsl/vmo/strings.h>
-#include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
@@ -22,6 +18,10 @@
 #include "src/developer/feedback/feedback_agent/kernel_log_ptr.h"
 #include "src/developer/feedback/feedback_agent/system_log_ptr.h"
 #include "src/developer/feedback/utils/archive.h"
+#include "src/lib/fsl/vmo/file.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
+#include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"
 #include "third_party/rapidjson/include/rapidjson/prettywriter.h"
 

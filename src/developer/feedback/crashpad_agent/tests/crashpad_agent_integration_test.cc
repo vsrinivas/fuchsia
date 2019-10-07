@@ -4,10 +4,10 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <zircon/errors.h>
 
+#include "src/lib/fsl/vmo/strings.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {

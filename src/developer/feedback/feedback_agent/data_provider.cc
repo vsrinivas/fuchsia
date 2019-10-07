@@ -8,7 +8,6 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/result.h>
-#include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -20,6 +19,7 @@
 #include "src/developer/feedback/feedback_agent/image_conversion.h"
 #include "src/developer/feedback/feedback_agent/screenshot_ptr.h"
 #include "src/lib/files/file.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

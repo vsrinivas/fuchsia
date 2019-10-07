@@ -4,10 +4,10 @@
 
 #include "src/developer/feedback/feedback_agent/config.h"
 
-#include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 
 #include "src/lib/files/file.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"
 #include "third_party/rapidjson/include/rapidjson/error/en.h"
 #include "third_party/rapidjson/include/rapidjson/schema.h"

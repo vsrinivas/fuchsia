@@ -7,11 +7,11 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/syslog/cpp/logger.h>
 
 #include <string>
 
 #include "src/developer/feedback/boot_log_checker/reboot_log_handler.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, char** argv) {
   syslog::InitLogger({"feedback"});

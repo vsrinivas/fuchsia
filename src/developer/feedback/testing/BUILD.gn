@@ -10,7 +10,7 @@ source_set("gmatchers") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fsl",
+    "//src/lib/fsl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -27,6 +27,7 @@ source_set("gpretty_printers") {
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fostr/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.feedback",
+    "//src/lib/fsl",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-mem",
   ]

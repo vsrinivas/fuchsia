@@ -38,15 +38,16 @@ executable("reboot_log_handler_unittest") {
 
   deps = [
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/feedback/boot_log_checker:metrics_registry",
     "//src/developer/feedback/boot_log_checker:src",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/lib/files",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
+    "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
