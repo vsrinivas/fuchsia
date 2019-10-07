@@ -1012,10 +1012,7 @@ if (use_vbmeta) {
           path = "fuchsia.vbmeta"
           type = "vbmeta"
 
-          # TODO (dmitryya@) netsvc does not support correct
-          # flashing vbmeta images to a device.
-          # Comment out this till this will be fixed.
-          #bootserver_pave = [ "--vbmetaa" ]
+          bootserver_pave = [ "--vbmetaa" ]
         },
       ]
       image_paths = [ "IMAGE_VBMETAA_RAW=fuchsia.vbmeta" ]

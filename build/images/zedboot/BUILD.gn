@@ -283,10 +283,8 @@ if (use_vbmeta) {
         {
           archive = true
 
-          # TODO (dmitryya@) netsvc does not support correct
-          # flashing vbmeta images to a device.
-          # Comment out this till this will be fixed.
-          #bootserver_pave = [ "--vbmetar" ]
+          bootserver_pave = [ "--vbmetar" ]
+          bootserver_pave_zedboot = [ "--vbmetaa" ]
           name = "zircon-r"
           path = "zedboot.vbmeta"
           type = "vbmeta"
