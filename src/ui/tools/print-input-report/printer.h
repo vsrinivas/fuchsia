@@ -8,6 +8,7 @@
 #include <fuchsia/input/report/llcpp/fidl.h>
 #include <stdarg.h>
 #include <stdio.h>
+
 #include <string>
 
 namespace print_input_report {

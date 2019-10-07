@@ -14,11 +14,12 @@
 #include <fbl/ring_buffer.h>
 #include <hid-input-report/descriptors.h>
 #include <hid-input-report/device.h>
+#include <hid-input-report/fidl.h>
 #include <hid-input-report/mouse.h>
 
-#include "descriptors.h"
-
 namespace hid_input_report_dev {
+
+namespace llcpp_report = ::llcpp::fuchsia::input::report;
 
 class InputReportBase;
 

@@ -47,7 +47,7 @@ void InputReportInstance::GetReportsEvent(GetReportsEventCompleter::Sync _comple
 }
 
 void InputReportInstance::GetDescriptor(GetDescriptorCompleter::Sync _completer) {
-  Descriptor descriptor_data = {};
+  hid_input_report::FidlDescriptor descriptor_data = {};
   llcpp_report::DeviceDescriptor descriptor;
 
   size_t size;
@@ -56,7 +56,7 @@ void InputReportInstance::GetDescriptor(GetDescriptorCompleter::Sync _completer)
   zx_status_t status;
   for (size_t i = 0; i < size; i++) {
     if (std::holds_alternative<hid_input_report::MouseDescriptor>(descriptors[i].descriptor)) {
-      status = SetMouseDescriptor(descriptors[i], &descriptor_data);
+      status = hid_input_report::SetMouseDescriptor(descriptors[i], &descriptor_data);
     }
     if (status != ZX_OK) {
       break;
@@ -71,7 +71,7 @@ void InputReportInstance::GetReports(GetReportsCompleter::Sync _completer) {
   fbl::AutoLock lock(&report_lock_);
   // These two arrays store the information to build the FIDL tables.
   std::array<llcpp_report::InputReport, llcpp_report::MAX_DEVICE_REPORT_COUNT> reports;
-  std::array<Report, llcpp_report::MAX_DEVICE_REPORT_COUNT> reports_fidl_data;
+  std::array<hid_input_report::FidlReport, llcpp_report::MAX_DEVICE_REPORT_COUNT> reports_fidl_data;
 
   // TODO(dgilhooley): |reports_data| can be removed if RingBuffer supports indexing.
   std::array<hid_input_report::Report, llcpp_report::MAX_DEVICE_REPORT_COUNT> reports_data;
@@ -82,7 +82,7 @@ void InputReportInstance::GetReports(GetReportsCompleter::Sync _completer) {
     reports_data[index] = std::move(reports_data_.front());
     reports_data_.pop();
     if (std::holds_alternative<hid_input_report::MouseReport>(reports_data[index].report)) {
-      status = SetMouseReport(&reports_data[index], &reports_fidl_data[index]);
+      status = hid_input_report::SetMouseReport(&reports_data[index], &reports_fidl_data[index]);
     }
     if (status != ZX_OK) {
       break;

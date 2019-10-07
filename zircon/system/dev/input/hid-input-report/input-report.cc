@@ -25,8 +25,6 @@
 #include <hid-parser/report.h>
 #include <hid-parser/usages.h>
 
-#include "descriptors.h"
-
 namespace hid_input_report_dev {
 
 void InputReport::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }

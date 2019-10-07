@@ -4,7 +4,6 @@
 
 driver("hid-input-report") {
   sources = [
-    "descriptors.cc",
     "input-report-instance.cc",
     "input-report.cc",
   ]
@@ -24,7 +23,6 @@ driver("hid-input-report") {
 
 test("hid-input-report-test") {
   sources = [
-    "descriptors.cc",
     "input-report-instance.cc",
     "input-report.cc",
     "test.cc",

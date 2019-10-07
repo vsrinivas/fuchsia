@@ -11,9 +11,9 @@
 #include <unistd.h>
 
 #include <ddktl/protocol/hiddevice.h>
+#include <hid-input-report/descriptors.h>
 #include <zxtest/zxtest.h>
 
-#include "descriptors.h"
 #include "input-report.h"
 
 namespace hid_input_report_dev {

@@ -13,7 +13,6 @@
 #include <fbl/mutex.h>
 #include <hid-input-report/device.h>
 
-#include "descriptors.h"
 #include "input-report-instance.h"
 
 namespace hid_input_report_dev {

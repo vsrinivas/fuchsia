@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "descriptors.h"
-
 #include <variant>
 
-namespace hid_input_report_dev {
+#include <hid-input-report/fidl.h>
+
+namespace hid_input_report {
+
+namespace llcpp_report = ::llcpp::fuchsia::input::report;
 
 static llcpp_report::Unit HidUnitToLlcppUnit(hid::unit::UnitType unit) {
   switch (unit) {
@@ -37,7 +39,7 @@ static llcpp_report::Unit HidUnitToLlcppUnit(hid::unit::UnitType unit) {
   }
 }
 
-static llcpp_report::Axis HidAxisToLlcppAxis(hid_input_report::Axis axis) {
+static llcpp_report::Axis HidAxisToLlcppAxis(Axis axis) {
   llcpp_report::Axis new_axis = {};
   new_axis.range.min = axis.range.min;
   new_axis.range.max = axis.range.max;
@@ -45,10 +47,9 @@ static llcpp_report::Axis HidAxisToLlcppAxis(hid_input_report::Axis axis) {
   return new_axis;
 }
 
-zx_status_t SetMouseDescriptor(const hid_input_report::ReportDescriptor& hid_desc,
-                               Descriptor* descriptor) {
-  const auto& hid_mouse_desc = std::get<hid_input_report::MouseDescriptor>(hid_desc.descriptor);
-  MouseDesc& mouse_desc = descriptor->mouse_desc;
+zx_status_t SetMouseDescriptor(const ReportDescriptor& hid_desc, FidlDescriptor* descriptor) {
+  const auto& hid_mouse_desc = std::get<MouseDescriptor>(hid_desc.descriptor);
+  FidlMouseDesc& mouse_desc = descriptor->mouse_desc;
   auto& mouse_builder = mouse_desc.mouse_builder;
   mouse_builder = llcpp_report::MouseDescriptor::Build();
 
@@ -75,9 +76,9 @@ zx_status_t SetMouseDescriptor(const hid_input_report::ReportDescriptor& hid_des
   return ZX_OK;
 }
 
-zx_status_t SetMouseReport(hid_input_report::Report* hid_report, Report* report) {
-  MouseReport& mouse_report = report->mouse_report;
-  auto& hid_mouse_report = std::get<hid_input_report::MouseReport>(hid_report->report);
+zx_status_t SetMouseReport(Report* hid_report, FidlReport* report) {
+  FidlMouseReport& mouse_report = report->mouse_report;
+  auto& hid_mouse_report = std::get<MouseReport>(hid_report->report);
   auto& mouse_builder = report->mouse_report.mouse_builder;
   mouse_builder = llcpp_report::MouseReport::Build();
 
@@ -99,4 +100,4 @@ zx_status_t SetMouseReport(hid_input_report::Report* hid_report, Report* report)
   return ZX_OK;
 }
 
-}  // namespace hid_input_report_dev
+}  // namespace hid_input_report
