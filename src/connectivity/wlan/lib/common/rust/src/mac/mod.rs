@@ -18,7 +18,7 @@ mod fields;
 mod frame_class;
 mod mgmt;
 
-pub use {ctrl::*, data::*, eth::*, fields::*, mgmt::*};
+pub use {ctrl::*, data::*, eth::*, fields::*, frame_class::*, mgmt::*};
 
 #[macro_export]
 macro_rules! frame_len {
@@ -55,7 +55,7 @@ pub enum MacFrame<B> {
         body: B,
     },
     Unsupported {
-        type_: FrameType,
+        frame_ctrl: FrameControl,
     },
 }
 
@@ -108,7 +108,7 @@ impl<B: ByteSlice> MacFrame<B> {
                     body: reader.into_remaining(),
                 })
             }
-            type_ => Some(MacFrame::Unsupported { type_ }),
+            _type => Some(MacFrame::Unsupported { frame_ctrl: fc }),
         }
     }
 }
@@ -164,7 +164,9 @@ mod tests {
         // Unsupported frame type.
         assert_variant!(
             MacFrame::parse(&[0xFF; 24][..], false),
-            Some(MacFrame::Unsupported { type_ }) => assert_eq!(3, type_.0),
+            Some(MacFrame::Unsupported { frame_ctrl }) => {
+                assert_eq!(frame_ctrl, FrameControl(0xFFFF))
+            },
             "expected unsupported frame type"
         );
     }

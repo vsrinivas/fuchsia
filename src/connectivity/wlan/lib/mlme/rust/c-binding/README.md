@@ -2,17 +2,17 @@
 
 ## Install cbindgen
 
-We are using `cbindgen 0.8.0` to auto generate our C bindings.
+We are using `cbindgen 0.9.1` to auto generate our C bindings.
 Install the tool via:
 ```
-cargo install cbindgen
+cargo install --force cbindgen
 ```
 
 ## Generate Cargo.toml file
 
 Generate a Cargo.toml for `wlan-mlme-c` by running the following commands:
 ```
-find $FUCHSIA_DIR/src/connectivity/wlan/lib/mlme/rust/c-binding/ -name 'Cargo.*' | xargs rm
+find $FUCHSIA_DIR/src/connectivity/wlan/lib/mlme/rust/c-binding/ -name 'Cargo.*' | xargs rm -f
 fx build //src/connectivity/wlan/lib/mlme/rust/c-binding:_wlan-mlme-c_rustc_artifact_cargo
 fx gen-cargo //src/connectivity/wlan/lib/mlme/rust/c-binding:_wlan-mlme-c_rustc_artifact
 ```
@@ -39,7 +39,7 @@ Run `cbindgen` with `-v` argument to get a better understand what types and func
 ```
 cbindgen: error while loading shared libraries: libproc_macro-7924135655fecacc.so: cannot open shared object file: No such file or directory
 ```
-Make sure rustc is the latest version by checking `rustc --version`. `rustc 1.34.0-nightly (00aae71f5 2019-02-25)` is known to work with `cbindgen 0.8.0`. If they become out of sync in some cases, try the latest version that is usually within the same day by running:
+Make sure rustc is the latest version by checking `rustc --version`. `rustc 1.39.0-nightly (2b8116dce 2019-09-08)` is known to work with `cbindgen 0.9.1`. If they become out of sync in some cases, try the latest version that is usually within the same day by running:
 ```
 rustup update
 rustup default nightly

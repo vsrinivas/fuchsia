@@ -24,9 +24,7 @@ class TimeoutId {
 
   bool operator!=(const TimeoutId& that) const { return !(*this == that); }
 
-  uint64_t raw() {
-    return id_;
-  }
+  uint64_t raw() { return id_; }
 
  private:
   template <typename Event>

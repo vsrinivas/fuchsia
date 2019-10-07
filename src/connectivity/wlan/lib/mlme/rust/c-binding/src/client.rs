@@ -9,7 +9,7 @@ use {
     wlan_common::buffer_writer::BufferWriter,
     wlan_mlme::{
         buffer::{BufferProvider, InBuf, OutBuf},
-        client::{self, ClientStation},
+        client::{self, Client},
         common::{
             frame_len,
             mac::{self, OptionalField},
@@ -28,40 +28,40 @@ pub extern "C" fn client_sta_new(
     scheduler: Scheduler,
     bssid: &[u8; 6],
     iface_mac: &[u8; 6],
-) -> *mut ClientStation {
-    Box::into_raw(Box::new(ClientStation::new(device, buf_provider, scheduler, *bssid, *iface_mac)))
+) -> *mut Client {
+    Box::into_raw(Box::new(Client::new(device, buf_provider, scheduler, *bssid, *iface_mac)))
 }
 
 #[no_mangle]
-pub extern "C" fn client_sta_delete(sta: *mut ClientStation) {
+pub extern "C" fn client_sta_delete(sta: *mut Client) {
     if !sta.is_null() {
         unsafe { Box::from_raw(sta) };
     }
 }
 
 #[no_mangle]
-pub extern "C" fn client_sta_timeout_fired(sta: &mut ClientStation, event_id: EventId) {
+pub extern "C" fn client_sta_timeout_fired(sta: &mut Client, event_id: EventId) {
     sta.handle_timed_event(event_id);
 }
 
 #[no_mangle]
-pub extern "C" fn client_sta_seq_mgr(sta: &mut ClientStation) -> &mut SequenceManager {
+pub extern "C" fn client_sta_seq_mgr(sta: &mut Client) -> &mut SequenceManager {
     sta.seq_mgr()
 }
 
 #[no_mangle]
-pub extern "C" fn client_sta_send_open_auth_frame(sta: &mut ClientStation) -> i32 {
+pub extern "C" fn client_sta_send_open_auth_frame(sta: &mut Client) -> i32 {
     sta.send_open_auth_frame().into_raw_zx_status()
 }
 
 #[no_mangle]
-pub extern "C" fn client_sta_send_deauth_frame(sta: &mut ClientStation, reason_code: u16) -> i32 {
+pub extern "C" fn client_sta_send_deauth_frame(sta: &mut Client, reason_code: u16) -> i32 {
     sta.send_deauth_frame(mac::ReasonCode(reason_code)).into_raw_zx_status()
 }
 
 #[no_mangle]
 pub extern "C" fn client_sta_handle_data_frame(
-    sta: &mut ClientStation,
+    sta: &mut Client,
     data_frame: *const u8,
     data_frame_len: usize,
     has_padding: bool,
@@ -75,7 +75,7 @@ pub extern "C" fn client_sta_handle_data_frame(
 
 #[no_mangle]
 pub unsafe extern "C" fn client_sta_send_data_frame(
-    sta: &mut ClientStation,
+    sta: &mut Client,
     src: &[u8; 6],
     dest: &[u8; 6],
     is_protected: bool,
@@ -90,7 +90,7 @@ pub unsafe extern "C" fn client_sta_send_data_frame(
 
 #[no_mangle]
 pub unsafe extern "C" fn client_sta_send_eapol_frame(
-    sta: &mut ClientStation,
+    sta: &mut Client,
     src: &[u8; 6],
     dest: &[u8; 6],
     is_protected: bool,
@@ -102,6 +102,6 @@ pub unsafe extern "C" fn client_sta_send_eapol_frame(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn client_sta_send_ps_poll_frame(sta: &mut ClientStation, aid: u16) -> i32 {
+pub unsafe extern "C" fn client_sta_send_ps_poll_frame(sta: &mut Client, aid: u16) -> i32 {
     sta.send_ps_poll_frame(aid).into_raw_zx_status()
 }

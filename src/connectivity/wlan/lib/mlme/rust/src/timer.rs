@@ -9,7 +9,7 @@ use {
     std::ffi::c_void,
 };
 
-#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, Default)]
 #[repr(C)]
 pub struct EventId(u64);
 
@@ -56,6 +56,11 @@ impl<E> Timer<E> {
             (self.scheduler.cancel)(self.scheduler.cookie, *event_id);
         }
         self.events.clear();
+    }
+
+    #[cfg(test)]
+    pub fn scheduled_event_count(&self) -> usize {
+        self.events.len()
     }
 }
 

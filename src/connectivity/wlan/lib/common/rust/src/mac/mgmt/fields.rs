@@ -7,6 +7,7 @@ use {
         Aid, FrameControl, HtControl, MacAddr, OptionalField, Presence, ReasonCode,
         SequenceControl, StatusCode,
     },
+    crate::TimeUnit,
     wlan_bitfield::bitfield,
     zerocopy::{AsBytes, FromBytes, Unaligned},
 };
@@ -110,7 +111,7 @@ impl AuthAlgorithmNumber {
 #[repr(C, packed)]
 pub struct BeaconHdr {
     pub timestamp: u64,
-    pub beacon_interval: u16,
+    pub beacon_interval: TimeUnit,
     // IEEE Std 802.11-2016, 9.4.1.4
     pub capabilities: CapabilityInfo,
 }

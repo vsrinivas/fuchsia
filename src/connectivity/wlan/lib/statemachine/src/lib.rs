@@ -149,6 +149,17 @@ impl<S> State<S> {
         Self::__internal_transition_to(new_state)
     }
 }
+
+/// Convenience functions for unit testing.
+/// Note: Do ONLY use in tests!
+pub mod testing {
+    use super::*;
+
+    /// Creates a new State with the given data.
+    pub fn new_state<S>(data: S) -> State<S> {
+        State::<S>::__internal_new(data)
+    }
+}
 impl<S> Deref for State<S> {
     type Target = S;
 

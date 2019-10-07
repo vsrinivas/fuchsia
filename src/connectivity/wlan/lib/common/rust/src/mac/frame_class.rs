@@ -2,22 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::mac;
+use {crate::mac, zerocopy::ByteSlice};
 
-// IEEE Std 802.11-2016, 11.3.3
-#[derive(PartialOrd, PartialEq, Debug)]
+/// IEEE Std 802.11-2016, 11.3.3
+#[derive(PartialOrd, PartialEq, Debug, Ord, Eq)]
 pub enum FrameClass {
-    Class1,
-    Class2,
-    Class3,
+    Class1 = 1,
+    Class2 = 2,
+    Class3 = 3,
 }
 
-// IEEE Std 802.11-2016, 11.3.3
-// Unlike IEEE which only considers Public and Self-Protected Action frames Class 1 frames,
-// Fuchsia considers all Action frames Class 1 frames when checking a frame's FrameControl.
-// Use `action_frame_class(category)` to determine an Action frame's proper frame Class.
-// Fuchsia supports neither IBSS nor PBSS, thus, every frame is evaluated in respect to an
-// Infrastructure BSS.
+/// Converts a MacFrame into a FrameClass.
+impl<B: ByteSlice> From<&mac::MacFrame<B>> for FrameClass {
+    fn from(mac_frame: &mac::MacFrame<B>) -> FrameClass {
+        match mac_frame {
+            mac::MacFrame::Data { fixed_fields, .. } => frame_class(&{ fixed_fields.frame_ctrl }),
+            mac::MacFrame::Mgmt { mgmt_hdr, .. } => frame_class(&{ mgmt_hdr.frame_ctrl }),
+            mac::MacFrame::Unsupported { frame_ctrl } => frame_class(&frame_ctrl),
+        }
+    }
+}
+
+/// IEEE Std 802.11-2016, 11.3.3
+/// Unlike IEEE which only considers Public and Self-Protected Action frames Class 1 frames,
+/// Fuchsia considers all Action frames Class 1 frames when checking a frame's FrameControl.
+/// Use `action_frame_class(category)` to determine an Action frame's proper frame Class.
+/// Fuchsia supports neither IBSS nor PBSS, thus, every frame is evaluated in respect to an
+/// Infrastructure BSS.
 pub fn frame_class(fc: &mac::FrameControl) -> FrameClass {
     // Class 1 frames:
     match fc.frame_type() {

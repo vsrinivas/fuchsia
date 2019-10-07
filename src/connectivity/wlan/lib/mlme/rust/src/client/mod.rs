@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod state;
 mod utils;
 
 use {
@@ -12,9 +13,11 @@ use {
         timer::*,
     },
     failure::format_err,
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon::{self as zx, DurationNum},
     log::error,
     std::ffi::c_void,
+    std::ops::Mul,
     wlan_common::{
         appendable::Appendable,
         big_endian::BigEndianU16,
@@ -23,31 +26,35 @@ use {
         mac::{self, Aid, MacAddr, OptionalField, Presence},
         sequence::SequenceManager,
     },
+    wlan_statemachine::*,
     zerocopy::ByteSlice,
 };
 
-pub use utils::*;
+use {state::States, utils::*};
 
 /// Maximum size of EAPOL frames forwarded to SME.
 /// TODO(34845): Evaluate whether EAPOL size restriction is needed.
 const MAX_EAPOL_FRAME_LEN: usize = 255;
 
 #[derive(Debug)]
-pub enum TimedEvent {}
+pub enum TimedEvent {
+    Authenticating,
+}
 
 /// A STA running in Client mode.
 /// The Client STA is in its early development process and does not yet manage its internal state
 /// machine or track negotiated capabilities.
-pub struct ClientStation {
+pub struct Client {
     device: Device,
     buf_provider: BufferProvider,
     timer: Timer<TimedEvent>,
     seq_mgr: SequenceManager,
     bssid: MacAddr,
     iface_mac: MacAddr,
+    state: Option<States>,
 }
 
-impl ClientStation {
+impl Client {
     pub fn new(
         device: Device,
         buf_provider: BufferProvider,
@@ -56,12 +63,33 @@ impl ClientStation {
         iface_mac: MacAddr,
     ) -> Self {
         let timer = Timer::<TimedEvent>::new(scheduler);
-        Self { device, buf_provider, timer, seq_mgr: SequenceManager::new(), bssid, iface_mac }
+        Self {
+            device,
+            buf_provider,
+            timer,
+            seq_mgr: SequenceManager::new(),
+            bssid,
+            iface_mac,
+            state: Some(States::new_initial()),
+        }
+    }
+
+    pub fn authenticate(&mut self, timeout_bcn_count: u8) {
+        // Safe: |state| is never None and always replaced with Some(..).
+        self.state = Some(self.state.take().unwrap().authenticate(self, timeout_bcn_count));
     }
 
     /// Returns a reference to the STA's SNS manager.
     pub fn seq_mgr(&mut self) -> &mut SequenceManager {
         &mut self.seq_mgr
+    }
+
+    pub fn device(&mut self) -> &mut Device {
+        &mut self.device
+    }
+
+    pub fn timer(&mut self) -> &mut Timer<TimedEvent> {
+        &mut self.timer
     }
 
     /// Extracts aggregated and non-aggregated MSDUs from the data frame.
@@ -289,8 +317,38 @@ impl ClientStation {
             .map_err(|s| Error::Status(format!("error sending PS-Poll frame"), s))
     }
 
+    /// Called when a previously scheduled `TimedEvent` fired.
     pub fn handle_timed_event(&mut self, event_id: EventId) {
-        unreachable!()
+        // Safe: |state| is never None and always replaced with Some(..).
+        self.state = Some(self.state.take().unwrap().on_timed_event(self, event_id));
+    }
+
+    /// Called when an arbitrary frame was received over the air.
+    pub fn on_mac_frame<B: ByteSlice>(&mut self, bytes: B, body_aligned: bool) {
+        // Safe: |state| is never None and always replaced with Some(..).
+        self.state = Some(self.state.take().unwrap().on_mac_frame(self, bytes, body_aligned));
+    }
+
+    /// Sends an MLME-AUTHENTICATE.confirm message to the joined BSS with authentication type
+    /// `Open System` as only open authentication is supported.
+    fn send_authenticate_conf(&mut self, result_code: fidl_mlme::AuthenticateResultCodes) {
+        self.device.access_sme_sender(|sender| {
+            sender.send_authenticate_conf(&mut fidl_mlme::AuthenticateConfirm {
+                peer_sta_address: self.bssid,
+                auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+                result_code,
+            })
+        });
+    }
+
+    /// Sends an MLME-DEAUTHENTICATE.indication message to the joined BSS.
+    fn send_deauthenticate_ind(&mut self, reason_code: fidl_mlme::ReasonCode) {
+        self.device.access_sme_sender(|sender| {
+            sender.send_deauthenticate_ind(&mut fidl_mlme::DeauthenticateIndication {
+                peer_sta_address: self.bssid,
+                reason_code,
+            })
+        });
     }
 }
 
@@ -304,9 +362,9 @@ mod tests {
     const BSSID: MacAddr = [6u8; 6];
     const IFACE_MAC: MacAddr = [7u8; 6];
 
-    fn make_client_station(device: Device, scheduler: Scheduler) -> ClientStation {
+    fn make_client_station(device: Device, scheduler: Scheduler) -> Client {
         let buf_provider = FakeBufferProvider::new();
-        let client = ClientStation::new(device, buf_provider, scheduler, BSSID, IFACE_MAC);
+        let client = Client::new(device, buf_provider, scheduler, BSSID, IFACE_MAC);
         client
     }
 

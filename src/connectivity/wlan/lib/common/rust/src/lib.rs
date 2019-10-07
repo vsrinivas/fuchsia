@@ -22,12 +22,15 @@ pub mod organization;
 pub mod sequence;
 pub mod test_utils;
 pub mod tim;
+pub mod time;
 pub mod unaligned_view;
 
 use {
     channel::{Cbw, Phy},
     failure, fidl_fuchsia_wlan_sme as fidl_sme,
 };
+
+pub use time::TimeUnit;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct RadioConfig {

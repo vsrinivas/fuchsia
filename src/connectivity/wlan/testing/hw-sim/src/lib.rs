@@ -20,6 +20,7 @@ use {
         },
         mac, mgmt_writer,
         organization::Oui,
+        TimeUnit,
     },
     wlan_rsn::rsna::SecAssocUpdate,
 };
@@ -89,7 +90,7 @@ pub fn send_beacon(
 
     frame_buf.append_value(&mac::BeaconHdr {
         timestamp: 0,
-        beacon_interval: 100,
+        beacon_interval: TimeUnit::DEFAULT_BEACON_INTERVAL,
         capabilities: mac::CapabilityInfo(0).with_privacy(*protection != Protection::Open),
     })?;
 

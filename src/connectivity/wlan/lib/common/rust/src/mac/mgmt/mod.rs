@@ -19,6 +19,7 @@ pub enum MgmtBody<B: ByteSlice> {
     Authentication { auth_hdr: LayoutVerified<B, AuthHdr>, elements: B },
     AssociationReq { assoc_req_hdr: LayoutVerified<B, AssocReqHdr>, elements: B },
     AssociationResp { assoc_resp_hdr: LayoutVerified<B, AssocRespHdr>, elements: B },
+    Deauthentication { deauth_hdr: LayoutVerified<B, DeauthHdr>, elements: B },
     Unsupported { subtype: MgmtSubtype },
 }
 
@@ -41,6 +42,10 @@ impl<B: ByteSlice> MgmtBody<B> {
                 let (assoc_resp_hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
                 Some(MgmtBody::AssociationResp { assoc_resp_hdr, elements })
             }
+            MgmtSubtype::DEAUTH => {
+                let (deauth_hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
+                Some(MgmtBody::Deauthentication { deauth_hdr, elements })
+            }
             subtype => Some(MgmtBody::Unsupported { subtype }),
         }
     }
@@ -48,7 +53,7 @@ impl<B: ByteSlice> MgmtBody<B> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::assert_variant, crate::mac::*};
+    use {super::*, crate::assert_variant, crate::mac::*, crate::TimeUnit};
 
     #[test]
     fn mgmt_hdr_len() {
@@ -69,7 +74,7 @@ mod tests {
             MgmtBody::parse(MgmtSubtype::BEACON, &bytes[..]),
             Some(MgmtBody::Beacon { bcn_hdr, elements }) => {
                 assert_eq!(0x0101010101010101, { bcn_hdr.timestamp });
-                assert_eq!(0x0202, { bcn_hdr.beacon_interval });
+                assert_eq!(TimeUnit::from(0x0202), { bcn_hdr.beacon_interval });
                 assert_eq!(0x0303, { bcn_hdr.capabilities.0 });
                 assert_eq!(&[0, 5, 1, 2, 3, 4, 5], &elements[..]);
             },
