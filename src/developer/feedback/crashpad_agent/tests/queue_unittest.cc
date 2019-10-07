@@ -55,7 +55,7 @@ std::map<std::string, FileReader*> MakeAttachments() { return {{kAttachmentKey, 
 
 class QueueTest : public ::testing::Test {
  public:
-  void Reset(std::vector<bool> upload_attempt_results = std::vector<bool>{}) {
+  void SetUpQueue(std::vector<bool> upload_attempt_results = std::vector<bool>{}) {
     program_id_ = 1;
     state_ = QueueOps::SetStateToLeaveAsPending;
     upload_attempt_results_ = upload_attempt_results;
@@ -192,13 +192,13 @@ class QueueTest : public ::testing::Test {
 };
 
 TEST_F(QueueTest, Check_EmptyQueue_OnZeroAdds) {
-  Reset();
+  SetUpQueue();
   CheckQueueContents();
   EXPECT_TRUE(queue_->IsEmpty());
 }
 
 TEST_F(QueueTest, Check_NonIsEmptyQueue_OnStateSetToLeaveAsPending_MultipleReports) {
-  Reset();
+  SetUpQueue();
   ApplyQueueOps({QueueOps::AddNewReport, QueueOps::AddNewReport, QueueOps::AddNewReport,
                  QueueOps::AddNewReport, QueueOps::AddNewReport, QueueOps::ProcessAll});
   CheckQueueContents();
@@ -206,7 +206,7 @@ TEST_F(QueueTest, Check_NonIsEmptyQueue_OnStateSetToLeaveAsPending_MultipleRepor
 }
 
 TEST_F(QueueTest, Check_IsEmptyQueue_OnStateSetToArchive_MultipleReports) {
-  Reset();
+  SetUpQueue();
   ApplyQueueOps({
       QueueOps::SetStateToArchive,
       QueueOps::AddNewReport,
@@ -217,7 +217,7 @@ TEST_F(QueueTest, Check_IsEmptyQueue_OnStateSetToArchive_MultipleReports) {
 }
 
 TEST_F(QueueTest, Check_IsEmptyQueue_OnStateSetToArchive_MultipleReports_OnePruned) {
-  Reset();
+  SetUpQueue();
   ApplyQueueOps({
       QueueOps::AddNewReport,
       QueueOps::AddNewReport,
@@ -231,7 +231,7 @@ TEST_F(QueueTest, Check_IsEmptyQueue_OnStateSetToArchive_MultipleReports_OnePrun
 }
 
 TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload) {
-  Reset({kUploadSuccessful});
+  SetUpQueue({kUploadSuccessful});
   ApplyQueueOps({
       QueueOps::SetStateToUpload,
       QueueOps::AddNewReport,
@@ -243,7 +243,7 @@ TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload) {
 }
 
 TEST_F(QueueTest, Check_NonIsEmptyQueue_OnFailedUpload) {
-  Reset({kUploadFailed});
+  SetUpQueue({kUploadFailed});
   ApplyQueueOps({
       QueueOps::SetStateToUpload,
       QueueOps::AddNewReport,
@@ -253,7 +253,7 @@ TEST_F(QueueTest, Check_NonIsEmptyQueue_OnFailedUpload) {
 }
 
 TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_MultipleReports) {
-  Reset(std::vector<bool>(5u, kUploadSuccessful));
+  SetUpQueue(std::vector<bool>(5u, kUploadSuccessful));
   ApplyQueueOps({QueueOps::AddNewReport, QueueOps::AddNewReport, QueueOps::AddNewReport,
                  QueueOps::AddNewReport, QueueOps::AddNewReport, QueueOps::SetStateToUpload,
                  QueueOps::ProcessAll});
@@ -264,7 +264,7 @@ TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_MultipleReports) {
 }
 
 TEST_F(QueueTest, Check_NonIsEmptyQueue_OneFailedUpload_MultipleReports) {
-  Reset(std::vector<bool>(5u, kUploadFailed));
+  SetUpQueue(std::vector<bool>(5u, kUploadFailed));
   ApplyQueueOps({QueueOps::AddNewReport, QueueOps::AddNewReport, QueueOps::AddNewReport,
                  QueueOps::AddNewReport, QueueOps::AddNewReport, QueueOps::SetStateToUpload,
                  QueueOps::ProcessAll});
@@ -273,7 +273,7 @@ TEST_F(QueueTest, Check_NonIsEmptyQueue_OneFailedUpload_MultipleReports) {
 }
 
 TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_OnePruned) {
-  Reset({kUploadSuccessful});
+  SetUpQueue({kUploadSuccessful});
   ApplyQueueOps({QueueOps::AddNewReport, QueueOps::DeleteOneReport, QueueOps::SetStateToUpload,
                  QueueOps::AddNewReport});
   CheckQueueContents();
@@ -283,7 +283,7 @@ TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_OnePruned) {
 }
 
 TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_MultiplePruned_MultipleReports) {
-  Reset({kUploadSuccessful});
+  SetUpQueue({kUploadSuccessful});
   ApplyQueueOps({QueueOps::AddNewReport, QueueOps::DeleteOneReport, QueueOps::AddNewReport,
                  QueueOps::DeleteOneReport, QueueOps::AddNewReport, QueueOps::DeleteOneReport,
                  QueueOps::AddNewReport, QueueOps::DeleteOneReport, QueueOps::AddNewReport,
@@ -295,7 +295,8 @@ TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_MultiplePruned_MultipleR
 }
 
 TEST_F(QueueTest, Check_NonIsEmptyQueue_OnMixedUploadResults_MultipleReports) {
-  Reset({kUploadSuccessful, kUploadSuccessful, kUploadFailed, kUploadFailed, kUploadSuccessful});
+  SetUpQueue(
+      {kUploadSuccessful, kUploadSuccessful, kUploadFailed, kUploadFailed, kUploadSuccessful});
   ApplyQueueOps({QueueOps::AddNewReport, QueueOps::AddNewReport, QueueOps::AddNewReport,
                  QueueOps::AddNewReport, QueueOps::AddNewReport, QueueOps::SetStateToUpload,
                  QueueOps::ProcessAll});
@@ -306,7 +307,8 @@ TEST_F(QueueTest, Check_NonIsEmptyQueue_OnMixedUploadResults_MultipleReports) {
 }
 
 TEST_F(QueueTest, Check_NonIsEmptyQueue_OnMixedUploadResults_MultiplePruned_MultipleReports) {
-  Reset({kUploadSuccessful, kUploadSuccessful, kUploadFailed, kUploadFailed, kUploadSuccessful});
+  SetUpQueue(
+      {kUploadSuccessful, kUploadSuccessful, kUploadFailed, kUploadFailed, kUploadSuccessful});
   ApplyQueueOps({QueueOps::AddNewReport, QueueOps::AddNewReport, QueueOps::AddNewReport,
                  QueueOps::AddNewReport, QueueOps::AddNewReport, QueueOps::AddNewReport,
                  QueueOps::AddNewReport, QueueOps::DeleteOneReport, QueueOps::DeleteOneReport,
@@ -319,7 +321,7 @@ TEST_F(QueueTest, Check_NonIsEmptyQueue_OnMixedUploadResults_MultiplePruned_Mult
 
 TEST_F(QueueTest, Check_IsEmptyQueue_MaxFailedUploads_MultipleReports) {
   const size_t kNumReports = 5u;
-  Reset(std::vector<bool>(kNumReports * kMaxUploadAttempts, kUploadFailed));
+  SetUpQueue(std::vector<bool>(kNumReports * kMaxUploadAttempts, kUploadFailed));
   std::vector<QueueOps> ops(kNumReports, QueueOps::AddNewReport);
   ops.push_back(QueueOps::SetStateToUpload);
   ops.insert(ops.end(), kMaxUploadAttempts, QueueOps::ProcessAll);
@@ -328,7 +330,8 @@ TEST_F(QueueTest, Check_IsEmptyQueue_MaxFailedUploads_MultipleReports) {
 }
 
 TEST_F(QueueTest, Check_InspectTree) {
-  Reset({kUploadSuccessful, kUploadSuccessful, kUploadFailed, kUploadFailed, kUploadSuccessful});
+  SetUpQueue(
+      {kUploadSuccessful, kUploadSuccessful, kUploadFailed, kUploadFailed, kUploadSuccessful});
   ApplyQueueOps({QueueOps::AddNewReport, QueueOps::AddNewReport, QueueOps::AddNewReport,
                  QueueOps::AddNewReport, QueueOps::AddNewReport, QueueOps::AddNewReport,
                  QueueOps::AddNewReport, QueueOps::DeleteOneReport, QueueOps::DeleteOneReport,

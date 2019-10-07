@@ -34,7 +34,7 @@ class TakeScreenshotTest : public gtest::TestLoopFixture {
   TakeScreenshotTest() : executor_(dispatcher()), service_directory_provider_(dispatcher()) {}
 
  protected:
-  void ResetScenic(std::unique_ptr<StubScenic> stub_scenic) {
+  void SetUpScenic(std::unique_ptr<StubScenic> stub_scenic) {
     stub_scenic_ = std::move(stub_scenic);
     if (stub_scenic_) {
       FXL_CHECK(service_directory_provider_.AddService(stub_scenic_->GetHandler()) == ZX_OK);
@@ -64,7 +64,7 @@ TEST_F(TakeScreenshotTest, Succeed_CheckerboardScreenshot) {
   scenic_responses.emplace_back(CreateCheckerboardScreenshot(image_dim_in_px), kSuccess);
   std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
   stub_scenic->set_take_screenshot_responses(std::move(scenic_responses));
-  ResetScenic(std::move(stub_scenic));
+  SetUpScenic(std::move(stub_scenic));
 
   fit::result<ScreenshotData> result = TakeScreenshot();
 
@@ -78,7 +78,7 @@ TEST_F(TakeScreenshotTest, Succeed_CheckerboardScreenshot) {
 }
 
 TEST_F(TakeScreenshotTest, Fail_ScenicNotAvailable) {
-  ResetScenic(nullptr);
+  SetUpScenic(nullptr);
 
   fit::result<ScreenshotData> result = TakeScreenshot();
 
@@ -86,7 +86,7 @@ TEST_F(TakeScreenshotTest, Fail_ScenicNotAvailable) {
 }
 
 TEST_F(TakeScreenshotTest, Fail_ScenicReturningFalse) {
-  ResetScenic(std::make_unique<StubScenicAlwaysReturnsFalse>());
+  SetUpScenic(std::make_unique<StubScenicAlwaysReturnsFalse>());
 
   fit::result<ScreenshotData> result = TakeScreenshot();
 
@@ -94,7 +94,7 @@ TEST_F(TakeScreenshotTest, Fail_ScenicReturningFalse) {
 }
 
 TEST_F(TakeScreenshotTest, Fail_ScenicClosesConnection) {
-  ResetScenic(std::make_unique<StubScenicClosesConnection>());
+  SetUpScenic(std::make_unique<StubScenicClosesConnection>());
 
   fit::result<ScreenshotData> result = TakeScreenshot();
 
@@ -102,7 +102,7 @@ TEST_F(TakeScreenshotTest, Fail_ScenicClosesConnection) {
 }
 
 TEST_F(TakeScreenshotTest, Fail_ScenicNeverReturns) {
-  ResetScenic(std::make_unique<StubScenicNeverReturns>());
+  SetUpScenic(std::make_unique<StubScenicNeverReturns>());
 
   fit::result<ScreenshotData> result = TakeScreenshot();
 
@@ -114,7 +114,7 @@ TEST_F(TakeScreenshotTest, Fail_CallTakeScreenshotTwice) {
   scenic_responses.emplace_back(CreateEmptyScreenshot(), kSuccess);
   std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
   stub_scenic->set_take_screenshot_responses(std::move(scenic_responses));
-  ResetScenic(std::move(stub_scenic));
+  SetUpScenic(std::move(stub_scenic));
 
   const zx::duration unused_timeout = zx::sec(1);
   Scenic scenic(dispatcher(), service_directory_provider_.service_directory());

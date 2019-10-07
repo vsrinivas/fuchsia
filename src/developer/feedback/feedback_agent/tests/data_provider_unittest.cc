@@ -141,7 +141,7 @@ MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expec
 // connecting through FIDL.
 class DataProviderImplTest : public sys::testing::TestWithEnvironment {
  public:
-  void SetUp() override { ResetDataProvider(kDefaultConfig); }
+  void SetUp() override { SetUpDataProvider(kDefaultConfig); }
 
   void TearDown() override {
     if (!controller_) {
@@ -158,29 +158,25 @@ class DataProviderImplTest : public sys::testing::TestWithEnvironment {
   }
 
  protected:
-  // Resets the underlying |data_provider_| using the given |config|.
-  void ResetDataProvider(const Config& config) {
+  void SetUpDataProvider(const Config& config) {
     data_provider_.reset(new DataProviderImpl(
         dispatcher(), service_directory_provider_.service_directory(), config));
   }
 
-  // Resets the underlying |stub_scenic_| using the given |scenic|.
-  void ResetScenic(std::unique_ptr<StubScenic> stub_scenic) {
+  void SetUpScenic(std::unique_ptr<StubScenic> stub_scenic) {
     stub_scenic_ = std::move(stub_scenic);
     if (stub_scenic_) {
       FXL_CHECK(service_directory_provider_.AddService(stub_scenic_->GetHandler()) == ZX_OK);
     }
   }
 
-  // Resets the underlying |stub_logger_| with the given log |messages|.
-  void ResetLogger(const std::vector<fuchsia::logger::LogMessage>& messages) {
+  void SetUpLogger(const std::vector<fuchsia::logger::LogMessage>& messages) {
     stub_logger_.reset(new StubLogger());
     stub_logger_->set_messages(messages);
     FXL_CHECK(service_directory_provider_.AddService(stub_logger_->GetHandler()) == ZX_OK);
   }
 
-  // Resets the underlying |stub_channel_provider| with the given |channel|.
-  void ResetChannelProvider(std::string channel) {
+  void SetUpChannelProvider(std::string channel) {
     stub_channel_provider_.reset(new StubChannelProvider());
     stub_channel_provider_->set_channel(channel);
     FXL_CHECK(service_directory_provider_.AddService(stub_channel_provider_->GetHandler()) ==
@@ -259,7 +255,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   scenic_responses.emplace_back(CreateCheckerboardScreenshot(image_dim_in_px), kSuccess);
   std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
   stub_scenic->set_take_screenshot_responses(std::move(scenic_responses));
-  ResetScenic(std::move(stub_scenic));
+  SetUpScenic(std::move(stub_scenic));
 
   GetScreenshotResponse feedback_response = GetScreenshot();
 
@@ -282,7 +278,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
 }
 
 TEST_F(DataProviderImplTest, GetScreenshot_FailOnScenicNotAvailable) {
-  ResetScenic(nullptr);
+  SetUpScenic(nullptr);
 
   GetScreenshotResponse feedback_response = GetScreenshot();
 
@@ -294,7 +290,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_FailOnScenicReturningFailure) {
   scenic_responses.emplace_back(CreateEmptyScreenshot(), kFailure);
   std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
   stub_scenic->set_take_screenshot_responses(std::move(scenic_responses));
-  ResetScenic(std::move(stub_scenic));
+  SetUpScenic(std::move(stub_scenic));
 
   GetScreenshotResponse feedback_response = GetScreenshot();
 
@@ -308,7 +304,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_FailOnScenicReturningNonBGRA8Screensh
   scenic_responses.emplace_back(CreateNonBGRA8Screenshot(), kSuccess);
   std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
   stub_scenic->set_take_screenshot_responses(std::move(scenic_responses));
-  ResetScenic(std::move(stub_scenic));
+  SetUpScenic(std::move(stub_scenic));
 
   GetScreenshotResponse feedback_response = GetScreenshot();
 
@@ -330,7 +326,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_ParallelRequests) {
   ASSERT_EQ(scenic_responses.size(), num_calls);
   std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
   stub_scenic->set_take_screenshot_responses(std::move(scenic_responses));
-  ResetScenic(std::move(stub_scenic));
+  SetUpScenic(std::move(stub_scenic));
 
   std::vector<GetScreenshotResponse> feedback_responses;
   for (size_t i = 0; i < num_calls; i++) {
@@ -370,7 +366,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_ParallelRequests) {
 
 TEST_F(DataProviderImplTest, GetScreenshot_OneScenicConnectionPerGetScreenshotCall) {
   // We use a stub that always returns false as we are not interested in the responses.
-  ResetScenic(std::make_unique<StubScenicAlwaysReturnsFalse>());
+  SetUpScenic(std::make_unique<StubScenicAlwaysReturnsFalse>());
 
   const size_t num_calls = 5u;
   std::vector<GetScreenshotResponse> feedback_responses;
@@ -485,7 +481,7 @@ TEST_F(DataProviderImplTest, GetData_AnnotationsAsAttachment) {
 TEST_F(DataProviderImplTest, GetData_SysLog) {
   // CollectSystemLogs() has its own set of unit tests so we only cover one log message here to
   // check that we are attaching the logs.
-  ResetLogger({
+  SetUpLogger({
       BuildLogMessage(FX_LOG_INFO, "log message",
                       /*timestamp_offset=*/zx::duration(0), {"foo"}),
   });
@@ -597,7 +593,7 @@ TEST_F(DataProviderImplTest, GetData_Inspect) {
 }
 
 TEST_F(DataProviderImplTest, GetData_Channel) {
-  ResetChannelProvider("my-channel");
+  SetUpChannelProvider("my-channel");
 
   fit::result<Data, zx_status_t> result = GetData();
 
@@ -620,7 +616,7 @@ TEST_F(DataProviderImplTest, GetData_Uptime) {
 }
 
 TEST_F(DataProviderImplTest, GetData_EmptyAnnotationAllowlist) {
-  ResetDataProvider(Config{/*annotation_allowlist=*/{}, kDefaultAttachments});
+  SetUpDataProvider(Config{/*annotation_allowlist=*/{}, kDefaultAttachments});
 
   fit::result<Data, zx_status_t> result = GetData();
   ASSERT_TRUE(result.is_ok());
@@ -630,7 +626,7 @@ TEST_F(DataProviderImplTest, GetData_EmptyAnnotationAllowlist) {
 }
 
 TEST_F(DataProviderImplTest, GetData_EmptyAttachmentAllowlist) {
-  ResetDataProvider(Config{kDefaultAnnotations, /*attachment_allowlist=*/{}});
+  SetUpDataProvider(Config{kDefaultAnnotations, /*attachment_allowlist=*/{}});
 
   fit::result<Data, zx_status_t> result = GetData();
   ASSERT_TRUE(result.is_ok());
@@ -645,7 +641,7 @@ TEST_F(DataProviderImplTest, GetData_EmptyAttachmentAllowlist) {
 }
 
 TEST_F(DataProviderImplTest, GetData_EmptyAllowlists) {
-  ResetDataProvider(Config{/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{}});
+  SetUpDataProvider(Config{/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{}});
 
   fit::result<Data, zx_status_t> result = GetData();
   ASSERT_TRUE(result.is_ok());
@@ -657,7 +653,7 @@ TEST_F(DataProviderImplTest, GetData_EmptyAllowlists) {
 }
 
 TEST_F(DataProviderImplTest, GetData_UnknownAllowlistedAnnotation) {
-  ResetDataProvider(Config{/*annotation_allowlist=*/{"unknown.annotation"}, kDefaultAttachments});
+  SetUpDataProvider(Config{/*annotation_allowlist=*/{"unknown.annotation"}, kDefaultAttachments});
 
   fit::result<Data, zx_status_t> result = GetData();
   ASSERT_TRUE(result.is_ok());
@@ -667,7 +663,7 @@ TEST_F(DataProviderImplTest, GetData_UnknownAllowlistedAnnotation) {
 }
 
 TEST_F(DataProviderImplTest, GetData_UnknownAllowlistedAttachment) {
-  ResetDataProvider(Config{kDefaultAnnotations,
+  SetUpDataProvider(Config{kDefaultAnnotations,
                            /*attachment_allowlist=*/{"unknown.attachment"}});
 
   fit::result<Data, zx_status_t> result = GetData();

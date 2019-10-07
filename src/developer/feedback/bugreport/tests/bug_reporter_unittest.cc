@@ -37,7 +37,7 @@ class BugReporterTest : public gtest::RealLoopFixture {
   void SetUp() override { ASSERT_TRUE(tmp_dir_.NewTempFile(&bugreport_path_)); }
 
  protected:
-  void ResetFeedbackDataProvider(fuchsia::feedback::Attachment attachment_bundle) {
+  void SetUpFeedbackDataProvider(fuchsia::feedback::Attachment attachment_bundle) {
     stub_feedback_data_provider_.reset(new StubFeedbackDataProvider(std::move(attachment_bundle)));
     FXL_CHECK(service_directory_provider_.AddService(stub_feedback_data_provider_->GetHandler()) ==
               ZX_OK);
@@ -61,7 +61,7 @@ TEST_F(BugReporterTest, Basic) {
   fuchsia::feedback::Attachment attachment_bundle;
   attachment_bundle.key = "unused";
   ASSERT_TRUE(fsl::VmoFromString(payload, &attachment_bundle.value));
-  ResetFeedbackDataProvider(std::move(attachment_bundle));
+  SetUpFeedbackDataProvider(std::move(attachment_bundle));
 
   ASSERT_TRUE(
       MakeBugReport(service_directory_provider_.service_directory(), bugreport_path_.data()));

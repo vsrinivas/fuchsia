@@ -95,8 +95,8 @@ Attachment BuildAttachment(const std::string& key, const std::string& value) {
 // connecting through FIDL.
 class CrashpadAgentTest : public gtest::TestLoopFixture {
  protected:
-  // Resets the underlying agent using the given |config| and |crash_server|.
-  void ResetAgent(Config config, std::unique_ptr<StubCrashServer> crash_server) {
+  // Sets up the underlying agent using the given |config| and |crash_server|.
+  void SetUpAgent(Config config, std::unique_ptr<StubCrashServer> crash_server) {
     FXL_CHECK((config.crash_server.url && crash_server) ||
               (!config.crash_server.url && !crash_server));
     crash_server_ = crash_server.get();
@@ -111,14 +111,15 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
     FXL_CHECK(agent_);
   }
 
-  // Resets the underlying agent using the given |config|.
-  void ResetAgent(Config config) {
+  // Sets up the underlying agent using the given |config|.
+  void SetUpAgent(Config config) {
     FXL_CHECK(!config.crash_server.url);
-    return ResetAgent(std::move(config), /*crash_server=*/nullptr);
+    return SetUpAgent(std::move(config), /*crash_server=*/nullptr);
   }
 
-  void ResetAgentDefaultConfig(const std::vector<bool>& upload_attempt_results = {}) {
-    ResetAgent(
+  // Sets up the underlying agent using a default config.
+  void SetUpAgentDefaultConfig(const std::vector<bool>& upload_attempt_results = {}) {
+    SetUpAgent(
         Config{/*crashpad_database=*/
                {
                    /*path=*/database_path_.path(),
@@ -132,12 +133,9 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
         std::make_unique<StubCrashServer>(upload_attempt_results));
   }
 
-  // Resets the underlying stub feedback data provider and registers it in the
+  // Sets up the underlying stub feedback data provider and registers it in the
   // |service_directory_provider_|.
-  //
-  // This can only be done once per test as ServiceDirectoryProvider does not allow overridding a
-  // service. Hence why it is not in the SetUp().
-  void ResetFeedbackDataProvider(std::unique_ptr<StubFeedbackDataProvider> feedback_data_provider) {
+  void SetUpFeedbackDataProvider(std::unique_ptr<StubFeedbackDataProvider> feedback_data_provider) {
     feedback_data_provider_ = std::move(feedback_data_provider);
     if (feedback_data_provider_) {
       FXL_CHECK(service_directory_provider_.AddService(feedback_data_provider_->GetHandler()) ==
@@ -241,7 +239,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
 
   // Files one crash report.
   fit::result<void, zx_status_t> FileOneCrashReport(CrashReport report) {
-    FXL_CHECK(agent_ != nullptr) << "agent_ is nullptr. Call ResetAgent() or one of its variants "
+    FXL_CHECK(agent_ != nullptr) << "agent_ is nullptr. Call SetUpAgent() or one of its variants "
                                     "at the beginning of a test case.";
     fit::result<void, zx_status_t> out_result;
     agent_->File(std::move(report), [&out_result](fit::result<void, zx_status_t> result) {
@@ -379,8 +377,8 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
 };
 
 TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReport) {
-  ResetAgentDefaultConfig({kUploadSuccessful});
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpAgentDefaultConfig({kUploadSuccessful});
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());
   CheckAttachmentsInDatabase();
@@ -389,8 +387,8 @@ TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReport) {
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithAdditionalData) {
-  ResetAgentDefaultConfig({kUploadSuccessful});
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpAgentDefaultConfig({kUploadSuccessful});
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   std::vector<Attachment> attachments;
   attachments.emplace_back(BuildAttachment(kSingleAttachmentKey, kSingleAttachmentValue));
 
@@ -409,8 +407,8 @@ TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithAdditionalData) {
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithEventId) {
-  ResetAgentDefaultConfig({kUploadSuccessful});
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpAgentDefaultConfig({kUploadSuccessful});
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   CrashReport report;
   report.set_program_name(kProgramName);
   report.set_event_id("some-event-id");
@@ -424,8 +422,8 @@ TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithEventId) {
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReport) {
-  ResetAgentDefaultConfig({kUploadSuccessful});
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpAgentDefaultConfig({kUploadSuccessful});
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
 
   ASSERT_TRUE(FileOneGenericCrashReport(std::nullopt).is_ok());
   CheckAttachmentsInDatabase();
@@ -434,8 +432,8 @@ TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReport) {
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReportWithSignature) {
-  ResetAgentDefaultConfig({kUploadSuccessful});
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpAgentDefaultConfig({kUploadSuccessful});
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
 
   ASSERT_TRUE(FileOneGenericCrashReport("some-signature").is_ok());
   CheckAttachmentsInDatabase();
@@ -446,8 +444,8 @@ TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReportWithSignature) {
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReport) {
-  ResetAgentDefaultConfig({kUploadSuccessful});
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpAgentDefaultConfig({kUploadSuccessful});
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   fuchsia::mem::Buffer minidump;
   fsl::VmoFromString("minidump", &minidump);
 
@@ -460,8 +458,8 @@ TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReport) {
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
-  ResetAgentDefaultConfig({kUploadSuccessful});
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpAgentDefaultConfig({kUploadSuccessful});
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
 
   ASSERT_TRUE(FileOneNativeCrashReport(std::nullopt).is_ok());
   CheckAttachmentsInDatabase();
@@ -470,8 +468,8 @@ TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReport) {
-  ResetAgentDefaultConfig({kUploadSuccessful});
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpAgentDefaultConfig({kUploadSuccessful});
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   fuchsia::mem::Buffer stack_trace;
   fsl::VmoFromString("#0", &stack_trace);
 
@@ -489,8 +487,8 @@ TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReport) {
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
-  ResetAgentDefaultConfig({kUploadSuccessful});
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpAgentDefaultConfig({kUploadSuccessful});
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
 
   ASSERT_TRUE(FileOneDartCrashReport(std::nullopt, std::nullopt, std::nullopt).is_ok());
   CheckAttachmentsInDatabase();
@@ -501,7 +499,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
 }
 
 TEST_F(CrashpadAgentTest, Fail_OnInvalidInputCrashReport) {
-  ResetAgentDefaultConfig();
+  SetUpAgentDefaultConfig();
   CrashReport report;
 
   fit::result<void, zx_status_t> out_result;
@@ -512,10 +510,10 @@ TEST_F(CrashpadAgentTest, Fail_OnInvalidInputCrashReport) {
 }
 
 TEST_F(CrashpadAgentTest, Check_DatabaseIsEmpty_OnPruneDatabaseWithZeroSize) {
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   // We reset the agent with a max database size of 0, meaning reports will get cleaned up before
   // the end of the |agent_| call.
-  ResetAgent(Config{/*crashpad_database=*/
+  SetUpAgent(Config{/*crashpad_database=*/
                     {
                         /*path=*/database_path_.path(),
                         /*max_size_in_kb=*/0u,
@@ -542,12 +540,12 @@ std::string GenerateString(const uint64_t string_size_in_kb) {
 }
 
 TEST_F(CrashpadAgentTest, Check_DatabaseHasOnlyOneReport_OnPruneDatabaseWithSizeForOnlyOneReport) {
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   // We reset the agent with a max database size equivalent to the expected size of a report plus
   // the value of an especially large attachment.
   const uint64_t crash_log_size_in_kb = 2u * kMaxTotalReportSizeInKb;
   const std::string large_string = GenerateString(crash_log_size_in_kb);
-  ResetAgent(Config{/*crashpad_database=*/
+  SetUpAgent(Config{/*crashpad_database=*/
                     {
                         /*path=*/database_path_.path(),
                         /*max_size_in_kb=*/kMaxTotalReportSizeInKb + crash_log_size_in_kb,
@@ -578,7 +576,7 @@ TEST_F(CrashpadAgentTest, Check_DatabaseHasOnlyOneReport_OnPruneDatabaseWithSize
 }
 
 TEST_F(CrashpadAgentTest, Check_DatabaseHasNoOrphanedAttachments) {
-  ResetAgentDefaultConfig({kUploadSuccessful});
+  SetUpAgentDefaultConfig({kUploadSuccessful});
   // We generate an orphan attachment and check it is there.
   const std::string kOrphanedAttachmentDir = files::JoinPath(
       database_path_.path(), files::JoinPath(kCrashpadAttachmentsDir, kCrashpadUUIDString));
@@ -596,7 +594,7 @@ TEST_F(CrashpadAgentTest, Check_DatabaseHasNoOrphanedAttachments) {
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnConcurrentReports) {
-  ResetAgentDefaultConfig(std::vector<bool>(10, kUploadSuccessful));
+  SetUpAgentDefaultConfig(std::vector<bool>(10, kUploadSuccessful));
   // We generate ten crash reports before runnning the loop to make sure that one crash
   // report filing doesn't clean up the concurrent crash reports being filed.
   const size_t kNumReports = 10;
@@ -617,7 +615,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnConcurrentReports) {
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnFailedUpload) {
-  ResetAgent(
+  SetUpAgent(
       Config{/*crashpad_database=*/
              {
                  /*path=*/database_path_.path(),
@@ -634,8 +632,8 @@ TEST_F(CrashpadAgentTest, Succeed_OnFailedUpload) {
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnDisabledUpload) {
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  ResetAgent(Config{/*crashpad_database=*/
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpAgent(Config{/*crashpad_database=*/
                     {
                         /*path=*/database_path_.path(),
                         /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
@@ -650,8 +648,8 @@ TEST_F(CrashpadAgentTest, Succeed_OnDisabledUpload) {
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackAttachments) {
-  ResetAgentDefaultConfig({kUploadSuccessful});
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoAttachment>());
+  SetUpAgentDefaultConfig({kUploadSuccessful});
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoAttachment>());
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAttachmentsInDatabase({kSingleAttachmentKey});
@@ -660,8 +658,8 @@ TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackAttachments) {
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackAnnotations) {
-  ResetAgentDefaultConfig({kUploadSuccessful});
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoAnnotation>());
+  SetUpAgentDefaultConfig({kUploadSuccessful});
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoAnnotation>());
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAttachmentsInDatabase({kSingleAttachmentKey});
@@ -670,8 +668,8 @@ TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackAnnotations) {
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackData) {
-  ResetAgentDefaultConfig({kUploadSuccessful});
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoData>());
+  SetUpAgentDefaultConfig({kUploadSuccessful});
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoData>());
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAttachmentsInDatabase({kSingleAttachmentKey});
@@ -680,9 +678,9 @@ TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackData) {
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackDataProvider) {
-  ResetAgentDefaultConfig({kUploadSuccessful});
+  SetUpAgentDefaultConfig({kUploadSuccessful});
   // We pass a nullptr stub so there will be no fuchsia.feedback.DataProvider service to connect to.
-  ResetFeedbackDataProvider(nullptr);
+  SetUpFeedbackDataProvider(nullptr);
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAttachmentsInDatabase({kSingleAttachmentKey});
@@ -691,8 +689,8 @@ TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackDataProvider) {
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnFeedbackDataProviderTakingTooLong) {
-  ResetAgentDefaultConfig({kUploadSuccessful});
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderNeverReturning>());
+  SetUpAgentDefaultConfig({kUploadSuccessful});
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderNeverReturning>());
 
   fit::result<void, zx_status_t> result = FileOneCrashReportWithSingleAttachment();
   RunLoopFor(zx::sec(10) + zx::sec(1));
@@ -705,10 +703,10 @@ TEST_F(CrashpadAgentTest, Succeed_OnFeedbackDataProviderTakingTooLong) {
 
 TEST_F(CrashpadAgentTest, Check_OneFeedbackDataProviderConnectionPerAnalysis) {
   const size_t num_calls = 5u;
-  ResetAgentDefaultConfig(std::vector<bool>(num_calls, true));
+  SetUpAgentDefaultConfig(std::vector<bool>(num_calls, true));
   // We use a stub that returns no data as we are not interested in the payload, just the number of
   // different connections to the stub.
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoData>());
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoData>());
 
   for (size_t i = 0; i < num_calls; i++) {
     FileOneCrashReportWithSingleAttachment();
@@ -719,7 +717,7 @@ TEST_F(CrashpadAgentTest, Check_OneFeedbackDataProviderConnectionPerAnalysis) {
 }
 
 TEST_F(CrashpadAgentTest, Check_InitialInspectTree) {
-  ResetAgentDefaultConfig();
+  SetUpAgentDefaultConfig();
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(UnorderedElementsAre(
@@ -746,7 +744,7 @@ TEST_F(CrashpadAgentTest, Check_InitialInspectTree) {
 }
 
 TEST_F(CrashpadAgentTest, Check_InspectTreeAfterSuccessfulUpload) {
-  ResetAgentDefaultConfig({kUploadSuccessful});
+  SetUpAgentDefaultConfig({kUploadSuccessful});
   EXPECT_TRUE(FileOneCrashReport().is_ok());
 
   EXPECT_THAT(

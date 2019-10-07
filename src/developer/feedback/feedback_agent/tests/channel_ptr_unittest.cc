@@ -30,7 +30,7 @@ class RetrieveCurrentChannelTest : public gtest::TestLoopFixture {
       : executor_(dispatcher()), service_directory_provider_(dispatcher()) {}
 
  protected:
-  void ResetChannelProvider(std::unique_ptr<StubChannelProvider> stub_channel_provider) {
+  void SetUpChannelProvider(std::unique_ptr<StubChannelProvider> stub_channel_provider) {
     stub_channel_provider_ = std::move(stub_channel_provider);
     if (stub_channel_provider_) {
       FXL_CHECK(service_directory_provider_.AddService(stub_channel_provider_->GetHandler()) ==
@@ -59,7 +59,7 @@ TEST_F(RetrieveCurrentChannelTest, Succeed_SomeChannel) {
   std::unique_ptr<StubChannelProvider> stub_channel_provider =
       std::make_unique<StubChannelProvider>();
   stub_channel_provider->set_channel("my-channel");
-  ResetChannelProvider(std::move(stub_channel_provider));
+  SetUpChannelProvider(std::move(stub_channel_provider));
 
   fit::result<std::string> result = RetrieveCurrentChannel();
 
@@ -68,7 +68,7 @@ TEST_F(RetrieveCurrentChannelTest, Succeed_SomeChannel) {
 }
 
 TEST_F(RetrieveCurrentChannelTest, Succeed_EmptyChannel) {
-  ResetChannelProvider(std::make_unique<StubChannelProvider>());
+  SetUpChannelProvider(std::make_unique<StubChannelProvider>());
 
   fit::result<std::string> result = RetrieveCurrentChannel();
 
@@ -77,7 +77,7 @@ TEST_F(RetrieveCurrentChannelTest, Succeed_EmptyChannel) {
 }
 
 TEST_F(RetrieveCurrentChannelTest, Fail_ChannelProviderNotAvailable) {
-  ResetChannelProvider(nullptr);
+  SetUpChannelProvider(nullptr);
 
   fit::result<std::string> result = RetrieveCurrentChannel();
 
@@ -85,7 +85,7 @@ TEST_F(RetrieveCurrentChannelTest, Fail_ChannelProviderNotAvailable) {
 }
 
 TEST_F(RetrieveCurrentChannelTest, Fail_ChannelProviderClosesConnection) {
-  ResetChannelProvider(std::make_unique<StubChannelProviderClosesConnection>());
+  SetUpChannelProvider(std::make_unique<StubChannelProviderClosesConnection>());
 
   fit::result<std::string> result = RetrieveCurrentChannel();
 
@@ -93,7 +93,7 @@ TEST_F(RetrieveCurrentChannelTest, Fail_ChannelProviderClosesConnection) {
 }
 
 TEST_F(RetrieveCurrentChannelTest, Fail_ChannelProviderNeverReturns) {
-  ResetChannelProvider(std::make_unique<StubChannelProviderNeverReturns>());
+  SetUpChannelProvider(std::make_unique<StubChannelProviderNeverReturns>());
 
   fit::result<std::string> result = RetrieveCurrentChannel();
 
@@ -101,7 +101,7 @@ TEST_F(RetrieveCurrentChannelTest, Fail_ChannelProviderNeverReturns) {
 }
 
 TEST_F(RetrieveCurrentChannelTest, Fail_CallGetCurrentTwice) {
-  ResetChannelProvider(std::make_unique<StubChannelProvider>());
+  SetUpChannelProvider(std::make_unique<StubChannelProvider>());
 
   const zx::duration unused_timeout = zx::sec(1);
   ChannelProvider channel_provider(dispatcher(), service_directory_provider_.service_directory());
