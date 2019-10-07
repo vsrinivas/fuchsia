@@ -54,14 +54,6 @@ static constexpr zx::duration kMinstrelUpdateIntervalForHwSim = zx::msec(83);
 static constexpr zx::duration kMinstrelUpdateIntervalNormal = zx::msec(100);
 
 #define DEV(c) static_cast<Device*>(c)
-static zx_protocol_device_t wlan_device_ops = {
-    .version = DEVICE_OPS_VERSION,
-    .unbind = [](void* ctx) { DEV(ctx)->WlanUnbind(); },
-    .release = [](void* ctx) { DEV(ctx)->WlanRelease(); },
-    .message = [](void* ctx, fidl_msg_t* msg,
-                  fidl_txn_t* txn) { return DEV(ctx)->WlanMessage(msg, txn); },
-};
-
 static zx_protocol_device_t eth_device_ops = {
     .version = DEVICE_OPS_VERSION,
     .unbind = [](void* ctx) { DEV(ctx)->EthUnbind(); },
@@ -134,6 +126,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     errorf("could not query wlanmac device: %d\n", status);
     return status;
   }
+  ZX_DEBUG_ASSERT(wlanmac_info_.ifc_info.driver_features & WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL);
 
   status = ValidateWlanMacInfo(wlanmac_info_);
   if (status != ZX_OK) {
@@ -147,6 +140,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     errorf("failed to start wlanmac device: %s\n", zx_status_get_string(status));
     return status;
   }
+  ZX_DEBUG_ASSERT(sme_channel != ZX_HANDLE_INVALID);
 
   state_->set_address(common::MacAddr(wlanmac_info_.ifc_info.mac_addr));
 
@@ -187,32 +181,11 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
 
   work_thread_ = std::thread(&Device::MainLoop, this);
 
-  if (wlanmac_info_.ifc_info.driver_features & WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
-    ZX_DEBUG_ASSERT(sme_channel != ZX_HANDLE_INVALID);
-    status = AddEthDevice(parent_);
-    if (status != ZX_OK) {
-      errorf("could not add eth device: %s\n", zx_status_get_string(status));
-    } else {
-      channel_ = zx::channel(sme_channel);
-      status = RegisterChannelWaitLocked();
-      if (status != ZX_OK) {
-        errorf("could not wait on channel: %s\n", zx_status_get_string(status));
-        device_remove_deprecated(ethdev_);
-        channel_.reset();
-      }
-    }
+  status = AddEthDevice();
+  if (status != ZX_OK) {
+    errorf("could not add eth device: %s\n", zx_status_get_string(status));
   } else {
-    status = AddWlanDevice();
-    if (status == ZX_OK) {
-      status = AddEthDevice(zxdev_);
-      if (status != ZX_OK) {
-        // Remove the wlan device.
-        device_remove_deprecated(zxdev_);
-        errorf("could not add eth device: %s\n", zx_status_get_string(status));
-      }
-    } else {
-      errorf("could not add wlan device: %s\n", zx_status_get_string(status));
-    }
+    status = Connect(zx::channel(sme_channel));
   }
 
   // Clean up if either device add failed.
@@ -231,16 +204,6 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
   return status;
 }
 
-zx_status_t Device::WlanMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  auto connect = [](void* ctx, zx_handle_t request) {
-    return static_cast<Device*>(ctx)->Connect(zx::channel(request));
-  };
-  static const fuchsia_wlan_mlme_Connector_ops_t ops = {
-      .Connect = connect,
-  };
-  return fuchsia_wlan_mlme_Connector_dispatch(this, txn, msg, &ops);
-}
-
 zx_status_t Device::Connect(zx::channel request) {
   debugfn();
   std::lock_guard<std::mutex> lock(lock_);
@@ -250,20 +213,10 @@ zx_status_t Device::Connect(zx::channel request) {
     errorf("could not wait on channel: %s\n", zx_status_get_string(status));
     channel_.reset();
   }
-  return ZX_OK;
+  return status;
 }
 
-zx_status_t Device::AddWlanDevice() {
-  device_add_args_t args = {};
-  args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "wlan";
-  args.ctx = this;
-  args.ops = &wlan_device_ops;
-  args.proto_id = ZX_PROTOCOL_WLANIF;
-  return device_add(parent_, &args, &zxdev_);
-}
-
-zx_status_t Device::AddEthDevice(zx_device* parent) {
+zx_status_t Device::AddEthDevice() {
   device_add_args_t args = {};
   args.version = DEVICE_ADD_ARGS_VERSION;
   args.name = "wlan-ethernet";
@@ -271,7 +224,7 @@ zx_status_t Device::AddEthDevice(zx_device* parent) {
   args.ops = &eth_device_ops;
   args.proto_id = ZX_PROTOCOL_ETHERNET_IMPL;
   args.proto_ops = &ethernet_impl_ops;
-  return device_add(parent, &args, &ethdev_);
+  return device_add(parent_, &args, &ethdev_);
 }
 
 fbl::unique_ptr<Packet> Device::PreparePacket(const void* data, size_t length, Packet::Peer peer) {
@@ -332,17 +285,6 @@ void Device::ShutdownMainLoop() {
   }
 }
 
-void Device::WlanUnbind() {
-  debugfn();
-  ShutdownMainLoop();
-  device_remove_deprecated(zxdev_);
-}
-
-void Device::WlanRelease() {
-  debugfn();
-  DestroySelf();
-}
-
 // ddk ethernet_impl_protocol_ops methods
 
 void Device::EthUnbind() {
@@ -353,11 +295,7 @@ void Device::EthUnbind() {
 
 void Device::EthRelease() {
   debugfn();
-  // If no wlanif device was added we need to clean-up memory here. Otherwise
-  // WlanRelease() will do the clean-up as |ethdev_| is a child of |zxdev_|.
-  if (wlanmac_info_.ifc_info.driver_features & WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
-    DestroySelf();
-  }
+  DestroySelf();
 }
 
 zx_status_t Device::EthernetImplQuery(uint32_t options, ethernet_info_t* info) {
@@ -849,7 +787,7 @@ void Device::MainLoop() {
 
 void Device::ProcessChannelPacketLocked(uint64_t signal_count) {
   if (!channel_.is_valid()) {
-    // It could be that we closed the channel (e.g., in WlanUnbind()) but there
+    // It could be that we closed the channel (e.g., in EthUnbind()) but there
     // is still a pending packet in the port that indicates read availability on
     // that channel. In that case we simply ignore the packet since we can't
     // read from the channel anyway.

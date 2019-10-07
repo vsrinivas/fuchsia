@@ -43,9 +43,6 @@ class Device : public DeviceInterface {
   zx_status_t Bind();
 
   // ddk device methods
-  void WlanUnbind();
-  void WlanRelease();
-  zx_status_t WlanMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void EthUnbind();
   void EthRelease();
 
@@ -104,8 +101,7 @@ class Device : public DeviceInterface {
     kHwScanComplete,
   };
 
-  zx_status_t AddWlanDevice();
-  zx_status_t AddEthDevice(zx_device* parent);
+  zx_status_t AddEthDevice();
 
   fbl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Peer peer);
   template <typename T>
@@ -141,7 +137,6 @@ class Device : public DeviceInterface {
   void AddMinstrelPeer(const wlan_assoc_ctx_t& assoc_ctx);
 
   zx_device_t* parent_ = nullptr;
-  zx_device_t* zxdev_ = nullptr;
   zx_device_t* ethdev_ = nullptr;
 
   WlanmacProxy wlanmac_proxy_;
