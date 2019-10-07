@@ -54,19 +54,6 @@ class LogListenerOStreamImplTest : public gtest::RealLoopFixture {
     return stream.str();
   }
 
-  std::string WaitForMessage() {
-    std::string str;
-
-    RunLoopUntil([this, &str]() {
-      str = stream.str();
-
-      // Keep looping while we didn't get any data.
-      return str.size();
-    });
-
-    return str;
-  }
-
   std::unique_ptr<internal::LogListenerImpl> log_listener;
   fuchsia::logger::LogListenerPtr proxy;
   std::stringstream stream;
@@ -78,7 +65,11 @@ TEST_F(LogListenerOStreamImplTest, SimpleLog) {
 
   proxy->Log(CreateLogMessage({"tag"}, "Hello"));
 
-  EXPECT_EQ(WaitForMessage(), ExpectedLog({"tag"}, "Hello"));
+  auto message = ExpectedLog({"tag"}, "Hello");
+  RunLoopUntil([this, &message]() {
+    // Keep looping while the message doesn't match
+    return message == stream.str();
+  });
 }
 
 TEST_F(LogListenerOStreamImplTest, SimpleLogs) {
@@ -87,7 +78,11 @@ TEST_F(LogListenerOStreamImplTest, SimpleLogs) {
   proxy->Log(CreateLogMessage({"tag1"}, "Hello1"));
   proxy->Log(CreateLogMessage({"tag2.1", "tag2.2"}, "Hello2"));
 
-  EXPECT_EQ(WaitForMessage(), ExpectedLogs({{"tag1"}, {"tag2.1", "tag2.2"}}, {"Hello1", "Hello2"}));
+  auto message = ExpectedLogs({{"tag1"}, {"tag2.1", "tag2.2"}}, {"Hello1", "Hello2"});
+  RunLoopUntil([this, &message]() {
+    // Keep looping while the message doesn't match
+    return message == stream.str();
+  });
 }
 
 }  // namespace testing
