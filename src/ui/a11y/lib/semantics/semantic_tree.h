@@ -7,6 +7,7 @@
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/math/cpp/fidl.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/vfs/cpp/pseudo_file.h>
@@ -14,8 +15,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <src/lib/fxl/macros.h>
-
+#include "src/lib/fxl/macros.h"
 #include "src/ui/a11y/lib/util/util.h"
 #include "src/ui/scenic/lib/gfx/util/unwrap.h"
 
@@ -25,11 +25,11 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
  public:
   // Callback which will be used to notify that an error is encountered while trying to apply the
   // commit.
-  using CommitErrorCallback = fit::function<void(zx_koid_t)>;
+  using CloseChannelCallback = fit::function<void(zx_koid_t)>;
 
   SemanticTree(fuchsia::ui::views::ViewRef view_ref,
                fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
-               vfs::PseudoDir* debug_dir, CommitErrorCallback callback);
+               vfs::PseudoDir* debug_dir, CloseChannelCallback callback);
 
   ~SemanticTree() override;
 
@@ -119,6 +119,11 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   // Helper function for applying commit.
   bool ApplyCommit();
 
+  // SignalHandler is called when ViewRef peer is destroyed. It is responsible for closing the
+  // channel.
+  void SignalHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                     const zx_packet_signal* signal);
+
   // Helper function to partially update fields from input node to output_node.
   static fuchsia::accessibility::semantics::NodePtr UpdateNode(
       fuchsia::accessibility::semantics::Node input_node,
@@ -132,10 +137,11 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   // List of pending semantic tree transactions.
   std::vector<SemanticTreeTransaction> pending_transactions_;
 
-  // This will be used to close the channel, if there is any issue while applying the commit.
-  CommitErrorCallback commit_error_callback_;
+  // This will be used to close the channel, if there is any error.
+  CloseChannelCallback close_channel_callback_;
 
   fuchsia::ui::views::ViewRef view_ref_;
+  async::WaitMethod<SemanticTree, &SemanticTree::SignalHandler> wait_;
   fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener_;
   vfs::PseudoDir* const debug_dir_;
   bool semantics_manager_enabled_ = false;

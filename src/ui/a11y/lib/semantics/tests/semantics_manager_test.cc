@@ -704,4 +704,46 @@ TEST_F(SemanticsManagerTest, SemanticsManagerDisabled) {
   EXPECT_EQ(returned_node, nullptr);
 }
 
+// Test to check that when event pair is signalled, Semantics Manager gets the signal and it closes
+// the fidl channel.
+TEST_F(SemanticsManagerTest, EventPairSignalled) {
+  // Enable Semantics Manager.
+  semantics_manager_.SetSemanticsManagerEnabled(true);
+
+  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
+  RunLoopUntilIdle();
+
+  // On registration of a new view, Semantic Listener should get notified about the current
+  // settings.
+  EXPECT_TRUE(semantic_provider.GetSemanticsEnabled());
+
+  semantic_provider.SendEventPairSignal();
+  RunLoopUntilIdle();
+
+  // Send node updates and commits.
+  {
+    std::vector<Node> update_nodes;
+    Node node = CreateTestNode(0, kLabelA);
+    Node clone_node;
+    node.Clone(&clone_node);
+    update_nodes.push_back(std::move(clone_node));
+
+    // Update the node created above.
+    FXL_LOG(ERROR) << "Following Error is expected since UpdateSemanticNodes call is made on a "
+                      "channel which is closed.";
+    semantic_provider.UpdateSemanticNodes(std::move(update_nodes));
+
+    // Commit nodes.
+    FXL_LOG(ERROR) << "Following Error is expected since CommitUpdates call is made on a "
+                      "channel which is closed.";
+    semantic_provider.CommitUpdates();
+    RunLoopUntilIdle();
+
+    // Check that the committed node is not present in the semantic tree.
+    NodePtr returned_node =
+        semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
+    EXPECT_EQ(returned_node, nullptr);
+  }
+}
+
 }  // namespace accessibility_test

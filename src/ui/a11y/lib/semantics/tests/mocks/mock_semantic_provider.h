@@ -44,12 +44,18 @@ class MockSemanticProvider {
   // Returns Semantics Enabled field from Semantic Listener.
   bool GetSemanticsEnabled();
 
+  // Function for sending signal to the view ref peer.
+  void SendEventPairSignal();
+
+  fuchsia::ui::views::ViewRef CreateOrphanViewRef();
+
  private:
   // Pointer to semantic tree which is used for sending Update/Delete/Commit
   // messages.
   fuchsia::accessibility::semantics::SemanticTreePtr tree_ptr_;
 
   // ViewRef of the Semantic Tree.
+  zx::eventpair eventpair_peer_;
   fuchsia::ui::views::ViewRef view_ref_;
 
   bool commit_failed_;

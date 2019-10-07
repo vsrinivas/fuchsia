@@ -46,13 +46,13 @@ class AppUnitTest : public gtest::TestLoopFixture {
   AppUnitTest() { context_ = context_provider_.context(); }
   void SetUp() override {
     TestLoopFixture::SetUp();
-    zx::eventpair a, b;
-    zx::eventpair::create(0u, &a, &b);
+
+    zx::eventpair::create(0u, &eventpair_, &eventpair_peer_);
     view_ref_ = fuchsia::ui::views::ViewRef({
-        .reference = std::move(a),
+        .reference = std::move(eventpair_),
     });
   }
-
+  zx::eventpair eventpair_, eventpair_peer_;
   sys::ComponentContext *context_;
   sys::testing::ComponentContextProvider context_provider_;
   fuchsia::ui::views::ViewRef view_ref_;

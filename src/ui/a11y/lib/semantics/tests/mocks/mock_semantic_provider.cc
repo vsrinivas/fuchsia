@@ -10,15 +10,14 @@
 
 namespace accessibility_test {
 
-namespace {
-
-fuchsia::ui::views::ViewRef CreateOrphanViewRef() {
+fuchsia::ui::views::ViewRef MockSemanticProvider::CreateOrphanViewRef() {
   fuchsia::ui::views::ViewRef view_ref;
-  zx::eventpair unused;
-  FX_CHECK(zx::eventpair::create(0u, &view_ref.reference, &unused) == ZX_OK);
+
+  FX_CHECK(zx::eventpair::create(0u, &view_ref.reference, &eventpair_peer_) == ZX_OK);
   return view_ref;
 }
 
+namespace {
 fuchsia::ui::views::ViewRef Clone(const fuchsia::ui::views::ViewRef& view_ref) {
   fuchsia::ui::views::ViewRef clone;
   FX_CHECK(fidl::Clone(view_ref, &clone) == ZX_OK);
@@ -55,6 +54,12 @@ void MockSemanticProvider::SetHitTestResult(uint32_t hit_test_result) {
 
 bool MockSemanticProvider::GetSemanticsEnabled() {
   return semantic_listener_.GetSemanticsEnabled();
+}
+
+void MockSemanticProvider::SendEventPairSignal() {
+  // Reset event pair peer. This should call close on the event pair that will send peer closed
+  // signal.
+  eventpair_peer_.reset();
 }
 
 }  // namespace accessibility_test

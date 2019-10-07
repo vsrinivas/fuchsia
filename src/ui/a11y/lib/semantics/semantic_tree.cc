@@ -4,8 +4,10 @@
 
 #include "src/ui/a11y/lib/semantics/semantic_tree.h"
 
+#include <lib/async/default.h>
 #include <lib/fsl/handles/object_info.h>
 #include <lib/syslog/cpp/logger.h>
+#include <zircon/types.h>
 
 #include "fuchsia/accessibility/semantics/cpp/fidl.h"
 #include "src/lib/fxl/logging.h"
@@ -26,11 +28,13 @@ constexpr int kRootNode = 0;
 
 SemanticTree::SemanticTree(fuchsia::ui::views::ViewRef view_ref,
                            fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
-                           vfs::PseudoDir* debug_dir, CommitErrorCallback commit_error_callback)
-    : commit_error_callback_(std::move(commit_error_callback)),
+                           vfs::PseudoDir* debug_dir, CloseChannelCallback error_callback)
+    : close_channel_callback_(std::move(error_callback)),
       view_ref_(std::move(view_ref)),
+      wait_(this, view_ref_.reference.get(), ZX_EVENTPAIR_PEER_CLOSED),
       semantic_listener_(std::move(semantic_listener)),
       debug_dir_(debug_dir) {
+  wait_.Begin(async_get_default_dispatcher());
   InitializeDebugEntry();
 }
 
@@ -71,7 +75,7 @@ void SemanticTree::CommitUpdates(CommitUpdatesCallback callback) {
     callback();
     // Call Semantics Manager to close the channel for current tree.
     FX_LOGS(ERROR) << "Closing Semantic Tree Channel for View(KOID):" << GetKoid(view_ref_);
-    commit_error_callback_(GetKoid(view_ref_));
+    close_channel_callback_(GetKoid(view_ref_));
   }
 }
 
@@ -333,6 +337,11 @@ void SemanticTree::EnableSemanticsUpdates(bool enabled) {
   fuchsia::accessibility::semantics::SemanticListener::OnSemanticsModeChangedCallback callback =
       []() { FX_LOGS(INFO) << "NotifySemanticsEnabled complete."; };
   semantic_listener_->OnSemanticsModeChanged(enabled, std::move(callback));
+}
+
+void SemanticTree::SignalHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                 zx_status_t status, const zx_packet_signal* signal) {
+  close_channel_callback_(GetKoid(view_ref_));
 }
 
 // namespace a11y
