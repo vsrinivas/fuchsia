@@ -51,7 +51,7 @@ def parse_args():
     parser.add_argument(
         '--docroot',
         default=os.path.normpath(
-            os.path.join(SCRIPT_DIR, os.pardir, os.pardir, 'docs', 'zircon',
+            os.path.join(SCRIPT_DIR, os.pardir, os.pardir, 'docs', 'reference',
                          'syscalls')),
         help='root of syscalls/ to be updated')
     parser.add_argument(
@@ -488,6 +488,8 @@ def check_for_orphans(syscalls, root):
     for md in os.listdir(root):
         if md == '_toc.yaml':
             continue
+        if md == 'README.md':
+            continue
         if not md.endswith('.md'):
             print >> sys.stderr, 'warning: non .md file %s' % md
         name = md[:-3]
@@ -499,10 +501,10 @@ def check_for_orphans(syscalls, root):
 
 # A few concept docs that are linked in SEE ALSO sections.
 SEE_ALSO_CONCEPTS = {
-    'rights': '../rights.md',
-    'exceptions': '../exceptions.md',
-    'futex objects': '../objects/futex.md',
-    'timer slack': '../timer_slack.md'
+    'rights': '/docs/zircon/rights.md',
+    'exceptions': '/docs/zircon/exceptions.md',
+    'futex objects': '/docs/zircon/objects/futex.md',
+    'timer slack': '/docs/zircon/timer_slack.md'
 }
 
 

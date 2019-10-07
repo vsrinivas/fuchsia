@@ -17,7 +17,7 @@ zx_status_t zx_job_set_policy(zx_handle_t handle,
                               uint32_t options,
                               uint32_t topic,
                               const void* policy,
-                              uint32_t count);
+                              uint32_t policy_size);
 ```
 
 ## DESCRIPTION

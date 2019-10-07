@@ -19,7 +19,7 @@ zx_status_t zx_bti_pin(zx_handle_t handle,
                        uint64_t offset,
                        uint64_t size,
                        zx_paddr_t* addrs,
-                       size_t addrs_count,
+                       size_t num_addrs,
                        zx_handle_t* pmt);
 ```
 
