@@ -68,6 +68,15 @@ pub struct InspectReaderData {
     /// that this data packet is about.
     pub component_hierarchy_path: PathBuf,
 
+    /// The path from the root parent to
+    /// the component generating the inspect reader
+    /// data, with all non-monikers stripped, such as
+    /// `r` and `c` characters denoting realm or component
+    /// or realm id/component id.
+    /// eg: /r/my_realm/123/c/echo.cmx/123/ becomes:
+    ///     [my_realm, echo.cmx]
+    pub absolute_moniker: Vec<String>,
+
     /// The name of the component.
     pub component_name: String,
 
@@ -404,8 +413,12 @@ impl HubCollector {
         let inspect_data_proxy =
             inspect::InspectDataCollector::find_directory_proxy(&inspect_out_dir_path).await?;
 
+        let mut absolute_moniker = data.realm_path.0;
+        absolute_moniker.push(data.component_name.clone());
+
         let inspect_reader_data = InspectReaderData {
             component_hierarchy_path: component_path.to_path_buf(),
+            absolute_moniker: absolute_moniker,
             component_name: data.component_name,
             component_id: data.component_id,
             data_directory_proxy: Some(inspect_data_proxy),
@@ -560,10 +573,12 @@ mod tests {
         component_path: &str,
         component_name: &str,
         component_id: &str,
+        absolute_moniker: Vec<String>,
     ) -> ComponentEvent {
         return ComponentEvent::OutDirectoryAppeared(InspectReaderData {
             component_hierarchy_path: component_path.to_string().into(),
             component_name: component_name.to_string(),
+            absolute_moniker: absolute_moniker,
             component_id: component_id.to_string(),
             data_directory_proxy: None,
         });
@@ -574,6 +589,7 @@ mod tests {
         fn eq(&self, other: &Self) -> bool {
             let InspectReaderData {
                 component_hierarchy_path,
+                absolute_moniker,
                 component_name,
                 component_id,
                 data_directory_proxy: _,
@@ -581,12 +597,14 @@ mod tests {
             let InspectReaderData {
                 component_hierarchy_path: heirarchy_path,
                 component_name: name,
+                absolute_moniker: moniker,
                 component_id: id,
                 data_directory_proxy: _,
             } = other;
             component_hierarchy_path == heirarchy_path
                 && component_name == name
                 && component_id == id
+                && absolute_moniker == moniker
         }
     }
 
@@ -709,7 +727,12 @@ mod tests {
         );
 
         assert_eq!(
-            make_out_directory_event("c/my_component.cmx/10", "my_component.cmx", "10"),
+            make_out_directory_event(
+                "c/my_component.cmx/10",
+                "my_component.cmx",
+                "10",
+                vec!["my_component.cmx".to_string()]
+            ),
             component_events.next().await.unwrap()
         );
 
@@ -753,7 +776,8 @@ mod tests {
             make_out_directory_event(
                 "r/app/1/c/runner_component.cmx/12",
                 "runner_component.cmx",
-                "12"
+                "12",
+                vec!["app".to_string(), "runner_component.cmx".to_string()],
             ),
             component_events.next().await.unwrap()
         );

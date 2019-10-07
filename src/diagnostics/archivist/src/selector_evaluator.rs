@@ -12,6 +12,7 @@ use {
     fidl_fuchsia_diagnostics_inspect::Selector,
     std::collections::HashSet,
     std::path::PathBuf,
+    std::sync::Arc,
 };
 
 /// Struct that encodes the information needed to
@@ -98,20 +99,20 @@ impl<'a> SelectorAutomata<'a> {
 ///
 /// Requires: hierarchy_path is not empty.
 ///           selectors contains valid Selectors.
-fn match_component_moniker_against_selectors<'a>(
+pub fn match_component_moniker_against_selectors<'a>(
     hierarchy_path: &Vec<String>,
-    selectors: &'a Vec<Selector>,
-) -> Result<Vec<&'a Selector>, Error> {
+    selectors: &Vec<Arc<Selector>>,
+) -> Result<Vec<Arc<Selector>>, Error> {
     if hierarchy_path.is_empty() {
         return Err(format_err!(
             "Cannot have empty hierarchy paths, at least the component name is required."
         ));
     }
 
-    let matching_selectors: Vec<&Selector> = selectors
+    let matching_selectors: Vec<Arc<Selector>> = selectors
         .iter()
         // TODO(4601): Run these DFA executions concurrently with async.
-        .filter(|selector| {
+        .filter_map(|selector| {
             let component_selector = &selector.component_selector;
             let component_moniker: &Vec<PathSelectionNode> =
                 match &component_selector.component_moniker {
@@ -124,7 +125,11 @@ fn match_component_moniker_against_selectors<'a>(
             }
 
             let mut automata = SelectorAutomata::new(component_moniker);
-            automata.evaluate_automata_against_path(hierarchy_path)
+            if automata.evaluate_automata_against_path(hierarchy_path) {
+                Some(selector.clone())
+            } else {
+                None
+            }
         })
         .collect();
 

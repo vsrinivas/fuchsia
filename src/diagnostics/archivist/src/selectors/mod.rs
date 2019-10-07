@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 #![allow(dead_code)]
-
 use {
-    failure::Fail,
+    failure::{format_err, Error},
     fidl_fuchsia_diagnostics::{ComponentSelector, PathSelectionNode, PatternMatcher},
     fidl_fuchsia_diagnostics_inspect::{PropertySelector, Selector, TreeSelector},
+    std::fs,
+    std::io::{BufRead, BufReader},
+    std::path::{Path, PathBuf},
 };
 // Character used to delimit the different sections of an inspect selector,
 // the component selector, the tree selector, and the property selector.
@@ -26,14 +28,10 @@ static WILDCARD_SYMBOL: &str = "*";
 // Pattern used to encode globs.
 static GLOB_SYMBOL: &str = "**";
 
-#[derive(Fail, Debug)]
-#[fail(display = "Selector parsing failed: {}", _0)]
-pub struct SelectorParserError(String);
-
 /// Parse a string into a FIDL PathSelectionNode structure.
 fn convert_string_to_path_selection_node(
     string_to_convert: &String,
-) -> Result<PathSelectionNode, SelectorParserError> {
+) -> Result<PathSelectionNode, Error> {
     match string_to_convert {
         wildcard if wildcard == WILDCARD_SYMBOL => {
             Ok(PathSelectionNode::PatternMatcher(PatternMatcher::Wildcard))
@@ -41,7 +39,7 @@ fn convert_string_to_path_selection_node(
         glob if glob == GLOB_SYMBOL => Ok(PathSelectionNode::PatternMatcher(PatternMatcher::Glob)),
         _ => {
             if string_to_convert.contains(GLOB_SYMBOL) {
-                Err(SelectorParserError("String literals can't contain globs.".to_string()))
+                Err(format_err!("String literals can't contain globs."))
             } else {
                 Ok(PathSelectionNode::StringPattern(string_to_convert.to_string()))
             }
@@ -51,25 +49,21 @@ fn convert_string_to_path_selection_node(
 
 /// Parse a string into a FIDL PropertySelector structure.
 ///
-/// Glob strings will throw SelectorParserErrors since globs are not
-/// permitted for property selction.
+/// Glob strings will throw Errorsince globs are not
+/// permitted for property selection.
 fn convert_string_to_property_selector(
     string_to_convert: &String,
-) -> Result<PropertySelector, SelectorParserError> {
+) -> Result<PropertySelector, Error> {
     if string_to_convert.is_empty() {
-        return Err(SelectorParserError(
-            "Tree Selectors must have non-empty property selectors.".to_string(),
-        ));
+        return Err(format_err!("Tree Selectors must have non-empty property selectors.",));
     }
 
     match string_to_convert {
         wildcard if wildcard == WILDCARD_SYMBOL => Ok(PropertySelector::Wildcard(true)),
-        glob if glob == GLOB_SYMBOL => {
-            Err(SelectorParserError("Property selectors don't support globs.".to_string()))
-        }
+        glob if glob == GLOB_SYMBOL => Err(format_err!("Property selectors don't support globs.")),
         _ => {
             if string_to_convert.contains(GLOB_SYMBOL) {
-                Err(SelectorParserError("String literals can't contain globs.".to_string()))
+                Err(format_err!("String literals can't contain globs."))
             } else {
                 Ok(PropertySelector::StringPattern(string_to_convert.to_string()))
             }
@@ -82,14 +76,14 @@ fn convert_string_to_property_selector(
 fn handle_escaped_char(
     token_builder: &mut String,
     selection_iter: &mut std::str::CharIndices,
-) -> Result<(), SelectorParserError> {
+) -> Result<(), Error> {
     token_builder.push(ESCAPE_CHARACTER);
     let escaped_char_option: Option<(usize, char)> = selection_iter.next();
     match escaped_char_option {
         Some((_, escaped_char)) => token_builder.push(escaped_char),
         None => {
-            return Err(SelectorParserError(
-                "Selecter fails verification due to unmatched escape character".to_string(),
+            return Err(format_err!(
+                "Selecter fails verification due to unmatched escape character",
             ));
         }
     }
@@ -98,15 +92,10 @@ fn handle_escaped_char(
 
 /// Converts a string into a vector of string tokens representing the unparsed
 /// string delimited by the provided delimiter, excluded escaped delimiters.
-pub fn tokenize_string(
-    untokenized_selector: &str,
-    delimiter: char,
-) -> Result<Vec<String>, SelectorParserError> {
+pub fn tokenize_string(untokenized_selector: &str, delimiter: char) -> Result<Vec<String>, Error> {
     let mut token_aggregator = Vec::new();
     let mut curr_token_builder: String = String::new();
     let mut unparsed_selector_iter = untokenized_selector.char_indices();
-
-    let empty_token_error_string = format!("Cannot have empty strings delimited by {}", delimiter);
 
     while let Some((_, selector_char)) = unparsed_selector_iter.next() {
         match selector_char {
@@ -115,7 +104,10 @@ pub fn tokenize_string(
             }
             selector_delimiter if selector_delimiter == delimiter => {
                 if curr_token_builder.is_empty() {
-                    return Err(SelectorParserError(empty_token_error_string));
+                    return Err(format_err!(
+                        "Cannot have empty strings delimited by {}",
+                        delimiter
+                    ));
                 }
                 token_aggregator.push(curr_token_builder);
                 curr_token_builder = String::new();
@@ -127,7 +119,7 @@ pub fn tokenize_string(
     // Push the last section of the selector into the aggregator since we don't delimit the
     // end of the selector.
     if curr_token_builder.is_empty() {
-        return Err(SelectorParserError(empty_token_error_string));
+        return Err(format_err!("Cannot have empty strings delimited by {}", delimiter));
     }
 
     token_aggregator.push(curr_token_builder);
@@ -137,11 +129,9 @@ pub fn tokenize_string(
 /// Converts an unparsed component selector string into a ComponentSelector.
 pub fn parse_component_selector(
     unparsed_component_selector: &String,
-) -> Result<ComponentSelector, SelectorParserError> {
+) -> Result<ComponentSelector, Error> {
     if unparsed_component_selector.is_empty() {
-        return Err(SelectorParserError(
-            "ComponentSelector must have atleast one path node.".to_string(),
-        ));
+        return Err(format_err!("ComponentSelector must have atleast one path node.",));
     }
 
     let tokenized_component_selector =
@@ -153,13 +143,11 @@ pub fn parse_component_selector(
     let path_node_vector = tokenized_component_selector
         .iter()
         .map(|node_string| convert_string_to_path_selection_node(node_string))
-        .collect::<Result<Vec<PathSelectionNode>, SelectorParserError>>()?;
+        .collect::<Result<Vec<PathSelectionNode>, Error>>()?;
 
     match path_node_vector.as_slice() {
         [] => {
-            return Err(SelectorParserError(
-                "ComponentSelector must have atleast one path node.".to_string(),
-            ));
+            return Err(format_err!("ComponentSelector must have atleast one path node.",));
         }
         _ => component_selector.component_moniker = Some(path_node_vector),
     }
@@ -172,7 +160,7 @@ pub fn parse_component_selector(
 pub fn parse_tree_selector(
     unparsed_node_path: &String,
     unparsed_property_selector: &String,
-) -> Result<TreeSelector, SelectorParserError> {
+) -> Result<TreeSelector, Error> {
     let mut tree_selector: TreeSelector = TreeSelector::empty();
 
     if unparsed_node_path.is_empty() {
@@ -182,7 +170,7 @@ pub fn parse_tree_selector(
             tokenize_string(unparsed_node_path, PATH_NODE_DELIMITER)?
                 .iter()
                 .map(|node_string| convert_string_to_path_selection_node(node_string))
-                .collect::<Result<Vec<PathSelectionNode>, SelectorParserError>>()?,
+                .collect::<Result<Vec<PathSelectionNode>, Error>>()?,
         );
     }
 
@@ -193,7 +181,7 @@ pub fn parse_tree_selector(
 }
 
 /// Converts an unparsed Inspect selector into a ComponentSelector and TreeSelector.
-pub fn parse_selector(unparsed_selector: &str) -> Result<Selector, SelectorParserError> {
+pub fn parse_selector(unparsed_selector: &str) -> Result<Selector, Error> {
     // Tokenize the selector by `:` char in order to process each subselector separately.
     let selector_sections = tokenize_string(unparsed_selector, SELECTOR_DELIMITER)?;
 
@@ -202,15 +190,52 @@ pub fn parse_selector(unparsed_selector: &str) -> Result<Selector, SelectorParse
             component_selector: parse_component_selector(component_selector)?,
             tree_selector: parse_tree_selector(inspect_node_selector, property_selector)?,
         }),
-        _ => Err(SelectorParserError(
-            "Selector format requires exactly 3 subselectors delimited by a `:`.".to_string(),
-        )),
+        _ => {
+            Err(format_err!("Selector format requires exactly 3 subselectors delimited by a `:`.",))
+        }
     }
+}
+
+pub fn parse_selector_file(selector_file: &Path) -> Result<Vec<Selector>, Error> {
+    let selector_file = match fs::File::open(selector_file) {
+        Ok(file) => file,
+        Err(_) => return Err(format_err!("Failed to open selector file at configured path.",)),
+    };
+    let mut selector_vec = Vec::new();
+    let reader = BufReader::new(selector_file);
+    for line in reader.lines() {
+        match line {
+            Ok(line) => selector_vec.push(parse_selector(&line)?),
+            Err(_) => {
+                return Err(
+                    format_err!("Failed to read line of selector file at configured path.",),
+                )
+            }
+        }
+    }
+    Ok(selector_vec)
+}
+
+pub fn parse_selectors(selector_path: impl Into<PathBuf>) -> Result<Vec<Selector>, Error> {
+    let selector_directory_path: PathBuf = selector_path.into();
+    let mut selector_vec: Vec<Selector> = Vec::new();
+    for entry in fs::read_dir(selector_directory_path)? {
+        let entry = entry?;
+        if entry.path().is_dir() {
+            return Err(format_err!("Static selector directories are expected to be flat.",));
+        } else {
+            selector_vec.append(&mut parse_selector_file(&entry.path())?);
+        }
+    }
+    Ok(selector_vec)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs::File;
+    use std::io::prelude::*;
+    use tempfile::TempDir;
 
     #[test]
     fn canonical_component_selector_test() {
@@ -391,5 +416,55 @@ mod tests {
             tree_selector_result.target_properties,
             Some(PropertySelector::StringPattern("c".to_string()))
         );
+    }
+
+    #[test]
+    fn successful_selector_parsing() {
+        let tempdir = TempDir::new().expect("failed to create tmp dir");
+        File::create(tempdir.path().join("a.txt"))
+            .expect("create file")
+            .write_all(b"a:b:c")
+            .expect("writing test file");
+        File::create(tempdir.path().join("b.txt"))
+            .expect("create file")
+            .write_all(b"**:**:*")
+            .expect("writing test file");
+
+        assert!(parse_selectors(tempdir.path()).is_ok());
+    }
+
+    #[test]
+    fn unsuccessful_selector_parsing_bad_selector() {
+        let tempdir = TempDir::new().expect("failed to create tmp dir");
+        File::create(tempdir.path().join("a.txt"))
+            .expect("create file")
+            .write_all(b"a:b:c")
+            .expect("writing test file");
+        File::create(tempdir.path().join("b.txt"))
+            .expect("create file")
+            .write_all(b"**:**:**")
+            .expect("writing test file");
+
+        assert!(parse_selectors(tempdir.path()).is_err());
+    }
+
+    #[test]
+    fn unsuccessful_selector_parsing_nonflat_dir() {
+        let tempdir = TempDir::new().expect("failed to create tmp dir");
+        File::create(tempdir.path().join("a.txt"))
+            .expect("create file")
+            .write_all(b"a:b:c")
+            .expect("writing test file");
+        File::create(tempdir.path().join("b.txt"))
+            .expect("create file")
+            .write_all(b"**:**:**")
+            .expect("writing test file");
+
+        std::fs::create_dir_all(tempdir.path().join("nested")).expect("make nested");
+        File::create(tempdir.path().join("nested/c.txt"))
+            .expect("create file")
+            .write_all(b"**:**:**")
+            .expect("writing test file");
+        assert!(parse_selectors(tempdir.path()).is_err());
     }
 }

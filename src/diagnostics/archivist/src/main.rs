@@ -7,6 +7,7 @@
 use {
     failure::Error,
     fidl::endpoints::create_proxy,
+    fidl_fuchsia_diagnostics_inspect::Selector,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -29,6 +30,7 @@ mod selectors;
 mod trie;
 
 static ARCHIVE_PATH: &str = "/data/archive";
+static INSPECT_ALL_SELECTORS: &str = "/config/data/pipelines/all/";
 static ARCHIVE_CONFIG_FILE: &str = "/config/data/archivist_config.json";
 
 static DEFAULT_NUM_THREADS: usize = 4;
@@ -70,9 +72,16 @@ fn main() -> Result<(), Error> {
         storage_inspect_proxy("global_tmp".to_string(), PathBuf::from("/global_tmp"))?,
     );
 
+    let all_selectors: Vec<Arc<Selector>> = match selectors::parse_selectors(INSPECT_ALL_SELECTORS)
+    {
+        Ok(selectors) => selectors.into_iter().map(|selector| Arc::new(selector)).collect(),
+        Err(parsing_error) => panic!("Parsing selectors failed: {}", parsing_error),
+    };
+
     // The repository that will serve as the data transfer between the archivist server
     // and all services needing access to inspect data.
-    let inspect_repository = Arc::new(Mutex::new(inspect::InspectDataRepository::new()));
+    let all_inspect_repository =
+        Arc::new(Mutex::new(inspect::InspectDataRepository::new(all_selectors)));
 
     let archivist_configuration: configs::Config = match configs::parse_config(ARCHIVE_CONFIG_FILE)
     {
@@ -83,7 +92,8 @@ fn main() -> Result<(), Error> {
     let archivist_threads: usize =
         archivist_configuration.num_threads.unwrap_or(DEFAULT_NUM_THREADS);
 
-    let archivist_state = ArchivistState::new(archivist_configuration, inspect_repository.clone())?;
+    let archivist_state =
+        ArchivistState::new(archivist_configuration, all_inspect_repository.clone())?;
 
     let log_manager2 = log_manager.clone();
     let log_manager3 = log_manager.clone();
@@ -96,7 +106,7 @@ fn main() -> Result<(), Error> {
             // This ends up functioning like a SPMC channel, in which only the archivist
             // pushes updates to the repository, but multiple inspect Reader sessions
             // read the data.
-            let reader_inspect_repository = inspect_repository.clone();
+            let reader_inspect_repository = all_inspect_repository.clone();
             let inspect_reader_server = inspect::ReaderServer::new(reader_inspect_repository);
 
             inspect_reader_server.spawn_reader_server(stream)
@@ -318,12 +328,13 @@ fn populate_inspect_repo(
     let state = state.lock().unwrap();
     let mut inspect_repo = state.inspect_repository.lock().unwrap();
 
-    // The InspectreaderData should always contain a directory_proxy. Its existence
+    // The InspectReaderData should always contain a directory_proxy. Its existence
     // as an Option is only to support mock objects for equality in tests.
     let inspect_directory_proxy = inspect_reader_data.data_directory_proxy.unwrap();
 
     inspect_repo.add(
         inspect_reader_data.component_name,
+        inspect_reader_data.absolute_moniker,
         inspect_reader_data.component_hierarchy_path,
         inspect_directory_proxy,
     );

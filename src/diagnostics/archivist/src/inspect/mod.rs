@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::collection::*,
+    crate::selector_evaluator,
     crate::selectors,
     crate::trie::*,
     failure::{self, err_msg, format_err, Error},
@@ -20,7 +21,7 @@ use {
     std::sync::{Arc, Mutex},
 };
 
-type InspectDataTrie = Trie<char, (PathBuf, DirectoryProxy)>;
+type InspectDataTrie = Trie<char, (PathBuf, DirectoryProxy, Vec<Arc<Selector>>)>;
 
 /// InspectDataCollector holds the information needed to retrieve the Inspect
 /// VMOs associated with a particular component
@@ -141,21 +142,45 @@ pub struct InspectDataRepository {
     // TODO(lukenicholson): Wrap directory proxies in a trie of
     // component names to make filtering by selectors work.
     data_directories: InspectDataTrie,
+    static_selectors: Vec<Arc<Selector>>,
 }
 
 impl InspectDataRepository {
-    pub fn new() -> Self {
-        InspectDataRepository { data_directories: InspectDataTrie::new() }
+    pub fn new(static_selectors: Vec<Arc<Selector>>) -> Self {
+        if static_selectors.is_empty() {
+            panic!(
+                "We require all inspect repositories to be explicit about the data they select."
+            );
+        }
+
+        InspectDataRepository {
+            data_directories: InspectDataTrie::new(),
+            static_selectors: static_selectors,
+        }
     }
 
     pub fn add(
         &mut self,
         component_name: String,
+        absolute_moniker: Vec<String>,
         component_hierachy_path: PathBuf,
         directory_proxy: DirectoryProxy,
     ) {
-        self.data_directories
-            .insert(component_name.chars().collect(), (component_hierachy_path, directory_proxy));
+        let matched_selectors = selector_evaluator::match_component_moniker_against_selectors(
+            &absolute_moniker,
+            &self.static_selectors,
+        );
+        match matched_selectors {
+            Ok(selectors) => {
+                if !selectors.is_empty() {
+                    self.data_directories.insert(
+                        component_name.chars().collect(),
+                        (component_hierachy_path, directory_proxy, selectors),
+                    );
+                }
+            }
+            Err(_) => eprintln!("Failed to match absolute moniker against static selectors."),
+        }
     }
 
     /// Return all of the DirectoryProxies that contain Inspect hierarchies
@@ -164,9 +189,11 @@ impl InspectDataRepository {
         return self
             .data_directories
             .iter()
-            .filter_map(|(_, (_, y))| match io_util::clone_directory(&y, CLONE_FLAG_SAME_RIGHTS) {
-                Ok(directory) => Some(directory),
-                Err(_) => None,
+            .filter_map(|(_, (_, y, _))| {
+                match io_util::clone_directory(&y, CLONE_FLAG_SAME_RIGHTS) {
+                    Ok(directory) => Some(directory),
+                    Err(_) => None,
+                }
             })
             .collect();
     }
@@ -469,12 +496,17 @@ mod tests {
             let mut executor = fasync::Executor::new().unwrap();
 
             executor.run_singlethreaded(async {
-                let mut inspect_repo = InspectDataRepository::new();
+                let glob_selector = selectors::parse_selector(r#"**:**:*"#).unwrap();
+                let mut inspect_repo = InspectDataRepository::new(vec![Arc::new(glob_selector)]);
 
                 let out_dir_proxy =
                     InspectDataCollector::find_directory_proxy(&path).await.unwrap();
 
-                inspect_repo.add("root.inspect".to_string(), path, out_dir_proxy);
+                // The absolute moniker here is made up since the selector is a glob
+                // selector, so any path would match.
+                let absolute_moniker = vec!["a".to_string(), "b".to_string()];
+
+                inspect_repo.add("root.inspect".to_string(), absolute_moniker, path, out_dir_proxy);
 
                 let reader_server = ReaderServer::new(Arc::new(Mutex::new(inspect_repo)));
 
