@@ -2371,7 +2371,6 @@ TEST_F(CompositeTestCase, Topology) {
   ASSERT_STR_EQ(path_buf, "/dev/composite-dev");
 }
 
-// Disable the test as it is flaking fxb/34842
 TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {
   ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
   set_coordinator_loop_thread_running(true);
@@ -2417,7 +2416,8 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {
   ASSERT_FALSE(suspend_task_sys.is_pending());
 }
 
-TEST_F(MultipleDeviceTestCase, SuspendFidlMexecFail) {
+// Disable the test as it is flaking fxb/37462
+/*TEST_F(MultipleDeviceTestCase, SuspendFidlMexecFail) {
   ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
   set_coordinator_loop_thread_running(true);
 
@@ -2460,7 +2460,7 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexecFail) {
   ASSERT_TRUE(callback_executed);
   ASSERT_FALSE(suspend_task_pbus.is_pending());
   ASSERT_TRUE(suspend_task_sys.is_pending());
-}
+}*/
 
 }  // namespace
 
