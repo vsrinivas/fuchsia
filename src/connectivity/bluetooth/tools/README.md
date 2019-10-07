@@ -37,7 +37,7 @@ This will fetch the current buffer of packets for all devices under `/dev/class/
 output the traffic to stdout, then exit:
 
 ```
-$ bt-snoop-cli --dump --format=pretty
+$ bt-snoop-cli --dump --format pretty
 ```
 
 To initiate a live capture using Wireshark (on host):
@@ -48,7 +48,7 @@ $ fx shell bt-snoop-cli | wireshark -k -i -
 
 To specify a custom HCI device ("005") and output location (on device):
 ```
-$ bt-snoop-cli --output=/my/custom/path --device=005
+$ bt-snoop-cli --output /my/custom/path --device 005
 ```
 
 Logs can then be copied from the Fuchsia device and given to any tool that can
