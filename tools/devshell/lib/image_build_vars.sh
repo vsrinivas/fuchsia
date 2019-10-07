@@ -6,4 +6,3 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/vars.sh |
 fx-config-read
 
 source "${FUCHSIA_BUILD_DIR}"/image_paths.sh
-source "${FUCHSIA_BUILD_DIR}"/zedboot_image_paths.sh
