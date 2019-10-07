@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
+    crate::input::monitor_mic_mute,
     crate::registry::base::{Command, Notifier, State},
     crate::registry::service_context::ServiceContext,
     crate::switchboard::base::*,
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_media_audio::MUTED_GAIN_DB,
+    fidl_fuchsia_ui_input::MediaButtonsEvent,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
     futures::StreamExt,
@@ -60,6 +62,8 @@ pub fn spawn_audio_controller(
     let (audio_handler_tx, mut audio_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
 
     let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));
+    let mic_mute_state = Arc::<RwLock<bool>>::new(RwLock::new(DEFAULT_MIC_MUTE));
+    let input_service_connected = Arc::<RwLock<bool>>::new(RwLock::new(false));
 
     // TODO(go/fxb/35878): Add persistent storage.
     // TODO(go/fxb/35983): Load default values from a config.
@@ -69,6 +73,30 @@ pub fn spawn_audio_controller(
         stored_audio_streams.insert(stream.stream_type.clone(), stream.clone());
     }
 
+    let (input_tx, mut input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
+
+    {
+        let mut input_service_connected_lock = input_service_connected.write();
+        *input_service_connected_lock =
+            monitor_mic_mute(service_context_handle.clone(), input_tx.clone()).is_ok();
+    }
+
+    let mic_mute_state_clone = mic_mute_state.clone();
+    let notifier_lock_clone = notifier_lock.clone();
+    fasync::spawn(async move {
+        while let Some(event) = input_rx.next().await {
+            if let Some(mic_mute) = event.mic_mute {
+                if *mic_mute_state_clone.read() != mic_mute {
+                    *mic_mute_state_clone.write() = mic_mute;
+                    if let Some(notifier) = (*notifier_lock_clone.read()).clone() {
+                        notifier.unbounded_send(SettingType::Audio).unwrap();
+                    }
+                }
+            }
+        }
+    });
+
+    let input_service_connected_clone = input_service_connected.clone();
     fasync::spawn(async move {
         // Connect to the audio core service.
         let audio_service = service_context_handle
@@ -128,10 +156,22 @@ pub fn spawn_audio_controller(
                             }
                         }
                         SettingRequest::Get => {
+                            {
+                                let mut input_service_connected_lock =
+                                    input_service_connected_clone.write();
+
+                                if !*input_service_connected_lock {
+                                    *input_service_connected_lock = monitor_mic_mute(
+                                        service_context_handle.clone(),
+                                        input_tx.clone(),
+                                    )
+                                    .is_ok();
+                                }
+                            }
                             let _ = responder
                                 .send(Ok(Some(SettingResponse::Audio(AudioInfo {
                                     streams: get_streams_array_from_map(&stored_audio_streams),
-                                    input: AudioInputInfo { mic_mute: DEFAULT_MIC_MUTE },
+                                    input: AudioInputInfo { mic_mute: *mic_mute_state.read() },
                                 }))))
                                 .ok();
                         }
