@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
@@ -67,5 +68,12 @@ test_package("network_manager_tests") {
       name = "network_manager_core_lib_test"
       environments = basic_envs
     },
+  ]
+}
+
+config_data("network_manager_sysmgr_config") {
+  for_pkg = "sysmgr"
+  sources = [
+    rebase_path("config/network_manager.sysmgr_config"),
   ]
 }

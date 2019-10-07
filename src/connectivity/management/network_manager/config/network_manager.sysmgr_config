@@ -1,0 +1,4 @@
+{
+  "apps": [ "fuchsia-pkg://fuchsia.com/router_manager#meta/router_manager.cmx" ]
+}
+
