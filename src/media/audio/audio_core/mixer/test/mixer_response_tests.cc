@@ -60,13 +60,26 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
 
   std::vector<float> accum(kFreqTestBufSize);
   uint32_t dest_offset = 0;
-  int32_t frac_src_offset = 0;
+  uint32_t frac_src_frames = kFreqTestBufSize << kPtsFractionalBits;
 
   Bookkeeping info;
-  mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
-             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false, &info);
+  // First "prime" the resampler by sending a mix command exactly at the end of the source buffer.
+  // This allows it to cache the frames at buffer's end. For our testing, buffers are periodic, so
+  // these frames are exactly what would have immediately preceded the first data in the buffer.
+  // This enables resamplers with significant side width to perform as they would in steady-state.
+  int32_t frac_src_offset = frac_src_frames;
+  auto source_is_consumed = mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
+                                       frac_src_frames, &frac_src_offset, false, &info);
+  FXL_DCHECK(source_is_consumed);
+  FXL_DCHECK(dest_offset == 0u);
+  FXL_DCHECK(frac_src_offset == static_cast<int32_t>(frac_src_frames));
+
+  // We now have a full cache of previous frames (for resamplers that require this), so do the mix.
+  frac_src_offset = 0;
+  mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(), frac_src_frames,
+             &frac_src_offset, false, &info);
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
-  EXPECT_EQ(frac_src_offset, static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits));
+  EXPECT_EQ(frac_src_offset, static_cast<int32_t>(frac_src_frames));
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   double magn_signal, magn_other;
@@ -297,11 +310,22 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
     info.src_pos_modulo = 0;
 
     uint32_t dest_frames, dest_offset = 0;
-    int32_t frac_src_offset = 0;
     uint32_t frac_src_frames = source.size() * Mixer::FRAC_ONE;
 
+    // First "prime" the resampler by sending a mix command exactly at the end of the source buffer.
+    // This allows it to cache the frames at buffer's end. For our testing, buffers are periodic, so
+    // these frames are exactly what would have immediately preceded the first data in the buffer.
+    // This enables resamplers with significant side width to perform as they would in steady-state.
+    int32_t frac_src_offset = static_cast<int32_t>(frac_src_frames);
+    auto source_is_consumed = mixer->Mix(accum.data(), num_dest_frames, &dest_offset, source.data(),
+                                         frac_src_frames, &frac_src_offset, false, &info);
+    FXL_CHECK(source_is_consumed);
+    FXL_CHECK(dest_offset == 0u);
+    FXL_CHECK(frac_src_offset == static_cast<int32_t>(frac_src_frames));
+
+    // Now resample source to accum. (Why in pieces? See kResamplerTestNumPackets: frequency_set.h)
+    frac_src_offset = 0;
     for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
-      // Resample source to accum. (Why in pieces? See kResamplerTestNumPackets in frequency_set.h)
       dest_frames = num_dest_frames * (packet + 1) / kResamplerTestNumPackets;
       mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), frac_src_frames,
                  &frac_src_offset, false, &info);

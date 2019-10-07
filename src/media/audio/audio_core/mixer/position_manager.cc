@@ -75,7 +75,10 @@ void PositionManager::SetSourceValues(const void* src_void, uint32_t frac_src_fr
   // in the past: they may impact future output but are insufficient for us to produce output here.
   frac_src_end_ = static_cast<int32_t>(frac_src_frames_ - positive_width_) - 1;
 
-  FXL_DCHECK(frac_src_offset_ < static_cast<int32_t>(frac_src_frames_))
+  // Strictly, src_off should be LESS THAN frac_src_frames. We also allow them to be exactly equal,
+  // as this is used to "prime" resamplers that use a significant amount of previously-cached data.
+  // When equal, we produce no output frame, but samplers with history will cache the final frames.
+  FXL_DCHECK(frac_src_offset_ <= static_cast<int32_t>(frac_src_frames_))
       << std::hex << "frac_src_off: 0x" << frac_src_offset_ << ", frac_src_end: 0x" << frac_src_end_
       << ", frac_src_frames: 0x" << frac_src_frames_;
 }

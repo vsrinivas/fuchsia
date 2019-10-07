@@ -97,9 +97,16 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   // the past -- they have no impact on any output we would produce here.
   auto src_end = static_cast<int32_t>(frac_src_frames - kPositiveFilterWidth) - 1;
   FXL_DCHECK(src_end >= 0);
-  FXL_DCHECK(src_off < static_cast<int32_t>(frac_src_frames))
+
+  // Strictly, src_off should be LESS THAN frac_src_frames. We also allow them to be exactly equal,
+  // as this is used to "prime" resamplers that use a significant amount of previously-cached data.
+  // When equal, we produce no output frame, but samplers with history will cache the final frames.
+  FXL_DCHECK(src_off <= static_cast<int32_t>(frac_src_frames))
       << std::hex << "src_off: 0x" << src_off << ", src_end: 0x" << src_end
       << ", frac_src_frames: 0x" << frac_src_frames;
+  if (src_off == static_cast<int32_t>(frac_src_frames)) {
+    return true;
+  }
 
   // Cache these locally, for the HasModulo specializations that use them. Only src_pos_modulo must
   // be written back before returning.
@@ -303,9 +310,16 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_f
   // the past -- they have no impact on any output we would produce here.
   auto src_end = static_cast<int32_t>(frac_src_frames - kPositiveFilterWidth) - 1;
   FXL_DCHECK(src_end >= 0);
-  FXL_DCHECK(src_off < static_cast<int32_t>(frac_src_frames))
+
+  // Strictly, src_off should be LESS THAN frac_src_frames. We also allow them to be exactly equal,
+  // as this is used to "prime" resamplers that use a significant amount of previously-cached data.
+  // When equal, we produce no output frame, but samplers with history will cache the final frames.
+  FXL_DCHECK(src_off <= static_cast<int32_t>(frac_src_frames))
       << std::hex << "src_off: 0x" << src_off << ", src_end: 0x" << src_end
       << ", frac_src_frames: 0x" << frac_src_frames;
+  if (src_off == static_cast<int32_t>(frac_src_frames)) {
+    return true;
+  }
 
   // Cache these locally, in the template specialization that uses them. Only src_pos_modulo needs
   // to be written back before returning.
