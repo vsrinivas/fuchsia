@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <lib/timekeeper/clock.h>
+#include <zircon/status.h>
+
 #include <cstring>
 
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/wlan/mlme/c/fidl.h>
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <gtest/gtest.h>
-#include <lib/timekeeper/clock.h>
 #include <wlan/common/element_splitter.h>
 #include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/client/scanner.h>
@@ -20,7 +21,6 @@
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/protocol/mac.h>
-#include <zircon/status.h>
 
 #include "mock_device.h"
 #include "test_bss.h"
@@ -66,7 +66,7 @@ class ScannerTest : public ::testing::Test {
 
  protected:
   zx_status_t Start(wlan_mlme::ScanRequest&& req) {
-    return scanner_.Start({std::move(req), fuchsia_wlan_mlme_MLMEOnScanResultOrdinal});
+    return scanner_.Start({std::move(req), fuchsia::wlan::mlme::internal::kMLME_OnScanResult_Ordinal});
   }
 
   fbl::unique_ptr<wlan::Packet> CreatePacket(fbl::Span<const uint8_t> data) {
@@ -106,7 +106,7 @@ class ScannerTest : public ::testing::Test {
 
   void AssertScanEnd(wlan_mlme::ScanResultCodes expected_code) {
     auto scan_ends =
-        mock_dev_.GetServiceMsgs<wlan_mlme::ScanEnd>(fuchsia_wlan_mlme_MLMEOnScanEndOrdinal);
+        mock_dev_.GetServiceMsgs<wlan_mlme::ScanEnd>(fuchsia::wlan::mlme::internal::kMLME_OnScanEnd_Ordinal);
     ASSERT_EQ(scan_ends.size(), 1ULL);
     EXPECT_EQ(123u, scan_ends[0].body()->txn_id);
     EXPECT_EQ(expected_code, scan_ends[0].body()->code);
@@ -219,7 +219,7 @@ TEST_F(ScannerTest, PassiveScanning) {
   chan_sched_.HandleTimeout();
 
   auto results =
-      mock_dev_.GetServiceMsgs<wlan_mlme::ScanResult>(fuchsia_wlan_mlme_MLMEOnScanResultOrdinal);
+      mock_dev_.GetServiceMsgs<wlan_mlme::ScanResult>(fuchsia::wlan::mlme::internal::kMLME_OnScanResult_Ordinal);
   ASSERT_EQ(results.size(), 1ULL);
   common::MacAddr frame_bssid({0x01, 0x02, 0x03, 0x04, 0x05, 0x06});
   AssertScanResult(results[0], frame_bssid);
@@ -260,7 +260,7 @@ TEST_F(ScannerTest, ActiveScanning) {
   chan_sched_.HandleTimeout();
 
   auto results =
-      mock_dev_.GetServiceMsgs<wlan_mlme::ScanResult>(fuchsia_wlan_mlme_MLMEOnScanResultOrdinal);
+      mock_dev_.GetServiceMsgs<wlan_mlme::ScanResult>(fuchsia::wlan::mlme::internal::kMLME_OnScanResult_Ordinal);
   ASSERT_EQ(results.size(), 1ULL);
   common::MacAddr frame_bssid({0x01, 0x02, 0x03, 0x04, 0x05, 0x06});
   AssertScanResult(results[0], frame_bssid);
@@ -288,7 +288,7 @@ TEST_F(ScannerTest, BeaconFromHiddenAp) {
   chan_sched_.HandleTimeout();
 
   auto results =
-      mock_dev_.GetServiceMsgs<wlan_mlme::ScanResult>(fuchsia_wlan_mlme_MLMEOnScanResultOrdinal);
+      mock_dev_.GetServiceMsgs<wlan_mlme::ScanResult>(fuchsia::wlan::mlme::internal::kMLME_OnScanResult_Ordinal);
   ASSERT_EQ(results.size(), 1ULL);
   common::MacAddr frame_bssid({0x01, 0x02, 0x03, 0x04, 0x05, 0x06});
   AssertScanResult(results[0], frame_bssid);

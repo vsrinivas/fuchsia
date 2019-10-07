@@ -4,9 +4,7 @@
 
 #include "wlantap-phy.h"
 
-#include <fuchsia/wlan/device/c/fidl.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
-#include <fuchsia/wlan/tap/c/fidl.h>
 #include <zircon/status.h>
 
 #include <array>

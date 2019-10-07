@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/unique_ptr.h>
-#include <fuchsia/wlan/mlme/c/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
+
+#include <fbl/unique_ptr.h>
 #include <gtest/gtest.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/write_element.h>

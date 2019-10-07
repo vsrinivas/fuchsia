@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/time.h>
+#include <zircon/assert.h>
+#include <zircon/status.h>
+
 #include <cinttypes>
 #include <utility>
 
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/wlan/mlme/c/fidl.h>
-#include <lib/zx/time.h>
 #include <wlan/common/arraysize.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/channel.h>
@@ -23,8 +25,6 @@
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/wlan.h>
-#include <zircon/assert.h>
-#include <zircon/status.h>
 
 #include "lib/fidl/cpp/vector.h"
 
@@ -38,7 +38,8 @@ static void SendScanEnd(DeviceInterface* device, uint64_t txn_id, wlan_mlme::Sca
   wlan_mlme::ScanEnd msg;
   msg.txn_id = txn_id;
   msg.code = code;
-  zx_status_t s = SendServiceMsg(device, &msg, fuchsia_wlan_mlme_MLMEOnScanEndOrdinal);
+  zx_status_t s =
+      SendServiceMsg(device, &msg, fuchsia::wlan::mlme::internal::kMLME_OnScanEnd_Ordinal);
   if (s != ZX_OK) {
     errorf("failed to send OnScanEnd event: %d\n", s);
   }
@@ -52,7 +53,8 @@ static zx_status_t SendResults(DeviceInterface* device, uint64_t txn_id,
     if (p.second.bss_desc().Clone(&r.bss) != ZX_OK) {
       continue;
     }
-    zx_status_t status = SendServiceMsg(device, &r, fuchsia_wlan_mlme_MLMEOnScanResultOrdinal);
+    zx_status_t status =
+        SendServiceMsg(device, &r, fuchsia::wlan::mlme::internal::kMLME_OnScanResult_Ordinal);
     if (status != ZX_OK) {
       return status;
     }

@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/status.h>
+
 #include <ddk/hw/wlan/wlaninfo.h>
-#include <fuchsia/wlan/mlme/c/fidl.h>
 #include <wlan/common/channel.h>
 #include <wlan/mlme/beacon.h>
 #include <wlan/mlme/debug.h>
@@ -12,7 +13,6 @@
 #include <wlan/mlme/mesh/parse_mp_action.h>
 #include <wlan/mlme/mesh/write_mp_action.h>
 #include <wlan/mlme/service.h>
-#include <zircon/status.h>
 
 namespace wlan {
 
@@ -412,7 +412,8 @@ zx_status_t MeshMlme::HandleMpmOpenAction(const common::MacAddr& src_addr, Buffe
   }
 
   src_addr.CopyTo(action.common.peer_sta_address.data());
-  return SendServiceMsg(device_, &action, fuchsia_wlan_mlme_MLMEIncomingMpOpenActionOrdinal);
+  return SendServiceMsg(device_, &action,
+                        fuchsia::wlan::mlme::internal::kMLME_IncomingMpOpenAction_Ordinal);
 }
 
 zx_status_t MeshMlme::HandleMpmConfirmAction(const common::MacAddr& src_addr, BufferReader* r) {
@@ -422,7 +423,8 @@ zx_status_t MeshMlme::HandleMpmConfirmAction(const common::MacAddr& src_addr, Bu
   }
 
   src_addr.CopyTo(action.common.peer_sta_address.data());
-  return SendServiceMsg(device_, &action, fuchsia_wlan_mlme_MLMEIncomingMpConfirmActionOrdinal);
+  return SendServiceMsg(device_, &action,
+                        fuchsia::wlan::mlme::internal::kMLME_IncomingMpConfirmAction_Ordinal);
 }
 
 const MeshPath* MeshMlme::QueryPathTable(const common::MacAddr& mesh_dest) {

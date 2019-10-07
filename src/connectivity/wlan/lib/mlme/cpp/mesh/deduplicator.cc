@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/wlan/mlme/c/fidl.h>
+#include <zircon/status.h>
+
 #include <wlan/common/channel.h>
 #include <wlan/mlme/beacon.h>
 #include <wlan/mlme/debug.h>
@@ -12,7 +13,6 @@
 #include <wlan/mlme/mesh/parse_mp_action.h>
 #include <wlan/mlme/mesh/write_mp_action.h>
 #include <wlan/mlme/service.h>
-#include <zircon/status.h>
 
 namespace wlan {
 

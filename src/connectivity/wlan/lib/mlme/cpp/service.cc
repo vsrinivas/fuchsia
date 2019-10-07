@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/wlan/mlme/c/fidl.h>
 #include <wlan/mlme/service.h>
 
 namespace wlan {
@@ -35,7 +34,7 @@ zx_status_t SendJoinConfirm(DeviceInterface* device, wlan_mlme::JoinResultCodes 
   debugfn();
   wlan_mlme::JoinConfirm conf;
   conf.result_code = result_code;
-  return SendServiceMsg(device, &conf, fuchsia_wlan_mlme_MLMEJoinConfOrdinal);
+  return SendServiceMsg(device, &conf, fuchsia::wlan::mlme::internal::kMLME_JoinConf_Ordinal);
 }
 
 zx_status_t SendAuthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta,
@@ -46,7 +45,7 @@ zx_status_t SendAuthConfirm(DeviceInterface* device, const common::MacAddr& peer
   // TODO(tkilbourn): set this based on the actual auth type
   conf.auth_type = wlan_mlme::AuthenticationTypes::OPEN_SYSTEM;
   conf.result_code = code;
-  return SendServiceMsg(device, &conf, fuchsia_wlan_mlme_MLMEAuthenticateConfOrdinal);
+  return SendServiceMsg(device, &conf, fuchsia::wlan::mlme::internal::kMLME_AuthenticateConf_Ordinal);
 }
 
 zx_status_t SendAuthIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
@@ -55,14 +54,14 @@ zx_status_t SendAuthIndication(DeviceInterface* device, const common::MacAddr& p
   wlan_mlme::AuthenticateIndication ind;
   peer_sta.CopyTo(ind.peer_sta_address.data());
   ind.auth_type = auth_type;
-  return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMEAuthenticateIndOrdinal);
+  return SendServiceMsg(device, &ind, fuchsia::wlan::mlme::internal::kMLME_AuthenticateInd_Ordinal);
 }
 
 zx_status_t SendDeauthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta) {
   debugfn();
   wlan_mlme::DeauthenticateConfirm conf;
   peer_sta.CopyTo(conf.peer_sta_address.data());
-  return SendServiceMsg(device, &conf, fuchsia_wlan_mlme_MLMEDeauthenticateConfOrdinal);
+  return SendServiceMsg(device, &conf, fuchsia::wlan::mlme::internal::kMLME_DeauthenticateConf_Ordinal);
 }
 
 zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
@@ -71,7 +70,7 @@ zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr&
   wlan_mlme::DeauthenticateIndication ind;
   peer_sta.CopyTo(ind.peer_sta_address.data());
   ind.reason_code = code;
-  return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal);
+  return SendServiceMsg(device, &ind, fuchsia::wlan::mlme::internal::kMLME_DeauthenticateInd_Ordinal);
 }
 
 zx_status_t SendAssocConfirm(DeviceInterface* device, wlan_mlme::AssociateResultCodes code,
@@ -82,7 +81,7 @@ zx_status_t SendAssocConfirm(DeviceInterface* device, wlan_mlme::AssociateResult
   wlan_mlme::AssociateConfirm conf;
   conf.result_code = code;
   conf.association_id = aid;
-  return SendServiceMsg(device, &conf, fuchsia_wlan_mlme_MLMEAssociateConfOrdinal);
+  return SendServiceMsg(device, &conf, fuchsia::wlan::mlme::internal::kMLME_AssociateConf_Ordinal);
 }
 
 zx_status_t SendAssocIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
@@ -99,7 +98,7 @@ zx_status_t SendAssocIndication(DeviceInterface* device, const common::MacAddr& 
     ind.rsn->reserve(2 + rsn_body->size());
     ind.rsn->insert(ind.rsn->end(), rsn_body->begin(), rsn_body->end());
   }
-  return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMEAssociateIndOrdinal);
+  return SendServiceMsg(device, &ind, fuchsia::wlan::mlme::internal::kMLME_AssociateInd_Ordinal);
 }
 
 zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
@@ -108,21 +107,21 @@ zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::Ma
   wlan_mlme::DisassociateIndication ind;
   peer_sta.CopyTo(ind.peer_sta_address.data());
   ind.reason_code = code;
-  return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMEDisassociateIndOrdinal);
+  return SendServiceMsg(device, &ind, fuchsia::wlan::mlme::internal::kMLME_DisassociateInd_Ordinal);
 }
 
 zx_status_t SendSignalReportIndication(DeviceInterface* device, common::dBm rssi_dbm) {
   debugfn();
   wlan_mlme::SignalReportIndication ind;
   ind.rssi_dbm = rssi_dbm.val;
-  return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMESignalReportOrdinal);
+  return SendServiceMsg(device, &ind, fuchsia::wlan::mlme::internal::kMLME_SignalReport_Ordinal);
 }
 
 zx_status_t SendEapolConfirm(DeviceInterface* device, wlan_mlme::EapolResultCodes result_code) {
   debugfn();
   wlan_mlme::EapolConfirm resp;
   resp.result_code = result_code;
-  return SendServiceMsg(device, &resp, fuchsia_wlan_mlme_MLMEEapolConfOrdinal);
+  return SendServiceMsg(device, &resp, fuchsia::wlan::mlme::internal::kMLME_EapolConf_Ordinal);
 }
 
 zx_status_t SendEapolIndication(DeviceInterface* device, const EapolHdr& eapol,
@@ -143,19 +142,19 @@ zx_status_t SendEapolIndication(DeviceInterface* device, const EapolHdr& eapol,
   std::memcpy(ind.data.data(), &eapol, frame_len);
   src.CopyTo(ind.src_addr.data());
   dst.CopyTo(ind.dst_addr.data());
-  return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMEEapolIndOrdinal);
+  return SendServiceMsg(device, &ind, fuchsia::wlan::mlme::internal::kMLME_EapolInd_Ordinal);
 }
 
 zx_status_t SendStartConfirm(DeviceInterface* device, wlan_mlme::StartResultCodes code) {
   wlan_mlme::StartConfirm msg;
   msg.result_code = code;
-  return SendServiceMsg(device, &msg, fuchsia_wlan_mlme_MLMEStartConfOrdinal);
+  return SendServiceMsg(device, &msg, fuchsia::wlan::mlme::internal::kMLME_StartConf_Ordinal);
 }
 
 zx_status_t SendStopConfirm(DeviceInterface* device, wlan_mlme::StopResultCodes code) {
   wlan_mlme::StopConfirm msg;
   msg.result_code = code;
-  return SendServiceMsg(device, &msg, fuchsia_wlan_mlme_MLMEStopConfOrdinal);
+  return SendServiceMsg(device, &msg, fuchsia::wlan::mlme::internal::kMLME_StopConf_Ordinal);
 }
 
 zx_status_t SendMeshPathTable(DeviceInterface* device, wlan_mesh::MeshPathTable& table,

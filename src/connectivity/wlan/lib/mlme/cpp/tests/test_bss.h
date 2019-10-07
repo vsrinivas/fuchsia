@@ -5,12 +5,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_BSS_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_BSS_H_
 
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <lib/timekeeper/clock.h>
+
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/wlan/mlme/c/fidl.h>
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <gtest/gtest.h>
-#include <lib/timekeeper/clock.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/assoc_context.h>
 #include <wlan/mlme/client/channel_scheduler.h>

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/wlan/minstrel/cpp/fidl.h>
-#include <fuchsia/wlan/mlme/c/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <zircon/fidl.h>
 #include <zircon/status.h>
@@ -132,72 +131,72 @@ zx_status_t Dispatcher::HandleAnyMlmeMessage(fbl::Span<uint8_t> span) {
   // value.  See FIDL-524.
 
   // Messages in wlan_mlme_ext.fidl does not involve MLME.
-  if (ordinal == fuchsia_wlan_mlme_MLMEQueryDeviceInfoOrdinal ||
-      ordinal == fuchsia_wlan_mlme_MLMEQueryDeviceInfoGenOrdinal) {
+  if (ordinal == fuchsia::wlan::mlme::internal::kMLME_QueryDeviceInfo_Ordinal ||
+      ordinal == fuchsia::wlan::mlme::internal::kMLME_QueryDeviceInfo_GenOrdinal) {
     return HandleQueryDeviceInfo(hdr->txid);
-  } else if (ordinal == fuchsia_wlan_mlme_MLMEStatsQueryReqOrdinal ||
-             ordinal == fuchsia_wlan_mlme_MLMEStatsQueryReqGenOrdinal) {
+  } else if (ordinal == fuchsia::wlan::mlme::internal::kMLME_StatsQueryReq_Ordinal ||
+             ordinal == fuchsia::wlan::mlme::internal::kMLME_StatsQueryReq_GenOrdinal) {
     return HandleMlmeStats(ordinal);
-  } else if (ordinal == fuchsia_wlan_mlme_MLMEListMinstrelPeersOrdinal ||
-             ordinal == fuchsia_wlan_mlme_MLMEListMinstrelPeersGenOrdinal) {
+  } else if (ordinal == fuchsia::wlan::mlme::internal::kMLME_ListMinstrelPeers_Ordinal ||
+             ordinal == fuchsia::wlan::mlme::internal::kMLME_ListMinstrelPeers_GenOrdinal) {
     return HandleMinstrelPeerList(ordinal, hdr->txid);
-  } else if (ordinal == fuchsia_wlan_mlme_MLMEGetMinstrelStatsOrdinal ||
-             ordinal == fuchsia_wlan_mlme_MLMEGetMinstrelStatsGenOrdinal) {
+  } else if (ordinal == fuchsia::wlan::mlme::internal::kMLME_GetMinstrelStats_Ordinal ||
+             ordinal == fuchsia::wlan::mlme::internal::kMLME_GetMinstrelStats_GenOrdinal) {
     return HandleMinstrelTxStats(span, ordinal, hdr->txid);
   }
 
-  if (ordinal == fuchsia_wlan_mlme_MLMEResetReqOrdinal ||
-      ordinal == fuchsia_wlan_mlme_MLMEResetReqGenOrdinal) {
+  if (ordinal == fuchsia::wlan::mlme::internal::kMLME_ResetReq_Ordinal ||
+      ordinal == fuchsia::wlan::mlme::internal::kMLME_ResetReq_GenOrdinal) {
     infof("resetting MLME\n");
     HandleMlmeMessage<wlan_mlme::ResetRequest>(span, ordinal);
     return ZX_OK;
-  } else if (ordinal == fuchsia_wlan_mlme_MLMEStartReqOrdinal ||
-             ordinal == fuchsia_wlan_mlme_MLMEStartReqGenOrdinal) {
+  } else if (ordinal == fuchsia::wlan::mlme::internal::kMLME_StartReq_Ordinal ||
+             ordinal == fuchsia::wlan::mlme::internal::kMLME_StartReq_GenOrdinal) {
     return HandleMlmeMessage<wlan_mlme::StartRequest>(span, ordinal);
-  } else if (ordinal == fuchsia_wlan_mlme_MLMEStopReqOrdinal ||
-             ordinal == fuchsia_wlan_mlme_MLMEStopReqGenOrdinal) {
+  } else if (ordinal == fuchsia::wlan::mlme::internal::kMLME_StopReq_Ordinal ||
+             ordinal == fuchsia::wlan::mlme::internal::kMLME_StopReq_GenOrdinal) {
     return HandleMlmeMessage<wlan_mlme::StopRequest>(span, ordinal);
-  } else if (ordinal == fuchsia_wlan_mlme_MLMEStartScanOrdinal ||
-             ordinal == fuchsia_wlan_mlme_MLMEStartScanGenOrdinal) {
+  } else if (ordinal == fuchsia::wlan::mlme::internal::kMLME_StartScan_Ordinal ||
+             ordinal == fuchsia::wlan::mlme::internal::kMLME_StartScan_GenOrdinal) {
     return HandleMlmeMessage<wlan_mlme::ScanRequest>(span, ordinal);
-  } else if (ordinal == fuchsia_wlan_mlme_MLMEJoinReqOrdinal ||
-             ordinal == fuchsia_wlan_mlme_MLMEJoinReqGenOrdinal) {
+  } else if (ordinal == fuchsia::wlan::mlme::internal::kMLME_JoinReq_Ordinal ||
+             ordinal == fuchsia::wlan::mlme::internal::kMLME_JoinReq_GenOrdinal) {
     return HandleMlmeMessage<wlan_mlme::JoinRequest>(span, ordinal);
-  } else if (ordinal == fuchsia_wlan_mlme_MLMEAuthenticateReqOrdinal ||
-             ordinal == fuchsia_wlan_mlme_MLMEAuthenticateReqGenOrdinal) {
+  } else if (ordinal == fuchsia::wlan::mlme::internal::kMLME_AuthenticateReq_Ordinal ||
+             ordinal == fuchsia::wlan::mlme::internal::kMLME_AuthenticateReq_GenOrdinal) {
     return HandleMlmeMessage<wlan_mlme::AuthenticateRequest>(span, ordinal);
-  } else if (ordinal == fuchsia_wlan_mlme_MLMEAuthenticateRespOrdinal ||
-             ordinal == fuchsia_wlan_mlme_MLMEAuthenticateRespGenOrdinal) {
+  } else if (ordinal == fuchsia::wlan::mlme::internal::kMLME_AuthenticateResp_Ordinal ||
+             ordinal == fuchsia::wlan::mlme::internal::kMLME_AuthenticateResp_GenOrdinal) {
     return HandleMlmeMessage<wlan_mlme::AuthenticateResponse>(span, ordinal);
-  } else if (ordinal == fuchsia_wlan_mlme_MLMEDeauthenticateReqOrdinal ||
-             ordinal == fuchsia_wlan_mlme_MLMEDeauthenticateReqGenOrdinal) {
+  } else if (ordinal == fuchsia::wlan::mlme::internal::kMLME_DeauthenticateReq_Ordinal ||
+             ordinal == fuchsia::wlan::mlme::internal::kMLME_DeauthenticateReq_GenOrdinal) {
     return HandleMlmeMessage<wlan_mlme::DeauthenticateRequest>(span, ordinal);
-  } else if (ordinal == fuchsia_wlan_mlme_MLMEAssociateReqOrdinal ||
-             ordinal == fuchsia_wlan_mlme_MLMEAssociateReqGenOrdinal) {
+  } else if (ordinal == fuchsia::wlan::mlme::internal::kMLME_AssociateReq_Ordinal ||
+             ordinal == fuchsia::wlan::mlme::internal::kMLME_AssociateReq_GenOrdinal) {
     return HandleMlmeMessage<wlan_mlme::AssociateRequest>(span, ordinal);
-  } else if (ordinal == fuchsia_wlan_mlme_MLMEAssociateRespOrdinal ||
-             ordinal == fuchsia_wlan_mlme_MLMEAssociateRespGenOrdinal) {
+  } else if (ordinal == fuchsia::wlan::mlme::internal::kMLME_AssociateResp_Ordinal ||
+             ordinal == fuchsia::wlan::mlme::internal::kMLME_AssociateResp_GenOrdinal) {
     return HandleMlmeMessage<wlan_mlme::AssociateResponse>(span, ordinal);
-  } else if (ordinal == fuchsia_wlan_mlme_MLMEEapolReqOrdinal ||
-             ordinal == fuchsia_wlan_mlme_MLMEEapolReqGenOrdinal) {
+  } else if (ordinal == fuchsia::wlan::mlme::internal::kMLME_EapolReq_Ordinal ||
+             ordinal == fuchsia::wlan::mlme::internal::kMLME_EapolReq_GenOrdinal) {
     return HandleMlmeMessage<wlan_mlme::EapolRequest>(span, ordinal);
-  } else if (ordinal == fuchsia_wlan_mlme_MLMESetKeysReqOrdinal ||
-             ordinal == fuchsia_wlan_mlme_MLMESetKeysReqGenOrdinal) {
+  } else if (ordinal == fuchsia::wlan::mlme::internal::kMLME_SetKeysReq_Ordinal ||
+             ordinal == fuchsia::wlan::mlme::internal::kMLME_SetKeysReq_GenOrdinal) {
     return HandleMlmeMessage<wlan_mlme::SetKeysRequest>(span, ordinal);
-  } else if (ordinal == fuchsia_wlan_mlme_MLMESetControlledPortOrdinal ||
-             ordinal == fuchsia_wlan_mlme_MLMESetControlledPortGenOrdinal) {
+  } else if (ordinal == fuchsia::wlan::mlme::internal::kMLME_SetControlledPort_Ordinal ||
+             ordinal == fuchsia::wlan::mlme::internal::kMLME_SetControlledPort_GenOrdinal) {
     return HandleMlmeMessage<wlan_mlme::SetControlledPortRequest>(span, ordinal);
-  } else if (ordinal == fuchsia_wlan_mlme_MLMESendMpOpenActionOrdinal ||
-             ordinal == fuchsia_wlan_mlme_MLMESendMpOpenActionGenOrdinal) {
+  } else if (ordinal == fuchsia::wlan::mlme::internal::kMLME_SendMpOpenAction_Ordinal ||
+             ordinal == fuchsia::wlan::mlme::internal::kMLME_SendMpOpenAction_GenOrdinal) {
     return HandleMlmeMessage<wlan_mlme::MeshPeeringOpenAction>(span, ordinal);
-  } else if (ordinal == fuchsia_wlan_mlme_MLMESendMpConfirmActionOrdinal ||
-             ordinal == fuchsia_wlan_mlme_MLMESendMpConfirmActionGenOrdinal) {
+  } else if (ordinal == fuchsia::wlan::mlme::internal::kMLME_SendMpConfirmAction_Ordinal ||
+             ordinal == fuchsia::wlan::mlme::internal::kMLME_SendMpConfirmAction_GenOrdinal) {
     return HandleMlmeMessage<wlan_mlme::MeshPeeringConfirmAction>(span, ordinal);
-  } else if (ordinal == fuchsia_wlan_mlme_MLMEMeshPeeringEstablishedOrdinal ||
-             ordinal == fuchsia_wlan_mlme_MLMEMeshPeeringEstablishedGenOrdinal) {
+  } else if (ordinal == fuchsia::wlan::mlme::internal::kMLME_MeshPeeringEstablished_Ordinal ||
+             ordinal == fuchsia::wlan::mlme::internal::kMLME_MeshPeeringEstablished_GenOrdinal) {
     return HandleMlmeMessage<wlan_mlme::MeshPeeringParams>(span, ordinal);
-  } else if (ordinal == fuchsia_wlan_mlme_MLMEGetMeshPathTableReqOrdinal ||
-             ordinal == fuchsia_wlan_mlme_MLMEGetMeshPathTableReqGenOrdinal) {
+  } else if (ordinal == fuchsia::wlan::mlme::internal::kMLME_GetMeshPathTableReq_Ordinal ||
+             ordinal == fuchsia::wlan::mlme::internal::kMLME_GetMeshPathTableReq_GenOrdinal) {
     return HandleMlmeMessage<wlan_mlme::GetMeshPathTableRequest>(span, ordinal);
   } else {
     warnf("unknown MLME method %lu\n", ordinal);
@@ -293,13 +292,15 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
     resp.driver_features.push_back(wlan_common::DriverFeature::DFS);
   }
 
-  return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEQueryDeviceInfoOrdinal, txid);
+  return SendServiceMsg(device_, &resp,
+                        fuchsia::wlan::mlme::internal::kMLME_QueryDeviceInfo_Ordinal, txid);
 }
 
 zx_status_t Dispatcher::HandleMlmeStats(uint64_t ordinal) const {
   debugfn();
   wlan_mlme::StatsQueryResponse resp = GetStatsToFidl();
-  return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEStatsQueryRespOrdinal);
+  return SendServiceMsg(device_, &resp,
+                        fuchsia::wlan::mlme::internal::kMLME_StatsQueryResp_Ordinal);
 }
 
 zx_status_t Dispatcher::HandleMinstrelPeerList(uint64_t ordinal, zx_txid_t txid) const {
@@ -310,7 +311,8 @@ zx_status_t Dispatcher::HandleMinstrelPeerList(uint64_t ordinal, zx_txid_t txid)
     errorf("cannot get minstrel peer list: %s\n", zx_status_get_string(status));
     resp.peers.peers.resize(0);
   }
-  return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEListMinstrelPeersOrdinal, txid);
+  return SendServiceMsg(device_, &resp,
+                        fuchsia::wlan::mlme::internal::kMLME_ListMinstrelPeers_Ordinal, txid);
 }
 
 zx_status_t Dispatcher::HandleMinstrelTxStats(fbl::Span<uint8_t> span, uint64_t ordinal,
@@ -318,7 +320,7 @@ zx_status_t Dispatcher::HandleMinstrelTxStats(fbl::Span<uint8_t> span, uint64_t 
   debugfn();
   wlan_mlme::MinstrelStatsResponse resp{};
   auto req = MlmeMsg<wlan_mlme::MinstrelStatsRequest>::Decode(
-      span, fuchsia_wlan_mlme_MLMEGetMinstrelStatsOrdinal);
+      span, fuchsia::wlan::mlme::internal::kMLME_GetMinstrelStats_Ordinal);
   if (!req.has_value()) {
     errorf("could not deserialize MLME primitive %lu\n", ordinal);
     return ZX_ERR_INVALID_ARGS;
@@ -332,7 +334,8 @@ zx_status_t Dispatcher::HandleMinstrelTxStats(fbl::Span<uint8_t> span, uint64_t 
   } else {
     errorf("could not get peer stats: %s\n", zx_status_get_string(status));
   }
-  return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEGetMinstrelStatsOrdinal, txid);
+  return SendServiceMsg(device_, &resp,
+                        fuchsia::wlan::mlme::internal::kMLME_GetMinstrelStats_Ordinal, txid);
 }
 
 void Dispatcher::HwIndication(uint32_t ind) {

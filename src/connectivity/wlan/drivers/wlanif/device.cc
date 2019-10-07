@@ -4,7 +4,6 @@
 
 #include "device.h"
 
-#include <fuchsia/wlan/mlme/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <net/ethernet.h>
 #include <zircon/status.h>

@@ -5,7 +5,6 @@
 #include <memory>
 #include <utility>
 
-#include <fuchsia/wlan/mlme/c/fidl.h>
 #include <gtest/gtest.h>
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/wlan.h>
@@ -85,7 +84,7 @@ TEST(MlmeMsg, MismatchingOrdinal) {
 
   // Type is correct but ordinal does not match
   auto mlme_msg = MlmeMsg<wlan_mlme::DeauthenticateRequest>::Decode(
-      enc.GetMessage().bytes(), fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal);
+      enc.GetMessage().bytes(), fuchsia::wlan::mlme::internal::kMLME_DeauthenticateInd_Ordinal);
   ASSERT_FALSE(mlme_msg.has_value());
 }
 
@@ -97,7 +96,7 @@ TEST_F(ServiceTest, SendAuthInd) {
 
   ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
   auto msgs = device.GetServiceMsgs<wlan_mlme::AuthenticateIndication>(
-      fuchsia_wlan_mlme_MLMEAuthenticateIndOrdinal);
+      fuchsia::wlan::mlme::internal::kMLME_AuthenticateInd_Ordinal);
   ASSERT_EQ(msgs.size(), 1ULL);
 
   ASSERT_EQ(std::memcmp(msgs[0].body()->peer_sta_address.data(), peer_sta.byte, 6), 0);
@@ -119,7 +118,7 @@ TEST_F(ServiceTest, SendAssocInd) {
   // -- verify
   ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
   auto msgs = device.GetServiceMsgs<wlan_mlme::AssociateIndication>(
-      fuchsia_wlan_mlme_MLMEAssociateIndOrdinal);
+      fuchsia::wlan::mlme::internal::kMLME_AssociateInd_Ordinal);
   ASSERT_EQ(msgs.size(), 1ULL);
 
   ASSERT_EQ(std::memcmp(msgs[0].body()->peer_sta_address.data(), peer_sta.byte, 6), 0);
@@ -141,7 +140,7 @@ TEST_F(ServiceTest, SendAssocInd_EmptyRsne) {
   // -- verify
   ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
   auto msgs = device.GetServiceMsgs<wlan_mlme::AssociateIndication>(
-      fuchsia_wlan_mlme_MLMEAssociateIndOrdinal);
+      fuchsia::wlan::mlme::internal::kMLME_AssociateInd_Ordinal);
   ASSERT_EQ(msgs.size(), 1ULL);
 
   ASSERT_EQ(std::memcmp(msgs[0].body()->peer_sta_address.data(), peer_sta.byte, 6), 0);
