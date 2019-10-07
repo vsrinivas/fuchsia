@@ -5,6 +5,7 @@
 #include "fidl/c_generator.h"
 
 #include "fidl/attributes.h"
+#include "fidl/flat_ast.h"
 #include "fidl/names.h"
 
 namespace fidl {
@@ -56,6 +57,20 @@ CGenerator::Member EmptyStructMember() {
 
 CGenerator::Transport ParseTransport(std::string_view view) {
   return CGenerator::Transport::Channel;
+}
+
+bool ShouldRecursiveDeprecate(const std::vector<CGenerator::Member>& members) {
+#ifdef FIDLC_DEPRECATE_C_UNIONS
+  for (const auto& m : members) {
+    switch (m.decl_kind) {
+      case flat::Decl::Kind::kUnion:
+        return true;
+      default:
+        break;
+    }
+  }
+#endif
+  return false;
 }
 
 // Functions named "Emit..." are called to actually emit to an std::ostream
@@ -196,7 +211,10 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
 void EmitClientMethodDecl(std::ostream* file, std::string_view method_name,
                           const std::vector<CGenerator::Member>& request,
                           const std::vector<CGenerator::Member>& response) {
-  *file << "zx_status_t " << method_name << "(zx_handle_t _channel";
+  bool should_recursive_deprecate =
+      ShouldRecursiveDeprecate(request) || ShouldRecursiveDeprecate(response);
+  *file << "zx_status_t " << (should_recursive_deprecate ? " __attribute__ ((deprecated)) " : "")
+        << method_name << "(zx_handle_t _channel";
   for (const auto& member : request) {
     *file << ", ";
     EmitMethodInParamDecl(file, member);
@@ -210,7 +228,9 @@ void EmitClientMethodDecl(std::ostream* file, std::string_view method_name,
 
 void EmitServerMethodDecl(std::ostream* file, std::string_view method_name,
                           const std::vector<CGenerator::Member>& request, bool has_response) {
-  *file << "zx_status_t (*" << method_name << ")(void* ctx";
+  bool should_recursive_deprecate = ShouldRecursiveDeprecate(request);
+  *file << "zx_status_t " << (should_recursive_deprecate ? " __attribute__ ((deprecated)) " : "")
+        << " (*" << method_name << ")(void* ctx";
   for (const auto& member : request) {
     *file << ", ";
     EmitMethodInParamDecl(file, member);
@@ -235,7 +255,9 @@ void EmitServerTryDispatchDecl(std::ostream* file, std::string_view protocol_nam
 
 void EmitServerReplyDecl(std::ostream* file, std::string_view method_name,
                          const std::vector<CGenerator::Member>& response) {
-  *file << "zx_status_t " << method_name << "_reply(fidl_txn_t* _txn";
+  bool should_recursive_deprecate = ShouldRecursiveDeprecate(response);
+  *file << "zx_status_t " << (should_recursive_deprecate ? " __attribute__ ((deprecated)) " : "")
+        << method_name << "_reply(fidl_txn_t* _txn";
   for (const auto& member : response) {
     *file << ", ";
     EmitMethodInParamDecl(file, member);
@@ -322,7 +344,7 @@ size_t CountSecondaryObjects(const std::vector<CGenerator::Member>& params) {
 }
 
 void EmitTxnHeader(std::ostream* file, const std::string& msg_name,
-                              const std::string& ordinal_name) {
+                   const std::string& ordinal_name) {
   *file << kIndent << msg_name << "->hdr.ordinal = " << ordinal_name << ";\n";
   *file << kIndent << msg_name << "->hdr.flags[0] = 0;\n";
   *file << kIndent << msg_name << "->hdr.flags[1] = 0;\n";
@@ -718,7 +740,10 @@ void CGenerator::GenerateStructTypedef(std::string_view name) {
 
 void CGenerator::GenerateStructDeclaration(std::string_view name,
                                            const std::vector<Member>& members, StructKind kind) {
-  file_ << "struct " << name << " {\n";
+  bool should_recursive_deprecate = ShouldRecursiveDeprecate(members);
+  file_ << "struct " << (should_recursive_deprecate ? "__attribute__ ((deprecated)) " : "") << name
+        << " {\n";
+
   if (kind == StructKind::kMessage) {
     file_ << kIndent << "FIDL_ALIGNDECL\n";
   }
@@ -742,7 +767,11 @@ void CGenerator::GenerateStructDeclaration(std::string_view name,
 
 void CGenerator::GenerateTaggedUnionDeclaration(std::string_view name,
                                                 const std::vector<Member>& members) {
+#ifdef FIDLC_DEPRECATE_C_UNIONS
+  file_ << "struct __attribute__ ((deprecated)) " << name << " {\n";
+#else
   file_ << "struct " << name << " {\n";
+#endif
   file_ << kIndent << "fidl_union_tag_t tag;\n";
   file_ << kIndent << "union {\n";
   for (const auto& member : members) {

@@ -4,12 +4,16 @@
 
 declare_args() {
   fidlc_union_not_simple = false
+  fidlc_deprecate_c_unions = false
 }
 
 config("fidlc_config") {
   defines = []
   if (defined(fidlc_union_not_simple) && fidlc_union_not_simple) {
     defines += [ "FIDLC_UNION_NOT_SIMPLE" ]
+  }
+  if (defined(fidlc_deprecate_c_unions) && fidlc_deprecate_c_unions) {
+    defines += [ "FIDLC_DEPRECATE_C_UNIONS" ]
   }
 }
 
