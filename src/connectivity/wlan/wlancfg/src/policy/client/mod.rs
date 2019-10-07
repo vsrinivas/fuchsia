@@ -6,8 +6,8 @@
 ///! Note: This implementation is still under development.
 ///!       No request is being processed and responded to yet.
 ///!       Unfortunately, there is currently no way to send an Epitaph in Rust. Thus, inbound
-///!       controller and listener requests are simply dropped, causing the underlying channel to get
-///!       closed.
+///!       controller and listener requests are simply dropped, causing the underlying channel to
+///!       get closed.
 ///!
 use {
     fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync,
@@ -15,63 +15,97 @@ use {
     log::error,
 };
 
+pub mod listener;
+
 // This number was chosen arbitrarily.
 const MAX_CONCURRENT_LISTENERS: usize = 1000;
 
-pub fn spawn_provider_server(requests: fidl_policy::ClientProviderRequestStream) {
-    fasync::spawn(serve_provider_requests(requests));
+pub fn spawn_provider_server(
+    update_sender: listener::MessageSender,
+    requests: fidl_policy::ClientProviderRequestStream,
+) {
+    fasync::spawn(serve_provider_requests(update_sender, requests));
 }
 
-pub fn spawn_listener_server(requests: fidl_policy::ClientListenerRequestStream) {
-    fasync::spawn(serve_listener_requests(requests));
+pub fn spawn_listener_server(
+    update_sender: listener::MessageSender,
+    requests: fidl_policy::ClientListenerRequestStream,
+) {
+    fasync::spawn(serve_listener_requests(update_sender, requests));
 }
 
 /// Serves the ClientProvider protocol.
 /// Only one ClientController can be active. Additional requests to register ClientControllers
 /// will result in their channel being immediately closed.
-async fn serve_provider_requests(mut requests: fidl_policy::ClientProviderRequestStream) {
+async fn serve_provider_requests(
+    update_sender: listener::MessageSender,
+    mut requests: fidl_policy::ClientProviderRequestStream,
+) {
     let mut controller_reqs = FuturesUnordered::new();
 
     loop {
         select! {
-            req = requests.next() => if let Some(Ok(req)) = req {
+            req = requests.select_next_some() => if let Ok(req) = req {
                 // If there is an active controller - reject new requests.
                 // Rust cannot yet send Epitaphs when closing a channel, thus, simply drop the
                 // request.
                 if controller_reqs.is_empty() {
-                    controller_reqs.push(handle_provider_request(req));
+                    controller_reqs.push(handle_provider_request(update_sender.clone(), req));
                 }
             },
             // Progress controller requests.
-            _ = controller_reqs.next() => (),
+            _ = controller_reqs.select_next_some() => (),
         }
     }
 }
 
 /// Serves the ClientListener protocol.
-async fn serve_listener_requests(requests: fidl_policy::ClientListenerRequestStream) {
-    let _ignored = requests
-        .try_for_each_concurrent(MAX_CONCURRENT_LISTENERS, |req| handle_listener_request(req))
-        .unwrap_or_else(|e| error!("error serving Client Listener API: {}", e))
-        .await;
+async fn serve_listener_requests(
+    update_sender: listener::MessageSender,
+    requests: fidl_policy::ClientListenerRequestStream,
+) {
+    let serve_fut = requests
+        .try_for_each_concurrent(MAX_CONCURRENT_LISTENERS, |req| {
+            handle_listener_request(update_sender.clone(), req)
+        })
+        .unwrap_or_else(|e| error!("error serving Client Listener API: {}", e));
+    let _ignored = serve_fut.await;
 }
 
 /// Handle inbound requests to acquire a new ClientController.
 async fn handle_provider_request(
+    update_sender: listener::MessageSender,
     req: fidl_policy::ClientProviderRequest,
 ) -> Result<(), fidl::Error> {
     match req {
-        fidl_policy::ClientProviderRequest::GetController { .. } => Ok(()),
+        fidl_policy::ClientProviderRequest::GetController { updates, .. } => {
+            register_listener(update_sender, updates.into_proxy()?);
+            // TODO(hahnr): Handle actual request.
+            Ok(())
+        }
     }
 }
 
 /// Handle inbound requests to register an additional ClientStateUpdates listener.
 async fn handle_listener_request(
+    update_sender: listener::MessageSender,
     req: fidl_policy::ClientListenerRequest,
 ) -> Result<(), fidl::Error> {
     match req {
-        fidl_policy::ClientListenerRequest::GetListener { .. } => Ok(()),
+        fidl_policy::ClientListenerRequest::GetListener { updates, .. } => {
+            register_listener(update_sender, updates.into_proxy()?);
+            Ok(())
+        }
     }
+}
+
+/// Registers a new update listener.
+/// The client's current state will be send to the newly added listener immediately.
+fn register_listener(
+    update_sender: listener::MessageSender,
+    listener: fidl_policy::ClientStateUpdatesProxy,
+) {
+    let _ignored = update_sender.unbounded_send(listener::Message::NewListener(listener));
 }
 
 #[cfg(test)]
@@ -83,7 +117,7 @@ mod tests {
             Error,
         },
         fuchsia_zircon as zx,
-        futures::task::Poll,
+        futures::{channel::mpsc, task::Poll},
         pin_utils::pin_mut,
         wlan_common::assert_variant,
     };
@@ -108,7 +142,10 @@ mod tests {
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let serve_fut = serve_provider_requests(requests);
+        let (update_sender, listener_updates) = mpsc::unbounded();
+        let serve_listeners = listener::serve(listener_updates);
+        pin_mut!(serve_listeners);
+        let serve_fut = serve_provider_requests(update_sender, requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -117,8 +154,24 @@ mod tests {
         // Request a new controller.
         let (controller, mut update_stream) = request_controller(&provider);
 
-        // Process request.
+        // Process request & verify listener was registered.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut serve_listeners), Poll::Pending);
+
+        // Send initial status update to newly registered listener.
+        let summary = assert_variant!(
+            exec.run_until_stalled(&mut update_stream.next()),
+            Poll::Ready(Some(Ok(fidl_policy::ClientStateUpdatesRequest::OnClientStateUpdate {
+                summary, responder
+            }))) => {
+                // Ack update.
+                responder.send().expect("error acking update");
+                summary
+            }
+        );
+        assert_eq!(summary, fidl_policy::ClientStateSummary { state: None, networks: None });
+        // Verify exactly one update was sent.
+        assert_variant!(exec.run_until_stalled(&mut update_stream.next()), Poll::Pending);
 
         // Issue connect request. Request should fail as current implementation immediately drops
         // the request.
@@ -131,9 +184,6 @@ mod tests {
             exec.run_until_stalled(&mut connect_fut),
             Poll::Ready(Err(Error::ClientWrite(zx::Status::PEER_CLOSED)))
         );
-
-        // Attempt to read an update from the stream. There shouldn't be an updated provided yet.
-        assert_variant!(exec.run_until_stalled(&mut update_stream.next()), Poll::Ready(None));
     }
 
     #[test]
@@ -144,7 +194,10 @@ mod tests {
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let serve_fut = serve_listener_requests(requests);
+        let (update_sender, listener_updates) = mpsc::unbounded();
+        let serve_listeners = listener::serve(listener_updates);
+        pin_mut!(serve_listeners);
+        let serve_fut = serve_listener_requests(update_sender, requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -156,10 +209,23 @@ mod tests {
                 .expect("failed to create ClientStateUpdates proxy");
         listener.get_listener(update_sink).expect("error getting listener");
 
-        // Process request.
+        // Process request & verify listener was registered.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut serve_listeners), Poll::Pending);
 
-        // Attempt to read an update from the stream. There shouldn't be an updated provided yet.
-        assert_variant!(exec.run_until_stalled(&mut update_stream.next()), Poll::Ready(None));
+        // Read initial state update from the stream.
+        let summary = assert_variant!(
+            exec.run_until_stalled(&mut update_stream.next()),
+            Poll::Ready(Some(Ok(fidl_policy::ClientStateUpdatesRequest::OnClientStateUpdate {
+                summary, responder
+            }))) => {
+                // Ack update.
+                responder.send().expect("error acking update");
+                summary
+            }
+        );
+        assert_eq!(summary, fidl_policy::ClientStateSummary { state: None, networks: None });
+        // Verify exactly one update was sent.
+        assert_variant!(exec.run_until_stalled(&mut update_stream.next()), Poll::Pending);
     }
 }

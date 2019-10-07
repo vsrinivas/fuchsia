@@ -13,33 +13,51 @@ mod policy;
 mod shim;
 mod state_machine;
 
-use crate::{config::Config, known_ess_store::KnownEssStore};
-
-use failure::{format_err, Error, ResultExt};
-use fidl_fuchsia_wlan_device_service::DeviceServiceMarker;
-use fuchsia_async as fasync;
-use fuchsia_component::server::ServiceFs;
-use futures::future::try_join;
-use futures::prelude::*;
-use std::sync::Arc;
-use void::Void;
+use {
+    crate::{config::Config, known_ess_store::KnownEssStore},
+    failure::{format_err, Error, ResultExt},
+    fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
+    fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    futures::{channel::mpsc, future::try_join, prelude::*, select},
+    pin_utils::pin_mut,
+    std::sync::Arc,
+    void::Void,
+};
 
 async fn serve_fidl(
     _client_ref: shim::ClientRef,
     ess_store: Arc<KnownEssStore>,
 ) -> Result<Void, Error> {
     let mut fs = ServiceFs::new();
+    let (listener_msg_sender, listener_msgs) = mpsc::unbounded();
+    let listener_msg_sender1 = listener_msg_sender.clone();
+    let listener_msg_sender2 = listener_msg_sender.clone();
     fs.dir("svc")
         .add_fidl_service(move |stream| {
             let fut = shim::serve_legacy(stream, _client_ref.clone(), Arc::clone(&ess_store))
                 .unwrap_or_else(|e| eprintln!("error serving legacy wlan API: {}", e));
             fasync::spawn(fut)
         })
-        .add_fidl_service(move |reqs| policy::client::spawn_provider_server(reqs))
-        .add_fidl_service(move |reqs| policy::client::spawn_listener_server(reqs));
+        .add_fidl_service(move |reqs| {
+            policy::client::spawn_provider_server(listener_msg_sender1.clone(), reqs)
+        })
+        .add_fidl_service(move |reqs| {
+            policy::client::spawn_listener_server(listener_msg_sender2.clone(), reqs)
+        });
     fs.take_and_serve_directory_handle()?;
-    let () = fs.collect().await;
-    Err(format_err!("FIDL server future exited unexpectedly"))
+    let service_fut = fs.collect::<()>().fuse();
+    pin_mut!(service_fut);
+
+    let serve_policy_listeners = policy::client::listener::serve(listener_msgs).fuse();
+    pin_mut!(serve_policy_listeners);
+
+    loop {
+        select! {
+            _ = service_fut => (),
+            _ = serve_policy_listeners => (),
+        }
+    }
 }
 
 fn main() -> Result<(), Error> {
