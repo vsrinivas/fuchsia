@@ -11,6 +11,7 @@ group("test") {
 
 test("hid-parser") {
   sources = [
+    "hid-descriptor-test.cc",
     "hid-helper-test.cc",
     "hid-parser-test.cc",
     "hid-report-data.cc",
@@ -20,6 +21,7 @@ test("hid-parser") {
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/hid",
     "$zx/system/ulib/hid-parser",
     "$zx/system/ulib/zxtest",
   ]

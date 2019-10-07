@@ -10,8 +10,10 @@ library("hid-parser") {
     "hid-parser/item.h",
     "hid-parser/parser.h",
     "hid-parser/usages.h",
+    "hid-parser/descriptor.h",
   ]
   sources = [
+    "descriptor.cc",
     "item.cc",
     "parser.cc",
     "report.cc",

@@ -11,10 +11,10 @@
 #include <hid-parser/report.h>
 #include <hid-parser/units.h>
 #include <hid-parser/usages.h>
+#include <hid/boot.h>
 #include <zxtest/zxtest.h>
 
 // See hid-report-data.cpp for the definitions of the test data.
-extern "C" const uint8_t boot_mouse_r_desc[50];
 extern "C" const uint8_t hp_mouse_r_desc[46];
 extern "C" const uint8_t trinket_r_desc[173];
 extern "C" const uint8_t ps3_ds_r_desc[148];
@@ -79,7 +79,9 @@ TEST(HidHelperTest, ItemizeEveTabletRpt) {
 
 TEST(HidHelperTest, ParseBootMouse) {
   hid::DeviceDescriptor* dev = nullptr;
-  auto res = hid::ParseReportDescriptor(boot_mouse_r_desc, sizeof(boot_mouse_r_desc), &dev);
+  size_t len;
+  const uint8_t* report_desc = get_boot_mouse_report_desc(&len);
+  auto res = hid::ParseReportDescriptor(report_desc, len, &dev);
 
   ASSERT_EQ(res, hid::ParseResult::kParseOk);
 
