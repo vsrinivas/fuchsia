@@ -455,10 +455,11 @@ TEST(MountGetDeviceCase, MountGetDevice) {
 }
 
 // Mounts a minfs formatted partition to the desired point.
-void MountMinfs(int block_fd, bool read_only, const char* mount_path) {
+void MountMinfs(int block_fd, bool read_only, bool enable_journal, const char* mount_path) {
   mount_options_t options;
   memcpy(&options, &test_mount_options, sizeof(mount_options_t));
   options.readonly = read_only;
+  options.enable_journal = enable_journal;
 
   ASSERT_EQ(mount(block_fd, mount_path, DISK_FORMAT_MINFS, &options, launch_stdio_async), ZX_OK);
   ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
@@ -471,7 +472,7 @@ void CreateTestFile(const char* ramdisk_path, const char* mount_path, const char
 
   int fd = open(ramdisk_path, O_RDWR);
   ASSERT_GT(fd, 0);
-  ASSERT_NO_FATAL_FAILURES(MountMinfs(fd, false, mount_path));
+  ASSERT_NO_FATAL_FAILURES(MountMinfs(fd, false, true, mount_path));
 
   int root_fd = open(mount_path, O_RDONLY | O_DIRECTORY);
   ASSERT_GE(root_fd, 0);
@@ -498,7 +499,8 @@ TEST(MountReadonlyCase, MountReadonly) {
   ASSERT_GT(fd, 0);
 
   bool read_only = true;
-  ASSERT_NO_FATAL_FAILURES(MountMinfs(fd, read_only, mount_path));
+  bool enable_journal = true;
+  ASSERT_NO_FATAL_FAILURES(MountMinfs(fd, read_only, enable_journal, mount_path));
 
   int root_fd = open(mount_path, O_RDONLY | O_DIRECTORY);
   ASSERT_GE(root_fd, 0);
@@ -540,7 +542,9 @@ TEST(MountBlockReadonlyCase, MountBlockReadonly) {
   ASSERT_EQ(ramdisk_set_flags(ramdisk, flags), ZX_OK);
 
   bool read_only = false;
-  ASSERT_NO_FATAL_FAILURES(MountMinfs(ramdisk_get_block_fd(ramdisk), read_only, mount_path));
+  bool enable_journal = false;
+  ASSERT_NO_FATAL_FAILURES(MountMinfs(ramdisk_get_block_fd(ramdisk), read_only, enable_journal,
+                                      mount_path));
 
   // We can't modify the file.
   int root_fd = open(mount_path, O_RDONLY | O_DIRECTORY);

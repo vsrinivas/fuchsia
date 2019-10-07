@@ -34,7 +34,7 @@
 namespace {
 
 int Fsck(fbl::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
-  if (options.readonly) {
+  if (options.readonly_after_initialization) {
     return Fsck(std::move(bc), minfs::Repair::kDisabled);
   }
   return Fsck(std::move(bc), minfs::Repair::kEnabled);
@@ -94,7 +94,8 @@ int usage() {
           "\n"
           "options:\n"
           "    -v|--verbose                  Some debug messages\n"
-          "    -r|--readonly                 Mount filesystem read-only\n"
+          "    -r|--readonly                 Mount filesystem read-only (after repair)\n"
+          "    -j|--journal                  Enable journaling for writeback\n"
           "    -m|--metrics                  Collect filesystem metrics\n"
           "    -s|--fvm_data_slices SLICES   When mkfs on top of FVM,\n"
           "                                  preallocate |SLICES| slices of data. \n"
@@ -112,32 +113,11 @@ int usage() {
   return -1;
 }
 
-zx_status_t GetInfo(const fbl::unique_fd& fd, off_t* out_size, bool* out_readonly) {
-  fuchsia_hardware_block_BlockInfo info;
-  const fzl::UnownedFdioCaller connection(fd.get());
-  zx_status_t status;
-  zx_status_t io_status =
-      fuchsia_hardware_block_BlockGetInfo(connection.borrow_channel(), &status, &info);
-  if (io_status != ZX_OK) {
-    status = io_status;
-  }
-  if (status != ZX_OK) {
-    fprintf(stderr, "error: minfs could not find size of device\n");
-    return status;
-  }
-  *out_size = info.block_size * info.block_count;
-  *out_readonly = info.flags & fuchsia_hardware_block_FLAG_READONLY;
-  return ZX_OK;
-}
-
 }  // namespace
 
 int main(int argc, char** argv) {
   minfs::MountOptions options;
-  options.readonly = false;
-  options.metrics = false;
-  options.verbose = false;
-  options.journal = false;
+  options.use_journal = false;
 
   while (1) {
     static struct option opts[] = {
@@ -156,13 +136,13 @@ int main(int argc, char** argv) {
     }
     switch (c) {
       case 'r':
-        options.readonly = true;
+        options.readonly_after_initialization = true;
         break;
       case 'm':
         options.metrics = true;
         break;
       case 'j':
-        options.journal = true;
+        options.use_journal = true;
         break;
       case 'v':
         options.verbose = true;
@@ -205,7 +185,8 @@ int main(int argc, char** argv) {
     fprintf(stderr, "minfs: error: cannot create block cache\n");
     return -1;
   }
-  options.readonly |= readonly_device;
+  options.readonly_after_initialization |= readonly_device;
+  options.repair_filesystem &= !readonly_device;
 
   for (unsigned i = 0; i < fbl::count_of(CMDS); i++) {
     if (strcmp(cmd, CMDS[i].name) == 0) {

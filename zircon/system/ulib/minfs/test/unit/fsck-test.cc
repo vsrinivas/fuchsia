@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <block-client/cpp/fake-device.h>
 #include <minfs/fsck.h>
+
+#include <block-client/cpp/fake-device.h>
 #include <minfs/format.h>
 #include <zxtest/zxtest.h>
 
@@ -54,13 +55,10 @@ TEST_F(ConsistencyCheckerTest, NewlyFormattedFilesystemCheckAfterMount) {
   ASSERT_OK(Bcache::Create(std::move(device), kBlockCount, &bcache));
   ASSERT_OK(Mkfs(bcache.get()));
 
-  Superblock info = {};
-  bool writable = true;
-  ASSERT_OK(LoadAndUpgradeSuperblockAndJournal(bcache.get(), writable, &info));
-
+  MountOptions options = {};
   std::unique_ptr<Minfs> fs;
-  ASSERT_OK(Minfs::Create(std::move(bcache), &info, IntegrityCheck::kAll, &fs));
-  Minfs::DestroyMinfs(std::move(fs), &bcache);
+  ASSERT_OK(Minfs::Create(std::move(bcache), options, &fs));
+  bcache = Minfs::Destroy(std::move(fs));
   ASSERT_OK(Fsck(std::move(bcache), Repair::kEnabled));
 }
 

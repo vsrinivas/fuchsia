@@ -275,6 +275,47 @@ zx_status_t VerifySlicesSize(const Superblock* info, const TransactionLimits& li
   return ZX_OK;
 }
 
+// Fuses "reading the superblock from storage" with "correcting if it is wrong".
+zx_status_t LoadSuperblockWithRepair(Bcache* bc, bool repair, Superblock* out_info) {
+  zx_status_t status = LoadSuperblock(bc, out_info);
+  if (status != ZX_OK) {
+    if (!repair) {
+      FS_TRACE_ERROR("minfs: Cannot load superblock; not attempting to repair\n");
+      return status;
+    }
+    FS_TRACE_WARN("minfs: Attempting to repair superblock\n");
+
+#ifdef __Fuchsia__
+    status = RepairSuperblock(bc, bc->device(), bc->Maxblk(), out_info);
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("minfs: Unable to repair corrupt filesystem.\n");
+      return status;
+    }
+#else
+    return ZX_ERR_NOT_SUPPORTED;
+#endif
+  }
+  return ZX_OK;
+}
+
+#ifdef __Fuchsia__
+
+// Replays the journal and reloads the superblock (it may have been present in the journal).
+//
+// |info| is both an input and output parameter; it may be overwritten.
+zx_status_t ReplayJournalReloadSuperblock(Bcache* bc, Superblock* info,
+                                          fs::JournalSuperblock* out_journal_superblock) {
+  zx_status_t status = ReplayJournal(bc, *info, out_journal_superblock);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("minfs: Cannot replay journal\n");
+    return status;
+  }
+  // Re-load the superblock after replaying the journal.
+  return LoadSuperblock(bc, info);
+}
+
+#endif
+
 }  // namespace
 
 zx_time_t GetTimeUTC() {
@@ -352,14 +393,6 @@ zx_status_t CheckSuperblock(const Superblock* info, uint32_t max_blocks) {
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
-#ifdef __Fuchsia__
-  if ((info->flags & kMinfsFlagClean) == 0) {
-    FS_TRACE_ERROR("minfs: filesystem in dirty state. Was not unmounted cleanly.\n");
-  } else {
-    FS_TRACE_INFO("minfs: filesystem in clean state.\n");
-  }
-#endif
-
   TransactionLimits limits(*info);
   if ((info->flags & kMinfsFlagFVM) == 0) {
     if (info->dat_block + info->block_count != max_blocks) {
@@ -385,7 +418,6 @@ zx_status_t CheckSuperblock(const Superblock* info, uint32_t max_blocks) {
       return status;
     }
   }
-  // TODO: validate layout
   return ZX_OK;
 }
 
@@ -420,8 +452,11 @@ BlockOffsets::BlockOffsets(const Bcache& bc, const SuperblockManager& sb) {
 }
 #endif
 
-void Minfs::DestroyMinfs(std::unique_ptr<Minfs> minfs, std::unique_ptr<Bcache>* out) {
-  *out = std::move(minfs->bc_);
+std::unique_ptr<Bcache> Minfs::Destroy(std::unique_ptr<Minfs> minfs) {
+#ifdef __Fuchsia__
+  minfs->StopWriteback();
+#endif
+  return std::move(minfs->bc_);
 }
 
 zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
@@ -768,6 +803,35 @@ zx_status_t Minfs::CreateFsId(uint64_t* out) {
   *out = info.koid;
   return ZX_OK;
 }
+
+zx_status_t Minfs::WriteCleanBit(bool is_clean) {
+  std::unique_ptr<Transaction> transaction;
+  zx_status_t status = BeginTransaction(0, 0, &transaction);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("minfs: failed to %s clean flag: %d\n", is_clean ? "set" : "unset", status);
+    return status;
+  }
+  UpdateFlags(transaction.get(), kMinfsFlagClean, is_clean);
+  CommitTransaction(std::move(transaction));
+  return ZX_OK;
+}
+
+void Minfs::StopWriteback() {
+  // Minfs already terminated.
+  if (!bc_) {
+    return;
+  }
+
+  if (IsReadonly() == false) {
+    bool is_clean = true;
+    WriteCleanBit(is_clean);
+  }
+
+  assigner_ = nullptr;
+  journal_ = nullptr;
+  bc_->Sync();
+}
+
 #endif
 
 fbl::RefPtr<VnodeMinfs> Minfs::VnodeLookupInternal(uint32_t ino) {
@@ -948,27 +1012,9 @@ void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent) {
   de->name[1] = '.';
 }
 
-zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info, IntegrityCheck checks,
-                          fbl::unique_ptr<Minfs>* out) {
-#ifndef __Fuchsia__
-  if (bc->extent_lengths_.size() != 0 && bc->extent_lengths_.size() != kExtentCount) {
-    FS_TRACE_ERROR("minfs: invalid number of extents\n");
-    return ZX_ERR_INVALID_ARGS;
-  }
-#endif
-
-  fbl::unique_ptr<SuperblockManager> sb;
-#ifdef __Fuchsia__
-  zx_status_t status = SuperblockManager::Create(bc->device(), info, bc->Maxblk(), checks, &sb);
-#else
-  zx_status_t status = SuperblockManager::Create(info, bc->Maxblk(), checks, &sb);
-#endif
-
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("Minfs::Create failed to initialize superblock: %d\n", status);
-    return status;
-  }
-
+zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bcache> bc,
+                                     std::unique_ptr<SuperblockManager> sb,
+                                     std::unique_ptr<Minfs>* out_minfs) {
 #ifdef __Fuchsia__
   const blk_t abm_start_block = sb->Info().abm_block;
   const blk_t ibm_start_block = sb->Info().ibm_block;
@@ -984,13 +1030,13 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info, In
 
   // Block Bitmap allocator initialization.
   AllocatorFvmMetadata block_allocator_fvm = AllocatorFvmMetadata(
-      &sb->MutableInfo()->dat_slices, &sb->MutableInfo()->abm_slices, info->slice_size);
+      &sb->MutableInfo()->dat_slices, &sb->MutableInfo()->abm_slices, info.slice_size);
   AllocatorMetadata block_allocator_meta =
-      AllocatorMetadata(info->dat_block, abm_start_block, (info->flags & kMinfsFlagFVM) != 0,
+      AllocatorMetadata(info.dat_block, abm_start_block, (info.flags & kMinfsFlagFVM) != 0,
                         std::move(block_allocator_fvm), &sb->MutableInfo()->alloc_block_count,
                         &sb->MutableInfo()->block_count);
 
-  fbl::unique_ptr<PersistentStorage> storage(
+  std::unique_ptr<PersistentStorage> storage(
 #ifdef __Fuchsia__
       new PersistentStorage(bc->device(), sb.get(), kMinfsBlockSize, nullptr,
                             std::move(block_allocator_meta)));
@@ -998,35 +1044,36 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info, In
       new PersistentStorage(sb.get(), kMinfsBlockSize, nullptr, std::move(block_allocator_meta)));
 #endif
 
-  fbl::unique_ptr<Allocator> block_allocator;
-  if ((status = Allocator::Create(&transaction, std::move(storage), &block_allocator)) != ZX_OK) {
+  std::unique_ptr<Allocator> block_allocator;
+  zx_status_t status = Allocator::Create(&transaction, std::move(storage), &block_allocator);
+  if (status != ZX_OK) {
     FS_TRACE_ERROR("Minfs::Create failed to initialize block allocator: %d\n", status);
     return status;
   }
 
   // Inode Bitmap allocator initialization.
   AllocatorFvmMetadata inode_allocator_fvm = AllocatorFvmMetadata(
-      &sb->MutableInfo()->ino_slices, &sb->MutableInfo()->ibm_slices, info->slice_size);
+      &sb->MutableInfo()->ino_slices, &sb->MutableInfo()->ibm_slices, info.slice_size);
   AllocatorMetadata inode_allocator_meta =
-      AllocatorMetadata(ino_start_block, ibm_start_block, (info->flags & kMinfsFlagFVM) != 0,
+      AllocatorMetadata(ino_start_block, ibm_start_block, (info.flags & kMinfsFlagFVM) != 0,
                         std::move(inode_allocator_fvm), &sb->MutableInfo()->alloc_inode_count,
                         &sb->MutableInfo()->inode_count);
 
-  fbl::unique_ptr<InodeManager> inodes;
+  std::unique_ptr<InodeManager> inodes;
 #ifdef __Fuchsia__
-  status =
-      InodeManager::Create(bc->device(), sb.get(), &transaction, std::move(inode_allocator_meta),
-                           ino_start_block, info->inode_count, &inodes);
+  status = InodeManager::Create(bc->device(), sb.get(), &transaction, std::move(inode_allocator_meta),
+                                ino_start_block, info.inode_count, &inodes);
 #else
   status = InodeManager::Create(bc.get(), sb.get(), &transaction, std::move(inode_allocator_meta),
-                                ino_start_block, info->inode_count, &inodes);
+                                ino_start_block, info.inode_count, &inodes);
 #endif
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Minfs::Create failed to initialize inodes: %d\n", status);
     return status;
   }
 
-  if ((status = transaction.Transact()) != ZX_OK) {
+  status = transaction.Transact();
+  if (status != ZX_OK) {
     FS_TRACE_ERROR("Minfs::Create failed to read initial blocks: %d\n", status);
     return status;
   }
@@ -1039,22 +1086,130 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info, In
     return status;
   }
 
-  *out = fbl::unique_ptr<Minfs>(
-      new Minfs(std::move(bc), std::move(sb), std::move(block_allocator), std::move(inodes), id));
+  *out_minfs = std::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb),
+                                                std::move(block_allocator), std::move(inodes), id));
 #else
-  *out = fbl::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb), std::move(block_allocator),
-                                          std::move(inodes), std::move(offsets)));
+  *out_minfs = std::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb),
+                                                std::move(block_allocator), std::move(inodes),
+                                                std::move(offsets)));
+#endif
+  return ZX_OK;
+}
+
+zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc,
+                          const MountOptions& options,
+                          fbl::unique_ptr<Minfs>* out) {
+  // To use the journal, it must first be replayed.
+  if (!options.repair_filesystem && options.use_journal) {
+    FS_TRACE_ERROR("minfs: Journal replay is required to utilize journal");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Read the superblock before replaying the journal.
+  Superblock info;
+  bool repair = options.repair_filesystem;
+  zx_status_t status = LoadSuperblockWithRepair(bc.get(), repair, &info);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+#ifdef __Fuchsia__
+  if ((info.flags & kMinfsFlagClean) == 0) {
+    FS_TRACE_WARN("minfs: filesystem not unmounted cleanly.\n");
+  }
+
+  // Replay the journal before loading any other structures.
+  fs::JournalSuperblock journal_superblock = {};
+  if (options.repair_filesystem) {
+    status = ReplayJournalReloadSuperblock(bc.get(), &info, &journal_superblock);
+    if (status != ZX_OK) {
+      return status;
+    }
+  } else {
+    FS_TRACE_WARN("minfs: Not replaying journal\n");
+  }
 #endif
 
+#ifndef __Fuchsia__
+  if (bc->extent_lengths_.size() != 0 && bc->extent_lengths_.size() != kExtentCount) {
+    FS_TRACE_ERROR("minfs: invalid number of extents\n");
+    return ZX_ERR_INVALID_ARGS;
+  }
+#endif
+
+  std::unique_ptr<SuperblockManager> sb;
+  IntegrityCheck checks = options.repair_filesystem ? IntegrityCheck::kAll : IntegrityCheck::kNone;
+#ifdef __Fuchsia__
+  status = SuperblockManager::Create(bc->device(), &info, bc->Maxblk(), checks, &sb);
+#else
+  status = SuperblockManager::Create(&info, bc->Maxblk(), checks, &sb);
+#endif
+
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("Minfs::Create failed to initialize superblock: %d\n", status);
+    return status;
+  }
+
+  std::unique_ptr<Minfs> fs;
+  status = Minfs::ReadInitialBlocks(info, std::move(bc), std::move(sb), &fs);
+
+#ifdef __Fuchsia__
+  if (options.use_journal) {
+    ZX_ASSERT(options.repair_filesystem);
+    status = fs->InitializeJournal(std::move(journal_superblock));
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("minfs: Cannot initialize journal\n");
+      return status;
+    }
+  } else {
+    status = fs->InitializeUnjournalledWriteback();
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("minfs: Cannot initialize non-journal writeback\n");
+      return status;
+    }
+  }
+
+  status = fs->InitializeWorkQueue();
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("minfs: Cannot initialize work queue\n");
+    return status;
+  }
+
+  if (options.repair_filesystem) {
+    // On a read-write filesystem we unset the kMinfsFlagClean flag to indicate that the filesystem
+    // may begin receiving modifications.
+    //
+    // The kMinfsFlagClean flag is reset on orderly shutdown.
+    bool is_clean = false;
+    status = fs->WriteCleanBit(is_clean);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    // After loading the rest of the filesystem, purge any remaining nodes in the unlinked list.
+    status = fs->PurgeUnlinked();
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("minfs: Cannot purge unlinked list\n");
+      return status;
+    }
+  }
+  if (options.readonly_after_initialization) {
+    // The filesystem should still be "writable"; we set the dirty bit while
+    // purging the unlinked list. Invoking StopWriteback here unsets the dirty bit.
+    fs->StopWriteback();
+  }
+  fs->SetReadonly(options.readonly_after_initialization);
+#endif
+
+  *out = std::move(fs);
   return ZX_OK;
 }
 
 #ifdef __Fuchsia__
-zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler, fs::VmoidRegistry* registry,
-                          const Superblock& info, fs::JournalSuperblock* out) {
+zx_status_t ReplayJournal(Bcache* bc, const Superblock& info, fs::JournalSuperblock* out) {
   FS_TRACE_INFO("minfs: Replaying journal\n");
 
-  zx_status_t status = fs::ReplayJournal(transaction_handler, registry, JournalStartBlock(info),
+  zx_status_t status = fs::ReplayJournal(bc, bc, JournalStartBlock(info),
                                          JournalBlocks(info), out);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("minfs: Failed to replay journal\n");
@@ -1194,147 +1349,6 @@ zx_status_t ReadDataFromDisk(fs::TransactionHandler* transaction_handler,
 #endif
 
 #ifdef __Fuchsia__
-zx_status_t UpgradeSuperblock(fs::TransactionHandler* transaction_handler,
-                              block_client::BlockDevice* device, void* out_info) {
-#else
-zx_status_t UpgradeSuperblock(fs::TransactionHandler* transaction_handler, void* out_info) {
-#endif
-  SuperblockOld* old_info = reinterpret_cast<SuperblockOld*>(out_info);
-
-  if (old_info->version != kMinfsMajorVersionOld1) {
-    // Skip upgrade if minfs superblock version does not match expected.
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  // Update to newer superblock version.
-  Superblock new_info = {};
-  new_info.magic0 = old_info->magic0;
-  new_info.magic1 = old_info->magic1;
-  new_info.flags = old_info->flags;
-  new_info.block_size = old_info->block_size;
-  new_info.inode_size = old_info->inode_size;
-  new_info.block_count = old_info->block_count;
-  new_info.inode_count = old_info->inode_count;
-  new_info.alloc_block_count = old_info->alloc_block_count;
-  new_info.alloc_inode_count = old_info->alloc_inode_count;
-  new_info.ibm_block = old_info->ibm_block;
-  new_info.abm_block = old_info->abm_block;
-  new_info.ino_block = old_info->ino_block;
-  new_info.integrity_start_block = old_info->journal_start_block;
-  new_info.dat_block = old_info->dat_block;
-  new_info.slice_size = static_cast<uint32_t>(old_info->slice_size);
-  new_info.vslice_count = static_cast<uint32_t>(old_info->vslice_count);
-  new_info.ibm_slices = old_info->ibm_slices;
-  new_info.abm_slices = old_info->abm_slices;
-  new_info.ino_slices = old_info->ino_slices;
-  new_info.integrity_slices = old_info->journal_slices;
-  new_info.dat_slices = old_info->dat_slices;
-  new_info.unlinked_head = old_info->unlinked_head;
-  new_info.unlinked_tail = old_info->unlinked_tail;
-
-  // Upgrade to newer version.
-  new_info.version_major = kMinfsMajorVersionOld2;
-  new_info.version_minor = kMinfsMinorVersion;
-
-  UpdateChecksum(&new_info);
-
-  blk_t block_num = kFvmSuperblockBackup;
-  if ((new_info.flags & kMinfsFlagFVM) == 0) {
-    block_num = kNonFvmSuperblockBackup;
-  }
-
-  zx_status_t status = ZX_OK;
-
-// First try to write backup superblock info to disk.
-#ifdef __Fuchsia__
-  status = WriteDataToDisk(transaction_handler, device, &new_info, sizeof(new_info), block_num);
-#else
-  status = transaction_handler->Writeblk(block_num, &new_info);
-#endif
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // Finally write newer superblock info to disk.
-  // If this fails, the state of the device is un-changed.
-#ifdef __Fuchsia__
-  status =
-      WriteDataToDisk(transaction_handler, device, &new_info, sizeof(new_info), kSuperblockStart);
-#else
-  status = transaction_handler->Writeblk(kSuperblockStart, &new_info);
-#endif
-  memcpy(out_info, &new_info, sizeof(new_info));
-  return status;
-}
-
-#ifdef __Fuchsia__
-zx_status_t UpgradeJournal(fs::TransactionHandler* transaction_handler,
-                           block_client::BlockDevice* device, Superblock* out_info) {
-  static_assert(kMinfsMajorVersion == 0x9, "Version 9 Upgrade code should only live for one rev.");
-
-  if (out_info->version_major != kMinfsMajorVersionOld2) {
-    // Skip upgrade if minfs superblock version does not match expected.
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  // Make sure that the journal start block is set correctly on FVM. If Minfs was previously
-  // upgraded from version 7 to 8, this may be out of date.
-  if (GetMinfsFlagFvm(*out_info)) {
-    out_info->integrity_start_block = kFvmSuperblockBackup + kBackupSuperblockBlocks;
-  }
-
-  zx_status_t status;
-  uint8_t journal_block[kMinfsBlockSize] = {};
-
-  blk_t journal_start_block = static_cast<blk_t>(JournalStartBlock(*out_info));
-  status = ReadDataFromDisk(transaction_handler, device, &journal_block[0], kMinfsBlockSize,
-                            journal_start_block);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  fs::JournalInfo* journal_info = reinterpret_cast<fs::JournalInfo*>(journal_block);
-  // Ideally we should check that the current journal magic on disk matches kOldJournalMagic, but
-  // in the case that this Minfs was previously upgraded to version 8, the journal superblock would
-  // have been overwritten and not moved to its new location, so this may not match as expected.
-  journal_info->magic = fs::kJournalMagic;
-  journal_info->checksum = 0;
-  journal_info->checksum =
-      crc32(0, reinterpret_cast<const uint8_t*>(journal_block), sizeof(fs::JournalInfo));
-
-  status = WriteDataToDisk(transaction_handler, device, journal_info, sizeof(*journal_info),
-                           journal_start_block);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  out_info->version_major = kMinfsMajorVersion;
-  UpdateChecksum(out_info);
-
-  blk_t block_num = kFvmSuperblockBackup;
-  if ((out_info->flags & kMinfsFlagFVM) == 0) {
-    block_num = kNonFvmSuperblockBackup;
-  }
-
-  // First try to write backup superblock info to disk.
-  status = WriteDataToDisk(transaction_handler, device, out_info, sizeof(*out_info), block_num);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // Finally write newer superblock info to disk.
-  // If this fails, the state of the device is un-changed.
-  status =
-      WriteDataToDisk(transaction_handler, device, out_info, sizeof(*out_info), kSuperblockStart);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  return ZX_OK;
-}
-#endif
-
-#ifdef __Fuchsia__
 zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool* out_readonly,
                          fbl::unique_ptr<minfs::Bcache>* out) {
   fuchsia_hardware_block_BlockInfo info;
@@ -1365,103 +1379,23 @@ zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool
 zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options,
                   fbl::RefPtr<VnodeMinfs>* root_out) {
   TRACE_DURATION("minfs", "minfs_mount");
-  zx_status_t status;
 
-  minfs::Superblock info = {};
-#ifdef __Fuchsia__
-  // TODO(36164): Remove this code after migration to major version 9 and
-  // replace with LoadSuperblock.
-  status = LoadAndUpgradeSuperblockAndJournal(bc.get(), options.readonly == false, &info);
-  if (status != ZX_OK) {
-    FS_TRACE_WARN("minfs: Failed to load superblock / journal: %d\n", status);
-    if (options.readonly) {
-      // Return without repairing.
-      return status;
-    }
-    FS_TRACE_WARN("minfs: Attempting repair via fsck\n");
-
-    // Force repair.
-    status = Fsck(std::move(bc), Repair::kEnabled, &bc);
-    if (status != ZX_OK) {
-      FS_TRACE_ERROR("minfs: error: Unable to repair corrupt filesystem.\n");
-      return status;
-    }
-
-    // Load the already repaired superblock again.
-    status = minfs::LoadSuperblock(bc.get(), &info);
-    if (status != ZX_OK) {
-      FS_TRACE_ERROR("minfs: error: Unable to read corrupt filesystem.\n");
-      return status;
-    }
-  }
-
-  if ((info.flags & kMinfsFlagClean) == 0) {
-    FS_TRACE_WARN("minfs: filesystem not unmounted cleanly. Integrity check required\n");
-  }
-  fs::JournalSuperblock journal_superblock;
-  if (!options.readonly) {
-    if ((status = ReplayJournal(bc.get(), bc.get(), info, &journal_superblock)) != ZX_OK) {
-      return status;
-    }
-  }
-#else
-  status = LoadSuperblock(bc.get(), &info);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("error: could not read info block: %d\n", status);
-    return status;
-  }
-#endif
   fbl::unique_ptr<Minfs> fs;
-  if ((status = Minfs::Create(std::move(bc), &info, IntegrityCheck::kAll, &fs)) != ZX_OK) {
+  zx_status_t status = Minfs::Create(std::move(bc), options, &fs);
+  if (status != ZX_OK) {
     FS_TRACE_ERROR("minfs: failed to create filesystem object %d\n", status);
     return status;
   }
-#ifdef __Fuchsia__
-  if (!options.readonly) {
-    if (options.journal) {
-      if ((status = fs->InitializeJournal(std::move(journal_superblock))) != ZX_OK) {
-        return status;
-      }
-    } else if ((status = fs->InitializeUnjournalledWriteback()) != ZX_OK) {
-      return status;
-    }
-
-    // After initializing the writeback buffers, purge any remaining nodes in the unlinked list.
-    if ((status = fs->PurgeUnlinked()) != ZX_OK) {
-      return status;
-    }
-
-    // Finally, bring up the async work queue.
-    if ((status = fs->InitializeWorkQueue()) != ZX_OK) {
-      return status;
-    }
-  }
-#endif
 
   fbl::RefPtr<VnodeMinfs> vn;
-  if ((status = fs->VnodeGet(&vn, kMinfsRootIno)) != ZX_OK) {
+  status = fs->VnodeGet(&vn, kMinfsRootIno);
+  if (status != ZX_OK) {
     FS_TRACE_ERROR("minfs: cannot find root inode: %d\n", status);
     return status;
   }
 
   ZX_DEBUG_ASSERT(vn->IsDirectory());
 
-#ifdef __Fuchsia__
-  // Filesystem is safely mounted at this point. On a read-write filesystem, since we can now
-  // serve writes on the filesystem, we need to unset the kMinfsFlagClean flag to indicate
-  // that the filesystem may not be in a "clean" state anymore. This helps to make sure we are
-  // unmounted cleanly i.e the kMinfsFlagClean flag is set back on clean unmount.
-  if (options.readonly == false) {
-    fbl::unique_ptr<Transaction> transaction;
-    if ((status = fs->BeginTransaction(0, 0, &transaction)) == ZX_OK) {
-      fs->UpdateFlags(transaction.get(), kMinfsFlagClean, false);
-      fs->CommitTransaction(std::move(transaction));
-    }
-    if (status != ZX_OK) {
-      FS_TRACE_WARN("minfs: failed to unset clean flag: %d\n", status);
-    }
-  }
-#endif
   __UNUSED auto r = fs.release();
   *root_out = std::move(vn);
   return ZX_OK;
@@ -1481,7 +1415,8 @@ zx_status_t MountAndServe(const MountOptions& mount_options, async_dispatcher_t*
     FS_TRACE_ERROR("minfs: Could not create block cache\n");
     return status;
   }
-  options.readonly |= readonly_device;
+  options.readonly_after_initialization |= readonly_device;
+  options.repair_filesystem &= !readonly_device;
 
   fbl::RefPtr<VnodeMinfs> root;
   status = Mount(std::move(bc), options, &root);
@@ -1490,7 +1425,6 @@ zx_status_t MountAndServe(const MountOptions& mount_options, async_dispatcher_t*
   }
 
   Minfs* vfs = root->Vfs();
-  vfs->SetReadonly(options.readonly);
   vfs->SetMetrics(options.metrics);
   vfs->SetUnmountCallback(std::move(on_unmount));
   vfs->SetDispatcher(dispatcher);
@@ -1500,27 +1434,11 @@ zx_status_t MountAndServe(const MountOptions& mount_options, async_dispatcher_t*
 void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
   // On a read-write filesystem, set the kMinfsFlagClean on a clean unmount.
   FS_TRACE_INFO("minfs: Shutting down\n");
-  if (IsReadonly() == false) {
-    fbl::unique_ptr<Transaction> transaction;
-    zx_status_t status;
-    if ((status = BeginTransaction(0, 0, &transaction)) == ZX_OK) {
-      UpdateFlags(transaction.get(), kMinfsFlagClean, true);
-      CommitTransaction(std::move(transaction));
-    }
-    if (status != ZX_OK) {
-      FS_TRACE_WARN("minfs: Failed to set clean flag on unmount: %d\n", status);
-    }
-  }
   ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
     Sync([this, cb = std::move(cb)](zx_status_t) mutable {
       async::PostTask(dispatcher(), [this, cb = std::move(cb)]() mutable {
-        // Ensure writeback buffer completes before auxilliary structures
-        // are deleted.
-        // The data block assigner must be resolved first, so it can enqueue any pending
-        // transactions to the writeback buffer.
-        assigner_ = nullptr;
-        journal_ = nullptr;
-        bc_->Sync();
+        // Ensure writeback buffer completes before auxilliary structures are deleted.
+        StopWriteback();
 
         auto on_unmount = std::move(on_unmount_);
 

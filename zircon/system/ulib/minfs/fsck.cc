@@ -30,11 +30,11 @@ using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 
 class MinfsChecker {
  public:
-  static zx_status_t Create(std::unique_ptr<Bcache> bc, const Superblock* info,
+  static zx_status_t Create(std::unique_ptr<Bcache> bc, Repair fsck_repair,
                             std::unique_ptr<MinfsChecker>* out);
 
-  static void DestroyChecker(std::unique_ptr<MinfsChecker> checker, std::unique_ptr<Bcache>* out) {
-    Minfs::DestroyMinfs(std::move(checker->fs_), out);
+  static std::unique_ptr<Bcache> Destroy(std::unique_ptr<MinfsChecker> checker) {
+    return Minfs::Destroy(std::move(checker->fs_));
   }
 
   void CheckReserved();
@@ -44,7 +44,7 @@ class MinfsChecker {
   zx_status_t CheckForUnusedInodes() const;
   zx_status_t CheckLinkCounts() const;
   zx_status_t CheckAllocatedCounts() const;
-  zx_status_t CheckIntegrity() const;
+  zx_status_t CheckSuperblockIntegrity() const;
 
   // "Set once"-style flag to identify if anything nonconforming
   // was found in the underlying filesystem -- even if it was fixed.
@@ -592,15 +592,9 @@ zx_status_t MinfsChecker::CheckAllocatedCounts() const {
   return status;
 }
 
-zx_status_t MinfsChecker::CheckIntegrity() const {
+zx_status_t MinfsChecker::CheckSuperblockIntegrity() const {
   char data[kMinfsBlockSize];
   blk_t journal_block;
-
-  // TODO(36164): Remove this condition after safe migration to major version 9.
-  if (fs_->Info().version_major != kMinfsMajorVersion) {
-    // Skip integrity check if we are not on the latest Minfs version.
-    return ZX_OK;
-  }
 
 #ifdef __Fuchsia__
   journal_block = static_cast<blk_t>(JournalStartBlock(fs_->Info()));
@@ -656,26 +650,39 @@ zx_status_t MinfsChecker::CheckIntegrity() const {
 MinfsChecker::MinfsChecker()
     : conforming_(true), fs_(nullptr), alloc_inodes_(0), alloc_blocks_(0), links_() {}
 
-zx_status_t MinfsChecker::Create(std::unique_ptr<Bcache> bc, const Superblock* info,
+zx_status_t MinfsChecker::Create(std::unique_ptr<Bcache> bc, Repair fsck_repair,
                                  std::unique_ptr<MinfsChecker>* out) {
+  MountOptions options = {};
+  if (fsck_repair == Repair::kEnabled) {
+    options.readonly_after_initialization = false;
+    options.repair_filesystem = true;
+    options.use_journal = true;
+  } else {
+    options.readonly_after_initialization = false;
+    options.repair_filesystem = false;
+    options.use_journal = false;
+  }
+  fbl::unique_ptr<Minfs> fs;
+  zx_status_t status = Minfs::Create(std::move(bc), options, &fs);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("MinfsChecker::Create Failed to Create Minfs: %d\n", status);
+    return status;
+  }
+
+  const Superblock& info = fs->Info();
+
   auto checker = std::unique_ptr<MinfsChecker>(new MinfsChecker());
-  checker->links_.reset(new int32_t[info->inode_count]{0}, info->inode_count);
+  checker->links_.reset(new int32_t[info.inode_count]{0}, info.inode_count);
   checker->links_[0] = -1;
   checker->cached_doubly_indirect_ = 0;
   checker->cached_indirect_ = 0;
 
-  zx_status_t status;
-  if ((status = checker->checked_inodes_.Reset(info->inode_count)) != ZX_OK) {
+  if ((status = checker->checked_inodes_.Reset(info.inode_count)) != ZX_OK) {
     FS_TRACE_ERROR("MinfsChecker::Init Failed to reset checked inodes: %d\n", status);
     return status;
   }
-  if ((status = checker->checked_blocks_.Reset(info->block_count)) != ZX_OK) {
+  if ((status = checker->checked_blocks_.Reset(info.block_count)) != ZX_OK) {
     FS_TRACE_ERROR("MinfsChecker::Init Failed to reset checked blocks: %d\n", status);
-    return status;
-  }
-  fbl::unique_ptr<Minfs> fs;
-  if ((status = Minfs::Create(std::move(bc), info, IntegrityCheck::kAll, &fs)) != ZX_OK) {
-    FS_TRACE_ERROR("MinfsChecker::Create Failed to Create Minfs: %d\n", status);
     return status;
   }
   checker->fs_ = std::move(fs);
@@ -818,83 +825,6 @@ zx_status_t RepairSuperblock(fs::TransactionHandler* transaction_handler,
   return status;
 }
 #endif
-
-// TODO(ZX-4623): Remove this code after migration to major version 8 and replace calling sites
-// with LoadSuperblock.
-// Loads the superblock and upgrades if needed from version 7 or 8 to version 9.
-zx_status_t LoadAndUpgradeSuperblockAndJournal(Bcache* bc, bool is_fs_writable,
-                                               Superblock* out_info) {
-  zx_status_t status = bc->Readblk(kSuperblockStart, out_info);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("minfs: could not read info block.\n");
-    return status;
-  }
-
-  // Verify that the superblock belongs to a Minfs partition.
-  if (out_info->magic0 != kMinfsMagic0 || out_info->magic1 != kMinfsMagic1) {
-    FS_TRACE_ERROR("minfs: invalid magic.\n");
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-#ifdef __Fuchsia__
-  // Fuchsia-only: Format upgrade and journal replay.
-  if (is_fs_writable) {
-    if (out_info->version_major == kMinfsMajorVersionOld1) {
-      FS_TRACE_INFO("minfs: Soft upgrade to version 8.\n");
-      // Upgrade the superblock.
-      status = UpgradeSuperblock(bc, bc->device(), out_info);
-      if (status != ZX_OK) {
-        FS_TRACE_ERROR("minfs: failed to upgrade filesystem format to newer version: %s\n",
-                       zx_status_get_string(status));
-        return status;
-      }
-
-      ZX_ASSERT(out_info->version_major == kMinfsMajorVersionOld2);
-    }
-
-    if (out_info->version_major == kMinfsMajorVersionOld2) {
-      FS_TRACE_INFO("minfs: Soft upgrade to version 9.\n");
-      // Upgrade the journal.
-      status = UpgradeJournal(bc, bc->device(), out_info);
-      if (status != ZX_OK) {
-        FS_TRACE_ERROR("minfs: failed to upgrade on-disk filesystem to newer version %s\n",
-                       zx_status_get_string(status));
-        return status;
-      }
-
-      ZX_ASSERT(out_info->version_major == kMinfsMajorVersion);
-    }
-  }
-
-  // Replay the journal before proceeding further.
-  //
-  // Additionally, re-read the superblock to make sure we're starting from a
-  // consistent state.
-  fs::JournalSuperblock unused_journal_superblock;
-  status = ReplayJournal(bc, bc, *out_info, &unused_journal_superblock);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("Fsck: Failed to replay journal: %s\n", zx_status_get_string(status));
-    return status;
-  }
-  status = bc->Readblk(kSuperblockStart, out_info);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("minfs: could not re-read superblock after replaying journal: %s\n",
-                   zx_status_get_string(status));
-    return status;
-  }
-#endif
-  DumpInfo(out_info);
-#ifdef __Fuchsia__
-  status = CheckSuperblock(out_info, bc->device(), bc->Maxblk());
-#else
-  status = CheckSuperblock(out_info, bc->Maxblk());
-#endif
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("Fsck: check_info failure: %d\n", status);
-    return status;
-  }
-  return ZX_OK;
-}
 
 zx_status_t LoadSuperblock(Bcache* bc, Superblock* out_info) {
   zx_status_t status = bc->Readblk(kSuperblockStart, out_info);
@@ -1044,28 +974,8 @@ zx_status_t ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
 }
 
 zx_status_t Fsck(std::unique_ptr<Bcache> bc, Repair fsck_repair, std::unique_ptr<Bcache>* out_bc) {
-  Superblock info = {};
-
-  // TODO(36164): Remove this code after migration to major version 9 and replace with
-  // LoadSuperblock.
-  zx_status_t status =
-      LoadAndUpgradeSuperblockAndJournal(bc.get(), fsck_repair == minfs::Repair::kEnabled, &info);
-  if (status != ZX_OK) {
-    if (fsck_repair == Repair::kDisabled) {
-      FS_TRACE_ERROR("Fsck: LoadSuperblock failure: %d\n", status);
-      return status;
-    }
-#ifdef __Fuchsia__
-    status = RepairSuperblock(bc.get(), bc->device(), bc->Maxblk(), &info);
-#endif
-    if (status != ZX_OK) {
-      FS_TRACE_ERROR("Fsck: RepairSuperblock failure: %d\n", status);
-      return status;
-    }
-  }
-
   std::unique_ptr<MinfsChecker> chk;
-  status = MinfsChecker::Create(std::move(bc), &info, &chk);
+  zx_status_t status = MinfsChecker::Create(std::move(bc), fsck_repair, &chk);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Fsck: Init failure: %d\n", status);
     return status;
@@ -1074,7 +984,8 @@ zx_status_t Fsck(std::unique_ptr<Bcache> bc, Repair fsck_repair, std::unique_ptr
   chk->CheckReserved();
 
   // TODO: check root not a directory
-  if ((status = chk->CheckInode(1, 1, 0)) != ZX_OK) {
+  status = chk->CheckInode(1, 1, 0);
+  if (status != ZX_OK) {
     FS_TRACE_ERROR("Fsck: CheckInode failure: %d\n", status);
     return status;
   }
@@ -1093,7 +1004,7 @@ zx_status_t Fsck(std::unique_ptr<Bcache> bc, Repair fsck_repair, std::unique_ptr
   r = chk->CheckAllocatedCounts();
   status |= (status != ZX_OK) ? 0 : r;
 
-  r = chk->CheckIntegrity();
+  r = chk->CheckSuperblockIntegrity();
   status |= (status != ZX_OK) ? 0 : r;
 
   // TODO: check allocated inodes that were abandoned
@@ -1105,7 +1016,7 @@ zx_status_t Fsck(std::unique_ptr<Bcache> bc, Repair fsck_repair, std::unique_ptr
   }
 
   if (out_bc != nullptr) {
-    MinfsChecker::DestroyChecker(std::move(chk), out_bc);
+    *out_bc = MinfsChecker::Destroy(std::move(chk));
   }
   return ZX_OK;
 }

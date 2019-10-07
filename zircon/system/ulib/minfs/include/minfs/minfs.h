@@ -47,10 +47,20 @@ enum class UpdateBackupSuperblock {
 };
 
 struct MountOptions {
-  bool readonly;
-  bool metrics;
-  bool verbose;
-  bool journal;
+  // Determines whether the filesystem will be accessible as read-only.
+  // This does not mean that access to the block device is exclusively read-only;
+  // the filesystem can still perform internal operations (like journal replay)
+  // while "read-only".
+  //
+  // The "clean bit" is written to storage if "readonly = false".
+  bool readonly_after_initialization = false;
+  bool metrics = false;
+  bool verbose = false;
+  // Determines if the filesystem performs actions like replaying the journal, repairing the
+  // superblock, etc.
+  bool repair_filesystem = true;
+  // Determines if the journal will be used to perform writeback.
+  bool use_journal = true;
 
   // Number of slices to preallocate for data when the filesystem is created.
   uint32_t fvm_data_slices = 1;

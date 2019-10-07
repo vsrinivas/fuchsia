@@ -28,9 +28,14 @@
 
 namespace minfs {
 
-void Bcache::DestroyBcache(std::unique_ptr<Bcache> bcache,
-                           std::unique_ptr<block_client::BlockDevice>* out) {
-  *out = std::move(bcache->device_);
+// Static.
+std::unique_ptr<block_client::BlockDevice> Bcache::Destroy(std::unique_ptr<Bcache> bcache) {
+  {
+    // Destroy the VmoBuffer before extracting the underlying device, as it needs
+    // to de-register itself from the underlying block device to be terminated.
+    __UNUSED auto unused = std::move(bcache->buffer_);
+  }
+  return std::move(bcache->device_);
 }
 
 zx_status_t Bcache::Readblk(blk_t bno, void* data) {

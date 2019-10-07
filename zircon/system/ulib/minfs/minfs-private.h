@@ -192,10 +192,10 @@ class Minfs :
   ~Minfs();
 
   // Destroys a "minfs" object, but take back ownership of the bcache object.
-  static void DestroyMinfs(std::unique_ptr<Minfs> minfs, std::unique_ptr<Bcache>* out);
+  static std::unique_ptr<Bcache> Destroy(std::unique_ptr<Minfs> minfs);
 
-  static zx_status_t Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
-                            IntegrityCheck checks, fbl::unique_ptr<Minfs>* out);
+  static zx_status_t Create(std::unique_ptr<Bcache> bc, const MountOptions& options,
+                            std::unique_ptr<Minfs>* out);
 
 #ifdef __Fuchsia__
   // Initializes the Minfs journal and writeback queue and resolves any pending disk state (e.g.,
@@ -411,7 +411,21 @@ class Minfs :
   // "construction".
   static zx_status_t CreateFsId(uint64_t* out);
 
-#ifndef __Fuchsia__
+  // Reads blocks from disk. Only to be called during "construction".
+  static zx_status_t ReadInitialBlocks(const Superblock& info,
+                                       std::unique_ptr<Bcache> bc,
+                                       std::unique_ptr<SuperblockManager> sb,
+                                       std::unique_ptr<Minfs>* out_minfs);
+
+  // Writes a bit to the superblock identifying that the filesystem is "clean" or not.
+  zx_status_t WriteCleanBit(bool is_clean);
+
+#ifdef __Fuchsia__
+  // Terminates all writeback queues, and flushes pending operations to the underlying device.
+  //
+  // If |!IsReadonly()|, also sets the dirty bit to a "clean" status.
+  void StopWriteback();
+#else
   zx_status_t ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_max, void* data);
 #endif
 
@@ -466,24 +480,9 @@ zx_status_t ReadDataFromDisk(fs::TransactionHandler* transaction_handler,
                              blk_t block_num);
 #endif
 
-// Upgrades superblock from older version 7 to newer version 8.
-// TODO(ZX-4623): Remove this code after migration to version 8.
 #ifdef __Fuchsia__
-zx_status_t UpgradeSuperblock(fs::TransactionHandler* transaction_handler,
-                              block_client::BlockDevice* device, void* out_info);
-#else
-zx_status_t UpgradeSuperblock(fs::TransactionHandler* transaction_handler, void* out_info);
-#endif
-
-#ifdef __Fuchsia__
-// Upgrades superblock from older version 8 to newer version 9.
-// TODO(36164): Remove this code after migration to version 9.
-zx_status_t UpgradeJournal(fs::TransactionHandler* transaction_handler,
-                           block_client::BlockDevice* device, Superblock* out_info);
-
 // Replay the minfs journal, given the sizes provided within the superblock.
-zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler, fs::VmoidRegistry* registry,
-                          const Superblock& info, fs::JournalSuperblock* out);
+zx_status_t ReplayJournal(Bcache* bc, const Superblock& info, fs::JournalSuperblock* out);
 #endif
 
 // Return the block offset in vmo_indirect_ of indirect blocks pointed to by the doubly indirect

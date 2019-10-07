@@ -314,15 +314,13 @@ zx_status_t Inspector::GetRoot(std::unique_ptr<disk_inspector::DiskObject>* out)
 
 zx_status_t Inspector::CreateRoot(std::unique_ptr<Bcache> bc,
                                   std::unique_ptr<disk_inspector::DiskObject>* out) {
-  zx_status_t status = ZX_OK;
-  char data[kMinfsBlockSize];
-  if (bc->Readblk(kSuperblockStart, data) < 0) {
-    FS_TRACE_ERROR("minfsInspector: could not read superblock\n");
-    return ZX_ERR_IO;
-  }
-  Superblock* info = reinterpret_cast<Superblock*>(data);
+  MountOptions options = {};
+  options.readonly_after_initialization = true;
+  options.repair_filesystem = false;
+  options.use_journal = false;
   std::unique_ptr<Minfs> fs;
-  if ((status = Minfs::Create(std::move(bc), info, IntegrityCheck::kNone, &fs)) != ZX_OK) {
+  zx_status_t status = Minfs::Create(std::move(bc), options, &fs);
+  if (status != ZX_OK) {
     FS_TRACE_ERROR("minfsInspector: Create Failed to Create Minfs: %d\n", status);
     return status;
   }

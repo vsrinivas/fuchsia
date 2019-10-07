@@ -129,10 +129,11 @@ int emu_mkfs(const char* path) {
 }
 
 static const minfs::MountOptions kDefaultMountOptions = {
-    .readonly = false,
+    .readonly_after_initialization = false,
     .metrics = false,
     .verbose = false,
-    .journal = false,
+    .repair_filesystem = false,
+    .use_journal = false,
 };
 
 int emu_mount_bcache(fbl::unique_ptr<minfs::Bcache> bc) {
