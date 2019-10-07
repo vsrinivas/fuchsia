@@ -37,7 +37,11 @@ class Index {
   // This function takes an object file rather than a context so it can create its own context, and
   // then discard the context when it's done. Since most debugging information is not needed after
   // indexing, this saves a lot of memory.
-  void CreateIndex(llvm::object::ObjectFile* object_file);
+  //
+  // Normal callers will want to use the fast path (which internally falls back to the slow path
+  // for cross unit references). Tests can set the force_slow_path flag to cause everything to be
+  // indexed with the slow path for validation purposes.
+  void CreateIndex(llvm::object::ObjectFile* object_file, bool force_slow_path = false);
 
   // Dumps the file index to the stream for debugging.
   void DumpFileIndex(std::ostream& out) const;
@@ -81,7 +85,8 @@ class Index {
   size_t CountSymbolsIndexed() const;
 
  private:
-  void IndexCompileUnit(llvm::DWARFContext* context, llvm::DWARFUnit* unit, unsigned unit_index);
+  void IndexCompileUnit(llvm::DWARFContext* context, llvm::DWARFUnit* unit, unsigned unit_index,
+                        bool force_slow_path);
 
   void IndexCompileUnitSourceFiles(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
                                    unsigned unit_index);

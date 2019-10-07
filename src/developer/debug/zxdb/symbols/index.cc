@@ -7,6 +7,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "src/developer/debug/zxdb/common/adapters.h"
 #include "src/developer/debug/zxdb/common/file_util.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_die_decoder.h"
@@ -16,6 +17,9 @@
 namespace zxdb {
 
 namespace {
+
+// Don't index more than this number of levels to prevent infinite recursion.
+constexpr size_t kMaxParentPath = 16;
 
 // Stores a name with a DieRef for later indexing.
 class NamedDieRef : public IndexNode::DieRef {
@@ -41,7 +45,8 @@ class NamedDieRef : public IndexNode::DieRef {
   void set_name(const char* n) { name_ = n; }
 
   // If this DIE has a declaration associated with it (a DW_AT_declaration tag), this indicates the
-  // absolute offset of the declaration DIE. Will be 0 if none.
+  // absolute offset of the declaration DIE. Will be 0 if none. It may or may not be inside the
+  // current unit (it normally will be though).
   uint32_t decl_offset() const { return decl_offset_; }
 
   // The indexing layer uses this to cache the node found for a given thing. This allows us to
@@ -113,6 +118,11 @@ class UnitIndexer {
     name_decoder_.AddCString(llvm::dwarf::DW_AT_name, &name_decoder_name_);
   }
 
+  // Forces indexing to go through the slow path (AddStandaloneEntryToIndex() instead of
+  // AddEntryToIndex()) which can handle cross-unit references. This allows us to test the slow path
+  // on the same data as the fast path and make sure they match.
+  void set_force_slow_path(bool force) { force_slow_path_ = force; }
+
   // To use, first call Scan() to populate the indexable_ array, then call Index() to add the
   // items to the given index node root. The Scan pass will additionally add any entrypoint
   // functions it finds to the main_functions vector.
@@ -129,12 +139,30 @@ class UnitIndexer {
   // Computes in the name and type for a DIE entry that wasn't filled in in the first pass (see
   // class-level comment). Returns empty string if there is no name (this is important for the
   // caller, see that code for more).
+  //
+  // This requires that the DIE be in the current unit_ (the decoder references the unit).
   const char* GetDieName(uint32_t index);
 
+  // Adds the entry at the given index. If the entry is not in the current compilation unit, this
+  // will fall back to the slow path: AddStandaloneEntryToIndex().
   void AddEntryToIndex(uint32_t index_me, IndexNode* root);
+
+  // Slow path for adding an entry.
+  //
+  // This takes the index of a DieRef we want to index and adds it to the index without using
+  // anything that references the compilation unit, notably the scanner_ which computes parent
+  // information.
+  //
+  // This is used for the uncommon case of cross-unit references, where the declaration might be
+  // in a different unit from the implementation. This means that the scanner's parent tree
+  // doesn't cover the object we want. This walks the tree using DWARFDie.getParent() which is
+  // conceptually simpler but requires a binary search at each step.
+  void AddStandaloneEntryToIndex(uint32_t index_me, IndexNode* root);
 
   llvm::DWARFContext* context_;
   llvm::DWARFUnit* unit_;
+
+  bool force_slow_path_ = false;  // See setter above.
 
   DwarfDieScanner2 scanner_;
   std::vector<NamedDieRef> indexable_;
@@ -153,11 +181,7 @@ class UnitIndexer {
 void UnitIndexer::Scan(std::vector<IndexNode::DieRef>* main_functions) {
   DwarfDieDecoder decoder(context_, unit_);
 
-  // The offset of the declaration. This can be unit-relative or file-absolute. This code doesn't
-  // implement the file-absolute variant which it seems our toolchain doesn't generate. To implement
-  // I'm thinking everything with an absolute offset will be put into a global list and processed in
-  // a third pass once all units are processed. This third pass will be slower since probably we
-  // won't do any optimized lookups.
+  // The offset of the declaration. This can be unit-relative or .debug_info-relative (global).
   llvm::Optional<uint64_t> decl_unit_offset;
   llvm::Optional<uint64_t> decl_global_offset;
   decoder.AddReference(llvm::dwarf::DW_AT_specification, &decl_unit_offset, &decl_global_offset);
@@ -199,7 +223,7 @@ void UnitIndexer::Scan(std::vector<IndexNode::DieRef>* main_functions) {
     if (decl_unit_offset)
       decl_offset = unit_->getOffset() + *decl_unit_offset;
     else if (decl_global_offset)
-      FXL_NOTREACHED() << "Implement DW_FORM_ref_addr for references.";
+      decl_offset = *decl_global_offset;
 
     if (kind == IndexNode::Kind::kVar && die->getTag() == llvm::dwarf::DW_TAG_member &&
         !has_const_value) {
@@ -231,9 +255,18 @@ void UnitIndexer::Scan(std::vector<IndexNode::DieRef>* main_functions) {
 }
 
 void UnitIndexer::Index(IndexNode* root) {
-  for (uint32_t i = 0; i < indexable_.size(); i++) {
-    if (indexable_[i].should_index())
-      AddEntryToIndex(i, root);
+  if (force_slow_path_) {
+    // Index everything with the slow path for testing purposes.
+    for (uint32_t i = 0; i < indexable_.size(); i++) {
+      if (indexable_[i].should_index())
+        AddStandaloneEntryToIndex(i, root);
+    }
+  } else {
+    // Normal fast-path.
+    for (uint32_t i = 0; i < indexable_.size(); i++) {
+      if (indexable_[i].should_index())
+        AddEntryToIndex(i, root);
+    }
   }
 }
 
@@ -290,6 +323,7 @@ const char* UnitIndexer::GetDieName(uint32_t index) {
   return "";
 }
 
+// NOTE: Changes in this function may require updates in the slow path: AddStandaloneEntryToIndex().
 void UnitIndexer::AddEntryToIndex(uint32_t index_me, IndexNode* root) {
   // The path to index always ends with the last thing being indexed (the path_ is in reverse).
   path_.clear();
@@ -299,9 +333,16 @@ void UnitIndexer::AddEntryToIndex(uint32_t index_me, IndexNode* root) {
   if (indexable_[index_me].decl_offset()) {
     // When the entry has a decl_offset, that means it's the implementation for e.g. a function.
     // The actual name comes from the declaration so start from that index.
+    //
+    // 99% of all declarations are within the same unit so look up in the current unit first. If
+    // the current unit doesn't cover the offset, getDIEForOffset will return a null DIE.
     llvm::DWARFDie die = unit_->getDIEForOffset(indexable_[index_me].decl_offset());
-    if (!die)
-      return;  // Invalid declaration.
+    if (!die) {
+      // DIE not found in this unit, try adding it to the index using the slow path which allows
+      // cross-unit references.
+      AddStandaloneEntryToIndex(index_me, root);
+      return;
+    }
     cur = unit_->getDIEIndex(die);
 
     if (!indexable_[index_me].name()) {
@@ -329,16 +370,13 @@ void UnitIndexer::AddEntryToIndex(uint32_t index_me, IndexNode* root) {
   // parent chain from there.
   cur = scanner_.GetParentIndex(cur);
 
-  // Don't index more than this number of levels to prevent infinite recursion.
-  constexpr uint32_t kMaxPath = 16;
-
   // Start indexing from here. We may find a cached one that will prevent us from having to
   // go to the root.
   IndexNode* index_from = root;
 
   // Collect the path from the current item (path_[0]) to its ultimate parent (path_.back()).
   while (cur != DwarfDieScanner2::kNoParent && indexable_[cur].should_index()) {
-    if (path_.size() > kMaxPath)
+    if (path_.size() > kMaxParentPath)
       return;  // Too many components, consider this item corrupt and don't index.
 
     if (indexable_[cur].index_node()) {
@@ -356,16 +394,78 @@ void UnitIndexer::AddEntryToIndex(uint32_t index_me, IndexNode* root) {
     NamedDieRef* named_ref = path_[path_i];
     const char* name = named_ref->name() ? named_ref->name() : "";
 
-    // Only save the DIE reference for the thing we're attempting to index. Intermediate things
-    // don't need DIE references unless we independently decided those need indexing. Not only is
-    // adding these DIEs unnecessary, it can create unnamed type entries for things like anonymous
-    // enums which we don't want.
+    // Only save the DIE reference for the thing we're attempting to index (the leaf node at
+    // path_[0]). Intermediate things like the namespaces and classes along the path don't need DIE
+    // references unless Scan() independently decided those need indexing (should_index()). Not only
+    // is adding these DIEs unnecessary, it can create unnamed type entries for things like
+    // anonymous enums which we don't want.
     if (path_i == 0)
       index_from = index_from->AddChild(named_ref->kind(), name, *named_ref);
     else
       index_from = index_from->AddChild(named_ref->kind(), name);
     named_ref->set_index_node(index_from);
   }
+}
+
+// NOTE: Changes in this function may require updates in the fast path: AddEntryToIndex().
+void UnitIndexer::AddStandaloneEntryToIndex(uint32_t index_me, IndexNode* index_root) {
+  // This function can not use the unit_, scanner_, or name_decoder_ (and hence GetDieName())
+  // because those all reference the current compilation unit. This code path must be able to handle
+  // cross-unit references.
+  const NamedDieRef& named_ref = indexable_[index_me];
+
+  // Compute the name (avoiding GetDieName()) and the DIE to start indexing from.
+  const char* name = named_ref.name();
+  llvm::DWARFDie die;
+  if (named_ref.decl_offset()) {
+    // When there's a separate declaration, its parent encodes the scope information.
+    die = context_->getDIEForOffset(named_ref.decl_offset());
+    if (!die)
+      return;  // Invalid decl offset, skip indexing.
+    if (!name) {
+      // The declaration can fill in the name if the name is not present on the implementation
+      // (normally it's not there).
+      name = die.getName(llvm::DINameKind::ShortName);
+    }
+  } else {
+    // When there's no declaration, the name will already have been filled in (if present) to the
+    // named_ref.
+    die = context_->getDIEForOffset(named_ref.offset());
+  }
+
+  if (!name)
+    return;  // This item has no name, can't index it.
+
+  // Stores the reverse path to the node we're inserting. This includes all scopes like namespaces
+  // and classes in reverse order, but does not include the thing we're inserting itself.
+  // So when insertng std::vector::vector this will be { "vector" (type), "std" (namespace) }.
+  struct NameKind {
+    NameKind(const char* n, IndexNode::Kind k) : name(n), kind(k) {}
+
+    const char* name = nullptr;
+    IndexNode::Kind kind = IndexNode::Kind::kNone;
+  };
+  std::vector<NameKind> path;
+
+  // Walk the path upward saving the path. Don't include the leaf DIE.
+  while ((die = die.getParent())) {
+    if (path.size() > kMaxParentPath)
+      return;  // Too deep nesting, give up.
+
+    auto kind = GetKindForDie(die.getDebugInfoEntry());
+    if (kind == IndexNode::Kind::kNone)
+      break;  // Hit the top of what we want to index (like the unit).
+
+    path.emplace_back(die.getName(llvm::DINameKind::ShortName), kind);
+  }
+
+  // Insert the containing elements (in reverse order to start from the top level and work inwards).
+  IndexNode* cur_index = index_root;
+  for (const auto& name_kind : Reversed(path))
+    cur_index = cur_index->AddChild(name_kind.kind, name_kind.name ? name_kind.name : "");
+
+  // Add the leaf item (holding the DIE reference) to the index.
+  cur_index->AddChild(named_ref.kind(), name, named_ref);
 }
 
 void RecursiveFindExact(const IndexNode* node, const Identifier& input, size_t input_index,
@@ -390,7 +490,7 @@ void RecursiveFindExact(const IndexNode* node, const Identifier& input, size_t i
 
 }  // namespace
 
-void Index::CreateIndex(llvm::object::ObjectFile* object_file) {
+void Index::CreateIndex(llvm::object::ObjectFile* object_file, bool force_slow_path) {
   std::unique_ptr<llvm::DWARFContext> context =
       llvm::DWARFContext::create(*object_file, nullptr, llvm::DWARFContext::defaultErrorHandler);
 
@@ -400,7 +500,7 @@ void Index::CreateIndex(llvm::object::ObjectFile* object_file) {
   });
 
   for (unsigned i = 0; i < compile_units.size(); i++) {
-    IndexCompileUnit(context.get(), compile_units[i].get(), i);
+    IndexCompileUnit(context.get(), compile_units[i].get(), i, force_slow_path);
 
     // Free compilation units as we process them. They will hold all of the parsed DIE data that we
     // don't need any more which can be multiple GB's for large programs.
@@ -464,8 +564,10 @@ const std::vector<unsigned>* Index::FindFileUnitIndices(const std::string& name)
 size_t Index::CountSymbolsIndexed() const { return RecursiveCountDies(root_); }
 
 void Index::IndexCompileUnit(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
-                             unsigned unit_index) {
+                             unsigned unit_index, bool force_slow_path) {
   UnitIndexer indexer(context, unit);
+  indexer.set_force_slow_path(force_slow_path);
+
   indexer.Scan(&main_functions_);
   indexer.Index(&root_);
 

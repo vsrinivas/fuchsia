@@ -116,6 +116,13 @@ zxdb_symbol_test.cc -> ../../src/developer/debug/zxdb/symbols/test_data/zxdb_sym
 zxdb_symbol_test2.cc -> ../../src/developer/debug/zxdb/symbols/test_data/zxdb_symbol_test2.cc -> 1 units
 )";
   EXPECT_EQ(kExpectedFiles, files.str());
+
+  // Test that the slow indexing path produces the same result as the fast path.
+  Index slow_index;
+  slow_index.CreateIndex(module.object_file(), true);
+  out = std::ostringstream();
+  slow_index.root().Dump(out, 0);
+  EXPECT_EQ(kExpected, out.str());
 }
 
 TEST(Index, FindExactFunction) {
