@@ -9,6 +9,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fit/function.h>
+#include <zircon/types.h>
 
 #include <cinttypes>
 #include <utility>
@@ -40,17 +41,13 @@ zx::process DuplicateProcess(const zx::process& process) {
 }  // namespace
 
 ComponentRequestWrapper::ComponentRequestWrapper(
-    fidl::InterfaceRequest<fuchsia::sys::ComponentController> request, TerminationCallback callback,
-    int64_t default_return, fuchsia::sys::TerminationReason default_reason)
-    : request_(std::move(request)),
-      callback_(std::move(callback)),
-      return_code_(default_return),
-      reason_(default_reason) {}
+    fidl::InterfaceRequest<fuchsia::sys::ComponentController> request, int64_t default_return,
+    fuchsia::sys::TerminationReason default_reason)
+    : request_(std::move(request)), return_code_(default_return), reason_(default_reason) {}
 
 ComponentRequestWrapper::~ComponentRequestWrapper() {
-  if (active_) {
-    FailedComponentController failed(return_code_, reason_, std::move(callback_),
-                                     std::move(request_));
+  if (request_) {
+    FailedComponentController failed(return_code_, reason_, std::move(request_));
   }
 }
 
@@ -60,10 +57,8 @@ ComponentRequestWrapper::ComponentRequestWrapper(ComponentRequestWrapper&& other
 
 void ComponentRequestWrapper::operator=(ComponentRequestWrapper&& other) {
   request_ = std::move(other.request_);
-  callback_ = std::move(other.callback_);
   return_code_ = std::move(other.return_code_);
   reason_ = std::move(other.reason_);
-  other.active_ = false;
 }
 
 void ComponentRequestWrapper::SetReturnValues(int64_t return_code, TerminationReason reason) {
@@ -71,30 +66,20 @@ void ComponentRequestWrapper::SetReturnValues(int64_t return_code, TerminationRe
   reason_ = reason;
 }
 
-TerminationCallback MakeForwardingTerminationCallback() {
-  return TerminationCallback([](int64_t return_code,
-                                fuchsia::sys::TerminationReason termination_reason,
-                                fuchsia::sys::ComponentController_EventSender* event) {
-    TRACE_DURATION("appmgr", "ComponentController::OnTerminated");
-    if (event == nullptr) {
-      FXL_LOG(DFATAL) << "Termination callback called with null event sender";
-      return;
-    }
-    event->OnTerminated(return_code, termination_reason);
-  });
-}
-
 FailedComponentController::FailedComponentController(
     int64_t return_code, TerminationReason termination_reason,
-    TerminationCallback termination_callback,
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller)
-    : binding_(this, std::move(controller)),
-      return_code_(return_code),
-      termination_reason_(termination_reason),
-      termination_callback_(std::move(termination_callback)) {}
+    : binding_(this), return_code_(return_code), termination_reason_(termination_reason) {
+  if (controller) {
+    binding_.Bind(std::move(controller));
+  }
+}
 
 FailedComponentController::~FailedComponentController() {
-  termination_callback_(return_code_, termination_reason_, &binding_.events());
+  // This can be false if other side of the channel dies before this object dies.
+  if (binding_.is_bound()) {
+    binding_.events().OnTerminated(return_code_, termination_reason_);
+  }
 }
 
 void FailedComponentController::Kill() {}
@@ -112,9 +97,8 @@ ComponentControllerBase::ComponentControllerBase(
       ns_(std::move(ns)) {
   if (request.is_valid()) {
     binding_.Bind(std::move(request));
-    binding_.set_error_handler([this](zx_status_t status) { Kill(); });
+    binding_.set_error_handler([this](zx_status_t /*status*/) { Kill(); });
   }
-
   if (!exported_dir) {
     return;
   }
@@ -132,7 +116,7 @@ ComponentControllerBase::ComponentControllerBase(
                        cloned_exported_dir_.NewRequest());
 
   cloned_exported_dir_.events().OnOpen = [this](zx_status_t status,
-                                                std::unique_ptr<fuchsia::io::NodeInfo> info) {
+                                                std::unique_ptr<fuchsia::io::NodeInfo> /*info*/) {
     if (status != ZX_OK) {
       FXL_LOG(WARNING) << "could not bind out directory for component" << label_ << "): " << status;
       return;
@@ -140,7 +124,7 @@ ComponentControllerBase::ComponentControllerBase(
     auto output_dir = fbl::AdoptRef(new fs::RemoteDir(cloned_exported_dir_.Unbind().TakeChannel()));
     hub_.PublishOut(std::move(output_dir));
     TRACE_DURATION_BEGIN("appmgr", "ComponentController::OnDirectoryReady");
-    binding_.events().OnDirectoryReady();
+    SendOnDirectoryReadyEvent();
     TRACE_DURATION_END("appmgr", "ComponentController::OnDirectoryReady");
   };
 
@@ -148,19 +132,43 @@ ComponentControllerBase::ComponentControllerBase(
       [this](zx_status_t status) { cloned_exported_dir_.Unbind(); });
 }
 
-ComponentControllerBase::~ComponentControllerBase() {}
+void ComponentControllerBase::SendOnDirectoryReadyEvent() {
+  // This can be false if
+  // 1. Other side of the channel dies before this call happens.
+  // 2. Component Controller request was not passed while creating the component.
+  if (binding_.is_bound()) {
+    binding_.events().OnDirectoryReady();
+  }
+}
+
+void ComponentControllerBase::SendOnTerminationEvent(
+    int64_t return_code, fuchsia::sys::TerminationReason termination_reason) {
+  // `binding_.is_bound()` can be false if
+  //  1. Other side of the channel dies before this call happens.
+  //  2. Component Controller request was not passed while creating the component.
+  if (on_terminated_event_sent_ || !binding_.is_bound()) {
+    return;
+  }
+  FXL_VLOG(1) << "Sending termination callback with return code: " << return_code;
+  binding_.events().OnTerminated(return_code, termination_reason);
+  on_terminated_event_sent_ = true;
+}
+
+ComponentControllerBase::~ComponentControllerBase() = default;
 
 HubInfo ComponentControllerBase::HubInfo() {
   return component::HubInfo(label_, hub_instance_id_, hub_.dir());
 }
 
-void ComponentControllerBase::Detach() { binding_.set_error_handler(nullptr); }
+void ComponentControllerBase::Detach() {
+  binding_.set_error_handler([](zx_status_t /*status*/) {});
+}
 
 ComponentControllerImpl::ComponentControllerImpl(
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
     ComponentContainer<ComponentControllerImpl>* container, zx::job job, zx::process process,
     std::string url, std::string args, std::string label, fxl::RefPtr<Namespace> ns,
-    zx::channel exported_dir, zx::channel client_request, TerminationCallback termination_callback)
+    zx::channel exported_dir, zx::channel client_request)
     : ComponentControllerBase(std::move(request), std::move(url), std::move(args), std::move(label),
                               std::to_string(fsl::GetKoid(process.get())), std::move(ns),
                               std::move(exported_dir), std::move(client_request)),
@@ -169,7 +177,6 @@ ComponentControllerImpl::ComponentControllerImpl(
       process_(std::move(process)),
       koid_(std::to_string(fsl::GetKoid(process_.get()))),
       wait_(this, process_.get(), ZX_TASK_TERMINATED),
-      termination_callback_(std::move(termination_callback)),
       system_objects_directory_(DuplicateProcess(process_)) {
   zx_status_t status = wait_.Begin(async_get_default_dispatcher());
   FXL_DCHECK(status == ZX_OK);
@@ -203,11 +210,8 @@ ComponentControllerImpl::~ComponentControllerImpl() {
     job_.kill();
     // Our owner destroyed this object before we could obtain a termination
     // reason.
-    if (termination_callback_) {
-      FXL_VLOG(1) << "~ComponentControllerImpl(): calling termination_callback_";
-      termination_callback_(-1, TerminationReason::UNKNOWN, &binding_.events());
-      termination_callback_ = nullptr;
-    }
+
+    SendOnTerminationEvent(-1, TerminationReason::UNKNOWN);
   }
 }
 
@@ -228,14 +232,7 @@ bool ComponentControllerImpl::SendReturnCodeIfTerminated() {
   FXL_DCHECK(result == ZX_OK);
 
   if (process_info.exited) {
-    if (termination_callback_) {
-      FXL_VLOG(1) << "SendReturnCodeIfTerminated(): calling "
-                     "termination_callback_, process return code: "
-                  << process_info.return_code;
-      termination_callback_(process_info.return_code, TerminationReason::EXITED,
-                            &binding_.events());
-      termination_callback_ = nullptr;
-    }
+    SendOnTerminationEvent(process_info.return_code, TerminationReason::EXITED);
   }
 
   return process_info.exited;
@@ -271,28 +268,27 @@ ComponentBridge::ComponentBridge(fidl::InterfaceRequest<fuchsia::sys::ComponentC
                                  ComponentContainer<ComponentBridge>* container, std::string url,
                                  std::string args, std::string label, std::string hub_instance_id,
                                  fxl::RefPtr<Namespace> ns, zx::channel exported_dir,
-                                 zx::channel client_request,
-                                 TerminationCallback termination_callback)
+                                 zx::channel client_request)
     : ComponentControllerBase(std::move(request), std::move(url), std::move(args), std::move(label),
                               hub_instance_id, std::move(ns), std::move(exported_dir),
                               std::move(client_request)),
       remote_controller_(std::move(remote_controller)),
       container_(std::move(container)),
-      termination_callback_(std::move(termination_callback)),
       termination_reason_(TerminationReason::UNKNOWN) {
   // Forward termination callbacks from the remote component over the bridge.
-  remote_controller_.events().OnTerminated = [this](int64_t result_code,
+  remote_controller_.events().OnTerminated = [this](int64_t return_code,
                                                     TerminationReason termination_reason) mutable {
     // Propagate the events to the external proxy.
     if (on_terminated_event_) {
-      on_terminated_event_(result_code, termination_reason);
+      on_terminated_event_(return_code, termination_reason);
     }
-    termination_callback_(result_code, termination_reason, &binding_.events());
+
+    SendOnTerminationEvent(return_code, termination_reason);
     remote_controller_.events().OnTerminated = nullptr;
     container_->ExtractComponent(this);
   };
 
-  remote_controller_.events().OnDirectoryReady = [this] { binding_.events().OnDirectoryReady(); };
+  remote_controller_.events().OnDirectoryReady = [this] { SendOnDirectoryReadyEvent(); };
 
   remote_controller_.set_error_handler([this](zx_status_t status) {
     if (remote_controller_.events().OnTerminated != nullptr) {
@@ -307,7 +303,7 @@ ComponentBridge::ComponentBridge(fidl::InterfaceRequest<fuchsia::sys::ComponentC
 
 ComponentBridge::~ComponentBridge() {
   if (remote_controller_.events().OnTerminated) {
-    termination_callback_(-1, termination_reason_, &binding_.events());
+    SendOnTerminationEvent(-1, termination_reason_);
   }
 }
 

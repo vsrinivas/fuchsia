@@ -189,8 +189,7 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
       return NULL;
     return std::make_unique<ComponentControllerImpl>(
         controller.NewRequest(), &realm_, std::move(job_clone), std::move(process_), "test-url",
-        "test-arg", "test-label", ns, std::move(export_dir), zx::channel(),
-        MakeForwardingTerminationCallback());
+        "test-arg", "test-label", ns, std::move(export_dir), zx::channel());
   }
 
   FakeRealm realm_;
@@ -231,8 +230,7 @@ class ComponentBridgeTest : public gtest::RealLoopFixture,
     }
     auto component = std::make_unique<ComponentBridge>(
         controller.NewRequest(), std::move(remote_controller_), &runner_, "test-url", "test-arg",
-        "test-label", "1", ns, std::move(export_dir), zx::channel(),
-        MakeForwardingTerminationCallback());
+        "test-label", "1", ns, std::move(export_dir), zx::channel());
     component->SetParentJobId(runner_.koid());
     return component;
   }

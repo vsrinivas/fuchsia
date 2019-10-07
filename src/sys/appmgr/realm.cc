@@ -516,8 +516,7 @@ void Realm::CreateComponent(fuchsia::sys::LaunchInfo launch_info,
                             fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
                             ComponentObjectCreatedCallback callback) {
   TRACE_DURATION("appmgr", "Realm::CreateComponent", "launch_info.url", launch_info.url);
-  ComponentRequestWrapper component_request(std::move(controller),
-                                            MakeForwardingTerminationCallback());
+  ComponentRequestWrapper component_request(std::move(controller));
 
   if (launch_info.url.empty()) {
     FXL_LOG(ERROR) << "Cannot create application because launch_info contains"
@@ -660,10 +659,9 @@ void Realm::CreateComponentWithRunnerForScheme(std::string runner_url,
       fxl::MakeRefCounted<Namespace>(default_namespace_, this, nullptr, nullptr);
 
   fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
-  TerminationCallback termination_callback;
-  component_request.Extract(&controller, &termination_callback);
+  component_request.Extract(&controller);
   runner->StartComponent(std::move(package), std::move(startup_info), std::move(ns),
-                         std::move(controller), std::move(termination_callback));
+                         std::move(controller));
 }
 
 void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
@@ -891,12 +889,12 @@ void Realm::CreateElfBinaryComponentFromPackage(
 
   if (process) {
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
-    TerminationCallback termination_callback;
-    component_request.Extract(&controller, &termination_callback);
+
+    component_request.Extract(&controller);
     auto application = std::make_shared<ComponentControllerImpl>(
         std::move(controller), this, std::move(child_job), std::move(process), url, std::move(args),
         Util::GetLabelFromURL(url), std::move(ns), std::move(channels.exported_dir),
-        std::move(channels.client_request), std::move(termination_callback));
+        std::move(channels.client_request));
     // update hub
     hub_.AddComponent(application->HubInfo());
     ComponentControllerImpl* key = application.get();
@@ -931,10 +929,9 @@ void Realm::CreateRunnerComponentFromPackage(
   }
 
   fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
-  TerminationCallback termination_callback;
-  component_request.Extract(&controller, &termination_callback);
+  component_request.Extract(&controller);
   runner->StartComponent(std::move(inner_package), std::move(startup_info), std::move(ns),
-                         std::move(controller), std::move(termination_callback));
+                         std::move(controller));
 }
 
 RunnerHolder* Realm::GetOrCreateRunner(const std::string& runner) {

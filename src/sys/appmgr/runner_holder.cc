@@ -77,8 +77,8 @@ void RunnerHolder::CreateComponentCallback(std::weak_ptr<ComponentControllerImpl
 
 void RunnerHolder::StartComponent(
     fuchsia::sys::Package package, fuchsia::sys::StartupInfo startup_info,
-    fxl::RefPtr<Namespace> ns, fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
-    TerminationCallback termination_callback) {
+    fxl::RefPtr<Namespace> ns,
+    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
   auto url = startup_info.launch_info.url;
   const std::string args = Util::GetArgsString(startup_info.launch_info.arguments);
   auto channels = Util::BindDirectory(&startup_info.launch_info);
@@ -90,8 +90,7 @@ void RunnerHolder::StartComponent(
   auto component = std::make_shared<ComponentBridge>(
       std::move(controller), std::move(remote_controller), this, url, std::move(args),
       Util::GetLabelFromURL(url), std::to_string(++component_id_counter_), std::move(ns),
-      std::move(channels.exported_dir), std::move(channels.client_request),
-      std::move(termination_callback));
+      std::move(channels.exported_dir), std::move(channels.client_request));
 
   // update hub
   if (auto impl = impl_object_.lock()) {
