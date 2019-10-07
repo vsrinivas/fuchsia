@@ -1,4 +1,3 @@
-#include <ddk/platform-defs.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <lib/driver-integration-test/fixture.h>
@@ -10,12 +9,15 @@
 #include <lib/fdio/watcher.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+
+#include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
 #include "test-metadata.h"
 
 using driver_integration_test::IsolatedDevmgr;
 
+/* TODO(fxb/38095): Fix flakiness and re-enable.
 TEST(DeviceControllerIntegrationTest, RunCompatibilityHookSuccess) {
   IsolatedDevmgr devmgr;
   IsolatedDevmgr::Args args;
@@ -58,6 +60,7 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookSuccess) {
   ASSERT_OK(status);
   ASSERT_EQ(call_status, fuchsia_device_manager_CompatibilityTestStatus_OK);
 }
+*/
 
 TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingAddInBind) {
   IsolatedDevmgr devmgr;
@@ -99,6 +102,7 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingAddInBind) {
   ASSERT_EQ(call_status, fuchsia_device_manager_CompatibilityTestStatus_ERR_BIND_NO_DDKADD);
 }
 
+/* TODO(fxb/38095): Fix flakiness and re-enable.
 TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingRemoveInUnbind) {
   IsolatedDevmgr devmgr;
   IsolatedDevmgr::Args args;
@@ -138,3 +142,4 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingRemoveInUnbind)
   ASSERT_OK(status);
   ASSERT_EQ(call_status, fuchsia_device_manager_CompatibilityTestStatus_ERR_UNBIND_TIMEOUT);
 }
+*/
