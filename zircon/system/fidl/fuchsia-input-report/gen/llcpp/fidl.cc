@@ -226,6 +226,10 @@ InputDevice::UnownedResultOf::GetReportsEvent InputDevice::Call::GetReportsEvent
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetReportsEventRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kInputDevice_GetReportsEvent_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -288,6 +292,10 @@ InputDevice::UnownedResultOf::GetReports InputDevice::Call::GetReports(zx::unown
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetReportsRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kInputDevice_GetReports_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -350,6 +358,10 @@ InputDevice::UnownedResultOf::GetDescriptor InputDevice::Call::GetDescriptor(zx:
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetDescriptorRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kInputDevice_GetDescriptor_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -430,6 +442,10 @@ void InputDevice::Interface::GetReportsEventCompleterBase::Reply(int32_t status,
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetReportsEventResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetReportsEventResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kInputDevice_GetReportsEvent_Ordinal;
   _response.status = std::move(status);
   _response.event = std::move(event);
@@ -443,6 +459,10 @@ void InputDevice::Interface::GetReportsEventCompleterBase::Reply(::fidl::BytePar
     return;
   }
   auto& _response = *reinterpret_cast<GetReportsEventResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kInputDevice_GetReportsEvent_Ordinal;
   _response.status = std::move(status);
   _response.event = std::move(event);
@@ -452,6 +472,10 @@ void InputDevice::Interface::GetReportsEventCompleterBase::Reply(::fidl::BytePar
 
 void InputDevice::Interface::GetReportsEventCompleterBase::Reply(::fidl::DecodedMessage<GetReportsEventResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kInputDevice_GetReportsEvent_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -462,6 +486,10 @@ void InputDevice::Interface::GetReportsCompleterBase::Reply(::fidl::VectorView<I
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   GetReportsResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kInputDevice_GetReports_Ordinal;
   _response.reports = std::move(reports);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
@@ -479,6 +507,10 @@ void InputDevice::Interface::GetReportsCompleterBase::Reply(::fidl::BytePart _bu
     return;
   }
   GetReportsResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kInputDevice_GetReports_Ordinal;
   _response.reports = std::move(reports);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
@@ -491,6 +523,10 @@ void InputDevice::Interface::GetReportsCompleterBase::Reply(::fidl::BytePart _bu
 
 void InputDevice::Interface::GetReportsCompleterBase::Reply(::fidl::DecodedMessage<GetReportsResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kInputDevice_GetReports_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -501,6 +537,10 @@ void InputDevice::Interface::GetDescriptorCompleterBase::Reply(DeviceDescriptor 
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   GetDescriptorResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kInputDevice_GetDescriptor_Ordinal;
   _response.descriptor = std::move(descriptor);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
@@ -518,6 +558,10 @@ void InputDevice::Interface::GetDescriptorCompleterBase::Reply(::fidl::BytePart 
     return;
   }
   GetDescriptorResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kInputDevice_GetDescriptor_Ordinal;
   _response.descriptor = std::move(descriptor);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
@@ -530,6 +574,10 @@ void InputDevice::Interface::GetDescriptorCompleterBase::Reply(::fidl::BytePart 
 
 void InputDevice::Interface::GetDescriptorCompleterBase::Reply(::fidl::DecodedMessage<GetDescriptorResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kInputDevice_GetDescriptor_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }

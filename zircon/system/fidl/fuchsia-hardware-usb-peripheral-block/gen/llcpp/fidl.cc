@@ -78,6 +78,10 @@ Device::UnownedResultOf::EnableWritebackCache Device::Call::EnableWritebackCache
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<EnableWritebackCacheRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_EnableWritebackCache_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -140,6 +144,10 @@ Device::UnownedResultOf::DisableWritebackCache Device::Call::DisableWritebackCac
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<DisableWritebackCacheRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_DisableWritebackCache_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -203,6 +211,10 @@ Device::UnownedResultOf::SetWritebackCacheReported Device::Call::SetWritebackCac
 
 ::fidl::DecodeResult<Device::SetWritebackCacheReportedResponse> Device::InPlace::SetWritebackCacheReported(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetWritebackCacheReportedRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_SetWritebackCacheReported_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -284,6 +296,10 @@ void Device::Interface::EnableWritebackCacheCompleterBase::Reply(int32_t status)
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableWritebackCacheResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<EnableWritebackCacheResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_EnableWritebackCache_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(EnableWritebackCacheResponse));
@@ -296,6 +312,10 @@ void Device::Interface::EnableWritebackCacheCompleterBase::Reply(::fidl::BytePar
     return;
   }
   auto& _response = *reinterpret_cast<EnableWritebackCacheResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_EnableWritebackCache_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(EnableWritebackCacheResponse));
@@ -304,6 +324,10 @@ void Device::Interface::EnableWritebackCacheCompleterBase::Reply(::fidl::BytePar
 
 void Device::Interface::EnableWritebackCacheCompleterBase::Reply(::fidl::DecodedMessage<EnableWritebackCacheResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_EnableWritebackCache_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -313,6 +337,10 @@ void Device::Interface::DisableWritebackCacheCompleterBase::Reply(int32_t status
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableWritebackCacheResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DisableWritebackCacheResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_DisableWritebackCache_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DisableWritebackCacheResponse));
@@ -325,6 +353,10 @@ void Device::Interface::DisableWritebackCacheCompleterBase::Reply(::fidl::BytePa
     return;
   }
   auto& _response = *reinterpret_cast<DisableWritebackCacheResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_DisableWritebackCache_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(DisableWritebackCacheResponse));
@@ -333,6 +365,10 @@ void Device::Interface::DisableWritebackCacheCompleterBase::Reply(::fidl::BytePa
 
 void Device::Interface::DisableWritebackCacheCompleterBase::Reply(::fidl::DecodedMessage<DisableWritebackCacheResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_DisableWritebackCache_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -342,6 +378,10 @@ void Device::Interface::SetWritebackCacheReportedCompleterBase::Reply(int32_t st
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetWritebackCacheReportedResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetWritebackCacheReportedResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_SetWritebackCacheReported_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetWritebackCacheReportedResponse));
@@ -354,6 +394,10 @@ void Device::Interface::SetWritebackCacheReportedCompleterBase::Reply(::fidl::By
     return;
   }
   auto& _response = *reinterpret_cast<SetWritebackCacheReportedResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_SetWritebackCacheReported_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(SetWritebackCacheReportedResponse));
@@ -362,6 +406,10 @@ void Device::Interface::SetWritebackCacheReportedCompleterBase::Reply(::fidl::By
 
 void Device::Interface::SetWritebackCacheReportedCompleterBase::Reply(::fidl::DecodedMessage<SetWritebackCacheReportedResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_SetWritebackCacheReported_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }

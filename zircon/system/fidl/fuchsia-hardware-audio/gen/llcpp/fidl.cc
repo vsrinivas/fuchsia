@@ -65,6 +65,10 @@ Device::UnownedResultOf::GetChannel Device::Call::GetChannel(zx::unowned_channel
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetChannelRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetChannel_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -121,6 +125,10 @@ void Device::Interface::GetChannelCompleterBase::Reply(::zx::channel ch) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetChannelResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetChannelResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetChannel_Ordinal;
   _response.ch = std::move(ch);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetChannelResponse));
@@ -133,6 +141,10 @@ void Device::Interface::GetChannelCompleterBase::Reply(::fidl::BytePart _buffer,
     return;
   }
   auto& _response = *reinterpret_cast<GetChannelResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetChannel_Ordinal;
   _response.ch = std::move(ch);
   _buffer.set_actual(sizeof(GetChannelResponse));
@@ -141,6 +153,10 @@ void Device::Interface::GetChannelCompleterBase::Reply(::fidl::BytePart _buffer,
 
 void Device::Interface::GetChannelCompleterBase::Reply(::fidl::DecodedMessage<GetChannelResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetChannel_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }

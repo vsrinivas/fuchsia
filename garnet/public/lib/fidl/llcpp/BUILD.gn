@@ -53,9 +53,9 @@ fidl("llcpptest.flexible.test") {
   ]
 }
 
-fidl("llcpptest.result.test") {
+fidl("llcpptest.protocol.test") {
   sources = [
-    "result.test.fidl",
+    "protocol.test.fidl",
   ]
 }
 
@@ -67,7 +67,7 @@ executable("fidl_llcpp_types_test_bin") {
   sources = [
     "bits_test.cc",
     "flexible_test.cc",
-    "result_test.cc",
+    "protocol_test.cc",
     "table_test.cc",
     "union_test.cc",
   ]
@@ -75,7 +75,7 @@ executable("fidl_llcpp_types_test_bin") {
   deps = [
     ":fidl.llcpp.types.test_llcpp",
     ":llcpptest.flexible.test_llcpp",
-    ":llcpptest.result.test_llcpp",
+    ":llcpptest.protocol.test_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",

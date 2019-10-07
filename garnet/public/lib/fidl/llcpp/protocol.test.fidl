@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library llcpptest.result.test;
+library llcpptest.protocol.test;
 
 enum MyError : int32 {
     BAD_ERROR = 1;
@@ -16,4 +16,10 @@ enum MyError : int32 {
 protocol ErrorMethods {
     NoArgsPrimitiveError(bool should_error) -> () error int32;
     ManyArgsCustomError(bool should_error) -> (int32 a, int32 b, int32 c) error MyError;
+};
+
+protocol Frobinator {
+    Frob(string value);
+    Grob(string value) -> (string value);
+    -> Hrob(string value);
 };

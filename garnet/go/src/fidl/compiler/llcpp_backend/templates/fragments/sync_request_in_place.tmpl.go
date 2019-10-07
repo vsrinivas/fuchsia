@@ -23,8 +23,7 @@ const SyncRequestInPlace = `
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<{{ .Name }}Request> params(std::move(_request_buffer));
   {{- end }}
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = {{ .Ordinals.Write.Name }};
+  {{- template "CreateTxnHeader" . }}
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
   {{- if .HasResponse }}

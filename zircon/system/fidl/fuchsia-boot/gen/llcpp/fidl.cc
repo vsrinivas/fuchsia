@@ -64,6 +64,10 @@ WriteOnlyLog::UnownedResultOf::Get WriteOnlyLog::Call::Get(zx::unowned_channel _
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kWriteOnlyLog_Get_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -120,6 +124,10 @@ void WriteOnlyLog::Interface::GetCompleterBase::Reply(::zx::debuglog log) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kWriteOnlyLog_Get_Ordinal;
   _response.log = std::move(log);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetResponse));
@@ -132,6 +140,10 @@ void WriteOnlyLog::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, 
     return;
   }
   auto& _response = *reinterpret_cast<GetResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kWriteOnlyLog_Get_Ordinal;
   _response.log = std::move(log);
   _buffer.set_actual(sizeof(GetResponse));
@@ -140,6 +152,10 @@ void WriteOnlyLog::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, 
 
 void WriteOnlyLog::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kWriteOnlyLog_Get_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -201,6 +217,10 @@ ReadOnlyLog::UnownedResultOf::Get ReadOnlyLog::Call::Get(zx::unowned_channel _cl
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kReadOnlyLog_Get_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -257,6 +277,10 @@ void ReadOnlyLog::Interface::GetCompleterBase::Reply(::zx::debuglog log) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kReadOnlyLog_Get_Ordinal;
   _response.log = std::move(log);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetResponse));
@@ -269,6 +293,10 @@ void ReadOnlyLog::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, :
     return;
   }
   auto& _response = *reinterpret_cast<GetResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kReadOnlyLog_Get_Ordinal;
   _response.log = std::move(log);
   _buffer.set_actual(sizeof(GetResponse));
@@ -277,6 +305,10 @@ void ReadOnlyLog::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, :
 
 void ReadOnlyLog::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kReadOnlyLog_Get_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -341,6 +373,10 @@ Items::UnownedResultOf::Get Items::Call::Get(zx::unowned_channel _client_end, ::
 
 ::fidl::DecodeResult<Items::GetResponse> Items::InPlace::Get(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kItems_Get_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -398,6 +434,10 @@ void Items::Interface::GetCompleterBase::Reply(::zx::vmo payload, uint32_t lengt
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kItems_Get_Ordinal;
   _response.payload = std::move(payload);
   _response.length = std::move(length);
@@ -411,6 +451,10 @@ void Items::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::zx::v
     return;
   }
   auto& _response = *reinterpret_cast<GetResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kItems_Get_Ordinal;
   _response.payload = std::move(payload);
   _response.length = std::move(length);
@@ -420,6 +464,10 @@ void Items::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::zx::v
 
 void Items::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kItems_Get_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -483,6 +531,10 @@ FactoryItems::UnownedResultOf::Get FactoryItems::Call::Get(zx::unowned_channel _
 
 ::fidl::DecodeResult<FactoryItems::GetResponse> FactoryItems::InPlace::Get(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kFactoryItems_Get_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -540,6 +592,10 @@ void FactoryItems::Interface::GetCompleterBase::Reply(::zx::vmo payload, uint32_
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kFactoryItems_Get_Ordinal;
   _response.payload = std::move(payload);
   _response.length = std::move(length);
@@ -553,6 +609,10 @@ void FactoryItems::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, 
     return;
   }
   auto& _response = *reinterpret_cast<GetResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kFactoryItems_Get_Ordinal;
   _response.payload = std::move(payload);
   _response.length = std::move(length);
@@ -562,6 +622,10 @@ void FactoryItems::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, 
 
 void FactoryItems::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kFactoryItems_Get_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -623,6 +687,10 @@ RootResource::UnownedResultOf::Get RootResource::Call::Get(zx::unowned_channel _
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kRootResource_Get_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -679,6 +747,10 @@ void RootResource::Interface::GetCompleterBase::Reply(::zx::resource resource) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kRootResource_Get_Ordinal;
   _response.resource = std::move(resource);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetResponse));
@@ -691,6 +763,10 @@ void RootResource::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, 
     return;
   }
   auto& _response = *reinterpret_cast<GetResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kRootResource_Get_Ordinal;
   _response.resource = std::move(resource);
   _buffer.set_actual(sizeof(GetResponse));
@@ -699,6 +775,10 @@ void RootResource::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, 
 
 void RootResource::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kRootResource_Get_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -760,6 +840,10 @@ RootJob::UnownedResultOf::Get RootJob::Call::Get(zx::unowned_channel _client_end
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kRootJob_Get_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -816,6 +900,10 @@ void RootJob::Interface::GetCompleterBase::Reply(::zx::job job) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kRootJob_Get_Ordinal;
   _response.job = std::move(job);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetResponse));
@@ -828,6 +916,10 @@ void RootJob::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::zx:
     return;
   }
   auto& _response = *reinterpret_cast<GetResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kRootJob_Get_Ordinal;
   _response.job = std::move(job);
   _buffer.set_actual(sizeof(GetResponse));
@@ -836,6 +928,10 @@ void RootJob::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::zx:
 
 void RootJob::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kRootJob_Get_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -897,6 +993,10 @@ RootJobForInspect::UnownedResultOf::Get RootJobForInspect::Call::Get(zx::unowned
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kRootJobForInspect_Get_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -953,6 +1053,10 @@ void RootJobForInspect::Interface::GetCompleterBase::Reply(::zx::job job) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kRootJobForInspect_Get_Ordinal;
   _response.job = std::move(job);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetResponse));
@@ -965,6 +1069,10 @@ void RootJobForInspect::Interface::GetCompleterBase::Reply(::fidl::BytePart _buf
     return;
   }
   auto& _response = *reinterpret_cast<GetResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kRootJobForInspect_Get_Ordinal;
   _response.job = std::move(job);
   _buffer.set_actual(sizeof(GetResponse));
@@ -973,6 +1081,10 @@ void RootJobForInspect::Interface::GetCompleterBase::Reply(::fidl::BytePart _buf
 
 void RootJobForInspect::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kRootJobForInspect_Get_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -1034,6 +1146,10 @@ Arguments::UnownedResultOf::Get Arguments::Call::Get(zx::unowned_channel _client
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kArguments_Get_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1090,6 +1206,10 @@ void Arguments::Interface::GetCompleterBase::Reply(::zx::vmo vmo, uint64_t size)
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kArguments_Get_Ordinal;
   _response.vmo = std::move(vmo);
   _response.size = std::move(size);
@@ -1103,6 +1223,10 @@ void Arguments::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::z
     return;
   }
   auto& _response = *reinterpret_cast<GetResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kArguments_Get_Ordinal;
   _response.vmo = std::move(vmo);
   _response.size = std::move(size);
@@ -1112,6 +1236,10 @@ void Arguments::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::z
 
 void Arguments::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kArguments_Get_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }

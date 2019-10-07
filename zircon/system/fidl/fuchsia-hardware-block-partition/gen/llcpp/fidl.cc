@@ -108,6 +108,10 @@ Partition::UnownedResultOf::GetInfo Partition::Call::GetInfo(zx::unowned_channel
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetInfoRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kPartition_GetInfo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -171,6 +175,10 @@ Partition::UnownedResultOf::GetStats Partition::Call::GetStats(zx::unowned_chann
 
 ::fidl::DecodeResult<Partition::GetStatsResponse> Partition::InPlace::GetStats(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kPartition_GetStats_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -233,6 +241,10 @@ Partition::UnownedResultOf::GetFifo Partition::Call::GetFifo(zx::unowned_channel
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetFifoRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kPartition_GetFifo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -296,6 +308,10 @@ Partition::UnownedResultOf::AttachVmo Partition::Call::AttachVmo(zx::unowned_cha
 
 ::fidl::DecodeResult<Partition::AttachVmoResponse> Partition::InPlace::AttachVmo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kPartition_AttachVmo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -358,6 +374,10 @@ Partition::UnownedResultOf::CloseFifo Partition::Call::CloseFifo(zx::unowned_cha
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<CloseFifoRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kPartition_CloseFifo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -420,6 +440,10 @@ Partition::UnownedResultOf::RebindDevice Partition::Call::RebindDevice(zx::unown
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<RebindDeviceRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kPartition_RebindDevice_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -482,6 +506,10 @@ Partition::UnownedResultOf::GetTypeGuid Partition::Call::GetTypeGuid(zx::unowned
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetTypeGuidRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kPartition_GetTypeGuid_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -544,6 +572,10 @@ Partition::UnownedResultOf::GetInstanceGuid Partition::Call::GetInstanceGuid(zx:
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetInstanceGuidRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kPartition_GetInstanceGuid_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -606,6 +638,10 @@ Partition::UnownedResultOf::GetName Partition::Call::GetName(zx::unowned_channel
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetNameRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kPartition_GetName_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -760,6 +796,10 @@ void Partition::Interface::GetInfoCompleterBase::Reply(int32_t status, ::llcpp::
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetInfoResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kPartition_GetInfo_Ordinal;
   _response.status = std::move(status);
   _response.info = std::move(info);
@@ -778,6 +818,10 @@ void Partition::Interface::GetInfoCompleterBase::Reply(::fidl::BytePart _buffer,
     return;
   }
   GetInfoResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kPartition_GetInfo_Ordinal;
   _response.status = std::move(status);
   _response.info = std::move(info);
@@ -791,6 +835,10 @@ void Partition::Interface::GetInfoCompleterBase::Reply(::fidl::BytePart _buffer,
 
 void Partition::Interface::GetInfoCompleterBase::Reply(::fidl::DecodedMessage<GetInfoResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kPartition_GetInfo_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -801,6 +849,10 @@ void Partition::Interface::GetStatsCompleterBase::Reply(int32_t status, ::llcpp:
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   GetStatsResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kPartition_GetStats_Ordinal;
   _response.status = std::move(status);
   _response.stats = std::move(stats);
@@ -819,6 +871,10 @@ void Partition::Interface::GetStatsCompleterBase::Reply(::fidl::BytePart _buffer
     return;
   }
   GetStatsResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kPartition_GetStats_Ordinal;
   _response.status = std::move(status);
   _response.stats = std::move(stats);
@@ -832,6 +888,10 @@ void Partition::Interface::GetStatsCompleterBase::Reply(::fidl::BytePart _buffer
 
 void Partition::Interface::GetStatsCompleterBase::Reply(::fidl::DecodedMessage<GetStatsResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kPartition_GetStats_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -841,6 +901,10 @@ void Partition::Interface::GetFifoCompleterBase::Reply(int32_t status, ::zx::fif
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFifoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetFifoResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kPartition_GetFifo_Ordinal;
   _response.status = std::move(status);
   _response.fifo = std::move(fifo);
@@ -854,6 +918,10 @@ void Partition::Interface::GetFifoCompleterBase::Reply(::fidl::BytePart _buffer,
     return;
   }
   auto& _response = *reinterpret_cast<GetFifoResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kPartition_GetFifo_Ordinal;
   _response.status = std::move(status);
   _response.fifo = std::move(fifo);
@@ -863,6 +931,10 @@ void Partition::Interface::GetFifoCompleterBase::Reply(::fidl::BytePart _buffer,
 
 void Partition::Interface::GetFifoCompleterBase::Reply(::fidl::DecodedMessage<GetFifoResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kPartition_GetFifo_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -872,6 +944,10 @@ void Partition::Interface::AttachVmoCompleterBase::Reply(int32_t status, ::llcpp
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AttachVmoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   AttachVmoResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kPartition_AttachVmo_Ordinal;
   _response.status = std::move(status);
   _response.vmoid = std::move(vmoid);
@@ -890,6 +966,10 @@ void Partition::Interface::AttachVmoCompleterBase::Reply(::fidl::BytePart _buffe
     return;
   }
   AttachVmoResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kPartition_AttachVmo_Ordinal;
   _response.status = std::move(status);
   _response.vmoid = std::move(vmoid);
@@ -903,6 +983,10 @@ void Partition::Interface::AttachVmoCompleterBase::Reply(::fidl::BytePart _buffe
 
 void Partition::Interface::AttachVmoCompleterBase::Reply(::fidl::DecodedMessage<AttachVmoResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kPartition_AttachVmo_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -912,6 +996,10 @@ void Partition::Interface::CloseFifoCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseFifoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<CloseFifoResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kPartition_CloseFifo_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(CloseFifoResponse));
@@ -924,6 +1012,10 @@ void Partition::Interface::CloseFifoCompleterBase::Reply(::fidl::BytePart _buffe
     return;
   }
   auto& _response = *reinterpret_cast<CloseFifoResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kPartition_CloseFifo_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(CloseFifoResponse));
@@ -932,6 +1024,10 @@ void Partition::Interface::CloseFifoCompleterBase::Reply(::fidl::BytePart _buffe
 
 void Partition::Interface::CloseFifoCompleterBase::Reply(::fidl::DecodedMessage<CloseFifoResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kPartition_CloseFifo_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -941,6 +1037,10 @@ void Partition::Interface::RebindDeviceCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RebindDeviceResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<RebindDeviceResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kPartition_RebindDevice_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(RebindDeviceResponse));
@@ -953,6 +1053,10 @@ void Partition::Interface::RebindDeviceCompleterBase::Reply(::fidl::BytePart _bu
     return;
   }
   auto& _response = *reinterpret_cast<RebindDeviceResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kPartition_RebindDevice_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(RebindDeviceResponse));
@@ -961,6 +1065,10 @@ void Partition::Interface::RebindDeviceCompleterBase::Reply(::fidl::BytePart _bu
 
 void Partition::Interface::RebindDeviceCompleterBase::Reply(::fidl::DecodedMessage<RebindDeviceResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kPartition_RebindDevice_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -970,6 +1078,10 @@ void Partition::Interface::GetTypeGuidCompleterBase::Reply(int32_t status, GUID*
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTypeGuidResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetTypeGuidResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kPartition_GetTypeGuid_Ordinal;
   _response.status = std::move(status);
   _response.guid = std::move(guid);
@@ -988,6 +1100,10 @@ void Partition::Interface::GetTypeGuidCompleterBase::Reply(::fidl::BytePart _buf
     return;
   }
   GetTypeGuidResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kPartition_GetTypeGuid_Ordinal;
   _response.status = std::move(status);
   _response.guid = std::move(guid);
@@ -1001,6 +1117,10 @@ void Partition::Interface::GetTypeGuidCompleterBase::Reply(::fidl::BytePart _buf
 
 void Partition::Interface::GetTypeGuidCompleterBase::Reply(::fidl::DecodedMessage<GetTypeGuidResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kPartition_GetTypeGuid_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -1010,6 +1130,10 @@ void Partition::Interface::GetInstanceGuidCompleterBase::Reply(int32_t status, G
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInstanceGuidResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetInstanceGuidResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kPartition_GetInstanceGuid_Ordinal;
   _response.status = std::move(status);
   _response.guid = std::move(guid);
@@ -1028,6 +1152,10 @@ void Partition::Interface::GetInstanceGuidCompleterBase::Reply(::fidl::BytePart 
     return;
   }
   GetInstanceGuidResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kPartition_GetInstanceGuid_Ordinal;
   _response.status = std::move(status);
   _response.guid = std::move(guid);
@@ -1041,6 +1169,10 @@ void Partition::Interface::GetInstanceGuidCompleterBase::Reply(::fidl::BytePart 
 
 void Partition::Interface::GetInstanceGuidCompleterBase::Reply(::fidl::DecodedMessage<GetInstanceGuidResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kPartition_GetInstanceGuid_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -1050,6 +1182,10 @@ void Partition::Interface::GetNameCompleterBase::Reply(int32_t status, ::fidl::S
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNameResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetNameResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kPartition_GetName_Ordinal;
   _response.status = std::move(status);
   _response.name = std::move(name);
@@ -1068,6 +1204,10 @@ void Partition::Interface::GetNameCompleterBase::Reply(::fidl::BytePart _buffer,
     return;
   }
   GetNameResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kPartition_GetName_Ordinal;
   _response.status = std::move(status);
   _response.name = std::move(name);
@@ -1081,6 +1221,10 @@ void Partition::Interface::GetNameCompleterBase::Reply(::fidl::BytePart _buffer,
 
 void Partition::Interface::GetNameCompleterBase::Reply(::fidl::DecodedMessage<GetNameResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kPartition_GetName_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }

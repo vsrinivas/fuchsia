@@ -117,6 +117,10 @@ Device::UnownedResultOf::GetInfo Device::Call::GetInfo(zx::unowned_channel _clie
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetInfoRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetInfo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -179,6 +183,10 @@ Device::UnownedResultOf::GetDeviceInfo Device::Call::GetDeviceInfo(zx::unowned_c
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetDeviceInfoRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetDeviceInfo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -242,6 +250,10 @@ Device::UnownedResultOf::GetDvfsInfo Device::Call::GetDvfsInfo(zx::unowned_chann
 
 ::fidl::DecodeResult<Device::GetDvfsInfoResponse> Device::InPlace::GetDvfsInfo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetDvfsInfoRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetDvfsInfo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -304,6 +316,10 @@ Device::UnownedResultOf::GetTemperatureCelsius Device::Call::GetTemperatureCelsi
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetTemperatureCelsiusRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetTemperatureCelsius_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -366,6 +382,10 @@ Device::UnownedResultOf::GetStateChangeEvent Device::Call::GetStateChangeEvent(z
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetStateChangeEventRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetStateChangeEvent_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -428,6 +448,10 @@ Device::UnownedResultOf::GetStateChangePort Device::Call::GetStateChangePort(zx:
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetStateChangePortRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetStateChangePort_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -493,6 +517,10 @@ Device::UnownedResultOf::SetTripCelsius Device::Call::SetTripCelsius(zx::unowned
 
 ::fidl::DecodeResult<Device::SetTripCelsiusResponse> Device::InPlace::SetTripCelsius(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetTripCelsiusRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_SetTripCelsius_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -556,6 +584,10 @@ Device::UnownedResultOf::GetDvfsOperatingPoint Device::Call::GetDvfsOperatingPoi
 
 ::fidl::DecodeResult<Device::GetDvfsOperatingPointResponse> Device::InPlace::GetDvfsOperatingPoint(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetDvfsOperatingPointRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetDvfsOperatingPoint_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -621,6 +653,10 @@ Device::UnownedResultOf::SetDvfsOperatingPoint Device::Call::SetDvfsOperatingPoi
 
 ::fidl::DecodeResult<Device::SetDvfsOperatingPointResponse> Device::InPlace::SetDvfsOperatingPoint(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDvfsOperatingPointRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_SetDvfsOperatingPoint_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -683,6 +719,10 @@ Device::UnownedResultOf::GetFanLevel Device::Call::GetFanLevel(zx::unowned_chann
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetFanLevelRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetFanLevel_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -746,6 +786,10 @@ Device::UnownedResultOf::SetFanLevel Device::Call::SetFanLevel(zx::unowned_chann
 
 ::fidl::DecodeResult<Device::SetFanLevelResponse> Device::InPlace::SetFanLevel(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetFanLevelRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_SetFanLevel_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -927,6 +971,10 @@ void Device::Interface::GetInfoCompleterBase::Reply(int32_t status, ThermalInfo*
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetInfoResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetInfo_Ordinal;
   _response.status = std::move(status);
   _response.info = std::move(info);
@@ -945,6 +993,10 @@ void Device::Interface::GetInfoCompleterBase::Reply(::fidl::BytePart _buffer, in
     return;
   }
   GetInfoResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetInfo_Ordinal;
   _response.status = std::move(status);
   _response.info = std::move(info);
@@ -958,6 +1010,10 @@ void Device::Interface::GetInfoCompleterBase::Reply(::fidl::BytePart _buffer, in
 
 void Device::Interface::GetInfoCompleterBase::Reply(::fidl::DecodedMessage<GetInfoResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetInfo_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -968,6 +1024,10 @@ void Device::Interface::GetDeviceInfoCompleterBase::Reply(int32_t status, Therma
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   GetDeviceInfoResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetDeviceInfo_Ordinal;
   _response.status = std::move(status);
   _response.info = std::move(info);
@@ -986,6 +1046,10 @@ void Device::Interface::GetDeviceInfoCompleterBase::Reply(::fidl::BytePart _buff
     return;
   }
   GetDeviceInfoResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetDeviceInfo_Ordinal;
   _response.status = std::move(status);
   _response.info = std::move(info);
@@ -999,6 +1063,10 @@ void Device::Interface::GetDeviceInfoCompleterBase::Reply(::fidl::BytePart _buff
 
 void Device::Interface::GetDeviceInfoCompleterBase::Reply(::fidl::DecodedMessage<GetDeviceInfoResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetDeviceInfo_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -1008,6 +1076,10 @@ void Device::Interface::GetDvfsInfoCompleterBase::Reply(int32_t status, Operatin
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDvfsInfoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetDvfsInfoResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetDvfsInfo_Ordinal;
   _response.status = std::move(status);
   _response.info = std::move(info);
@@ -1026,6 +1098,10 @@ void Device::Interface::GetDvfsInfoCompleterBase::Reply(::fidl::BytePart _buffer
     return;
   }
   GetDvfsInfoResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetDvfsInfo_Ordinal;
   _response.status = std::move(status);
   _response.info = std::move(info);
@@ -1039,6 +1115,10 @@ void Device::Interface::GetDvfsInfoCompleterBase::Reply(::fidl::BytePart _buffer
 
 void Device::Interface::GetDvfsInfoCompleterBase::Reply(::fidl::DecodedMessage<GetDvfsInfoResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetDvfsInfo_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -1048,6 +1128,10 @@ void Device::Interface::GetTemperatureCelsiusCompleterBase::Reply(int32_t status
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTemperatureCelsiusResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetTemperatureCelsiusResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetTemperatureCelsius_Ordinal;
   _response.status = std::move(status);
   _response.temp = std::move(temp);
@@ -1061,6 +1145,10 @@ void Device::Interface::GetTemperatureCelsiusCompleterBase::Reply(::fidl::BytePa
     return;
   }
   auto& _response = *reinterpret_cast<GetTemperatureCelsiusResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetTemperatureCelsius_Ordinal;
   _response.status = std::move(status);
   _response.temp = std::move(temp);
@@ -1070,6 +1158,10 @@ void Device::Interface::GetTemperatureCelsiusCompleterBase::Reply(::fidl::BytePa
 
 void Device::Interface::GetTemperatureCelsiusCompleterBase::Reply(::fidl::DecodedMessage<GetTemperatureCelsiusResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetTemperatureCelsius_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -1079,6 +1171,10 @@ void Device::Interface::GetStateChangeEventCompleterBase::Reply(int32_t status, 
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetStateChangeEventResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetStateChangeEventResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetStateChangeEvent_Ordinal;
   _response.status = std::move(status);
   _response.handle = std::move(handle);
@@ -1092,6 +1188,10 @@ void Device::Interface::GetStateChangeEventCompleterBase::Reply(::fidl::BytePart
     return;
   }
   auto& _response = *reinterpret_cast<GetStateChangeEventResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetStateChangeEvent_Ordinal;
   _response.status = std::move(status);
   _response.handle = std::move(handle);
@@ -1101,6 +1201,10 @@ void Device::Interface::GetStateChangeEventCompleterBase::Reply(::fidl::BytePart
 
 void Device::Interface::GetStateChangeEventCompleterBase::Reply(::fidl::DecodedMessage<GetStateChangeEventResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetStateChangeEvent_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -1110,6 +1214,10 @@ void Device::Interface::GetStateChangePortCompleterBase::Reply(int32_t status, :
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetStateChangePortResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetStateChangePortResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetStateChangePort_Ordinal;
   _response.status = std::move(status);
   _response.handle = std::move(handle);
@@ -1123,6 +1231,10 @@ void Device::Interface::GetStateChangePortCompleterBase::Reply(::fidl::BytePart 
     return;
   }
   auto& _response = *reinterpret_cast<GetStateChangePortResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetStateChangePort_Ordinal;
   _response.status = std::move(status);
   _response.handle = std::move(handle);
@@ -1132,6 +1244,10 @@ void Device::Interface::GetStateChangePortCompleterBase::Reply(::fidl::BytePart 
 
 void Device::Interface::GetStateChangePortCompleterBase::Reply(::fidl::DecodedMessage<GetStateChangePortResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetStateChangePort_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -1141,6 +1257,10 @@ void Device::Interface::SetTripCelsiusCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetTripCelsiusResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetTripCelsiusResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_SetTripCelsius_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetTripCelsiusResponse));
@@ -1153,6 +1273,10 @@ void Device::Interface::SetTripCelsiusCompleterBase::Reply(::fidl::BytePart _buf
     return;
   }
   auto& _response = *reinterpret_cast<SetTripCelsiusResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_SetTripCelsius_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(SetTripCelsiusResponse));
@@ -1161,6 +1285,10 @@ void Device::Interface::SetTripCelsiusCompleterBase::Reply(::fidl::BytePart _buf
 
 void Device::Interface::SetTripCelsiusCompleterBase::Reply(::fidl::DecodedMessage<SetTripCelsiusResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_SetTripCelsius_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -1170,6 +1298,10 @@ void Device::Interface::GetDvfsOperatingPointCompleterBase::Reply(int32_t status
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDvfsOperatingPointResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetDvfsOperatingPointResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetDvfsOperatingPoint_Ordinal;
   _response.status = std::move(status);
   _response.op_idx = std::move(op_idx);
@@ -1183,6 +1315,10 @@ void Device::Interface::GetDvfsOperatingPointCompleterBase::Reply(::fidl::BytePa
     return;
   }
   auto& _response = *reinterpret_cast<GetDvfsOperatingPointResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetDvfsOperatingPoint_Ordinal;
   _response.status = std::move(status);
   _response.op_idx = std::move(op_idx);
@@ -1192,6 +1328,10 @@ void Device::Interface::GetDvfsOperatingPointCompleterBase::Reply(::fidl::BytePa
 
 void Device::Interface::GetDvfsOperatingPointCompleterBase::Reply(::fidl::DecodedMessage<GetDvfsOperatingPointResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetDvfsOperatingPoint_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -1201,6 +1341,10 @@ void Device::Interface::SetDvfsOperatingPointCompleterBase::Reply(int32_t status
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetDvfsOperatingPointResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetDvfsOperatingPointResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_SetDvfsOperatingPoint_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetDvfsOperatingPointResponse));
@@ -1213,6 +1357,10 @@ void Device::Interface::SetDvfsOperatingPointCompleterBase::Reply(::fidl::BytePa
     return;
   }
   auto& _response = *reinterpret_cast<SetDvfsOperatingPointResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_SetDvfsOperatingPoint_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(SetDvfsOperatingPointResponse));
@@ -1221,6 +1369,10 @@ void Device::Interface::SetDvfsOperatingPointCompleterBase::Reply(::fidl::BytePa
 
 void Device::Interface::SetDvfsOperatingPointCompleterBase::Reply(::fidl::DecodedMessage<SetDvfsOperatingPointResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_SetDvfsOperatingPoint_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -1230,6 +1382,10 @@ void Device::Interface::GetFanLevelCompleterBase::Reply(int32_t status, uint32_t
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFanLevelResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetFanLevelResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetFanLevel_Ordinal;
   _response.status = std::move(status);
   _response.fan_level = std::move(fan_level);
@@ -1243,6 +1399,10 @@ void Device::Interface::GetFanLevelCompleterBase::Reply(::fidl::BytePart _buffer
     return;
   }
   auto& _response = *reinterpret_cast<GetFanLevelResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetFanLevel_Ordinal;
   _response.status = std::move(status);
   _response.fan_level = std::move(fan_level);
@@ -1252,6 +1412,10 @@ void Device::Interface::GetFanLevelCompleterBase::Reply(::fidl::BytePart _buffer
 
 void Device::Interface::GetFanLevelCompleterBase::Reply(::fidl::DecodedMessage<GetFanLevelResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetFanLevel_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -1261,6 +1425,10 @@ void Device::Interface::SetFanLevelCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetFanLevelResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetFanLevelResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_SetFanLevel_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetFanLevelResponse));
@@ -1273,6 +1441,10 @@ void Device::Interface::SetFanLevelCompleterBase::Reply(::fidl::BytePart _buffer
     return;
   }
   auto& _response = *reinterpret_cast<SetFanLevelResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_SetFanLevel_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(SetFanLevelResponse));
@@ -1281,6 +1453,10 @@ void Device::Interface::SetFanLevelCompleterBase::Reply(::fidl::BytePart _buffer
 
 void Device::Interface::SetFanLevelCompleterBase::Reply(::fidl::DecodedMessage<SetFanLevelResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_SetFanLevel_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }

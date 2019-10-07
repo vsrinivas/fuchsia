@@ -120,6 +120,10 @@ zx_status_t Connectivity::SendOnNetworkReachableEvent(::zx::unowned_channel _cha
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<OnNetworkReachableResponse*>(_write_bytes);
   _response._hdr = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kConnectivity_OnNetworkReachable_Ordinal;
   _response.reachable = std::move(reachable);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(OnNetworkReachableResponse));
@@ -132,6 +136,10 @@ zx_status_t Connectivity::SendOnNetworkReachableEvent(::zx::unowned_channel _cha
   }
   auto& _response = *reinterpret_cast<OnNetworkReachableResponse*>(_buffer.data());
   _response._hdr = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kConnectivity_OnNetworkReachable_Ordinal;
   _response.reachable = std::move(reachable);
   _buffer.set_actual(sizeof(OnNetworkReachableResponse));
@@ -140,6 +148,10 @@ zx_status_t Connectivity::SendOnNetworkReachableEvent(::zx::unowned_channel _cha
 
 zx_status_t Connectivity::SendOnNetworkReachableEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnNetworkReachableResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kConnectivity_OnNetworkReachable_Ordinal;
   return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
 }
@@ -402,6 +414,10 @@ NameLookup::UnownedResultOf::LookupIp NameLookup::Call::LookupIp(zx::unowned_cha
 
 ::fidl::DecodeResult<NameLookup::LookupIpResponse> NameLookup::InPlace::LookupIp(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupIpRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kNameLookup_LookupIp_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -465,6 +481,10 @@ NameLookup::UnownedResultOf::LookupHostname NameLookup::Call::LookupHostname(zx:
 
 ::fidl::DecodeResult<NameLookup::LookupHostnameResponse> NameLookup::InPlace::LookupHostname(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupHostnameRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kNameLookup_LookupHostname_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -536,6 +556,10 @@ void NameLookup::Interface::LookupIpCompleterBase::Reply(NameLookup_LookupIp_Res
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   LookupIpResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kNameLookup_LookupIp_Ordinal;
   _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
@@ -562,6 +586,10 @@ void NameLookup::Interface::LookupIpCompleterBase::Reply(::fidl::BytePart _buffe
     return;
   }
   LookupIpResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kNameLookup_LookupIp_Ordinal;
   _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
@@ -580,6 +608,10 @@ void NameLookup::Interface::LookupIpCompleterBase::ReplySuccess(::fidl::BytePart
 
 void NameLookup::Interface::LookupIpCompleterBase::Reply(::fidl::DecodedMessage<LookupIpResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kNameLookup_LookupIp_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -589,6 +621,10 @@ void NameLookup::Interface::LookupHostnameCompleterBase::Reply(NameLookup_Lookup
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LookupHostnameResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   LookupHostnameResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kNameLookup_LookupHostname_Ordinal;
   _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
@@ -615,6 +651,10 @@ void NameLookup::Interface::LookupHostnameCompleterBase::Reply(::fidl::BytePart 
     return;
   }
   LookupHostnameResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kNameLookup_LookupHostname_Ordinal;
   _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
@@ -633,6 +673,10 @@ void NameLookup::Interface::LookupHostnameCompleterBase::ReplySuccess(::fidl::By
 
 void NameLookup::Interface::LookupHostnameCompleterBase::Reply(::fidl::DecodedMessage<LookupHostnameResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kNameLookup_LookupHostname_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }

@@ -50,6 +50,10 @@ Events::ResultOf::FunctionRegistered Events::Call::FunctionRegistered(zx::unowne
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<FunctionRegisteredRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kEvents_FunctionRegistered_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -93,6 +97,10 @@ Events::ResultOf::FunctionsCleared Events::Call::FunctionsCleared(zx::unowned_ch
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<FunctionsClearedRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kEvents_FunctionsCleared_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -161,6 +169,10 @@ void Events::Interface::FunctionRegisteredCompleterBase::Reply() {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<FunctionRegisteredResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<FunctionRegisteredResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kEvents_FunctionRegistered_Ordinal;
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(FunctionRegisteredResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<FunctionRegisteredResponse>(std::move(_response_bytes)));
@@ -300,6 +312,10 @@ Device::UnownedResultOf::SetConfiguration Device::Call::SetConfiguration(zx::uno
 
 ::fidl::DecodeResult<Device::SetConfigurationResponse> Device::InPlace::SetConfiguration(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigurationRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_SetConfiguration_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -343,6 +359,10 @@ Device::ResultOf::ClearFunctions Device::Call::ClearFunctions(zx::unowned_channe
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<ClearFunctionsRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_ClearFunctions_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -407,6 +427,10 @@ Device::UnownedResultOf::SetStateChangeListener Device::Call::SetStateChangeList
 
 ::fidl::internal::StatusAndError Device::InPlace::SetStateChangeListener(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateChangeListenerRequest> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_SetStateChangeListener_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -489,6 +513,10 @@ void Device::Interface::SetConfigurationCompleterBase::Reply(Device_SetConfigura
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigurationResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetConfigurationResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_SetConfiguration_Ordinal;
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetConfigurationResponse));
@@ -509,6 +537,10 @@ void Device::Interface::SetConfigurationCompleterBase::Reply(::fidl::BytePart _b
     return;
   }
   auto& _response = *reinterpret_cast<SetConfigurationResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_SetConfiguration_Ordinal;
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(SetConfigurationResponse));
@@ -522,6 +554,10 @@ void Device::Interface::SetConfigurationCompleterBase::ReplySuccess(::fidl::Byte
 
 void Device::Interface::SetConfigurationCompleterBase::Reply(::fidl::DecodedMessage<SetConfigurationResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_SetConfiguration_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -531,6 +567,10 @@ void Device::Interface::ClearFunctionsCompleterBase::Reply() {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ClearFunctionsResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ClearFunctionsResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_ClearFunctions_Ordinal;
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ClearFunctionsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ClearFunctionsResponse>(std::move(_response_bytes)));

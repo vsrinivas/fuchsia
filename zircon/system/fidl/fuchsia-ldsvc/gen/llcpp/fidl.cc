@@ -62,6 +62,10 @@ Loader::ResultOf::Done Loader::Call::Done(zx::unowned_channel _client_end) {
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<DoneRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kLoader_Done_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -130,6 +134,10 @@ Loader::UnownedResultOf::LoadObject Loader::Call::LoadObject(zx::unowned_channel
 
 ::fidl::DecodeResult<Loader::LoadObjectResponse> Loader::InPlace::LoadObject(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LoadObjectRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kLoader_LoadObject_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -198,6 +206,10 @@ Loader::UnownedResultOf::Config Loader::Call::Config(zx::unowned_channel _client
 
 ::fidl::DecodeResult<Loader::ConfigResponse> Loader::InPlace::Config(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConfigRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kLoader_Config_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -261,6 +273,10 @@ Loader::UnownedResultOf::Clone Loader::Call::Clone(zx::unowned_channel _client_e
 
 ::fidl::DecodeResult<Loader::CloneResponse> Loader::InPlace::Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kLoader_Clone_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -356,6 +372,10 @@ void Loader::Interface::LoadObjectCompleterBase::Reply(int32_t rv, ::zx::vmo obj
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadObjectResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<LoadObjectResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kLoader_LoadObject_Ordinal;
   _response.rv = std::move(rv);
   _response.object = std::move(object);
@@ -369,6 +389,10 @@ void Loader::Interface::LoadObjectCompleterBase::Reply(::fidl::BytePart _buffer,
     return;
   }
   auto& _response = *reinterpret_cast<LoadObjectResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kLoader_LoadObject_Ordinal;
   _response.rv = std::move(rv);
   _response.object = std::move(object);
@@ -378,6 +402,10 @@ void Loader::Interface::LoadObjectCompleterBase::Reply(::fidl::BytePart _buffer,
 
 void Loader::Interface::LoadObjectCompleterBase::Reply(::fidl::DecodedMessage<LoadObjectResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kLoader_LoadObject_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -387,6 +415,10 @@ void Loader::Interface::ConfigCompleterBase::Reply(int32_t rv) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConfigResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ConfigResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kLoader_Config_Ordinal;
   _response.rv = std::move(rv);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ConfigResponse));
@@ -399,6 +431,10 @@ void Loader::Interface::ConfigCompleterBase::Reply(::fidl::BytePart _buffer, int
     return;
   }
   auto& _response = *reinterpret_cast<ConfigResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kLoader_Config_Ordinal;
   _response.rv = std::move(rv);
   _buffer.set_actual(sizeof(ConfigResponse));
@@ -407,6 +443,10 @@ void Loader::Interface::ConfigCompleterBase::Reply(::fidl::BytePart _buffer, int
 
 void Loader::Interface::ConfigCompleterBase::Reply(::fidl::DecodedMessage<ConfigResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kLoader_Config_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -416,6 +456,10 @@ void Loader::Interface::CloneCompleterBase::Reply(int32_t rv) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloneResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<CloneResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kLoader_Clone_Ordinal;
   _response.rv = std::move(rv);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(CloneResponse));
@@ -428,6 +472,10 @@ void Loader::Interface::CloneCompleterBase::Reply(::fidl::BytePart _buffer, int3
     return;
   }
   auto& _response = *reinterpret_cast<CloneResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kLoader_Clone_Ordinal;
   _response.rv = std::move(rv);
   _buffer.set_actual(sizeof(CloneResponse));
@@ -436,6 +484,10 @@ void Loader::Interface::CloneCompleterBase::Reply(::fidl::BytePart _buffer, int3
 
 void Loader::Interface::CloneCompleterBase::Reply(::fidl::DecodedMessage<CloneResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kLoader_Clone_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }

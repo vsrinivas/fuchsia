@@ -44,6 +44,10 @@ SecondProtocol::ResultOf::MethodOnSecond SecondProtocol::Call::MethodOnSecond(zx
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<MethodOnSecondRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kSecondProtocol_MethodOnSecond_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -132,6 +136,10 @@ FirstProtocol::ResultOf::MethodOnFirst FirstProtocol::Call::MethodOnFirst(zx::un
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<MethodOnFirstRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kFirstProtocol_MethodOnFirst_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

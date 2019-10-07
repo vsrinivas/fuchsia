@@ -82,6 +82,10 @@ Bus::UnownedResultOf::Enable Bus::Call::Enable(zx::unowned_channel _client_end, 
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<EnableRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kBus_Enable_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -144,6 +148,10 @@ Bus::UnownedResultOf::Disable Bus::Call::Disable(zx::unowned_channel _client_end
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<DisableRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kBus_Disable_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -206,6 +214,10 @@ Bus::UnownedResultOf::Connect Bus::Call::Connect(zx::unowned_channel _client_end
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<ConnectRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kBus_Connect_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -268,6 +280,10 @@ Bus::UnownedResultOf::Disconnect Bus::Call::Disconnect(zx::unowned_channel _clie
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<DisconnectRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kBus_Disconnect_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -360,6 +376,10 @@ void Bus::Interface::EnableCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<EnableResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kBus_Enable_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(EnableResponse));
@@ -372,6 +392,10 @@ void Bus::Interface::EnableCompleterBase::Reply(::fidl::BytePart _buffer, int32_
     return;
   }
   auto& _response = *reinterpret_cast<EnableResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kBus_Enable_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(EnableResponse));
@@ -380,6 +404,10 @@ void Bus::Interface::EnableCompleterBase::Reply(::fidl::BytePart _buffer, int32_
 
 void Bus::Interface::EnableCompleterBase::Reply(::fidl::DecodedMessage<EnableResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kBus_Enable_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -389,6 +417,10 @@ void Bus::Interface::DisableCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DisableResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kBus_Disable_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DisableResponse));
@@ -401,6 +433,10 @@ void Bus::Interface::DisableCompleterBase::Reply(::fidl::BytePart _buffer, int32
     return;
   }
   auto& _response = *reinterpret_cast<DisableResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kBus_Disable_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(DisableResponse));
@@ -409,6 +445,10 @@ void Bus::Interface::DisableCompleterBase::Reply(::fidl::BytePart _buffer, int32
 
 void Bus::Interface::DisableCompleterBase::Reply(::fidl::DecodedMessage<DisableResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kBus_Disable_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -418,6 +458,10 @@ void Bus::Interface::ConnectCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConnectResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ConnectResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kBus_Connect_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ConnectResponse));
@@ -430,6 +474,10 @@ void Bus::Interface::ConnectCompleterBase::Reply(::fidl::BytePart _buffer, int32
     return;
   }
   auto& _response = *reinterpret_cast<ConnectResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kBus_Connect_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(ConnectResponse));
@@ -438,6 +486,10 @@ void Bus::Interface::ConnectCompleterBase::Reply(::fidl::BytePart _buffer, int32
 
 void Bus::Interface::ConnectCompleterBase::Reply(::fidl::DecodedMessage<ConnectResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kBus_Connect_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -447,6 +499,10 @@ void Bus::Interface::DisconnectCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisconnectResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DisconnectResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kBus_Disconnect_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DisconnectResponse));
@@ -459,6 +515,10 @@ void Bus::Interface::DisconnectCompleterBase::Reply(::fidl::BytePart _buffer, in
     return;
   }
   auto& _response = *reinterpret_cast<DisconnectResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kBus_Disconnect_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(DisconnectResponse));
@@ -467,6 +527,10 @@ void Bus::Interface::DisconnectCompleterBase::Reply(::fidl::BytePart _buffer, in
 
 void Bus::Interface::DisconnectCompleterBase::Reply(::fidl::DecodedMessage<DisconnectResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kBus_Disconnect_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }

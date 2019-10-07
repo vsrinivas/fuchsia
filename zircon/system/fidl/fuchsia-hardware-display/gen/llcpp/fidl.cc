@@ -75,6 +75,10 @@ Provider::UnownedResultOf::OpenVirtconController Provider::Call::OpenVirtconCont
 
 ::fidl::DecodeResult<Provider::OpenVirtconControllerResponse> Provider::InPlace::OpenVirtconController(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenVirtconControllerRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kProvider_OpenVirtconController_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -140,6 +144,10 @@ Provider::UnownedResultOf::OpenController Provider::Call::OpenController(zx::uno
 
 ::fidl::DecodeResult<Provider::OpenControllerResponse> Provider::InPlace::OpenController(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenControllerRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kProvider_OpenController_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -210,6 +218,10 @@ void Provider::Interface::OpenVirtconControllerCompleterBase::Reply(int32_t s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OpenVirtconControllerResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<OpenVirtconControllerResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kProvider_OpenVirtconController_Ordinal;
   _response.s = std::move(s);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(OpenVirtconControllerResponse));
@@ -222,6 +234,10 @@ void Provider::Interface::OpenVirtconControllerCompleterBase::Reply(::fidl::Byte
     return;
   }
   auto& _response = *reinterpret_cast<OpenVirtconControllerResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kProvider_OpenVirtconController_Ordinal;
   _response.s = std::move(s);
   _buffer.set_actual(sizeof(OpenVirtconControllerResponse));
@@ -230,6 +246,10 @@ void Provider::Interface::OpenVirtconControllerCompleterBase::Reply(::fidl::Byte
 
 void Provider::Interface::OpenVirtconControllerCompleterBase::Reply(::fidl::DecodedMessage<OpenVirtconControllerResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kProvider_OpenVirtconController_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -239,6 +259,10 @@ void Provider::Interface::OpenControllerCompleterBase::Reply(int32_t s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OpenControllerResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<OpenControllerResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kProvider_OpenController_Ordinal;
   _response.s = std::move(s);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(OpenControllerResponse));
@@ -251,6 +275,10 @@ void Provider::Interface::OpenControllerCompleterBase::Reply(::fidl::BytePart _b
     return;
   }
   auto& _response = *reinterpret_cast<OpenControllerResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kProvider_OpenController_Ordinal;
   _response.s = std::move(s);
   _buffer.set_actual(sizeof(OpenControllerResponse));
@@ -259,6 +287,10 @@ void Provider::Interface::OpenControllerCompleterBase::Reply(::fidl::BytePart _b
 
 void Provider::Interface::OpenControllerCompleterBase::Reply(::fidl::DecodedMessage<OpenControllerResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kProvider_OpenController_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -657,6 +689,10 @@ Controller::UnownedResultOf::ImportVmoImage Controller::Call::ImportVmoImage(zx:
 
 ::fidl::DecodeResult<Controller::ImportVmoImageResponse> Controller::InPlace::ImportVmoImage(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ImportVmoImageRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_ImportVmoImage_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -724,6 +760,10 @@ Controller::UnownedResultOf::ImportImage Controller::Call::ImportImage(zx::unown
 
 ::fidl::DecodeResult<Controller::ImportImageResponse> Controller::InPlace::ImportImage(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ImportImageRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_ImportImage_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -788,6 +828,10 @@ Controller::UnownedResultOf::ReleaseImage Controller::Call::ReleaseImage(zx::uno
 
 ::fidl::internal::StatusAndError Controller::InPlace::ReleaseImage(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseImageRequest> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_ReleaseImage_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -854,6 +898,10 @@ Controller::UnownedResultOf::ImportEvent Controller::Call::ImportEvent(zx::unown
 
 ::fidl::internal::StatusAndError Controller::InPlace::ImportEvent(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ImportEventRequest> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_ImportEvent_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -918,6 +966,10 @@ Controller::UnownedResultOf::ReleaseEvent Controller::Call::ReleaseEvent(zx::uno
 
 ::fidl::internal::StatusAndError Controller::InPlace::ReleaseEvent(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseEventRequest> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_ReleaseEvent_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -980,6 +1032,10 @@ Controller::UnownedResultOf::CreateLayer Controller::Call::CreateLayer(zx::unown
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<CreateLayerRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_CreateLayer_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1044,6 +1100,10 @@ Controller::UnownedResultOf::DestroyLayer Controller::Call::DestroyLayer(zx::uno
 
 ::fidl::internal::StatusAndError Controller::InPlace::DestroyLayer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DestroyLayerRequest> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_DestroyLayer_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1110,6 +1170,10 @@ Controller::UnownedResultOf::SetDisplayMode Controller::Call::SetDisplayMode(zx:
 
 ::fidl::internal::StatusAndError Controller::InPlace::SetDisplayMode(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDisplayModeRequest> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_SetDisplayMode_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1180,6 +1244,10 @@ Controller::UnownedResultOf::SetDisplayColorConversion Controller::Call::SetDisp
 
 ::fidl::internal::StatusAndError Controller::InPlace::SetDisplayColorConversion(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDisplayColorConversionRequest> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_SetDisplayColorConversion_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1251,6 +1319,10 @@ Controller::UnownedResultOf::SetDisplayLayers Controller::Call::SetDisplayLayers
 
 ::fidl::internal::StatusAndError Controller::InPlace::SetDisplayLayers(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDisplayLayersRequest> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_SetDisplayLayers_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1317,6 +1389,10 @@ Controller::UnownedResultOf::SetLayerPrimaryConfig Controller::Call::SetLayerPri
 
 ::fidl::internal::StatusAndError Controller::InPlace::SetLayerPrimaryConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerPrimaryConfigRequest> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_SetLayerPrimaryConfig_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1387,6 +1463,10 @@ Controller::UnownedResultOf::SetLayerPrimaryPosition Controller::Call::SetLayerP
 
 ::fidl::internal::StatusAndError Controller::InPlace::SetLayerPrimaryPosition(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerPrimaryPositionRequest> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_SetLayerPrimaryPosition_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1455,6 +1535,10 @@ Controller::UnownedResultOf::SetLayerPrimaryAlpha Controller::Call::SetLayerPrim
 
 ::fidl::internal::StatusAndError Controller::InPlace::SetLayerPrimaryAlpha(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerPrimaryAlphaRequest> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_SetLayerPrimaryAlpha_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1521,6 +1605,10 @@ Controller::UnownedResultOf::SetLayerCursorConfig Controller::Call::SetLayerCurs
 
 ::fidl::internal::StatusAndError Controller::InPlace::SetLayerCursorConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerCursorConfigRequest> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_SetLayerCursorConfig_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1589,6 +1677,10 @@ Controller::UnownedResultOf::SetLayerCursorPosition Controller::Call::SetLayerCu
 
 ::fidl::internal::StatusAndError Controller::InPlace::SetLayerCursorPosition(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerCursorPositionRequest> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_SetLayerCursorPosition_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1662,6 +1754,10 @@ Controller::UnownedResultOf::SetLayerColorConfig Controller::Call::SetLayerColor
 
 ::fidl::internal::StatusAndError Controller::InPlace::SetLayerColorConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerColorConfigRequest> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_SetLayerColorConfig_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1732,6 +1828,10 @@ Controller::UnownedResultOf::SetLayerImage Controller::Call::SetLayerImage(zx::u
 
 ::fidl::internal::StatusAndError Controller::InPlace::SetLayerImage(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerImageRequest> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_SetLayerImage_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1795,6 +1895,10 @@ Controller::UnownedResultOf::CheckConfig Controller::Call::CheckConfig(zx::unown
 
 ::fidl::DecodeResult<Controller::CheckConfigResponse> Controller::InPlace::CheckConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CheckConfigRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_CheckConfig_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1838,6 +1942,10 @@ Controller::ResultOf::ApplyConfig Controller::Call::ApplyConfig(zx::unowned_chan
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<ApplyConfigRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_ApplyConfig_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1902,6 +2010,10 @@ Controller::UnownedResultOf::EnableVsync Controller::Call::EnableVsync(zx::unown
 
 ::fidl::internal::StatusAndError Controller::InPlace::EnableVsync(zx::unowned_channel _client_end, ::fidl::DecodedMessage<EnableVsyncRequest> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_EnableVsync_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1966,6 +2078,10 @@ Controller::UnownedResultOf::SetVirtconMode Controller::Call::SetVirtconMode(zx:
 
 ::fidl::internal::StatusAndError Controller::InPlace::SetVirtconMode(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetVirtconModeRequest> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_SetVirtconMode_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -2031,6 +2147,10 @@ Controller::UnownedResultOf::ComputeLinearImageStride Controller::Call::ComputeL
 
 ::fidl::DecodeResult<Controller::ComputeLinearImageStrideResponse> Controller::InPlace::ComputeLinearImageStride(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ComputeLinearImageStrideRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_ComputeLinearImageStride_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -2094,6 +2214,10 @@ Controller::UnownedResultOf::AllocateVmo Controller::Call::AllocateVmo(zx::unown
 
 ::fidl::DecodeResult<Controller::AllocateVmoResponse> Controller::InPlace::AllocateVmo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocateVmoRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_AllocateVmo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -2159,6 +2283,10 @@ Controller::UnownedResultOf::ImportBufferCollection Controller::Call::ImportBuff
 
 ::fidl::DecodeResult<Controller::ImportBufferCollectionResponse> Controller::InPlace::ImportBufferCollection(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ImportBufferCollectionRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_ImportBufferCollection_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -2223,6 +2351,10 @@ Controller::UnownedResultOf::ReleaseBufferCollection Controller::Call::ReleaseBu
 
 ::fidl::internal::StatusAndError Controller::InPlace::ReleaseBufferCollection(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseBufferCollectionRequest> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_ReleaseBufferCollection_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -2288,6 +2420,10 @@ Controller::UnownedResultOf::SetBufferCollectionConstraints Controller::Call::Se
 
 ::fidl::DecodeResult<Controller::SetBufferCollectionConstraintsResponse> Controller::InPlace::SetBufferCollectionConstraints(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetBufferCollectionConstraintsRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_SetBufferCollectionConstraints_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -2350,6 +2486,10 @@ Controller::UnownedResultOf::GetSingleBufferFramebuffer Controller::Call::GetSin
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetSingleBufferFramebufferRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_GetSingleBufferFramebuffer_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -2417,6 +2557,10 @@ Controller::UnownedResultOf::ImportImageForCapture Controller::Call::ImportImage
 
 ::fidl::DecodeResult<Controller::ImportImageForCaptureResponse> Controller::InPlace::ImportImageForCapture(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ImportImageForCaptureRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_ImportImageForCapture_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -2482,6 +2626,10 @@ Controller::UnownedResultOf::StartCapture Controller::Call::StartCapture(zx::uno
 
 ::fidl::DecodeResult<Controller::StartCaptureResponse> Controller::InPlace::StartCapture(zx::unowned_channel _client_end, ::fidl::DecodedMessage<StartCaptureRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_StartCapture_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -2545,6 +2693,10 @@ Controller::UnownedResultOf::ReleaseCapture Controller::Call::ReleaseCapture(zx:
 
 ::fidl::DecodeResult<Controller::ReleaseCaptureResponse> Controller::InPlace::ReleaseCapture(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseCaptureRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_ReleaseCapture_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -3084,6 +3236,10 @@ zx_status_t Controller::SendDisplaysChangedEvent(::zx::unowned_channel _chan, ::
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   DisplaysChangedResponse _response = {};
   _response._hdr = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_DisplaysChanged_Ordinal;
   _response.added = std::move(added);
   _response.removed = std::move(removed);
@@ -3101,6 +3257,10 @@ zx_status_t Controller::SendDisplaysChangedEvent(::zx::unowned_channel _chan, ::
   }
   DisplaysChangedResponse _response = {};
   _response._hdr = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_DisplaysChanged_Ordinal;
   _response.added = std::move(added);
   _response.removed = std::move(removed);
@@ -3113,6 +3273,10 @@ zx_status_t Controller::SendDisplaysChangedEvent(::zx::unowned_channel _chan, ::
 
 zx_status_t Controller::SendDisplaysChangedEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<DisplaysChangedResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_DisplaysChanged_Ordinal;
   return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
 }
@@ -3122,6 +3286,10 @@ void Controller::Interface::ImportVmoImageCompleterBase::Reply(int32_t res, uint
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ImportVmoImageResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ImportVmoImageResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_ImportVmoImage_Ordinal;
   _response.res = std::move(res);
   _response.image_id = std::move(image_id);
@@ -3135,6 +3303,10 @@ void Controller::Interface::ImportVmoImageCompleterBase::Reply(::fidl::BytePart 
     return;
   }
   auto& _response = *reinterpret_cast<ImportVmoImageResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_ImportVmoImage_Ordinal;
   _response.res = std::move(res);
   _response.image_id = std::move(image_id);
@@ -3144,6 +3316,10 @@ void Controller::Interface::ImportVmoImageCompleterBase::Reply(::fidl::BytePart 
 
 void Controller::Interface::ImportVmoImageCompleterBase::Reply(::fidl::DecodedMessage<ImportVmoImageResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_ImportVmoImage_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -3153,6 +3329,10 @@ void Controller::Interface::ImportImageCompleterBase::Reply(int32_t res, uint64_
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ImportImageResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ImportImageResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_ImportImage_Ordinal;
   _response.res = std::move(res);
   _response.image_id = std::move(image_id);
@@ -3166,6 +3346,10 @@ void Controller::Interface::ImportImageCompleterBase::Reply(::fidl::BytePart _bu
     return;
   }
   auto& _response = *reinterpret_cast<ImportImageResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_ImportImage_Ordinal;
   _response.res = std::move(res);
   _response.image_id = std::move(image_id);
@@ -3175,6 +3359,10 @@ void Controller::Interface::ImportImageCompleterBase::Reply(::fidl::BytePart _bu
 
 void Controller::Interface::ImportImageCompleterBase::Reply(::fidl::DecodedMessage<ImportImageResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_ImportImage_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -3184,6 +3372,10 @@ void Controller::Interface::CreateLayerCompleterBase::Reply(int32_t res, uint64_
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateLayerResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<CreateLayerResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_CreateLayer_Ordinal;
   _response.res = std::move(res);
   _response.layer_id = std::move(layer_id);
@@ -3197,6 +3389,10 @@ void Controller::Interface::CreateLayerCompleterBase::Reply(::fidl::BytePart _bu
     return;
   }
   auto& _response = *reinterpret_cast<CreateLayerResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_CreateLayer_Ordinal;
   _response.res = std::move(res);
   _response.layer_id = std::move(layer_id);
@@ -3206,6 +3402,10 @@ void Controller::Interface::CreateLayerCompleterBase::Reply(::fidl::BytePart _bu
 
 void Controller::Interface::CreateLayerCompleterBase::Reply(::fidl::DecodedMessage<CreateLayerResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_CreateLayer_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -3216,6 +3416,10 @@ void Controller::Interface::CheckConfigCompleterBase::Reply(ConfigResult res, ::
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   CheckConfigResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_CheckConfig_Ordinal;
   _response.res = std::move(res);
   _response.ops = std::move(ops);
@@ -3234,6 +3438,10 @@ void Controller::Interface::CheckConfigCompleterBase::Reply(::fidl::BytePart _bu
     return;
   }
   CheckConfigResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_CheckConfig_Ordinal;
   _response.res = std::move(res);
   _response.ops = std::move(ops);
@@ -3247,6 +3455,10 @@ void Controller::Interface::CheckConfigCompleterBase::Reply(::fidl::BytePart _bu
 
 void Controller::Interface::CheckConfigCompleterBase::Reply(::fidl::DecodedMessage<CheckConfigResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_CheckConfig_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -3258,6 +3470,10 @@ zx_status_t Controller::SendVsyncEvent(::zx::unowned_channel _chan, uint64_t dis
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   VsyncResponse _response = {};
   _response._hdr = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_Vsync_Ordinal;
   _response.display_id = std::move(display_id);
   _response.timestamp = std::move(timestamp);
@@ -3276,6 +3492,10 @@ zx_status_t Controller::SendVsyncEvent(::zx::unowned_channel _chan, ::fidl::Byte
   }
   VsyncResponse _response = {};
   _response._hdr = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_Vsync_Ordinal;
   _response.display_id = std::move(display_id);
   _response.timestamp = std::move(timestamp);
@@ -3289,6 +3509,10 @@ zx_status_t Controller::SendVsyncEvent(::zx::unowned_channel _chan, ::fidl::Byte
 
 zx_status_t Controller::SendVsyncEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<VsyncResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_Vsync_Ordinal;
   return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
 }
@@ -3299,6 +3523,10 @@ zx_status_t Controller::SendClientOwnershipChangeEvent(::zx::unowned_channel _ch
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ClientOwnershipChangeResponse*>(_write_bytes);
   _response._hdr = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_ClientOwnershipChange_Ordinal;
   _response.has_ownership = std::move(has_ownership);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ClientOwnershipChangeResponse));
@@ -3311,6 +3539,10 @@ zx_status_t Controller::SendClientOwnershipChangeEvent(::zx::unowned_channel _ch
   }
   auto& _response = *reinterpret_cast<ClientOwnershipChangeResponse*>(_buffer.data());
   _response._hdr = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_ClientOwnershipChange_Ordinal;
   _response.has_ownership = std::move(has_ownership);
   _buffer.set_actual(sizeof(ClientOwnershipChangeResponse));
@@ -3319,6 +3551,10 @@ zx_status_t Controller::SendClientOwnershipChangeEvent(::zx::unowned_channel _ch
 
 zx_status_t Controller::SendClientOwnershipChangeEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<ClientOwnershipChangeResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_ClientOwnershipChange_Ordinal;
   return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
 }
@@ -3328,6 +3564,10 @@ void Controller::Interface::ComputeLinearImageStrideCompleterBase::Reply(uint32_
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ComputeLinearImageStrideResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ComputeLinearImageStrideResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_ComputeLinearImageStride_Ordinal;
   _response.stride = std::move(stride);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ComputeLinearImageStrideResponse));
@@ -3340,6 +3580,10 @@ void Controller::Interface::ComputeLinearImageStrideCompleterBase::Reply(::fidl:
     return;
   }
   auto& _response = *reinterpret_cast<ComputeLinearImageStrideResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_ComputeLinearImageStride_Ordinal;
   _response.stride = std::move(stride);
   _buffer.set_actual(sizeof(ComputeLinearImageStrideResponse));
@@ -3348,6 +3592,10 @@ void Controller::Interface::ComputeLinearImageStrideCompleterBase::Reply(::fidl:
 
 void Controller::Interface::ComputeLinearImageStrideCompleterBase::Reply(::fidl::DecodedMessage<ComputeLinearImageStrideResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_ComputeLinearImageStride_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -3357,6 +3605,10 @@ void Controller::Interface::AllocateVmoCompleterBase::Reply(int32_t res, ::zx::v
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AllocateVmoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<AllocateVmoResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_AllocateVmo_Ordinal;
   _response.res = std::move(res);
   _response.vmo = std::move(vmo);
@@ -3370,6 +3622,10 @@ void Controller::Interface::AllocateVmoCompleterBase::Reply(::fidl::BytePart _bu
     return;
   }
   auto& _response = *reinterpret_cast<AllocateVmoResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_AllocateVmo_Ordinal;
   _response.res = std::move(res);
   _response.vmo = std::move(vmo);
@@ -3379,6 +3635,10 @@ void Controller::Interface::AllocateVmoCompleterBase::Reply(::fidl::BytePart _bu
 
 void Controller::Interface::AllocateVmoCompleterBase::Reply(::fidl::DecodedMessage<AllocateVmoResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_AllocateVmo_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -3388,6 +3648,10 @@ void Controller::Interface::ImportBufferCollectionCompleterBase::Reply(int32_t r
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ImportBufferCollectionResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ImportBufferCollectionResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_ImportBufferCollection_Ordinal;
   _response.res = std::move(res);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ImportBufferCollectionResponse));
@@ -3400,6 +3664,10 @@ void Controller::Interface::ImportBufferCollectionCompleterBase::Reply(::fidl::B
     return;
   }
   auto& _response = *reinterpret_cast<ImportBufferCollectionResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_ImportBufferCollection_Ordinal;
   _response.res = std::move(res);
   _buffer.set_actual(sizeof(ImportBufferCollectionResponse));
@@ -3408,6 +3676,10 @@ void Controller::Interface::ImportBufferCollectionCompleterBase::Reply(::fidl::B
 
 void Controller::Interface::ImportBufferCollectionCompleterBase::Reply(::fidl::DecodedMessage<ImportBufferCollectionResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_ImportBufferCollection_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -3417,6 +3689,10 @@ void Controller::Interface::SetBufferCollectionConstraintsCompleterBase::Reply(i
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetBufferCollectionConstraintsResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetBufferCollectionConstraintsResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_SetBufferCollectionConstraints_Ordinal;
   _response.res = std::move(res);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetBufferCollectionConstraintsResponse));
@@ -3429,6 +3705,10 @@ void Controller::Interface::SetBufferCollectionConstraintsCompleterBase::Reply(:
     return;
   }
   auto& _response = *reinterpret_cast<SetBufferCollectionConstraintsResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_SetBufferCollectionConstraints_Ordinal;
   _response.res = std::move(res);
   _buffer.set_actual(sizeof(SetBufferCollectionConstraintsResponse));
@@ -3437,6 +3717,10 @@ void Controller::Interface::SetBufferCollectionConstraintsCompleterBase::Reply(:
 
 void Controller::Interface::SetBufferCollectionConstraintsCompleterBase::Reply(::fidl::DecodedMessage<SetBufferCollectionConstraintsResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_SetBufferCollectionConstraints_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -3446,6 +3730,10 @@ void Controller::Interface::GetSingleBufferFramebufferCompleterBase::Reply(int32
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetSingleBufferFramebufferResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetSingleBufferFramebufferResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_GetSingleBufferFramebuffer_Ordinal;
   _response.res = std::move(res);
   _response.vmo = std::move(vmo);
@@ -3460,6 +3748,10 @@ void Controller::Interface::GetSingleBufferFramebufferCompleterBase::Reply(::fid
     return;
   }
   auto& _response = *reinterpret_cast<GetSingleBufferFramebufferResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_GetSingleBufferFramebuffer_Ordinal;
   _response.res = std::move(res);
   _response.vmo = std::move(vmo);
@@ -3470,6 +3762,10 @@ void Controller::Interface::GetSingleBufferFramebufferCompleterBase::Reply(::fid
 
 void Controller::Interface::GetSingleBufferFramebufferCompleterBase::Reply(::fidl::DecodedMessage<GetSingleBufferFramebufferResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_GetSingleBufferFramebuffer_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -3479,6 +3775,10 @@ void Controller::Interface::ImportImageForCaptureCompleterBase::Reply(Controller
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ImportImageForCaptureResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ImportImageForCaptureResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_ImportImageForCapture_Ordinal;
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ImportImageForCaptureResponse));
@@ -3500,6 +3800,10 @@ void Controller::Interface::ImportImageForCaptureCompleterBase::Reply(::fidl::By
     return;
   }
   auto& _response = *reinterpret_cast<ImportImageForCaptureResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_ImportImageForCapture_Ordinal;
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(ImportImageForCaptureResponse));
@@ -3514,6 +3818,10 @@ void Controller::Interface::ImportImageForCaptureCompleterBase::ReplySuccess(::f
 
 void Controller::Interface::ImportImageForCaptureCompleterBase::Reply(::fidl::DecodedMessage<ImportImageForCaptureResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_ImportImageForCapture_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -3523,6 +3831,10 @@ void Controller::Interface::StartCaptureCompleterBase::Reply(Controller_StartCap
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StartCaptureResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<StartCaptureResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_StartCapture_Ordinal;
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(StartCaptureResponse));
@@ -3543,6 +3855,10 @@ void Controller::Interface::StartCaptureCompleterBase::Reply(::fidl::BytePart _b
     return;
   }
   auto& _response = *reinterpret_cast<StartCaptureResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_StartCapture_Ordinal;
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(StartCaptureResponse));
@@ -3556,6 +3872,10 @@ void Controller::Interface::StartCaptureCompleterBase::ReplySuccess(::fidl::Byte
 
 void Controller::Interface::StartCaptureCompleterBase::Reply(::fidl::DecodedMessage<StartCaptureResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_StartCapture_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -3565,6 +3885,10 @@ void Controller::Interface::ReleaseCaptureCompleterBase::Reply(Controller_Releas
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReleaseCaptureResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ReleaseCaptureResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_ReleaseCapture_Ordinal;
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReleaseCaptureResponse));
@@ -3585,6 +3909,10 @@ void Controller::Interface::ReleaseCaptureCompleterBase::Reply(::fidl::BytePart 
     return;
   }
   auto& _response = *reinterpret_cast<ReleaseCaptureResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kController_ReleaseCapture_Ordinal;
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(ReleaseCaptureResponse));
@@ -3598,6 +3926,10 @@ void Controller::Interface::ReleaseCaptureCompleterBase::ReplySuccess(::fidl::By
 
 void Controller::Interface::ReleaseCaptureCompleterBase::Reply(::fidl::DecodedMessage<ReleaseCaptureResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kController_ReleaseCapture_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }

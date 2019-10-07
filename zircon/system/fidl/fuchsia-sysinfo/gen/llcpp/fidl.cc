@@ -74,6 +74,10 @@ Device::UnownedResultOf::GetHypervisorResource Device::Call::GetHypervisorResour
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetHypervisorResourceRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetHypervisorResource_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -136,6 +140,10 @@ Device::UnownedResultOf::GetBoardName Device::Call::GetBoardName(zx::unowned_cha
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetBoardNameRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetBoardName_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -198,6 +206,10 @@ Device::UnownedResultOf::GetInterruptControllerInfo Device::Call::GetInterruptCo
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetInterruptControllerInfoRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetInterruptControllerInfo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -278,6 +290,10 @@ void Device::Interface::GetHypervisorResourceCompleterBase::Reply(int32_t status
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetHypervisorResourceResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetHypervisorResourceResponse*>(_write_bytes);
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetHypervisorResource_Ordinal;
   _response.status = std::move(status);
   _response.resource = std::move(resource);
@@ -291,6 +307,10 @@ void Device::Interface::GetHypervisorResourceCompleterBase::Reply(::fidl::BytePa
     return;
   }
   auto& _response = *reinterpret_cast<GetHypervisorResourceResponse*>(_buffer.data());
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetHypervisorResource_Ordinal;
   _response.status = std::move(status);
   _response.resource = std::move(resource);
@@ -300,6 +320,10 @@ void Device::Interface::GetHypervisorResourceCompleterBase::Reply(::fidl::BytePa
 
 void Device::Interface::GetHypervisorResourceCompleterBase::Reply(::fidl::DecodedMessage<GetHypervisorResourceResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetHypervisorResource_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -309,6 +333,10 @@ void Device::Interface::GetBoardNameCompleterBase::Reply(int32_t status, ::fidl:
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetBoardNameResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetBoardNameResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetBoardName_Ordinal;
   _response.status = std::move(status);
   _response.name = std::move(name);
@@ -327,6 +355,10 @@ void Device::Interface::GetBoardNameCompleterBase::Reply(::fidl::BytePart _buffe
     return;
   }
   GetBoardNameResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetBoardName_Ordinal;
   _response.status = std::move(status);
   _response.name = std::move(name);
@@ -340,6 +372,10 @@ void Device::Interface::GetBoardNameCompleterBase::Reply(::fidl::BytePart _buffe
 
 void Device::Interface::GetBoardNameCompleterBase::Reply(::fidl::DecodedMessage<GetBoardNameResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetBoardName_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
@@ -349,6 +385,10 @@ void Device::Interface::GetInterruptControllerInfoCompleterBase::Reply(int32_t s
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInterruptControllerInfoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetInterruptControllerInfoResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetInterruptControllerInfo_Ordinal;
   _response.status = std::move(status);
   _response.info = std::move(info);
@@ -367,6 +407,10 @@ void Device::Interface::GetInterruptControllerInfoCompleterBase::Reply(::fidl::B
     return;
   }
   GetInterruptControllerInfoResponse _response = {};
+  _response._hdr.flags[0] = 0;
+  _response._hdr.flags[1] = 0;
+  _response._hdr.flags[2] = 0;
+  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   _response._hdr.ordinal = kDevice_GetInterruptControllerInfo_Ordinal;
   _response.status = std::move(status);
   _response.info = std::move(info);
@@ -380,6 +424,10 @@ void Device::Interface::GetInterruptControllerInfoCompleterBase::Reply(::fidl::B
 
 void Device::Interface::GetInterruptControllerInfoCompleterBase::Reply(::fidl::DecodedMessage<GetInterruptControllerInfoResponse> params) {
   params.message()->_hdr = {};
+  params.message()->_hdr.flags[0] = 0;
+  params.message()->_hdr.flags[1] = 0;
+  params.message()->_hdr.flags[2] = 0;
+  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   params.message()->_hdr.ordinal = kDevice_GetInterruptControllerInfo_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
