@@ -92,6 +92,7 @@ func doTestLongevityOTAs(t *testing.T, device *device.Client) {
 	}
 
 	lastBuildID := ""
+	attempt := 1
 	for {
 		log.Printf("Lookup up latest build for builder %s", builder)
 
@@ -105,7 +106,7 @@ func doTestLongevityOTAs(t *testing.T, device *device.Client) {
 			time.Sleep(60 * time.Second)
 			continue
 		}
-		log.Printf("upgrading to build %s", build)
+		log.Printf("new build %s is available, downloading", build)
 
 		repo, err := build.GetPackageRepository()
 		if err != nil {
@@ -118,14 +119,18 @@ func doTestLongevityOTAs(t *testing.T, device *device.Client) {
 		}
 
 		if isDeviceUpToDate(t, device, expectedSystemImageMerkle) {
-			log.Printf("device is up to date, sleeping")
+			log.Printf("device is already up to date, sleeping")
 			time.Sleep(60 * time.Second)
 		} else {
-			log.Printf("OTAing from %s to %s", lastBuildID, build)
+			log.Printf("Longevity Test Attempt %d from %s to %s", attempt, lastBuildID, build)
 			doSystemOTA(t, device, repo)
 		}
 
+		log.Printf("Longevity Test Attempt %d successful", attempt)
+		log.Printf("------------------------------------------------------------------------------")
+
 		lastBuildID = build.ID
+		attempt += 1
 	}
 }
 
