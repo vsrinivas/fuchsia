@@ -143,6 +143,21 @@ C and C++ client libraries should use `ZX_DEBUG_ASSERT` and `ZX_ASSERT`, defined
 in `<zircon/assert.h>`, to assert invariants. Client libraries may also use the
 `_MSG` variants to provide a message when the assertion fails.
 
+## Recommendations for client code
+
+### C
+
+The Fuchsia System Interface uses symbols with the `zx_` and `fuchsia_` prefixes and
+preprocessor macros with the `ZX_` and `FUCHSIA_` prefixes. To avoid collisions, these
+prefixes are reserved for use by the Fuchsia SDK. Clients of the Fuchsia SDK should not
+declare symbols or preprocessor macros with these prefixes.
+
+### C++
+
+The FIDL protocols included in the Fuchsia System Interface resides in the top-level
+`fuchsia` namespace. To avoid collisions, this namespace is reserved for use by the
+Fuchsia SDK. Clients of the Fuchsia SDK should not declare names in the top-level
+`fuchsia` namespace.
 
 [Fuchsia API Council]: ../api/council.md
 [FIDL API style rubric]: ../languages/fidl/style.md
