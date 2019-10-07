@@ -34,45 +34,10 @@ pub enum SessionsWatcherEvent {
 }
 
 impl PlayerEvent {
-    /// Returns whether this event updates the active status of the player's session.
-    pub fn updates_activity(&self) -> bool {
-        match self {
-            PlayerEvent::Updated { active, .. } => active.is_some(),
-            _ => false,
-        }
-    }
-
     pub fn is_removal(&self) -> bool {
         match self {
             PlayerEvent::Removed => true,
             _ => false,
-        }
-    }
-
-    /// Given a new event from the player, coalesce the events. If between client requests for an
-    /// update, the player pauses, then plays, then pauses, we want to send only one event that says
-    /// its state is now paused, rather than the whole sequence.
-    // TODO(turnage): Clients should accept a delta that re-announces the same state (such as will
-    // happen if a state flips and flips back). Look into avoiding it anyway because it would be
-    // better.
-    pub fn update(self, delta: PlayerEvent) -> Self {
-        match (self, delta) {
-            (_, PlayerEvent::Removed) => PlayerEvent::Removed,
-            (
-                PlayerEvent::Updated { delta, registration, active },
-                PlayerEvent::Updated {
-                    delta: new_delta,
-                    registration: new_registration,
-                    active: new_active,
-                },
-            ) => PlayerEvent::Updated {
-                delta: delta.apply(new_delta),
-                registration: new_registration.or(registration),
-                active: new_active.or(active),
-            },
-            (PlayerEvent::Removed, _) => {
-                panic!("This should never happen (update to removed player)")
-            }
         }
     }
 

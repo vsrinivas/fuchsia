@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{services::discovery::player_event::PlayerEvent, Result};
+use crate::{
+    services::discovery::{filter::*, player_event::PlayerEvent},
+    Result,
+};
 use failure::Error as FError;
 use fidl::client::QueryResponseFut;
 use fidl::endpoints::ClientEnd;
@@ -225,12 +228,16 @@ impl Player {
         }
         self.server_wait_group.wait().await;
     }
+
+    fn options_satisfied(&self) -> WatchOptions {
+        WatchOptions { only_active: Some(self.state.is_active().unwrap_or(false)) }
+    }
 }
 
 /// The Stream implementation for Player is a stream of full player states. A new state is emitted
 /// when the backing player implementation sends us an update.
 impl Stream for Player {
-    type Item = (u64, PlayerEvent);
+    type Item = FilterApplicant<(u64, PlayerEvent)>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
         let proxy = self.inner.clone();
@@ -268,7 +275,7 @@ impl Stream for Player {
                     },
                 };
                 self.terminated = event.is_removal();
-                Poll::Ready(Some((self.id, event)))
+                Poll::Ready(Some(FilterApplicant::new(self.options_satisfied(), (self.id, event))))
             }
         }
     }
@@ -346,7 +353,7 @@ mod test {
         info_change_responder.send(Decodable::new_empty())?;
 
         let mut player_stream = Pin::new(&mut player);
-        let (_, event) = player_stream.next().await.expect("Polling player event");
+        let (_, event) = player_stream.next().await.expect("Polling player event").applicant;
         assert_eq!(
             event,
             PlayerEvent::Updated {
@@ -365,7 +372,7 @@ mod test {
     async fn update_stream_terminates_when_backing_player_disconnects() {
         let (mut player, _) = test_player();
         let mut player_stream = Pin::new(&mut player);
-        let (_, event) = player_stream.next().await.expect("Polling player event");
+        let (_, event) = player_stream.next().await.expect("Polling player event").applicant;
         assert_matches!(event, PlayerEvent::Removed);
         assert!(player_stream.is_terminated());
     }
@@ -395,7 +402,7 @@ mod test {
         })?;
 
         let mut player_stream = Pin::new(&mut player);
-        let (_, event) = player_stream.next().await.expect("Polling player event");
+        let (_, event) = player_stream.next().await.expect("Polling player event").applicant;
         assert_matches!(event, PlayerEvent::Removed);
         assert!(player_stream.is_terminated());
 

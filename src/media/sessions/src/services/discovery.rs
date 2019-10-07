@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub mod filter;
 pub mod player_event;
 mod watcher;
 
-use self::{player_event::PlayerEvent, watcher::*};
+use self::{filter::*, player_event::PlayerEvent, watcher::*};
 use crate::{proxies::player::Player, spawn_log_error, Result};
 use fidl_fuchsia_media_sessions2::*;
 use futures::{self, channel::mpsc, prelude::*};
@@ -48,7 +49,7 @@ impl Discovery {
                         }
                         DiscoveryRequest::WatchSessions { watch_options, session_watcher, ..} => {
                             spawn_log_error(Watcher::new(
-                                watch_options,
+                                Filter::new(watch_options),
                                 sender.new_receiver()
                             ).serve(session_watcher));
                         }
@@ -60,13 +61,13 @@ impl Discovery {
                 }
                 // A player answered a hanging get for its status.
                 player_update = player_updates.select_next_some() => {
-                    let (id, event) = player_update;
+                    let (id, event) = &player_update.applicant;
                     if let PlayerEvent::Removed = event {
-                        if let Some(mut player) = player_updates.remove(id).await {
+                        if let Some(mut player) = player_updates.remove(*id).await {
                             player.disconnect_proxied_clients().await;
                         }
                     }
-                    sender.send((id, event)).await;
+                    sender.send(player_update).await;
                 }
             }
         }
