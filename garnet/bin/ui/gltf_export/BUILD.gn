@@ -12,10 +12,10 @@ executable("gltf_export") {
   configs += [ "//third_party/cobalt:cobalt_config" ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.scenic.internal",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/ui/scenic/lib/gfx",
     "//src/ui/scenic/lib/scenic",

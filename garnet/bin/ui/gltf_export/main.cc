@@ -6,6 +6,7 @@
 #include <fuchsia/ui/scenic/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/sys/cpp/component_context.h>
 #include <png.h>
 
 #include <cstdlib>
@@ -14,7 +15,6 @@
 
 #include <trace-provider/provider.h>
 
-#include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/vmo/vector.h"
 #include "rapidjson/document.h"
 #include "rapidjson/prettywriter.h"
@@ -81,9 +81,9 @@ std::ostream &operator<<(std::ostream &os, const Value &v) {
 class SnapshotTaker {
  public:
   explicit SnapshotTaker(async::Loop *loop)
-      : loop_(loop), context_(component::StartupContext::CreateFromStartupInfo()) {
+      : loop_(loop), context_(sys::ComponentContext::Create()) {
     // Connect to the Scenic service.
-    scenic_ = context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+    scenic_ = context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic_.set_error_handler([this](zx_status_t status) {
       FXL_LOG(ERROR) << "Lost connection to Scenic service.";
       encountered_error_ = true;
@@ -91,7 +91,7 @@ class SnapshotTaker {
     });
 
     // Connect to the internal snapshot service.
-    snapshotter_ = context_->ConnectToEnvironmentService<fuchsia::ui::scenic::internal::Snapshot>();
+    snapshotter_ = context_->svc()->Connect<fuchsia::ui::scenic::internal::Snapshot>();
     snapshotter_.set_error_handler([this](zx_status_t status) {
       FXL_LOG(ERROR) << "Lost connection to Snapshot service.";
       encountered_error_ = true;
@@ -432,7 +432,7 @@ class SnapshotTaker {
 
  private:
   async::Loop *loop_;
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   bool encountered_error_ = false;
   fuchsia::ui::scenic::ScenicPtr scenic_;
   fuchsia::ui::scenic::internal::SnapshotPtr snapshotter_;
