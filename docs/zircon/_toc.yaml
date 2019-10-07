@@ -163,6 +163,8 @@ toc:
   section:
   - include: /docs/zircon/benchmarks/_toc.yaml
 
+- title: "Reference"
+  path: /docs/reference/README.md
 - title: "Notes"
   section:
   - title: "Entropy collection TODOs"

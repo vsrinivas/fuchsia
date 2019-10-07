@@ -2,6 +2,8 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
+- title: "Target devices"
+  path: /docs/zircon/targets/README.md
 - title: "Acer Switch Alpha 12"
   path: /docs/zircon/targets/acer12.md
 - title: "Zircon on HiKey960 (96boards.org)"

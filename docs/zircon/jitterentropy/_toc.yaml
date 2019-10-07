@@ -2,6 +2,8 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
+- title: "Jitterentropy library"
+  path: /docs/zircon/jitterentropy/README.md
 - title: "Basic configuration"
   path: /docs/zircon/jitterentropy/config-basic.md
 - title: "Tuning the configuration"
