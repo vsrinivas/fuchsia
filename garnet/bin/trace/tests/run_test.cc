@@ -142,8 +142,8 @@ zx_status_t SpawnProgram(const zx::job& job, const std::vector<std::string>& arg
   return ZX_OK;
 }
 
-zx_status_t WaitAndGetExitCode(const std::string& program_name, const zx::process& process,
-                               int* out_exit_code) {
+zx_status_t WaitAndGetReturnCode(const std::string& program_name, const zx::process& process,
+                                 int* out_return_code) {
   // Leave it to the test harness to provide a timeout. If it doesn't that's
   // its bug.
   auto status = process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
@@ -163,9 +163,9 @@ zx_status_t WaitAndGetExitCode(const std::string& program_name, const zx::proces
   }
 
   if (proc_info.return_code != 0) {
-    FXL_LOG(ERROR) << program_name << " exited with exit code " << proc_info.return_code;
+    FXL_LOG(ERROR) << program_name << " exited with return code " << proc_info.return_code;
   }
-  *out_exit_code = proc_info.return_code;
+  *out_return_code = proc_info.return_code;
   return ZX_OK;
 }
 
@@ -178,12 +178,12 @@ static bool LaunchTool(const std::vector<std::string>& argv) {
     return false;
   }
 
-  int exit_code;
-  status = WaitAndGetExitCode(argv[0], subprocess, &exit_code);
+  int return_code;
+  status = WaitAndGetReturnCode(argv[0], subprocess, &return_code);
   if (status != ZX_OK) {
     return false;
   }
-  if (exit_code != 0) {
+  if (return_code != 0) {
     return false;
   }
 

@@ -1,6 +1,7 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 #include <gtest/gtest.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -87,11 +88,11 @@ class ExtraProvider : public ::testing::Test {
   void TearDown() override {
     if (provider_process_.is_valid()) {
       our_event_.reset();
-      int exit_code;
-      auto status = WaitAndGetExitCode(argv_[0], provider_process_, &exit_code);
+      int return_code;
+      auto status = WaitAndGetReturnCode(argv_[0], provider_process_, &return_code);
       EXPECT_EQ(status, ZX_OK);
       if (status == ZX_OK) {
-        EXPECT_EQ(exit_code, 0);
+        EXPECT_EQ(return_code, 0);
       }
       provider_process_.reset();
       FXL_LOG(INFO) << GetProgramPath() << " terminated";

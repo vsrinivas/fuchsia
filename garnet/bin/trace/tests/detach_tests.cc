@@ -29,7 +29,7 @@ TEST(DetachTest, DISABLED_SpawnedAppNotDetached) {
   ASSERT_EQ(SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
 
   int return_code;
-  ASSERT_EQ(WaitAndGetExitCode(argv[0], child, &return_code), ZX_OK);
+  ASSERT_EQ(WaitAndGetReturnCode(argv[0], child, &return_code), ZX_OK);
   EXPECT_EQ(return_code, 0);
 
   FXL_LOG(INFO) << "Trace exited, checking for helper presence";
@@ -55,7 +55,7 @@ TEST(DetachTest, DISABLED_SpawnedAppDetached) {
   ASSERT_EQ(SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
 
   int return_code;
-  ASSERT_EQ(WaitAndGetExitCode(argv[0], child, &return_code), ZX_OK);
+  ASSERT_EQ(WaitAndGetReturnCode(argv[0], child, &return_code), ZX_OK);
   EXPECT_EQ(return_code, 0);
 
   FXL_LOG(INFO) << "Trace exited, checking for helper presence";

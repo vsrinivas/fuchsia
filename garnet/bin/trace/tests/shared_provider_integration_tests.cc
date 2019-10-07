@@ -38,7 +38,7 @@ TEST(SharedProvider, IntegrationTest) {
   ASSERT_EQ(SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
 
   int return_code;
-  ASSERT_EQ(WaitAndGetExitCode(argv[0], child, &return_code), ZX_OK);
+  ASSERT_EQ(WaitAndGetReturnCode(argv[0], child, &return_code), ZX_OK);
   EXPECT_EQ(return_code, 0);
 
   size_t num_events;
