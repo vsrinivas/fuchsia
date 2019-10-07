@@ -31,10 +31,15 @@ fn main() -> Result<(), Error> {
 
     executor.run_singlethreaded(async {
         let version = configuration::get_version().context("Failed to get version")?;
-        let app_set = configuration::get_app_set(&version).context("Failed to get app set")?;
-        info!("Omaha app set: {:?}", app_set.to_vec().await);
         let channel_configs = channel::get_configs().ok();
         info!("Omaha channel config: {:?}", channel_configs);
+        let default_channel = match &channel_configs {
+            Some(channel_configs) => channel_configs.default_channel.clone(),
+            None => None,
+        };
+        let app_set = configuration::get_app_set(&version, default_channel)
+            .context("Failed to get app set")?;
+        info!("Omaha app set: {:?}", app_set.to_vec().await);
         let config = configuration::get_config(&version);
         info!("Update config: {:?}", config);
 

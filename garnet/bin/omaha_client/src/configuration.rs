@@ -12,17 +12,16 @@ use omaha_client::{
 use std::fs;
 use std::io;
 
-pub fn get_app_set(version: &str) -> Result<AppSet, Error> {
+pub fn get_app_set(version: &str, default_channel: Option<String>) -> Result<AppSet, Error> {
     let id = fs::read_to_string("/config/data/omaha_app_id")?;
     let version = version
         .parse::<Version>()
         .context(format!("Unable to parse '{}' as Omaha version format", version))?;
     let channel_config = sysconfig_client::channel::read_channel_config();
     info!("Channel configuration in sysconfig: {:?}", channel_config);
-    let cohort = Cohort {
-        hint: channel_config.map(|config| config.channel_name().to_string()).ok(),
-        ..Cohort::default()
-    };
+    let channel =
+        channel_config.map(|config| config.channel_name().to_string()).ok().or(default_channel);
+    let cohort = Cohort { hint: channel.clone(), name: channel, ..Cohort::default() };
     // Fuchsia only has a single app.
     Ok(AppSet::new(vec![App {
         id,
@@ -70,15 +69,28 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_app_set() {
-        let app_set = get_app_set("1.2.3.4").unwrap();
+        let app_set = get_app_set("1.2.3.4", None).unwrap();
         let apps = app_set.to_vec().await;
         assert_eq!(apps.len(), 1);
         assert_eq!(apps[0].id, "fuchsia:test-app-id");
         assert_eq!(apps[0].version, Version::from([1, 2, 3, 4]));
+        assert_eq!(apps[0].cohort.name, None);
+        assert_eq!(apps[0].cohort.hint, None);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_app_set_default_channel() {
+        let app_set = get_app_set("1.2.3.4", Some("default-channel".to_string())).unwrap();
+        let apps = app_set.to_vec().await;
+        assert_eq!(apps.len(), 1);
+        assert_eq!(apps[0].id, "fuchsia:test-app-id");
+        assert_eq!(apps[0].version, Version::from([1, 2, 3, 4]));
+        assert_eq!(apps[0].cohort.name, Some("default-channel".to_string()));
+        assert_eq!(apps[0].cohort.hint, Some("default-channel".to_string()));
     }
 
     #[test]
     fn test_get_app_set_invalid_version() {
-        assert!(get_app_set("invalid version").is_err());
+        assert!(get_app_set("invalid version", None).is_err());
     }
 }
