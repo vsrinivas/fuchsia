@@ -12,7 +12,7 @@ use fidl_fuchsia_update_channelcontrol::{ChannelControlRequest, ChannelControlRe
 use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use futures::{lock::Mutex, prelude::*};
-use log::{error, info};
+use log::{error, info, warn};
 use omaha_client::{
     common::{AppSet, CheckOptions},
     http_request::HttpRequest,
@@ -25,13 +25,23 @@ use omaha_client::{
 };
 use std::cell::RefCell;
 use std::rc::Rc;
-use sysconfig_client::channel::OtaUpdateChannelConfig;
+use sysconfig_client::{channel::OtaUpdateChannelConfig, SysconfigPartition};
 
 #[cfg(not(test))]
 use sysconfig_client::channel::write_channel_config;
 
 #[cfg(test)]
 fn write_channel_config(_config: &OtaUpdateChannelConfig) -> Result<(), Error> {
+    Ok(())
+}
+
+#[cfg(not(test))]
+use sysconfig_client::write_partition;
+
+#[cfg(test)]
+fn write_partition(partition: SysconfigPartition, data: &[u8]) -> Result<(), Error> {
+    assert_eq!(partition, SysconfigPartition::Config);
+    assert_eq!(data, &[] as &[u8]);
     Ok(())
 }
 
@@ -213,14 +223,28 @@ where
             ChannelControlRequest::SetTarget { channel, responder } => {
                 info!("Received SetTarget request with {}", channel);
                 // TODO: Verify that channel is valid.
-                // TODO: Write tuf_config_name.
-                let config = OtaUpdateChannelConfig::new(&channel, "")?;
-                write_channel_config(&config)?;
-                let mut storage = server.storage_ref.lock().await;
-                server.app_set.set_target_channel(Some(channel)).await;
-                server.app_set.persist(&mut *storage).await;
-                if let Err(e) = storage.commit().await {
-                    error!("Unable to commit target channel change: {}", e);
+                if channel.is_empty() {
+                    // TODO: Remove this when fxb/36608 is fixed.
+                    warn!(
+                        "Empty channel passed to SetTarget, erasing all channel data in SysConfig."
+                    );
+                    write_partition(SysconfigPartition::Config, &[])?;
+                    let target_channel = match &server.channel_configs {
+                        Some(channel_configs) => channel_configs.default_channel.clone(),
+                        None => None,
+                    };
+                    server.app_set.set_target_channel(target_channel).await;
+                } else {
+                    // TODO: Write tuf_config_name.
+                    let config = OtaUpdateChannelConfig::new(&channel, "")?;
+                    write_channel_config(&config)?;
+
+                    let mut storage = server.storage_ref.lock().await;
+                    server.app_set.set_target_channel(Some(channel)).await;
+                    server.app_set.persist(&mut *storage).await;
+                    if let Err(e) = storage.commit().await {
+                        error!("Unable to commit target channel change: {}", e);
+                    }
                 }
                 responder.send().context("error sending response")?;
             }
@@ -488,7 +512,33 @@ mod tests {
         assert_eq!("target-channel", apps[0].get_target_channel());
         let storage = fidl.storage_ref.lock().await;
         storage.get_string(&apps[0].id).await.unwrap();
-        assert_eq!(true, storage.committed());
+        assert!(storage.committed());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_set_target_empty() {
+        let fidl = Rc::new(RefCell::new(
+            FidlServerBuilder::new()
+                .with_channel_configs(ChannelConfigs {
+                    default_channel: Some("default-channel".to_string()),
+                    known_channels: vec![],
+                })
+                .build()
+                .await,
+        ));
+
+        let (proxy, stream) = create_proxy_and_stream::<ChannelControlMarker>().unwrap();
+        fasync::spawn_local(
+            FidlServer::handle_client(fidl.clone(), IncomingServices::ChannelControl(stream))
+                .unwrap_or_else(|e| panic!(e)),
+        );
+        proxy.set_target("").await.unwrap();
+        let fidl = fidl.borrow();
+        let apps = fidl.app_set.to_vec().await;
+        assert_eq!("default-channel", apps[0].get_target_channel());
+        let storage = fidl.storage_ref.lock().await;
+        // Default channel should not be persisted to storage.
+        assert_eq!(None, storage.get_string(&apps[0].id).await);
     }
 
     #[fasync::run_singlethreaded(test)]
