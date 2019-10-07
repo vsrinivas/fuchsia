@@ -79,7 +79,7 @@ class RebootLogHandlerTest : public gtest::TestLoopFixture {
   async::Executor executor_;
 
  protected:
-  ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
+  sys::testing::ServiceDirectoryProvider service_directory_provider_;
   std::unique_ptr<StubConnectivity> stub_network_reachability_provider_;
   std::unique_ptr<StubCrashReporter> stub_crash_reporter_;
   std::unique_ptr<StubCobaltLoggerFactory> stub_logger_factory_;

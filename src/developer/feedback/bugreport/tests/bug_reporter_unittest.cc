@@ -47,7 +47,7 @@ class BugReporterTest : public gtest::RealLoopFixture {
   async::Loop service_directory_provider_loop_;
 
  protected:
-  ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
+  sys::testing::ServiceDirectoryProvider service_directory_provider_;
   std::string bugreport_path_;
 
  private:

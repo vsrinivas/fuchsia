@@ -29,11 +29,11 @@
 namespace feedback {
 namespace {
 
-class CollectKernelLogTest : public ::sys::testing::TestWithEnvironment {
+class CollectKernelLogTest : public sys::testing::TestWithEnvironment {
  public:
   CollectKernelLogTest() : executor_(dispatcher()) {}
 
-  void SetUp() override { environment_services_ = ::sys::ServiceDirectory::CreateFromNamespace(); }
+  void SetUp() override { environment_services_ = sys::ServiceDirectory::CreateFromNamespace(); }
 
   fit::result<fuchsia::mem::Buffer> GetKernelLog() {
     fit::result<fuchsia::mem::Buffer> result;
@@ -49,7 +49,7 @@ class CollectKernelLogTest : public ::sys::testing::TestWithEnvironment {
   }
 
  protected:
-  std::shared_ptr<::sys::ServiceDirectory> environment_services_;
+  std::shared_ptr<sys::ServiceDirectory> environment_services_;
   async::Executor executor_;
 };
 

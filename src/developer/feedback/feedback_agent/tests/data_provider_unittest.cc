@@ -240,8 +240,8 @@ class DataProviderImplTest : public sys::testing::TestWithEnvironment {
   std::unique_ptr<DataProviderImpl> data_provider_;
 
  private:
-  ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
-  std::unique_ptr<::sys::testing::EnclosingEnvironment> environment_;
+  sys::testing::ServiceDirectoryProvider service_directory_provider_;
+  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
   fuchsia::sys::ComponentControllerPtr controller_;
 
   std::unique_ptr<StubScenic> stub_scenic_;

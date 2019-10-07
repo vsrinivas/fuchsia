@@ -52,7 +52,7 @@ class TakeScreenshotTest : public gtest::TestLoopFixture {
   }
 
   async::Executor executor_;
-  ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
+  sys::testing::ServiceDirectoryProvider service_directory_provider_;
 
  private:
   std::unique_ptr<StubScenic> stub_scenic_;

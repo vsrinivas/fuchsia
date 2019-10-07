@@ -13,9 +13,9 @@
 
 namespace feedback {
 
-fit::promise<fuchsia::mem::Buffer> CollectKernelLog(
-    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
-    zx::duration timeout) {
+fit::promise<fuchsia::mem::Buffer> CollectKernelLog(async_dispatcher_t* dispatcher,
+                                                    std::shared_ptr<sys::ServiceDirectory> services,
+                                                    zx::duration timeout) {
   std::unique_ptr<BootLog> boot_log = std::make_unique<BootLog>(dispatcher, services);
 
   // We move |boot_log| in a subsequent chained promise to guarantee its lifetime.
@@ -25,7 +25,7 @@ fit::promise<fuchsia::mem::Buffer> CollectKernelLog(
       });
 }
 
-BootLog::BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services)
+BootLog::BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services)
     : dispatcher_(dispatcher), services_(services) {}
 
 fit::promise<fuchsia::mem::Buffer> BootLog::GetLog(const zx::duration timeout) {
