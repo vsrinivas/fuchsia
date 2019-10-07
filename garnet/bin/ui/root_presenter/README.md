@@ -7,7 +7,12 @@ root-level Views by clients such as Sys UI.
 This collection of code has a lot of complexity, and you may find various workarounds that exist for
 very specific purposes.  Additionally, the code and comments make assumptions (both explicit and
 implicit) that may no longer hold.  Please don't make plans and patches based on what you see in the
-repository!  Instead, reach out to jaeheon@ or dworsham@ to coordinate your intended work.
+repository!  Instead, reach out to the following reviewers to coordinate your intended work.
+
+  * jaeheon@
+  * dworsham@
+  * lindkvist@
+  * neelsa@
 
 ## USAGE
 
