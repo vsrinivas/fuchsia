@@ -62,22 +62,22 @@ struct Data {
 
   bool is_buffer() const { return ordinal_ == Tag::kBuffer; }
 
-  static Data WithBuffer(Buffer* val) {
+  static Data WithBuffer(::llcpp::fuchsia::mem::Buffer* val) {
     Data result;
     result.set_buffer(val);
     return result;
   }
 
   // The binary data provided out-of-line in a `Buffer`.
-  void set_buffer(Buffer* elem) {
+  void set_buffer(::llcpp::fuchsia::mem::Buffer* elem) {
     ordinal_ = Tag::kBuffer;
     envelope_.data = static_cast<void*>(elem);
   }
 
   // The binary data provided out-of-line in a `Buffer`.
-  Buffer& buffer() const {
+  ::llcpp::fuchsia::mem::Buffer& buffer() const {
     ZX_ASSERT(ordinal_ == Tag::kBuffer);
-    return *static_cast<Buffer*>(envelope_.data);
+    return *static_cast<::llcpp::fuchsia::mem::Buffer*>(envelope_.data);
   }
 
   Tag which() const;

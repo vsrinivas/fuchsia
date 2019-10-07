@@ -63,7 +63,7 @@ struct Device_GetStateNormalized_Response {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  State state = {};
+  ::llcpp::fuchsia::hardware::backlight::State state = {};
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_GetStateNormalized_ResultTable;
@@ -96,27 +96,27 @@ struct Device_GetStateNormalized_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static Device_GetStateNormalized_Result WithResponse(Device_GetStateNormalized_Response&& val) {
+  static Device_GetStateNormalized_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response&& val) {
     Device_GetStateNormalized_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  Device_GetStateNormalized_Response& mutable_response();
+  ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Device_GetStateNormalized_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Device_GetStateNormalized_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  Device_GetStateNormalized_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -156,7 +156,7 @@ struct Device_GetStateNormalized_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Device_GetStateNormalized_Response response_;
+    ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response response_;
     int32_t err_;
   };
 };
@@ -170,7 +170,7 @@ struct Device_GetStateAbsolute_Response {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  State state = {};
+  ::llcpp::fuchsia::hardware::backlight::State state = {};
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_GetStateAbsolute_ResultTable;
@@ -203,27 +203,27 @@ struct Device_GetStateAbsolute_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static Device_GetStateAbsolute_Result WithResponse(Device_GetStateAbsolute_Response&& val) {
+  static Device_GetStateAbsolute_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response&& val) {
     Device_GetStateAbsolute_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  Device_GetStateAbsolute_Response& mutable_response();
+  ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Device_GetStateAbsolute_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Device_GetStateAbsolute_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  Device_GetStateAbsolute_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -263,7 +263,7 @@ struct Device_GetStateAbsolute_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Device_GetStateAbsolute_Response response_;
+    ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response response_;
     int32_t err_;
   };
 };
@@ -310,27 +310,27 @@ struct Device_SetStateNormalized_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static Device_SetStateNormalized_Result WithResponse(Device_SetStateNormalized_Response&& val) {
+  static Device_SetStateNormalized_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response&& val) {
     Device_SetStateNormalized_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  Device_SetStateNormalized_Response& mutable_response();
+  ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Device_SetStateNormalized_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Device_SetStateNormalized_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  Device_SetStateNormalized_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -370,7 +370,7 @@ struct Device_SetStateNormalized_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Device_SetStateNormalized_Response response_;
+    ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response response_;
     int32_t err_;
   };
 };
@@ -417,27 +417,27 @@ struct Device_SetStateAbsolute_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static Device_SetStateAbsolute_Result WithResponse(Device_SetStateAbsolute_Response&& val) {
+  static Device_SetStateAbsolute_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response&& val) {
     Device_SetStateAbsolute_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  Device_SetStateAbsolute_Response& mutable_response();
+  ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Device_SetStateAbsolute_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Device_SetStateAbsolute_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  Device_SetStateAbsolute_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -477,7 +477,7 @@ struct Device_SetStateAbsolute_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Device_SetStateAbsolute_Response response_;
+    ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response response_;
     int32_t err_;
   };
 };
@@ -524,27 +524,27 @@ struct Device_GetMaxAbsoluteBrightness_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static Device_GetMaxAbsoluteBrightness_Result WithResponse(Device_GetMaxAbsoluteBrightness_Response&& val) {
+  static Device_GetMaxAbsoluteBrightness_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response&& val) {
     Device_GetMaxAbsoluteBrightness_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  Device_GetMaxAbsoluteBrightness_Response& mutable_response();
+  ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Device_GetMaxAbsoluteBrightness_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Device_GetMaxAbsoluteBrightness_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  Device_GetMaxAbsoluteBrightness_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -584,7 +584,7 @@ struct Device_GetMaxAbsoluteBrightness_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Device_GetMaxAbsoluteBrightness_Response response_;
+    ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response response_;
     int32_t err_;
   };
 };
@@ -604,7 +604,7 @@ class Device final {
   struct GetStateNormalizedResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Device_GetStateNormalized_Result result;
+    ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_DeviceGetStateNormalizedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -619,7 +619,7 @@ class Device final {
   struct SetStateNormalizedResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Device_SetStateNormalized_Result result;
+    ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_DeviceSetStateNormalizedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -632,7 +632,7 @@ class Device final {
   struct SetStateNormalizedRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    State state;
+    ::llcpp::fuchsia::hardware::backlight::State state;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_DeviceSetStateNormalizedRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -647,7 +647,7 @@ class Device final {
   struct GetStateAbsoluteResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Device_GetStateAbsolute_Result result;
+    ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_DeviceGetStateAbsoluteResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -662,7 +662,7 @@ class Device final {
   struct SetStateAbsoluteResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Device_SetStateAbsolute_Result result;
+    ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_DeviceSetStateAbsoluteResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -675,7 +675,7 @@ class Device final {
   struct SetStateAbsoluteRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    State state;
+    ::llcpp::fuchsia::hardware::backlight::State state;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_DeviceSetStateAbsoluteRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -690,7 +690,7 @@ class Device final {
   struct GetMaxAbsoluteBrightnessResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Device_GetMaxAbsoluteBrightness_Result result;
+    ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_DeviceGetMaxAbsoluteBrightnessResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -727,7 +727,7 @@ class Device final {
     class SetStateNormalized_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetStateNormalized_Impl(zx::unowned_channel _client_end, State state);
+      SetStateNormalized_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state);
       ~SetStateNormalized_Impl() = default;
       SetStateNormalized_Impl(SetStateNormalized_Impl&& other) = default;
       SetStateNormalized_Impl& operator=(SetStateNormalized_Impl&& other) = default;
@@ -759,7 +759,7 @@ class Device final {
     class SetStateAbsolute_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetStateAbsolute_Impl(zx::unowned_channel _client_end, State state);
+      SetStateAbsolute_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state);
       ~SetStateAbsolute_Impl() = default;
       SetStateAbsolute_Impl(SetStateAbsolute_Impl&& other) = default;
       SetStateAbsolute_Impl& operator=(SetStateAbsolute_Impl&& other) = default;
@@ -821,7 +821,7 @@ class Device final {
     class SetStateNormalized_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetStateNormalized_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, State state, ::fidl::BytePart _response_buffer);
+      SetStateNormalized_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer);
       ~SetStateNormalized_Impl() = default;
       SetStateNormalized_Impl(SetStateNormalized_Impl&& other) = default;
       SetStateNormalized_Impl& operator=(SetStateNormalized_Impl&& other) = default;
@@ -853,7 +853,7 @@ class Device final {
     class SetStateAbsolute_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetStateAbsolute_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, State state, ::fidl::BytePart _response_buffer);
+      SetStateAbsolute_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer);
       ~SetStateAbsolute_Impl() = default;
       SetStateAbsolute_Impl(SetStateAbsolute_Impl&& other) = default;
       SetStateAbsolute_Impl& operator=(SetStateAbsolute_Impl&& other) = default;
@@ -914,12 +914,12 @@ class Device final {
     // Sets the current backlight brightness as a percentage value between 0.0
     // and 1.0
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetStateNormalized SetStateNormalized(State state);
+    ResultOf::SetStateNormalized SetStateNormalized(::llcpp::fuchsia::hardware::backlight::State state);
 
     // Sets the current backlight brightness as a percentage value between 0.0
     // and 1.0
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetStateNormalized SetStateNormalized(::fidl::BytePart _request_buffer, State state, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::SetStateNormalized SetStateNormalized(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer);
 
     // Gets the current backlight brightness in nits
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
@@ -931,11 +931,11 @@ class Device final {
 
     // Sets the current backlight brightness in nits
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetStateAbsolute SetStateAbsolute(State state);
+    ResultOf::SetStateAbsolute SetStateAbsolute(::llcpp::fuchsia::hardware::backlight::State state);
 
     // Sets the current backlight brightness in nits
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetStateAbsolute SetStateAbsolute(::fidl::BytePart _request_buffer, State state, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::SetStateAbsolute SetStateAbsolute(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer);
 
     // Gets the maximum supported backlight brightness in nits, if known.
     // Otherwise returns error ZX_ERR_NOT_SUPPORTED.
@@ -969,12 +969,12 @@ class Device final {
     // Sets the current backlight brightness as a percentage value between 0.0
     // and 1.0
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetStateNormalized SetStateNormalized(zx::unowned_channel _client_end, State state);
+    static ResultOf::SetStateNormalized SetStateNormalized(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state);
 
     // Sets the current backlight brightness as a percentage value between 0.0
     // and 1.0
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetStateNormalized SetStateNormalized(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, State state, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetStateNormalized SetStateNormalized(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer);
 
     // Gets the current backlight brightness in nits
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
@@ -986,11 +986,11 @@ class Device final {
 
     // Sets the current backlight brightness in nits
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetStateAbsolute SetStateAbsolute(zx::unowned_channel _client_end, State state);
+    static ResultOf::SetStateAbsolute SetStateAbsolute(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state);
 
     // Sets the current backlight brightness in nits
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetStateAbsolute SetStateAbsolute(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, State state, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetStateAbsolute SetStateAbsolute(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer);
 
     // Gets the maximum supported backlight brightness in nits, if known.
     // Otherwise returns error ZX_ERR_NOT_SUPPORTED.
@@ -1040,11 +1040,11 @@ class Device final {
 
     class GetStateNormalizedCompleterBase : public _Base {
      public:
-      void Reply(Device_GetStateNormalized_Result result);
-      void ReplySuccess(State state);
+      void Reply(::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result result);
+      void ReplySuccess(::llcpp::fuchsia::hardware::backlight::State state);
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, Device_GetStateNormalized_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer, State state);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::backlight::State state);
       void Reply(::fidl::DecodedMessage<GetStateNormalizedResponse> params);
 
      protected:
@@ -1057,10 +1057,10 @@ class Device final {
 
     class SetStateNormalizedCompleterBase : public _Base {
      public:
-      void Reply(Device_SetStateNormalized_Result result);
+      void Reply(::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result result);
       void ReplySuccess();
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, Device_SetStateNormalized_Result result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result result);
       void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<SetStateNormalizedResponse> params);
 
@@ -1070,15 +1070,15 @@ class Device final {
 
     using SetStateNormalizedCompleter = ::fidl::Completer<SetStateNormalizedCompleterBase>;
 
-    virtual void SetStateNormalized(State state, SetStateNormalizedCompleter::Sync _completer) = 0;
+    virtual void SetStateNormalized(::llcpp::fuchsia::hardware::backlight::State state, SetStateNormalizedCompleter::Sync _completer) = 0;
 
     class GetStateAbsoluteCompleterBase : public _Base {
      public:
-      void Reply(Device_GetStateAbsolute_Result result);
-      void ReplySuccess(State state);
+      void Reply(::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result result);
+      void ReplySuccess(::llcpp::fuchsia::hardware::backlight::State state);
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, Device_GetStateAbsolute_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer, State state);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::backlight::State state);
       void Reply(::fidl::DecodedMessage<GetStateAbsoluteResponse> params);
 
      protected:
@@ -1091,10 +1091,10 @@ class Device final {
 
     class SetStateAbsoluteCompleterBase : public _Base {
      public:
-      void Reply(Device_SetStateAbsolute_Result result);
+      void Reply(::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result result);
       void ReplySuccess();
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, Device_SetStateAbsolute_Result result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result result);
       void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<SetStateAbsoluteResponse> params);
 
@@ -1104,14 +1104,14 @@ class Device final {
 
     using SetStateAbsoluteCompleter = ::fidl::Completer<SetStateAbsoluteCompleterBase>;
 
-    virtual void SetStateAbsolute(State state, SetStateAbsoluteCompleter::Sync _completer) = 0;
+    virtual void SetStateAbsolute(::llcpp::fuchsia::hardware::backlight::State state, SetStateAbsoluteCompleter::Sync _completer) = 0;
 
     class GetMaxAbsoluteBrightnessCompleterBase : public _Base {
      public:
-      void Reply(Device_GetMaxAbsoluteBrightness_Result result);
+      void Reply(::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result result);
       void ReplySuccess(double max_brightness);
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, Device_GetMaxAbsoluteBrightness_Result result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result result);
       void ReplySuccess(::fidl::BytePart _buffer, double max_brightness);
       void Reply(::fidl::DecodedMessage<GetMaxAbsoluteBrightnessResponse> params);
 

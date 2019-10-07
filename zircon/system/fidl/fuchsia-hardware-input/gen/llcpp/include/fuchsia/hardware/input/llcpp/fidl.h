@@ -91,7 +91,7 @@ class Device final {
   struct GetBootProtocolResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    BootProtocol protocol;
+    ::llcpp::fuchsia::hardware::input::BootProtocol protocol;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceGetBootProtocolResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -106,7 +106,7 @@ class Device final {
   struct GetDeviceIdsResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    DeviceIds ids;
+    ::llcpp::fuchsia::hardware::input::DeviceIds ids;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceGetDeviceIdsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -195,7 +195,7 @@ class Device final {
   struct GetReportSizeRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ReportType type;
+    ::llcpp::fuchsia::hardware::input::ReportType type;
     uint8_t id;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceGetReportSizeRequestTable;
@@ -272,7 +272,7 @@ class Device final {
   struct GetReportRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ReportType type;
+    ::llcpp::fuchsia::hardware::input::ReportType type;
     uint8_t id;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceGetReportRequestTable;
@@ -301,7 +301,7 @@ class Device final {
   struct SetReportRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ReportType type;
+    ::llcpp::fuchsia::hardware::input::ReportType type;
     uint8_t id;
     ::fidl::VectorView<uint8_t> report;
 
@@ -434,7 +434,7 @@ class Device final {
     class GetReportSize_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetReportSize_Impl(zx::unowned_channel _client_end, ReportType type, uint8_t id);
+      GetReportSize_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id);
       ~GetReportSize_Impl() = default;
       GetReportSize_Impl(GetReportSize_Impl&& other) = default;
       GetReportSize_Impl& operator=(GetReportSize_Impl&& other) = default;
@@ -498,7 +498,7 @@ class Device final {
     class GetReport_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetReport_Impl(zx::unowned_channel _client_end, ReportType type, uint8_t id);
+      GetReport_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id);
       ~GetReport_Impl() = default;
       GetReport_Impl(GetReport_Impl&& other) = default;
       GetReport_Impl& operator=(GetReport_Impl&& other) = default;
@@ -514,7 +514,7 @@ class Device final {
     class SetReport_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetReport_Impl(zx::unowned_channel _client_end, ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report);
+      SetReport_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report);
       ~SetReport_Impl() = default;
       SetReport_Impl(SetReport_Impl&& other) = default;
       SetReport_Impl& operator=(SetReport_Impl&& other) = default;
@@ -659,7 +659,7 @@ class Device final {
     class GetReportSize_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetReportSize_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
+      GetReportSize_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
       ~GetReportSize_Impl() = default;
       GetReportSize_Impl(GetReportSize_Impl&& other) = default;
       GetReportSize_Impl& operator=(GetReportSize_Impl&& other) = default;
@@ -723,7 +723,7 @@ class Device final {
     class GetReport_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetReport_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
+      GetReport_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
       ~GetReport_Impl() = default;
       GetReport_Impl(GetReport_Impl&& other) = default;
       GetReport_Impl& operator=(GetReport_Impl&& other) = default;
@@ -739,7 +739,7 @@ class Device final {
     class SetReport_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetReport_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, ::fidl::BytePart _response_buffer);
+      SetReport_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, ::fidl::BytePart _response_buffer);
       ~SetReport_Impl() = default;
       SetReport_Impl(SetReport_Impl&& other) = default;
       SetReport_Impl& operator=(SetReport_Impl&& other) = default;
@@ -842,11 +842,11 @@ class Device final {
 
     // Get the size of a single report for the given (type, id) pair.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::GetReportSize GetReportSize(ReportType type, uint8_t id);
+    ResultOf::GetReportSize GetReportSize(::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id);
 
     // Get the size of a single report for the given (type, id) pair.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::GetReportSize GetReportSize(::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::GetReportSize GetReportSize(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
 
     // Get the maximum size of a single input report.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -889,20 +889,20 @@ class Device final {
     // Get a single report of the given (type, id) pair.  This interface is not intended
     // to be used for continuous polling of the reports.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
-    ResultOf::GetReport GetReport(ReportType type, uint8_t id);
+    ResultOf::GetReport GetReport(::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id);
 
     // Get a single report of the given (type, id) pair.  This interface is not intended
     // to be used for continuous polling of the reports.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::GetReport GetReport(::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::GetReport GetReport(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
 
     // Set a single report of the given (type, id) pair.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    ResultOf::SetReport SetReport(ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report);
+    ResultOf::SetReport SetReport(::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report);
 
     // Set a single report of the given (type, id) pair.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetReport SetReport(::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::SetReport SetReport(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, ::fidl::BytePart _response_buffer);
 
     // Set the trace ID that is used for HID report flow events.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
@@ -973,11 +973,11 @@ class Device final {
 
     // Get the size of a single report for the given (type, id) pair.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetReportSize GetReportSize(zx::unowned_channel _client_end, ReportType type, uint8_t id);
+    static ResultOf::GetReportSize GetReportSize(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id);
 
     // Get the size of a single report for the given (type, id) pair.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetReportSize GetReportSize(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetReportSize GetReportSize(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
 
     // Get the maximum size of a single input report.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -1020,20 +1020,20 @@ class Device final {
     // Get a single report of the given (type, id) pair.  This interface is not intended
     // to be used for continuous polling of the reports.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::GetReport GetReport(zx::unowned_channel _client_end, ReportType type, uint8_t id);
+    static ResultOf::GetReport GetReport(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id);
 
     // Get a single report of the given (type, id) pair.  This interface is not intended
     // to be used for continuous polling of the reports.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetReport GetReport(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetReport GetReport(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
 
     // Set a single report of the given (type, id) pair.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::SetReport SetReport(zx::unowned_channel _client_end, ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report);
+    static ResultOf::SetReport SetReport(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report);
 
     // Set a single report of the given (type, id) pair.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetReport SetReport(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetReport SetReport(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, ::fidl::BytePart _response_buffer);
 
     // Set the trace ID that is used for HID report flow events.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
@@ -1111,8 +1111,8 @@ class Device final {
 
     class GetBootProtocolCompleterBase : public _Base {
      public:
-      void Reply(BootProtocol protocol);
-      void Reply(::fidl::BytePart _buffer, BootProtocol protocol);
+      void Reply(::llcpp::fuchsia::hardware::input::BootProtocol protocol);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::input::BootProtocol protocol);
       void Reply(::fidl::DecodedMessage<GetBootProtocolResponse> params);
 
      protected:
@@ -1125,8 +1125,8 @@ class Device final {
 
     class GetDeviceIdsCompleterBase : public _Base {
      public:
-      void Reply(DeviceIds ids);
-      void Reply(::fidl::BytePart _buffer, DeviceIds ids);
+      void Reply(::llcpp::fuchsia::hardware::input::DeviceIds ids);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::input::DeviceIds ids);
       void Reply(::fidl::DecodedMessage<GetDeviceIdsResponse> params);
 
      protected:
@@ -1205,7 +1205,7 @@ class Device final {
 
     using GetReportSizeCompleter = ::fidl::Completer<GetReportSizeCompleterBase>;
 
-    virtual void GetReportSize(ReportType type, uint8_t id, GetReportSizeCompleter::Sync _completer) = 0;
+    virtual void GetReportSize(::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, GetReportSizeCompleter::Sync _completer) = 0;
 
     class GetMaxInputReportSizeCompleterBase : public _Base {
      public:
@@ -1261,7 +1261,7 @@ class Device final {
 
     using GetReportCompleter = ::fidl::Completer<GetReportCompleterBase>;
 
-    virtual void GetReport(ReportType type, uint8_t id, GetReportCompleter::Sync _completer) = 0;
+    virtual void GetReport(::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, GetReportCompleter::Sync _completer) = 0;
 
     class SetReportCompleterBase : public _Base {
      public:
@@ -1275,7 +1275,7 @@ class Device final {
 
     using SetReportCompleter = ::fidl::Completer<SetReportCompleterBase>;
 
-    virtual void SetReport(ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, SetReportCompleter::Sync _completer) = 0;
+    virtual void SetReport(::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, SetReportCompleter::Sync _completer) = 0;
 
     using SetTraceIdCompleter = ::fidl::Completer<>;
 

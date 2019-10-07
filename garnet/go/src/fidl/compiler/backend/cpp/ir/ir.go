@@ -555,10 +555,10 @@ func (c *compiler) isInExternalLibrary(ci types.CompoundIdentifier) bool {
 	return false
 }
 
-func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier, ext, appendNamespace string) string {
+func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier, ext, appendNamespace string, fullName bool) string {
 	val := types.ParseCompoundIdentifier(eci)
 	strs := []string{}
-	if c.isInExternalLibrary(val) {
+	if fullName || c.isInExternalLibrary(val) {
 		strs = append(strs, c.namespaceFormatter(val.Library, appendNamespace))
 	}
 	strs = append(strs, changeIfReserved(val.Name, ext))
@@ -621,7 +621,7 @@ func (c *compiler) compileLiteral(val types.Literal, typ types.Type) string {
 func (c *compiler) compileConstant(val types.Constant, t *Type, typ types.Type, appendNamespace string) string {
 	switch val.Kind {
 	case types.IdentifierConstant:
-		return c.compileCompoundIdentifier(val.Identifier, "", appendNamespace)
+		return c.compileCompoundIdentifier(val.Identifier, "", appendNamespace, false)
 	case types.LiteralConstant:
 		return c.compileLiteral(val.Literal, typ)
 	default:
@@ -678,7 +678,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.LLDtor = r.Dtor
 	case types.RequestType:
 		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>",
-			c.compileCompoundIdentifier(val.RequestSubtype, "", ""))
+			c.compileCompoundIdentifier(val.RequestSubtype, "", "", false))
 		r.LLDecl = "::zx::channel"
 		r.Dtor = "~InterfaceRequest"
 		r.LLDtor = "~channel"
@@ -687,7 +687,8 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.LLDecl = r.Decl
 		r.IsPrimitive = true
 	case types.IdentifierType:
-		t := c.compileCompoundIdentifier(val.Identifier, "", "")
+		t := c.compileCompoundIdentifier(val.Identifier, "", "", false)
+		ft := c.compileCompoundIdentifier(val.Identifier, "", "", true)
 		declType, ok := (*c.decls)[val.Identifier]
 		if !ok {
 			log.Fatal("Unknown identifier: ", val.Identifier)
@@ -713,14 +714,14 @@ func (c *compiler) compileType(val types.Type) Type {
 			if val.Nullable {
 				r.Decl = fmt.Sprintf("::std::unique_ptr<%s>", t)
 				if declType == types.XUnionDeclType {
-					r.LLDecl = fmt.Sprintf("%s", t)
+					r.LLDecl = fmt.Sprintf("%s", ft)
 				} else {
-					r.LLDecl = fmt.Sprintf("%s*", t)
+					r.LLDecl = fmt.Sprintf("%s*", ft)
 				}
 				r.Dtor = "~unique_ptr"
 			} else {
 				r.Decl = t
-				r.LLDecl = r.Decl
+				r.LLDecl = ft
 				r.Dtor = formatDestructor(val.Identifier)
 				r.LLDtor = r.Dtor
 			}
@@ -743,9 +744,9 @@ func (c *compiler) compileBits(val types.Bits, appendNamespace string) Bits {
 	r := Bits{
 		Namespace: c.namespace,
 		Type:      c.compileType(val.Type).Decl,
-		Name:      c.compileCompoundIdentifier(val.Name, "", appendNamespace),
+		Name:      c.compileCompoundIdentifier(val.Name, "", appendNamespace, false),
 		Mask:      val.Mask,
-		MaskName:  c.compileCompoundIdentifier(val.Name, "Mask", appendNamespace),
+		MaskName:  c.compileCompoundIdentifier(val.Name, "Mask", appendNamespace, false),
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, BitsMember{
@@ -766,7 +767,7 @@ func (c *compiler) compileConst(val types.Const, appendNamespace string) Const {
 				Decl:   "char",
 				LLDecl: "char",
 			},
-			Name:  c.compileCompoundIdentifier(val.Name, "[]", appendNamespace),
+			Name:  c.compileCompoundIdentifier(val.Name, "[]", appendNamespace, false),
 			Value: c.compileConstant(val.Value, nil, val.Type, appendNamespace),
 		}
 	} else {
@@ -776,7 +777,7 @@ func (c *compiler) compileConst(val types.Const, appendNamespace string) Const {
 			Extern:     false,
 			Decorator:  "constexpr",
 			Type:       t,
-			Name:       c.compileCompoundIdentifier(val.Name, "", appendNamespace),
+			Name:       c.compileCompoundIdentifier(val.Name, "", appendNamespace, false),
 			Value:      c.compileConstant(val.Value, &t, val.Type, appendNamespace),
 		}
 	}
@@ -786,7 +787,7 @@ func (c *compiler) compileEnum(val types.Enum, appendNamespace string) Enum {
 	r := Enum{
 		Namespace: c.namespace,
 		Type:      c.compilePrimitiveSubtype(val.Type),
-		Name:      c.compileCompoundIdentifier(val.Name, "", appendNamespace),
+		Name:      c.compileCompoundIdentifier(val.Name, "", appendNamespace, false),
 		Members:   []EnumMember{},
 	}
 	for _, v := range val.Members {
@@ -895,18 +896,18 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
 		Attributes:          val.Attributes,
 		Namespace:           c.namespace,
-		Name:                c.compileCompoundIdentifier(val.Name, "", ""),
-		ClassName:           c.compileCompoundIdentifier(val.Name, "_clazz", ""),
+		Name:                c.compileCompoundIdentifier(val.Name, "", "", false),
+		ClassName:           c.compileCompoundIdentifier(val.Name, "_clazz", "", false),
 		ServiceName:         val.GetServiceName(),
-		ProxyName:           c.compileCompoundIdentifier(val.Name, "_Proxy", ""),
-		StubName:            c.compileCompoundIdentifier(val.Name, "_Stub", ""),
-		EventSenderName:     c.compileCompoundIdentifier(val.Name, "_EventSender", ""),
-		SyncName:            c.compileCompoundIdentifier(val.Name, "_Sync", ""),
-		SyncProxyName:       c.compileCompoundIdentifier(val.Name, "_SyncProxy", ""),
-		RequestEncoderName:  c.compileCompoundIdentifier(val.Name, "_RequestEncoder", ""),
-		RequestDecoderName:  c.compileCompoundIdentifier(val.Name, "_RequestDecoder", ""),
-		ResponseEncoderName: c.compileCompoundIdentifier(val.Name, "_ResponseEncoder", ""),
-		ResponseDecoderName: c.compileCompoundIdentifier(val.Name, "_ResponseDecoder", ""),
+		ProxyName:           c.compileCompoundIdentifier(val.Name, "_Proxy", "", false),
+		StubName:            c.compileCompoundIdentifier(val.Name, "_Stub", "", false),
+		EventSenderName:     c.compileCompoundIdentifier(val.Name, "_EventSender", "", false),
+		SyncName:            c.compileCompoundIdentifier(val.Name, "_Sync", "", false),
+		SyncProxyName:       c.compileCompoundIdentifier(val.Name, "_SyncProxy", "", false),
+		RequestEncoderName:  c.compileCompoundIdentifier(val.Name, "_RequestEncoder", "", false),
+		RequestDecoderName:  c.compileCompoundIdentifier(val.Name, "_RequestDecoder", "", false),
+		ResponseEncoderName: c.compileCompoundIdentifier(val.Name, "_ResponseEncoder", "", false),
+		ResponseDecoderName: c.compileCompoundIdentifier(val.Name, "_ResponseDecoder", "", false),
 	}
 
 	hasEvents := false
@@ -976,7 +977,7 @@ func (c *compiler) compileService(val types.Service) Service {
 	s := Service{
 		Attributes:  val.Attributes,
 		Namespace:   c.namespace,
-		Name:        c.compileCompoundIdentifier(val.Name, "", ""),
+		Name:        c.compileCompoundIdentifier(val.Name, "", "", false),
 		ServiceName: val.GetServiceName(),
 	}
 
@@ -989,7 +990,7 @@ func (c *compiler) compileService(val types.Service) Service {
 func (c *compiler) compileServiceMember(val types.ServiceMember) ServiceMember {
 	return ServiceMember{
 		Attributes:    val.Attributes,
-		InterfaceType: c.compileCompoundIdentifier(val.Type.Identifier, "", ""),
+		InterfaceType: c.compileCompoundIdentifier(val.Type.Identifier, "", "", false),
 		Name:          string(val.Name),
 		MethodName:    changeIfReserved(val.Name, ""),
 	}
@@ -1013,7 +1014,7 @@ func (c *compiler) compileStructMember(val types.StructMember, appendNamespace s
 }
 
 func (c *compiler) compileStruct(val types.Struct, appendNamespace string) Struct {
-	name := c.compileCompoundIdentifier(val.Name, "", appendNamespace)
+	name := c.compileCompoundIdentifier(val.Name, "", appendNamespace, false)
 	r := Struct{
 		Attributes:   val.Attributes,
 		Namespace:    c.namespace,
@@ -1096,7 +1097,7 @@ func (m byOrdinal) Less(i, j int) bool {
 }
 
 func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
-	name := c.compileCompoundIdentifier(val.Name, "", appendNamespace)
+	name := c.compileCompoundIdentifier(val.Name, "", appendNamespace, false)
 	r := Table{
 		Attributes:     val.Attributes,
 		Namespace:      c.namespace,
@@ -1136,7 +1137,7 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 }
 
 func (c *compiler) compileUnion(val types.Union) *Union {
-	name := c.compileCompoundIdentifier(val.Name, "", "")
+	name := c.compileCompoundIdentifier(val.Name, "", "", false)
 	r := Union{
 		Attributes:   val.Attributes,
 		Namespace:    c.namespace,
@@ -1193,7 +1194,7 @@ func (c *compiler) compileXUnionMember(val types.XUnionMember) XUnionMember {
 }
 
 func (c *compiler) compileXUnion(val types.XUnion) XUnion {
-	name := c.compileCompoundIdentifier(val.Name, "", "")
+	name := c.compileCompoundIdentifier(val.Name, "", "", false)
 
 	r := XUnion{
 		Attributes:   val.Attributes,

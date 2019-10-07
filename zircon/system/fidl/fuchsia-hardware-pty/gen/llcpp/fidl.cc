@@ -1571,7 +1571,7 @@ Device::UnownedResultOf::ReadEvents Device::Call::ReadEvents(zx::unowned_channel
 }
 
 template <>
-Device::ResultOf::SetWindowSize_Impl<Device::SetWindowSizeResponse>::SetWindowSize_Impl(zx::unowned_channel _client_end, WindowSize size) {
+Device::ResultOf::SetWindowSize_Impl<Device::SetWindowSizeResponse>::SetWindowSize_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::pty::WindowSize size) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetWindowSizeRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1585,16 +1585,16 @@ Device::ResultOf::SetWindowSize_Impl<Device::SetWindowSizeResponse>::SetWindowSi
       Device::InPlace::SetWindowSize(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Device::ResultOf::SetWindowSize Device::SyncClient::SetWindowSize(WindowSize size) {
+Device::ResultOf::SetWindowSize Device::SyncClient::SetWindowSize(::llcpp::fuchsia::hardware::pty::WindowSize size) {
   return ResultOf::SetWindowSize(zx::unowned_channel(this->channel_), std::move(size));
 }
 
-Device::ResultOf::SetWindowSize Device::Call::SetWindowSize(zx::unowned_channel _client_end, WindowSize size) {
+Device::ResultOf::SetWindowSize Device::Call::SetWindowSize(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::pty::WindowSize size) {
   return ResultOf::SetWindowSize(std::move(_client_end), std::move(size));
 }
 
 template <>
-Device::UnownedResultOf::SetWindowSize_Impl<Device::SetWindowSizeResponse>::SetWindowSize_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, WindowSize size, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetWindowSize_Impl<Device::SetWindowSizeResponse>::SetWindowSize_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::pty::WindowSize size, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetWindowSizeRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetWindowSizeResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1608,11 +1608,11 @@ Device::UnownedResultOf::SetWindowSize_Impl<Device::SetWindowSizeResponse>::SetW
       Device::InPlace::SetWindowSize(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Device::UnownedResultOf::SetWindowSize Device::SyncClient::SetWindowSize(::fidl::BytePart _request_buffer, WindowSize size, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetWindowSize Device::SyncClient::SetWindowSize(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::pty::WindowSize size, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetWindowSize(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(size), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::SetWindowSize Device::Call::SetWindowSize(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, WindowSize size, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetWindowSize Device::Call::SetWindowSize(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::pty::WindowSize size, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetWindowSize(std::move(_client_end), std::move(_request_buffer), std::move(size), std::move(_response_buffer));
 }
 
@@ -2823,7 +2823,7 @@ void Device::Interface::ClrSetFeatureCompleterBase::Reply(::fidl::DecodedMessage
 }
 
 
-void Device::Interface::GetWindowSizeCompleterBase::Reply(int32_t status, WindowSize size) {
+void Device::Interface::GetWindowSizeCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::hardware::pty::WindowSize size) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetWindowSizeResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetWindowSizeResponse*>(_write_bytes);
@@ -2838,7 +2838,7 @@ void Device::Interface::GetWindowSizeCompleterBase::Reply(int32_t status, Window
   CompleterBase::SendReply(::fidl::DecodedMessage<GetWindowSizeResponse>(std::move(_response_bytes)));
 }
 
-void Device::Interface::GetWindowSizeCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, WindowSize size) {
+void Device::Interface::GetWindowSizeCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::pty::WindowSize size) {
   if (_buffer.capacity() < GetWindowSizeResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

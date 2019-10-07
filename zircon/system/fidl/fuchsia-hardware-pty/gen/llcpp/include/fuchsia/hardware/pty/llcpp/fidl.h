@@ -540,7 +540,7 @@ class Device final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    WindowSize size;
+    ::llcpp::fuchsia::hardware::pty::WindowSize size;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_pty_DeviceGetWindowSizeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -612,7 +612,7 @@ class Device final {
   struct SetWindowSizeRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    WindowSize size;
+    ::llcpp::fuchsia::hardware::pty::WindowSize size;
 
     static constexpr const fidl_type_t* Type = nullptr;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -977,7 +977,7 @@ class Device final {
     class SetWindowSize_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetWindowSize_Impl(zx::unowned_channel _client_end, WindowSize size);
+      SetWindowSize_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::pty::WindowSize size);
       ~SetWindowSize_Impl() = default;
       SetWindowSize_Impl(SetWindowSize_Impl&& other) = default;
       SetWindowSize_Impl& operator=(SetWindowSize_Impl&& other) = default;
@@ -1355,7 +1355,7 @@ class Device final {
     class SetWindowSize_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetWindowSize_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, WindowSize size, ::fidl::BytePart _response_buffer);
+      SetWindowSize_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::pty::WindowSize size, ::fidl::BytePart _response_buffer);
       ~SetWindowSize_Impl() = default;
       SetWindowSize_Impl(SetWindowSize_Impl&& other) = default;
       SetWindowSize_Impl& operator=(SetWindowSize_Impl&& other) = default;
@@ -1722,13 +1722,13 @@ class Device final {
     // --------------------------------
     // Sets the window size
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetWindowSize SetWindowSize(WindowSize size);
+    ResultOf::SetWindowSize SetWindowSize(::llcpp::fuchsia::hardware::pty::WindowSize size);
 
     // allowed on the Server PTY
     // --------------------------------
     // Sets the window size
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetWindowSize SetWindowSize(::fidl::BytePart _request_buffer, WindowSize size, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::SetWindowSize SetWindowSize(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::pty::WindowSize size, ::fidl::BytePart _response_buffer);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -2062,13 +2062,13 @@ class Device final {
     // --------------------------------
     // Sets the window size
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetWindowSize SetWindowSize(zx::unowned_channel _client_end, WindowSize size);
+    static ResultOf::SetWindowSize SetWindowSize(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::pty::WindowSize size);
 
     // allowed on the Server PTY
     // --------------------------------
     // Sets the window size
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetWindowSize SetWindowSize(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, WindowSize size, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetWindowSize SetWindowSize(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::pty::WindowSize size, ::fidl::BytePart _response_buffer);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -2478,8 +2478,8 @@ class Device final {
 
     class GetWindowSizeCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, WindowSize size);
-      void Reply(::fidl::BytePart _buffer, int32_t status, WindowSize size);
+      void Reply(int32_t status, ::llcpp::fuchsia::hardware::pty::WindowSize size);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::pty::WindowSize size);
       void Reply(::fidl::DecodedMessage<GetWindowSizeResponse> params);
 
      protected:
@@ -2530,7 +2530,7 @@ class Device final {
 
     using SetWindowSizeCompleter = ::fidl::Completer<SetWindowSizeCompleterBase>;
 
-    virtual void SetWindowSize(WindowSize size, SetWindowSizeCompleter::Sync _completer) = 0;
+    virtual void SetWindowSize(::llcpp::fuchsia::hardware::pty::WindowSize size, SetWindowSizeCompleter::Sync _completer) = 0;
 
   };
 

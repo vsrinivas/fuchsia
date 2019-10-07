@@ -487,7 +487,7 @@ struct ImageConfig {
 
   uint32_t type = {};
 
-  ::fidl::Array<ImagePlane, 4> planes = {};
+  ::fidl::Array<::llcpp::fuchsia::hardware::display::ImagePlane, 4> planes = {};
 };
 
 
@@ -535,11 +535,11 @@ struct Info {
 
   uint64_t id = {};
 
-  ::fidl::VectorView<Mode> modes = {};
+  ::fidl::VectorView<::llcpp::fuchsia::hardware::display::Mode> modes = {};
 
   ::fidl::VectorView<uint32_t> pixel_format = {};
 
-  ::fidl::VectorView<CursorInfo> cursor_configs = {};
+  ::fidl::VectorView<::llcpp::fuchsia::hardware::display::CursorInfo> cursor_configs = {};
 
   ::fidl::StringView manufacturer_name = {};
 
@@ -590,27 +590,27 @@ struct Controller_StartCapture_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static Controller_StartCapture_Result WithResponse(Controller_StartCapture_Response&& val) {
+  static Controller_StartCapture_Result WithResponse(::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response&& val) {
     Controller_StartCapture_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  Controller_StartCapture_Response& mutable_response();
+  ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Controller_StartCapture_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Controller_StartCapture_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  Controller_StartCapture_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -650,7 +650,7 @@ struct Controller_StartCapture_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Controller_StartCapture_Response response_;
+    ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response response_;
     int32_t err_;
   };
 };
@@ -697,27 +697,27 @@ struct Controller_ReleaseCapture_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static Controller_ReleaseCapture_Result WithResponse(Controller_ReleaseCapture_Response&& val) {
+  static Controller_ReleaseCapture_Result WithResponse(::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response&& val) {
     Controller_ReleaseCapture_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  Controller_ReleaseCapture_Response& mutable_response();
+  ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Controller_ReleaseCapture_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Controller_ReleaseCapture_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  Controller_ReleaseCapture_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -757,7 +757,7 @@ struct Controller_ReleaseCapture_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Controller_ReleaseCapture_Response response_;
+    ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response response_;
     int32_t err_;
   };
 };
@@ -804,27 +804,27 @@ struct Controller_ImportImageForCapture_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static Controller_ImportImageForCapture_Result WithResponse(Controller_ImportImageForCapture_Response&& val) {
+  static Controller_ImportImageForCapture_Result WithResponse(::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response&& val) {
     Controller_ImportImageForCapture_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  Controller_ImportImageForCapture_Response& mutable_response();
+  ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Controller_ImportImageForCapture_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Controller_ImportImageForCapture_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  Controller_ImportImageForCapture_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -864,7 +864,7 @@ struct Controller_ImportImageForCapture_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Controller_ImportImageForCapture_Response response_;
+    ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response response_;
     int32_t err_;
   };
 };
@@ -882,7 +882,7 @@ struct ClientCompositionOp {
 
   uint64_t layer_id = {};
 
-  ClientCompositionOpcode opcode = {};
+  ::llcpp::fuchsia::hardware::display::ClientCompositionOpcode opcode = {};
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerDisplaysChangedEventTable;
@@ -935,7 +935,7 @@ class Controller final {
   struct DisplaysChangedResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::fidl::VectorView<Info> added;
+    ::fidl::VectorView<::llcpp::fuchsia::hardware::display::Info> added;
     ::fidl::VectorView<uint64_t> removed;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerDisplaysChangedEventTable;
@@ -963,7 +963,7 @@ class Controller final {
   struct ImportVmoImageRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ImageConfig image_config;
+    ::llcpp::fuchsia::hardware::display::ImageConfig image_config;
     ::zx::vmo vmo;
     int32_t offset;
 
@@ -994,7 +994,7 @@ class Controller final {
   struct ImportImageRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ImageConfig image_config;
+    ::llcpp::fuchsia::hardware::display::ImageConfig image_config;
     uint64_t collection_id;
     uint32_t index;
 
@@ -1085,7 +1085,7 @@ class Controller final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint64_t display_id;
-    Mode mode;
+    ::llcpp::fuchsia::hardware::display::Mode mode;
 
     static constexpr const fidl_type_t* Type = nullptr;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1132,7 +1132,7 @@ class Controller final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint64_t layer_id;
-    ImageConfig image_config;
+    ::llcpp::fuchsia::hardware::display::ImageConfig image_config;
 
     static constexpr const fidl_type_t* Type = nullptr;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1147,9 +1147,9 @@ class Controller final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint64_t layer_id;
-    Transform transform;
-    Frame src_frame;
-    Frame dest_frame;
+    ::llcpp::fuchsia::hardware::display::Transform transform;
+    ::llcpp::fuchsia::hardware::display::Frame src_frame;
+    ::llcpp::fuchsia::hardware::display::Frame dest_frame;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1164,7 +1164,7 @@ class Controller final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint64_t layer_id;
-    AlphaMode mode;
+    ::llcpp::fuchsia::hardware::display::AlphaMode mode;
     float val;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequestTable;
@@ -1180,7 +1180,7 @@ class Controller final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint64_t layer_id;
-    ImageConfig image_config;
+    ::llcpp::fuchsia::hardware::display::ImageConfig image_config;
 
     static constexpr const fidl_type_t* Type = nullptr;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1243,8 +1243,8 @@ class Controller final {
   struct CheckConfigResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ConfigResult res;
-    ::fidl::VectorView<ClientCompositionOp> ops;
+    ::llcpp::fuchsia::hardware::display::ConfigResult res;
+    ::fidl::VectorView<::llcpp::fuchsia::hardware::display::ClientCompositionOp> ops;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerCheckConfigResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1445,7 +1445,7 @@ class Controller final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint64_t collection_id;
-    ImageConfig config;
+    ::llcpp::fuchsia::hardware::display::ImageConfig config;
 
     static constexpr const fidl_type_t* Type = nullptr;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1477,7 +1477,7 @@ class Controller final {
   struct ImportImageForCaptureResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Controller_ImportImageForCapture_Result result;
+    ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerImportImageForCaptureResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1490,7 +1490,7 @@ class Controller final {
   struct ImportImageForCaptureRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ImageConfig image_config;
+    ::llcpp::fuchsia::hardware::display::ImageConfig image_config;
     uint64_t collection_id;
     uint32_t index;
 
@@ -1507,7 +1507,7 @@ class Controller final {
   struct StartCaptureResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Controller_StartCapture_Result result;
+    ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerStartCaptureResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1536,7 +1536,7 @@ class Controller final {
   struct ReleaseCaptureResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Controller_ReleaseCapture_Result result;
+    ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerReleaseCaptureResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1563,7 +1563,7 @@ class Controller final {
 
 
   struct EventHandlers {
-    fit::callback<zx_status_t(::fidl::VectorView<Info> added, ::fidl::VectorView<uint64_t> removed)> displays_changed;
+    fit::callback<zx_status_t(::fidl::VectorView<::llcpp::fuchsia::hardware::display::Info> added, ::fidl::VectorView<uint64_t> removed)> displays_changed;
 
     fit::callback<zx_status_t(uint64_t display_id, uint64_t timestamp, ::fidl::VectorView<uint64_t> images)> vsync;
 
@@ -1582,7 +1582,7 @@ class Controller final {
     class ImportVmoImage_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ImportVmoImage_Impl(zx::unowned_channel _client_end, ImageConfig image_config, ::zx::vmo vmo, int32_t offset);
+      ImportVmoImage_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset);
       ~ImportVmoImage_Impl() = default;
       ImportVmoImage_Impl(ImportVmoImage_Impl&& other) = default;
       ImportVmoImage_Impl& operator=(ImportVmoImage_Impl&& other) = default;
@@ -1598,7 +1598,7 @@ class Controller final {
     class ImportImage_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ImportImage_Impl(zx::unowned_channel _client_end, ImageConfig image_config, uint64_t collection_id, uint32_t index);
+      ImportImage_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index);
       ~ImportImage_Impl() = default;
       ImportImage_Impl(ImportImage_Impl&& other) = default;
       ImportImage_Impl& operator=(ImportImage_Impl&& other) = default;
@@ -1673,7 +1673,7 @@ class Controller final {
     class SetDisplayMode_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetDisplayMode_Impl(zx::unowned_channel _client_end, uint64_t display_id, Mode mode);
+      SetDisplayMode_Impl(zx::unowned_channel _client_end, uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode);
       ~SetDisplayMode_Impl() = default;
       SetDisplayMode_Impl(SetDisplayMode_Impl&& other) = default;
       SetDisplayMode_Impl& operator=(SetDisplayMode_Impl&& other) = default;
@@ -1706,7 +1706,7 @@ class Controller final {
     class SetLayerPrimaryConfig_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerPrimaryConfig_Impl(zx::unowned_channel _client_end, uint64_t layer_id, ImageConfig image_config);
+      SetLayerPrimaryConfig_Impl(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
       ~SetLayerPrimaryConfig_Impl() = default;
       SetLayerPrimaryConfig_Impl(SetLayerPrimaryConfig_Impl&& other) = default;
       SetLayerPrimaryConfig_Impl& operator=(SetLayerPrimaryConfig_Impl&& other) = default;
@@ -1717,7 +1717,7 @@ class Controller final {
     class SetLayerPrimaryPosition_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerPrimaryPosition_Impl(zx::unowned_channel _client_end, uint64_t layer_id, Transform transform, Frame src_frame, Frame dest_frame);
+      SetLayerPrimaryPosition_Impl(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame);
       ~SetLayerPrimaryPosition_Impl() = default;
       SetLayerPrimaryPosition_Impl(SetLayerPrimaryPosition_Impl&& other) = default;
       SetLayerPrimaryPosition_Impl& operator=(SetLayerPrimaryPosition_Impl&& other) = default;
@@ -1728,7 +1728,7 @@ class Controller final {
     class SetLayerPrimaryAlpha_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerPrimaryAlpha_Impl(zx::unowned_channel _client_end, uint64_t layer_id, AlphaMode mode, float val);
+      SetLayerPrimaryAlpha_Impl(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val);
       ~SetLayerPrimaryAlpha_Impl() = default;
       SetLayerPrimaryAlpha_Impl(SetLayerPrimaryAlpha_Impl&& other) = default;
       SetLayerPrimaryAlpha_Impl& operator=(SetLayerPrimaryAlpha_Impl&& other) = default;
@@ -1739,7 +1739,7 @@ class Controller final {
     class SetLayerCursorConfig_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerCursorConfig_Impl(zx::unowned_channel _client_end, uint64_t layer_id, ImageConfig image_config);
+      SetLayerCursorConfig_Impl(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
       ~SetLayerCursorConfig_Impl() = default;
       SetLayerCursorConfig_Impl(SetLayerCursorConfig_Impl&& other) = default;
       SetLayerCursorConfig_Impl& operator=(SetLayerCursorConfig_Impl&& other) = default;
@@ -1892,7 +1892,7 @@ class Controller final {
     class SetBufferCollectionConstraints_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetBufferCollectionConstraints_Impl(zx::unowned_channel _client_end, uint64_t collection_id, ImageConfig config);
+      SetBufferCollectionConstraints_Impl(zx::unowned_channel _client_end, uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config);
       ~SetBufferCollectionConstraints_Impl() = default;
       SetBufferCollectionConstraints_Impl(SetBufferCollectionConstraints_Impl&& other) = default;
       SetBufferCollectionConstraints_Impl& operator=(SetBufferCollectionConstraints_Impl&& other) = default;
@@ -1924,7 +1924,7 @@ class Controller final {
     class ImportImageForCapture_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ImportImageForCapture_Impl(zx::unowned_channel _client_end, ImageConfig image_config, uint64_t collection_id, uint32_t index);
+      ImportImageForCapture_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index);
       ~ImportImageForCapture_Impl() = default;
       ImportImageForCapture_Impl(ImportImageForCapture_Impl&& other) = default;
       ImportImageForCapture_Impl& operator=(ImportImageForCapture_Impl&& other) = default;
@@ -2011,7 +2011,7 @@ class Controller final {
     class ImportVmoImage_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ImportVmoImage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ::fidl::BytePart _response_buffer);
+      ImportVmoImage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ::fidl::BytePart _response_buffer);
       ~ImportVmoImage_Impl() = default;
       ImportVmoImage_Impl(ImportVmoImage_Impl&& other) = default;
       ImportVmoImage_Impl& operator=(ImportVmoImage_Impl&& other) = default;
@@ -2027,7 +2027,7 @@ class Controller final {
     class ImportImage_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ImportImage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
+      ImportImage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
       ~ImportImage_Impl() = default;
       ImportImage_Impl(ImportImage_Impl&& other) = default;
       ImportImage_Impl& operator=(ImportImage_Impl&& other) = default;
@@ -2102,7 +2102,7 @@ class Controller final {
     class SetDisplayMode_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetDisplayMode_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, Mode mode);
+      SetDisplayMode_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode);
       ~SetDisplayMode_Impl() = default;
       SetDisplayMode_Impl(SetDisplayMode_Impl&& other) = default;
       SetDisplayMode_Impl& operator=(SetDisplayMode_Impl&& other) = default;
@@ -2135,7 +2135,7 @@ class Controller final {
     class SetLayerPrimaryConfig_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerPrimaryConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ImageConfig image_config);
+      SetLayerPrimaryConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
       ~SetLayerPrimaryConfig_Impl() = default;
       SetLayerPrimaryConfig_Impl(SetLayerPrimaryConfig_Impl&& other) = default;
       SetLayerPrimaryConfig_Impl& operator=(SetLayerPrimaryConfig_Impl&& other) = default;
@@ -2146,7 +2146,7 @@ class Controller final {
     class SetLayerPrimaryPosition_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerPrimaryPosition_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, Transform transform, Frame src_frame, Frame dest_frame);
+      SetLayerPrimaryPosition_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame);
       ~SetLayerPrimaryPosition_Impl() = default;
       SetLayerPrimaryPosition_Impl(SetLayerPrimaryPosition_Impl&& other) = default;
       SetLayerPrimaryPosition_Impl& operator=(SetLayerPrimaryPosition_Impl&& other) = default;
@@ -2157,7 +2157,7 @@ class Controller final {
     class SetLayerPrimaryAlpha_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerPrimaryAlpha_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, AlphaMode mode, float val);
+      SetLayerPrimaryAlpha_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val);
       ~SetLayerPrimaryAlpha_Impl() = default;
       SetLayerPrimaryAlpha_Impl(SetLayerPrimaryAlpha_Impl&& other) = default;
       SetLayerPrimaryAlpha_Impl& operator=(SetLayerPrimaryAlpha_Impl&& other) = default;
@@ -2168,7 +2168,7 @@ class Controller final {
     class SetLayerCursorConfig_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerCursorConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ImageConfig image_config);
+      SetLayerCursorConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
       ~SetLayerCursorConfig_Impl() = default;
       SetLayerCursorConfig_Impl(SetLayerCursorConfig_Impl&& other) = default;
       SetLayerCursorConfig_Impl& operator=(SetLayerCursorConfig_Impl&& other) = default;
@@ -2321,7 +2321,7 @@ class Controller final {
     class SetBufferCollectionConstraints_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetBufferCollectionConstraints_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id, ImageConfig config, ::fidl::BytePart _response_buffer);
+      SetBufferCollectionConstraints_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config, ::fidl::BytePart _response_buffer);
       ~SetBufferCollectionConstraints_Impl() = default;
       SetBufferCollectionConstraints_Impl(SetBufferCollectionConstraints_Impl&& other) = default;
       SetBufferCollectionConstraints_Impl& operator=(SetBufferCollectionConstraints_Impl&& other) = default;
@@ -2353,7 +2353,7 @@ class Controller final {
     class ImportImageForCapture_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ImportImageForCapture_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
+      ImportImageForCapture_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
       ~ImportImageForCapture_Impl() = default;
       ImportImageForCapture_Impl(ImportImageForCapture_Impl&& other) = default;
       ImportImageForCapture_Impl& operator=(ImportImageForCapture_Impl&& other) = default;
@@ -2443,16 +2443,16 @@ class Controller final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::ImportVmoImage ImportVmoImage(ImageConfig image_config, ::zx::vmo vmo, int32_t offset);
+    ResultOf::ImportVmoImage ImportVmoImage(::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::ImportVmoImage ImportVmoImage(::fidl::BytePart _request_buffer, ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::ImportVmoImage ImportVmoImage(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ::fidl::BytePart _response_buffer);
 
     // Allocates 112 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::ImportImage ImportImage(ImageConfig image_config, uint64_t collection_id, uint32_t index);
+    ResultOf::ImportImage ImportImage(::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::ImportImage ImportImage(::fidl::BytePart _request_buffer, ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::ImportImage ImportImage(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ReleaseImage ReleaseImage(uint64_t image_id);
@@ -2485,10 +2485,10 @@ class Controller final {
     UnownedResultOf::DestroyLayer DestroyLayer(::fidl::BytePart _request_buffer, uint64_t layer_id);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetDisplayMode SetDisplayMode(uint64_t display_id, Mode mode);
+    ResultOf::SetDisplayMode SetDisplayMode(uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetDisplayMode SetDisplayMode(::fidl::BytePart _request_buffer, uint64_t display_id, Mode mode);
+    UnownedResultOf::SetDisplayMode SetDisplayMode(::fidl::BytePart _request_buffer, uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode);
 
     // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetDisplayColorConversion SetDisplayColorConversion(uint64_t display_id, ::fidl::Array<float, 3> preoffsets, ::fidl::Array<float, 9> coefficients, ::fidl::Array<float, 3> postoffsets);
@@ -2503,28 +2503,28 @@ class Controller final {
     UnownedResultOf::SetDisplayLayers SetDisplayLayers(::fidl::BytePart _request_buffer, uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids);
 
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetLayerPrimaryConfig SetLayerPrimaryConfig(uint64_t layer_id, ImageConfig image_config);
+    ResultOf::SetLayerPrimaryConfig SetLayerPrimaryConfig(uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetLayerPrimaryConfig SetLayerPrimaryConfig(::fidl::BytePart _request_buffer, uint64_t layer_id, ImageConfig image_config);
+    UnownedResultOf::SetLayerPrimaryConfig SetLayerPrimaryConfig(::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetLayerPrimaryPosition SetLayerPrimaryPosition(uint64_t layer_id, Transform transform, Frame src_frame, Frame dest_frame);
+    ResultOf::SetLayerPrimaryPosition SetLayerPrimaryPosition(uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetLayerPrimaryPosition SetLayerPrimaryPosition(::fidl::BytePart _request_buffer, uint64_t layer_id, Transform transform, Frame src_frame, Frame dest_frame);
+    UnownedResultOf::SetLayerPrimaryPosition SetLayerPrimaryPosition(::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame);
 
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetLayerPrimaryAlpha SetLayerPrimaryAlpha(uint64_t layer_id, AlphaMode mode, float val);
+    ResultOf::SetLayerPrimaryAlpha SetLayerPrimaryAlpha(uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetLayerPrimaryAlpha SetLayerPrimaryAlpha(::fidl::BytePart _request_buffer, uint64_t layer_id, AlphaMode mode, float val);
+    UnownedResultOf::SetLayerPrimaryAlpha SetLayerPrimaryAlpha(::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val);
 
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetLayerCursorConfig SetLayerCursorConfig(uint64_t layer_id, ImageConfig image_config);
+    ResultOf::SetLayerCursorConfig SetLayerCursorConfig(uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetLayerCursorConfig SetLayerCursorConfig(::fidl::BytePart _request_buffer, uint64_t layer_id, ImageConfig image_config);
+    UnownedResultOf::SetLayerCursorConfig SetLayerCursorConfig(::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
 
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetLayerCursorPosition SetLayerCursorPosition(uint64_t layer_id, int32_t x, int32_t y);
@@ -2591,10 +2591,10 @@ class Controller final {
     UnownedResultOf::ReleaseBufferCollection ReleaseBufferCollection(::fidl::BytePart _request_buffer, uint64_t collection_id);
 
     // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetBufferCollectionConstraints SetBufferCollectionConstraints(uint64_t collection_id, ImageConfig config);
+    ResultOf::SetBufferCollectionConstraints SetBufferCollectionConstraints(uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetBufferCollectionConstraints SetBufferCollectionConstraints(::fidl::BytePart _request_buffer, uint64_t collection_id, ImageConfig config, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::SetBufferCollectionConstraints SetBufferCollectionConstraints(::fidl::BytePart _request_buffer, uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetSingleBufferFramebuffer GetSingleBufferFramebuffer();
@@ -2609,7 +2609,7 @@ class Controller final {
     // resources allocated for capture.
     // Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
     // Allocates 112 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::ImportImageForCapture ImportImageForCapture(ImageConfig image_config, uint64_t collection_id, uint32_t index);
+    ResultOf::ImportImageForCapture ImportImageForCapture(::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index);
 
     // Imports a buffer collection backed VMO into the display controller. The VMO
     // will be used by display controller to capture the image being displayed.
@@ -2618,7 +2618,7 @@ class Controller final {
     // resources allocated for capture.
     // Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::ImportImageForCapture ImportImageForCapture(::fidl::BytePart _request_buffer, ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::ImportImageForCapture ImportImageForCapture(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
 
     // Starts capture. Client must provide a valid signal_event_id and
     // image_id. signal_event_id must have been imported into the driver
@@ -2661,16 +2661,16 @@ class Controller final {
    public:
 
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ImportVmoImage ImportVmoImage(zx::unowned_channel _client_end, ImageConfig image_config, ::zx::vmo vmo, int32_t offset);
+    static ResultOf::ImportVmoImage ImportVmoImage(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ImportVmoImage ImportVmoImage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ImportVmoImage ImportVmoImage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ::fidl::BytePart _response_buffer);
 
     // Allocates 112 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ImportImage ImportImage(zx::unowned_channel _client_end, ImageConfig image_config, uint64_t collection_id, uint32_t index);
+    static ResultOf::ImportImage ImportImage(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ImportImage ImportImage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ImportImage ImportImage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ReleaseImage ReleaseImage(zx::unowned_channel _client_end, uint64_t image_id);
@@ -2703,10 +2703,10 @@ class Controller final {
     static UnownedResultOf::DestroyLayer DestroyLayer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetDisplayMode SetDisplayMode(zx::unowned_channel _client_end, uint64_t display_id, Mode mode);
+    static ResultOf::SetDisplayMode SetDisplayMode(zx::unowned_channel _client_end, uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetDisplayMode SetDisplayMode(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, Mode mode);
+    static UnownedResultOf::SetDisplayMode SetDisplayMode(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode);
 
     // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetDisplayColorConversion SetDisplayColorConversion(zx::unowned_channel _client_end, uint64_t display_id, ::fidl::Array<float, 3> preoffsets, ::fidl::Array<float, 9> coefficients, ::fidl::Array<float, 3> postoffsets);
@@ -2721,28 +2721,28 @@ class Controller final {
     static UnownedResultOf::SetDisplayLayers SetDisplayLayers(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids);
 
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetLayerPrimaryConfig SetLayerPrimaryConfig(zx::unowned_channel _client_end, uint64_t layer_id, ImageConfig image_config);
+    static ResultOf::SetLayerPrimaryConfig SetLayerPrimaryConfig(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetLayerPrimaryConfig SetLayerPrimaryConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ImageConfig image_config);
+    static UnownedResultOf::SetLayerPrimaryConfig SetLayerPrimaryConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetLayerPrimaryPosition SetLayerPrimaryPosition(zx::unowned_channel _client_end, uint64_t layer_id, Transform transform, Frame src_frame, Frame dest_frame);
+    static ResultOf::SetLayerPrimaryPosition SetLayerPrimaryPosition(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetLayerPrimaryPosition SetLayerPrimaryPosition(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, Transform transform, Frame src_frame, Frame dest_frame);
+    static UnownedResultOf::SetLayerPrimaryPosition SetLayerPrimaryPosition(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame);
 
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetLayerPrimaryAlpha SetLayerPrimaryAlpha(zx::unowned_channel _client_end, uint64_t layer_id, AlphaMode mode, float val);
+    static ResultOf::SetLayerPrimaryAlpha SetLayerPrimaryAlpha(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetLayerPrimaryAlpha SetLayerPrimaryAlpha(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, AlphaMode mode, float val);
+    static UnownedResultOf::SetLayerPrimaryAlpha SetLayerPrimaryAlpha(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val);
 
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetLayerCursorConfig SetLayerCursorConfig(zx::unowned_channel _client_end, uint64_t layer_id, ImageConfig image_config);
+    static ResultOf::SetLayerCursorConfig SetLayerCursorConfig(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetLayerCursorConfig SetLayerCursorConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ImageConfig image_config);
+    static UnownedResultOf::SetLayerCursorConfig SetLayerCursorConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
 
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetLayerCursorPosition SetLayerCursorPosition(zx::unowned_channel _client_end, uint64_t layer_id, int32_t x, int32_t y);
@@ -2809,10 +2809,10 @@ class Controller final {
     static UnownedResultOf::ReleaseBufferCollection ReleaseBufferCollection(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id);
 
     // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetBufferCollectionConstraints SetBufferCollectionConstraints(zx::unowned_channel _client_end, uint64_t collection_id, ImageConfig config);
+    static ResultOf::SetBufferCollectionConstraints SetBufferCollectionConstraints(zx::unowned_channel _client_end, uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetBufferCollectionConstraints SetBufferCollectionConstraints(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id, ImageConfig config, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetBufferCollectionConstraints SetBufferCollectionConstraints(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetSingleBufferFramebuffer GetSingleBufferFramebuffer(zx::unowned_channel _client_end);
@@ -2827,7 +2827,7 @@ class Controller final {
     // resources allocated for capture.
     // Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
     // Allocates 112 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ImportImageForCapture ImportImageForCapture(zx::unowned_channel _client_end, ImageConfig image_config, uint64_t collection_id, uint32_t index);
+    static ResultOf::ImportImageForCapture ImportImageForCapture(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index);
 
     // Imports a buffer collection backed VMO into the display controller. The VMO
     // will be used by display controller to capture the image being displayed.
@@ -2836,7 +2836,7 @@ class Controller final {
     // resources allocated for capture.
     // Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ImportImageForCapture ImportImageForCapture(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ImportImageForCapture ImportImageForCapture(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
 
     // Starts capture. Client must provide a valid signal_event_id and
     // image_id. signal_event_id must have been imported into the driver
@@ -2972,7 +2972,7 @@ class Controller final {
 
     using ImportVmoImageCompleter = ::fidl::Completer<ImportVmoImageCompleterBase>;
 
-    virtual void ImportVmoImage(ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ImportVmoImageCompleter::Sync _completer) = 0;
+    virtual void ImportVmoImage(::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ImportVmoImageCompleter::Sync _completer) = 0;
 
     class ImportImageCompleterBase : public _Base {
      public:
@@ -2986,7 +2986,7 @@ class Controller final {
 
     using ImportImageCompleter = ::fidl::Completer<ImportImageCompleterBase>;
 
-    virtual void ImportImage(ImageConfig image_config, uint64_t collection_id, uint32_t index, ImportImageCompleter::Sync _completer) = 0;
+    virtual void ImportImage(::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ImportImageCompleter::Sync _completer) = 0;
 
     using ReleaseImageCompleter = ::fidl::Completer<>;
 
@@ -3020,7 +3020,7 @@ class Controller final {
 
     using SetDisplayModeCompleter = ::fidl::Completer<>;
 
-    virtual void SetDisplayMode(uint64_t display_id, Mode mode, SetDisplayModeCompleter::Sync _completer) = 0;
+    virtual void SetDisplayMode(uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode, SetDisplayModeCompleter::Sync _completer) = 0;
 
     using SetDisplayColorConversionCompleter = ::fidl::Completer<>;
 
@@ -3032,19 +3032,19 @@ class Controller final {
 
     using SetLayerPrimaryConfigCompleter = ::fidl::Completer<>;
 
-    virtual void SetLayerPrimaryConfig(uint64_t layer_id, ImageConfig image_config, SetLayerPrimaryConfigCompleter::Sync _completer) = 0;
+    virtual void SetLayerPrimaryConfig(uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, SetLayerPrimaryConfigCompleter::Sync _completer) = 0;
 
     using SetLayerPrimaryPositionCompleter = ::fidl::Completer<>;
 
-    virtual void SetLayerPrimaryPosition(uint64_t layer_id, Transform transform, Frame src_frame, Frame dest_frame, SetLayerPrimaryPositionCompleter::Sync _completer) = 0;
+    virtual void SetLayerPrimaryPosition(uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame, SetLayerPrimaryPositionCompleter::Sync _completer) = 0;
 
     using SetLayerPrimaryAlphaCompleter = ::fidl::Completer<>;
 
-    virtual void SetLayerPrimaryAlpha(uint64_t layer_id, AlphaMode mode, float val, SetLayerPrimaryAlphaCompleter::Sync _completer) = 0;
+    virtual void SetLayerPrimaryAlpha(uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val, SetLayerPrimaryAlphaCompleter::Sync _completer) = 0;
 
     using SetLayerCursorConfigCompleter = ::fidl::Completer<>;
 
-    virtual void SetLayerCursorConfig(uint64_t layer_id, ImageConfig image_config, SetLayerCursorConfigCompleter::Sync _completer) = 0;
+    virtual void SetLayerCursorConfig(uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, SetLayerCursorConfigCompleter::Sync _completer) = 0;
 
     using SetLayerCursorPositionCompleter = ::fidl::Completer<>;
 
@@ -3060,8 +3060,8 @@ class Controller final {
 
     class CheckConfigCompleterBase : public _Base {
      public:
-      void Reply(ConfigResult res, ::fidl::VectorView<ClientCompositionOp> ops);
-      void Reply(::fidl::BytePart _buffer, ConfigResult res, ::fidl::VectorView<ClientCompositionOp> ops);
+      void Reply(::llcpp::fuchsia::hardware::display::ConfigResult res, ::fidl::VectorView<::llcpp::fuchsia::hardware::display::ClientCompositionOp> ops);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::display::ConfigResult res, ::fidl::VectorView<::llcpp::fuchsia::hardware::display::ClientCompositionOp> ops);
       void Reply(::fidl::DecodedMessage<CheckConfigResponse> params);
 
      protected:
@@ -3142,7 +3142,7 @@ class Controller final {
 
     using SetBufferCollectionConstraintsCompleter = ::fidl::Completer<SetBufferCollectionConstraintsCompleterBase>;
 
-    virtual void SetBufferCollectionConstraints(uint64_t collection_id, ImageConfig config, SetBufferCollectionConstraintsCompleter::Sync _completer) = 0;
+    virtual void SetBufferCollectionConstraints(uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config, SetBufferCollectionConstraintsCompleter::Sync _completer) = 0;
 
     class GetSingleBufferFramebufferCompleterBase : public _Base {
      public:
@@ -3160,10 +3160,10 @@ class Controller final {
 
     class ImportImageForCaptureCompleterBase : public _Base {
      public:
-      void Reply(Controller_ImportImageForCapture_Result result);
+      void Reply(::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result result);
       void ReplySuccess(uint64_t image_id);
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, Controller_ImportImageForCapture_Result result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result result);
       void ReplySuccess(::fidl::BytePart _buffer, uint64_t image_id);
       void Reply(::fidl::DecodedMessage<ImportImageForCaptureResponse> params);
 
@@ -3173,14 +3173,14 @@ class Controller final {
 
     using ImportImageForCaptureCompleter = ::fidl::Completer<ImportImageForCaptureCompleterBase>;
 
-    virtual void ImportImageForCapture(ImageConfig image_config, uint64_t collection_id, uint32_t index, ImportImageForCaptureCompleter::Sync _completer) = 0;
+    virtual void ImportImageForCapture(::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ImportImageForCaptureCompleter::Sync _completer) = 0;
 
     class StartCaptureCompleterBase : public _Base {
      public:
-      void Reply(Controller_StartCapture_Result result);
+      void Reply(::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result result);
       void ReplySuccess();
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, Controller_StartCapture_Result result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result result);
       void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<StartCaptureResponse> params);
 
@@ -3194,10 +3194,10 @@ class Controller final {
 
     class ReleaseCaptureCompleterBase : public _Base {
      public:
-      void Reply(Controller_ReleaseCapture_Result result);
+      void Reply(::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result result);
       void ReplySuccess();
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, Controller_ReleaseCapture_Result result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result result);
       void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<ReleaseCaptureResponse> params);
 
@@ -3229,10 +3229,10 @@ class Controller final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  static zx_status_t SendDisplaysChangedEvent(::zx::unowned_channel _chan, ::fidl::VectorView<Info> added, ::fidl::VectorView<uint64_t> removed);
+  static zx_status_t SendDisplaysChangedEvent(::zx::unowned_channel _chan, ::fidl::VectorView<::llcpp::fuchsia::hardware::display::Info> added, ::fidl::VectorView<uint64_t> removed);
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendDisplaysChangedEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, ::fidl::VectorView<Info> added, ::fidl::VectorView<uint64_t> removed);
+  static zx_status_t SendDisplaysChangedEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, ::fidl::VectorView<::llcpp::fuchsia::hardware::display::Info> added, ::fidl::VectorView<uint64_t> removed);
 
   // Messages are encoded in-place.
   static zx_status_t SendDisplaysChangedEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<DisplaysChangedResponse> params);

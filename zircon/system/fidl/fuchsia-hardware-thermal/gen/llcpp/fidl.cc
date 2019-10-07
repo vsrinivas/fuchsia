@@ -203,7 +203,7 @@ Device::UnownedResultOf::GetDeviceInfo Device::Call::GetDeviceInfo(zx::unowned_c
 }
 
 template <>
-Device::ResultOf::GetDvfsInfo_Impl<Device::GetDvfsInfoResponse>::GetDvfsInfo_Impl(zx::unowned_channel _client_end, PowerDomain power_domain) {
+Device::ResultOf::GetDvfsInfo_Impl<Device::GetDvfsInfoResponse>::GetDvfsInfo_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDvfsInfoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -217,16 +217,16 @@ Device::ResultOf::GetDvfsInfo_Impl<Device::GetDvfsInfoResponse>::GetDvfsInfo_Imp
       Device::InPlace::GetDvfsInfo(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Device::ResultOf::GetDvfsInfo Device::SyncClient::GetDvfsInfo(PowerDomain power_domain) {
+Device::ResultOf::GetDvfsInfo Device::SyncClient::GetDvfsInfo(::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
   return ResultOf::GetDvfsInfo(zx::unowned_channel(this->channel_), std::move(power_domain));
 }
 
-Device::ResultOf::GetDvfsInfo Device::Call::GetDvfsInfo(zx::unowned_channel _client_end, PowerDomain power_domain) {
+Device::ResultOf::GetDvfsInfo Device::Call::GetDvfsInfo(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
   return ResultOf::GetDvfsInfo(std::move(_client_end), std::move(power_domain));
 }
 
 template <>
-Device::UnownedResultOf::GetDvfsInfo_Impl<Device::GetDvfsInfoResponse>::GetDvfsInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetDvfsInfo_Impl<Device::GetDvfsInfoResponse>::GetDvfsInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < GetDvfsInfoRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<GetDvfsInfoResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -240,11 +240,11 @@ Device::UnownedResultOf::GetDvfsInfo_Impl<Device::GetDvfsInfoResponse>::GetDvfsI
       Device::InPlace::GetDvfsInfo(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Device::UnownedResultOf::GetDvfsInfo Device::SyncClient::GetDvfsInfo(::fidl::BytePart _request_buffer, PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetDvfsInfo Device::SyncClient::GetDvfsInfo(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetDvfsInfo(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(power_domain), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetDvfsInfo Device::Call::GetDvfsInfo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetDvfsInfo Device::Call::GetDvfsInfo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetDvfsInfo(std::move(_client_end), std::move(_request_buffer), std::move(power_domain), std::move(_response_buffer));
 }
 
@@ -537,7 +537,7 @@ Device::UnownedResultOf::SetTripCelsius Device::Call::SetTripCelsius(zx::unowned
 }
 
 template <>
-Device::ResultOf::GetDvfsOperatingPoint_Impl<Device::GetDvfsOperatingPointResponse>::GetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, PowerDomain power_domain) {
+Device::ResultOf::GetDvfsOperatingPoint_Impl<Device::GetDvfsOperatingPointResponse>::GetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDvfsOperatingPointRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -551,16 +551,16 @@ Device::ResultOf::GetDvfsOperatingPoint_Impl<Device::GetDvfsOperatingPointRespon
       Device::InPlace::GetDvfsOperatingPoint(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Device::ResultOf::GetDvfsOperatingPoint Device::SyncClient::GetDvfsOperatingPoint(PowerDomain power_domain) {
+Device::ResultOf::GetDvfsOperatingPoint Device::SyncClient::GetDvfsOperatingPoint(::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
   return ResultOf::GetDvfsOperatingPoint(zx::unowned_channel(this->channel_), std::move(power_domain));
 }
 
-Device::ResultOf::GetDvfsOperatingPoint Device::Call::GetDvfsOperatingPoint(zx::unowned_channel _client_end, PowerDomain power_domain) {
+Device::ResultOf::GetDvfsOperatingPoint Device::Call::GetDvfsOperatingPoint(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
   return ResultOf::GetDvfsOperatingPoint(std::move(_client_end), std::move(power_domain));
 }
 
 template <>
-Device::UnownedResultOf::GetDvfsOperatingPoint_Impl<Device::GetDvfsOperatingPointResponse>::GetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetDvfsOperatingPoint_Impl<Device::GetDvfsOperatingPointResponse>::GetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < GetDvfsOperatingPointRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<GetDvfsOperatingPointResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -574,11 +574,11 @@ Device::UnownedResultOf::GetDvfsOperatingPoint_Impl<Device::GetDvfsOperatingPoin
       Device::InPlace::GetDvfsOperatingPoint(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Device::UnownedResultOf::GetDvfsOperatingPoint Device::SyncClient::GetDvfsOperatingPoint(::fidl::BytePart _request_buffer, PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetDvfsOperatingPoint Device::SyncClient::GetDvfsOperatingPoint(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetDvfsOperatingPoint(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(power_domain), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetDvfsOperatingPoint Device::Call::GetDvfsOperatingPoint(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetDvfsOperatingPoint Device::Call::GetDvfsOperatingPoint(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetDvfsOperatingPoint(std::move(_client_end), std::move(_request_buffer), std::move(power_domain), std::move(_response_buffer));
 }
 
@@ -604,7 +604,7 @@ Device::UnownedResultOf::GetDvfsOperatingPoint Device::Call::GetDvfsOperatingPoi
 }
 
 template <>
-Device::ResultOf::SetDvfsOperatingPoint_Impl<Device::SetDvfsOperatingPointResponse>::SetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, uint16_t op_idx, PowerDomain power_domain) {
+Device::ResultOf::SetDvfsOperatingPoint_Impl<Device::SetDvfsOperatingPointResponse>::SetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetDvfsOperatingPointRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -619,16 +619,16 @@ Device::ResultOf::SetDvfsOperatingPoint_Impl<Device::SetDvfsOperatingPointRespon
       Device::InPlace::SetDvfsOperatingPoint(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Device::ResultOf::SetDvfsOperatingPoint Device::SyncClient::SetDvfsOperatingPoint(uint16_t op_idx, PowerDomain power_domain) {
+Device::ResultOf::SetDvfsOperatingPoint Device::SyncClient::SetDvfsOperatingPoint(uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
   return ResultOf::SetDvfsOperatingPoint(zx::unowned_channel(this->channel_), std::move(op_idx), std::move(power_domain));
 }
 
-Device::ResultOf::SetDvfsOperatingPoint Device::Call::SetDvfsOperatingPoint(zx::unowned_channel _client_end, uint16_t op_idx, PowerDomain power_domain) {
+Device::ResultOf::SetDvfsOperatingPoint Device::Call::SetDvfsOperatingPoint(zx::unowned_channel _client_end, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
   return ResultOf::SetDvfsOperatingPoint(std::move(_client_end), std::move(op_idx), std::move(power_domain));
 }
 
 template <>
-Device::UnownedResultOf::SetDvfsOperatingPoint_Impl<Device::SetDvfsOperatingPointResponse>::SetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint16_t op_idx, PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetDvfsOperatingPoint_Impl<Device::SetDvfsOperatingPointResponse>::SetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetDvfsOperatingPointRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetDvfsOperatingPointResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -643,11 +643,11 @@ Device::UnownedResultOf::SetDvfsOperatingPoint_Impl<Device::SetDvfsOperatingPoin
       Device::InPlace::SetDvfsOperatingPoint(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Device::UnownedResultOf::SetDvfsOperatingPoint Device::SyncClient::SetDvfsOperatingPoint(::fidl::BytePart _request_buffer, uint16_t op_idx, PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetDvfsOperatingPoint Device::SyncClient::SetDvfsOperatingPoint(::fidl::BytePart _request_buffer, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetDvfsOperatingPoint(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(op_idx), std::move(power_domain), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::SetDvfsOperatingPoint Device::Call::SetDvfsOperatingPoint(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint16_t op_idx, PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetDvfsOperatingPoint Device::Call::SetDvfsOperatingPoint(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetDvfsOperatingPoint(std::move(_client_end), std::move(_request_buffer), std::move(op_idx), std::move(power_domain), std::move(_response_buffer));
 }
 
@@ -967,7 +967,7 @@ bool Device::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
 }
 
 
-void Device::Interface::GetInfoCompleterBase::Reply(int32_t status, ThermalInfo* info) {
+void Device::Interface::GetInfoCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::hardware::thermal::ThermalInfo* info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetInfoResponse _response = {};
@@ -987,7 +987,7 @@ void Device::Interface::GetInfoCompleterBase::Reply(int32_t status, ThermalInfo*
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void Device::Interface::GetInfoCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ThermalInfo* info) {
+void Device::Interface::GetInfoCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::thermal::ThermalInfo* info) {
   if (_buffer.capacity() < GetInfoResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -1019,7 +1019,7 @@ void Device::Interface::GetInfoCompleterBase::Reply(::fidl::DecodedMessage<GetIn
 }
 
 
-void Device::Interface::GetDeviceInfoCompleterBase::Reply(int32_t status, ThermalDeviceInfo* info) {
+void Device::Interface::GetDeviceInfoCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::hardware::thermal::ThermalDeviceInfo* info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceInfoResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -1040,7 +1040,7 @@ void Device::Interface::GetDeviceInfoCompleterBase::Reply(int32_t status, Therma
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void Device::Interface::GetDeviceInfoCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ThermalDeviceInfo* info) {
+void Device::Interface::GetDeviceInfoCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::thermal::ThermalDeviceInfo* info) {
   if (_buffer.capacity() < GetDeviceInfoResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -1072,7 +1072,7 @@ void Device::Interface::GetDeviceInfoCompleterBase::Reply(::fidl::DecodedMessage
 }
 
 
-void Device::Interface::GetDvfsInfoCompleterBase::Reply(int32_t status, OperatingPoint* info) {
+void Device::Interface::GetDvfsInfoCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::hardware::thermal::OperatingPoint* info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDvfsInfoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetDvfsInfoResponse _response = {};
@@ -1092,7 +1092,7 @@ void Device::Interface::GetDvfsInfoCompleterBase::Reply(int32_t status, Operatin
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void Device::Interface::GetDvfsInfoCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, OperatingPoint* info) {
+void Device::Interface::GetDvfsInfoCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::thermal::OperatingPoint* info) {
   if (_buffer.capacity() < GetDvfsInfoResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

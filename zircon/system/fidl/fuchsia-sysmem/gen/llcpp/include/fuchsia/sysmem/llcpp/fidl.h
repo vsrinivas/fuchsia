@@ -1982,27 +1982,27 @@ struct SecureMem_SetPhysicalSecureHeaps_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static SecureMem_SetPhysicalSecureHeaps_Result WithResponse(SecureMem_SetPhysicalSecureHeaps_Response&& val) {
+  static SecureMem_SetPhysicalSecureHeaps_Result WithResponse(::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response&& val) {
     SecureMem_SetPhysicalSecureHeaps_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  SecureMem_SetPhysicalSecureHeaps_Response& mutable_response();
+  ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, SecureMem_SetPhysicalSecureHeaps_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, SecureMem_SetPhysicalSecureHeaps_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  SecureMem_SetPhysicalSecureHeaps_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -2042,7 +2042,7 @@ struct SecureMem_SetPhysicalSecureHeaps_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    SecureMem_SetPhysicalSecureHeaps_Response response_;
+    ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response response_;
     int32_t err_;
   };
 };
@@ -2076,7 +2076,7 @@ struct PhysicalSecureHeap {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // This must be a HeapType that is secure/protected.
-  HeapType heap = {};
+  ::llcpp::fuchsia::sysmem::HeapType heap = {};
 
   // Must be at least PAGE_SIZE aligned.
   uint64_t physical_address = {};
@@ -2098,7 +2098,7 @@ struct PhysicalSecureHeaps {
   uint32_t heaps_count = {};
 
   // Only the first heaps_count are meaningful.  The rest are ignored.
-  ::fidl::Array<PhysicalSecureHeap, 32> heaps = {};
+  ::fidl::Array<::llcpp::fuchsia::sysmem::PhysicalSecureHeap, 32> heaps = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResponseTable;
@@ -2110,7 +2110,7 @@ struct SecureMem_GetPhysicalSecureHeaps_Response {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  PhysicalSecureHeaps heaps = {};
+  ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResultTable;
@@ -2143,27 +2143,27 @@ struct SecureMem_GetPhysicalSecureHeaps_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static SecureMem_GetPhysicalSecureHeaps_Result WithResponse(SecureMem_GetPhysicalSecureHeaps_Response&& val) {
+  static SecureMem_GetPhysicalSecureHeaps_Result WithResponse(::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response&& val) {
     SecureMem_GetPhysicalSecureHeaps_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  SecureMem_GetPhysicalSecureHeaps_Response& mutable_response();
+  ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, SecureMem_GetPhysicalSecureHeaps_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, SecureMem_GetPhysicalSecureHeaps_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  SecureMem_GetPhysicalSecureHeaps_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -2203,7 +2203,7 @@ struct SecureMem_GetPhysicalSecureHeaps_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    SecureMem_GetPhysicalSecureHeaps_Response response_;
+    ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response response_;
     int32_t err_;
   };
 };
@@ -2238,7 +2238,7 @@ class SecureMem final {
   struct GetPhysicalSecureHeapsResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    SecureMem_GetPhysicalSecureHeaps_Result result;
+    ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_sysmem_SecureMemGetPhysicalSecureHeapsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -2253,7 +2253,7 @@ class SecureMem final {
   struct SetPhysicalSecureHeapsResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    SecureMem_SetPhysicalSecureHeaps_Result result;
+    ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -2266,7 +2266,7 @@ class SecureMem final {
   struct SetPhysicalSecureHeapsRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    PhysicalSecureHeaps heaps;
+    ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps;
 
     static constexpr const fidl_type_t* Type = &fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -2303,7 +2303,7 @@ class SecureMem final {
     class SetPhysicalSecureHeaps_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetPhysicalSecureHeaps_Impl(zx::unowned_channel _client_end, PhysicalSecureHeaps heaps);
+      SetPhysicalSecureHeaps_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps);
       ~SetPhysicalSecureHeaps_Impl() = default;
       SetPhysicalSecureHeaps_Impl(SetPhysicalSecureHeaps_Impl&& other) = default;
       SetPhysicalSecureHeaps_Impl& operator=(SetPhysicalSecureHeaps_Impl&& other) = default;
@@ -2346,7 +2346,7 @@ class SecureMem final {
     class SetPhysicalSecureHeaps_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetPhysicalSecureHeaps_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, PhysicalSecureHeaps heaps, ::fidl::BytePart _response_buffer);
+      SetPhysicalSecureHeaps_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps, ::fidl::BytePart _response_buffer);
       ~SetPhysicalSecureHeaps_Impl() = default;
       SetPhysicalSecureHeaps_Impl(SetPhysicalSecureHeaps_Impl&& other) = default;
       SetPhysicalSecureHeaps_Impl& operator=(SetPhysicalSecureHeaps_Impl&& other) = default;
@@ -2458,7 +2458,7 @@ class SecureMem final {
     //  * other errors are possible, such as from communication failures or
     //    server propagation of zx_status_t failures
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    ResultOf::SetPhysicalSecureHeaps SetPhysicalSecureHeaps(PhysicalSecureHeaps heaps);
+    ResultOf::SetPhysicalSecureHeaps SetPhysicalSecureHeaps(::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps);
 
     // This request from sysmem to the securemem driver lets the TEE know the
     // physical memory address and length of any secure heap whose location is
@@ -2495,7 +2495,7 @@ class SecureMem final {
     //  * other errors are possible, such as from communication failures or
     //    server propagation of zx_status_t failures
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetPhysicalSecureHeaps SetPhysicalSecureHeaps(::fidl::BytePart _request_buffer, PhysicalSecureHeaps heaps, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::SetPhysicalSecureHeaps SetPhysicalSecureHeaps(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps, ::fidl::BytePart _response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -2589,7 +2589,7 @@ class SecureMem final {
     //  * other errors are possible, such as from communication failures or
     //    server propagation of zx_status_t failures
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::SetPhysicalSecureHeaps SetPhysicalSecureHeaps(zx::unowned_channel _client_end, PhysicalSecureHeaps heaps);
+    static ResultOf::SetPhysicalSecureHeaps SetPhysicalSecureHeaps(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps);
 
     // This request from sysmem to the securemem driver lets the TEE know the
     // physical memory address and length of any secure heap whose location is
@@ -2626,7 +2626,7 @@ class SecureMem final {
     //  * other errors are possible, such as from communication failures or
     //    server propagation of zx_status_t failures
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetPhysicalSecureHeaps SetPhysicalSecureHeaps(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, PhysicalSecureHeaps heaps, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetPhysicalSecureHeaps SetPhysicalSecureHeaps(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -2707,11 +2707,11 @@ class SecureMem final {
 
     class GetPhysicalSecureHeapsCompleterBase : public _Base {
      public:
-      void Reply(SecureMem_GetPhysicalSecureHeaps_Result result);
-      void ReplySuccess(PhysicalSecureHeaps heaps);
+      void Reply(::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result result);
+      void ReplySuccess(::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps);
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, SecureMem_GetPhysicalSecureHeaps_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer, PhysicalSecureHeaps heaps);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps);
       void Reply(::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse> params);
 
      protected:
@@ -2724,10 +2724,10 @@ class SecureMem final {
 
     class SetPhysicalSecureHeapsCompleterBase : public _Base {
      public:
-      void Reply(SecureMem_SetPhysicalSecureHeaps_Result result);
+      void Reply(::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result result);
       void ReplySuccess();
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, SecureMem_SetPhysicalSecureHeaps_Result result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result result);
       void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<SetPhysicalSecureHeapsResponse> params);
 
@@ -2737,7 +2737,7 @@ class SecureMem final {
 
     using SetPhysicalSecureHeapsCompleter = ::fidl::Completer<SetPhysicalSecureHeapsCompleterBase>;
 
-    virtual void SetPhysicalSecureHeaps(PhysicalSecureHeaps heaps, SetPhysicalSecureHeapsCompleter::Sync _completer) = 0;
+    virtual void SetPhysicalSecureHeaps(::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps, SetPhysicalSecureHeapsCompleter::Sync _completer) = 0;
 
   };
 
@@ -2798,7 +2798,7 @@ struct BufferMemoryConstraints {
   // memory is allocated on should leave this field 0.
   uint32_t heap_permitted_count = {};
 
-  ::fidl::Array<HeapType, 32> heap_permitted = {};
+  ::fidl::Array<::llcpp::fuchsia::sysmem::HeapType, 32> heap_permitted = {};
 };
 
 
@@ -2830,13 +2830,13 @@ struct PixelFormat {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  PixelFormatType type = {};
+  ::llcpp::fuchsia::sysmem::PixelFormatType type = {};
 
   // This bool effectively makes format_modifier optional, to satisfy
   // 'Layout = "Simple"', to satisify "FIDL Simple C Bindings".
   bool has_format_modifier = {};
 
-  FormatModifier format_modifier = {};
+  ::llcpp::fuchsia::sysmem::FormatModifier format_modifier = {};
 };
 
 constexpr uint64_t FORMAT_MODIFIER_VENDOR_VIVANTE = 432345564227567616u;
@@ -2887,7 +2887,7 @@ struct ColorSpace {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  ColorSpaceType type = {};
+  ::llcpp::fuchsia::sysmem::ColorSpaceType type = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_ImageSpecTable;
@@ -2911,10 +2911,10 @@ struct ImageSpec {
   uint32_t layers = {};
 
   // Pixel format.
-  PixelFormat pixel_format = {};
+  ::llcpp::fuchsia::sysmem::PixelFormat pixel_format = {};
 
   // Color space.
-  ColorSpace color_space = {};
+  ::llcpp::fuchsia::sysmem::ColorSpace color_space = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_BufferSpecTable;
@@ -2948,27 +2948,27 @@ struct BufferSpec {
 
   bool is_image() const { return tag_ == Tag::kImage; }
 
-  static BufferSpec WithImage(ImageSpec&& val) {
+  static BufferSpec WithImage(::llcpp::fuchsia::sysmem::ImageSpec&& val) {
     BufferSpec result;
     result.set_image(std::move(val));
     return result;
   }
 
-  ImageSpec& mutable_image();
+  ::llcpp::fuchsia::sysmem::ImageSpec& mutable_image();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ImageSpec>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::ImageSpec>::value && std::is_copy_assignable<T>::value>
   set_image(const T& v) {
     mutable_image() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ImageSpec>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::ImageSpec>::value && std::is_move_assignable<T>::value>
   set_image(T&& v) {
     mutable_image() = std::move(v);
   }
 
-  ImageSpec const & image() const { return image_; }
+  ::llcpp::fuchsia::sysmem::ImageSpec const & image() const { return image_; }
 
   Tag which() const { return tag_; }
 
@@ -2984,7 +2984,7 @@ struct BufferSpec {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    ImageSpec image_;
+    ::llcpp::fuchsia::sysmem::ImageSpec image_;
   };
 };
 
@@ -2999,7 +2999,7 @@ struct ImageFormat_2 {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // Pixel format.
-  PixelFormat pixel_format = {};
+  ::llcpp::fuchsia::sysmem::PixelFormat pixel_format = {};
 
   // Row width in pixels that exist in the buffer.  Must be >= display_width.
   // Can be < the width implied by stride_bytes.
@@ -3022,7 +3022,7 @@ struct ImageFormat_2 {
   uint32_t layers = {};
 
   // Color space.
-  ColorSpace color_space = {};
+  ::llcpp::fuchsia::sysmem::ColorSpace color_space = {};
 
   // The pixel_aspect_ratio_width : pixel_aspect_ratio_height is the
   // pixel aspect ratio (AKA sample aspect ratio aka SAR) for the luma
@@ -3062,13 +3062,13 @@ struct ImageFormatConstraints {
   // with an entry per PixelFormat.  It's not uncommon for the other fields
   // of ImageFormatConstraints to vary by PixelFormat - for example for a
   // linear format to support smaller max size than a tiled format.
-  PixelFormat pixel_format = {};
+  ::llcpp::fuchsia::sysmem::PixelFormat pixel_format = {};
 
   // Empty is an error.  Redundant entries are an error.  Arbitrary ordering
   // is not an error.
   uint32_t color_spaces_count = {};
 
-  ::fidl::Array<ColorSpace, 32> color_space = {};
+  ::fidl::Array<::llcpp::fuchsia::sysmem::ColorSpace, 32> color_space = {};
 
   // Minimum permitted width in pixels.
   //
@@ -3197,12 +3197,12 @@ struct ImageFormat {
   uint32_t layers = {};
 
   // Pixel format.
-  PixelFormat pixel_format = {};
+  ::llcpp::fuchsia::sysmem::PixelFormat pixel_format = {};
 
   // Color space.
-  ColorSpace color_space = {};
+  ::llcpp::fuchsia::sysmem::ColorSpace color_space = {};
 
-  ::fidl::Array<ImagePlane, 4> planes = {};
+  ::fidl::Array<::llcpp::fuchsia::sysmem::ImagePlane, 4> planes = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_BufferFormatTable;
@@ -3236,27 +3236,27 @@ struct BufferFormat {
 
   bool is_image() const { return tag_ == Tag::kImage; }
 
-  static BufferFormat WithImage(ImageFormat&& val) {
+  static BufferFormat WithImage(::llcpp::fuchsia::sysmem::ImageFormat&& val) {
     BufferFormat result;
     result.set_image(std::move(val));
     return result;
   }
 
-  ImageFormat& mutable_image();
+  ::llcpp::fuchsia::sysmem::ImageFormat& mutable_image();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ImageFormat>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::ImageFormat>::value && std::is_copy_assignable<T>::value>
   set_image(const T& v) {
     mutable_image() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ImageFormat>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::ImageFormat>::value && std::is_move_assignable<T>::value>
   set_image(T&& v) {
     mutable_image() = std::move(v);
   }
 
-  ImageFormat const & image() const { return image_; }
+  ::llcpp::fuchsia::sysmem::ImageFormat const & image() const { return image_; }
 
   Tag which() const { return tag_; }
 
@@ -3272,7 +3272,7 @@ struct BufferFormat {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    ImageFormat image_;
+    ::llcpp::fuchsia::sysmem::ImageFormat image_;
   };
 };
 
@@ -3291,7 +3291,7 @@ struct BufferCollectionInfo {
 
   // Describes how the contents of buffers are represented.
   // All buffers within the collection have the same format.
-  BufferFormat format = {};
+  ::llcpp::fuchsia::sysmem::BufferFormat format = {};
 
   // VMO handles for each buffer in the collection.
   // The VMOs are only present when the buffers are backed by VMOs.
@@ -3324,11 +3324,11 @@ struct BufferMemorySettings {
 
   bool is_secure = {};
 
-  CoherencyDomain coherency_domain = {};
+  ::llcpp::fuchsia::sysmem::CoherencyDomain coherency_domain = {};
 
   // The specific heap from which buffers are allocated.
   // See above in this file for heap identifier values.
-  HeapType heap = {};
+  ::llcpp::fuchsia::sysmem::HeapType heap = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_SingleBufferSettingsTable;
@@ -3344,7 +3344,7 @@ struct SingleBufferSettings {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  BufferMemorySettings buffer_settings = {};
+  ::llcpp::fuchsia::sysmem::BufferMemorySettings buffer_settings = {};
 
   // Buffers holding data that is not uncompressed image data will not have
   // this field set.  Buffers holding data that is uncompressed image data
@@ -3354,7 +3354,7 @@ struct SingleBufferSettings {
   // buffers.
   bool has_image_format_constraints = {};
 
-  ImageFormatConstraints image_format_constraints = {};
+  ::llcpp::fuchsia::sysmem::ImageFormatConstraints image_format_constraints = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_SingleBufferInfoTable;
@@ -3366,9 +3366,9 @@ struct SingleBufferInfo {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  SingleBufferSettings settings = {};
+  ::llcpp::fuchsia::sysmem::SingleBufferSettings settings = {};
 
-  VmoBuffer buffer = {};
+  ::llcpp::fuchsia::sysmem::VmoBuffer buffer = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionInfo_2Table;
@@ -3387,7 +3387,7 @@ struct BufferCollectionInfo_2 {
   uint32_t buffer_count = {};
 
   // These settings apply to all the buffers in the inital buffer allocation.
-  SingleBufferSettings settings = {};
+  ::llcpp::fuchsia::sysmem::SingleBufferSettings settings = {};
 
   // VMO handles (and vmo_usable_start offset) for each buffer in the
   // collection.
@@ -3403,7 +3403,7 @@ struct BufferCollectionInfo_2 {
   // a client which expressed a read-only usage will receive VMOs without
   // write rights.  In addition, the rights can be attenuated by the parameter
   // to BufferCollectionToken.Duplicate() calls.
-  ::fidl::Array<VmoBuffer, 64> buffers = {};
+  ::fidl::Array<::llcpp::fuchsia::sysmem::VmoBuffer, 64> buffers = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionEventsOnBuffersAllocatedRequestTable;
@@ -3424,7 +3424,7 @@ class BufferCollectionEvents final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    BufferCollectionInfo_2 buffer_collection_info;
+    ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionEventsOnBuffersAllocatedRequestTable;
     static constexpr uint32_t MaxNumHandles = 64;
@@ -3439,7 +3439,7 @@ class BufferCollectionEvents final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    SingleBufferInfo buffer_info;
+    ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionEventsOnAllocateSingleBufferDoneRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
@@ -3469,7 +3469,7 @@ class BufferCollectionEvents final {
     class OnBuffersAllocated_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      OnBuffersAllocated_Impl(zx::unowned_channel _client_end, int32_t status, BufferCollectionInfo_2 buffer_collection_info);
+      OnBuffersAllocated_Impl(zx::unowned_channel _client_end, int32_t status, ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info);
       ~OnBuffersAllocated_Impl() = default;
       OnBuffersAllocated_Impl(OnBuffersAllocated_Impl&& other) = default;
       OnBuffersAllocated_Impl& operator=(OnBuffersAllocated_Impl&& other) = default;
@@ -3480,7 +3480,7 @@ class BufferCollectionEvents final {
     class OnAllocateSingleBufferDone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      OnAllocateSingleBufferDone_Impl(zx::unowned_channel _client_end, int32_t status, SingleBufferInfo buffer_info);
+      OnAllocateSingleBufferDone_Impl(zx::unowned_channel _client_end, int32_t status, ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info);
       ~OnAllocateSingleBufferDone_Impl() = default;
       OnAllocateSingleBufferDone_Impl(OnAllocateSingleBufferDone_Impl&& other) = default;
       OnAllocateSingleBufferDone_Impl& operator=(OnAllocateSingleBufferDone_Impl&& other) = default;
@@ -3514,7 +3514,7 @@ class BufferCollectionEvents final {
     class OnBuffersAllocated_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      OnBuffersAllocated_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, BufferCollectionInfo_2 buffer_collection_info);
+      OnBuffersAllocated_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info);
       ~OnBuffersAllocated_Impl() = default;
       OnBuffersAllocated_Impl(OnBuffersAllocated_Impl&& other) = default;
       OnBuffersAllocated_Impl& operator=(OnBuffersAllocated_Impl&& other) = default;
@@ -3525,7 +3525,7 @@ class BufferCollectionEvents final {
     class OnAllocateSingleBufferDone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      OnAllocateSingleBufferDone_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, SingleBufferInfo buffer_info);
+      OnAllocateSingleBufferDone_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info);
       ~OnAllocateSingleBufferDone_Impl() = default;
       OnAllocateSingleBufferDone_Impl(OnAllocateSingleBufferDone_Impl&& other) = default;
       OnAllocateSingleBufferDone_Impl& operator=(OnAllocateSingleBufferDone_Impl&& other) = default;
@@ -3580,7 +3580,7 @@ class BufferCollectionEvents final {
     // If `status` is not `ZX_OK`, `buffer_collection_info` is default
     // initialized and contains no meaningful information.
     // Request is heap-allocated.
-    ResultOf::OnBuffersAllocated OnBuffersAllocated(int32_t status, BufferCollectionInfo_2 buffer_collection_info);
+    ResultOf::OnBuffersAllocated OnBuffersAllocated(int32_t status, ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info);
 
     // This event inidicates that buffer allocation is over, whether succesful
     // or failed.
@@ -3602,7 +3602,7 @@ class BufferCollectionEvents final {
     // If `status` is not `ZX_OK`, `buffer_collection_info` is default
     // initialized and contains no meaningful information.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::OnBuffersAllocated OnBuffersAllocated(::fidl::BytePart _request_buffer, int32_t status, BufferCollectionInfo_2 buffer_collection_info);
+    UnownedResultOf::OnBuffersAllocated OnBuffersAllocated(::fidl::BytePart _request_buffer, int32_t status, ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info);
 
     // A participant can learn when a new buffer is allocated via this event.
     // The only participant that will see a failing status is the participant
@@ -3629,7 +3629,7 @@ class BufferCollectionEvents final {
     // `ZX_ERR_NOT_SUPPORTED` if request is valid but cannot be satisfied,
     // perhaps due to hardware limitations.
     // Allocates 304 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::OnAllocateSingleBufferDone OnAllocateSingleBufferDone(int32_t status, SingleBufferInfo buffer_info);
+    ResultOf::OnAllocateSingleBufferDone OnAllocateSingleBufferDone(int32_t status, ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info);
 
     // A participant can learn when a new buffer is allocated via this event.
     // The only participant that will see a failing status is the participant
@@ -3656,7 +3656,7 @@ class BufferCollectionEvents final {
     // `ZX_ERR_NOT_SUPPORTED` if request is valid but cannot be satisfied,
     // perhaps due to hardware limitations.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::OnAllocateSingleBufferDone OnAllocateSingleBufferDone(::fidl::BytePart _request_buffer, int32_t status, SingleBufferInfo buffer_info);
+    UnownedResultOf::OnAllocateSingleBufferDone OnAllocateSingleBufferDone(::fidl::BytePart _request_buffer, int32_t status, ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info);
 
    private:
     ::zx::channel channel_;
@@ -3696,7 +3696,7 @@ class BufferCollectionEvents final {
     // If `status` is not `ZX_OK`, `buffer_collection_info` is default
     // initialized and contains no meaningful information.
     // Request is heap-allocated.
-    static ResultOf::OnBuffersAllocated OnBuffersAllocated(zx::unowned_channel _client_end, int32_t status, BufferCollectionInfo_2 buffer_collection_info);
+    static ResultOf::OnBuffersAllocated OnBuffersAllocated(zx::unowned_channel _client_end, int32_t status, ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info);
 
     // This event inidicates that buffer allocation is over, whether succesful
     // or failed.
@@ -3718,7 +3718,7 @@ class BufferCollectionEvents final {
     // If `status` is not `ZX_OK`, `buffer_collection_info` is default
     // initialized and contains no meaningful information.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::OnBuffersAllocated OnBuffersAllocated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, BufferCollectionInfo_2 buffer_collection_info);
+    static UnownedResultOf::OnBuffersAllocated OnBuffersAllocated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info);
 
     // A participant can learn when a new buffer is allocated via this event.
     // The only participant that will see a failing status is the participant
@@ -3745,7 +3745,7 @@ class BufferCollectionEvents final {
     // `ZX_ERR_NOT_SUPPORTED` if request is valid but cannot be satisfied,
     // perhaps due to hardware limitations.
     // Allocates 304 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::OnAllocateSingleBufferDone OnAllocateSingleBufferDone(zx::unowned_channel _client_end, int32_t status, SingleBufferInfo buffer_info);
+    static ResultOf::OnAllocateSingleBufferDone OnAllocateSingleBufferDone(zx::unowned_channel _client_end, int32_t status, ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info);
 
     // A participant can learn when a new buffer is allocated via this event.
     // The only participant that will see a failing status is the participant
@@ -3772,7 +3772,7 @@ class BufferCollectionEvents final {
     // `ZX_ERR_NOT_SUPPORTED` if request is valid but cannot be satisfied,
     // perhaps due to hardware limitations.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::OnAllocateSingleBufferDone OnAllocateSingleBufferDone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, SingleBufferInfo buffer_info);
+    static UnownedResultOf::OnAllocateSingleBufferDone OnAllocateSingleBufferDone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info);
 
   };
 
@@ -3852,11 +3852,11 @@ class BufferCollectionEvents final {
 
     using OnBuffersAllocatedCompleter = ::fidl::Completer<>;
 
-    virtual void OnBuffersAllocated(int32_t status, BufferCollectionInfo_2 buffer_collection_info, OnBuffersAllocatedCompleter::Sync _completer) = 0;
+    virtual void OnBuffersAllocated(int32_t status, ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info, OnBuffersAllocatedCompleter::Sync _completer) = 0;
 
     using OnAllocateSingleBufferDoneCompleter = ::fidl::Completer<>;
 
-    virtual void OnAllocateSingleBufferDone(int32_t status, SingleBufferInfo buffer_info, OnAllocateSingleBufferDoneCompleter::Sync _completer) = 0;
+    virtual void OnAllocateSingleBufferDone(int32_t status, ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info, OnAllocateSingleBufferDoneCompleter::Sync _completer) = 0;
 
   };
 
@@ -3919,7 +3919,7 @@ struct BufferCollectionConstraints {
   //
   // At least one usage bit must be specified unless the whole
   // BufferCollectionConstraints is logically null due to !has_constraints.
-  BufferUsage usage = {};
+  ::llcpp::fuchsia::sysmem::BufferUsage usage = {};
 
   // Per-participant minimum number of buffers that are needed for camping
   // purposes.  A participant should specify a number for min_buffer_count
@@ -3994,7 +3994,7 @@ struct BufferCollectionConstraints {
   // via buffer_memory_constraints.
   bool has_buffer_memory_constraints = {};
 
-  BufferMemoryConstraints buffer_memory_constraints = {};
+  ::llcpp::fuchsia::sysmem::BufferMemoryConstraints buffer_memory_constraints = {};
 
   // Optional constraints on the image format parameters of an image stored
   // in a buffer of the BufferCollection.  This includes pixel format and
@@ -4006,7 +4006,7 @@ struct BufferCollectionConstraints {
   // BufferCollectionConstraints) are retained.
   uint32_t image_format_constraints_count = {};
 
-  ::fidl::Array<ImageFormatConstraints, 32> image_format_constraints = {};
+  ::fidl::Array<::llcpp::fuchsia::sysmem::ImageFormatConstraints, 32> image_format_constraints = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionSetEventSinkRequestTable;
@@ -4069,7 +4069,7 @@ class BufferCollection final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     bool has_constraints;
-    BufferCollectionConstraints constraints;
+    ::llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints;
 
     static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionSetConstraintsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -4084,7 +4084,7 @@ class BufferCollection final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    BufferCollectionInfo_2 buffer_collection_info;
+    ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionWaitForBuffersAllocatedResponseTable;
     static constexpr uint32_t MaxNumHandles = 64;
@@ -4143,7 +4143,7 @@ class BufferCollection final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    SingleBufferInfo buffer_info;
+    ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionWaitForSingleBufferAllocatedResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
@@ -4219,7 +4219,7 @@ class BufferCollection final {
     class SetConstraints_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetConstraints_Impl(zx::unowned_channel _client_end, bool has_constraints, BufferCollectionConstraints constraints);
+      SetConstraints_Impl(zx::unowned_channel _client_end, bool has_constraints, ::llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints);
       ~SetConstraints_Impl() = default;
       SetConstraints_Impl(SetConstraints_Impl&& other) = default;
       SetConstraints_Impl& operator=(SetConstraints_Impl&& other) = default;
@@ -4368,7 +4368,7 @@ class BufferCollection final {
     class SetConstraints_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetConstraints_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool has_constraints, BufferCollectionConstraints constraints);
+      SetConstraints_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool has_constraints, ::llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints);
       ~SetConstraints_Impl() = default;
       SetConstraints_Impl(SetConstraints_Impl&& other) = default;
       SetConstraints_Impl& operator=(SetConstraints_Impl&& other) = default;
@@ -4562,7 +4562,7 @@ class BufferCollection final {
     //
     // `constraints` are constraints on the buffer collection.
     // Request is heap-allocated.
-    ResultOf::SetConstraints SetConstraints(bool has_constraints, BufferCollectionConstraints constraints);
+    ResultOf::SetConstraints SetConstraints(bool has_constraints, ::llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints);
 
     // Provide BufferCollectionConstraints to the logical BufferCollection.
     //
@@ -4600,7 +4600,7 @@ class BufferCollection final {
     //
     // `constraints` are constraints on the buffer collection.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetConstraints SetConstraints(::fidl::BytePart _request_buffer, bool has_constraints, BufferCollectionConstraints constraints);
+    UnownedResultOf::SetConstraints SetConstraints(::fidl::BytePart _request_buffer, bool has_constraints, ::llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints);
 
     // This request completes when buffers have been allocated, responds with
     // some failure detail if allocation has been attempted but failed.
@@ -4865,7 +4865,7 @@ class BufferCollection final {
     //
     // `constraints` are constraints on the buffer collection.
     // Request is heap-allocated.
-    static ResultOf::SetConstraints SetConstraints(zx::unowned_channel _client_end, bool has_constraints, BufferCollectionConstraints constraints);
+    static ResultOf::SetConstraints SetConstraints(zx::unowned_channel _client_end, bool has_constraints, ::llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints);
 
     // Provide BufferCollectionConstraints to the logical BufferCollection.
     //
@@ -4903,7 +4903,7 @@ class BufferCollection final {
     //
     // `constraints` are constraints on the buffer collection.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetConstraints SetConstraints(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool has_constraints, BufferCollectionConstraints constraints);
+    static UnownedResultOf::SetConstraints SetConstraints(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool has_constraints, ::llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints);
 
     // This request completes when buffers have been allocated, responds with
     // some failure detail if allocation has been attempted but failed.
@@ -5269,12 +5269,12 @@ class BufferCollection final {
 
     using SetConstraintsCompleter = ::fidl::Completer<>;
 
-    virtual void SetConstraints(bool has_constraints, BufferCollectionConstraints constraints, SetConstraintsCompleter::Sync _completer) = 0;
+    virtual void SetConstraints(bool has_constraints, ::llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints, SetConstraintsCompleter::Sync _completer) = 0;
 
     class WaitForBuffersAllocatedCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, BufferCollectionInfo_2 buffer_collection_info);
-      void Reply(::fidl::BytePart _buffer, int32_t status, BufferCollectionInfo_2 buffer_collection_info);
+      void Reply(int32_t status, ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info);
       void Reply(::fidl::DecodedMessage<WaitForBuffersAllocatedResponse> params);
 
      protected:
@@ -5309,8 +5309,8 @@ class BufferCollection final {
 
     class WaitForSingleBufferAllocatedCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, SingleBufferInfo buffer_info);
-      void Reply(::fidl::BytePart _buffer, int32_t status, SingleBufferInfo buffer_info);
+      void Reply(int32_t status, ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info);
       void Reply(::fidl::DecodedMessage<WaitForSingleBufferAllocatedResponse> params);
 
      protected:

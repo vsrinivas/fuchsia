@@ -44,3 +44,14 @@ table SampleTable {
 protocol TestInterface {
     TestMethod(TestUnion u) -> (TestUnion u);
 };
+
+/// Verifies that method argument types don't conflict with user-defined types.
+struct FooRequest {
+    int32 bar;
+};
+struct FooResponse {
+    int32 bar;
+};
+protocol Baz {
+    Foo(FooRequest req) -> (FooResponse res);
+};

@@ -985,10 +985,10 @@ void ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::SizeAndOff
 }
 
 
-Coordinator_AddDevice_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::mutable_response() {
+::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Coordinator_AddDevice_Response;
+    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -1044,10 +1044,10 @@ void ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::S
 }
 
 
-Coordinator_AddDeviceInvisible_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::mutable_response() {
+::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Coordinator_AddDeviceInvisible_Response;
+    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -1103,10 +1103,10 @@ void ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result::SizeAndOf
 }
 
 
-Coordinator_UnbindDone_Response& ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result::mutable_response() {
+::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response& ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Coordinator_UnbindDone_Response;
+    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -1162,10 +1162,10 @@ void ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result
 }
 
 
-Coordinator_RunCompatibilityTests_Response& ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::mutable_response() {
+::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response& ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Coordinator_RunCompatibilityTests_Response;
+    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -1221,10 +1221,10 @@ void ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result::SizeAndOf
 }
 
 
-Coordinator_RemoveDone_Response& ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result::mutable_response() {
+::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response& ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Coordinator_RemoveDone_Response;
+    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -1280,10 +1280,10 @@ void ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::Size
 }
 
 
-Coordinator_PublishMetadata_Response& ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::mutable_response() {
+::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response& ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Coordinator_PublishMetadata_Response;
+    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -1339,10 +1339,10 @@ void ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::SizeAndO
 }
 
 
-Coordinator_MakeVisible_Response& ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::mutable_response() {
+::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response& ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Coordinator_MakeVisible_Response;
+    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -1398,10 +1398,10 @@ void ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::SizeAnd
 }
 
 
-Coordinator_LoadFirmware_Response& ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::mutable_response() {
+::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response& ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Coordinator_LoadFirmware_Response;
+    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -1457,10 +1457,10 @@ void ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::S
 }
 
 
-Coordinator_GetTopologicalPath_Response& ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::mutable_response() {
+::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response& ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Coordinator_GetTopologicalPath_Response;
+    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -1516,10 +1516,10 @@ void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::SizeAndO
 }
 
 
-Coordinator_GetMetadata_Response& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::mutable_response() {
+::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Coordinator_GetMetadata_Response;
+    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -1575,10 +1575,10 @@ void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::Size
 }
 
 
-Coordinator_GetMetadataSize_Response& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::mutable_response() {
+::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Coordinator_GetMetadataSize_Response;
+    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -1634,10 +1634,10 @@ void ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::SizeA
 }
 
 
-Coordinator_DirectoryWatch_Response& ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::mutable_response() {
+::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response& ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Coordinator_DirectoryWatch_Response;
+    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -1693,10 +1693,10 @@ void ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::SizeAndOf
 }
 
 
-Coordinator_BindDevice_Response& ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::mutable_response() {
+::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response& ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Coordinator_BindDevice_Response;
+    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -1752,10 +1752,10 @@ void ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::SizeAndO
 }
 
 
-Coordinator_AddMetadata_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::mutable_response() {
+::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Coordinator_AddMetadata_Response;
+    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -1811,10 +1811,10 @@ void ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::S
 }
 
 
-Coordinator_AddCompositeDevice_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::mutable_response() {
+::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Coordinator_AddCompositeDevice_Response;
+    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -2168,7 +2168,7 @@ DeviceController::UnownedResultOf::Suspend DeviceController::Call::Suspend(zx::u
 }
 
 
-DeviceController::ResultOf::CompleteCompatibilityTests_Impl::CompleteCompatibilityTests_Impl(zx::unowned_channel _client_end, CompatibilityTestStatus status) {
+DeviceController::ResultOf::CompleteCompatibilityTests_Impl::CompleteCompatibilityTests_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::manager::CompatibilityTestStatus status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CompleteCompatibilityTestsRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -2182,16 +2182,16 @@ DeviceController::ResultOf::CompleteCompatibilityTests_Impl::CompleteCompatibili
       DeviceController::InPlace::CompleteCompatibilityTests(std::move(_client_end), std::move(_decoded_request)));
 }
 
-DeviceController::ResultOf::CompleteCompatibilityTests DeviceController::SyncClient::CompleteCompatibilityTests(CompatibilityTestStatus status) {
+DeviceController::ResultOf::CompleteCompatibilityTests DeviceController::SyncClient::CompleteCompatibilityTests(::llcpp::fuchsia::device::manager::CompatibilityTestStatus status) {
   return ResultOf::CompleteCompatibilityTests(zx::unowned_channel(this->channel_), std::move(status));
 }
 
-DeviceController::ResultOf::CompleteCompatibilityTests DeviceController::Call::CompleteCompatibilityTests(zx::unowned_channel _client_end, CompatibilityTestStatus status) {
+DeviceController::ResultOf::CompleteCompatibilityTests DeviceController::Call::CompleteCompatibilityTests(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::manager::CompatibilityTestStatus status) {
   return ResultOf::CompleteCompatibilityTests(std::move(_client_end), std::move(status));
 }
 
 
-DeviceController::UnownedResultOf::CompleteCompatibilityTests_Impl::CompleteCompatibilityTests_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, CompatibilityTestStatus status) {
+DeviceController::UnownedResultOf::CompleteCompatibilityTests_Impl::CompleteCompatibilityTests_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::manager::CompatibilityTestStatus status) {
   if (_request_buffer.capacity() < CompleteCompatibilityTestsRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -2206,11 +2206,11 @@ DeviceController::UnownedResultOf::CompleteCompatibilityTests_Impl::CompleteComp
       DeviceController::InPlace::CompleteCompatibilityTests(std::move(_client_end), std::move(_decoded_request)));
 }
 
-DeviceController::UnownedResultOf::CompleteCompatibilityTests DeviceController::SyncClient::CompleteCompatibilityTests(::fidl::BytePart _request_buffer, CompatibilityTestStatus status) {
+DeviceController::UnownedResultOf::CompleteCompatibilityTests DeviceController::SyncClient::CompleteCompatibilityTests(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::manager::CompatibilityTestStatus status) {
   return UnownedResultOf::CompleteCompatibilityTests(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(status));
 }
 
-DeviceController::UnownedResultOf::CompleteCompatibilityTests DeviceController::Call::CompleteCompatibilityTests(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, CompatibilityTestStatus status) {
+DeviceController::UnownedResultOf::CompleteCompatibilityTests DeviceController::Call::CompleteCompatibilityTests(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::manager::CompatibilityTestStatus status) {
   return UnownedResultOf::CompleteCompatibilityTests(std::move(_client_end), std::move(_request_buffer), std::move(status));
 }
 
@@ -2519,7 +2519,7 @@ extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRunCompatibilityT
 
 }  // namespace
 template <>
-Coordinator::ResultOf::AddDevice_Impl<Coordinator::AddDeviceResponse>::AddDevice_Impl(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote) {
+Coordinator::ResultOf::AddDevice_Impl<Coordinator::AddDeviceResponse>::AddDevice_Impl(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -2542,16 +2542,16 @@ Coordinator::ResultOf::AddDevice_Impl<Coordinator::AddDeviceResponse>::AddDevice
       Coordinator::InPlace::AddDevice(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Coordinator::ResultOf::AddDevice Coordinator::SyncClient::AddDevice(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote) {
+Coordinator::ResultOf::AddDevice Coordinator::SyncClient::AddDevice(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote) {
   return ResultOf::AddDevice(zx::unowned_channel(this->channel_), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(client_remote));
 }
 
-Coordinator::ResultOf::AddDevice Coordinator::Call::AddDevice(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote) {
+Coordinator::ResultOf::AddDevice Coordinator::Call::AddDevice(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote) {
   return ResultOf::AddDevice(std::move(_client_end), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(client_remote));
 }
 
 template <>
-Coordinator::UnownedResultOf::AddDevice_Impl<Coordinator::AddDeviceResponse>::AddDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
+Coordinator::UnownedResultOf::AddDevice_Impl<Coordinator::AddDeviceResponse>::AddDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < AddDeviceRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<AddDeviceResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -2575,11 +2575,11 @@ Coordinator::UnownedResultOf::AddDevice_Impl<Coordinator::AddDeviceResponse>::Ad
       Coordinator::InPlace::AddDevice(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Coordinator::UnownedResultOf::AddDevice Coordinator::SyncClient::AddDevice(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
+Coordinator::UnownedResultOf::AddDevice Coordinator::SyncClient::AddDevice(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::AddDevice(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(client_remote), std::move(_response_buffer));
 }
 
-Coordinator::UnownedResultOf::AddDevice Coordinator::Call::AddDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
+Coordinator::UnownedResultOf::AddDevice Coordinator::Call::AddDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::AddDevice(std::move(_client_end), std::move(_request_buffer), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(client_remote), std::move(_response_buffer));
 }
 
@@ -3496,7 +3496,7 @@ Coordinator::UnownedResultOf::PublishMetadata Coordinator::Call::PublishMetadata
 }
 
 template <>
-Coordinator::ResultOf::AddCompositeDevice_Impl<Coordinator::AddCompositeDeviceResponse>::AddCompositeDevice_Impl(zx::unowned_channel _client_end, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index) {
+Coordinator::ResultOf::AddCompositeDevice_Impl<Coordinator::AddCompositeDeviceResponse>::AddCompositeDevice_Impl(zx::unowned_channel _client_end, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<::llcpp::fuchsia::device::manager::DeviceComponent> components, uint32_t coresident_device_index) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddCompositeDeviceRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -3515,16 +3515,16 @@ Coordinator::ResultOf::AddCompositeDevice_Impl<Coordinator::AddCompositeDeviceRe
       Coordinator::InPlace::AddCompositeDevice(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Coordinator::ResultOf::AddCompositeDevice Coordinator::SyncClient::AddCompositeDevice(::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index) {
+Coordinator::ResultOf::AddCompositeDevice Coordinator::SyncClient::AddCompositeDevice(::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<::llcpp::fuchsia::device::manager::DeviceComponent> components, uint32_t coresident_device_index) {
   return ResultOf::AddCompositeDevice(zx::unowned_channel(this->channel_), std::move(name), std::move(props), std::move(components), std::move(coresident_device_index));
 }
 
-Coordinator::ResultOf::AddCompositeDevice Coordinator::Call::AddCompositeDevice(zx::unowned_channel _client_end, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index) {
+Coordinator::ResultOf::AddCompositeDevice Coordinator::Call::AddCompositeDevice(zx::unowned_channel _client_end, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<::llcpp::fuchsia::device::manager::DeviceComponent> components, uint32_t coresident_device_index) {
   return ResultOf::AddCompositeDevice(std::move(_client_end), std::move(name), std::move(props), std::move(components), std::move(coresident_device_index));
 }
 
 template <>
-Coordinator::UnownedResultOf::AddCompositeDevice_Impl<Coordinator::AddCompositeDeviceResponse>::AddCompositeDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer) {
+Coordinator::UnownedResultOf::AddCompositeDevice_Impl<Coordinator::AddCompositeDeviceResponse>::AddCompositeDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<::llcpp::fuchsia::device::manager::DeviceComponent> components, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < AddCompositeDeviceRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<AddCompositeDeviceResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -3544,11 +3544,11 @@ Coordinator::UnownedResultOf::AddCompositeDevice_Impl<Coordinator::AddCompositeD
       Coordinator::InPlace::AddCompositeDevice(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Coordinator::UnownedResultOf::AddCompositeDevice Coordinator::SyncClient::AddCompositeDevice(::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer) {
+Coordinator::UnownedResultOf::AddCompositeDevice Coordinator::SyncClient::AddCompositeDevice(::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<::llcpp::fuchsia::device::manager::DeviceComponent> components, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::AddCompositeDevice(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(name), std::move(props), std::move(components), std::move(coresident_device_index), std::move(_response_buffer));
 }
 
-Coordinator::UnownedResultOf::AddCompositeDevice Coordinator::Call::AddCompositeDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer) {
+Coordinator::UnownedResultOf::AddCompositeDevice Coordinator::Call::AddCompositeDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<::llcpp::fuchsia::device::manager::DeviceComponent> components, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::AddCompositeDevice(std::move(_client_end), std::move(_request_buffer), std::move(name), std::move(props), std::move(components), std::move(coresident_device_index), std::move(_response_buffer));
 }
 
@@ -3952,7 +3952,7 @@ bool Coordinator::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
 }
 
 
-void Coordinator::Interface::AddDeviceCompleterBase::Reply(Coordinator_AddDevice_Result result) {
+void Coordinator::Interface::AddDeviceCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<AddDeviceResponse*>(_write_bytes);
@@ -3975,7 +3975,7 @@ void Coordinator::Interface::AddDeviceCompleterBase::ReplyError(int32_t error) {
   Reply(Coordinator_AddDevice_Result::WithErr(std::move(error)));
 }
 
-void Coordinator::Interface::AddDeviceCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_AddDevice_Result result) {
+void Coordinator::Interface::AddDeviceCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result result) {
   if (_buffer.capacity() < AddDeviceResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -4008,7 +4008,7 @@ void Coordinator::Interface::AddDeviceCompleterBase::Reply(::fidl::DecodedMessag
 }
 
 
-void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(Coordinator_AddDeviceInvisible_Result result) {
+void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceInvisibleResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<AddDeviceInvisibleResponse*>(_write_bytes);
@@ -4031,7 +4031,7 @@ void Coordinator::Interface::AddDeviceInvisibleCompleterBase::ReplyError(int32_t
   Reply(Coordinator_AddDeviceInvisible_Result::WithErr(std::move(error)));
 }
 
-void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_AddDeviceInvisible_Result result) {
+void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result result) {
   if (_buffer.capacity() < AddDeviceInvisibleResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -4064,7 +4064,7 @@ void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(::fidl::Deco
 }
 
 
-void Coordinator::Interface::UnbindDoneCompleterBase::Reply(Coordinator_UnbindDone_Result result) {
+void Coordinator::Interface::UnbindDoneCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnbindDoneResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<UnbindDoneResponse*>(_write_bytes);
@@ -4086,7 +4086,7 @@ void Coordinator::Interface::UnbindDoneCompleterBase::ReplyError(int32_t error) 
   Reply(Coordinator_UnbindDone_Result::WithErr(std::move(error)));
 }
 
-void Coordinator::Interface::UnbindDoneCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_UnbindDone_Result result) {
+void Coordinator::Interface::UnbindDoneCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result result) {
   if (_buffer.capacity() < UnbindDoneResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -4118,7 +4118,7 @@ void Coordinator::Interface::UnbindDoneCompleterBase::Reply(::fidl::DecodedMessa
 }
 
 
-void Coordinator::Interface::RemoveDoneCompleterBase::Reply(Coordinator_RemoveDone_Result result) {
+void Coordinator::Interface::RemoveDoneCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RemoveDoneResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<RemoveDoneResponse*>(_write_bytes);
@@ -4140,7 +4140,7 @@ void Coordinator::Interface::RemoveDoneCompleterBase::ReplyError(int32_t error) 
   Reply(Coordinator_RemoveDone_Result::WithErr(std::move(error)));
 }
 
-void Coordinator::Interface::RemoveDoneCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_RemoveDone_Result result) {
+void Coordinator::Interface::RemoveDoneCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result result) {
   if (_buffer.capacity() < RemoveDoneResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -4172,7 +4172,7 @@ void Coordinator::Interface::RemoveDoneCompleterBase::Reply(::fidl::DecodedMessa
 }
 
 
-void Coordinator::Interface::MakeVisibleCompleterBase::Reply(Coordinator_MakeVisible_Result result) {
+void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MakeVisibleResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<MakeVisibleResponse*>(_write_bytes);
@@ -4194,7 +4194,7 @@ void Coordinator::Interface::MakeVisibleCompleterBase::ReplyError(int32_t error)
   Reply(Coordinator_MakeVisible_Result::WithErr(std::move(error)));
 }
 
-void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_MakeVisible_Result result) {
+void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result result) {
   if (_buffer.capacity() < MakeVisibleResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -4226,7 +4226,7 @@ void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::fidl::DecodedMess
 }
 
 
-void Coordinator::Interface::BindDeviceCompleterBase::Reply(Coordinator_BindDevice_Result result) {
+void Coordinator::Interface::BindDeviceCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindDeviceResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<BindDeviceResponse*>(_write_bytes);
@@ -4248,7 +4248,7 @@ void Coordinator::Interface::BindDeviceCompleterBase::ReplyError(int32_t error) 
   Reply(Coordinator_BindDevice_Result::WithErr(std::move(error)));
 }
 
-void Coordinator::Interface::BindDeviceCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_BindDevice_Result result) {
+void Coordinator::Interface::BindDeviceCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result result) {
   if (_buffer.capacity() < BindDeviceResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -4280,7 +4280,7 @@ void Coordinator::Interface::BindDeviceCompleterBase::Reply(::fidl::DecodedMessa
 }
 
 
-void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(Coordinator_GetTopologicalPath_Result result) {
+void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTopologicalPathResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -4309,7 +4309,7 @@ void Coordinator::Interface::GetTopologicalPathCompleterBase::ReplyError(int32_t
   Reply(Coordinator_GetTopologicalPath_Result::WithErr(std::move(error)));
 }
 
-void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_GetTopologicalPath_Result result) {
+void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result result) {
   if (_buffer.capacity() < GetTopologicalPathResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -4346,7 +4346,7 @@ void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::Deco
 }
 
 
-void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(Coordinator_LoadFirmware_Result result) {
+void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadFirmwareResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<LoadFirmwareResponse*>(_write_bytes);
@@ -4370,7 +4370,7 @@ void Coordinator::Interface::LoadFirmwareCompleterBase::ReplyError(int32_t error
   Reply(Coordinator_LoadFirmware_Result::WithErr(std::move(error)));
 }
 
-void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_LoadFirmware_Result result) {
+void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result result) {
   if (_buffer.capacity() < LoadFirmwareResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -4404,7 +4404,7 @@ void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(::fidl::DecodedMes
 }
 
 
-void Coordinator::Interface::GetMetadataCompleterBase::Reply(Coordinator_GetMetadata_Result result) {
+void Coordinator::Interface::GetMetadataCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetMetadataResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -4433,7 +4433,7 @@ void Coordinator::Interface::GetMetadataCompleterBase::ReplyError(int32_t error)
   Reply(Coordinator_GetMetadata_Result::WithErr(std::move(error)));
 }
 
-void Coordinator::Interface::GetMetadataCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_GetMetadata_Result result) {
+void Coordinator::Interface::GetMetadataCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result result) {
   if (_buffer.capacity() < GetMetadataResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -4470,7 +4470,7 @@ void Coordinator::Interface::GetMetadataCompleterBase::Reply(::fidl::DecodedMess
 }
 
 
-void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(Coordinator_GetMetadataSize_Result result) {
+void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetMetadataSizeResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetMetadataSizeResponse*>(_write_bytes);
@@ -4493,7 +4493,7 @@ void Coordinator::Interface::GetMetadataSizeCompleterBase::ReplyError(int32_t er
   Reply(Coordinator_GetMetadataSize_Result::WithErr(std::move(error)));
 }
 
-void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_GetMetadataSize_Result result) {
+void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result result) {
   if (_buffer.capacity() < GetMetadataSizeResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -4526,7 +4526,7 @@ void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(::fidl::Decoded
 }
 
 
-void Coordinator::Interface::AddMetadataCompleterBase::Reply(Coordinator_AddMetadata_Result result) {
+void Coordinator::Interface::AddMetadataCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddMetadataResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<AddMetadataResponse*>(_write_bytes);
@@ -4548,7 +4548,7 @@ void Coordinator::Interface::AddMetadataCompleterBase::ReplyError(int32_t error)
   Reply(Coordinator_AddMetadata_Result::WithErr(std::move(error)));
 }
 
-void Coordinator::Interface::AddMetadataCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_AddMetadata_Result result) {
+void Coordinator::Interface::AddMetadataCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result result) {
   if (_buffer.capacity() < AddMetadataResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -4580,7 +4580,7 @@ void Coordinator::Interface::AddMetadataCompleterBase::Reply(::fidl::DecodedMess
 }
 
 
-void Coordinator::Interface::PublishMetadataCompleterBase::Reply(Coordinator_PublishMetadata_Result result) {
+void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<PublishMetadataResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<PublishMetadataResponse*>(_write_bytes);
@@ -4602,7 +4602,7 @@ void Coordinator::Interface::PublishMetadataCompleterBase::ReplyError(int32_t er
   Reply(Coordinator_PublishMetadata_Result::WithErr(std::move(error)));
 }
 
-void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_PublishMetadata_Result result) {
+void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result result) {
   if (_buffer.capacity() < PublishMetadataResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -4634,7 +4634,7 @@ void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::fidl::Decoded
 }
 
 
-void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(Coordinator_AddCompositeDevice_Result result) {
+void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddCompositeDeviceResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<AddCompositeDeviceResponse*>(_write_bytes);
@@ -4656,7 +4656,7 @@ void Coordinator::Interface::AddCompositeDeviceCompleterBase::ReplyError(int32_t
   Reply(Coordinator_AddCompositeDevice_Result::WithErr(std::move(error)));
 }
 
-void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_AddCompositeDevice_Result result) {
+void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result result) {
   if (_buffer.capacity() < AddCompositeDeviceResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -4688,7 +4688,7 @@ void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::fidl::Deco
 }
 
 
-void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(Coordinator_DirectoryWatch_Result result) {
+void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DirectoryWatchResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DirectoryWatchResponse*>(_write_bytes);
@@ -4710,7 +4710,7 @@ void Coordinator::Interface::DirectoryWatchCompleterBase::ReplyError(int32_t err
   Reply(Coordinator_DirectoryWatch_Result::WithErr(std::move(error)));
 }
 
-void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_DirectoryWatch_Result result) {
+void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result result) {
   if (_buffer.capacity() < DirectoryWatchResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -4742,7 +4742,7 @@ void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::fidl::DecodedM
 }
 
 
-void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(Coordinator_RunCompatibilityTests_Result result) {
+void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RunCompatibilityTestsResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<RunCompatibilityTestsResponse*>(_write_bytes);
@@ -4764,7 +4764,7 @@ void Coordinator::Interface::RunCompatibilityTestsCompleterBase::ReplyError(int3
   Reply(Coordinator_RunCompatibilityTests_Result::WithErr(std::move(error)));
 }
 
-void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(::fidl::BytePart _buffer, Coordinator_RunCompatibilityTests_Result result) {
+void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result result) {
   if (_buffer.capacity() < RunCompatibilityTestsResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

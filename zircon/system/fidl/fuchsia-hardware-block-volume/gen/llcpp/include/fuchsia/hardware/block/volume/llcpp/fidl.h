@@ -278,7 +278,7 @@ class Volume final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    VolumeInfo* info;
+    ::llcpp::fuchsia::hardware::block::volume::VolumeInfo* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeQueryResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -294,7 +294,7 @@ class Volume final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    ::fidl::Array<VsliceRange, 16> response;
+    ::fidl::Array<::llcpp::fuchsia::hardware::block::volume::VsliceRange, 16> response;
     uint64_t response_count;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeQuerySlicesResponseTable;
@@ -1249,8 +1249,8 @@ class Volume final {
 
     class QueryCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, VolumeInfo* info);
-      void Reply(::fidl::BytePart _buffer, int32_t status, VolumeInfo* info);
+      void Reply(int32_t status, ::llcpp::fuchsia::hardware::block::volume::VolumeInfo* info);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::block::volume::VolumeInfo* info);
       void Reply(::fidl::DecodedMessage<QueryResponse> params);
 
      protected:
@@ -1263,8 +1263,8 @@ class Volume final {
 
     class QuerySlicesCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, ::fidl::Array<VsliceRange, 16> response, uint64_t response_count);
-      void Reply(::fidl::BytePart _buffer, int32_t status, ::fidl::Array<VsliceRange, 16> response, uint64_t response_count);
+      void Reply(int32_t status, ::fidl::Array<::llcpp::fuchsia::hardware::block::volume::VsliceRange, 16> response, uint64_t response_count);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::fidl::Array<::llcpp::fuchsia::hardware::block::volume::VsliceRange, 16> response, uint64_t response_count);
       void Reply(::fidl::DecodedMessage<QuerySlicesResponse> params);
 
      protected:
@@ -1385,7 +1385,7 @@ class VolumeManager final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    VolumeInfo* info;
+    ::llcpp::fuchsia::hardware::block::volume::VolumeInfo* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeManagerQueryResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1401,7 +1401,7 @@ class VolumeManager final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    VolumeManagerInfo* info;
+    ::llcpp::fuchsia::hardware::block::volume::VolumeManagerInfo* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeManagerGetInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1706,8 +1706,8 @@ class VolumeManager final {
 
     class QueryCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, VolumeInfo* info);
-      void Reply(::fidl::BytePart _buffer, int32_t status, VolumeInfo* info);
+      void Reply(int32_t status, ::llcpp::fuchsia::hardware::block::volume::VolumeInfo* info);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::block::volume::VolumeInfo* info);
       void Reply(::fidl::DecodedMessage<QueryResponse> params);
 
      protected:
@@ -1720,8 +1720,8 @@ class VolumeManager final {
 
     class GetInfoCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, VolumeManagerInfo* info);
-      void Reply(::fidl::BytePart _buffer, int32_t status, VolumeManagerInfo* info);
+      void Reply(int32_t status, ::llcpp::fuchsia::hardware::block::volume::VolumeManagerInfo* info);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::block::volume::VolumeManagerInfo* info);
       void Reply(::fidl::DecodedMessage<GetInfoResponse> params);
 
      protected:

@@ -168,7 +168,7 @@ class Partition final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    GUID* guid;
+    ::llcpp::fuchsia::hardware::block::partition::GUID* guid;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionGetTypeGuidResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -184,7 +184,7 @@ class Partition final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    GUID* guid;
+    ::llcpp::fuchsia::hardware::block::partition::GUID* guid;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionGetInstanceGuidResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -786,8 +786,8 @@ class Partition final {
 
     class GetTypeGuidCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, GUID* guid);
-      void Reply(::fidl::BytePart _buffer, int32_t status, GUID* guid);
+      void Reply(int32_t status, ::llcpp::fuchsia::hardware::block::partition::GUID* guid);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::block::partition::GUID* guid);
       void Reply(::fidl::DecodedMessage<GetTypeGuidResponse> params);
 
      protected:
@@ -800,8 +800,8 @@ class Partition final {
 
     class GetInstanceGuidCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, GUID* guid);
-      void Reply(::fidl::BytePart _buffer, int32_t status, GUID* guid);
+      void Reply(int32_t status, ::llcpp::fuchsia::hardware::block::partition::GUID* guid);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::block::partition::GUID* guid);
       void Reply(::fidl::DecodedMessage<GetInstanceGuidResponse> params);
 
      protected:

@@ -49,7 +49,7 @@ class Device final {
   struct GetInfoResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Info info;
+    ::llcpp::fuchsia::hardware::midi::Info info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_midi_DeviceGetInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -172,8 +172,8 @@ class Device final {
 
     class GetInfoCompleterBase : public _Base {
      public:
-      void Reply(Info info);
-      void Reply(::fidl::BytePart _buffer, Info info);
+      void Reply(::llcpp::fuchsia::hardware::midi::Info info);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::midi::Info info);
       void Reply(::fidl::DecodedMessage<GetInfoResponse> params);
 
      protected:

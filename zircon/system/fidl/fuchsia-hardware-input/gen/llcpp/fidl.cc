@@ -478,7 +478,7 @@ Device::UnownedResultOf::GetReportIds Device::Call::GetReportIds(zx::unowned_cha
 }
 
 template <>
-Device::ResultOf::GetReportSize_Impl<Device::GetReportSizeResponse>::GetReportSize_Impl(zx::unowned_channel _client_end, ReportType type, uint8_t id) {
+Device::ResultOf::GetReportSize_Impl<Device::GetReportSizeResponse>::GetReportSize_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetReportSizeRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -493,16 +493,16 @@ Device::ResultOf::GetReportSize_Impl<Device::GetReportSizeResponse>::GetReportSi
       Device::InPlace::GetReportSize(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Device::ResultOf::GetReportSize Device::SyncClient::GetReportSize(ReportType type, uint8_t id) {
+Device::ResultOf::GetReportSize Device::SyncClient::GetReportSize(::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id) {
   return ResultOf::GetReportSize(zx::unowned_channel(this->channel_), std::move(type), std::move(id));
 }
 
-Device::ResultOf::GetReportSize Device::Call::GetReportSize(zx::unowned_channel _client_end, ReportType type, uint8_t id) {
+Device::ResultOf::GetReportSize Device::Call::GetReportSize(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id) {
   return ResultOf::GetReportSize(std::move(_client_end), std::move(type), std::move(id));
 }
 
 template <>
-Device::UnownedResultOf::GetReportSize_Impl<Device::GetReportSizeResponse>::GetReportSize_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetReportSize_Impl<Device::GetReportSizeResponse>::GetReportSize_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < GetReportSizeRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<GetReportSizeResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -517,11 +517,11 @@ Device::UnownedResultOf::GetReportSize_Impl<Device::GetReportSizeResponse>::GetR
       Device::InPlace::GetReportSize(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Device::UnownedResultOf::GetReportSize Device::SyncClient::GetReportSize(::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetReportSize Device::SyncClient::GetReportSize(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetReportSize(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(type), std::move(id), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetReportSize Device::Call::GetReportSize(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetReportSize Device::Call::GetReportSize(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetReportSize(std::move(_client_end), std::move(_request_buffer), std::move(type), std::move(id), std::move(_response_buffer));
 }
 
@@ -745,7 +745,7 @@ Device::UnownedResultOf::GetReportsEvent Device::Call::GetReportsEvent(zx::unown
 }
 
 template <>
-Device::ResultOf::GetReport_Impl<Device::GetReportResponse>::GetReport_Impl(zx::unowned_channel _client_end, ReportType type, uint8_t id) {
+Device::ResultOf::GetReport_Impl<Device::GetReportResponse>::GetReport_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetReportRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -760,16 +760,16 @@ Device::ResultOf::GetReport_Impl<Device::GetReportResponse>::GetReport_Impl(zx::
       Device::InPlace::GetReport(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Device::ResultOf::GetReport Device::SyncClient::GetReport(ReportType type, uint8_t id) {
+Device::ResultOf::GetReport Device::SyncClient::GetReport(::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id) {
   return ResultOf::GetReport(zx::unowned_channel(this->channel_), std::move(type), std::move(id));
 }
 
-Device::ResultOf::GetReport Device::Call::GetReport(zx::unowned_channel _client_end, ReportType type, uint8_t id) {
+Device::ResultOf::GetReport Device::Call::GetReport(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id) {
   return ResultOf::GetReport(std::move(_client_end), std::move(type), std::move(id));
 }
 
 template <>
-Device::UnownedResultOf::GetReport_Impl<Device::GetReportResponse>::GetReport_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetReport_Impl<Device::GetReportResponse>::GetReport_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < GetReportRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<GetReportResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -784,11 +784,11 @@ Device::UnownedResultOf::GetReport_Impl<Device::GetReportResponse>::GetReport_Im
       Device::InPlace::GetReport(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Device::UnownedResultOf::GetReport Device::SyncClient::GetReport(::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetReport Device::SyncClient::GetReport(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetReport(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(type), std::move(id), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetReport Device::Call::GetReport(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetReport Device::Call::GetReport(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetReport(std::move(_client_end), std::move(_request_buffer), std::move(type), std::move(id), std::move(_response_buffer));
 }
 
@@ -814,7 +814,7 @@ Device::UnownedResultOf::GetReport Device::Call::GetReport(zx::unowned_channel _
 }
 
 template <>
-Device::ResultOf::SetReport_Impl<Device::SetReportResponse>::SetReport_Impl(zx::unowned_channel _client_end, ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report) {
+Device::ResultOf::SetReport_Impl<Device::SetReportResponse>::SetReport_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetReportRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -832,16 +832,16 @@ Device::ResultOf::SetReport_Impl<Device::SetReportResponse>::SetReport_Impl(zx::
       Device::InPlace::SetReport(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Device::ResultOf::SetReport Device::SyncClient::SetReport(ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report) {
+Device::ResultOf::SetReport Device::SyncClient::SetReport(::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report) {
   return ResultOf::SetReport(zx::unowned_channel(this->channel_), std::move(type), std::move(id), std::move(report));
 }
 
-Device::ResultOf::SetReport Device::Call::SetReport(zx::unowned_channel _client_end, ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report) {
+Device::ResultOf::SetReport Device::Call::SetReport(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report) {
   return ResultOf::SetReport(std::move(_client_end), std::move(type), std::move(id), std::move(report));
 }
 
 template <>
-Device::UnownedResultOf::SetReport_Impl<Device::SetReportResponse>::SetReport_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetReport_Impl<Device::SetReportResponse>::SetReport_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetReportRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetReportResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -860,11 +860,11 @@ Device::UnownedResultOf::SetReport_Impl<Device::SetReportResponse>::SetReport_Im
       Device::InPlace::SetReport(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Device::UnownedResultOf::SetReport Device::SyncClient::SetReport(::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetReport Device::SyncClient::SetReport(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetReport(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(type), std::move(id), std::move(report), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::SetReport Device::Call::SetReport(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetReport Device::Call::SetReport(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetReport(std::move(_client_end), std::move(_request_buffer), std::move(type), std::move(id), std::move(report), std::move(_response_buffer));
 }
 
@@ -1142,7 +1142,7 @@ bool Device::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
 }
 
 
-void Device::Interface::GetBootProtocolCompleterBase::Reply(BootProtocol protocol) {
+void Device::Interface::GetBootProtocolCompleterBase::Reply(::llcpp::fuchsia::hardware::input::BootProtocol protocol) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetBootProtocolResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetBootProtocolResponse*>(_write_bytes);
@@ -1156,7 +1156,7 @@ void Device::Interface::GetBootProtocolCompleterBase::Reply(BootProtocol protoco
   CompleterBase::SendReply(::fidl::DecodedMessage<GetBootProtocolResponse>(std::move(_response_bytes)));
 }
 
-void Device::Interface::GetBootProtocolCompleterBase::Reply(::fidl::BytePart _buffer, BootProtocol protocol) {
+void Device::Interface::GetBootProtocolCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::input::BootProtocol protocol) {
   if (_buffer.capacity() < GetBootProtocolResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -1183,7 +1183,7 @@ void Device::Interface::GetBootProtocolCompleterBase::Reply(::fidl::DecodedMessa
 }
 
 
-void Device::Interface::GetDeviceIdsCompleterBase::Reply(DeviceIds ids) {
+void Device::Interface::GetDeviceIdsCompleterBase::Reply(::llcpp::fuchsia::hardware::input::DeviceIds ids) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceIdsResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetDeviceIdsResponse*>(_write_bytes);
@@ -1197,7 +1197,7 @@ void Device::Interface::GetDeviceIdsCompleterBase::Reply(DeviceIds ids) {
   CompleterBase::SendReply(::fidl::DecodedMessage<GetDeviceIdsResponse>(std::move(_response_bytes)));
 }
 
-void Device::Interface::GetDeviceIdsCompleterBase::Reply(::fidl::BytePart _buffer, DeviceIds ids) {
+void Device::Interface::GetDeviceIdsCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::input::DeviceIds ids) {
   if (_buffer.capacity() < GetDeviceIdsResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

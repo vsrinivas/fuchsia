@@ -244,7 +244,7 @@ class Block final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    BlockInfo* info;
+    ::llcpp::fuchsia::hardware::block::BlockInfo* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_BlockGetInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -260,7 +260,7 @@ class Block final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    BlockStats* stats;
+    ::llcpp::fuchsia::hardware::block::BlockStats* stats;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_BlockGetStatsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -305,7 +305,7 @@ class Block final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    VmoID* vmoid;
+    ::llcpp::fuchsia::hardware::block::VmoID* vmoid;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_BlockAttachVmoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -706,8 +706,8 @@ class Block final {
 
     class GetInfoCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, BlockInfo* info);
-      void Reply(::fidl::BytePart _buffer, int32_t status, BlockInfo* info);
+      void Reply(int32_t status, ::llcpp::fuchsia::hardware::block::BlockInfo* info);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::block::BlockInfo* info);
       void Reply(::fidl::DecodedMessage<GetInfoResponse> params);
 
      protected:
@@ -720,8 +720,8 @@ class Block final {
 
     class GetStatsCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, BlockStats* stats);
-      void Reply(::fidl::BytePart _buffer, int32_t status, BlockStats* stats);
+      void Reply(int32_t status, ::llcpp::fuchsia::hardware::block::BlockStats* stats);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::block::BlockStats* stats);
       void Reply(::fidl::DecodedMessage<GetStatsResponse> params);
 
      protected:
@@ -748,8 +748,8 @@ class Block final {
 
     class AttachVmoCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, VmoID* vmoid);
-      void Reply(::fidl::BytePart _buffer, int32_t status, VmoID* vmoid);
+      void Reply(int32_t status, ::llcpp::fuchsia::hardware::block::VmoID* vmoid);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::block::VmoID* vmoid);
       void Reply(::fidl::DecodedMessage<AttachVmoResponse> params);
 
      protected:

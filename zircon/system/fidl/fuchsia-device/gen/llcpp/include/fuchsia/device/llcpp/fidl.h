@@ -88,27 +88,27 @@ struct NameProvider_GetDeviceName_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static NameProvider_GetDeviceName_Result WithResponse(NameProvider_GetDeviceName_Response&& val) {
+  static NameProvider_GetDeviceName_Result WithResponse(::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response&& val) {
     NameProvider_GetDeviceName_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  NameProvider_GetDeviceName_Response& mutable_response();
+  ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, NameProvider_GetDeviceName_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, NameProvider_GetDeviceName_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  NameProvider_GetDeviceName_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -148,7 +148,7 @@ struct NameProvider_GetDeviceName_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    NameProvider_GetDeviceName_Response response_;
+    ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response response_;
     int32_t err_;
   };
 };
@@ -164,7 +164,7 @@ class NameProvider final {
   struct GetDeviceNameResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    NameProvider_GetDeviceName_Result result;
+    ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_NameProviderGetDeviceNameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -287,10 +287,10 @@ class NameProvider final {
 
     class GetDeviceNameCompleterBase : public _Base {
      public:
-      void Reply(NameProvider_GetDeviceName_Result result);
+      void Reply(::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result result);
       void ReplySuccess(::fidl::StringView name);
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, NameProvider_GetDeviceName_Result result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result result);
       void ReplySuccess(::fidl::BytePart _buffer, ::fidl::StringView name);
       void Reply(::fidl::DecodedMessage<GetDeviceNameResponse> params);
 
@@ -357,7 +357,7 @@ struct SystemPowerStateInfo {
   bool wakeup_enable = {};
 
   // Device power state that the device should be in for this system power state.
-  DevicePowerState dev_state = {};
+  ::llcpp::fuchsia::device::DevicePowerState dev_state = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_Controller_GetPowerStateMapping_ResponseTable;
@@ -369,7 +369,7 @@ struct Controller_GetPowerStateMapping_Response {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  ::fidl::Array<SystemPowerStateInfo, 6> mapping = {};
+  ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_Controller_GetPowerStateMapping_ResultTable;
@@ -402,27 +402,27 @@ struct Controller_GetPowerStateMapping_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static Controller_GetPowerStateMapping_Result WithResponse(Controller_GetPowerStateMapping_Response&& val) {
+  static Controller_GetPowerStateMapping_Result WithResponse(::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response&& val) {
     Controller_GetPowerStateMapping_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  Controller_GetPowerStateMapping_Response& mutable_response();
+  ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Controller_GetPowerStateMapping_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Controller_GetPowerStateMapping_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  Controller_GetPowerStateMapping_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -462,7 +462,7 @@ struct Controller_GetPowerStateMapping_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Controller_GetPowerStateMapping_Response response_;
+    ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response response_;
     int32_t err_;
   };
 };
@@ -476,7 +476,7 @@ struct DevicePowerStateInfo {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  DevicePowerState state_id = {};
+  ::llcpp::fuchsia::device::DevicePowerState state_id = {};
 
   // Is this state supported?
   bool is_supported = {};
@@ -500,7 +500,7 @@ struct Controller_GetDevicePowerCaps_Response {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  ::fidl::Array<DevicePowerStateInfo, 5> dpstates = {};
+  ::fidl::Array<::llcpp::fuchsia::device::DevicePowerStateInfo, 5> dpstates = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_Controller_GetDevicePowerCaps_ResultTable;
@@ -533,27 +533,27 @@ struct Controller_GetDevicePowerCaps_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static Controller_GetDevicePowerCaps_Result WithResponse(Controller_GetDevicePowerCaps_Response&& val) {
+  static Controller_GetDevicePowerCaps_Result WithResponse(::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response&& val) {
     Controller_GetDevicePowerCaps_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  Controller_GetDevicePowerCaps_Response& mutable_response();
+  ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Controller_GetDevicePowerCaps_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Controller_GetDevicePowerCaps_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  Controller_GetDevicePowerCaps_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -593,7 +593,7 @@ struct Controller_GetDevicePowerCaps_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Controller_GetDevicePowerCaps_Response response_;
+    ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response response_;
     int32_t err_;
   };
 };
@@ -607,7 +607,7 @@ struct Controller_Resume_Response {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  DevicePowerState out_state = {};
+  ::llcpp::fuchsia::device::DevicePowerState out_state = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_Controller_Resume_ResultTable;
@@ -640,27 +640,27 @@ struct Controller_Resume_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static Controller_Resume_Result WithResponse(Controller_Resume_Response&& val) {
+  static Controller_Resume_Result WithResponse(::llcpp::fuchsia::device::Controller_Resume_Response&& val) {
     Controller_Resume_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  Controller_Resume_Response& mutable_response();
+  ::llcpp::fuchsia::device::Controller_Resume_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Controller_Resume_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_Resume_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Controller_Resume_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_Resume_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  Controller_Resume_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::device::Controller_Resume_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -700,7 +700,7 @@ struct Controller_Resume_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Controller_Resume_Response response_;
+    ::llcpp::fuchsia::device::Controller_Resume_Response response_;
     int32_t err_;
   };
 };
@@ -774,27 +774,27 @@ struct Controller_UpdatePowerStateMapping_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static Controller_UpdatePowerStateMapping_Result WithResponse(Controller_UpdatePowerStateMapping_Response&& val) {
+  static Controller_UpdatePowerStateMapping_Result WithResponse(::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response&& val) {
     Controller_UpdatePowerStateMapping_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  Controller_UpdatePowerStateMapping_Response& mutable_response();
+  ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Controller_UpdatePowerStateMapping_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Controller_UpdatePowerStateMapping_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  Controller_UpdatePowerStateMapping_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -834,7 +834,7 @@ struct Controller_UpdatePowerStateMapping_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Controller_UpdatePowerStateMapping_Response response_;
+    ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response response_;
     int32_t err_;
   };
 };
@@ -1076,7 +1076,7 @@ class Controller final {
   struct GetDevicePowerCapsResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Controller_GetDevicePowerCaps_Result result;
+    ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerGetDevicePowerCapsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1091,7 +1091,7 @@ class Controller final {
   struct UpdatePowerStateMappingResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Controller_UpdatePowerStateMapping_Result result;
+    ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerUpdatePowerStateMappingResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1104,7 +1104,7 @@ class Controller final {
   struct UpdatePowerStateMappingRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::fidl::Array<SystemPowerStateInfo, 6> mapping;
+    ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerUpdatePowerStateMappingRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1119,7 +1119,7 @@ class Controller final {
   struct GetPowerStateMappingResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Controller_GetPowerStateMapping_Result result;
+    ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerGetPowerStateMappingResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1135,7 +1135,7 @@ class Controller final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    DevicePowerState out_state;
+    ::llcpp::fuchsia::device::DevicePowerState out_state;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerSuspendResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1148,7 +1148,7 @@ class Controller final {
   struct SuspendRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    DevicePowerState requested_state;
+    ::llcpp::fuchsia::device::DevicePowerState requested_state;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerSuspendRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1163,7 +1163,7 @@ class Controller final {
   struct ResumeResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Controller_Resume_Result result;
+    ::llcpp::fuchsia::device::Controller_Resume_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerResumeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1176,7 +1176,7 @@ class Controller final {
   struct ResumeRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    DevicePowerState requested_state;
+    ::llcpp::fuchsia::device::DevicePowerState requested_state;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerResumeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1389,7 +1389,7 @@ class Controller final {
     class UpdatePowerStateMapping_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      UpdatePowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::Array<SystemPowerStateInfo, 6> mapping);
+      UpdatePowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping);
       ~UpdatePowerStateMapping_Impl() = default;
       UpdatePowerStateMapping_Impl(UpdatePowerStateMapping_Impl&& other) = default;
       UpdatePowerStateMapping_Impl& operator=(UpdatePowerStateMapping_Impl&& other) = default;
@@ -1421,7 +1421,7 @@ class Controller final {
     class Suspend_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Suspend_Impl(zx::unowned_channel _client_end, DevicePowerState requested_state);
+      Suspend_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state);
       ~Suspend_Impl() = default;
       Suspend_Impl(Suspend_Impl&& other) = default;
       Suspend_Impl& operator=(Suspend_Impl&& other) = default;
@@ -1437,7 +1437,7 @@ class Controller final {
     class Resume_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Resume_Impl(zx::unowned_channel _client_end, DevicePowerState requested_state);
+      Resume_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state);
       ~Resume_Impl() = default;
       Resume_Impl(Resume_Impl&& other) = default;
       Resume_Impl& operator=(Resume_Impl&& other) = default;
@@ -1670,7 +1670,7 @@ class Controller final {
     class UpdatePowerStateMapping_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      UpdatePowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<SystemPowerStateInfo, 6> mapping, ::fidl::BytePart _response_buffer);
+      UpdatePowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping, ::fidl::BytePart _response_buffer);
       ~UpdatePowerStateMapping_Impl() = default;
       UpdatePowerStateMapping_Impl(UpdatePowerStateMapping_Impl&& other) = default;
       UpdatePowerStateMapping_Impl& operator=(UpdatePowerStateMapping_Impl&& other) = default;
@@ -1702,7 +1702,7 @@ class Controller final {
     class Suspend_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Suspend_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
+      Suspend_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
       ~Suspend_Impl() = default;
       Suspend_Impl(Suspend_Impl&& other) = default;
       Suspend_Impl& operator=(Suspend_Impl&& other) = default;
@@ -1718,7 +1718,7 @@ class Controller final {
     class Resume_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Resume_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
+      Resume_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
       ~Resume_Impl() = default;
       Resume_Impl(Resume_Impl&& other) = default;
       Resume_Impl& operator=(Resume_Impl&& other) = default;
@@ -1874,12 +1874,12 @@ class Controller final {
     // Updates the mapping between system power states to device power states. Used by the system
     // wide power manager to manage power for this device
     // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::UpdatePowerStateMapping UpdatePowerStateMapping(::fidl::Array<SystemPowerStateInfo, 6> mapping);
+    ResultOf::UpdatePowerStateMapping UpdatePowerStateMapping(::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping);
 
     // Updates the mapping between system power states to device power states. Used by the system
     // wide power manager to manage power for this device
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::UpdatePowerStateMapping UpdatePowerStateMapping(::fidl::BytePart _request_buffer, ::fidl::Array<SystemPowerStateInfo, 6> mapping, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::UpdatePowerStateMapping UpdatePowerStateMapping(::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping, ::fidl::BytePart _response_buffer);
 
     // Get the mapping between system power states to device power states. Used by the system
     // wide power manager to manage power for this device.
@@ -1894,20 +1894,20 @@ class Controller final {
     // Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
     // state.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::Suspend Suspend(DevicePowerState requested_state);
+    ResultOf::Suspend Suspend(::llcpp::fuchsia::device::DevicePowerState requested_state);
 
     // Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
     // state.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::Suspend Suspend(::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::Suspend Suspend(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
 
     // Transition this device from a sleep state to a working state.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::Resume Resume(DevicePowerState requested_state);
+    ResultOf::Resume Resume(::llcpp::fuchsia::device::DevicePowerState requested_state);
 
     // Transition this device from a sleep state to a working state.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::Resume Resume(::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::Resume Resume(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -2031,12 +2031,12 @@ class Controller final {
     // Updates the mapping between system power states to device power states. Used by the system
     // wide power manager to manage power for this device
     // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::UpdatePowerStateMapping UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::Array<SystemPowerStateInfo, 6> mapping);
+    static ResultOf::UpdatePowerStateMapping UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping);
 
     // Updates the mapping between system power states to device power states. Used by the system
     // wide power manager to manage power for this device
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::UpdatePowerStateMapping UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<SystemPowerStateInfo, 6> mapping, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::UpdatePowerStateMapping UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping, ::fidl::BytePart _response_buffer);
 
     // Get the mapping between system power states to device power states. Used by the system
     // wide power manager to manage power for this device.
@@ -2051,20 +2051,20 @@ class Controller final {
     // Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
     // state.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Suspend Suspend(zx::unowned_channel _client_end, DevicePowerState requested_state);
+    static ResultOf::Suspend Suspend(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state);
 
     // Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
     // state.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Suspend Suspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Suspend Suspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
 
     // Transition this device from a sleep state to a working state.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Resume Resume(zx::unowned_channel _client_end, DevicePowerState requested_state);
+    static ResultOf::Resume Resume(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state);
 
     // Transition this device from a sleep state to a working state.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Resume Resume(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Resume Resume(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -2298,11 +2298,11 @@ class Controller final {
 
     class GetDevicePowerCapsCompleterBase : public _Base {
      public:
-      void Reply(Controller_GetDevicePowerCaps_Result result);
-      void ReplySuccess(::fidl::Array<DevicePowerStateInfo, 5> dpstates);
+      void Reply(::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result result);
+      void ReplySuccess(::fidl::Array<::llcpp::fuchsia::device::DevicePowerStateInfo, 5> dpstates);
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, Controller_GetDevicePowerCaps_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer, ::fidl::Array<DevicePowerStateInfo, 5> dpstates);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::fidl::Array<::llcpp::fuchsia::device::DevicePowerStateInfo, 5> dpstates);
       void Reply(::fidl::DecodedMessage<GetDevicePowerCapsResponse> params);
 
      protected:
@@ -2315,10 +2315,10 @@ class Controller final {
 
     class UpdatePowerStateMappingCompleterBase : public _Base {
      public:
-      void Reply(Controller_UpdatePowerStateMapping_Result result);
+      void Reply(::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result result);
       void ReplySuccess();
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, Controller_UpdatePowerStateMapping_Result result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result result);
       void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<UpdatePowerStateMappingResponse> params);
 
@@ -2328,15 +2328,15 @@ class Controller final {
 
     using UpdatePowerStateMappingCompleter = ::fidl::Completer<UpdatePowerStateMappingCompleterBase>;
 
-    virtual void UpdatePowerStateMapping(::fidl::Array<SystemPowerStateInfo, 6> mapping, UpdatePowerStateMappingCompleter::Sync _completer) = 0;
+    virtual void UpdatePowerStateMapping(::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping, UpdatePowerStateMappingCompleter::Sync _completer) = 0;
 
     class GetPowerStateMappingCompleterBase : public _Base {
      public:
-      void Reply(Controller_GetPowerStateMapping_Result result);
-      void ReplySuccess(::fidl::Array<SystemPowerStateInfo, 6> mapping);
+      void Reply(::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result result);
+      void ReplySuccess(::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping);
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, Controller_GetPowerStateMapping_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer, ::fidl::Array<SystemPowerStateInfo, 6> mapping);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping);
       void Reply(::fidl::DecodedMessage<GetPowerStateMappingResponse> params);
 
      protected:
@@ -2349,8 +2349,8 @@ class Controller final {
 
     class SuspendCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, DevicePowerState out_state);
-      void Reply(::fidl::BytePart _buffer, int32_t status, DevicePowerState out_state);
+      void Reply(int32_t status, ::llcpp::fuchsia::device::DevicePowerState out_state);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::device::DevicePowerState out_state);
       void Reply(::fidl::DecodedMessage<SuspendResponse> params);
 
      protected:
@@ -2359,15 +2359,15 @@ class Controller final {
 
     using SuspendCompleter = ::fidl::Completer<SuspendCompleterBase>;
 
-    virtual void Suspend(DevicePowerState requested_state, SuspendCompleter::Sync _completer) = 0;
+    virtual void Suspend(::llcpp::fuchsia::device::DevicePowerState requested_state, SuspendCompleter::Sync _completer) = 0;
 
     class ResumeCompleterBase : public _Base {
      public:
-      void Reply(Controller_Resume_Result result);
-      void ReplySuccess(DevicePowerState out_state);
+      void Reply(::llcpp::fuchsia::device::Controller_Resume_Result result);
+      void ReplySuccess(::llcpp::fuchsia::device::DevicePowerState out_state);
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, Controller_Resume_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer, DevicePowerState out_state);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_Resume_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::DevicePowerState out_state);
       void Reply(::fidl::DecodedMessage<ResumeResponse> params);
 
      protected:
@@ -2376,7 +2376,7 @@ class Controller final {
 
     using ResumeCompleter = ::fidl::Completer<ResumeCompleterBase>;
 
-    virtual void Resume(DevicePowerState requested_state, ResumeCompleter::Sync _completer) = 0;
+    virtual void Resume(::llcpp::fuchsia::device::DevicePowerState requested_state, ResumeCompleter::Sync _completer) = 0;
 
   };
 

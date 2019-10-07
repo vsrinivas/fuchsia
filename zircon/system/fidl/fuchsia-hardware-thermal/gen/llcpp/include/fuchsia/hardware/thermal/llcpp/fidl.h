@@ -117,7 +117,7 @@ class Device final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    ThermalInfo* info;
+    ::llcpp::fuchsia::hardware::thermal::ThermalInfo* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceGetInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -133,7 +133,7 @@ class Device final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    ThermalDeviceInfo* info;
+    ::llcpp::fuchsia::hardware::thermal::ThermalDeviceInfo* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceGetDeviceInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -149,7 +149,7 @@ class Device final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    OperatingPoint* info;
+    ::llcpp::fuchsia::hardware::thermal::OperatingPoint* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceGetDvfsInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -162,7 +162,7 @@ class Device final {
   struct GetDvfsInfoRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    PowerDomain power_domain;
+    ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceGetDvfsInfoRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -268,7 +268,7 @@ class Device final {
   struct GetDvfsOperatingPointRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    PowerDomain power_domain;
+    ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceGetDvfsOperatingPointRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -297,7 +297,7 @@ class Device final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint16_t op_idx;
-    PowerDomain power_domain;
+    ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceSetDvfsOperatingPointRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -394,7 +394,7 @@ class Device final {
     class GetDvfsInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetDvfsInfo_Impl(zx::unowned_channel _client_end, PowerDomain power_domain);
+      GetDvfsInfo_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
       ~GetDvfsInfo_Impl() = default;
       GetDvfsInfo_Impl(GetDvfsInfo_Impl&& other) = default;
       GetDvfsInfo_Impl& operator=(GetDvfsInfo_Impl&& other) = default;
@@ -474,7 +474,7 @@ class Device final {
     class GetDvfsOperatingPoint_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, PowerDomain power_domain);
+      GetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
       ~GetDvfsOperatingPoint_Impl() = default;
       GetDvfsOperatingPoint_Impl(GetDvfsOperatingPoint_Impl&& other) = default;
       GetDvfsOperatingPoint_Impl& operator=(GetDvfsOperatingPoint_Impl&& other) = default;
@@ -490,7 +490,7 @@ class Device final {
     class SetDvfsOperatingPoint_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, uint16_t op_idx, PowerDomain power_domain);
+      SetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
       ~SetDvfsOperatingPoint_Impl() = default;
       SetDvfsOperatingPoint_Impl(SetDvfsOperatingPoint_Impl&& other) = default;
       SetDvfsOperatingPoint_Impl& operator=(SetDvfsOperatingPoint_Impl&& other) = default;
@@ -590,7 +590,7 @@ class Device final {
     class GetDvfsInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetDvfsInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, PowerDomain power_domain, ::fidl::BytePart _response_buffer);
+      GetDvfsInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
       ~GetDvfsInfo_Impl() = default;
       GetDvfsInfo_Impl(GetDvfsInfo_Impl&& other) = default;
       GetDvfsInfo_Impl& operator=(GetDvfsInfo_Impl&& other) = default;
@@ -670,7 +670,7 @@ class Device final {
     class GetDvfsOperatingPoint_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, PowerDomain power_domain, ::fidl::BytePart _response_buffer);
+      GetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
       ~GetDvfsOperatingPoint_Impl() = default;
       GetDvfsOperatingPoint_Impl(GetDvfsOperatingPoint_Impl&& other) = default;
       GetDvfsOperatingPoint_Impl& operator=(GetDvfsOperatingPoint_Impl&& other) = default;
@@ -686,7 +686,7 @@ class Device final {
     class SetDvfsOperatingPoint_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint16_t op_idx, PowerDomain power_domain, ::fidl::BytePart _response_buffer);
+      SetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
       ~SetDvfsOperatingPoint_Impl() = default;
       SetDvfsOperatingPoint_Impl(SetDvfsOperatingPoint_Impl&& other) = default;
       SetDvfsOperatingPoint_Impl& operator=(SetDvfsOperatingPoint_Impl&& other) = default;
@@ -775,12 +775,12 @@ class Device final {
     // Get the device's operating points.
     // TODO(bradenkell): Can this be removed? GetDeviceInfo() provides the same information.
     // Allocates 192 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::GetDvfsInfo GetDvfsInfo(PowerDomain power_domain);
+    ResultOf::GetDvfsInfo GetDvfsInfo(::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
 
     // Get the device's operating points.
     // TODO(bradenkell): Can this be removed? GetDeviceInfo() provides the same information.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::GetDvfsInfo GetDvfsInfo(::fidl::BytePart _request_buffer, PowerDomain power_domain, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::GetDvfsInfo GetDvfsInfo(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
 
     // Get the current temperature in degrees Celsius.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -820,19 +820,19 @@ class Device final {
 
     // Get the current operating point index.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::GetDvfsOperatingPoint GetDvfsOperatingPoint(PowerDomain power_domain);
+    ResultOf::GetDvfsOperatingPoint GetDvfsOperatingPoint(::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
 
     // Get the current operating point index.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::GetDvfsOperatingPoint GetDvfsOperatingPoint(::fidl::BytePart _request_buffer, PowerDomain power_domain, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::GetDvfsOperatingPoint GetDvfsOperatingPoint(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
 
     // Set the operating point index.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetDvfsOperatingPoint SetDvfsOperatingPoint(uint16_t op_idx, PowerDomain power_domain);
+    ResultOf::SetDvfsOperatingPoint SetDvfsOperatingPoint(uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
 
     // Set the operating point index.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetDvfsOperatingPoint SetDvfsOperatingPoint(::fidl::BytePart _request_buffer, uint16_t op_idx, PowerDomain power_domain, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::SetDvfsOperatingPoint SetDvfsOperatingPoint(::fidl::BytePart _request_buffer, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
 
     // Get the current fan level.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -878,12 +878,12 @@ class Device final {
     // Get the device's operating points.
     // TODO(bradenkell): Can this be removed? GetDeviceInfo() provides the same information.
     // Allocates 192 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetDvfsInfo GetDvfsInfo(zx::unowned_channel _client_end, PowerDomain power_domain);
+    static ResultOf::GetDvfsInfo GetDvfsInfo(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
 
     // Get the device's operating points.
     // TODO(bradenkell): Can this be removed? GetDeviceInfo() provides the same information.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetDvfsInfo GetDvfsInfo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, PowerDomain power_domain, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetDvfsInfo GetDvfsInfo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
 
     // Get the current temperature in degrees Celsius.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -923,19 +923,19 @@ class Device final {
 
     // Get the current operating point index.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetDvfsOperatingPoint GetDvfsOperatingPoint(zx::unowned_channel _client_end, PowerDomain power_domain);
+    static ResultOf::GetDvfsOperatingPoint GetDvfsOperatingPoint(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
 
     // Get the current operating point index.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetDvfsOperatingPoint GetDvfsOperatingPoint(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, PowerDomain power_domain, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetDvfsOperatingPoint GetDvfsOperatingPoint(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
 
     // Set the operating point index.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetDvfsOperatingPoint SetDvfsOperatingPoint(zx::unowned_channel _client_end, uint16_t op_idx, PowerDomain power_domain);
+    static ResultOf::SetDvfsOperatingPoint SetDvfsOperatingPoint(zx::unowned_channel _client_end, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
 
     // Set the operating point index.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetDvfsOperatingPoint SetDvfsOperatingPoint(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint16_t op_idx, PowerDomain power_domain, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetDvfsOperatingPoint SetDvfsOperatingPoint(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
 
     // Get the current fan level.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -1009,8 +1009,8 @@ class Device final {
 
     class GetInfoCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, ThermalInfo* info);
-      void Reply(::fidl::BytePart _buffer, int32_t status, ThermalInfo* info);
+      void Reply(int32_t status, ::llcpp::fuchsia::hardware::thermal::ThermalInfo* info);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::thermal::ThermalInfo* info);
       void Reply(::fidl::DecodedMessage<GetInfoResponse> params);
 
      protected:
@@ -1023,8 +1023,8 @@ class Device final {
 
     class GetDeviceInfoCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, ThermalDeviceInfo* info);
-      void Reply(::fidl::BytePart _buffer, int32_t status, ThermalDeviceInfo* info);
+      void Reply(int32_t status, ::llcpp::fuchsia::hardware::thermal::ThermalDeviceInfo* info);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::thermal::ThermalDeviceInfo* info);
       void Reply(::fidl::DecodedMessage<GetDeviceInfoResponse> params);
 
      protected:
@@ -1037,8 +1037,8 @@ class Device final {
 
     class GetDvfsInfoCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, OperatingPoint* info);
-      void Reply(::fidl::BytePart _buffer, int32_t status, OperatingPoint* info);
+      void Reply(int32_t status, ::llcpp::fuchsia::hardware::thermal::OperatingPoint* info);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::thermal::OperatingPoint* info);
       void Reply(::fidl::DecodedMessage<GetDvfsInfoResponse> params);
 
      protected:
@@ -1047,7 +1047,7 @@ class Device final {
 
     using GetDvfsInfoCompleter = ::fidl::Completer<GetDvfsInfoCompleterBase>;
 
-    virtual void GetDvfsInfo(PowerDomain power_domain, GetDvfsInfoCompleter::Sync _completer) = 0;
+    virtual void GetDvfsInfo(::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, GetDvfsInfoCompleter::Sync _completer) = 0;
 
     class GetTemperatureCelsiusCompleterBase : public _Base {
      public:
@@ -1117,7 +1117,7 @@ class Device final {
 
     using GetDvfsOperatingPointCompleter = ::fidl::Completer<GetDvfsOperatingPointCompleterBase>;
 
-    virtual void GetDvfsOperatingPoint(PowerDomain power_domain, GetDvfsOperatingPointCompleter::Sync _completer) = 0;
+    virtual void GetDvfsOperatingPoint(::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, GetDvfsOperatingPointCompleter::Sync _completer) = 0;
 
     class SetDvfsOperatingPointCompleterBase : public _Base {
      public:
@@ -1131,7 +1131,7 @@ class Device final {
 
     using SetDvfsOperatingPointCompleter = ::fidl::Completer<SetDvfsOperatingPointCompleterBase>;
 
-    virtual void SetDvfsOperatingPoint(uint16_t op_idx, PowerDomain power_domain, SetDvfsOperatingPointCompleter::Sync _completer) = 0;
+    virtual void SetDvfsOperatingPoint(uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, SetDvfsOperatingPointCompleter::Sync _completer) = 0;
 
     class GetFanLevelCompleterBase : public _Base {
      public:
@@ -1211,7 +1211,7 @@ struct OperatingPoint {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // The device's operating points.
-  ::fidl::Array<OperatingPointEntry, 16> opp = {};
+  ::fidl::Array<::llcpp::fuchsia::hardware::thermal::OperatingPointEntry, 16> opp = {};
 
   // In microseconds.
   uint32_t latency = {};
@@ -1248,10 +1248,10 @@ struct ThermalDeviceInfo {
   float critical_temp_celsius = {};
 
   // Trip point information.
-  ::fidl::Array<ThermalTemperatureInfo, 16> trip_point_info = {};
+  ::fidl::Array<::llcpp::fuchsia::hardware::thermal::ThermalTemperatureInfo, 16> trip_point_info = {};
 
   // Operating point information.
-  ::fidl::Array<OperatingPoint, 2> opps = {};
+  ::fidl::Array<::llcpp::fuchsia::hardware::thermal::OperatingPoint, 2> opps = {};
 };
 
 // The maximum number of trip points that can be used.

@@ -71,27 +71,27 @@ struct TestDevice_GetCurrentDevicePowerState_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static TestDevice_GetCurrentDevicePowerState_Result WithResponse(TestDevice_GetCurrentDevicePowerState_Response&& val) {
+  static TestDevice_GetCurrentDevicePowerState_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response&& val) {
     TestDevice_GetCurrentDevicePowerState_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  TestDevice_GetCurrentDevicePowerState_Response& mutable_response();
+  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, TestDevice_GetCurrentDevicePowerState_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, TestDevice_GetCurrentDevicePowerState_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  TestDevice_GetCurrentDevicePowerState_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -131,7 +131,7 @@ struct TestDevice_GetCurrentDevicePowerState_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    TestDevice_GetCurrentDevicePowerState_Response response_;
+    ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response response_;
     int32_t err_;
   };
 };
@@ -178,27 +178,27 @@ struct TestDevice_AddDeviceWithPowerArgs_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static TestDevice_AddDeviceWithPowerArgs_Result WithResponse(TestDevice_AddDeviceWithPowerArgs_Response&& val) {
+  static TestDevice_AddDeviceWithPowerArgs_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response&& val) {
     TestDevice_AddDeviceWithPowerArgs_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  TestDevice_AddDeviceWithPowerArgs_Response& mutable_response();
+  ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, TestDevice_AddDeviceWithPowerArgs_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, TestDevice_AddDeviceWithPowerArgs_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  TestDevice_AddDeviceWithPowerArgs_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -238,7 +238,7 @@ struct TestDevice_AddDeviceWithPowerArgs_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    TestDevice_AddDeviceWithPowerArgs_Response response_;
+    ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response response_;
     int32_t err_;
   };
 };
@@ -254,7 +254,7 @@ class TestDevice final {
   struct AddDeviceWithPowerArgsResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    TestDevice_AddDeviceWithPowerArgs_Result result;
+    ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -282,7 +282,7 @@ class TestDevice final {
   struct GetCurrentDevicePowerStateResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    TestDevice_GetCurrentDevicePowerState_Result result;
+    ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -458,10 +458,10 @@ class TestDevice final {
 
     class AddDeviceWithPowerArgsCompleterBase : public _Base {
      public:
-      void Reply(TestDevice_AddDeviceWithPowerArgs_Result result);
+      void Reply(::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result result);
       void ReplySuccess();
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, TestDevice_AddDeviceWithPowerArgs_Result result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result result);
       void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<AddDeviceWithPowerArgsResponse> params);
 
@@ -475,10 +475,10 @@ class TestDevice final {
 
     class GetCurrentDevicePowerStateCompleterBase : public _Base {
      public:
-      void Reply(TestDevice_GetCurrentDevicePowerState_Result result);
+      void Reply(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result result);
       void ReplySuccess(::llcpp::fuchsia::device::DevicePowerState cur_state);
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, TestDevice_GetCurrentDevicePowerState_Result result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result result);
       void ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::DevicePowerState cur_state);
       void Reply(::fidl::DecodedMessage<GetCurrentDevicePowerStateResponse> params);
 

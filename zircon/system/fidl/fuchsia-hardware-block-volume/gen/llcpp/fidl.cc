@@ -1661,7 +1661,7 @@ void Volume::Interface::GetNameCompleterBase::Reply(::fidl::DecodedMessage<GetNa
 }
 
 
-void Volume::Interface::QueryCompleterBase::Reply(int32_t status, VolumeInfo* info) {
+void Volume::Interface::QueryCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::hardware::block::volume::VolumeInfo* info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   QueryResponse _response = {};
@@ -1681,7 +1681,7 @@ void Volume::Interface::QueryCompleterBase::Reply(int32_t status, VolumeInfo* in
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void Volume::Interface::QueryCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, VolumeInfo* info) {
+void Volume::Interface::QueryCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::block::volume::VolumeInfo* info) {
   if (_buffer.capacity() < QueryResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -1713,7 +1713,7 @@ void Volume::Interface::QueryCompleterBase::Reply(::fidl::DecodedMessage<QueryRe
 }
 
 
-void Volume::Interface::QuerySlicesCompleterBase::Reply(int32_t status, ::fidl::Array<VsliceRange, 16> response, uint64_t response_count) {
+void Volume::Interface::QuerySlicesCompleterBase::Reply(int32_t status, ::fidl::Array<::llcpp::fuchsia::hardware::block::volume::VsliceRange, 16> response, uint64_t response_count) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QuerySlicesResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<QuerySlicesResponse*>(_write_bytes);
@@ -1729,7 +1729,7 @@ void Volume::Interface::QuerySlicesCompleterBase::Reply(int32_t status, ::fidl::
   CompleterBase::SendReply(::fidl::DecodedMessage<QuerySlicesResponse>(std::move(_response_bytes)));
 }
 
-void Volume::Interface::QuerySlicesCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::fidl::Array<VsliceRange, 16> response, uint64_t response_count) {
+void Volume::Interface::QuerySlicesCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::fidl::Array<::llcpp::fuchsia::hardware::block::volume::VsliceRange, 16> response, uint64_t response_count) {
   if (_buffer.capacity() < QuerySlicesResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -2303,7 +2303,7 @@ void VolumeManager::Interface::AllocatePartitionCompleterBase::Reply(::fidl::Dec
 }
 
 
-void VolumeManager::Interface::QueryCompleterBase::Reply(int32_t status, VolumeInfo* info) {
+void VolumeManager::Interface::QueryCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::hardware::block::volume::VolumeInfo* info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   QueryResponse _response = {};
@@ -2323,7 +2323,7 @@ void VolumeManager::Interface::QueryCompleterBase::Reply(int32_t status, VolumeI
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void VolumeManager::Interface::QueryCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, VolumeInfo* info) {
+void VolumeManager::Interface::QueryCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::block::volume::VolumeInfo* info) {
   if (_buffer.capacity() < QueryResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -2355,7 +2355,7 @@ void VolumeManager::Interface::QueryCompleterBase::Reply(::fidl::DecodedMessage<
 }
 
 
-void VolumeManager::Interface::GetInfoCompleterBase::Reply(int32_t status, VolumeManagerInfo* info) {
+void VolumeManager::Interface::GetInfoCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::hardware::block::volume::VolumeManagerInfo* info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetInfoResponse _response = {};
@@ -2375,7 +2375,7 @@ void VolumeManager::Interface::GetInfoCompleterBase::Reply(int32_t status, Volum
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void VolumeManager::Interface::GetInfoCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, VolumeManagerInfo* info) {
+void VolumeManager::Interface::GetInfoCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::block::volume::VolumeManagerInfo* info) {
   if (_buffer.capacity() < GetInfoResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

@@ -70,10 +70,10 @@ bool& ::llcpp::fuchsia::paver::ReadResult::mutable_eof() {
   return eof_;
 }
 
-ReadInfo& ::llcpp::fuchsia::paver::ReadResult::mutable_info() {
+::llcpp::fuchsia::paver::ReadInfo& ::llcpp::fuchsia::paver::ReadResult::mutable_info() {
   if (which() != Tag::kInfo) {
     Destroy();
-    new (&info_) ReadInfo;
+    new (&info_) ::llcpp::fuchsia::paver::ReadInfo;
   }
   tag_ = Tag::kInfo;
   return info_;
@@ -319,7 +319,7 @@ void PayloadStream::Interface::RegisterVmoCompleterBase::Reply(::fidl::DecodedMe
 }
 
 
-void PayloadStream::Interface::ReadDataCompleterBase::Reply(ReadResult result) {
+void PayloadStream::Interface::ReadDataCompleterBase::Reply(::llcpp::fuchsia::paver::ReadResult result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadDataResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ReadDataResponse*>(_write_bytes);
@@ -333,7 +333,7 @@ void PayloadStream::Interface::ReadDataCompleterBase::Reply(ReadResult result) {
   CompleterBase::SendReply(::fidl::DecodedMessage<ReadDataResponse>(std::move(_response_bytes)));
 }
 
-void PayloadStream::Interface::ReadDataCompleterBase::Reply(::fidl::BytePart _buffer, ReadResult result) {
+void PayloadStream::Interface::ReadDataCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::ReadResult result) {
   if (_buffer.capacity() < ReadDataResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -400,10 +400,10 @@ void ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::SizeAndOffs
 }
 
 
-Paver_QueryConfigurationStatus_Response& ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::mutable_response() {
+::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response& ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Paver_QueryConfigurationStatus_Response;
+    new (&response_) ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -459,10 +459,10 @@ void ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::SizeAndOffs
 }
 
 
-Paver_QueryActiveConfiguration_Response& ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::mutable_response() {
+::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response& ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Paver_QueryActiveConfiguration_Response;
+    new (&response_) ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -518,10 +518,10 @@ void ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::SizeAndOffsetAssertionHelp
 }
 
 
-Paver_ReadAsset_Response& ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::mutable_response() {
+::llcpp::fuchsia::paver::Paver_ReadAsset_Response& ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Paver_ReadAsset_Response;
+    new (&response_) ::llcpp::fuchsia::paver::Paver_ReadAsset_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -752,7 +752,7 @@ Paver::UnownedResultOf::QueryActiveConfiguration Paver::Call::QueryActiveConfigu
 }
 
 template <>
-Paver::ResultOf::QueryConfigurationStatus_Impl<Paver::QueryConfigurationStatusResponse>::QueryConfigurationStatus_Impl(zx::unowned_channel _client_end, Configuration configuration) {
+Paver::ResultOf::QueryConfigurationStatus_Impl<Paver::QueryConfigurationStatusResponse>::QueryConfigurationStatus_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryConfigurationStatusRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -766,16 +766,16 @@ Paver::ResultOf::QueryConfigurationStatus_Impl<Paver::QueryConfigurationStatusRe
       Paver::InPlace::QueryConfigurationStatus(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Paver::ResultOf::QueryConfigurationStatus Paver::SyncClient::QueryConfigurationStatus(Configuration configuration) {
+Paver::ResultOf::QueryConfigurationStatus Paver::SyncClient::QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration configuration) {
   return ResultOf::QueryConfigurationStatus(zx::unowned_channel(this->channel_), std::move(configuration));
 }
 
-Paver::ResultOf::QueryConfigurationStatus Paver::Call::QueryConfigurationStatus(zx::unowned_channel _client_end, Configuration configuration) {
+Paver::ResultOf::QueryConfigurationStatus Paver::Call::QueryConfigurationStatus(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration) {
   return ResultOf::QueryConfigurationStatus(std::move(_client_end), std::move(configuration));
 }
 
 template <>
-Paver::UnownedResultOf::QueryConfigurationStatus_Impl<Paver::QueryConfigurationStatusResponse>::QueryConfigurationStatus_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
+Paver::UnownedResultOf::QueryConfigurationStatus_Impl<Paver::QueryConfigurationStatusResponse>::QueryConfigurationStatus_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < QueryConfigurationStatusRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<QueryConfigurationStatusResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -789,11 +789,11 @@ Paver::UnownedResultOf::QueryConfigurationStatus_Impl<Paver::QueryConfigurationS
       Paver::InPlace::QueryConfigurationStatus(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Paver::UnownedResultOf::QueryConfigurationStatus Paver::SyncClient::QueryConfigurationStatus(::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
+Paver::UnownedResultOf::QueryConfigurationStatus Paver::SyncClient::QueryConfigurationStatus(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::QueryConfigurationStatus(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
 }
 
-Paver::UnownedResultOf::QueryConfigurationStatus Paver::Call::QueryConfigurationStatus(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
+Paver::UnownedResultOf::QueryConfigurationStatus Paver::Call::QueryConfigurationStatus(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::QueryConfigurationStatus(std::move(_client_end), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
 }
 
@@ -819,7 +819,7 @@ Paver::UnownedResultOf::QueryConfigurationStatus Paver::Call::QueryConfiguration
 }
 
 template <>
-Paver::ResultOf::SetConfigurationActive_Impl<Paver::SetConfigurationActiveResponse>::SetConfigurationActive_Impl(zx::unowned_channel _client_end, Configuration configuration) {
+Paver::ResultOf::SetConfigurationActive_Impl<Paver::SetConfigurationActiveResponse>::SetConfigurationActive_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigurationActiveRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -833,16 +833,16 @@ Paver::ResultOf::SetConfigurationActive_Impl<Paver::SetConfigurationActiveRespon
       Paver::InPlace::SetConfigurationActive(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Paver::ResultOf::SetConfigurationActive Paver::SyncClient::SetConfigurationActive(Configuration configuration) {
+Paver::ResultOf::SetConfigurationActive Paver::SyncClient::SetConfigurationActive(::llcpp::fuchsia::paver::Configuration configuration) {
   return ResultOf::SetConfigurationActive(zx::unowned_channel(this->channel_), std::move(configuration));
 }
 
-Paver::ResultOf::SetConfigurationActive Paver::Call::SetConfigurationActive(zx::unowned_channel _client_end, Configuration configuration) {
+Paver::ResultOf::SetConfigurationActive Paver::Call::SetConfigurationActive(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration) {
   return ResultOf::SetConfigurationActive(std::move(_client_end), std::move(configuration));
 }
 
 template <>
-Paver::UnownedResultOf::SetConfigurationActive_Impl<Paver::SetConfigurationActiveResponse>::SetConfigurationActive_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
+Paver::UnownedResultOf::SetConfigurationActive_Impl<Paver::SetConfigurationActiveResponse>::SetConfigurationActive_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetConfigurationActiveRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetConfigurationActiveResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -856,11 +856,11 @@ Paver::UnownedResultOf::SetConfigurationActive_Impl<Paver::SetConfigurationActiv
       Paver::InPlace::SetConfigurationActive(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Paver::UnownedResultOf::SetConfigurationActive Paver::SyncClient::SetConfigurationActive(::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
+Paver::UnownedResultOf::SetConfigurationActive Paver::SyncClient::SetConfigurationActive(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetConfigurationActive(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
 }
 
-Paver::UnownedResultOf::SetConfigurationActive Paver::Call::SetConfigurationActive(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
+Paver::UnownedResultOf::SetConfigurationActive Paver::Call::SetConfigurationActive(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetConfigurationActive(std::move(_client_end), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
 }
 
@@ -886,7 +886,7 @@ Paver::UnownedResultOf::SetConfigurationActive Paver::Call::SetConfigurationActi
 }
 
 template <>
-Paver::ResultOf::SetConfigurationUnbootable_Impl<Paver::SetConfigurationUnbootableResponse>::SetConfigurationUnbootable_Impl(zx::unowned_channel _client_end, Configuration configuration) {
+Paver::ResultOf::SetConfigurationUnbootable_Impl<Paver::SetConfigurationUnbootableResponse>::SetConfigurationUnbootable_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigurationUnbootableRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -900,16 +900,16 @@ Paver::ResultOf::SetConfigurationUnbootable_Impl<Paver::SetConfigurationUnbootab
       Paver::InPlace::SetConfigurationUnbootable(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Paver::ResultOf::SetConfigurationUnbootable Paver::SyncClient::SetConfigurationUnbootable(Configuration configuration) {
+Paver::ResultOf::SetConfigurationUnbootable Paver::SyncClient::SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration configuration) {
   return ResultOf::SetConfigurationUnbootable(zx::unowned_channel(this->channel_), std::move(configuration));
 }
 
-Paver::ResultOf::SetConfigurationUnbootable Paver::Call::SetConfigurationUnbootable(zx::unowned_channel _client_end, Configuration configuration) {
+Paver::ResultOf::SetConfigurationUnbootable Paver::Call::SetConfigurationUnbootable(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration) {
   return ResultOf::SetConfigurationUnbootable(std::move(_client_end), std::move(configuration));
 }
 
 template <>
-Paver::UnownedResultOf::SetConfigurationUnbootable_Impl<Paver::SetConfigurationUnbootableResponse>::SetConfigurationUnbootable_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
+Paver::UnownedResultOf::SetConfigurationUnbootable_Impl<Paver::SetConfigurationUnbootableResponse>::SetConfigurationUnbootable_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetConfigurationUnbootableRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetConfigurationUnbootableResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -923,11 +923,11 @@ Paver::UnownedResultOf::SetConfigurationUnbootable_Impl<Paver::SetConfigurationU
       Paver::InPlace::SetConfigurationUnbootable(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Paver::UnownedResultOf::SetConfigurationUnbootable Paver::SyncClient::SetConfigurationUnbootable(::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
+Paver::UnownedResultOf::SetConfigurationUnbootable Paver::SyncClient::SetConfigurationUnbootable(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetConfigurationUnbootable(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
 }
 
-Paver::UnownedResultOf::SetConfigurationUnbootable Paver::Call::SetConfigurationUnbootable(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer) {
+Paver::UnownedResultOf::SetConfigurationUnbootable Paver::Call::SetConfigurationUnbootable(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetConfigurationUnbootable(std::move(_client_end), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
 }
 
@@ -1019,7 +1019,7 @@ Paver::UnownedResultOf::SetActiveConfigurationHealthy Paver::Call::SetActiveConf
 }
 
 template <>
-Paver::ResultOf::ReadAsset_Impl<Paver::ReadAssetResponse>::ReadAsset_Impl(zx::unowned_channel _client_end, Configuration configuration, Asset asset) {
+Paver::ResultOf::ReadAsset_Impl<Paver::ReadAssetResponse>::ReadAsset_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadAssetRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1034,16 +1034,16 @@ Paver::ResultOf::ReadAsset_Impl<Paver::ReadAssetResponse>::ReadAsset_Impl(zx::un
       Paver::InPlace::ReadAsset(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Paver::ResultOf::ReadAsset Paver::SyncClient::ReadAsset(Configuration configuration, Asset asset) {
+Paver::ResultOf::ReadAsset Paver::SyncClient::ReadAsset(::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset) {
   return ResultOf::ReadAsset(zx::unowned_channel(this->channel_), std::move(configuration), std::move(asset));
 }
 
-Paver::ResultOf::ReadAsset Paver::Call::ReadAsset(zx::unowned_channel _client_end, Configuration configuration, Asset asset) {
+Paver::ResultOf::ReadAsset Paver::Call::ReadAsset(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset) {
   return ResultOf::ReadAsset(std::move(_client_end), std::move(configuration), std::move(asset));
 }
 
 template <>
-Paver::UnownedResultOf::ReadAsset_Impl<Paver::ReadAssetResponse>::ReadAsset_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::fidl::BytePart _response_buffer) {
+Paver::UnownedResultOf::ReadAsset_Impl<Paver::ReadAssetResponse>::ReadAsset_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < ReadAssetRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<ReadAssetResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1058,11 +1058,11 @@ Paver::UnownedResultOf::ReadAsset_Impl<Paver::ReadAssetResponse>::ReadAsset_Impl
       Paver::InPlace::ReadAsset(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Paver::UnownedResultOf::ReadAsset Paver::SyncClient::ReadAsset(::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::fidl::BytePart _response_buffer) {
+Paver::UnownedResultOf::ReadAsset Paver::SyncClient::ReadAsset(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ReadAsset(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(asset), std::move(_response_buffer));
 }
 
-Paver::UnownedResultOf::ReadAsset Paver::Call::ReadAsset(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::fidl::BytePart _response_buffer) {
+Paver::UnownedResultOf::ReadAsset Paver::Call::ReadAsset(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ReadAsset(std::move(_client_end), std::move(_request_buffer), std::move(configuration), std::move(asset), std::move(_response_buffer));
 }
 
@@ -1088,7 +1088,7 @@ Paver::UnownedResultOf::ReadAsset Paver::Call::ReadAsset(zx::unowned_channel _cl
 }
 
 template <>
-Paver::ResultOf::WriteAsset_Impl<Paver::WriteAssetResponse>::WriteAsset_Impl(zx::unowned_channel _client_end, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload) {
+Paver::ResultOf::WriteAsset_Impl<Paver::WriteAssetResponse>::WriteAsset_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteAssetRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1104,16 +1104,16 @@ Paver::ResultOf::WriteAsset_Impl<Paver::WriteAssetResponse>::WriteAsset_Impl(zx:
       Paver::InPlace::WriteAsset(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Paver::ResultOf::WriteAsset Paver::SyncClient::WriteAsset(Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload) {
+Paver::ResultOf::WriteAsset Paver::SyncClient::WriteAsset(::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload) {
   return ResultOf::WriteAsset(zx::unowned_channel(this->channel_), std::move(configuration), std::move(asset), std::move(payload));
 }
 
-Paver::ResultOf::WriteAsset Paver::Call::WriteAsset(zx::unowned_channel _client_end, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload) {
+Paver::ResultOf::WriteAsset Paver::Call::WriteAsset(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload) {
   return ResultOf::WriteAsset(std::move(_client_end), std::move(configuration), std::move(asset), std::move(payload));
 }
 
 template <>
-Paver::UnownedResultOf::WriteAsset_Impl<Paver::WriteAssetResponse>::WriteAsset_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+Paver::UnownedResultOf::WriteAsset_Impl<Paver::WriteAssetResponse>::WriteAsset_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < WriteAssetRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<WriteAssetResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1129,11 +1129,11 @@ Paver::UnownedResultOf::WriteAsset_Impl<Paver::WriteAssetResponse>::WriteAsset_I
       Paver::InPlace::WriteAsset(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Paver::UnownedResultOf::WriteAsset Paver::SyncClient::WriteAsset(::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+Paver::UnownedResultOf::WriteAsset Paver::SyncClient::WriteAsset(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::WriteAsset(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(asset), std::move(payload), std::move(_response_buffer));
 }
 
-Paver::UnownedResultOf::WriteAsset Paver::Call::WriteAsset(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+Paver::UnownedResultOf::WriteAsset Paver::Call::WriteAsset(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::WriteAsset(std::move(_client_end), std::move(_request_buffer), std::move(configuration), std::move(asset), std::move(payload), std::move(_response_buffer));
 }
 
@@ -1812,7 +1812,7 @@ void Paver::Interface::InitializeAbrCompleterBase::Reply(::fidl::DecodedMessage<
 }
 
 
-void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(Paver_QueryActiveConfiguration_Result result) {
+void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryActiveConfigurationResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<QueryActiveConfigurationResponse*>(_write_bytes);
@@ -1825,7 +1825,7 @@ void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(Paver_QueryA
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(QueryActiveConfigurationResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<QueryActiveConfigurationResponse>(std::move(_response_bytes)));
 }
-void Paver::Interface::QueryActiveConfigurationCompleterBase::ReplySuccess(Configuration configuration) {
+void Paver::Interface::QueryActiveConfigurationCompleterBase::ReplySuccess(::llcpp::fuchsia::paver::Configuration configuration) {
   Paver_QueryActiveConfiguration_Response response;
   response.configuration = std::move(configuration);
 
@@ -1835,7 +1835,7 @@ void Paver::Interface::QueryActiveConfigurationCompleterBase::ReplyError(int32_t
   Reply(Paver_QueryActiveConfiguration_Result::WithErr(std::move(error)));
 }
 
-void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl::BytePart _buffer, Paver_QueryActiveConfiguration_Result result) {
+void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result) {
   if (_buffer.capacity() < QueryActiveConfigurationResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -1850,7 +1850,7 @@ void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl::Byte
   _buffer.set_actual(sizeof(QueryActiveConfigurationResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<QueryActiveConfigurationResponse>(std::move(_buffer)));
 }
-void Paver::Interface::QueryActiveConfigurationCompleterBase::ReplySuccess(::fidl::BytePart _buffer, Configuration configuration) {
+void Paver::Interface::QueryActiveConfigurationCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Configuration configuration) {
   Paver_QueryActiveConfiguration_Response response;
   response.configuration = std::move(configuration);
 
@@ -1868,7 +1868,7 @@ void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl::Deco
 }
 
 
-void Paver::Interface::QueryConfigurationStatusCompleterBase::Reply(Paver_QueryConfigurationStatus_Result result) {
+void Paver::Interface::QueryConfigurationStatusCompleterBase::Reply(::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryConfigurationStatusResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<QueryConfigurationStatusResponse*>(_write_bytes);
@@ -1881,7 +1881,7 @@ void Paver::Interface::QueryConfigurationStatusCompleterBase::Reply(Paver_QueryC
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(QueryConfigurationStatusResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<QueryConfigurationStatusResponse>(std::move(_response_bytes)));
 }
-void Paver::Interface::QueryConfigurationStatusCompleterBase::ReplySuccess(ConfigurationStatus status) {
+void Paver::Interface::QueryConfigurationStatusCompleterBase::ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus status) {
   Paver_QueryConfigurationStatus_Response response;
   response.status = std::move(status);
 
@@ -1891,7 +1891,7 @@ void Paver::Interface::QueryConfigurationStatusCompleterBase::ReplyError(int32_t
   Reply(Paver_QueryConfigurationStatus_Result::WithErr(std::move(error)));
 }
 
-void Paver::Interface::QueryConfigurationStatusCompleterBase::Reply(::fidl::BytePart _buffer, Paver_QueryConfigurationStatus_Result result) {
+void Paver::Interface::QueryConfigurationStatusCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result result) {
   if (_buffer.capacity() < QueryConfigurationStatusResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -1906,7 +1906,7 @@ void Paver::Interface::QueryConfigurationStatusCompleterBase::Reply(::fidl::Byte
   _buffer.set_actual(sizeof(QueryConfigurationStatusResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<QueryConfigurationStatusResponse>(std::move(_buffer)));
 }
-void Paver::Interface::QueryConfigurationStatusCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ConfigurationStatus status) {
+void Paver::Interface::QueryConfigurationStatusCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::ConfigurationStatus status) {
   Paver_QueryConfigurationStatus_Response response;
   response.status = std::move(status);
 
@@ -2047,7 +2047,7 @@ void Paver::Interface::SetActiveConfigurationHealthyCompleterBase::Reply(::fidl:
 }
 
 
-void Paver::Interface::ReadAssetCompleterBase::Reply(Paver_ReadAsset_Result result) {
+void Paver::Interface::ReadAssetCompleterBase::Reply(::llcpp::fuchsia::paver::Paver_ReadAsset_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadAssetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ReadAssetResponse*>(_write_bytes);
@@ -2070,7 +2070,7 @@ void Paver::Interface::ReadAssetCompleterBase::ReplyError(int32_t error) {
   Reply(Paver_ReadAsset_Result::WithErr(std::move(error)));
 }
 
-void Paver::Interface::ReadAssetCompleterBase::Reply(::fidl::BytePart _buffer, Paver_ReadAsset_Result result) {
+void Paver::Interface::ReadAssetCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Paver_ReadAsset_Result result) {
   if (_buffer.capacity() < ReadAssetResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

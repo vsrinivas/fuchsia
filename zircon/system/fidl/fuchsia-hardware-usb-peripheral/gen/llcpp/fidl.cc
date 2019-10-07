@@ -219,10 +219,10 @@ void ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result
 }
 
 
-Device_SetConfiguration_Response& ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result::mutable_response() {
+::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response& ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Device_SetConfiguration_Response;
+    new (&response_) ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -258,7 +258,7 @@ extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetStateChang
 
 }  // namespace
 template <>
-Device::ResultOf::SetConfiguration_Impl<Device::SetConfigurationResponse>::SetConfiguration_Impl(zx::unowned_channel _client_end, DeviceDescriptor device_desc, ::fidl::VectorView<FunctionDescriptor> function_descriptors) {
+Device::ResultOf::SetConfiguration_Impl<Device::SetConfigurationResponse>::SetConfiguration_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigurationRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -275,16 +275,16 @@ Device::ResultOf::SetConfiguration_Impl<Device::SetConfigurationResponse>::SetCo
       Device::InPlace::SetConfiguration(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Device::ResultOf::SetConfiguration Device::SyncClient::SetConfiguration(DeviceDescriptor device_desc, ::fidl::VectorView<FunctionDescriptor> function_descriptors) {
+Device::ResultOf::SetConfiguration Device::SyncClient::SetConfiguration(::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors) {
   return ResultOf::SetConfiguration(zx::unowned_channel(this->channel_), std::move(device_desc), std::move(function_descriptors));
 }
 
-Device::ResultOf::SetConfiguration Device::Call::SetConfiguration(zx::unowned_channel _client_end, DeviceDescriptor device_desc, ::fidl::VectorView<FunctionDescriptor> function_descriptors) {
+Device::ResultOf::SetConfiguration Device::Call::SetConfiguration(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors) {
   return ResultOf::SetConfiguration(std::move(_client_end), std::move(device_desc), std::move(function_descriptors));
 }
 
 template <>
-Device::UnownedResultOf::SetConfiguration_Impl<Device::SetConfigurationResponse>::SetConfiguration_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DeviceDescriptor device_desc, ::fidl::VectorView<FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetConfiguration_Impl<Device::SetConfigurationResponse>::SetConfiguration_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetConfigurationRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetConfigurationResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -302,11 +302,11 @@ Device::UnownedResultOf::SetConfiguration_Impl<Device::SetConfigurationResponse>
       Device::InPlace::SetConfiguration(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Device::UnownedResultOf::SetConfiguration Device::SyncClient::SetConfiguration(::fidl::BytePart _request_buffer, DeviceDescriptor device_desc, ::fidl::VectorView<FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetConfiguration Device::SyncClient::SetConfiguration(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetConfiguration(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(device_desc), std::move(function_descriptors), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::SetConfiguration Device::Call::SetConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DeviceDescriptor device_desc, ::fidl::VectorView<FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetConfiguration Device::Call::SetConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetConfiguration(std::move(_client_end), std::move(_request_buffer), std::move(device_desc), std::move(function_descriptors), std::move(_response_buffer));
 }
 
@@ -509,7 +509,7 @@ bool Device::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
 }
 
 
-void Device::Interface::SetConfigurationCompleterBase::Reply(Device_SetConfiguration_Result result) {
+void Device::Interface::SetConfigurationCompleterBase::Reply(::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigurationResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetConfigurationResponse*>(_write_bytes);
@@ -531,7 +531,7 @@ void Device::Interface::SetConfigurationCompleterBase::ReplyError(int32_t error)
   Reply(Device_SetConfiguration_Result::WithErr(std::move(error)));
 }
 
-void Device::Interface::SetConfigurationCompleterBase::Reply(::fidl::BytePart _buffer, Device_SetConfiguration_Result result) {
+void Device::Interface::SetConfigurationCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result result) {
   if (_buffer.capacity() < SetConfigurationResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

@@ -158,31 +158,31 @@ struct ReadResult {
 
   bool is_info() const { return tag_ == Tag::kInfo; }
 
-  static ReadResult WithInfo(ReadInfo&& val) {
+  static ReadResult WithInfo(::llcpp::fuchsia::paver::ReadInfo&& val) {
     ReadResult result;
     result.set_info(std::move(val));
     return result;
   }
 
   // Information about location of successfully read data within pre-registered VMO.
-  ReadInfo& mutable_info();
+  ::llcpp::fuchsia::paver::ReadInfo& mutable_info();
 
   // Information about location of successfully read data within pre-registered VMO.
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ReadInfo>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::ReadInfo>::value && std::is_copy_assignable<T>::value>
   set_info(const T& v) {
     mutable_info() = v;
   }
 
   // Information about location of successfully read data within pre-registered VMO.
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ReadInfo>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::ReadInfo>::value && std::is_move_assignable<T>::value>
   set_info(T&& v) {
     mutable_info() = std::move(v);
   }
 
   // Information about location of successfully read data within pre-registered VMO.
-  ReadInfo const & info() const { return info_; }
+  ::llcpp::fuchsia::paver::ReadInfo const & info() const { return info_; }
 
   Tag which() const { return tag_; }
 
@@ -200,7 +200,7 @@ struct ReadResult {
   union {
     int32_t err_;
     bool eof_;
-    ReadInfo info_;
+    ::llcpp::fuchsia::paver::ReadInfo info_;
   };
 };
 
@@ -244,7 +244,7 @@ class PayloadStream final {
   struct ReadDataResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ReadResult result;
+    ::llcpp::fuchsia::paver::ReadResult result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_paver_PayloadStreamReadDataResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -434,8 +434,8 @@ class PayloadStream final {
 
     class ReadDataCompleterBase : public _Base {
      public:
-      void Reply(ReadResult result);
-      void Reply(::fidl::BytePart _buffer, ReadResult result);
+      void Reply(::llcpp::fuchsia::paver::ReadResult result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::ReadResult result);
       void Reply(::fidl::DecodedMessage<ReadDataResponse> params);
 
      protected:
@@ -477,7 +477,7 @@ struct Paver_QueryConfigurationStatus_Response {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  ConfigurationStatus status = {};
+  ::llcpp::fuchsia::paver::ConfigurationStatus status = {};
 };
 
 extern "C" const fidl_type_t fuchsia_paver_Paver_QueryConfigurationStatus_ResultTable;
@@ -510,27 +510,27 @@ struct Paver_QueryConfigurationStatus_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static Paver_QueryConfigurationStatus_Result WithResponse(Paver_QueryConfigurationStatus_Response&& val) {
+  static Paver_QueryConfigurationStatus_Result WithResponse(::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response&& val) {
     Paver_QueryConfigurationStatus_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  Paver_QueryConfigurationStatus_Response& mutable_response();
+  ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Paver_QueryConfigurationStatus_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Paver_QueryConfigurationStatus_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  Paver_QueryConfigurationStatus_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -570,7 +570,7 @@ struct Paver_QueryConfigurationStatus_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Paver_QueryConfigurationStatus_Response response_;
+    ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response response_;
     int32_t err_;
   };
 };
@@ -584,7 +584,7 @@ struct Paver_QueryActiveConfiguration_Response {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  Configuration configuration = {};
+  ::llcpp::fuchsia::paver::Configuration configuration = {};
 };
 
 extern "C" const fidl_type_t fuchsia_paver_Paver_QueryActiveConfiguration_ResultTable;
@@ -617,27 +617,27 @@ struct Paver_QueryActiveConfiguration_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static Paver_QueryActiveConfiguration_Result WithResponse(Paver_QueryActiveConfiguration_Response&& val) {
+  static Paver_QueryActiveConfiguration_Result WithResponse(::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response&& val) {
     Paver_QueryActiveConfiguration_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  Paver_QueryActiveConfiguration_Response& mutable_response();
+  ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Paver_QueryActiveConfiguration_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Paver_QueryActiveConfiguration_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  Paver_QueryActiveConfiguration_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -677,7 +677,7 @@ struct Paver_QueryActiveConfiguration_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Paver_QueryActiveConfiguration_Response response_;
+    ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response response_;
     int32_t err_;
   };
 };
@@ -724,27 +724,27 @@ struct Paver_ReadAsset_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static Paver_ReadAsset_Result WithResponse(Paver_ReadAsset_Response&& val) {
+  static Paver_ReadAsset_Result WithResponse(::llcpp::fuchsia::paver::Paver_ReadAsset_Response&& val) {
     Paver_ReadAsset_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  Paver_ReadAsset_Response& mutable_response();
+  ::llcpp::fuchsia::paver::Paver_ReadAsset_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Paver_ReadAsset_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_ReadAsset_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Paver_ReadAsset_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_ReadAsset_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  Paver_ReadAsset_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::paver::Paver_ReadAsset_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -784,7 +784,7 @@ struct Paver_ReadAsset_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Paver_ReadAsset_Response response_;
+    ::llcpp::fuchsia::paver::Paver_ReadAsset_Response response_;
     int32_t err_;
   };
 };
@@ -842,7 +842,7 @@ class Paver final {
   struct QueryActiveConfigurationResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Paver_QueryActiveConfiguration_Result result;
+    ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result;
 
     static constexpr const fidl_type_t* Type = nullptr;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -857,7 +857,7 @@ class Paver final {
   struct QueryConfigurationStatusResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Paver_QueryConfigurationStatus_Result result;
+    ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result result;
 
     static constexpr const fidl_type_t* Type = nullptr;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -870,7 +870,7 @@ class Paver final {
   struct QueryConfigurationStatusRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Configuration configuration;
+    ::llcpp::fuchsia::paver::Configuration configuration;
 
     static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverQueryConfigurationStatusRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -898,7 +898,7 @@ class Paver final {
   struct SetConfigurationActiveRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Configuration configuration;
+    ::llcpp::fuchsia::paver::Configuration configuration;
 
     static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverSetConfigurationActiveRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -926,7 +926,7 @@ class Paver final {
   struct SetConfigurationUnbootableRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Configuration configuration;
+    ::llcpp::fuchsia::paver::Configuration configuration;
 
     static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverSetConfigurationUnbootableRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -956,7 +956,7 @@ class Paver final {
   struct ReadAssetResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Paver_ReadAsset_Result result;
+    ::llcpp::fuchsia::paver::Paver_ReadAsset_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverReadAssetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
@@ -969,8 +969,8 @@ class Paver final {
   struct ReadAssetRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Configuration configuration;
-    Asset asset;
+    ::llcpp::fuchsia::paver::Configuration configuration;
+    ::llcpp::fuchsia::paver::Asset asset;
 
     static constexpr const fidl_type_t* Type = nullptr;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -998,8 +998,8 @@ class Paver final {
   struct WriteAssetRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Configuration configuration;
-    Asset asset;
+    ::llcpp::fuchsia::paver::Configuration configuration;
+    ::llcpp::fuchsia::paver::Asset asset;
     ::llcpp::fuchsia::mem::Buffer payload;
 
     static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverWriteAssetRequestTable;
@@ -1222,7 +1222,7 @@ class Paver final {
     class QueryConfigurationStatus_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      QueryConfigurationStatus_Impl(zx::unowned_channel _client_end, Configuration configuration);
+      QueryConfigurationStatus_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration);
       ~QueryConfigurationStatus_Impl() = default;
       QueryConfigurationStatus_Impl(QueryConfigurationStatus_Impl&& other) = default;
       QueryConfigurationStatus_Impl& operator=(QueryConfigurationStatus_Impl&& other) = default;
@@ -1238,7 +1238,7 @@ class Paver final {
     class SetConfigurationActive_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetConfigurationActive_Impl(zx::unowned_channel _client_end, Configuration configuration);
+      SetConfigurationActive_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration);
       ~SetConfigurationActive_Impl() = default;
       SetConfigurationActive_Impl(SetConfigurationActive_Impl&& other) = default;
       SetConfigurationActive_Impl& operator=(SetConfigurationActive_Impl&& other) = default;
@@ -1254,7 +1254,7 @@ class Paver final {
     class SetConfigurationUnbootable_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetConfigurationUnbootable_Impl(zx::unowned_channel _client_end, Configuration configuration);
+      SetConfigurationUnbootable_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration);
       ~SetConfigurationUnbootable_Impl() = default;
       SetConfigurationUnbootable_Impl(SetConfigurationUnbootable_Impl&& other) = default;
       SetConfigurationUnbootable_Impl& operator=(SetConfigurationUnbootable_Impl&& other) = default;
@@ -1286,7 +1286,7 @@ class Paver final {
     class ReadAsset_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ReadAsset_Impl(zx::unowned_channel _client_end, Configuration configuration, Asset asset);
+      ReadAsset_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset);
       ~ReadAsset_Impl() = default;
       ReadAsset_Impl(ReadAsset_Impl&& other) = default;
       ReadAsset_Impl& operator=(ReadAsset_Impl&& other) = default;
@@ -1302,7 +1302,7 @@ class Paver final {
     class WriteAsset_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      WriteAsset_Impl(zx::unowned_channel _client_end, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload);
+      WriteAsset_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload);
       ~WriteAsset_Impl() = default;
       WriteAsset_Impl(WriteAsset_Impl&& other) = default;
       WriteAsset_Impl& operator=(WriteAsset_Impl&& other) = default;
@@ -1469,7 +1469,7 @@ class Paver final {
     class QueryConfigurationStatus_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      QueryConfigurationStatus_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
+      QueryConfigurationStatus_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
       ~QueryConfigurationStatus_Impl() = default;
       QueryConfigurationStatus_Impl(QueryConfigurationStatus_Impl&& other) = default;
       QueryConfigurationStatus_Impl& operator=(QueryConfigurationStatus_Impl&& other) = default;
@@ -1485,7 +1485,7 @@ class Paver final {
     class SetConfigurationActive_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetConfigurationActive_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
+      SetConfigurationActive_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
       ~SetConfigurationActive_Impl() = default;
       SetConfigurationActive_Impl(SetConfigurationActive_Impl&& other) = default;
       SetConfigurationActive_Impl& operator=(SetConfigurationActive_Impl&& other) = default;
@@ -1501,7 +1501,7 @@ class Paver final {
     class SetConfigurationUnbootable_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetConfigurationUnbootable_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
+      SetConfigurationUnbootable_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
       ~SetConfigurationUnbootable_Impl() = default;
       SetConfigurationUnbootable_Impl(SetConfigurationUnbootable_Impl&& other) = default;
       SetConfigurationUnbootable_Impl& operator=(SetConfigurationUnbootable_Impl&& other) = default;
@@ -1533,7 +1533,7 @@ class Paver final {
     class ReadAsset_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ReadAsset_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::fidl::BytePart _response_buffer);
+      ReadAsset_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::fidl::BytePart _response_buffer);
       ~ReadAsset_Impl() = default;
       ReadAsset_Impl(ReadAsset_Impl&& other) = default;
       ReadAsset_Impl& operator=(ReadAsset_Impl&& other) = default;
@@ -1549,7 +1549,7 @@ class Paver final {
     class WriteAsset_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      WriteAsset_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
+      WriteAsset_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
       ~WriteAsset_Impl() = default;
       WriteAsset_Impl(WriteAsset_Impl&& other) = default;
       WriteAsset_Impl& operator=(WriteAsset_Impl&& other) = default;
@@ -1722,13 +1722,13 @@ class Paver final {
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::QueryConfigurationStatus QueryConfigurationStatus(Configuration configuration);
+    ResultOf::QueryConfigurationStatus QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration configuration);
 
     // Queries status of |configuration|.
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::QueryConfigurationStatus QueryConfigurationStatus(::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::QueryConfigurationStatus QueryConfigurationStatus(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
 
     // Updates persistent metadata identifying which configuration should be selected as 'primary'
     // for booting purposes. Should only be called after `KERNEL` as well as optional
@@ -1736,7 +1736,7 @@ class Paver final {
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetConfigurationActive SetConfigurationActive(Configuration configuration);
+    ResultOf::SetConfigurationActive SetConfigurationActive(::llcpp::fuchsia::paver::Configuration configuration);
 
     // Updates persistent metadata identifying which configuration should be selected as 'primary'
     // for booting purposes. Should only be called after `KERNEL` as well as optional
@@ -1744,7 +1744,7 @@ class Paver final {
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetConfigurationActive SetConfigurationActive(::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::SetConfigurationActive SetConfigurationActive(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
 
     // Updates persistent metadata identifying whether |configuration| is bootable.
     // Should only be called in the following situations:
@@ -1759,7 +1759,7 @@ class Paver final {
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(Configuration configuration);
+    ResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration configuration);
 
     // Updates persistent metadata identifying whether |configuration| is bootable.
     // Should only be called in the following situations:
@@ -1774,7 +1774,7 @@ class Paver final {
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
 
     // Updates persistent metadata identifying that active configuration is stable. Used to signal
     // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
@@ -1797,12 +1797,12 @@ class Paver final {
     // Reads partition corresponding to |configuration| and |asset| into a
     // vmo and returns it.
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::ReadAsset ReadAsset(Configuration configuration, Asset asset);
+    ResultOf::ReadAsset ReadAsset(::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset);
 
     // Reads partition corresponding to |configuration| and |asset| into a
     // vmo and returns it.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::ReadAsset ReadAsset(::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::ReadAsset ReadAsset(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::fidl::BytePart _response_buffer);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
     // `payload` may need to be resized to the partition size, so the provided vmo must have
@@ -1813,7 +1813,7 @@ class Paver final {
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::WriteAsset WriteAsset(Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload);
+    ResultOf::WriteAsset WriteAsset(::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
     // `payload` may need to be resized to the partition size, so the provided vmo must have
@@ -1824,7 +1824,7 @@ class Paver final {
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::WriteAsset WriteAsset(::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::WriteAsset WriteAsset(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
 
     // Writes FVM with data from streamed via `payload`. This potentially affects all
     // configurations.
@@ -1971,13 +1971,13 @@ class Paver final {
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::QueryConfigurationStatus QueryConfigurationStatus(zx::unowned_channel _client_end, Configuration configuration);
+    static ResultOf::QueryConfigurationStatus QueryConfigurationStatus(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration);
 
     // Queries status of |configuration|.
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::QueryConfigurationStatus QueryConfigurationStatus(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::QueryConfigurationStatus QueryConfigurationStatus(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
 
     // Updates persistent metadata identifying which configuration should be selected as 'primary'
     // for booting purposes. Should only be called after `KERNEL` as well as optional
@@ -1985,7 +1985,7 @@ class Paver final {
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetConfigurationActive SetConfigurationActive(zx::unowned_channel _client_end, Configuration configuration);
+    static ResultOf::SetConfigurationActive SetConfigurationActive(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration);
 
     // Updates persistent metadata identifying which configuration should be selected as 'primary'
     // for booting purposes. Should only be called after `KERNEL` as well as optional
@@ -1993,7 +1993,7 @@ class Paver final {
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetConfigurationActive SetConfigurationActive(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetConfigurationActive SetConfigurationActive(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
 
     // Updates persistent metadata identifying whether |configuration| is bootable.
     // Should only be called in the following situations:
@@ -2008,7 +2008,7 @@ class Paver final {
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(zx::unowned_channel _client_end, Configuration configuration);
+    static ResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration);
 
     // Updates persistent metadata identifying whether |configuration| is bootable.
     // Should only be called in the following situations:
@@ -2023,7 +2023,7 @@ class Paver final {
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
 
     // Updates persistent metadata identifying that active configuration is stable. Used to signal
     // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
@@ -2046,12 +2046,12 @@ class Paver final {
     // Reads partition corresponding to |configuration| and |asset| into a
     // vmo and returns it.
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ReadAsset ReadAsset(zx::unowned_channel _client_end, Configuration configuration, Asset asset);
+    static ResultOf::ReadAsset ReadAsset(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset);
 
     // Reads partition corresponding to |configuration| and |asset| into a
     // vmo and returns it.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ReadAsset ReadAsset(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ReadAsset ReadAsset(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::fidl::BytePart _response_buffer);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
     // `payload` may need to be resized to the partition size, so the provided vmo must have
@@ -2062,7 +2062,7 @@ class Paver final {
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::WriteAsset WriteAsset(zx::unowned_channel _client_end, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload);
+    static ResultOf::WriteAsset WriteAsset(zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
     // `payload` may need to be resized to the partition size, so the provided vmo must have
@@ -2073,7 +2073,7 @@ class Paver final {
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::WriteAsset WriteAsset(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::WriteAsset WriteAsset(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
 
     // Writes FVM with data from streamed via `payload`. This potentially affects all
     // configurations.
@@ -2315,11 +2315,11 @@ class Paver final {
 
     class QueryActiveConfigurationCompleterBase : public _Base {
      public:
-      void Reply(Paver_QueryActiveConfiguration_Result result);
-      void ReplySuccess(Configuration configuration);
+      void Reply(::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result);
+      void ReplySuccess(::llcpp::fuchsia::paver::Configuration configuration);
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, Paver_QueryActiveConfiguration_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer, Configuration configuration);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Configuration configuration);
       void Reply(::fidl::DecodedMessage<QueryActiveConfigurationResponse> params);
 
      protected:
@@ -2332,11 +2332,11 @@ class Paver final {
 
     class QueryConfigurationStatusCompleterBase : public _Base {
      public:
-      void Reply(Paver_QueryConfigurationStatus_Result result);
-      void ReplySuccess(ConfigurationStatus status);
+      void Reply(::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result result);
+      void ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus status);
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, Paver_QueryConfigurationStatus_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer, ConfigurationStatus status);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::ConfigurationStatus status);
       void Reply(::fidl::DecodedMessage<QueryConfigurationStatusResponse> params);
 
      protected:
@@ -2345,7 +2345,7 @@ class Paver final {
 
     using QueryConfigurationStatusCompleter = ::fidl::Completer<QueryConfigurationStatusCompleterBase>;
 
-    virtual void QueryConfigurationStatus(Configuration configuration, QueryConfigurationStatusCompleter::Sync _completer) = 0;
+    virtual void QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration configuration, QueryConfigurationStatusCompleter::Sync _completer) = 0;
 
     class SetConfigurationActiveCompleterBase : public _Base {
      public:
@@ -2359,7 +2359,7 @@ class Paver final {
 
     using SetConfigurationActiveCompleter = ::fidl::Completer<SetConfigurationActiveCompleterBase>;
 
-    virtual void SetConfigurationActive(Configuration configuration, SetConfigurationActiveCompleter::Sync _completer) = 0;
+    virtual void SetConfigurationActive(::llcpp::fuchsia::paver::Configuration configuration, SetConfigurationActiveCompleter::Sync _completer) = 0;
 
     class SetConfigurationUnbootableCompleterBase : public _Base {
      public:
@@ -2373,7 +2373,7 @@ class Paver final {
 
     using SetConfigurationUnbootableCompleter = ::fidl::Completer<SetConfigurationUnbootableCompleterBase>;
 
-    virtual void SetConfigurationUnbootable(Configuration configuration, SetConfigurationUnbootableCompleter::Sync _completer) = 0;
+    virtual void SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration configuration, SetConfigurationUnbootableCompleter::Sync _completer) = 0;
 
     class SetActiveConfigurationHealthyCompleterBase : public _Base {
      public:
@@ -2391,10 +2391,10 @@ class Paver final {
 
     class ReadAssetCompleterBase : public _Base {
      public:
-      void Reply(Paver_ReadAsset_Result result);
+      void Reply(::llcpp::fuchsia::paver::Paver_ReadAsset_Result result);
       void ReplySuccess(::llcpp::fuchsia::mem::Buffer asset);
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, Paver_ReadAsset_Result result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Paver_ReadAsset_Result result);
       void ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::mem::Buffer asset);
       void Reply(::fidl::DecodedMessage<ReadAssetResponse> params);
 
@@ -2404,7 +2404,7 @@ class Paver final {
 
     using ReadAssetCompleter = ::fidl::Completer<ReadAssetCompleterBase>;
 
-    virtual void ReadAsset(Configuration configuration, Asset asset, ReadAssetCompleter::Sync _completer) = 0;
+    virtual void ReadAsset(::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ReadAssetCompleter::Sync _completer) = 0;
 
     class WriteAssetCompleterBase : public _Base {
      public:
@@ -2418,7 +2418,7 @@ class Paver final {
 
     using WriteAssetCompleter = ::fidl::Completer<WriteAssetCompleterBase>;
 
-    virtual void WriteAsset(Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, WriteAssetCompleter::Sync _completer) = 0;
+    virtual void WriteAsset(::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, WriteAssetCompleter::Sync _completer) = 0;
 
     class WriteVolumesCompleterBase : public _Base {
      public:

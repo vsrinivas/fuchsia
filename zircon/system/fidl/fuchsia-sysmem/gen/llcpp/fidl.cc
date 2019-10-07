@@ -1093,10 +1093,10 @@ void ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::SizeAndO
 }
 
 
-SecureMem_SetPhysicalSecureHeaps_Response& ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::mutable_response() {
+::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response& ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) SecureMem_SetPhysicalSecureHeaps_Response;
+    new (&response_) ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -1152,10 +1152,10 @@ void ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::SizeAndO
 }
 
 
-SecureMem_GetPhysicalSecureHeaps_Response& ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::mutable_response() {
+::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response& ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) SecureMem_GetPhysicalSecureHeaps_Response;
+    new (&response_) ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -1253,7 +1253,7 @@ SecureMem::UnownedResultOf::GetPhysicalSecureHeaps SecureMem::Call::GetPhysicalS
 }
 
 template <>
-SecureMem::ResultOf::SetPhysicalSecureHeaps_Impl<SecureMem::SetPhysicalSecureHeapsResponse>::SetPhysicalSecureHeaps_Impl(zx::unowned_channel _client_end, PhysicalSecureHeaps heaps) {
+SecureMem::ResultOf::SetPhysicalSecureHeaps_Impl<SecureMem::SetPhysicalSecureHeapsResponse>::SetPhysicalSecureHeaps_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetPhysicalSecureHeapsRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -1267,16 +1267,16 @@ SecureMem::ResultOf::SetPhysicalSecureHeaps_Impl<SecureMem::SetPhysicalSecureHea
       SecureMem::InPlace::SetPhysicalSecureHeaps(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-SecureMem::ResultOf::SetPhysicalSecureHeaps SecureMem::SyncClient::SetPhysicalSecureHeaps(PhysicalSecureHeaps heaps) {
+SecureMem::ResultOf::SetPhysicalSecureHeaps SecureMem::SyncClient::SetPhysicalSecureHeaps(::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps) {
   return ResultOf::SetPhysicalSecureHeaps(zx::unowned_channel(this->channel_), std::move(heaps));
 }
 
-SecureMem::ResultOf::SetPhysicalSecureHeaps SecureMem::Call::SetPhysicalSecureHeaps(zx::unowned_channel _client_end, PhysicalSecureHeaps heaps) {
+SecureMem::ResultOf::SetPhysicalSecureHeaps SecureMem::Call::SetPhysicalSecureHeaps(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps) {
   return ResultOf::SetPhysicalSecureHeaps(std::move(_client_end), std::move(heaps));
 }
 
 template <>
-SecureMem::UnownedResultOf::SetPhysicalSecureHeaps_Impl<SecureMem::SetPhysicalSecureHeapsResponse>::SetPhysicalSecureHeaps_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, PhysicalSecureHeaps heaps, ::fidl::BytePart _response_buffer) {
+SecureMem::UnownedResultOf::SetPhysicalSecureHeaps_Impl<SecureMem::SetPhysicalSecureHeapsResponse>::SetPhysicalSecureHeaps_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetPhysicalSecureHeapsRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetPhysicalSecureHeapsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1290,11 +1290,11 @@ SecureMem::UnownedResultOf::SetPhysicalSecureHeaps_Impl<SecureMem::SetPhysicalSe
       SecureMem::InPlace::SetPhysicalSecureHeaps(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-SecureMem::UnownedResultOf::SetPhysicalSecureHeaps SecureMem::SyncClient::SetPhysicalSecureHeaps(::fidl::BytePart _request_buffer, PhysicalSecureHeaps heaps, ::fidl::BytePart _response_buffer) {
+SecureMem::UnownedResultOf::SetPhysicalSecureHeaps SecureMem::SyncClient::SetPhysicalSecureHeaps(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetPhysicalSecureHeaps(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(heaps), std::move(_response_buffer));
 }
 
-SecureMem::UnownedResultOf::SetPhysicalSecureHeaps SecureMem::Call::SetPhysicalSecureHeaps(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, PhysicalSecureHeaps heaps, ::fidl::BytePart _response_buffer) {
+SecureMem::UnownedResultOf::SetPhysicalSecureHeaps SecureMem::Call::SetPhysicalSecureHeaps(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetPhysicalSecureHeaps(std::move(_client_end), std::move(_request_buffer), std::move(heaps), std::move(_response_buffer));
 }
 
@@ -1369,7 +1369,7 @@ bool SecureMem::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
 }
 
 
-void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(SecureMem_GetPhysicalSecureHeaps_Result result) {
+void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPhysicalSecureHeapsResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -1383,7 +1383,7 @@ void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(SecureMem_
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetPhysicalSecureHeapsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse>(std::move(_response_bytes)));
 }
-void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::ReplySuccess(PhysicalSecureHeaps heaps) {
+void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::ReplySuccess(::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps) {
   SecureMem_GetPhysicalSecureHeaps_Response response;
   response.heaps = std::move(heaps);
 
@@ -1393,7 +1393,7 @@ void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::ReplyError(int32
   Reply(SecureMem_GetPhysicalSecureHeaps_Result::WithErr(std::move(error)));
 }
 
-void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(::fidl::BytePart _buffer, SecureMem_GetPhysicalSecureHeaps_Result result) {
+void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result result) {
   if (_buffer.capacity() < GetPhysicalSecureHeapsResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -1408,7 +1408,7 @@ void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(::fidl::By
   _buffer.set_actual(sizeof(GetPhysicalSecureHeapsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse>(std::move(_buffer)));
 }
-void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::ReplySuccess(::fidl::BytePart _buffer, PhysicalSecureHeaps heaps) {
+void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps) {
   SecureMem_GetPhysicalSecureHeaps_Response response;
   response.heaps = std::move(heaps);
 
@@ -1426,7 +1426,7 @@ void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(::fidl::De
 }
 
 
-void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(SecureMem_SetPhysicalSecureHeaps_Result result) {
+void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetPhysicalSecureHeapsResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetPhysicalSecureHeapsResponse*>(_write_bytes);
@@ -1448,7 +1448,7 @@ void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::ReplyError(int32
   Reply(SecureMem_SetPhysicalSecureHeaps_Result::WithErr(std::move(error)));
 }
 
-void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(::fidl::BytePart _buffer, SecureMem_SetPhysicalSecureHeaps_Result result) {
+void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result result) {
   if (_buffer.capacity() < SetPhysicalSecureHeapsResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -1516,10 +1516,10 @@ void ::llcpp::fuchsia::sysmem::BufferSpec::SizeAndOffsetAssertionHelper() {
 }
 
 
-ImageSpec& ::llcpp::fuchsia::sysmem::BufferSpec::mutable_image() {
+::llcpp::fuchsia::sysmem::ImageSpec& ::llcpp::fuchsia::sysmem::BufferSpec::mutable_image() {
   if (which() != Tag::kImage) {
     Destroy();
-    new (&image_) ImageSpec;
+    new (&image_) ::llcpp::fuchsia::sysmem::ImageSpec;
   }
   tag_ = Tag::kImage;
   return image_;
@@ -1562,10 +1562,10 @@ void ::llcpp::fuchsia::sysmem::BufferFormat::SizeAndOffsetAssertionHelper() {
 }
 
 
-ImageFormat& ::llcpp::fuchsia::sysmem::BufferFormat::mutable_image() {
+::llcpp::fuchsia::sysmem::ImageFormat& ::llcpp::fuchsia::sysmem::BufferFormat::mutable_image() {
   if (which() != Tag::kImage) {
     Destroy();
-    new (&image_) ImageFormat;
+    new (&image_) ::llcpp::fuchsia::sysmem::ImageFormat;
   }
   tag_ = Tag::kImage;
   return image_;
@@ -1638,7 +1638,7 @@ BufferCollectionEvents::ResultOf::OnDuplicatedTokensKnownByServer BufferCollecti
 }
 
 
-BufferCollectionEvents::ResultOf::OnBuffersAllocated_Impl::OnBuffersAllocated_Impl(zx::unowned_channel _client_end, int32_t status, BufferCollectionInfo_2 buffer_collection_info) {
+BufferCollectionEvents::ResultOf::OnBuffersAllocated_Impl::OnBuffersAllocated_Impl(zx::unowned_channel _client_end, int32_t status, ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnBuffersAllocatedRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -1653,16 +1653,16 @@ BufferCollectionEvents::ResultOf::OnBuffersAllocated_Impl::OnBuffersAllocated_Im
       BufferCollectionEvents::InPlace::OnBuffersAllocated(std::move(_client_end), std::move(_decoded_request)));
 }
 
-BufferCollectionEvents::ResultOf::OnBuffersAllocated BufferCollectionEvents::SyncClient::OnBuffersAllocated(int32_t status, BufferCollectionInfo_2 buffer_collection_info) {
+BufferCollectionEvents::ResultOf::OnBuffersAllocated BufferCollectionEvents::SyncClient::OnBuffersAllocated(int32_t status, ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info) {
   return ResultOf::OnBuffersAllocated(zx::unowned_channel(this->channel_), std::move(status), std::move(buffer_collection_info));
 }
 
-BufferCollectionEvents::ResultOf::OnBuffersAllocated BufferCollectionEvents::Call::OnBuffersAllocated(zx::unowned_channel _client_end, int32_t status, BufferCollectionInfo_2 buffer_collection_info) {
+BufferCollectionEvents::ResultOf::OnBuffersAllocated BufferCollectionEvents::Call::OnBuffersAllocated(zx::unowned_channel _client_end, int32_t status, ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info) {
   return ResultOf::OnBuffersAllocated(std::move(_client_end), std::move(status), std::move(buffer_collection_info));
 }
 
 
-BufferCollectionEvents::UnownedResultOf::OnBuffersAllocated_Impl::OnBuffersAllocated_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, BufferCollectionInfo_2 buffer_collection_info) {
+BufferCollectionEvents::UnownedResultOf::OnBuffersAllocated_Impl::OnBuffersAllocated_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info) {
   if (_request_buffer.capacity() < OnBuffersAllocatedRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -1678,11 +1678,11 @@ BufferCollectionEvents::UnownedResultOf::OnBuffersAllocated_Impl::OnBuffersAlloc
       BufferCollectionEvents::InPlace::OnBuffersAllocated(std::move(_client_end), std::move(_decoded_request)));
 }
 
-BufferCollectionEvents::UnownedResultOf::OnBuffersAllocated BufferCollectionEvents::SyncClient::OnBuffersAllocated(::fidl::BytePart _request_buffer, int32_t status, BufferCollectionInfo_2 buffer_collection_info) {
+BufferCollectionEvents::UnownedResultOf::OnBuffersAllocated BufferCollectionEvents::SyncClient::OnBuffersAllocated(::fidl::BytePart _request_buffer, int32_t status, ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info) {
   return UnownedResultOf::OnBuffersAllocated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(status), std::move(buffer_collection_info));
 }
 
-BufferCollectionEvents::UnownedResultOf::OnBuffersAllocated BufferCollectionEvents::Call::OnBuffersAllocated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, BufferCollectionInfo_2 buffer_collection_info) {
+BufferCollectionEvents::UnownedResultOf::OnBuffersAllocated BufferCollectionEvents::Call::OnBuffersAllocated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info) {
   return UnownedResultOf::OnBuffersAllocated(std::move(_client_end), std::move(_request_buffer), std::move(status), std::move(buffer_collection_info));
 }
 
@@ -1708,7 +1708,7 @@ BufferCollectionEvents::UnownedResultOf::OnBuffersAllocated BufferCollectionEven
 }
 
 
-BufferCollectionEvents::ResultOf::OnAllocateSingleBufferDone_Impl::OnAllocateSingleBufferDone_Impl(zx::unowned_channel _client_end, int32_t status, SingleBufferInfo buffer_info) {
+BufferCollectionEvents::ResultOf::OnAllocateSingleBufferDone_Impl::OnAllocateSingleBufferDone_Impl(zx::unowned_channel _client_end, int32_t status, ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnAllocateSingleBufferDoneRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1723,16 +1723,16 @@ BufferCollectionEvents::ResultOf::OnAllocateSingleBufferDone_Impl::OnAllocateSin
       BufferCollectionEvents::InPlace::OnAllocateSingleBufferDone(std::move(_client_end), std::move(_decoded_request)));
 }
 
-BufferCollectionEvents::ResultOf::OnAllocateSingleBufferDone BufferCollectionEvents::SyncClient::OnAllocateSingleBufferDone(int32_t status, SingleBufferInfo buffer_info) {
+BufferCollectionEvents::ResultOf::OnAllocateSingleBufferDone BufferCollectionEvents::SyncClient::OnAllocateSingleBufferDone(int32_t status, ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info) {
   return ResultOf::OnAllocateSingleBufferDone(zx::unowned_channel(this->channel_), std::move(status), std::move(buffer_info));
 }
 
-BufferCollectionEvents::ResultOf::OnAllocateSingleBufferDone BufferCollectionEvents::Call::OnAllocateSingleBufferDone(zx::unowned_channel _client_end, int32_t status, SingleBufferInfo buffer_info) {
+BufferCollectionEvents::ResultOf::OnAllocateSingleBufferDone BufferCollectionEvents::Call::OnAllocateSingleBufferDone(zx::unowned_channel _client_end, int32_t status, ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info) {
   return ResultOf::OnAllocateSingleBufferDone(std::move(_client_end), std::move(status), std::move(buffer_info));
 }
 
 
-BufferCollectionEvents::UnownedResultOf::OnAllocateSingleBufferDone_Impl::OnAllocateSingleBufferDone_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, SingleBufferInfo buffer_info) {
+BufferCollectionEvents::UnownedResultOf::OnAllocateSingleBufferDone_Impl::OnAllocateSingleBufferDone_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info) {
   if (_request_buffer.capacity() < OnAllocateSingleBufferDoneRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -1748,11 +1748,11 @@ BufferCollectionEvents::UnownedResultOf::OnAllocateSingleBufferDone_Impl::OnAllo
       BufferCollectionEvents::InPlace::OnAllocateSingleBufferDone(std::move(_client_end), std::move(_decoded_request)));
 }
 
-BufferCollectionEvents::UnownedResultOf::OnAllocateSingleBufferDone BufferCollectionEvents::SyncClient::OnAllocateSingleBufferDone(::fidl::BytePart _request_buffer, int32_t status, SingleBufferInfo buffer_info) {
+BufferCollectionEvents::UnownedResultOf::OnAllocateSingleBufferDone BufferCollectionEvents::SyncClient::OnAllocateSingleBufferDone(::fidl::BytePart _request_buffer, int32_t status, ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info) {
   return UnownedResultOf::OnAllocateSingleBufferDone(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(status), std::move(buffer_info));
 }
 
-BufferCollectionEvents::UnownedResultOf::OnAllocateSingleBufferDone BufferCollectionEvents::Call::OnAllocateSingleBufferDone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, SingleBufferInfo buffer_info) {
+BufferCollectionEvents::UnownedResultOf::OnAllocateSingleBufferDone BufferCollectionEvents::Call::OnAllocateSingleBufferDone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info) {
   return UnownedResultOf::OnAllocateSingleBufferDone(std::move(_client_end), std::move(_request_buffer), std::move(status), std::move(buffer_info));
 }
 
@@ -2005,7 +2005,7 @@ BufferCollection::ResultOf::Sync BufferCollection::Call::Sync(zx::unowned_channe
 }
 
 
-BufferCollection::ResultOf::SetConstraints_Impl::SetConstraints_Impl(zx::unowned_channel _client_end, bool has_constraints, BufferCollectionConstraints constraints) {
+BufferCollection::ResultOf::SetConstraints_Impl::SetConstraints_Impl(zx::unowned_channel _client_end, bool has_constraints, ::llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConstraintsRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -2020,16 +2020,16 @@ BufferCollection::ResultOf::SetConstraints_Impl::SetConstraints_Impl(zx::unowned
       BufferCollection::InPlace::SetConstraints(std::move(_client_end), std::move(_decoded_request)));
 }
 
-BufferCollection::ResultOf::SetConstraints BufferCollection::SyncClient::SetConstraints(bool has_constraints, BufferCollectionConstraints constraints) {
+BufferCollection::ResultOf::SetConstraints BufferCollection::SyncClient::SetConstraints(bool has_constraints, ::llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints) {
   return ResultOf::SetConstraints(zx::unowned_channel(this->channel_), std::move(has_constraints), std::move(constraints));
 }
 
-BufferCollection::ResultOf::SetConstraints BufferCollection::Call::SetConstraints(zx::unowned_channel _client_end, bool has_constraints, BufferCollectionConstraints constraints) {
+BufferCollection::ResultOf::SetConstraints BufferCollection::Call::SetConstraints(zx::unowned_channel _client_end, bool has_constraints, ::llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints) {
   return ResultOf::SetConstraints(std::move(_client_end), std::move(has_constraints), std::move(constraints));
 }
 
 
-BufferCollection::UnownedResultOf::SetConstraints_Impl::SetConstraints_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool has_constraints, BufferCollectionConstraints constraints) {
+BufferCollection::UnownedResultOf::SetConstraints_Impl::SetConstraints_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool has_constraints, ::llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints) {
   if (_request_buffer.capacity() < SetConstraintsRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -2045,11 +2045,11 @@ BufferCollection::UnownedResultOf::SetConstraints_Impl::SetConstraints_Impl(zx::
       BufferCollection::InPlace::SetConstraints(std::move(_client_end), std::move(_decoded_request)));
 }
 
-BufferCollection::UnownedResultOf::SetConstraints BufferCollection::SyncClient::SetConstraints(::fidl::BytePart _request_buffer, bool has_constraints, BufferCollectionConstraints constraints) {
+BufferCollection::UnownedResultOf::SetConstraints BufferCollection::SyncClient::SetConstraints(::fidl::BytePart _request_buffer, bool has_constraints, ::llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints) {
   return UnownedResultOf::SetConstraints(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(has_constraints), std::move(constraints));
 }
 
-BufferCollection::UnownedResultOf::SetConstraints BufferCollection::Call::SetConstraints(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool has_constraints, BufferCollectionConstraints constraints) {
+BufferCollection::UnownedResultOf::SetConstraints BufferCollection::Call::SetConstraints(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool has_constraints, ::llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints) {
   return UnownedResultOf::SetConstraints(std::move(_client_end), std::move(_request_buffer), std::move(has_constraints), std::move(constraints));
 }
 
@@ -2689,7 +2689,7 @@ void BufferCollection::Interface::SyncCompleterBase::Reply() {
 }
 
 
-void BufferCollection::Interface::WaitForBuffersAllocatedCompleterBase::Reply(int32_t status, BufferCollectionInfo_2 buffer_collection_info) {
+void BufferCollection::Interface::WaitForBuffersAllocatedCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WaitForBuffersAllocatedResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -2705,7 +2705,7 @@ void BufferCollection::Interface::WaitForBuffersAllocatedCompleterBase::Reply(in
   CompleterBase::SendReply(::fidl::DecodedMessage<WaitForBuffersAllocatedResponse>(std::move(_response_bytes)));
 }
 
-void BufferCollection::Interface::WaitForBuffersAllocatedCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, BufferCollectionInfo_2 buffer_collection_info) {
+void BufferCollection::Interface::WaitForBuffersAllocatedCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info) {
   if (_buffer.capacity() < WaitForBuffersAllocatedResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -2774,7 +2774,7 @@ void BufferCollection::Interface::CheckBuffersAllocatedCompleterBase::Reply(::fi
 }
 
 
-void BufferCollection::Interface::WaitForSingleBufferAllocatedCompleterBase::Reply(int32_t status, SingleBufferInfo buffer_info) {
+void BufferCollection::Interface::WaitForSingleBufferAllocatedCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WaitForSingleBufferAllocatedResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WaitForSingleBufferAllocatedResponse*>(_write_bytes);
@@ -2789,7 +2789,7 @@ void BufferCollection::Interface::WaitForSingleBufferAllocatedCompleterBase::Rep
   CompleterBase::SendReply(::fidl::DecodedMessage<WaitForSingleBufferAllocatedResponse>(std::move(_response_bytes)));
 }
 
-void BufferCollection::Interface::WaitForSingleBufferAllocatedCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, SingleBufferInfo buffer_info) {
+void BufferCollection::Interface::WaitForSingleBufferAllocatedCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info) {
   if (_buffer.capacity() < WaitForSingleBufferAllocatedResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

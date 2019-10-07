@@ -1074,7 +1074,7 @@ void Partition::Interface::RebindDeviceCompleterBase::Reply(::fidl::DecodedMessa
 }
 
 
-void Partition::Interface::GetTypeGuidCompleterBase::Reply(int32_t status, GUID* guid) {
+void Partition::Interface::GetTypeGuidCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::hardware::block::partition::GUID* guid) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTypeGuidResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetTypeGuidResponse _response = {};
@@ -1094,7 +1094,7 @@ void Partition::Interface::GetTypeGuidCompleterBase::Reply(int32_t status, GUID*
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void Partition::Interface::GetTypeGuidCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, GUID* guid) {
+void Partition::Interface::GetTypeGuidCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::block::partition::GUID* guid) {
   if (_buffer.capacity() < GetTypeGuidResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -1126,7 +1126,7 @@ void Partition::Interface::GetTypeGuidCompleterBase::Reply(::fidl::DecodedMessag
 }
 
 
-void Partition::Interface::GetInstanceGuidCompleterBase::Reply(int32_t status, GUID* guid) {
+void Partition::Interface::GetInstanceGuidCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::hardware::block::partition::GUID* guid) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInstanceGuidResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetInstanceGuidResponse _response = {};
@@ -1146,7 +1146,7 @@ void Partition::Interface::GetInstanceGuidCompleterBase::Reply(int32_t status, G
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void Partition::Interface::GetInstanceGuidCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, GUID* guid) {
+void Partition::Interface::GetInstanceGuidCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::block::partition::GUID* guid) {
   if (_buffer.capacity() < GetInstanceGuidResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

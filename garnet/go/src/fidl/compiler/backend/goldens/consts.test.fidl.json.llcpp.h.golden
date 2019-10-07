@@ -39,7 +39,7 @@ constexpr float MIN_TEMP = -273.15;
 
 constexpr uint64_t FUCHSIA = 4054509061583223046u;
 
-constexpr EnumType enumVal = EnumType::VALUE;
+constexpr ::llcpp::test::name::EnumType enumVal = EnumType::VALUE;
 
 constexpr int32_t enumPrimitiveVal = EnumType::VALUE;
 
@@ -49,7 +49,7 @@ constexpr uint64_t DIAMOND = 1746410393481133080u;
 
 constexpr double CONVERSION_FACTOR = 1.41421;
 
-constexpr BitsType bitsVal = BitsType::VALUE;
+constexpr ::llcpp::test::name::BitsType bitsVal = BitsType::VALUE;
 
 constexpr int32_t bitsPrimitiveVal = BitsType::VALUE;
 

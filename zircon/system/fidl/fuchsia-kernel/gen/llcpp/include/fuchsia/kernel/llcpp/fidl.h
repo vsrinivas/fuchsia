@@ -459,7 +459,7 @@ struct CpuStats {
 
   uint64_t actual_num_cpus = {};
 
-  ::fidl::VectorView<PerCpuStats> per_cpu_stats = {};
+  ::fidl::VectorView<::llcpp::fuchsia::kernel::PerCpuStats> per_cpu_stats = {};
 };
 
 extern "C" const fidl_type_t fuchsia_kernel_MexecBrokerPerformMexecRequestTable;
@@ -1182,7 +1182,7 @@ class Stats final {
   struct GetMemoryStatsResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    MemoryStats stats;
+    ::llcpp::fuchsia::kernel::MemoryStats stats;
 
     static constexpr const fidl_type_t* Type = &fuchsia_kernel_StatsGetMemoryStatsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1197,7 +1197,7 @@ class Stats final {
   struct GetCpuStatsResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    CpuStats stats;
+    ::llcpp::fuchsia::kernel::CpuStats stats;
 
     static constexpr const fidl_type_t* Type = &fuchsia_kernel_StatsGetCpuStatsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1363,8 +1363,8 @@ class Stats final {
 
     class GetMemoryStatsCompleterBase : public _Base {
      public:
-      void Reply(MemoryStats stats);
-      void Reply(::fidl::BytePart _buffer, MemoryStats stats);
+      void Reply(::llcpp::fuchsia::kernel::MemoryStats stats);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::kernel::MemoryStats stats);
       void Reply(::fidl::DecodedMessage<GetMemoryStatsResponse> params);
 
      protected:
@@ -1377,8 +1377,8 @@ class Stats final {
 
     class GetCpuStatsCompleterBase : public _Base {
      public:
-      void Reply(CpuStats stats);
-      void Reply(::fidl::BytePart _buffer, CpuStats stats);
+      void Reply(::llcpp::fuchsia::kernel::CpuStats stats);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::kernel::CpuStats stats);
       void Reply(::fidl::DecodedMessage<GetCpuStatsResponse> params);
 
      protected:

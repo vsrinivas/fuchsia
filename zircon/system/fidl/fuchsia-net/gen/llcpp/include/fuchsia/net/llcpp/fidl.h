@@ -295,51 +295,51 @@ struct NameLookup_LookupHostname_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static NameLookup_LookupHostname_Result WithResponse(NameLookup_LookupHostname_Response&& val) {
+  static NameLookup_LookupHostname_Result WithResponse(::llcpp::fuchsia::net::NameLookup_LookupHostname_Response&& val) {
     NameLookup_LookupHostname_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  NameLookup_LookupHostname_Response& mutable_response();
+  ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, NameLookup_LookupHostname_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, NameLookup_LookupHostname_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  NameLookup_LookupHostname_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
-  static NameLookup_LookupHostname_Result WithErr(LookupError&& val) {
+  static NameLookup_LookupHostname_Result WithErr(::llcpp::fuchsia::net::LookupError&& val) {
     NameLookup_LookupHostname_Result result;
     result.set_err(std::move(val));
     return result;
   }
 
-  LookupError& mutable_err();
+  ::llcpp::fuchsia::net::LookupError& mutable_err();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, LookupError>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::LookupError>::value && std::is_copy_assignable<T>::value>
   set_err(const T& v) {
     mutable_err() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, LookupError>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::LookupError>::value && std::is_move_assignable<T>::value>
   set_err(T&& v) {
     mutable_err() = std::move(v);
   }
 
-  LookupError const & err() const { return err_; }
+  ::llcpp::fuchsia::net::LookupError const & err() const { return err_; }
 
   Tag which() const { return tag_; }
 
@@ -355,8 +355,8 @@ struct NameLookup_LookupHostname_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    NameLookup_LookupHostname_Response response_;
-    LookupError err_;
+    ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response response_;
+    ::llcpp::fuchsia::net::LookupError err_;
   };
 };
 
@@ -398,10 +398,10 @@ struct IpAddressInfo {
   static constexpr uint32_t MaxOutOfLine = 4294967295;
 
   // All of the IPv4 addresses for the requested hostname.
-  ::fidl::VectorView<Ipv4Address> ipv4_addrs = {};
+  ::fidl::VectorView<::llcpp::fuchsia::net::Ipv4Address> ipv4_addrs = {};
 
   // All of the IPv6 addresses for the requested hostname.
-  ::fidl::VectorView<Ipv6Address> ipv6_addrs = {};
+  ::fidl::VectorView<::llcpp::fuchsia::net::Ipv6Address> ipv6_addrs = {};
 
   // The canonical name of the requested hostname (usually the DNS CNAME record, if one exists).
   ::fidl::StringView canonical_name = {};
@@ -416,7 +416,7 @@ struct NameLookup_LookupIp_Response {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4294967295;
 
-  IpAddressInfo addr = {};
+  ::llcpp::fuchsia::net::IpAddressInfo addr = {};
 };
 
 extern "C" const fidl_type_t fuchsia_net_NameLookup_LookupIp_ResultTable;
@@ -449,51 +449,51 @@ struct NameLookup_LookupIp_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static NameLookup_LookupIp_Result WithResponse(NameLookup_LookupIp_Response&& val) {
+  static NameLookup_LookupIp_Result WithResponse(::llcpp::fuchsia::net::NameLookup_LookupIp_Response&& val) {
     NameLookup_LookupIp_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  NameLookup_LookupIp_Response& mutable_response();
+  ::llcpp::fuchsia::net::NameLookup_LookupIp_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, NameLookup_LookupIp_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::NameLookup_LookupIp_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, NameLookup_LookupIp_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::NameLookup_LookupIp_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  NameLookup_LookupIp_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::net::NameLookup_LookupIp_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
-  static NameLookup_LookupIp_Result WithErr(LookupError&& val) {
+  static NameLookup_LookupIp_Result WithErr(::llcpp::fuchsia::net::LookupError&& val) {
     NameLookup_LookupIp_Result result;
     result.set_err(std::move(val));
     return result;
   }
 
-  LookupError& mutable_err();
+  ::llcpp::fuchsia::net::LookupError& mutable_err();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, LookupError>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::LookupError>::value && std::is_copy_assignable<T>::value>
   set_err(const T& v) {
     mutable_err() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, LookupError>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::LookupError>::value && std::is_move_assignable<T>::value>
   set_err(T&& v) {
     mutable_err() = std::move(v);
   }
 
-  LookupError const & err() const { return err_; }
+  ::llcpp::fuchsia::net::LookupError const & err() const { return err_; }
 
   Tag which() const { return tag_; }
 
@@ -509,8 +509,8 @@ struct NameLookup_LookupIp_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    NameLookup_LookupIp_Response response_;
-    LookupError err_;
+    ::llcpp::fuchsia::net::NameLookup_LookupIp_Response response_;
+    ::llcpp::fuchsia::net::LookupError err_;
   };
 };
 
@@ -545,51 +545,51 @@ struct IpAddress {
 
   bool is_ipv4() const { return tag_ == Tag::kIpv4; }
 
-  static IpAddress WithIpv4(Ipv4Address&& val) {
+  static IpAddress WithIpv4(::llcpp::fuchsia::net::Ipv4Address&& val) {
     IpAddress result;
     result.set_ipv4(std::move(val));
     return result;
   }
 
-  Ipv4Address& mutable_ipv4();
+  ::llcpp::fuchsia::net::Ipv4Address& mutable_ipv4();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Ipv4Address>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::Ipv4Address>::value && std::is_copy_assignable<T>::value>
   set_ipv4(const T& v) {
     mutable_ipv4() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Ipv4Address>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::Ipv4Address>::value && std::is_move_assignable<T>::value>
   set_ipv4(T&& v) {
     mutable_ipv4() = std::move(v);
   }
 
-  Ipv4Address const & ipv4() const { return ipv4_; }
+  ::llcpp::fuchsia::net::Ipv4Address const & ipv4() const { return ipv4_; }
 
   bool is_ipv6() const { return tag_ == Tag::kIpv6; }
 
-  static IpAddress WithIpv6(Ipv6Address&& val) {
+  static IpAddress WithIpv6(::llcpp::fuchsia::net::Ipv6Address&& val) {
     IpAddress result;
     result.set_ipv6(std::move(val));
     return result;
   }
 
-  Ipv6Address& mutable_ipv6();
+  ::llcpp::fuchsia::net::Ipv6Address& mutable_ipv6();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Ipv6Address>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::Ipv6Address>::value && std::is_copy_assignable<T>::value>
   set_ipv6(const T& v) {
     mutable_ipv6() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Ipv6Address>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::Ipv6Address>::value && std::is_move_assignable<T>::value>
   set_ipv6(T&& v) {
     mutable_ipv6() = std::move(v);
   }
 
-  Ipv6Address const & ipv6() const { return ipv6_; }
+  ::llcpp::fuchsia::net::Ipv6Address const & ipv6() const { return ipv6_; }
 
   Tag which() const { return tag_; }
 
@@ -605,8 +605,8 @@ struct IpAddress {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Ipv4Address ipv4_;
-    Ipv6Address ipv6_;
+    ::llcpp::fuchsia::net::Ipv4Address ipv4_;
+    ::llcpp::fuchsia::net::Ipv6Address ipv6_;
   };
 };
 
@@ -623,7 +623,7 @@ struct Subnet {
 
   // The Ipv4 or Ipv6 address. Only the `prefix_len` most significant bits may be set in `addr`;
   // all bits in the host portion of the address must be zero.
-  IpAddress addr = {};
+  ::llcpp::fuchsia::net::IpAddress addr = {};
 
   // The prefix length of the netmask. E.g. for 192.168.1.0/24, the prefix
   // length is 24, corresponding to a netmask of 255.255.255.0.
@@ -645,7 +645,7 @@ class NameLookup final {
   struct LookupIpResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    NameLookup_LookupIp_Result result;
+    ::llcpp::fuchsia::net::NameLookup_LookupIp_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_net_NameLookupLookupIpResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -659,7 +659,7 @@ class NameLookup final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView hostname;
-    LookupIpOptions options;
+    ::llcpp::fuchsia::net::LookupIpOptions options;
 
     static constexpr const fidl_type_t* Type = &fuchsia_net_NameLookupLookupIpRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -674,7 +674,7 @@ class NameLookup final {
   struct LookupHostnameResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    NameLookup_LookupHostname_Result result;
+    ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_net_NameLookupLookupHostnameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -687,7 +687,7 @@ class NameLookup final {
   struct LookupHostnameRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    IpAddress addr;
+    ::llcpp::fuchsia::net::IpAddress addr;
 
     static constexpr const fidl_type_t* Type = &fuchsia_net_NameLookupLookupHostnameRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -708,7 +708,7 @@ class NameLookup final {
     class LookupIp_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LookupIp_Impl(zx::unowned_channel _client_end, ::fidl::StringView hostname, LookupIpOptions options);
+      LookupIp_Impl(zx::unowned_channel _client_end, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options);
       ~LookupIp_Impl() = default;
       LookupIp_Impl(LookupIp_Impl&& other) = default;
       LookupIp_Impl& operator=(LookupIp_Impl&& other) = default;
@@ -724,7 +724,7 @@ class NameLookup final {
     class LookupHostname_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LookupHostname_Impl(zx::unowned_channel _client_end, IpAddress addr);
+      LookupHostname_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::net::IpAddress addr);
       ~LookupHostname_Impl() = default;
       LookupHostname_Impl(LookupHostname_Impl&& other) = default;
       LookupHostname_Impl& operator=(LookupHostname_Impl&& other) = default;
@@ -751,7 +751,7 @@ class NameLookup final {
     class LookupIp_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LookupIp_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView hostname, LookupIpOptions options, ::fidl::BytePart _response_buffer);
+      LookupIp_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options, ::fidl::BytePart _response_buffer);
       ~LookupIp_Impl() = default;
       LookupIp_Impl(LookupIp_Impl&& other) = default;
       LookupIp_Impl& operator=(LookupIp_Impl&& other) = default;
@@ -767,7 +767,7 @@ class NameLookup final {
     class LookupHostname_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LookupHostname_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, IpAddress addr, ::fidl::BytePart _response_buffer);
+      LookupHostname_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::net::IpAddress addr, ::fidl::BytePart _response_buffer);
       ~LookupHostname_Impl() = default;
       LookupHostname_Impl(LookupHostname_Impl&& other) = default;
       LookupHostname_Impl& operator=(LookupHostname_Impl&& other) = default;
@@ -800,21 +800,21 @@ class NameLookup final {
     //
     // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
     // Allocates 296 bytes of request buffer on the stack. Response is heap-allocated.
-    ResultOf::LookupIp LookupIp(::fidl::StringView hostname, LookupIpOptions options);
+    ResultOf::LookupIp LookupIp(::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options);
 
     // Look up a list of IP addresses by hostname.
     //
     // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::LookupIp LookupIp(::fidl::BytePart _request_buffer, ::fidl::StringView hostname, LookupIpOptions options, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::LookupIp LookupIp(::fidl::BytePart _request_buffer, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options, ::fidl::BytePart _response_buffer);
 
     // Look up a hostname by IP address.
     // Allocates 336 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::LookupHostname LookupHostname(IpAddress addr);
+    ResultOf::LookupHostname LookupHostname(::llcpp::fuchsia::net::IpAddress addr);
 
     // Look up a hostname by IP address.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::LookupHostname LookupHostname(::fidl::BytePart _request_buffer, IpAddress addr, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::LookupHostname LookupHostname(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::net::IpAddress addr, ::fidl::BytePart _response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -829,21 +829,21 @@ class NameLookup final {
     //
     // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
     // Allocates 296 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::LookupIp LookupIp(zx::unowned_channel _client_end, ::fidl::StringView hostname, LookupIpOptions options);
+    static ResultOf::LookupIp LookupIp(zx::unowned_channel _client_end, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options);
 
     // Look up a list of IP addresses by hostname.
     //
     // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LookupIp LookupIp(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView hostname, LookupIpOptions options, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LookupIp LookupIp(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options, ::fidl::BytePart _response_buffer);
 
     // Look up a hostname by IP address.
     // Allocates 336 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LookupHostname LookupHostname(zx::unowned_channel _client_end, IpAddress addr);
+    static ResultOf::LookupHostname LookupHostname(zx::unowned_channel _client_end, ::llcpp::fuchsia::net::IpAddress addr);
 
     // Look up a hostname by IP address.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LookupHostname LookupHostname(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, IpAddress addr, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LookupHostname LookupHostname(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::net::IpAddress addr, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -873,11 +873,11 @@ class NameLookup final {
 
     class LookupIpCompleterBase : public _Base {
      public:
-      void Reply(NameLookup_LookupIp_Result result);
-      void ReplySuccess(IpAddressInfo addr);
+      void Reply(::llcpp::fuchsia::net::NameLookup_LookupIp_Result result);
+      void ReplySuccess(::llcpp::fuchsia::net::IpAddressInfo addr);
       void ReplyError(LookupError error);
-      void Reply(::fidl::BytePart _buffer, NameLookup_LookupIp_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer, IpAddressInfo addr);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::net::NameLookup_LookupIp_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::net::IpAddressInfo addr);
       void Reply(::fidl::DecodedMessage<LookupIpResponse> params);
 
      protected:
@@ -886,14 +886,14 @@ class NameLookup final {
 
     using LookupIpCompleter = ::fidl::Completer<LookupIpCompleterBase>;
 
-    virtual void LookupIp(::fidl::StringView hostname, LookupIpOptions options, LookupIpCompleter::Sync _completer) = 0;
+    virtual void LookupIp(::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options, LookupIpCompleter::Sync _completer) = 0;
 
     class LookupHostnameCompleterBase : public _Base {
      public:
-      void Reply(NameLookup_LookupHostname_Result result);
+      void Reply(::llcpp::fuchsia::net::NameLookup_LookupHostname_Result result);
       void ReplySuccess(::fidl::StringView hostname);
       void ReplyError(LookupError error);
-      void Reply(::fidl::BytePart _buffer, NameLookup_LookupHostname_Result result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result result);
       void ReplySuccess(::fidl::BytePart _buffer, ::fidl::StringView hostname);
       void Reply(::fidl::DecodedMessage<LookupHostnameResponse> params);
 
@@ -903,7 +903,7 @@ class NameLookup final {
 
     using LookupHostnameCompleter = ::fidl::Completer<LookupHostnameCompleterBase>;
 
-    virtual void LookupHostname(IpAddress addr, LookupHostnameCompleter::Sync _completer) = 0;
+    virtual void LookupHostname(::llcpp::fuchsia::net::IpAddress addr, LookupHostnameCompleter::Sync _completer) = 0;
 
   };
 
@@ -940,7 +940,7 @@ struct Endpoint {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // The IP address of the endpoint.
-  IpAddress addr = {};
+  ::llcpp::fuchsia::net::IpAddress addr = {};
 
   // The port number of the endpoint.
   uint16_t port = {};

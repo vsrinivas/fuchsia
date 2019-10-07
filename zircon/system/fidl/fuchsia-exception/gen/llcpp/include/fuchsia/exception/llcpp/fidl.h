@@ -57,13 +57,13 @@ struct ProcessExceptionMetadata final : private ::fidl::VectorView<fidl_envelope
   // Returns whether no field is set.
   bool IsEmpty() const { return EnvelopesView::empty(); }
 
-  const ExceptionInfo& info() const {
+  const ::llcpp::fuchsia::exception::ExceptionInfo& info() const {
     ZX_ASSERT(has_info());
-    return *reinterpret_cast<const ExceptionInfo*>(EnvelopesView::at(1 - 1).data);
+    return *reinterpret_cast<const ::llcpp::fuchsia::exception::ExceptionInfo*>(EnvelopesView::at(1 - 1).data);
   }
-  ExceptionInfo& info() {
+  ::llcpp::fuchsia::exception::ExceptionInfo& info() {
     ZX_ASSERT(has_info());
-    return *reinterpret_cast<ExceptionInfo*>(EnvelopesView::at(1 - 1).data);
+    return *reinterpret_cast<::llcpp::fuchsia::exception::ExceptionInfo*>(EnvelopesView::at(1 - 1).data);
   }
   bool has_info() const {
     return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
@@ -122,7 +122,7 @@ class ProcessExceptionMetadata::Builder {
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
 
-  Builder&& set_info(ExceptionInfo* elem);
+  Builder&& set_info(::llcpp::fuchsia::exception::ExceptionInfo* elem);
 
   // Only has ZX_RIGHT_READ and ZX_RIGHT_GET_PROPERTY rights.
   Builder&& set_process(::zx::process* elem);
@@ -162,13 +162,13 @@ struct ProcessException final : private ::fidl::VectorView<fidl_envelope_t> {
     return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
   }
 
-  const ExceptionInfo& info() const {
+  const ::llcpp::fuchsia::exception::ExceptionInfo& info() const {
     ZX_ASSERT(has_info());
-    return *reinterpret_cast<const ExceptionInfo*>(EnvelopesView::at(2 - 1).data);
+    return *reinterpret_cast<const ::llcpp::fuchsia::exception::ExceptionInfo*>(EnvelopesView::at(2 - 1).data);
   }
-  ExceptionInfo& info() {
+  ::llcpp::fuchsia::exception::ExceptionInfo& info() {
     ZX_ASSERT(has_info());
-    return *reinterpret_cast<ExceptionInfo*>(EnvelopesView::at(2 - 1).data);
+    return *reinterpret_cast<::llcpp::fuchsia::exception::ExceptionInfo*>(EnvelopesView::at(2 - 1).data);
   }
   bool has_info() const {
     return EnvelopesView::count() >= 2 && EnvelopesView::at(2 - 1).data != nullptr;
@@ -225,7 +225,7 @@ class ProcessException::Builder {
 
   Builder&& set_exception(::zx::exception* elem);
 
-  Builder&& set_info(ExceptionInfo* elem);
+  Builder&& set_info(::llcpp::fuchsia::exception::ExceptionInfo* elem);
 
   Builder&& set_process(::zx::process* elem);
 
@@ -258,7 +258,7 @@ struct ExceptionInfo {
 
   uint64_t thread_koid = {};
 
-  ExceptionType type = {};
+  ::llcpp::fuchsia::exception::ExceptionType type = {};
 };
 
 extern "C" const fidl_type_t fuchsia_exception_HandlerOnExceptionRequestTable;
@@ -275,7 +275,7 @@ class Handler final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::exception exception;
-    ExceptionInfo info;
+    ::llcpp::fuchsia::exception::ExceptionInfo info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_exception_HandlerOnExceptionRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
@@ -295,7 +295,7 @@ class Handler final {
     class OnException_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      OnException_Impl(zx::unowned_channel _client_end, ::zx::exception exception, ExceptionInfo info);
+      OnException_Impl(zx::unowned_channel _client_end, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info);
       ~OnException_Impl() = default;
       OnException_Impl(OnException_Impl&& other) = default;
       OnException_Impl& operator=(OnException_Impl&& other) = default;
@@ -321,7 +321,7 @@ class Handler final {
     class OnException_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      OnException_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::exception exception, ExceptionInfo info, ::fidl::BytePart _response_buffer);
+      OnException_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info, ::fidl::BytePart _response_buffer);
       ~OnException_Impl() = default;
       OnException_Impl(OnException_Impl&& other) = default;
       OnException_Impl& operator=(OnException_Impl&& other) = default;
@@ -360,7 +360,7 @@ class Handler final {
     // `info` represents basic exception information as provided by the
     // exception channel.
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::OnException OnException(::zx::exception exception, ExceptionInfo info);
+    ResultOf::OnException OnException(::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info);
 
     // This exception mirrors closely the information provided by exception
     // channels. The design is to have clients of this API behave as closely as
@@ -373,7 +373,7 @@ class Handler final {
     // `info` represents basic exception information as provided by the
     // exception channel.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::OnException OnException(::fidl::BytePart _request_buffer, ::zx::exception exception, ExceptionInfo info, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::OnException OnException(::fidl::BytePart _request_buffer, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info, ::fidl::BytePart _response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -395,7 +395,7 @@ class Handler final {
     // `info` represents basic exception information as provided by the
     // exception channel.
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::OnException OnException(zx::unowned_channel _client_end, ::zx::exception exception, ExceptionInfo info);
+    static ResultOf::OnException OnException(zx::unowned_channel _client_end, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info);
 
     // This exception mirrors closely the information provided by exception
     // channels. The design is to have clients of this API behave as closely as
@@ -408,7 +408,7 @@ class Handler final {
     // `info` represents basic exception information as provided by the
     // exception channel.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::OnException OnException(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::exception exception, ExceptionInfo info, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::OnException OnException(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -450,7 +450,7 @@ class Handler final {
 
     using OnExceptionCompleter = ::fidl::Completer<OnExceptionCompleterBase>;
 
-    virtual void OnException(::zx::exception exception, ExceptionInfo info, OnExceptionCompleter::Sync _completer) = 0;
+    virtual void OnException(::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info, OnExceptionCompleter::Sync _completer) = 0;
 
   };
 
@@ -483,7 +483,7 @@ struct ProcessLimbo_RetrieveException_Response {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 112;
 
-  ProcessException process_exception = {};
+  ::llcpp::fuchsia::exception::ProcessException process_exception = {};
 };
 
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_RetrieveException_ResultTable;
@@ -516,27 +516,27 @@ struct ProcessLimbo_RetrieveException_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static ProcessLimbo_RetrieveException_Result WithResponse(ProcessLimbo_RetrieveException_Response&& val) {
+  static ProcessLimbo_RetrieveException_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response&& val) {
     ProcessLimbo_RetrieveException_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  ProcessLimbo_RetrieveException_Response& mutable_response();
+  ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ProcessLimbo_RetrieveException_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ProcessLimbo_RetrieveException_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  ProcessLimbo_RetrieveException_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -576,7 +576,7 @@ struct ProcessLimbo_RetrieveException_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    ProcessLimbo_RetrieveException_Response response_;
+    ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response response_;
     int32_t err_;
   };
 };
@@ -595,7 +595,7 @@ class ProcessLimbo final {
   struct ListProcessesWaitingOnExceptionResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::fidl::VectorView<ProcessExceptionMetadata> exception_list;
+    ::fidl::VectorView<::llcpp::fuchsia::exception::ProcessExceptionMetadata> exception_list;
 
     static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionResponseTable;
     static constexpr uint32_t MaxNumHandles = 64;
@@ -610,7 +610,7 @@ class ProcessLimbo final {
   struct RetrieveExceptionResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ProcessLimbo_RetrieveException_Result result;
+    ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboRetrieveExceptionResponseTable;
     static constexpr uint32_t MaxNumHandles = 3;
@@ -859,8 +859,8 @@ class ProcessLimbo final {
 
     class ListProcessesWaitingOnExceptionCompleterBase : public _Base {
      public:
-      void Reply(::fidl::VectorView<ProcessExceptionMetadata> exception_list);
-      void Reply(::fidl::BytePart _buffer, ::fidl::VectorView<ProcessExceptionMetadata> exception_list);
+      void Reply(::fidl::VectorView<::llcpp::fuchsia::exception::ProcessExceptionMetadata> exception_list);
+      void Reply(::fidl::BytePart _buffer, ::fidl::VectorView<::llcpp::fuchsia::exception::ProcessExceptionMetadata> exception_list);
       void Reply(::fidl::DecodedMessage<ListProcessesWaitingOnExceptionResponse> params);
 
      protected:
@@ -873,11 +873,11 @@ class ProcessLimbo final {
 
     class RetrieveExceptionCompleterBase : public _Base {
      public:
-      void Reply(ProcessLimbo_RetrieveException_Result result);
-      void ReplySuccess(ProcessException process_exception);
+      void Reply(::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result result);
+      void ReplySuccess(::llcpp::fuchsia::exception::ProcessException process_exception);
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, ProcessLimbo_RetrieveException_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer, ProcessException process_exception);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::exception::ProcessException process_exception);
       void Reply(::fidl::DecodedMessage<RetrieveExceptionResponse> params);
 
      protected:

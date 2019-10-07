@@ -13,7 +13,7 @@ namespace report {
   return MouseDescriptor::Builder();
 }
 
-auto ::llcpp::fuchsia::input::report::MouseDescriptor::Builder::set_movement_x(Axis* elem) -> Builder&& {
+auto ::llcpp::fuchsia::input::report::MouseDescriptor::Builder::set_movement_x(::llcpp::fuchsia::input::report::Axis* elem) -> Builder&& {
   ZX_ASSERT(elem);
   envelopes_[1 - 1].data = static_cast<void*>(elem);
   if (max_ordinal_ < 1) {
@@ -22,7 +22,7 @@ auto ::llcpp::fuchsia::input::report::MouseDescriptor::Builder::set_movement_x(A
   return std::move(*this);
 }
 
-auto ::llcpp::fuchsia::input::report::MouseDescriptor::Builder::set_movement_y(Axis* elem) -> Builder&& {
+auto ::llcpp::fuchsia::input::report::MouseDescriptor::Builder::set_movement_y(::llcpp::fuchsia::input::report::Axis* elem) -> Builder&& {
   ZX_ASSERT(elem);
   envelopes_[2 - 1].data = static_cast<void*>(elem);
   if (max_ordinal_ < 2) {
@@ -31,7 +31,7 @@ auto ::llcpp::fuchsia::input::report::MouseDescriptor::Builder::set_movement_y(A
   return std::move(*this);
 }
 
-auto ::llcpp::fuchsia::input::report::MouseDescriptor::Builder::set_scroll_v(Axis* elem) -> Builder&& {
+auto ::llcpp::fuchsia::input::report::MouseDescriptor::Builder::set_scroll_v(::llcpp::fuchsia::input::report::Axis* elem) -> Builder&& {
   ZX_ASSERT(elem);
   envelopes_[3 - 1].data = static_cast<void*>(elem);
   if (max_ordinal_ < 3) {
@@ -40,7 +40,7 @@ auto ::llcpp::fuchsia::input::report::MouseDescriptor::Builder::set_scroll_v(Axi
   return std::move(*this);
 }
 
-auto ::llcpp::fuchsia::input::report::MouseDescriptor::Builder::set_scroll_h(Axis* elem) -> Builder&& {
+auto ::llcpp::fuchsia::input::report::MouseDescriptor::Builder::set_scroll_h(::llcpp::fuchsia::input::report::Axis* elem) -> Builder&& {
   ZX_ASSERT(elem);
   envelopes_[4 - 1].data = static_cast<void*>(elem);
   if (max_ordinal_ < 4) {
@@ -120,7 +120,7 @@ auto ::llcpp::fuchsia::input::report::InputReport::Builder::set_event_time(int64
   return std::move(*this);
 }
 
-auto ::llcpp::fuchsia::input::report::InputReport::Builder::set_mouse(MouseReport* elem) -> Builder&& {
+auto ::llcpp::fuchsia::input::report::InputReport::Builder::set_mouse(::llcpp::fuchsia::input::report::MouseReport* elem) -> Builder&& {
   ZX_ASSERT(elem);
   envelopes_[2 - 1].data = static_cast<void*>(elem);
   if (max_ordinal_ < 2) {
@@ -142,7 +142,7 @@ auto ::llcpp::fuchsia::input::report::InputReport::Builder::set_trace_id(uint64_
   return DeviceDescriptor::Builder();
 }
 
-auto ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder::set_device_info(DeviceInfo* elem) -> Builder&& {
+auto ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder::set_device_info(::llcpp::fuchsia::input::report::DeviceInfo* elem) -> Builder&& {
   ZX_ASSERT(elem);
   envelopes_[1 - 1].data = static_cast<void*>(elem);
   if (max_ordinal_ < 1) {
@@ -151,7 +151,7 @@ auto ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder::set_device_info
   return std::move(*this);
 }
 
-auto ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder::set_mouse(MouseDescriptor* elem) -> Builder&& {
+auto ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder::set_mouse(::llcpp::fuchsia::input::report::MouseDescriptor* elem) -> Builder&& {
   ZX_ASSERT(elem);
   envelopes_[2 - 1].data = static_cast<void*>(elem);
   if (max_ordinal_ < 2) {
@@ -481,7 +481,7 @@ void InputDevice::Interface::GetReportsEventCompleterBase::Reply(::fidl::Decoded
 }
 
 
-void InputDevice::Interface::GetReportsCompleterBase::Reply(::fidl::VectorView<InputReport> reports) {
+void InputDevice::Interface::GetReportsCompleterBase::Reply(::fidl::VectorView<::llcpp::fuchsia::input::report::InputReport> reports) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetReportsResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -501,7 +501,7 @@ void InputDevice::Interface::GetReportsCompleterBase::Reply(::fidl::VectorView<I
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void InputDevice::Interface::GetReportsCompleterBase::Reply(::fidl::BytePart _buffer, ::fidl::VectorView<InputReport> reports) {
+void InputDevice::Interface::GetReportsCompleterBase::Reply(::fidl::BytePart _buffer, ::fidl::VectorView<::llcpp::fuchsia::input::report::InputReport> reports) {
   if (_buffer.capacity() < GetReportsResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -532,7 +532,7 @@ void InputDevice::Interface::GetReportsCompleterBase::Reply(::fidl::DecodedMessa
 }
 
 
-void InputDevice::Interface::GetDescriptorCompleterBase::Reply(DeviceDescriptor descriptor) {
+void InputDevice::Interface::GetDescriptorCompleterBase::Reply(::llcpp::fuchsia::input::report::DeviceDescriptor descriptor) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDescriptorResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -552,7 +552,7 @@ void InputDevice::Interface::GetDescriptorCompleterBase::Reply(DeviceDescriptor 
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void InputDevice::Interface::GetDescriptorCompleterBase::Reply(::fidl::BytePart _buffer, DeviceDescriptor descriptor) {
+void InputDevice::Interface::GetDescriptorCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::input::report::DeviceDescriptor descriptor) {
   if (_buffer.capacity() < GetDescriptorResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

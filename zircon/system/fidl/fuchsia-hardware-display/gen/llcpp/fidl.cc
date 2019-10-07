@@ -336,10 +336,10 @@ void ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::SizeAn
 }
 
 
-Controller_StartCapture_Response& ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::mutable_response() {
+::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response& ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Controller_StartCapture_Response;
+    new (&response_) ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -395,10 +395,10 @@ void ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::Size
 }
 
 
-Controller_ReleaseCapture_Response& ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::mutable_response() {
+::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response& ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Controller_ReleaseCapture_Response;
+    new (&response_) ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -454,10 +454,10 @@ void ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Resul
 }
 
 
-Controller_ImportImageForCapture_Response& ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result::mutable_response() {
+::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response& ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Controller_ImportImageForCapture_Response;
+    new (&response_) ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -638,7 +638,7 @@ extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseCaptureRe
 
 }  // namespace
 template <>
-Controller::ResultOf::ImportVmoImage_Impl<Controller::ImportVmoImageResponse>::ImportVmoImage_Impl(zx::unowned_channel _client_end, ImageConfig image_config, ::zx::vmo vmo, int32_t offset) {
+Controller::ResultOf::ImportVmoImage_Impl<Controller::ImportVmoImageResponse>::ImportVmoImage_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ImportVmoImageRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -654,16 +654,16 @@ Controller::ResultOf::ImportVmoImage_Impl<Controller::ImportVmoImageResponse>::I
       Controller::InPlace::ImportVmoImage(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Controller::ResultOf::ImportVmoImage Controller::SyncClient::ImportVmoImage(ImageConfig image_config, ::zx::vmo vmo, int32_t offset) {
+Controller::ResultOf::ImportVmoImage Controller::SyncClient::ImportVmoImage(::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset) {
   return ResultOf::ImportVmoImage(zx::unowned_channel(this->channel_), std::move(image_config), std::move(vmo), std::move(offset));
 }
 
-Controller::ResultOf::ImportVmoImage Controller::Call::ImportVmoImage(zx::unowned_channel _client_end, ImageConfig image_config, ::zx::vmo vmo, int32_t offset) {
+Controller::ResultOf::ImportVmoImage Controller::Call::ImportVmoImage(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset) {
   return ResultOf::ImportVmoImage(std::move(_client_end), std::move(image_config), std::move(vmo), std::move(offset));
 }
 
 template <>
-Controller::UnownedResultOf::ImportVmoImage_Impl<Controller::ImportVmoImageResponse>::ImportVmoImage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::ImportVmoImage_Impl<Controller::ImportVmoImageResponse>::ImportVmoImage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < ImportVmoImageRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<ImportVmoImageResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -679,11 +679,11 @@ Controller::UnownedResultOf::ImportVmoImage_Impl<Controller::ImportVmoImageRespo
       Controller::InPlace::ImportVmoImage(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Controller::UnownedResultOf::ImportVmoImage Controller::SyncClient::ImportVmoImage(::fidl::BytePart _request_buffer, ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::ImportVmoImage Controller::SyncClient::ImportVmoImage(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ImportVmoImage(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(image_config), std::move(vmo), std::move(offset), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::ImportVmoImage Controller::Call::ImportVmoImage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::ImportVmoImage Controller::Call::ImportVmoImage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ImportVmoImage(std::move(_client_end), std::move(_request_buffer), std::move(image_config), std::move(vmo), std::move(offset), std::move(_response_buffer));
 }
 
@@ -709,7 +709,7 @@ Controller::UnownedResultOf::ImportVmoImage Controller::Call::ImportVmoImage(zx:
 }
 
 template <>
-Controller::ResultOf::ImportImage_Impl<Controller::ImportImageResponse>::ImportImage_Impl(zx::unowned_channel _client_end, ImageConfig image_config, uint64_t collection_id, uint32_t index) {
+Controller::ResultOf::ImportImage_Impl<Controller::ImportImageResponse>::ImportImage_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ImportImageRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -725,16 +725,16 @@ Controller::ResultOf::ImportImage_Impl<Controller::ImportImageResponse>::ImportI
       Controller::InPlace::ImportImage(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Controller::ResultOf::ImportImage Controller::SyncClient::ImportImage(ImageConfig image_config, uint64_t collection_id, uint32_t index) {
+Controller::ResultOf::ImportImage Controller::SyncClient::ImportImage(::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index) {
   return ResultOf::ImportImage(zx::unowned_channel(this->channel_), std::move(image_config), std::move(collection_id), std::move(index));
 }
 
-Controller::ResultOf::ImportImage Controller::Call::ImportImage(zx::unowned_channel _client_end, ImageConfig image_config, uint64_t collection_id, uint32_t index) {
+Controller::ResultOf::ImportImage Controller::Call::ImportImage(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index) {
   return ResultOf::ImportImage(std::move(_client_end), std::move(image_config), std::move(collection_id), std::move(index));
 }
 
 template <>
-Controller::UnownedResultOf::ImportImage_Impl<Controller::ImportImageResponse>::ImportImage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::ImportImage_Impl<Controller::ImportImageResponse>::ImportImage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < ImportImageRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<ImportImageResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -750,11 +750,11 @@ Controller::UnownedResultOf::ImportImage_Impl<Controller::ImportImageResponse>::
       Controller::InPlace::ImportImage(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Controller::UnownedResultOf::ImportImage Controller::SyncClient::ImportImage(::fidl::BytePart _request_buffer, ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::ImportImage Controller::SyncClient::ImportImage(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ImportImage(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(image_config), std::move(collection_id), std::move(index), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::ImportImage Controller::Call::ImportImage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::ImportImage Controller::Call::ImportImage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ImportImage(std::move(_client_end), std::move(_request_buffer), std::move(image_config), std::move(collection_id), std::move(index), std::move(_response_buffer));
 }
 
@@ -1120,7 +1120,7 @@ Controller::UnownedResultOf::DestroyLayer Controller::Call::DestroyLayer(zx::uno
 }
 
 
-Controller::ResultOf::SetDisplayMode_Impl::SetDisplayMode_Impl(zx::unowned_channel _client_end, uint64_t display_id, Mode mode) {
+Controller::ResultOf::SetDisplayMode_Impl::SetDisplayMode_Impl(zx::unowned_channel _client_end, uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetDisplayModeRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1135,16 +1135,16 @@ Controller::ResultOf::SetDisplayMode_Impl::SetDisplayMode_Impl(zx::unowned_chann
       Controller::InPlace::SetDisplayMode(std::move(_client_end), std::move(_decoded_request)));
 }
 
-Controller::ResultOf::SetDisplayMode Controller::SyncClient::SetDisplayMode(uint64_t display_id, Mode mode) {
+Controller::ResultOf::SetDisplayMode Controller::SyncClient::SetDisplayMode(uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode) {
   return ResultOf::SetDisplayMode(zx::unowned_channel(this->channel_), std::move(display_id), std::move(mode));
 }
 
-Controller::ResultOf::SetDisplayMode Controller::Call::SetDisplayMode(zx::unowned_channel _client_end, uint64_t display_id, Mode mode) {
+Controller::ResultOf::SetDisplayMode Controller::Call::SetDisplayMode(zx::unowned_channel _client_end, uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode) {
   return ResultOf::SetDisplayMode(std::move(_client_end), std::move(display_id), std::move(mode));
 }
 
 
-Controller::UnownedResultOf::SetDisplayMode_Impl::SetDisplayMode_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, Mode mode) {
+Controller::UnownedResultOf::SetDisplayMode_Impl::SetDisplayMode_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode) {
   if (_request_buffer.capacity() < SetDisplayModeRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -1160,11 +1160,11 @@ Controller::UnownedResultOf::SetDisplayMode_Impl::SetDisplayMode_Impl(zx::unowne
       Controller::InPlace::SetDisplayMode(std::move(_client_end), std::move(_decoded_request)));
 }
 
-Controller::UnownedResultOf::SetDisplayMode Controller::SyncClient::SetDisplayMode(::fidl::BytePart _request_buffer, uint64_t display_id, Mode mode) {
+Controller::UnownedResultOf::SetDisplayMode Controller::SyncClient::SetDisplayMode(::fidl::BytePart _request_buffer, uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode) {
   return UnownedResultOf::SetDisplayMode(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(display_id), std::move(mode));
 }
 
-Controller::UnownedResultOf::SetDisplayMode Controller::Call::SetDisplayMode(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, Mode mode) {
+Controller::UnownedResultOf::SetDisplayMode Controller::Call::SetDisplayMode(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode) {
   return UnownedResultOf::SetDisplayMode(std::move(_client_end), std::move(_request_buffer), std::move(display_id), std::move(mode));
 }
 
@@ -1339,7 +1339,7 @@ Controller::UnownedResultOf::SetDisplayLayers Controller::Call::SetDisplayLayers
 }
 
 
-Controller::ResultOf::SetLayerPrimaryConfig_Impl::SetLayerPrimaryConfig_Impl(zx::unowned_channel _client_end, uint64_t layer_id, ImageConfig image_config) {
+Controller::ResultOf::SetLayerPrimaryConfig_Impl::SetLayerPrimaryConfig_Impl(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetLayerPrimaryConfigRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1354,16 +1354,16 @@ Controller::ResultOf::SetLayerPrimaryConfig_Impl::SetLayerPrimaryConfig_Impl(zx:
       Controller::InPlace::SetLayerPrimaryConfig(std::move(_client_end), std::move(_decoded_request)));
 }
 
-Controller::ResultOf::SetLayerPrimaryConfig Controller::SyncClient::SetLayerPrimaryConfig(uint64_t layer_id, ImageConfig image_config) {
+Controller::ResultOf::SetLayerPrimaryConfig Controller::SyncClient::SetLayerPrimaryConfig(uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config) {
   return ResultOf::SetLayerPrimaryConfig(zx::unowned_channel(this->channel_), std::move(layer_id), std::move(image_config));
 }
 
-Controller::ResultOf::SetLayerPrimaryConfig Controller::Call::SetLayerPrimaryConfig(zx::unowned_channel _client_end, uint64_t layer_id, ImageConfig image_config) {
+Controller::ResultOf::SetLayerPrimaryConfig Controller::Call::SetLayerPrimaryConfig(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config) {
   return ResultOf::SetLayerPrimaryConfig(std::move(_client_end), std::move(layer_id), std::move(image_config));
 }
 
 
-Controller::UnownedResultOf::SetLayerPrimaryConfig_Impl::SetLayerPrimaryConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ImageConfig image_config) {
+Controller::UnownedResultOf::SetLayerPrimaryConfig_Impl::SetLayerPrimaryConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config) {
   if (_request_buffer.capacity() < SetLayerPrimaryConfigRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -1379,11 +1379,11 @@ Controller::UnownedResultOf::SetLayerPrimaryConfig_Impl::SetLayerPrimaryConfig_I
       Controller::InPlace::SetLayerPrimaryConfig(std::move(_client_end), std::move(_decoded_request)));
 }
 
-Controller::UnownedResultOf::SetLayerPrimaryConfig Controller::SyncClient::SetLayerPrimaryConfig(::fidl::BytePart _request_buffer, uint64_t layer_id, ImageConfig image_config) {
+Controller::UnownedResultOf::SetLayerPrimaryConfig Controller::SyncClient::SetLayerPrimaryConfig(::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config) {
   return UnownedResultOf::SetLayerPrimaryConfig(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(layer_id), std::move(image_config));
 }
 
-Controller::UnownedResultOf::SetLayerPrimaryConfig Controller::Call::SetLayerPrimaryConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ImageConfig image_config) {
+Controller::UnownedResultOf::SetLayerPrimaryConfig Controller::Call::SetLayerPrimaryConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config) {
   return UnownedResultOf::SetLayerPrimaryConfig(std::move(_client_end), std::move(_request_buffer), std::move(layer_id), std::move(image_config));
 }
 
@@ -1409,7 +1409,7 @@ Controller::UnownedResultOf::SetLayerPrimaryConfig Controller::Call::SetLayerPri
 }
 
 
-Controller::ResultOf::SetLayerPrimaryPosition_Impl::SetLayerPrimaryPosition_Impl(zx::unowned_channel _client_end, uint64_t layer_id, Transform transform, Frame src_frame, Frame dest_frame) {
+Controller::ResultOf::SetLayerPrimaryPosition_Impl::SetLayerPrimaryPosition_Impl(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetLayerPrimaryPositionRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1426,16 +1426,16 @@ Controller::ResultOf::SetLayerPrimaryPosition_Impl::SetLayerPrimaryPosition_Impl
       Controller::InPlace::SetLayerPrimaryPosition(std::move(_client_end), std::move(_decoded_request)));
 }
 
-Controller::ResultOf::SetLayerPrimaryPosition Controller::SyncClient::SetLayerPrimaryPosition(uint64_t layer_id, Transform transform, Frame src_frame, Frame dest_frame) {
+Controller::ResultOf::SetLayerPrimaryPosition Controller::SyncClient::SetLayerPrimaryPosition(uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame) {
   return ResultOf::SetLayerPrimaryPosition(zx::unowned_channel(this->channel_), std::move(layer_id), std::move(transform), std::move(src_frame), std::move(dest_frame));
 }
 
-Controller::ResultOf::SetLayerPrimaryPosition Controller::Call::SetLayerPrimaryPosition(zx::unowned_channel _client_end, uint64_t layer_id, Transform transform, Frame src_frame, Frame dest_frame) {
+Controller::ResultOf::SetLayerPrimaryPosition Controller::Call::SetLayerPrimaryPosition(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame) {
   return ResultOf::SetLayerPrimaryPosition(std::move(_client_end), std::move(layer_id), std::move(transform), std::move(src_frame), std::move(dest_frame));
 }
 
 
-Controller::UnownedResultOf::SetLayerPrimaryPosition_Impl::SetLayerPrimaryPosition_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, Transform transform, Frame src_frame, Frame dest_frame) {
+Controller::UnownedResultOf::SetLayerPrimaryPosition_Impl::SetLayerPrimaryPosition_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame) {
   if (_request_buffer.capacity() < SetLayerPrimaryPositionRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -1453,11 +1453,11 @@ Controller::UnownedResultOf::SetLayerPrimaryPosition_Impl::SetLayerPrimaryPositi
       Controller::InPlace::SetLayerPrimaryPosition(std::move(_client_end), std::move(_decoded_request)));
 }
 
-Controller::UnownedResultOf::SetLayerPrimaryPosition Controller::SyncClient::SetLayerPrimaryPosition(::fidl::BytePart _request_buffer, uint64_t layer_id, Transform transform, Frame src_frame, Frame dest_frame) {
+Controller::UnownedResultOf::SetLayerPrimaryPosition Controller::SyncClient::SetLayerPrimaryPosition(::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame) {
   return UnownedResultOf::SetLayerPrimaryPosition(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(layer_id), std::move(transform), std::move(src_frame), std::move(dest_frame));
 }
 
-Controller::UnownedResultOf::SetLayerPrimaryPosition Controller::Call::SetLayerPrimaryPosition(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, Transform transform, Frame src_frame, Frame dest_frame) {
+Controller::UnownedResultOf::SetLayerPrimaryPosition Controller::Call::SetLayerPrimaryPosition(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame) {
   return UnownedResultOf::SetLayerPrimaryPosition(std::move(_client_end), std::move(_request_buffer), std::move(layer_id), std::move(transform), std::move(src_frame), std::move(dest_frame));
 }
 
@@ -1483,7 +1483,7 @@ Controller::UnownedResultOf::SetLayerPrimaryPosition Controller::Call::SetLayerP
 }
 
 
-Controller::ResultOf::SetLayerPrimaryAlpha_Impl::SetLayerPrimaryAlpha_Impl(zx::unowned_channel _client_end, uint64_t layer_id, AlphaMode mode, float val) {
+Controller::ResultOf::SetLayerPrimaryAlpha_Impl::SetLayerPrimaryAlpha_Impl(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetLayerPrimaryAlphaRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1499,16 +1499,16 @@ Controller::ResultOf::SetLayerPrimaryAlpha_Impl::SetLayerPrimaryAlpha_Impl(zx::u
       Controller::InPlace::SetLayerPrimaryAlpha(std::move(_client_end), std::move(_decoded_request)));
 }
 
-Controller::ResultOf::SetLayerPrimaryAlpha Controller::SyncClient::SetLayerPrimaryAlpha(uint64_t layer_id, AlphaMode mode, float val) {
+Controller::ResultOf::SetLayerPrimaryAlpha Controller::SyncClient::SetLayerPrimaryAlpha(uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val) {
   return ResultOf::SetLayerPrimaryAlpha(zx::unowned_channel(this->channel_), std::move(layer_id), std::move(mode), std::move(val));
 }
 
-Controller::ResultOf::SetLayerPrimaryAlpha Controller::Call::SetLayerPrimaryAlpha(zx::unowned_channel _client_end, uint64_t layer_id, AlphaMode mode, float val) {
+Controller::ResultOf::SetLayerPrimaryAlpha Controller::Call::SetLayerPrimaryAlpha(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val) {
   return ResultOf::SetLayerPrimaryAlpha(std::move(_client_end), std::move(layer_id), std::move(mode), std::move(val));
 }
 
 
-Controller::UnownedResultOf::SetLayerPrimaryAlpha_Impl::SetLayerPrimaryAlpha_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, AlphaMode mode, float val) {
+Controller::UnownedResultOf::SetLayerPrimaryAlpha_Impl::SetLayerPrimaryAlpha_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val) {
   if (_request_buffer.capacity() < SetLayerPrimaryAlphaRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -1525,11 +1525,11 @@ Controller::UnownedResultOf::SetLayerPrimaryAlpha_Impl::SetLayerPrimaryAlpha_Imp
       Controller::InPlace::SetLayerPrimaryAlpha(std::move(_client_end), std::move(_decoded_request)));
 }
 
-Controller::UnownedResultOf::SetLayerPrimaryAlpha Controller::SyncClient::SetLayerPrimaryAlpha(::fidl::BytePart _request_buffer, uint64_t layer_id, AlphaMode mode, float val) {
+Controller::UnownedResultOf::SetLayerPrimaryAlpha Controller::SyncClient::SetLayerPrimaryAlpha(::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val) {
   return UnownedResultOf::SetLayerPrimaryAlpha(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(layer_id), std::move(mode), std::move(val));
 }
 
-Controller::UnownedResultOf::SetLayerPrimaryAlpha Controller::Call::SetLayerPrimaryAlpha(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, AlphaMode mode, float val) {
+Controller::UnownedResultOf::SetLayerPrimaryAlpha Controller::Call::SetLayerPrimaryAlpha(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val) {
   return UnownedResultOf::SetLayerPrimaryAlpha(std::move(_client_end), std::move(_request_buffer), std::move(layer_id), std::move(mode), std::move(val));
 }
 
@@ -1555,7 +1555,7 @@ Controller::UnownedResultOf::SetLayerPrimaryAlpha Controller::Call::SetLayerPrim
 }
 
 
-Controller::ResultOf::SetLayerCursorConfig_Impl::SetLayerCursorConfig_Impl(zx::unowned_channel _client_end, uint64_t layer_id, ImageConfig image_config) {
+Controller::ResultOf::SetLayerCursorConfig_Impl::SetLayerCursorConfig_Impl(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetLayerCursorConfigRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1570,16 +1570,16 @@ Controller::ResultOf::SetLayerCursorConfig_Impl::SetLayerCursorConfig_Impl(zx::u
       Controller::InPlace::SetLayerCursorConfig(std::move(_client_end), std::move(_decoded_request)));
 }
 
-Controller::ResultOf::SetLayerCursorConfig Controller::SyncClient::SetLayerCursorConfig(uint64_t layer_id, ImageConfig image_config) {
+Controller::ResultOf::SetLayerCursorConfig Controller::SyncClient::SetLayerCursorConfig(uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config) {
   return ResultOf::SetLayerCursorConfig(zx::unowned_channel(this->channel_), std::move(layer_id), std::move(image_config));
 }
 
-Controller::ResultOf::SetLayerCursorConfig Controller::Call::SetLayerCursorConfig(zx::unowned_channel _client_end, uint64_t layer_id, ImageConfig image_config) {
+Controller::ResultOf::SetLayerCursorConfig Controller::Call::SetLayerCursorConfig(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config) {
   return ResultOf::SetLayerCursorConfig(std::move(_client_end), std::move(layer_id), std::move(image_config));
 }
 
 
-Controller::UnownedResultOf::SetLayerCursorConfig_Impl::SetLayerCursorConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ImageConfig image_config) {
+Controller::UnownedResultOf::SetLayerCursorConfig_Impl::SetLayerCursorConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config) {
   if (_request_buffer.capacity() < SetLayerCursorConfigRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -1595,11 +1595,11 @@ Controller::UnownedResultOf::SetLayerCursorConfig_Impl::SetLayerCursorConfig_Imp
       Controller::InPlace::SetLayerCursorConfig(std::move(_client_end), std::move(_decoded_request)));
 }
 
-Controller::UnownedResultOf::SetLayerCursorConfig Controller::SyncClient::SetLayerCursorConfig(::fidl::BytePart _request_buffer, uint64_t layer_id, ImageConfig image_config) {
+Controller::UnownedResultOf::SetLayerCursorConfig Controller::SyncClient::SetLayerCursorConfig(::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config) {
   return UnownedResultOf::SetLayerCursorConfig(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(layer_id), std::move(image_config));
 }
 
-Controller::UnownedResultOf::SetLayerCursorConfig Controller::Call::SetLayerCursorConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ImageConfig image_config) {
+Controller::UnownedResultOf::SetLayerCursorConfig Controller::Call::SetLayerCursorConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config) {
   return UnownedResultOf::SetLayerCursorConfig(std::move(_client_end), std::move(_request_buffer), std::move(layer_id), std::move(image_config));
 }
 
@@ -2371,7 +2371,7 @@ Controller::UnownedResultOf::ReleaseBufferCollection Controller::Call::ReleaseBu
 }
 
 template <>
-Controller::ResultOf::SetBufferCollectionConstraints_Impl<Controller::SetBufferCollectionConstraintsResponse>::SetBufferCollectionConstraints_Impl(zx::unowned_channel _client_end, uint64_t collection_id, ImageConfig config) {
+Controller::ResultOf::SetBufferCollectionConstraints_Impl<Controller::SetBufferCollectionConstraintsResponse>::SetBufferCollectionConstraints_Impl(zx::unowned_channel _client_end, uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetBufferCollectionConstraintsRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -2386,16 +2386,16 @@ Controller::ResultOf::SetBufferCollectionConstraints_Impl<Controller::SetBufferC
       Controller::InPlace::SetBufferCollectionConstraints(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Controller::ResultOf::SetBufferCollectionConstraints Controller::SyncClient::SetBufferCollectionConstraints(uint64_t collection_id, ImageConfig config) {
+Controller::ResultOf::SetBufferCollectionConstraints Controller::SyncClient::SetBufferCollectionConstraints(uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config) {
   return ResultOf::SetBufferCollectionConstraints(zx::unowned_channel(this->channel_), std::move(collection_id), std::move(config));
 }
 
-Controller::ResultOf::SetBufferCollectionConstraints Controller::Call::SetBufferCollectionConstraints(zx::unowned_channel _client_end, uint64_t collection_id, ImageConfig config) {
+Controller::ResultOf::SetBufferCollectionConstraints Controller::Call::SetBufferCollectionConstraints(zx::unowned_channel _client_end, uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config) {
   return ResultOf::SetBufferCollectionConstraints(std::move(_client_end), std::move(collection_id), std::move(config));
 }
 
 template <>
-Controller::UnownedResultOf::SetBufferCollectionConstraints_Impl<Controller::SetBufferCollectionConstraintsResponse>::SetBufferCollectionConstraints_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id, ImageConfig config, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::SetBufferCollectionConstraints_Impl<Controller::SetBufferCollectionConstraintsResponse>::SetBufferCollectionConstraints_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetBufferCollectionConstraintsRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetBufferCollectionConstraintsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -2410,11 +2410,11 @@ Controller::UnownedResultOf::SetBufferCollectionConstraints_Impl<Controller::Set
       Controller::InPlace::SetBufferCollectionConstraints(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Controller::UnownedResultOf::SetBufferCollectionConstraints Controller::SyncClient::SetBufferCollectionConstraints(::fidl::BytePart _request_buffer, uint64_t collection_id, ImageConfig config, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::SetBufferCollectionConstraints Controller::SyncClient::SetBufferCollectionConstraints(::fidl::BytePart _request_buffer, uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetBufferCollectionConstraints(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(collection_id), std::move(config), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::SetBufferCollectionConstraints Controller::Call::SetBufferCollectionConstraints(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id, ImageConfig config, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::SetBufferCollectionConstraints Controller::Call::SetBufferCollectionConstraints(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetBufferCollectionConstraints(std::move(_client_end), std::move(_request_buffer), std::move(collection_id), std::move(config), std::move(_response_buffer));
 }
 
@@ -2506,7 +2506,7 @@ Controller::UnownedResultOf::GetSingleBufferFramebuffer Controller::Call::GetSin
 }
 
 template <>
-Controller::ResultOf::ImportImageForCapture_Impl<Controller::ImportImageForCaptureResponse>::ImportImageForCapture_Impl(zx::unowned_channel _client_end, ImageConfig image_config, uint64_t collection_id, uint32_t index) {
+Controller::ResultOf::ImportImageForCapture_Impl<Controller::ImportImageForCaptureResponse>::ImportImageForCapture_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ImportImageForCaptureRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -2522,16 +2522,16 @@ Controller::ResultOf::ImportImageForCapture_Impl<Controller::ImportImageForCaptu
       Controller::InPlace::ImportImageForCapture(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Controller::ResultOf::ImportImageForCapture Controller::SyncClient::ImportImageForCapture(ImageConfig image_config, uint64_t collection_id, uint32_t index) {
+Controller::ResultOf::ImportImageForCapture Controller::SyncClient::ImportImageForCapture(::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index) {
   return ResultOf::ImportImageForCapture(zx::unowned_channel(this->channel_), std::move(image_config), std::move(collection_id), std::move(index));
 }
 
-Controller::ResultOf::ImportImageForCapture Controller::Call::ImportImageForCapture(zx::unowned_channel _client_end, ImageConfig image_config, uint64_t collection_id, uint32_t index) {
+Controller::ResultOf::ImportImageForCapture Controller::Call::ImportImageForCapture(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index) {
   return ResultOf::ImportImageForCapture(std::move(_client_end), std::move(image_config), std::move(collection_id), std::move(index));
 }
 
 template <>
-Controller::UnownedResultOf::ImportImageForCapture_Impl<Controller::ImportImageForCaptureResponse>::ImportImageForCapture_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::ImportImageForCapture_Impl<Controller::ImportImageForCaptureResponse>::ImportImageForCapture_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < ImportImageForCaptureRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<ImportImageForCaptureResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -2547,11 +2547,11 @@ Controller::UnownedResultOf::ImportImageForCapture_Impl<Controller::ImportImageF
       Controller::InPlace::ImportImageForCapture(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Controller::UnownedResultOf::ImportImageForCapture Controller::SyncClient::ImportImageForCapture(::fidl::BytePart _request_buffer, ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::ImportImageForCapture Controller::SyncClient::ImportImageForCapture(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ImportImageForCapture(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(image_config), std::move(collection_id), std::move(index), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::ImportImageForCapture Controller::Call::ImportImageForCapture(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::ImportImageForCapture Controller::Call::ImportImageForCapture(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ImportImageForCapture(std::move(_client_end), std::move(_request_buffer), std::move(image_config), std::move(collection_id), std::move(index), std::move(_response_buffer));
 }
 
@@ -3230,7 +3230,7 @@ bool Controller::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
 }
 
 
-zx_status_t Controller::SendDisplaysChangedEvent(::zx::unowned_channel _chan, ::fidl::VectorView<Info> added, ::fidl::VectorView<uint64_t> removed) {
+zx_status_t Controller::SendDisplaysChangedEvent(::zx::unowned_channel _chan, ::fidl::VectorView<::llcpp::fuchsia::hardware::display::Info> added, ::fidl::VectorView<uint64_t> removed) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisplaysChangedResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -3251,7 +3251,7 @@ zx_status_t Controller::SendDisplaysChangedEvent(::zx::unowned_channel _chan, ::
   return ::fidl::Write(zx::unowned_channel(_chan), std::move(_linearize_result.message));
 }
 
-zx_status_t Controller::SendDisplaysChangedEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, ::fidl::VectorView<Info> added, ::fidl::VectorView<uint64_t> removed) {
+zx_status_t Controller::SendDisplaysChangedEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, ::fidl::VectorView<::llcpp::fuchsia::hardware::display::Info> added, ::fidl::VectorView<uint64_t> removed) {
   if (_buffer.capacity() < DisplaysChangedResponse::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -3411,7 +3411,7 @@ void Controller::Interface::CreateLayerCompleterBase::Reply(::fidl::DecodedMessa
 }
 
 
-void Controller::Interface::CheckConfigCompleterBase::Reply(ConfigResult res, ::fidl::VectorView<ClientCompositionOp> ops) {
+void Controller::Interface::CheckConfigCompleterBase::Reply(::llcpp::fuchsia::hardware::display::ConfigResult res, ::fidl::VectorView<::llcpp::fuchsia::hardware::display::ClientCompositionOp> ops) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CheckConfigResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -3432,7 +3432,7 @@ void Controller::Interface::CheckConfigCompleterBase::Reply(ConfigResult res, ::
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void Controller::Interface::CheckConfigCompleterBase::Reply(::fidl::BytePart _buffer, ConfigResult res, ::fidl::VectorView<ClientCompositionOp> ops) {
+void Controller::Interface::CheckConfigCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::display::ConfigResult res, ::fidl::VectorView<::llcpp::fuchsia::hardware::display::ClientCompositionOp> ops) {
   if (_buffer.capacity() < CheckConfigResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -3771,7 +3771,7 @@ void Controller::Interface::GetSingleBufferFramebufferCompleterBase::Reply(::fid
 }
 
 
-void Controller::Interface::ImportImageForCaptureCompleterBase::Reply(Controller_ImportImageForCapture_Result result) {
+void Controller::Interface::ImportImageForCaptureCompleterBase::Reply(::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ImportImageForCaptureResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ImportImageForCaptureResponse*>(_write_bytes);
@@ -3794,7 +3794,7 @@ void Controller::Interface::ImportImageForCaptureCompleterBase::ReplyError(int32
   Reply(Controller_ImportImageForCapture_Result::WithErr(std::move(error)));
 }
 
-void Controller::Interface::ImportImageForCaptureCompleterBase::Reply(::fidl::BytePart _buffer, Controller_ImportImageForCapture_Result result) {
+void Controller::Interface::ImportImageForCaptureCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result result) {
   if (_buffer.capacity() < ImportImageForCaptureResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -3827,7 +3827,7 @@ void Controller::Interface::ImportImageForCaptureCompleterBase::Reply(::fidl::De
 }
 
 
-void Controller::Interface::StartCaptureCompleterBase::Reply(Controller_StartCapture_Result result) {
+void Controller::Interface::StartCaptureCompleterBase::Reply(::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StartCaptureResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<StartCaptureResponse*>(_write_bytes);
@@ -3849,7 +3849,7 @@ void Controller::Interface::StartCaptureCompleterBase::ReplyError(int32_t error)
   Reply(Controller_StartCapture_Result::WithErr(std::move(error)));
 }
 
-void Controller::Interface::StartCaptureCompleterBase::Reply(::fidl::BytePart _buffer, Controller_StartCapture_Result result) {
+void Controller::Interface::StartCaptureCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result result) {
   if (_buffer.capacity() < StartCaptureResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -3881,7 +3881,7 @@ void Controller::Interface::StartCaptureCompleterBase::Reply(::fidl::DecodedMess
 }
 
 
-void Controller::Interface::ReleaseCaptureCompleterBase::Reply(Controller_ReleaseCapture_Result result) {
+void Controller::Interface::ReleaseCaptureCompleterBase::Reply(::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReleaseCaptureResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ReleaseCaptureResponse*>(_write_bytes);
@@ -3903,7 +3903,7 @@ void Controller::Interface::ReleaseCaptureCompleterBase::ReplyError(int32_t erro
   Reply(Controller_ReleaseCapture_Result::WithErr(std::move(error)));
 }
 
-void Controller::Interface::ReleaseCaptureCompleterBase::Reply(::fidl::BytePart _buffer, Controller_ReleaseCapture_Result result) {
+void Controller::Interface::ReleaseCaptureCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result result) {
   if (_buffer.capacity() < ReleaseCaptureResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

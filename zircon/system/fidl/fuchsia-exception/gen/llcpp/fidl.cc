@@ -18,7 +18,7 @@ extern "C" const fidl_type_t fuchsia_exception_HandlerOnExceptionRequestTable;
 
 }  // namespace
 template <>
-Handler::ResultOf::OnException_Impl<Handler::OnExceptionResponse>::OnException_Impl(zx::unowned_channel _client_end, ::zx::exception exception, ExceptionInfo info) {
+Handler::ResultOf::OnException_Impl<Handler::OnExceptionResponse>::OnException_Impl(zx::unowned_channel _client_end, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnExceptionRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -33,16 +33,16 @@ Handler::ResultOf::OnException_Impl<Handler::OnExceptionResponse>::OnException_I
       Handler::InPlace::OnException(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Handler::ResultOf::OnException Handler::SyncClient::OnException(::zx::exception exception, ExceptionInfo info) {
+Handler::ResultOf::OnException Handler::SyncClient::OnException(::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info) {
   return ResultOf::OnException(zx::unowned_channel(this->channel_), std::move(exception), std::move(info));
 }
 
-Handler::ResultOf::OnException Handler::Call::OnException(zx::unowned_channel _client_end, ::zx::exception exception, ExceptionInfo info) {
+Handler::ResultOf::OnException Handler::Call::OnException(zx::unowned_channel _client_end, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info) {
   return ResultOf::OnException(std::move(_client_end), std::move(exception), std::move(info));
 }
 
 template <>
-Handler::UnownedResultOf::OnException_Impl<Handler::OnExceptionResponse>::OnException_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::exception exception, ExceptionInfo info, ::fidl::BytePart _response_buffer) {
+Handler::UnownedResultOf::OnException_Impl<Handler::OnExceptionResponse>::OnException_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < OnExceptionRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<OnExceptionResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -57,11 +57,11 @@ Handler::UnownedResultOf::OnException_Impl<Handler::OnExceptionResponse>::OnExce
       Handler::InPlace::OnException(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Handler::UnownedResultOf::OnException Handler::SyncClient::OnException(::fidl::BytePart _request_buffer, ::zx::exception exception, ExceptionInfo info, ::fidl::BytePart _response_buffer) {
+Handler::UnownedResultOf::OnException Handler::SyncClient::OnException(::fidl::BytePart _request_buffer, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::OnException(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(exception), std::move(info), std::move(_response_buffer));
 }
 
-Handler::UnownedResultOf::OnException Handler::Call::OnException(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::exception exception, ExceptionInfo info, ::fidl::BytePart _response_buffer) {
+Handler::UnownedResultOf::OnException Handler::Call::OnException(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::OnException(std::move(_client_end), std::move(_request_buffer), std::move(exception), std::move(info), std::move(_response_buffer));
 }
 
@@ -142,7 +142,7 @@ void Handler::Interface::OnExceptionCompleterBase::Reply() {
   return ProcessExceptionMetadata::Builder();
 }
 
-auto ::llcpp::fuchsia::exception::ProcessExceptionMetadata::Builder::set_info(ExceptionInfo* elem) -> Builder&& {
+auto ::llcpp::fuchsia::exception::ProcessExceptionMetadata::Builder::set_info(::llcpp::fuchsia::exception::ExceptionInfo* elem) -> Builder&& {
   ZX_ASSERT(elem);
   envelopes_[1 - 1].data = static_cast<void*>(elem);
   if (max_ordinal_ < 1) {
@@ -182,7 +182,7 @@ auto ::llcpp::fuchsia::exception::ProcessException::Builder::set_exception(::zx:
   return std::move(*this);
 }
 
-auto ::llcpp::fuchsia::exception::ProcessException::Builder::set_info(ExceptionInfo* elem) -> Builder&& {
+auto ::llcpp::fuchsia::exception::ProcessException::Builder::set_info(::llcpp::fuchsia::exception::ExceptionInfo* elem) -> Builder&& {
   ZX_ASSERT(elem);
   envelopes_[2 - 1].data = static_cast<void*>(elem);
   if (max_ordinal_ < 2) {
@@ -249,10 +249,10 @@ void ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::SizeAnd
 }
 
 
-ProcessLimbo_RetrieveException_Response& ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::mutable_response() {
+::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response& ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) ProcessLimbo_RetrieveException_Response;
+    new (&response_) ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -465,7 +465,7 @@ bool ProcessLimbo::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
 }
 
 
-void ProcessLimbo::Interface::ListProcessesWaitingOnExceptionCompleterBase::Reply(::fidl::VectorView<ProcessExceptionMetadata> exception_list) {
+void ProcessLimbo::Interface::ListProcessesWaitingOnExceptionCompleterBase::Reply(::fidl::VectorView<::llcpp::fuchsia::exception::ProcessExceptionMetadata> exception_list) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ListProcessesWaitingOnExceptionResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -485,7 +485,7 @@ void ProcessLimbo::Interface::ListProcessesWaitingOnExceptionCompleterBase::Repl
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void ProcessLimbo::Interface::ListProcessesWaitingOnExceptionCompleterBase::Reply(::fidl::BytePart _buffer, ::fidl::VectorView<ProcessExceptionMetadata> exception_list) {
+void ProcessLimbo::Interface::ListProcessesWaitingOnExceptionCompleterBase::Reply(::fidl::BytePart _buffer, ::fidl::VectorView<::llcpp::fuchsia::exception::ProcessExceptionMetadata> exception_list) {
   if (_buffer.capacity() < ListProcessesWaitingOnExceptionResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -516,7 +516,7 @@ void ProcessLimbo::Interface::ListProcessesWaitingOnExceptionCompleterBase::Repl
 }
 
 
-void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::Reply(ProcessLimbo_RetrieveException_Result result) {
+void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::Reply(::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RetrieveExceptionResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -535,7 +535,7 @@ void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::Reply(ProcessLimbo
   }
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
-void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::ReplySuccess(ProcessException process_exception) {
+void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::ReplySuccess(::llcpp::fuchsia::exception::ProcessException process_exception) {
   ProcessLimbo_RetrieveException_Response response;
   response.process_exception = std::move(process_exception);
 
@@ -545,7 +545,7 @@ void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::ReplyError(int32_t
   Reply(ProcessLimbo_RetrieveException_Result::WithErr(std::move(error)));
 }
 
-void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::Reply(::fidl::BytePart _buffer, ProcessLimbo_RetrieveException_Result result) {
+void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result result) {
   if (_buffer.capacity() < RetrieveExceptionResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -564,7 +564,7 @@ void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::Reply(::fidl::Byte
   }
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
-void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ProcessException process_exception) {
+void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::exception::ProcessException process_exception) {
   ProcessLimbo_RetrieveException_Response response;
   response.process_exception = std::move(process_exception);
 

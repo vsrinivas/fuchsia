@@ -82,27 +82,27 @@ struct WithErrorSyntax_ResponseAsStruct_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static WithErrorSyntax_ResponseAsStruct_Result WithResponse(WithErrorSyntax_ResponseAsStruct_Response&& val) {
+  static WithErrorSyntax_ResponseAsStruct_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response&& val) {
     WithErrorSyntax_ResponseAsStruct_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  WithErrorSyntax_ResponseAsStruct_Response& mutable_response();
+  ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, WithErrorSyntax_ResponseAsStruct_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, WithErrorSyntax_ResponseAsStruct_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  WithErrorSyntax_ResponseAsStruct_Response const & response() const { return response_; }
+  ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -142,7 +142,7 @@ struct WithErrorSyntax_ResponseAsStruct_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    WithErrorSyntax_ResponseAsStruct_Response response_;
+    ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response response_;
     uint32_t err_;
   };
 };
@@ -189,27 +189,27 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(WithErrorSyntax_ErrorAsPrimitive_Response&& val) {
+  static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response&& val) {
     WithErrorSyntax_ErrorAsPrimitive_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  WithErrorSyntax_ErrorAsPrimitive_Response& mutable_response();
+  ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, WithErrorSyntax_ErrorAsPrimitive_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, WithErrorSyntax_ErrorAsPrimitive_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  WithErrorSyntax_ErrorAsPrimitive_Response const & response() const { return response_; }
+  ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -249,7 +249,7 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    WithErrorSyntax_ErrorAsPrimitive_Response response_;
+    ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response response_;
     uint32_t err_;
   };
 };
@@ -1189,51 +1189,51 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static WithErrorSyntax_ErrorAsEnum_Result WithResponse(WithErrorSyntax_ErrorAsEnum_Response&& val) {
+  static WithErrorSyntax_ErrorAsEnum_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response&& val) {
     WithErrorSyntax_ErrorAsEnum_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  WithErrorSyntax_ErrorAsEnum_Response& mutable_response();
+  ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, WithErrorSyntax_ErrorAsEnum_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, WithErrorSyntax_ErrorAsEnum_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  WithErrorSyntax_ErrorAsEnum_Response const & response() const { return response_; }
+  ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
-  static WithErrorSyntax_ErrorAsEnum_Result WithErr(ErrorEnun&& val) {
+  static WithErrorSyntax_ErrorAsEnum_Result WithErr(::llcpp::test::name::ErrorEnun&& val) {
     WithErrorSyntax_ErrorAsEnum_Result result;
     result.set_err(std::move(val));
     return result;
   }
 
-  ErrorEnun& mutable_err();
+  ::llcpp::test::name::ErrorEnun& mutable_err();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ErrorEnun>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::ErrorEnun>::value && std::is_copy_assignable<T>::value>
   set_err(const T& v) {
     mutable_err() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ErrorEnun>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::ErrorEnun>::value && std::is_move_assignable<T>::value>
   set_err(T&& v) {
     mutable_err() = std::move(v);
   }
 
-  ErrorEnun const & err() const { return err_; }
+  ::llcpp::test::name::ErrorEnun const & err() const { return err_; }
 
   Tag which() const { return tag_; }
 
@@ -1249,8 +1249,8 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    WithErrorSyntax_ErrorAsEnum_Response response_;
-    ErrorEnun err_;
+    ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response response_;
+    ::llcpp::test::name::ErrorEnun err_;
   };
 };
 
@@ -1265,7 +1265,7 @@ class WithErrorSyntax final {
   struct ResponseAsStructResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    WithErrorSyntax_ResponseAsStruct_Result result;
+    ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result;
 
     static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntaxResponseAsStructResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1280,7 +1280,7 @@ class WithErrorSyntax final {
   struct ErrorAsPrimitiveResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    WithErrorSyntax_ErrorAsPrimitive_Result result;
+    ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result;
 
     static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1295,7 +1295,7 @@ class WithErrorSyntax final {
   struct ErrorAsEnumResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    WithErrorSyntax_ErrorAsEnum_Result result;
+    ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result;
 
     static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntaxErrorAsEnumResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1509,10 +1509,10 @@ class WithErrorSyntax final {
 
     class ResponseAsStructCompleterBase : public _Base {
      public:
-      void Reply(WithErrorSyntax_ResponseAsStruct_Result result);
+      void Reply(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result);
       void ReplySuccess(int64_t a, int64_t b, int64_t c);
       void ReplyError(uint32_t error);
-      void Reply(::fidl::BytePart _buffer, WithErrorSyntax_ResponseAsStruct_Result result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result);
       void ReplySuccess(::fidl::BytePart _buffer, int64_t a, int64_t b, int64_t c);
       void Reply(::fidl::DecodedMessage<ResponseAsStructResponse> params);
 
@@ -1526,10 +1526,10 @@ class WithErrorSyntax final {
 
     class ErrorAsPrimitiveCompleterBase : public _Base {
      public:
-      void Reply(WithErrorSyntax_ErrorAsPrimitive_Result result);
+      void Reply(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result);
       void ReplySuccess();
       void ReplyError(uint32_t error);
-      void Reply(::fidl::BytePart _buffer, WithErrorSyntax_ErrorAsPrimitive_Result result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result);
       void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<ErrorAsPrimitiveResponse> params);
 
@@ -1543,10 +1543,10 @@ class WithErrorSyntax final {
 
     class ErrorAsEnumCompleterBase : public _Base {
      public:
-      void Reply(WithErrorSyntax_ErrorAsEnum_Result result);
+      void Reply(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result);
       void ReplySuccess();
       void ReplyError(ErrorEnun error);
-      void Reply(::fidl::BytePart _buffer, WithErrorSyntax_ErrorAsEnum_Result result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result);
       void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<ErrorAsEnumResponse> params);
 

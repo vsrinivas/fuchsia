@@ -55,52 +55,52 @@ struct MouseDescriptor final : private ::fidl::VectorView<fidl_envelope_t> {
   bool IsEmpty() const { return EnvelopesView::empty(); }
 
   // The range of relative X movement.
-  const Axis& movement_x() const {
+  const ::llcpp::fuchsia::input::report::Axis& movement_x() const {
     ZX_ASSERT(has_movement_x());
-    return *reinterpret_cast<const Axis*>(EnvelopesView::at(1 - 1).data);
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::Axis*>(EnvelopesView::at(1 - 1).data);
   }
-  Axis& movement_x() {
+  ::llcpp::fuchsia::input::report::Axis& movement_x() {
     ZX_ASSERT(has_movement_x());
-    return *reinterpret_cast<Axis*>(EnvelopesView::at(1 - 1).data);
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::Axis*>(EnvelopesView::at(1 - 1).data);
   }
   bool has_movement_x() const {
     return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
   }
 
   // The range of relative Y movement.
-  const Axis& movement_y() const {
+  const ::llcpp::fuchsia::input::report::Axis& movement_y() const {
     ZX_ASSERT(has_movement_y());
-    return *reinterpret_cast<const Axis*>(EnvelopesView::at(2 - 1).data);
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::Axis*>(EnvelopesView::at(2 - 1).data);
   }
-  Axis& movement_y() {
+  ::llcpp::fuchsia::input::report::Axis& movement_y() {
     ZX_ASSERT(has_movement_y());
-    return *reinterpret_cast<Axis*>(EnvelopesView::at(2 - 1).data);
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::Axis*>(EnvelopesView::at(2 - 1).data);
   }
   bool has_movement_y() const {
     return EnvelopesView::count() >= 2 && EnvelopesView::at(2 - 1).data != nullptr;
   }
 
   // The range of relative vertical scroll.
-  const Axis& scroll_v() const {
+  const ::llcpp::fuchsia::input::report::Axis& scroll_v() const {
     ZX_ASSERT(has_scroll_v());
-    return *reinterpret_cast<const Axis*>(EnvelopesView::at(3 - 1).data);
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::Axis*>(EnvelopesView::at(3 - 1).data);
   }
-  Axis& scroll_v() {
+  ::llcpp::fuchsia::input::report::Axis& scroll_v() {
     ZX_ASSERT(has_scroll_v());
-    return *reinterpret_cast<Axis*>(EnvelopesView::at(3 - 1).data);
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::Axis*>(EnvelopesView::at(3 - 1).data);
   }
   bool has_scroll_v() const {
     return EnvelopesView::count() >= 3 && EnvelopesView::at(3 - 1).data != nullptr;
   }
 
   // The range of relative horizontal scroll.
-  const Axis& scroll_h() const {
+  const ::llcpp::fuchsia::input::report::Axis& scroll_h() const {
     ZX_ASSERT(has_scroll_h());
-    return *reinterpret_cast<const Axis*>(EnvelopesView::at(4 - 1).data);
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::Axis*>(EnvelopesView::at(4 - 1).data);
   }
-  Axis& scroll_h() {
+  ::llcpp::fuchsia::input::report::Axis& scroll_h() {
     ZX_ASSERT(has_scroll_h());
-    return *reinterpret_cast<Axis*>(EnvelopesView::at(4 - 1).data);
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::Axis*>(EnvelopesView::at(4 - 1).data);
   }
   bool has_scroll_h() const {
     return EnvelopesView::count() >= 4 && EnvelopesView::at(4 - 1).data != nullptr;
@@ -145,16 +145,16 @@ class MouseDescriptor::Builder {
   Builder& operator=(Builder&& other) noexcept = default;
 
   // The range of relative X movement.
-  Builder&& set_movement_x(Axis* elem);
+  Builder&& set_movement_x(::llcpp::fuchsia::input::report::Axis* elem);
 
   // The range of relative Y movement.
-  Builder&& set_movement_y(Axis* elem);
+  Builder&& set_movement_y(::llcpp::fuchsia::input::report::Axis* elem);
 
   // The range of relative vertical scroll.
-  Builder&& set_scroll_v(Axis* elem);
+  Builder&& set_scroll_v(::llcpp::fuchsia::input::report::Axis* elem);
 
   // The range of relative horizontal scroll.
-  Builder&& set_scroll_h(Axis* elem);
+  Builder&& set_scroll_h(::llcpp::fuchsia::input::report::Axis* elem);
 
   // This is a vector of id's for the mouse buttons.
   Builder&& set_buttons(::fidl::VectorView<uint8_t>* elem);
@@ -314,13 +314,13 @@ struct InputReport final : private ::fidl::VectorView<fidl_envelope_t> {
     return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
   }
 
-  const MouseReport& mouse() const {
+  const ::llcpp::fuchsia::input::report::MouseReport& mouse() const {
     ZX_ASSERT(has_mouse());
-    return *reinterpret_cast<const MouseReport*>(EnvelopesView::at(2 - 1).data);
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::MouseReport*>(EnvelopesView::at(2 - 1).data);
   }
-  MouseReport& mouse() {
+  ::llcpp::fuchsia::input::report::MouseReport& mouse() {
     ZX_ASSERT(has_mouse());
-    return *reinterpret_cast<MouseReport*>(EnvelopesView::at(2 - 1).data);
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::MouseReport*>(EnvelopesView::at(2 - 1).data);
   }
   bool has_mouse() const {
     return EnvelopesView::count() >= 2 && EnvelopesView::at(2 - 1).data != nullptr;
@@ -367,7 +367,7 @@ class InputReport::Builder {
   // |event_time| is in nanoseconds when the event was recorded.
   Builder&& set_event_time(int64_t* elem);
 
-  Builder&& set_mouse(MouseReport* elem);
+  Builder&& set_mouse(::llcpp::fuchsia::input::report::MouseReport* elem);
 
   // Unique ID to connect trace async begin/end events.
   Builder&& set_trace_id(uint64_t* elem);
@@ -392,26 +392,26 @@ struct DeviceDescriptor final : private ::fidl::VectorView<fidl_envelope_t> {
   bool IsEmpty() const { return EnvelopesView::empty(); }
 
   // |device_info| should always be present to help distinguish between physical devices.
-  const DeviceInfo& device_info() const {
+  const ::llcpp::fuchsia::input::report::DeviceInfo& device_info() const {
     ZX_ASSERT(has_device_info());
-    return *reinterpret_cast<const DeviceInfo*>(EnvelopesView::at(1 - 1).data);
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::DeviceInfo*>(EnvelopesView::at(1 - 1).data);
   }
-  DeviceInfo& device_info() {
+  ::llcpp::fuchsia::input::report::DeviceInfo& device_info() {
     ZX_ASSERT(has_device_info());
-    return *reinterpret_cast<DeviceInfo*>(EnvelopesView::at(1 - 1).data);
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::DeviceInfo*>(EnvelopesView::at(1 - 1).data);
   }
   bool has_device_info() const {
     return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
   }
 
   // When |mouse| is present the device has a mouse.
-  const MouseDescriptor& mouse() const {
+  const ::llcpp::fuchsia::input::report::MouseDescriptor& mouse() const {
     ZX_ASSERT(has_mouse());
-    return *reinterpret_cast<const MouseDescriptor*>(EnvelopesView::at(2 - 1).data);
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::MouseDescriptor*>(EnvelopesView::at(2 - 1).data);
   }
-  MouseDescriptor& mouse() {
+  ::llcpp::fuchsia::input::report::MouseDescriptor& mouse() {
     ZX_ASSERT(has_mouse());
-    return *reinterpret_cast<MouseDescriptor*>(EnvelopesView::at(2 - 1).data);
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::MouseDescriptor*>(EnvelopesView::at(2 - 1).data);
   }
   bool has_mouse() const {
     return EnvelopesView::count() >= 2 && EnvelopesView::at(2 - 1).data != nullptr;
@@ -443,10 +443,10 @@ class DeviceDescriptor::Builder {
   Builder& operator=(Builder&& other) noexcept = default;
 
   // |device_info| should always be present to help distinguish between physical devices.
-  Builder&& set_device_info(DeviceInfo* elem);
+  Builder&& set_device_info(::llcpp::fuchsia::input::report::DeviceInfo* elem);
 
   // When |mouse| is present the device has a mouse.
-  Builder&& set_mouse(MouseDescriptor* elem);
+  Builder&& set_mouse(::llcpp::fuchsia::input::report::MouseDescriptor* elem);
 
  private:
   Builder() = default;
@@ -481,9 +481,9 @@ struct Axis {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  Range range = {};
+  ::llcpp::fuchsia::input::report::Range range = {};
 
-  Unit unit = {};
+  ::llcpp::fuchsia::input::report::Unit unit = {};
 };
 
 // A hardcoded number of max mouse buttons. This should be increased in the future
@@ -550,7 +550,7 @@ class InputDevice final {
   struct GetReportsResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::fidl::VectorView<InputReport> reports;
+    ::fidl::VectorView<::llcpp::fuchsia::input::report::InputReport> reports;
 
     static constexpr const fidl_type_t* Type = &fuchsia_input_report_InputDeviceGetReportsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -565,7 +565,7 @@ class InputDevice final {
   struct GetDescriptorResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    DeviceDescriptor descriptor;
+    ::llcpp::fuchsia::input::report::DeviceDescriptor descriptor;
 
     static constexpr const fidl_type_t* Type = &fuchsia_input_report_InputDeviceGetDescriptorResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -828,8 +828,8 @@ class InputDevice final {
 
     class GetReportsCompleterBase : public _Base {
      public:
-      void Reply(::fidl::VectorView<InputReport> reports);
-      void Reply(::fidl::BytePart _buffer, ::fidl::VectorView<InputReport> reports);
+      void Reply(::fidl::VectorView<::llcpp::fuchsia::input::report::InputReport> reports);
+      void Reply(::fidl::BytePart _buffer, ::fidl::VectorView<::llcpp::fuchsia::input::report::InputReport> reports);
       void Reply(::fidl::DecodedMessage<GetReportsResponse> params);
 
      protected:
@@ -842,8 +842,8 @@ class InputDevice final {
 
     class GetDescriptorCompleterBase : public _Base {
      public:
-      void Reply(DeviceDescriptor descriptor);
-      void Reply(::fidl::BytePart _buffer, DeviceDescriptor descriptor);
+      void Reply(::llcpp::fuchsia::input::report::DeviceDescriptor descriptor);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::input::report::DeviceDescriptor descriptor);
       void Reply(::fidl::DecodedMessage<GetDescriptorResponse> params);
 
      protected:

@@ -48,10 +48,10 @@ void ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result::SizeAndOffsetA
 }
 
 
-NameProvider_GetDeviceName_Response& ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result::mutable_response() {
+::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response& ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) NameProvider_GetDeviceName_Response;
+    new (&response_) ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -179,7 +179,7 @@ bool NameProvider::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
 }
 
 
-void NameProvider::Interface::GetDeviceNameCompleterBase::Reply(NameProvider_GetDeviceName_Result result) {
+void NameProvider::Interface::GetDeviceNameCompleterBase::Reply(::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceNameResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetDeviceNameResponse _response = {};
@@ -207,7 +207,7 @@ void NameProvider::Interface::GetDeviceNameCompleterBase::ReplyError(int32_t err
   Reply(NameProvider_GetDeviceName_Result::WithErr(std::move(error)));
 }
 
-void NameProvider::Interface::GetDeviceNameCompleterBase::Reply(::fidl::BytePart _buffer, NameProvider_GetDeviceName_Result result) {
+void NameProvider::Interface::GetDeviceNameCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result result) {
   if (_buffer.capacity() < GetDeviceNameResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -284,10 +284,10 @@ void ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::SizeAndOf
 }
 
 
-Controller_GetPowerStateMapping_Response& ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::mutable_response() {
+::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response& ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Controller_GetPowerStateMapping_Response;
+    new (&response_) ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -343,10 +343,10 @@ void ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result::SizeAndOffs
 }
 
 
-Controller_GetDevicePowerCaps_Response& ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result::mutable_response() {
+::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response& ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Controller_GetDevicePowerCaps_Response;
+    new (&response_) ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -402,10 +402,10 @@ void ::llcpp::fuchsia::device::Controller_Resume_Result::SizeAndOffsetAssertionH
 }
 
 
-Controller_Resume_Response& ::llcpp::fuchsia::device::Controller_Resume_Result::mutable_response() {
+::llcpp::fuchsia::device::Controller_Resume_Response& ::llcpp::fuchsia::device::Controller_Resume_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Controller_Resume_Response;
+    new (&response_) ::llcpp::fuchsia::device::Controller_Resume_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -462,10 +462,10 @@ void ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::SizeAn
 }
 
 
-Controller_UpdatePowerStateMapping_Response& ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::mutable_response() {
+::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response& ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) Controller_UpdatePowerStateMapping_Response;
+    new (&response_) ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -1371,7 +1371,7 @@ Controller::UnownedResultOf::GetDevicePowerCaps Controller::Call::GetDevicePower
 }
 
 template <>
-Controller::ResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowerStateMappingResponse>::UpdatePowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::Array<SystemPowerStateInfo, 6> mapping) {
+Controller::ResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowerStateMappingResponse>::UpdatePowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UpdatePowerStateMappingRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1385,16 +1385,16 @@ Controller::ResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowerStateM
       Controller::InPlace::UpdatePowerStateMapping(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Controller::ResultOf::UpdatePowerStateMapping Controller::SyncClient::UpdatePowerStateMapping(::fidl::Array<SystemPowerStateInfo, 6> mapping) {
+Controller::ResultOf::UpdatePowerStateMapping Controller::SyncClient::UpdatePowerStateMapping(::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping) {
   return ResultOf::UpdatePowerStateMapping(zx::unowned_channel(this->channel_), std::move(mapping));
 }
 
-Controller::ResultOf::UpdatePowerStateMapping Controller::Call::UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::Array<SystemPowerStateInfo, 6> mapping) {
+Controller::ResultOf::UpdatePowerStateMapping Controller::Call::UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping) {
   return ResultOf::UpdatePowerStateMapping(std::move(_client_end), std::move(mapping));
 }
 
 template <>
-Controller::UnownedResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowerStateMappingResponse>::UpdatePowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<SystemPowerStateInfo, 6> mapping, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowerStateMappingResponse>::UpdatePowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < UpdatePowerStateMappingRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<UpdatePowerStateMappingResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1408,11 +1408,11 @@ Controller::UnownedResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowe
       Controller::InPlace::UpdatePowerStateMapping(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Controller::UnownedResultOf::UpdatePowerStateMapping Controller::SyncClient::UpdatePowerStateMapping(::fidl::BytePart _request_buffer, ::fidl::Array<SystemPowerStateInfo, 6> mapping, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::UpdatePowerStateMapping Controller::SyncClient::UpdatePowerStateMapping(::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::UpdatePowerStateMapping(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(mapping), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::UpdatePowerStateMapping Controller::Call::UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<SystemPowerStateInfo, 6> mapping, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::UpdatePowerStateMapping Controller::Call::UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::UpdatePowerStateMapping(std::move(_client_end), std::move(_request_buffer), std::move(mapping), std::move(_response_buffer));
 }
 
@@ -1504,7 +1504,7 @@ Controller::UnownedResultOf::GetPowerStateMapping Controller::Call::GetPowerStat
 }
 
 template <>
-Controller::ResultOf::Suspend_Impl<Controller::SuspendResponse>::Suspend_Impl(zx::unowned_channel _client_end, DevicePowerState requested_state) {
+Controller::ResultOf::Suspend_Impl<Controller::SuspendResponse>::Suspend_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SuspendRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1518,16 +1518,16 @@ Controller::ResultOf::Suspend_Impl<Controller::SuspendResponse>::Suspend_Impl(zx
       Controller::InPlace::Suspend(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Controller::ResultOf::Suspend Controller::SyncClient::Suspend(DevicePowerState requested_state) {
+Controller::ResultOf::Suspend Controller::SyncClient::Suspend(::llcpp::fuchsia::device::DevicePowerState requested_state) {
   return ResultOf::Suspend(zx::unowned_channel(this->channel_), std::move(requested_state));
 }
 
-Controller::ResultOf::Suspend Controller::Call::Suspend(zx::unowned_channel _client_end, DevicePowerState requested_state) {
+Controller::ResultOf::Suspend Controller::Call::Suspend(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state) {
   return ResultOf::Suspend(std::move(_client_end), std::move(requested_state));
 }
 
 template <>
-Controller::UnownedResultOf::Suspend_Impl<Controller::SuspendResponse>::Suspend_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::Suspend_Impl<Controller::SuspendResponse>::Suspend_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SuspendRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SuspendResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1541,11 +1541,11 @@ Controller::UnownedResultOf::Suspend_Impl<Controller::SuspendResponse>::Suspend_
       Controller::InPlace::Suspend(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Controller::UnownedResultOf::Suspend Controller::SyncClient::Suspend(::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::Suspend Controller::SyncClient::Suspend(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Suspend(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(requested_state), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::Suspend Controller::Call::Suspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::Suspend Controller::Call::Suspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Suspend(std::move(_client_end), std::move(_request_buffer), std::move(requested_state), std::move(_response_buffer));
 }
 
@@ -1571,7 +1571,7 @@ Controller::UnownedResultOf::Suspend Controller::Call::Suspend(zx::unowned_chann
 }
 
 template <>
-Controller::ResultOf::Resume_Impl<Controller::ResumeResponse>::Resume_Impl(zx::unowned_channel _client_end, DevicePowerState requested_state) {
+Controller::ResultOf::Resume_Impl<Controller::ResumeResponse>::Resume_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ResumeRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1585,16 +1585,16 @@ Controller::ResultOf::Resume_Impl<Controller::ResumeResponse>::Resume_Impl(zx::u
       Controller::InPlace::Resume(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Controller::ResultOf::Resume Controller::SyncClient::Resume(DevicePowerState requested_state) {
+Controller::ResultOf::Resume Controller::SyncClient::Resume(::llcpp::fuchsia::device::DevicePowerState requested_state) {
   return ResultOf::Resume(zx::unowned_channel(this->channel_), std::move(requested_state));
 }
 
-Controller::ResultOf::Resume Controller::Call::Resume(zx::unowned_channel _client_end, DevicePowerState requested_state) {
+Controller::ResultOf::Resume Controller::Call::Resume(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state) {
   return ResultOf::Resume(std::move(_client_end), std::move(requested_state));
 }
 
 template <>
-Controller::UnownedResultOf::Resume_Impl<Controller::ResumeResponse>::Resume_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::Resume_Impl<Controller::ResumeResponse>::Resume_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < ResumeRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<ResumeResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1608,11 +1608,11 @@ Controller::UnownedResultOf::Resume_Impl<Controller::ResumeResponse>::Resume_Imp
       Controller::InPlace::Resume(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Controller::UnownedResultOf::Resume Controller::SyncClient::Resume(::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::Resume Controller::SyncClient::Resume(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Resume(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(requested_state), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::Resume Controller::Call::Resume(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::Resume Controller::Call::Resume(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Resume(std::move(_client_end), std::move(_request_buffer), std::move(requested_state), std::move(_response_buffer));
 }
 
@@ -2347,7 +2347,7 @@ void Controller::Interface::RunCompatibilityTestsCompleterBase::Reply(::fidl::De
 }
 
 
-void Controller::Interface::GetDevicePowerCapsCompleterBase::Reply(Controller_GetDevicePowerCaps_Result result) {
+void Controller::Interface::GetDevicePowerCapsCompleterBase::Reply(::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDevicePowerCapsResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetDevicePowerCapsResponse*>(_write_bytes);
@@ -2360,7 +2360,7 @@ void Controller::Interface::GetDevicePowerCapsCompleterBase::Reply(Controller_Ge
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetDevicePowerCapsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetDevicePowerCapsResponse>(std::move(_response_bytes)));
 }
-void Controller::Interface::GetDevicePowerCapsCompleterBase::ReplySuccess(::fidl::Array<DevicePowerStateInfo, 5> dpstates) {
+void Controller::Interface::GetDevicePowerCapsCompleterBase::ReplySuccess(::fidl::Array<::llcpp::fuchsia::device::DevicePowerStateInfo, 5> dpstates) {
   Controller_GetDevicePowerCaps_Response response;
   response.dpstates = std::move(dpstates);
 
@@ -2370,7 +2370,7 @@ void Controller::Interface::GetDevicePowerCapsCompleterBase::ReplyError(int32_t 
   Reply(Controller_GetDevicePowerCaps_Result::WithErr(std::move(error)));
 }
 
-void Controller::Interface::GetDevicePowerCapsCompleterBase::Reply(::fidl::BytePart _buffer, Controller_GetDevicePowerCaps_Result result) {
+void Controller::Interface::GetDevicePowerCapsCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result result) {
   if (_buffer.capacity() < GetDevicePowerCapsResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -2385,7 +2385,7 @@ void Controller::Interface::GetDevicePowerCapsCompleterBase::Reply(::fidl::ByteP
   _buffer.set_actual(sizeof(GetDevicePowerCapsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetDevicePowerCapsResponse>(std::move(_buffer)));
 }
-void Controller::Interface::GetDevicePowerCapsCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::fidl::Array<DevicePowerStateInfo, 5> dpstates) {
+void Controller::Interface::GetDevicePowerCapsCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::fidl::Array<::llcpp::fuchsia::device::DevicePowerStateInfo, 5> dpstates) {
   Controller_GetDevicePowerCaps_Response response;
   response.dpstates = std::move(dpstates);
 
@@ -2403,7 +2403,7 @@ void Controller::Interface::GetDevicePowerCapsCompleterBase::Reply(::fidl::Decod
 }
 
 
-void Controller::Interface::UpdatePowerStateMappingCompleterBase::Reply(Controller_UpdatePowerStateMapping_Result result) {
+void Controller::Interface::UpdatePowerStateMappingCompleterBase::Reply(::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UpdatePowerStateMappingResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<UpdatePowerStateMappingResponse*>(_write_bytes);
@@ -2425,7 +2425,7 @@ void Controller::Interface::UpdatePowerStateMappingCompleterBase::ReplyError(int
   Reply(Controller_UpdatePowerStateMapping_Result::WithErr(std::move(error)));
 }
 
-void Controller::Interface::UpdatePowerStateMappingCompleterBase::Reply(::fidl::BytePart _buffer, Controller_UpdatePowerStateMapping_Result result) {
+void Controller::Interface::UpdatePowerStateMappingCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result result) {
   if (_buffer.capacity() < UpdatePowerStateMappingResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -2457,7 +2457,7 @@ void Controller::Interface::UpdatePowerStateMappingCompleterBase::Reply(::fidl::
 }
 
 
-void Controller::Interface::GetPowerStateMappingCompleterBase::Reply(Controller_GetPowerStateMapping_Result result) {
+void Controller::Interface::GetPowerStateMappingCompleterBase::Reply(::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPowerStateMappingResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetPowerStateMappingResponse*>(_write_bytes);
@@ -2470,7 +2470,7 @@ void Controller::Interface::GetPowerStateMappingCompleterBase::Reply(Controller_
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetPowerStateMappingResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetPowerStateMappingResponse>(std::move(_response_bytes)));
 }
-void Controller::Interface::GetPowerStateMappingCompleterBase::ReplySuccess(::fidl::Array<SystemPowerStateInfo, 6> mapping) {
+void Controller::Interface::GetPowerStateMappingCompleterBase::ReplySuccess(::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping) {
   Controller_GetPowerStateMapping_Response response;
   response.mapping = std::move(mapping);
 
@@ -2480,7 +2480,7 @@ void Controller::Interface::GetPowerStateMappingCompleterBase::ReplyError(int32_
   Reply(Controller_GetPowerStateMapping_Result::WithErr(std::move(error)));
 }
 
-void Controller::Interface::GetPowerStateMappingCompleterBase::Reply(::fidl::BytePart _buffer, Controller_GetPowerStateMapping_Result result) {
+void Controller::Interface::GetPowerStateMappingCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result result) {
   if (_buffer.capacity() < GetPowerStateMappingResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -2495,7 +2495,7 @@ void Controller::Interface::GetPowerStateMappingCompleterBase::Reply(::fidl::Byt
   _buffer.set_actual(sizeof(GetPowerStateMappingResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetPowerStateMappingResponse>(std::move(_buffer)));
 }
-void Controller::Interface::GetPowerStateMappingCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::fidl::Array<SystemPowerStateInfo, 6> mapping) {
+void Controller::Interface::GetPowerStateMappingCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping) {
   Controller_GetPowerStateMapping_Response response;
   response.mapping = std::move(mapping);
 
@@ -2513,7 +2513,7 @@ void Controller::Interface::GetPowerStateMappingCompleterBase::Reply(::fidl::Dec
 }
 
 
-void Controller::Interface::SuspendCompleterBase::Reply(int32_t status, DevicePowerState out_state) {
+void Controller::Interface::SuspendCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::device::DevicePowerState out_state) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SuspendResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SuspendResponse*>(_write_bytes);
@@ -2528,7 +2528,7 @@ void Controller::Interface::SuspendCompleterBase::Reply(int32_t status, DevicePo
   CompleterBase::SendReply(::fidl::DecodedMessage<SuspendResponse>(std::move(_response_bytes)));
 }
 
-void Controller::Interface::SuspendCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, DevicePowerState out_state) {
+void Controller::Interface::SuspendCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::device::DevicePowerState out_state) {
   if (_buffer.capacity() < SuspendResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -2556,7 +2556,7 @@ void Controller::Interface::SuspendCompleterBase::Reply(::fidl::DecodedMessage<S
 }
 
 
-void Controller::Interface::ResumeCompleterBase::Reply(Controller_Resume_Result result) {
+void Controller::Interface::ResumeCompleterBase::Reply(::llcpp::fuchsia::device::Controller_Resume_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ResumeResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ResumeResponse*>(_write_bytes);
@@ -2569,7 +2569,7 @@ void Controller::Interface::ResumeCompleterBase::Reply(Controller_Resume_Result 
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ResumeResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ResumeResponse>(std::move(_response_bytes)));
 }
-void Controller::Interface::ResumeCompleterBase::ReplySuccess(DevicePowerState out_state) {
+void Controller::Interface::ResumeCompleterBase::ReplySuccess(::llcpp::fuchsia::device::DevicePowerState out_state) {
   Controller_Resume_Response response;
   response.out_state = std::move(out_state);
 
@@ -2579,7 +2579,7 @@ void Controller::Interface::ResumeCompleterBase::ReplyError(int32_t error) {
   Reply(Controller_Resume_Result::WithErr(std::move(error)));
 }
 
-void Controller::Interface::ResumeCompleterBase::Reply(::fidl::BytePart _buffer, Controller_Resume_Result result) {
+void Controller::Interface::ResumeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_Resume_Result result) {
   if (_buffer.capacity() < ResumeResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -2594,7 +2594,7 @@ void Controller::Interface::ResumeCompleterBase::Reply(::fidl::BytePart _buffer,
   _buffer.set_actual(sizeof(ResumeResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ResumeResponse>(std::move(_buffer)));
 }
-void Controller::Interface::ResumeCompleterBase::ReplySuccess(::fidl::BytePart _buffer, DevicePowerState out_state) {
+void Controller::Interface::ResumeCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::DevicePowerState out_state) {
   Controller_Resume_Response response;
   response.out_state = std::move(out_state);
 

@@ -381,7 +381,7 @@ void Device::Interface::GetBoardNameCompleterBase::Reply(::fidl::DecodedMessage<
 }
 
 
-void Device::Interface::GetInterruptControllerInfoCompleterBase::Reply(int32_t status, InterruptControllerInfo* info) {
+void Device::Interface::GetInterruptControllerInfoCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::sysinfo::InterruptControllerInfo* info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInterruptControllerInfoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetInterruptControllerInfoResponse _response = {};
@@ -401,7 +401,7 @@ void Device::Interface::GetInterruptControllerInfoCompleterBase::Reply(int32_t s
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void Device::Interface::GetInterruptControllerInfoCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, InterruptControllerInfo* info) {
+void Device::Interface::GetInterruptControllerInfoCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::sysinfo::InterruptControllerInfo* info) {
   if (_buffer.capacity() < GetInterruptControllerInfoResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

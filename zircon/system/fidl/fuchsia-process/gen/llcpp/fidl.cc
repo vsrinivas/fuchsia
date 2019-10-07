@@ -210,7 +210,7 @@ extern "C" const fidl_type_t fuchsia_process_LauncherAddHandlesRequestTable;
 
 }  // namespace
 template <>
-Launcher::ResultOf::Launch_Impl<Launcher::LaunchResponse>::Launch_Impl(zx::unowned_channel _client_end, LaunchInfo info) {
+Launcher::ResultOf::Launch_Impl<Launcher::LaunchResponse>::Launch_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LaunchRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -226,16 +226,16 @@ Launcher::ResultOf::Launch_Impl<Launcher::LaunchResponse>::Launch_Impl(zx::unown
       Launcher::InPlace::Launch(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Launcher::ResultOf::Launch Launcher::SyncClient::Launch(LaunchInfo info) {
+Launcher::ResultOf::Launch Launcher::SyncClient::Launch(::llcpp::fuchsia::process::LaunchInfo info) {
   return ResultOf::Launch(zx::unowned_channel(this->channel_), std::move(info));
 }
 
-Launcher::ResultOf::Launch Launcher::Call::Launch(zx::unowned_channel _client_end, LaunchInfo info) {
+Launcher::ResultOf::Launch Launcher::Call::Launch(zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info) {
   return ResultOf::Launch(std::move(_client_end), std::move(info));
 }
 
 template <>
-Launcher::UnownedResultOf::Launch_Impl<Launcher::LaunchResponse>::Launch_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, LaunchInfo info, ::fidl::BytePart _response_buffer) {
+Launcher::UnownedResultOf::Launch_Impl<Launcher::LaunchResponse>::Launch_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LaunchRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LaunchResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -252,11 +252,11 @@ Launcher::UnownedResultOf::Launch_Impl<Launcher::LaunchResponse>::Launch_Impl(zx
       Launcher::InPlace::Launch(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Launcher::UnownedResultOf::Launch Launcher::SyncClient::Launch(::fidl::BytePart _request_buffer, LaunchInfo info, ::fidl::BytePart _response_buffer) {
+Launcher::UnownedResultOf::Launch Launcher::SyncClient::Launch(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Launch(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(info), std::move(_response_buffer));
 }
 
-Launcher::UnownedResultOf::Launch Launcher::Call::Launch(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, LaunchInfo info, ::fidl::BytePart _response_buffer) {
+Launcher::UnownedResultOf::Launch Launcher::Call::Launch(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Launch(std::move(_client_end), std::move(_request_buffer), std::move(info), std::move(_response_buffer));
 }
 
@@ -282,7 +282,7 @@ Launcher::UnownedResultOf::Launch Launcher::Call::Launch(zx::unowned_channel _cl
 }
 
 template <>
-Launcher::ResultOf::CreateWithoutStarting_Impl<Launcher::CreateWithoutStartingResponse>::CreateWithoutStarting_Impl(zx::unowned_channel _client_end, LaunchInfo info) {
+Launcher::ResultOf::CreateWithoutStarting_Impl<Launcher::CreateWithoutStartingResponse>::CreateWithoutStarting_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateWithoutStartingRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -298,16 +298,16 @@ Launcher::ResultOf::CreateWithoutStarting_Impl<Launcher::CreateWithoutStartingRe
       Launcher::InPlace::CreateWithoutStarting(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Launcher::ResultOf::CreateWithoutStarting Launcher::SyncClient::CreateWithoutStarting(LaunchInfo info) {
+Launcher::ResultOf::CreateWithoutStarting Launcher::SyncClient::CreateWithoutStarting(::llcpp::fuchsia::process::LaunchInfo info) {
   return ResultOf::CreateWithoutStarting(zx::unowned_channel(this->channel_), std::move(info));
 }
 
-Launcher::ResultOf::CreateWithoutStarting Launcher::Call::CreateWithoutStarting(zx::unowned_channel _client_end, LaunchInfo info) {
+Launcher::ResultOf::CreateWithoutStarting Launcher::Call::CreateWithoutStarting(zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info) {
   return ResultOf::CreateWithoutStarting(std::move(_client_end), std::move(info));
 }
 
 template <>
-Launcher::UnownedResultOf::CreateWithoutStarting_Impl<Launcher::CreateWithoutStartingResponse>::CreateWithoutStarting_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, LaunchInfo info, ::fidl::BytePart _response_buffer) {
+Launcher::UnownedResultOf::CreateWithoutStarting_Impl<Launcher::CreateWithoutStartingResponse>::CreateWithoutStarting_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < CreateWithoutStartingRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<CreateWithoutStartingResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -324,11 +324,11 @@ Launcher::UnownedResultOf::CreateWithoutStarting_Impl<Launcher::CreateWithoutSta
       Launcher::InPlace::CreateWithoutStarting(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Launcher::UnownedResultOf::CreateWithoutStarting Launcher::SyncClient::CreateWithoutStarting(::fidl::BytePart _request_buffer, LaunchInfo info, ::fidl::BytePart _response_buffer) {
+Launcher::UnownedResultOf::CreateWithoutStarting Launcher::SyncClient::CreateWithoutStarting(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::CreateWithoutStarting(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(info), std::move(_response_buffer));
 }
 
-Launcher::UnownedResultOf::CreateWithoutStarting Launcher::Call::CreateWithoutStarting(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, LaunchInfo info, ::fidl::BytePart _response_buffer) {
+Launcher::UnownedResultOf::CreateWithoutStarting Launcher::Call::CreateWithoutStarting(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::CreateWithoutStarting(std::move(_client_end), std::move(_request_buffer), std::move(info), std::move(_response_buffer));
 }
 
@@ -500,7 +500,7 @@ Launcher::UnownedResultOf::AddEnvirons Launcher::Call::AddEnvirons(zx::unowned_c
 }
 
 
-Launcher::ResultOf::AddNames_Impl::AddNames_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<NameInfo> names) {
+Launcher::ResultOf::AddNames_Impl::AddNames_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddNamesRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -516,16 +516,16 @@ Launcher::ResultOf::AddNames_Impl::AddNames_Impl(zx::unowned_channel _client_end
       Launcher::InPlace::AddNames(std::move(_client_end), std::move(_decoded_request)));
 }
 
-Launcher::ResultOf::AddNames Launcher::SyncClient::AddNames(::fidl::VectorView<NameInfo> names) {
+Launcher::ResultOf::AddNames Launcher::SyncClient::AddNames(::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names) {
   return ResultOf::AddNames(zx::unowned_channel(this->channel_), std::move(names));
 }
 
-Launcher::ResultOf::AddNames Launcher::Call::AddNames(zx::unowned_channel _client_end, ::fidl::VectorView<NameInfo> names) {
+Launcher::ResultOf::AddNames Launcher::Call::AddNames(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names) {
   return ResultOf::AddNames(std::move(_client_end), std::move(names));
 }
 
 
-Launcher::UnownedResultOf::AddNames_Impl::AddNames_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<NameInfo> names) {
+Launcher::UnownedResultOf::AddNames_Impl::AddNames_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names) {
   if (_request_buffer.capacity() < AddNamesRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -543,11 +543,11 @@ Launcher::UnownedResultOf::AddNames_Impl::AddNames_Impl(zx::unowned_channel _cli
       Launcher::InPlace::AddNames(std::move(_client_end), std::move(_decoded_request)));
 }
 
-Launcher::UnownedResultOf::AddNames Launcher::SyncClient::AddNames(::fidl::BytePart _request_buffer, ::fidl::VectorView<NameInfo> names) {
+Launcher::UnownedResultOf::AddNames Launcher::SyncClient::AddNames(::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names) {
   return UnownedResultOf::AddNames(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(names));
 }
 
-Launcher::UnownedResultOf::AddNames Launcher::Call::AddNames(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<NameInfo> names) {
+Launcher::UnownedResultOf::AddNames Launcher::Call::AddNames(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names) {
   return UnownedResultOf::AddNames(std::move(_client_end), std::move(_request_buffer), std::move(names));
 }
 
@@ -573,7 +573,7 @@ Launcher::UnownedResultOf::AddNames Launcher::Call::AddNames(zx::unowned_channel
 }
 
 
-Launcher::ResultOf::AddHandles_Impl::AddHandles_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<HandleInfo> handles) {
+Launcher::ResultOf::AddHandles_Impl::AddHandles_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddHandlesRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -589,16 +589,16 @@ Launcher::ResultOf::AddHandles_Impl::AddHandles_Impl(zx::unowned_channel _client
       Launcher::InPlace::AddHandles(std::move(_client_end), std::move(_decoded_request)));
 }
 
-Launcher::ResultOf::AddHandles Launcher::SyncClient::AddHandles(::fidl::VectorView<HandleInfo> handles) {
+Launcher::ResultOf::AddHandles Launcher::SyncClient::AddHandles(::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles) {
   return ResultOf::AddHandles(zx::unowned_channel(this->channel_), std::move(handles));
 }
 
-Launcher::ResultOf::AddHandles Launcher::Call::AddHandles(zx::unowned_channel _client_end, ::fidl::VectorView<HandleInfo> handles) {
+Launcher::ResultOf::AddHandles Launcher::Call::AddHandles(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles) {
   return ResultOf::AddHandles(std::move(_client_end), std::move(handles));
 }
 
 
-Launcher::UnownedResultOf::AddHandles_Impl::AddHandles_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<HandleInfo> handles) {
+Launcher::UnownedResultOf::AddHandles_Impl::AddHandles_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles) {
   if (_request_buffer.capacity() < AddHandlesRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -616,11 +616,11 @@ Launcher::UnownedResultOf::AddHandles_Impl::AddHandles_Impl(zx::unowned_channel 
       Launcher::InPlace::AddHandles(std::move(_client_end), std::move(_decoded_request)));
 }
 
-Launcher::UnownedResultOf::AddHandles Launcher::SyncClient::AddHandles(::fidl::BytePart _request_buffer, ::fidl::VectorView<HandleInfo> handles) {
+Launcher::UnownedResultOf::AddHandles Launcher::SyncClient::AddHandles(::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles) {
   return UnownedResultOf::AddHandles(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(handles));
 }
 
-Launcher::UnownedResultOf::AddHandles Launcher::Call::AddHandles(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<HandleInfo> handles) {
+Launcher::UnownedResultOf::AddHandles Launcher::Call::AddHandles(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles) {
   return UnownedResultOf::AddHandles(std::move(_client_end), std::move(_request_buffer), std::move(handles));
 }
 
@@ -791,7 +791,7 @@ void Launcher::Interface::LaunchCompleterBase::Reply(::fidl::DecodedMessage<Laun
 }
 
 
-void Launcher::Interface::CreateWithoutStartingCompleterBase::Reply(int32_t status, ProcessStartData* data) {
+void Launcher::Interface::CreateWithoutStartingCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::process::ProcessStartData* data) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateWithoutStartingResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   CreateWithoutStartingResponse _response = {};
@@ -811,7 +811,7 @@ void Launcher::Interface::CreateWithoutStartingCompleterBase::Reply(int32_t stat
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void Launcher::Interface::CreateWithoutStartingCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ProcessStartData* data) {
+void Launcher::Interface::CreateWithoutStartingCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::process::ProcessStartData* data) {
   if (_buffer.capacity() < CreateWithoutStartingResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

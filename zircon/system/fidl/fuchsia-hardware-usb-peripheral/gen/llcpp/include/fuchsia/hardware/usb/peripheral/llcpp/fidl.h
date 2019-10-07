@@ -283,27 +283,27 @@ struct Device_SetConfiguration_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static Device_SetConfiguration_Result WithResponse(Device_SetConfiguration_Response&& val) {
+  static Device_SetConfiguration_Result WithResponse(::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response&& val) {
     Device_SetConfiguration_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  Device_SetConfiguration_Response& mutable_response();
+  ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Device_SetConfiguration_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Device_SetConfiguration_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  Device_SetConfiguration_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -343,7 +343,7 @@ struct Device_SetConfiguration_Result {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Device_SetConfiguration_Response response_;
+    ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response response_;
     int32_t err_;
   };
 };
@@ -395,7 +395,7 @@ class Device final {
   struct SetConfigurationResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Device_SetConfiguration_Result result;
+    ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_DeviceSetConfigurationResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -408,8 +408,8 @@ class Device final {
   struct SetConfigurationRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    DeviceDescriptor device_desc;
-    ::fidl::VectorView<FunctionDescriptor> function_descriptors;
+    ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc;
+    ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_DeviceSetConfigurationRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -447,7 +447,7 @@ class Device final {
     class SetConfiguration_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetConfiguration_Impl(zx::unowned_channel _client_end, DeviceDescriptor device_desc, ::fidl::VectorView<FunctionDescriptor> function_descriptors);
+      SetConfiguration_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors);
       ~SetConfiguration_Impl() = default;
       SetConfiguration_Impl(SetConfiguration_Impl&& other) = default;
       SetConfiguration_Impl& operator=(SetConfiguration_Impl&& other) = default;
@@ -502,7 +502,7 @@ class Device final {
     class SetConfiguration_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetConfiguration_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DeviceDescriptor device_desc, ::fidl::VectorView<FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer);
+      SetConfiguration_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer);
       ~SetConfiguration_Impl() = default;
       SetConfiguration_Impl(SetConfiguration_Impl&& other) = default;
       SetConfiguration_Impl& operator=(SetConfiguration_Impl&& other) = default;
@@ -563,13 +563,13 @@ class Device final {
     // configuration's interfaces.
     // At least one function descriptor must be provided.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    ResultOf::SetConfiguration SetConfiguration(DeviceDescriptor device_desc, ::fidl::VectorView<FunctionDescriptor> function_descriptors);
+    ResultOf::SetConfiguration SetConfiguration(::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors);
 
     // Sets the device's descriptors, adds the functions and creates the child devices for the
     // configuration's interfaces.
     // At least one function descriptor must be provided.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetConfiguration SetConfiguration(::fidl::BytePart _request_buffer, DeviceDescriptor device_desc, ::fidl::VectorView<FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::SetConfiguration SetConfiguration(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer);
 
     // Tells the device to remove the child devices for the configuration's interfaces
     // and reset the list of functions to empty.
@@ -599,13 +599,13 @@ class Device final {
     // configuration's interfaces.
     // At least one function descriptor must be provided.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::SetConfiguration SetConfiguration(zx::unowned_channel _client_end, DeviceDescriptor device_desc, ::fidl::VectorView<FunctionDescriptor> function_descriptors);
+    static ResultOf::SetConfiguration SetConfiguration(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors);
 
     // Sets the device's descriptors, adds the functions and creates the child devices for the
     // configuration's interfaces.
     // At least one function descriptor must be provided.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetConfiguration SetConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DeviceDescriptor device_desc, ::fidl::VectorView<FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetConfiguration SetConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer);
 
     // Tells the device to remove the child devices for the configuration's interfaces
     // and reset the list of functions to empty.
@@ -655,10 +655,10 @@ class Device final {
 
     class SetConfigurationCompleterBase : public _Base {
      public:
-      void Reply(Device_SetConfiguration_Result result);
+      void Reply(::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result result);
       void ReplySuccess();
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, Device_SetConfiguration_Result result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result result);
       void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<SetConfigurationResponse> params);
 
@@ -668,7 +668,7 @@ class Device final {
 
     using SetConfigurationCompleter = ::fidl::Completer<SetConfigurationCompleterBase>;
 
-    virtual void SetConfiguration(DeviceDescriptor device_desc, ::fidl::VectorView<FunctionDescriptor> function_descriptors, SetConfigurationCompleter::Sync _completer) = 0;
+    virtual void SetConfiguration(::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors, SetConfigurationCompleter::Sync _completer) = 0;
 
     class ClearFunctionsCompleterBase : public _Base {
      public:

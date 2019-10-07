@@ -1111,7 +1111,7 @@ bool Stats::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn)
 }
 
 
-void Stats::Interface::GetMemoryStatsCompleterBase::Reply(MemoryStats stats) {
+void Stats::Interface::GetMemoryStatsCompleterBase::Reply(::llcpp::fuchsia::kernel::MemoryStats stats) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetMemoryStatsResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -1131,7 +1131,7 @@ void Stats::Interface::GetMemoryStatsCompleterBase::Reply(MemoryStats stats) {
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void Stats::Interface::GetMemoryStatsCompleterBase::Reply(::fidl::BytePart _buffer, MemoryStats stats) {
+void Stats::Interface::GetMemoryStatsCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::kernel::MemoryStats stats) {
   if (_buffer.capacity() < GetMemoryStatsResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -1162,7 +1162,7 @@ void Stats::Interface::GetMemoryStatsCompleterBase::Reply(::fidl::DecodedMessage
 }
 
 
-void Stats::Interface::GetCpuStatsCompleterBase::Reply(CpuStats stats) {
+void Stats::Interface::GetCpuStatsCompleterBase::Reply(::llcpp::fuchsia::kernel::CpuStats stats) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCpuStatsResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -1182,7 +1182,7 @@ void Stats::Interface::GetCpuStatsCompleterBase::Reply(CpuStats stats) {
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void Stats::Interface::GetCpuStatsCompleterBase::Reply(::fidl::BytePart _buffer, CpuStats stats) {
+void Stats::Interface::GetCpuStatsCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::kernel::CpuStats stats) {
   if (_buffer.capacity() < GetCpuStatsResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

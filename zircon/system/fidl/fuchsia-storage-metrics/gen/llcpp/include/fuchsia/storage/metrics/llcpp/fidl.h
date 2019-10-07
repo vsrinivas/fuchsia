@@ -52,9 +52,9 @@ struct CallStat {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  CallStatRaw success = {};
+  ::llcpp::fuchsia::storage::metrics::CallStatRaw success = {};
 
-  CallStatRaw failure = {};
+  ::llcpp::fuchsia::storage::metrics::CallStatRaw failure = {};
 };
 
 
@@ -66,21 +66,21 @@ struct FsMetrics {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  CallStat create = {};
+  ::llcpp::fuchsia::storage::metrics::CallStat create = {};
 
-  CallStat read = {};
+  ::llcpp::fuchsia::storage::metrics::CallStat read = {};
 
-  CallStat write = {};
+  ::llcpp::fuchsia::storage::metrics::CallStat write = {};
 
-  CallStat truncate = {};
+  ::llcpp::fuchsia::storage::metrics::CallStat truncate = {};
 
-  CallStat unlink = {};
+  ::llcpp::fuchsia::storage::metrics::CallStat unlink = {};
 
-  CallStat rename = {};
+  ::llcpp::fuchsia::storage::metrics::CallStat rename = {};
 
-  CallStat lookup = {};
+  ::llcpp::fuchsia::storage::metrics::CallStat lookup = {};
 
-  CallStat open = {};
+  ::llcpp::fuchsia::storage::metrics::CallStat open = {};
 };
 
 }  // namespace metrics

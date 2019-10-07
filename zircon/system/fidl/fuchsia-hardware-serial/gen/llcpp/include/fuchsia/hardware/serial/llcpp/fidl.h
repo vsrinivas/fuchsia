@@ -66,13 +66,13 @@ struct Config {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  CharacterWidth character_width = {};
+  ::llcpp::fuchsia::hardware::serial::CharacterWidth character_width = {};
 
-  StopWidth stop_width = {};
+  ::llcpp::fuchsia::hardware::serial::StopWidth stop_width = {};
 
-  Parity parity = {};
+  ::llcpp::fuchsia::hardware::serial::Parity parity = {};
 
-  FlowControl control_flow = {};
+  ::llcpp::fuchsia::hardware::serial::FlowControl control_flow = {};
 
   uint32_t baud_rate = {};
 };
@@ -87,7 +87,7 @@ class Device final {
   struct GetClassResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Class device_class;
+    ::llcpp::fuchsia::hardware::serial::Class device_class;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_DeviceGetClassResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -115,7 +115,7 @@ class Device final {
   struct SetConfigRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Config config;
+    ::llcpp::fuchsia::hardware::serial::Config config;
 
     static constexpr const fidl_type_t* Type = nullptr;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -152,7 +152,7 @@ class Device final {
     class SetConfig_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetConfig_Impl(zx::unowned_channel _client_end, Config config);
+      SetConfig_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config);
       ~SetConfig_Impl() = default;
       SetConfig_Impl(SetConfig_Impl&& other) = default;
       SetConfig_Impl& operator=(SetConfig_Impl&& other) = default;
@@ -195,7 +195,7 @@ class Device final {
     class SetConfig_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Config config, ::fidl::BytePart _response_buffer);
+      SetConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer);
       ~SetConfig_Impl() = default;
       SetConfig_Impl(SetConfig_Impl&& other) = default;
       SetConfig_Impl& operator=(SetConfig_Impl&& other) = default;
@@ -234,11 +234,11 @@ class Device final {
 
     // Set the configuration of this serial device.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetConfig SetConfig(Config config);
+    ResultOf::SetConfig SetConfig(::llcpp::fuchsia::hardware::serial::Config config);
 
     // Set the configuration of this serial device.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetConfig SetConfig(::fidl::BytePart _request_buffer, Config config, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::SetConfig SetConfig(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -259,11 +259,11 @@ class Device final {
 
     // Set the configuration of this serial device.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetConfig SetConfig(zx::unowned_channel _client_end, Config config);
+    static ResultOf::SetConfig SetConfig(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config);
 
     // Set the configuration of this serial device.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetConfig SetConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Config config, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetConfig SetConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -291,8 +291,8 @@ class Device final {
 
     class GetClassCompleterBase : public _Base {
      public:
-      void Reply(Class device_class);
-      void Reply(::fidl::BytePart _buffer, Class device_class);
+      void Reply(::llcpp::fuchsia::hardware::serial::Class device_class);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::serial::Class device_class);
       void Reply(::fidl::DecodedMessage<GetClassResponse> params);
 
      protected:
@@ -315,7 +315,7 @@ class Device final {
 
     using SetConfigCompleter = ::fidl::Completer<SetConfigCompleterBase>;
 
-    virtual void SetConfig(Config config, SetConfigCompleter::Sync _completer) = 0;
+    virtual void SetConfig(::llcpp::fuchsia::hardware::serial::Config config, SetConfigCompleter::Sync _completer) = 0;
 
   };
 

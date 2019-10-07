@@ -50,10 +50,10 @@ void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerStat
 }
 
 
-TestDevice_GetCurrentDevicePowerState_Response& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::mutable_response() {
+::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) TestDevice_GetCurrentDevicePowerState_Response;
+    new (&response_) ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -109,10 +109,10 @@ void ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Re
 }
 
 
-TestDevice_AddDeviceWithPowerArgs_Response& ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result::mutable_response() {
+::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response& ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
-    new (&response_) TestDevice_AddDeviceWithPowerArgs_Response;
+    new (&response_) ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response;
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -331,7 +331,7 @@ bool TestDevice::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
 }
 
 
-void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(TestDevice_AddDeviceWithPowerArgs_Result result) {
+void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceWithPowerArgsResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<AddDeviceWithPowerArgsResponse*>(_write_bytes);
@@ -353,7 +353,7 @@ void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::ReplyError(int3
   Reply(TestDevice_AddDeviceWithPowerArgs_Result::WithErr(std::move(error)));
 }
 
-void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(::fidl::BytePart _buffer, TestDevice_AddDeviceWithPowerArgs_Result result) {
+void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result result) {
   if (_buffer.capacity() < AddDeviceWithPowerArgsResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -385,7 +385,7 @@ void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(::fidl::D
 }
 
 
-void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(TestDevice_GetCurrentDevicePowerState_Result result) {
+void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCurrentDevicePowerStateResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetCurrentDevicePowerStateResponse*>(_write_bytes);
@@ -408,7 +408,7 @@ void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::ReplyError(
   Reply(TestDevice_GetCurrentDevicePowerState_Result::WithErr(std::move(error)));
 }
 
-void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(::fidl::BytePart _buffer, TestDevice_GetCurrentDevicePowerState_Result result) {
+void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result result) {
   if (_buffer.capacity() < GetCurrentDevicePowerStateResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

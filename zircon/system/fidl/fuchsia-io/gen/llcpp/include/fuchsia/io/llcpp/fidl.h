@@ -630,195 +630,195 @@ struct NodeInfo {
 
   bool is_service() const { return tag_ == Tag::kService; }
 
-  static NodeInfo WithService(Service&& val) {
+  static NodeInfo WithService(::llcpp::fuchsia::io::Service&& val) {
     NodeInfo result;
     result.set_service(std::move(val));
     return result;
   }
 
-  Service& mutable_service();
+  ::llcpp::fuchsia::io::Service& mutable_service();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Service>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Service>::value && std::is_copy_assignable<T>::value>
   set_service(const T& v) {
     mutable_service() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Service>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Service>::value && std::is_move_assignable<T>::value>
   set_service(T&& v) {
     mutable_service() = std::move(v);
   }
 
-  Service const & service() const { return service_; }
+  ::llcpp::fuchsia::io::Service const & service() const { return service_; }
 
   bool is_file() const { return tag_ == Tag::kFile; }
 
-  static NodeInfo WithFile(FileObject&& val) {
+  static NodeInfo WithFile(::llcpp::fuchsia::io::FileObject&& val) {
     NodeInfo result;
     result.set_file(std::move(val));
     return result;
   }
 
-  FileObject& mutable_file();
+  ::llcpp::fuchsia::io::FileObject& mutable_file();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, FileObject>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::FileObject>::value && std::is_copy_assignable<T>::value>
   set_file(const T& v) {
     mutable_file() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, FileObject>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::FileObject>::value && std::is_move_assignable<T>::value>
   set_file(T&& v) {
     mutable_file() = std::move(v);
   }
 
-  FileObject const & file() const { return file_; }
+  ::llcpp::fuchsia::io::FileObject const & file() const { return file_; }
 
   bool is_directory() const { return tag_ == Tag::kDirectory; }
 
-  static NodeInfo WithDirectory(DirectoryObject&& val) {
+  static NodeInfo WithDirectory(::llcpp::fuchsia::io::DirectoryObject&& val) {
     NodeInfo result;
     result.set_directory(std::move(val));
     return result;
   }
 
-  DirectoryObject& mutable_directory();
+  ::llcpp::fuchsia::io::DirectoryObject& mutable_directory();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, DirectoryObject>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::DirectoryObject>::value && std::is_copy_assignable<T>::value>
   set_directory(const T& v) {
     mutable_directory() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, DirectoryObject>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::DirectoryObject>::value && std::is_move_assignable<T>::value>
   set_directory(T&& v) {
     mutable_directory() = std::move(v);
   }
 
-  DirectoryObject const & directory() const { return directory_; }
+  ::llcpp::fuchsia::io::DirectoryObject const & directory() const { return directory_; }
 
   bool is_pipe() const { return tag_ == Tag::kPipe; }
 
-  static NodeInfo WithPipe(Pipe&& val) {
+  static NodeInfo WithPipe(::llcpp::fuchsia::io::Pipe&& val) {
     NodeInfo result;
     result.set_pipe(std::move(val));
     return result;
   }
 
-  Pipe& mutable_pipe();
+  ::llcpp::fuchsia::io::Pipe& mutable_pipe();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Pipe>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Pipe>::value && std::is_copy_assignable<T>::value>
   set_pipe(const T& v) {
     mutable_pipe() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Pipe>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Pipe>::value && std::is_move_assignable<T>::value>
   set_pipe(T&& v) {
     mutable_pipe() = std::move(v);
   }
 
-  Pipe const & pipe() const { return pipe_; }
+  ::llcpp::fuchsia::io::Pipe const & pipe() const { return pipe_; }
 
   bool is_vmofile() const { return tag_ == Tag::kVmofile; }
 
-  static NodeInfo WithVmofile(Vmofile&& val) {
+  static NodeInfo WithVmofile(::llcpp::fuchsia::io::Vmofile&& val) {
     NodeInfo result;
     result.set_vmofile(std::move(val));
     return result;
   }
 
-  Vmofile& mutable_vmofile();
+  ::llcpp::fuchsia::io::Vmofile& mutable_vmofile();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Vmofile>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Vmofile>::value && std::is_copy_assignable<T>::value>
   set_vmofile(const T& v) {
     mutable_vmofile() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Vmofile>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Vmofile>::value && std::is_move_assignable<T>::value>
   set_vmofile(T&& v) {
     mutable_vmofile() = std::move(v);
   }
 
-  Vmofile const & vmofile() const { return vmofile_; }
+  ::llcpp::fuchsia::io::Vmofile const & vmofile() const { return vmofile_; }
 
   bool is_device() const { return tag_ == Tag::kDevice; }
 
-  static NodeInfo WithDevice(Device&& val) {
+  static NodeInfo WithDevice(::llcpp::fuchsia::io::Device&& val) {
     NodeInfo result;
     result.set_device(std::move(val));
     return result;
   }
 
-  Device& mutable_device();
+  ::llcpp::fuchsia::io::Device& mutable_device();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Device>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Device>::value && std::is_copy_assignable<T>::value>
   set_device(const T& v) {
     mutable_device() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Device>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Device>::value && std::is_move_assignable<T>::value>
   set_device(T&& v) {
     mutable_device() = std::move(v);
   }
 
-  Device const & device() const { return device_; }
+  ::llcpp::fuchsia::io::Device const & device() const { return device_; }
 
   bool is_tty() const { return tag_ == Tag::kTty; }
 
-  static NodeInfo WithTty(Tty&& val) {
+  static NodeInfo WithTty(::llcpp::fuchsia::io::Tty&& val) {
     NodeInfo result;
     result.set_tty(std::move(val));
     return result;
   }
 
-  Tty& mutable_tty();
+  ::llcpp::fuchsia::io::Tty& mutable_tty();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Tty>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Tty>::value && std::is_copy_assignable<T>::value>
   set_tty(const T& v) {
     mutable_tty() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Tty>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Tty>::value && std::is_move_assignable<T>::value>
   set_tty(T&& v) {
     mutable_tty() = std::move(v);
   }
 
-  Tty const & tty() const { return tty_; }
+  ::llcpp::fuchsia::io::Tty const & tty() const { return tty_; }
 
   bool is_socket() const { return tag_ == Tag::kSocket; }
 
-  static NodeInfo WithSocket(Socket&& val) {
+  static NodeInfo WithSocket(::llcpp::fuchsia::io::Socket&& val) {
     NodeInfo result;
     result.set_socket(std::move(val));
     return result;
   }
 
-  Socket& mutable_socket();
+  ::llcpp::fuchsia::io::Socket& mutable_socket();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Socket>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Socket>::value && std::is_copy_assignable<T>::value>
   set_socket(const T& v) {
     mutable_socket() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Socket>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Socket>::value && std::is_move_assignable<T>::value>
   set_socket(T&& v) {
     mutable_socket() = std::move(v);
   }
 
-  Socket const & socket() const { return socket_; }
+  ::llcpp::fuchsia::io::Socket const & socket() const { return socket_; }
 
   Tag which() const { return tag_; }
 
@@ -834,14 +834,14 @@ struct NodeInfo {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Service service_;
-    FileObject file_;
-    DirectoryObject directory_;
-    Pipe pipe_;
-    Vmofile vmofile_;
-    Device device_;
-    Tty tty_;
-    Socket socket_;
+    ::llcpp::fuchsia::io::Service service_;
+    ::llcpp::fuchsia::io::FileObject file_;
+    ::llcpp::fuchsia::io::DirectoryObject directory_;
+    ::llcpp::fuchsia::io::Pipe pipe_;
+    ::llcpp::fuchsia::io::Vmofile vmofile_;
+    ::llcpp::fuchsia::io::Device device_;
+    ::llcpp::fuchsia::io::Tty tty_;
+    ::llcpp::fuchsia::io::Socket socket_;
   };
 };
 
@@ -894,7 +894,7 @@ class Node final {
   struct DescribeResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    NodeInfo info;
+    ::llcpp::fuchsia::io::NodeInfo info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_NodeDescribeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
@@ -910,7 +910,7 @@ class Node final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
-    NodeInfo* info;
+    ::llcpp::fuchsia::io::NodeInfo* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_NodeOnOpenEventTable;
     static constexpr uint32_t MaxNumHandles = 1;
@@ -939,7 +939,7 @@ class Node final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
-    NodeAttributes attributes;
+    ::llcpp::fuchsia::io::NodeAttributes attributes;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_NodeGetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -968,7 +968,7 @@ class Node final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t flags;
-    NodeAttributes attributes;
+    ::llcpp::fuchsia::io::NodeAttributes attributes;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_NodeSetAttrRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1020,7 +1020,7 @@ class Node final {
     // Indicates the success or failure of the open operation, and optionally describes the
     // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
     // (the same as would be returned by `Describe`).
-    fit::callback<zx_status_t(int32_t s, NodeInfo* info)> on_open;
+    fit::callback<zx_status_t(int32_t s, ::llcpp::fuchsia::io::NodeInfo* info)> on_open;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
@@ -1110,7 +1110,7 @@ class Node final {
     class SetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetAttr_Impl(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes);
+      SetAttr_Impl(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
       ~SetAttr_Impl() = default;
       SetAttr_Impl(SetAttr_Impl&& other) = default;
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
@@ -1233,7 +1233,7 @@ class Node final {
     class SetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+      SetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
       ~SetAttr_Impl() = default;
       SetAttr_Impl(SetAttr_Impl&& other) = default;
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
@@ -1380,14 +1380,14 @@ class Node final {
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetAttr SetAttr(uint32_t flags, NodeAttributes attributes);
+    ResultOf::SetAttr SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
 
     // Updates information about the node.
     // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
     // Deprecated. Only for use with compatibility with devhost.
     // Request is heap-allocated. Response is heap-allocated.
@@ -1508,14 +1508,14 @@ class Node final {
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes);
+    static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
 
     // Updates information about the node.
     // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
     // Deprecated. Only for use with compatibility with devhost.
     // Request is heap-allocated. Response is heap-allocated.
@@ -1618,8 +1618,8 @@ class Node final {
 
     class DescribeCompleterBase : public _Base {
      public:
-      void Reply(NodeInfo info);
-      void Reply(::fidl::BytePart _buffer, NodeInfo info);
+      void Reply(::llcpp::fuchsia::io::NodeInfo info);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::io::NodeInfo info);
       void Reply(::fidl::DecodedMessage<DescribeResponse> params);
 
      protected:
@@ -1646,8 +1646,8 @@ class Node final {
 
     class GetAttrCompleterBase : public _Base {
      public:
-      void Reply(int32_t s, NodeAttributes attributes);
-      void Reply(::fidl::BytePart _buffer, int32_t s, NodeAttributes attributes);
+      void Reply(int32_t s, ::llcpp::fuchsia::io::NodeAttributes attributes);
+      void Reply(::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeAttributes attributes);
       void Reply(::fidl::DecodedMessage<GetAttrResponse> params);
 
      protected:
@@ -1670,7 +1670,7 @@ class Node final {
 
     using SetAttrCompleter = ::fidl::Completer<SetAttrCompleterBase>;
 
-    virtual void SetAttr(uint32_t flags, NodeAttributes attributes, SetAttrCompleter::Sync _completer) = 0;
+    virtual void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, SetAttrCompleter::Sync _completer) = 0;
 
     class IoctlCompleterBase : public _Base {
      public:
@@ -1711,7 +1711,7 @@ class Node final {
   // Indicates the success or failure of the open operation, and optionally describes the
   // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
   // (the same as would be returned by `Describe`).
-  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, NodeInfo* info);
+  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info);
 
   // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
@@ -1719,7 +1719,7 @@ class Node final {
   // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
   // (the same as would be returned by `Describe`).
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, NodeInfo* info);
+  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info);
 
   // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
@@ -1793,7 +1793,7 @@ class File final {
   struct DescribeResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    NodeInfo info;
+    ::llcpp::fuchsia::io::NodeInfo info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileDescribeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
@@ -1809,7 +1809,7 @@ class File final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
-    NodeInfo* info;
+    ::llcpp::fuchsia::io::NodeInfo* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileOnOpenEventTable;
     static constexpr uint32_t MaxNumHandles = 1;
@@ -1838,7 +1838,7 @@ class File final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
-    NodeAttributes attributes;
+    ::llcpp::fuchsia::io::NodeAttributes attributes;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileGetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1867,7 +1867,7 @@ class File final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t flags;
-    NodeAttributes attributes;
+    ::llcpp::fuchsia::io::NodeAttributes attributes;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileSetAttrRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -2048,7 +2048,7 @@ class File final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t offset;
-    SeekOrigin start;
+    ::llcpp::fuchsia::io::SeekOrigin start;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileSeekRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -2168,7 +2168,7 @@ class File final {
     // Indicates the success or failure of the open operation, and optionally describes the
     // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
     // (the same as would be returned by `Describe`).
-    fit::callback<zx_status_t(int32_t s, NodeInfo* info)> on_open;
+    fit::callback<zx_status_t(int32_t s, ::llcpp::fuchsia::io::NodeInfo* info)> on_open;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
@@ -2258,7 +2258,7 @@ class File final {
     class SetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetAttr_Impl(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes);
+      SetAttr_Impl(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
       ~SetAttr_Impl() = default;
       SetAttr_Impl(SetAttr_Impl&& other) = default;
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
@@ -2354,7 +2354,7 @@ class File final {
     class Seek_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Seek_Impl(zx::unowned_channel _client_end, int64_t offset, SeekOrigin start);
+      Seek_Impl(zx::unowned_channel _client_end, int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start);
       ~Seek_Impl() = default;
       Seek_Impl(Seek_Impl&& other) = default;
       Seek_Impl& operator=(Seek_Impl&& other) = default;
@@ -2534,7 +2534,7 @@ class File final {
     class SetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+      SetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
       ~SetAttr_Impl() = default;
       SetAttr_Impl(SetAttr_Impl&& other) = default;
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
@@ -2630,7 +2630,7 @@ class File final {
     class Seek_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Seek_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t offset, SeekOrigin start, ::fidl::BytePart _response_buffer);
+      Seek_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start, ::fidl::BytePart _response_buffer);
       ~Seek_Impl() = default;
       Seek_Impl(Seek_Impl&& other) = default;
       Seek_Impl& operator=(Seek_Impl&& other) = default;
@@ -2834,14 +2834,14 @@ class File final {
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetAttr SetAttr(uint32_t flags, NodeAttributes attributes);
+    ResultOf::SetAttr SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
 
     // Updates information about the node.
     // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
     // Deprecated. Only for use with compatibility with devhost.
     // Request is heap-allocated. Response is heap-allocated.
@@ -2912,14 +2912,14 @@ class File final {
     //
     // This method does not require any rights.
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::Seek Seek(int64_t offset, SeekOrigin start);
+    ResultOf::Seek Seek(int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start);
 
     // Moves the offset at which the next invocation of `Read()` or `Write()` will
     // occur.
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::Seek Seek(::fidl::BytePart _request_buffer, int64_t offset, SeekOrigin start, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::Seek Seek(::fidl::BytePart _request_buffer, int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start, ::fidl::BytePart _response_buffer);
 
     // Shrinks the file size to 'length' bytes.
     //
@@ -3096,14 +3096,14 @@ class File final {
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes);
+    static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
 
     // Updates information about the node.
     // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
     // Deprecated. Only for use with compatibility with devhost.
     // Request is heap-allocated. Response is heap-allocated.
@@ -3174,14 +3174,14 @@ class File final {
     //
     // This method does not require any rights.
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Seek Seek(zx::unowned_channel _client_end, int64_t offset, SeekOrigin start);
+    static ResultOf::Seek Seek(zx::unowned_channel _client_end, int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start);
 
     // Moves the offset at which the next invocation of `Read()` or `Write()` will
     // occur.
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Seek Seek(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t offset, SeekOrigin start, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Seek Seek(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start, ::fidl::BytePart _response_buffer);
 
     // Shrinks the file size to 'length' bytes.
     //
@@ -3398,8 +3398,8 @@ class File final {
 
     class DescribeCompleterBase : public _Base {
      public:
-      void Reply(NodeInfo info);
-      void Reply(::fidl::BytePart _buffer, NodeInfo info);
+      void Reply(::llcpp::fuchsia::io::NodeInfo info);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::io::NodeInfo info);
       void Reply(::fidl::DecodedMessage<DescribeResponse> params);
 
      protected:
@@ -3426,8 +3426,8 @@ class File final {
 
     class GetAttrCompleterBase : public _Base {
      public:
-      void Reply(int32_t s, NodeAttributes attributes);
-      void Reply(::fidl::BytePart _buffer, int32_t s, NodeAttributes attributes);
+      void Reply(int32_t s, ::llcpp::fuchsia::io::NodeAttributes attributes);
+      void Reply(::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeAttributes attributes);
       void Reply(::fidl::DecodedMessage<GetAttrResponse> params);
 
      protected:
@@ -3450,7 +3450,7 @@ class File final {
 
     using SetAttrCompleter = ::fidl::Completer<SetAttrCompleterBase>;
 
-    virtual void SetAttr(uint32_t flags, NodeAttributes attributes, SetAttrCompleter::Sync _completer) = 0;
+    virtual void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, SetAttrCompleter::Sync _completer) = 0;
 
     class IoctlCompleterBase : public _Base {
      public:
@@ -3534,7 +3534,7 @@ class File final {
 
     using SeekCompleter = ::fidl::Completer<SeekCompleterBase>;
 
-    virtual void Seek(int64_t offset, SeekOrigin start, SeekCompleter::Sync _completer) = 0;
+    virtual void Seek(int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start, SeekCompleter::Sync _completer) = 0;
 
     class TruncateCompleterBase : public _Base {
      public:
@@ -3617,7 +3617,7 @@ class File final {
   // Indicates the success or failure of the open operation, and optionally describes the
   // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
   // (the same as would be returned by `Describe`).
-  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, NodeInfo* info);
+  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info);
 
   // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
@@ -3625,7 +3625,7 @@ class File final {
   // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
   // (the same as would be returned by `Describe`).
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, NodeInfo* info);
+  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info);
 
   // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
@@ -3698,7 +3698,7 @@ class Directory final {
   struct DescribeResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    NodeInfo info;
+    ::llcpp::fuchsia::io::NodeInfo info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryDescribeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
@@ -3714,7 +3714,7 @@ class Directory final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
-    NodeInfo* info;
+    ::llcpp::fuchsia::io::NodeInfo* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryOnOpenEventTable;
     static constexpr uint32_t MaxNumHandles = 1;
@@ -3743,7 +3743,7 @@ class Directory final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
-    NodeAttributes attributes;
+    ::llcpp::fuchsia::io::NodeAttributes attributes;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryGetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -3772,7 +3772,7 @@ class Directory final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t flags;
-    NodeAttributes attributes;
+    ::llcpp::fuchsia::io::NodeAttributes attributes;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectorySetAttrRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -4019,7 +4019,7 @@ class Directory final {
     // Indicates the success or failure of the open operation, and optionally describes the
     // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
     // (the same as would be returned by `Describe`).
-    fit::callback<zx_status_t(int32_t s, NodeInfo* info)> on_open;
+    fit::callback<zx_status_t(int32_t s, ::llcpp::fuchsia::io::NodeInfo* info)> on_open;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
@@ -4109,7 +4109,7 @@ class Directory final {
     class SetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetAttr_Impl(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes);
+      SetAttr_Impl(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
       ~SetAttr_Impl() = default;
       SetAttr_Impl(SetAttr_Impl&& other) = default;
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
@@ -4363,7 +4363,7 @@ class Directory final {
     class SetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+      SetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
       ~SetAttr_Impl() = default;
       SetAttr_Impl(SetAttr_Impl&& other) = default;
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
@@ -4641,14 +4641,14 @@ class Directory final {
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetAttr SetAttr(uint32_t flags, NodeAttributes attributes);
+    ResultOf::SetAttr SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
 
     // Updates information about the node.
     // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
     // Deprecated. Only for use with compatibility with devhost.
     // Request is heap-allocated. Response is heap-allocated.
@@ -5047,14 +5047,14 @@ class Directory final {
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes);
+    static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
 
     // Updates information about the node.
     // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
     // Deprecated. Only for use with compatibility with devhost.
     // Request is heap-allocated. Response is heap-allocated.
@@ -5566,8 +5566,8 @@ class Directory final {
 
     class DescribeCompleterBase : public _Base {
      public:
-      void Reply(NodeInfo info);
-      void Reply(::fidl::BytePart _buffer, NodeInfo info);
+      void Reply(::llcpp::fuchsia::io::NodeInfo info);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::io::NodeInfo info);
       void Reply(::fidl::DecodedMessage<DescribeResponse> params);
 
      protected:
@@ -5594,8 +5594,8 @@ class Directory final {
 
     class GetAttrCompleterBase : public _Base {
      public:
-      void Reply(int32_t s, NodeAttributes attributes);
-      void Reply(::fidl::BytePart _buffer, int32_t s, NodeAttributes attributes);
+      void Reply(int32_t s, ::llcpp::fuchsia::io::NodeAttributes attributes);
+      void Reply(::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeAttributes attributes);
       void Reply(::fidl::DecodedMessage<GetAttrResponse> params);
 
      protected:
@@ -5618,7 +5618,7 @@ class Directory final {
 
     using SetAttrCompleter = ::fidl::Completer<SetAttrCompleterBase>;
 
-    virtual void SetAttr(uint32_t flags, NodeAttributes attributes, SetAttrCompleter::Sync _completer) = 0;
+    virtual void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, SetAttrCompleter::Sync _completer) = 0;
 
     class IoctlCompleterBase : public _Base {
      public:
@@ -5761,7 +5761,7 @@ class Directory final {
   // Indicates the success or failure of the open operation, and optionally describes the
   // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
   // (the same as would be returned by `Describe`).
-  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, NodeInfo* info);
+  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info);
 
   // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
@@ -5769,7 +5769,7 @@ class Directory final {
   // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
   // (the same as would be returned by `Describe`).
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, NodeInfo* info);
+  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info);
 
   // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
@@ -5851,7 +5851,7 @@ class DirectoryAdmin final {
   struct DescribeResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    NodeInfo info;
+    ::llcpp::fuchsia::io::NodeInfo info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminDescribeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
@@ -5867,7 +5867,7 @@ class DirectoryAdmin final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
-    NodeInfo* info;
+    ::llcpp::fuchsia::io::NodeInfo* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminOnOpenEventTable;
     static constexpr uint32_t MaxNumHandles = 1;
@@ -5896,7 +5896,7 @@ class DirectoryAdmin final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
-    NodeAttributes attributes;
+    ::llcpp::fuchsia::io::NodeAttributes attributes;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminGetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -5925,7 +5925,7 @@ class DirectoryAdmin final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t flags;
-    NodeAttributes attributes;
+    ::llcpp::fuchsia::io::NodeAttributes attributes;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminSetAttrRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -6258,7 +6258,7 @@ class DirectoryAdmin final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
-    FilesystemInfo* info;
+    ::llcpp::fuchsia::io::FilesystemInfo* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminQueryFilesystemResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -6293,7 +6293,7 @@ class DirectoryAdmin final {
     // Indicates the success or failure of the open operation, and optionally describes the
     // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
     // (the same as would be returned by `Describe`).
-    fit::callback<zx_status_t(int32_t s, NodeInfo* info)> on_open;
+    fit::callback<zx_status_t(int32_t s, ::llcpp::fuchsia::io::NodeInfo* info)> on_open;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
@@ -6383,7 +6383,7 @@ class DirectoryAdmin final {
     class SetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetAttr_Impl(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes);
+      SetAttr_Impl(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
       ~SetAttr_Impl() = default;
       SetAttr_Impl(SetAttr_Impl&& other) = default;
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
@@ -6739,7 +6739,7 @@ class DirectoryAdmin final {
     class SetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+      SetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
       ~SetAttr_Impl() = default;
       SetAttr_Impl(SetAttr_Impl&& other) = default;
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
@@ -7119,14 +7119,14 @@ class DirectoryAdmin final {
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetAttr SetAttr(uint32_t flags, NodeAttributes attributes);
+    ResultOf::SetAttr SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
 
     // Updates information about the node.
     // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
     // Deprecated. Only for use with compatibility with devhost.
     // Request is heap-allocated. Response is heap-allocated.
@@ -7585,14 +7585,14 @@ class DirectoryAdmin final {
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes);
+    static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
 
     // Updates information about the node.
     // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
     // Deprecated. Only for use with compatibility with devhost.
     // Request is heap-allocated. Response is heap-allocated.
@@ -8188,8 +8188,8 @@ class DirectoryAdmin final {
 
     class DescribeCompleterBase : public _Base {
      public:
-      void Reply(NodeInfo info);
-      void Reply(::fidl::BytePart _buffer, NodeInfo info);
+      void Reply(::llcpp::fuchsia::io::NodeInfo info);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::io::NodeInfo info);
       void Reply(::fidl::DecodedMessage<DescribeResponse> params);
 
      protected:
@@ -8216,8 +8216,8 @@ class DirectoryAdmin final {
 
     class GetAttrCompleterBase : public _Base {
      public:
-      void Reply(int32_t s, NodeAttributes attributes);
-      void Reply(::fidl::BytePart _buffer, int32_t s, NodeAttributes attributes);
+      void Reply(int32_t s, ::llcpp::fuchsia::io::NodeAttributes attributes);
+      void Reply(::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeAttributes attributes);
       void Reply(::fidl::DecodedMessage<GetAttrResponse> params);
 
      protected:
@@ -8240,7 +8240,7 @@ class DirectoryAdmin final {
 
     using SetAttrCompleter = ::fidl::Completer<SetAttrCompleterBase>;
 
-    virtual void SetAttr(uint32_t flags, NodeAttributes attributes, SetAttrCompleter::Sync _completer) = 0;
+    virtual void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, SetAttrCompleter::Sync _completer) = 0;
 
     class IoctlCompleterBase : public _Base {
      public:
@@ -8416,8 +8416,8 @@ class DirectoryAdmin final {
 
     class QueryFilesystemCompleterBase : public _Base {
      public:
-      void Reply(int32_t s, FilesystemInfo* info);
-      void Reply(::fidl::BytePart _buffer, int32_t s, FilesystemInfo* info);
+      void Reply(int32_t s, ::llcpp::fuchsia::io::FilesystemInfo* info);
+      void Reply(::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::FilesystemInfo* info);
       void Reply(::fidl::DecodedMessage<QueryFilesystemResponse> params);
 
      protected:
@@ -8467,7 +8467,7 @@ class DirectoryAdmin final {
   // Indicates the success or failure of the open operation, and optionally describes the
   // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
   // (the same as would be returned by `Describe`).
-  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, NodeInfo* info);
+  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info);
 
   // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
@@ -8475,7 +8475,7 @@ class DirectoryAdmin final {
   // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
   // (the same as would be returned by `Describe`).
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, NodeInfo* info);
+  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info);
 
   // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //

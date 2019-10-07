@@ -213,73 +213,73 @@ void ::llcpp::fuchsia::io::NodeInfo::SizeAndOffsetAssertionHelper() {
 }
 
 
-Service& ::llcpp::fuchsia::io::NodeInfo::mutable_service() {
+::llcpp::fuchsia::io::Service& ::llcpp::fuchsia::io::NodeInfo::mutable_service() {
   if (which() != Tag::kService) {
     Destroy();
-    new (&service_) Service;
+    new (&service_) ::llcpp::fuchsia::io::Service;
   }
   tag_ = Tag::kService;
   return service_;
 }
 
-FileObject& ::llcpp::fuchsia::io::NodeInfo::mutable_file() {
+::llcpp::fuchsia::io::FileObject& ::llcpp::fuchsia::io::NodeInfo::mutable_file() {
   if (which() != Tag::kFile) {
     Destroy();
-    new (&file_) FileObject;
+    new (&file_) ::llcpp::fuchsia::io::FileObject;
   }
   tag_ = Tag::kFile;
   return file_;
 }
 
-DirectoryObject& ::llcpp::fuchsia::io::NodeInfo::mutable_directory() {
+::llcpp::fuchsia::io::DirectoryObject& ::llcpp::fuchsia::io::NodeInfo::mutable_directory() {
   if (which() != Tag::kDirectory) {
     Destroy();
-    new (&directory_) DirectoryObject;
+    new (&directory_) ::llcpp::fuchsia::io::DirectoryObject;
   }
   tag_ = Tag::kDirectory;
   return directory_;
 }
 
-Pipe& ::llcpp::fuchsia::io::NodeInfo::mutable_pipe() {
+::llcpp::fuchsia::io::Pipe& ::llcpp::fuchsia::io::NodeInfo::mutable_pipe() {
   if (which() != Tag::kPipe) {
     Destroy();
-    new (&pipe_) Pipe;
+    new (&pipe_) ::llcpp::fuchsia::io::Pipe;
   }
   tag_ = Tag::kPipe;
   return pipe_;
 }
 
-Vmofile& ::llcpp::fuchsia::io::NodeInfo::mutable_vmofile() {
+::llcpp::fuchsia::io::Vmofile& ::llcpp::fuchsia::io::NodeInfo::mutable_vmofile() {
   if (which() != Tag::kVmofile) {
     Destroy();
-    new (&vmofile_) Vmofile;
+    new (&vmofile_) ::llcpp::fuchsia::io::Vmofile;
   }
   tag_ = Tag::kVmofile;
   return vmofile_;
 }
 
-Device& ::llcpp::fuchsia::io::NodeInfo::mutable_device() {
+::llcpp::fuchsia::io::Device& ::llcpp::fuchsia::io::NodeInfo::mutable_device() {
   if (which() != Tag::kDevice) {
     Destroy();
-    new (&device_) Device;
+    new (&device_) ::llcpp::fuchsia::io::Device;
   }
   tag_ = Tag::kDevice;
   return device_;
 }
 
-Tty& ::llcpp::fuchsia::io::NodeInfo::mutable_tty() {
+::llcpp::fuchsia::io::Tty& ::llcpp::fuchsia::io::NodeInfo::mutable_tty() {
   if (which() != Tag::kTty) {
     Destroy();
-    new (&tty_) Tty;
+    new (&tty_) ::llcpp::fuchsia::io::Tty;
   }
   tag_ = Tag::kTty;
   return tty_;
 }
 
-Socket& ::llcpp::fuchsia::io::NodeInfo::mutable_socket() {
+::llcpp::fuchsia::io::Socket& ::llcpp::fuchsia::io::NodeInfo::mutable_socket() {
   if (which() != Tag::kSocket) {
     Destroy();
-    new (&socket_) Socket;
+    new (&socket_) ::llcpp::fuchsia::io::Socket;
   }
   tag_ = Tag::kSocket;
   return socket_;
@@ -667,7 +667,7 @@ Node::UnownedResultOf::GetAttr Node::Call::GetAttr(zx::unowned_channel _client_e
 }
 
 template <>
-Node::ResultOf::SetAttr_Impl<Node::SetAttrResponse>::SetAttr_Impl(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes) {
+Node::ResultOf::SetAttr_Impl<Node::SetAttrResponse>::SetAttr_Impl(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetAttrRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -682,16 +682,16 @@ Node::ResultOf::SetAttr_Impl<Node::SetAttrResponse>::SetAttr_Impl(zx::unowned_ch
       Node::InPlace::SetAttr(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Node::ResultOf::SetAttr Node::SyncClient::SetAttr(uint32_t flags, NodeAttributes attributes) {
+Node::ResultOf::SetAttr Node::SyncClient::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   return ResultOf::SetAttr(zx::unowned_channel(this->channel_), std::move(flags), std::move(attributes));
 }
 
-Node::ResultOf::SetAttr Node::Call::SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes) {
+Node::ResultOf::SetAttr Node::Call::SetAttr(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   return ResultOf::SetAttr(std::move(_client_end), std::move(flags), std::move(attributes));
 }
 
 template <>
-Node::UnownedResultOf::SetAttr_Impl<Node::SetAttrResponse>::SetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
+Node::UnownedResultOf::SetAttr_Impl<Node::SetAttrResponse>::SetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetAttrRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetAttrResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -706,11 +706,11 @@ Node::UnownedResultOf::SetAttr_Impl<Node::SetAttrResponse>::SetAttr_Impl(zx::uno
       Node::InPlace::SetAttr(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Node::UnownedResultOf::SetAttr Node::SyncClient::SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
+Node::UnownedResultOf::SetAttr Node::SyncClient::SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetAttr(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(attributes), std::move(_response_buffer));
 }
 
-Node::UnownedResultOf::SetAttr Node::Call::SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
+Node::UnownedResultOf::SetAttr Node::Call::SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetAttr(std::move(_client_end), std::move(_request_buffer), std::move(flags), std::move(attributes), std::move(_response_buffer));
 }
 
@@ -1039,7 +1039,7 @@ void Node::Interface::CloseCompleterBase::Reply(::fidl::DecodedMessage<CloseResp
 }
 
 
-void Node::Interface::DescribeCompleterBase::Reply(NodeInfo info) {
+void Node::Interface::DescribeCompleterBase::Reply(::llcpp::fuchsia::io::NodeInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DescribeResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DescribeResponse*>(_write_bytes);
@@ -1053,7 +1053,7 @@ void Node::Interface::DescribeCompleterBase::Reply(NodeInfo info) {
   CompleterBase::SendReply(::fidl::DecodedMessage<DescribeResponse>(std::move(_response_bytes)));
 }
 
-void Node::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _buffer, NodeInfo info) {
+void Node::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::io::NodeInfo info) {
   if (_buffer.capacity() < DescribeResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -1080,7 +1080,7 @@ void Node::Interface::DescribeCompleterBase::Reply(::fidl::DecodedMessage<Descri
 }
 
 
-zx_status_t Node::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, NodeInfo* info) {
+zx_status_t Node::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   OnOpenResponse _response = {};
@@ -1100,7 +1100,7 @@ zx_status_t Node::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, NodeIn
   return ::fidl::Write(zx::unowned_channel(_chan), std::move(_linearize_result.message));
 }
 
-zx_status_t Node::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, NodeInfo* info) {
+zx_status_t Node::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info) {
   if (_buffer.capacity() < OnOpenResponse::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -1172,7 +1172,7 @@ void Node::Interface::SyncCompleterBase::Reply(::fidl::DecodedMessage<SyncRespon
 }
 
 
-void Node::Interface::GetAttrCompleterBase::Reply(int32_t s, NodeAttributes attributes) {
+void Node::Interface::GetAttrCompleterBase::Reply(int32_t s, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetAttrResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetAttrResponse*>(_write_bytes);
@@ -1187,7 +1187,7 @@ void Node::Interface::GetAttrCompleterBase::Reply(int32_t s, NodeAttributes attr
   CompleterBase::SendReply(::fidl::DecodedMessage<GetAttrResponse>(std::move(_response_bytes)));
 }
 
-void Node::Interface::GetAttrCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, NodeAttributes attributes) {
+void Node::Interface::GetAttrCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   if (_buffer.capacity() < GetAttrResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -1741,7 +1741,7 @@ File::UnownedResultOf::GetAttr File::Call::GetAttr(zx::unowned_channel _client_e
 }
 
 template <>
-File::ResultOf::SetAttr_Impl<File::SetAttrResponse>::SetAttr_Impl(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes) {
+File::ResultOf::SetAttr_Impl<File::SetAttrResponse>::SetAttr_Impl(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetAttrRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1756,16 +1756,16 @@ File::ResultOf::SetAttr_Impl<File::SetAttrResponse>::SetAttr_Impl(zx::unowned_ch
       File::InPlace::SetAttr(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-File::ResultOf::SetAttr File::SyncClient::SetAttr(uint32_t flags, NodeAttributes attributes) {
+File::ResultOf::SetAttr File::SyncClient::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   return ResultOf::SetAttr(zx::unowned_channel(this->channel_), std::move(flags), std::move(attributes));
 }
 
-File::ResultOf::SetAttr File::Call::SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes) {
+File::ResultOf::SetAttr File::Call::SetAttr(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   return ResultOf::SetAttr(std::move(_client_end), std::move(flags), std::move(attributes));
 }
 
 template <>
-File::UnownedResultOf::SetAttr_Impl<File::SetAttrResponse>::SetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
+File::UnownedResultOf::SetAttr_Impl<File::SetAttrResponse>::SetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetAttrRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetAttrResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1780,11 +1780,11 @@ File::UnownedResultOf::SetAttr_Impl<File::SetAttrResponse>::SetAttr_Impl(zx::uno
       File::InPlace::SetAttr(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-File::UnownedResultOf::SetAttr File::SyncClient::SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
+File::UnownedResultOf::SetAttr File::SyncClient::SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetAttr(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(attributes), std::move(_response_buffer));
 }
 
-File::UnownedResultOf::SetAttr File::Call::SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
+File::UnownedResultOf::SetAttr File::Call::SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetAttr(std::move(_client_end), std::move(_request_buffer), std::move(flags), std::move(attributes), std::move(_response_buffer));
 }
 
@@ -2170,7 +2170,7 @@ File::UnownedResultOf::WriteAt File::Call::WriteAt(zx::unowned_channel _client_e
 }
 
 template <>
-File::ResultOf::Seek_Impl<File::SeekResponse>::Seek_Impl(zx::unowned_channel _client_end, int64_t offset, SeekOrigin start) {
+File::ResultOf::Seek_Impl<File::SeekResponse>::Seek_Impl(zx::unowned_channel _client_end, int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SeekRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -2185,16 +2185,16 @@ File::ResultOf::Seek_Impl<File::SeekResponse>::Seek_Impl(zx::unowned_channel _cl
       File::InPlace::Seek(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-File::ResultOf::Seek File::SyncClient::Seek(int64_t offset, SeekOrigin start) {
+File::ResultOf::Seek File::SyncClient::Seek(int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start) {
   return ResultOf::Seek(zx::unowned_channel(this->channel_), std::move(offset), std::move(start));
 }
 
-File::ResultOf::Seek File::Call::Seek(zx::unowned_channel _client_end, int64_t offset, SeekOrigin start) {
+File::ResultOf::Seek File::Call::Seek(zx::unowned_channel _client_end, int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start) {
   return ResultOf::Seek(std::move(_client_end), std::move(offset), std::move(start));
 }
 
 template <>
-File::UnownedResultOf::Seek_Impl<File::SeekResponse>::Seek_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t offset, SeekOrigin start, ::fidl::BytePart _response_buffer) {
+File::UnownedResultOf::Seek_Impl<File::SeekResponse>::Seek_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SeekRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SeekResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -2209,11 +2209,11 @@ File::UnownedResultOf::Seek_Impl<File::SeekResponse>::Seek_Impl(zx::unowned_chan
       File::InPlace::Seek(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-File::UnownedResultOf::Seek File::SyncClient::Seek(::fidl::BytePart _request_buffer, int64_t offset, SeekOrigin start, ::fidl::BytePart _response_buffer) {
+File::UnownedResultOf::Seek File::SyncClient::Seek(::fidl::BytePart _request_buffer, int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Seek(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(offset), std::move(start), std::move(_response_buffer));
 }
 
-File::UnownedResultOf::Seek File::Call::Seek(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t offset, SeekOrigin start, ::fidl::BytePart _response_buffer) {
+File::UnownedResultOf::Seek File::Call::Seek(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Seek(std::move(_client_end), std::move(_request_buffer), std::move(offset), std::move(start), std::move(_response_buffer));
 }
 
@@ -2847,7 +2847,7 @@ void File::Interface::CloseCompleterBase::Reply(::fidl::DecodedMessage<CloseResp
 }
 
 
-void File::Interface::DescribeCompleterBase::Reply(NodeInfo info) {
+void File::Interface::DescribeCompleterBase::Reply(::llcpp::fuchsia::io::NodeInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DescribeResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DescribeResponse*>(_write_bytes);
@@ -2861,7 +2861,7 @@ void File::Interface::DescribeCompleterBase::Reply(NodeInfo info) {
   CompleterBase::SendReply(::fidl::DecodedMessage<DescribeResponse>(std::move(_response_bytes)));
 }
 
-void File::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _buffer, NodeInfo info) {
+void File::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::io::NodeInfo info) {
   if (_buffer.capacity() < DescribeResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -2888,7 +2888,7 @@ void File::Interface::DescribeCompleterBase::Reply(::fidl::DecodedMessage<Descri
 }
 
 
-zx_status_t File::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, NodeInfo* info) {
+zx_status_t File::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   OnOpenResponse _response = {};
@@ -2908,7 +2908,7 @@ zx_status_t File::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, NodeIn
   return ::fidl::Write(zx::unowned_channel(_chan), std::move(_linearize_result.message));
 }
 
-zx_status_t File::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, NodeInfo* info) {
+zx_status_t File::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info) {
   if (_buffer.capacity() < OnOpenResponse::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -2980,7 +2980,7 @@ void File::Interface::SyncCompleterBase::Reply(::fidl::DecodedMessage<SyncRespon
 }
 
 
-void File::Interface::GetAttrCompleterBase::Reply(int32_t s, NodeAttributes attributes) {
+void File::Interface::GetAttrCompleterBase::Reply(int32_t s, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetAttrResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetAttrResponse*>(_write_bytes);
@@ -2995,7 +2995,7 @@ void File::Interface::GetAttrCompleterBase::Reply(int32_t s, NodeAttributes attr
   CompleterBase::SendReply(::fidl::DecodedMessage<GetAttrResponse>(std::move(_response_bytes)));
 }
 
-void File::Interface::GetAttrCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, NodeAttributes attributes) {
+void File::Interface::GetAttrCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   if (_buffer.capacity() < GetAttrResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -3956,7 +3956,7 @@ Directory::UnownedResultOf::GetAttr Directory::Call::GetAttr(zx::unowned_channel
 }
 
 template <>
-Directory::ResultOf::SetAttr_Impl<Directory::SetAttrResponse>::SetAttr_Impl(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes) {
+Directory::ResultOf::SetAttr_Impl<Directory::SetAttrResponse>::SetAttr_Impl(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetAttrRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -3971,16 +3971,16 @@ Directory::ResultOf::SetAttr_Impl<Directory::SetAttrResponse>::SetAttr_Impl(zx::
       Directory::InPlace::SetAttr(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Directory::ResultOf::SetAttr Directory::SyncClient::SetAttr(uint32_t flags, NodeAttributes attributes) {
+Directory::ResultOf::SetAttr Directory::SyncClient::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   return ResultOf::SetAttr(zx::unowned_channel(this->channel_), std::move(flags), std::move(attributes));
 }
 
-Directory::ResultOf::SetAttr Directory::Call::SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes) {
+Directory::ResultOf::SetAttr Directory::Call::SetAttr(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   return ResultOf::SetAttr(std::move(_client_end), std::move(flags), std::move(attributes));
 }
 
 template <>
-Directory::UnownedResultOf::SetAttr_Impl<Directory::SetAttrResponse>::SetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
+Directory::UnownedResultOf::SetAttr_Impl<Directory::SetAttrResponse>::SetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetAttrRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetAttrResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -3995,11 +3995,11 @@ Directory::UnownedResultOf::SetAttr_Impl<Directory::SetAttrResponse>::SetAttr_Im
       Directory::InPlace::SetAttr(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Directory::UnownedResultOf::SetAttr Directory::SyncClient::SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
+Directory::UnownedResultOf::SetAttr Directory::SyncClient::SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetAttr(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(attributes), std::move(_response_buffer));
 }
 
-Directory::UnownedResultOf::SetAttr Directory::Call::SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
+Directory::UnownedResultOf::SetAttr Directory::Call::SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetAttr(std::move(_client_end), std::move(_request_buffer), std::move(flags), std::move(attributes), std::move(_response_buffer));
 }
 
@@ -5003,7 +5003,7 @@ void Directory::Interface::CloseCompleterBase::Reply(::fidl::DecodedMessage<Clos
 }
 
 
-void Directory::Interface::DescribeCompleterBase::Reply(NodeInfo info) {
+void Directory::Interface::DescribeCompleterBase::Reply(::llcpp::fuchsia::io::NodeInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DescribeResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DescribeResponse*>(_write_bytes);
@@ -5017,7 +5017,7 @@ void Directory::Interface::DescribeCompleterBase::Reply(NodeInfo info) {
   CompleterBase::SendReply(::fidl::DecodedMessage<DescribeResponse>(std::move(_response_bytes)));
 }
 
-void Directory::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _buffer, NodeInfo info) {
+void Directory::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::io::NodeInfo info) {
   if (_buffer.capacity() < DescribeResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -5044,7 +5044,7 @@ void Directory::Interface::DescribeCompleterBase::Reply(::fidl::DecodedMessage<D
 }
 
 
-zx_status_t Directory::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, NodeInfo* info) {
+zx_status_t Directory::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   OnOpenResponse _response = {};
@@ -5064,7 +5064,7 @@ zx_status_t Directory::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, N
   return ::fidl::Write(zx::unowned_channel(_chan), std::move(_linearize_result.message));
 }
 
-zx_status_t Directory::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, NodeInfo* info) {
+zx_status_t Directory::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info) {
   if (_buffer.capacity() < OnOpenResponse::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -5136,7 +5136,7 @@ void Directory::Interface::SyncCompleterBase::Reply(::fidl::DecodedMessage<SyncR
 }
 
 
-void Directory::Interface::GetAttrCompleterBase::Reply(int32_t s, NodeAttributes attributes) {
+void Directory::Interface::GetAttrCompleterBase::Reply(int32_t s, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetAttrResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetAttrResponse*>(_write_bytes);
@@ -5151,7 +5151,7 @@ void Directory::Interface::GetAttrCompleterBase::Reply(int32_t s, NodeAttributes
   CompleterBase::SendReply(::fidl::DecodedMessage<GetAttrResponse>(std::move(_response_bytes)));
 }
 
-void Directory::Interface::GetAttrCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, NodeAttributes attributes) {
+void Directory::Interface::GetAttrCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   if (_buffer.capacity() < GetAttrResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -6033,7 +6033,7 @@ DirectoryAdmin::UnownedResultOf::GetAttr DirectoryAdmin::Call::GetAttr(zx::unown
 }
 
 template <>
-DirectoryAdmin::ResultOf::SetAttr_Impl<DirectoryAdmin::SetAttrResponse>::SetAttr_Impl(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes) {
+DirectoryAdmin::ResultOf::SetAttr_Impl<DirectoryAdmin::SetAttrResponse>::SetAttr_Impl(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetAttrRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -6048,16 +6048,16 @@ DirectoryAdmin::ResultOf::SetAttr_Impl<DirectoryAdmin::SetAttrResponse>::SetAttr
       DirectoryAdmin::InPlace::SetAttr(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-DirectoryAdmin::ResultOf::SetAttr DirectoryAdmin::SyncClient::SetAttr(uint32_t flags, NodeAttributes attributes) {
+DirectoryAdmin::ResultOf::SetAttr DirectoryAdmin::SyncClient::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   return ResultOf::SetAttr(zx::unowned_channel(this->channel_), std::move(flags), std::move(attributes));
 }
 
-DirectoryAdmin::ResultOf::SetAttr DirectoryAdmin::Call::SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes) {
+DirectoryAdmin::ResultOf::SetAttr DirectoryAdmin::Call::SetAttr(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   return ResultOf::SetAttr(std::move(_client_end), std::move(flags), std::move(attributes));
 }
 
 template <>
-DirectoryAdmin::UnownedResultOf::SetAttr_Impl<DirectoryAdmin::SetAttrResponse>::SetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
+DirectoryAdmin::UnownedResultOf::SetAttr_Impl<DirectoryAdmin::SetAttrResponse>::SetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetAttrRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetAttrResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -6072,11 +6072,11 @@ DirectoryAdmin::UnownedResultOf::SetAttr_Impl<DirectoryAdmin::SetAttrResponse>::
       DirectoryAdmin::InPlace::SetAttr(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-DirectoryAdmin::UnownedResultOf::SetAttr DirectoryAdmin::SyncClient::SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
+DirectoryAdmin::UnownedResultOf::SetAttr DirectoryAdmin::SyncClient::SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetAttr(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(attributes), std::move(_response_buffer));
 }
 
-DirectoryAdmin::UnownedResultOf::SetAttr DirectoryAdmin::Call::SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
+DirectoryAdmin::UnownedResultOf::SetAttr DirectoryAdmin::Call::SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetAttr(std::move(_client_end), std::move(_request_buffer), std::move(flags), std::move(attributes), std::move(_response_buffer));
 }
 
@@ -7561,7 +7561,7 @@ void DirectoryAdmin::Interface::CloseCompleterBase::Reply(::fidl::DecodedMessage
 }
 
 
-void DirectoryAdmin::Interface::DescribeCompleterBase::Reply(NodeInfo info) {
+void DirectoryAdmin::Interface::DescribeCompleterBase::Reply(::llcpp::fuchsia::io::NodeInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DescribeResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DescribeResponse*>(_write_bytes);
@@ -7575,7 +7575,7 @@ void DirectoryAdmin::Interface::DescribeCompleterBase::Reply(NodeInfo info) {
   CompleterBase::SendReply(::fidl::DecodedMessage<DescribeResponse>(std::move(_response_bytes)));
 }
 
-void DirectoryAdmin::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _buffer, NodeInfo info) {
+void DirectoryAdmin::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::io::NodeInfo info) {
   if (_buffer.capacity() < DescribeResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -7602,7 +7602,7 @@ void DirectoryAdmin::Interface::DescribeCompleterBase::Reply(::fidl::DecodedMess
 }
 
 
-zx_status_t DirectoryAdmin::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, NodeInfo* info) {
+zx_status_t DirectoryAdmin::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   OnOpenResponse _response = {};
@@ -7622,7 +7622,7 @@ zx_status_t DirectoryAdmin::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t
   return ::fidl::Write(zx::unowned_channel(_chan), std::move(_linearize_result.message));
 }
 
-zx_status_t DirectoryAdmin::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, NodeInfo* info) {
+zx_status_t DirectoryAdmin::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info) {
   if (_buffer.capacity() < OnOpenResponse::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -7694,7 +7694,7 @@ void DirectoryAdmin::Interface::SyncCompleterBase::Reply(::fidl::DecodedMessage<
 }
 
 
-void DirectoryAdmin::Interface::GetAttrCompleterBase::Reply(int32_t s, NodeAttributes attributes) {
+void DirectoryAdmin::Interface::GetAttrCompleterBase::Reply(int32_t s, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetAttrResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetAttrResponse*>(_write_bytes);
@@ -7709,7 +7709,7 @@ void DirectoryAdmin::Interface::GetAttrCompleterBase::Reply(int32_t s, NodeAttri
   CompleterBase::SendReply(::fidl::DecodedMessage<GetAttrResponse>(std::move(_response_bytes)));
 }
 
-void DirectoryAdmin::Interface::GetAttrCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, NodeAttributes attributes) {
+void DirectoryAdmin::Interface::GetAttrCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   if (_buffer.capacity() < GetAttrResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -8300,7 +8300,7 @@ void DirectoryAdmin::Interface::UnmountNodeCompleterBase::Reply(::fidl::DecodedM
 }
 
 
-void DirectoryAdmin::Interface::QueryFilesystemCompleterBase::Reply(int32_t s, FilesystemInfo* info) {
+void DirectoryAdmin::Interface::QueryFilesystemCompleterBase::Reply(int32_t s, ::llcpp::fuchsia::io::FilesystemInfo* info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryFilesystemResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   QueryFilesystemResponse _response = {};
@@ -8320,7 +8320,7 @@ void DirectoryAdmin::Interface::QueryFilesystemCompleterBase::Reply(int32_t s, F
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void DirectoryAdmin::Interface::QueryFilesystemCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, FilesystemInfo* info) {
+void DirectoryAdmin::Interface::QueryFilesystemCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::FilesystemInfo* info) {
   if (_buffer.capacity() < QueryFilesystemResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

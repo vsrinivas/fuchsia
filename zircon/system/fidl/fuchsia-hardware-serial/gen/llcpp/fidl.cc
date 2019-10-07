@@ -90,7 +90,7 @@ Device::UnownedResultOf::GetClass Device::Call::GetClass(zx::unowned_channel _cl
 }
 
 template <>
-Device::ResultOf::SetConfig_Impl<Device::SetConfigResponse>::SetConfig_Impl(zx::unowned_channel _client_end, Config config) {
+Device::ResultOf::SetConfig_Impl<Device::SetConfigResponse>::SetConfig_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -104,16 +104,16 @@ Device::ResultOf::SetConfig_Impl<Device::SetConfigResponse>::SetConfig_Impl(zx::
       Device::InPlace::SetConfig(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Device::ResultOf::SetConfig Device::SyncClient::SetConfig(Config config) {
+Device::ResultOf::SetConfig Device::SyncClient::SetConfig(::llcpp::fuchsia::hardware::serial::Config config) {
   return ResultOf::SetConfig(zx::unowned_channel(this->channel_), std::move(config));
 }
 
-Device::ResultOf::SetConfig Device::Call::SetConfig(zx::unowned_channel _client_end, Config config) {
+Device::ResultOf::SetConfig Device::Call::SetConfig(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config) {
   return ResultOf::SetConfig(std::move(_client_end), std::move(config));
 }
 
 template <>
-Device::UnownedResultOf::SetConfig_Impl<Device::SetConfigResponse>::SetConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Config config, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetConfig_Impl<Device::SetConfigResponse>::SetConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetConfigRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetConfigResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -127,11 +127,11 @@ Device::UnownedResultOf::SetConfig_Impl<Device::SetConfigResponse>::SetConfig_Im
       Device::InPlace::SetConfig(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Device::UnownedResultOf::SetConfig Device::SyncClient::SetConfig(::fidl::BytePart _request_buffer, Config config, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetConfig Device::SyncClient::SetConfig(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetConfig(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(config), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::SetConfig Device::Call::SetConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Config config, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetConfig Device::Call::SetConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetConfig(std::move(_client_end), std::move(_request_buffer), std::move(config), std::move(_response_buffer));
 }
 
@@ -206,7 +206,7 @@ bool Device::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
 }
 
 
-void Device::Interface::GetClassCompleterBase::Reply(Class device_class) {
+void Device::Interface::GetClassCompleterBase::Reply(::llcpp::fuchsia::hardware::serial::Class device_class) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetClassResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetClassResponse*>(_write_bytes);
@@ -220,7 +220,7 @@ void Device::Interface::GetClassCompleterBase::Reply(Class device_class) {
   CompleterBase::SendReply(::fidl::DecodedMessage<GetClassResponse>(std::move(_response_bytes)));
 }
 
-void Device::Interface::GetClassCompleterBase::Reply(::fidl::BytePart _buffer, Class device_class) {
+void Device::Interface::GetClassCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::serial::Class device_class) {
   if (_buffer.capacity() < GetClassResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

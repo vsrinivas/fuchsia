@@ -75,7 +75,7 @@ class Device final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    InterruptControllerInfo* info;
+    ::llcpp::fuchsia::sysinfo::InterruptControllerInfo* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_sysinfo_DeviceGetInterruptControllerInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -317,8 +317,8 @@ class Device final {
 
     class GetInterruptControllerInfoCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, InterruptControllerInfo* info);
-      void Reply(::fidl::BytePart _buffer, int32_t status, InterruptControllerInfo* info);
+      void Reply(int32_t status, ::llcpp::fuchsia::sysinfo::InterruptControllerInfo* info);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::sysinfo::InterruptControllerInfo* info);
       void Reply(::fidl::DecodedMessage<GetInterruptControllerInfoResponse> params);
 
      protected:
@@ -362,7 +362,7 @@ struct InterruptControllerInfo {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  InterruptControllerType type = {};
+  ::llcpp::fuchsia::sysinfo::InterruptControllerType type = {};
 };
 
 }  // namespace sysinfo

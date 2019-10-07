@@ -126,7 +126,7 @@ class Light final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t index;
-    Capability capability;
+    ::llcpp::fuchsia::hardware::light::Capability capability;
 
     static constexpr const fidl_type_t* Type = nullptr;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -200,7 +200,7 @@ class Light final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    Rgb value;
+    ::llcpp::fuchsia::hardware::light::Rgb value;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightGetRgbValueResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -242,7 +242,7 @@ class Light final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t index;
-    Rgb value;
+    ::llcpp::fuchsia::hardware::light::Rgb value;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightSetRgbValueRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -295,7 +295,7 @@ class Light final {
     class HasCapability_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      HasCapability_Impl(zx::unowned_channel _client_end, uint32_t index, Capability capability);
+      HasCapability_Impl(zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability);
       ~HasCapability_Impl() = default;
       HasCapability_Impl(HasCapability_Impl&& other) = default;
       HasCapability_Impl& operator=(HasCapability_Impl&& other) = default;
@@ -359,7 +359,7 @@ class Light final {
     class SetRgbValue_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetRgbValue_Impl(zx::unowned_channel _client_end, uint32_t index, Rgb value);
+      SetRgbValue_Impl(zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value);
       ~SetRgbValue_Impl() = default;
       SetRgbValue_Impl(SetRgbValue_Impl&& other) = default;
       SetRgbValue_Impl& operator=(SetRgbValue_Impl&& other) = default;
@@ -423,7 +423,7 @@ class Light final {
     class HasCapability_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      HasCapability_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, Capability capability, ::fidl::BytePart _response_buffer);
+      HasCapability_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability, ::fidl::BytePart _response_buffer);
       ~HasCapability_Impl() = default;
       HasCapability_Impl(HasCapability_Impl&& other) = default;
       HasCapability_Impl& operator=(HasCapability_Impl&& other) = default;
@@ -487,7 +487,7 @@ class Light final {
     class SetRgbValue_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetRgbValue_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, Rgb value, ::fidl::BytePart _response_buffer);
+      SetRgbValue_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value, ::fidl::BytePart _response_buffer);
       ~SetRgbValue_Impl() = default;
       SetRgbValue_Impl(SetRgbValue_Impl&& other) = default;
       SetRgbValue_Impl& operator=(SetRgbValue_Impl&& other) = default;
@@ -534,10 +534,10 @@ class Light final {
     UnownedResultOf::GetCount GetCount(::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::HasCapability HasCapability(uint32_t index, Capability capability);
+    ResultOf::HasCapability HasCapability(uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::HasCapability HasCapability(::fidl::BytePart _request_buffer, uint32_t index, Capability capability, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::HasCapability HasCapability(::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetSimpleValue GetSimpleValue(uint32_t index);
@@ -558,10 +558,10 @@ class Light final {
     UnownedResultOf::GetRgbValue GetRgbValue(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetRgbValue SetRgbValue(uint32_t index, Rgb value);
+    ResultOf::SetRgbValue SetRgbValue(uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetRgbValue SetRgbValue(::fidl::BytePart _request_buffer, uint32_t index, Rgb value, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::SetRgbValue SetRgbValue(::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value, ::fidl::BytePart _response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -585,10 +585,10 @@ class Light final {
     static UnownedResultOf::GetCount GetCount(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::HasCapability HasCapability(zx::unowned_channel _client_end, uint32_t index, Capability capability);
+    static ResultOf::HasCapability HasCapability(zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::HasCapability HasCapability(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, Capability capability, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::HasCapability HasCapability(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetSimpleValue GetSimpleValue(zx::unowned_channel _client_end, uint32_t index);
@@ -609,10 +609,10 @@ class Light final {
     static UnownedResultOf::GetRgbValue GetRgbValue(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetRgbValue SetRgbValue(zx::unowned_channel _client_end, uint32_t index, Rgb value);
+    static ResultOf::SetRgbValue SetRgbValue(zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetRgbValue SetRgbValue(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, Rgb value, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetRgbValue SetRgbValue(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -686,7 +686,7 @@ class Light final {
 
     using HasCapabilityCompleter = ::fidl::Completer<HasCapabilityCompleterBase>;
 
-    virtual void HasCapability(uint32_t index, Capability capability, HasCapabilityCompleter::Sync _completer) = 0;
+    virtual void HasCapability(uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability, HasCapabilityCompleter::Sync _completer) = 0;
 
     class GetSimpleValueCompleterBase : public _Base {
      public:
@@ -718,8 +718,8 @@ class Light final {
 
     class GetRgbValueCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, Rgb value);
-      void Reply(::fidl::BytePart _buffer, int32_t status, Rgb value);
+      void Reply(int32_t status, ::llcpp::fuchsia::hardware::light::Rgb value);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::light::Rgb value);
       void Reply(::fidl::DecodedMessage<GetRgbValueResponse> params);
 
      protected:
@@ -742,7 +742,7 @@ class Light final {
 
     using SetRgbValueCompleter = ::fidl::Completer<SetRgbValueCompleterBase>;
 
-    virtual void SetRgbValue(uint32_t index, Rgb value, SetRgbValueCompleter::Sync _completer) = 0;
+    virtual void SetRgbValue(uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value, SetRgbValueCompleter::Sync _completer) = 0;
 
   };
 

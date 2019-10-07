@@ -121,7 +121,7 @@ bool Device::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
 }
 
 
-void Device::Interface::GetInfoCompleterBase::Reply(Info info) {
+void Device::Interface::GetInfoCompleterBase::Reply(::llcpp::fuchsia::hardware::midi::Info info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetInfoResponse*>(_write_bytes);
@@ -135,7 +135,7 @@ void Device::Interface::GetInfoCompleterBase::Reply(Info info) {
   CompleterBase::SendReply(::fidl::DecodedMessage<GetInfoResponse>(std::move(_response_bytes)));
 }
 
-void Device::Interface::GetInfoCompleterBase::Reply(::fidl::BytePart _buffer, Info info) {
+void Device::Interface::GetInfoCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::midi::Info info) {
   if (_buffer.capacity() < GetInfoResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

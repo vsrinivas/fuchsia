@@ -86,9 +86,9 @@ struct OsInfo {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  Uuid uuid = {};
+  ::llcpp::fuchsia::tee::Uuid uuid = {};
 
-  OsRevision revision = {};
+  ::llcpp::fuchsia::tee::OsRevision revision = {};
 
   bool is_global_platform_compliant = {};
 };
@@ -114,7 +114,7 @@ struct Value {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  Direction direction = {};
+  ::llcpp::fuchsia::tee::Direction direction = {};
 
   uint64_t a = {};
 
@@ -132,7 +132,7 @@ struct Buffer {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  Direction direction = {};
+  ::llcpp::fuchsia::tee::Direction direction = {};
 
   ::zx::vmo vmo = {};
 
@@ -172,75 +172,75 @@ struct Parameter {
 
   bool is_empty() const { return tag_ == Tag::kEmpty; }
 
-  static Parameter WithEmpty(Empty&& val) {
+  static Parameter WithEmpty(::llcpp::fuchsia::tee::Empty&& val) {
     Parameter result;
     result.set_empty(std::move(val));
     return result;
   }
 
-  Empty& mutable_empty();
+  ::llcpp::fuchsia::tee::Empty& mutable_empty();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Empty>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::tee::Empty>::value && std::is_copy_assignable<T>::value>
   set_empty(const T& v) {
     mutable_empty() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Empty>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::tee::Empty>::value && std::is_move_assignable<T>::value>
   set_empty(T&& v) {
     mutable_empty() = std::move(v);
   }
 
-  Empty const & empty() const { return empty_; }
+  ::llcpp::fuchsia::tee::Empty const & empty() const { return empty_; }
 
   bool is_buffer() const { return tag_ == Tag::kBuffer; }
 
-  static Parameter WithBuffer(Buffer&& val) {
+  static Parameter WithBuffer(::llcpp::fuchsia::tee::Buffer&& val) {
     Parameter result;
     result.set_buffer(std::move(val));
     return result;
   }
 
-  Buffer& mutable_buffer();
+  ::llcpp::fuchsia::tee::Buffer& mutable_buffer();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Buffer>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::tee::Buffer>::value && std::is_copy_assignable<T>::value>
   set_buffer(const T& v) {
     mutable_buffer() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Buffer>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::tee::Buffer>::value && std::is_move_assignable<T>::value>
   set_buffer(T&& v) {
     mutable_buffer() = std::move(v);
   }
 
-  Buffer const & buffer() const { return buffer_; }
+  ::llcpp::fuchsia::tee::Buffer const & buffer() const { return buffer_; }
 
   bool is_value() const { return tag_ == Tag::kValue; }
 
-  static Parameter WithValue(Value&& val) {
+  static Parameter WithValue(::llcpp::fuchsia::tee::Value&& val) {
     Parameter result;
     result.set_value(std::move(val));
     return result;
   }
 
-  Value& mutable_value();
+  ::llcpp::fuchsia::tee::Value& mutable_value();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Value>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::tee::Value>::value && std::is_copy_assignable<T>::value>
   set_value(const T& v) {
     mutable_value() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, Value>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::tee::Value>::value && std::is_move_assignable<T>::value>
   set_value(T&& v) {
     mutable_value() = std::move(v);
   }
 
-  Value const & value() const { return value_; }
+  ::llcpp::fuchsia::tee::Value const & value() const { return value_; }
 
   Tag which() const { return tag_; }
 
@@ -256,9 +256,9 @@ struct Parameter {
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    Empty empty_;
-    Buffer buffer_;
-    Value value_;
+    ::llcpp::fuchsia::tee::Empty empty_;
+    ::llcpp::fuchsia::tee::Buffer buffer_;
+    ::llcpp::fuchsia::tee::Value value_;
   };
 };
 
@@ -273,7 +273,7 @@ struct ParameterSet {
 
   uint16_t count = {};
 
-  ::fidl::Array<Parameter, 4> parameters = {};
+  ::fidl::Array<::llcpp::fuchsia::tee::Parameter, 4> parameters = {};
 };
 
 extern "C" const fidl_type_t fuchsia_tee_OpResultTable;
@@ -287,9 +287,9 @@ struct OpResult {
 
   uint64_t return_code = {};
 
-  ReturnOrigin return_origin = {};
+  ::llcpp::fuchsia::tee::ReturnOrigin return_origin = {};
 
-  ParameterSet parameter_set = {};
+  ::llcpp::fuchsia::tee::ParameterSet parameter_set = {};
 };
 
 extern "C" const fidl_type_t fuchsia_tee_DeviceGetOsInfoResponseTable;
@@ -307,7 +307,7 @@ class Device final {
   struct GetOsInfoResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    OsInfo info;
+    ::llcpp::fuchsia::tee::OsInfo info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_tee_DeviceGetOsInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -323,7 +323,7 @@ class Device final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     uint32_t session_id;
-    OpResult op_result;
+    ::llcpp::fuchsia::tee::OpResult op_result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_tee_DeviceOpenSessionResponseTable;
     static constexpr uint32_t MaxNumHandles = 4;
@@ -336,8 +336,8 @@ class Device final {
   struct OpenSessionRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    Uuid trusted_app;
-    ParameterSet parameter_set;
+    ::llcpp::fuchsia::tee::Uuid trusted_app;
+    ::llcpp::fuchsia::tee::ParameterSet parameter_set;
 
     static constexpr const fidl_type_t* Type = &fuchsia_tee_DeviceOpenSessionRequestTable;
     static constexpr uint32_t MaxNumHandles = 4;
@@ -352,7 +352,7 @@ class Device final {
   struct InvokeCommandResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    OpResult op_result;
+    ::llcpp::fuchsia::tee::OpResult op_result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_tee_DeviceInvokeCommandResponseTable;
     static constexpr uint32_t MaxNumHandles = 4;
@@ -367,7 +367,7 @@ class Device final {
     fidl_message_header_t _hdr;
     uint32_t session_id;
     uint32_t command_id;
-    ParameterSet parameter_set;
+    ::llcpp::fuchsia::tee::ParameterSet parameter_set;
 
     static constexpr const fidl_type_t* Type = &fuchsia_tee_DeviceInvokeCommandRequestTable;
     static constexpr uint32_t MaxNumHandles = 4;
@@ -419,7 +419,7 @@ class Device final {
     class OpenSession_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      OpenSession_Impl(zx::unowned_channel _client_end, Uuid trusted_app, ParameterSet parameter_set);
+      OpenSession_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set);
       ~OpenSession_Impl() = default;
       OpenSession_Impl(OpenSession_Impl&& other) = default;
       OpenSession_Impl& operator=(OpenSession_Impl&& other) = default;
@@ -435,7 +435,7 @@ class Device final {
     class InvokeCommand_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      InvokeCommand_Impl(zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ParameterSet parameter_set);
+      InvokeCommand_Impl(zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set);
       ~InvokeCommand_Impl() = default;
       InvokeCommand_Impl(InvokeCommand_Impl&& other) = default;
       InvokeCommand_Impl& operator=(InvokeCommand_Impl&& other) = default;
@@ -496,7 +496,7 @@ class Device final {
     class OpenSession_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      OpenSession_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Uuid trusted_app, ParameterSet parameter_set, ::fidl::BytePart _response_buffer);
+      OpenSession_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set, ::fidl::BytePart _response_buffer);
       ~OpenSession_Impl() = default;
       OpenSession_Impl(OpenSession_Impl&& other) = default;
       OpenSession_Impl& operator=(OpenSession_Impl&& other) = default;
@@ -512,7 +512,7 @@ class Device final {
     class InvokeCommand_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      InvokeCommand_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ParameterSet parameter_set, ::fidl::BytePart _response_buffer);
+      InvokeCommand_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set, ::fidl::BytePart _response_buffer);
       ~InvokeCommand_Impl() = default;
       InvokeCommand_Impl(InvokeCommand_Impl&& other) = default;
       InvokeCommand_Impl& operator=(InvokeCommand_Impl&& other) = default;
@@ -566,16 +566,16 @@ class Device final {
     UnownedResultOf::GetOsInfo GetOsInfo(::fidl::BytePart _response_buffer);
 
     // Allocates 408 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::OpenSession OpenSession(Uuid trusted_app, ParameterSet parameter_set);
+    ResultOf::OpenSession OpenSession(::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::OpenSession OpenSession(::fidl::BytePart _request_buffer, Uuid trusted_app, ParameterSet parameter_set, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::OpenSession OpenSession(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set, ::fidl::BytePart _response_buffer);
 
     // Allocates 392 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::InvokeCommand InvokeCommand(uint32_t session_id, uint32_t command_id, ParameterSet parameter_set);
+    ResultOf::InvokeCommand InvokeCommand(uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::InvokeCommand InvokeCommand(::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ParameterSet parameter_set, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::InvokeCommand InvokeCommand(::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::CloseSession CloseSession(uint32_t session_id);
@@ -599,16 +599,16 @@ class Device final {
     static UnownedResultOf::GetOsInfo GetOsInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 408 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::OpenSession OpenSession(zx::unowned_channel _client_end, Uuid trusted_app, ParameterSet parameter_set);
+    static ResultOf::OpenSession OpenSession(zx::unowned_channel _client_end, ::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::OpenSession OpenSession(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Uuid trusted_app, ParameterSet parameter_set, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::OpenSession OpenSession(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set, ::fidl::BytePart _response_buffer);
 
     // Allocates 392 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::InvokeCommand InvokeCommand(zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ParameterSet parameter_set);
+    static ResultOf::InvokeCommand InvokeCommand(zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::InvokeCommand InvokeCommand(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ParameterSet parameter_set, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::InvokeCommand InvokeCommand(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::CloseSession CloseSession(zx::unowned_channel _client_end, uint32_t session_id);
@@ -644,8 +644,8 @@ class Device final {
 
     class GetOsInfoCompleterBase : public _Base {
      public:
-      void Reply(OsInfo info);
-      void Reply(::fidl::BytePart _buffer, OsInfo info);
+      void Reply(::llcpp::fuchsia::tee::OsInfo info);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::tee::OsInfo info);
       void Reply(::fidl::DecodedMessage<GetOsInfoResponse> params);
 
      protected:
@@ -658,8 +658,8 @@ class Device final {
 
     class OpenSessionCompleterBase : public _Base {
      public:
-      void Reply(uint32_t session_id, OpResult op_result);
-      void Reply(::fidl::BytePart _buffer, uint32_t session_id, OpResult op_result);
+      void Reply(uint32_t session_id, ::llcpp::fuchsia::tee::OpResult op_result);
+      void Reply(::fidl::BytePart _buffer, uint32_t session_id, ::llcpp::fuchsia::tee::OpResult op_result);
       void Reply(::fidl::DecodedMessage<OpenSessionResponse> params);
 
      protected:
@@ -668,12 +668,12 @@ class Device final {
 
     using OpenSessionCompleter = ::fidl::Completer<OpenSessionCompleterBase>;
 
-    virtual void OpenSession(Uuid trusted_app, ParameterSet parameter_set, OpenSessionCompleter::Sync _completer) = 0;
+    virtual void OpenSession(::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set, OpenSessionCompleter::Sync _completer) = 0;
 
     class InvokeCommandCompleterBase : public _Base {
      public:
-      void Reply(OpResult op_result);
-      void Reply(::fidl::BytePart _buffer, OpResult op_result);
+      void Reply(::llcpp::fuchsia::tee::OpResult op_result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::tee::OpResult op_result);
       void Reply(::fidl::DecodedMessage<InvokeCommandResponse> params);
 
      protected:
@@ -682,7 +682,7 @@ class Device final {
 
     using InvokeCommandCompleter = ::fidl::Completer<InvokeCommandCompleterBase>;
 
-    virtual void InvokeCommand(uint32_t session_id, uint32_t command_id, ParameterSet parameter_set, InvokeCommandCompleter::Sync _completer) = 0;
+    virtual void InvokeCommand(uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set, InvokeCommandCompleter::Sync _completer) = 0;
 
     class CloseSessionCompleterBase : public _Base {
      public:
