@@ -8,6 +8,7 @@
 #include "src/ui/lib/escher/paper/paper_draw_call.h"
 #include "src/ui/lib/escher/paper/paper_readme.h"
 #include "src/ui/lib/escher/renderer/render_queue.h"
+#include "src/ui/lib/escher/third_party/granite/vk/command_buffer.h"
 
 namespace escher {
 

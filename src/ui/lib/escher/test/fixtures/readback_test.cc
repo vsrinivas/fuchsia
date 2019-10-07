@@ -56,7 +56,7 @@ ReadbackTest::FrameData ReadbackTest::NewFrame(vk::ImageLayout framebuffer_layou
 
   // Unless the client does something weird, this will only happen the first
   // time NewFrame() is called after SetUp().
-  cb->impl()->TakeWaitSemaphore(black_, vk::PipelineStageFlagBits::eTransfer);
+  cb->TakeWaitSemaphore(black_, vk::PipelineStageFlagBits::eTransfer);
 
   // Wait for all previous commands to finish before clearing the image to
   // black.  We do this by blitting, because clearing a color attachment can
@@ -94,8 +94,8 @@ std::vector<uint8_t> ReadbackTest::ReadbackFromColorAttachment(const FramePtr& f
                                                                vk::ImageLayout final_image_layout) {
   CommandBuffer* cb = frame->cmds();
 
-  cb->impl()->KeepAlive(readback_buffer_);
-  cb->impl()->KeepAlive(color_attachment_);
+  cb->KeepAlive(readback_buffer_);
+  cb->KeepAlive(color_attachment_);
 
   // Allow previous cmds to finish modifying the color attachment.  Also,
   // transition to eTransferSrcOptimal before copying the bytes.

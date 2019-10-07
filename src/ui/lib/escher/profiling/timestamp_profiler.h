@@ -9,6 +9,7 @@
 
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/ui/lib/escher/forward_declarations.h"
+#include "src/ui/lib/escher/third_party/granite/vk/command_buffer.h"
 #include "src/ui/lib/escher/vk/vulkan_context.h"
 
 namespace escher {
@@ -30,8 +31,7 @@ class TimestampProfiler : public fxl::RefCountedThreadSafe<TimestampProfiler> {
   // NOTE: you should understand the caveats in the Vulkan spec regarding the
   // accuracy of these timestamps.  For example, many implementations will treat
   // any set of flags as equivalent to eBottomOfPipe.
-  void AddTimestamp(impl::CommandBuffer* cmd_buf, vk::PipelineStageFlagBits flags,
-                    const char* name);
+  void AddTimestamp(CommandBufferPtr cmd_buf, vk::PipelineStageFlagBits flags, const char* name);
 
   struct Result {
     uint64_t raw_nanoseconds;  // nanoseconds according to some timebase.
@@ -80,9 +80,9 @@ class TimestampProfiler : public fxl::RefCountedThreadSafe<TimestampProfiler> {
     uint32_t count;
   };
 
-  QueryRange* ObtainRange(impl::CommandBuffer* cmd_buf);
-  QueryRange* CreateRange(impl::CommandBuffer* cmd_buf);
-  QueryRange* CreateRangeAndPool(impl::CommandBuffer* cmd_buf);
+  QueryRange* ObtainRange(CommandBufferPtr cmd_buf);
+  QueryRange* CreateRange(CommandBufferPtr cmd_buf);
+  QueryRange* CreateRangeAndPool(CommandBufferPtr cmd_buf);
 
   std::vector<QueryRange> ranges_;
   std::vector<vk::QueryPool> pools_;

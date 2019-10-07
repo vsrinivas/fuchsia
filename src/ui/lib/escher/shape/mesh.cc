@@ -6,6 +6,7 @@
 
 #include "src/ui/lib/escher/impl/command_buffer.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
+#include "src/ui/lib/escher/third_party/granite/vk/command_buffer.h"
 #include "src/ui/lib/escher/vk/buffer.h"
 
 namespace escher {
@@ -82,7 +83,7 @@ Mesh::Mesh(ResourceRecycler* resource_recycler, MeshSpec spec, BoundingBox bound
 
 Mesh::~Mesh() {}
 
-void Mesh::TransferWaitSemaphores(impl::CommandBuffer* cb, vk::PipelineStageFlags stages) {
+void Mesh::TransferWaitSemaphores(CommandBuffer* cb, vk::PipelineStageFlags stages) {
   // TODO(ES-104): Replace TakeWaitSemaphore() with something better.
   cb->TakeWaitSemaphore(index_buffer_, stages);
   for (auto& attr : attribute_buffers_) {

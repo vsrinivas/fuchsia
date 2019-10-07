@@ -150,7 +150,7 @@ VK_TEST_F(ShaderProgramTest, DISABLED_GeneratePipelines) {
   // TODO(ES-83): move into ShaderProgramTest.
   auto noise_image = escher->NewNoiseImage(512, 512);
   auto noise_texture = escher->NewTexture(noise_image, vk::Filter::eLinear);
-  cb->impl()->TakeWaitSemaphore(noise_image, vk::PipelineStageFlagBits::eFragmentShader);
+  cb->TakeWaitSemaphore(noise_image, vk::PipelineStageFlagBits::eFragmentShader);
 
   cb->BeginRenderPass(render_pass_info);
 

@@ -5,7 +5,7 @@
 #ifndef SRC_UI_LIB_ESCHER_RENDERER_UNIFORM_BINDING_H_
 #define SRC_UI_LIB_ESCHER_RENDERER_UNIFORM_BINDING_H_
 
-#include "src/ui/lib/escher/vk/command_buffer.h"
+#include "src/ui/lib/escher/third_party/granite/vk/command_buffer.h"
 
 namespace escher {
 

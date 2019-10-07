@@ -23,10 +23,10 @@ std::unique_ptr<DebugRects> DebugRects::New(BatchGpuUploader* uploader, ImageFac
 DebugRects::DebugRects(ImagePtr image) : palette_(std::move(image)) { FXL_DCHECK(palette_); }
 
 void DebugRects::Blit(CommandBuffer* cb, Color color, const ImagePtr& target, vk::Rect2D rect) {
-  cb->impl()->TakeWaitSemaphore(palette_, vk::PipelineStageFlagBits::eTransfer);
-  cb->impl()->TakeWaitSemaphore(target, vk::PipelineStageFlagBits::eColorAttachmentOutput |
-                                            vk::PipelineStageFlagBits::eTransfer);
-  cb->impl()->KeepAlive(target);
+  cb->TakeWaitSemaphore(palette_, vk::PipelineStageFlagBits::eTransfer);
+  cb->TakeWaitSemaphore(target, vk::PipelineStageFlagBits::eColorAttachmentOutput |
+                                    vk::PipelineStageFlagBits::eTransfer);
+  cb->KeepAlive(target);
 
   vk::ImageBlit region;
   uint32_t region_count = 1;

@@ -113,10 +113,6 @@ void CommandBuffer::KeepAlive(Resource* resource) {
 }
 
 void CommandBuffer::DrawMesh(const MeshPtr& mesh) {
-  KeepAlive(mesh);
-
-  mesh->TransferWaitSemaphores(this, vk::PipelineStageFlagBits::eVertexInput);
-
   const uint32_t vbo_binding = MeshShaderBinding::kTheOnlyCurrentlySupportedBinding;
   auto& attribute_buffer = mesh->attribute_buffer(vbo_binding);
   vk::Buffer vbo = attribute_buffer.vk_buffer;

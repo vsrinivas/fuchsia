@@ -36,7 +36,7 @@ void BatchGpuUploader::Writer::WriteBuffer(const BufferPtr& target, vk::BufferCo
   BatchGpuUploader::SemaphoreAssignmentHelper(target.get(), command_buffer_.get());
 
   command_buffer_->vk().copyBuffer(buffer_->vk(), target->vk(), 1, &region);
-  command_buffer_->impl()->KeepAlive(target);
+  command_buffer_->KeepAlive(target);
 }
 
 void BatchGpuUploader::Writer::WriteImage(const ImagePtr& target, vk::BufferImageCopy region,
@@ -45,23 +45,23 @@ void BatchGpuUploader::Writer::WriteImage(const ImagePtr& target, vk::BufferImag
 
   BatchGpuUploader::SemaphoreAssignmentHelper(target.get(), command_buffer_.get());
 
-  command_buffer_->impl()->TransitionImageLayout(target, vk::ImageLayout::eUndefined,
-                                                 vk::ImageLayout::eTransferDstOptimal);
+  command_buffer_->TransitionImageLayout(target, vk::ImageLayout::eUndefined,
+                                         vk::ImageLayout::eTransferDstOptimal);
   command_buffer_->vk().copyBufferToImage(buffer_->vk(), target->vk(),
                                           vk::ImageLayout::eTransferDstOptimal, 1, &region);
   if (final_layout != vk::ImageLayout::eTransferDstOptimal) {
-    command_buffer_->impl()->TransitionImageLayout(target, vk::ImageLayout::eTransferDstOptimal,
-                                                   final_layout);
+    command_buffer_->TransitionImageLayout(target, vk::ImageLayout::eTransferDstOptimal,
+                                           final_layout);
   }
 
-  command_buffer_->impl()->KeepAlive(target);
+  command_buffer_->KeepAlive(target);
 }
 
 CommandBufferPtr BatchGpuUploader::Writer::TakeCommandsAndShutdown() {
   FXL_DCHECK(command_buffer_);
   // Assume that if a writer was requested, it was written to, and the buffer
   // needs to be kept alive.
-  command_buffer_->impl()->KeepAlive(std::move(buffer_));
+  command_buffer_->KeepAlive(std::move(buffer_));
 
   // Underlying CommandBuffer is being removed, shutdown this writer.
   buffer_ = nullptr;
@@ -81,7 +81,7 @@ void BatchGpuUploader::Reader::ReadBuffer(const BufferPtr& source, vk::BufferCop
   BatchGpuUploader::SemaphoreAssignmentHelper(source.get(), command_buffer_.get());
 
   command_buffer_->vk().copyBuffer(source->vk(), buffer_->vk(), 1, &region);
-  command_buffer_->impl()->KeepAlive(source);
+  command_buffer_->KeepAlive(source);
 }
 
 void BatchGpuUploader::Reader::ReadImage(const ImagePtr& source, vk::BufferImageCopy region) {
@@ -89,20 +89,20 @@ void BatchGpuUploader::Reader::ReadImage(const ImagePtr& source, vk::BufferImage
 
   BatchGpuUploader::SemaphoreAssignmentHelper(source.get(), command_buffer_.get());
 
-  command_buffer_->impl()->TransitionImageLayout(source, source->layout(),
-                                                 vk::ImageLayout::eTransferSrcOptimal);
+  command_buffer_->TransitionImageLayout(source, source->layout(),
+                                         vk::ImageLayout::eTransferSrcOptimal);
   command_buffer_->vk().copyImageToBuffer(source->vk(), vk::ImageLayout::eTransferSrcOptimal,
                                           buffer_->vk(), 1, &region);
-  command_buffer_->impl()->TransitionImageLayout(source, vk::ImageLayout::eTransferSrcOptimal,
-                                                 vk::ImageLayout::eShaderReadOnlyOptimal);
-  command_buffer_->impl()->KeepAlive(source);
+  command_buffer_->TransitionImageLayout(source, vk::ImageLayout::eTransferSrcOptimal,
+                                         vk::ImageLayout::eShaderReadOnlyOptimal);
+  command_buffer_->KeepAlive(source);
 }
 
 CommandBufferPtr BatchGpuUploader::Reader::TakeCommandsAndShutdown() {
   FXL_DCHECK(command_buffer_);
   // Assume that if a reader was requested, it was read from, and the buffer
   // needs to be kept alive.
-  command_buffer_->impl()->KeepAlive(std::move(buffer_));
+  command_buffer_->KeepAlive(std::move(buffer_));
 
   // Underlying CommandBuffer is being removed, shutdown this reader.
   buffer_ = nullptr;
@@ -120,13 +120,13 @@ BatchGpuUploader::~BatchGpuUploader() { FXL_CHECK(!frame_); }
 void BatchGpuUploader::SemaphoreAssignmentHelper(WaitableResource* resource,
                                                  CommandBuffer* command_buffer) {
   if (resource->HasWaitSemaphore()) {
-    command_buffer->impl()->TakeWaitSemaphore(resource, vk::PipelineStageFlagBits::eTransfer);
+    command_buffer->TakeWaitSemaphore(resource, vk::PipelineStageFlagBits::eTransfer);
   }
   // The resource no longer has a wait semaphore, so add a semaphore that's
   // signalled when the batched upload is done.
   SemaphorePtr semaphore = Semaphore::New(command_buffer->vk_device());
   resource->SetWaitSemaphore(semaphore);
-  command_buffer->impl()->AddSignalSemaphore(std::move(semaphore));
+  command_buffer->AddSignalSemaphore(std::move(semaphore));
 }
 
 void BatchGpuUploader::Initialize() {

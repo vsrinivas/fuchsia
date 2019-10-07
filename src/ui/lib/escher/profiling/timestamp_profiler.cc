@@ -24,7 +24,7 @@ TimestampProfiler::~TimestampProfiler() {
   FXL_DCHECK(ranges_.empty() && pools_.empty() && query_count_ == 0 && current_pool_index_ == 0);
 }
 
-void TimestampProfiler::AddTimestamp(impl::CommandBuffer* cmd_buf, vk::PipelineStageFlagBits flags,
+void TimestampProfiler::AddTimestamp(CommandBufferPtr cmd_buf, vk::PipelineStageFlagBits flags,
                                      const char* name) {
   QueryRange* range = ObtainRange(cmd_buf);
   cmd_buf->vk().writeTimestamp(flags, range->pool, current_pool_index_);
@@ -234,7 +234,7 @@ void TimestampProfiler::LogGpuQueryResults(
                    "----------------------";
 }
 
-TimestampProfiler::QueryRange* TimestampProfiler::ObtainRange(impl::CommandBuffer* cmd_buf) {
+TimestampProfiler::QueryRange* TimestampProfiler::ObtainRange(CommandBufferPtr cmd_buf) {
   if (ranges_.empty() || current_pool_index_ == kPoolSize) {
     return CreateRangeAndPool(cmd_buf);
   } else if (ranges_.back().command_buffer != cmd_buf->vk()) {
@@ -250,7 +250,7 @@ TimestampProfiler::QueryRange* TimestampProfiler::ObtainRange(impl::CommandBuffe
   }
 }
 
-TimestampProfiler::QueryRange* TimestampProfiler::CreateRangeAndPool(impl::CommandBuffer* cmd_buf) {
+TimestampProfiler::QueryRange* TimestampProfiler::CreateRangeAndPool(CommandBufferPtr cmd_buf) {
   vk::QueryPoolCreateInfo info;
   info.flags = vk::QueryPoolCreateFlags();  // no flags currently exist
   info.queryType = vk::QueryType::eTimestamp;
@@ -271,7 +271,7 @@ TimestampProfiler::QueryRange* TimestampProfiler::CreateRangeAndPool(impl::Comma
   return &ranges_.back();
 }
 
-TimestampProfiler::QueryRange* TimestampProfiler::CreateRange(impl::CommandBuffer* cmd_buf) {
+TimestampProfiler::QueryRange* TimestampProfiler::CreateRange(CommandBufferPtr cmd_buf) {
   QueryRange& prev = ranges_.back();
   FXL_DCHECK(!ranges_.empty() && current_pool_index_ < kPoolSize);
   FXL_DCHECK(current_pool_index_ == prev.start_index + prev.count);

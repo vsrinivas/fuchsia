@@ -154,7 +154,8 @@ PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(const FramePtr& frame,
   // single wait semaphore from PaperRenderer's per-frame BatchGpuUploader.
   // Once this is done, should probably DCHECK here that none of the buffers
   // have wait semaphores.
-  mesh->TransferWaitSemaphores(frame->command_buffer(), vk::PipelineStageFlagBits::eVertexInput);
+  mesh->TransferWaitSemaphores(frame->command_buffer().get(),
+                               vk::PipelineStageFlagBits::eVertexInput);
 
   auto* obj = frame->Allocate<MeshData>();
 

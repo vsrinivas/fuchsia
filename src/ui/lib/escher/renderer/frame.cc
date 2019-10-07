@@ -65,9 +65,9 @@ Frame::~Frame() {
       << "EndFrame() was not called - state_: " << static_cast<int>(state_);
 }
 
-impl::CommandBuffer* Frame::command_buffer() const {
+CommandBufferPtr Frame::command_buffer() const {
   FXL_DCHECK(command_buffer_) << "Cannot access command buffer.";
-  return command_buffer_->impl();
+  return command_buffer_;
 }
 
 vk::CommandBuffer Frame::vk_command_buffer() const {
@@ -89,7 +89,7 @@ void Frame::IssueCommandBuffer() {
 
   command_buffer_ =
       CommandBuffer::NewForType(escher(), command_buffer_type_, use_protected_memory_);
-  command_buffer_sequence_number_ = command_buffer_->impl()->sequence_number();
+  command_buffer_sequence_number_ = command_buffer_->sequence_number();
 }
 
 void Frame::SubmitPartialFrame(const SemaphorePtr& frame_done) {
@@ -101,8 +101,8 @@ void Frame::SubmitPartialFrame(const SemaphorePtr& frame_done) {
                  submission_count_);
   FXL_DCHECK(state_ == State::kInProgress);
 
-  command_buffer_->impl()->AddSignalSemaphore(frame_done);
-  command_buffer_->impl()->Submit(queue_, nullptr);
+  command_buffer_->AddSignalSemaphore(frame_done);
+  command_buffer_->Submit(queue_, nullptr);
 
   // Command buffer has submitted, clear the current command buffer data to
   // recycle it.
@@ -124,14 +124,14 @@ void Frame::EndFrame(const SemaphorePtr& frame_done, FrameRetiredCallback frame_
 
   AddTimestamp("end of frame");
 
-  command_buffer_->impl()->AddSignalSemaphore(frame_done);
+  command_buffer_->AddSignalSemaphore(frame_done);
 
   // Submit the final command buffer and register a callback to perform a
   // variety of bookkeeping and cleanup tasks.
   //
   // NOTE: this closure refs this Frame via a FramePtr, guaranteeing that it
   // will not be destroyed until the frame is finished rendering.
-  command_buffer_->impl()->Submit(
+  command_buffer_->Submit(
       queue_, [client_callback{std::move(frame_retired_callback)}, profiler{std::move(profiler_)},
                frame_number = frame_number_, escher_frame_number = escher_frame_number_,
                trace_literal = trace_literal_, gpu_vthread_literal = gpu_vthread_literal_,
@@ -185,7 +185,7 @@ void Frame::EndFrame(const SemaphorePtr& frame_done, FrameRetiredCallback frame_
 
 void Frame::AddTimestamp(const char* name, vk::PipelineStageFlagBits stages) {
   if (profiler_)
-    profiler_->AddTimestamp(command_buffer_->impl(), stages, name);
+    profiler_->AddTimestamp(command_buffer_, stages, name);
 }
 
 void Frame::KeepAlive(ResourcePtr resource) { keep_alive_.push_back(std::move(resource)); }
@@ -194,7 +194,7 @@ CommandBufferPtr Frame::TakeCommandBuffer() { return std::move(command_buffer_);
 
 void Frame::PutCommandBuffer(CommandBufferPtr command_buffer) {
   FXL_DCHECK(!command_buffer_ && command_buffer);
-  FXL_DCHECK(command_buffer_sequence_number_ == command_buffer->impl()->sequence_number());
+  FXL_DCHECK(command_buffer_sequence_number_ == command_buffer->sequence_number());
 
   command_buffer_ = std::move(command_buffer);
 }

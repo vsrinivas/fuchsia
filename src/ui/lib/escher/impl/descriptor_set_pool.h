@@ -6,10 +6,11 @@
 #define SRC_UI_LIB_ESCHER_IMPL_DESCRIPTOR_SET_POOL_H_
 
 #include <vector>
-#include <vulkan/vulkan.hpp>
 
 #include "src/ui/lib/escher/resources/resource.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 namespace impl {
@@ -57,7 +58,7 @@ class DescriptorSetPool : public ResourceRecycler {
   // form of a DescriptorSetAllocation.  All such allocations must be destroyed
   // before this DescriptorSetPool is destroyed.  If command_buffer is not null,
   // it will retain the new allocation until it is retired.
-  DescriptorSetAllocationPtr Allocate(uint32_t count, CommandBuffer* command_buffer);
+  DescriptorSetAllocationPtr Allocate(uint32_t count, CommandBufferPtr command_buffer);
 
   vk::DescriptorSetLayout layout() const { return layout_; }
 

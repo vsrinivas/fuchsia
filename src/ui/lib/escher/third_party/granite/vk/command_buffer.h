@@ -27,6 +27,7 @@
 #define SRC_UI_LIB_ESCHER_THIRD_PARTY_GRANITE_VK_COMMAND_BUFFER_H_
 
 #include "src/ui/lib/escher/base/reffable.h"
+#include "src/ui/lib/escher/shape/mesh.h"
 #include "src/ui/lib/escher/third_party/granite/vk/command_buffer_pipeline_state.h"
 #include "src/ui/lib/escher/third_party/granite/vk/pipeline_layout.h"
 #include "src/ui/lib/escher/util/enum_cast.h"
@@ -82,8 +83,51 @@ class CommandBuffer : public Reffable {
   vk::CommandBuffer vk() const { return vk_; }
   vk::Device vk_device() const { return vk_device_; }
   // TODO(ES-83): deprecated from the get-go.
-  impl::CommandBuffer* impl() const { return impl_; }
-  bool use_protected_memory() const { return impl()->use_protected_memory(); }
+  bool use_protected_memory() const { return impl_->use_protected_memory(); }
+
+  size_t NumWaitSemaphores() const { return impl_->NumWaitSemaphores(); }
+  size_t NumSignalSemaphores() const { return impl_->NumSignalSemaphores(); }
+
+  // These resources will be retained until the command-buffer is finished
+  // running on the GPU.
+  void KeepAlive(Resource* resource) { impl_->KeepAlive(resource); }
+  template <typename ResourceT>
+  void KeepAlive(const fxl::RefPtr<ResourceT>& ptr) {
+    impl_->KeepAlive(ptr);
+  }
+
+  // Each CommandBuffer that is obtained from a CommandBufferPool is given a
+  // monotonically-increasing sequence number.  This number is globally unique
+  // (per Escher instance), even across multiple CommandBufferPools.
+  uint64_t sequence_number() const { return impl_->sequence_number(); }
+
+  // During Submit(), these semaphores will be added to the vk::SubmitInfo.
+  // No-op if semaphore is null
+  void AddWaitSemaphore(SemaphorePtr semaphore, vk::PipelineStageFlags stage) {
+    impl_->AddWaitSemaphore(semaphore, stage);
+  }
+
+  // For convenience, calls TakeWaitSemaphore() on the resource, and passes the
+  // result to AddWaitSemaphore().
+  template <typename ResourcePtrT>
+  void TakeWaitSemaphore(const ResourcePtrT& resource, vk::PipelineStageFlags stage) {
+    impl_->TakeWaitSemaphore(resource, stage);
+  }
+
+  // During Submit(), these semaphores will be added to the vk::SubmitInfo.
+  // No-op if semaphore is null.
+  void AddSignalSemaphore(SemaphorePtr semaphore) { impl_->AddSignalSemaphore(semaphore); }
+
+  // Transition the image between the two layouts; see section 11.4 of the
+  // Vulkan spec.  Retain image in used_resources.
+  void TransitionImageLayout(const ImagePtr& image, vk::ImageLayout old_layout,
+                             vk::ImageLayout new_layout) {
+    impl_->TransitionImageLayout(image, old_layout, new_layout);
+  }
+
+  bool Submit(vk::Queue queue, CommandBufferFinishedCallback callback) {
+    return impl_->Submit(queue, std::move(callback));
+  }
 
   // Submits the command buffer on the appropriate queue: the main queue for
   // graphics and compute tasks, and the transfer queue for dedicated transfer
@@ -95,6 +139,13 @@ class CommandBuffer : public Reffable {
   // Wraps vkCmdBeginRenderPass(). Uses |info| to obtain a cached VkRenderPass
   // and VkFramebuffer.
   void BeginRenderPass(const RenderPassInfo& info);
+
+  // Convenient way to begin a render-pass that renders to the whole framebuffer
+  // (i.e. width/height of viewport and scissors are obtained from framebuffer).
+  void BeginRenderPass(vk::RenderPass render_pass, const escher::FramebufferPtr& framebuffer,
+                       const std::vector<vk::ClearValue>& clear_values, const vk::Rect2D viewport) {
+    impl_->BeginRenderPass(render_pass, framebuffer, clear_values, viewport);
+  }
 
   // Wraps vkCmdEndRenderPass().
   void EndRenderPass();
@@ -162,6 +213,14 @@ class CommandBuffer : public Reffable {
     FXL_DCHECK(IsInRenderPass());
     pipeline_state_.SetVertexAttributes(binding, attrib, format, offset);
     SetDirty(kDirtyStaticVertexBit);
+  }
+
+  // Bind index/vertex buffers and write draw command.
+  // Retain mesh in used_resources.
+  void DrawMesh(const MeshPtr& mesh) {
+    KeepAlive(mesh);
+    mesh->TransferWaitSemaphores(this, vk::PipelineStageFlagBits::eVertexInput);
+    impl_->DrawMesh(mesh);
   }
 
   // Wraps vkCmdDrawIndexed(), first flushing any dirty render state; this may

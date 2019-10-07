@@ -25,10 +25,10 @@ DebugFont::DebugFont(ImagePtr image) : image_(std::move(image)) { FXL_DCHECK(ima
 
 void DebugFont::Blit(CommandBuffer* cb, const std::string& text, const ImagePtr& target,
                      vk::Offset2D offset, int32_t scale) {
-  cb->impl()->TakeWaitSemaphore(image_, vk::PipelineStageFlagBits::eTransfer);
-  cb->impl()->TakeWaitSemaphore(target, vk::PipelineStageFlagBits::eColorAttachmentOutput |
-                                            vk::PipelineStageFlagBits::eTransfer);
-  cb->impl()->KeepAlive(target);
+  cb->TakeWaitSemaphore(image_, vk::PipelineStageFlagBits::eTransfer);
+  cb->TakeWaitSemaphore(target, vk::PipelineStageFlagBits::eColorAttachmentOutput |
+                                    vk::PipelineStageFlagBits::eTransfer);
+  cb->KeepAlive(target);
 
   vk::ImageBlit* regions = ESCHER_ALLOCA(vk::ImageBlit, text.length());
 

@@ -10,6 +10,7 @@
 #include "src/lib/fxl/macros.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/impl/compute_shader.h"
+
 #include "vulkan/vulkan.hpp"
 
 namespace escher {
@@ -26,7 +27,7 @@ class Gaussian3x3f16 {
   // texture. Mipmap is not supported. Assumes the image layout is
   // vk::ImageLayout::eGeneral.ss
 
-  void Apply(CommandBuffer* command_buffer, const TexturePtr& input, const TexturePtr& output);
+  void Apply(CommandBufferPtr command_buffer, const TexturePtr& input, const TexturePtr& output);
 
  private:
   EscherWeakPtr escher_;
