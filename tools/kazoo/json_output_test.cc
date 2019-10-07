@@ -36,42 +36,58 @@ TEST(JsonOutput, KernelCases) {
         {
           "name": "handle",
           "type": "zx_handle_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "options",
           "type": "uint32_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "vmo",
           "type": "zx_handle_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "offset",
           "type": "uint64_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "size",
           "type": "uint64_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "addrs",
           "type": "zx_paddr_t",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+          ]
         },
         {
           "name": "num_addrs",
           "type": "size_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "pmt",
           "type": "zx_handle_t",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+          ]
         }
       ],
       "return_type": "zx_status_t"
@@ -105,32 +121,44 @@ TEST(JsonOutput, KernelCases) {
         {
           "name": "handle",
           "type": "zx_handle_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "kind",
           "type": "uint32_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "action",
           "type": "uint32_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "options",
           "type": "uint32_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "ptr",
           "type": "any",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+          ]
         },
         {
           "name": "ptr_size",
           "type": "size_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         }
       ],
       "return_type": "zx_status_t"
@@ -149,42 +177,58 @@ TEST(JsonOutput, KernelCases) {
         {
           "name": "handle",
           "type": "zx_handle_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "options",
           "type": "uint32_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "bytes",
           "type": "any",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+          ]
         },
         {
           "name": "num_bytes",
           "type": "uint32_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "handles",
           "type": "zx_handle_t",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+          ]
         },
         {
           "name": "num_handles",
           "type": "uint32_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "actual_bytes",
           "type": "uint32_t",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+          ]
         },
         {
           "name": "actual_handles",
           "type": "uint32_t",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+          ]
         }
       ],
       "return_type": "zx_status_t"
@@ -232,12 +276,17 @@ TEST(JsonOutput, RustCases) {
         {
           "name": "handles",
           "type": "zx_handle_t",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+            "IN"
+          ]
         },
         {
           "name": "num_handles",
           "type": "size_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         }
       ],
       "return_type": "zx_status_t"
@@ -271,7 +320,9 @@ TEST(JsonOutput, RustCases) {
         {
           "name": "x",
           "type": "uint32_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         }
       ],
       "return_type": "void"
@@ -290,32 +341,44 @@ TEST(JsonOutput, RustCases) {
         {
           "name": "handle",
           "type": "zx_handle_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "op",
           "type": "uint32_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "offset",
           "type": "uint64_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "size",
           "type": "uint64_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "buffer",
           "type": "any",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+          ]
         },
         {
           "name": "buffer_size",
           "type": "size_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         }
       ],
       "return_type": "zx_status_t"
@@ -334,12 +397,17 @@ TEST(JsonOutput, RustCases) {
         {
           "name": "input",
           "type": "uint8_t",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+            "IN"
+          ]
         },
         {
           "name": "num_input",
           "type": "size_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         }
       ],
       "return_type": "zx_status_t"
@@ -358,62 +426,86 @@ TEST(JsonOutput, RustCases) {
         {
           "name": "a",
           "type": "bool",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "b",
           "type": "uint8_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "d",
           "type": "int32_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "e",
           "type": "int64_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "f",
           "type": "uint16_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "g",
           "type": "uint32_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "h",
           "type": "uint64_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "i",
           "type": "size_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "j",
           "type": "uintptr_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "k",
           "type": "any",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+          ]
         },
         {
           "name": "l",
           "type": "zx_time_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "m",
           "type": "zx_ticks_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         }
       ],
       "return_type": "void"
@@ -447,32 +539,46 @@ TEST(JsonOutput, SelectionCases) {
         {
           "name": "value_ptr",
           "type": "zx_futex_t",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+            "IN"
+          ]
         },
         {
           "name": "wake_count",
           "type": "uint32_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "current_value",
           "type": "zx_futex_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "requeue_ptr",
           "type": "zx_futex_t",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+            "IN"
+          ]
         },
         {
           "name": "requeue_count",
           "type": "uint32_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "new_requeue_owner",
           "type": "zx_handle_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         }
       ],
       "return_type": "zx_status_t"
@@ -491,22 +597,30 @@ TEST(JsonOutput, SelectionCases) {
         {
           "name": "handle",
           "type": "zx_handle_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "signals",
           "type": "zx_signals_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "deadline",
           "type": "zx_time_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "observed",
           "type": "zx_signals_t",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+          ]
         }
       ],
       "return_type": "zx_status_t"
@@ -525,27 +639,37 @@ TEST(JsonOutput, SelectionCases) {
         {
           "name": "handle",
           "type": "zx_handle_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "data",
           "type": "any",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+          ]
         },
         {
           "name": "offset",
           "type": "uint32_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "data_size",
           "type": "size_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "actual",
           "type": "size_t",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+          ]
         }
       ],
       "return_type": "zx_status_t"
@@ -564,42 +688,58 @@ TEST(JsonOutput, SelectionCases) {
         {
           "name": "handle",
           "type": "zx_handle_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "bus",
           "type": "uint8_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "dev",
           "type": "uint8_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "func",
           "type": "uint8_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "offset",
           "type": "uint8_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "val",
           "type": "uint32_t",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+          ]
         },
         {
           "name": "width",
           "type": "size_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "write",
           "type": "bool",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         }
       ],
       "return_type": "zx_status_t"
@@ -618,27 +758,38 @@ TEST(JsonOutput, SelectionCases) {
         {
           "name": "handle",
           "type": "zx_handle_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "options",
           "type": "uint32_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "topic",
           "type": "uint32_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "policy",
           "type": "any",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+            "IN"
+          ]
         },
         {
           "name": "policy_size",
           "type": "uint32_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         }
       ],
       "return_type": "zx_status_t"
@@ -657,12 +808,16 @@ TEST(JsonOutput, SelectionCases) {
         {
           "name": "clock_id",
           "type": "zx_clock_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "out",
           "type": "zx_time_t",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+          ]
         }
       ],
       "return_type": "zx_status_t"
@@ -698,17 +853,23 @@ TEST(JsonOutput, RightsSpecs) {
         {
           "name": "handle",
           "type": "zx_handle_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "options",
           "type": "uint32_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         },
         {
           "name": "out",
           "type": "zx_handle_t",
-          "is_array": true
+          "is_array": true,
+          "attributes": [
+          ]
         }
       ],
       "return_type": "zx_status_t"
@@ -728,7 +889,9 @@ TEST(JsonOutput, RightsSpecs) {
         {
           "name": "handle",
           "type": "zx_handle_t",
-          "is_array": false
+          "is_array": false,
+          "attributes": [
+          ]
         }
       ],
       "return_type": "void"

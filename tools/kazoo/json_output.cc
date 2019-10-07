@@ -119,7 +119,12 @@ bool JsonOutput(const SyscallLibrary& library, Writer* writer) {
       iprintn("\"name\": \"%s\",", arg.name().c_str());
       auto type_info = GetJsonName(arg.type());
       iprintn("\"type\": \"%s\",", type_info.name.c_str());
-      iprintn("\"is_array\": %s", type_info.is_pointer ? "true" : "false");
+      iprintn("\"is_array\": %s,", type_info.is_pointer ? "true" : "false");
+      iprintn("\"attributes\": [");
+      if (type_info.attribute == "IN") {
+        iprintn("  \"IN\"");
+      }
+      iprintn("]");
       out();
       const bool last_arg = i == syscall.kernel_arguments().size() - 1;
       iprintn("}%s", last_arg ? "" : ",");

@@ -81,13 +81,11 @@ bool JsonGenerator::syscall(std::ofstream& os, const Syscall& sc) {
     os << "          \"type\": \"" << arg.type << "\",\n";
 
     // Array spec.
-    os << "          \"is_array\": " << (arg.arr_spec ? "true" : "false") << "\n";
+    os << "          \"is_array\": " << (arg.arr_spec ? "true" : "false") << ",\n";
 
     // The .json output is currently only used by the syscall documentation updater, and it doesn't
-    // use the array counts nor the argument attributes. Because there's slight differences (e.g.
-    // kazoo would list all out parameters with OUT, whereas abigen only outputs the ones that are
-    // explicitly tagged as OUT in the syscalls.abigen, we temporarily disable this part of the
-    // output, so that kazoo and abigen's output is identical.
+    // use the array counts. Temporarily disable this part of the output, so that kazoo and abigen's
+    // output is identical.
 #if 0
     if (arg.arr_spec) {
       if (arg.arr_spec->count) {
@@ -105,18 +103,28 @@ bool JsonGenerator::syscall(std::ofstream& os, const Syscall& sc) {
         os << "          ],\n";
       }
     }
+#endif
 
     // Attributes.
-    os << "          \"attributes\": [\n";
-    for (std::vector<std::string>::size_type index = 0; index != arg.attributes.size(); ++index) {
-      os << "            \"" << arg.attributes[index] << "\"";
-      if (index < arg.attributes.size() - 1) {
-        os << ",";
+    // The .json output is currently only used by the syscall documentation updater, and it only
+    // needs "IN" argument attributes to add "const". Other arguments are tagged OUT/INOUT, but
+    // don't completely match what kazoo would output. Rather than modifying abigen to match kazoo,
+    // or adding a lot of unused logic to kazoo, only output "IN" when specified to make kazoo and
+    // abigen's json output match.
+    //
+    // So: the attributes output will either be `"attributes":[]` or
+    // `"attributes": ["IN"]`, but no other argument attributes are output.
+    bool has_in = false;
+    for (const auto& attrib : arg.attributes) {
+      if (attrib == "IN") {
+        has_in = true;
       }
-      os << "\n";
+    }
+    os << "          \"attributes\": [\n";
+    if (has_in) {
+      os << "            \"IN\"\n";
     }
     os << "          ]\n";
-#endif
     os << "        }";
   });
   if (has_args) {
