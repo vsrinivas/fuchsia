@@ -6,6 +6,12 @@ toc:
   path: /docs/zircon/objects/bus_transaction_initiator.md
 - title: "Channel"
   path: /docs/zircon/objects/channel.md
+- title: "Clocks"
+  section:
+  - title: "Overview"
+    path: /docs/zircon/objects/clock.md
+  - title: "Clock Transformations"
+    path: /docs/zircon/clock_transformations.md
 - title: "Log"
   path: /docs/zircon/objects/debuglog.md
 - title: "Event"

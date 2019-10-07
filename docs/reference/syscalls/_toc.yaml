@@ -26,10 +26,18 @@ toc:
   path: /docs/reference/syscalls/channel_write.md
 - title: "zx_clock_adjust"
   path: /docs/reference/syscalls/clock_adjust.md
+- title: "zx_clock_create"
+  path: /docs/reference/syscalls/clock_create.md
 - title: "zx_clock_get"
   path: /docs/reference/syscalls/clock_get.md
+- title: "zx_clock_get_details"
+  path: /docs/reference/syscalls/clock_get_details.md
 - title: "zx_clock_get_monotonic"
   path: /docs/reference/syscalls/clock_get_monotonic.md
+- title: "zx_clock_read"
+  path: /docs/reference/syscalls/clock_read.md
+- title: "zx_clock_update"
+  path: /docs/reference/syscalls/clock_update.md
 - title: "zx_cprng_add_entropy"
   path: /docs/reference/syscalls/cprng_add_entropy.md
 - title: "zx_cprng_draw"

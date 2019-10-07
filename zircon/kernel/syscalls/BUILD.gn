@@ -86,6 +86,7 @@ if (is_kernel) {
   source_set("syscalls") {
     sources = [
       "channel.cc",
+      "clock.cc",
       "ddk.cc",
       "ddk_${zircon_cpu}.cc",
       "ddk_pci.cc",

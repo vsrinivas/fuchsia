@@ -111,6 +111,9 @@ typedef uint32_t zx_signals_t;
 #define ZX_CHANNEL_WRITABLE         __ZX_OBJECT_WRITABLE
 #define ZX_CHANNEL_PEER_CLOSED      __ZX_OBJECT_PEER_CLOSED
 
+// Clock
+#define ZX_CLOCK_STARTED            __ZX_OBJECT_SIGNAL_4
+
 // Socket
 #define ZX_SOCKET_READABLE            __ZX_OBJECT_READABLE
 #define ZX_SOCKET_WRITABLE            __ZX_OBJECT_WRITABLE
@@ -356,6 +359,7 @@ typedef uint32_t zx_obj_type_t;
 #define ZX_OBJ_TYPE_SUSPEND_TOKEN   ((zx_obj_type_t)27u)
 #define ZX_OBJ_TYPE_PAGER           ((zx_obj_type_t)28u)
 #define ZX_OBJ_TYPE_EXCEPTION       ((zx_obj_type_t)29u)
+#define ZX_OBJ_TYPE_CLOCK           ((zx_obj_type_t)30u)
 
 // System ABI commits to having no more than 64 object types.
 //

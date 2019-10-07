@@ -252,6 +252,7 @@ if (current_cpu != "") {
       "inspector",
       "int-types",
       "kcounter",
+      "kernel-clocks",
       "kernel-cmdline",
       "kernel-unittests",
       "log",

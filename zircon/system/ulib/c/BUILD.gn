@@ -17,8 +17,8 @@ library("c") {
   sources = []
 
   deps = [
-    "$zx/third_party/ulib/musl",
     "$zx/system/ulib/zx-panic-libc:as_source",
+    "$zx/third_party/ulib/musl",
     "sanitizers",
     "setjmp",
     "zircon",
@@ -84,6 +84,7 @@ library("c") {
             "zircon/rights.h",
             "zircon/syscalls.banjo",
             "zircon/syscalls.h",
+            "zircon/syscalls/clock.h",
             "zircon/syscalls/debug.h",
             "zircon/syscalls/exception.h",
             "zircon/syscalls/hypervisor.h",
