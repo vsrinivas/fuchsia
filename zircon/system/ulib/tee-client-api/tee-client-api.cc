@@ -4,11 +4,13 @@
 
 #include <arpa/inet.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/tee/c/fidl.h>
-#include <fuchsia/tee/c/fidl.h>
+#include <fuchsia/hardware/tee/llcpp/fidl.h>
+#include <fuchsia/tee/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/vmo.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/assert.h>
@@ -25,34 +27,39 @@
 
 #define GET_PARAM_TYPE_FOR_INDEX(param_types, index) ((param_types >> (4 * index)) & 0xF)
 
+namespace fuchsia_tee = ::llcpp::fuchsia::tee;
+namespace fuchsia_hardware_tee = ::llcpp::fuchsia::hardware::tee;
+
 static inline bool is_shared_mem_flag_inout(uint32_t flags) {
   const uint32_t inout_flags = TEEC_MEM_INPUT | TEEC_MEM_OUTPUT;
   return (flags & inout_flags) == inout_flags;
 }
 
-static inline bool is_direction_input(fuchsia_tee_Direction direction) {
-  return ((direction == fuchsia_tee_Direction_INPUT) || (direction == fuchsia_tee_Direction_INOUT));
+static inline bool is_direction_input(fuchsia_tee::Direction direction) {
+  return ((direction == fuchsia_tee::Direction::INPUT) || (direction == fuchsia_tee::Direction::INOUT));
 }
 
-static inline bool is_direction_output(fuchsia_tee_Direction direction) {
-  return ((direction == fuchsia_tee_Direction_OUTPUT) ||
-          (direction == fuchsia_tee_Direction_INOUT));
+static inline bool is_direction_output(fuchsia_tee::Direction direction) {
+  return ((direction == fuchsia_tee::Direction::OUTPUT) ||
+          (direction == fuchsia_tee::Direction::INOUT));
 }
 
 static bool is_global_platform_compliant(zx_handle_t tee_channel) {
-  fuchsia_tee_OsInfo os_info;
-  zx_status_t status = fuchsia_tee_DeviceGetOsInfo(tee_channel, &os_info);
-
-  return status == ZX_OK ? os_info.is_global_platform_compliant : false;
+  auto result = fuchsia_tee::Device::Call::GetOsInfo(zx::unowned_channel(tee_channel));
+  if (!result.ok()) {
+    return false;
+  }
+  auto os_info = std::move(result->info);
+  return os_info.is_global_platform_compliant;
 }
 
-static void convert_teec_uuid_to_zx_uuid(const TEEC_UUID* teec_uuid, fuchsia_tee_Uuid* out_uuid) {
+static void convert_teec_uuid_to_zx_uuid(const TEEC_UUID* teec_uuid, fuchsia_tee::Uuid* out_uuid) {
   ZX_DEBUG_ASSERT(teec_uuid);
   ZX_DEBUG_ASSERT(out_uuid);
   out_uuid->time_low = teec_uuid->timeLow;
   out_uuid->time_mid = teec_uuid->timeMid;
   out_uuid->time_hi_and_version = teec_uuid->timeHiAndVersion;
-  memcpy(out_uuid->clock_seq_and_node, teec_uuid->clockSeqAndNode,
+  memcpy(out_uuid->clock_seq_and_node.data(), teec_uuid->clockSeqAndNode,
          sizeof(out_uuid->clock_seq_and_node));
 }
 
@@ -72,77 +79,67 @@ static TEEC_Result convert_status_to_result(zx_status_t status) {
   return TEEC_ERROR_GENERIC;
 }
 
-static uint32_t convert_zx_to_teec_return_origin(fuchsia_tee_ReturnOrigin return_origin) {
+static uint32_t convert_zx_to_teec_return_origin(fuchsia_tee::ReturnOrigin return_origin) {
   switch (return_origin) {
-    case fuchsia_tee_ReturnOrigin_COMMUNICATION:
+    case fuchsia_tee::ReturnOrigin::COMMUNICATION:
       return TEEC_ORIGIN_COMMS;
-    case fuchsia_tee_ReturnOrigin_TRUSTED_OS:
+    case fuchsia_tee::ReturnOrigin::TRUSTED_OS:
       return TEEC_ORIGIN_TEE;
-    case fuchsia_tee_ReturnOrigin_TRUSTED_APPLICATION:
+    case fuchsia_tee::ReturnOrigin::TRUSTED_APPLICATION:
       return TEEC_ORIGIN_TRUSTED_APP;
     default:
       return TEEC_ORIGIN_API;
   }
 }
 
-static void close_all_vmos(const fuchsia_tee_ParameterSet* parameter_set) {
-  ZX_DEBUG_ASSERT(parameter_set);
-
-  for (size_t i = 0; i < parameter_set->count; i++) {
-    const fuchsia_tee_Parameter* param = &parameter_set->parameters[i];
-    if (param->tag == fuchsia_tee_ParameterTag_buffer) {
-      zx_handle_close(param->buffer.vmo);
-    }
-  }
-}
-
 static void preprocess_value(uint32_t param_type, const TEEC_Value* teec_value,
-                             fuchsia_tee_Parameter* out_zx_param) {
+                             fuchsia_tee::Parameter* out_zx_param) {
   ZX_DEBUG_ASSERT(teec_value);
   ZX_DEBUG_ASSERT(out_zx_param);
 
-  fuchsia_tee_Direction direction = 0;
+  fuchsia_tee::Direction direction;
   switch (param_type) {
     case TEEC_VALUE_INPUT:
-      direction = fuchsia_tee_Direction_INPUT;
+      direction = fuchsia_tee::Direction::INPUT;
       break;
     case TEEC_VALUE_OUTPUT:
-      direction = fuchsia_tee_Direction_OUTPUT;
+      direction = fuchsia_tee::Direction::OUTPUT;
       break;
     case TEEC_VALUE_INOUT:
-      direction = fuchsia_tee_Direction_INOUT;
+      direction = fuchsia_tee::Direction::INOUT;
       break;
     default:
       ZX_PANIC("Unknown param type");
   }
 
-  out_zx_param->tag = fuchsia_tee_ParameterTag_value;
-  out_zx_param->value.direction = direction;
+  fuchsia_tee::Value value;
+  value.direction = direction;
   if (is_direction_input(direction)) {
     // The TEEC_Value type only includes two generic fields, whereas the Fuchsia TEE interface
     // supports three. The c field cannot be used by the TEE Client API.
-    out_zx_param->value.a = teec_value->a;
-    out_zx_param->value.b = teec_value->b;
-    out_zx_param->value.c = 0;
+    value.a = teec_value->a;
+    value.b = teec_value->b;
+    value.c = 0;
   }
+  out_zx_param->set_value(std::move(value));
 }
 
 static TEEC_Result preprocess_temporary_memref(uint32_t param_type,
                                                const TEEC_TempMemoryReference* temp_memory_ref,
-                                               fuchsia_tee_Parameter* out_zx_param) {
+                                               fuchsia_tee::Parameter* out_zx_param) {
   ZX_DEBUG_ASSERT(temp_memory_ref);
   ZX_DEBUG_ASSERT(out_zx_param);
 
-  fuchsia_tee_Direction direction;
+  fuchsia_tee::Direction direction;
   switch (param_type) {
     case TEEC_MEMREF_TEMP_INPUT:
-      direction = fuchsia_tee_Direction_INPUT;
+      direction = fuchsia_tee::Direction::INPUT;
       break;
     case TEEC_MEMREF_TEMP_OUTPUT:
-      direction = fuchsia_tee_Direction_OUTPUT;
+      direction = fuchsia_tee::Direction::OUTPUT;
       break;
     case TEEC_MEMREF_TEMP_INOUT:
-      direction = fuchsia_tee_Direction_INOUT;
+      direction = fuchsia_tee::Direction::INOUT;
       break;
     default:
       ZX_PANIC("TEE Client API Unknown parameter type\n");
@@ -175,16 +172,17 @@ static TEEC_Result preprocess_temporary_memref(uint32_t param_type,
     }
   }
 
-  out_zx_param->tag = fuchsia_tee_ParameterTag_buffer;
-  out_zx_param->buffer.direction = direction;
-  out_zx_param->buffer.vmo = vmo;
-  out_zx_param->buffer.offset = 0;
-  out_zx_param->buffer.size = temp_memory_ref->size;
+  fuchsia_tee::Buffer buffer;
+  buffer.direction = direction;
+  buffer.vmo = zx::vmo(vmo);
+  buffer.offset = 0;
+  buffer.size = temp_memory_ref->size;
+  out_zx_param->set_buffer(std::move(buffer));
   return TEEC_SUCCESS;
 }
 
 static TEEC_Result preprocess_whole_memref(const TEEC_RegisteredMemoryReference* memory_ref,
-                                           fuchsia_tee_Parameter* out_zx_param) {
+                                           fuchsia_tee::Parameter* out_zx_param) {
   ZX_DEBUG_ASSERT(memory_ref);
   ZX_DEBUG_ASSERT(out_zx_param);
 
@@ -193,13 +191,13 @@ static TEEC_Result preprocess_whole_memref(const TEEC_RegisteredMemoryReference*
   }
 
   TEEC_SharedMemory* shared_mem = memory_ref->parent;
-  fuchsia_tee_Direction direction;
+  fuchsia_tee::Direction direction;
   if (is_shared_mem_flag_inout(shared_mem->flags)) {
-    direction = fuchsia_tee_Direction_INOUT;
+    direction = fuchsia_tee::Direction::INOUT;
   } else if (shared_mem->flags & TEEC_MEM_INPUT) {
-    direction = fuchsia_tee_Direction_INPUT;
+    direction = fuchsia_tee::Direction::INPUT;
   } else if (shared_mem->flags & TEEC_MEM_OUTPUT) {
-    direction = fuchsia_tee_Direction_OUTPUT;
+    direction = fuchsia_tee::Direction::OUTPUT;
   } else {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
@@ -210,18 +208,18 @@ static TEEC_Result preprocess_whole_memref(const TEEC_RegisteredMemoryReference*
     return convert_status_to_result(status);
   }
 
-  out_zx_param->tag = fuchsia_tee_ParameterTag_buffer;
-  out_zx_param->buffer.direction = direction;
-  out_zx_param->buffer.vmo = vmo;
-  out_zx_param->buffer.offset = 0;
-  out_zx_param->buffer.size = shared_mem->size;
-
+  fuchsia_tee::Buffer buffer;
+  buffer.direction = direction;
+  buffer.vmo = zx::vmo(vmo);
+  buffer.offset = 0;
+  buffer.size = shared_mem->size;
+  out_zx_param->set_buffer(std::move(buffer));
   return TEEC_SUCCESS;
 }
 
 static TEEC_Result preprocess_partial_memref(uint32_t param_type,
                                              const TEEC_RegisteredMemoryReference* memory_ref,
-                                             fuchsia_tee_Parameter* out_zx_param) {
+                                             fuchsia_tee::Parameter* out_zx_param) {
   ZX_DEBUG_ASSERT(memory_ref);
   ZX_DEBUG_ASSERT(out_zx_param);
 
@@ -230,19 +228,19 @@ static TEEC_Result preprocess_partial_memref(uint32_t param_type,
   }
 
   uint32_t expected_shm_flags = 0;
-  fuchsia_tee_Direction direction = 0;
+  fuchsia_tee::Direction direction;
   switch (param_type) {
     case TEEC_MEMREF_PARTIAL_INPUT:
       expected_shm_flags = TEEC_MEM_INPUT;
-      direction = fuchsia_tee_Direction_INPUT;
+      direction = fuchsia_tee::Direction::INPUT;
       break;
     case TEEC_MEMREF_PARTIAL_OUTPUT:
       expected_shm_flags = TEEC_MEM_OUTPUT;
-      direction = fuchsia_tee_Direction_OUTPUT;
+      direction = fuchsia_tee::Direction::OUTPUT;
       break;
     case TEEC_MEMREF_PARTIAL_INOUT:
       expected_shm_flags = TEEC_MEM_INPUT | TEEC_MEM_OUTPUT;
-      direction = fuchsia_tee_Direction_INOUT;
+      direction = fuchsia_tee::Direction::INOUT;
       break;
     default:
       ZX_DEBUG_ASSERT(param_type == TEEC_MEMREF_PARTIAL_INPUT ||
@@ -262,17 +260,17 @@ static TEEC_Result preprocess_partial_memref(uint32_t param_type,
     return convert_status_to_result(status);
   }
 
-  out_zx_param->tag = fuchsia_tee_ParameterTag_buffer;
-  out_zx_param->buffer.direction = direction;
-  out_zx_param->buffer.vmo = vmo;
-  out_zx_param->buffer.offset = memory_ref->offset;
-  out_zx_param->buffer.size = memory_ref->size;
-
+  fuchsia_tee::Buffer buffer;
+  buffer.direction = direction;
+  buffer.vmo = zx::vmo(vmo);
+  buffer.offset = memory_ref->offset;
+  buffer.size = memory_ref->size;
+  out_zx_param->set_buffer(std::move(buffer));
   return TEEC_SUCCESS;
 }
 
 static TEEC_Result preprocess_operation(const TEEC_Operation* operation,
-                                        fuchsia_tee_ParameterSet* out_parameter_set) {
+                                        fuchsia_tee::ParameterSet* out_parameter_set) {
   if (!operation) {
     return TEEC_SUCCESS;
   }
@@ -283,7 +281,7 @@ static TEEC_Result preprocess_operation(const TEEC_Operation* operation,
 
     switch (param_type) {
       case TEEC_NONE:
-        out_parameter_set->parameters[i].tag = fuchsia_tee_ParameterTag_empty;
+        out_parameter_set->parameters[i].set_empty(fuchsia_tee::Empty{});
         break;
       case TEEC_VALUE_INPUT:
       case TEEC_VALUE_OUTPUT:
@@ -313,8 +311,6 @@ static TEEC_Result preprocess_operation(const TEEC_Operation* operation,
     }
 
     if (rc != TEEC_SUCCESS) {
-      // Close out any VMOs we already opened for the parameters we did parse
-      close_all_vmos(out_parameter_set);
       return rc;
     }
   }
@@ -324,61 +320,61 @@ static TEEC_Result preprocess_operation(const TEEC_Operation* operation,
   return rc;
 }
 
-static TEEC_Result postprocess_value(uint32_t param_type, const fuchsia_tee_Parameter* zx_param,
+static TEEC_Result postprocess_value(uint32_t param_type, const fuchsia_tee::Parameter* zx_param,
                                      TEEC_Value* out_teec_value) {
   ZX_DEBUG_ASSERT(zx_param);
   ZX_DEBUG_ASSERT(out_teec_value);
   ZX_DEBUG_ASSERT(param_type == TEEC_VALUE_INPUT || param_type == TEEC_VALUE_OUTPUT ||
                   param_type == TEEC_VALUE_INOUT);
 
-  if (zx_param->tag != fuchsia_tee_ParameterTag_value) {
+  if (zx_param->which() != fuchsia_tee::Parameter::Tag::kValue) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
-  const fuchsia_tee_Value* zx_value = &zx_param->value;
+  const fuchsia_tee::Value* zx_value = &zx_param->value();
 
   // Validate that the direction of the returned parameter matches the expected.
-  if ((param_type == TEEC_VALUE_INPUT) && (zx_value->direction != fuchsia_tee_Direction_INPUT)) {
+  if ((param_type == TEEC_VALUE_INPUT) && (zx_value->direction != fuchsia_tee::Direction::INPUT)) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
-  if ((param_type == TEEC_VALUE_OUTPUT) && (zx_value->direction != fuchsia_tee_Direction_OUTPUT)) {
+  if ((param_type == TEEC_VALUE_OUTPUT) && (zx_value->direction != fuchsia_tee::Direction::OUTPUT)) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
-  if ((param_type == TEEC_VALUE_INOUT) && (zx_value->direction != fuchsia_tee_Direction_INOUT)) {
+  if ((param_type == TEEC_VALUE_INOUT) && (zx_value->direction != fuchsia_tee::Direction::INOUT)) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
   // The TEEC_Value type only includes two generic fields, whereas the Fuchsia TEE interface
   // supports three. The c field cannot be used by the TEE Client API.
-  out_teec_value->a = zx_value->a;
-  out_teec_value->b = zx_value->b;
+  out_teec_value->a = static_cast<uint32_t>(zx_value->a);
+  out_teec_value->b = static_cast<uint32_t>(zx_value->b);
   return TEEC_SUCCESS;
 }
 
 static TEEC_Result postprocess_temporary_memref(uint32_t param_type,
-                                                const fuchsia_tee_Parameter* zx_param,
+                                                const fuchsia_tee::Parameter* zx_param,
                                                 TEEC_TempMemoryReference* out_temp_memory_ref) {
   ZX_DEBUG_ASSERT(zx_param);
   ZX_DEBUG_ASSERT(out_temp_memory_ref);
   ZX_DEBUG_ASSERT(param_type == TEEC_MEMREF_TEMP_INPUT || param_type == TEEC_MEMREF_TEMP_OUTPUT ||
                   param_type == TEEC_MEMREF_TEMP_INOUT);
 
-  if (zx_param->tag != fuchsia_tee_ParameterTag_buffer) {
+  if (zx_param->which() != fuchsia_tee::Parameter::Tag::kBuffer) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
-  const fuchsia_tee_Buffer* zx_buffer = &zx_param->buffer;
+  const fuchsia_tee::Buffer* zx_buffer = &zx_param->buffer();
 
   if ((param_type == TEEC_MEMREF_TEMP_INPUT) &&
-      (zx_buffer->direction != fuchsia_tee_Direction_INPUT)) {
+      (zx_buffer->direction != fuchsia_tee::Direction::INPUT)) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
   if ((param_type == TEEC_MEMREF_TEMP_OUTPUT) &&
-      (zx_buffer->direction != fuchsia_tee_Direction_OUTPUT)) {
+      (zx_buffer->direction != fuchsia_tee::Direction::OUTPUT)) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
   if ((param_type == TEEC_MEMREF_TEMP_INOUT) &&
-      (zx_buffer->direction != fuchsia_tee_Direction_INOUT)) {
+      (zx_buffer->direction != fuchsia_tee::Direction::INOUT)) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
@@ -388,8 +384,7 @@ static TEEC_Result postprocess_temporary_memref(uint32_t param_type,
     // copy the data out, we still need to update the size to indicate to the user how large of
     // a buffer they need to perform the requested operation.
     if (out_temp_memory_ref->buffer && out_temp_memory_ref->size >= zx_buffer->size) {
-      zx_status_t status = zx_vmo_read(zx_buffer->vmo, out_temp_memory_ref->buffer,
-                                       zx_buffer->offset, zx_buffer->size);
+      zx_status_t status = zx_buffer->vmo.read(out_temp_memory_ref->buffer, zx_buffer->offset, zx_buffer->size);
       rc = convert_status_to_result(status);
     }
     out_temp_memory_ref->size = zx_buffer->size;
@@ -398,17 +393,17 @@ static TEEC_Result postprocess_temporary_memref(uint32_t param_type,
   return rc;
 }
 
-static TEEC_Result postprocess_whole_memref(const fuchsia_tee_Parameter* zx_param,
+static TEEC_Result postprocess_whole_memref(const fuchsia_tee::Parameter* zx_param,
                                             TEEC_RegisteredMemoryReference* out_memory_ref) {
   ZX_DEBUG_ASSERT(zx_param);
   ZX_DEBUG_ASSERT(out_memory_ref);
   ZX_DEBUG_ASSERT(out_memory_ref->parent);
 
-  if (zx_param->tag != fuchsia_tee_ParameterTag_buffer) {
+  if (zx_param->which() != fuchsia_tee::Parameter::Tag::kBuffer) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
-  const fuchsia_tee_Buffer* zx_buffer = &zx_param->buffer;
+  const fuchsia_tee::Buffer* zx_buffer = &zx_param->buffer();
 
   if (is_direction_output(zx_buffer->direction)) {
     out_memory_ref->size = zx_buffer->size;
@@ -418,7 +413,7 @@ static TEEC_Result postprocess_whole_memref(const fuchsia_tee_Parameter* zx_para
 }
 
 static TEEC_Result postprocess_partial_memref(uint32_t param_type,
-                                              const fuchsia_tee_Parameter* zx_param,
+                                              const fuchsia_tee::Parameter* zx_param,
                                               TEEC_RegisteredMemoryReference* out_memory_ref) {
   ZX_DEBUG_ASSERT(zx_param);
   ZX_DEBUG_ASSERT(out_memory_ref);
@@ -426,22 +421,22 @@ static TEEC_Result postprocess_partial_memref(uint32_t param_type,
                   param_type == TEEC_MEMREF_PARTIAL_OUTPUT ||
                   param_type == TEEC_MEMREF_PARTIAL_INOUT);
 
-  if (zx_param->tag != fuchsia_tee_ParameterTag_buffer) {
+  if (zx_param->which() != fuchsia_tee::Parameter::Tag::kBuffer) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
-  const fuchsia_tee_Buffer* zx_buffer = &zx_param->buffer;
+  const fuchsia_tee::Buffer* zx_buffer = &zx_param->buffer();
 
   if ((param_type == TEEC_MEMREF_PARTIAL_INPUT) &&
-      (zx_buffer->direction != fuchsia_tee_Direction_INPUT)) {
+      (zx_buffer->direction != fuchsia_tee::Direction::INPUT)) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
   if ((param_type == TEEC_MEMREF_PARTIAL_OUTPUT) &&
-      (zx_buffer->direction != fuchsia_tee_Direction_OUTPUT)) {
+      (zx_buffer->direction != fuchsia_tee::Direction::OUTPUT)) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
   if ((param_type == TEEC_MEMREF_PARTIAL_INOUT) &&
-      (zx_buffer->direction != fuchsia_tee_Direction_INOUT)) {
+      (zx_buffer->direction != fuchsia_tee::Direction::INOUT)) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
@@ -452,7 +447,7 @@ static TEEC_Result postprocess_partial_memref(uint32_t param_type,
   return TEEC_SUCCESS;
 }
 
-static TEEC_Result postprocess_operation(const fuchsia_tee_ParameterSet* parameter_set,
+static TEEC_Result postprocess_operation(fuchsia_tee::ParameterSet* parameter_set,
                                          TEEC_Operation* out_operation) {
   if (!out_operation) {
     return TEEC_SUCCESS;
@@ -472,7 +467,7 @@ static TEEC_Result postprocess_operation(const fuchsia_tee_ParameterSet* paramet
 
     switch (param_type) {
       case TEEC_NONE:
-        if (parameter_set->parameters[i].tag != fuchsia_tee_ParameterTag_empty) {
+        if (parameter_set->parameters[i].which() != fuchsia_tee::Parameter::Tag::kEmpty) {
           rc = TEEC_ERROR_BAD_PARAMETERS;
         }
         break;
@@ -506,8 +501,6 @@ static TEEC_Result postprocess_operation(const fuchsia_tee_ParameterSet* paramet
       break;
     }
   }
-
-  close_all_vmos(parameter_set);
 
   return rc;
 }
@@ -563,11 +556,9 @@ static zx_status_t connect_driver(const char* tee_device, zx_handle_t* tee_chann
   }
 
   // Connect to the device interface with no supporting service provider
-  status = fuchsia_hardware_tee_DeviceConnectorConnectTee(connector_channel, ZX_HANDLE_INVALID,
-                                                          server_channel);
-
-  // Close the connector channel regardless of FIDL call success. It has served its purpose.
-  zx_handle_close(connector_channel);
+  fuchsia_hardware_tee::DeviceConnector::SyncClient client((zx::channel(connector_channel)));
+  auto result = client.ConnectTee(zx::channel(ZX_HANDLE_INVALID), zx::channel(server_channel));
+  status = result.status();
 
   if (status != ZX_OK) {
     zx_handle_close(client_channel);
@@ -698,12 +689,10 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
     return TEEC_ERROR_NOT_IMPLEMENTED;
   }
 
-  fuchsia_tee_Uuid trusted_app;
+  fuchsia_tee::Uuid trusted_app;
   convert_teec_uuid_to_zx_uuid(destination, &trusted_app);
 
-  fuchsia_tee_ParameterSet parameter_set;
-  memset(&parameter_set, 0, sizeof(parameter_set));
-
+  fuchsia_tee::ParameterSet parameter_set;
   uint32_t processing_rc = preprocess_operation(operation, &parameter_set);
   if (processing_rc != TEEC_SUCCESS) {
     if (returnOrigin) {
@@ -712,13 +701,9 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
     return processing_rc;
   }
 
-  // Outputs
-  uint32_t out_session_id;
-  fuchsia_tee_OpResult out_result;
-  memset(&out_result, 0, sizeof(out_result));
-
-  zx_status_t status = fuchsia_tee_DeviceOpenSession(context->imp.tee_channel, &trusted_app,
-                                                     &parameter_set, &out_session_id, &out_result);
+  auto result = fuchsia_tee::Device::Call::OpenSession(
+    zx::unowned_channel(context->imp.tee_channel), trusted_app, std::move(parameter_set));
+  zx_status_t status = result.status();
 
   if (status != ZX_OK) {
     if (returnOrigin) {
@@ -726,6 +711,10 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
     }
     return convert_status_to_result(status);
   }
+
+
+  uint32_t out_session_id = result->session_id;
+  fuchsia_tee::OpResult out_result = std::move(result->op_result);
 
   // Run post-processing regardless of TEE operation status. The operation was invoked
   // successfully, so the parameter set should be okay to post-process.
@@ -736,7 +725,7 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
     if (returnOrigin) {
       *returnOrigin = convert_zx_to_teec_return_origin(out_result.return_origin);
     }
-    return out_result.return_code;
+    return static_cast<uint32_t>(out_result.return_code);
   }
   if (processing_rc != TEEC_SUCCESS) {
     // The TEE operation succeeded but the processing operation failed.
@@ -749,7 +738,7 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
   session->imp.session_id = out_session_id;
   session->imp.context_imp = &context->imp;
 
-  return out_result.return_code;
+  return static_cast<uint32_t>(out_result.return_code);
 }
 
 __EXPORT
@@ -759,7 +748,8 @@ void TEEC_CloseSession(TEEC_Session* session) {
   }
 
   // TEEC_CloseSession simply swallows errors, so no need to check here.
-  fuchsia_tee_DeviceCloseSession(session->imp.context_imp->tee_channel, session->imp.session_id);
+  fuchsia_tee::Device::Call::CloseSession(
+    zx::unowned_channel(session->imp.context_imp->tee_channel), session->imp.session_id);
   session->imp.context_imp = NULL;
 }
 
@@ -773,12 +763,7 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session* session, uint32_t commandID, TEEC_O
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
-  fuchsia_tee_ParameterSet parameter_set;
-  memset(&parameter_set, 0, sizeof(parameter_set));
-
-  fuchsia_tee_OpResult out_result;
-  memset(&out_result, 0, sizeof(out_result));
-
+  fuchsia_tee::ParameterSet parameter_set;
   uint32_t processing_rc = preprocess_operation(operation, &parameter_set);
   if (processing_rc != TEEC_SUCCESS) {
     if (returnOrigin) {
@@ -787,16 +772,21 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session* session, uint32_t commandID, TEEC_O
     return processing_rc;
   }
 
-  zx_status_t status = fuchsia_tee_DeviceInvokeCommand(session->imp.context_imp->tee_channel,
-                                                       session->imp.session_id, commandID,
-                                                       &parameter_set, &out_result);
-
+  auto result = fuchsia_tee::Device::Call::InvokeCommand(
+    zx::unowned_channel(session->imp.context_imp->tee_channel),
+    session->imp.session_id,
+    commandID,
+    std::move(parameter_set)
+  );
+  zx_status_t status = result.status();
   if (status != ZX_OK) {
     if (returnOrigin) {
       *returnOrigin = TEEC_ORIGIN_COMMS;
     }
     return convert_status_to_result(status);
   }
+
+  auto& out_result = result->op_result;
 
   // Run post-processing regardless of TEE operation status. The operation was invoked
   // successfully, so the parameter set should be okay to post-process.
@@ -807,7 +797,7 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session* session, uint32_t commandID, TEEC_O
     if (returnOrigin) {
       *returnOrigin = convert_zx_to_teec_return_origin(out_result.return_origin);
     }
-    return out_result.return_code;
+    return static_cast<uint32_t>(out_result.return_code);
   }
   if (processing_rc != TEEC_SUCCESS) {
     // The TEE operation succeeded but the processing operation failed.
@@ -817,7 +807,7 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session* session, uint32_t commandID, TEEC_O
     return processing_rc;
   }
 
-  return out_result.return_code;
+  return static_cast<uint32_t>(out_result.return_code);
 }
 
 __EXPORT
