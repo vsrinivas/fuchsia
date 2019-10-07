@@ -31,7 +31,7 @@ impl Scope {
 #[inline]
 pub fn is_enabled() -> bool {
     // Trivial no-argument function that will not race
-    unsafe { sys::trace_is_enabled() }
+    unsafe { sys::trace_state() != sys::TRACE_STOPPED }
 }
 
 /// Returns true if tracing has been enabled for the given category.
@@ -1004,8 +1004,6 @@ mod sys {
 
         pub fn trace_state() -> trace_state_t;
 
-        pub fn trace_is_enabled() -> bool;
-
         pub fn trace_is_category_enabled(category_literal: *const libc::c_char) -> bool;
 
         pub fn trace_acquire_context() -> *const trace_context_t;
@@ -1065,5 +1063,12 @@ mod test {
         duration_begin!("foo", "bar", "x" => 5);
         println!("Between duration creation and duration ending");
         duration_end!("foo", "bar", "y" => 10);
+    }
+
+    #[test]
+    fn trace_enabled() {
+        if crate::is_enabled() {
+            println!("Tracing enabled");
+        }
     }
 }
