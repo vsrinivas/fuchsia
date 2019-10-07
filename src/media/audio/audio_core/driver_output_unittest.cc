@@ -150,12 +150,83 @@ TEST_F(DriverOutputTest, RendererOutput) {
   //   [first_silent_frame, ring_buffer.size()) - Silence again (we did not provide any data to
   //       mix at this point in the ring buffer.
   const uint32_t kNonSilentFrame = 0x7fff7fff;
+  const uint32_t kMixWindowFrames = 480;
   size_t first_non_silent_frame =
       (kSupportedSampleRate * output_->min_clock_lead_time_nsec()) / 1'000'000'000;
-  size_t first_silent_frame = first_non_silent_frame + 480;
+  size_t first_silent_frame = first_non_silent_frame + kMixWindowFrames;
 
   EXPECT_THAT(RingBufferSlice<uint32_t>(0, first_non_silent_frame), Each(Eq(kSilentFrame)));
-  EXPECT_THAT(RingBufferSlice<uint32_t>(first_non_silent_frame, 480), Each(Eq(kNonSilentFrame)));
+  EXPECT_THAT(RingBufferSlice<uint32_t>(first_non_silent_frame, kMixWindowFrames),
+              Each(Eq(kNonSilentFrame)));
+  EXPECT_THAT(RingBufferSlice<uint32_t>(first_silent_frame, -1), Each(Eq(kSilentFrame)));
+
+  threading_model().FidlDomain().ScheduleTask(output_->Shutdown());
+  RunLoopUntilIdle();
+}
+
+TEST_F(DriverOutputTest, MixAtExpectedInterval) {
+  // Setup our driver to advertise support for a single format.
+  constexpr uint8_t kSupportedChannels = 2;
+  constexpr uint32_t kSupportedSampleRate = 48000;
+  constexpr audio_sample_format_t kSupportedSampleFormat = AUDIO_SAMPLE_FORMAT_16BIT;
+  // 5ms at our chosen sample rate.
+  constexpr uint32_t kFifoDepth = 240;
+  driver_->set_fifo_depth(kFifoDepth);
+  ConfigureDriverForSampleFormat(kSupportedChannels, kSupportedSampleRate, kSupportedSampleFormat,
+                                 ASF_RANGE_FLAG_FPS_48000_FAMILY);
+
+  threading_model().FidlDomain().ScheduleTask(output_->Startup());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(driver_->is_running());
+
+  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher());
+  AudioObject::LinkObjects(renderer, output_);
+  renderer->EnqueueAudioPacket(1.0, kExpectedMixInterval);
+  renderer->EnqueueAudioPacket(-1.0, kExpectedMixInterval);
+
+  // We'll have 4 sections in our ring buffer:
+  //   > Silence during the initial lead time.
+  //   > 10ms of frames that contain 1.0 float data.
+  //   > 10ms of frames that contain -1.0 float data.
+  //   > Silence during the rest of the ring.
+  const uint32_t kSilentFrame = 0;
+  const uint32_t kPostiveOneSamples = 0x7fff7fff;
+  const uint32_t kNegativeOneSamples = 0x80008000;
+  const uint32_t kMixWindowFrames = 480;
+  size_t first_positive_one_frame =
+      (kSupportedSampleRate * output_->min_clock_lead_time_nsec()) / 1'000'000'000;
+  size_t first_negative_one_frame = first_positive_one_frame + kMixWindowFrames;
+  size_t first_silent_frame = first_negative_one_frame + kMixWindowFrames;
+
+  // Run until just before the expected first mix. Expect the ring buffer to be empty.
+  RunLoopFor(kExpectedMixInterval - zx::nsec(1));
+  EXPECT_THAT(RingBuffer<uint32_t>(), Each(Eq(kSilentFrame)));
+
+  // Now expect the first mix, which adds the 1.0 samples
+  RunLoopFor(zx::nsec(1));
+  EXPECT_THAT(RingBufferSlice<uint32_t>(0, first_positive_one_frame), Each(Eq(kSilentFrame)));
+  EXPECT_THAT(RingBufferSlice<uint32_t>(first_positive_one_frame, kMixWindowFrames),
+              Each(Eq(kPostiveOneSamples)));
+  EXPECT_THAT(RingBufferSlice<uint32_t>(first_negative_one_frame, kMixWindowFrames),
+              Each(Eq(kSilentFrame)));
+  EXPECT_THAT(RingBufferSlice<uint32_t>(first_silent_frame, -1), Each(Eq(kSilentFrame)));
+
+  // Run until just before the next mix interval. Expect the ring to be unchanged.
+  RunLoopFor(kExpectedMixInterval - zx::nsec(1));
+  EXPECT_THAT(RingBufferSlice<uint32_t>(0, first_positive_one_frame), Each(Eq(kSilentFrame)));
+  EXPECT_THAT(RingBufferSlice<uint32_t>(first_positive_one_frame, kMixWindowFrames),
+              Each(Eq(kPostiveOneSamples)));
+  EXPECT_THAT(RingBufferSlice<uint32_t>(first_negative_one_frame, kMixWindowFrames),
+              Each(Eq(kSilentFrame)));
+  EXPECT_THAT(RingBufferSlice<uint32_t>(first_silent_frame, -1), Each(Eq(kSilentFrame)));
+
+  // Now run the second mix. Expect the rest of the frames to be in the ring.
+  RunLoopFor(zx::nsec(1));
+  EXPECT_THAT(RingBufferSlice<uint32_t>(0, first_positive_one_frame), Each(Eq(kSilentFrame)));
+  EXPECT_THAT(RingBufferSlice<uint32_t>(first_positive_one_frame, kMixWindowFrames),
+              Each(Eq(kPostiveOneSamples)));
+  EXPECT_THAT(RingBufferSlice<uint32_t>(first_negative_one_frame, kMixWindowFrames),
+              Each(Eq(kNegativeOneSamples)));
   EXPECT_THAT(RingBufferSlice<uint32_t>(first_silent_frame, -1), Each(Eq(kSilentFrame)));
 
   threading_model().FidlDomain().ScheduleTask(output_->Shutdown());

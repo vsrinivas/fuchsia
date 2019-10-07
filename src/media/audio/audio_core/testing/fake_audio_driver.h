@@ -48,6 +48,7 @@ class FakeAudioDriver {
     formats_ = std::move(formats);
   }
   void set_plugged(bool plugged) { plugged_ = plugged; }
+  void set_fifo_depth(uint32_t fifo_depth) { fifo_depth_ = fifo_depth; }
 
   // |true| after an |audio_rb_cmd_start| is received, until an |audio_rb_cmd_stop| is received.
   bool is_running() const { return is_running_; }

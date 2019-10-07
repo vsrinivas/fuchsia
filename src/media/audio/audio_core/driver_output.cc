@@ -176,7 +176,8 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
       underflow_cooldown_deadline_ = zx_deadline_after(kUnderflowCooldown);
     }
 
-    int64_t fill_target = cm2rd_pos.Apply(uptime + kDefaultHighWaterNsec.get());
+    int64_t fill_target =
+        cm2rd_pos.Apply(uptime + kDefaultHighWaterNsec.get()) + driver()->fifo_depth_frames();
 
     // Are we in the middle of an underflow cooldown? If so, check whether we have recovered yet.
     if (underflow_start_time_) {

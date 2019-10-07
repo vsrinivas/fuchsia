@@ -34,7 +34,7 @@ FakeAudioRenderer::FakeAudioRenderer(async_dispatcher_t* dispatcher)
     : AudioObject(AudioObject::Type::AudioRenderer),
       dispatcher_(dispatcher),
       vmo_ref_(fbl::MakeRefCounted<RefCountedVmoMapper>()) {
-  zx_status_t status = vmo_ref_->CreateAndMap(PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+  zx_status_t status = vmo_ref_->CreateAndMap(2 * PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   FXL_CHECK(status == ZX_OK);
 }
 
