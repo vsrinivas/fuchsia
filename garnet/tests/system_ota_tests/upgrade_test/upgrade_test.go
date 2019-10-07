@@ -197,6 +197,14 @@ func doSystemPrimeOTA(t *testing.T, device *device.Client, repo *packages.Reposi
 		t.Fatalf("error running GC: %v", err)
 	}
 
+	// In order to manually trigger the system updater, we need the `run`
+	// package. Since builds can be configured to not automatically install
+	// packages, we need to explicitly resolve it.
+	err = device.Run("pkgctl resolve fuchsia-pkg://fuchsia.com/run/0", os.Stdout, os.Stderr)
+	if err != nil {
+		t.Fatalf("error running GC: %v", err)
+	}
+
 	var wg sync.WaitGroup
 	device.RegisterDisconnectListener(&wg)
 
