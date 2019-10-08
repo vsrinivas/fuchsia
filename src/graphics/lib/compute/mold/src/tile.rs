@@ -158,8 +158,9 @@ impl Tiles {
             raster.translation().y * PIXEL_WIDTH,
         ));
         let (i, j) = edge_tile(&edge);
+        let i = i.max(0);
 
-        if 0 <= i && 0 <= j && (j as usize) < height {
+        if 0 <= j && (j as usize) < height {
             raster.tile_contour().for_each_tile_from(self, i as usize, j as usize, |tile| {
                 if !is_partial || tile.needs_render {
                     tile.push_edge(p0, edge_range.clone());
@@ -837,6 +838,29 @@ mod tests {
                 LayerNode::Layer(1, Point::new(TILE_SIZE as i32, TILE_SIZE as i32)),
                 edges(&translated, HALF..HALF * 3)
             ]
+        );
+    }
+
+    #[test]
+    fn negative_rasters() {
+        let mut map = Map::new(TILE_SIZE, TILE_SIZE);
+
+        let mut path = Path::new();
+        polygon(&mut path, &[(-0.5, 0.5), (-0.5, 1.5), (0.5, 1.5), (0.5, 0.5)]);
+
+        let raster = Raster::new(&path);
+
+        print(&mut map, 0, raster.clone());
+
+        map.reprint_all();
+
+        assert_eq!(
+            map.tiles[0].layers,
+            vec![
+                LayerNode::Layer(0, Point::new(0, 0)),
+                edges(&raster, 0..HALF),
+                edges(&raster, HALF * 3..HALF * 4),
+            ],
         );
     }
 
