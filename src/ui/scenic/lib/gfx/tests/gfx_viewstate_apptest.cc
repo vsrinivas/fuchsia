@@ -36,7 +36,7 @@ class ViewEmbedderTest : public gfx::PixelTest {
   ViewEmbedderTest() : gfx::PixelTest("ViewEmbedderTest") {}
 };
 
-TEST_F(ViewEmbedderTest, BouncingBall) {
+VK_TEST_F(ViewEmbedderTest, BouncingBall) {
   auto info = scenic::LaunchComponentAndCreateView(
       environment_->launcher_ptr(),
       "fuchsia-pkg://fuchsia.com/bouncing_ball#meta/bouncing_ball.cmx", {});
@@ -53,12 +53,12 @@ TEST_F(ViewEmbedderTest, BouncingBall) {
       zx::sec(kTestTimeout)));
 }
 
-TEST_F(ViewEmbedderTest, ProtectedVkcube) {
+VK_TEST_F(ViewEmbedderTest, ProtectedVkcube) {
   // vkcube_on_scenic does not produce protected content if platform does not allow. Check if
   // protected memory is available beforehand to skip these cases.
   {
-    if (VK_TESTS_SUPPRESSED() || !scenic_impl::gfx::test::VkSessionTest::CreateVulkanDeviceQueues(
-                                     /*use_protected_memory=*/true)) {
+    if (!scenic_impl::gfx::test::VkSessionTest::CreateVulkanDeviceQueues(
+            /*use_protected_memory=*/true)) {
       GTEST_SKIP();
     }
   }
