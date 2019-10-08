@@ -34,7 +34,7 @@ namespace fbl {
 //  All the members should be one 'T' type and the union should not
 //  include any other object.
 //
-//  The Macros simply remove the risk of accidentialy violating the rules
+//  The Macros simply remove the risk of accidentally violating the rules
 //  at the price of ugly looking code:
 //
 //      BITFIELD_DEF_START(MyClass, uint32_t)
@@ -75,6 +75,12 @@ public:
     constexpr BitFieldMember& operator=(T new_value) {
         ZX_DEBUG_ASSERT(new_value <= Maximum);
         value_ = (value_ & ~Mask) | (new_value << Offset);
+        return *this;
+    }
+
+    constexpr BitFieldMember& operator=(const BitFieldMember& other) {
+        T new_value = other;
+        *this = new_value;
         return *this;
     }
 

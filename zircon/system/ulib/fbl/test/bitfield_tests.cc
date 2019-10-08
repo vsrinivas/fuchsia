@@ -4,7 +4,7 @@
 
 #include <cstdint>
 #include <atomic>
- 
+
 #include <zxtest/zxtest.h>
 #include <fbl/bitfield.h>
 
@@ -93,6 +93,20 @@ TEST(BitfieldTest, ReadWriteUint64) {
     ASSERT_EQ(bf.m3_13bits, test_val_13b);
     ASSERT_EQ(bf.m4_5bits, 0u);
     ASSERT_EQ(bf.unused, 0u);
+}
+
+TEST(BitfieldTest, AssignFromBitField) {
+    TestBFuint64 bf1, bf2;
+    ASSERT_EQ(bf1.value, 0u);
+    ASSERT_EQ(bf2.value, 0u);
+
+    bf1.m1_4bits = test_val_4b;
+    bf2.m2_8bits = test_val_8b;
+
+    bf1.m2_8bits = bf2.m2_8bits;
+    // |bf1.m1_4bits| should not be overwritten.
+    ASSERT_EQ(bf1.m1_4bits, test_val_4b);
+    ASSERT_EQ(bf1.m2_8bits, test_val_8b);
 }
 
 constexpr TestBFuint64 cex_bf_uint64;
