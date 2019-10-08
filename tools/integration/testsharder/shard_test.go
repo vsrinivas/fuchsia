@@ -248,7 +248,7 @@ func TestMultiplyShards(t *testing.T) {
 			tests = append(tests, testCopy)
 		}
 		return &Shard{
-			Name:  env.Name() + "-" + test.Name,
+			Name:  "multiplied:" + env.Name() + "-" + test.Name,
 			Tests: tests,
 			Env:   env,
 		}
