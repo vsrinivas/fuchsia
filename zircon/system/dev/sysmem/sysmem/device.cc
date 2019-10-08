@@ -438,9 +438,17 @@ zx_status_t Device::RegisterSecureMem(zx_handle_t secure_mem_connection) {
     fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_Result set_result = {};
     status = fuchsia_sysmem_SecureMemSetPhysicalSecureHeaps(secure_mem_->channel(),
                                                             &sysmem_configured_heaps, &set_result);
-    // For now this is fatal.  Among the reasons is without that call succeeding, we haven't told
-    // the HW to secure/protect the physical range.
+    // For now the FIDL IPC failing is fatal.  Among the reasons is without that
+    // call succeeding, we haven't told the HW to secure/protect the physical
+    // range.
+    // For now it could return an error on sherlock if the bootloader is old, so
+    // in that case just don't mark the allocators as ready.
     ZX_ASSERT(status == ZX_OK);
+    if (set_result.tag == fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResultTag_err) {
+      LOG(ERROR, "Got secure memory allocation error %d", set_result.err);
+      return;
+    }
+
     ZX_ASSERT(set_result.tag == fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResultTag_response);
 
     for (const auto& [heap_type, allocator] : secure_allocators_) {

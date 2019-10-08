@@ -177,6 +177,10 @@ int Sherlock::Thread() {
     zxlogf(ERROR, "OtRadioInit() failed\n");
   }
 
+  if (SecureMemInit() != ZX_OK) {
+    zxlogf(ERROR, "SecureMemInit failed\n");
+  }
+
   if (BacklightInit() != ZX_OK) {
     zxlogf(ERROR, "BacklightInit() failed\n");
   }

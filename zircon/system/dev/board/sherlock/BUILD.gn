@@ -21,6 +21,7 @@ driver("sherlock") {
     "sherlock-nna.cc",
     "sherlock-ot-radio.cc",
     "sherlock-sdio.cc",
+    "sherlock-securemem.cc",
     "sherlock-spi.cc",
     "sherlock-sysmem.cc",
     "sherlock-tee.cc",

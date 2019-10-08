@@ -268,6 +268,8 @@ zx_status_t SysmemSecureMemServer::SetPhysicalSecureHeapsInternal(
     return status;
   }
 
+  LOG(INFO, "Succeeded protecting memory range 0x%lx 0x%lx", heap.physical_address, heap.size_bytes);
+
   return ZX_OK;
 }
 

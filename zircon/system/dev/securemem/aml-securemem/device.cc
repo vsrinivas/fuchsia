@@ -302,10 +302,11 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace amlogic_secure_mem
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(amlogic_secure_mem, amlogic_secure_mem::driver_ops, "zircon", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(amlogic_secure_mem, amlogic_secure_mem::driver_ops, "zircon", "0.1", 5)
   BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
   BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_SECURE_MEM),
+  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_SECURE_MEM),
+  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
+  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
 ZIRCON_DRIVER_END(amlogic_secure_mem)
 // clang-format on
