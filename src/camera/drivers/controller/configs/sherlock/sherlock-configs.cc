@@ -9,7 +9,7 @@ namespace camera {
 
 std::vector<fuchsia::camera2::hal::Config> ControllerImpl::SherlockConfigs() {
   std::vector<fuchsia::camera2::hal::Config> configs;
-  configs.push_back(std::move(DebugConfig()));
+  configs.push_back(DebugConfig());
   return configs;
 }
 

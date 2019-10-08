@@ -213,7 +213,7 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
                      const std::string& param_value, const std::string& link_path_name) {
     fuchsia::modular::ModuleData module_data;
     module_data.mutable_module_path()->push_back(mod_name);
-    module_data.set_intent(std::move(fuchsia::modular::Intent{}));
+    module_data.set_intent(fuchsia::modular::Intent{});
     AddJsonParameter(module_data.mutable_intent(), param_name, param_value);
 
     fuchsia::modular::ModuleParameterMapEntry parameter_entry;

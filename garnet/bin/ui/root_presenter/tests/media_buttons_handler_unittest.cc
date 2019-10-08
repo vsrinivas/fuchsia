@@ -50,7 +50,7 @@ class MediaButtonsHandlerTest : public component::testing::TestWithContext,
 
     int id = rand();
     device = std::make_unique<ui_input::InputDeviceImpl>(
-        id, std::move(device_descriptor), std::move(input_device.NewRequest()), this);
+        id, std::move(device_descriptor), input_device.NewRequest(), this);
     device_added = false;
   }
 

@@ -137,7 +137,7 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
   WithErrorSyntax_ResponseAsStruct_Result(fit::result<std::tuple<int64_t, int64_t, int64_t>, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
-      set_response(std::move(result.take_value()));
+      set_response(result.take_value());
     } else {
       set_err(std::move(result.take_error()));
     }

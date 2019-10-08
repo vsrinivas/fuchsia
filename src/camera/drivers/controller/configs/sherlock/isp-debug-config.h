@@ -93,7 +93,7 @@ static fuchsia::camera2::hal::StreamConfig IspStreamConfig() {
 
 fuchsia::camera2::hal::Config DebugConfig() {
   fuchsia::camera2::hal::Config config;
-  config.stream_configs.push_back(std::move(IspStreamConfig()));
+  config.stream_configs.push_back(IspStreamConfig());
   return config;
 }
 

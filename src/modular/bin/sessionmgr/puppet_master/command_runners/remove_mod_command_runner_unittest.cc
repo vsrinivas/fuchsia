@@ -25,7 +25,7 @@ class RemoveModCommandRunnerTest : public testing::TestWithSessionStorage {
   void InitModuleData(StoryStorage* const story_storage, std::vector<std::string> path) {
     fuchsia::modular::ModuleData module_data;
     module_data.set_module_path(std::move(path));
-    module_data.set_intent(std::move(fuchsia::modular::Intent{}));
+    module_data.set_intent(fuchsia::modular::Intent{});
     module_data.set_module_deleted(false);
 
     WriteModuleData(story_storage, std::move(module_data));

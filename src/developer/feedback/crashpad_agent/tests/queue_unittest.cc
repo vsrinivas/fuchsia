@@ -65,7 +65,7 @@ class QueueTest : public ::testing::Test {
     clock_ = std::make_unique<timekeeper::TestClock>();
     crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results_);
     database_ =
-        std::move(crashpad::CrashReportDatabase::Initialize(base::FilePath(database_path_.path())));
+        crashpad::CrashReportDatabase::Initialize(base::FilePath(database_path_.path()));
     inspector_ = std::make_unique<inspect::Inspector>();
     inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot(), clock_.get());
     queue_ = std::make_unique<Queue>(Queue::Config{

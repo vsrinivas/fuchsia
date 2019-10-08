@@ -222,7 +222,7 @@ bool construct_destruct_match_test() {
     fbl::RingBuffer<TestObj, kBuffSize> buffer;
 
     // Push and pop an object and assert the constructors and destructors are called.
-    buffer.push(std::move(TestObj(1)));
+    buffer.push(TestObj(1));
     EXPECT_EQ(TestObj::ConstructCount(), 1);
     EXPECT_EQ(TestObj::DestructCount(), 0);
 
@@ -235,7 +235,7 @@ bool construct_destruct_match_test() {
     EXPECT_EQ(TestObj::ConstructCount(), 2);
     EXPECT_EQ(TestObj::DestructCount(), 1);
 
-    buffer.push(std::move(TestObj(3)));
+    buffer.push(TestObj(3));
     EXPECT_EQ(TestObj::ConstructCount(), 3);
     EXPECT_EQ(TestObj::DestructCount(), 1);
 

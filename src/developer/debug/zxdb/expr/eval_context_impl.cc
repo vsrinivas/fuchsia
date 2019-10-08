@@ -297,7 +297,7 @@ Err EvalContextImpl::ResolveExternValue(const fxl::RefPtr<Value>& input_value,
   if (!found || !found.variable())
     return Err("Extern variable '%s' not found.", input_value->GetFullName().c_str());
 
-  *resolved = std::move(found.variable_ref());
+  *resolved = found.variable_ref();
   return Err();
 }
 

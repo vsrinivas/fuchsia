@@ -35,7 +35,7 @@ AccessibilityPointerEvent GetDefaultPointerEvent() {
 TEST_F(GestureManagerTest, CallsActionOnTouch) {
   GestureManager gesture_manager;
   fuchsia::ui::input::accessibility::PointerEventListenerPtr listener;
-  listener.Bind(std::move(gesture_manager.binding().NewBinding()));
+  listener.Bind(gesture_manager.binding().NewBinding());
   // Registers the callback (in a real use case, an Screen Reader action for example), that will be
   // invoked once a gesture is detected. For now, this only detects a single touch (finger down ->
   // up).

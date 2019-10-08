@@ -35,7 +35,7 @@ bool CrashServer::MakeRequest(const std::map<std::string, std::string>& annotati
   for (const auto& header : headers) {
     http_transport->SetHeader(header.first, header.second);
   }
-  http_transport->SetBodyStream(std::move(http_multipart_builder.GetBodyStream()));
+  http_transport->SetBodyStream(http_multipart_builder.GetBodyStream());
   http_transport->SetTimeout(60.0);  // 1 minute.
   http_transport->SetURL(url_);
   return http_transport->ExecuteSynchronously(server_report_id);

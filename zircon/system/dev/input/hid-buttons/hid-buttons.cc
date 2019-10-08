@@ -239,8 +239,8 @@ zx_status_t HidButtonsDevice::Bind(fbl::Array<Gpio> gpios,
   gpios_ = std::move(gpios);
   fbl::AllocChecker ac;
   fbl::AutoLock lock(&callbacks_lock_);
-  callbacks_ = std::move(fbl::Array(
-      new (&ac) std::vector<button_notify_callback_t>[BUTTON_TYPE_MAX], BUTTON_TYPE_MAX));
+  callbacks_ = fbl::Array(
+      new (&ac) std::vector<button_notify_callback_t>[BUTTON_TYPE_MAX], BUTTON_TYPE_MAX);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

@@ -119,7 +119,7 @@ void SceneGraph::MaybeDispatchFidlFocusChain(const std::vector<zx_koid_t>& old_f
   }
   if (focus_changed) {
     FocusChainListener::OnFocusChangeCallback callback = [] { /* No flow control yet. */ };
-    focus_chain_listener_->OnFocusChange(std::move(view_tree_.CloneFocusChain()),
+    focus_chain_listener_->OnFocusChange(view_tree_.CloneFocusChain(),
                                          std::move(callback));
   }
 }

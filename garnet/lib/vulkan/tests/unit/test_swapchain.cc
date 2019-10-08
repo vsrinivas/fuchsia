@@ -51,7 +51,7 @@ class FakeImagePipe : public fuchsia::images::testing::ImagePipe2_TestBase {
     EXPECT_EQ(status, ZX_OK);
 
     fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
-    status = sysmem_allocator->BindSharedCollection(std::move(buffer_collection_token.BindSync()),
+    status = sysmem_allocator->BindSharedCollection(buffer_collection_token.BindSync(),
                                                     buffer_collection.NewRequest());
     EXPECT_EQ(status, ZX_OK);
 

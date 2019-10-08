@@ -43,7 +43,7 @@ void FuchsiaGuestInteractionService::PutFile(fidl::InterfaceHandle<fuchsia::io::
                                              std::string remote_path,
                                              fit::function<void(zx_status_t)> callback) {
   executor_.schedule_task(
-      InitiatePut(std::move(local_file.TakeChannel()), remote_path)
+      InitiatePut(local_file.TakeChannel(), remote_path)
           .and_then([callback = std::move(callback),
                      local_file = std::move(local_file)](zx_status_t& status) { callback(status); })
           .wrap_with(scope_));
@@ -63,7 +63,7 @@ void FuchsiaGuestInteractionService::GetFile(std::string remote_path,
                                              fidl::InterfaceHandle<fuchsia::io::File> local_file,
                                              fit::function<void(zx_status_t)> callback) {
   executor_.schedule_task(
-      InitiateGet(remote_path, std::move(local_file.TakeChannel()))
+      InitiateGet(remote_path, local_file.TakeChannel())
           .and_then([callback = std::move(callback),
                      local_file = std::move(local_file)](zx_status_t& status) { callback(status); })
           .wrap_with(scope_));

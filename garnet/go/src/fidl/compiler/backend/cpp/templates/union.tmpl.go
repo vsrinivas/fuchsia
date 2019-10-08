@@ -30,7 +30,7 @@ class {{ .Name }} final {
       {{- else if eq 1 .Result.ValueArity }}
       set_response({{ .Result.ValueStructDecl }}{result.take_value()});
       {{- else }}
-      set_response(std::move(result.take_value()));
+      set_response(result.take_value());
       {{- end }}
     } else {
       set_err(std::move(result.take_error()));
