@@ -10,7 +10,8 @@
 ///!       get closed.
 ///!
 use {
-    fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
+    fuchsia_async as fasync,
     futures::{prelude::*, select, stream::FuturesUnordered},
     log::error,
 };
@@ -19,6 +20,8 @@ pub mod listener;
 
 // This number was chosen arbitrarily.
 const MAX_CONCURRENT_LISTENERS: usize = 1000;
+
+type ClientRequests = fidl::endpoints::ServerEnd<fidl_policy::ClientControllerMarker>;
 
 pub fn spawn_provider_server(
     update_sender: listener::MessageSender,
@@ -78,12 +81,28 @@ async fn handle_provider_request(
     req: fidl_policy::ClientProviderRequest,
 ) -> Result<(), fidl::Error> {
     match req {
-        fidl_policy::ClientProviderRequest::GetController { updates, .. } => {
+        fidl_policy::ClientProviderRequest::GetController { requests, updates, .. } => {
             register_listener(update_sender, updates.into_proxy()?);
-            // TODO(hahnr): Handle actual request.
+            handle_client_requests(requests).await?;
             Ok(())
         }
     }
+}
+
+/// Handles all incoming requests from a ClientController.
+async fn handle_client_requests(requests: ClientRequests) -> Result<(), fidl::Error> {
+    let mut request_stream = requests.into_stream()?;
+    while let Some(request) = request_stream.try_next().await? {
+        match request {
+            fidl_policy::ClientControllerRequest::Connect { responder, .. } => {
+                // TODO(hahnr): Verify whether the requested network is known.
+                // TODO(hahnr): Send connect request to SME.
+                responder.send(fidl_common::RequestStatus::Acknowledged)?;
+            }
+            unsupported => error!("unsupported request: {:?}", unsupported),
+        }
+    }
+    Ok(())
 }
 
 /// Handle inbound requests to register an additional ClientStateUpdates listener.
@@ -112,11 +131,7 @@ fn register_listener(
 mod tests {
     use {
         super::*,
-        fidl::{
-            endpoints::{create_proxy, create_request_stream},
-            Error,
-        },
-        fuchsia_zircon as zx,
+        fidl::endpoints::{create_proxy, create_request_stream},
         futures::{channel::mpsc, task::Poll},
         pin_utils::pin_mut,
         wlan_common::assert_variant,
@@ -180,9 +195,12 @@ mod tests {
             type_: fidl_policy::SecurityType::None,
         });
         pin_mut!(connect_fut);
+
+        // Process connect request and verify connect response.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(
             exec.run_until_stalled(&mut connect_fut),
-            Poll::Ready(Err(Error::ClientWrite(zx::Status::PEER_CLOSED)))
+            Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
         );
     }
 
