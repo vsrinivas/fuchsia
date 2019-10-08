@@ -19,7 +19,6 @@ base_package_labels += [
   "//src/modular/bundles:framework_experimental",
   "//src/ui/bin/brightness_manager",
   "//src/ui/bin/shortcut",
-  "//topaz/bin/userpicker_base_shell",
   "//topaz/shell/story_shell_labs",
 ]
 
