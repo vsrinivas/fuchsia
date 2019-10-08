@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:fidl_fuchsia_modular/fidl_async.dart' as modular;
+import 'package:fidl_fuchsia_device_manager/fidl_async.dart';
 import 'package:fuchsia_inspect/inspect.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:quickui/uistream.dart';
@@ -23,8 +24,9 @@ class StatusModel implements Inspectable {
   UiStream battery;
   final StartupContext startupContext;
   final modular.PuppetMasterProxy puppetMaster;
+  final AdministratorProxy deviceManager;
 
-  StatusModel({this.startupContext, this.puppetMaster}) {
+  StatusModel({this.startupContext, this.puppetMaster, this.deviceManager}) {
     brightness = UiStream(Brightness.fromStartupContext(startupContext));
     memory = UiStream(Memory.fromStartupContext(startupContext));
     battery = UiStream(Battery.fromStartupContext(startupContext));
@@ -34,20 +36,25 @@ class StatusModel implements Inspectable {
     final puppetMaster = modular.PuppetMasterProxy();
     startupContext.incoming.connectToService(puppetMaster);
 
+    final deviceManager = AdministratorProxy();
+    startupContext.incoming.connectToService(deviceManager);
+
     return StatusModel(
       startupContext: startupContext,
       puppetMaster: puppetMaster,
+      deviceManager: deviceManager,
     );
   }
 
   void dispose() {
+    deviceManager.ctrl.close();
     puppetMaster.ctrl.close();
     brightness.dispose();
     memory.dispose();
     battery.dispose();
   }
 
-  // Launch settings mod.
+  /// Launch settings mod.
   void launchSettings() {
     final storyMaster = modular.StoryPuppetMasterProxy();
     puppetMaster.controlStory('settings', storyMaster.ctrl.request());
@@ -61,6 +68,12 @@ class StatusModel implements Inspectable {
       ..enqueue([modular.StoryCommand.withAddMod(addMod)])
       ..execute();
   }
+
+  /// Reboot the device.
+  void restartDevice() => deviceManager.suspend(suspendFlagReboot);
+
+  /// Shutdown the device.
+  void shutdownDevice() => deviceManager.suspend(suspendFlagPoweroff);
 
   @override
   void onInspect(Node node) {

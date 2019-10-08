@@ -219,9 +219,9 @@ class _ManualStatusEntry extends StatelessWidget {
       height: kRowHeight,
       child: Row(
         children: <Widget>[
-          _buildButton(strings.restart(), null),
+          _buildButton(strings.restart(), model.restartDevice),
           Padding(padding: EdgeInsets.only(right: kPadding)),
-          _buildButton(strings.shutdown(), null),
+          _buildButton(strings.shutdown(), model.shutdownDevice),
           Spacer(),
           _buildButton(strings.settings(), model.launchSettings),
         ],

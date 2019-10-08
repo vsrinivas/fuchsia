@@ -125,6 +125,7 @@ dart_library("ermine_library") {
     "//topaz/public/dart/fuchsia_services",
     "//topaz/public/dart/story_shell_labs:story_shell_labs_lib",
     "//topaz/public/dart/widgets:lib.widgets",
+    "//zircon/system/fidl/fuchsia-device-manager",
   ]
 }
 

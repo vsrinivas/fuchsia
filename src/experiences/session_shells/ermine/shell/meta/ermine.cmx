@@ -14,6 +14,7 @@
             "fuchsia.app.discover.Suggestions",
             "fuchsia.bluetooth.control.Control",
             "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.device.manager.Administrator",
             "fuchsia.fonts.Provider",
             "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.LogSink",
