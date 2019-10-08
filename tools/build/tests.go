@@ -46,11 +46,6 @@ type Test struct {
 	// containing a JSON list of the test's runtime dependencies, Currently this
 	// field only makes sense for Linux and Mac tests.
 	RuntimeDepsFile string `json:"runtime_deps,omitempty"`
-
-	// TODO(fxbug.dev/37955): Have this instead as a top-level target in
-	// testsharder.Shard.
-	// Deps is the list of runtime dependencies (on the host) of the test.
-	Deps []string `json:"deps,omitempty"`
 }
 
 // Environment describes the full environment a test requires.

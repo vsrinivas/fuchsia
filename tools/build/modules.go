@@ -17,7 +17,7 @@ const (
 	// platforms that tests can target.
 	platformModuleName = "platforms.json"
 	// TestModuleName is the name of the build API module of tests.
-	TestModuleName = "tests.json"
+	testModuleName = "tests.json"
 )
 
 // Modules is a convenience interface for accessing the various build API
@@ -88,5 +88,5 @@ func (m Modules) TestSpecs() []TestSpec {
 
 // TestManifest returns the path to the manifest of tests in the build.
 func (m Modules) TestManifest() string {
-	return filepath.Join(m.BuildDir(), TestModuleName)
+	return filepath.Join(m.BuildDir(), testModuleName)
 }

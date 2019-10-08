@@ -81,16 +81,12 @@ func execute() error {
 		return err
 	}
 
-	// TODO(fxbug.dev/37955): Fetch test specs via modCtx once the
-	// `DepsFile`-related logic has been separated out into a separate
-	// utility.
-	specs, err := testsharder.LoadTestSpecs(modCtx.BuildDir())
-	if err != nil {
-		return err
+	opts := &testsharder.ShardOptions{
+		Mode: mode,
+		Tags: tags,
 	}
+	shards := testsharder.MakeShards(modCtx.TestSpecs(), opts)
 
-	// Create shards and write them to an output file if specifed, else stdout.
-	shards := testsharder.MakeShards(specs, mode, tags)
 	if multipliersPath != "" {
 		multipliers, err := testsharder.LoadTestModifiers(multipliersPath)
 		if err != nil {
@@ -98,7 +94,13 @@ func execute() error {
 		}
 		shards = testsharder.MultiplyShards(shards, multipliers)
 	}
+
 	shards = testsharder.WithMaxSize(shards, maxShardSize)
+
+	if err := testsharder.ExtractDeps(shards, modCtx.BuildDir()); err != nil {
+		return err
+	}
+
 	f := os.Stdout
 	if outputFile != "" {
 		var err error
