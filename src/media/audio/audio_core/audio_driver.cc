@@ -3,6 +3,7 @@
 
 #include "src/media/audio/audio_core/audio_driver.h"
 
+#include <lib/fidl/cpp/clone.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
 
@@ -12,7 +13,6 @@
 #include <audio-proto-utils/format-utils.h>
 #include <trace/event.h>
 
-#include "lib/fidl/cpp/clone.h"
 #include "src/media/audio/audio_core/driver_utils.h"
 #include "src/media/audio/lib/logging/logging.h"
 
@@ -1002,7 +1002,7 @@ void AudioDriver::SetupCommandTimeout() {
 void AudioDriver::ReportPlugStateChange(bool plugged, zx::time plug_time) {
   TRACE_DURATION("audio", "AudioDriver::ReportPlugStateChange");
   {
-    fbl::AutoLock lock(&plugged_lock_);
+    std::lock_guard<std::mutex> lock(plugged_lock_);
     plugged_ = plugged;
     plug_time_ = plug_time;
   }

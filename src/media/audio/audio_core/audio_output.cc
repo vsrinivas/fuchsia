@@ -8,7 +8,6 @@
 
 #include <limits>
 
-#include <fbl/auto_lock.h>
 #include <trace/event.h>
 
 #include "src/lib/fxl/time/time_delta.h"
@@ -178,7 +177,7 @@ void AudioOutput::ForEachLink(TaskType task_type) {
   // Make a copy of our currently active set of links so that we don't have to hold onto mutex_ for
   // the entire mix operation.
   {
-    fbl::AutoLock links_lock(&links_lock_);
+    std::lock_guard<std::mutex> links_lock(links_lock_);
     ZX_DEBUG_ASSERT(source_link_refs_.empty());
     for (auto& link : source_links_) {
       // For now, skip ring-buffer source links. This code cannot mix them yet.

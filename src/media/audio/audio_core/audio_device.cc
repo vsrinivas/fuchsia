@@ -73,7 +73,7 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_
 
   // For outputs, change the gain of all links where it is the destination.
   if (is_output()) {
-    fbl::AutoLock links_lock(&links_lock_);
+    std::lock_guard<std::mutex> links_lock(links_lock_);
     for (auto& link : source_links_) {
       if (link.GetSource()->type() == AudioObject::Type::AudioRenderer) {
         const auto muted = limited.flags & fuchsia::media::AudioGainInfoFlag_Mute;
@@ -84,7 +84,7 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_
   } else {
     // For inputs, change the gain of all links where it is the source.
     FXL_DCHECK(is_input());
-    fbl::AutoLock links_lock(&links_lock_);
+    std::lock_guard<std::mutex> links_lock(links_lock_);
     for (auto& link : dest_links_) {
       if (link.GetDest()->type() == AudioObject::Type::AudioCapturer) {
         const auto muted = limited.flags & fuchsia::media::AudioGainInfoFlag_Mute;

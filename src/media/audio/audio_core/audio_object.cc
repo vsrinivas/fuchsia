@@ -57,8 +57,8 @@ fbl::RefPtr<AudioLink> AudioObject::LinkObjects(const fbl::RefPtr<AudioObject>& 
   // Now lock both objects, make sure both are still allowing new links, then add the link to the
   // proper sets in both source and destination.
   {
-    fbl::AutoLock slock(&source->links_lock_);
-    fbl::AutoLock dlock(&dest->links_lock_);
+    std::lock_guard<std::mutex> slock(source->links_lock_);
+    std::lock_guard<std::mutex> dlock(dest->links_lock_);
     if (source->new_links_allowed_ && dest->new_links_allowed_) {
       source->dest_links_.insert(link);
       dest->source_links_.insert(link);
@@ -83,7 +83,7 @@ void AudioObject::RemoveLink(const fbl::RefPtr<AudioLink>& link) {
   const fbl::RefPtr<AudioObject>& source = link->GetSource();
   FXL_DCHECK(source != nullptr);
   {
-    fbl::AutoLock slock(&source->links_lock_);
+    std::lock_guard<std::mutex> slock(source->links_lock_);
     auto iter = source->dest_links_.find(link.get());
     if (iter != source->dest_links_.end()) {
       source->dest_links_.erase(iter);
@@ -93,7 +93,7 @@ void AudioObject::RemoveLink(const fbl::RefPtr<AudioLink>& link) {
   const fbl::RefPtr<AudioObject>& dest = link->GetDest();
   FXL_DCHECK(dest != nullptr);
   {
-    fbl::AutoLock dlock(&dest->links_lock_);
+    std::lock_guard<std::mutex> dlock(dest->links_lock_);
     auto iter = dest->source_links_.find(link.get());
     if (iter != dest->source_links_.end()) {
       dest->source_links_.erase(iter);
@@ -105,7 +105,7 @@ void AudioObject::RemoveLink(const fbl::RefPtr<AudioLink>& link) {
 // calls such as SetGain to every AudioCapturer path.
 void AudioObject::ForEachSourceLink(const LinkFunction& source_task) {
   TRACE_DURATION("audio", "AudioObject::ForEachSourceLink");
-  fbl::AutoLock links_lock(&links_lock_);
+  std::lock_guard<std::mutex> links_lock(links_lock_);
 
   // Callers (generally AudioCapturers) should never be linked to destinations.
   FXL_DCHECK(dest_links_.is_empty());
@@ -119,7 +119,7 @@ void AudioObject::ForEachSourceLink(const LinkFunction& source_task) {
 // calls such as SetGain to every AudioRenderer output path.
 void AudioObject::ForEachDestLink(const LinkFunction& dest_task) {
   TRACE_DURATION("audio", "AudioObject::ForEachDestLink");
-  fbl::AutoLock links_lock(&links_lock_);
+  std::lock_guard<std::mutex> links_lock(links_lock_);
 
   // Callers (generally AudioRenderers) should never be linked to sources.
   FXL_DCHECK(source_links_.is_empty());
@@ -132,7 +132,7 @@ void AudioObject::ForEachDestLink(const LinkFunction& dest_task) {
 // Call the provided function for each destination link, until one returns true.
 bool AudioObject::ForAnyDestLink(const LinkBoolFunction& dest_task) {
   TRACE_DURATION("audio", "AudioObject::ForAnyDestLink");
-  fbl::AutoLock links_lock(&links_lock_);
+  std::lock_guard<std::mutex> links_lock(links_lock_);
 
   FXL_DCHECK(source_links_.is_empty());
 
@@ -149,7 +149,7 @@ void AudioObject::UnlinkSources() {
   TRACE_DURATION("audio", "AudioObject::UnlinkSources");
   typename AudioLink::Set<AudioLink::Source> old_links;
   {
-    fbl::AutoLock lock(&links_lock_);
+    std::lock_guard<std::mutex> lock(links_lock_);
     old_links = std::move(source_links_);
   }
   UnlinkCleanup<AudioLink::Source>(&old_links);
@@ -159,7 +159,7 @@ void AudioObject::UnlinkDestinations() {
   TRACE_DURATION("audio", "AudioObject::UnlinkDestinations");
   typename AudioLink::Set<AudioLink::Dest> old_links;
   {
-    fbl::AutoLock lock(&links_lock_);
+    std::lock_guard<std::mutex> lock(links_lock_);
     old_links = std::move(dest_links_);
   }
   UnlinkCleanup<AudioLink::Dest>(&old_links);

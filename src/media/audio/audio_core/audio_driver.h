@@ -15,9 +15,6 @@
 #include <mutex>
 #include <string>
 
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
-
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_device_settings.h"
 #include "src/media/audio/audio_core/ring_buffer.h"
@@ -74,12 +71,12 @@ class AudioDriver {
   fuchsia::media::AudioStreamTypePtr GetSourceFormat() const;
 
   bool plugged() const {
-    fbl::AutoLock lock(&plugged_lock_);
+    std::lock_guard<std::mutex> lock(plugged_lock_);
     return plugged_;
   }
 
   zx::time plug_time() const {
-    fbl::AutoLock lock(&plugged_lock_);
+    std::lock_guard<std::mutex> lock(plugged_lock_);
     return plug_time_;
   }
 
@@ -273,7 +270,7 @@ class AudioDriver {
   bool pd_enabled_ = false;
   zx_time_t pd_enable_timeout_ = ZX_TIME_INFINITE;
 
-  mutable fbl::Mutex plugged_lock_;
+  mutable std::mutex plugged_lock_;
   bool plugged_ FXL_GUARDED_BY(plugged_lock_) = false;
   zx::time plug_time_ FXL_GUARDED_BY(plugged_lock_);
 };

@@ -7,8 +7,6 @@
 
 #include <lib/fit/function.h>
 
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
@@ -55,7 +53,7 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   //
   // TODO(johngro): Consider eliminating. Given how links are created/destroyed, we may not need it.
   void PreventNewLinks() {
-    fbl::AutoLock lock(&links_lock_);
+    std::lock_guard<std::mutex> lock(links_lock_);
     new_links_allowed_ = false;
   }
 
@@ -115,7 +113,7 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   // Called immediately after a new link is added to the object.
   virtual void OnLinkAdded();
 
-  fbl::Mutex links_lock_;
+  std::mutex links_lock_;
 
   // The set of links which this audio device is acting as a source for (eg; the
   // destinations that this object is sending to). The target of each of these
@@ -173,20 +171,6 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   // immediately returns 'true' without calling the remaining links. If none
   // returns 'true' or if link set is empty, ForAnyDestLink returns 'false'.
   bool ForAnyDestLink(const LinkBoolFunction& dest_task) FXL_LOCKS_EXCLUDED(links_lock_);
-
-  // TODO(mpuryear): it might be a good idea to introduce an auto-lock like
-  // object to fbl::, to behave like a lock token for situations like this. With
-  // proper tweaks to fbl::Mutex, this could for static analysis purposes seem
-  // to obtain and release a mutex without actually doing so. In debug builds,
-  // it could also assert that the mutex was held at object construction time.
-
-  // Pros: we regain much of the TA protection, if lambdas add one of these
-  // objects "holding" the proper lock at the start of their executions.
-
-  // Cons: essentially all these lambdas must capture "this", to tell the TA
-  // which instance of links_lock was being held. This price would be paid in
-  // all builds, regardless of whether code gets generated as a result.
-  //
 
  private:
   template <typename TagType>

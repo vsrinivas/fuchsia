@@ -6,7 +6,6 @@
 
 #include <lib/zx/clock.h>
 
-#include <fbl/auto_lock.h>
 #include <trace/event.h>
 
 #include "src/media/audio/audio_core/audio_driver.h"
@@ -30,7 +29,7 @@ AudioDeviceSettings::AudioDeviceSettings(const audio_stream_unique_id_t& uid, co
 
 AudioDeviceSettings::AudioDeviceSettings(const AudioDeviceSettings& o)
     : uid_(o.uid_), is_input_(o.is_input_), can_mute_(o.can_mute_), can_agc_(o.can_agc_) {
-  fbl::AutoLock lock(&o.settings_lock_);
+  std::lock_guard<std::mutex> lock(o.settings_lock_);
   gain_state_.gain_db = o.gain_state_.gain_db;
   gain_state_.muted = o.gain_state_.muted;
   gain_state_.agc_enabled = o.gain_state_.agc_enabled;
@@ -57,7 +56,7 @@ fbl::RefPtr<AudioDeviceSettings> AudioDeviceSettings::Clone() {
 bool AudioDeviceSettings::SetGainInfo(const fuchsia::media::AudioGainInfo& req,
                                       uint32_t set_flags) {
   TRACE_DURATION("audio", "AudioDeviceSettings::SetGainInfo");
-  fbl::AutoLock lock(&settings_lock_);
+  std::lock_guard<std::mutex> lock(settings_lock_);
   audio_set_gain_flags_t dirtied = gain_state_dirty_flags_;
 
   if ((set_flags & fuchsia::media::SetAudioGainFlag_GainValid) &&
@@ -101,7 +100,7 @@ void AudioDeviceSettings::GetGainInfo(fuchsia::media::AudioGainInfo* out_info) c
   //
   // Conversely, if we had an efficient reader/writer lock, we should only need to obtain this lock
   // for read which should always succeed without contention.
-  fbl::AutoLock lock(&settings_lock_);
+  std::lock_guard<std::mutex> lock(settings_lock_);
 
   out_info->gain_db = gain_state_.gain_db;
   out_info->flags = 0;
@@ -124,7 +123,7 @@ audio_set_gain_flags_t AudioDeviceSettings::SnapshotGainState(GainState* out_sta
   audio_set_gain_flags_t ret;
 
   {
-    fbl::AutoLock lock(&settings_lock_);
+    std::lock_guard<std::mutex> lock(settings_lock_);
     *out_state = gain_state_;
     ret = gain_state_dirty_flags_;
     gain_state_dirty_flags_ = static_cast<audio_set_gain_flags_t>(0);
@@ -134,7 +133,7 @@ audio_set_gain_flags_t AudioDeviceSettings::SnapshotGainState(GainState* out_sta
 }
 
 void AudioDeviceSettings::SetIgnored(bool ignored) {
-  fbl::AutoLock lock(&settings_lock_);
+  std::lock_guard<std::mutex> lock(settings_lock_);
   if (ignored != ignored_) {
     ignored_ = ignored;
     NotifyObserver();
@@ -142,7 +141,7 @@ void AudioDeviceSettings::SetIgnored(bool ignored) {
 }
 
 void AudioDeviceSettings::SetAutoRoutingDisabled(bool auto_routing_disabled) {
-  fbl::AutoLock lock(&settings_lock_);
+  std::lock_guard<std::mutex> lock(settings_lock_);
   if (auto_routing_disabled != auto_routing_disabled_) {
     auto_routing_disabled_ = auto_routing_disabled;
     NotifyObserver();

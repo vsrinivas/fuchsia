@@ -8,11 +8,10 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <zircon/device/audio.h>
 
-#include <fbl/intrusive_wavl_tree.h>
-#include <fbl/mutex.h>
+#include <mutex>
+
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_fd.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
@@ -118,7 +117,7 @@ class AudioDeviceSettings : public fbl::RefCounted<AudioDeviceSettings> {
   // and observed atomically by the mix domain threads. Any state which is used only by the
   // AudioDeviceManager, or which can be observed using std::atomic<>, does not need to be protected
   // by the settings_lock_.
-  mutable fbl::Mutex settings_lock_;
+  mutable std::mutex settings_lock_;
   GainState gain_state_ FXL_GUARDED_BY(settings_lock_);
   audio_set_gain_flags_t gain_state_dirty_flags_ FXL_GUARDED_BY(settings_lock_) =
       static_cast<audio_set_gain_flags_t>(0);

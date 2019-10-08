@@ -6,15 +6,16 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_RENDERER_IMPL_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
+#include <lib/media/cpp/timeline_function.h>
 
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <unordered_map>
 
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/media/cpp/timeline_function.h"
 #include "src/media/audio/audio_core/audio_link_packet_source.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/audio_renderer_format_info.h"
@@ -184,7 +185,7 @@ class AudioRendererImpl : public AudioObject,
   // Minimum Clock Lead Time state
   bool min_clock_lead_time_events_enabled_ = false;
 
-  fbl::Mutex ref_to_ff_lock_;
+  std::mutex ref_to_ff_lock_;
   TimelineFunction ref_clock_to_frac_frames_ FXL_GUARDED_BY(ref_to_ff_lock_);
   GenerationId ref_clock_to_frac_frames_gen_ FXL_GUARDED_BY(ref_to_ff_lock_);
 

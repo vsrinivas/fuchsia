@@ -140,7 +140,7 @@ std::optional<std::pair<TimelineFunction, uint32_t>>
 AudioRendererImpl::SnapshotCurrentTimelineFunction(int64_t reference_time) {
   TRACE_DURATION("audio", "AudioRendererImpl::SnapshotCurrentTimelineFunction");
 
-  fbl::AutoLock lock(&ref_to_ff_lock_);
+  std::lock_guard<std::mutex> lock(ref_to_ff_lock_);
   return {std::make_pair(ref_clock_to_frac_frames_, ref_clock_to_frac_frames_gen_.get())};
 }
 
@@ -722,7 +722,7 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   auto ref_time_for_reset =
       zx::clock::get_monotonic().get() + min_clock_lead_nsec_ + kPaddingForUnspecifiedRefTime;
   {
-    fbl::AutoLock lock(&ref_to_ff_lock_);
+    std::lock_guard<std::mutex> lock(ref_to_ff_lock_);
     next_frac_frame_pts_ = ref_clock_to_frac_frames_.Apply(ref_time_for_reset);
   }
   ComputePtsToFracFrames(0);
@@ -809,7 +809,7 @@ void AudioRendererImpl::Play(int64_t reference_time, int64_t media_time, PlayCal
   //
   // TODO(mpuryear): if we need to trigger a remix for our outputs, do it here.
   {
-    fbl::AutoLock lock(&ref_to_ff_lock_);
+    std::lock_guard<std::mutex> lock(ref_to_ff_lock_);
     ref_clock_to_frac_frames_ =
         TimelineFunction(frac_frame_media_time, reference_time, frac_frames_per_ref_tick_);
     ref_clock_to_frac_frames_gen_.Next();
@@ -854,7 +854,7 @@ void AudioRendererImpl::Pause(PauseCallback callback) {
   // Update our reference clock to fractional frame transformation, keeping it 1st order continuous.
   int64_t ref_clock_now;
   {
-    fbl::AutoLock lock(&ref_to_ff_lock_);
+    std::lock_guard<std::mutex> lock(ref_to_ff_lock_);
 
     // TODO(mpuryear): query the actual reference clock, don't assume CLOCK_MONO
     ref_clock_now = zx::clock::get_monotonic().get();

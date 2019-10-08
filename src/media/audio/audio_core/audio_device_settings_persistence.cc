@@ -10,7 +10,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include <fbl/auto_lock.h>
 #include <trace/event.h>
 
 #include "src/lib/files/directory.h"

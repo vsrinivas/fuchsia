@@ -13,6 +13,7 @@
 
 #include <atomic>
 #include <memory>
+#include <mutex>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/slab_allocator.h>
@@ -249,7 +250,7 @@ class AudioCapturerImpl : public AudioObject,
       FXL_GUARDED_BY(mix_domain_->token()){this};
 
   // Queues of capture buffers from the client: waiting to be filled, or waiting to be returned.
-  fbl::Mutex pending_lock_;
+  std::mutex pending_lock_;
   PcbList pending_capture_buffers_ FXL_GUARDED_BY(pending_lock_);
   PcbList finished_capture_buffers_ FXL_GUARDED_BY(pending_lock_);
 

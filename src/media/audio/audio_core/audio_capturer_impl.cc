@@ -509,7 +509,7 @@ void AudioCapturerImpl::CaptureAt(uint32_t payload_buffer_id, uint32_t offset_fr
   // Place the capture operation on the pending list.
   bool wake_mixer;
   {
-    fbl::AutoLock pending_lock(&pending_lock_);
+    std::lock_guard<std::mutex> pending_lock(pending_lock_);
     wake_mixer = pending_capture_buffers_.is_empty();
     pending_capture_buffers_.push_back(std::move(pending_capture_buffer));
   }
@@ -558,7 +558,7 @@ void AudioCapturerImpl::DiscardAllPackets(DiscardAllPacketsCallback cbk) {
   // client, however the frames will be written to the shared payload buffer.
   PcbList finished;
   {
-    fbl::AutoLock pending_lock(&pending_lock_);
+    std::lock_guard<std::mutex> pending_lock(pending_lock_);
     finished = std::move(finished_capture_buffers_);
     finished.splice(finished.end(), pending_capture_buffers_);
   }
@@ -590,7 +590,7 @@ void AudioCapturerImpl::StartAsyncCapture(uint32_t frames_per_packet) {
 
   bool queues_empty;
   {
-    fbl::AutoLock pending_lock(&pending_lock_);
+    std::lock_guard<std::mutex> pending_lock(pending_lock_);
     queues_empty = pending_capture_buffers_.is_empty() && finished_capture_buffers_.is_empty();
   }
 
@@ -771,7 +771,7 @@ zx_status_t AudioCapturerImpl::Process() {
     uint32_t mix_frames;
     uint32_t buffer_sequence_number;
     {
-      fbl::AutoLock pending_lock(&pending_lock_);
+      std::lock_guard<std::mutex> pending_lock(pending_lock_);
       if (!pending_capture_buffers_.is_empty()) {
         auto& p = pending_capture_buffers_.front();
 
@@ -909,7 +909,7 @@ zx_status_t AudioCapturerImpl::Process() {
     bool buffer_finished = false;
     bool wakeup_service_thread = false;
     {
-      fbl::AutoLock pending_lock(&pending_lock_);
+      std::lock_guard<std::mutex> pending_lock(pending_lock_);
       if (!pending_capture_buffers_.is_empty()) {
         auto& p = pending_capture_buffers_.front();
         if (buffer_sequence_number == p.sequence_number) {
@@ -976,7 +976,7 @@ void AudioCapturerImpl::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
         ReportStart();
       }
       if (state == State::OperatingSync) {
-        fbl::AutoLock pending_lock(&pending_lock_);
+        std::lock_guard<std::mutex> pending_lock(pending_lock_);
         if (!pending_capture_buffers_.is_empty()) {
           ReportStart();
         }
@@ -1413,7 +1413,7 @@ void AudioCapturerImpl::DoStopAsyncCapture() {
   // any buffers in the finished queue waiting to be sent back to the user, make
   // sure that the last one is flagged as the end of stream.
   {
-    fbl::AutoLock pending_lock(&pending_lock_);
+    std::lock_guard<std::mutex> pending_lock(pending_lock_);
 
     if (!pending_capture_buffers_.is_empty()) {
       auto buf = pending_capture_buffers_.pop_front();
@@ -1477,7 +1477,7 @@ bool AudioCapturerImpl::QueueNextAsyncPendingBuffer() {
 
   // Queue the pending buffer and signal success.
   {
-    fbl::AutoLock pending_lock(&pending_lock_);
+    std::lock_guard<std::mutex> pending_lock(pending_lock_);
     pending_capture_buffers_.push_back(std::move(pending_capture_buffer));
   }
   return true;
@@ -1501,7 +1501,7 @@ void AudioCapturerImpl::FinishAsyncStopThunk() {
   // an OnEndOfStream event.
   PcbList finished;
   {
-    fbl::AutoLock pending_lock(&pending_lock_);
+    std::lock_guard<std::mutex> pending_lock(pending_lock_);
     FXL_DCHECK(pending_capture_buffers_.is_empty());
     finished = std::move(finished_capture_buffers_);
   }
@@ -1533,7 +1533,7 @@ void AudioCapturerImpl::FinishBuffersThunk() {
 
   PcbList finished;
   {
-    fbl::AutoLock pending_lock(&pending_lock_);
+    std::lock_guard<std::mutex> pending_lock(pending_lock_);
     finished = std::move(finished_capture_buffers_);
   }
 
