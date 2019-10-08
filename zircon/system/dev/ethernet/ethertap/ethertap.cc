@@ -4,20 +4,21 @@
 
 #include "ethertap.h"
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/driver.h>
-#include <ddk/platform-defs.h>
-#include <fbl/auto_lock.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_builder.h>
 #include <lib/operation/ethernet.h>
-#include <pretty/hexdump.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/compiler.h>
 
 #include <utility>
+
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/driver.h>
+#include <ddk/platform-defs.h>
+#include <fbl/auto_lock.h>
+#include <pretty/hexdump.h>
 
 // This macro allows for per-device tracing rather than enabling tracing for the whole driver
 #define ethertap_trace(args...)                  \
@@ -37,9 +38,16 @@ static zx_status_t fidl_tap_ctl_open_device(void* ctx, const char* name_data, si
                                             const fuchsia_hardware_ethertap_Config* config,
                                             zx_handle_t device_handle, fidl_txn_t* txn) {
   auto ctl = static_cast<TapCtl*>(ctx);
+
+  // copy provided name so we can add a null termination:
+  ZX_DEBUG_ASSERT(name_size <= fuchsia_hardware_ethertap_MAX_NAME_LENGTH);
   char name[fuchsia_hardware_ethertap_MAX_NAME_LENGTH + 1];
-  strncpy(name, name_data, sizeof(name));
-  name[fuchsia_hardware_ethertap_MAX_NAME_LENGTH] = '\0';
+  // NOTE(brunodalbo): if name_data contains inline null characters, displaying it may not match
+  // exactly what we got from FIDL. Because this is mostly used for debugging, we can let it pass.
+  // Issue 38101 to tracks having sized strings in DDK API.
+  memcpy(name, name_data, name_size);
+  name[name_size] = '\0';
+
   auto status = ctl->OpenDevice(name, config, zx::channel(device_handle));
   return fuchsia_hardware_ethertap_TapControlOpenDevice_reply(txn, status);
 }
