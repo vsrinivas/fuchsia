@@ -25,7 +25,7 @@ TEST(ServiceDirectoryTest, Control) {
   message.Read(svc_server.get(), 0);
 
   EXPECT_TRUE(message.has_header());
-  EXPECT_EQ(fuchsia_io_DirectoryOpenGenOrdinal, message.ordinal());
+  EXPECT_EQ(fuchsia_io_DirectoryOpenOrdinal, message.ordinal());
 }
 
 TEST(ServiceDirectoryTest, CreateWithRequest) {
@@ -41,7 +41,7 @@ TEST(ServiceDirectoryTest, CreateWithRequest) {
   message.Read(svc_server.get(), 0);
 
   EXPECT_TRUE(message.has_header());
-  EXPECT_EQ(fuchsia_io_DirectoryOpenGenOrdinal, message.ordinal());
+  EXPECT_EQ(fuchsia_io_DirectoryOpenOrdinal, message.ordinal());
 }
 
 TEST(ServiceDirectoryTest, Clone) {
@@ -57,7 +57,7 @@ TEST(ServiceDirectoryTest, Clone) {
   message.Read(svc_server.get(), 0);
 
   EXPECT_TRUE(message.has_header());
-  EXPECT_EQ(fuchsia_io_DirectoryCloneGenOrdinal, message.ordinal());
+  EXPECT_EQ(fuchsia_io_DirectoryCloneOrdinal, message.ordinal());
 }
 
 TEST(ServiceDirectoryTest, Invalid) {

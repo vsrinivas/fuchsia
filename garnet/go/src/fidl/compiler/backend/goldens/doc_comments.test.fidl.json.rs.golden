@@ -121,7 +121,7 @@ impl InterfaceSynchronousProxy {
 	///
 	/// method comment #3
 	pub fn method(&mut self,) -> Result<(), fidl::Error> {self.client.send(&mut (),
-				0x60e700e002995ef8,
+				0x3f43684c00000000,
 			)}
 }
 
@@ -185,7 +185,7 @@ impl InterfaceProxy {
 impl InterfaceProxyInterface for InterfaceProxy {
 	fn method(&self,
 	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (), 0x60e700e002995ef8)
+		self.client.send(&mut (), 0x3f43684c00000000)
 	}
 	type OnEventResponseFut = fidl::client::QueryResponseFut<()>;}
 
@@ -433,7 +433,7 @@ impl InterfaceEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
 			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x60e700e002995ef8,
+			ordinal: 0x3f43684c00000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -445,7 +445,7 @@ impl InterfaceEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
 			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x914c226136244ed,
+			ordinal: 0x136d200d00000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -482,7 +482,7 @@ impl InterfaceControlHandle {
 			tx_id: 0,
 			flags: [0; 3],
 			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x914c226136244ed,
+			ordinal: 0x136d200d00000000,
 		};
 
 		let mut response = ();

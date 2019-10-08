@@ -879,65 +879,65 @@ void Light::Interface::SetRgbValueCompleterBase::Reply(::fidl::DecodedMessage<Se
 
 void Light::SetTransactionHeaderFor::GetNameRequest(const ::fidl::DecodedMessage<Light::GetNameRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLight_GetName_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kLight_GetName_Ordinal;
 }
 void Light::SetTransactionHeaderFor::GetNameResponse(const ::fidl::DecodedMessage<Light::GetNameResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLight_GetName_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kLight_GetName_Ordinal;
 }
 
 void Light::SetTransactionHeaderFor::GetCountRequest(const ::fidl::DecodedMessage<Light::GetCountRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLight_GetCount_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kLight_GetCount_Ordinal;
 }
 void Light::SetTransactionHeaderFor::GetCountResponse(const ::fidl::DecodedMessage<Light::GetCountResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLight_GetCount_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kLight_GetCount_Ordinal;
 }
 
 void Light::SetTransactionHeaderFor::HasCapabilityRequest(const ::fidl::DecodedMessage<Light::HasCapabilityRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLight_HasCapability_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kLight_HasCapability_Ordinal;
 }
 void Light::SetTransactionHeaderFor::HasCapabilityResponse(const ::fidl::DecodedMessage<Light::HasCapabilityResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLight_HasCapability_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kLight_HasCapability_Ordinal;
 }
 
 void Light::SetTransactionHeaderFor::GetSimpleValueRequest(const ::fidl::DecodedMessage<Light::GetSimpleValueRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLight_GetSimpleValue_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kLight_GetSimpleValue_Ordinal;
 }
 void Light::SetTransactionHeaderFor::GetSimpleValueResponse(const ::fidl::DecodedMessage<Light::GetSimpleValueResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLight_GetSimpleValue_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kLight_GetSimpleValue_Ordinal;
 }
 
 void Light::SetTransactionHeaderFor::SetSimpleValueRequest(const ::fidl::DecodedMessage<Light::SetSimpleValueRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLight_SetSimpleValue_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kLight_SetSimpleValue_Ordinal;
 }
 void Light::SetTransactionHeaderFor::SetSimpleValueResponse(const ::fidl::DecodedMessage<Light::SetSimpleValueResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLight_SetSimpleValue_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kLight_SetSimpleValue_Ordinal;
 }
 
 void Light::SetTransactionHeaderFor::GetRgbValueRequest(const ::fidl::DecodedMessage<Light::GetRgbValueRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLight_GetRgbValue_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kLight_GetRgbValue_Ordinal;
 }
 void Light::SetTransactionHeaderFor::GetRgbValueResponse(const ::fidl::DecodedMessage<Light::GetRgbValueResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLight_GetRgbValue_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kLight_GetRgbValue_Ordinal;
 }
 
 void Light::SetTransactionHeaderFor::SetRgbValueRequest(const ::fidl::DecodedMessage<Light::SetRgbValueRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLight_SetRgbValue_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kLight_SetRgbValue_Ordinal;
 }
 void Light::SetTransactionHeaderFor::SetRgbValueResponse(const ::fidl::DecodedMessage<Light::SetRgbValueResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLight_SetRgbValue_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kLight_SetRgbValue_Ordinal;
 }
 
 }  // namespace light

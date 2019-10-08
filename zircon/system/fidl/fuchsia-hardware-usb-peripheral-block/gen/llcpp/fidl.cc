@@ -388,29 +388,29 @@ void Device::Interface::SetWritebackCacheReportedCompleterBase::Reply(::fidl::De
 
 void Device::SetTransactionHeaderFor::EnableWritebackCacheRequest(const ::fidl::DecodedMessage<Device::EnableWritebackCacheRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_EnableWritebackCache_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_EnableWritebackCache_Ordinal;
 }
 void Device::SetTransactionHeaderFor::EnableWritebackCacheResponse(const ::fidl::DecodedMessage<Device::EnableWritebackCacheResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_EnableWritebackCache_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_EnableWritebackCache_Ordinal;
 }
 
 void Device::SetTransactionHeaderFor::DisableWritebackCacheRequest(const ::fidl::DecodedMessage<Device::DisableWritebackCacheRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_DisableWritebackCache_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_DisableWritebackCache_Ordinal;
 }
 void Device::SetTransactionHeaderFor::DisableWritebackCacheResponse(const ::fidl::DecodedMessage<Device::DisableWritebackCacheResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_DisableWritebackCache_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_DisableWritebackCache_Ordinal;
 }
 
 void Device::SetTransactionHeaderFor::SetWritebackCacheReportedRequest(const ::fidl::DecodedMessage<Device::SetWritebackCacheReportedRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_SetWritebackCacheReported_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_SetWritebackCacheReported_Ordinal;
 }
 void Device::SetTransactionHeaderFor::SetWritebackCacheReportedResponse(const ::fidl::DecodedMessage<Device::SetWritebackCacheReportedResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_SetWritebackCacheReported_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_SetWritebackCacheReported_Ordinal;
 }
 
 }  // namespace block

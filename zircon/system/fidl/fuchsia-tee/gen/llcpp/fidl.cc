@@ -568,38 +568,38 @@ void Device::Interface::CloseSessionCompleterBase::Reply() {
 
 void Device::SetTransactionHeaderFor::GetOsInfoRequest(const ::fidl::DecodedMessage<Device::GetOsInfoRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetOsInfo_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetOsInfo_Ordinal;
 }
 void Device::SetTransactionHeaderFor::GetOsInfoResponse(const ::fidl::DecodedMessage<Device::GetOsInfoResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetOsInfo_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetOsInfo_Ordinal;
 }
 
 void Device::SetTransactionHeaderFor::OpenSessionRequest(const ::fidl::DecodedMessage<Device::OpenSessionRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_OpenSession_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_OpenSession_Ordinal;
 }
 void Device::SetTransactionHeaderFor::OpenSessionResponse(const ::fidl::DecodedMessage<Device::OpenSessionResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_OpenSession_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_OpenSession_Ordinal;
 }
 
 void Device::SetTransactionHeaderFor::InvokeCommandRequest(const ::fidl::DecodedMessage<Device::InvokeCommandRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_InvokeCommand_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_InvokeCommand_Ordinal;
 }
 void Device::SetTransactionHeaderFor::InvokeCommandResponse(const ::fidl::DecodedMessage<Device::InvokeCommandResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_InvokeCommand_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_InvokeCommand_Ordinal;
 }
 
 void Device::SetTransactionHeaderFor::CloseSessionRequest(const ::fidl::DecodedMessage<Device::CloseSessionRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_CloseSession_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_CloseSession_Ordinal;
 }
 void Device::SetTransactionHeaderFor::CloseSessionResponse(const ::fidl::DecodedMessage<Device::CloseSessionResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_CloseSession_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_CloseSession_Ordinal;
 }
 
 }  // namespace tee

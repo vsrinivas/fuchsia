@@ -154,11 +154,11 @@ void WriteOnlyLog::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<Get
 
 void WriteOnlyLog::SetTransactionHeaderFor::GetRequest(const ::fidl::DecodedMessage<WriteOnlyLog::GetRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWriteOnlyLog_Get_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kWriteOnlyLog_Get_Ordinal;
 }
 void WriteOnlyLog::SetTransactionHeaderFor::GetResponse(const ::fidl::DecodedMessage<WriteOnlyLog::GetResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWriteOnlyLog_Get_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kWriteOnlyLog_Get_Ordinal;
 }
 
 namespace {
@@ -307,11 +307,11 @@ void ReadOnlyLog::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetR
 
 void ReadOnlyLog::SetTransactionHeaderFor::GetRequest(const ::fidl::DecodedMessage<ReadOnlyLog::GetRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kReadOnlyLog_Get_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kReadOnlyLog_Get_Ordinal;
 }
 void ReadOnlyLog::SetTransactionHeaderFor::GetResponse(const ::fidl::DecodedMessage<ReadOnlyLog::GetResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kReadOnlyLog_Get_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kReadOnlyLog_Get_Ordinal;
 }
 
 namespace {
@@ -466,11 +466,11 @@ void Items::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetRespons
 
 void Items::SetTransactionHeaderFor::GetRequest(const ::fidl::DecodedMessage<Items::GetRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kItems_Get_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kItems_Get_Ordinal;
 }
 void Items::SetTransactionHeaderFor::GetResponse(const ::fidl::DecodedMessage<Items::GetResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kItems_Get_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kItems_Get_Ordinal;
 }
 
 namespace {
@@ -624,11 +624,11 @@ void FactoryItems::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<Get
 
 void FactoryItems::SetTransactionHeaderFor::GetRequest(const ::fidl::DecodedMessage<FactoryItems::GetRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFactoryItems_Get_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFactoryItems_Get_Ordinal;
 }
 void FactoryItems::SetTransactionHeaderFor::GetResponse(const ::fidl::DecodedMessage<FactoryItems::GetResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFactoryItems_Get_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFactoryItems_Get_Ordinal;
 }
 
 namespace {
@@ -777,11 +777,11 @@ void RootResource::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<Get
 
 void RootResource::SetTransactionHeaderFor::GetRequest(const ::fidl::DecodedMessage<RootResource::GetRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kRootResource_Get_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kRootResource_Get_Ordinal;
 }
 void RootResource::SetTransactionHeaderFor::GetResponse(const ::fidl::DecodedMessage<RootResource::GetResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kRootResource_Get_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kRootResource_Get_Ordinal;
 }
 
 namespace {
@@ -930,11 +930,11 @@ void RootJob::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetRespo
 
 void RootJob::SetTransactionHeaderFor::GetRequest(const ::fidl::DecodedMessage<RootJob::GetRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kRootJob_Get_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kRootJob_Get_Ordinal;
 }
 void RootJob::SetTransactionHeaderFor::GetResponse(const ::fidl::DecodedMessage<RootJob::GetResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kRootJob_Get_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kRootJob_Get_Ordinal;
 }
 
 namespace {
@@ -1083,11 +1083,11 @@ void RootJobForInspect::Interface::GetCompleterBase::Reply(::fidl::DecodedMessag
 
 void RootJobForInspect::SetTransactionHeaderFor::GetRequest(const ::fidl::DecodedMessage<RootJobForInspect::GetRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kRootJobForInspect_Get_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kRootJobForInspect_Get_Ordinal;
 }
 void RootJobForInspect::SetTransactionHeaderFor::GetResponse(const ::fidl::DecodedMessage<RootJobForInspect::GetResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kRootJobForInspect_Get_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kRootJobForInspect_Get_Ordinal;
 }
 
 namespace {
@@ -1238,11 +1238,11 @@ void Arguments::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetRes
 
 void Arguments::SetTransactionHeaderFor::GetRequest(const ::fidl::DecodedMessage<Arguments::GetRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kArguments_Get_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kArguments_Get_Ordinal;
 }
 void Arguments::SetTransactionHeaderFor::GetResponse(const ::fidl::DecodedMessage<Arguments::GetResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kArguments_Get_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kArguments_Get_Ordinal;
 }
 
 }  // namespace boot

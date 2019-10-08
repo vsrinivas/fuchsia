@@ -1559,115 +1559,115 @@ void Device::Interface::SetReportCompleterBase::Reply(::fidl::DecodedMessage<Set
 
 void Device::SetTransactionHeaderFor::GetBootProtocolRequest(const ::fidl::DecodedMessage<Device::GetBootProtocolRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetBootProtocol_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetBootProtocol_Ordinal;
 }
 void Device::SetTransactionHeaderFor::GetBootProtocolResponse(const ::fidl::DecodedMessage<Device::GetBootProtocolResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetBootProtocol_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetBootProtocol_Ordinal;
 }
 
 void Device::SetTransactionHeaderFor::GetDeviceIdsRequest(const ::fidl::DecodedMessage<Device::GetDeviceIdsRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetDeviceIds_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetDeviceIds_Ordinal;
 }
 void Device::SetTransactionHeaderFor::GetDeviceIdsResponse(const ::fidl::DecodedMessage<Device::GetDeviceIdsResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetDeviceIds_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetDeviceIds_Ordinal;
 }
 
 void Device::SetTransactionHeaderFor::GetReportDescSizeRequest(const ::fidl::DecodedMessage<Device::GetReportDescSizeRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetReportDescSize_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetReportDescSize_Ordinal;
 }
 void Device::SetTransactionHeaderFor::GetReportDescSizeResponse(const ::fidl::DecodedMessage<Device::GetReportDescSizeResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetReportDescSize_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetReportDescSize_Ordinal;
 }
 
 void Device::SetTransactionHeaderFor::GetReportDescRequest(const ::fidl::DecodedMessage<Device::GetReportDescRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetReportDesc_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetReportDesc_Ordinal;
 }
 void Device::SetTransactionHeaderFor::GetReportDescResponse(const ::fidl::DecodedMessage<Device::GetReportDescResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetReportDesc_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetReportDesc_Ordinal;
 }
 
 void Device::SetTransactionHeaderFor::GetNumReportsRequest(const ::fidl::DecodedMessage<Device::GetNumReportsRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetNumReports_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetNumReports_Ordinal;
 }
 void Device::SetTransactionHeaderFor::GetNumReportsResponse(const ::fidl::DecodedMessage<Device::GetNumReportsResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetNumReports_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetNumReports_Ordinal;
 }
 
 void Device::SetTransactionHeaderFor::GetReportIdsRequest(const ::fidl::DecodedMessage<Device::GetReportIdsRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetReportIds_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetReportIds_Ordinal;
 }
 void Device::SetTransactionHeaderFor::GetReportIdsResponse(const ::fidl::DecodedMessage<Device::GetReportIdsResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetReportIds_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetReportIds_Ordinal;
 }
 
 void Device::SetTransactionHeaderFor::GetReportSizeRequest(const ::fidl::DecodedMessage<Device::GetReportSizeRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetReportSize_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetReportSize_Ordinal;
 }
 void Device::SetTransactionHeaderFor::GetReportSizeResponse(const ::fidl::DecodedMessage<Device::GetReportSizeResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetReportSize_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetReportSize_Ordinal;
 }
 
 void Device::SetTransactionHeaderFor::GetMaxInputReportSizeRequest(const ::fidl::DecodedMessage<Device::GetMaxInputReportSizeRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetMaxInputReportSize_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetMaxInputReportSize_Ordinal;
 }
 void Device::SetTransactionHeaderFor::GetMaxInputReportSizeResponse(const ::fidl::DecodedMessage<Device::GetMaxInputReportSizeResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetMaxInputReportSize_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetMaxInputReportSize_Ordinal;
 }
 
 void Device::SetTransactionHeaderFor::GetReportsRequest(const ::fidl::DecodedMessage<Device::GetReportsRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetReports_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetReports_Ordinal;
 }
 void Device::SetTransactionHeaderFor::GetReportsResponse(const ::fidl::DecodedMessage<Device::GetReportsResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetReports_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetReports_Ordinal;
 }
 
 void Device::SetTransactionHeaderFor::GetReportsEventRequest(const ::fidl::DecodedMessage<Device::GetReportsEventRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetReportsEvent_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetReportsEvent_Ordinal;
 }
 void Device::SetTransactionHeaderFor::GetReportsEventResponse(const ::fidl::DecodedMessage<Device::GetReportsEventResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetReportsEvent_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetReportsEvent_Ordinal;
 }
 
 void Device::SetTransactionHeaderFor::GetReportRequest(const ::fidl::DecodedMessage<Device::GetReportRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetReport_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetReport_Ordinal;
 }
 void Device::SetTransactionHeaderFor::GetReportResponse(const ::fidl::DecodedMessage<Device::GetReportResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetReport_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetReport_Ordinal;
 }
 
 void Device::SetTransactionHeaderFor::SetReportRequest(const ::fidl::DecodedMessage<Device::SetReportRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_SetReport_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_SetReport_Ordinal;
 }
 void Device::SetTransactionHeaderFor::SetReportResponse(const ::fidl::DecodedMessage<Device::SetReportResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_SetReport_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_SetReport_Ordinal;
 }
 
 void Device::SetTransactionHeaderFor::SetTraceIdRequest(const ::fidl::DecodedMessage<Device::SetTraceIdRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_SetTraceId_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDevice_SetTraceId_Ordinal;
 }
 
 }  // namespace input

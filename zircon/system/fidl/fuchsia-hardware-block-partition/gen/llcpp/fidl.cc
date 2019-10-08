@@ -1143,83 +1143,83 @@ void Partition::Interface::GetNameCompleterBase::Reply(::fidl::DecodedMessage<Ge
 
 void Partition::SetTransactionHeaderFor::GetInfoRequest(const ::fidl::DecodedMessage<Partition::GetInfoRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPartition_GetInfo_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kPartition_GetInfo_Ordinal;
 }
 void Partition::SetTransactionHeaderFor::GetInfoResponse(const ::fidl::DecodedMessage<Partition::GetInfoResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPartition_GetInfo_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kPartition_GetInfo_Ordinal;
 }
 
 void Partition::SetTransactionHeaderFor::GetStatsRequest(const ::fidl::DecodedMessage<Partition::GetStatsRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPartition_GetStats_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kPartition_GetStats_Ordinal;
 }
 void Partition::SetTransactionHeaderFor::GetStatsResponse(const ::fidl::DecodedMessage<Partition::GetStatsResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPartition_GetStats_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kPartition_GetStats_Ordinal;
 }
 
 void Partition::SetTransactionHeaderFor::GetFifoRequest(const ::fidl::DecodedMessage<Partition::GetFifoRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPartition_GetFifo_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kPartition_GetFifo_Ordinal;
 }
 void Partition::SetTransactionHeaderFor::GetFifoResponse(const ::fidl::DecodedMessage<Partition::GetFifoResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPartition_GetFifo_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kPartition_GetFifo_Ordinal;
 }
 
 void Partition::SetTransactionHeaderFor::AttachVmoRequest(const ::fidl::DecodedMessage<Partition::AttachVmoRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPartition_AttachVmo_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kPartition_AttachVmo_Ordinal;
 }
 void Partition::SetTransactionHeaderFor::AttachVmoResponse(const ::fidl::DecodedMessage<Partition::AttachVmoResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPartition_AttachVmo_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kPartition_AttachVmo_Ordinal;
 }
 
 void Partition::SetTransactionHeaderFor::CloseFifoRequest(const ::fidl::DecodedMessage<Partition::CloseFifoRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPartition_CloseFifo_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kPartition_CloseFifo_Ordinal;
 }
 void Partition::SetTransactionHeaderFor::CloseFifoResponse(const ::fidl::DecodedMessage<Partition::CloseFifoResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPartition_CloseFifo_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kPartition_CloseFifo_Ordinal;
 }
 
 void Partition::SetTransactionHeaderFor::RebindDeviceRequest(const ::fidl::DecodedMessage<Partition::RebindDeviceRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPartition_RebindDevice_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kPartition_RebindDevice_Ordinal;
 }
 void Partition::SetTransactionHeaderFor::RebindDeviceResponse(const ::fidl::DecodedMessage<Partition::RebindDeviceResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPartition_RebindDevice_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kPartition_RebindDevice_Ordinal;
 }
 
 void Partition::SetTransactionHeaderFor::GetTypeGuidRequest(const ::fidl::DecodedMessage<Partition::GetTypeGuidRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPartition_GetTypeGuid_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kPartition_GetTypeGuid_Ordinal;
 }
 void Partition::SetTransactionHeaderFor::GetTypeGuidResponse(const ::fidl::DecodedMessage<Partition::GetTypeGuidResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPartition_GetTypeGuid_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kPartition_GetTypeGuid_Ordinal;
 }
 
 void Partition::SetTransactionHeaderFor::GetInstanceGuidRequest(const ::fidl::DecodedMessage<Partition::GetInstanceGuidRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPartition_GetInstanceGuid_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kPartition_GetInstanceGuid_Ordinal;
 }
 void Partition::SetTransactionHeaderFor::GetInstanceGuidResponse(const ::fidl::DecodedMessage<Partition::GetInstanceGuidResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPartition_GetInstanceGuid_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kPartition_GetInstanceGuid_Ordinal;
 }
 
 void Partition::SetTransactionHeaderFor::GetNameRequest(const ::fidl::DecodedMessage<Partition::GetNameRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPartition_GetName_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kPartition_GetName_Ordinal;
 }
 void Partition::SetTransactionHeaderFor::GetNameResponse(const ::fidl::DecodedMessage<Partition::GetNameResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPartition_GetName_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kPartition_GetName_Ordinal;
 }
 
 }  // namespace partition

@@ -126,7 +126,7 @@ bool DirectoryWatcher::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
 
 void DirectoryWatcher::SetTransactionHeaderFor::OnEventRequest(const ::fidl::DecodedMessage<DirectoryWatcher::OnEventRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryWatcher_OnEvent_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryWatcher_OnEvent_Ordinal;
 }
 
 ::llcpp::fuchsia::io::NodeInfo::NodeInfo() {
@@ -1243,66 +1243,66 @@ void Node::Interface::IoctlCompleterBase::Reply(::fidl::DecodedMessage<IoctlResp
 
 void Node::SetTransactionHeaderFor::CloneRequest(const ::fidl::DecodedMessage<Node::CloneRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNode_Clone_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kNode_Clone_Ordinal;
 }
 
 void Node::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<Node::CloseRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNode_Close_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kNode_Close_Ordinal;
 }
 void Node::SetTransactionHeaderFor::CloseResponse(const ::fidl::DecodedMessage<Node::CloseResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNode_Close_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kNode_Close_Ordinal;
 }
 
 void Node::SetTransactionHeaderFor::DescribeRequest(const ::fidl::DecodedMessage<Node::DescribeRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNode_Describe_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kNode_Describe_Ordinal;
 }
 void Node::SetTransactionHeaderFor::DescribeResponse(const ::fidl::DecodedMessage<Node::DescribeResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNode_Describe_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kNode_Describe_Ordinal;
 }
 
 void Node::SetTransactionHeaderFor::OnOpenResponse(const ::fidl::DecodedMessage<Node::OnOpenResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNode_OnOpen_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kNode_OnOpen_Ordinal;
 }
 
 void Node::SetTransactionHeaderFor::SyncRequest(const ::fidl::DecodedMessage<Node::SyncRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNode_Sync_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kNode_Sync_Ordinal;
 }
 void Node::SetTransactionHeaderFor::SyncResponse(const ::fidl::DecodedMessage<Node::SyncResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNode_Sync_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kNode_Sync_Ordinal;
 }
 
 void Node::SetTransactionHeaderFor::GetAttrRequest(const ::fidl::DecodedMessage<Node::GetAttrRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNode_GetAttr_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kNode_GetAttr_Ordinal;
 }
 void Node::SetTransactionHeaderFor::GetAttrResponse(const ::fidl::DecodedMessage<Node::GetAttrResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNode_GetAttr_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kNode_GetAttr_Ordinal;
 }
 
 void Node::SetTransactionHeaderFor::SetAttrRequest(const ::fidl::DecodedMessage<Node::SetAttrRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNode_SetAttr_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kNode_SetAttr_Ordinal;
 }
 void Node::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMessage<Node::SetAttrResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNode_SetAttr_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kNode_SetAttr_Ordinal;
 }
 
 void Node::SetTransactionHeaderFor::IoctlRequest(const ::fidl::DecodedMessage<Node::IoctlRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNode_Ioctl_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kNode_Ioctl_Ordinal;
 }
 void Node::SetTransactionHeaderFor::IoctlResponse(const ::fidl::DecodedMessage<Node::IoctlResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNode_Ioctl_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kNode_Ioctl_Ordinal;
 }
 
 namespace {
@@ -3366,147 +3366,147 @@ void File::Interface::GetBufferCompleterBase::Reply(::fidl::DecodedMessage<GetBu
 
 void File::SetTransactionHeaderFor::CloneRequest(const ::fidl::DecodedMessage<File::CloneRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_Clone_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_Clone_Ordinal;
 }
 
 void File::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<File::CloseRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_Close_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_Close_Ordinal;
 }
 void File::SetTransactionHeaderFor::CloseResponse(const ::fidl::DecodedMessage<File::CloseResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_Close_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_Close_Ordinal;
 }
 
 void File::SetTransactionHeaderFor::DescribeRequest(const ::fidl::DecodedMessage<File::DescribeRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_Describe_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_Describe_Ordinal;
 }
 void File::SetTransactionHeaderFor::DescribeResponse(const ::fidl::DecodedMessage<File::DescribeResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_Describe_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_Describe_Ordinal;
 }
 
 void File::SetTransactionHeaderFor::OnOpenResponse(const ::fidl::DecodedMessage<File::OnOpenResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_OnOpen_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_OnOpen_Ordinal;
 }
 
 void File::SetTransactionHeaderFor::SyncRequest(const ::fidl::DecodedMessage<File::SyncRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_Sync_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_Sync_Ordinal;
 }
 void File::SetTransactionHeaderFor::SyncResponse(const ::fidl::DecodedMessage<File::SyncResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_Sync_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_Sync_Ordinal;
 }
 
 void File::SetTransactionHeaderFor::GetAttrRequest(const ::fidl::DecodedMessage<File::GetAttrRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_GetAttr_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_GetAttr_Ordinal;
 }
 void File::SetTransactionHeaderFor::GetAttrResponse(const ::fidl::DecodedMessage<File::GetAttrResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_GetAttr_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_GetAttr_Ordinal;
 }
 
 void File::SetTransactionHeaderFor::SetAttrRequest(const ::fidl::DecodedMessage<File::SetAttrRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_SetAttr_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_SetAttr_Ordinal;
 }
 void File::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMessage<File::SetAttrResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_SetAttr_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_SetAttr_Ordinal;
 }
 
 void File::SetTransactionHeaderFor::IoctlRequest(const ::fidl::DecodedMessage<File::IoctlRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_Ioctl_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_Ioctl_Ordinal;
 }
 void File::SetTransactionHeaderFor::IoctlResponse(const ::fidl::DecodedMessage<File::IoctlResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_Ioctl_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_Ioctl_Ordinal;
 }
 
 void File::SetTransactionHeaderFor::ReadRequest(const ::fidl::DecodedMessage<File::ReadRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_Read_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_Read_Ordinal;
 }
 void File::SetTransactionHeaderFor::ReadResponse(const ::fidl::DecodedMessage<File::ReadResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_Read_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_Read_Ordinal;
 }
 
 void File::SetTransactionHeaderFor::ReadAtRequest(const ::fidl::DecodedMessage<File::ReadAtRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_ReadAt_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_ReadAt_Ordinal;
 }
 void File::SetTransactionHeaderFor::ReadAtResponse(const ::fidl::DecodedMessage<File::ReadAtResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_ReadAt_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_ReadAt_Ordinal;
 }
 
 void File::SetTransactionHeaderFor::WriteRequest(const ::fidl::DecodedMessage<File::WriteRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_Write_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_Write_Ordinal;
 }
 void File::SetTransactionHeaderFor::WriteResponse(const ::fidl::DecodedMessage<File::WriteResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_Write_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_Write_Ordinal;
 }
 
 void File::SetTransactionHeaderFor::WriteAtRequest(const ::fidl::DecodedMessage<File::WriteAtRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_WriteAt_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_WriteAt_Ordinal;
 }
 void File::SetTransactionHeaderFor::WriteAtResponse(const ::fidl::DecodedMessage<File::WriteAtResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_WriteAt_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_WriteAt_Ordinal;
 }
 
 void File::SetTransactionHeaderFor::SeekRequest(const ::fidl::DecodedMessage<File::SeekRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_Seek_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_Seek_Ordinal;
 }
 void File::SetTransactionHeaderFor::SeekResponse(const ::fidl::DecodedMessage<File::SeekResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_Seek_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_Seek_Ordinal;
 }
 
 void File::SetTransactionHeaderFor::TruncateRequest(const ::fidl::DecodedMessage<File::TruncateRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_Truncate_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_Truncate_Ordinal;
 }
 void File::SetTransactionHeaderFor::TruncateResponse(const ::fidl::DecodedMessage<File::TruncateResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_Truncate_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_Truncate_Ordinal;
 }
 
 void File::SetTransactionHeaderFor::GetFlagsRequest(const ::fidl::DecodedMessage<File::GetFlagsRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_GetFlags_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_GetFlags_Ordinal;
 }
 void File::SetTransactionHeaderFor::GetFlagsResponse(const ::fidl::DecodedMessage<File::GetFlagsResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_GetFlags_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_GetFlags_Ordinal;
 }
 
 void File::SetTransactionHeaderFor::SetFlagsRequest(const ::fidl::DecodedMessage<File::SetFlagsRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_SetFlags_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_SetFlags_Ordinal;
 }
 void File::SetTransactionHeaderFor::SetFlagsResponse(const ::fidl::DecodedMessage<File::SetFlagsResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_SetFlags_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_SetFlags_Ordinal;
 }
 
 void File::SetTransactionHeaderFor::GetBufferRequest(const ::fidl::DecodedMessage<File::GetBufferRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_GetBuffer_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_GetBuffer_Ordinal;
 }
 void File::SetTransactionHeaderFor::GetBufferResponse(const ::fidl::DecodedMessage<File::GetBufferResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_GetBuffer_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kFile_GetBuffer_Ordinal;
 }
 
 namespace {
@@ -5410,134 +5410,134 @@ void Directory::Interface::WatchCompleterBase::Reply(::fidl::DecodedMessage<Watc
 
 void Directory::SetTransactionHeaderFor::CloneRequest(const ::fidl::DecodedMessage<Directory::CloneRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Clone_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Clone_Ordinal;
 }
 
 void Directory::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<Directory::CloseRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Close_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Close_Ordinal;
 }
 void Directory::SetTransactionHeaderFor::CloseResponse(const ::fidl::DecodedMessage<Directory::CloseResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Close_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Close_Ordinal;
 }
 
 void Directory::SetTransactionHeaderFor::DescribeRequest(const ::fidl::DecodedMessage<Directory::DescribeRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Describe_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Describe_Ordinal;
 }
 void Directory::SetTransactionHeaderFor::DescribeResponse(const ::fidl::DecodedMessage<Directory::DescribeResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Describe_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Describe_Ordinal;
 }
 
 void Directory::SetTransactionHeaderFor::OnOpenResponse(const ::fidl::DecodedMessage<Directory::OnOpenResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_OnOpen_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_OnOpen_Ordinal;
 }
 
 void Directory::SetTransactionHeaderFor::SyncRequest(const ::fidl::DecodedMessage<Directory::SyncRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Sync_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Sync_Ordinal;
 }
 void Directory::SetTransactionHeaderFor::SyncResponse(const ::fidl::DecodedMessage<Directory::SyncResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Sync_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Sync_Ordinal;
 }
 
 void Directory::SetTransactionHeaderFor::GetAttrRequest(const ::fidl::DecodedMessage<Directory::GetAttrRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_GetAttr_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_GetAttr_Ordinal;
 }
 void Directory::SetTransactionHeaderFor::GetAttrResponse(const ::fidl::DecodedMessage<Directory::GetAttrResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_GetAttr_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_GetAttr_Ordinal;
 }
 
 void Directory::SetTransactionHeaderFor::SetAttrRequest(const ::fidl::DecodedMessage<Directory::SetAttrRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_SetAttr_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_SetAttr_Ordinal;
 }
 void Directory::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMessage<Directory::SetAttrResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_SetAttr_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_SetAttr_Ordinal;
 }
 
 void Directory::SetTransactionHeaderFor::IoctlRequest(const ::fidl::DecodedMessage<Directory::IoctlRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Ioctl_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Ioctl_Ordinal;
 }
 void Directory::SetTransactionHeaderFor::IoctlResponse(const ::fidl::DecodedMessage<Directory::IoctlResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Ioctl_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Ioctl_Ordinal;
 }
 
 void Directory::SetTransactionHeaderFor::OpenRequest(const ::fidl::DecodedMessage<Directory::OpenRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Open_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Open_Ordinal;
 }
 
 void Directory::SetTransactionHeaderFor::UnlinkRequest(const ::fidl::DecodedMessage<Directory::UnlinkRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Unlink_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Unlink_Ordinal;
 }
 void Directory::SetTransactionHeaderFor::UnlinkResponse(const ::fidl::DecodedMessage<Directory::UnlinkResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Unlink_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Unlink_Ordinal;
 }
 
 void Directory::SetTransactionHeaderFor::ReadDirentsRequest(const ::fidl::DecodedMessage<Directory::ReadDirentsRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_ReadDirents_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_ReadDirents_Ordinal;
 }
 void Directory::SetTransactionHeaderFor::ReadDirentsResponse(const ::fidl::DecodedMessage<Directory::ReadDirentsResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_ReadDirents_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_ReadDirents_Ordinal;
 }
 
 void Directory::SetTransactionHeaderFor::RewindRequest(const ::fidl::DecodedMessage<Directory::RewindRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Rewind_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Rewind_Ordinal;
 }
 void Directory::SetTransactionHeaderFor::RewindResponse(const ::fidl::DecodedMessage<Directory::RewindResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Rewind_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Rewind_Ordinal;
 }
 
 void Directory::SetTransactionHeaderFor::GetTokenRequest(const ::fidl::DecodedMessage<Directory::GetTokenRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_GetToken_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_GetToken_Ordinal;
 }
 void Directory::SetTransactionHeaderFor::GetTokenResponse(const ::fidl::DecodedMessage<Directory::GetTokenResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_GetToken_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_GetToken_Ordinal;
 }
 
 void Directory::SetTransactionHeaderFor::RenameRequest(const ::fidl::DecodedMessage<Directory::RenameRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Rename_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Rename_Ordinal;
 }
 void Directory::SetTransactionHeaderFor::RenameResponse(const ::fidl::DecodedMessage<Directory::RenameResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Rename_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Rename_Ordinal;
 }
 
 void Directory::SetTransactionHeaderFor::LinkRequest(const ::fidl::DecodedMessage<Directory::LinkRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Link_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Link_Ordinal;
 }
 void Directory::SetTransactionHeaderFor::LinkResponse(const ::fidl::DecodedMessage<Directory::LinkResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Link_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Link_Ordinal;
 }
 
 void Directory::SetTransactionHeaderFor::WatchRequest(const ::fidl::DecodedMessage<Directory::WatchRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Watch_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Watch_Ordinal;
 }
 void Directory::SetTransactionHeaderFor::WatchResponse(const ::fidl::DecodedMessage<Directory::WatchResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Watch_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectory_Watch_Ordinal;
 }
 
 namespace {
@@ -8165,188 +8165,188 @@ void DirectoryAdmin::Interface::GetDevicePathCompleterBase::Reply(::fidl::Decode
 
 void DirectoryAdmin::SetTransactionHeaderFor::CloneRequest(const ::fidl::DecodedMessage<DirectoryAdmin::CloneRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Clone_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Clone_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<DirectoryAdmin::CloseRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Close_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Close_Ordinal;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::CloseResponse(const ::fidl::DecodedMessage<DirectoryAdmin::CloseResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Close_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Close_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::DescribeRequest(const ::fidl::DecodedMessage<DirectoryAdmin::DescribeRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Describe_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Describe_Ordinal;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::DescribeResponse(const ::fidl::DecodedMessage<DirectoryAdmin::DescribeResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Describe_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Describe_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::OnOpenResponse(const ::fidl::DecodedMessage<DirectoryAdmin::OnOpenResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_OnOpen_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_OnOpen_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::SyncRequest(const ::fidl::DecodedMessage<DirectoryAdmin::SyncRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Sync_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Sync_Ordinal;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::SyncResponse(const ::fidl::DecodedMessage<DirectoryAdmin::SyncResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Sync_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Sync_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::GetAttrRequest(const ::fidl::DecodedMessage<DirectoryAdmin::GetAttrRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_GetAttr_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_GetAttr_Ordinal;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::GetAttrResponse(const ::fidl::DecodedMessage<DirectoryAdmin::GetAttrResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_GetAttr_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_GetAttr_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::SetAttrRequest(const ::fidl::DecodedMessage<DirectoryAdmin::SetAttrRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_SetAttr_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_SetAttr_Ordinal;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMessage<DirectoryAdmin::SetAttrResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_SetAttr_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_SetAttr_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::IoctlRequest(const ::fidl::DecodedMessage<DirectoryAdmin::IoctlRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Ioctl_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Ioctl_Ordinal;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::IoctlResponse(const ::fidl::DecodedMessage<DirectoryAdmin::IoctlResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Ioctl_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Ioctl_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::OpenRequest(const ::fidl::DecodedMessage<DirectoryAdmin::OpenRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Open_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Open_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::UnlinkRequest(const ::fidl::DecodedMessage<DirectoryAdmin::UnlinkRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Unlink_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Unlink_Ordinal;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::UnlinkResponse(const ::fidl::DecodedMessage<DirectoryAdmin::UnlinkResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Unlink_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Unlink_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::ReadDirentsRequest(const ::fidl::DecodedMessage<DirectoryAdmin::ReadDirentsRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_ReadDirents_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_ReadDirents_Ordinal;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::ReadDirentsResponse(const ::fidl::DecodedMessage<DirectoryAdmin::ReadDirentsResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_ReadDirents_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_ReadDirents_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::RewindRequest(const ::fidl::DecodedMessage<DirectoryAdmin::RewindRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Rewind_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Rewind_Ordinal;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::RewindResponse(const ::fidl::DecodedMessage<DirectoryAdmin::RewindResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Rewind_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Rewind_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::GetTokenRequest(const ::fidl::DecodedMessage<DirectoryAdmin::GetTokenRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_GetToken_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_GetToken_Ordinal;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::GetTokenResponse(const ::fidl::DecodedMessage<DirectoryAdmin::GetTokenResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_GetToken_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_GetToken_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::RenameRequest(const ::fidl::DecodedMessage<DirectoryAdmin::RenameRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Rename_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Rename_Ordinal;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::RenameResponse(const ::fidl::DecodedMessage<DirectoryAdmin::RenameResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Rename_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Rename_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::LinkRequest(const ::fidl::DecodedMessage<DirectoryAdmin::LinkRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Link_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Link_Ordinal;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::LinkResponse(const ::fidl::DecodedMessage<DirectoryAdmin::LinkResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Link_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Link_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::WatchRequest(const ::fidl::DecodedMessage<DirectoryAdmin::WatchRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Watch_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Watch_Ordinal;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::WatchResponse(const ::fidl::DecodedMessage<DirectoryAdmin::WatchResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Watch_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Watch_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::MountRequest(const ::fidl::DecodedMessage<DirectoryAdmin::MountRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Mount_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Mount_Ordinal;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::MountResponse(const ::fidl::DecodedMessage<DirectoryAdmin::MountResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Mount_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Mount_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::MountAndCreateRequest(const ::fidl::DecodedMessage<DirectoryAdmin::MountAndCreateRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_MountAndCreate_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_MountAndCreate_Ordinal;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::MountAndCreateResponse(const ::fidl::DecodedMessage<DirectoryAdmin::MountAndCreateResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_MountAndCreate_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_MountAndCreate_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::UnmountRequest(const ::fidl::DecodedMessage<DirectoryAdmin::UnmountRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Unmount_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Unmount_Ordinal;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::UnmountResponse(const ::fidl::DecodedMessage<DirectoryAdmin::UnmountResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Unmount_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Unmount_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::UnmountNodeRequest(const ::fidl::DecodedMessage<DirectoryAdmin::UnmountNodeRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_UnmountNode_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_UnmountNode_Ordinal;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::UnmountNodeResponse(const ::fidl::DecodedMessage<DirectoryAdmin::UnmountNodeResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_UnmountNode_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_UnmountNode_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::QueryFilesystemRequest(const ::fidl::DecodedMessage<DirectoryAdmin::QueryFilesystemRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_QueryFilesystem_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_QueryFilesystem_Ordinal;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::QueryFilesystemResponse(const ::fidl::DecodedMessage<DirectoryAdmin::QueryFilesystemResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_QueryFilesystem_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_QueryFilesystem_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::GetDevicePathRequest(const ::fidl::DecodedMessage<DirectoryAdmin::GetDevicePathRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_GetDevicePath_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_GetDevicePath_Ordinal;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::GetDevicePathResponse(const ::fidl::DecodedMessage<DirectoryAdmin::GetDevicePathResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_GetDevicePath_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_GetDevicePath_Ordinal;
 }
 
 }  // namespace io

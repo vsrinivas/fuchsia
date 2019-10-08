@@ -372,9 +372,8 @@ TEST_F(ClientTest, ExchangeEapolFrames) {
   // Verify EAPOL.confirm message was sent to SME
   auto msg_data = device.NextTxMlmeMsg();
   ASSERT_TRUE(msg_data.has_value());
-  // TODO(fxb/7848): Switch back to using kMLME_EapolConf_Ordinal.
   auto eapol_confirm = MlmeMsg<wlan_mlme::EapolConfirm>::Decode(
-      msg_data->data(), fuchsia::wlan::mlme::internal::kMLME_EapolConf_GenOrdinal);
+      msg_data->data(), fuchsia::wlan::mlme::internal::kMLME_EapolConf_Ordinal);
   ASSERT_TRUE(eapol_confirm.has_value());
   EXPECT_EQ(eapol_confirm.value().body()->result_code, wlan_mlme::EapolResultCodes::SUCCESS);
 

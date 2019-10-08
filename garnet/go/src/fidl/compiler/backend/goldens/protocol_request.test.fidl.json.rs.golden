@@ -354,20 +354,20 @@ impl ParentSynchronousProxy {
 		self.client.into_channel()
 	}
 	pub fn get_child(&mut self,___deadline: zx::Time,) -> Result<(fidl::endpoints::ClientEnd<ChildMarker>), fidl::Error> {self.client.send_query(&mut (),
-				0x57e26ed694158086,
+				0x3692bc6900000000,
 				___deadline,
 			)}
 	pub fn get_child_request(&mut self,___deadline: zx::Time,) -> Result<(fidl::endpoints::ServerEnd<ChildMarker>), fidl::Error> {self.client.send_query(&mut (),
-				0x5ea0990a698a80,
+				0x3faacc7e00000000,
 				___deadline,
 			)}
 	pub fn take_child(&mut self,
 		mut c: fidl::endpoints::ClientEnd<ChildMarker>,) -> Result<(), fidl::Error> {self.client.send(&mut (c),
-				0x6a9827d18871f87d,
+				0x4c0642f900000000,
 			)}
 	pub fn take_child_request(&mut self,
 		mut r: fidl::endpoints::ServerEnd<ChildMarker>,) -> Result<(), fidl::Error> {self.client.send(&mut (r),
-				0x6c4a70e2a2126637,
+				0x5ec3867a00000000,
 			)}
 }
 
@@ -448,22 +448,22 @@ impl ParentProxyInterface for ParentProxy {
 	type GetChildResponseFut = fidl::client::QueryResponseFut<(fidl::endpoints::ClientEnd<ChildMarker>)>;
 	fn get_child(&self,
 	)-> Self::GetChildResponseFut {
-		self.client.send_query(&mut (), 0x57e26ed694158086)
+		self.client.send_query(&mut (), 0x3692bc6900000000)
 	}
 	type GetChildRequestResponseFut = fidl::client::QueryResponseFut<(fidl::endpoints::ServerEnd<ChildMarker>)>;
 	fn get_child_request(&self,
 	)-> Self::GetChildRequestResponseFut {
-		self.client.send_query(&mut (), 0x5ea0990a698a80)
+		self.client.send_query(&mut (), 0x3faacc7e00000000)
 	}
 	fn take_child(&self,
 		mut c: fidl::endpoints::ClientEnd<ChildMarker>,
 	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (c), 0x6a9827d18871f87d)
+		self.client.send(&mut (c), 0x4c0642f900000000)
 	}
 	fn take_child_request(&self,
 		mut r: fidl::endpoints::ServerEnd<ChildMarker>,
 	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (r), 0x6c4a70e2a2126637)
+		self.client.send(&mut (r), 0x5ec3867a00000000)
 	}}
 
 #[cfg(target_os = "fuchsia")]
@@ -767,7 +767,7 @@ impl ParentEncoder {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,flags: [0; 3],
 			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x57e26ed694158086,
+			ordinal: 0x3692bc6900000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -781,7 +781,7 @@ impl ParentEncoder {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,flags: [0; 3],
 			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x57e26ed694158086,
+			ordinal: 0x3692bc6900000000,
 		};
 		let mut body = (in_c,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -795,7 +795,7 @@ impl ParentEncoder {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,flags: [0; 3],
 			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x5ea0990a698a80,
+			ordinal: 0x3faacc7e00000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -809,7 +809,7 @@ impl ParentEncoder {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,flags: [0; 3],
 			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x5ea0990a698a80,
+			ordinal: 0x3faacc7e00000000,
 		};
 		let mut body = (in_r,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -821,7 +821,7 @@ impl ParentEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,mut in_c: fidl::endpoints::ClientEnd<ChildMarker>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
 			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x6a9827d18871f87d,
+			ordinal: 0x4c0642f900000000,
 		};
 		let mut body = (in_c,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -833,7 +833,7 @@ impl ParentEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,mut in_r: fidl::endpoints::ServerEnd<ChildMarker>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
 			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x6c4a70e2a2126637,
+			ordinal: 0x5ec3867a00000000,
 		};
 		let mut body = (in_r,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };

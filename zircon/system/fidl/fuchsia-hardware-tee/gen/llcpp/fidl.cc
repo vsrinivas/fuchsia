@@ -124,7 +124,7 @@ bool DeviceConnector::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
 
 void DeviceConnector::SetTransactionHeaderFor::ConnectTeeRequest(const ::fidl::DecodedMessage<DeviceConnector::ConnectTeeRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDeviceConnector_ConnectTee_GenOrdinal;
+  _msg.message()->_hdr.ordinal = kDeviceConnector_ConnectTee_Ordinal;
 }
 
 }  // namespace tee
