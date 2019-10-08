@@ -1,8 +1,8 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/modular/bin/sessionmgr/puppet_master/command_runners/set_link_value_command_runner.h"
+#include "src/modular/bin/sessionmgr/puppet_master/command_runners/no_op_command_runner.h"
 
 #include <lib/fsl/vmo/strings.h>
 
@@ -12,7 +12,7 @@
 namespace modular {
 namespace {
 
-class SetLinkValueCommandRunnerTest : public modular_testing::TestWithSessionStorage {
+class NoOpCommandRunnerTest : public modular_testing::TestWithSessionStorage {
  public:
   void SetUp() override {
     modular_testing::TestWithSessionStorage::SetUp();
@@ -23,9 +23,7 @@ class SetLinkValueCommandRunnerTest : public modular_testing::TestWithSessionSto
   }
 
  protected:
-  std::unique_ptr<SetLinkValueCommandRunner> MakeRunner() {
-    return std::make_unique<SetLinkValueCommandRunner>();
-  }
+  std::unique_ptr<NoOpCommandRunner> MakeRunner() { return std::make_unique<NoOpCommandRunner>(); }
 
   fuchsia::modular::StoryCommand MakeSetLinkValueCommand(const std::string& path_name,
                                                          const std::string& value) {
@@ -41,40 +39,20 @@ class SetLinkValueCommandRunnerTest : public modular_testing::TestWithSessionSto
 
   std::unique_ptr<SessionStorage> session_storage_;
   std::unique_ptr<StoryStorage> story_storage_;
-  std::unique_ptr<SetLinkValueCommandRunner> runner_;
+  std::unique_ptr<NoOpCommandRunner> runner_;
   std::string story_id_;
 };
 
-// On an empty story, it sets a link with a value, then updates it. Each time
-// verifying that the link value is the expected one.
-TEST_F(SetLinkValueCommandRunnerTest, Execute) {
+TEST_F(NoOpCommandRunnerTest, Execute) {
+  // SetLinkValue is deprecated and results in NoOpCommandRunner being used.
+  auto command = MakeSetLinkValueCommand("some-path", "some-value");
   bool done{};
-
-  // Let's set a value.
-  auto command = MakeSetLinkValueCommand("link", "10");
   runner_->Execute(story_id_, story_storage_.get(), std::move(command),
                    [&](fuchsia::modular::ExecuteResult result) {
                      EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
                      done = true;
                    });
   RunLoopUntil([&] { return done; });
-  done = false;
-
-  // Let's get the value.
-  EXPECT_EQ("10", GetLinkValue(story_storage_.get(), "link"));
-
-  // Mutate again.
-  auto command2 = MakeSetLinkValueCommand("link", "20");
-  runner_->Execute(story_id_, story_storage_.get(), std::move(command2),
-                   [&](fuchsia::modular::ExecuteResult result) {
-                     EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
-                     done = true;
-                   });
-  RunLoopUntil([&] { return done; });
-  done = false;
-
-  // Let's get the value again, we should see the new one.
-  EXPECT_EQ("20", GetLinkValue(story_storage_.get(), "link"));
 }
 
 }  // namespace

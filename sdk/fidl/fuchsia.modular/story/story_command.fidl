@@ -25,6 +25,7 @@ union StoryCommand {
     RemoveMod remove_mod;
 
     /// Sets the value of a Link.
+    /// DEPRECATED. This command is a no-op.
     SetLinkValue set_link_value;
 
     /// Brings focus to a mod.

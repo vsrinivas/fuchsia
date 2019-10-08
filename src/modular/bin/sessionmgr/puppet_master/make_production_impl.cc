@@ -8,10 +8,10 @@
 
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/add_mod_command_runner.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/focus_mod_command_runner.h"
+#include "src/modular/bin/sessionmgr/puppet_master/command_runners/no_op_command_runner.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/remove_mod_command_runner.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/set_focus_state_command_runner.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/set_kind_of_proto_story_option_command_runner.h"
-#include "src/modular/bin/sessionmgr/puppet_master/command_runners/set_link_value_command_runner.h"
 #include "src/modular/bin/sessionmgr/puppet_master/dispatch_story_command_executor.h"
 
 namespace modular {
@@ -34,12 +34,12 @@ std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
                           new SetFocusStateCommandRunner(std::move(focus_provider)));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kAddMod,
                           new AddModCommandRunner(module_resolver, entity_resolver));
+  command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kSetLinkValue,
+                          new NoOpCommandRunner());
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kFocusMod,
                           new FocusModCommandRunner(std::move(module_focuser)));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kRemoveMod,
                           new RemoveModCommandRunner());
-  command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kSetLinkValue,
-                          new SetLinkValueCommandRunner());
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kSetKindOfProtoStoryOption,
                           new SetKindOfProtoStoryOptionCommandRunner(session_storage));
 
