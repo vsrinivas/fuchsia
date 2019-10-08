@@ -187,10 +187,20 @@ test_package("guest_interaction_tests") {
     {
       name = "server_daemon_test"
       environments = [ nuc_env ]
+
+      # Bug: 36427
+      # There appears to be some flakiness in the gRPC communications with the guest.  Move this
+      # test to the flaky builders until that issue is resolved.
+      tags = [ "flaky" ]
     },
     {
       name = "guest_interaction_service_test"
       environments = [ nuc_env ]
+
+      # Bug: 36427
+      # There appears to be some flakiness in the gRPC communications with the guest.  Move this
+      # test to the flaky builders until that issue is resolved.
+      tags = [ "flaky" ]
     },
   ]
 }
