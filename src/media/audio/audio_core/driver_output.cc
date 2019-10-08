@@ -22,8 +22,8 @@ static constexpr uint32_t kDefaultFramesPerSec = 48000;
 static constexpr uint32_t kDefaultChannelCount = 2;
 static constexpr fuchsia::media::AudioSampleFormat kDefaultAudioFmt =
     fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
-static constexpr zx_duration_t kDefaultMaxRetentionNsec = ZX_MSEC(60);
-static constexpr zx_duration_t kDefaultRetentionGapNsec = ZX_MSEC(10);
+static constexpr zx::duration kDefaultMaxRetentionNsec = zx::msec(60);
+static constexpr zx::duration kDefaultRetentionGapNsec = zx::msec(10);
 static constexpr zx_duration_t kUnderflowCooldown = ZX_SEC(1);
 
 static std::atomic<zx_txid_t> TXID_GEN(1);
@@ -310,8 +310,8 @@ void DriverOutput::OnDriverInfoFetched() {
   uint32_t pref_fps = kDefaultFramesPerSec;
   uint32_t pref_chan = kDefaultChannelCount;
   fuchsia::media::AudioSampleFormat pref_fmt = kDefaultAudioFmt;
-  zx_duration_t min_rb_duration =
-      kDefaultHighWaterNsec.get() + kDefaultMaxRetentionNsec + kDefaultRetentionGapNsec;
+  zx::duration min_rb_duration =
+      kDefaultHighWaterNsec + kDefaultMaxRetentionNsec + kDefaultRetentionGapNsec;
 
   res = SelectBestFormat(driver()->format_ranges(), &pref_fps, &pref_chan, &pref_fmt);
 
@@ -325,7 +325,7 @@ void DriverOutput::OnDriverInfoFetched() {
   // TODO(mpuryear): Save to the hub the configured format for this output.
 
   TimelineRate ns_to_frames(pref_fps, ZX_SEC(1));
-  int64_t retention_frames = ns_to_frames.Scale(kDefaultMaxRetentionNsec);
+  int64_t retention_frames = ns_to_frames.Scale(kDefaultMaxRetentionNsec.to_nsecs());
   FXL_DCHECK(retention_frames != TimelineRate::kOverflow);
   FXL_DCHECK(retention_frames <= std::numeric_limits<uint32_t>::max());
   driver()->SetEndFenceToStartFenceFrames(static_cast<uint32_t>(retention_frames));

@@ -10,8 +10,8 @@
 
 namespace media::audio {
 
-constexpr zx_duration_t kMinFenceDistance = ZX_MSEC(200);
-constexpr zx_duration_t kMaxFenceDistance = kMinFenceDistance + ZX_MSEC(20);
+constexpr zx::duration kMinFenceDistance = zx::msec(200);
+constexpr zx::duration kMaxFenceDistance = kMinFenceDistance + zx::msec(20);
 
 // static
 fbl::RefPtr<AudioInput> AudioInput::Create(zx::channel channel, ThreadingModel* threading_model,
@@ -84,7 +84,7 @@ void AudioInput::OnDriverInfoFetched() {
   // Send config request; recompute distance between start|end sampling fences.
   driver()->Configure(pref_fps, pref_chan, pref_fmt, kMaxFenceDistance);
 
-  int64_t dist = TimelineRate(pref_fps, ZX_SEC(1)).Scale(kMinFenceDistance);
+  int64_t dist = TimelineRate(pref_fps, ZX_SEC(1)).Scale(kMinFenceDistance.to_nsecs());
   FXL_DCHECK(dist < std::numeric_limits<uint32_t>::max());
   driver()->SetEndFenceToStartFenceFrames(static_cast<uint32_t>(dist));
 

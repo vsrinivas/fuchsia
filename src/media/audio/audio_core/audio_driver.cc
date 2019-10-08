@@ -218,7 +218,7 @@ zx_status_t AudioDriver::GetDriverInfo() {
 
 zx_status_t AudioDriver::Configure(uint32_t frames_per_second, uint32_t channels,
                                    fuchsia::media::AudioSampleFormat fmt,
-                                   zx_duration_t min_ring_buffer_duration) {
+                                   zx::duration min_ring_buffer_duration) {
   TRACE_DURATION("audio", "AudioDriver::Configure");
   // TODO(MTWN-385): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
@@ -796,8 +796,8 @@ zx_status_t AudioDriver::ProcessGetFifoDepthResponse(
   fifo_depth_frames_ = (fifo_depth_bytes_ + bytes_per_frame_ - 1) / bytes_per_frame_;
 
   // Figure out how many frames we need in our ring buffer.
-  int64_t min_frames_64 =
-      TimelineRate::Scale(min_ring_buffer_duration_, bytes_per_frame_ * frames_per_sec_, ZX_SEC(1));
+  int64_t min_frames_64 = TimelineRate::Scale(min_ring_buffer_duration_.to_nsecs(),
+                                              bytes_per_frame_ * frames_per_sec_, ZX_SEC(1));
   int64_t overhead = static_cast<int64_t>(fifo_depth_bytes_) + bytes_per_frame_ - 1;
   bool overflow = ((min_frames_64 == TimelineRate::kOverflow) ||
                    (min_frames_64 > (std::numeric_limits<int64_t>::max() - overhead)));
@@ -810,7 +810,7 @@ zx_status_t AudioDriver::ProcessGetFifoDepthResponse(
 
   if (overflow) {
     FXL_LOG(ERROR) << "Overflow while attempting to compute ring buffer size in frames.";
-    FXL_LOG(ERROR) << "duration        : " << min_ring_buffer_duration_;
+    FXL_LOG(ERROR) << "duration        : " << min_ring_buffer_duration_.get();
     FXL_LOG(ERROR) << "bytes per frame : " << bytes_per_frame_;
     FXL_LOG(ERROR) << "frames per sec  : " << frames_per_sec_;
     FXL_LOG(ERROR) << "fifo depth      : " << fifo_depth_bytes_;

@@ -114,7 +114,7 @@ class AudioDriver {
   zx_status_t GetDriverInfo();
   zx_status_t Configure(uint32_t frames_per_second, uint32_t channels,
                         fuchsia::media::AudioSampleFormat fmt,
-                        zx_duration_t min_ring_buffer_duration);
+                        zx::duration min_ring_buffer_duration);
   zx_status_t Start();
   zx_status_t Stop();
   zx_status_t SetPlugDetectEnabled(bool enabled);
@@ -251,7 +251,7 @@ class AudioDriver {
   uint16_t channel_count_;
   audio_sample_format_t sample_format_;
   uint32_t bytes_per_frame_;
-  zx_duration_t min_ring_buffer_duration_;
+  zx::duration min_ring_buffer_duration_;
   uint32_t fifo_depth_bytes_;
   uint32_t fifo_depth_frames_;
   zx_time_t configuration_timeout_ = ZX_TIME_INFINITE;
