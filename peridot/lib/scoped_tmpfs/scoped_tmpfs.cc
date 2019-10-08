@@ -36,8 +36,8 @@ ScopedTmpFS::~ScopedTmpFS() {
   root_fd_.reset();
   sync_completion_t unmounted;
   memfs_free_filesystem(memfs_, &unmounted);
-  zx_status_t status = sync_completion_wait(&unmounted, ZX_SEC(3));
-  FXL_DCHECK(status == ZX_OK);
+  zx_status_t status = sync_completion_wait(&unmounted, ZX_SEC(10));
+  FXL_DCHECK(status == ZX_OK) << status;
 }
 
 }  // namespace scoped_tmpfs
