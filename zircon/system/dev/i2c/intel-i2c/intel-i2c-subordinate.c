@@ -249,38 +249,6 @@ transfer_finish_2:
   return status;
 }
 
-// Implement the char protocol for the subordinate devices.
-
-static zx_status_t intel_serialio_i2c_subordinate_read(void* ctx, void* buf, size_t count,
-                                                       zx_off_t off, size_t* actual) {
-  intel_serialio_i2c_subordinate_device_t* subordinate = ctx;
-  i2c_subordinate_segment_t segment = {
-      .type = fuchsia_hardware_i2c_SegmentType_READ,
-      .buf = buf,
-      .len = count,
-  };
-  zx_status_t status = intel_serialio_i2c_subordinate_transfer(subordinate, &segment, 1);
-  if (status == ZX_OK) {
-    *actual = count;
-  }
-  return status;
-}
-
-static zx_status_t intel_serialio_i2c_subordinate_write(void* ctx, const void* buf, size_t count,
-                                                        zx_off_t off, size_t* actual) {
-  intel_serialio_i2c_subordinate_device_t* subordinate = ctx;
-  i2c_subordinate_segment_t segment = {
-      .type = fuchsia_hardware_i2c_SegmentType_WRITE,
-      .buf = (void*)buf,
-      .len = count,
-  };
-  zx_status_t status = intel_serialio_i2c_subordinate_transfer(subordinate, &segment, 1);
-  if (status == ZX_OK) {
-    *actual = count;
-  }
-  return status;
-}
-
 static zx_status_t intel_serialio_i2c_subordinate_transfer_helper(
     intel_serialio_i2c_subordinate_device_t* subordinate, const void* in_buf, size_t in_len,
     void* out_buf, size_t out_len, size_t* out_actual) {
@@ -450,8 +418,6 @@ zx_status_t intel_serialio_i2c_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* t
 
 zx_protocol_device_t intel_serialio_i2c_subordinate_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .read = intel_serialio_i2c_subordinate_read,
-    .write = intel_serialio_i2c_subordinate_write,
     .message = intel_serialio_i2c_message,
     .release = intel_serialio_i2c_subordinate_release,
 };
