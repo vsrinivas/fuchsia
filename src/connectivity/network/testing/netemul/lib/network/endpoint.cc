@@ -58,7 +58,10 @@ class EndpointImpl : public data::Consumer {
       ethernet_factory_ = std::make_unique<EthernetClientFactory>();
     }
 
-    ethernet_mount_path_ = ethernet_factory_->MountPointWithMAC(mac);
+    // We add a 2 min timeout to this so that it's easier to debug problems with enumerating devices
+    // from devfs. By default, MountPointWithMAC would hang forever and would make debugging
+    // problems here really hard.
+    ethernet_mount_path_ = ethernet_factory_->MountPointWithMAC(mac, zx::sec(120));
 
     // can't find mount path for ethernet!!
     if (ethernet_mount_path_.empty()) {

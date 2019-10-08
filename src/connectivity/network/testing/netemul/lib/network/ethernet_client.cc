@@ -4,8 +4,6 @@
 
 #include "ethernet_client.h"
 
-#include <fbl/intrusive_single_list.h>
-#include <fbl/unique_ptr.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/ethernet/cpp/fidl.h>
 #include <inttypes.h>
@@ -21,6 +19,9 @@
 
 #include <iostream>
 #include <sstream>
+
+#include <fbl/intrusive_single_list.h>
+#include <fbl/unique_ptr.h>
 
 namespace netemul {
 using ZDevice = fuchsia::hardware::ethernet::Device;
@@ -390,7 +391,7 @@ void EthernetClient::set_online(bool online) {
 }
 
 std::string EthernetClientFactory::MountPointWithMAC(const EthernetClient::Mac& mac,
-                                                     unsigned int deadline_ms) {
+                                                     zx::duration timeout) {
   WatchCbArgs args{.base_dir = base_dir_, .search_mac = mac};
 
   int ethdir = OpenDir();
@@ -402,7 +403,7 @@ std::string EthernetClientFactory::MountPointWithMAC(const EthernetClient::Mac& 
   }
 
   zx_status_t status;
-  status = fdio_watch_directory(ethdir, WatchCb, zx_deadline_after(ZX_MSEC(deadline_ms)),
+  status = fdio_watch_directory(ethdir, WatchCb, zx::deadline_after(timeout).get(),
                                 reinterpret_cast<void*>(&args));
   close(ethdir);
   if (status == ZX_ERR_STOP) {
@@ -439,9 +440,9 @@ EthernetClient::Ptr EthernetClientFactory::Create(const std::string& path,
 }
 
 EthernetClient::Ptr EthernetClientFactory::RetrieveWithMAC(const EthernetClient::Mac& mac,
-                                                           unsigned int deadline_ms,
+                                                           zx::duration timeout,
                                                            async_dispatcher_t* dispatcher) {
-  auto mount = MountPointWithMAC(mac, deadline_ms);
+  auto mount = MountPointWithMAC(mac, timeout);
   if (mount.empty()) {
     return nullptr;
   }

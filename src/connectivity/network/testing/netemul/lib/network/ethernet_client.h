@@ -80,12 +80,13 @@ class EthernetClientFactory {
 
   // finds the mount point of an ethernet device with given Mac.
   // This is achieved based on directory watching and will only fail on timeout.
-  std::string MountPointWithMAC(const EthernetClient::Mac& mac, unsigned int deadline_ms = 2000);
+  std::string MountPointWithMAC(const EthernetClient::Mac& mac,
+                                zx::duration timeout = zx::duration::infinite());
 
   // Same as MountPointWithMac, but returns an instance of EthernetClient
   // already bound to the found mount point.
   EthernetClient::Ptr RetrieveWithMAC(const EthernetClient::Mac& mac,
-                                      unsigned int deadline_ms = 2000,
+                                      zx::duration timeout = zx::duration::infinite(),
                                       async_dispatcher_t* dispatcher = nullptr);
 
   zx_status_t Connect(const std::string& path,
