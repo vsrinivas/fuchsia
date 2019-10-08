@@ -54,17 +54,28 @@ fn soft_reboot(target: &str) -> Result<(), RebootError> {
     Ok(())
 }
 
+trait Runner {
+    fn run_spawn(&self, subc: &str) -> Result<Child, Error>;
+    fn run_output(&self, subc: &str) -> Result<Output, Error>;
+    fn run(&self, subc: &str) -> Result<(), Error>;
+}
+
 /// run a target binary on a target device over ssh.
-struct Runner {
+struct CmdRunner {
     target: String,
     bin: String,
     seed: u32,
     block_device: String,
 }
 
-impl Runner {
-    fn new(target: &str, bin: &str, seed: u32, block_device: &str) -> Self {
-        Runner { target: target.into(), bin: bin.into(), seed, block_device: block_device.into() }
+impl CmdRunner {
+    fn new(target: &str, bin: &str, seed: u32, block_device: &str) -> Box<dyn Runner> {
+        Box::new(CmdRunner {
+            target: target.into(),
+            bin: bin.into(),
+            seed,
+            block_device: block_device.into(),
+        })
     }
 
     fn run_bin(&self) -> Command {
@@ -72,11 +83,13 @@ impl Runner {
         command.arg(&self.bin).arg(self.seed.to_string()).arg(&self.block_device);
         command
     }
+}
 
+impl Runner for CmdRunner {
     /// Run a subcommand of the originally provided binary on the target. The command is spawned as a
     /// separate process, and a reference to the child process is returned. stdout and stderr are
     /// piped (see [`std::process::Stdio::piped()`] for details).
-    pub fn run_spawn(&self, subc: &str) -> Result<Child, Error> {
+    fn run_spawn(&self, subc: &str) -> Result<Child, Error> {
         let child =
             self.run_bin().arg(subc).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
 
@@ -84,7 +97,7 @@ impl Runner {
     }
 
     /// Run a subcommand to completion and collect the output from the process.
-    pub fn run_output(&self, subc: &str) -> Result<Output, Error> {
+    fn run_output(&self, subc: &str) -> Result<Output, Error> {
         let out = self.run_bin().arg(subc).output()?;
         if out.status.success() {
             Ok(out)
@@ -95,7 +108,7 @@ impl Runner {
         }
     }
 
-    pub fn run(&self, subc: &str) -> Result<(), Error> {
+    fn run(&self, subc: &str) -> Result<(), Error> {
         self.run_output(subc).map(|_| ())
     }
 }
@@ -110,13 +123,13 @@ pub trait TestStep {
 /// A test step for setting up the filesystem in the way we want it for the test. This executes the
 /// `setup` subcommand on the target binary and waits for completion, checking the result.
 pub struct SetupStep {
-    runner: Runner,
+    runner: Box<dyn Runner>,
 }
 
 impl SetupStep {
     /// Create a new operation step.
     pub fn new(target: &str, bin: &str, seed: u32, block_device: &str) -> Self {
-        Self { runner: Runner::new(target, bin, seed, block_device) }
+        Self { runner: CmdRunner::new(target, bin, seed, block_device) }
     }
 }
 
@@ -130,14 +143,14 @@ impl TestStep for SetupStep {
 /// A test step for generating load on a filesystem. This executes the `test` subcommand on the
 /// target binary and then checks to make sure it didn't exit after `duration`.
 pub struct LoadStep {
-    runner: Runner,
+    runner: Box<dyn Runner>,
     duration: Duration,
 }
 
 impl LoadStep {
     /// Create a new test step.
     pub fn new(target: &str, bin: &str, seed: u32, block_device: &str, duration: Duration) -> Self {
-        Self { runner: Runner::new(target, bin, seed, block_device), duration }
+        Self { runner: CmdRunner::new(target, bin, seed, block_device), duration }
     }
 }
 
@@ -161,13 +174,13 @@ impl TestStep for LoadStep {
 /// A test step for running an operation to completion. This executes the `test` subcommand and waits
 /// for completion, checking the result.
 pub struct OperationStep {
-    runner: Runner,
+    runner: Box<dyn Runner>,
 }
 
 impl OperationStep {
     /// Create a new operation step.
     pub fn new(target: &str, bin: &str, seed: u32, block_device: &str) -> Self {
-        Self { runner: Runner::new(target, bin, seed, block_device) }
+        Self { runner: CmdRunner::new(target, bin, seed, block_device) }
     }
 }
 
@@ -208,7 +221,7 @@ impl TestStep for RebootStep {
 /// A test step for verifying the machine. This executes the `verify` subcommand on the target binary
 /// and waits for completion, checking the result.
 pub struct VerifyStep {
-    runner: Runner,
+    runner: Box<dyn Runner>,
     num_retries: u32,
     retry_timeout: Duration,
 }
@@ -225,7 +238,7 @@ impl VerifyStep {
         num_retries: u32,
         retry_timeout: Duration,
     ) -> Self {
-        Self { runner: Runner::new(target, bin, seed, block_device), num_retries, retry_timeout }
+        Self { runner: CmdRunner::new(target, bin, seed, block_device), num_retries, retry_timeout }
     }
 }
 
@@ -253,5 +266,199 @@ impl TestStep for VerifyStep {
         }
         // we failed to ssh into the device too many times in a row. something's wrong.
         last_ssh_error
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{OperationStep, Runner, SetupStep, TestStep, VerifyStep};
+    use crate::{CommandError, Error};
+    use std::{
+        cell::Cell,
+        os::unix::process::ExitStatusExt,
+        process::{Child, ExitStatus, Output},
+        rc::Rc,
+        time::Duration,
+    };
+
+    struct FakeRunner<F>
+    where
+        F: Fn() -> Result<(), Error>,
+    {
+        command: &'static str,
+        res: F,
+    }
+    impl<F> FakeRunner<F>
+    where
+        F: Fn() -> Result<(), Error>,
+    {
+        pub fn new(command: &'static str, res: F) -> FakeRunner<F> {
+            FakeRunner { command, res }
+        }
+    }
+    impl<F> Runner for FakeRunner<F>
+    where
+        F: Fn() -> Result<(), Error>,
+    {
+        fn run_spawn(&self, _subc: &str) -> Result<Child, Error> {
+            unimplemented!()
+        }
+        fn run_output(&self, _subc: &str) -> Result<Output, Error> {
+            unimplemented!()
+        }
+        fn run(&self, subc: &str) -> Result<(), Error> {
+            assert_eq!(subc, self.command);
+            (self.res)()
+        }
+    }
+
+    #[test]
+    fn setup_success() {
+        let step = SetupStep { runner: Box::new(FakeRunner::new("setup", || Ok(()))) };
+        match step.execute() {
+            Ok(()) => (),
+            _ => panic!("setup step returned an error on a successful run"),
+        }
+    }
+
+    #[test]
+    fn setup_error() {
+        let error = || {
+            Err(Error::TargetCommand(CommandError(
+                ExitStatus::from_raw(1),
+                "(fake stdout)".into(),
+                "(fake stderr)".into(),
+            )))
+        };
+        let step = SetupStep { runner: Box::new(FakeRunner::new("setup", error)) };
+        match step.execute() {
+            Err(Error::TargetCommand(_)) => (),
+            Ok(()) => panic!("setup step returned success when runner failed"),
+            _ => panic!("setup step returned an unexpected error"),
+        }
+    }
+
+    #[test]
+    fn operation_success() {
+        let step = OperationStep { runner: Box::new(FakeRunner::new("test", || Ok(()))) };
+        match step.execute() {
+            Ok(()) => (),
+            _ => panic!("operation step returned an error on a successful run"),
+        }
+    }
+
+    #[test]
+    fn operation_error() {
+        let error = || {
+            Err(Error::TargetCommand(CommandError(
+                ExitStatus::from_raw(1),
+                "(fake stdout)".into(),
+                "(fake stderr)".into(),
+            )))
+        };
+        let step = OperationStep { runner: Box::new(FakeRunner::new("test", error)) };
+        match step.execute() {
+            Err(Error::TargetCommand(_)) => (),
+            Ok(()) => panic!("operation step returned success when runner failed"),
+            _ => panic!("operation step returned an unexpected error"),
+        }
+    }
+
+    #[test]
+    fn verify_success() {
+        let step = VerifyStep {
+            runner: Box::new(FakeRunner::new("verify", || Ok(()))),
+            num_retries: 10,
+            retry_timeout: Duration::from_secs(0),
+        };
+        match step.execute() {
+            Ok(()) => (),
+            _ => panic!("verify step returned an error on a successful run"),
+        }
+    }
+
+    #[test]
+    fn verify_target_command_error() {
+        let error = || {
+            Err(Error::TargetCommand(CommandError(
+                ExitStatus::from_raw(1),
+                "(fake stdout)".into(),
+                "(fake stderr)".into(),
+            )))
+        };
+        let step = VerifyStep {
+            runner: Box::new(FakeRunner::new("verify", error)),
+            num_retries: 10,
+            retry_timeout: Duration::from_secs(0),
+        };
+        match step.execute() {
+            // verify step is expected to tranform target command errors into verification errors.
+            Err(Error::Verification(_)) => (),
+            Err(Error::TargetCommand(_)) => {
+                panic!("verify step returned target command error instead of verification error")
+            }
+            Ok(()) => panic!("verify step returned success when runner failed"),
+            _ => panic!("verify step returned an unexpected error"),
+        }
+    }
+
+    #[test]
+    fn verify_ssh_error_retry_loop_timeout() {
+        let outer_attempts = Rc::new(Cell::new(0));
+        let attempts = outer_attempts.clone();
+        let error = move || {
+            attempts.set(attempts.get() + 1);
+            Err(Error::Ssh(
+                "fake target".into(),
+                CommandError(
+                    ExitStatus::from_raw(255),
+                    "(fake stdout)".into(),
+                    "(fake stderr)".into(),
+                ),
+            ))
+        };
+        let step = VerifyStep {
+            runner: Box::new(FakeRunner::new("verify", error)),
+            num_retries: 10,
+            retry_timeout: Duration::from_secs(0),
+        };
+        match step.execute() {
+            Err(Error::Ssh(..)) => (),
+            Ok(()) => panic!("verify step returned success when runner failed"),
+            _ => panic!("verify step returned an unexpected error"),
+        }
+        assert_eq!(outer_attempts.get(), 10);
+    }
+
+    #[test]
+    fn verify_ssh_error_retry_loop_success() {
+        let outer_attempts = Rc::new(Cell::new(0));
+        let attempts = outer_attempts.clone();
+        let error = move || {
+            attempts.set(attempts.get() + 1);
+            if attempts.get() <= 5 {
+                Err(Error::Ssh(
+                    "fake target".into(),
+                    CommandError(
+                        ExitStatus::from_raw(255),
+                        "(fake stdout)".into(),
+                        "(fake stderr)".into(),
+                    ),
+                ))
+            } else {
+                Ok(())
+            }
+        };
+        let step = VerifyStep {
+            runner: Box::new(FakeRunner::new("verify", error)),
+            num_retries: 10,
+            retry_timeout: Duration::from_secs(0),
+        };
+        match step.execute() {
+            Ok(()) => (),
+            Err(Error::Ssh(..)) => panic!("verify step returned error when runner succeeded"),
+            _ => panic!("verify step returned an unexpected error"),
+        }
+        assert_eq!(outer_attempts.get(), 6);
     }
 }
