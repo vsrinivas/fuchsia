@@ -13,7 +13,7 @@
 
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
-class ModularTestHarnessTest : public modular::testing::TestHarnessFixture {};
+class ModularTestHarnessTest : public modular_testing::TestHarnessFixture {};
 
 // Ensure that the TestHarnessFixture is able to launch the modular runtime.
 TEST_F(ModularTestHarnessTest, SimpleSuccess) {
@@ -45,7 +45,7 @@ TEST_F(ModularTestHarnessTest, SimpleSuccess) {
 }
 
 class ModularTestHarnessDestructionTest : public sys::testing::TestWithEnvironment,
-                                          protected modular::testing::FakeSessionShell {
+                                          protected modular_testing::FakeSessionShell {
  protected:
   ModularTestHarnessDestructionTest()
       : FakeSessionShell({.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
@@ -61,7 +61,7 @@ class ModularTestHarnessDestructionTest : public sys::testing::TestWithEnvironme
   // |fuchsia::modular::Lifecycle|
   void Terminate() override {
     termination_signaled_.store(true);
-    modular::testing::FakeSessionShell::Terminate();
+    modular_testing::FakeSessionShell::Terminate();
   };
 };
 

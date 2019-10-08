@@ -10,7 +10,7 @@
 namespace modular {
 namespace {
 
-class RemoveModCommandRunnerTest : public testing::TestWithSessionStorage {
+class RemoveModCommandRunnerTest : public modular_testing::TestWithSessionStorage {
  protected:
   std::unique_ptr<RemoveModCommandRunner> MakeRunner() {
     return std::make_unique<RemoveModCommandRunner>();

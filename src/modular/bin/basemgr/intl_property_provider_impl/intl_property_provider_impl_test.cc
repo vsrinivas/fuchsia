@@ -18,8 +18,7 @@
 #include "lib/fostr/fidl/fuchsia/intl/formatting.h"
 #include "src/lib/fidl_fuchsia_intl_ext/cpp/fidl_ext.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 namespace {
 
 using fuchsia::deprecatedtimezone::Timezone;
@@ -175,5 +174,4 @@ TEST_F(IntlPropertyProviderImplTest, NotifiesOnTimeZoneChange) {
 }
 
 }  // namespace
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

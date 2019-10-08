@@ -6,8 +6,7 @@
 
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 namespace {
 constexpr char kServiceRootPath[] = "/svc";
 
@@ -73,5 +72,4 @@ void FakeComponent::Exit(int64_t exit_code, fuchsia::sys::TerminationReason reas
 
 void FakeComponent::Terminate() { Exit(0); }
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

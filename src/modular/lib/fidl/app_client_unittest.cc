@@ -12,8 +12,7 @@
 
 #include "gtest/gtest.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 namespace {
 
 using ::sys::testing::FakeLauncher;
@@ -62,7 +61,7 @@ TEST_F(AppClientTest, BaseRun_Success) {
         EXPECT_EQ(kTestUrl, launch_info.url);
         callback_called = true;
       });
-  AppClientBase app_client_base(&launcher, GetTestAppConfig());
+  modular::AppClientBase app_client_base(&launcher, GetTestAppConfig());
 
   EXPECT_TRUE(callback_called);
 }
@@ -80,7 +79,7 @@ TEST_F(AppClientTest, BaseTerminate_Success) {
                                controller.Connect(std::move(ctrl));
                              });
 
-  AppClientBase app_client_base(&launcher, GetTestAppConfig());
+  modular::AppClientBase app_client_base(&launcher, GetTestAppConfig());
 
   bool app_terminated_callback_called = false;
   app_client_base.Teardown(
@@ -102,7 +101,7 @@ TEST_F(AppClientTest, Run_Success) {
         callback_called = true;
       });
 
-  AppClient<TerminateService> app_client(&launcher, GetTestAppConfig());
+  modular::AppClient<TerminateService> app_client(&launcher, GetTestAppConfig());
 
   EXPECT_TRUE(callback_called);
 }
@@ -124,12 +123,11 @@ TEST_F(AppClientTest, RunWithParams_Success) {
         callback_called = true;
       });
 
-  AppClient<TerminateService> app_client(&launcher, GetTestAppConfig(), "",
-                                         std::move(additional_services));
+  modular::AppClient<TerminateService> app_client(&launcher, GetTestAppConfig(), "",
+                                                  std::move(additional_services));
 
   EXPECT_TRUE(callback_called);
 }
 
 }  // namespace
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

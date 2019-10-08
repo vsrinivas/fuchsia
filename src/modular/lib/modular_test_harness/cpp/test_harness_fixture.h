@@ -11,8 +11,7 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 // TesHarnessFixture is a googletest fixture that starts up the modular
 // test harness component and provides the |fuchsia.modular.testing.TestHarness|
@@ -35,7 +34,6 @@ class TestHarnessFixture : public sys::testing::TestWithEnvironment {
 void AddModToStory(const fuchsia::modular::testing::TestHarnessPtr& test_harness,
                    std::string story_name, std::string mod_name, fuchsia::modular::Intent intent);
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing
 
 #endif  // SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_TEST_HARNESS_FIXTURE_H_

@@ -4,8 +4,7 @@
 
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 TestHarnessFixture::TestHarnessFixture()
     : test_harness_launcher_(real_services()->Connect<fuchsia::sys::Launcher>()) {}
@@ -37,5 +36,4 @@ void AddModToStory(const fuchsia::modular::testing::TestHarnessPtr& test_harness
   story_master->Execute([&](fuchsia::modular::ExecuteResult result) {});
 }
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

@@ -4,8 +4,7 @@
 
 #include "src/modular/lib/modular_test_harness/cpp/fake_story_shell.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 FakeStoryShell::FakeStoryShell(FakeComponent::Args args) : FakeComponent(std::move(args)) {}
 
@@ -65,5 +64,4 @@ void FakeStoryShell::AddSurface3(fuchsia::modular::ViewConnection view_connectio
   }
 }
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

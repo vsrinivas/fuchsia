@@ -17,11 +17,11 @@ constexpr char kIntentAction[] = "action";
 constexpr char kTestData[] = "test-data";
 constexpr char kTestType[] = "test-type";
 
-class StoryModuleTest : public modular::testing::TestHarnessFixture {
+class StoryModuleTest : public modular_testing::TestHarnessFixture {
  public:
   StoryModuleTest() {
-    test_module_ = std::make_unique<modular::testing::FakeModule>(
-        modular::testing::FakeComponent::Args{
+    test_module_ = std::make_unique<modular_testing::FakeModule>(
+        modular_testing::FakeComponent::Args{
             .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
             .sandbox_services = {"fuchsia.app.discover.StoryModule",
                                  "fuchsia.modular.ModuleContext"}},
@@ -30,7 +30,7 @@ class StoryModuleTest : public modular::testing::TestHarnessFixture {
     builder_.BuildAndRun(test_harness());
   }
 
-  std::unique_ptr<modular::testing::FakeModule> test_module_;
+  std::unique_ptr<modular_testing::FakeModule> test_module_;
   modular_testing::TestHarnessBuilder builder_;
   std::string test_entity_provider_agent_url_;
 };
@@ -40,7 +40,7 @@ TEST_F(StoryModuleTest, ModuleWritesToOutput) {
   intent.handler = test_module_->url();
   intent.action = kIntentAction;
 
-  modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName, std::move(intent));
+  modular_testing::AddModToStory(test_harness(), kStoryName, kModuleName, std::move(intent));
   RunLoopUntil([&] { return test_module_->is_running(); });
 
   fsl::SizedVmo vmo;

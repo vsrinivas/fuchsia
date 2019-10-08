@@ -9,15 +9,14 @@
 
 #include "src/modular/lib/modular_test_harness/cpp/fake_component.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 // Story shell fake that provides access to the StoryShellContext.
 //
 // EXAMPLE USAGE (see test_harness_fixture.h for more details on how to use the
 // test harness):
 //
-// modular::testing::FakeStoryShell fake_story_shell(
+// modular_testing::FakeStoryShell fake_story_shell(
 //    {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
 //     .sandbox_services = {"fuchsia.modular.StoryShellContext"}});
 //
@@ -27,7 +26,7 @@ namespace testing {
 //
 // // Wait for the session shell to be intercepted.
 // RunLoopUntil([&] { return fake_story_shell.is_running(); });
-class FakeStoryShell : public modular::testing::FakeComponent, fuchsia::modular::StoryShell {
+class FakeStoryShell : public modular_testing::FakeComponent, fuchsia::modular::StoryShell {
  public:
   explicit FakeStoryShell(FakeComponent::Args args);
   ~FakeStoryShell() override = default;
@@ -49,10 +48,10 @@ class FakeStoryShell : public modular::testing::FakeComponent, fuchsia::modular:
   fidl::InterfaceRequestHandler<fuchsia::modular::StoryShell> GetHandler();
 
  private:
-  // |modular::testing::FakeComponent|
+  // |modular_testing::FakeComponent|
   void OnCreate(fuchsia::sys::StartupInfo startup_info) override;
 
-  // |modular::testing::FakeComponent|
+  // |modular_testing::FakeComponent|
   void OnDestroy() override;
 
   // |fuchsia::modular::StoryShell|
@@ -94,7 +93,6 @@ class FakeStoryShell : public modular::testing::FakeComponent, fuchsia::modular:
   fit::function<void()> on_destroy_;
 };
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing
 
 #endif  // SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_FAKE_STORY_SHELL_H_

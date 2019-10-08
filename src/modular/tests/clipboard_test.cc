@@ -13,12 +13,12 @@
 
 namespace {
 
-class ClipboardTest : public modular::testing::TestHarnessFixture {};
+class ClipboardTest : public modular_testing::TestHarnessFixture {};
 
 // Ensure that a Clipboard can successfully push and peek its contents.
 TEST_F(ClipboardTest, PushAndPeekToTheSameClipboard) {
-  std::unique_ptr<modular::testing::LedgerRepositoryForTesting> ledger_app_ =
-      std::make_unique<modular::testing::LedgerRepositoryForTesting>();
+  std::unique_ptr<modular_testing::LedgerRepositoryForTesting> ledger_app_ =
+      std::make_unique<modular_testing::LedgerRepositoryForTesting>();
   std::unique_ptr<modular::LedgerClient> ledger_client_ = std::make_unique<modular::LedgerClient>(
       ledger_app_->ledger_repository(), __FILE__,
       [](zx_status_t status) { ASSERT_TRUE(false) << "Status: " << status; });

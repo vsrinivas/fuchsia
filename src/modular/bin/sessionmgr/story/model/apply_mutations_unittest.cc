@@ -27,7 +27,7 @@ TEST(ApplyMutationsTest, set_runtime_state) {
 
   std::vector<StoryModelMutation> commands(1);
   commands[0].set_set_runtime_state(StoryState::RUNNING);
-  auto result = ApplyMutations(before, commands);
+  auto result = modular::ApplyMutations(before, commands);
   EXPECT_EQ(StoryState::RUNNING, result.runtime_state());
 }
 
@@ -39,7 +39,7 @@ TEST(ApplyMutationsTest, set_visibility_state) {
 
   std::vector<StoryModelMutation> commands(1);
   commands[0].set_set_visibility_state(StoryVisibilityState::IMMERSIVE);
-  auto result = ApplyMutations(before, commands);
+  auto result = modular::ApplyMutations(before, commands);
   EXPECT_EQ(StoryVisibilityState::IMMERSIVE, result.visibility_state());
 }
 
@@ -52,7 +52,7 @@ TEST(ApplyMutationsTest, MultipleMutations_AppliedInOrder_set_visibility_state) 
   std::vector<StoryModelMutation> commands(2);
   commands[0].set_set_visibility_state(StoryVisibilityState::IMMERSIVE);
   commands[1].set_set_visibility_state(StoryVisibilityState::DEFAULT);
-  auto result = ApplyMutations(before, commands);
+  auto result = modular::ApplyMutations(before, commands);
   EXPECT_EQ(StoryVisibilityState::DEFAULT, result.visibility_state());
 }
 

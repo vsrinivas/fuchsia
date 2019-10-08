@@ -4,8 +4,7 @@
 
 #include "src/modular/lib/modular_test_harness/cpp/fake_agent.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 FakeAgent::FakeAgent(FakeComponent::Args args) : FakeComponent(std::move(args)) {}
 
@@ -13,7 +12,7 @@ FakeAgent::~FakeAgent() = default;
 
 // static
 std::unique_ptr<FakeAgent> FakeAgent::CreateWithDefaultOptions() {
-  return std::make_unique<FakeAgent>(modular::testing::FakeComponent::Args{
+  return std::make_unique<FakeAgent>(modular_testing::FakeComponent::Args{
       .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
       .sandbox_services = FakeAgent::GetDefaultSandboxServices()});
 }
@@ -23,7 +22,7 @@ std::vector<std::string> FakeAgent::GetDefaultSandboxServices() {
   return {fuchsia::modular::ComponentContext::Name_, fuchsia::modular::AgentContext::Name_};
 }
 
-// |modular::testing::FakeComponent|
+// |modular_testing::FakeComponent|
 void FakeAgent::OnCreate(fuchsia::sys::StartupInfo startup_info) {
   FakeComponent::OnCreate(std::move(startup_info));
 
@@ -38,5 +37,4 @@ void FakeAgent::OnCreate(fuchsia::sys::StartupInfo startup_info) {
                                             });
 }
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

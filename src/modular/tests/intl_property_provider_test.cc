@@ -17,13 +17,13 @@ constexpr char kStoryName[] = "story";
 constexpr char kIntentAction[] = "action";
 
 // Minimal module that connects to `fuchsia.intl.PropertyProvider` and retrieves a `Profile`.
-class IntlClientModule : public modular::testing::FakeModule {
+class IntlClientModule : public modular_testing::FakeModule {
  public:
   IntlClientModule()
-      : modular::testing::FakeModule({.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
-                                      .sandbox_services = {"fuchsia.intl.PropertyProvider",
-                                                           "fuchsia.modular.ModuleContext"}},
-                                     [](fuchsia::modular::Intent) {}) {}
+      : modular_testing::FakeModule({.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
+                                     .sandbox_services = {"fuchsia.intl.PropertyProvider",
+                                                          "fuchsia.modular.ModuleContext"}},
+                                    [](fuchsia::modular::Intent) {}) {}
 
   zx_status_t ConnectToIntlPropertyProvider() {
     return component_context()->svc()->Connect<fuchsia::intl::PropertyProvider>(
@@ -45,7 +45,7 @@ class IntlClientModule : public modular::testing::FakeModule {
 };
 
 // Smoke test for Modular's provision of fuchsia.intl.PropertyProvider.
-class IntlPropertyProviderTest : public modular::testing::TestHarnessFixture {
+class IntlPropertyProviderTest : public modular_testing::TestHarnessFixture {
  public:
   IntlPropertyProviderTest() {
     test_module_ = std::make_unique<IntlClientModule>();
@@ -62,7 +62,7 @@ TEST_F(IntlPropertyProviderTest, GetsProfileFromProvider) {
   intent.handler = test_module_->url();
   intent.action = kIntentAction;
 
-  modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName, std::move(intent));
+  modular_testing::AddModToStory(test_harness(), kStoryName, kModuleName, std::move(intent));
   RunLoopUntil([&] { return test_module_->is_running(); });
   ASSERT_EQ(ZX_OK, test_module_->ConnectToIntlPropertyProvider());
 

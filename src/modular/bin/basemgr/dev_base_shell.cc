@@ -44,7 +44,7 @@ class Settings {
     // If passed, runs as a test harness.
     use_test_runner = command_line.HasOption("use_test_runner");
 
-    test_timeout_ms = testing::kTestTimeoutMilliseconds;
+    test_timeout_ms = modular_testing::kTestTimeoutMilliseconds;
 
     if (command_line.HasOption("test_timeout_ms")) {
       std::string test_timeout_ms_string;
@@ -70,14 +70,14 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
         weak_ptr_factory_(this) {
     this->component_context()->svc()->Connect(account_manager_.NewRequest());
     if (settings_.use_test_runner) {
-      testing::Init(this->component_context(), __FILE__);
+      modular_testing::Init(this->component_context(), __FILE__);
       // Start a timer to quit in case a test component misbehaves and hangs. If
       // we hit the timeout, this is a test failure.
       async::PostDelayedTask(async_get_default_dispatcher(),
                              callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
                                                   [this] {
                                                     FXL_LOG(WARNING) << "DevBaseShell timed out";
-                                                    testing::Fail("DevBaseShell timed out");
+                                                    modular_testing::Fail("DevBaseShell timed out");
                                                     Terminate([] {});
                                                   }),
                              zx::msec(settings_.test_timeout_ms));
@@ -89,7 +89,7 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
   // |SingleServiceApp|
   void Terminate(fit::function<void()> done) override {
     if (settings_.use_test_runner) {
-      testing::Teardown(std::move(done));
+      modular_testing::Teardown(std::move(done));
     } else {
       done();
     }

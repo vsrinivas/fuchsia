@@ -8,8 +8,7 @@
 #include "src/modular/lib/testing/component_base.h"
 #include "src/modular/lib/testing/session_shell_impl.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 class SessionShellBase : public ComponentBase<void> {
  public:
@@ -23,7 +22,7 @@ class SessionShellBase : public ComponentBase<void> {
   }
 
  protected:
-  modular::testing::SessionShellImpl* session_shell_impl() { return &session_shell_impl_; }
+  modular_testing::SessionShellImpl* session_shell_impl() { return &session_shell_impl_; }
 
   fuchsia::modular::SessionShellContext* session_shell_context() {
     return session_shell_context_.get();
@@ -32,14 +31,13 @@ class SessionShellBase : public ComponentBase<void> {
   fuchsia::modular::StoryProvider* story_provider() { return story_provider_.get(); }
 
  private:
-  modular::testing::SessionShellImpl session_shell_impl_;
+  modular_testing::SessionShellImpl session_shell_impl_;
   fuchsia::modular::SessionShellContextPtr session_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionShellBase);
 };
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing
 
 #endif  // SRC_MODULAR_LIB_TESTING_SESSION_SHELL_BASE_H_

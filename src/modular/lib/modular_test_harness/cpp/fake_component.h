@@ -9,8 +9,7 @@
 #include <lib/modular/testing/cpp/test_harness_builder.h>
 #include <lib/sys/cpp/component_context.h>
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 // Represents an instance of an intercepted component. Clients may use directly
 // or sub-class and override OnCreate() and/or OnDestroy().
@@ -22,7 +21,7 @@ namespace testing {
 //
 // ..
 // modular_testing::TestHarnessBuilder builder;
-// modular::testing::FakeComponent fake_component(
+// modular_testing::FakeComponent fake_component(
 //     {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
 // builder.InterceptComponent(fake_component.BuildInterceptOptions());
 // builder.BuildAndRun(test_harness());
@@ -101,7 +100,6 @@ class FakeComponent : fuchsia::modular::Lifecycle {
   fidl::BindingSet<fuchsia::modular::Lifecycle> lifecycle_bindings_;
 };
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing
 
 #endif  // SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_FAKE_COMPONENT_H_

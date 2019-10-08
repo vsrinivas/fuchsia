@@ -13,8 +13,7 @@
 
 #include "src/modular/lib/async/cpp/future.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 // Integration tests that run under DevBaseShell are cut off after this
 // timeout.
@@ -65,8 +64,9 @@ fuchsia::testing::runner::TestRunnerStore* GetStore();
 // futures in the vector later), and returns a |Completer| callback to be
 // passed to a function that requires a callback.
 template <typename... Results>
-fit::function<void(Results...)> AddBarrierFuture(std::vector<FuturePtr<Results...>> futures) {
-  auto f = Future<Results...>::Create("some barrier future");
+fit::function<void(Results...)> AddBarrierFuture(
+    std::vector<modular::FuturePtr<Results...>> futures) {
+  auto f = modular::Future<Results...>::Create("some barrier future");
   futures.push_back(f);
   return f->Completer();
 }
@@ -97,7 +97,6 @@ void RegisterTestPoint(const std::string& label);
 // Signals that a test point has been passed.
 void PassTestPoint(const std::string& label);
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing
 
 #endif  // SRC_MODULAR_LIB_INTEGRATION_TESTING_CPP_TESTING_H_

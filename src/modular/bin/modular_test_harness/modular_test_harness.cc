@@ -22,7 +22,7 @@ int main(int argc, const char** argv) {
   auto context = sys::ComponentContext::Create();
   auto env = context->svc()->Connect<fuchsia::sys::Environment>();
 
-  modular::testing::TestHarnessImpl test_harness_impl(env, [&loop] { loop.Quit(); });
+  modular_testing::TestHarnessImpl test_harness_impl(env, [&loop] { loop.Quit(); });
   context->outgoing()->AddPublicService<fuchsia::modular::testing::TestHarness>(
       [&test_harness_impl](fidl::InterfaceRequest<fuchsia::modular::testing::TestHarness> request) {
         test_harness_impl.Bind(std::move(request));

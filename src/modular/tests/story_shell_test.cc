@@ -19,10 +19,10 @@ using testing::ElementsAre;
 
 namespace {
 
-class StoryShellTest : public modular::testing::TestHarnessFixture {
+class StoryShellTest : public modular_testing::TestHarnessFixture {
  protected:
   StoryShellTest()
-      : session_shell_(modular::testing::FakeSessionShell::CreateWithDefaultOptions()),
+      : session_shell_(modular_testing::FakeSessionShell::CreateWithDefaultOptions()),
         story_shell_({.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
                       .sandbox_services = {"fuchsia.modular.StoryShellContext"}}) {}
 
@@ -87,8 +87,8 @@ class StoryShellTest : public modular::testing::TestHarnessFixture {
   }
 
   fuchsia::modular::PuppetMasterPtr puppet_master_;
-  std::unique_ptr<modular::testing::FakeSessionShell> session_shell_;
-  modular::testing::FakeStoryShell story_shell_;
+  std::unique_ptr<modular_testing::FakeSessionShell> session_shell_;
+  modular_testing::FakeStoryShell story_shell_;
   std::string fake_module_url_;
 
   // Stories must have modules in them so the stories created above

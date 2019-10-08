@@ -21,7 +21,7 @@
 
 #include "src/modular/lib/lifecycle/cpp/lifecycle_impl.h"
 
-namespace modular::testing {
+namespace modular_testing {
 
 // Provides the |TestHarness| service.
 class TestHarnessImpl final : fuchsia::modular::testing::TestHarness,
@@ -191,6 +191,6 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness,
   friend class TestHarnessImplTest;
 };
 
-}  // namespace modular::testing
+}  // namespace modular_testing
 
 #endif  // SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_TEST_HARNESS_IMPL_H_

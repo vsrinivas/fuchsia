@@ -10,7 +10,7 @@
 
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
-class AutoLoginBaseShellTest : public modular::testing::TestHarnessFixture {};
+class AutoLoginBaseShellTest : public modular_testing::TestHarnessFixture {};
 
 // Use auto_login_base_shell and expect the user to be automatically logged into
 // session shell.

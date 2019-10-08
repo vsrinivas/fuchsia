@@ -16,7 +16,7 @@ using testing::Gt;
 
 namespace {
 
-class LastFocusTimeTest : public modular::testing::TestHarnessFixture {};
+class LastFocusTimeTest : public modular_testing::TestHarnessFixture {};
 
 // A simple story provider watcher implementation. It confirms that it sees an
 // increase in the last_focus_time in the fuchsia::modular::StoryInfo it
@@ -91,11 +91,11 @@ const char kStoryName[] = "storyname";
 TEST_F(LastFocusTimeTest, LastFocusTimeIncreases) {
   modular_testing::TestHarnessBuilder builder;
 
-  auto test_session_shell = modular::testing::FakeSessionShell::CreateWithDefaultOptions();
+  auto test_session_shell = modular_testing::FakeSessionShell::CreateWithDefaultOptions();
   builder.InterceptSessionShell(test_session_shell->BuildInterceptOptions());
 
   // Listen for the module we're going to create.
-  modular::testing::FakeComponent test_module(
+  modular_testing::FakeComponent test_module(
       {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
   builder.InterceptComponent(test_module.BuildInterceptOptions());
   builder.BuildAndRun(test_harness());
@@ -127,7 +127,7 @@ TEST_F(LastFocusTimeTest, LastFocusTimeIncreases) {
   intent.handler = test_module.url();
   intent.action = "action";
 
-  modular::testing::AddModToStory(test_harness(), kStoryName, "modname", std::move(intent));
+  modular_testing::AddModToStory(test_harness(), kStoryName, "modname", std::move(intent));
 
   RunLoopUntil([&] { return test_module.is_running(); });
 

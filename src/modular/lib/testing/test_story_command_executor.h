@@ -12,14 +12,13 @@
 #include "src/modular/bin/sessionmgr/puppet_master/story_command_executor.h"
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
-class TestStoryCommandExecutor : public StoryCommandExecutor {
+class TestStoryCommandExecutor : public modular::StoryCommandExecutor {
  public:
   // Optional. If a |StoryStorage| is set, certain executed commands perform limited (as-needed to
   // support existing test cases) updates to the |StoryStorage|. See ExecuteCommandsInternal().
-  void SetStoryStorage(std::unique_ptr<StoryStorage> story_storage);
+  void SetStoryStorage(std::unique_ptr<modular::StoryStorage> story_storage);
 
   // Change the default return status and optional error message to be returned from
   // |StoryController|->Execute()
@@ -45,10 +44,9 @@ class TestStoryCommandExecutor : public StoryCommandExecutor {
   fidl::StringPtr last_story_id_;
   std::vector<fuchsia::modular::StoryCommand> last_commands_;
   fuchsia::modular::ExecuteResult result_;
-  std::unique_ptr<StoryStorage> story_storage_;
+  std::unique_ptr<modular::StoryStorage> story_storage_;
 };
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing
 
 #endif  // SRC_MODULAR_LIB_TESTING_TEST_STORY_COMMAND_EXECUTOR_H_

@@ -23,10 +23,10 @@ namespace {
 
 using ::testing::ByRef;
 
-class SessionStorageTest : public testing::TestWithLedger {
+class SessionStorageTest : public modular_testing::TestWithLedger {
  protected:
   std::unique_ptr<SessionStorage> CreateStorage(std::string page_id) {
-    return std::make_unique<SessionStorage>(ledger_client(), MakePageId(page_id));
+    return std::make_unique<SessionStorage>(ledger_client(), modular::MakePageId(page_id));
   }
 
   // Convenience method to create a story for the test cases where
@@ -256,7 +256,7 @@ TEST_F(SessionStorageTest, DISABLED_DeleteStoryDeletesStoryPage) {
       [](zx_status_t status) { FAIL() << "Unexpected disconnection on page, status: " << status; });
   ledger_client()->ledger()->GetPage(std::move(story_page_id), story_page.NewRequest());
   done = false;
-  story_page->Put(to_array("key"), to_array("value"));
+  story_page->Put(modular::to_array("key"), modular::to_array("value"));
   story_page->Sync([&] { done = true; });
   RunLoopUntil([&] { return done; });
 
@@ -267,10 +267,11 @@ TEST_F(SessionStorageTest, DISABLED_DeleteStoryDeletesStoryPage) {
 
   // Show that the underlying page is now empty.
   fuchsia::ledger::PageSnapshotPtr snapshot;
-  story_page->GetSnapshot(snapshot.NewRequest(), to_array("") /* prefix */, nullptr /* watcher */);
+  story_page->GetSnapshot(snapshot.NewRequest(), modular::to_array("") /* prefix */,
+                          nullptr /* watcher */);
   done = false;
   snapshot->GetEntries(
-      to_array("") /* key_start */, nullptr /* token */,
+      modular::to_array("") /* key_start */, nullptr /* token */,
       [&](std::vector<fuchsia::ledger::Entry> entries, fuchsia::ledger::TokenPtr next_token) {
         EXPECT_EQ(nullptr, next_token);
         EXPECT_TRUE(entries.empty());

@@ -16,8 +16,7 @@ using fuchsia::testing::runner::TestRunnerPtr;
 using fuchsia::testing::runner::TestRunnerStore;
 using fuchsia::testing::runner::TestRunnerStorePtr;
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 namespace {
 TestRunnerPtr g_test_runner;
@@ -89,20 +88,20 @@ TestRunnerStore* GetStore() {
 }
 
 void Put(const fidl::StringPtr& key, const fidl::StringPtr& value) {
-  modular::testing::GetStore()->Put(key.value_or(""), value.value_or(""), [] {});
+  modular_testing::GetStore()->Put(key.value_or(""), value.value_or(""), [] {});
 }
 
 void Get(const fidl::StringPtr& key, fit::function<void(fidl::StringPtr)> callback) {
-  modular::testing::GetStore()->Get(key.value_or(""), std::move(callback));
+  modular_testing::GetStore()->Get(key.value_or(""), std::move(callback));
 }
 
 void Signal(const fidl::StringPtr& condition) {
-  modular::testing::GetStore()->Put(condition.value_or(""), condition.value_or(""), [] {});
+  modular_testing::GetStore()->Put(condition.value_or(""), condition.value_or(""), [] {});
 }
 
 void Await(const fidl::StringPtr& condition, fit::function<void()> cont) {
-  modular::testing::GetStore()->Get(condition.value_or(""),
-                                    [cont = std::move(cont)](fidl::StringPtr) { cont(); });
+  modular_testing::GetStore()->Get(condition.value_or(""),
+                                   [cont = std::move(cont)](fidl::StringPtr) { cont(); });
 }
 
 void RegisterTestPoint(const std::string& label) {
@@ -132,5 +131,4 @@ void PassTestPoint(const std::string& label) {
   g_test_runner->PassTestPoint();
 }
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

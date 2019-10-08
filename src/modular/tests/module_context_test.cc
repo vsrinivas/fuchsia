@@ -16,10 +16,10 @@ using testing::ElementsAre;
 
 namespace {
 
-class ModuleContextTest : public modular::testing::TestHarnessFixture {
+class ModuleContextTest : public modular_testing::TestHarnessFixture {
  protected:
   ModuleContextTest()
-      : session_shell_(modular::testing::FakeSessionShell::CreateWithDefaultOptions()) {}
+      : session_shell_(modular_testing::FakeSessionShell::CreateWithDefaultOptions()) {}
 
   void StartSession(modular_testing::TestHarnessBuilder builder) {
     builder.InterceptSessionShell(session_shell_->BuildInterceptOptions());
@@ -42,17 +42,17 @@ class ModuleContextTest : public modular::testing::TestHarnessFixture {
   }
 
  private:
-  std::unique_ptr<modular::testing::FakeSessionShell> session_shell_;
+  std::unique_ptr<modular_testing::FakeSessionShell> session_shell_;
 };
 
 // A version of FakeModule which captures handled intents in a std::vector<>
 // and exposes callbacks triggered on certain lifecycle events.
-class TestModule : public modular::testing::FakeModule {
+class TestModule : public modular_testing::FakeModule {
  public:
   explicit TestModule(std::string module_name = "")
-      : modular::testing::FakeModule(
+      : modular_testing::FakeModule(
             {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(module_name),
-             .sandbox_services = modular::testing::FakeModule::GetDefaultSandboxServices()},
+             .sandbox_services = modular_testing::FakeModule::GetDefaultSandboxServices()},
             [this](fuchsia::modular::Intent intent) {
               handled_intents.push_back(std::move(intent));
             }) {}
@@ -62,14 +62,14 @@ class TestModule : public modular::testing::FakeModule {
   fuchsia::modular::ModuleControllerPtr controller;
 
  private:
-  // |modular::testing::FakeModule|
+  // |modular_testing::FakeModule|
   void OnCreate(fuchsia::sys::StartupInfo startup_info) override {
-    modular::testing::FakeModule::OnCreate(std::move(startup_info));
+    modular_testing::FakeModule::OnCreate(std::move(startup_info));
     if (on_create)
       on_create();
   }
 
-  // |modular::testing::FakeModule|
+  // |modular_testing::FakeModule|
   void OnDestroy() override {
     handled_intents.clear();
     if (on_destroy)
@@ -92,8 +92,8 @@ TEST_F(ModuleContextTest, AddModuleToStory) {
   builder.InterceptComponent(child_module2.BuildInterceptOptions());
 
   StartSession(std::move(builder));
-  modular::testing::AddModToStory(test_harness(), "storyname", "modname",
-                                  {.action = "action", .handler = parent_module.url()});
+  modular_testing::AddModToStory(test_harness(), "storyname", "modname",
+                                 {.action = "action", .handler = parent_module.url()});
   RunLoopUntil([&] { return parent_module.is_running(); });
 
   // Add a single child module.
@@ -147,10 +147,10 @@ TEST_F(ModuleContextTest, RemoveSelfFromStory) {
   builder.InterceptComponent(module2.BuildInterceptOptions());
 
   StartSession(std::move(builder));
-  modular::testing::AddModToStory(test_harness(), "storyname", "modname1",
-                                  {.action = "action", .handler = module1.url()});
-  modular::testing::AddModToStory(test_harness(), "storyname", "modname2",
-                                  {.action = "action", .handler = module2.url()});
+  modular_testing::AddModToStory(test_harness(), "storyname", "modname1",
+                                 {.action = "action", .handler = module1.url()});
+  modular_testing::AddModToStory(test_harness(), "storyname", "modname2",
+                                 {.action = "action", .handler = module2.url()});
   RunLoopUntil([&] { return module1.is_running() && module2.is_running(); });
 
   // Instruct module1 to remove itself from the story. Expect to see that
@@ -180,8 +180,8 @@ TEST_F(ModuleContextTest, CreateEntity) {
   builder.InterceptComponent(module.BuildInterceptOptions());
 
   StartSession(std::move(builder));
-  modular::testing::AddModToStory(test_harness(), "storyname", "modname",
-                                  {.action = "action", .handler = module.url()});
+  modular_testing::AddModToStory(test_harness(), "storyname", "modname",
+                                 {.action = "action", .handler = module.url()});
   RunLoopUntil([&] { return module.is_running(); });
 
   // Create an entity, acquire an Entity handle as well as a reference

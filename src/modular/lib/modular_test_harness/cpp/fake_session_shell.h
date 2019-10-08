@@ -10,8 +10,7 @@
 #include "src/modular/lib/modular_test_harness/cpp/fake_component.h"
 #include "src/modular/lib/testing/session_shell_impl.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 // Session shell fake that provides access to the StoryProvider, the
 // SessionShellContext, and a test implementation of SessionShellImpl.
@@ -28,7 +27,7 @@ namespace testing {
 // // Wait for the session shell to be intercepted.
 // RunLoopUntil([&] { return fake_session_shell->is_running(); });
 // ...
-class FakeSessionShell : public modular::testing::FakeComponent {
+class FakeSessionShell : public modular_testing::FakeComponent {
  public:
   explicit FakeSessionShell(FakeComponent::Args args);
 
@@ -55,26 +54,26 @@ class FakeSessionShell : public modular::testing::FakeComponent {
     return session_shell_context_.get();
   }
 
-  // See modular::testing::SessionShellImpl implementation.
+  // See modular_testing::SessionShellImpl implementation.
   void set_on_attach_view(fit::function<void(fuchsia::modular::ViewIdentifier view_id)> callback) {
     session_shell_impl_.set_on_attach_view(std::move(callback));
   }
 
-  // See modular::testing::SessionShellImpl implementation.
+  // See modular_testing::SessionShellImpl implementation.
   void set_on_detach_view(fit::function<void(fuchsia::modular::ViewIdentifier view_id)> callback) {
     session_shell_impl_.set_on_detach_view(std::move(callback));
   }
 
-  // See modular::testing::SessionShellImpl implementation.
+  // See modular_testing::SessionShellImpl implementation.
   void set_detach_delay(zx::duration detach_delay) {
     session_shell_impl_.set_detach_delay(std::move(detach_delay));
   }
 
  private:
-  // |modular::testing::FakeComponent|
+  // |modular_testing::FakeComponent|
   void OnCreate(fuchsia::sys::StartupInfo startup_info) override;
 
-  modular::testing::SessionShellImpl session_shell_impl_;
+  modular_testing::SessionShellImpl session_shell_impl_;
   fuchsia::modular::SessionShellContextPtr session_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
 };
@@ -87,7 +86,7 @@ class FakeSessionShell : public modular::testing::FakeComponent {
 //
 // // Add a function that does something when a story state change is observed.
 // const char[] kStoryId = "my_story";
-// modular::testing::SimpleStoryProviderWatcher watcher;
+// modular_testing::SimpleStoryProviderWatcher watcher;
 // watcher.set_on_change_2([kStoryId](StoryInfo2 story_info,
 //                                    StoryState story_state,
 //                                    StoryVisibilityState _) {
@@ -138,7 +137,6 @@ class SimpleStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher
   fidl::Binding<fuchsia::modular::StoryProviderWatcher> binding_;
 };
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing
 
 #endif  // SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_FAKE_SESSION_SHELL_H_

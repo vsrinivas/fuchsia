@@ -8,8 +8,7 @@
 #include <map>
 #include <string>
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 // Helper class for unit testing that provides a collection to track the number
 // of times each function is called, then provides functions to validate those
@@ -33,7 +32,6 @@ class MockBase {
   std::map<std::string, unsigned int> counts;
 };
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing
 
 #endif  // SRC_MODULAR_LIB_TESTING_MOCK_BASE_H_

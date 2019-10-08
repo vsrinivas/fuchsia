@@ -12,45 +12,46 @@
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
 #include "src/modular/lib/testing/test_with_ledger.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
-class TestWithSessionStorage : public testing::TestWithLedger {
+class TestWithSessionStorage : public TestWithLedger {
  public:
   TestWithSessionStorage();
   ~TestWithSessionStorage() override;
 
  protected:
-  std::unique_ptr<SessionStorage> MakeSessionStorage(std::string ledger_page);
+  std::unique_ptr<modular::SessionStorage> MakeSessionStorage(std::string ledger_page);
 
-  std::unique_ptr<StoryStorage> GetStoryStorage(SessionStorage* storage, std::string story_id);
+  std::unique_ptr<modular::StoryStorage> GetStoryStorage(modular::SessionStorage* storage,
+                                                         std::string story_id);
 
   // Create a new story with a specific story_id (name)
-  void CreateStory(const std::string& story_id, SessionStorage* storage);
+  void CreateStory(const std::string& story_id, modular::SessionStorage* storage);
 
   // Create a new story and return the generated name
-  fidl::StringPtr CreateStory(SessionStorage* storage);
+  fidl::StringPtr CreateStory(modular::SessionStorage* storage);
 
-  void SetLinkValue(StoryStorage* story_storage, const std::string& link_name,
+  void SetLinkValue(modular::StoryStorage* story_storage, const std::string& link_name,
                     const std::string& link_value);
 
-  void SetLinkValue(StoryStorage* story_storage, const fuchsia::modular::LinkPath& link_path,
-                    const std::string& link_value);
+  void SetLinkValue(modular::StoryStorage* story_storage,
+                    const fuchsia::modular::LinkPath& link_path, const std::string& link_value);
 
-  void WriteModuleData(StoryStorage* story_storage, fuchsia::modular::ModuleData module_data);
+  void WriteModuleData(modular::StoryStorage* story_storage,
+                       fuchsia::modular::ModuleData module_data);
 
-  std::string GetLinkValue(StoryStorage* story_storage, const fuchsia::modular::LinkPath& path);
+  std::string GetLinkValue(modular::StoryStorage* story_storage,
+                           const fuchsia::modular::LinkPath& path);
 
-  std::string GetLinkValue(StoryStorage* story_storage, const std::string& link_name);
+  std::string GetLinkValue(modular::StoryStorage* story_storage, const std::string& link_name);
 
   fuchsia::modular::LinkPath MakeLinkPath(const std::string& name);
 
  private:
   // Implements CreateStory on behalf of protected variants
-  fidl::StringPtr CreateStoryImpl(fidl::StringPtr story_id, SessionStorage* storage);
+  fidl::StringPtr CreateStoryImpl(fidl::StringPtr story_id, modular::SessionStorage* storage);
 };
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing
 
 #endif  // SRC_MODULAR_LIB_TESTING_TEST_WITH_SESSION_STORAGE_H_

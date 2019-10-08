@@ -14,18 +14,17 @@
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/fidl/app_client.h"
 
-namespace modular {
-
-namespace testing {
+namespace modular_testing {
 
 LedgerRepositoryForTesting::LedgerRepositoryForTesting()
     : component_context_(sys::ComponentContext::Create()), weak_ptr_factory_(this) {
   fuchsia::modular::AppConfig ledger_config;
-  ledger_config.url = kLedgerAppUrl;
+  ledger_config.url = modular::kLedgerAppUrl;
 
   auto launcher = component_context_->svc()->Connect<fuchsia::sys::Launcher>();
-  ledger_app_client_ = std::make_unique<AppClient<fuchsia::ledger::internal::LedgerController>>(
-      launcher.get(), std::move(ledger_config));
+  ledger_app_client_ =
+      std::make_unique<modular::AppClient<fuchsia::ledger::internal::LedgerController>>(
+          launcher.get(), std::move(ledger_config));
 
   ledger_repo_factory_.set_error_handler([](zx_status_t status) {
     FXL_CHECK(false) << "LedgerRepositoryFactory returned an error. Status: "
@@ -47,18 +46,18 @@ fuchsia::ledger::internal::LedgerRepository* LedgerRepositoryForTesting::ledger_
 
 void LedgerRepositoryForTesting::Terminate(fit::function<void()> callback) {
   if (ledger_app_client_) {
-    ledger_app_client_->Teardown(kBasicTimeout, [this, weak_this = weak_ptr_factory_.GetWeakPtr(),
-                                                 callback = std::move(callback)] {
-      ledger_repo_factory_.Unbind();
-      callback();
-      if (weak_this) {
-        weak_this->ledger_app_client_.reset();
-      }
-    });
+    ledger_app_client_->Teardown(
+        modular::kBasicTimeout,
+        [this, weak_this = weak_ptr_factory_.GetWeakPtr(), callback = std::move(callback)] {
+          ledger_repo_factory_.Unbind();
+          callback();
+          if (weak_this) {
+            weak_this->ledger_app_client_.reset();
+          }
+        });
   } else {
     callback();
   }
 }
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

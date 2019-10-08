@@ -29,8 +29,7 @@ constexpr char kFakeStoryShellUrl[] =
     "fuchsia-pkg://example.com/FAKE_STORY_SHELL_PKG/fake_story_shell.cmx";
 constexpr char kFakeModuleUrl[] = "fuchsia-pkg://example.com/FAKE_MODULE_PKG/fake_module.cmx";
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 namespace {
 std::string GenerateFakeUrl() {
   uint32_t random_number = 0;
@@ -59,7 +58,7 @@ class TestHarnessImplTest : public sys::testing::TestWithEnvironment {
  private:
   bool did_exit_ = false;
   fuchsia::modular::testing::TestHarnessPtr harness_;
-  ::modular::testing::TestHarnessImpl harness_impl_;
+  ::modular_testing::TestHarnessImpl harness_impl_;
 };
 
 namespace {
@@ -315,7 +314,7 @@ TEST_F(TestHarnessImplTest, EnvironmentServiceDirectory) {
                           svc_requested = true;
                         }));
 
-  PseudoDirServer svc_dir_server(std::move(svc_dir));
+  modular::PseudoDirServer svc_dir_server(std::move(svc_dir));
 
   fuchsia::modular::testing::TestHarnessSpec spec;
   spec.mutable_env_services()->set_service_dir(svc_dir_server.Serve().Unbind().TakeChannel());
@@ -375,5 +374,4 @@ TEST_F(TestHarnessImplTest, ParseConfigFromString) {
 }
 
 }  // namespace
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

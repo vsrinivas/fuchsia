@@ -15,7 +15,7 @@
 #include "src/modular/lib/modular_test_harness/cpp/fake_component.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_module.h"
 
-class TestHarnessFixtureTest : public modular::testing::TestHarnessFixture {};
+class TestHarnessFixtureTest : public modular_testing::TestHarnessFixture {};
 
 // Test that the TestHarnessFixture is able to launch the modular runtime by
 // asserting that we can intercept a base shell.
@@ -40,7 +40,7 @@ TEST_F(TestHarnessFixtureTest, CanLaunchModular) {
   RunLoopUntil([&] { return intercepted; });
 }
 
-class TestComponent : public modular::testing::FakeComponent {
+class TestComponent : public modular_testing::FakeComponent {
  public:
   TestComponent(fit::function<void()> on_created, fit::function<void()> on_destroyed)
       : FakeComponent({.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
@@ -125,18 +125,18 @@ TEST_F(TestHarnessFixtureTest, FakeComponentLifecycle_KilledByLifecycleService) 
 TEST_F(TestHarnessFixtureTest, AddModToStory) {
   modular_testing::TestHarnessBuilder builder;
 
-  modular::testing::FakeModule mod({.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()},
-                                   [](fuchsia::modular::Intent) {});
+  modular_testing::FakeModule mod({.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()},
+                                  [](fuchsia::modular::Intent) {});
   builder.InterceptComponent(mod.BuildInterceptOptions());
   builder.BuildAndRun(test_harness());
 
-  modular::testing::AddModToStory(test_harness(), "mystory", "mymod",
-                                  fuchsia::modular::Intent{.handler = mod.url()});
+  modular_testing::AddModToStory(test_harness(), "mystory", "mymod",
+                                 fuchsia::modular::Intent{.handler = mod.url()});
 
   RunLoopUntil([&] { return mod.is_running(); });
 }
 
-class TestFixtureForTestingCleanup : public modular::testing::TestHarnessFixture {
+class TestFixtureForTestingCleanup : public modular_testing::TestHarnessFixture {
  public:
   // Runs the test harness and calls |on_running| once the base shell starts
   // running.

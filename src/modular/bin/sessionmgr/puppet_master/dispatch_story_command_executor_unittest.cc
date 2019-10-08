@@ -50,7 +50,7 @@ class TestCommandRunner : public CommandRunner {
   bool delay_done_;
 };
 
-class DispatchStoryCommandExecutorTest : public modular::testing::TestWithLedger {
+class DispatchStoryCommandExecutorTest : public modular_testing::TestWithLedger {
  protected:
   void SetUp() override {
     TestWithLedger::SetUp();

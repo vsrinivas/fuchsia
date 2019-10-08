@@ -7,8 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 SessionShellImpl::SessionShellImpl() = default;
 SessionShellImpl::~SessionShellImpl() = default;
@@ -38,5 +37,4 @@ void SessionShellImpl::DetachView(fuchsia::modular::ViewIdentifier view_id,
   async::PostDelayedTask(async_get_default_dispatcher(), std::move(done), detach_delay_);
 }
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

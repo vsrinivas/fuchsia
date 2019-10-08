@@ -12,7 +12,7 @@
 
 namespace {
 
-class SessionmgrIntegrationTest : public modular::testing::TestHarnessFixture {};
+class SessionmgrIntegrationTest : public modular_testing::TestHarnessFixture {};
 
 class MockAdmin : public fuchsia::device::manager::Administrator {
  public:
@@ -33,7 +33,7 @@ TEST_F(SessionmgrIntegrationTest, RebootCalledIfSessionmgrCrashNumberReachesRetr
   MockAdmin mock_admin;
   fidl::BindingSet<fuchsia::device::manager::Administrator> admin_bindings;
 
-  auto session_shell = modular::testing::FakeSessionShell::CreateWithDefaultOptions();
+  auto session_shell = modular_testing::FakeSessionShell::CreateWithDefaultOptions();
   modular_testing::TestHarnessBuilder builder;
   builder.InterceptSessionShell(session_shell->BuildInterceptOptions());
   builder.AddService(admin_bindings.GetHandler(&mock_admin));

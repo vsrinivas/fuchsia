@@ -18,8 +18,7 @@
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/modular/lib/fidl/app_client.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 // LedgerRepositoryForTesting spins up a ledger instance and acquires a ledger
 // repository meant to be used for testing, particularly in gtest unittests.
@@ -36,7 +35,8 @@ class LedgerRepositoryForTesting {
  private:
   std::unique_ptr<sys::ComponentContext> component_context_;
   scoped_tmpfs::ScopedTmpFS tmp_fs_;
-  std::unique_ptr<AppClient<fuchsia::ledger::internal::LedgerController>> ledger_app_client_;
+  std::unique_ptr<modular::AppClient<fuchsia::ledger::internal::LedgerController>>
+      ledger_app_client_;
   fuchsia::ledger::internal::LedgerRepositoryFactoryPtr ledger_repo_factory_;
   fuchsia::ledger::internal::LedgerRepositoryPtr ledger_repo_;
 
@@ -45,7 +45,6 @@ class LedgerRepositoryForTesting {
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryForTesting);
 };
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing
 
 #endif  // SRC_MODULAR_LIB_TESTING_LEDGER_REPOSITORY_FOR_TESTING_H_

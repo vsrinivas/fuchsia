@@ -26,10 +26,10 @@ fuchsia::modular::IntentFilter MakeIntentFilter(
   return f;
 }
 
-class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
+class AddModCommandRunnerTest : public modular_testing::TestWithSessionStorage {
  public:
   void SetUp() override {
-    testing::TestWithSessionStorage::SetUp();
+    modular_testing::TestWithSessionStorage::SetUp();
     session_storage_ = MakeSessionStorage("page");
     story_id_ = CreateStory(session_storage_.get()).value_or("");
     story_storage_ = GetStoryStorage(session_storage_.get(), story_id_);

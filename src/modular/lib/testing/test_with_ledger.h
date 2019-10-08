@@ -10,15 +10,13 @@
 
 #include <memory>
 
+#include "peridot/lib/ledger_client/ledger_client.h"
 #include "src/modular/lib/testing/ledger_repository_for_testing.h"
 
-namespace modular {
-class LedgerClient;
+namespace modular_testing {
 
-namespace testing {
-
-// A test fixture class for a test case that needs a ledger repository, ledger,
 // ledger client, or ledger page. This runs a message loop, which is required to
+// A test fixture class for a test case that needs a ledger repository, ledger,
 // interact with the ledger through fidl calls.
 //
 // The ledger client is available to the test case and its fixture through the
@@ -34,11 +32,11 @@ class TestWithLedger : public gtest::RealLoopFixture {
   fuchsia::ledger::internal::LedgerRepository* ledger_repository() {
     return ledger_app_->ledger_repository();
   }
-  LedgerClient* ledger_client() { return ledger_client_.get(); }
+  modular::LedgerClient* ledger_client() { return ledger_client_.get(); }
 
   // Build a new LedgerClient connecting to the same underlying ledger.
   // This class must outlive the resulting client.
-  std::unique_ptr<LedgerClient> NewLedgerClient();
+  std::unique_ptr<modular::LedgerClient> NewLedgerClient();
 
   // Increases default timeout over plain test with message loop, because
   // methods executing on the message loop are real fidl calls.
@@ -52,11 +50,10 @@ class TestWithLedger : public gtest::RealLoopFixture {
                                  zx::duration timeout = zx::sec(10));
 
  private:
-  std::unique_ptr<testing::LedgerRepositoryForTesting> ledger_app_;
-  std::unique_ptr<LedgerClient> ledger_client_;
+  std::unique_ptr<modular_testing::LedgerRepositoryForTesting> ledger_app_;
+  std::unique_ptr<modular::LedgerClient> ledger_client_;
 };
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing
 
 #endif  // SRC_MODULAR_LIB_TESTING_TEST_WITH_LEDGER_H_

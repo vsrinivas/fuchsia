@@ -15,7 +15,7 @@
 namespace modular {
 namespace {
 
-class SessionCtlAppTest : public testing::TestWithSessionStorage {
+class SessionCtlAppTest : public modular_testing::TestWithSessionStorage {
  public:
   SessionCtlAppTest() {
     session_storage_ = MakeSessionStorage("page");
@@ -30,7 +30,7 @@ class SessionCtlAppTest : public testing::TestWithSessionStorage {
   std::unique_ptr<PuppetMasterImpl> puppet_master_impl_;
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   std::unique_ptr<Logger> logger_;
-  testing::TestStoryCommandExecutor test_executor_;
+  modular_testing::TestStoryCommandExecutor test_executor_;
   bool done_;
 
   SessionCtlApp CreateSessionCtl(fxl::CommandLine command_line) {

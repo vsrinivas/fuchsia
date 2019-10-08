@@ -10,8 +10,7 @@
 
 #include "src/modular/lib/app_driver/cpp/app_driver.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 // A main function for an application that only runs the implementation of a
 // single component used for integration testing. The component implementation
@@ -26,14 +25,14 @@ namespace testing {
 //   int main(int argc, const char** argv) {
 //     auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 //     Settings settings(command_line);
-//     modular::testing::ComponentMain<TestApp, Settings>(std::move(settings));
+//     modular_testing::ComponentMain<TestApp, Settings>(std::move(settings));
 //     return 0;
 //   }
 //
 // Example use without settings (TestApp is a locally defined class):
 //
 //   int main(int, const char**) {
-//     modular::testing::ComponentMain<TestApp>();
+//     modular_testing::ComponentMain<TestApp>();
 //     return 0;
 //   }
 //
@@ -51,7 +50,6 @@ void ComponentMain(Args... args) {
   loop.Run();
 }
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing
 
 #endif  // SRC_MODULAR_LIB_TESTING_COMPONENT_MAIN_H_

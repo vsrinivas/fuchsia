@@ -28,26 +28,25 @@
 #include "src/modular/lib/testing/mock_base.h"
 #include "src/modular/lib/testing/test_with_ledger.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 namespace {
 
 using ::sys::testing::FakeLauncher;
 
-class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
+class EntityProviderRunnerTest : public TestWithLedger, modular::EntityProviderLauncher {
  public:
   EntityProviderRunnerTest() = default;
 
   void SetUp() override {
     TestWithLedger::SetUp();
 
-    entity_provider_runner_ =
-        std::make_unique<EntityProviderRunner>(static_cast<EntityProviderLauncher*>(this));
+    entity_provider_runner_ = std::make_unique<modular::EntityProviderRunner>(
+        static_cast<modular::EntityProviderLauncher*>(this));
     // The |fuchsia::modular::UserIntelligenceProvider| below must be nullptr in
     // order for agent creation to be synchronous, which these tests assume.
-    agent_runner_ =
-        std::make_unique<AgentRunner>(&launcher_, ledger_repository(), token_manager_.get(),
-                                      nullptr, entity_provider_runner_.get());
+    agent_runner_ = std::make_unique<modular::AgentRunner>(&launcher_, ledger_repository(),
+                                                           token_manager_.get(), nullptr,
+                                                           entity_provider_runner_.get());
   }
 
   void TearDown() override {
@@ -58,13 +57,13 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
   }
 
  protected:
-  AgentRunner* agent_runner() { return agent_runner_.get(); }
+  modular::AgentRunner* agent_runner() { return agent_runner_.get(); }
   FakeLauncher* launcher() { return &launcher_; }
-  EntityProviderRunner* entity_provider_runner() { return entity_provider_runner_.get(); }
+  modular::EntityProviderRunner* entity_provider_runner() { return entity_provider_runner_.get(); }
 
  private:
   // TODO(vardhan): A test probably shouldn't be implementing this..
-  // |EntityProviderLauncher|
+  // |modular::EntityProviderLauncher|
   void ConnectToEntityProvider(
       const std::string& agent_url,
       fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request,
@@ -82,8 +81,8 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
   FakeLauncher launcher_;
 
   files::ScopedTempDir mq_data_dir_;
-  std::unique_ptr<EntityProviderRunner> entity_provider_runner_;
-  std::unique_ptr<AgentRunner> agent_runner_;
+  std::unique_ptr<modular::EntityProviderRunner> entity_provider_runner_;
+  std::unique_ptr<modular::AgentRunner> agent_runner_;
 
   fuchsia::auth::TokenManagerPtr token_manager_;
 
@@ -93,7 +92,7 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
 class MyEntityProvider : fuchsia::modular::Agent,
                          fuchsia::modular::EntityProvider,
                          public fuchsia::sys::ComponentController,
-                         public testing::MockBase {
+                         public modular_testing::MockBase {
  public:
   MyEntityProvider(fuchsia::sys::LaunchInfo launch_info,
                    fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl)
@@ -246,5 +245,4 @@ TEST_F(EntityProviderRunnerTest, Basic) {
 }
 
 }  // namespace
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

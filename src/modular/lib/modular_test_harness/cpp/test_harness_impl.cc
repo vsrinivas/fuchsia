@@ -23,7 +23,7 @@
 #include <src/modular/lib/modular_config/modular_config_constants.h>
 #include <src/modular/lib/modular_config/modular_config_xdr.h>
 
-namespace modular::testing {
+namespace modular_testing {
 namespace {
 
 constexpr char kBasemgrUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
@@ -451,8 +451,8 @@ std::unique_ptr<vfs::PseudoDir> TestHarnessImpl::MakeBasemgrConfigDir(
   // json object, as described in //peridot/docs/modular/guide/config.md
   std::string basemgr_json;
   std::string sessionmgr_json;
-  XdrWrite(&basemgr_json, basemgr_config, XdrBasemgrConfig);
-  XdrWrite(&sessionmgr_json, sessionmgr_config, XdrSessionmgrConfig);
+  XdrWrite(&basemgr_json, basemgr_config, modular::XdrBasemgrConfig);
+  XdrWrite(&sessionmgr_json, sessionmgr_config, modular::XdrSessionmgrConfig);
 
   std::string modular_config_json =
       fxl::Substitute(R"({
@@ -462,7 +462,8 @@ std::unique_ptr<vfs::PseudoDir> TestHarnessImpl::MakeBasemgrConfigDir(
                       modular_config::kBasemgrConfigName, basemgr_json,
                       modular_config::kSessionmgrConfigName, sessionmgr_json);
 
-  return MakeFilePathWithContents(modular_config::kStartupConfigFilePath, modular_config_json);
+  return modular::MakeFilePathWithContents(modular_config::kStartupConfigFilePath,
+                                           modular_config_json);
 }
 
 fuchsia::modular::testing::InterceptedComponentPtr TestHarnessImpl::AddInterceptedComponentBinding(
@@ -524,4 +525,4 @@ void TestHarnessImpl::FlushBufferedSessionAgentServices() {
   intercepted_session_agent_info_.buffered_service_requests.clear();
 }
 
-}  // namespace modular::testing
+}  // namespace modular_testing

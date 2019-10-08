@@ -1,12 +1,13 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 #include "src/modular/lib/testing/test_story_command_executor.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
-void TestStoryCommandExecutor::SetStoryStorage(std::unique_ptr<StoryStorage> story_storage) {
+void TestStoryCommandExecutor::SetStoryStorage(
+    std::unique_ptr<modular::StoryStorage> story_storage) {
   story_storage_ = std::move(story_storage);
 }
 
@@ -71,5 +72,4 @@ void TestStoryCommandExecutor::ExecuteCommandsInternal(
   }
 }
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

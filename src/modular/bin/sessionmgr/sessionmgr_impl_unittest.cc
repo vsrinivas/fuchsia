@@ -24,8 +24,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/modular/lib/fidl/clone.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 namespace {
 using ::testing::Eq;
 using ::testing::SizeIs;
@@ -263,7 +262,7 @@ TEST_F(SessionmgrImplTest, LedgerInitializedWithUserId) {
         ledger_repository_factories.push_back(
             std::make_unique<FakeLedgerRepositoryFactory>(std::move(handler)));
       });
-  ledger_component.Register(kLedgerAppUrl, fake_launcher);
+  ledger_component.Register(modular::kLedgerAppUrl, fake_launcher);
 
   sys::testing::FakeComponent cloud_provider_component;
   std::vector<std::unique_ptr<FakeCloudProviderFactory>> cloud_provider_factories;
@@ -273,14 +272,14 @@ TEST_F(SessionmgrImplTest, LedgerInitializedWithUserId) {
         cloud_provider_factories.push_back(
             std::make_unique<FakeCloudProviderFactory>(std::move(handler)));
       });
-  cloud_provider_component.Register(kCloudProviderFirestoreAppUrl, fake_launcher);
+  cloud_provider_component.Register(modular::kCloudProviderFirestoreAppUrl, fake_launcher);
 
   component_context_provider.service_directory_provider()->AddService(fake_launcher.GetHandler());
 
   inspect::Node root_node;
   fuchsia::modular::internal::SessionmgrPtr sessionmgr;
-  SessionmgrImpl sessionmgr_impl(component_context_provider.context(), std::move(config),
-                                 std::move(root_node));
+  modular::SessionmgrImpl sessionmgr_impl(component_context_provider.context(), std::move(config),
+                                          std::move(root_node));
   component_context_provider.ConnectToPublicService(sessionmgr.NewRequest());
 
   sessionmgr.set_error_handler([](zx_status_t status) {
@@ -306,8 +305,8 @@ TEST_F(SessionmgrImplTest, LedgerInitializedWithUserId) {
 
   auto [view_token, view_token_holder] = scenic::ViewTokenPair::New();
 
-  sessionmgr->Initialize("session_id", std::move(account), CloneStruct(app_config),
-                         CloneStruct(app_config), false, std::move(ledger_token_manager),
+  sessionmgr->Initialize("session_id", std::move(account), modular::CloneStruct(app_config),
+                         modular::CloneStruct(app_config), false, std::move(ledger_token_manager),
                          std::move(agent_token_manager), std::move(session_context),
                          std::move(view_token));
   RunLoopUntilIdle();
@@ -334,5 +333,4 @@ TEST_F(SessionmgrImplTest, LedgerInitializedWithUserId) {
 }
 
 }  // namespace
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

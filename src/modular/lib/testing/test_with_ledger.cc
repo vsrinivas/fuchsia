@@ -7,13 +7,11 @@
 #include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
-#include "peridot/lib/ledger_client/ledger_client.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 TestWithLedger::TestWithLedger() {
-  ledger_app_ = std::make_unique<testing::LedgerRepositoryForTesting>();
+  ledger_app_ = std::make_unique<modular_testing::LedgerRepositoryForTesting>();
 
   ledger_client_ = NewLedgerClient();
 };
@@ -30,8 +28,8 @@ TestWithLedger::~TestWithLedger() {
   ledger_app_.reset();
 };
 
-std::unique_ptr<LedgerClient> TestWithLedger::NewLedgerClient() {
-  return std::make_unique<LedgerClient>(
+std::unique_ptr<modular::LedgerClient> TestWithLedger::NewLedgerClient() {
+  return std::make_unique<modular::LedgerClient>(
       ledger_app_->ledger_repository(), __FILE__,
       [](zx_status_t status) { ASSERT_TRUE(false) << "Status: " << status; });
 }
@@ -45,5 +43,4 @@ bool TestWithLedger::RunLoopWithTimeoutOrUntil(fit::function<bool()> condition,
   return RealLoopFixture::RunLoopWithTimeoutOrUntil(std::move(condition), timeout);
 }
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

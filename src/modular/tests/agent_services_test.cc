@@ -68,7 +68,7 @@ struct ConnectToAgentServiceExpect {
   zx_status_t service_status = ZX_OK;
 };
 
-class AgentServicesTest : public modular::testing::TestHarnessFixture {
+class AgentServicesTest : public modular_testing::TestHarnessFixture {
  protected:
   fuchsia::modular::ComponentContextPtr StartTestHarness(
       ConnectToAgentServiceTestConfig test_config) {

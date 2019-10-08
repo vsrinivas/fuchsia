@@ -12,7 +12,7 @@
 
 namespace {
 
-class ComponentContextTest : public modular::testing::TestHarnessFixture {};
+class ComponentContextTest : public modular_testing::TestHarnessFixture {};
 
 // Tests that an agent is able to start another agent through
 // fuchsia::modular::ComponentContext.ConnectToAgent(). Asserts that closing
@@ -20,13 +20,13 @@ class ComponentContextTest : public modular::testing::TestHarnessFixture {};
 TEST_F(ComponentContextTest, AgentStartsSecondAgent) {
   modular_testing::TestHarnessBuilder builder;
 
-  auto fake_module = modular::testing::FakeModule::CreateWithDefaultOptions();
+  auto fake_module = modular_testing::FakeModule::CreateWithDefaultOptions();
   builder.InterceptComponent(fake_module->BuildInterceptOptions());
 
-  auto fake_agent = modular::testing::FakeAgent::CreateWithDefaultOptions();
+  auto fake_agent = modular_testing::FakeAgent::CreateWithDefaultOptions();
   builder.InterceptComponent(fake_agent->BuildInterceptOptions());
 
-  auto second_fake_agent = modular::testing::FakeAgent::CreateWithDefaultOptions();
+  auto second_fake_agent = modular_testing::FakeAgent::CreateWithDefaultOptions();
   builder.InterceptComponent(second_fake_agent->BuildInterceptOptions());
 
   builder.BuildAndRun(test_harness());
@@ -34,7 +34,7 @@ TEST_F(ComponentContextTest, AgentStartsSecondAgent) {
   // Add the test mod.
   fuchsia::modular::Intent intent;
   intent.handler = fake_module->url();
-  modular::testing::AddModToStory(test_harness(), "story_name", "mod_name", std::move(intent));
+  modular_testing::AddModToStory(test_harness(), "story_name", "mod_name", std::move(intent));
   RunLoopUntil([&] { return fake_module->is_running(); });
 
   // Connect to the first fake agent from the fake mod.

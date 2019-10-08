@@ -22,14 +22,14 @@ using fuchsia::modular::StoryVisibilityState;
 using fuchsia::modular::storymodel::StoryModel;
 using fuchsia::modular::storymodel::StoryModelMutation;
 
-namespace modular {
+namespace modular_testing {
 namespace {
 
 // TODO: there is no good candidate for testing conflict resolution in the
 // StoryModel as of yet. What would be good is, e.g.: setting a value on a
 // ModuleModel while simultaneously deleting the entire entry.
 
-class LedgerStoryModelStorageTest : public testing::TestWithLedger {
+class LedgerStoryModelStorageTest : public modular_testing::TestWithLedger {
  public:
   async::Executor executor;
 
@@ -43,21 +43,22 @@ class LedgerStoryModelStorageTest : public testing::TestWithLedger {
   // 2) A ptr to a vector of lists of StoryModelMutations observed from that
   // instance.
   // 3) A ptr to a StoryModel updated with the observed commands.
-  std::tuple<std::unique_ptr<StoryModelStorage>, std::vector<std::vector<StoryModelMutation>>*,
-             StoryModel*>
-  Create(std::string page_id, std::string device_id, LedgerClient* ledger_client = nullptr) {
+  std::tuple<std::unique_ptr<modular::StoryModelStorage>,
+             std::vector<std::vector<StoryModelMutation>>*, StoryModel*>
+  Create(std::string page_id, std::string device_id,
+         modular::LedgerClient* ledger_client = nullptr) {
     // If not client is specified, use the default client.
     if (!ledger_client) {
       ledger_client = this->ledger_client();
     }
 
-    auto storage =
-        std::make_unique<LedgerStoryModelStorage>(ledger_client, MakePageId(page_id), device_id);
+    auto storage = std::make_unique<modular::LedgerStoryModelStorage>(
+        ledger_client, modular::MakePageId(page_id), device_id);
 
     auto observed_commands = observed_mutations_.emplace(observed_mutations_.end());
     auto observed_model = observed_models_.emplace(observed_models_.end());
     storage->SetObserveCallback([=](std::vector<StoryModelMutation> commands) {
-      *observed_model = ApplyMutations(*observed_model, commands);
+      *observed_model = modular::ApplyMutations(*observed_model, commands);
       observed_commands->push_back(std::move(commands));
     });
     return std::make_tuple(std::move(storage), &*observed_commands, &*observed_model);
@@ -98,9 +99,10 @@ TEST_F(LedgerStoryModelStorageTest, DeviceLocal_RoundTrip) {
   // eventually.
   RunLoopUntilNumMutationsObserved(observed_mutations, 1);
   EXPECT_EQ(1lu, observed_mutations->size());
-  EXPECT_THAT(observed_mutations->at(0),
-              ::testing::ElementsAre(IsSetRuntimeStateMutation(StoryState::RUNNING),
-                                     IsSetVisibilityMutation(StoryVisibilityState::IMMERSIVE)));
+  EXPECT_THAT(
+      observed_mutations->at(0),
+      ::testing::ElementsAre(modular::IsSetRuntimeStateMutation(StoryState::RUNNING),
+                             modular::IsSetVisibilityMutation(StoryVisibilityState::IMMERSIVE)));
 
   // Now change only StoryState. We should see the result of our previous
   // change to StoryVisibilityState preserved.
@@ -115,9 +117,10 @@ TEST_F(LedgerStoryModelStorageTest, DeviceLocal_RoundTrip) {
 
   RunLoopUntilNumMutationsObserved(observed_mutations, 2);
   EXPECT_EQ(2lu, observed_mutations->size());
-  EXPECT_THAT(observed_mutations->at(1),
-              ::testing::ElementsAre(IsSetRuntimeStateMutation(StoryState::STOPPED),
-                                     IsSetVisibilityMutation(StoryVisibilityState::IMMERSIVE)));
+  EXPECT_THAT(
+      observed_mutations->at(1),
+      ::testing::ElementsAre(modular::IsSetRuntimeStateMutation(StoryState::STOPPED),
+                             modular::IsSetVisibilityMutation(StoryVisibilityState::IMMERSIVE)));
 }
 
 // Show that when we store values for two different device IDs in the same
@@ -197,4 +200,4 @@ TEST_F(LedgerStoryModelStorageTest, Load) {
 }
 
 }  // namespace
-}  // namespace modular
+}  // namespace modular_testing

@@ -29,8 +29,7 @@
 #include "src/modular/lib/testing/mock_base.h"
 #include "src/modular/lib/testing/test_with_ledger.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 namespace {
 
 using ::sys::testing::FakeLauncher;
@@ -84,7 +83,7 @@ static zx_koid_t get_object_koid(zx_handle_t handle) {
 
 class TestAgent : fuchsia::modular::Agent,
                   public fuchsia::sys::ComponentController,
-                  public testing::MockBase {
+                  public modular_testing::MockBase {
  public:
   TestAgent(zx::channel directory_request,
             fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl,
@@ -144,7 +143,7 @@ class AgentRunnerTest : public TestWithLedger {
   void SetUp() override {
     TestWithLedger::SetUp();
 
-    entity_provider_runner_ = std::make_unique<EntityProviderRunner>(nullptr);
+    entity_provider_runner_ = std::make_unique<modular::EntityProviderRunner>(nullptr);
     // The |fuchsia::modular::UserIntelligenceProvider| below must be nullptr in
     // order for agent creation to be synchronous, which these tests assume.
   }
@@ -157,12 +156,12 @@ class AgentRunnerTest : public TestWithLedger {
   }
 
  protected:
-  AgentRunner* agent_runner() {
+  modular::AgentRunner* agent_runner() {
     if (agent_runner_ == nullptr) {
-      agent_runner_ = std::make_unique<AgentRunner>(
+      agent_runner_ = std::make_unique<modular::AgentRunner>(
           &launcher_, ledger_repository(), token_manager_.get(), nullptr,
           entity_provider_runner_.get(),
-          std::make_unique<MapAgentServiceIndex>(std::move(agent_service_index_)));
+          std::make_unique<modular::MapAgentServiceIndex>(std::move(agent_service_index_)));
     }
     return agent_runner_.get();
   }
@@ -255,8 +254,8 @@ class AgentRunnerTest : public TestWithLedger {
   FakeLauncher launcher_;
 
   files::ScopedTempDir mq_data_dir_;
-  std::unique_ptr<EntityProviderRunner> entity_provider_runner_;
-  std::unique_ptr<AgentRunner> agent_runner_;
+  std::unique_ptr<modular::EntityProviderRunner> entity_provider_runner_;
+  std::unique_ptr<modular::AgentRunner> agent_runner_;
   std::map<std::string, std::string> agent_service_index_;
 
   fuchsia::auth::TokenManagerPtr token_manager_;
@@ -406,5 +405,4 @@ TEST_F(AgentRunnerTest, ConnectToServiceName) {
   execute_connect_to_agent_service_test(test_config, expect);
 }
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

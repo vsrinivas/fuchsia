@@ -11,8 +11,7 @@
 
 #include "src/modular/lib/modular_test_harness/cpp/fake_component.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 // An Agent implementation which provides access to
 // |fuchsia::modular::AgentContext|, implements boilerplate for exposing
@@ -59,7 +58,6 @@ class FakeAgent : public FakeComponent {
   std::unique_ptr<modular::Agent> agent_;
 };
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing
 
 #endif  // SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_FAKE_AGENT_H_

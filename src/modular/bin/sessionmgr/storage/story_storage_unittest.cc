@@ -20,10 +20,10 @@ using fuchsia::modular::ModuleDataPtr;
 namespace modular {
 namespace {
 
-class StoryStorageTest : public testing::TestWithLedger {
+class StoryStorageTest : public modular_testing::TestWithLedger {
  protected:
   std::unique_ptr<StoryStorage> CreateStorage(std::string page_id) {
-    return std::make_unique<StoryStorage>(ledger_client(), MakePageId(page_id));
+    return std::make_unique<StoryStorage>(ledger_client(), modular::MakePageId(page_id));
   }
 };
 

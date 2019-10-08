@@ -53,7 +53,7 @@ fuchsia::modular::StoryCommand MakeRemoveModCommand(std::string mod_name) {
   return command;
 }
 
-class PuppetMasterTest : public testing::TestWithSessionStorage {
+class PuppetMasterTest : public modular_testing::TestWithSessionStorage {
  public:
   void SetUp() override {
     TestWithSessionStorage::SetUp();
@@ -86,7 +86,7 @@ class PuppetMasterTest : public testing::TestWithSessionStorage {
 
  protected:
   fidl::StringPtr story_name_;
-  testing::TestStoryCommandExecutor executor_;
+  modular_testing::TestStoryCommandExecutor executor_;
   std::unique_ptr<SessionStorage> session_storage_;
   std::unique_ptr<PuppetMasterImpl> impl_;
   fuchsia::modular::PuppetMasterPtr ptr_;

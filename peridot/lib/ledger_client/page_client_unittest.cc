@@ -13,8 +13,7 @@
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/testing/test_with_ledger.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 namespace {
 
 // NOTE(mesch): Test cases here take about 300ms when running in CI.
@@ -23,10 +22,12 @@ namespace {
 // FW-287.
 constexpr zx::duration kTimeout = zx::sec(10);
 
-class PageClientImpl : public PageClient {
+class PageClientImpl : public modular::PageClient {
  public:
-  PageClientImpl(LedgerClient* ledger_client, LedgerPageId page_id, std::string prefix = "")
-      : PageClient("PageClientImpl", ledger_client, std::move(page_id), std::move(prefix)) {}
+  PageClientImpl(modular::LedgerClient* ledger_client, modular::LedgerPageId page_id,
+                 std::string prefix = "")
+      : modular::PageClient("PageClientImpl", ledger_client, std::move(page_id),
+                            std::move(prefix)) {}
 
   ~PageClientImpl() override = default;
 
@@ -47,7 +48,8 @@ class PageClientImpl : public PageClient {
     ++conflict_count_;
 
     FXL_LOG(INFO) << "OnPageConflict " << prefix() << " " << conflict_count_ << " "
-                  << to_string(conflict->key) << " " << conflict->left << " " << conflict->right;
+                  << modular::to_string(conflict->key) << " " << conflict->left << " "
+                  << conflict->right;
 
     conflict_resolver_(conflict);
   }
@@ -85,7 +87,7 @@ class PageClientTest : public TestWithLedger {
 
   PageClientImpl* CreatePageClient(const std::string& page_id, const std::string& prefix = "") {
     auto page_client =
-        std::make_unique<PageClientImpl>(ledger_client(), MakePageId(page_id), prefix);
+        std::make_unique<PageClientImpl>(ledger_client(), modular::MakePageId(page_id), prefix);
     auto* ptr = page_client.get();
     page_clients_.emplace_back(std::move(page_client));
     return ptr;
@@ -94,7 +96,7 @@ class PageClientTest : public TestWithLedger {
   fuchsia::ledger::PagePtr CreatePagePtr(const std::string& page_id) {
     fuchsia::ledger::PagePtr page;
     ledger_client()->ledger()->GetPage(
-        std::make_unique<fuchsia::ledger::PageId>(MakePageId(page_id)), page.NewRequest());
+        std::make_unique<fuchsia::ledger::PageId>(modular::MakePageId(page_id)), page.NewRequest());
     return page;
   }
 
@@ -118,7 +120,7 @@ TEST_F(PageClientTest, DISABLED_SimpleWriteObserve) {
   // the resulting change in the PageClient.
   auto client = CreatePageClient("page");
 
-  client->page()->Put(to_array("key"), to_array("value"));
+  client->page()->Put(modular::to_array("key"), modular::to_array("value"));
 
   RunLoopWithTimeoutOrUntil([&] { return client->value("key") == "value"; }, kTimeout);
 
@@ -134,8 +136,8 @@ TEST_F(PageClientTest, PrefixWriteObserve) {
   auto client_b = CreatePageClient("page", "b/");
 
   auto page = CreatePagePtr("page");
-  page->Put(to_array("a/key"), to_array("value"));
-  page->Put(to_array("b/key"), to_array("value"));
+  page->Put(modular::to_array("a/key"), modular::to_array("value"));
+  page->Put(modular::to_array("b/key"), modular::to_array("value"));
 
   RunLoopWithTimeoutOrUntil(
       [&] { return client_a->value("a/key") == "value" && client_b->value("b/key") == "value"; },
@@ -156,8 +158,8 @@ TEST_F(PageClientTest, ConcurrentWrite) {
 
   auto page1 = CreatePagePtr("page");
   auto page2 = CreatePagePtr("page");
-  page1->Put(to_array("key1"), to_array("value1"));
-  page2->Put(to_array("key2"), to_array("value2"));
+  page1->Put(modular::to_array("key1"), modular::to_array("value1"));
+  page2->Put(modular::to_array("key2"), modular::to_array("value2"));
 
   RunLoopWithTimeoutOrUntil(
       [&] { return client->value("key1") == "value1" && client->value("key2") == "value2"; },
@@ -172,8 +174,8 @@ TEST_F(PageClientTest, ConflictWrite) {
   // Write to the same key on two different PagePtrs, and set our PageClient to
   // resolve conflict by setting yet a third value.
   auto client = CreatePageClient("page");
-  client->SetConflictResolver([](PageClient::Conflict* const conflict) {
-    conflict->resolution = PageClient::MERGE;
+  client->SetConflictResolver([](modular::PageClient::Conflict* const conflict) {
+    conflict->resolution = modular::PageClient::MERGE;
     conflict->merged = "value3";
   });
 
@@ -183,10 +185,10 @@ TEST_F(PageClientTest, ConflictWrite) {
   bool finished{};
 
   page2->StartTransaction();
-  page2->Put(to_array("key"), to_array("value2"));
+  page2->Put(modular::to_array("key"), modular::to_array("value2"));
   page2->Sync([&] {
     page1->StartTransaction();
-    page1->Put(to_array("key"), to_array("value1"));
+    page1->Put(modular::to_array("key"), modular::to_array("value1"));
     page1->Sync([&] {
       page2->Commit();
       page1->Commit();
@@ -207,8 +209,8 @@ TEST_F(PageClientTest, ConflictPrefixWrite) {
   // resolution, and the other is not consulted at all.
   auto client_a = CreatePageClient("page", "a/");
   auto client_b = CreatePageClient("page", "b/");
-  client_a->SetConflictResolver([](PageClient::Conflict* const conflict) {
-    conflict->resolution = PageClient::MERGE;
+  client_a->SetConflictResolver([](modular::PageClient::Conflict* const conflict) {
+    conflict->resolution = modular::PageClient::MERGE;
     conflict->merged = "value3";
   });
 
@@ -217,10 +219,10 @@ TEST_F(PageClientTest, ConflictPrefixWrite) {
 
   bool finished{};
   page2->StartTransaction();
-  page2->Put(to_array("a/key"), to_array("value2"));
+  page2->Put(modular::to_array("a/key"), modular::to_array("value2"));
   page2->Sync([&] {
     page1->StartTransaction();
-    page1->Put(to_array("a/key"), to_array("value1"));
+    page1->Put(modular::to_array("a/key"), modular::to_array("value1"));
     page1->Sync([&] {
       page2->Commit();
       page1->Commit();
@@ -241,8 +243,8 @@ TEST_F(PageClientTest, ConcurrentConflictWrite) {
   // Explicitly cause a conflict on one key, but not on other keys. We should
   // see the conflict resolve, but it should not affect the other keys at all.
   auto client = CreatePageClient("page");
-  client->SetConflictResolver([](PageClient::Conflict* const conflict) {
-    conflict->resolution = PageClient::MERGE;
+  client->SetConflictResolver([](modular::PageClient::Conflict* const conflict) {
+    conflict->resolution = modular::PageClient::MERGE;
     conflict->merged = "value3";
   });
 
@@ -251,12 +253,12 @@ TEST_F(PageClientTest, ConcurrentConflictWrite) {
 
   bool finished{};
   page2->StartTransaction();
-  page2->Put(to_array("key2"), to_array("value2"));
-  page2->Put(to_array("key"), to_array("value2"));
+  page2->Put(modular::to_array("key2"), modular::to_array("value2"));
+  page2->Put(modular::to_array("key"), modular::to_array("value2"));
   page2->Sync([&] {
     page1->StartTransaction();
-    page1->Put(to_array("key1"), to_array("value1"));
-    page1->Put(to_array("key"), to_array("value1"));
+    page1->Put(modular::to_array("key1"), modular::to_array("value1"));
+    page1->Put(modular::to_array("key"), modular::to_array("value1"));
     page1->Sync([&] {
       page2->Commit();
       page1->Commit();
@@ -278,5 +280,4 @@ TEST_F(PageClientTest, ConcurrentConflictWrite) {
 }
 
 }  // namespace
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

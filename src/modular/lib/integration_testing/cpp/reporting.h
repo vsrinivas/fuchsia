@@ -13,11 +13,10 @@
 #define TEST_FAIL(label)                                  \
   {                                                       \
     std::cerr << "[TEST] FAIL: " << (label) << std::endl; \
-    testing::Fail(label);                                 \
+    modular_testing::Fail(label);                         \
   }
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 // Helper class to record that a particular condition was reached sometime
 // in the life span of an object. If the test point is not marked with Pass()
@@ -34,7 +33,6 @@ class TestPoint {
   bool value_{};
 };
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing
 
 #endif  // SRC_MODULAR_LIB_INTEGRATION_TESTING_CPP_REPORTING_H_

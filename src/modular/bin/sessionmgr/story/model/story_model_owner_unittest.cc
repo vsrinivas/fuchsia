@@ -21,7 +21,7 @@ namespace {
 // This persistence system acts as a mock for calls to Execute(), and promotes
 // Observe() from protected to public so that we can call it directly from the
 // test body.
-class TestModelStorage : public StoryModelStorage {
+class TestModelStorage : public modular::StoryModelStorage {
  public:
   struct ExecuteCall {
     std::vector<StoryModelMutation> commands;

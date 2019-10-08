@@ -11,7 +11,7 @@
 
 namespace modular {
 
-class ClipboardImplTest : public testing::TestWithLedger {
+class ClipboardImplTest : public modular_testing::TestWithLedger {
  public:
   ClipboardImplTest() = default;
 

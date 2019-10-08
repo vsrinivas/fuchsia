@@ -12,7 +12,7 @@
 constexpr char kModularTestHarnessGlobPath[] =
     "/hub/r/mth_*_test/*/c/sessionmgr.cmx/*/out/debug/sessionctl";
 
-class SessionctlTest : public modular::testing::TestHarnessFixture {};
+class SessionctlTest : public modular_testing::TestHarnessFixture {};
 
 TEST_F(SessionctlTest, FindSessionCtlService) {
   fuchsia::modular::testing::TestHarnessSpec spec;

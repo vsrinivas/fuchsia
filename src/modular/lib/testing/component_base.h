@@ -14,8 +14,7 @@
 #include "src/modular/public/src/modular/lib/integration_testing/cpp/reporting.h"
 #include "src/modular/public/src/modular/lib/integration_testing/cpp/testing.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 // A base class for components used in tests. It helps them to exit the
 // application at the end of the life cycle while properly posting test points
@@ -26,7 +25,7 @@ namespace testing {
 template <typename Component>
 class ComponentBase : protected SingleServiceApp<Component> {
  public:
-  void Terminate(fit::function<void()> done) override { modular::testing::Done(std::move(done)); }
+  void Terminate(fit::function<void()> done) override { modular_testing::Done(std::move(done)); }
 
  protected:
   // Invocations of methods of the base class must be unambiguously recognizable
@@ -44,10 +43,10 @@ class ComponentBase : protected SingleServiceApp<Component> {
 
   ~ComponentBase() override = default;
 
-  // We must not call testing::Init() in the base class
+  // We must not call modular_modular_testing::Init() in the base class
   // constructor, because that's before the test points are initialized. It's
   // fine to call this from the derived class constructor.
-  void TestInit(const char* const file) { testing::Init(Base::component_context(), file); }
+  void TestInit(const char* const file) { modular_testing::Init(Base::component_context(), file); }
 
   // Wraps the callback function into a layer that protects executing the
   // callback in the argument against execution after this instance is deleted,
@@ -73,7 +72,7 @@ class ComponentBase : protected SingleServiceApp<Component> {
 template <>
 class ComponentBase<void> : protected ViewApp {
  public:
-  void Terminate(fit::function<void()> done) override { modular::testing::Done(std::move(done)); }
+  void Terminate(fit::function<void()> done) override { modular_testing::Done(std::move(done)); }
 
  protected:
   ComponentBase(sys::ComponentContext* const component_context)
@@ -81,10 +80,12 @@ class ComponentBase<void> : protected ViewApp {
 
   ~ComponentBase() override = default;
 
-  // We must not call testing::Init() in the base class
+  // We must not call modular_testing::Init() in the base class
   // constructor, because that's before the test points are initialized. It's
   // fine to call this from the derived class constructor.
-  void TestInit(const char* const file) { testing::Init(ViewApp::component_context(), file); }
+  void TestInit(const char* const file) {
+    modular_testing::Init(ViewApp::component_context(), file);
+  }
 
   // Wraps the callback function into a layer that protects executing the
   // callback in the argument against execution after this instance is deleted,
@@ -107,7 +108,6 @@ class ComponentBase<void> : protected ViewApp {
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentBase);
 };
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing
 
 #endif  // SRC_MODULAR_LIB_TESTING_COMPONENT_BASE_H_

@@ -22,14 +22,14 @@ constexpr char kModuleName[] = "mod_name";
 constexpr char kStoryName[] = "story";
 constexpr char kIntentAction[] = "action";
 
-class IntentsTest : public modular::testing::TestHarnessFixture {
+class IntentsTest : public modular_testing::TestHarnessFixture {
  protected:
   IntentsTest()
       : number_of_intents_handled_(0),
         test_module_(
-            modular::testing::FakeComponent::Args{
+            modular_testing::FakeComponent::Args{
                 .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
-                .sandbox_services = modular::testing::FakeModule::GetDefaultSandboxServices()},
+                .sandbox_services = modular_testing::FakeModule::GetDefaultSandboxServices()},
             [this](fuchsia::modular::Intent intent) {
               latest_handled_intent_ = std::move(intent);
               number_of_intents_handled_++;
@@ -88,7 +88,7 @@ class IntentsTest : public modular::testing::TestHarnessFixture {
   }
 
   int number_of_intents_handled_;
-  modular::testing::FakeModule test_module_;
+  modular_testing::FakeModule test_module_;
   modular_testing::TestHarnessBuilder builder_;
   fuchsia::modular::Intent latest_handled_intent_;
 };
@@ -99,8 +99,8 @@ TEST_F(IntentsTest, ModuleUsesIntentHandler) {
   // Launch initial module
   auto initial_module_intent =
       CreateIntent(test_module_.url(), kIntentParameterName, kInitialIntentParameterData);
-  modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName,
-                                  std::move(initial_module_intent));
+  modular_testing::AddModToStory(test_harness(), kStoryName, kModuleName,
+                                 std::move(initial_module_intent));
   RunLoopUntil([&] { return number_of_intents_handled_ == 1; });
   ASSERT_TRUE(test_module_.is_running());
 
@@ -116,8 +116,8 @@ TEST_F(IntentsTest, ReuseIntentHandlerSameParamName) {
   // Launch initial module
   auto initial_module_intent =
       CreateIntent(test_module_.url(), kIntentParameterName, kInitialIntentParameterData);
-  modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName,
-                                  std::move(initial_module_intent));
+  modular_testing::AddModToStory(test_harness(), kStoryName, kModuleName,
+                                 std::move(initial_module_intent));
   RunLoopUntil([&] { return number_of_intents_handled_ == 1; });
   ASSERT_TRUE(test_module_.is_running());
 
@@ -144,8 +144,8 @@ TEST_F(IntentsTest, ReuseIntentHandlerDifferentParam) {
   // Launch initial module
   auto initial_module_intent =
       CreateIntent(test_module_.url(), kIntentParameterName, kInitialIntentParameterData);
-  modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName,
-                                  std::move(initial_module_intent));
+  modular_testing::AddModToStory(test_harness(), kStoryName, kModuleName,
+                                 std::move(initial_module_intent));
   RunLoopUntil([&] { return number_of_intents_handled_ == 1; });
   ASSERT_TRUE(test_module_.is_running());
 
@@ -174,8 +174,8 @@ TEST_F(IntentsTest, DifferentHandler) {
   // Launch initial module
   auto initial_module_intent =
       CreateIntent(test_module_.url(), kIntentParameterName, kInitialIntentParameterData);
-  modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName,
-                                  std::move(initial_module_intent));
+  modular_testing::AddModToStory(test_harness(), kStoryName, kModuleName,
+                                 std::move(initial_module_intent));
   RunLoopUntil([&] { return number_of_intents_handled_ == 1; });
   ASSERT_TRUE(test_module_.is_running());
 

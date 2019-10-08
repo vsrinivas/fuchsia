@@ -48,10 +48,10 @@ constexpr char kInitialIntentParameterData[] = "\"initial\"";
 constexpr char kIntentAction[] = "action";
 constexpr char kIntentParameterName[] = "intent_parameter";
 
-class InspectSessionTest : public modular::testing::TestHarnessFixture {
+class InspectSessionTest : public modular_testing::TestHarnessFixture {
  protected:
   InspectSessionTest()
-      : fake_session_shell_(modular::testing::FakeSessionShell::CreateWithDefaultOptions()) {}
+      : fake_session_shell_(modular_testing::FakeSessionShell::CreateWithDefaultOptions()) {}
 
   void RunHarnessAndInterceptSessionShell() {
     fuchsia::modular::testing::TestHarnessSpec spec;
@@ -113,7 +113,7 @@ class InspectSessionTest : public modular::testing::TestHarnessFixture {
     return intent;
   }
 
-  std::unique_ptr<modular::testing::FakeSessionShell> fake_session_shell_;
+  std::unique_ptr<modular_testing::FakeSessionShell> fake_session_shell_;
 };  // namespace
 
 class TestStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher {

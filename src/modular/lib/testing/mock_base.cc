@@ -8,8 +8,7 @@
 
 #include "gtest/gtest.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 MockBase::MockBase() = default;
 MockBase::~MockBase() = default;
@@ -32,5 +31,4 @@ void MockBase::ExpectNoOtherCalls() {
   }
 }
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

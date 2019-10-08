@@ -32,7 +32,7 @@ namespace modular_testing {
 //   // Instruct the test harness to intercept the launch of a new component
 //   // within the test harness environment. Specify that the component should
 //   // include foo.Service within its component manifest.
-//   modular::testing::FakeComponent component(
+//   modular_testing::FakeComponent component(
 //       {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
 //        .sandbox_services = {"foo.Service"}});
 //   builder.InterceptComponent(component.BuildInterceptOptions());

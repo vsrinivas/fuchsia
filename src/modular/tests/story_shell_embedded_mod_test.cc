@@ -20,15 +20,15 @@ constexpr char kEmbeddedModuleName[] = "embedded_name";
 constexpr char kThirdModuleName[] = "third_name";
 constexpr char kStoryName[] = "story";
 
-class StoryShellEmbeddedModTest : public modular::testing::TestHarnessFixture {
+class StoryShellEmbeddedModTest : public modular_testing::TestHarnessFixture {
  public:
   StoryShellEmbeddedModTest()
-      : fake_session_shell_(modular::testing::FakeSessionShell::CreateWithDefaultOptions()),
+      : fake_session_shell_(modular_testing::FakeSessionShell::CreateWithDefaultOptions()),
         test_story_shell_({.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
                            .sandbox_services = {"fuchsia.modular.StoryShellContext"}}),
-        parent_module_(modular::testing::FakeModule::CreateWithDefaultOptions()),
-        embedded_module_(modular::testing::FakeModule::CreateWithDefaultOptions()),
-        third_module_(modular::testing::FakeModule::CreateWithDefaultOptions()) {
+        parent_module_(modular_testing::FakeModule::CreateWithDefaultOptions()),
+        embedded_module_(modular_testing::FakeModule::CreateWithDefaultOptions()),
+        third_module_(modular_testing::FakeModule::CreateWithDefaultOptions()) {
     builder_.InterceptSessionShell(fake_session_shell_->BuildInterceptOptions());
     builder_.InterceptStoryShell(test_story_shell_.BuildInterceptOptions());
     builder_.InterceptComponent(parent_module_->BuildInterceptOptions());
@@ -45,8 +45,8 @@ class StoryShellEmbeddedModTest : public modular::testing::TestHarnessFixture {
   // Launches an initial parent module.
   void LaunchParentModule() {
     auto parent_mod_intent = fuchsia::modular::Intent{.handler = parent_module_->url()};
-    modular::testing::AddModToStory(test_harness(), kStoryName, kParentModuleName,
-                                    std::move(parent_mod_intent));
+    modular_testing::AddModToStory(test_harness(), kStoryName, kParentModuleName,
+                                   std::move(parent_mod_intent));
 
     RunLoopUntil([&] { return parent_module_->is_running(); });
   }
@@ -78,11 +78,11 @@ class StoryShellEmbeddedModTest : public modular::testing::TestHarnessFixture {
     RunLoopUntil([&] { return third_module_->is_running(); });
   }
 
-  std::unique_ptr<modular::testing::FakeSessionShell> fake_session_shell_;
-  modular::testing::FakeStoryShell test_story_shell_;
-  std::unique_ptr<modular::testing::FakeModule> parent_module_;
-  std::unique_ptr<modular::testing::FakeModule> embedded_module_;
-  std::unique_ptr<modular::testing::FakeModule> third_module_;
+  std::unique_ptr<modular_testing::FakeSessionShell> fake_session_shell_;
+  modular_testing::FakeStoryShell test_story_shell_;
+  std::unique_ptr<modular_testing::FakeModule> parent_module_;
+  std::unique_ptr<modular_testing::FakeModule> embedded_module_;
+  std::unique_ptr<modular_testing::FakeModule> third_module_;
   modular_testing::TestHarnessBuilder builder_;
 };
 

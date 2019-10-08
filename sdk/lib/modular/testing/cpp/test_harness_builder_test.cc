@@ -42,7 +42,7 @@ class FakeTestHarness : public fuchsia::modular::testing::TestHarness {
 
 // TestHarnessBuilder. Provides a service directory, typically used for
 // testing environment service building.
-class TestHarnessBuilderTest : public modular::testing::TestHarnessFixture {
+class TestHarnessBuilderTest : public modular_testing::TestHarnessFixture {
  public:
   TestHarnessBuilderTest() {
     zx::channel dir_req;

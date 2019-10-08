@@ -6,8 +6,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 FakeSessionShell::FakeSessionShell(FakeComponent::Args args) : FakeComponent(std::move(args)) {}
 
@@ -15,7 +14,7 @@ FakeSessionShell::~FakeSessionShell() = default;
 
 // static
 std::unique_ptr<FakeSessionShell> FakeSessionShell::CreateWithDefaultOptions() {
-  return std::make_unique<FakeSessionShell>(modular::testing::FakeComponent::Args{
+  return std::make_unique<FakeSessionShell>(modular_testing::FakeComponent::Args{
       .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
       .sandbox_services = FakeSessionShell::GetDefaultSandboxServices()});
 }
@@ -33,5 +32,4 @@ void FakeSessionShell::OnCreate(fuchsia::sys::StartupInfo startup_info) {
   component_context()->outgoing()->AddPublicService(session_shell_impl_.GetHandler());
 }
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

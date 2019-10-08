@@ -75,16 +75,16 @@ class TestStoryShellFactory : fuchsia::modular::StoryShellFactory {
 // A basic fake session shell component: gives access to services
 // available to session shells in their environment, as well as an
 // implementation of fuchsia::modular::SessionShell built for tests.
-class TestSessionShell : public modular::testing::FakeComponent {
+class TestSessionShell : public modular_testing::FakeComponent {
  public:
-  TestSessionShell(modular::testing::FakeComponent::Args args)
-      : modular::testing::FakeComponent(std::move(args)) {}
+  TestSessionShell(modular_testing::FakeComponent::Args args)
+      : modular_testing::FakeComponent(std::move(args)) {}
   fuchsia::modular::StoryProvider* story_provider() { return story_provider_.get(); }
 
   TestStoryShellFactory* story_shell_factory() { return story_shell_factory_.get(); }
 
  private:
-  // |modular::testing::FakeComponent|
+  // |modular_testing::FakeComponent|
   void OnCreate(fuchsia::sys::StartupInfo startup_info) override {
     component_context()->svc()->Connect(session_shell_context_.NewRequest());
     session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
@@ -94,13 +94,13 @@ class TestSessionShell : public modular::testing::FakeComponent {
     story_shell_factory_ = std::make_unique<TestStoryShellFactory>(component_context());
   }
 
-  modular::testing::SessionShellImpl session_shell_impl_;
+  modular_testing::SessionShellImpl session_shell_impl_;
   fuchsia::modular::SessionShellContextPtr session_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
   std::unique_ptr<TestStoryShellFactory> story_shell_factory_;
 };
 
-class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
+class StoryShellFactoryTest : public modular_testing::TestHarnessFixture {
  public:
   const std::string story_name = "story1";
   const std::string mod_name = "mod1";
@@ -115,13 +115,13 @@ class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
     spec.mutable_basemgr_config()->set_use_session_shell_for_story_shell_factory(true);
 
     modular_testing::TestHarnessBuilder builder(std::move(spec));
-    test_session_shell_ = std::make_unique<TestSessionShell>(modular::testing::FakeComponent::Args{
+    test_session_shell_ = std::make_unique<TestSessionShell>(modular_testing::FakeComponent::Args{
         .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
         .sandbox_services = {"fuchsia.modular.SessionShellContext",
                              "fuchsia.modular.PuppetMaster"}});
     // Listen for the module that is created in CreateStory().
     test_module_ =
-        std::make_unique<modular::testing::FakeComponent>(modular::testing::FakeComponent::Args{
+        std::make_unique<modular_testing::FakeComponent>(modular_testing::FakeComponent::Args{
             .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
     builder.InterceptSessionShell(test_session_shell_->BuildInterceptOptions());
     builder.InterceptComponent(test_module_->BuildInterceptOptions());
@@ -146,7 +146,7 @@ class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
     fuchsia::modular::Intent intent;
     intent.handler = test_module_->url();
     intent.action = "action";
-    modular::testing::AddModToStory(test_harness(), story_name, mod_name, std::move(intent));
+    modular_testing::AddModToStory(test_harness(), story_name, mod_name, std::move(intent));
 
     // Wait for the story to be created.
     RunLoopUntil([this] { return test_module_->is_running(); });
@@ -181,13 +181,13 @@ class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
 
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   std::unique_ptr<TestSessionShell> test_session_shell_;
-  std::unique_ptr<modular::testing::FakeComponent> test_module_;
+  std::unique_ptr<modular_testing::FakeComponent> test_module_;
 };
 
 TEST_F(StoryShellFactoryTest, AttachCalledOnStoryStart) {
   InitSession();
 
-  modular::testing::FakeStoryShell fake_story_shell(modular::testing::FakeComponent::Args{
+  modular_testing::FakeStoryShell fake_story_shell(modular_testing::FakeComponent::Args{
       .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
 
   // The StoryShellFactory will be asked to attach a StoryShell when the story

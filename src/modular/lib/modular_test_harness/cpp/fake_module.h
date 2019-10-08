@@ -9,8 +9,7 @@
 
 #include <src/modular/lib/modular_test_harness/cpp/fake_component.h>
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 // A fake module that exposes an IntentHandler service that can be used with
 // TestHarnessBuilder. Refer to detailed documentation at test_harness_fixture.h.
@@ -19,14 +18,14 @@ namespace testing {
 //
 // ...
 // modular_testing::TestHarnessBuilder builder;
-// auto fake_module = modular::testing::FakeModule::CreateWithDefaultOptions();
+// auto fake_module = modular_testing::FakeModule::CreateWithDefaultOptions();
 // builder.InterceptComponent(fake_module->BuildInterceptOptions());
 // builder.BuildAndRun(test_harness());
 // ...
-class FakeModule : public modular::testing::FakeComponent, fuchsia::modular::IntentHandler {
+class FakeModule : public modular_testing::FakeComponent, fuchsia::modular::IntentHandler {
  public:
   // |on_intent_handled| will be invoked whenever HandleIntent() is called.
-  explicit FakeModule(modular::testing::FakeComponent::Args args,
+  explicit FakeModule(modular_testing::FakeComponent::Args args,
                       fit::function<void(fuchsia::modular::Intent)> on_intent_handled);
 
   ~FakeModule() override;
@@ -65,7 +64,6 @@ class FakeModule : public modular::testing::FakeComponent, fuchsia::modular::Int
   fidl::BindingSet<fuchsia::modular::IntentHandler> bindings_;
 };
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing
 
 #endif  // SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_FAKE_MODULE_H_

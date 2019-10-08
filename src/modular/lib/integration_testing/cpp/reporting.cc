@@ -6,8 +6,7 @@
 
 #include "src/modular/lib/integration_testing/cpp/testing.h"
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 TestPoint::TestPoint(std::string label) : label_(std::move(label)) { RegisterTestPoint(label_); }
 
@@ -22,5 +21,4 @@ void TestPoint::Pass() {
   PassTestPoint(label_);
 }
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

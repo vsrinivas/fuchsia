@@ -14,8 +14,7 @@
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/time/time_delta.h>
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 // An implementation of the fuchsia.modular.SessionShell FIDL service, to be
 // used in session shell components in integration tests. Usually used through
@@ -69,7 +68,6 @@ class SessionShellImpl : fuchsia::modular::SessionShell {
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionShellImpl);
 };
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing
 
 #endif  // SRC_MODULAR_LIB_TESTING_SESSION_SHELL_IMPL_H_

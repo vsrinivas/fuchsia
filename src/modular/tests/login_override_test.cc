@@ -13,7 +13,7 @@
 
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
-class LoginOverrideTest : public modular::testing::TestHarnessFixture {
+class LoginOverrideTest : public modular_testing::TestHarnessFixture {
  public:
   LoginOverrideTest() {}
 

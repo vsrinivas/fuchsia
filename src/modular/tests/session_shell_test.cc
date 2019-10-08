@@ -17,7 +17,7 @@
 #define TEST_NAME(SUFFIX) \
   std::string(::testing::UnitTest::GetInstance()->current_test_info()->name()) + "_" #SUFFIX;
 
-// TODO(MF-435): Use modular::testing::AddModToStory() throughout the test.
+// TODO(MF-435): Use modular_testing::AddModToStory() throughout the test.
 using fuchsia::modular::AddMod;
 using fuchsia::modular::StoryCommand;
 using fuchsia::modular::StoryInfo2;
@@ -32,10 +32,10 @@ constexpr char kFakeModuleUrl[] = "fuchsia-pkg://example.com/FAKE_MODULE_PKG/fak
 
 namespace {
 
-class SessionShellTest : public modular::testing::TestHarnessFixture {
+class SessionShellTest : public modular_testing::TestHarnessFixture {
  protected:
   SessionShellTest()
-      : fake_session_shell_(modular::testing::FakeSessionShell::CreateWithDefaultOptions()) {}
+      : fake_session_shell_(modular_testing::FakeSessionShell::CreateWithDefaultOptions()) {}
   // Shared boilerplate for configuring the test harness to intercept the
   // session shell, setting up the session shell mock object, running the test
   // harness, and waiting for the session shell to be successfully intercepted.
@@ -57,7 +57,7 @@ class SessionShellTest : public modular::testing::TestHarnessFixture {
     modular_testing::TestHarnessBuilder builder;
     builder.InterceptSessionShell(fake_session_shell_->BuildInterceptOptions());
     // Listen for the module we're going to create.
-    auto test_module = modular::testing::FakeModule::CreateWithDefaultOptions();
+    auto test_module = modular_testing::FakeModule::CreateWithDefaultOptions();
     builder.InterceptComponent(test_module->BuildInterceptOptions());
 
     // Start the session shell
@@ -77,13 +77,13 @@ class SessionShellTest : public modular::testing::TestHarnessFixture {
     intent.handler = test_module->url();
     intent.action = "action";
 
-    modular::testing::AddModToStory(test_harness(), story_name, "modname", std::move(intent));
+    modular_testing::AddModToStory(test_harness(), story_name, "modname", std::move(intent));
 
     // Wait for the session shell and test module
     RunLoopUntil([&] { return test_module->is_running(); });
   }
 
-  std::unique_ptr<modular::testing::FakeSessionShell> fake_session_shell_;
+  std::unique_ptr<modular_testing::FakeSessionShell> fake_session_shell_;
 };
 
 TEST_F(SessionShellTest, GetStoryInfoNonexistentStory) {
@@ -137,7 +137,7 @@ TEST_F(SessionShellTest, StartAndStopStoryWithExtraInfoMod) {
   // Have the mock session_shell record the sequence of story states it sees,
   // and confirm that it only sees the correct story id.
   std::vector<StoryState> sequence_of_story_states;
-  modular::testing::SimpleStoryProviderWatcher watcher;
+  modular_testing::SimpleStoryProviderWatcher watcher;
   watcher.set_on_change_2([&sequence_of_story_states, kStoryId](StoryInfo2 story_info,
                                                                 StoryState story_state,
                                                                 StoryVisibilityState _) {
@@ -298,7 +298,7 @@ TEST_F(SessionShellTest, AttachesAndDetachesView) {
   // Have the mock session_shell record the sequence of story states it sees,
   // and confirm that it only sees the correct story id.
   std::vector<StoryState> sequence_of_story_states;
-  modular::testing::SimpleStoryProviderWatcher watcher;
+  modular_testing::SimpleStoryProviderWatcher watcher;
   watcher.set_on_change_2([&sequence_of_story_states, kStoryId](StoryInfo2 story_info,
                                                                 StoryState story_state,
                                                                 StoryVisibilityState _) {
@@ -370,7 +370,7 @@ TEST_F(SessionShellTest, StoryStopDoesntWaitOnDetachView) {
   // Have the mock session_shell record the sequence of story states it sees,
   // and confirm that it only sees the correct story id.
   std::vector<StoryState> sequence_of_story_states;
-  modular::testing::SimpleStoryProviderWatcher watcher;
+  modular_testing::SimpleStoryProviderWatcher watcher;
   watcher.set_on_change_2([&sequence_of_story_states, kStoryId](StoryInfo2 story_info,
                                                                 StoryState story_state,
                                                                 StoryVisibilityState _) {
@@ -530,7 +530,7 @@ TEST_F(SessionShellTest, OnChange2ReturnsStoryInfo2) {
 
   // Once the story is created, OnChange2 should be called with a StoryInfo2 that has the story ID.
   bool called_on_change_2 = false;
-  modular::testing::SimpleStoryProviderWatcher watcher;
+  modular_testing::SimpleStoryProviderWatcher watcher;
   watcher.set_on_change_2([&called_on_change_2, kStoryId](StoryInfo2 story_info, StoryState _,
                                                           StoryVisibilityState __) {
     EXPECT_TRUE(story_info.has_id());
