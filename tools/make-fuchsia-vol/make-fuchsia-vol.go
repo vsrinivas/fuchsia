@@ -57,10 +57,10 @@ var (
 	resize  = flag.Int64("resize", 0, "create or resize the image to this size in bytes")
 )
 
-// imageManifests contains a list of known manifests produced by the build that contains build-dir relative paths to images.
-var imageManifests = []string{"zedboot_images.json", "images.json"}
+// imageManifest is basename of the image manifest file.
+const imageManifest = "images.json"
 
-type imageManifest struct {
+type imageManifestEntry struct {
 	Name string `json:"name"`
 	Path string `json:"path"`
 }
@@ -85,25 +85,24 @@ func init() {
 }
 
 func tryLoadManifests() {
-	if *fuchsiaBuildDir != "" {
-		for _, manifest := range imageManifests {
-			f, err := os.Open(filepath.Join(*fuchsiaBuildDir, manifest))
-			if err != nil {
-				log.Printf("warning: failed to load %q manifest: %s", manifest, err)
-				continue
-			}
-			defer f.Close()
+	if *fuchsiaBuildDir == "" {
+		return
+	}
+	f, err := os.Open(filepath.Join(*fuchsiaBuildDir, imageManifest))
+	if err != nil {
+		log.Printf("warning: failed to load %s: %v", imageManifest, err)
+		return
+	}
+	defer f.Close()
 
-			var imageManifests []imageManifest
-			if err := json.NewDecoder(f).Decode(&imageManifests); err != nil {
-				log.Printf("warning: failed to load %q manifest: %s", manifest, err)
-				continue
-			}
+	var entries []imageManifestEntry
+	if err := json.NewDecoder(f).Decode(&entries); err != nil {
+		log.Printf("warning: failed to load %s: %v", imageManifest, err)
+		return
+	}
 
-			for _, image := range imageManifests {
-				imagePaths[image.Name] = image.Path
-			}
-		}
+	for _, image := range entries {
+		imagePaths[image.Name] = image.Path
 	}
 }
 

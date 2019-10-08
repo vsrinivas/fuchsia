@@ -267,11 +267,6 @@ build_api_module("images") {
   ]
 }
 
-# TODO(fxbug.dev/37538): The infrastructure currently depends on there being a
-# zedboot_images.json. Once it is softly transitioned off of it, delete this
-# otherwise useless call.
-write_file("$root_build_dir/zedboot_images.json", [], "json")
-
 # Describes the platforms available for testing.
 #
 # TODO(fxbug.dev/10429): the fuchsia platform should not know about such things.

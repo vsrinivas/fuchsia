@@ -64,8 +64,8 @@ type RunCommand struct {
 	// ConfigFile is the path to the target configurations.
 	configFile string
 
-	// ImageManifests is a list of paths to image manifests (e.g., images.json)
-	imageManifests command.StringsFlag
+	// ImageManifest is a path to an image manifest.
+	imageManifest string
 
 	// Netboot tells botanist to netboot (and not to pave).
 	netboot bool
@@ -110,7 +110,7 @@ func (*RunCommand) Synopsis() string {
 
 func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.configFile, "config", "", "path to file of device config")
-	f.Var(&r.imageManifests, "images", "paths to image manifests")
+	f.StringVar(&r.imageManifest, "images", "", "path to an image manifest")
 	f.BoolVar(&r.netboot, "netboot", false, "if set, botanist will not pave; but will netboot instead")
 	f.Var(&r.zirconArgs, "zircon-args", "kernel command-line arguments")
 	f.DurationVar(&r.timeout, "timeout", 10*time.Minute, "duration allowed for the command to finish execution.")
@@ -346,7 +346,7 @@ func (r *RunCommand) runCmdWithTargets(ctx context.Context, targetSetup *targetS
 }
 
 func (r *RunCommand) execute(ctx context.Context, args []string) error {
-	imgs, err := build.LoadImages(r.imageManifests...)
+	imgs, err := build.LoadImages(r.imageManifest)
 	if err != nil {
 		return fmt.Errorf("failed to load images: %v", err)
 	}

@@ -14,7 +14,6 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
 	"go.fuchsia.dev/fuchsia/tools/build/api"
-	"go.fuchsia.dev/fuchsia/tools/lib/command"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
@@ -25,8 +24,8 @@ import (
 // ZedbootCommand is a Command implementation for running the testing workflow on a device
 // that boots with Zedboot.
 type ZedbootCommand struct {
-	// ImageManifests is a list of paths to image manifests (e.g., images.json)
-	imageManifests command.StringsFlag
+	// ImageManifest is a path to an image manifest
+	imageManifest string
 
 	// Netboot tells botanist to netboot (and not to pave).
 	netboot bool
@@ -66,7 +65,7 @@ func (*ZedbootCommand) Synopsis() string {
 }
 
 func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
-	f.Var(&cmd.imageManifests, "images", "paths to image manifests")
+	f.StringVar(&cmd.imageManifest, "images", "", "path to an image manifest")
 	f.BoolVar(&cmd.netboot, "netboot", false, "if set, botanist will not pave; but will netboot instead")
 	f.StringVar(&cmd.testResultsDir, "results-dir", "/test", "path on target to where test results will be written")
 	f.StringVar(&cmd.outputArchive, "out", "output.tar", "path on host to output tarball of test results")
@@ -104,7 +103,7 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 		defer device.Restart(ctx)
 	}
 
-	imgs, err := build.LoadImages(cmd.imageManifests...)
+	imgs, err := build.LoadImages(cmd.imageManifest)
 	if err != nil {
 		return err
 	}
