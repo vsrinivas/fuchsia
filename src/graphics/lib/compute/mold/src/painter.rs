@@ -149,7 +149,7 @@ impl Painter {
 
     fn mul(a: u8, b: u8) -> u8 {
         let product = u16::from(a) * u16::from(b);
-        ((product + 127) / 255) as u8
+        ((product + 128 + (product >> 8)) >> 8) as u8
     }
 
     fn cover_wip_zero(&mut self) {

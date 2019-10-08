@@ -477,7 +477,7 @@ impl Map {
             .filter_map(|(id, layer)| if layer.new_edges.get() { Some(*id) } else { None })
             .collect();
 
-        let mut partial_reprints = HashSet::new();
+        let mut partial_reprints = vec![];
 
         for id in &complete_reprints {
             let raster = self.layers.get(id).unwrap().raster.clone();
@@ -485,21 +485,11 @@ impl Map {
         }
 
         for tile in &mut self.tiles {
-            let mut needs_render = tile.needs_render;
-
-            for node in &tile.layers {
-                if let LayerNode::Layer(id, _) = node {
-                    if complete_reprints.contains(id) || !self.layers.contains_key(id) {
-                        needs_render = true;
-                    }
-                }
-            }
-
-            if needs_render {
+            if tile.needs_render {
                 for node in &tile.layers {
                     if let LayerNode::Layer(id, _) = node {
                         if !complete_reprints.contains(id) {
-                            partial_reprints.insert(*id);
+                            partial_reprints.push(*id);
                         }
                     }
                 }
@@ -515,6 +505,7 @@ impl Map {
             .chain(partial_reprints.into_iter().map(|id| (id, true)))
             .collect();
         reprints.par_sort();
+        reprints.dedup();
 
         for (id, is_partial) in reprints {
             self.specialized_print(id, is_partial);
