@@ -22,25 +22,29 @@ class Ge2dTask : public generictask::GenericTask {
   // |callback|                             : Callback function to call for.
   // this task. |out|                       : Pointer to a task.
   // object returned to the caller.
-  zx_status_t InitResize(const buffer_collection_info_t* input_buffer_collection,
-                         const buffer_collection_info_t* output_buffer_collection,
-                         const resize_info_t* info, const image_format_2_t* image_format_table_list,
-                         size_t image_format_table_count, uint32_t image_format_index,
+  zx_status_t InitResize(const buffer_collection_info_2_t* input_buffer_collection,
+                         const buffer_collection_info_2_t* output_buffer_collection,
+                         const resize_info_t* info, const image_format_2_t* input_image_format,
+                         const image_format_2_t* output_image_format_table_list,
+                         size_t output_image_format_table_count, uint32_t output_image_format_index,
                          const hw_accel_callback_t* callback, const zx::bti& bti);
 
-  zx_status_t InitWatermark(const buffer_collection_info_t* input_buffer_collection,
-                            const buffer_collection_info_t* output_buffer_collection,
+  zx_status_t InitWatermark(const buffer_collection_info_2_t* input_buffer_collection,
+                            const buffer_collection_info_2_t* output_buffer_collection,
                             const water_mark_info_t* info, const zx::vmo& watermark_vmo,
-                            const image_format_2_t* image_format_table_list,
-                            size_t image_format_table_count, uint32_t image_format_index,
-                            const hw_accel_callback_t* callback, const zx::bti& bti);
+                            const image_format_2_t* input_image_format,
+                            const image_format_2_t* output_image_format_table_list,
+                            size_t output_image_format_table_count,
+                            uint32_t output_image_format_index, const hw_accel_callback_t* callback,
+                            const zx::bti& bti);
 
  private:
-  zx_status_t Init(const buffer_collection_info_t* input_buffer_collection,
-                   const buffer_collection_info_t* output_buffer_collection,
-                   const image_format_2_t* image_format_table_list, size_t image_format_table_count,
-                   uint32_t image_format_index, const hw_accel_callback_t* callback,
-                   const zx::bti& bti);
+  zx_status_t Init(const buffer_collection_info_2_t* input_buffer_collection,
+                   const buffer_collection_info_2_t* output_buffer_collection,
+                   const image_format_2_t* input_image_format,
+                   const image_format_2_t* output_image_format_table_list,
+                   size_t output_image_format_table_count, uint32_t output_image_format_index,
+                   const hw_accel_callback_t* callback, const zx::bti& bti);
   zx_status_t PinWatermarkVmo(const zx::vmo& watermark_vmo, const zx::bti& bti);
   size_t image_format_count_;
   std::unique_ptr<image_format_2_t[]> image_format_list_;

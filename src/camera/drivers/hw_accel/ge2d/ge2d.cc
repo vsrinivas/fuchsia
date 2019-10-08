@@ -35,10 +35,12 @@ enum {
 }  // namespace
 
 zx_status_t Ge2dDevice::Ge2dInitTaskResize(
-    const buffer_collection_info_t* input_buffer_collection,
-    const buffer_collection_info_t* output_buffer_collection, const resize_info_t* info,
-    const image_format_2_t* image_format_table_list, size_t image_format_table_count,
-    uint32_t image_format_index, const hw_accel_callback_t* callback, uint32_t* out_task_index) {
+    const buffer_collection_info_2_t* input_buffer_collection,
+    const buffer_collection_info_2_t* output_buffer_collection, const resize_info_t* info,
+    const image_format_2_t* input_image_format,
+    const image_format_2_t* output_image_format_table_list, size_t output_image_format_table_count,
+    uint32_t output_image_format_index, const hw_accel_callback_t* callback,
+    uint32_t* out_task_index) {
   if (out_task_index == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -48,9 +50,10 @@ zx_status_t Ge2dDevice::Ge2dInitTaskResize(
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  zx_status_t status = task->InitResize(input_buffer_collection, output_buffer_collection, info,
-                                        image_format_table_list, image_format_table_count,
-                                        image_format_index, callback, bti_);
+  zx_status_t status =
+      task->InitResize(input_buffer_collection, output_buffer_collection, info, input_image_format,
+                       output_image_format_table_list, output_image_format_table_count,
+                       output_image_format_index, callback, bti_);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "%s: Task Creation Failed %d\n", __func__, status);
     return status;
@@ -64,11 +67,12 @@ zx_status_t Ge2dDevice::Ge2dInitTaskResize(
 }
 
 zx_status_t Ge2dDevice::Ge2dInitTaskWaterMark(
-    const buffer_collection_info_t* input_buffer_collection,
-    const buffer_collection_info_t* output_buffer_collection, const water_mark_info_t* info,
-    zx::vmo watermark_vmo, const image_format_2_t* image_format_table_list,
-    size_t image_format_table_count, uint32_t image_format_index,
-    const hw_accel_callback_t* callback, uint32_t* out_task_index) {
+    const buffer_collection_info_2_t* input_buffer_collection,
+    const buffer_collection_info_2_t* output_buffer_collection, const water_mark_info_t* info,
+    zx::vmo watermark_vmo, const image_format_2_t* input_image_format,
+    const image_format_2_t* output_image_format_table_list, size_t output_image_format_table_count,
+    uint32_t output_image_format_index, const hw_accel_callback_t* callback,
+    uint32_t* out_task_index) {
   if (out_task_index == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -80,8 +84,9 @@ zx_status_t Ge2dDevice::Ge2dInitTaskWaterMark(
   }
 
   zx_status_t status = task->InitWatermark(
-      input_buffer_collection, output_buffer_collection, info, watermark_vmo,
-      image_format_table_list, image_format_table_count, image_format_index, callback, bti_);
+      input_buffer_collection, output_buffer_collection, info, watermark_vmo, input_image_format,
+      output_image_format_table_list, output_image_format_table_count, output_image_format_index,
+      callback, bti_);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "%s: Task Creation Failed %d\n", __func__, status);
     return status;

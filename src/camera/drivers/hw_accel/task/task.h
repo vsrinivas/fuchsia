@@ -58,20 +58,22 @@ class GenericTask {
   // Returns the output buffer back to the VMO pool to be reused again.
   zx_status_t ReleaseOutputBuffer(uint32_t index) { return output_buffers_.ReleaseBuffer(index); }
 
-  image_format_t input_format() { return input_format_; }
-  image_format_t output_format() { return output_format_; }
+  image_format_2_t input_format() { return input_format_; }
+  image_format_2_t output_format() { return output_format_; }
   const hw_accel_callback_t* callback() { return callback_; }
 
  protected:
   // Initializes a VMO pool from buffer collection for output buffer collection.
   // Pins the input buffer collection.
-  zx_status_t InitBuffers(const buffer_collection_info_t* input_buffer_collection,
-                          const buffer_collection_info_t* output_buffer_collection,
-                          const zx::bti& bti, const hw_accel_callback_t* callback);
+  zx_status_t InitBuffers(const buffer_collection_info_2_t* input_buffer_collection,
+                          const buffer_collection_info_2_t* output_buffer_collection,
+                          const image_format_2_t* input_image_format,
+                          const image_format_2_t* output_image_format, const zx::bti& bti,
+                          const hw_accel_callback_t* callback);
 
  private:
-  image_format_t input_format_;
-  image_format_t output_format_;
+  image_format_2_t input_format_;
+  image_format_2_t output_format_;
   const hw_accel_callback_t* callback_;
   fzl::VmoPool output_buffers_;
   fbl::Array<fzl::PinnedVmo> input_buffers_;

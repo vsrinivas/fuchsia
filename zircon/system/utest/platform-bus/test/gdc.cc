@@ -27,9 +27,9 @@ constexpr uint32_t kVmoSize = 0x1000;
 constexpr uint32_t kBufferId = 777;
 }  // namespace
 
-static bool isBufferCollectionValid(const buffer_collection_info_t* buffer_collection) {
-  return !(buffer_collection->format.image.width != kWidth ||
-           buffer_collection->format.image.height != kHeight ||
+static bool isBufferCollectionValid(const buffer_collection_info_2_t* buffer_collection,
+                                    const image_format_2_t* image_format) {
+  return !(image_format->display_width != kWidth || image_format->display_height != kHeight ||
            buffer_collection->buffer_count != kNumBuffers);
 }
 
@@ -46,24 +46,25 @@ class TestGdcDevice : public DeviceType,
   zx_status_t Create(std::unique_ptr<TestGdcDevice>* out);
 
   // ZX_PROTOCOL_GDC (Refer to gdc.banjo for documentation).
-  zx_status_t GdcInitTask(const buffer_collection_info_t* input_buffer_collection,
-                          const buffer_collection_info_t* output_buffer_collection,
-                          zx::vmo config_vmo, const hw_accel_callback_t* callback,
-                          uint32_t* out_task_index) {
+  zx_status_t GdcInitTask(const buffer_collection_info_2_t* input_buffer_collection,
+                          const buffer_collection_info_2_t* output_buffer_collection,
+                          const image_format_2_t* input_image_format,
+                          const image_format_2_t* output_image_format, zx::vmo config_vmo,
+                          const hw_accel_callback_t* callback, uint32_t* out_task_index) {
     if (input_buffer_collection == nullptr || output_buffer_collection == nullptr ||
         callback == nullptr || out_task_index == nullptr || !config_vmo.is_valid() ||
-        !isBufferCollectionValid(input_buffer_collection) ||
-        !isBufferCollectionValid(output_buffer_collection)) {
+        !isBufferCollectionValid(input_buffer_collection, input_image_format) ||
+        !isBufferCollectionValid(output_buffer_collection, output_image_format)) {
       return ZX_ERR_INVALID_ARGS;
     }
 
     // Validate Buffer Collection VMO handles
     // looping thru buffer_count, since its the same for both buffer collections.
     for (uint32_t i = 0; i < input_buffer_collection->buffer_count; i++) {
-      if (input_buffer_collection->vmos[i] == ZX_HANDLE_INVALID ||
-          output_buffer_collection->vmos[i] == ZX_HANDLE_INVALID ||
-          input_buffer_collection->vmo_size != kVmoSize ||
-          output_buffer_collection->vmo_size != kVmoSize) {
+      if (input_buffer_collection->buffers[i].vmo == ZX_HANDLE_INVALID ||
+          output_buffer_collection->buffers[i].vmo == ZX_HANDLE_INVALID ||
+          input_buffer_collection->settings.buffer_settings.size_bytes != kVmoSize ||
+          output_buffer_collection->settings.buffer_settings.size_bytes != kVmoSize) {
         return ZX_ERR_INVALID_ARGS;
       }
     }

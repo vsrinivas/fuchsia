@@ -16,11 +16,10 @@
 namespace generictask {
 
 // Validates the buffer collection.
-static bool IsBufferCollectionValid(const buffer_collection_info_t* buffer_collection) {
+static bool IsBufferCollectionValid(const buffer_collection_info_2_t* buffer_collection,
+                                    const image_format_2_t* image_format) {
   return !(buffer_collection == nullptr || buffer_collection->buffer_count == 0 ||
-           buffer_collection->buffer_count > countof(buffer_collection->vmos) ||
-           buffer_collection->format.image.pixel_format.type !=
-               fuchsia_sysmem_PixelFormatType_NV12);
+           image_format->pixel_format.type != fuchsia_sysmem_PixelFormatType_NV12);
 }
 
 zx_status_t GenericTask::GetInputBufferPhysAddr(uint32_t input_buffer_index,
@@ -41,18 +40,20 @@ zx_status_t GenericTask::GetInputBufferPhysSize(uint32_t input_buffer_index, uin
   return ZX_OK;
 }
 
-zx_status_t GenericTask::InitBuffers(const buffer_collection_info_t* input_buffer_collection,
-                                     const buffer_collection_info_t* output_buffer_collection,
+zx_status_t GenericTask::InitBuffers(const buffer_collection_info_2_t* input_buffer_collection,
+                                     const buffer_collection_info_2_t* output_buffer_collection,
+                                     const image_format_2_t* input_image_format,
+                                     const image_format_2_t* output_image_format,
                                      const zx::bti& bti, const hw_accel_callback_t* callback) {
-  if (!IsBufferCollectionValid(input_buffer_collection) ||
-      !IsBufferCollectionValid(output_buffer_collection)) {
+  if (!IsBufferCollectionValid(input_buffer_collection, input_image_format) ||
+      !IsBufferCollectionValid(output_buffer_collection, output_image_format)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   // Initialize the VMOPool and pin the output buffers
-  zx::vmo output_vmos[countof(output_buffer_collection->vmos)];
+  zx::vmo output_vmos[output_buffer_collection->buffer_count];
   for (uint32_t i = 0; i < output_buffer_collection->buffer_count; ++i) {
-    output_vmos[i] = zx::vmo(output_buffer_collection->vmos[i]);
+    output_vmos[i] = zx::vmo(output_buffer_collection->buffers[i].vmo);
   }
 
   zx_status_t status = output_buffers_.Init(output_vmos, output_buffer_collection->buffer_count);
@@ -85,7 +86,7 @@ zx_status_t GenericTask::InitBuffers(const buffer_collection_info_t* input_buffe
   }
 
   for (uint32_t i = 0; i < input_buffer_collection->buffer_count; ++i) {
-    zx::vmo vmo(input_buffer_collection->vmos[i]);
+    zx::vmo vmo(input_buffer_collection->buffers[i].vmo);
     status = input_buffers_[i].Pin(vmo, bti, ZX_BTI_CONTIGUOUS | ZX_VM_PERM_READ);
 
     // Release the vmos so that the buffer collection could be reused.
@@ -103,8 +104,8 @@ zx_status_t GenericTask::InitBuffers(const buffer_collection_info_t* input_buffe
     }
   }
 
-  input_format_ = input_buffer_collection->format.image;
-  output_format_ = output_buffer_collection->format.image;
+  input_format_ = *input_image_format;
+  output_format_ = *output_image_format;
   callback_ = callback;
 
   return status;

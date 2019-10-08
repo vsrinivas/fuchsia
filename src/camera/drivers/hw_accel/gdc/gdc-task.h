@@ -19,14 +19,17 @@ class GdcTask : public generictask::GenericTask {
   // Static function to create a task object.
   // |input_buffer_collection|              : Input buffer collection.
   // |output_buffer_collection|             : Output buffer collection.
+  // [input_image_format]                   : Input image format.
+  // [output_image_format]                  : Output image format.
   // |config_vmo|                           : Configuration is stored in this
   // VMO. |callback|                        : Callback function to call for
   // this task. |out|                       : Pointer to a task
   // object returned to the caller.
-  zx_status_t Init(const buffer_collection_info_t* input_buffer_collection,
-                   const buffer_collection_info_t* output_buffer_collection,
-                   const zx::vmo& config_vmo, const hw_accel_callback_t* callback,
-                   const zx::bti& bti);
+  zx_status_t Init(const buffer_collection_info_2_t* input_buffer_collection,
+                   const buffer_collection_info_2_t* output_buffer_collection,
+                   const image_format_2_t* input_image_format,
+                   const image_format_2_t* output_image_format, const zx::vmo& config_vmo,
+                   const hw_accel_callback_t* callback, const zx::bti& bti);
 
  private:
   fzl::PinnedVmo config_vmo_pinned_;

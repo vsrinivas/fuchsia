@@ -318,7 +318,6 @@ struct I2cProxyOp {
   bool stop;
 };
 
-// ZX_PROTOCOL_SPI proxy support.
 enum class SpiOp {
   TRANSMIT,
   RECEIVE,

@@ -49,19 +49,21 @@ protocol Ge2d {
     // [image_format_index] : Initialize with this image format.
     // |callback| : This function is called when GDC is done processing the task.
     // @Returns: |task_index| : Task ID for this task.
-    InitTaskResize(zircon.device.sysmem.BufferCollectionInfo input_buffer_collection,
-                   zircon.device.sysmem.BufferCollectionInfo output_buffer_collection,
+    InitTaskResize(zircon.device.sysmem.BufferCollectionInfo_2 input_buffer_collection,
+                   zircon.device.sysmem.BufferCollectionInfo_2 output_buffer_collection,
                    ResizeInfo info,
-                   vector<zircon.device.sysmem.ImageFormat_2> image_format_table,
-                   uint32 image_format_index,
+                   zircon.device.sysmem.ImageFormat_2 input_image_format,
+                   vector<zircon.device.sysmem.ImageFormat_2> output_image_format_table,
+                   uint32 output_image_format_index,
                    ddk.protocol.camerahwaccel.HwAccelCallback callback) -> (zx.status s, uint32 task_index);
 
-    InitTaskWaterMark(zircon.device.sysmem.BufferCollectionInfo input_buffer_collection,
-                      zircon.device.sysmem.BufferCollectionInfo output_buffer_collection,
+    InitTaskWaterMark(zircon.device.sysmem.BufferCollectionInfo_2 input_buffer_collection,
+                      zircon.device.sysmem.BufferCollectionInfo_2 output_buffer_collection,
                       WaterMarkInfo info,
 		      handle<vmo> watermark_vmo,
-                      vector<zircon.device.sysmem.ImageFormat_2> image_format_table,
-                      uint32 image_format_index,
+		      zircon.device.sysmem.ImageFormat_2 input_image_format,
+                      vector<zircon.device.sysmem.ImageFormat_2> output_image_format_table,
+                      uint32 output_image_format_index,
                       ddk.protocol.camerahwaccel.HwAccelCallback callback) -> (zx.status s, uint32 task_index);
 
     // De-registers the task.

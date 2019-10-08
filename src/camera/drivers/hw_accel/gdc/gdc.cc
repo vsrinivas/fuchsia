@@ -61,10 +61,11 @@ void GdcDevice::InitClocks() {
   GdcMemPowerDomain::Get().ReadFrom(&clock_mmio_).set_gdc_pd(0).WriteTo(&clock_mmio_);
 }
 
-zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_t* input_buffer_collection,
-                                   const buffer_collection_info_t* output_buffer_collection,
-                                   zx::vmo config_vmo, const hw_accel_callback_t* callback,
-                                   uint32_t* out_task_index) {
+zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_2_t* input_buffer_collection,
+                                   const buffer_collection_info_2_t* output_buffer_collection,
+                                   const image_format_2_t* input_image_format,
+                                   const image_format_2_t* output_image_format, zx::vmo config_vmo,
+                                   const hw_accel_callback_t* callback, uint32_t* out_task_index) {
   if (out_task_index == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -75,7 +76,8 @@ zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_t* input_buffer_
     return ZX_ERR_NO_MEMORY;
   }
   zx_status_t status =
-      task->Init(input_buffer_collection, output_buffer_collection, config_vmo, callback, bti_);
+      task->Init(input_buffer_collection, output_buffer_collection, input_image_format,
+                 output_image_format, config_vmo, callback, bti_);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "%s: Task Creation Failed %d\n", __func__, status);
     return status;
@@ -142,29 +144,29 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
   auto input_format = task->input_format();
   DataInWidth::Get()
       .ReadFrom(gdc_mmio())
-      .set_width(input_format.width)
+      .set_width(input_format.display_width)
       .WriteTo(gdc_mmio());
 
   DataInHeight::Get()
       .ReadFrom(gdc_mmio())
-      .set_height(input_format.height)
+      .set_height(input_format.display_height)
       .WriteTo(gdc_mmio());
 
   // Program the Output frame details.
   auto output_format = task->output_format();
   DataOutWidth::Get()
       .ReadFrom(gdc_mmio())
-      .set_width(output_format.width)
+      .set_width(output_format.display_width)
       .WriteTo(gdc_mmio());
 
   DataOutHeight::Get()
       .ReadFrom(gdc_mmio())
-      .set_height(output_format.height)
+      .set_height(output_format.display_height)
       .WriteTo(gdc_mmio());
 
   // Program Data1In Address Register (Y).
   zx_paddr_t input_y_addr;
-  auto input_line_offset = input_format.planes[0].bytes_per_row;
+  auto input_line_offset = input_format.bytes_per_row;
   ZX_ASSERT(ZX_OK == task->GetInputBufferPhysAddr(input_buffer_index, &input_y_addr));
   Data1InAddr::Get()
       .ReadFrom(gdc_mmio())
@@ -178,7 +180,7 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
       .WriteTo(gdc_mmio());
 
   // Program Data2In Address Register (UV).
-  auto input_uv_addr = input_y_addr + (input_line_offset * input_format.height);
+  auto input_uv_addr = input_y_addr + (input_line_offset * input_format.display_height);
   Data2InAddr::Get()
       .ReadFrom(gdc_mmio())
       .set_addr(input_uv_addr)
@@ -199,7 +201,7 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
   }
 
   // Program Data1Out Address Register (Y).
-  auto output_line_offset = output_format.planes[0].bytes_per_row;
+  auto output_line_offset = output_format.bytes_per_row;
   Data1OutAddr::Get()
       .ReadFrom(gdc_mmio())
       .set_addr(AxiWordAlign(output_y_addr))
@@ -212,7 +214,7 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
       .WriteTo(gdc_mmio());
 
   // Program Data2Out Address Register (UV).
-  auto output_uv_addr = output_y_addr + (output_line_offset * output_format.height);
+  auto output_uv_addr = output_y_addr + (output_line_offset * output_format.display_height);
   Data2OutAddr::Get()
       .ReadFrom(gdc_mmio())
       .set_addr(AxiWordAlign(output_uv_addr))

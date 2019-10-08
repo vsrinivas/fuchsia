@@ -17,8 +17,10 @@ protocol Gdc {
     // |config_vmo| : Static configuration for GDC is stored in this vmo for this task.
     // |callback| : This function is called when GDC is done processing the task.
     // @Returns: |task_index| : Task ID for this task.
-    InitTask(zircon.device.sysmem.BufferCollectionInfo input_buffer_collection,
-             zircon.device.sysmem.BufferCollectionInfo output_buffer_collection,
+    InitTask(zircon.device.sysmem.BufferCollectionInfo_2 input_buffer_collection,
+             zircon.device.sysmem.BufferCollectionInfo_2 output_buffer_collection,
+             zircon.device.sysmem.ImageFormat_2	input_image_format,
+             zircon.device.sysmem.ImageFormat_2	output_image_format,
              handle<vmo> config_vmo,
              ddk.protocol.camerahwaccel.HwAccelCallback callback) -> (zx.status s, uint32 task_index);
 

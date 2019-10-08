@@ -7,6 +7,7 @@
 
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/zx/vmo.h>
+#include <zircon/device/sysmem.h>
 
 namespace camera {
 
@@ -24,6 +25,15 @@ namespace camera {
 zx_status_t CreateContiguousBufferCollectionInfo(
     fuchsia_sysmem_BufferCollectionInfo* buffer_collection, zx_handle_t bti_handle, uint32_t width,
     uint32_t height, uint32_t num_buffers);
+
+// Create a fake ImageFormat2.
+void GetImageFormat2(image_format_2_t& image_format, uint32_t width, uint32_t height);
+
+// Creates a BufferCollectionInfo2 that is allocated with contiguous memory, similar
+// to the above.
+zx_status_t CreateContiguousBufferCollectionInfo2(
+    fuchsia_sysmem_BufferCollectionInfo_2& buffer_collection, const image_format_2_t& image_format,
+    zx_handle_t bti_handle, uint32_t width, uint32_t height, uint32_t num_buffers);
 
 }  // namespace camera
 

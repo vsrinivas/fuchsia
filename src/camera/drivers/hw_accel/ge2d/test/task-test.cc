@@ -7,6 +7,7 @@
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/mmio/mmio.h>
+#include <lib/sync/completion.h>
 #include <lib/syslog/global.h>
 #include <stdint.h>
 #include <unistd.h>
@@ -44,12 +45,19 @@ class TaskTest : public zxtest::Test {
  public:
   void ProcessFrameCallback(uint32_t output_buffer_id) {
     callback_check_.push_back(output_buffer_id);
+    sync_completion_signal(&event_);
+  }
+
+  void WaitAndReset() {
+    sync_completion_wait(&event_, ZX_TIME_INFINITE);
+    sync_completion_reset(&event_);
   }
 
  protected:
   void SetUpBufferCollections(uint32_t buffer_collection_count) {
+    camera::GetImageFormat2(input_image_format_, kWidth, kHeight);
+    camera::GetImageFormat2(output_image_format_table_[0], kWidth, kHeight);
     // Set up fake Resize info, Watermark info, Watermark vmo.
-    // We don't bother initializing ImageFormat.
     resize_info_.crop.crop_x = 100;
     resize_info_.crop.crop_y = 100;
     resize_info_.crop.crop_width = 50;
@@ -64,12 +72,14 @@ class TaskTest : public zxtest::Test {
                                                   watermark_vmo_.reset_and_get_address());
     ASSERT_OK(status);
 
-    status = camera::CreateContiguousBufferCollectionInfo(
-        &input_buffer_collection_, bti_handle_.get(), kWidth, kHeight, buffer_collection_count);
+    status = camera::CreateContiguousBufferCollectionInfo2(
+        input_buffer_collection_, input_image_format_, bti_handle_.get(), kWidth, kHeight,
+        buffer_collection_count);
     ASSERT_OK(status);
 
-    status = camera::CreateContiguousBufferCollectionInfo(
-        &output_buffer_collection_, bti_handle_.get(), kWidth, kHeight, buffer_collection_count);
+    status = camera::CreateContiguousBufferCollectionInfo2(
+        output_buffer_collection_, input_image_format_, bti_handle_.get(), kWidth, kHeight,
+        buffer_collection_count);
     ASSERT_OK(status);
   }
 
@@ -102,14 +112,14 @@ class TaskTest : public zxtest::Test {
     EXPECT_OK(watermark_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &watermark_vmo));
     zx_status_t status = ge2d_device_->Ge2dInitTaskWaterMark(
         &input_buffer_collection_, &output_buffer_collection_, &watermark_info_,
-        std::move(watermark_vmo), image_format_table_, kImageFormatTableSize, 0, &callback_,
-        &task_id);
+        std::move(watermark_vmo), &input_image_format_, output_image_format_table_,
+        kImageFormatTableSize, 0, &callback_, &task_id);
     EXPECT_OK(status);
     watermark_task = task_id;
 
-    status = ge2d_device_->Ge2dInitTaskResize(&input_buffer_collection_, &output_buffer_collection_,
-                                              &resize_info_, image_format_table_,
-                                              kImageFormatTableSize, 0, &callback_, &task_id);
+    status = ge2d_device_->Ge2dInitTaskResize(
+        &input_buffer_collection_, &output_buffer_collection_, &resize_info_, &input_image_format_,
+        output_image_format_table_, kImageFormatTableSize, 0, &callback_, &task_id);
     EXPECT_OK(status);
     resize_task = task_id;
 
@@ -130,13 +140,17 @@ class TaskTest : public zxtest::Test {
   zx::port port_;
   zx::interrupt irq_;
   hw_accel_callback_t callback_;
-  image_format_2_t image_format_table_[kImageFormatTableSize];
+  // Array of output Image formats.
+  image_format_2_t output_image_format_table_[kImageFormatTableSize];
   resize_info_t resize_info_;
   water_mark_info_t watermark_info_;
-  buffer_collection_info_t input_buffer_collection_;
-  buffer_collection_info_t output_buffer_collection_;
+  buffer_collection_info_2_t input_buffer_collection_;
+  buffer_collection_info_2_t output_buffer_collection_;
+  // Input Image format.
+  image_format_2_t input_image_format_;
   std::unique_ptr<Ge2dDevice> ge2d_device_;
   std::vector<uint32_t> callback_check_;
+  sync_completion_t event_;
 };
 
 TEST_F(TaskTest, BasicCreationTest) {
@@ -148,25 +162,28 @@ TEST_F(TaskTest, BasicCreationTest) {
   EXPECT_TRUE(ac.check());
   zx_status_t status;
   status = resize_task->InitResize(&input_buffer_collection_, &output_buffer_collection_,
-                                   &resize_info_, image_format_table_, kImageFormatTableSize, 0,
-                                   &callback_, bti_handle_);
+                                   &resize_info_, &input_image_format_, output_image_format_table_,
+                                   kImageFormatTableSize, 0, &callback_, bti_handle_);
   EXPECT_OK(status);
   status = watermark_task->InitWatermark(&input_buffer_collection_, &output_buffer_collection_,
-                                         &watermark_info_, watermark_vmo_, image_format_table_,
-                                         kImageFormatTableSize, 0, &callback_, bti_handle_);
+                                         &watermark_info_, watermark_vmo_, &input_image_format_,
+                                         output_image_format_table_, kImageFormatTableSize, 0,
+                                         &callback_, bti_handle_);
   EXPECT_OK(status);
 }
 
 TEST_F(TaskTest, InvalidFormatTest) {
   SetUpBufferCollections(kNumberOfBuffers);
-  input_buffer_collection_.format.image.pixel_format.type = fuchsia_sysmem_PixelFormatType_YUY2;
+  image_format_2_t format;
+  camera::GetImageFormat2(format, kWidth, kHeight);
+  format.pixel_format.type = fuchsia_sysmem_PixelFormatType_YUY2;
   fbl::AllocChecker ac;
   auto task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
   EXPECT_TRUE(ac.check());
-  EXPECT_EQ(
-      ZX_ERR_INVALID_ARGS,
-      task->InitResize(&input_buffer_collection_, &output_buffer_collection_, &resize_info_,
-                       image_format_table_, kImageFormatTableSize, 0, &callback_, bti_handle_));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            task->InitResize(&input_buffer_collection_, &output_buffer_collection_, &resize_info_,
+                             &format, output_image_format_table_, kImageFormatTableSize, 0,
+                             &callback_, bti_handle_));
 }
 
 TEST_F(TaskTest, InvalidVmoTest) {
@@ -176,7 +193,8 @@ TEST_F(TaskTest, InvalidVmoTest) {
   EXPECT_TRUE(ac.check());
   zx_status_t status;
   status = task->InitResize(&input_buffer_collection_, &output_buffer_collection_, &resize_info_,
-                            image_format_table_, kImageFormatTableSize, 0, &callback_, bti_handle_);
+                            &input_image_format_, output_image_format_table_, kImageFormatTableSize,
+                            0, &callback_, bti_handle_);
   // Expecting Task setup to be returning an error when there are
   // no VMOs in the buffer collection. At the moment VmoPool library
   // doesn't return an error.
@@ -194,8 +212,8 @@ TEST_F(TaskTest, InitTaskTest) {
   for (uint32_t i = 0; i < kMaxTasks; i++) {
     uint32_t task_id;
     zx_status_t status = ge2d_device_->Ge2dInitTaskResize(
-        &input_buffer_collection_, &output_buffer_collection_, &resize_info_, image_format_table_,
-        kImageFormatTableSize, 0, &callback_, &task_id);
+        &input_buffer_collection_, &output_buffer_collection_, &resize_info_, &input_image_format_,
+        output_image_format_table_, kImageFormatTableSize, 0, &callback_, &task_id);
     EXPECT_OK(status);
     // Check to see if we are getting unique task ids.
     auto entry = find(received_ids.begin(), received_ids.end(), task_id);
@@ -203,10 +221,10 @@ TEST_F(TaskTest, InitTaskTest) {
     received_ids.push_back(task_id);
     zx::vmo watermark_vmo;
     ASSERT_OK(watermark_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &watermark_vmo));
-    status = ge2d_device_->Ge2dInitTaskWaterMark(&input_buffer_collection_,
-                                                 &output_buffer_collection_, &watermark_info_,
-                                                 std::move(watermark_vmo), image_format_table_,
-                                                 kImageFormatTableSize, 0, &callback_, &task_id);
+    status = ge2d_device_->Ge2dInitTaskWaterMark(
+        &input_buffer_collection_, &output_buffer_collection_, &watermark_info_,
+        std::move(watermark_vmo), &input_image_format_, output_image_format_table_,
+        kImageFormatTableSize, 0, &callback_, &task_id);
     EXPECT_OK(status);
     // Check to see if we are getting unique task ids.
     entry = find(received_ids.begin(), received_ids.end(), task_id);
@@ -282,7 +300,7 @@ TEST_F(TaskTest, ProcessFrameTest) {
   EXPECT_OK(port_.queue(&packet));
 
   // Check if the callback was called.
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+  WaitAndReset();
   EXPECT_EQ(1, callback_check_.size());
 
   ASSERT_OK(ge2d_device_->StopThread());
@@ -307,7 +325,7 @@ TEST_F(TaskTest, ReleaseValidFrameTest) {
   EXPECT_OK(port_.queue(&packet));
 
   // Check if the callback was called.
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+  WaitAndReset();
   EXPECT_EQ(1, callback_check_.size());
 
   // There is no output buffer to release at the moment. But let's keep this code
@@ -336,7 +354,7 @@ TEST_F(TaskTest, ReleaseInValidFrameTest) {
   EXPECT_OK(port_.queue(&packet));
 
   // Check if the callback was called.
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+  WaitAndReset();
   EXPECT_EQ(1, callback_check_.size());
 
   // Test releasing an invalid frame (invalid task id).
@@ -373,7 +391,7 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
     EXPECT_OK(port_.queue(&packet));
 
     // Check if the callback was called once.
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+    WaitAndReset();
     EXPECT_EQ(t, callback_check_.size());
   }
 
@@ -388,7 +406,7 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
     EXPECT_OK(port_.queue(&packet));
 
     // Check if the callback was called once.
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+    WaitAndReset();
     EXPECT_EQ(t + 3, callback_check_.size());
   }
 
@@ -399,18 +417,20 @@ TEST(TaskTest, NonContigVmoTest) {
   zx_handle_t bti_handle = ZX_HANDLE_INVALID;
   hw_accel_callback_t callback;
   zx_handle_t watermark_vmo;
-  buffer_collection_info_t input_buffer_collection;
-  buffer_collection_info_t output_buffer_collection;
+  buffer_collection_info_2_t input_buffer_collection;
+  buffer_collection_info_2_t output_buffer_collection;
   image_format_2_t image_format_table[kImageFormatTableSize];
   water_mark_info_t watermark_info;
   ASSERT_OK(fake_bti_create(&bti_handle));
 
-  zx_status_t status = camera::CreateContiguousBufferCollectionInfo(&input_buffer_collection,
-                                                                    bti_handle, kWidth, kHeight, 0);
+  image_format_2_t format;
+  camera::GetImageFormat2(format, kWidth, kHeight);
+  zx_status_t status = camera::CreateContiguousBufferCollectionInfo2(
+      input_buffer_collection, format, bti_handle, kWidth, kHeight, 0);
   ASSERT_OK(status);
 
-  status = camera::CreateContiguousBufferCollectionInfo(&output_buffer_collection, bti_handle,
-                                                        kWidth, kHeight, 0);
+  status = camera::CreateContiguousBufferCollectionInfo2(output_buffer_collection, format,
+                                                         bti_handle, kWidth, kHeight, 0);
   ASSERT_OK(status);
 
   status = zx_vmo_create(kWatermarkSize, 0, &watermark_vmo);
@@ -419,8 +439,8 @@ TEST(TaskTest, NonContigVmoTest) {
   auto task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
   EXPECT_TRUE(ac.check());
   status = task->InitWatermark(&input_buffer_collection, &output_buffer_collection, &watermark_info,
-                               zx::vmo(watermark_vmo), image_format_table, kImageFormatTableSize, 0,
-                               &callback, zx::bti(bti_handle));
+                               zx::vmo(watermark_vmo), &format, image_format_table,
+                               kImageFormatTableSize, 0, &callback, zx::bti(bti_handle));
   // Expecting Task setup to be returning an error when watermark vmo is not
   // contig.
   EXPECT_NE(ZX_OK, status);
@@ -439,7 +459,9 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
   fbl::AllocChecker ac;
   auto task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
   EXPECT_TRUE(ac.check());
-  status = task->InitWatermark(nullptr, nullptr, &watermark_info, zx::vmo(watermark_vmo),
+  image_format_2_t format;
+  camera::GetImageFormat2(format, kWidth, kHeight);
+  status = task->InitWatermark(nullptr, nullptr, &watermark_info, zx::vmo(watermark_vmo), &format,
                                image_format_table, kImageFormatTableSize, 0, &callback,
                                zx::bti(bti_handle));
   EXPECT_NE(ZX_OK, status);
