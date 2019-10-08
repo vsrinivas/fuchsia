@@ -33,14 +33,19 @@ async fn serve_fidl(
     let (listener_msg_sender, listener_msgs) = mpsc::unbounded();
     let listener_msg_sender1 = listener_msg_sender.clone();
     let listener_msg_sender2 = listener_msg_sender.clone();
+    let ess_store_clone = ess_store.clone();
     fs.dir("svc")
-        .add_fidl_service(move |stream| {
+        .add_fidl_service(|stream| {
             let fut = shim::serve_legacy(stream, _client_ref.clone(), Arc::clone(&ess_store))
                 .unwrap_or_else(|e| eprintln!("error serving legacy wlan API: {}", e));
             fasync::spawn(fut)
         })
         .add_fidl_service(move |reqs| {
-            policy::client::spawn_provider_server(listener_msg_sender1.clone(), reqs)
+            policy::client::spawn_provider_server(
+                listener_msg_sender1.clone(),
+                Arc::clone(&ess_store_clone),
+                reqs,
+            )
         })
         .add_fidl_service(move |reqs| {
             policy::client::spawn_listener_server(listener_msg_sender2.clone(), reqs)
@@ -63,7 +68,7 @@ async fn serve_fidl(
 fn main() -> Result<(), Error> {
     let cfg = Config::load_from_file()?;
 
-    let mut executor = fasync::Executor::new().context("error creating event loop")?;
+    let mut executor = fasync::Executor::new().context("error create event loop")?;
     let wlan_svc = fuchsia_component::client::connect_to_service::<DeviceServiceMarker>()
         .context("failed to connect to device service")?;
 
