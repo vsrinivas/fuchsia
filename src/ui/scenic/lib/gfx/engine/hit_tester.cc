@@ -67,9 +67,7 @@ Node::IntersectionInfo GetTransformedIntersection(const Node::IntersectionInfo& 
 }
 
 // TODO(37712): Remove when parent propagation is removed and we no longer have false nodes.
-bool IsHittableNode(const Node* node) {
-  return node->IsKindOf<ViewNode>() || node->IsKindOf<ShapeNode>();
-}
+bool IsHittableNode(const Node* node) { return node->IsKindOf<ShapeNode>(); }
 
 }  // namespace
 
