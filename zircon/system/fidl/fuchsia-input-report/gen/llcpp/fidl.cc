@@ -556,29 +556,29 @@ void InputDevice::Interface::GetDescriptorCompleterBase::Reply(::fidl::DecodedMe
 
 void InputDevice::SetTransactionHeaderFor::GetReportsEventRequest(const ::fidl::DecodedMessage<InputDevice::GetReportsEventRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kInputDevice_GetReportsEvent_Ordinal;
+  _msg.message()->_hdr.ordinal = kInputDevice_GetReportsEvent_GenOrdinal;
 }
 void InputDevice::SetTransactionHeaderFor::GetReportsEventResponse(const ::fidl::DecodedMessage<InputDevice::GetReportsEventResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kInputDevice_GetReportsEvent_Ordinal;
+  _msg.message()->_hdr.ordinal = kInputDevice_GetReportsEvent_GenOrdinal;
 }
 
 void InputDevice::SetTransactionHeaderFor::GetReportsRequest(const ::fidl::DecodedMessage<InputDevice::GetReportsRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kInputDevice_GetReports_Ordinal;
+  _msg.message()->_hdr.ordinal = kInputDevice_GetReports_GenOrdinal;
 }
 void InputDevice::SetTransactionHeaderFor::GetReportsResponse(const ::fidl::DecodedMessage<InputDevice::GetReportsResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kInputDevice_GetReports_Ordinal;
+  _msg.message()->_hdr.ordinal = kInputDevice_GetReports_GenOrdinal;
 }
 
 void InputDevice::SetTransactionHeaderFor::GetDescriptorRequest(const ::fidl::DecodedMessage<InputDevice::GetDescriptorRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kInputDevice_GetDescriptor_Ordinal;
+  _msg.message()->_hdr.ordinal = kInputDevice_GetDescriptor_GenOrdinal;
 }
 void InputDevice::SetTransactionHeaderFor::GetDescriptorResponse(const ::fidl::DecodedMessage<InputDevice::GetDescriptorResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kInputDevice_GetDescriptor_Ordinal;
+  _msg.message()->_hdr.ordinal = kInputDevice_GetDescriptor_GenOrdinal;
 }
 
 }  // namespace report

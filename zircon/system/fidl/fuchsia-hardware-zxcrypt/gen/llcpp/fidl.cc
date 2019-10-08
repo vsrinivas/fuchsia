@@ -279,20 +279,20 @@ void DeviceManager::Interface::SealCompleterBase::Reply(::fidl::DecodedMessage<S
 
 void DeviceManager::SetTransactionHeaderFor::UnsealRequest(const ::fidl::DecodedMessage<DeviceManager::UnsealRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDeviceManager_Unseal_Ordinal;
+  _msg.message()->_hdr.ordinal = kDeviceManager_Unseal_GenOrdinal;
 }
 void DeviceManager::SetTransactionHeaderFor::UnsealResponse(const ::fidl::DecodedMessage<DeviceManager::UnsealResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDeviceManager_Unseal_Ordinal;
+  _msg.message()->_hdr.ordinal = kDeviceManager_Unseal_GenOrdinal;
 }
 
 void DeviceManager::SetTransactionHeaderFor::SealRequest(const ::fidl::DecodedMessage<DeviceManager::SealRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDeviceManager_Seal_Ordinal;
+  _msg.message()->_hdr.ordinal = kDeviceManager_Seal_GenOrdinal;
 }
 void DeviceManager::SetTransactionHeaderFor::SealResponse(const ::fidl::DecodedMessage<DeviceManager::SealResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDeviceManager_Seal_Ordinal;
+  _msg.message()->_hdr.ordinal = kDeviceManager_Seal_GenOrdinal;
 }
 
 }  // namespace zxcrypt

@@ -155,11 +155,11 @@ void Device::Interface::GetInfoCompleterBase::Reply(::fidl::DecodedMessage<GetIn
 
 void Device::SetTransactionHeaderFor::GetInfoRequest(const ::fidl::DecodedMessage<Device::GetInfoRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetInfo_Ordinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetInfo_GenOrdinal;
 }
 void Device::SetTransactionHeaderFor::GetInfoResponse(const ::fidl::DecodedMessage<Device::GetInfoResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetInfo_Ordinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetInfo_GenOrdinal;
 }
 
 }  // namespace midi

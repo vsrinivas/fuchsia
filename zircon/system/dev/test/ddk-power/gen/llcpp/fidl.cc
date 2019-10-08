@@ -424,20 +424,20 @@ void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(::fid
 
 void TestDevice::SetTransactionHeaderFor::AddDeviceWithPowerArgsRequest(const ::fidl::DecodedMessage<TestDevice::AddDeviceWithPowerArgsRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kTestDevice_AddDeviceWithPowerArgs_Ordinal;
+  _msg.message()->_hdr.ordinal = kTestDevice_AddDeviceWithPowerArgs_GenOrdinal;
 }
 void TestDevice::SetTransactionHeaderFor::AddDeviceWithPowerArgsResponse(const ::fidl::DecodedMessage<TestDevice::AddDeviceWithPowerArgsResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kTestDevice_AddDeviceWithPowerArgs_Ordinal;
+  _msg.message()->_hdr.ordinal = kTestDevice_AddDeviceWithPowerArgs_GenOrdinal;
 }
 
 void TestDevice::SetTransactionHeaderFor::GetCurrentDevicePowerStateRequest(const ::fidl::DecodedMessage<TestDevice::GetCurrentDevicePowerStateRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kTestDevice_GetCurrentDevicePowerState_Ordinal;
+  _msg.message()->_hdr.ordinal = kTestDevice_GetCurrentDevicePowerState_GenOrdinal;
 }
 void TestDevice::SetTransactionHeaderFor::GetCurrentDevicePowerStateResponse(const ::fidl::DecodedMessage<TestDevice::GetCurrentDevicePowerStateResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kTestDevice_GetCurrentDevicePowerState_Ordinal;
+  _msg.message()->_hdr.ordinal = kTestDevice_GetCurrentDevicePowerState_GenOrdinal;
 }
 
 }  // namespace test

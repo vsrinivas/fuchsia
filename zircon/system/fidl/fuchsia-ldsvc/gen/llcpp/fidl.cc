@@ -461,34 +461,34 @@ void Loader::Interface::CloneCompleterBase::Reply(::fidl::DecodedMessage<CloneRe
 
 void Loader::SetTransactionHeaderFor::DoneRequest(const ::fidl::DecodedMessage<Loader::DoneRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLoader_Done_Ordinal;
+  _msg.message()->_hdr.ordinal = kLoader_Done_GenOrdinal;
 }
 
 void Loader::SetTransactionHeaderFor::LoadObjectRequest(const ::fidl::DecodedMessage<Loader::LoadObjectRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLoader_LoadObject_Ordinal;
+  _msg.message()->_hdr.ordinal = kLoader_LoadObject_GenOrdinal;
 }
 void Loader::SetTransactionHeaderFor::LoadObjectResponse(const ::fidl::DecodedMessage<Loader::LoadObjectResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLoader_LoadObject_Ordinal;
+  _msg.message()->_hdr.ordinal = kLoader_LoadObject_GenOrdinal;
 }
 
 void Loader::SetTransactionHeaderFor::ConfigRequest(const ::fidl::DecodedMessage<Loader::ConfigRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLoader_Config_Ordinal;
+  _msg.message()->_hdr.ordinal = kLoader_Config_GenOrdinal;
 }
 void Loader::SetTransactionHeaderFor::ConfigResponse(const ::fidl::DecodedMessage<Loader::ConfigResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLoader_Config_Ordinal;
+  _msg.message()->_hdr.ordinal = kLoader_Config_GenOrdinal;
 }
 
 void Loader::SetTransactionHeaderFor::CloneRequest(const ::fidl::DecodedMessage<Loader::CloneRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLoader_Clone_Ordinal;
+  _msg.message()->_hdr.ordinal = kLoader_Clone_GenOrdinal;
 }
 void Loader::SetTransactionHeaderFor::CloneResponse(const ::fidl::DecodedMessage<Loader::CloneResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kLoader_Clone_Ordinal;
+  _msg.message()->_hdr.ordinal = kLoader_Clone_GenOrdinal;
 }
 
 }  // namespace ldsvc

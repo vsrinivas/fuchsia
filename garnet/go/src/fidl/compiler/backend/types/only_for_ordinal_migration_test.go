@@ -106,6 +106,34 @@ func TestStep5(t *testing.T) {
 	}
 }
 
+func TestStep7(t *testing.T) {
+	// At step 7, fidlc emits 64b and bindings should just use them, send gen.
+	cases := []testCase{
+		{
+			name: "ord_and_gen_same",
+			input: NewOrdinalsStep7(Method{
+				Ordinal:    0x7676e0ea00000000,
+				GenOrdinal: 0x7676e0ea00000000,
+			}, "ord", "gen"),
+			expectedReads: []string{"gen"},
+			expectedWrite: "gen",
+		},
+		// Both ordinals are different, use both on reads, ord on write.
+		{
+			name: "ord_and_gen_different",
+			input: NewOrdinalsStep7(Method{
+				Ordinal:    0x7676e0ea00000000,
+				GenOrdinal: 0xae0e676700000000,
+			}, "ord", "gen"),
+			expectedReads: []string{"ord", "gen"},
+			expectedWrite: "gen",
+		},
+	}
+	for _, ex := range cases {
+		ex.run(t)
+	}
+}
+
 func names(namedOrdinals []NamedOrdinal) []string {
 	var names []string
 	for _, namedOrdinal := range namedOrdinals {

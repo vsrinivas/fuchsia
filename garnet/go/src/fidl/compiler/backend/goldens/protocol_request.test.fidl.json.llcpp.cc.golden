@@ -430,30 +430,30 @@ void Parent::Interface::GetChildRequestCompleterBase::Reply(::fidl::DecodedMessa
 
 void Parent::SetTransactionHeaderFor::GetChildRequest(const ::fidl::DecodedMessage<Parent::GetChildRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kParent_GetChild_Ordinal;
+  _msg.message()->_hdr.ordinal = kParent_GetChild_GenOrdinal;
 }
 void Parent::SetTransactionHeaderFor::GetChildResponse(const ::fidl::DecodedMessage<Parent::GetChildResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kParent_GetChild_Ordinal;
+  _msg.message()->_hdr.ordinal = kParent_GetChild_GenOrdinal;
 }
 
 void Parent::SetTransactionHeaderFor::GetChildRequestRequest(const ::fidl::DecodedMessage<Parent::GetChildRequestRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kParent_GetChildRequest_Ordinal;
+  _msg.message()->_hdr.ordinal = kParent_GetChildRequest_GenOrdinal;
 }
 void Parent::SetTransactionHeaderFor::GetChildRequestResponse(const ::fidl::DecodedMessage<Parent::GetChildRequestResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kParent_GetChildRequest_Ordinal;
+  _msg.message()->_hdr.ordinal = kParent_GetChildRequest_GenOrdinal;
 }
 
 void Parent::SetTransactionHeaderFor::TakeChildRequest(const ::fidl::DecodedMessage<Parent::TakeChildRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kParent_TakeChild_Ordinal;
+  _msg.message()->_hdr.ordinal = kParent_TakeChild_GenOrdinal;
 }
 
 void Parent::SetTransactionHeaderFor::TakeChildRequestRequest(const ::fidl::DecodedMessage<Parent::TakeChildRequestRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kParent_TakeChildRequest_Ordinal;
+  _msg.message()->_hdr.ordinal = kParent_TakeChildRequest_GenOrdinal;
 }
 
 namespace {

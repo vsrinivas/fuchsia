@@ -343,20 +343,20 @@ void PayloadStream::Interface::ReadDataCompleterBase::Reply(::fidl::DecodedMessa
 
 void PayloadStream::SetTransactionHeaderFor::RegisterVmoRequest(const ::fidl::DecodedMessage<PayloadStream::RegisterVmoRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPayloadStream_RegisterVmo_Ordinal;
+  _msg.message()->_hdr.ordinal = kPayloadStream_RegisterVmo_GenOrdinal;
 }
 void PayloadStream::SetTransactionHeaderFor::RegisterVmoResponse(const ::fidl::DecodedMessage<PayloadStream::RegisterVmoResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPayloadStream_RegisterVmo_Ordinal;
+  _msg.message()->_hdr.ordinal = kPayloadStream_RegisterVmo_GenOrdinal;
 }
 
 void PayloadStream::SetTransactionHeaderFor::ReadDataRequest(const ::fidl::DecodedMessage<PayloadStream::ReadDataRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPayloadStream_ReadData_Ordinal;
+  _msg.message()->_hdr.ordinal = kPayloadStream_ReadData_GenOrdinal;
 }
 void PayloadStream::SetTransactionHeaderFor::ReadDataResponse(const ::fidl::DecodedMessage<PayloadStream::ReadDataResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPayloadStream_ReadData_Ordinal;
+  _msg.message()->_hdr.ordinal = kPayloadStream_ReadData_GenOrdinal;
 }
 
 ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::Paver_QueryConfigurationStatus_Result() {
@@ -2252,128 +2252,128 @@ void Paver::Interface::WipePartitionTablesCompleterBase::Reply(::fidl::DecodedMe
 
 void Paver::SetTransactionHeaderFor::InitializeAbrRequest(const ::fidl::DecodedMessage<Paver::InitializeAbrRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_InitializeAbr_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_InitializeAbr_GenOrdinal;
 }
 void Paver::SetTransactionHeaderFor::InitializeAbrResponse(const ::fidl::DecodedMessage<Paver::InitializeAbrResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_InitializeAbr_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_InitializeAbr_GenOrdinal;
 }
 
 void Paver::SetTransactionHeaderFor::QueryActiveConfigurationRequest(const ::fidl::DecodedMessage<Paver::QueryActiveConfigurationRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_QueryActiveConfiguration_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_QueryActiveConfiguration_GenOrdinal;
 }
 void Paver::SetTransactionHeaderFor::QueryActiveConfigurationResponse(const ::fidl::DecodedMessage<Paver::QueryActiveConfigurationResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_QueryActiveConfiguration_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_QueryActiveConfiguration_GenOrdinal;
 }
 
 void Paver::SetTransactionHeaderFor::QueryConfigurationStatusRequest(const ::fidl::DecodedMessage<Paver::QueryConfigurationStatusRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_QueryConfigurationStatus_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_QueryConfigurationStatus_GenOrdinal;
 }
 void Paver::SetTransactionHeaderFor::QueryConfigurationStatusResponse(const ::fidl::DecodedMessage<Paver::QueryConfigurationStatusResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_QueryConfigurationStatus_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_QueryConfigurationStatus_GenOrdinal;
 }
 
 void Paver::SetTransactionHeaderFor::SetConfigurationActiveRequest(const ::fidl::DecodedMessage<Paver::SetConfigurationActiveRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_SetConfigurationActive_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_SetConfigurationActive_GenOrdinal;
 }
 void Paver::SetTransactionHeaderFor::SetConfigurationActiveResponse(const ::fidl::DecodedMessage<Paver::SetConfigurationActiveResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_SetConfigurationActive_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_SetConfigurationActive_GenOrdinal;
 }
 
 void Paver::SetTransactionHeaderFor::SetConfigurationUnbootableRequest(const ::fidl::DecodedMessage<Paver::SetConfigurationUnbootableRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_SetConfigurationUnbootable_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_SetConfigurationUnbootable_GenOrdinal;
 }
 void Paver::SetTransactionHeaderFor::SetConfigurationUnbootableResponse(const ::fidl::DecodedMessage<Paver::SetConfigurationUnbootableResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_SetConfigurationUnbootable_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_SetConfigurationUnbootable_GenOrdinal;
 }
 
 void Paver::SetTransactionHeaderFor::SetActiveConfigurationHealthyRequest(const ::fidl::DecodedMessage<Paver::SetActiveConfigurationHealthyRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_SetActiveConfigurationHealthy_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_SetActiveConfigurationHealthy_GenOrdinal;
 }
 void Paver::SetTransactionHeaderFor::SetActiveConfigurationHealthyResponse(const ::fidl::DecodedMessage<Paver::SetActiveConfigurationHealthyResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_SetActiveConfigurationHealthy_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_SetActiveConfigurationHealthy_GenOrdinal;
 }
 
 void Paver::SetTransactionHeaderFor::ReadAssetRequest(const ::fidl::DecodedMessage<Paver::ReadAssetRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_ReadAsset_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_ReadAsset_GenOrdinal;
 }
 void Paver::SetTransactionHeaderFor::ReadAssetResponse(const ::fidl::DecodedMessage<Paver::ReadAssetResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_ReadAsset_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_ReadAsset_GenOrdinal;
 }
 
 void Paver::SetTransactionHeaderFor::WriteAssetRequest(const ::fidl::DecodedMessage<Paver::WriteAssetRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_WriteAsset_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_WriteAsset_GenOrdinal;
 }
 void Paver::SetTransactionHeaderFor::WriteAssetResponse(const ::fidl::DecodedMessage<Paver::WriteAssetResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_WriteAsset_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_WriteAsset_GenOrdinal;
 }
 
 void Paver::SetTransactionHeaderFor::WriteVolumesRequest(const ::fidl::DecodedMessage<Paver::WriteVolumesRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_WriteVolumes_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_WriteVolumes_GenOrdinal;
 }
 void Paver::SetTransactionHeaderFor::WriteVolumesResponse(const ::fidl::DecodedMessage<Paver::WriteVolumesResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_WriteVolumes_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_WriteVolumes_GenOrdinal;
 }
 
 void Paver::SetTransactionHeaderFor::WriteBootloaderRequest(const ::fidl::DecodedMessage<Paver::WriteBootloaderRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_WriteBootloader_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_WriteBootloader_GenOrdinal;
 }
 void Paver::SetTransactionHeaderFor::WriteBootloaderResponse(const ::fidl::DecodedMessage<Paver::WriteBootloaderResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_WriteBootloader_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_WriteBootloader_GenOrdinal;
 }
 
 void Paver::SetTransactionHeaderFor::WriteDataFileRequest(const ::fidl::DecodedMessage<Paver::WriteDataFileRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_WriteDataFile_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_WriteDataFile_GenOrdinal;
 }
 void Paver::SetTransactionHeaderFor::WriteDataFileResponse(const ::fidl::DecodedMessage<Paver::WriteDataFileResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_WriteDataFile_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_WriteDataFile_GenOrdinal;
 }
 
 void Paver::SetTransactionHeaderFor::WipeVolumesRequest(const ::fidl::DecodedMessage<Paver::WipeVolumesRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_WipeVolumes_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_WipeVolumes_GenOrdinal;
 }
 void Paver::SetTransactionHeaderFor::WipeVolumesResponse(const ::fidl::DecodedMessage<Paver::WipeVolumesResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_WipeVolumes_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_WipeVolumes_GenOrdinal;
 }
 
 void Paver::SetTransactionHeaderFor::InitializePartitionTablesRequest(const ::fidl::DecodedMessage<Paver::InitializePartitionTablesRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_InitializePartitionTables_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_InitializePartitionTables_GenOrdinal;
 }
 void Paver::SetTransactionHeaderFor::InitializePartitionTablesResponse(const ::fidl::DecodedMessage<Paver::InitializePartitionTablesResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_InitializePartitionTables_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_InitializePartitionTables_GenOrdinal;
 }
 
 void Paver::SetTransactionHeaderFor::WipePartitionTablesRequest(const ::fidl::DecodedMessage<Paver::WipePartitionTablesRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_WipePartitionTables_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_WipePartitionTables_GenOrdinal;
 }
 void Paver::SetTransactionHeaderFor::WipePartitionTablesResponse(const ::fidl::DecodedMessage<Paver::WipePartitionTablesResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kPaver_WipePartitionTables_Ordinal;
+  _msg.message()->_hdr.ordinal = kPaver_WipePartitionTables_GenOrdinal;
 }
 
 }  // namespace paver

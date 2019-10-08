@@ -406,29 +406,29 @@ void Device::Interface::GetInterruptControllerInfoCompleterBase::Reply(::fidl::D
 
 void Device::SetTransactionHeaderFor::GetHypervisorResourceRequest(const ::fidl::DecodedMessage<Device::GetHypervisorResourceRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetHypervisorResource_Ordinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetHypervisorResource_GenOrdinal;
 }
 void Device::SetTransactionHeaderFor::GetHypervisorResourceResponse(const ::fidl::DecodedMessage<Device::GetHypervisorResourceResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetHypervisorResource_Ordinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetHypervisorResource_GenOrdinal;
 }
 
 void Device::SetTransactionHeaderFor::GetBoardNameRequest(const ::fidl::DecodedMessage<Device::GetBoardNameRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetBoardName_Ordinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetBoardName_GenOrdinal;
 }
 void Device::SetTransactionHeaderFor::GetBoardNameResponse(const ::fidl::DecodedMessage<Device::GetBoardNameResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetBoardName_Ordinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetBoardName_GenOrdinal;
 }
 
 void Device::SetTransactionHeaderFor::GetInterruptControllerInfoRequest(const ::fidl::DecodedMessage<Device::GetInterruptControllerInfoRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetInterruptControllerInfo_Ordinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetInterruptControllerInfo_GenOrdinal;
 }
 void Device::SetTransactionHeaderFor::GetInterruptControllerInfoResponse(const ::fidl::DecodedMessage<Device::GetInterruptControllerInfoResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetInterruptControllerInfo_Ordinal;
+  _msg.message()->_hdr.ordinal = kDevice_GetInterruptControllerInfo_GenOrdinal;
 }
 
 }  // namespace sysinfo

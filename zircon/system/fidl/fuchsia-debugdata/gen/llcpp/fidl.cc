@@ -250,16 +250,16 @@ void DebugData::Interface::LoadConfigCompleterBase::Reply(::fidl::DecodedMessage
 
 void DebugData::SetTransactionHeaderFor::PublishRequest(const ::fidl::DecodedMessage<DebugData::PublishRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDebugData_Publish_Ordinal;
+  _msg.message()->_hdr.ordinal = kDebugData_Publish_GenOrdinal;
 }
 
 void DebugData::SetTransactionHeaderFor::LoadConfigRequest(const ::fidl::DecodedMessage<DebugData::LoadConfigRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDebugData_LoadConfig_Ordinal;
+  _msg.message()->_hdr.ordinal = kDebugData_LoadConfig_GenOrdinal;
 }
 void DebugData::SetTransactionHeaderFor::LoadConfigResponse(const ::fidl::DecodedMessage<DebugData::LoadConfigResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDebugData_LoadConfig_Ordinal;
+  _msg.message()->_hdr.ordinal = kDebugData_LoadConfig_GenOrdinal;
 }
 
 }  // namespace debugdata

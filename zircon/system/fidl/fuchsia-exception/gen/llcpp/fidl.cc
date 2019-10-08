@@ -136,11 +136,11 @@ void Handler::Interface::OnExceptionCompleterBase::Reply() {
 
 void Handler::SetTransactionHeaderFor::OnExceptionRequest(const ::fidl::DecodedMessage<Handler::OnExceptionRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kHandler_OnException_Ordinal;
+  _msg.message()->_hdr.ordinal = kHandler_OnException_GenOrdinal;
 }
 void Handler::SetTransactionHeaderFor::OnExceptionResponse(const ::fidl::DecodedMessage<Handler::OnExceptionResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kHandler_OnException_Ordinal;
+  _msg.message()->_hdr.ordinal = kHandler_OnException_GenOrdinal;
 }
 
 ::llcpp::fuchsia::exception::ProcessExceptionMetadata::Builder ProcessExceptionMetadata::Build() {
@@ -570,20 +570,20 @@ void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::Reply(::fidl::Deco
 
 void ProcessLimbo::SetTransactionHeaderFor::ListProcessesWaitingOnExceptionRequest(const ::fidl::DecodedMessage<ProcessLimbo::ListProcessesWaitingOnExceptionRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kProcessLimbo_ListProcessesWaitingOnException_Ordinal;
+  _msg.message()->_hdr.ordinal = kProcessLimbo_ListProcessesWaitingOnException_GenOrdinal;
 }
 void ProcessLimbo::SetTransactionHeaderFor::ListProcessesWaitingOnExceptionResponse(const ::fidl::DecodedMessage<ProcessLimbo::ListProcessesWaitingOnExceptionResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kProcessLimbo_ListProcessesWaitingOnException_Ordinal;
+  _msg.message()->_hdr.ordinal = kProcessLimbo_ListProcessesWaitingOnException_GenOrdinal;
 }
 
 void ProcessLimbo::SetTransactionHeaderFor::RetrieveExceptionRequest(const ::fidl::DecodedMessage<ProcessLimbo::RetrieveExceptionRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kProcessLimbo_RetrieveException_Ordinal;
+  _msg.message()->_hdr.ordinal = kProcessLimbo_RetrieveException_GenOrdinal;
 }
 void ProcessLimbo::SetTransactionHeaderFor::RetrieveExceptionResponse(const ::fidl::DecodedMessage<ProcessLimbo::RetrieveExceptionResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kProcessLimbo_RetrieveException_Ordinal;
+  _msg.message()->_hdr.ordinal = kProcessLimbo_RetrieveException_GenOrdinal;
 }
 
 }  // namespace exception

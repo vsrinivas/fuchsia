@@ -499,38 +499,38 @@ void Bus::Interface::DisconnectCompleterBase::Reply(::fidl::DecodedMessage<Disco
 
 void Bus::SetTransactionHeaderFor::EnableRequest(const ::fidl::DecodedMessage<Bus::EnableRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kBus_Enable_Ordinal;
+  _msg.message()->_hdr.ordinal = kBus_Enable_GenOrdinal;
 }
 void Bus::SetTransactionHeaderFor::EnableResponse(const ::fidl::DecodedMessage<Bus::EnableResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kBus_Enable_Ordinal;
+  _msg.message()->_hdr.ordinal = kBus_Enable_GenOrdinal;
 }
 
 void Bus::SetTransactionHeaderFor::DisableRequest(const ::fidl::DecodedMessage<Bus::DisableRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kBus_Disable_Ordinal;
+  _msg.message()->_hdr.ordinal = kBus_Disable_GenOrdinal;
 }
 void Bus::SetTransactionHeaderFor::DisableResponse(const ::fidl::DecodedMessage<Bus::DisableResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kBus_Disable_Ordinal;
+  _msg.message()->_hdr.ordinal = kBus_Disable_GenOrdinal;
 }
 
 void Bus::SetTransactionHeaderFor::ConnectRequest(const ::fidl::DecodedMessage<Bus::ConnectRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kBus_Connect_Ordinal;
+  _msg.message()->_hdr.ordinal = kBus_Connect_GenOrdinal;
 }
 void Bus::SetTransactionHeaderFor::ConnectResponse(const ::fidl::DecodedMessage<Bus::ConnectResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kBus_Connect_Ordinal;
+  _msg.message()->_hdr.ordinal = kBus_Connect_GenOrdinal;
 }
 
 void Bus::SetTransactionHeaderFor::DisconnectRequest(const ::fidl::DecodedMessage<Bus::DisconnectRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kBus_Disconnect_Ordinal;
+  _msg.message()->_hdr.ordinal = kBus_Disconnect_GenOrdinal;
 }
 void Bus::SetTransactionHeaderFor::DisconnectResponse(const ::fidl::DecodedMessage<Bus::DisconnectResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kBus_Disconnect_Ordinal;
+  _msg.message()->_hdr.ordinal = kBus_Disconnect_GenOrdinal;
 }
 
 }  // namespace bus

@@ -55,7 +55,7 @@ impl FirstProtocolSynchronousProxy {
 		self.client.into_channel()
 	}
 	pub fn method_on_first(&mut self,) -> Result<(), fidl::Error> {self.client.send(&mut (),
-				0x2838a83100000000,
+				0x580cbd0d43ccbe3b,
 			)}
 }
 
@@ -116,7 +116,7 @@ impl FirstProtocolProxy {
 impl FirstProtocolProxyInterface for FirstProtocolProxy {
 	fn method_on_first(&self,
 	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (), 0x2838a83100000000)
+		self.client.send(&mut (), 0x580cbd0d43ccbe3b)
 	}}
 
 #[cfg(target_os = "fuchsia")]
@@ -326,7 +326,7 @@ impl FirstProtocolEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
 			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x2838a83100000000,
+			ordinal: 0x580cbd0d43ccbe3b,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -394,7 +394,7 @@ impl SecondProtocolSynchronousProxy {
 		self.client.into_channel()
 	}
 	pub fn method_on_second(&mut self,) -> Result<(), fidl::Error> {self.client.send(&mut (),
-				0xd09c00f00000000,
+				0x5785f9c1f2aece21,
 			)}
 }
 
@@ -455,7 +455,7 @@ impl SecondProtocolProxy {
 impl SecondProtocolProxyInterface for SecondProtocolProxy {
 	fn method_on_second(&self,
 	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (), 0xd09c00f00000000)
+		self.client.send(&mut (), 0x5785f9c1f2aece21)
 	}}
 
 #[cfg(target_os = "fuchsia")]
@@ -665,7 +665,7 @@ impl SecondProtocolEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
 			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0xd09c00f00000000,
+			ordinal: 0x5785f9c1f2aece21,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };

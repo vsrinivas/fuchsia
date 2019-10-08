@@ -279,20 +279,20 @@ void Provider::Interface::OpenControllerCompleterBase::Reply(::fidl::DecodedMess
 
 void Provider::SetTransactionHeaderFor::OpenVirtconControllerRequest(const ::fidl::DecodedMessage<Provider::OpenVirtconControllerRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kProvider_OpenVirtconController_Ordinal;
+  _msg.message()->_hdr.ordinal = kProvider_OpenVirtconController_GenOrdinal;
 }
 void Provider::SetTransactionHeaderFor::OpenVirtconControllerResponse(const ::fidl::DecodedMessage<Provider::OpenVirtconControllerResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kProvider_OpenVirtconController_Ordinal;
+  _msg.message()->_hdr.ordinal = kProvider_OpenVirtconController_GenOrdinal;
 }
 
 void Provider::SetTransactionHeaderFor::OpenControllerRequest(const ::fidl::DecodedMessage<Provider::OpenControllerRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kProvider_OpenController_Ordinal;
+  _msg.message()->_hdr.ordinal = kProvider_OpenController_GenOrdinal;
 }
 void Provider::SetTransactionHeaderFor::OpenControllerResponse(const ::fidl::DecodedMessage<Provider::OpenControllerResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kProvider_OpenController_Ordinal;
+  _msg.message()->_hdr.ordinal = kProvider_OpenController_GenOrdinal;
 }
 
 ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::Controller_StartCapture_Result() {
@@ -3706,215 +3706,215 @@ void Controller::Interface::ReleaseCaptureCompleterBase::Reply(::fidl::DecodedMe
 
 void Controller::SetTransactionHeaderFor::DisplaysChangedResponse(const ::fidl::DecodedMessage<Controller::DisplaysChangedResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_DisplaysChanged_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_DisplaysChanged_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::ImportVmoImageRequest(const ::fidl::DecodedMessage<Controller::ImportVmoImageRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ImportVmoImage_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_ImportVmoImage_GenOrdinal;
 }
 void Controller::SetTransactionHeaderFor::ImportVmoImageResponse(const ::fidl::DecodedMessage<Controller::ImportVmoImageResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ImportVmoImage_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_ImportVmoImage_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::ImportImageRequest(const ::fidl::DecodedMessage<Controller::ImportImageRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ImportImage_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_ImportImage_GenOrdinal;
 }
 void Controller::SetTransactionHeaderFor::ImportImageResponse(const ::fidl::DecodedMessage<Controller::ImportImageResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ImportImage_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_ImportImage_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::ReleaseImageRequest(const ::fidl::DecodedMessage<Controller::ReleaseImageRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ReleaseImage_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_ReleaseImage_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::ImportEventRequest(const ::fidl::DecodedMessage<Controller::ImportEventRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ImportEvent_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_ImportEvent_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::ReleaseEventRequest(const ::fidl::DecodedMessage<Controller::ReleaseEventRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ReleaseEvent_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_ReleaseEvent_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::CreateLayerRequest(const ::fidl::DecodedMessage<Controller::CreateLayerRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_CreateLayer_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_CreateLayer_GenOrdinal;
 }
 void Controller::SetTransactionHeaderFor::CreateLayerResponse(const ::fidl::DecodedMessage<Controller::CreateLayerResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_CreateLayer_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_CreateLayer_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::DestroyLayerRequest(const ::fidl::DecodedMessage<Controller::DestroyLayerRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_DestroyLayer_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_DestroyLayer_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::SetDisplayModeRequest(const ::fidl::DecodedMessage<Controller::SetDisplayModeRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_SetDisplayMode_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_SetDisplayMode_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::SetDisplayColorConversionRequest(const ::fidl::DecodedMessage<Controller::SetDisplayColorConversionRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_SetDisplayColorConversion_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_SetDisplayColorConversion_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::SetDisplayLayersRequest(const ::fidl::DecodedMessage<Controller::SetDisplayLayersRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_SetDisplayLayers_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_SetDisplayLayers_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::SetLayerPrimaryConfigRequest(const ::fidl::DecodedMessage<Controller::SetLayerPrimaryConfigRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_SetLayerPrimaryConfig_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_SetLayerPrimaryConfig_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::SetLayerPrimaryPositionRequest(const ::fidl::DecodedMessage<Controller::SetLayerPrimaryPositionRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_SetLayerPrimaryPosition_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_SetLayerPrimaryPosition_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::SetLayerPrimaryAlphaRequest(const ::fidl::DecodedMessage<Controller::SetLayerPrimaryAlphaRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_SetLayerPrimaryAlpha_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_SetLayerPrimaryAlpha_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::SetLayerCursorConfigRequest(const ::fidl::DecodedMessage<Controller::SetLayerCursorConfigRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_SetLayerCursorConfig_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_SetLayerCursorConfig_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::SetLayerCursorPositionRequest(const ::fidl::DecodedMessage<Controller::SetLayerCursorPositionRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_SetLayerCursorPosition_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_SetLayerCursorPosition_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::SetLayerColorConfigRequest(const ::fidl::DecodedMessage<Controller::SetLayerColorConfigRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_SetLayerColorConfig_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_SetLayerColorConfig_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::SetLayerImageRequest(const ::fidl::DecodedMessage<Controller::SetLayerImageRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_SetLayerImage_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_SetLayerImage_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::CheckConfigRequest(const ::fidl::DecodedMessage<Controller::CheckConfigRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_CheckConfig_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_CheckConfig_GenOrdinal;
 }
 void Controller::SetTransactionHeaderFor::CheckConfigResponse(const ::fidl::DecodedMessage<Controller::CheckConfigResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_CheckConfig_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_CheckConfig_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::ApplyConfigRequest(const ::fidl::DecodedMessage<Controller::ApplyConfigRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ApplyConfig_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_ApplyConfig_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::EnableVsyncRequest(const ::fidl::DecodedMessage<Controller::EnableVsyncRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_EnableVsync_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_EnableVsync_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::VsyncResponse(const ::fidl::DecodedMessage<Controller::VsyncResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_Vsync_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_Vsync_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::SetVirtconModeRequest(const ::fidl::DecodedMessage<Controller::SetVirtconModeRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_SetVirtconMode_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_SetVirtconMode_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::ClientOwnershipChangeResponse(const ::fidl::DecodedMessage<Controller::ClientOwnershipChangeResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ClientOwnershipChange_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_ClientOwnershipChange_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::ComputeLinearImageStrideRequest(const ::fidl::DecodedMessage<Controller::ComputeLinearImageStrideRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ComputeLinearImageStride_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_ComputeLinearImageStride_GenOrdinal;
 }
 void Controller::SetTransactionHeaderFor::ComputeLinearImageStrideResponse(const ::fidl::DecodedMessage<Controller::ComputeLinearImageStrideResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ComputeLinearImageStride_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_ComputeLinearImageStride_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::AllocateVmoRequest(const ::fidl::DecodedMessage<Controller::AllocateVmoRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_AllocateVmo_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_AllocateVmo_GenOrdinal;
 }
 void Controller::SetTransactionHeaderFor::AllocateVmoResponse(const ::fidl::DecodedMessage<Controller::AllocateVmoResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_AllocateVmo_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_AllocateVmo_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::ImportBufferCollectionRequest(const ::fidl::DecodedMessage<Controller::ImportBufferCollectionRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ImportBufferCollection_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_ImportBufferCollection_GenOrdinal;
 }
 void Controller::SetTransactionHeaderFor::ImportBufferCollectionResponse(const ::fidl::DecodedMessage<Controller::ImportBufferCollectionResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ImportBufferCollection_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_ImportBufferCollection_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::ReleaseBufferCollectionRequest(const ::fidl::DecodedMessage<Controller::ReleaseBufferCollectionRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ReleaseBufferCollection_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_ReleaseBufferCollection_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::SetBufferCollectionConstraintsRequest(const ::fidl::DecodedMessage<Controller::SetBufferCollectionConstraintsRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_SetBufferCollectionConstraints_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_SetBufferCollectionConstraints_GenOrdinal;
 }
 void Controller::SetTransactionHeaderFor::SetBufferCollectionConstraintsResponse(const ::fidl::DecodedMessage<Controller::SetBufferCollectionConstraintsResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_SetBufferCollectionConstraints_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_SetBufferCollectionConstraints_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::GetSingleBufferFramebufferRequest(const ::fidl::DecodedMessage<Controller::GetSingleBufferFramebufferRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_GetSingleBufferFramebuffer_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_GetSingleBufferFramebuffer_GenOrdinal;
 }
 void Controller::SetTransactionHeaderFor::GetSingleBufferFramebufferResponse(const ::fidl::DecodedMessage<Controller::GetSingleBufferFramebufferResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_GetSingleBufferFramebuffer_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_GetSingleBufferFramebuffer_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::ImportImageForCaptureRequest(const ::fidl::DecodedMessage<Controller::ImportImageForCaptureRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ImportImageForCapture_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_ImportImageForCapture_GenOrdinal;
 }
 void Controller::SetTransactionHeaderFor::ImportImageForCaptureResponse(const ::fidl::DecodedMessage<Controller::ImportImageForCaptureResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ImportImageForCapture_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_ImportImageForCapture_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::StartCaptureRequest(const ::fidl::DecodedMessage<Controller::StartCaptureRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_StartCapture_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_StartCapture_GenOrdinal;
 }
 void Controller::SetTransactionHeaderFor::StartCaptureResponse(const ::fidl::DecodedMessage<Controller::StartCaptureResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_StartCapture_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_StartCapture_GenOrdinal;
 }
 
 void Controller::SetTransactionHeaderFor::ReleaseCaptureRequest(const ::fidl::DecodedMessage<Controller::ReleaseCaptureRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ReleaseCapture_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_ReleaseCapture_GenOrdinal;
 }
 void Controller::SetTransactionHeaderFor::ReleaseCaptureResponse(const ::fidl::DecodedMessage<Controller::ReleaseCaptureResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ReleaseCapture_Ordinal;
+  _msg.message()->_hdr.ordinal = kController_ReleaseCapture_GenOrdinal;
 }
 
 }  // namespace display

@@ -673,7 +673,7 @@ func TestCompileInterface(t *testing.T) {
 		ServiceNameConstant:  "TestName",
 		Methods: []Method{
 			{
-				Ordinals: types.NewOrdinalsStep5(
+				Ordinals: types.NewOrdinalsStep7(
 					types.Method{
 						Ordinal:    1,
 						GenOrdinal: 1789789,
@@ -698,7 +698,7 @@ func TestCompileInterface(t *testing.T) {
 				IsEvent:         false,
 			},
 			{
-				Ordinals: types.NewOrdinalsStep5(
+				Ordinals: types.NewOrdinalsStep7(
 					types.Method{
 						Ordinal:    2,
 						GenOrdinal: 2789789,
@@ -778,7 +778,7 @@ func TestCompileInterface(t *testing.T) {
 		ServiceNameConstant:  "TestName",
 		Methods: []Method{
 			{
-				Ordinals: types.NewOrdinalsStep5(
+				Ordinals: types.NewOrdinalsStep7(
 					types.Method{
 						Ordinal:    1,
 						GenOrdinal: 9,
