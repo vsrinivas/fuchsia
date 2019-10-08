@@ -2,13 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/modular/build/modular_config/modular_config.gni")
 import("//build/dart/dart_library.gni")
+import("//src/modular/build/modular_config/modular_config.gni")
 import("//topaz/runtime/dart/flutter_test.gni")
 import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
 dart_library("internationalization") {
   package_name = "internationalization"
+
   # Disabling analysis for the time being, this is mostly generated code to begin
   # with, and there are issues like this one that make things harder than necessary:
   # https://github.com/dart-lang/sdk/issues/38598.
@@ -37,6 +38,7 @@ dart_library("internationalization") {
 flutter_test("ermine_internationalization_unittests") {
   sources = [
     "current_locale_test.dart",
+    "profile_provider_test.dart",
   ]
 
   deps = [

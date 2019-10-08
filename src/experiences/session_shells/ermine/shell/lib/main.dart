@@ -4,12 +4,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:lib.widgets/model.dart';
 
+import 'package:fidl_fuchsia_intl/fidl_async.dart';
 import 'package:fuchsia_logger/logger.dart';
+import 'package:fuchsia_services/services.dart';
 import 'package:internationalization/localizations_delegate.dart'
     as localizations;
-import 'package:internationalization/current_locale.dart';
+import 'package:internationalization/profile_provider.dart';
 import 'package:internationalization/supported_locales.dart'
     as supported_locales;
 import 'package:intl/intl.dart';
@@ -18,45 +19,55 @@ import 'src/models/app_model.dart' show AppModel;
 import 'src/widgets/app.dart' show App;
 
 Future<void> main() async {
-  // TODO(fmil): Add a dynamically changing value of the locale, based on system
-  // preferences.
-  final providers = Providers()
-    ..provideValue(CurrentLocale(Locale.fromSubtags(languageCode: 'en')));
-
   setupLogger(name: 'ermine');
 
+  final _intl = PropertyProviderProxy();
+  StartupContext.fromStartupInfo().incoming.connectToService(_intl);
+
+  final locales = LocaleSource(_intl);
   final model = AppModel();
-  final app = _Localized(model);
 
-  runApp(ProviderNode(providers: providers, child: app));
-
+  runApp(_Localized(model, await locales.initial(), locales.stream()));
   await model.onStarted();
+  _intl.ctrl.close();
 }
 
 /// This is a localized version of the Ermine shell localized app.  It is the
 /// same as the original App, but it also has the current locale injected.
 class _Localized extends StatelessWidget {
+  // The model to use for the underlying app.
   final AppModel _model;
-  const _Localized(this._model);
+
+  // The stream of locale updates.
+  final Stream<Locale> _localeStream;
+
+  // The initial value of the locale
+  final Locale _initial;
+
+  const _Localized(this._model, this._initial, this._localeStream);
 
   @override
   Widget build(BuildContext context) {
-    return Provide<CurrentLocale>(
-        builder: (BuildContext context, Widget child, currentLocale) {
-      // Changing the default locale here ensures that any non-Flutter
-      // code sees the locale change as well.
-      Intl.defaultLocale = currentLocale.unicode();
-      return MaterialApp(
-        home: App(model: _model),
-        debugShowCheckedModeBanner: false,
-        locale: currentLocale.value,
-        localizationsDelegates: [
-          localizations.delegate(),
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-        ],
-        supportedLocales: supported_locales.locales,
-      );
-    });
+    return StreamBuilder<Locale>(
+        stream: _localeStream,
+        initialData: _initial,
+        builder: (BuildContext context, AsyncSnapshot<Locale> snapshot) {
+          final Locale locale = snapshot.data ?? _initial;
+          // This is required so app parts which don't depend on the flutter
+          // locale have access to it.
+          Intl.defaultLocale = locale.toString();
+          return MaterialApp(
+            home: App(model: _model),
+            debugShowCheckedModeBanner: false,
+            locale: locale,
+            localizationsDelegates: [
+              localizations.delegate(),
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: supported_locales.locales,
+          );
+        });
   }
 }
+
