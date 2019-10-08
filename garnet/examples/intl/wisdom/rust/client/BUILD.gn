@@ -33,7 +33,6 @@ rustc_binary("intl_wisdom_client_rust") {
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:structopt",
   ]
-  test_deps = [ "//src/lib/rust_backtrace" ]
 }
 
 test_package("intl_wisdom_client_rust_tests") {

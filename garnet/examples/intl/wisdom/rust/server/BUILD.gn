@@ -34,9 +34,6 @@ rustc_binary("intl_wisdom_server_rust") {
   non_rust_deps = [
     "//third_party/icu",
   ]
-  test_deps = [
-    "//src/lib/rust_backtrace",
-  ]
 }
 
 # This is the Fuchsia test package which ensures that the generated tests from

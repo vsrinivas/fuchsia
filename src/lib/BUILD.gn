@@ -41,7 +41,6 @@ group("tests") {
     "line_input:tests",
     "mpmc:tests",
     "process_builder:tests",
-    "rust_backtrace:tests",
     "streammap:tests",
     "test_util:tests",
     "ui:tests",
