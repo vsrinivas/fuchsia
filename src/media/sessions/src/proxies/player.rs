@@ -274,7 +274,9 @@ impl Stream for Player {
                         }
                     },
                 };
-                self.terminated = event.is_removal();
+                if let PlayerEvent::Removed = event {
+                    self.terminated = true;
+                }
                 Poll::Ready(Some(FilterApplicant::new(self.options_satisfied(), (self.id, event))))
             }
         }

@@ -34,13 +34,6 @@ pub enum SessionsWatcherEvent {
 }
 
 impl PlayerEvent {
-    pub fn is_removal(&self) -> bool {
-        match self {
-            PlayerEvent::Removed => true,
-            _ => false,
-        }
-    }
-
     /// Renders the event for the client as a `SessionsWatcher` message.
     pub fn sessions_watcher_event(self) -> SessionsWatcherEvent {
         match self {
