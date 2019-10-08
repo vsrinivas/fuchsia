@@ -577,17 +577,22 @@ namespace {
     FakeWriteMsr msrs;
     uint32_t fake_patch[512] = {};
 
-    // Expect that a patch == current patch is not loaded.
-    uint32_t current_patch_level = x86_intel_get_patch_level();
-    fake_patch[1] = current_patch_level;
-    x86_intel_load_microcode_patch(&cpu, &msrs, {fake_patch, sizeof(fake_patch)});
-    EXPECT_FALSE(msrs.written_);
+    // This test can only run on physical Intel x86-64 hosts; x86_intel_get_patch_level
+    // does not use an interface to access patch_level registers and those registers are
+    // only present/writeable on h/w.
+    if (x86_vendor == X86_VENDOR_INTEL && !x86_feature_test(X86_FEATURE_HYPERVISOR)) {
+      // Expect that a patch == current patch is not loaded.
+      uint32_t current_patch_level = x86_intel_get_patch_level();
+      fake_patch[1] = current_patch_level;
+      x86_intel_load_microcode_patch(&cpu, &msrs, {fake_patch, sizeof(fake_patch)});
+      EXPECT_FALSE(msrs.written_);
 
-    // Expect that a newer patch is loaded.
-    fake_patch[1] = current_patch_level + 1;
-    x86_intel_load_microcode_patch(&cpu, &msrs, {fake_patch, sizeof(fake_patch)});
-    EXPECT_TRUE(msrs.written_);
-    EXPECT_EQ(msrs.msr_index_, X86_MSR_IA32_BIOS_UPDT_TRIG);
+      // Expect that a newer patch is loaded.
+      fake_patch[1] = current_patch_level + 1;
+      x86_intel_load_microcode_patch(&cpu, &msrs, {fake_patch, sizeof(fake_patch)});
+      EXPECT_TRUE(msrs.written_);
+      EXPECT_EQ(msrs.msr_index_, X86_MSR_IA32_BIOS_UPDT_TRIG);
+    }
 
     END_TEST;
   }
