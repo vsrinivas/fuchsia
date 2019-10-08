@@ -31,7 +31,6 @@ String done() => Intl.message(
       desc: 'The label for saying we are done with a command',
     );
 
-
 String sleep() => Intl.message(
       'Sleep',
       name: 'sleep',

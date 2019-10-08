@@ -209,6 +209,42 @@
     "type": "text",
     "placeholders": {}
   },
+  "overview": "Преглед",
+  "@overview": {
+    "description": "Shown in top bar on the Ermine shell",
+    "type": "text",
+    "placeholders": {}
+  },
+  "recents": "Историјат",
+  "@recents": {
+    "description": "A list of recent apps",
+    "type": "text",
+    "placeholders": {}
+  },
+  "browser": "Прегледач",
+  "@browser": {
+    "description": "A button to invoke a browser with",
+    "type": "text",
+    "placeholders": {}
+  },
+  "auto": "Ауто",
+  "@auto": {
+    "description": "A shorthand for \"automatic\" setting.",
+    "type": "text",
+    "placeholders": {}
+  },
+  "shutdown": "Искључи",
+  "@shutdown": {
+    "description": "The label for the \"System shutdown\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "mockWirelessNetwork": "Бежична_мрежа",
+  "@mockWirelessNetwork": {
+    "description": "A mock label for a wireless network name that the device is connected to",
+    "type": "text",
+    "placeholders": {}
+  },
   "nameThisStory": "Именуј ову причу",
   "@nameThisStory": {
     "description": "A hint appearing in a window for naming a story. This text should not include padding, but now it does.",

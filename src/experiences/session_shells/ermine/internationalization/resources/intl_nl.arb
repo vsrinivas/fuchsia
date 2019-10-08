@@ -209,6 +209,42 @@
     "type": "text",
     "placeholders": {}
   },
+  "overview": "Overzicht",
+  "@overview": {
+    "description": "Shown in top bar on the Ermine shell",
+    "type": "text",
+    "placeholders": {}
+  },
+  "recents": "Onlangs",
+  "@recents": {
+    "description": "A list of recent apps",
+    "type": "text",
+    "placeholders": {}
+  },
+  "browser": "Browser",
+  "@browser": {
+    "description": "A button to invoke a browser with",
+    "type": "text",
+    "placeholders": {}
+  },
+  "auto": "Auto",
+  "@auto": {
+    "description": "A shorthand for \"automatic\" setting.",
+    "type": "text",
+    "placeholders": {}
+  },
+  "shutdown": "Uitschakelen",
+  "@shutdown": {
+    "description": "The label for the \"System shutdown\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "mockWirelessNetwork": "Draadlooz_Netwerk",
+  "@mockWirelessNetwork": {
+    "description": "A mock label for a wireless network name that the device is connected to",
+    "type": "text",
+    "placeholders": {}
+  },
   "nameThisStory": "Noem dit verhaal",
   "@nameThisStory": {
     "description": "A hint appearing in a window for naming a story. This text should not include padding, but now it does.",
