@@ -393,6 +393,8 @@ int main(int argc, char** argv) {
   if (!fxl::SetTestSettings(argc, argv)) {
     return EXIT_FAILURE;
   }
+
+  testing::InitGoogleTest(&argc, argv);
   syslog::InitLogger({"feedback", "test"});
   return RUN_ALL_TESTS();
 }
