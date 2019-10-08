@@ -5,12 +5,14 @@
 #include "paver.h"
 
 #include <algorithm>
+#include <fcntl.h>
 #include <stdio.h>
 
 #include <fbl/auto_call.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
+#include <lib/sysconfig/sync-client.h>
 #include <lib/zx/clock.h>
 #include <zircon/boot/netboot.h>
 
@@ -21,6 +23,37 @@ namespace {
 
 size_t NB_IMAGE_PREFIX_LEN() { return strlen(NB_IMAGE_PREFIX); }
 size_t NB_FILENAME_PREFIX_LEN() { return strlen(NB_FILENAME_PREFIX); }
+
+zx_status_t ClearSysconfig(const fbl::unique_fd& devfs_root) {
+  std::optional<sysconfig::SyncClient> client;
+  zx_status_t status = sysconfig::SyncClient::Create(devfs_root, &client);
+  if (status == ZX_ERR_NOT_SUPPORTED) {
+    // We only clear sysconfig on devices with sysconfig partition.
+    return ZX_OK;
+  } else if (status != ZX_OK) {
+    fprintf(stderr, "netsvc: Failed to create sysconfig SyncClient.\n");
+    return status;
+  }
+  constexpr auto kPartition = sysconfig::SyncClient::PartitionType::kSysconfig;
+  size_t size = client->GetPartitionSize(kPartition);
+
+  // We assume the vmo is zero initialized.
+  zx::vmo vmo;
+  status = zx::vmo::create(fbl::round_up(size, ZX_PAGE_SIZE), 0, &vmo);
+  if (status != ZX_OK) {
+    fprintf(stderr, "netsvc: Failed to create vmo.\n");
+    return status;
+  }
+
+  status = client->WritePartition(kPartition, vmo, 0);
+  if (status != ZX_OK) {
+    fprintf(stderr, "netsvc: Failed to write to sysconfig partition.\n");
+    return status;
+  }
+
+  return ZX_OK;
+}
+
 
 }  // namespace
 
@@ -36,7 +69,12 @@ Paver* Paver::Get() {
     if (status != ZX_OK) {
       return nullptr;
     }
-    instance_ = new Paver(std::move(local));
+    fbl::unique_fd devfs_root(open("/dev", O_RDWR));
+    if (!devfs_root) {
+      return nullptr;
+    }
+
+    instance_ = new Paver(std::move(local), std::move(devfs_root));
   }
   return instance_;
 }
@@ -181,7 +219,7 @@ zx_status_t Paver::WriteAsset(::llcpp::fuchsia::mem::Buffer buffer) {
       return status;
     }
   }
-  return ZX_OK;
+  return ClearSysconfig(devfs_root_);
 }
 
 int Paver::MonitorBuffer() {

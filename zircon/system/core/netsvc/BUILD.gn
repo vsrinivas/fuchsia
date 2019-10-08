@@ -79,6 +79,7 @@ source_set("netsvc_common") {
     "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/libzbi",
+    "$zx/system/ulib/sysconfig-client:sysconfig-sync-client",
     "$zx/system/ulib/zircon",
   ]
   public_deps = [
@@ -108,6 +109,8 @@ test("netsvc-test") {
     "$zx/system/fidl/fuchsia-sysinfo:llcpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/async-loop:async-loop-default.static",
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/driver-integration-test",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/fs",

@@ -12,6 +12,7 @@
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/driver-integration-test/fixture.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/zx/channel.h>
 #include <zircon/boot/netboot.h>
@@ -27,13 +28,15 @@ TEST(PaverTest, GetSingleton) { ASSERT_NOT_NULL(netsvc::Paver::Get()); }
 
 TEST(PaverTest, InitialInProgressFalse) {
   zx::channel chan;
-  netsvc::Paver paver_(std::move(chan));
+  fbl::unique_fd fd;
+  netsvc::Paver paver_(std::move(chan), std::move(fd));
   ASSERT_FALSE(paver_.InProgress());
 }
 
 TEST(PaverTest, InitialExitCodeValid) {
   zx::channel chan;
-  netsvc::Paver paver_(std::move(chan));
+  fbl::unique_fd fd;
+  netsvc::Paver paver_(std::move(chan), std::move(fd));
   ASSERT_OK(paver_.exit_code());
 }
 
@@ -243,6 +246,23 @@ class FakeSvc {
   zx::channel svc_local_;
 };
 
+class FakeDev {
+ public:
+  FakeDev() {
+    driver_integration_test::IsolatedDevmgr::Args args;
+    args.driver_search_paths.push_back("/boot/driver");
+
+    ASSERT_OK(driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr_));
+    fbl::unique_fd fd;
+    ASSERT_OK(
+        devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
+    ASSERT_OK(
+        devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "misc/sysinfo", &fd));
+  }
+
+  driver_integration_test::IsolatedDevmgr devmgr_;
+};
+
 }  // namespace
 
 class PaverTest : public zxtest::Test {
@@ -250,7 +270,8 @@ class PaverTest : public zxtest::Test {
   PaverTest()
       : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         fake_svc_(loop_.dispatcher()),
-        paver_(std::move(fake_svc_.svc_chan())) {
+        paver_(std::move(fake_svc_.svc_chan()), fake_dev_.devmgr_.devfs_root().duplicate()) {
+    
     paver_.set_timeout(zx::msec(500));
     loop_.StartThread("paver-test-loop");
   }
@@ -268,6 +289,7 @@ class PaverTest : public zxtest::Test {
 
   async::Loop loop_;
   FakeSvc fake_svc_;
+  FakeDev fake_dev_;
   netsvc::Paver paver_;
 };
 
