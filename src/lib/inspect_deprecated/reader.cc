@@ -152,12 +152,11 @@ fit::promise<ObjectReader> ObjectReader::OpenChild(std::string child_name) const
 
   state_->inspect_ptr_->OpenChild(child_name, child_ptr.NewRequest(), bridge.completer.bind());
 
-  ObjectReader reader(child_ptr.Unbind());
   return bridge.consumer.promise_or(fit::error())
       .and_then(
-          [ret = std::move(reader)](const bool& success) mutable -> fit::result<ObjectReader> {
+          [chan = child_ptr.Unbind()](const bool& success) mutable -> fit::result<ObjectReader> {
             if (success) {
-              return fit::ok(ObjectReader(std::move(ret)));
+              return fit::ok(ObjectReader(std::move(chan)));
             } else {
               return fit::error();
             }
