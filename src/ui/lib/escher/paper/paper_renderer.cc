@@ -313,11 +313,14 @@ void PaperRenderer::DrawDebugText(std::string text, vk::Offset2D offset, int32_t
 
 void PaperRenderer::DrawVLine(escher::DebugRects::Color kColor, uint32_t x_coord, int32_t y_start,
                               uint32_t y_end, uint32_t thickness) {
-  // TODO(ES-245): Add error checking to make sure math will not cause negative
-  // values or the bars to go off screen.
   vk::Rect2D rect;
   vk::Offset2D offset = {static_cast<int32_t>(x_coord), y_start};
   vk::Extent2D extent = {static_cast<uint32_t>(x_coord + thickness), y_end};
+
+  // Adds error checking to make sure math will not cause negative
+  // values or the bars to go off screen.
+  FXL_DCHECK(extent.width >= 0 && extent.width < frame_data_->output_image->width());
+  FXL_DCHECK(extent.height >= 0 && extent.height < frame_data_->output_image->height());
 
   rect.offset = offset;
   rect.extent = extent;
@@ -327,11 +330,14 @@ void PaperRenderer::DrawVLine(escher::DebugRects::Color kColor, uint32_t x_coord
 
 void PaperRenderer::DrawHLine(escher::DebugRects::Color kColor, int32_t y_coord, int32_t x_start,
                               uint32_t x_end, int32_t thickness) {
-  // TODO(ES-245): Add error checking to make sure math will not cause negative
-  // values or the bars to go off screen.
   vk::Rect2D rect;
   vk::Offset2D offset = {x_start, static_cast<int32_t>(y_coord)};
   vk::Extent2D extent = {x_end, static_cast<uint32_t>(y_coord + thickness)};
+
+  // Adds error checking to make sure math will not cause negative
+  // values or the bars to go off screen.
+  FXL_DCHECK(extent.width >= 0 && extent.width < frame_data_->output_image->width());
+  FXL_DCHECK(extent.height >= 0 && extent.height < frame_data_->output_image->height());
 
   rect.offset = offset;
   rect.extent = extent;
