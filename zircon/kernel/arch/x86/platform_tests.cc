@@ -111,6 +111,9 @@ namespace {
   static bool test_x64_cpu_uarch_config_selection() {
     BEGIN_TEST;
 
+    EXPECT_EQ(get_microarch_config(&cpu_id::kCpuIdCorei5_6260U)->x86_microarch,
+              X86_MICROARCH_INTEL_SKYLAKE);
+
     // Intel Xeon E5-2690 V4 is Broadwell
     EXPECT_EQ(get_microarch_config(&cpu_id::kCpuIdXeon2690v4)->x86_microarch,
               X86_MICROARCH_INTEL_BROADWELL);

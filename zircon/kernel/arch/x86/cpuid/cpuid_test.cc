@@ -25,7 +25,8 @@ using cpu_id::Topology;
 bool test_intel_feature_flags() {
   BEGIN_TEST;
 
-  for (const auto& data : {cpu_id::kTestDataXeon2690v4, cpu_id::kTestDataCeleronJ3455}) {
+  for (const auto& data : {cpu_id::kTestDataCorei5_6260U, cpu_id::kTestDataXeon2690v4,
+                           cpu_id::kTestDataCeleronJ3455}) {
     cpu_id::FakeCpuId fake_cpu(data);
     auto features = fake_cpu.ReadFeatures();
 

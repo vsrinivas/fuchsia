@@ -23,6 +23,36 @@ struct TestDataSet {
   Registers leaf8_1E;
 };
 
+// Queried from an Intel Core i5-6260U (NUC6i5SYH)
+const TestDataSet kTestDataCorei5_6260U = {
+    .features = {Features::FPU,     Features::VME,     Features::DE,     Features::PSE,
+                 Features::TSC,     Features::MSR,     Features::PAE,    Features::MCE,
+                 Features::CX8,     Features::APIC,    Features::SEP,    Features::MTRR,
+                 Features::FXSR,    Features::SSE,     Features::SSE2,   Features::SS,
+                 Features::XD,      Features::PDPE1GB, Features::RDTSCP, Features::PCLMULQDQ,
+                 Features::DTES64,  Features::MONITOR, Features::DS_CPL, Features::VMX,
+                 Features::RDSEED,  Features::EST,     Features::TM2,    Features::SSSE3,
+                 Features::PDCM,    Features::PCID,    Features::SSE4_1, Features::MD_CLEAR,
+                 Features::SSE4_2,  Features::X2APIC,  Features::MOVBE,  Features::POPCNT,
+                 Features::AES,     Features::XSAVE,   Features::AVX,    Features::F16C,
+                 Features::RDRAND,  Features::LAHF,    Features::BMI1,   Features::ERMS,
+                 Features::AVX2,    Features::SMEP,    Features::BMI2,   Features::ADX,
+                 Features::INVPCID},
+    .missing_features = {Features::PSN, Features::AVX512VNNI},
+    .leaf0 = {.reg = {0x16, 0x756e6547, 0x6c65746e, 0x49656e69}},
+    .leaf1 = {.reg = {0x406e3, 0x100800, 0x7ffafbbf, 0xbfebfbff}},
+    .leaf4 = {.reg = {0x1c004121, 0x1c0003f, 0x3f, 0x0}},
+    .leaf7 = {.reg = {0x0, 0x29c67af, 0x0, 0x9c002400}},
+    .leafB = {{{.reg = {0x1, 0x2, 0x100, 0x0}},
+               {.reg = {0x4, 0x4, 0x201, 0x0}},
+               {.reg = {0x0, 0x0, 0x2, 0x0}}}},
+    .leaf8_0 = {.reg = {0x80000008, 0x0, 0x0, 0x0}},
+    .leaf8_1 = {.reg = {0x0, 0x0, 0x121, 0x2c100800}},
+    .leaf8_8 = {.reg = {0x3027, 0x0, 0x0, 0x0}},
+    .leaf8_1D = {.reg = {0x708, 0xb54, 0x64, 0x0}},
+    .leaf8_1E = {.reg = {0x708, 0xb54, 0x64, 0x0}},
+};
+
 // Queried from a Intel Xeon E5-2690v4.
 const TestDataSet kTestDataXeon2690v4 = {
     .features = {Features::FPU,     Features::VME,     Features::DE,     Features::PSE,
@@ -152,6 +182,7 @@ class FakeCpuId : public CpuId {
   const TestDataSet& data_;
 };
 
+const FakeCpuId kCpuIdCorei5_6260U(kTestDataCorei5_6260U);
 const FakeCpuId kCpuIdXeon2690v4(kTestDataXeon2690v4);
 const FakeCpuId kCpuIdThreadRipper2970wx(kTestDataThreadRipper2970wx);
 const FakeCpuId kCpuIdAmdA49120C(kTestDataAmdA49120C);
