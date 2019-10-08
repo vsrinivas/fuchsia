@@ -221,7 +221,7 @@ if (custom_signing_script != "") {
           type = "zbi.signed"
         },
       ]
-      image_paths = [ "IMAGE_ZIRCONR_SIGNEDZBI=zedboot.zbi" ]
+      image_paths = [ "IMAGE_ZIRCONR_SIGNEDZBI=zedboot.zbi.signed" ]
     }
   }
 } else if (use_vboot) {

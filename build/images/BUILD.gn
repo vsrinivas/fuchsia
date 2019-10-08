@@ -897,7 +897,7 @@ if (custom_signing_script != "") {
           type = "zbi.signed"
         },
       ]
-      image_paths = [ "IMAGE_ZIRCONA_SIGNEDZBI=$output_name" ]
+      image_paths = [ "IMAGE_ZIRCONA_SIGNEDZBI=$output_name.signed" ]
     }
   }
 } else if (use_vboot) {
@@ -918,7 +918,7 @@ if (custom_signing_script != "") {
           type = "zbi.signed"
         },
       ]
-      image_paths = [ "IMAGE_ZIRCONA_SIGNEDZBI=$output_name" ]
+      image_paths = [ "IMAGE_ZIRCONA_SIGNEDZBI=$output_name.signed" ]
     }
   }
 }
