@@ -6,6 +6,7 @@ source_set("flatland") {
   sources = [
     "flatland.cc",
     "flatland.h",
+    "hanging_get_helper.h"
   ]
 
   public_deps = [
@@ -15,6 +16,7 @@ source_set("flatland") {
   ]
 
   deps = [
+    "//src/ui/scenic/lib/gfx:object_linker",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/trace",

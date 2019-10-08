@@ -15,8 +15,10 @@ executable("unittests") {
   testonly = true
   sources = [
     "flatland_unittest.cc",
+    "hanging_get_helper_unittest.cc"
   ]
   deps = [
+    "//garnet/public/lib/gtest:gtest",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/scenic/lib/flatland",
   ]
