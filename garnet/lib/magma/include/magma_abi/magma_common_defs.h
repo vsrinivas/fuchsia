@@ -12,6 +12,9 @@ extern "C" {
 #endif
 
 // This is a list of vendor-neutral queries that can be passed to magma_query.
+// Vendor ID should be the PCI ID of the GPU vendor if possible, or the Khronos
+// vendor ID otherwise.
+#define MAGMA_QUERY_VENDOR_ID 0
 #define MAGMA_QUERY_DEVICE_ID 1
 // TODO(MA-518): remove this
 #define MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED 2
