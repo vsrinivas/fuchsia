@@ -32,12 +32,14 @@ extern zx_device_t* kFakeParent;
 extern zx_device_t* FakeDevice();
 extern zx_device_t* FakeParent();
 
+typedef void(UnbindOp)(void* ctx);
+
 // Mocks the bind/unbind functionality provided by the DDK(TL).
 //
 // The typical use of this class is something like:
 //      fake_ddk::Bind ddk;
 //      device->Bind();
-//      device->DdkUnbind();
+//      device->DdkAsyncRemove();
 //      EXPECT_TRUE(ddk.Ok());
 //
 // Note that this class is not thread safe. Only one test at a time is supported.
@@ -86,6 +88,9 @@ class Bind {
   virtual zx_status_t DeviceRemove(zx_device_t* device);
 
   // Internal fake implementation of ddk functionality.
+  virtual void DeviceAsyncRemove(zx_device_t* device);
+
+  // Internal fake implementation of ddk functionality.
   virtual zx_status_t DeviceAddMetadata(zx_device_t* dev, uint32_t type, const void* data,
                                         size_t length);
 
@@ -131,6 +136,10 @@ class Bind {
 
   fbl::Array<ProtocolEntry> protocols_;
   FidlMessenger fidl_;
+
+  UnbindOp* unbind_op_ = nullptr;
+  void* op_ctx_ = nullptr;
+  bool unbind_called_ = false;
 };
 
 }  // namespace fake_ddk

@@ -66,7 +66,7 @@ class AmlCanvasTest : public zxtest::Test {
   void TestLifecycle() {
     fake_ddk::Bind ddk;
     EXPECT_OK(canvas_->DdkAdd("aml-canvas"));
-    canvas_->DdkUnbindDeprecated();
+    canvas_->DdkAsyncRemove();
     EXPECT_TRUE(ddk.Ok());
     canvas_->DdkRelease();
     __UNUSED auto ptr = canvas_.release();

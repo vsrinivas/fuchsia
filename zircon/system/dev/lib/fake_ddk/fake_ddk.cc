@@ -85,6 +85,10 @@ zx_status_t Bind::DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_ar
         return status;
       }
     }
+    if (args->ops->unbind) {
+      unbind_op_ = args->ops->unbind;
+      op_ctx_ = args->ctx;
+    }
   }
 
   *out = kFakeDevice;
@@ -99,6 +103,20 @@ zx_status_t Bind::DeviceRemove(zx_device_t* device) {
   remove_called_ = true;
   sync_completion_signal(&remove_called_sync_);
   return ZX_OK;
+}
+
+void Bind::DeviceAsyncRemove(zx_device_t* device) {
+  if (device != kFakeDevice) {
+    bad_device_ = true;
+  }
+  // Only call the unbind hook once.
+  if (unbind_op_ && !unbind_called_) {
+    unbind_called_ = true;
+    unbind_op_(op_ctx_);
+  } else if (!unbind_op_) {
+    // The unbind hook is optional. If not present, we should mark the device as removed.
+    remove_called_ = true;
+  }
 }
 
 zx_status_t Bind::DeviceAddMetadata(zx_device_t* device, uint32_t type, const void* data,
@@ -208,6 +226,14 @@ zx_status_t device_remove_deprecated(zx_device_t* device) {
 
 __EXPORT
 void device_async_remove(zx_device_t* device) {
+  if (!fake_ddk::Bind::Instance()) {
+    return;
+  }
+  return fake_ddk::Bind::Instance()->DeviceAsyncRemove(device);
+}
+
+__EXPORT
+void device_unbind_reply(zx_device_t* device) {
   if (!fake_ddk::Bind::Instance()) {
     return;
   }
