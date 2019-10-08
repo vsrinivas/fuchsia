@@ -138,16 +138,12 @@ void CreateEntryOperation(Minfs* fs) {
   ASSERT_OK(root->Create(&child, "foo", 0));
   ASSERT_OK(child->Close());
 
-  zx_status_t sync_result;
   sync_completion_t completion;
-  fs->Sync([&sync_result, &completion](zx_status_t status) {
+  fs->Sync([&completion](zx_status_t status) {
     sync_completion_signal(&completion);
-    sync_result = status;
   });
   ASSERT_OK(sync_completion_wait(&completion, zx::duration::infinite().get()));
-  ASSERT_TRUE(sync_result == ZX_OK ||
-              sync_result == ZX_ERR_IO_REFUSED || // Rejected by journal.
-              sync_result == ZX_ERR_IO); // Rejected by block device directly.
+  // Ignore the result of |Sync|, as the operation may or may not have failed.
 }
 
 using JournalIntegrationTest = JournalIntegrationFixture<CreateEntryOperation>;
@@ -203,16 +199,12 @@ void UnlinkEntryOperation(Minfs* fs) {
   ASSERT_OK(root->Unlink("bar", false));
   ASSERT_OK(root->Unlink("baz", false));
 
-  zx_status_t sync_result;
   sync_completion_t completion;
-  fs->Sync([&sync_result, &completion](zx_status_t status) {
+  fs->Sync([&completion](zx_status_t status) {
     sync_completion_signal(&completion);
-    sync_result = status;
   });
   ASSERT_OK(sync_completion_wait(&completion, zx::duration::infinite().get()));
-  ASSERT_TRUE(sync_result == ZX_OK ||
-              sync_result == ZX_ERR_IO_REFUSED || // Rejected by journal.
-              sync_result == ZX_ERR_IO); // Rejected by block device directly.
+  // Ignore the result of |Sync|, as the operation may or may not have failed.
   ASSERT_OK(foo->Close());
   ASSERT_OK(bar->Close());
   ASSERT_OK(baz->Close());
