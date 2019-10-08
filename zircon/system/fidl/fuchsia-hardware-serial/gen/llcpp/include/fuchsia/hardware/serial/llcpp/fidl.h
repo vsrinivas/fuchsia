@@ -337,6 +337,16 @@ class Device final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetClassRequest(const ::fidl::DecodedMessage<Device::GetClassRequest>& _msg);
+    static void GetClassResponse(const ::fidl::DecodedMessage<Device::GetClassResponse>& _msg);
+    static void SetConfigRequest(const ::fidl::DecodedMessage<Device::SetConfigRequest>& _msg);
+    static void SetConfigResponse(const ::fidl::DecodedMessage<Device::SetConfigResponse>& _msg);
+  };
 };
 
 }  // namespace serial

@@ -1301,6 +1301,37 @@ class Device final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetBootProtocolRequest(const ::fidl::DecodedMessage<Device::GetBootProtocolRequest>& _msg);
+    static void GetBootProtocolResponse(const ::fidl::DecodedMessage<Device::GetBootProtocolResponse>& _msg);
+    static void GetDeviceIdsRequest(const ::fidl::DecodedMessage<Device::GetDeviceIdsRequest>& _msg);
+    static void GetDeviceIdsResponse(const ::fidl::DecodedMessage<Device::GetDeviceIdsResponse>& _msg);
+    static void GetReportDescSizeRequest(const ::fidl::DecodedMessage<Device::GetReportDescSizeRequest>& _msg);
+    static void GetReportDescSizeResponse(const ::fidl::DecodedMessage<Device::GetReportDescSizeResponse>& _msg);
+    static void GetReportDescRequest(const ::fidl::DecodedMessage<Device::GetReportDescRequest>& _msg);
+    static void GetReportDescResponse(const ::fidl::DecodedMessage<Device::GetReportDescResponse>& _msg);
+    static void GetNumReportsRequest(const ::fidl::DecodedMessage<Device::GetNumReportsRequest>& _msg);
+    static void GetNumReportsResponse(const ::fidl::DecodedMessage<Device::GetNumReportsResponse>& _msg);
+    static void GetReportIdsRequest(const ::fidl::DecodedMessage<Device::GetReportIdsRequest>& _msg);
+    static void GetReportIdsResponse(const ::fidl::DecodedMessage<Device::GetReportIdsResponse>& _msg);
+    static void GetReportSizeRequest(const ::fidl::DecodedMessage<Device::GetReportSizeRequest>& _msg);
+    static void GetReportSizeResponse(const ::fidl::DecodedMessage<Device::GetReportSizeResponse>& _msg);
+    static void GetMaxInputReportSizeRequest(const ::fidl::DecodedMessage<Device::GetMaxInputReportSizeRequest>& _msg);
+    static void GetMaxInputReportSizeResponse(const ::fidl::DecodedMessage<Device::GetMaxInputReportSizeResponse>& _msg);
+    static void GetReportsRequest(const ::fidl::DecodedMessage<Device::GetReportsRequest>& _msg);
+    static void GetReportsResponse(const ::fidl::DecodedMessage<Device::GetReportsResponse>& _msg);
+    static void GetReportsEventRequest(const ::fidl::DecodedMessage<Device::GetReportsEventRequest>& _msg);
+    static void GetReportsEventResponse(const ::fidl::DecodedMessage<Device::GetReportsEventResponse>& _msg);
+    static void GetReportRequest(const ::fidl::DecodedMessage<Device::GetReportRequest>& _msg);
+    static void GetReportResponse(const ::fidl::DecodedMessage<Device::GetReportResponse>& _msg);
+    static void SetReportRequest(const ::fidl::DecodedMessage<Device::SetReportRequest>& _msg);
+    static void SetReportResponse(const ::fidl::DecodedMessage<Device::SetReportResponse>& _msg);
+    static void SetTraceIdRequest(const ::fidl::DecodedMessage<Device::SetTraceIdRequest>& _msg);
+  };
 };
 
 }  // namespace input

@@ -100,12 +100,7 @@ Light::UnownedResultOf::GetName Light::Call::GetName(zx::unowned_channel _client
 }
 
 ::fidl::DecodeResult<Light::GetNameResponse> Light::InPlace::GetName(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetNameRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLight_GetName_Ordinal;
+  Light::SetTransactionHeaderFor::GetNameRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Light::GetNameResponse>::FromFailure(
@@ -166,12 +161,7 @@ Light::UnownedResultOf::GetCount Light::Call::GetCount(zx::unowned_channel _clie
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetCountRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLight_GetCount_Ordinal;
+  Light::SetTransactionHeaderFor::GetCountRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Light::GetCountResponse>::FromFailure(
@@ -235,12 +225,7 @@ Light::UnownedResultOf::HasCapability Light::Call::HasCapability(zx::unowned_cha
 }
 
 ::fidl::DecodeResult<Light::HasCapabilityResponse> Light::InPlace::HasCapability(zx::unowned_channel _client_end, ::fidl::DecodedMessage<HasCapabilityRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLight_HasCapability_Ordinal;
+  Light::SetTransactionHeaderFor::HasCapabilityRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Light::HasCapabilityResponse>::FromFailure(
@@ -302,12 +287,7 @@ Light::UnownedResultOf::GetSimpleValue Light::Call::GetSimpleValue(zx::unowned_c
 }
 
 ::fidl::DecodeResult<Light::GetSimpleValueResponse> Light::InPlace::GetSimpleValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSimpleValueRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLight_GetSimpleValue_Ordinal;
+  Light::SetTransactionHeaderFor::GetSimpleValueRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Light::GetSimpleValueResponse>::FromFailure(
@@ -371,12 +351,7 @@ Light::UnownedResultOf::SetSimpleValue Light::Call::SetSimpleValue(zx::unowned_c
 }
 
 ::fidl::DecodeResult<Light::SetSimpleValueResponse> Light::InPlace::SetSimpleValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetSimpleValueRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLight_SetSimpleValue_Ordinal;
+  Light::SetTransactionHeaderFor::SetSimpleValueRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Light::SetSimpleValueResponse>::FromFailure(
@@ -438,12 +413,7 @@ Light::UnownedResultOf::GetRgbValue Light::Call::GetRgbValue(zx::unowned_channel
 }
 
 ::fidl::DecodeResult<Light::GetRgbValueResponse> Light::InPlace::GetRgbValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetRgbValueRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLight_GetRgbValue_Ordinal;
+  Light::SetTransactionHeaderFor::GetRgbValueRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Light::GetRgbValueResponse>::FromFailure(
@@ -507,12 +477,7 @@ Light::UnownedResultOf::SetRgbValue Light::Call::SetRgbValue(zx::unowned_channel
 }
 
 ::fidl::DecodeResult<Light::SetRgbValueResponse> Light::InPlace::SetRgbValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetRgbValueRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLight_SetRgbValue_Ordinal;
+  Light::SetTransactionHeaderFor::SetRgbValueRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Light::SetRgbValueResponse>::FromFailure(
@@ -646,11 +611,11 @@ void Light::Interface::GetNameCompleterBase::Reply(int32_t status, ::fidl::Strin
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNameResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetNameResponse _response = {};
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLight_GetName_Ordinal;
+  Light::SetTransactionHeaderFor::GetNameResponse(
+      ::fidl::DecodedMessage<GetNameResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetNameResponse::PrimarySize,
+              GetNameResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.name = std::move(name);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
@@ -668,11 +633,11 @@ void Light::Interface::GetNameCompleterBase::Reply(::fidl::BytePart _buffer, int
     return;
   }
   GetNameResponse _response = {};
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLight_GetName_Ordinal;
+  Light::SetTransactionHeaderFor::GetNameResponse(
+      ::fidl::DecodedMessage<GetNameResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetNameResponse::PrimarySize,
+              GetNameResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.name = std::move(name);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
@@ -684,12 +649,7 @@ void Light::Interface::GetNameCompleterBase::Reply(::fidl::BytePart _buffer, int
 }
 
 void Light::Interface::GetNameCompleterBase::Reply(::fidl::DecodedMessage<GetNameResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLight_GetName_Ordinal;
+  Light::SetTransactionHeaderFor::GetNameResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -698,11 +658,11 @@ void Light::Interface::GetCountCompleterBase::Reply(uint32_t count) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCountResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetCountResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLight_GetCount_Ordinal;
+  Light::SetTransactionHeaderFor::GetCountResponse(
+      ::fidl::DecodedMessage<GetCountResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetCountResponse::PrimarySize,
+              GetCountResponse::PrimarySize)));
   _response.count = std::move(count);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetCountResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetCountResponse>(std::move(_response_bytes)));
@@ -714,23 +674,18 @@ void Light::Interface::GetCountCompleterBase::Reply(::fidl::BytePart _buffer, ui
     return;
   }
   auto& _response = *reinterpret_cast<GetCountResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLight_GetCount_Ordinal;
+  Light::SetTransactionHeaderFor::GetCountResponse(
+      ::fidl::DecodedMessage<GetCountResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetCountResponse::PrimarySize,
+              GetCountResponse::PrimarySize)));
   _response.count = std::move(count);
   _buffer.set_actual(sizeof(GetCountResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetCountResponse>(std::move(_buffer)));
 }
 
 void Light::Interface::GetCountCompleterBase::Reply(::fidl::DecodedMessage<GetCountResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLight_GetCount_Ordinal;
+  Light::SetTransactionHeaderFor::GetCountResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -739,11 +694,11 @@ void Light::Interface::HasCapabilityCompleterBase::Reply(int32_t status, bool ha
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<HasCapabilityResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<HasCapabilityResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLight_HasCapability_Ordinal;
+  Light::SetTransactionHeaderFor::HasCapabilityResponse(
+      ::fidl::DecodedMessage<HasCapabilityResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              HasCapabilityResponse::PrimarySize,
+              HasCapabilityResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.has = std::move(has);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(HasCapabilityResponse));
@@ -756,11 +711,11 @@ void Light::Interface::HasCapabilityCompleterBase::Reply(::fidl::BytePart _buffe
     return;
   }
   auto& _response = *reinterpret_cast<HasCapabilityResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLight_HasCapability_Ordinal;
+  Light::SetTransactionHeaderFor::HasCapabilityResponse(
+      ::fidl::DecodedMessage<HasCapabilityResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              HasCapabilityResponse::PrimarySize,
+              HasCapabilityResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.has = std::move(has);
   _buffer.set_actual(sizeof(HasCapabilityResponse));
@@ -768,12 +723,7 @@ void Light::Interface::HasCapabilityCompleterBase::Reply(::fidl::BytePart _buffe
 }
 
 void Light::Interface::HasCapabilityCompleterBase::Reply(::fidl::DecodedMessage<HasCapabilityResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLight_HasCapability_Ordinal;
+  Light::SetTransactionHeaderFor::HasCapabilityResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -782,11 +732,11 @@ void Light::Interface::GetSimpleValueCompleterBase::Reply(int32_t status, uint8_
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetSimpleValueResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetSimpleValueResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLight_GetSimpleValue_Ordinal;
+  Light::SetTransactionHeaderFor::GetSimpleValueResponse(
+      ::fidl::DecodedMessage<GetSimpleValueResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetSimpleValueResponse::PrimarySize,
+              GetSimpleValueResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.value = std::move(value);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetSimpleValueResponse));
@@ -799,11 +749,11 @@ void Light::Interface::GetSimpleValueCompleterBase::Reply(::fidl::BytePart _buff
     return;
   }
   auto& _response = *reinterpret_cast<GetSimpleValueResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLight_GetSimpleValue_Ordinal;
+  Light::SetTransactionHeaderFor::GetSimpleValueResponse(
+      ::fidl::DecodedMessage<GetSimpleValueResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetSimpleValueResponse::PrimarySize,
+              GetSimpleValueResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.value = std::move(value);
   _buffer.set_actual(sizeof(GetSimpleValueResponse));
@@ -811,12 +761,7 @@ void Light::Interface::GetSimpleValueCompleterBase::Reply(::fidl::BytePart _buff
 }
 
 void Light::Interface::GetSimpleValueCompleterBase::Reply(::fidl::DecodedMessage<GetSimpleValueResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLight_GetSimpleValue_Ordinal;
+  Light::SetTransactionHeaderFor::GetSimpleValueResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -825,11 +770,11 @@ void Light::Interface::SetSimpleValueCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetSimpleValueResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetSimpleValueResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLight_SetSimpleValue_Ordinal;
+  Light::SetTransactionHeaderFor::SetSimpleValueResponse(
+      ::fidl::DecodedMessage<SetSimpleValueResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SetSimpleValueResponse::PrimarySize,
+              SetSimpleValueResponse::PrimarySize)));
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetSimpleValueResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetSimpleValueResponse>(std::move(_response_bytes)));
@@ -841,23 +786,18 @@ void Light::Interface::SetSimpleValueCompleterBase::Reply(::fidl::BytePart _buff
     return;
   }
   auto& _response = *reinterpret_cast<SetSimpleValueResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLight_SetSimpleValue_Ordinal;
+  Light::SetTransactionHeaderFor::SetSimpleValueResponse(
+      ::fidl::DecodedMessage<SetSimpleValueResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SetSimpleValueResponse::PrimarySize,
+              SetSimpleValueResponse::PrimarySize)));
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(SetSimpleValueResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetSimpleValueResponse>(std::move(_buffer)));
 }
 
 void Light::Interface::SetSimpleValueCompleterBase::Reply(::fidl::DecodedMessage<SetSimpleValueResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLight_SetSimpleValue_Ordinal;
+  Light::SetTransactionHeaderFor::SetSimpleValueResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -866,11 +806,11 @@ void Light::Interface::GetRgbValueCompleterBase::Reply(int32_t status, ::llcpp::
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRgbValueResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetRgbValueResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLight_GetRgbValue_Ordinal;
+  Light::SetTransactionHeaderFor::GetRgbValueResponse(
+      ::fidl::DecodedMessage<GetRgbValueResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetRgbValueResponse::PrimarySize,
+              GetRgbValueResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.value = std::move(value);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetRgbValueResponse));
@@ -883,11 +823,11 @@ void Light::Interface::GetRgbValueCompleterBase::Reply(::fidl::BytePart _buffer,
     return;
   }
   auto& _response = *reinterpret_cast<GetRgbValueResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLight_GetRgbValue_Ordinal;
+  Light::SetTransactionHeaderFor::GetRgbValueResponse(
+      ::fidl::DecodedMessage<GetRgbValueResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetRgbValueResponse::PrimarySize,
+              GetRgbValueResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.value = std::move(value);
   _buffer.set_actual(sizeof(GetRgbValueResponse));
@@ -895,12 +835,7 @@ void Light::Interface::GetRgbValueCompleterBase::Reply(::fidl::BytePart _buffer,
 }
 
 void Light::Interface::GetRgbValueCompleterBase::Reply(::fidl::DecodedMessage<GetRgbValueResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLight_GetRgbValue_Ordinal;
+  Light::SetTransactionHeaderFor::GetRgbValueResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -909,11 +844,11 @@ void Light::Interface::SetRgbValueCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetRgbValueResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetRgbValueResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLight_SetRgbValue_Ordinal;
+  Light::SetTransactionHeaderFor::SetRgbValueResponse(
+      ::fidl::DecodedMessage<SetRgbValueResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SetRgbValueResponse::PrimarySize,
+              SetRgbValueResponse::PrimarySize)));
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetRgbValueResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetRgbValueResponse>(std::move(_response_bytes)));
@@ -925,26 +860,85 @@ void Light::Interface::SetRgbValueCompleterBase::Reply(::fidl::BytePart _buffer,
     return;
   }
   auto& _response = *reinterpret_cast<SetRgbValueResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLight_SetRgbValue_Ordinal;
+  Light::SetTransactionHeaderFor::SetRgbValueResponse(
+      ::fidl::DecodedMessage<SetRgbValueResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SetRgbValueResponse::PrimarySize,
+              SetRgbValueResponse::PrimarySize)));
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(SetRgbValueResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetRgbValueResponse>(std::move(_buffer)));
 }
 
 void Light::Interface::SetRgbValueCompleterBase::Reply(::fidl::DecodedMessage<SetRgbValueResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLight_SetRgbValue_Ordinal;
+  Light::SetTransactionHeaderFor::SetRgbValueResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
+
+
+void Light::SetTransactionHeaderFor::GetNameRequest(const ::fidl::DecodedMessage<Light::GetNameRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLight_GetName_Ordinal;
+}
+void Light::SetTransactionHeaderFor::GetNameResponse(const ::fidl::DecodedMessage<Light::GetNameResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLight_GetName_Ordinal;
+}
+
+void Light::SetTransactionHeaderFor::GetCountRequest(const ::fidl::DecodedMessage<Light::GetCountRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLight_GetCount_Ordinal;
+}
+void Light::SetTransactionHeaderFor::GetCountResponse(const ::fidl::DecodedMessage<Light::GetCountResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLight_GetCount_Ordinal;
+}
+
+void Light::SetTransactionHeaderFor::HasCapabilityRequest(const ::fidl::DecodedMessage<Light::HasCapabilityRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLight_HasCapability_Ordinal;
+}
+void Light::SetTransactionHeaderFor::HasCapabilityResponse(const ::fidl::DecodedMessage<Light::HasCapabilityResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLight_HasCapability_Ordinal;
+}
+
+void Light::SetTransactionHeaderFor::GetSimpleValueRequest(const ::fidl::DecodedMessage<Light::GetSimpleValueRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLight_GetSimpleValue_Ordinal;
+}
+void Light::SetTransactionHeaderFor::GetSimpleValueResponse(const ::fidl::DecodedMessage<Light::GetSimpleValueResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLight_GetSimpleValue_Ordinal;
+}
+
+void Light::SetTransactionHeaderFor::SetSimpleValueRequest(const ::fidl::DecodedMessage<Light::SetSimpleValueRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLight_SetSimpleValue_Ordinal;
+}
+void Light::SetTransactionHeaderFor::SetSimpleValueResponse(const ::fidl::DecodedMessage<Light::SetSimpleValueResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLight_SetSimpleValue_Ordinal;
+}
+
+void Light::SetTransactionHeaderFor::GetRgbValueRequest(const ::fidl::DecodedMessage<Light::GetRgbValueRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLight_GetRgbValue_Ordinal;
+}
+void Light::SetTransactionHeaderFor::GetRgbValueResponse(const ::fidl::DecodedMessage<Light::GetRgbValueResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLight_GetRgbValue_Ordinal;
+}
+
+void Light::SetTransactionHeaderFor::SetRgbValueRequest(const ::fidl::DecodedMessage<Light::SetRgbValueRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLight_SetRgbValue_Ordinal;
+}
+void Light::SetTransactionHeaderFor::SetRgbValueResponse(const ::fidl::DecodedMessage<Light::SetRgbValueResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLight_SetRgbValue_Ordinal;
+}
 
 }  // namespace light
 }  // namespace hardware

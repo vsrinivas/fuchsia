@@ -5,20 +5,37 @@
 package fragments
 
 const Helpers = `
-{{- define "CreateTxnHeader" }}
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = {{ .Ordinals.Write.Name }};
+{{- define "SetTransactionHeaderForResponse" }}
+  {{ .LLProps.InterfaceName }}::SetTransactionHeaderFor::{{ .Name }}Response(
+      ::fidl::DecodedMessage<{{ .Name }}Response>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              {{ .Name }}Response::PrimarySize,
+              {{ .Name }}Response::PrimarySize)));
 {{- end }}
 
-{{- define "SetTxnHeader" }}
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = {{ .Ordinals.Write.Name }};
+{{- define "SetTransactionHeaderForRequestMethodSignature" }}
+{{- $interface_name := .LLProps.InterfaceName -}}
+{{- .Name }}Request(const ::fidl::DecodedMessage<{{ $interface_name}}::{{ .Name }}Request>& _msg)
+{{- end }}
+
+{{- define "SetTransactionHeaderForRequestMethodDefinition" -}}
+{{- $interface_name := .LLProps.InterfaceName -}}
+void {{ $interface_name }}::SetTransactionHeaderFor::{{ template "SetTransactionHeaderForRequestMethodSignature" . }} {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = {{ .Ordinals.Write.Name }};
+}
+{{- end }}
+
+{{- define "SetTransactionHeaderForResponseMethodSignature" }}
+{{- $interface_name := .LLProps.InterfaceName -}}
+{{- .Name }}Response(const ::fidl::DecodedMessage<{{ $interface_name}}::{{ .Name }}Response>& _msg)
+{{- end }}
+
+{{- define "SetTransactionHeaderForResponseMethodDefinition" -}}
+{{- $interface_name := .LLProps.InterfaceName -}}
+void {{ $interface_name }}::SetTransactionHeaderFor::{{ template "SetTransactionHeaderForResponseMethodSignature" . }} {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = {{ .Ordinals.Write.Name }};
+}
 {{- end }}
 `

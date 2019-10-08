@@ -181,6 +181,14 @@ class Llcpp final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void ActionRequest(const ::fidl::DecodedMessage<Llcpp::ActionRequest>& _msg);
+    static void ActionResponse(const ::fidl::DecodedMessage<Llcpp::ActionResponse>& _msg);
+  };
 };
 
 }  // namespace coding

@@ -43,12 +43,7 @@ SecondProtocol::ResultOf::MethodOnSecond SecondProtocol::Call::MethodOnSecond(zx
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<MethodOnSecondRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kSecondProtocol_MethodOnSecond_Ordinal;
+  SecondProtocol::SetTransactionHeaderFor::MethodOnSecondRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -100,6 +95,12 @@ bool SecondProtocol::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
 }
 
 
+
+void SecondProtocol::SetTransactionHeaderFor::MethodOnSecondRequest(const ::fidl::DecodedMessage<SecondProtocol::MethodOnSecondRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kSecondProtocol_MethodOnSecond_Ordinal;
+}
+
 namespace {
 
 [[maybe_unused]]
@@ -135,12 +136,7 @@ FirstProtocol::ResultOf::MethodOnFirst FirstProtocol::Call::MethodOnFirst(zx::un
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<MethodOnFirstRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kFirstProtocol_MethodOnFirst_Ordinal;
+  FirstProtocol::SetTransactionHeaderFor::MethodOnFirstRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -191,6 +187,12 @@ bool FirstProtocol::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
   return found;
 }
 
+
+
+void FirstProtocol::SetTransactionHeaderFor::MethodOnFirstRequest(const ::fidl::DecodedMessage<FirstProtocol::MethodOnFirstRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kFirstProtocol_MethodOnFirst_Ordinal;
+}
 
 }  // namespace name
 }  // namespace test

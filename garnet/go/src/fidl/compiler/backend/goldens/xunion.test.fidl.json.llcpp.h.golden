@@ -587,6 +587,16 @@ class TestProtocol final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void StrictXUnionHenceResponseMayBeStackAllocatedRequest(const ::fidl::DecodedMessage<TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedRequest>& _msg);
+    static void StrictXUnionHenceResponseMayBeStackAllocatedResponse(const ::fidl::DecodedMessage<TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedResponse>& _msg);
+    static void FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest(const ::fidl::DecodedMessage<TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>& _msg);
+    static void FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(const ::fidl::DecodedMessage<TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>& _msg);
+  };
 };
 
 

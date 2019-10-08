@@ -2575,6 +2575,56 @@ class Device final {
   // Messages are encoded in-place.
   static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnOpenResponse> params);
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void CloneRequest(const ::fidl::DecodedMessage<Device::CloneRequest>& _msg);
+    static void CloseRequest(const ::fidl::DecodedMessage<Device::CloseRequest>& _msg);
+    static void CloseResponse(const ::fidl::DecodedMessage<Device::CloseResponse>& _msg);
+    static void DescribeRequest(const ::fidl::DecodedMessage<Device::DescribeRequest>& _msg);
+    static void DescribeResponse(const ::fidl::DecodedMessage<Device::DescribeResponse>& _msg);
+    static void OnOpenResponse(const ::fidl::DecodedMessage<Device::OnOpenResponse>& _msg);
+    static void SyncRequest(const ::fidl::DecodedMessage<Device::SyncRequest>& _msg);
+    static void SyncResponse(const ::fidl::DecodedMessage<Device::SyncResponse>& _msg);
+    static void GetAttrRequest(const ::fidl::DecodedMessage<Device::GetAttrRequest>& _msg);
+    static void GetAttrResponse(const ::fidl::DecodedMessage<Device::GetAttrResponse>& _msg);
+    static void SetAttrRequest(const ::fidl::DecodedMessage<Device::SetAttrRequest>& _msg);
+    static void SetAttrResponse(const ::fidl::DecodedMessage<Device::SetAttrResponse>& _msg);
+    static void IoctlRequest(const ::fidl::DecodedMessage<Device::IoctlRequest>& _msg);
+    static void IoctlResponse(const ::fidl::DecodedMessage<Device::IoctlResponse>& _msg);
+    static void ReadRequest(const ::fidl::DecodedMessage<Device::ReadRequest>& _msg);
+    static void ReadResponse(const ::fidl::DecodedMessage<Device::ReadResponse>& _msg);
+    static void ReadAtRequest(const ::fidl::DecodedMessage<Device::ReadAtRequest>& _msg);
+    static void ReadAtResponse(const ::fidl::DecodedMessage<Device::ReadAtResponse>& _msg);
+    static void WriteRequest(const ::fidl::DecodedMessage<Device::WriteRequest>& _msg);
+    static void WriteResponse(const ::fidl::DecodedMessage<Device::WriteResponse>& _msg);
+    static void WriteAtRequest(const ::fidl::DecodedMessage<Device::WriteAtRequest>& _msg);
+    static void WriteAtResponse(const ::fidl::DecodedMessage<Device::WriteAtResponse>& _msg);
+    static void SeekRequest(const ::fidl::DecodedMessage<Device::SeekRequest>& _msg);
+    static void SeekResponse(const ::fidl::DecodedMessage<Device::SeekResponse>& _msg);
+    static void TruncateRequest(const ::fidl::DecodedMessage<Device::TruncateRequest>& _msg);
+    static void TruncateResponse(const ::fidl::DecodedMessage<Device::TruncateResponse>& _msg);
+    static void GetFlagsRequest(const ::fidl::DecodedMessage<Device::GetFlagsRequest>& _msg);
+    static void GetFlagsResponse(const ::fidl::DecodedMessage<Device::GetFlagsResponse>& _msg);
+    static void SetFlagsRequest(const ::fidl::DecodedMessage<Device::SetFlagsRequest>& _msg);
+    static void SetFlagsResponse(const ::fidl::DecodedMessage<Device::SetFlagsResponse>& _msg);
+    static void GetBufferRequest(const ::fidl::DecodedMessage<Device::GetBufferRequest>& _msg);
+    static void GetBufferResponse(const ::fidl::DecodedMessage<Device::GetBufferResponse>& _msg);
+    static void OpenClientRequest(const ::fidl::DecodedMessage<Device::OpenClientRequest>& _msg);
+    static void OpenClientResponse(const ::fidl::DecodedMessage<Device::OpenClientResponse>& _msg);
+    static void ClrSetFeatureRequest(const ::fidl::DecodedMessage<Device::ClrSetFeatureRequest>& _msg);
+    static void ClrSetFeatureResponse(const ::fidl::DecodedMessage<Device::ClrSetFeatureResponse>& _msg);
+    static void GetWindowSizeRequest(const ::fidl::DecodedMessage<Device::GetWindowSizeRequest>& _msg);
+    static void GetWindowSizeResponse(const ::fidl::DecodedMessage<Device::GetWindowSizeResponse>& _msg);
+    static void MakeActiveRequest(const ::fidl::DecodedMessage<Device::MakeActiveRequest>& _msg);
+    static void MakeActiveResponse(const ::fidl::DecodedMessage<Device::MakeActiveResponse>& _msg);
+    static void ReadEventsRequest(const ::fidl::DecodedMessage<Device::ReadEventsRequest>& _msg);
+    static void ReadEventsResponse(const ::fidl::DecodedMessage<Device::ReadEventsResponse>& _msg);
+    static void SetWindowSizeRequest(const ::fidl::DecodedMessage<Device::SetWindowSizeRequest>& _msg);
+    static void SetWindowSizeResponse(const ::fidl::DecodedMessage<Device::SetWindowSizeResponse>& _msg);
+  };
 };
 
 // When an event is pending, this signal is asserted on the Controlling PTY.

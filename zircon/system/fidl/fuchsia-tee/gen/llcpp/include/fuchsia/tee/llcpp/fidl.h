@@ -716,6 +716,20 @@ class Device final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetOsInfoRequest(const ::fidl::DecodedMessage<Device::GetOsInfoRequest>& _msg);
+    static void GetOsInfoResponse(const ::fidl::DecodedMessage<Device::GetOsInfoResponse>& _msg);
+    static void OpenSessionRequest(const ::fidl::DecodedMessage<Device::OpenSessionRequest>& _msg);
+    static void OpenSessionResponse(const ::fidl::DecodedMessage<Device::OpenSessionResponse>& _msg);
+    static void InvokeCommandRequest(const ::fidl::DecodedMessage<Device::InvokeCommandRequest>& _msg);
+    static void InvokeCommandResponse(const ::fidl::DecodedMessage<Device::InvokeCommandResponse>& _msg);
+    static void CloseSessionRequest(const ::fidl::DecodedMessage<Device::CloseSessionRequest>& _msg);
+    static void CloseSessionResponse(const ::fidl::DecodedMessage<Device::CloseSessionResponse>& _msg);
+  };
 };
 
 }  // namespace tee

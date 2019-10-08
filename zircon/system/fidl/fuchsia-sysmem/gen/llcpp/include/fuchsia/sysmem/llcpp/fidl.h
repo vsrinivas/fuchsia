@@ -747,6 +747,16 @@ class BufferCollectionToken final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void DuplicateRequest(const ::fidl::DecodedMessage<BufferCollectionToken::DuplicateRequest>& _msg);
+    static void SyncRequest(const ::fidl::DecodedMessage<BufferCollectionToken::SyncRequest>& _msg);
+    static void SyncResponse(const ::fidl::DecodedMessage<BufferCollectionToken::SyncResponse>& _msg);
+    static void CloseRequest(const ::fidl::DecodedMessage<BufferCollectionToken::CloseRequest>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_HeapAllocateVmoResponseTable;
@@ -1268,6 +1278,18 @@ class Heap final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void AllocateVmoRequest(const ::fidl::DecodedMessage<Heap::AllocateVmoRequest>& _msg);
+    static void AllocateVmoResponse(const ::fidl::DecodedMessage<Heap::AllocateVmoResponse>& _msg);
+    static void CreateResourceRequest(const ::fidl::DecodedMessage<Heap::CreateResourceRequest>& _msg);
+    static void CreateResourceResponse(const ::fidl::DecodedMessage<Heap::CreateResourceResponse>& _msg);
+    static void DestroyResourceRequest(const ::fidl::DecodedMessage<Heap::DestroyResourceRequest>& _msg);
+    static void DestroyResourceResponse(const ::fidl::DecodedMessage<Heap::DestroyResourceResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_DriverConnectorConnectRequestTable;
@@ -1445,6 +1467,13 @@ class DriverConnector final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void ConnectRequest(const ::fidl::DecodedMessage<DriverConnector::ConnectRequest>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_AllocatorAllocateNonSharedCollectionRequestTable;
@@ -1938,6 +1967,15 @@ class Allocator final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void AllocateNonSharedCollectionRequest(const ::fidl::DecodedMessage<Allocator::AllocateNonSharedCollectionRequest>& _msg);
+    static void AllocateSharedCollectionRequest(const ::fidl::DecodedMessage<Allocator::AllocateSharedCollectionRequest>& _msg);
+    static void BindSharedCollectionRequest(const ::fidl::DecodedMessage<Allocator::BindSharedCollectionRequest>& _msg);
+  };
 };
 
 
@@ -2759,6 +2797,16 @@ class SecureMem final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetPhysicalSecureHeapsRequest(const ::fidl::DecodedMessage<SecureMem::GetPhysicalSecureHeapsRequest>& _msg);
+    static void GetPhysicalSecureHeapsResponse(const ::fidl::DecodedMessage<SecureMem::GetPhysicalSecureHeapsResponse>& _msg);
+    static void SetPhysicalSecureHeapsRequest(const ::fidl::DecodedMessage<SecureMem::SetPhysicalSecureHeapsRequest>& _msg);
+    static void SetPhysicalSecureHeapsResponse(const ::fidl::DecodedMessage<SecureMem::SetPhysicalSecureHeapsResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_BufferMemoryConstraintsTable;
@@ -3878,6 +3926,15 @@ class BufferCollectionEvents final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void OnDuplicatedTokensKnownByServerRequest(const ::fidl::DecodedMessage<BufferCollectionEvents::OnDuplicatedTokensKnownByServerRequest>& _msg);
+    static void OnBuffersAllocatedRequest(const ::fidl::DecodedMessage<BufferCollectionEvents::OnBuffersAllocatedRequest>& _msg);
+    static void OnAllocateSingleBufferDoneRequest(const ::fidl::DecodedMessage<BufferCollectionEvents::OnAllocateSingleBufferDoneRequest>& _msg);
+  };
 };
 
 
@@ -5349,6 +5406,26 @@ class BufferCollection final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void SetEventSinkRequest(const ::fidl::DecodedMessage<BufferCollection::SetEventSinkRequest>& _msg);
+    static void SyncRequest(const ::fidl::DecodedMessage<BufferCollection::SyncRequest>& _msg);
+    static void SyncResponse(const ::fidl::DecodedMessage<BufferCollection::SyncResponse>& _msg);
+    static void SetConstraintsRequest(const ::fidl::DecodedMessage<BufferCollection::SetConstraintsRequest>& _msg);
+    static void WaitForBuffersAllocatedRequest(const ::fidl::DecodedMessage<BufferCollection::WaitForBuffersAllocatedRequest>& _msg);
+    static void WaitForBuffersAllocatedResponse(const ::fidl::DecodedMessage<BufferCollection::WaitForBuffersAllocatedResponse>& _msg);
+    static void CheckBuffersAllocatedRequest(const ::fidl::DecodedMessage<BufferCollection::CheckBuffersAllocatedRequest>& _msg);
+    static void CheckBuffersAllocatedResponse(const ::fidl::DecodedMessage<BufferCollection::CheckBuffersAllocatedResponse>& _msg);
+    static void CloseSingleBufferRequest(const ::fidl::DecodedMessage<BufferCollection::CloseSingleBufferRequest>& _msg);
+    static void AllocateSingleBufferRequest(const ::fidl::DecodedMessage<BufferCollection::AllocateSingleBufferRequest>& _msg);
+    static void WaitForSingleBufferAllocatedRequest(const ::fidl::DecodedMessage<BufferCollection::WaitForSingleBufferAllocatedRequest>& _msg);
+    static void WaitForSingleBufferAllocatedResponse(const ::fidl::DecodedMessage<BufferCollection::WaitForSingleBufferAllocatedResponse>& _msg);
+    static void CheckSingleBufferAllocatedRequest(const ::fidl::DecodedMessage<BufferCollection::CheckSingleBufferAllocatedRequest>& _msg);
+    static void CloseRequest(const ::fidl::DecodedMessage<BufferCollection::CloseRequest>& _msg);
+  };
 };
 
 }  // namespace sysmem

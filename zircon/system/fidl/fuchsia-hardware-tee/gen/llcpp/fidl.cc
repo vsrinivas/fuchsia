@@ -68,12 +68,7 @@ DeviceConnector::UnownedResultOf::ConnectTee DeviceConnector::Call::ConnectTee(z
 }
 
 ::fidl::internal::StatusAndError DeviceConnector::InPlace::ConnectTee(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectTeeRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDeviceConnector_ConnectTee_Ordinal;
+  DeviceConnector::SetTransactionHeaderFor::ConnectTeeRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -125,6 +120,12 @@ bool DeviceConnector::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
   return found;
 }
 
+
+
+void DeviceConnector::SetTransactionHeaderFor::ConnectTeeRequest(const ::fidl::DecodedMessage<DeviceConnector::ConnectTeeRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDeviceConnector_ConnectTee_Ordinal;
+}
 
 }  // namespace tee
 }  // namespace hardware

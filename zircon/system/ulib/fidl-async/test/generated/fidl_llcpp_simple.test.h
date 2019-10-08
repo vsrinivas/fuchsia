@@ -186,6 +186,14 @@ class Simple final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void CloseRequest(const ::fidl::DecodedMessage<Simple::CloseRequest>& _msg);
+    static void CloseResponse(const ::fidl::DecodedMessage<Simple::CloseResponse>& _msg);
+  };
 };
 
 }  // namespace simple

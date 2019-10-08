@@ -846,6 +846,30 @@ class Partition final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetInfoRequest(const ::fidl::DecodedMessage<Partition::GetInfoRequest>& _msg);
+    static void GetInfoResponse(const ::fidl::DecodedMessage<Partition::GetInfoResponse>& _msg);
+    static void GetStatsRequest(const ::fidl::DecodedMessage<Partition::GetStatsRequest>& _msg);
+    static void GetStatsResponse(const ::fidl::DecodedMessage<Partition::GetStatsResponse>& _msg);
+    static void GetFifoRequest(const ::fidl::DecodedMessage<Partition::GetFifoRequest>& _msg);
+    static void GetFifoResponse(const ::fidl::DecodedMessage<Partition::GetFifoResponse>& _msg);
+    static void AttachVmoRequest(const ::fidl::DecodedMessage<Partition::AttachVmoRequest>& _msg);
+    static void AttachVmoResponse(const ::fidl::DecodedMessage<Partition::AttachVmoResponse>& _msg);
+    static void CloseFifoRequest(const ::fidl::DecodedMessage<Partition::CloseFifoRequest>& _msg);
+    static void CloseFifoResponse(const ::fidl::DecodedMessage<Partition::CloseFifoResponse>& _msg);
+    static void RebindDeviceRequest(const ::fidl::DecodedMessage<Partition::RebindDeviceRequest>& _msg);
+    static void RebindDeviceResponse(const ::fidl::DecodedMessage<Partition::RebindDeviceResponse>& _msg);
+    static void GetTypeGuidRequest(const ::fidl::DecodedMessage<Partition::GetTypeGuidRequest>& _msg);
+    static void GetTypeGuidResponse(const ::fidl::DecodedMessage<Partition::GetTypeGuidResponse>& _msg);
+    static void GetInstanceGuidRequest(const ::fidl::DecodedMessage<Partition::GetInstanceGuidRequest>& _msg);
+    static void GetInstanceGuidResponse(const ::fidl::DecodedMessage<Partition::GetInstanceGuidResponse>& _msg);
+    static void GetNameRequest(const ::fidl::DecodedMessage<Partition::GetNameRequest>& _msg);
+    static void GetNameResponse(const ::fidl::DecodedMessage<Partition::GetNameResponse>& _msg);
+  };
 };
 
 constexpr uint32_t NAME_LENGTH = 128u;

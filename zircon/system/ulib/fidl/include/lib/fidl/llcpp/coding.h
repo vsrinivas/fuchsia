@@ -8,6 +8,7 @@
 #include <lib/fidl/llcpp/decoded_message.h>
 #include <lib/fidl/llcpp/encoded_message.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <zircon/fidl.h>
 
 #ifdef __Fuchsia__
 #include <lib/zx/channel.h>
@@ -51,6 +52,15 @@ template <>
 struct IsFidlType<AnyZeroArgMessage> : public std::true_type {};
 template <>
 struct IsFidlMessage<AnyZeroArgMessage> : public std::true_type {};
+
+// Initialize a |fidl_message_header_t| struct as per the Transaction Header v3 proposal.
+inline void InitializeTransactionHeader(fidl_message_header_t* hdr) {
+  *hdr = {};
+  hdr->flags[0] = 0;
+  hdr->flags[1] = 0;
+  hdr->flags[2] = 0;
+  hdr->magic_number = kFidlWireFormatMagicNumberInitial;
+}
 
 // Holds a |DecodedMessage| in addition to |status| and |error|.
 // This is typically the return type of fidl::Decode and FIDL methods which require

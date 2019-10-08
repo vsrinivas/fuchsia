@@ -225,6 +225,14 @@ class Ftl final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void FormatRequest(const ::fidl::DecodedMessage<Ftl::FormatRequest>& _msg);
+    static void FormatResponse(const ::fidl::DecodedMessage<Ftl::FormatResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetInfoResponseTable;
@@ -808,6 +816,24 @@ class Block final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetInfoRequest(const ::fidl::DecodedMessage<Block::GetInfoRequest>& _msg);
+    static void GetInfoResponse(const ::fidl::DecodedMessage<Block::GetInfoResponse>& _msg);
+    static void GetStatsRequest(const ::fidl::DecodedMessage<Block::GetStatsRequest>& _msg);
+    static void GetStatsResponse(const ::fidl::DecodedMessage<Block::GetStatsResponse>& _msg);
+    static void GetFifoRequest(const ::fidl::DecodedMessage<Block::GetFifoRequest>& _msg);
+    static void GetFifoResponse(const ::fidl::DecodedMessage<Block::GetFifoResponse>& _msg);
+    static void AttachVmoRequest(const ::fidl::DecodedMessage<Block::AttachVmoRequest>& _msg);
+    static void AttachVmoResponse(const ::fidl::DecodedMessage<Block::AttachVmoResponse>& _msg);
+    static void CloseFifoRequest(const ::fidl::DecodedMessage<Block::CloseFifoRequest>& _msg);
+    static void CloseFifoResponse(const ::fidl::DecodedMessage<Block::CloseFifoResponse>& _msg);
+    static void RebindDeviceRequest(const ::fidl::DecodedMessage<Block::RebindDeviceRequest>& _msg);
+    static void RebindDeviceResponse(const ::fidl::DecodedMessage<Block::RebindDeviceResponse>& _msg);
+  };
 };
 
 constexpr uint32_t MAX_TRANSFER_UNBOUNDED = 4294967295u;

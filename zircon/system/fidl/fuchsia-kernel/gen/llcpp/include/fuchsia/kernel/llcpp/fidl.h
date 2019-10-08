@@ -613,6 +613,13 @@ class MexecBroker final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void PerformMexecRequest(const ::fidl::DecodedMessage<MexecBroker::PerformMexecRequest>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_kernel_DebugBrokerSendDebugCommandRequestTable;
@@ -897,6 +904,16 @@ class DebugBroker final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void SendDebugCommandRequest(const ::fidl::DecodedMessage<DebugBroker::SendDebugCommandRequest>& _msg);
+    static void SendDebugCommandResponse(const ::fidl::DecodedMessage<DebugBroker::SendDebugCommandResponse>& _msg);
+    static void SetTracingEnabledRequest(const ::fidl::DecodedMessage<DebugBroker::SetTracingEnabledRequest>& _msg);
+    static void SetTracingEnabledResponse(const ::fidl::DecodedMessage<DebugBroker::SetTracingEnabledResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_kernel_CounterGetInspectVMOResponseTable;
@@ -1164,6 +1181,16 @@ class Counter final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetInspectVMORequest(const ::fidl::DecodedMessage<Counter::GetInspectVMORequest>& _msg);
+    static void GetInspectVMOResponse(const ::fidl::DecodedMessage<Counter::GetInspectVMOResponse>& _msg);
+    static void UpdateInspectVMORequest(const ::fidl::DecodedMessage<Counter::UpdateInspectVMORequest>& _msg);
+    static void UpdateInspectVMOResponse(const ::fidl::DecodedMessage<Counter::UpdateInspectVMOResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_kernel_StatsGetMemoryStatsResponseTable;
@@ -1409,6 +1436,16 @@ class Stats final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetMemoryStatsRequest(const ::fidl::DecodedMessage<Stats::GetMemoryStatsRequest>& _msg);
+    static void GetMemoryStatsResponse(const ::fidl::DecodedMessage<Stats::GetMemoryStatsResponse>& _msg);
+    static void GetCpuStatsRequest(const ::fidl::DecodedMessage<Stats::GetCpuStatsRequest>& _msg);
+    static void GetCpuStatsResponse(const ::fidl::DecodedMessage<Stats::GetCpuStatsResponse>& _msg);
+  };
 };
 
 // Maximum number of bytes in a command string

@@ -25,8 +25,7 @@ zx_status_t {{ .LLProps.InterfaceName }}::{{ template "SendEventCFlavorMethodSig
   {{- else }}
   auto& _response = *reinterpret_cast<{{ .Name }}Response*>(_write_bytes);
   {{- end }}
-  _response._hdr = {};
-  {{- template "SetTxnHeader" . }}
+  {{- template "SetTransactionHeaderForResponse" . }}
   {{- template "FillResponseStructMembers" .Response -}}
 
   {{- if .LLProps.LinearizeResponse }}

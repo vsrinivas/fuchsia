@@ -236,6 +236,13 @@ class Connectivity final {
   // Messages are encoded in-place.
   static zx_status_t SendOnNetworkReachableEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnNetworkReachableResponse> params);
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void OnNetworkReachableResponse(const ::fidl::DecodedMessage<Connectivity::OnNetworkReachableResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_net_NameLookup_LookupHostname_ResponseTable;
@@ -925,6 +932,16 @@ class NameLookup final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void LookupIpRequest(const ::fidl::DecodedMessage<NameLookup::LookupIpRequest>& _msg);
+    static void LookupIpResponse(const ::fidl::DecodedMessage<NameLookup::LookupIpResponse>& _msg);
+    static void LookupHostnameRequest(const ::fidl::DecodedMessage<NameLookup::LookupHostnameRequest>& _msg);
+    static void LookupHostnameResponse(const ::fidl::DecodedMessage<NameLookup::LookupHostnameResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_net_EndpointTable;

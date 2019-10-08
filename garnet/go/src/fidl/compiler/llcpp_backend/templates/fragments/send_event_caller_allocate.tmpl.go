@@ -20,8 +20,7 @@ zx_status_t {{ .LLProps.InterfaceName }}::{{ template "SendEventCallerAllocateMe
   {{- else }}
   auto& _response = *reinterpret_cast<{{ .Name }}Response*>(_buffer.data());
   {{- end }}
-  _response._hdr = {};
-  {{- template "SetTxnHeader" . }}
+  {{- template "SetTransactionHeaderForResponse" . }}
   {{- template "FillResponseStructMembers" .Response -}}
 
   {{- if .LLProps.LinearizeResponse }}

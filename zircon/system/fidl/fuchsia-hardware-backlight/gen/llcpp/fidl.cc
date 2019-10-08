@@ -381,12 +381,7 @@ Device::UnownedResultOf::GetStateNormalized Device::Call::GetStateNormalized(zx:
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetStateNormalizedRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevice_GetStateNormalized_Ordinal;
+  Device::SetTransactionHeaderFor::GetStateNormalizedRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::GetStateNormalizedResponse>::FromFailure(
@@ -448,12 +443,7 @@ Device::UnownedResultOf::SetStateNormalized Device::Call::SetStateNormalized(zx:
 }
 
 ::fidl::DecodeResult<Device::SetStateNormalizedResponse> Device::InPlace::SetStateNormalized(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateNormalizedRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevice_SetStateNormalized_Ordinal;
+  Device::SetTransactionHeaderFor::SetStateNormalizedRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::SetStateNormalizedResponse>::FromFailure(
@@ -514,12 +504,7 @@ Device::UnownedResultOf::GetStateAbsolute Device::Call::GetStateAbsolute(zx::uno
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetStateAbsoluteRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevice_GetStateAbsolute_Ordinal;
+  Device::SetTransactionHeaderFor::GetStateAbsoluteRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::GetStateAbsoluteResponse>::FromFailure(
@@ -581,12 +566,7 @@ Device::UnownedResultOf::SetStateAbsolute Device::Call::SetStateAbsolute(zx::uno
 }
 
 ::fidl::DecodeResult<Device::SetStateAbsoluteResponse> Device::InPlace::SetStateAbsolute(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateAbsoluteRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevice_SetStateAbsolute_Ordinal;
+  Device::SetTransactionHeaderFor::SetStateAbsoluteRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::SetStateAbsoluteResponse>::FromFailure(
@@ -647,12 +627,7 @@ Device::UnownedResultOf::GetMaxAbsoluteBrightness Device::Call::GetMaxAbsoluteBr
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetMaxAbsoluteBrightnessRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevice_GetMaxAbsoluteBrightness_Ordinal;
+  Device::SetTransactionHeaderFor::GetMaxAbsoluteBrightnessRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::GetMaxAbsoluteBrightnessResponse>::FromFailure(
@@ -758,11 +733,11 @@ void Device::Interface::GetStateNormalizedCompleterBase::Reply(::llcpp::fuchsia:
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetStateNormalizedResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetStateNormalizedResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevice_GetStateNormalized_Ordinal;
+  Device::SetTransactionHeaderFor::GetStateNormalizedResponse(
+      ::fidl::DecodedMessage<GetStateNormalizedResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetStateNormalizedResponse::PrimarySize,
+              GetStateNormalizedResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetStateNormalizedResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetStateNormalizedResponse>(std::move(_response_bytes)));
@@ -783,11 +758,11 @@ void Device::Interface::GetStateNormalizedCompleterBase::Reply(::fidl::BytePart 
     return;
   }
   auto& _response = *reinterpret_cast<GetStateNormalizedResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevice_GetStateNormalized_Ordinal;
+  Device::SetTransactionHeaderFor::GetStateNormalizedResponse(
+      ::fidl::DecodedMessage<GetStateNormalizedResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetStateNormalizedResponse::PrimarySize,
+              GetStateNormalizedResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(GetStateNormalizedResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetStateNormalizedResponse>(std::move(_buffer)));
@@ -800,12 +775,7 @@ void Device::Interface::GetStateNormalizedCompleterBase::ReplySuccess(::fidl::By
 }
 
 void Device::Interface::GetStateNormalizedCompleterBase::Reply(::fidl::DecodedMessage<GetStateNormalizedResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevice_GetStateNormalized_Ordinal;
+  Device::SetTransactionHeaderFor::GetStateNormalizedResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -814,11 +784,11 @@ void Device::Interface::SetStateNormalizedCompleterBase::Reply(::llcpp::fuchsia:
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetStateNormalizedResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetStateNormalizedResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevice_SetStateNormalized_Ordinal;
+  Device::SetTransactionHeaderFor::SetStateNormalizedResponse(
+      ::fidl::DecodedMessage<SetStateNormalizedResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SetStateNormalizedResponse::PrimarySize,
+              SetStateNormalizedResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetStateNormalizedResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetStateNormalizedResponse>(std::move(_response_bytes)));
@@ -838,11 +808,11 @@ void Device::Interface::SetStateNormalizedCompleterBase::Reply(::fidl::BytePart 
     return;
   }
   auto& _response = *reinterpret_cast<SetStateNormalizedResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevice_SetStateNormalized_Ordinal;
+  Device::SetTransactionHeaderFor::SetStateNormalizedResponse(
+      ::fidl::DecodedMessage<SetStateNormalizedResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SetStateNormalizedResponse::PrimarySize,
+              SetStateNormalizedResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(SetStateNormalizedResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetStateNormalizedResponse>(std::move(_buffer)));
@@ -854,12 +824,7 @@ void Device::Interface::SetStateNormalizedCompleterBase::ReplySuccess(::fidl::By
 }
 
 void Device::Interface::SetStateNormalizedCompleterBase::Reply(::fidl::DecodedMessage<SetStateNormalizedResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevice_SetStateNormalized_Ordinal;
+  Device::SetTransactionHeaderFor::SetStateNormalizedResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -868,11 +833,11 @@ void Device::Interface::GetStateAbsoluteCompleterBase::Reply(::llcpp::fuchsia::h
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetStateAbsoluteResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetStateAbsoluteResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevice_GetStateAbsolute_Ordinal;
+  Device::SetTransactionHeaderFor::GetStateAbsoluteResponse(
+      ::fidl::DecodedMessage<GetStateAbsoluteResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetStateAbsoluteResponse::PrimarySize,
+              GetStateAbsoluteResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetStateAbsoluteResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetStateAbsoluteResponse>(std::move(_response_bytes)));
@@ -893,11 +858,11 @@ void Device::Interface::GetStateAbsoluteCompleterBase::Reply(::fidl::BytePart _b
     return;
   }
   auto& _response = *reinterpret_cast<GetStateAbsoluteResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevice_GetStateAbsolute_Ordinal;
+  Device::SetTransactionHeaderFor::GetStateAbsoluteResponse(
+      ::fidl::DecodedMessage<GetStateAbsoluteResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetStateAbsoluteResponse::PrimarySize,
+              GetStateAbsoluteResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(GetStateAbsoluteResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetStateAbsoluteResponse>(std::move(_buffer)));
@@ -910,12 +875,7 @@ void Device::Interface::GetStateAbsoluteCompleterBase::ReplySuccess(::fidl::Byte
 }
 
 void Device::Interface::GetStateAbsoluteCompleterBase::Reply(::fidl::DecodedMessage<GetStateAbsoluteResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevice_GetStateAbsolute_Ordinal;
+  Device::SetTransactionHeaderFor::GetStateAbsoluteResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -924,11 +884,11 @@ void Device::Interface::SetStateAbsoluteCompleterBase::Reply(::llcpp::fuchsia::h
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetStateAbsoluteResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetStateAbsoluteResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevice_SetStateAbsolute_Ordinal;
+  Device::SetTransactionHeaderFor::SetStateAbsoluteResponse(
+      ::fidl::DecodedMessage<SetStateAbsoluteResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SetStateAbsoluteResponse::PrimarySize,
+              SetStateAbsoluteResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetStateAbsoluteResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetStateAbsoluteResponse>(std::move(_response_bytes)));
@@ -948,11 +908,11 @@ void Device::Interface::SetStateAbsoluteCompleterBase::Reply(::fidl::BytePart _b
     return;
   }
   auto& _response = *reinterpret_cast<SetStateAbsoluteResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevice_SetStateAbsolute_Ordinal;
+  Device::SetTransactionHeaderFor::SetStateAbsoluteResponse(
+      ::fidl::DecodedMessage<SetStateAbsoluteResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SetStateAbsoluteResponse::PrimarySize,
+              SetStateAbsoluteResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(SetStateAbsoluteResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetStateAbsoluteResponse>(std::move(_buffer)));
@@ -964,12 +924,7 @@ void Device::Interface::SetStateAbsoluteCompleterBase::ReplySuccess(::fidl::Byte
 }
 
 void Device::Interface::SetStateAbsoluteCompleterBase::Reply(::fidl::DecodedMessage<SetStateAbsoluteResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevice_SetStateAbsolute_Ordinal;
+  Device::SetTransactionHeaderFor::SetStateAbsoluteResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -978,11 +933,11 @@ void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::Reply(::llcpp::fu
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetMaxAbsoluteBrightnessResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetMaxAbsoluteBrightnessResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevice_GetMaxAbsoluteBrightness_Ordinal;
+  Device::SetTransactionHeaderFor::GetMaxAbsoluteBrightnessResponse(
+      ::fidl::DecodedMessage<GetMaxAbsoluteBrightnessResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetMaxAbsoluteBrightnessResponse::PrimarySize,
+              GetMaxAbsoluteBrightnessResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetMaxAbsoluteBrightnessResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetMaxAbsoluteBrightnessResponse>(std::move(_response_bytes)));
@@ -1003,11 +958,11 @@ void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::Reply(::fidl::Byt
     return;
   }
   auto& _response = *reinterpret_cast<GetMaxAbsoluteBrightnessResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevice_GetMaxAbsoluteBrightness_Ordinal;
+  Device::SetTransactionHeaderFor::GetMaxAbsoluteBrightnessResponse(
+      ::fidl::DecodedMessage<GetMaxAbsoluteBrightnessResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetMaxAbsoluteBrightnessResponse::PrimarySize,
+              GetMaxAbsoluteBrightnessResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(GetMaxAbsoluteBrightnessResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetMaxAbsoluteBrightnessResponse>(std::move(_buffer)));
@@ -1020,15 +975,56 @@ void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::ReplySuccess(::fi
 }
 
 void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::Reply(::fidl::DecodedMessage<GetMaxAbsoluteBrightnessResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevice_GetMaxAbsoluteBrightness_Ordinal;
+  Device::SetTransactionHeaderFor::GetMaxAbsoluteBrightnessResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
+
+
+void Device::SetTransactionHeaderFor::GetStateNormalizedRequest(const ::fidl::DecodedMessage<Device::GetStateNormalizedRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_GetStateNormalized_Ordinal;
+}
+void Device::SetTransactionHeaderFor::GetStateNormalizedResponse(const ::fidl::DecodedMessage<Device::GetStateNormalizedResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_GetStateNormalized_Ordinal;
+}
+
+void Device::SetTransactionHeaderFor::SetStateNormalizedRequest(const ::fidl::DecodedMessage<Device::SetStateNormalizedRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_SetStateNormalized_Ordinal;
+}
+void Device::SetTransactionHeaderFor::SetStateNormalizedResponse(const ::fidl::DecodedMessage<Device::SetStateNormalizedResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_SetStateNormalized_Ordinal;
+}
+
+void Device::SetTransactionHeaderFor::GetStateAbsoluteRequest(const ::fidl::DecodedMessage<Device::GetStateAbsoluteRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_GetStateAbsolute_Ordinal;
+}
+void Device::SetTransactionHeaderFor::GetStateAbsoluteResponse(const ::fidl::DecodedMessage<Device::GetStateAbsoluteResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_GetStateAbsolute_Ordinal;
+}
+
+void Device::SetTransactionHeaderFor::SetStateAbsoluteRequest(const ::fidl::DecodedMessage<Device::SetStateAbsoluteRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_SetStateAbsolute_Ordinal;
+}
+void Device::SetTransactionHeaderFor::SetStateAbsoluteResponse(const ::fidl::DecodedMessage<Device::SetStateAbsoluteResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_SetStateAbsolute_Ordinal;
+}
+
+void Device::SetTransactionHeaderFor::GetMaxAbsoluteBrightnessRequest(const ::fidl::DecodedMessage<Device::GetMaxAbsoluteBrightnessRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_GetMaxAbsoluteBrightness_Ordinal;
+}
+void Device::SetTransactionHeaderFor::GetMaxAbsoluteBrightnessResponse(const ::fidl::DecodedMessage<Device::GetMaxAbsoluteBrightnessResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_GetMaxAbsoluteBrightness_Ordinal;
+}
 
 }  // namespace backlight
 }  // namespace hardware

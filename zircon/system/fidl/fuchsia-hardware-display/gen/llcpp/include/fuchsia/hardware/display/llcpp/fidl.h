@@ -436,6 +436,16 @@ class Provider final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void OpenVirtconControllerRequest(const ::fidl::DecodedMessage<Provider::OpenVirtconControllerRequest>& _msg);
+    static void OpenVirtconControllerResponse(const ::fidl::DecodedMessage<Provider::OpenVirtconControllerResponse>& _msg);
+    static void OpenControllerRequest(const ::fidl::DecodedMessage<Provider::OpenControllerRequest>& _msg);
+    static void OpenControllerResponse(const ::fidl::DecodedMessage<Provider::OpenControllerResponse>& _msg);
+  };
 };
 
 
@@ -3253,6 +3263,57 @@ class Controller final {
   // Messages are encoded in-place.
   static zx_status_t SendClientOwnershipChangeEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<ClientOwnershipChangeResponse> params);
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void DisplaysChangedResponse(const ::fidl::DecodedMessage<Controller::DisplaysChangedResponse>& _msg);
+    static void ImportVmoImageRequest(const ::fidl::DecodedMessage<Controller::ImportVmoImageRequest>& _msg);
+    static void ImportVmoImageResponse(const ::fidl::DecodedMessage<Controller::ImportVmoImageResponse>& _msg);
+    static void ImportImageRequest(const ::fidl::DecodedMessage<Controller::ImportImageRequest>& _msg);
+    static void ImportImageResponse(const ::fidl::DecodedMessage<Controller::ImportImageResponse>& _msg);
+    static void ReleaseImageRequest(const ::fidl::DecodedMessage<Controller::ReleaseImageRequest>& _msg);
+    static void ImportEventRequest(const ::fidl::DecodedMessage<Controller::ImportEventRequest>& _msg);
+    static void ReleaseEventRequest(const ::fidl::DecodedMessage<Controller::ReleaseEventRequest>& _msg);
+    static void CreateLayerRequest(const ::fidl::DecodedMessage<Controller::CreateLayerRequest>& _msg);
+    static void CreateLayerResponse(const ::fidl::DecodedMessage<Controller::CreateLayerResponse>& _msg);
+    static void DestroyLayerRequest(const ::fidl::DecodedMessage<Controller::DestroyLayerRequest>& _msg);
+    static void SetDisplayModeRequest(const ::fidl::DecodedMessage<Controller::SetDisplayModeRequest>& _msg);
+    static void SetDisplayColorConversionRequest(const ::fidl::DecodedMessage<Controller::SetDisplayColorConversionRequest>& _msg);
+    static void SetDisplayLayersRequest(const ::fidl::DecodedMessage<Controller::SetDisplayLayersRequest>& _msg);
+    static void SetLayerPrimaryConfigRequest(const ::fidl::DecodedMessage<Controller::SetLayerPrimaryConfigRequest>& _msg);
+    static void SetLayerPrimaryPositionRequest(const ::fidl::DecodedMessage<Controller::SetLayerPrimaryPositionRequest>& _msg);
+    static void SetLayerPrimaryAlphaRequest(const ::fidl::DecodedMessage<Controller::SetLayerPrimaryAlphaRequest>& _msg);
+    static void SetLayerCursorConfigRequest(const ::fidl::DecodedMessage<Controller::SetLayerCursorConfigRequest>& _msg);
+    static void SetLayerCursorPositionRequest(const ::fidl::DecodedMessage<Controller::SetLayerCursorPositionRequest>& _msg);
+    static void SetLayerColorConfigRequest(const ::fidl::DecodedMessage<Controller::SetLayerColorConfigRequest>& _msg);
+    static void SetLayerImageRequest(const ::fidl::DecodedMessage<Controller::SetLayerImageRequest>& _msg);
+    static void CheckConfigRequest(const ::fidl::DecodedMessage<Controller::CheckConfigRequest>& _msg);
+    static void CheckConfigResponse(const ::fidl::DecodedMessage<Controller::CheckConfigResponse>& _msg);
+    static void ApplyConfigRequest(const ::fidl::DecodedMessage<Controller::ApplyConfigRequest>& _msg);
+    static void EnableVsyncRequest(const ::fidl::DecodedMessage<Controller::EnableVsyncRequest>& _msg);
+    static void VsyncResponse(const ::fidl::DecodedMessage<Controller::VsyncResponse>& _msg);
+    static void SetVirtconModeRequest(const ::fidl::DecodedMessage<Controller::SetVirtconModeRequest>& _msg);
+    static void ClientOwnershipChangeResponse(const ::fidl::DecodedMessage<Controller::ClientOwnershipChangeResponse>& _msg);
+    static void ComputeLinearImageStrideRequest(const ::fidl::DecodedMessage<Controller::ComputeLinearImageStrideRequest>& _msg);
+    static void ComputeLinearImageStrideResponse(const ::fidl::DecodedMessage<Controller::ComputeLinearImageStrideResponse>& _msg);
+    static void AllocateVmoRequest(const ::fidl::DecodedMessage<Controller::AllocateVmoRequest>& _msg);
+    static void AllocateVmoResponse(const ::fidl::DecodedMessage<Controller::AllocateVmoResponse>& _msg);
+    static void ImportBufferCollectionRequest(const ::fidl::DecodedMessage<Controller::ImportBufferCollectionRequest>& _msg);
+    static void ImportBufferCollectionResponse(const ::fidl::DecodedMessage<Controller::ImportBufferCollectionResponse>& _msg);
+    static void ReleaseBufferCollectionRequest(const ::fidl::DecodedMessage<Controller::ReleaseBufferCollectionRequest>& _msg);
+    static void SetBufferCollectionConstraintsRequest(const ::fidl::DecodedMessage<Controller::SetBufferCollectionConstraintsRequest>& _msg);
+    static void SetBufferCollectionConstraintsResponse(const ::fidl::DecodedMessage<Controller::SetBufferCollectionConstraintsResponse>& _msg);
+    static void GetSingleBufferFramebufferRequest(const ::fidl::DecodedMessage<Controller::GetSingleBufferFramebufferRequest>& _msg);
+    static void GetSingleBufferFramebufferResponse(const ::fidl::DecodedMessage<Controller::GetSingleBufferFramebufferResponse>& _msg);
+    static void ImportImageForCaptureRequest(const ::fidl::DecodedMessage<Controller::ImportImageForCaptureRequest>& _msg);
+    static void ImportImageForCaptureResponse(const ::fidl::DecodedMessage<Controller::ImportImageForCaptureResponse>& _msg);
+    static void StartCaptureRequest(const ::fidl::DecodedMessage<Controller::StartCaptureRequest>& _msg);
+    static void StartCaptureResponse(const ::fidl::DecodedMessage<Controller::StartCaptureResponse>& _msg);
+    static void ReleaseCaptureRequest(const ::fidl::DecodedMessage<Controller::ReleaseCaptureRequest>& _msg);
+    static void ReleaseCaptureResponse(const ::fidl::DecodedMessage<Controller::ReleaseCaptureResponse>& _msg);
+  };
 };
 
 }  // namespace display

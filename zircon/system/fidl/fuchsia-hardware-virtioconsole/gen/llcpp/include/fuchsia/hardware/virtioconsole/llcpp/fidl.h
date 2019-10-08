@@ -187,6 +187,13 @@ class Device final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetChannelRequest(const ::fidl::DecodedMessage<Device::GetChannelRequest>& _msg);
+  };
 };
 
 }  // namespace virtioconsole

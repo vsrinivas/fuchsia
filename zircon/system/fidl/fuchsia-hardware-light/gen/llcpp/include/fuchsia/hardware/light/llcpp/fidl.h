@@ -764,6 +764,26 @@ class Light final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetNameRequest(const ::fidl::DecodedMessage<Light::GetNameRequest>& _msg);
+    static void GetNameResponse(const ::fidl::DecodedMessage<Light::GetNameResponse>& _msg);
+    static void GetCountRequest(const ::fidl::DecodedMessage<Light::GetCountRequest>& _msg);
+    static void GetCountResponse(const ::fidl::DecodedMessage<Light::GetCountResponse>& _msg);
+    static void HasCapabilityRequest(const ::fidl::DecodedMessage<Light::HasCapabilityRequest>& _msg);
+    static void HasCapabilityResponse(const ::fidl::DecodedMessage<Light::HasCapabilityResponse>& _msg);
+    static void GetSimpleValueRequest(const ::fidl::DecodedMessage<Light::GetSimpleValueRequest>& _msg);
+    static void GetSimpleValueResponse(const ::fidl::DecodedMessage<Light::GetSimpleValueResponse>& _msg);
+    static void SetSimpleValueRequest(const ::fidl::DecodedMessage<Light::SetSimpleValueRequest>& _msg);
+    static void SetSimpleValueResponse(const ::fidl::DecodedMessage<Light::SetSimpleValueResponse>& _msg);
+    static void GetRgbValueRequest(const ::fidl::DecodedMessage<Light::GetRgbValueRequest>& _msg);
+    static void GetRgbValueResponse(const ::fidl::DecodedMessage<Light::GetRgbValueResponse>& _msg);
+    static void SetRgbValueRequest(const ::fidl::DecodedMessage<Light::SetRgbValueRequest>& _msg);
+    static void SetRgbValueResponse(const ::fidl::DecodedMessage<Light::SetRgbValueResponse>& _msg);
+  };
 };
 
 }  // namespace light

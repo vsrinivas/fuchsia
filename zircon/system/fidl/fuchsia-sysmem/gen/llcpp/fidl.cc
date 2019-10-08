@@ -75,12 +75,7 @@ BufferCollectionToken::UnownedResultOf::Duplicate BufferCollectionToken::Call::D
 }
 
 ::fidl::internal::StatusAndError BufferCollectionToken::InPlace::Duplicate(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DuplicateRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kBufferCollectionToken_Duplicate_Ordinal;
+  BufferCollectionToken::SetTransactionHeaderFor::DuplicateRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -122,12 +117,7 @@ BufferCollectionToken::ResultOf::Sync BufferCollectionToken::Call::Sync(zx::unow
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<SyncRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kBufferCollectionToken_Sync_Ordinal;
+  BufferCollectionToken::SetTransactionHeaderFor::SyncRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<BufferCollectionToken::SyncResponse>::FromFailure(
@@ -169,12 +159,7 @@ BufferCollectionToken::ResultOf::Close BufferCollectionToken::Call::Close(zx::un
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<CloseRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kBufferCollectionToken_Close_Ordinal;
+  BufferCollectionToken::SetTransactionHeaderFor::CloseRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -255,15 +240,35 @@ void BufferCollectionToken::Interface::SyncCompleterBase::Reply() {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SyncResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SyncResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kBufferCollectionToken_Sync_Ordinal;
+  BufferCollectionToken::SetTransactionHeaderFor::SyncResponse(
+      ::fidl::DecodedMessage<SyncResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SyncResponse::PrimarySize,
+              SyncResponse::PrimarySize)));
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SyncResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SyncResponse>(std::move(_response_bytes)));
 }
 
+
+
+void BufferCollectionToken::SetTransactionHeaderFor::DuplicateRequest(const ::fidl::DecodedMessage<BufferCollectionToken::DuplicateRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollectionToken_Duplicate_Ordinal;
+}
+
+void BufferCollectionToken::SetTransactionHeaderFor::SyncRequest(const ::fidl::DecodedMessage<BufferCollectionToken::SyncRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollectionToken_Sync_Ordinal;
+}
+void BufferCollectionToken::SetTransactionHeaderFor::SyncResponse(const ::fidl::DecodedMessage<BufferCollectionToken::SyncResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollectionToken_Sync_Ordinal;
+}
+
+void BufferCollectionToken::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<BufferCollectionToken::CloseRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollectionToken_Close_Ordinal;
+}
 
 namespace {
 
@@ -331,12 +336,7 @@ Heap::UnownedResultOf::AllocateVmo Heap::Call::AllocateVmo(zx::unowned_channel _
 }
 
 ::fidl::DecodeResult<Heap::AllocateVmoResponse> Heap::InPlace::AllocateVmo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocateVmoRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kHeap_AllocateVmo_Ordinal;
+  Heap::SetTransactionHeaderFor::AllocateVmoRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Heap::AllocateVmoResponse>::FromFailure(
@@ -398,12 +398,7 @@ Heap::UnownedResultOf::CreateResource Heap::Call::CreateResource(zx::unowned_cha
 }
 
 ::fidl::DecodeResult<Heap::CreateResourceResponse> Heap::InPlace::CreateResource(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateResourceRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kHeap_CreateResource_Ordinal;
+  Heap::SetTransactionHeaderFor::CreateResourceRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Heap::CreateResourceResponse>::FromFailure(
@@ -465,12 +460,7 @@ Heap::UnownedResultOf::DestroyResource Heap::Call::DestroyResource(zx::unowned_c
 }
 
 ::fidl::DecodeResult<Heap::DestroyResourceResponse> Heap::InPlace::DestroyResource(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DestroyResourceRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kHeap_DestroyResource_Ordinal;
+  Heap::SetTransactionHeaderFor::DestroyResourceRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Heap::DestroyResourceResponse>::FromFailure(
@@ -553,11 +543,11 @@ void Heap::Interface::AllocateVmoCompleterBase::Reply(int32_t s, ::zx::vmo vmo) 
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AllocateVmoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<AllocateVmoResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kHeap_AllocateVmo_Ordinal;
+  Heap::SetTransactionHeaderFor::AllocateVmoResponse(
+      ::fidl::DecodedMessage<AllocateVmoResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              AllocateVmoResponse::PrimarySize,
+              AllocateVmoResponse::PrimarySize)));
   _response.s = std::move(s);
   _response.vmo = std::move(vmo);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AllocateVmoResponse));
@@ -570,11 +560,11 @@ void Heap::Interface::AllocateVmoCompleterBase::Reply(::fidl::BytePart _buffer, 
     return;
   }
   auto& _response = *reinterpret_cast<AllocateVmoResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kHeap_AllocateVmo_Ordinal;
+  Heap::SetTransactionHeaderFor::AllocateVmoResponse(
+      ::fidl::DecodedMessage<AllocateVmoResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              AllocateVmoResponse::PrimarySize,
+              AllocateVmoResponse::PrimarySize)));
   _response.s = std::move(s);
   _response.vmo = std::move(vmo);
   _buffer.set_actual(sizeof(AllocateVmoResponse));
@@ -582,12 +572,7 @@ void Heap::Interface::AllocateVmoCompleterBase::Reply(::fidl::BytePart _buffer, 
 }
 
 void Heap::Interface::AllocateVmoCompleterBase::Reply(::fidl::DecodedMessage<AllocateVmoResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kHeap_AllocateVmo_Ordinal;
+  Heap::SetTransactionHeaderFor::AllocateVmoResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -596,11 +581,11 @@ void Heap::Interface::CreateResourceCompleterBase::Reply(int32_t s, uint64_t id)
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateResourceResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<CreateResourceResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kHeap_CreateResource_Ordinal;
+  Heap::SetTransactionHeaderFor::CreateResourceResponse(
+      ::fidl::DecodedMessage<CreateResourceResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              CreateResourceResponse::PrimarySize,
+              CreateResourceResponse::PrimarySize)));
   _response.s = std::move(s);
   _response.id = std::move(id);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(CreateResourceResponse));
@@ -613,11 +598,11 @@ void Heap::Interface::CreateResourceCompleterBase::Reply(::fidl::BytePart _buffe
     return;
   }
   auto& _response = *reinterpret_cast<CreateResourceResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kHeap_CreateResource_Ordinal;
+  Heap::SetTransactionHeaderFor::CreateResourceResponse(
+      ::fidl::DecodedMessage<CreateResourceResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              CreateResourceResponse::PrimarySize,
+              CreateResourceResponse::PrimarySize)));
   _response.s = std::move(s);
   _response.id = std::move(id);
   _buffer.set_actual(sizeof(CreateResourceResponse));
@@ -625,12 +610,7 @@ void Heap::Interface::CreateResourceCompleterBase::Reply(::fidl::BytePart _buffe
 }
 
 void Heap::Interface::CreateResourceCompleterBase::Reply(::fidl::DecodedMessage<CreateResourceResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kHeap_CreateResource_Ordinal;
+  Heap::SetTransactionHeaderFor::CreateResourceResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -639,15 +619,43 @@ void Heap::Interface::DestroyResourceCompleterBase::Reply() {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DestroyResourceResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DestroyResourceResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kHeap_DestroyResource_Ordinal;
+  Heap::SetTransactionHeaderFor::DestroyResourceResponse(
+      ::fidl::DecodedMessage<DestroyResourceResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              DestroyResourceResponse::PrimarySize,
+              DestroyResourceResponse::PrimarySize)));
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DestroyResourceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DestroyResourceResponse>(std::move(_response_bytes)));
 }
 
+
+
+void Heap::SetTransactionHeaderFor::AllocateVmoRequest(const ::fidl::DecodedMessage<Heap::AllocateVmoRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kHeap_AllocateVmo_Ordinal;
+}
+void Heap::SetTransactionHeaderFor::AllocateVmoResponse(const ::fidl::DecodedMessage<Heap::AllocateVmoResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kHeap_AllocateVmo_Ordinal;
+}
+
+void Heap::SetTransactionHeaderFor::CreateResourceRequest(const ::fidl::DecodedMessage<Heap::CreateResourceRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kHeap_CreateResource_Ordinal;
+}
+void Heap::SetTransactionHeaderFor::CreateResourceResponse(const ::fidl::DecodedMessage<Heap::CreateResourceResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kHeap_CreateResource_Ordinal;
+}
+
+void Heap::SetTransactionHeaderFor::DestroyResourceRequest(const ::fidl::DecodedMessage<Heap::DestroyResourceRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kHeap_DestroyResource_Ordinal;
+}
+void Heap::SetTransactionHeaderFor::DestroyResourceResponse(const ::fidl::DecodedMessage<Heap::DestroyResourceResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kHeap_DestroyResource_Ordinal;
+}
 
 namespace {
 
@@ -706,12 +714,7 @@ DriverConnector::UnownedResultOf::Connect DriverConnector::Call::Connect(zx::uno
 }
 
 ::fidl::internal::StatusAndError DriverConnector::InPlace::Connect(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDriverConnector_Connect_Ordinal;
+  DriverConnector::SetTransactionHeaderFor::ConnectRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -763,6 +766,12 @@ bool DriverConnector::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
   return found;
 }
 
+
+
+void DriverConnector::SetTransactionHeaderFor::ConnectRequest(const ::fidl::DecodedMessage<DriverConnector::ConnectRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDriverConnector_Connect_Ordinal;
+}
 
 namespace {
 
@@ -831,12 +840,7 @@ Allocator::UnownedResultOf::AllocateNonSharedCollection Allocator::Call::Allocat
 }
 
 ::fidl::internal::StatusAndError Allocator::InPlace::AllocateNonSharedCollection(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocateNonSharedCollectionRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kAllocator_AllocateNonSharedCollection_Ordinal;
+  Allocator::SetTransactionHeaderFor::AllocateNonSharedCollectionRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -899,12 +903,7 @@ Allocator::UnownedResultOf::AllocateSharedCollection Allocator::Call::AllocateSh
 }
 
 ::fidl::internal::StatusAndError Allocator::InPlace::AllocateSharedCollection(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocateSharedCollectionRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kAllocator_AllocateSharedCollection_Ordinal;
+  Allocator::SetTransactionHeaderFor::AllocateSharedCollectionRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -969,12 +968,7 @@ Allocator::UnownedResultOf::BindSharedCollection Allocator::Call::BindSharedColl
 }
 
 ::fidl::internal::StatusAndError Allocator::InPlace::BindSharedCollection(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindSharedCollectionRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kAllocator_BindSharedCollection_Ordinal;
+  Allocator::SetTransactionHeaderFor::BindSharedCollectionRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -1052,6 +1046,22 @@ bool Allocator::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   return found;
 }
 
+
+
+void Allocator::SetTransactionHeaderFor::AllocateNonSharedCollectionRequest(const ::fidl::DecodedMessage<Allocator::AllocateNonSharedCollectionRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kAllocator_AllocateNonSharedCollection_Ordinal;
+}
+
+void Allocator::SetTransactionHeaderFor::AllocateSharedCollectionRequest(const ::fidl::DecodedMessage<Allocator::AllocateSharedCollectionRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kAllocator_AllocateSharedCollection_Ordinal;
+}
+
+void Allocator::SetTransactionHeaderFor::BindSharedCollectionRequest(const ::fidl::DecodedMessage<Allocator::BindSharedCollectionRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kAllocator_BindSharedCollection_Ordinal;
+}
 
 ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::SecureMem_SetPhysicalSecureHeaps_Result() {
   tag_ = Tag::Invalid;
@@ -1232,12 +1242,7 @@ SecureMem::UnownedResultOf::GetPhysicalSecureHeaps SecureMem::Call::GetPhysicalS
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetPhysicalSecureHeapsRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kSecureMem_GetPhysicalSecureHeaps_Ordinal;
+  SecureMem::SetTransactionHeaderFor::GetPhysicalSecureHeapsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<SecureMem::GetPhysicalSecureHeapsResponse>::FromFailure(
@@ -1299,12 +1304,7 @@ SecureMem::UnownedResultOf::SetPhysicalSecureHeaps SecureMem::Call::SetPhysicalS
 }
 
 ::fidl::DecodeResult<SecureMem::SetPhysicalSecureHeapsResponse> SecureMem::InPlace::SetPhysicalSecureHeaps(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetPhysicalSecureHeapsRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kSecureMem_SetPhysicalSecureHeaps_Ordinal;
+  SecureMem::SetTransactionHeaderFor::SetPhysicalSecureHeapsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<SecureMem::SetPhysicalSecureHeapsResponse>::FromFailure(
@@ -1374,11 +1374,11 @@ void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(::llcpp::f
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   auto& _response = *reinterpret_cast<GetPhysicalSecureHeapsResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kSecureMem_GetPhysicalSecureHeaps_Ordinal;
+  SecureMem::SetTransactionHeaderFor::GetPhysicalSecureHeapsResponse(
+      ::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetPhysicalSecureHeapsResponse::PrimarySize,
+              GetPhysicalSecureHeapsResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetPhysicalSecureHeapsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse>(std::move(_response_bytes)));
@@ -1399,11 +1399,11 @@ void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(::fidl::By
     return;
   }
   auto& _response = *reinterpret_cast<GetPhysicalSecureHeapsResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kSecureMem_GetPhysicalSecureHeaps_Ordinal;
+  SecureMem::SetTransactionHeaderFor::GetPhysicalSecureHeapsResponse(
+      ::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetPhysicalSecureHeapsResponse::PrimarySize,
+              GetPhysicalSecureHeapsResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(GetPhysicalSecureHeapsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse>(std::move(_buffer)));
@@ -1416,12 +1416,7 @@ void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::ReplySuccess(::f
 }
 
 void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kSecureMem_GetPhysicalSecureHeaps_Ordinal;
+  SecureMem::SetTransactionHeaderFor::GetPhysicalSecureHeapsResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1430,11 +1425,11 @@ void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(::llcpp::f
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetPhysicalSecureHeapsResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetPhysicalSecureHeapsResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kSecureMem_SetPhysicalSecureHeaps_Ordinal;
+  SecureMem::SetTransactionHeaderFor::SetPhysicalSecureHeapsResponse(
+      ::fidl::DecodedMessage<SetPhysicalSecureHeapsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SetPhysicalSecureHeapsResponse::PrimarySize,
+              SetPhysicalSecureHeapsResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetPhysicalSecureHeapsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetPhysicalSecureHeapsResponse>(std::move(_response_bytes)));
@@ -1454,11 +1449,11 @@ void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(::fidl::By
     return;
   }
   auto& _response = *reinterpret_cast<SetPhysicalSecureHeapsResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kSecureMem_SetPhysicalSecureHeaps_Ordinal;
+  SecureMem::SetTransactionHeaderFor::SetPhysicalSecureHeapsResponse(
+      ::fidl::DecodedMessage<SetPhysicalSecureHeapsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SetPhysicalSecureHeapsResponse::PrimarySize,
+              SetPhysicalSecureHeapsResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(SetPhysicalSecureHeapsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetPhysicalSecureHeapsResponse>(std::move(_buffer)));
@@ -1470,15 +1465,29 @@ void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::ReplySuccess(::f
 }
 
 void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(::fidl::DecodedMessage<SetPhysicalSecureHeapsResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kSecureMem_SetPhysicalSecureHeaps_Ordinal;
+  SecureMem::SetTransactionHeaderFor::SetPhysicalSecureHeapsResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
+
+
+void SecureMem::SetTransactionHeaderFor::GetPhysicalSecureHeapsRequest(const ::fidl::DecodedMessage<SecureMem::GetPhysicalSecureHeapsRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kSecureMem_GetPhysicalSecureHeaps_Ordinal;
+}
+void SecureMem::SetTransactionHeaderFor::GetPhysicalSecureHeapsResponse(const ::fidl::DecodedMessage<SecureMem::GetPhysicalSecureHeapsResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kSecureMem_GetPhysicalSecureHeaps_Ordinal;
+}
+
+void SecureMem::SetTransactionHeaderFor::SetPhysicalSecureHeapsRequest(const ::fidl::DecodedMessage<SecureMem::SetPhysicalSecureHeapsRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kSecureMem_SetPhysicalSecureHeaps_Ordinal;
+}
+void SecureMem::SetTransactionHeaderFor::SetPhysicalSecureHeapsResponse(const ::fidl::DecodedMessage<SecureMem::SetPhysicalSecureHeapsResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kSecureMem_SetPhysicalSecureHeaps_Ordinal;
+}
 
 ::llcpp::fuchsia::sysmem::BufferSpec::BufferSpec() {
   tag_ = Tag::Invalid;
@@ -1617,12 +1626,7 @@ BufferCollectionEvents::ResultOf::OnDuplicatedTokensKnownByServer BufferCollecti
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<OnDuplicatedTokensKnownByServerRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_Ordinal;
+  BufferCollectionEvents::SetTransactionHeaderFor::OnDuplicatedTokensKnownByServerRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -1687,12 +1691,7 @@ BufferCollectionEvents::UnownedResultOf::OnBuffersAllocated BufferCollectionEven
 }
 
 ::fidl::internal::StatusAndError BufferCollectionEvents::InPlace::OnBuffersAllocated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OnBuffersAllocatedRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kBufferCollectionEvents_OnBuffersAllocated_Ordinal;
+  BufferCollectionEvents::SetTransactionHeaderFor::OnBuffersAllocatedRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -1757,12 +1756,7 @@ BufferCollectionEvents::UnownedResultOf::OnAllocateSingleBufferDone BufferCollec
 }
 
 ::fidl::internal::StatusAndError BufferCollectionEvents::InPlace::OnAllocateSingleBufferDone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OnAllocateSingleBufferDoneRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kBufferCollectionEvents_OnAllocateSingleBufferDone_Ordinal;
+  BufferCollectionEvents::SetTransactionHeaderFor::OnAllocateSingleBufferDoneRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -1839,6 +1833,22 @@ bool BufferCollectionEvents::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::
   return found;
 }
 
+
+
+void BufferCollectionEvents::SetTransactionHeaderFor::OnDuplicatedTokensKnownByServerRequest(const ::fidl::DecodedMessage<BufferCollectionEvents::OnDuplicatedTokensKnownByServerRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_Ordinal;
+}
+
+void BufferCollectionEvents::SetTransactionHeaderFor::OnBuffersAllocatedRequest(const ::fidl::DecodedMessage<BufferCollectionEvents::OnBuffersAllocatedRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollectionEvents_OnBuffersAllocated_Ordinal;
+}
+
+void BufferCollectionEvents::SetTransactionHeaderFor::OnAllocateSingleBufferDoneRequest(const ::fidl::DecodedMessage<BufferCollectionEvents::OnAllocateSingleBufferDoneRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollectionEvents_OnAllocateSingleBufferDone_Ordinal;
+}
 
 namespace {
 
@@ -1937,12 +1947,7 @@ BufferCollection::UnownedResultOf::SetEventSink BufferCollection::Call::SetEvent
 }
 
 ::fidl::internal::StatusAndError BufferCollection::InPlace::SetEventSink(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetEventSinkRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kBufferCollection_SetEventSink_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::SetEventSinkRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -1984,12 +1989,7 @@ BufferCollection::ResultOf::Sync BufferCollection::Call::Sync(zx::unowned_channe
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<SyncRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kBufferCollection_Sync_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::SyncRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<BufferCollection::SyncResponse>::FromFailure(
@@ -2054,12 +2054,7 @@ BufferCollection::UnownedResultOf::SetConstraints BufferCollection::Call::SetCon
 }
 
 ::fidl::internal::StatusAndError BufferCollection::InPlace::SetConstraints(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConstraintsRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kBufferCollection_SetConstraints_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::SetConstraintsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -2120,12 +2115,7 @@ BufferCollection::UnownedResultOf::WaitForBuffersAllocated BufferCollection::Cal
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<WaitForBuffersAllocatedRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kBufferCollection_WaitForBuffersAllocated_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::WaitForBuffersAllocatedRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<BufferCollection::WaitForBuffersAllocatedResponse>::FromFailure(
@@ -2186,12 +2176,7 @@ BufferCollection::UnownedResultOf::CheckBuffersAllocated BufferCollection::Call:
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<CheckBuffersAllocatedRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kBufferCollection_CheckBuffersAllocated_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::CheckBuffersAllocatedRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<BufferCollection::CheckBuffersAllocatedResponse>::FromFailure(
@@ -2254,12 +2239,7 @@ BufferCollection::UnownedResultOf::CloseSingleBuffer BufferCollection::Call::Clo
 }
 
 ::fidl::internal::StatusAndError BufferCollection::InPlace::CloseSingleBuffer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloseSingleBufferRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kBufferCollection_CloseSingleBuffer_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::CloseSingleBufferRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -2322,12 +2302,7 @@ BufferCollection::UnownedResultOf::AllocateSingleBuffer BufferCollection::Call::
 }
 
 ::fidl::internal::StatusAndError BufferCollection::InPlace::AllocateSingleBuffer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocateSingleBufferRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kBufferCollection_AllocateSingleBuffer_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::AllocateSingleBufferRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -2389,12 +2364,7 @@ BufferCollection::UnownedResultOf::WaitForSingleBufferAllocated BufferCollection
 }
 
 ::fidl::DecodeResult<BufferCollection::WaitForSingleBufferAllocatedResponse> BufferCollection::InPlace::WaitForSingleBufferAllocated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WaitForSingleBufferAllocatedRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kBufferCollection_WaitForSingleBufferAllocated_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::WaitForSingleBufferAllocatedRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<BufferCollection::WaitForSingleBufferAllocatedResponse>::FromFailure(
@@ -2457,12 +2427,7 @@ BufferCollection::UnownedResultOf::CheckSingleBufferAllocated BufferCollection::
 }
 
 ::fidl::internal::StatusAndError BufferCollection::InPlace::CheckSingleBufferAllocated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CheckSingleBufferAllocatedRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kBufferCollection_CheckSingleBufferAllocated_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::CheckSingleBufferAllocatedRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -2504,12 +2469,7 @@ BufferCollection::ResultOf::Close BufferCollection::Call::Close(zx::unowned_chan
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<CloseRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kBufferCollection_Close_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::CloseRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -2679,11 +2639,11 @@ void BufferCollection::Interface::SyncCompleterBase::Reply() {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SyncResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SyncResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kBufferCollection_Sync_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::SyncResponse(
+      ::fidl::DecodedMessage<SyncResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SyncResponse::PrimarySize,
+              SyncResponse::PrimarySize)));
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SyncResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SyncResponse>(std::move(_response_bytes)));
 }
@@ -2694,11 +2654,11 @@ void BufferCollection::Interface::WaitForBuffersAllocatedCompleterBase::Reply(in
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   auto& _response = *reinterpret_cast<WaitForBuffersAllocatedResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kBufferCollection_WaitForBuffersAllocated_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::WaitForBuffersAllocatedResponse(
+      ::fidl::DecodedMessage<WaitForBuffersAllocatedResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WaitForBuffersAllocatedResponse::PrimarySize,
+              WaitForBuffersAllocatedResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.buffer_collection_info = std::move(buffer_collection_info);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WaitForBuffersAllocatedResponse));
@@ -2711,11 +2671,11 @@ void BufferCollection::Interface::WaitForBuffersAllocatedCompleterBase::Reply(::
     return;
   }
   auto& _response = *reinterpret_cast<WaitForBuffersAllocatedResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kBufferCollection_WaitForBuffersAllocated_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::WaitForBuffersAllocatedResponse(
+      ::fidl::DecodedMessage<WaitForBuffersAllocatedResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WaitForBuffersAllocatedResponse::PrimarySize,
+              WaitForBuffersAllocatedResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.buffer_collection_info = std::move(buffer_collection_info);
   _buffer.set_actual(sizeof(WaitForBuffersAllocatedResponse));
@@ -2723,12 +2683,7 @@ void BufferCollection::Interface::WaitForBuffersAllocatedCompleterBase::Reply(::
 }
 
 void BufferCollection::Interface::WaitForBuffersAllocatedCompleterBase::Reply(::fidl::DecodedMessage<WaitForBuffersAllocatedResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kBufferCollection_WaitForBuffersAllocated_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::WaitForBuffersAllocatedResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -2737,11 +2692,11 @@ void BufferCollection::Interface::CheckBuffersAllocatedCompleterBase::Reply(int3
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CheckBuffersAllocatedResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<CheckBuffersAllocatedResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kBufferCollection_CheckBuffersAllocated_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::CheckBuffersAllocatedResponse(
+      ::fidl::DecodedMessage<CheckBuffersAllocatedResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              CheckBuffersAllocatedResponse::PrimarySize,
+              CheckBuffersAllocatedResponse::PrimarySize)));
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(CheckBuffersAllocatedResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<CheckBuffersAllocatedResponse>(std::move(_response_bytes)));
@@ -2753,23 +2708,18 @@ void BufferCollection::Interface::CheckBuffersAllocatedCompleterBase::Reply(::fi
     return;
   }
   auto& _response = *reinterpret_cast<CheckBuffersAllocatedResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kBufferCollection_CheckBuffersAllocated_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::CheckBuffersAllocatedResponse(
+      ::fidl::DecodedMessage<CheckBuffersAllocatedResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              CheckBuffersAllocatedResponse::PrimarySize,
+              CheckBuffersAllocatedResponse::PrimarySize)));
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(CheckBuffersAllocatedResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<CheckBuffersAllocatedResponse>(std::move(_buffer)));
 }
 
 void BufferCollection::Interface::CheckBuffersAllocatedCompleterBase::Reply(::fidl::DecodedMessage<CheckBuffersAllocatedResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kBufferCollection_CheckBuffersAllocated_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::CheckBuffersAllocatedResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -2778,11 +2728,11 @@ void BufferCollection::Interface::WaitForSingleBufferAllocatedCompleterBase::Rep
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WaitForSingleBufferAllocatedResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WaitForSingleBufferAllocatedResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kBufferCollection_WaitForSingleBufferAllocated_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::WaitForSingleBufferAllocatedResponse(
+      ::fidl::DecodedMessage<WaitForSingleBufferAllocatedResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WaitForSingleBufferAllocatedResponse::PrimarySize,
+              WaitForSingleBufferAllocatedResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.buffer_info = std::move(buffer_info);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WaitForSingleBufferAllocatedResponse));
@@ -2795,11 +2745,11 @@ void BufferCollection::Interface::WaitForSingleBufferAllocatedCompleterBase::Rep
     return;
   }
   auto& _response = *reinterpret_cast<WaitForSingleBufferAllocatedResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kBufferCollection_WaitForSingleBufferAllocated_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::WaitForSingleBufferAllocatedResponse(
+      ::fidl::DecodedMessage<WaitForSingleBufferAllocatedResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WaitForSingleBufferAllocatedResponse::PrimarySize,
+              WaitForSingleBufferAllocatedResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.buffer_info = std::move(buffer_info);
   _buffer.set_actual(sizeof(WaitForSingleBufferAllocatedResponse));
@@ -2807,15 +2757,77 @@ void BufferCollection::Interface::WaitForSingleBufferAllocatedCompleterBase::Rep
 }
 
 void BufferCollection::Interface::WaitForSingleBufferAllocatedCompleterBase::Reply(::fidl::DecodedMessage<WaitForSingleBufferAllocatedResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kBufferCollection_WaitForSingleBufferAllocated_Ordinal;
+  BufferCollection::SetTransactionHeaderFor::WaitForSingleBufferAllocatedResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
+
+
+void BufferCollection::SetTransactionHeaderFor::SetEventSinkRequest(const ::fidl::DecodedMessage<BufferCollection::SetEventSinkRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollection_SetEventSink_Ordinal;
+}
+
+void BufferCollection::SetTransactionHeaderFor::SyncRequest(const ::fidl::DecodedMessage<BufferCollection::SyncRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollection_Sync_Ordinal;
+}
+void BufferCollection::SetTransactionHeaderFor::SyncResponse(const ::fidl::DecodedMessage<BufferCollection::SyncResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollection_Sync_Ordinal;
+}
+
+void BufferCollection::SetTransactionHeaderFor::SetConstraintsRequest(const ::fidl::DecodedMessage<BufferCollection::SetConstraintsRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollection_SetConstraints_Ordinal;
+}
+
+void BufferCollection::SetTransactionHeaderFor::WaitForBuffersAllocatedRequest(const ::fidl::DecodedMessage<BufferCollection::WaitForBuffersAllocatedRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollection_WaitForBuffersAllocated_Ordinal;
+}
+void BufferCollection::SetTransactionHeaderFor::WaitForBuffersAllocatedResponse(const ::fidl::DecodedMessage<BufferCollection::WaitForBuffersAllocatedResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollection_WaitForBuffersAllocated_Ordinal;
+}
+
+void BufferCollection::SetTransactionHeaderFor::CheckBuffersAllocatedRequest(const ::fidl::DecodedMessage<BufferCollection::CheckBuffersAllocatedRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollection_CheckBuffersAllocated_Ordinal;
+}
+void BufferCollection::SetTransactionHeaderFor::CheckBuffersAllocatedResponse(const ::fidl::DecodedMessage<BufferCollection::CheckBuffersAllocatedResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollection_CheckBuffersAllocated_Ordinal;
+}
+
+void BufferCollection::SetTransactionHeaderFor::CloseSingleBufferRequest(const ::fidl::DecodedMessage<BufferCollection::CloseSingleBufferRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollection_CloseSingleBuffer_Ordinal;
+}
+
+void BufferCollection::SetTransactionHeaderFor::AllocateSingleBufferRequest(const ::fidl::DecodedMessage<BufferCollection::AllocateSingleBufferRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollection_AllocateSingleBuffer_Ordinal;
+}
+
+void BufferCollection::SetTransactionHeaderFor::WaitForSingleBufferAllocatedRequest(const ::fidl::DecodedMessage<BufferCollection::WaitForSingleBufferAllocatedRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollection_WaitForSingleBufferAllocated_Ordinal;
+}
+void BufferCollection::SetTransactionHeaderFor::WaitForSingleBufferAllocatedResponse(const ::fidl::DecodedMessage<BufferCollection::WaitForSingleBufferAllocatedResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollection_WaitForSingleBufferAllocated_Ordinal;
+}
+
+void BufferCollection::SetTransactionHeaderFor::CheckSingleBufferAllocatedRequest(const ::fidl::DecodedMessage<BufferCollection::CheckSingleBufferAllocatedRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollection_CheckSingleBufferAllocated_Ordinal;
+}
+
+void BufferCollection::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<BufferCollection::CloseRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kBufferCollection_Close_Ordinal;
+}
 
 }  // namespace sysmem
 }  // namespace fuchsia

@@ -214,6 +214,14 @@ class Provider final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void SocketRequest(const ::fidl::DecodedMessage<Provider::SocketRequest>& _msg);
+    static void SocketResponse(const ::fidl::DecodedMessage<Provider::SocketResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloneRequestTable;
@@ -1967,6 +1975,44 @@ class Control final {
   // Messages are encoded in-place.
   static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnOpenResponse> params);
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void CloneRequest(const ::fidl::DecodedMessage<Control::CloneRequest>& _msg);
+    static void CloseRequest(const ::fidl::DecodedMessage<Control::CloseRequest>& _msg);
+    static void CloseResponse(const ::fidl::DecodedMessage<Control::CloseResponse>& _msg);
+    static void DescribeRequest(const ::fidl::DecodedMessage<Control::DescribeRequest>& _msg);
+    static void DescribeResponse(const ::fidl::DecodedMessage<Control::DescribeResponse>& _msg);
+    static void OnOpenResponse(const ::fidl::DecodedMessage<Control::OnOpenResponse>& _msg);
+    static void SyncRequest(const ::fidl::DecodedMessage<Control::SyncRequest>& _msg);
+    static void SyncResponse(const ::fidl::DecodedMessage<Control::SyncResponse>& _msg);
+    static void GetAttrRequest(const ::fidl::DecodedMessage<Control::GetAttrRequest>& _msg);
+    static void GetAttrResponse(const ::fidl::DecodedMessage<Control::GetAttrResponse>& _msg);
+    static void SetAttrRequest(const ::fidl::DecodedMessage<Control::SetAttrRequest>& _msg);
+    static void SetAttrResponse(const ::fidl::DecodedMessage<Control::SetAttrResponse>& _msg);
+    static void IoctlRequest(const ::fidl::DecodedMessage<Control::IoctlRequest>& _msg);
+    static void IoctlResponse(const ::fidl::DecodedMessage<Control::IoctlResponse>& _msg);
+    static void BindRequest(const ::fidl::DecodedMessage<Control::BindRequest>& _msg);
+    static void BindResponse(const ::fidl::DecodedMessage<Control::BindResponse>& _msg);
+    static void ConnectRequest(const ::fidl::DecodedMessage<Control::ConnectRequest>& _msg);
+    static void ConnectResponse(const ::fidl::DecodedMessage<Control::ConnectResponse>& _msg);
+    static void ListenRequest(const ::fidl::DecodedMessage<Control::ListenRequest>& _msg);
+    static void ListenResponse(const ::fidl::DecodedMessage<Control::ListenResponse>& _msg);
+    static void AcceptRequest(const ::fidl::DecodedMessage<Control::AcceptRequest>& _msg);
+    static void AcceptResponse(const ::fidl::DecodedMessage<Control::AcceptResponse>& _msg);
+    static void GetSockNameRequest(const ::fidl::DecodedMessage<Control::GetSockNameRequest>& _msg);
+    static void GetSockNameResponse(const ::fidl::DecodedMessage<Control::GetSockNameResponse>& _msg);
+    static void GetPeerNameRequest(const ::fidl::DecodedMessage<Control::GetPeerNameRequest>& _msg);
+    static void GetPeerNameResponse(const ::fidl::DecodedMessage<Control::GetPeerNameResponse>& _msg);
+    static void SetSockOptRequest(const ::fidl::DecodedMessage<Control::SetSockOptRequest>& _msg);
+    static void SetSockOptResponse(const ::fidl::DecodedMessage<Control::SetSockOptResponse>& _msg);
+    static void GetSockOptRequest(const ::fidl::DecodedMessage<Control::GetSockOptRequest>& _msg);
+    static void GetSockOptResponse(const ::fidl::DecodedMessage<Control::GetSockOptResponse>& _msg);
+    static void IoctlPOSIXRequest(const ::fidl::DecodedMessage<Control::IoctlPOSIXRequest>& _msg);
+    static void IoctlPOSIXResponse(const ::fidl::DecodedMessage<Control::IoctlPOSIXResponse>& _msg);
+  };
 };
 
 }  // namespace socket

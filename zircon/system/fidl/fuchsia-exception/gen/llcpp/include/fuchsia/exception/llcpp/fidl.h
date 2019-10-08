@@ -472,6 +472,14 @@ class Handler final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void OnExceptionRequest(const ::fidl::DecodedMessage<Handler::OnExceptionRequest>& _msg);
+    static void OnExceptionResponse(const ::fidl::DecodedMessage<Handler::OnExceptionResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_RetrieveException_ResponseTable;
@@ -908,6 +916,16 @@ class ProcessLimbo final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void ListProcessesWaitingOnExceptionRequest(const ::fidl::DecodedMessage<ProcessLimbo::ListProcessesWaitingOnExceptionRequest>& _msg);
+    static void ListProcessesWaitingOnExceptionResponse(const ::fidl::DecodedMessage<ProcessLimbo::ListProcessesWaitingOnExceptionResponse>& _msg);
+    static void RetrieveExceptionRequest(const ::fidl::DecodedMessage<ProcessLimbo::RetrieveExceptionRequest>& _msg);
+    static void RetrieveExceptionResponse(const ::fidl::DecodedMessage<ProcessLimbo::RetrieveExceptionResponse>& _msg);
+  };
 };
 
 }  // namespace exception

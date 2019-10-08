@@ -66,12 +66,7 @@ Device::UnownedResultOf::GetSecureMemoryPhysicalAddress Device::Call::GetSecureM
 }
 
 ::fidl::DecodeResult<Device::GetSecureMemoryPhysicalAddressResponse> Device::InPlace::GetSecureMemoryPhysicalAddress(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSecureMemoryPhysicalAddressRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevice_GetSecureMemoryPhysicalAddress_Ordinal;
+  Device::SetTransactionHeaderFor::GetSecureMemoryPhysicalAddressRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::GetSecureMemoryPhysicalAddressResponse>::FromFailure(
@@ -128,11 +123,11 @@ void Device::Interface::GetSecureMemoryPhysicalAddressCompleterBase::Reply(int32
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetSecureMemoryPhysicalAddressResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetSecureMemoryPhysicalAddressResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevice_GetSecureMemoryPhysicalAddress_Ordinal;
+  Device::SetTransactionHeaderFor::GetSecureMemoryPhysicalAddressResponse(
+      ::fidl::DecodedMessage<GetSecureMemoryPhysicalAddressResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetSecureMemoryPhysicalAddressResponse::PrimarySize,
+              GetSecureMemoryPhysicalAddressResponse::PrimarySize)));
   _response.s = std::move(s);
   _response.paddr = std::move(paddr);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetSecureMemoryPhysicalAddressResponse));
@@ -145,11 +140,11 @@ void Device::Interface::GetSecureMemoryPhysicalAddressCompleterBase::Reply(::fid
     return;
   }
   auto& _response = *reinterpret_cast<GetSecureMemoryPhysicalAddressResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevice_GetSecureMemoryPhysicalAddress_Ordinal;
+  Device::SetTransactionHeaderFor::GetSecureMemoryPhysicalAddressResponse(
+      ::fidl::DecodedMessage<GetSecureMemoryPhysicalAddressResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetSecureMemoryPhysicalAddressResponse::PrimarySize,
+              GetSecureMemoryPhysicalAddressResponse::PrimarySize)));
   _response.s = std::move(s);
   _response.paddr = std::move(paddr);
   _buffer.set_actual(sizeof(GetSecureMemoryPhysicalAddressResponse));
@@ -157,15 +152,20 @@ void Device::Interface::GetSecureMemoryPhysicalAddressCompleterBase::Reply(::fid
 }
 
 void Device::Interface::GetSecureMemoryPhysicalAddressCompleterBase::Reply(::fidl::DecodedMessage<GetSecureMemoryPhysicalAddressResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevice_GetSecureMemoryPhysicalAddress_Ordinal;
+  Device::SetTransactionHeaderFor::GetSecureMemoryPhysicalAddressResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
+
+
+void Device::SetTransactionHeaderFor::GetSecureMemoryPhysicalAddressRequest(const ::fidl::DecodedMessage<Device::GetSecureMemoryPhysicalAddressRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_GetSecureMemoryPhysicalAddress_Ordinal;
+}
+void Device::SetTransactionHeaderFor::GetSecureMemoryPhysicalAddressResponse(const ::fidl::DecodedMessage<Device::GetSecureMemoryPhysicalAddressResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_GetSecureMemoryPhysicalAddress_Ordinal;
+}
 
 }  // namespace securemem
 }  // namespace hardware

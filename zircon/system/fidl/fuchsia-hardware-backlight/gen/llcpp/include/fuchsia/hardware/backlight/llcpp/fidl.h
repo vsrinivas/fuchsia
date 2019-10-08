@@ -1143,6 +1143,22 @@ class Device final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetStateNormalizedRequest(const ::fidl::DecodedMessage<Device::GetStateNormalizedRequest>& _msg);
+    static void GetStateNormalizedResponse(const ::fidl::DecodedMessage<Device::GetStateNormalizedResponse>& _msg);
+    static void SetStateNormalizedRequest(const ::fidl::DecodedMessage<Device::SetStateNormalizedRequest>& _msg);
+    static void SetStateNormalizedResponse(const ::fidl::DecodedMessage<Device::SetStateNormalizedResponse>& _msg);
+    static void GetStateAbsoluteRequest(const ::fidl::DecodedMessage<Device::GetStateAbsoluteRequest>& _msg);
+    static void GetStateAbsoluteResponse(const ::fidl::DecodedMessage<Device::GetStateAbsoluteResponse>& _msg);
+    static void SetStateAbsoluteRequest(const ::fidl::DecodedMessage<Device::SetStateAbsoluteRequest>& _msg);
+    static void SetStateAbsoluteResponse(const ::fidl::DecodedMessage<Device::SetStateAbsoluteResponse>& _msg);
+    static void GetMaxAbsoluteBrightnessRequest(const ::fidl::DecodedMessage<Device::GetMaxAbsoluteBrightnessRequest>& _msg);
+    static void GetMaxAbsoluteBrightnessResponse(const ::fidl::DecodedMessage<Device::GetMaxAbsoluteBrightnessResponse>& _msg);
+  };
 };
 
 }  // namespace backlight

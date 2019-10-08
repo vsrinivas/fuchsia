@@ -198,6 +198,14 @@ class WriteOnlyLog final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetRequest(const ::fidl::DecodedMessage<WriteOnlyLog::GetRequest>& _msg);
+    static void GetResponse(const ::fidl::DecodedMessage<WriteOnlyLog::GetResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_boot_ReadOnlyLogGetResponseTable;
@@ -366,6 +374,14 @@ class ReadOnlyLog final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetRequest(const ::fidl::DecodedMessage<ReadOnlyLog::GetRequest>& _msg);
+    static void GetResponse(const ::fidl::DecodedMessage<ReadOnlyLog::GetResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_boot_ItemsGetResponseTable;
@@ -569,6 +585,14 @@ class Items final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetRequest(const ::fidl::DecodedMessage<Items::GetRequest>& _msg);
+    static void GetResponse(const ::fidl::DecodedMessage<Items::GetResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_boot_FactoryItemsGetRequestTable;
@@ -767,6 +791,14 @@ class FactoryItems final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetRequest(const ::fidl::DecodedMessage<FactoryItems::GetRequest>& _msg);
+    static void GetResponse(const ::fidl::DecodedMessage<FactoryItems::GetResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_boot_RootResourceGetResponseTable;
@@ -935,6 +967,14 @@ class RootResource final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetRequest(const ::fidl::DecodedMessage<RootResource::GetRequest>& _msg);
+    static void GetResponse(const ::fidl::DecodedMessage<RootResource::GetResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_boot_RootJobGetResponseTable;
@@ -1105,6 +1145,14 @@ class RootJob final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetRequest(const ::fidl::DecodedMessage<RootJob::GetRequest>& _msg);
+    static void GetResponse(const ::fidl::DecodedMessage<RootJob::GetResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_boot_RootJobForInspectGetResponseTable;
@@ -1274,6 +1322,14 @@ class RootJobForInspect final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetRequest(const ::fidl::DecodedMessage<RootJobForInspect::GetRequest>& _msg);
+    static void GetResponse(const ::fidl::DecodedMessage<RootJobForInspect::GetResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_boot_ArgumentsGetResponseTable;
@@ -1448,6 +1504,14 @@ class Arguments final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetRequest(const ::fidl::DecodedMessage<Arguments::GetRequest>& _msg);
+    static void GetResponse(const ::fidl::DecodedMessage<Arguments::GetResponse>& _msg);
+  };
 };
 
 }  // namespace boot

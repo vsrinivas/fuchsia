@@ -349,6 +349,14 @@ class Interface final {
   // event comment #3
   static zx_status_t SendOnEventEvent(::zx::unowned_channel _chan);
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void MethodRequest(const ::fidl::DecodedMessage<Interface::MethodRequest>& _msg);
+    static void OnEventResponse(const ::fidl::DecodedMessage<Interface::OnEventResponse>& _msg);
+  };
 };
 
 // const comment #1

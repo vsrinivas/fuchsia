@@ -239,6 +239,14 @@ class Device final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetSecureMemoryPhysicalAddressRequest(const ::fidl::DecodedMessage<Device::GetSecureMemoryPhysicalAddressRequest>& _msg);
+    static void GetSecureMemoryPhysicalAddressResponse(const ::fidl::DecodedMessage<Device::GetSecureMemoryPhysicalAddressResponse>& _msg);
+  };
 };
 
 }  // namespace securemem

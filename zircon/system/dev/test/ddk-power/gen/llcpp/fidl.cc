@@ -195,12 +195,7 @@ TestDevice::UnownedResultOf::AddDeviceWithPowerArgs TestDevice::Call::AddDeviceW
 }
 
 ::fidl::DecodeResult<TestDevice::AddDeviceWithPowerArgsResponse> TestDevice::InPlace::AddDeviceWithPowerArgs(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceWithPowerArgsRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kTestDevice_AddDeviceWithPowerArgs_Ordinal;
+  TestDevice::SetTransactionHeaderFor::AddDeviceWithPowerArgsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<TestDevice::AddDeviceWithPowerArgsResponse>::FromFailure(
@@ -261,12 +256,7 @@ TestDevice::UnownedResultOf::GetCurrentDevicePowerState TestDevice::Call::GetCur
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetCurrentDevicePowerStateRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kTestDevice_GetCurrentDevicePowerState_Ordinal;
+  TestDevice::SetTransactionHeaderFor::GetCurrentDevicePowerStateRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<TestDevice::GetCurrentDevicePowerStateResponse>::FromFailure(
@@ -335,11 +325,11 @@ void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(::llcpp::
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceWithPowerArgsResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<AddDeviceWithPowerArgsResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kTestDevice_AddDeviceWithPowerArgs_Ordinal;
+  TestDevice::SetTransactionHeaderFor::AddDeviceWithPowerArgsResponse(
+      ::fidl::DecodedMessage<AddDeviceWithPowerArgsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              AddDeviceWithPowerArgsResponse::PrimarySize,
+              AddDeviceWithPowerArgsResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddDeviceWithPowerArgsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceWithPowerArgsResponse>(std::move(_response_bytes)));
@@ -359,11 +349,11 @@ void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(::fidl::B
     return;
   }
   auto& _response = *reinterpret_cast<AddDeviceWithPowerArgsResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kTestDevice_AddDeviceWithPowerArgs_Ordinal;
+  TestDevice::SetTransactionHeaderFor::AddDeviceWithPowerArgsResponse(
+      ::fidl::DecodedMessage<AddDeviceWithPowerArgsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              AddDeviceWithPowerArgsResponse::PrimarySize,
+              AddDeviceWithPowerArgsResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(AddDeviceWithPowerArgsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceWithPowerArgsResponse>(std::move(_buffer)));
@@ -375,12 +365,7 @@ void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::ReplySuccess(::
 }
 
 void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(::fidl::DecodedMessage<AddDeviceWithPowerArgsResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kTestDevice_AddDeviceWithPowerArgs_Ordinal;
+  TestDevice::SetTransactionHeaderFor::AddDeviceWithPowerArgsResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -389,11 +374,11 @@ void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(::llc
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCurrentDevicePowerStateResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetCurrentDevicePowerStateResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kTestDevice_GetCurrentDevicePowerState_Ordinal;
+  TestDevice::SetTransactionHeaderFor::GetCurrentDevicePowerStateResponse(
+      ::fidl::DecodedMessage<GetCurrentDevicePowerStateResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetCurrentDevicePowerStateResponse::PrimarySize,
+              GetCurrentDevicePowerStateResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetCurrentDevicePowerStateResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetCurrentDevicePowerStateResponse>(std::move(_response_bytes)));
@@ -414,11 +399,11 @@ void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(::fid
     return;
   }
   auto& _response = *reinterpret_cast<GetCurrentDevicePowerStateResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kTestDevice_GetCurrentDevicePowerState_Ordinal;
+  TestDevice::SetTransactionHeaderFor::GetCurrentDevicePowerStateResponse(
+      ::fidl::DecodedMessage<GetCurrentDevicePowerStateResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetCurrentDevicePowerStateResponse::PrimarySize,
+              GetCurrentDevicePowerStateResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(GetCurrentDevicePowerStateResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetCurrentDevicePowerStateResponse>(std::move(_buffer)));
@@ -431,15 +416,29 @@ void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::ReplySucces
 }
 
 void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(::fidl::DecodedMessage<GetCurrentDevicePowerStateResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kTestDevice_GetCurrentDevicePowerState_Ordinal;
+  TestDevice::SetTransactionHeaderFor::GetCurrentDevicePowerStateResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
+
+
+void TestDevice::SetTransactionHeaderFor::AddDeviceWithPowerArgsRequest(const ::fidl::DecodedMessage<TestDevice::AddDeviceWithPowerArgsRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kTestDevice_AddDeviceWithPowerArgs_Ordinal;
+}
+void TestDevice::SetTransactionHeaderFor::AddDeviceWithPowerArgsResponse(const ::fidl::DecodedMessage<TestDevice::AddDeviceWithPowerArgsResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kTestDevice_AddDeviceWithPowerArgs_Ordinal;
+}
+
+void TestDevice::SetTransactionHeaderFor::GetCurrentDevicePowerStateRequest(const ::fidl::DecodedMessage<TestDevice::GetCurrentDevicePowerStateRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kTestDevice_GetCurrentDevicePowerState_Ordinal;
+}
+void TestDevice::SetTransactionHeaderFor::GetCurrentDevicePowerStateResponse(const ::fidl::DecodedMessage<TestDevice::GetCurrentDevicePowerStateResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kTestDevice_GetCurrentDevicePowerState_Ordinal;
+}
 
 }  // namespace test
 }  // namespace power

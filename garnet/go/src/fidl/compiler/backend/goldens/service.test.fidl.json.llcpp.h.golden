@@ -142,6 +142,13 @@ class SecondProtocol final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void MethodOnSecondRequest(const ::fidl::DecodedMessage<SecondProtocol::MethodOnSecondRequest>& _msg);
+  };
 };
 
 class FirstProtocol final {
@@ -264,6 +271,13 @@ class FirstProtocol final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void MethodOnFirstRequest(const ::fidl::DecodedMessage<FirstProtocol::MethodOnFirstRequest>& _msg);
+  };
 };
 
 }  // namespace name

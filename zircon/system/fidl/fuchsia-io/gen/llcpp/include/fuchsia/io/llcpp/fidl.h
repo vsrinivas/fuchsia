@@ -298,6 +298,13 @@ class DirectoryWatcher final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void OnEventRequest(const ::fidl::DecodedMessage<DirectoryWatcher::OnEventRequest>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_io_SocketTable;
@@ -1729,6 +1736,26 @@ class Node final {
   // Messages are encoded in-place.
   static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnOpenResponse> params);
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void CloneRequest(const ::fidl::DecodedMessage<Node::CloneRequest>& _msg);
+    static void CloseRequest(const ::fidl::DecodedMessage<Node::CloseRequest>& _msg);
+    static void CloseResponse(const ::fidl::DecodedMessage<Node::CloseResponse>& _msg);
+    static void DescribeRequest(const ::fidl::DecodedMessage<Node::DescribeRequest>& _msg);
+    static void DescribeResponse(const ::fidl::DecodedMessage<Node::DescribeResponse>& _msg);
+    static void OnOpenResponse(const ::fidl::DecodedMessage<Node::OnOpenResponse>& _msg);
+    static void SyncRequest(const ::fidl::DecodedMessage<Node::SyncRequest>& _msg);
+    static void SyncResponse(const ::fidl::DecodedMessage<Node::SyncResponse>& _msg);
+    static void GetAttrRequest(const ::fidl::DecodedMessage<Node::GetAttrRequest>& _msg);
+    static void GetAttrResponse(const ::fidl::DecodedMessage<Node::GetAttrResponse>& _msg);
+    static void SetAttrRequest(const ::fidl::DecodedMessage<Node::SetAttrRequest>& _msg);
+    static void SetAttrResponse(const ::fidl::DecodedMessage<Node::SetAttrResponse>& _msg);
+    static void IoctlRequest(const ::fidl::DecodedMessage<Node::IoctlRequest>& _msg);
+    static void IoctlResponse(const ::fidl::DecodedMessage<Node::IoctlResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_io_FileCloneRequestTable;
@@ -3635,6 +3662,44 @@ class File final {
   // Messages are encoded in-place.
   static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnOpenResponse> params);
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void CloneRequest(const ::fidl::DecodedMessage<File::CloneRequest>& _msg);
+    static void CloseRequest(const ::fidl::DecodedMessage<File::CloseRequest>& _msg);
+    static void CloseResponse(const ::fidl::DecodedMessage<File::CloseResponse>& _msg);
+    static void DescribeRequest(const ::fidl::DecodedMessage<File::DescribeRequest>& _msg);
+    static void DescribeResponse(const ::fidl::DecodedMessage<File::DescribeResponse>& _msg);
+    static void OnOpenResponse(const ::fidl::DecodedMessage<File::OnOpenResponse>& _msg);
+    static void SyncRequest(const ::fidl::DecodedMessage<File::SyncRequest>& _msg);
+    static void SyncResponse(const ::fidl::DecodedMessage<File::SyncResponse>& _msg);
+    static void GetAttrRequest(const ::fidl::DecodedMessage<File::GetAttrRequest>& _msg);
+    static void GetAttrResponse(const ::fidl::DecodedMessage<File::GetAttrResponse>& _msg);
+    static void SetAttrRequest(const ::fidl::DecodedMessage<File::SetAttrRequest>& _msg);
+    static void SetAttrResponse(const ::fidl::DecodedMessage<File::SetAttrResponse>& _msg);
+    static void IoctlRequest(const ::fidl::DecodedMessage<File::IoctlRequest>& _msg);
+    static void IoctlResponse(const ::fidl::DecodedMessage<File::IoctlResponse>& _msg);
+    static void ReadRequest(const ::fidl::DecodedMessage<File::ReadRequest>& _msg);
+    static void ReadResponse(const ::fidl::DecodedMessage<File::ReadResponse>& _msg);
+    static void ReadAtRequest(const ::fidl::DecodedMessage<File::ReadAtRequest>& _msg);
+    static void ReadAtResponse(const ::fidl::DecodedMessage<File::ReadAtResponse>& _msg);
+    static void WriteRequest(const ::fidl::DecodedMessage<File::WriteRequest>& _msg);
+    static void WriteResponse(const ::fidl::DecodedMessage<File::WriteResponse>& _msg);
+    static void WriteAtRequest(const ::fidl::DecodedMessage<File::WriteAtRequest>& _msg);
+    static void WriteAtResponse(const ::fidl::DecodedMessage<File::WriteAtResponse>& _msg);
+    static void SeekRequest(const ::fidl::DecodedMessage<File::SeekRequest>& _msg);
+    static void SeekResponse(const ::fidl::DecodedMessage<File::SeekResponse>& _msg);
+    static void TruncateRequest(const ::fidl::DecodedMessage<File::TruncateRequest>& _msg);
+    static void TruncateResponse(const ::fidl::DecodedMessage<File::TruncateResponse>& _msg);
+    static void GetFlagsRequest(const ::fidl::DecodedMessage<File::GetFlagsRequest>& _msg);
+    static void GetFlagsResponse(const ::fidl::DecodedMessage<File::GetFlagsResponse>& _msg);
+    static void SetFlagsRequest(const ::fidl::DecodedMessage<File::SetFlagsRequest>& _msg);
+    static void SetFlagsResponse(const ::fidl::DecodedMessage<File::SetFlagsResponse>& _msg);
+    static void GetBufferRequest(const ::fidl::DecodedMessage<File::GetBufferRequest>& _msg);
+    static void GetBufferResponse(const ::fidl::DecodedMessage<File::GetBufferResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_io_DirectoryCloneRequestTable;
@@ -5779,6 +5844,41 @@ class Directory final {
   // Messages are encoded in-place.
   static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnOpenResponse> params);
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void CloneRequest(const ::fidl::DecodedMessage<Directory::CloneRequest>& _msg);
+    static void CloseRequest(const ::fidl::DecodedMessage<Directory::CloseRequest>& _msg);
+    static void CloseResponse(const ::fidl::DecodedMessage<Directory::CloseResponse>& _msg);
+    static void DescribeRequest(const ::fidl::DecodedMessage<Directory::DescribeRequest>& _msg);
+    static void DescribeResponse(const ::fidl::DecodedMessage<Directory::DescribeResponse>& _msg);
+    static void OnOpenResponse(const ::fidl::DecodedMessage<Directory::OnOpenResponse>& _msg);
+    static void SyncRequest(const ::fidl::DecodedMessage<Directory::SyncRequest>& _msg);
+    static void SyncResponse(const ::fidl::DecodedMessage<Directory::SyncResponse>& _msg);
+    static void GetAttrRequest(const ::fidl::DecodedMessage<Directory::GetAttrRequest>& _msg);
+    static void GetAttrResponse(const ::fidl::DecodedMessage<Directory::GetAttrResponse>& _msg);
+    static void SetAttrRequest(const ::fidl::DecodedMessage<Directory::SetAttrRequest>& _msg);
+    static void SetAttrResponse(const ::fidl::DecodedMessage<Directory::SetAttrResponse>& _msg);
+    static void IoctlRequest(const ::fidl::DecodedMessage<Directory::IoctlRequest>& _msg);
+    static void IoctlResponse(const ::fidl::DecodedMessage<Directory::IoctlResponse>& _msg);
+    static void OpenRequest(const ::fidl::DecodedMessage<Directory::OpenRequest>& _msg);
+    static void UnlinkRequest(const ::fidl::DecodedMessage<Directory::UnlinkRequest>& _msg);
+    static void UnlinkResponse(const ::fidl::DecodedMessage<Directory::UnlinkResponse>& _msg);
+    static void ReadDirentsRequest(const ::fidl::DecodedMessage<Directory::ReadDirentsRequest>& _msg);
+    static void ReadDirentsResponse(const ::fidl::DecodedMessage<Directory::ReadDirentsResponse>& _msg);
+    static void RewindRequest(const ::fidl::DecodedMessage<Directory::RewindRequest>& _msg);
+    static void RewindResponse(const ::fidl::DecodedMessage<Directory::RewindResponse>& _msg);
+    static void GetTokenRequest(const ::fidl::DecodedMessage<Directory::GetTokenRequest>& _msg);
+    static void GetTokenResponse(const ::fidl::DecodedMessage<Directory::GetTokenResponse>& _msg);
+    static void RenameRequest(const ::fidl::DecodedMessage<Directory::RenameRequest>& _msg);
+    static void RenameResponse(const ::fidl::DecodedMessage<Directory::RenameResponse>& _msg);
+    static void LinkRequest(const ::fidl::DecodedMessage<Directory::LinkRequest>& _msg);
+    static void LinkResponse(const ::fidl::DecodedMessage<Directory::LinkResponse>& _msg);
+    static void WatchRequest(const ::fidl::DecodedMessage<Directory::WatchRequest>& _msg);
+    static void WatchResponse(const ::fidl::DecodedMessage<Directory::WatchResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloneRequestTable;
@@ -8485,6 +8585,53 @@ class DirectoryAdmin final {
   // Messages are encoded in-place.
   static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnOpenResponse> params);
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void CloneRequest(const ::fidl::DecodedMessage<DirectoryAdmin::CloneRequest>& _msg);
+    static void CloseRequest(const ::fidl::DecodedMessage<DirectoryAdmin::CloseRequest>& _msg);
+    static void CloseResponse(const ::fidl::DecodedMessage<DirectoryAdmin::CloseResponse>& _msg);
+    static void DescribeRequest(const ::fidl::DecodedMessage<DirectoryAdmin::DescribeRequest>& _msg);
+    static void DescribeResponse(const ::fidl::DecodedMessage<DirectoryAdmin::DescribeResponse>& _msg);
+    static void OnOpenResponse(const ::fidl::DecodedMessage<DirectoryAdmin::OnOpenResponse>& _msg);
+    static void SyncRequest(const ::fidl::DecodedMessage<DirectoryAdmin::SyncRequest>& _msg);
+    static void SyncResponse(const ::fidl::DecodedMessage<DirectoryAdmin::SyncResponse>& _msg);
+    static void GetAttrRequest(const ::fidl::DecodedMessage<DirectoryAdmin::GetAttrRequest>& _msg);
+    static void GetAttrResponse(const ::fidl::DecodedMessage<DirectoryAdmin::GetAttrResponse>& _msg);
+    static void SetAttrRequest(const ::fidl::DecodedMessage<DirectoryAdmin::SetAttrRequest>& _msg);
+    static void SetAttrResponse(const ::fidl::DecodedMessage<DirectoryAdmin::SetAttrResponse>& _msg);
+    static void IoctlRequest(const ::fidl::DecodedMessage<DirectoryAdmin::IoctlRequest>& _msg);
+    static void IoctlResponse(const ::fidl::DecodedMessage<DirectoryAdmin::IoctlResponse>& _msg);
+    static void OpenRequest(const ::fidl::DecodedMessage<DirectoryAdmin::OpenRequest>& _msg);
+    static void UnlinkRequest(const ::fidl::DecodedMessage<DirectoryAdmin::UnlinkRequest>& _msg);
+    static void UnlinkResponse(const ::fidl::DecodedMessage<DirectoryAdmin::UnlinkResponse>& _msg);
+    static void ReadDirentsRequest(const ::fidl::DecodedMessage<DirectoryAdmin::ReadDirentsRequest>& _msg);
+    static void ReadDirentsResponse(const ::fidl::DecodedMessage<DirectoryAdmin::ReadDirentsResponse>& _msg);
+    static void RewindRequest(const ::fidl::DecodedMessage<DirectoryAdmin::RewindRequest>& _msg);
+    static void RewindResponse(const ::fidl::DecodedMessage<DirectoryAdmin::RewindResponse>& _msg);
+    static void GetTokenRequest(const ::fidl::DecodedMessage<DirectoryAdmin::GetTokenRequest>& _msg);
+    static void GetTokenResponse(const ::fidl::DecodedMessage<DirectoryAdmin::GetTokenResponse>& _msg);
+    static void RenameRequest(const ::fidl::DecodedMessage<DirectoryAdmin::RenameRequest>& _msg);
+    static void RenameResponse(const ::fidl::DecodedMessage<DirectoryAdmin::RenameResponse>& _msg);
+    static void LinkRequest(const ::fidl::DecodedMessage<DirectoryAdmin::LinkRequest>& _msg);
+    static void LinkResponse(const ::fidl::DecodedMessage<DirectoryAdmin::LinkResponse>& _msg);
+    static void WatchRequest(const ::fidl::DecodedMessage<DirectoryAdmin::WatchRequest>& _msg);
+    static void WatchResponse(const ::fidl::DecodedMessage<DirectoryAdmin::WatchResponse>& _msg);
+    static void MountRequest(const ::fidl::DecodedMessage<DirectoryAdmin::MountRequest>& _msg);
+    static void MountResponse(const ::fidl::DecodedMessage<DirectoryAdmin::MountResponse>& _msg);
+    static void MountAndCreateRequest(const ::fidl::DecodedMessage<DirectoryAdmin::MountAndCreateRequest>& _msg);
+    static void MountAndCreateResponse(const ::fidl::DecodedMessage<DirectoryAdmin::MountAndCreateResponse>& _msg);
+    static void UnmountRequest(const ::fidl::DecodedMessage<DirectoryAdmin::UnmountRequest>& _msg);
+    static void UnmountResponse(const ::fidl::DecodedMessage<DirectoryAdmin::UnmountResponse>& _msg);
+    static void UnmountNodeRequest(const ::fidl::DecodedMessage<DirectoryAdmin::UnmountNodeRequest>& _msg);
+    static void UnmountNodeResponse(const ::fidl::DecodedMessage<DirectoryAdmin::UnmountNodeResponse>& _msg);
+    static void QueryFilesystemRequest(const ::fidl::DecodedMessage<DirectoryAdmin::QueryFilesystemRequest>& _msg);
+    static void QueryFilesystemResponse(const ::fidl::DecodedMessage<DirectoryAdmin::QueryFilesystemResponse>& _msg);
+    static void GetDevicePathRequest(const ::fidl::DecodedMessage<DirectoryAdmin::GetDevicePathRequest>& _msg);
+    static void GetDevicePathResponse(const ::fidl::DecodedMessage<DirectoryAdmin::GetDevicePathResponse>& _msg);
+  };
 };
 
 // A dirent with an unknown type.

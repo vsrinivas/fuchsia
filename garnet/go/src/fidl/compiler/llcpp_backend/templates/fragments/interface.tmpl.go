@@ -403,6 +403,20 @@ class {{ .Name }} final {
 {{ "" }}
     {{- end }}
   {{- end }}
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+  {{- range .Methods }}
+    {{- if .HasRequest }}
+    static void {{ template "SetTransactionHeaderForRequestMethodSignature" . }};
+    {{- end }}
+    {{- if .HasResponse }}
+    static void {{ template "SetTransactionHeaderForResponseMethodSignature" . }};
+    {{- end }}
+  {{- end }}
+  };
 };
 {{- end }}
 
@@ -538,6 +552,19 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
         {{- template "ReplyInPlaceMethodDefinition" . }}
       {{- end }}
 {{ "" }}
+    {{- end }}
+  {{- end }}
+{{ "" }}
+
+  {{- range .Methods }}
+{{ "" }}
+    {{- if .HasRequest }}
+{{ "" }}
+      {{- template "SetTransactionHeaderForRequestMethodDefinition" . }}
+    {{- end }}
+    {{- if .HasResponse }}
+{{ "" }}
+      {{- template "SetTransactionHeaderForResponseMethodDefinition" . }}
     {{- end }}
   {{- end }}
 {{- end }}

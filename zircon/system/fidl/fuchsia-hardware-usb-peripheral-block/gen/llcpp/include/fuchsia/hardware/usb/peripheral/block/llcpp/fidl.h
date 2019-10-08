@@ -431,6 +431,18 @@ class Device final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void EnableWritebackCacheRequest(const ::fidl::DecodedMessage<Device::EnableWritebackCacheRequest>& _msg);
+    static void EnableWritebackCacheResponse(const ::fidl::DecodedMessage<Device::EnableWritebackCacheResponse>& _msg);
+    static void DisableWritebackCacheRequest(const ::fidl::DecodedMessage<Device::DisableWritebackCacheRequest>& _msg);
+    static void DisableWritebackCacheResponse(const ::fidl::DecodedMessage<Device::DisableWritebackCacheResponse>& _msg);
+    static void SetWritebackCacheReportedRequest(const ::fidl::DecodedMessage<Device::SetWritebackCacheReportedRequest>& _msg);
+    static void SetWritebackCacheReportedResponse(const ::fidl::DecodedMessage<Device::SetWritebackCacheReportedResponse>& _msg);
+  };
 };
 
 }  // namespace block

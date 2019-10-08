@@ -322,6 +322,14 @@ class NameProvider final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetDeviceNameRequest(const ::fidl::DecodedMessage<NameProvider::GetDeviceNameRequest>& _msg);
+    static void GetDeviceNameResponse(const ::fidl::DecodedMessage<NameProvider::GetDeviceNameResponse>& _msg);
+  };
 };
 
 constexpr uint32_t MIN_DEVICE_POWER_STATES = 2u;
@@ -2398,6 +2406,44 @@ class Controller final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void BindRequest(const ::fidl::DecodedMessage<Controller::BindRequest>& _msg);
+    static void BindResponse(const ::fidl::DecodedMessage<Controller::BindResponse>& _msg);
+    static void ScheduleUnbindRequest(const ::fidl::DecodedMessage<Controller::ScheduleUnbindRequest>& _msg);
+    static void ScheduleUnbindResponse(const ::fidl::DecodedMessage<Controller::ScheduleUnbindResponse>& _msg);
+    static void GetDriverNameRequest(const ::fidl::DecodedMessage<Controller::GetDriverNameRequest>& _msg);
+    static void GetDriverNameResponse(const ::fidl::DecodedMessage<Controller::GetDriverNameResponse>& _msg);
+    static void GetDeviceNameRequest(const ::fidl::DecodedMessage<Controller::GetDeviceNameRequest>& _msg);
+    static void GetDeviceNameResponse(const ::fidl::DecodedMessage<Controller::GetDeviceNameResponse>& _msg);
+    static void GetTopologicalPathRequest(const ::fidl::DecodedMessage<Controller::GetTopologicalPathRequest>& _msg);
+    static void GetTopologicalPathResponse(const ::fidl::DecodedMessage<Controller::GetTopologicalPathResponse>& _msg);
+    static void GetEventHandleRequest(const ::fidl::DecodedMessage<Controller::GetEventHandleRequest>& _msg);
+    static void GetEventHandleResponse(const ::fidl::DecodedMessage<Controller::GetEventHandleResponse>& _msg);
+    static void GetDriverLogFlagsRequest(const ::fidl::DecodedMessage<Controller::GetDriverLogFlagsRequest>& _msg);
+    static void GetDriverLogFlagsResponse(const ::fidl::DecodedMessage<Controller::GetDriverLogFlagsResponse>& _msg);
+    static void SetDriverLogFlagsRequest(const ::fidl::DecodedMessage<Controller::SetDriverLogFlagsRequest>& _msg);
+    static void SetDriverLogFlagsResponse(const ::fidl::DecodedMessage<Controller::SetDriverLogFlagsResponse>& _msg);
+    static void DebugSuspendRequest(const ::fidl::DecodedMessage<Controller::DebugSuspendRequest>& _msg);
+    static void DebugSuspendResponse(const ::fidl::DecodedMessage<Controller::DebugSuspendResponse>& _msg);
+    static void DebugResumeRequest(const ::fidl::DecodedMessage<Controller::DebugResumeRequest>& _msg);
+    static void DebugResumeResponse(const ::fidl::DecodedMessage<Controller::DebugResumeResponse>& _msg);
+    static void RunCompatibilityTestsRequest(const ::fidl::DecodedMessage<Controller::RunCompatibilityTestsRequest>& _msg);
+    static void RunCompatibilityTestsResponse(const ::fidl::DecodedMessage<Controller::RunCompatibilityTestsResponse>& _msg);
+    static void GetDevicePowerCapsRequest(const ::fidl::DecodedMessage<Controller::GetDevicePowerCapsRequest>& _msg);
+    static void GetDevicePowerCapsResponse(const ::fidl::DecodedMessage<Controller::GetDevicePowerCapsResponse>& _msg);
+    static void UpdatePowerStateMappingRequest(const ::fidl::DecodedMessage<Controller::UpdatePowerStateMappingRequest>& _msg);
+    static void UpdatePowerStateMappingResponse(const ::fidl::DecodedMessage<Controller::UpdatePowerStateMappingResponse>& _msg);
+    static void GetPowerStateMappingRequest(const ::fidl::DecodedMessage<Controller::GetPowerStateMappingRequest>& _msg);
+    static void GetPowerStateMappingResponse(const ::fidl::DecodedMessage<Controller::GetPowerStateMappingResponse>& _msg);
+    static void SuspendRequest(const ::fidl::DecodedMessage<Controller::SuspendRequest>& _msg);
+    static void SuspendResponse(const ::fidl::DecodedMessage<Controller::SuspendResponse>& _msg);
+    static void ResumeRequest(const ::fidl::DecodedMessage<Controller::ResumeRequest>& _msg);
+    static void ResumeResponse(const ::fidl::DecodedMessage<Controller::ResumeResponse>& _msg);
+  };
 };
 
 }  // namespace device

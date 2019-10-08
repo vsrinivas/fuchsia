@@ -350,6 +350,16 @@ class DeviceManager final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void UnsealRequest(const ::fidl::DecodedMessage<DeviceManager::UnsealRequest>& _msg);
+    static void UnsealResponse(const ::fidl::DecodedMessage<DeviceManager::UnsealResponse>& _msg);
+    static void SealRequest(const ::fidl::DecodedMessage<DeviceManager::SealRequest>& _msg);
+    static void SealResponse(const ::fidl::DecodedMessage<DeviceManager::SealResponse>& _msg);
+  };
 };
 
 // We require simple layout to use the simple C bindings, and simple layout

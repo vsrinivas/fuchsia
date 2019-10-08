@@ -25,7 +25,7 @@ void {{ .LLProps.InterfaceName }}::Interface::{{ .Name }}CompleterBase::{{ templ
   {{- else }}
   auto& _response = *reinterpret_cast<{{ .Name }}Response*>(_write_bytes);
   {{- end }}
-  {{- template "SetTxnHeader" . }}
+  {{- template "SetTransactionHeaderForResponse" . }}
   {{- template "FillResponseStructMembers" .Response -}}
 
   {{- if .LLProps.LinearizeResponse }}

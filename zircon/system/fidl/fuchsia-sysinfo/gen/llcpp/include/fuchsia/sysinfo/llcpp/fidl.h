@@ -349,6 +349,18 @@ class Device final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetHypervisorResourceRequest(const ::fidl::DecodedMessage<Device::GetHypervisorResourceRequest>& _msg);
+    static void GetHypervisorResourceResponse(const ::fidl::DecodedMessage<Device::GetHypervisorResourceResponse>& _msg);
+    static void GetBoardNameRequest(const ::fidl::DecodedMessage<Device::GetBoardNameRequest>& _msg);
+    static void GetBoardNameResponse(const ::fidl::DecodedMessage<Device::GetBoardNameResponse>& _msg);
+    static void GetInterruptControllerInfoRequest(const ::fidl::DecodedMessage<Device::GetInterruptControllerInfoRequest>& _msg);
+    static void GetInterruptControllerInfoResponse(const ::fidl::DecodedMessage<Device::GetInterruptControllerInfoResponse>& _msg);
+  };
 };
 
 constexpr uint8_t SYSINFO_BOARD_NAME_LEN = 32u;

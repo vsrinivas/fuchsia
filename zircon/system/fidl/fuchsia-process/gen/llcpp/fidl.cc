@@ -70,12 +70,7 @@ Resolver::UnownedResultOf::Resolve Resolver::Call::Resolve(zx::unowned_channel _
 }
 
 ::fidl::DecodeResult<Resolver::ResolveResponse> Resolver::InPlace::Resolve(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ResolveRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kResolver_Resolve_Ordinal;
+  Resolver::SetTransactionHeaderFor::ResolveRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Resolver::ResolveResponse>::FromFailure(
@@ -132,11 +127,11 @@ void Resolver::Interface::ResolveCompleterBase::Reply(int32_t status, ::zx::vmo 
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ResolveResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ResolveResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kResolver_Resolve_Ordinal;
+  Resolver::SetTransactionHeaderFor::ResolveResponse(
+      ::fidl::DecodedMessage<ResolveResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ResolveResponse::PrimarySize,
+              ResolveResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.executable = std::move(executable);
   _response.ldsvc = std::move(ldsvc);
@@ -150,11 +145,11 @@ void Resolver::Interface::ResolveCompleterBase::Reply(::fidl::BytePart _buffer, 
     return;
   }
   auto& _response = *reinterpret_cast<ResolveResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kResolver_Resolve_Ordinal;
+  Resolver::SetTransactionHeaderFor::ResolveResponse(
+      ::fidl::DecodedMessage<ResolveResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ResolveResponse::PrimarySize,
+              ResolveResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.executable = std::move(executable);
   _response.ldsvc = std::move(ldsvc);
@@ -163,15 +158,20 @@ void Resolver::Interface::ResolveCompleterBase::Reply(::fidl::BytePart _buffer, 
 }
 
 void Resolver::Interface::ResolveCompleterBase::Reply(::fidl::DecodedMessage<ResolveResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kResolver_Resolve_Ordinal;
+  Resolver::SetTransactionHeaderFor::ResolveResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
+
+
+void Resolver::SetTransactionHeaderFor::ResolveRequest(const ::fidl::DecodedMessage<Resolver::ResolveRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kResolver_Resolve_Ordinal;
+}
+void Resolver::SetTransactionHeaderFor::ResolveResponse(const ::fidl::DecodedMessage<Resolver::ResolveResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kResolver_Resolve_Ordinal;
+}
 
 namespace {
 
@@ -261,12 +261,7 @@ Launcher::UnownedResultOf::Launch Launcher::Call::Launch(zx::unowned_channel _cl
 }
 
 ::fidl::DecodeResult<Launcher::LaunchResponse> Launcher::InPlace::Launch(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LaunchRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLauncher_Launch_Ordinal;
+  Launcher::SetTransactionHeaderFor::LaunchRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Launcher::LaunchResponse>::FromFailure(
@@ -333,12 +328,7 @@ Launcher::UnownedResultOf::CreateWithoutStarting Launcher::Call::CreateWithoutSt
 }
 
 ::fidl::DecodeResult<Launcher::CreateWithoutStartingResponse> Launcher::InPlace::CreateWithoutStarting(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateWithoutStartingRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLauncher_CreateWithoutStarting_Ordinal;
+  Launcher::SetTransactionHeaderFor::CreateWithoutStartingRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Launcher::CreateWithoutStartingResponse>::FromFailure(
@@ -406,12 +396,7 @@ Launcher::UnownedResultOf::AddArgs Launcher::Call::AddArgs(zx::unowned_channel _
 }
 
 ::fidl::internal::StatusAndError Launcher::InPlace::AddArgs(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddArgsRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLauncher_AddArgs_Ordinal;
+  Launcher::SetTransactionHeaderFor::AddArgsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -479,12 +464,7 @@ Launcher::UnownedResultOf::AddEnvirons Launcher::Call::AddEnvirons(zx::unowned_c
 }
 
 ::fidl::internal::StatusAndError Launcher::InPlace::AddEnvirons(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddEnvironsRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLauncher_AddEnvirons_Ordinal;
+  Launcher::SetTransactionHeaderFor::AddEnvironsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -552,12 +532,7 @@ Launcher::UnownedResultOf::AddNames Launcher::Call::AddNames(zx::unowned_channel
 }
 
 ::fidl::internal::StatusAndError Launcher::InPlace::AddNames(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddNamesRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLauncher_AddNames_Ordinal;
+  Launcher::SetTransactionHeaderFor::AddNamesRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -625,12 +600,7 @@ Launcher::UnownedResultOf::AddHandles Launcher::Call::AddHandles(zx::unowned_cha
 }
 
 ::fidl::internal::StatusAndError Launcher::InPlace::AddHandles(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddHandlesRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLauncher_AddHandles_Ordinal;
+  Launcher::SetTransactionHeaderFor::AddHandlesRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -752,11 +722,11 @@ void Launcher::Interface::LaunchCompleterBase::Reply(int32_t status, ::zx::proce
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LaunchResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<LaunchResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLauncher_Launch_Ordinal;
+  Launcher::SetTransactionHeaderFor::LaunchResponse(
+      ::fidl::DecodedMessage<LaunchResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              LaunchResponse::PrimarySize,
+              LaunchResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.process = std::move(process);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(LaunchResponse));
@@ -769,11 +739,11 @@ void Launcher::Interface::LaunchCompleterBase::Reply(::fidl::BytePart _buffer, i
     return;
   }
   auto& _response = *reinterpret_cast<LaunchResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLauncher_Launch_Ordinal;
+  Launcher::SetTransactionHeaderFor::LaunchResponse(
+      ::fidl::DecodedMessage<LaunchResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              LaunchResponse::PrimarySize,
+              LaunchResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.process = std::move(process);
   _buffer.set_actual(sizeof(LaunchResponse));
@@ -781,12 +751,7 @@ void Launcher::Interface::LaunchCompleterBase::Reply(::fidl::BytePart _buffer, i
 }
 
 void Launcher::Interface::LaunchCompleterBase::Reply(::fidl::DecodedMessage<LaunchResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLauncher_Launch_Ordinal;
+  Launcher::SetTransactionHeaderFor::LaunchResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -795,11 +760,11 @@ void Launcher::Interface::CreateWithoutStartingCompleterBase::Reply(int32_t stat
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateWithoutStartingResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   CreateWithoutStartingResponse _response = {};
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLauncher_CreateWithoutStarting_Ordinal;
+  Launcher::SetTransactionHeaderFor::CreateWithoutStartingResponse(
+      ::fidl::DecodedMessage<CreateWithoutStartingResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              CreateWithoutStartingResponse::PrimarySize,
+              CreateWithoutStartingResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.data = std::move(data);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
@@ -817,11 +782,11 @@ void Launcher::Interface::CreateWithoutStartingCompleterBase::Reply(::fidl::Byte
     return;
   }
   CreateWithoutStartingResponse _response = {};
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLauncher_CreateWithoutStarting_Ordinal;
+  Launcher::SetTransactionHeaderFor::CreateWithoutStartingResponse(
+      ::fidl::DecodedMessage<CreateWithoutStartingResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              CreateWithoutStartingResponse::PrimarySize,
+              CreateWithoutStartingResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.data = std::move(data);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
@@ -833,15 +798,49 @@ void Launcher::Interface::CreateWithoutStartingCompleterBase::Reply(::fidl::Byte
 }
 
 void Launcher::Interface::CreateWithoutStartingCompleterBase::Reply(::fidl::DecodedMessage<CreateWithoutStartingResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLauncher_CreateWithoutStarting_Ordinal;
+  Launcher::SetTransactionHeaderFor::CreateWithoutStartingResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
+
+
+void Launcher::SetTransactionHeaderFor::LaunchRequest(const ::fidl::DecodedMessage<Launcher::LaunchRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLauncher_Launch_Ordinal;
+}
+void Launcher::SetTransactionHeaderFor::LaunchResponse(const ::fidl::DecodedMessage<Launcher::LaunchResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLauncher_Launch_Ordinal;
+}
+
+void Launcher::SetTransactionHeaderFor::CreateWithoutStartingRequest(const ::fidl::DecodedMessage<Launcher::CreateWithoutStartingRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLauncher_CreateWithoutStarting_Ordinal;
+}
+void Launcher::SetTransactionHeaderFor::CreateWithoutStartingResponse(const ::fidl::DecodedMessage<Launcher::CreateWithoutStartingResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLauncher_CreateWithoutStarting_Ordinal;
+}
+
+void Launcher::SetTransactionHeaderFor::AddArgsRequest(const ::fidl::DecodedMessage<Launcher::AddArgsRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLauncher_AddArgs_Ordinal;
+}
+
+void Launcher::SetTransactionHeaderFor::AddEnvironsRequest(const ::fidl::DecodedMessage<Launcher::AddEnvironsRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLauncher_AddEnvirons_Ordinal;
+}
+
+void Launcher::SetTransactionHeaderFor::AddNamesRequest(const ::fidl::DecodedMessage<Launcher::AddNamesRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLauncher_AddNames_Ordinal;
+}
+
+void Launcher::SetTransactionHeaderFor::AddHandlesRequest(const ::fidl::DecodedMessage<Launcher::AddHandlesRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLauncher_AddHandles_Ordinal;
+}
 
 }  // namespace process
 }  // namespace fuchsia

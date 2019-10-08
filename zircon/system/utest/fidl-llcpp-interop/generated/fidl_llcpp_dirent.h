@@ -501,6 +501,20 @@ class DirEntTestInterface final {
   // Messages are encoded in-place.
   static zx_status_t SendOnDirentsEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnDirentsResponse> params);
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void CountNumDirectoriesRequest(const ::fidl::DecodedMessage<DirEntTestInterface::CountNumDirectoriesRequest>& _msg);
+    static void CountNumDirectoriesResponse(const ::fidl::DecodedMessage<DirEntTestInterface::CountNumDirectoriesResponse>& _msg);
+    static void ReadDirRequest(const ::fidl::DecodedMessage<DirEntTestInterface::ReadDirRequest>& _msg);
+    static void ReadDirResponse(const ::fidl::DecodedMessage<DirEntTestInterface::ReadDirResponse>& _msg);
+    static void ConsumeDirectoriesRequest(const ::fidl::DecodedMessage<DirEntTestInterface::ConsumeDirectoriesRequest>& _msg);
+    static void ConsumeDirectoriesResponse(const ::fidl::DecodedMessage<DirEntTestInterface::ConsumeDirectoriesResponse>& _msg);
+    static void OnDirentsResponse(const ::fidl::DecodedMessage<DirEntTestInterface::OnDirentsResponse>& _msg);
+    static void OneWayDirentsRequest(const ::fidl::DecodedMessage<DirEntTestInterface::OneWayDirentsRequest>& _msg);
+  };
 };
 
 }  // namespace dirent

@@ -66,12 +66,7 @@ Provider::UnownedResultOf::RequestPersistentStorage Provider::Call::RequestPersi
 }
 
 ::fidl::internal::StatusAndError Provider::InPlace::RequestPersistentStorage(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RequestPersistentStorageRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kProvider_RequestPersistentStorage_Ordinal;
+  Provider::SetTransactionHeaderFor::RequestPersistentStorageRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -123,6 +118,12 @@ bool Provider::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
   return found;
 }
 
+
+
+void Provider::SetTransactionHeaderFor::RequestPersistentStorageRequest(const ::fidl::DecodedMessage<Provider::RequestPersistentStorageRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kProvider_RequestPersistentStorage_Ordinal;
+}
 
 }  // namespace manager
 }  // namespace tee

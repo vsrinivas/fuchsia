@@ -310,6 +310,15 @@ class DebugData final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void PublishRequest(const ::fidl::DecodedMessage<DebugData::PublishRequest>& _msg);
+    static void LoadConfigRequest(const ::fidl::DecodedMessage<DebugData::LoadConfigRequest>& _msg);
+    static void LoadConfigResponse(const ::fidl::DecodedMessage<DebugData::LoadConfigResponse>& _msg);
+  };
 };
 
 // The maximum length, in bytes, of data sink or configuration name.

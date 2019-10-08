@@ -1337,6 +1337,40 @@ class Volume final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetInfoRequest(const ::fidl::DecodedMessage<Volume::GetInfoRequest>& _msg);
+    static void GetInfoResponse(const ::fidl::DecodedMessage<Volume::GetInfoResponse>& _msg);
+    static void GetStatsRequest(const ::fidl::DecodedMessage<Volume::GetStatsRequest>& _msg);
+    static void GetStatsResponse(const ::fidl::DecodedMessage<Volume::GetStatsResponse>& _msg);
+    static void GetFifoRequest(const ::fidl::DecodedMessage<Volume::GetFifoRequest>& _msg);
+    static void GetFifoResponse(const ::fidl::DecodedMessage<Volume::GetFifoResponse>& _msg);
+    static void AttachVmoRequest(const ::fidl::DecodedMessage<Volume::AttachVmoRequest>& _msg);
+    static void AttachVmoResponse(const ::fidl::DecodedMessage<Volume::AttachVmoResponse>& _msg);
+    static void CloseFifoRequest(const ::fidl::DecodedMessage<Volume::CloseFifoRequest>& _msg);
+    static void CloseFifoResponse(const ::fidl::DecodedMessage<Volume::CloseFifoResponse>& _msg);
+    static void RebindDeviceRequest(const ::fidl::DecodedMessage<Volume::RebindDeviceRequest>& _msg);
+    static void RebindDeviceResponse(const ::fidl::DecodedMessage<Volume::RebindDeviceResponse>& _msg);
+    static void GetTypeGuidRequest(const ::fidl::DecodedMessage<Volume::GetTypeGuidRequest>& _msg);
+    static void GetTypeGuidResponse(const ::fidl::DecodedMessage<Volume::GetTypeGuidResponse>& _msg);
+    static void GetInstanceGuidRequest(const ::fidl::DecodedMessage<Volume::GetInstanceGuidRequest>& _msg);
+    static void GetInstanceGuidResponse(const ::fidl::DecodedMessage<Volume::GetInstanceGuidResponse>& _msg);
+    static void GetNameRequest(const ::fidl::DecodedMessage<Volume::GetNameRequest>& _msg);
+    static void GetNameResponse(const ::fidl::DecodedMessage<Volume::GetNameResponse>& _msg);
+    static void QueryRequest(const ::fidl::DecodedMessage<Volume::QueryRequest>& _msg);
+    static void QueryResponse(const ::fidl::DecodedMessage<Volume::QueryResponse>& _msg);
+    static void QuerySlicesRequest(const ::fidl::DecodedMessage<Volume::QuerySlicesRequest>& _msg);
+    static void QuerySlicesResponse(const ::fidl::DecodedMessage<Volume::QuerySlicesResponse>& _msg);
+    static void ExtendRequest(const ::fidl::DecodedMessage<Volume::ExtendRequest>& _msg);
+    static void ExtendResponse(const ::fidl::DecodedMessage<Volume::ExtendResponse>& _msg);
+    static void ShrinkRequest(const ::fidl::DecodedMessage<Volume::ShrinkRequest>& _msg);
+    static void ShrinkResponse(const ::fidl::DecodedMessage<Volume::ShrinkResponse>& _msg);
+    static void DestroyRequest(const ::fidl::DecodedMessage<Volume::DestroyRequest>& _msg);
+    static void DestroyResponse(const ::fidl::DecodedMessage<Volume::DestroyResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerAllocatePartitionRequestTable;
@@ -1766,6 +1800,20 @@ class VolumeManager final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void AllocatePartitionRequest(const ::fidl::DecodedMessage<VolumeManager::AllocatePartitionRequest>& _msg);
+    static void AllocatePartitionResponse(const ::fidl::DecodedMessage<VolumeManager::AllocatePartitionResponse>& _msg);
+    static void QueryRequest(const ::fidl::DecodedMessage<VolumeManager::QueryRequest>& _msg);
+    static void QueryResponse(const ::fidl::DecodedMessage<VolumeManager::QueryResponse>& _msg);
+    static void GetInfoRequest(const ::fidl::DecodedMessage<VolumeManager::GetInfoRequest>& _msg);
+    static void GetInfoResponse(const ::fidl::DecodedMessage<VolumeManager::GetInfoResponse>& _msg);
+    static void ActivateRequest(const ::fidl::DecodedMessage<VolumeManager::ActivateRequest>& _msg);
+    static void ActivateResponse(const ::fidl::DecodedMessage<VolumeManager::ActivateResponse>& _msg);
+  };
 };
 
 }  // namespace volume

@@ -466,6 +466,16 @@ class PayloadStream final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void RegisterVmoRequest(const ::fidl::DecodedMessage<PayloadStream::RegisterVmoRequest>& _msg);
+    static void RegisterVmoResponse(const ::fidl::DecodedMessage<PayloadStream::RegisterVmoResponse>& _msg);
+    static void ReadDataRequest(const ::fidl::DecodedMessage<PayloadStream::ReadDataRequest>& _msg);
+    static void ReadDataResponse(const ::fidl::DecodedMessage<PayloadStream::ReadDataResponse>& _msg);
+  };
 };
 
 
@@ -2524,6 +2534,40 @@ class Paver final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void InitializeAbrRequest(const ::fidl::DecodedMessage<Paver::InitializeAbrRequest>& _msg);
+    static void InitializeAbrResponse(const ::fidl::DecodedMessage<Paver::InitializeAbrResponse>& _msg);
+    static void QueryActiveConfigurationRequest(const ::fidl::DecodedMessage<Paver::QueryActiveConfigurationRequest>& _msg);
+    static void QueryActiveConfigurationResponse(const ::fidl::DecodedMessage<Paver::QueryActiveConfigurationResponse>& _msg);
+    static void QueryConfigurationStatusRequest(const ::fidl::DecodedMessage<Paver::QueryConfigurationStatusRequest>& _msg);
+    static void QueryConfigurationStatusResponse(const ::fidl::DecodedMessage<Paver::QueryConfigurationStatusResponse>& _msg);
+    static void SetConfigurationActiveRequest(const ::fidl::DecodedMessage<Paver::SetConfigurationActiveRequest>& _msg);
+    static void SetConfigurationActiveResponse(const ::fidl::DecodedMessage<Paver::SetConfigurationActiveResponse>& _msg);
+    static void SetConfigurationUnbootableRequest(const ::fidl::DecodedMessage<Paver::SetConfigurationUnbootableRequest>& _msg);
+    static void SetConfigurationUnbootableResponse(const ::fidl::DecodedMessage<Paver::SetConfigurationUnbootableResponse>& _msg);
+    static void SetActiveConfigurationHealthyRequest(const ::fidl::DecodedMessage<Paver::SetActiveConfigurationHealthyRequest>& _msg);
+    static void SetActiveConfigurationHealthyResponse(const ::fidl::DecodedMessage<Paver::SetActiveConfigurationHealthyResponse>& _msg);
+    static void ReadAssetRequest(const ::fidl::DecodedMessage<Paver::ReadAssetRequest>& _msg);
+    static void ReadAssetResponse(const ::fidl::DecodedMessage<Paver::ReadAssetResponse>& _msg);
+    static void WriteAssetRequest(const ::fidl::DecodedMessage<Paver::WriteAssetRequest>& _msg);
+    static void WriteAssetResponse(const ::fidl::DecodedMessage<Paver::WriteAssetResponse>& _msg);
+    static void WriteVolumesRequest(const ::fidl::DecodedMessage<Paver::WriteVolumesRequest>& _msg);
+    static void WriteVolumesResponse(const ::fidl::DecodedMessage<Paver::WriteVolumesResponse>& _msg);
+    static void WriteBootloaderRequest(const ::fidl::DecodedMessage<Paver::WriteBootloaderRequest>& _msg);
+    static void WriteBootloaderResponse(const ::fidl::DecodedMessage<Paver::WriteBootloaderResponse>& _msg);
+    static void WriteDataFileRequest(const ::fidl::DecodedMessage<Paver::WriteDataFileRequest>& _msg);
+    static void WriteDataFileResponse(const ::fidl::DecodedMessage<Paver::WriteDataFileResponse>& _msg);
+    static void WipeVolumesRequest(const ::fidl::DecodedMessage<Paver::WipeVolumesRequest>& _msg);
+    static void WipeVolumesResponse(const ::fidl::DecodedMessage<Paver::WipeVolumesResponse>& _msg);
+    static void InitializePartitionTablesRequest(const ::fidl::DecodedMessage<Paver::InitializePartitionTablesRequest>& _msg);
+    static void InitializePartitionTablesResponse(const ::fidl::DecodedMessage<Paver::InitializePartitionTablesResponse>& _msg);
+    static void WipePartitionTablesRequest(const ::fidl::DecodedMessage<Paver::WipePartitionTablesRequest>& _msg);
+    static void WipePartitionTablesResponse(const ::fidl::DecodedMessage<Paver::WipePartitionTablesResponse>& _msg);
+  };
 };
 
 }  // namespace paver

@@ -401,6 +401,18 @@ class Device final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void TransmitRequest(const ::fidl::DecodedMessage<Device::TransmitRequest>& _msg);
+    static void TransmitResponse(const ::fidl::DecodedMessage<Device::TransmitResponse>& _msg);
+    static void ReceiveRequest(const ::fidl::DecodedMessage<Device::ReceiveRequest>& _msg);
+    static void ReceiveResponse(const ::fidl::DecodedMessage<Device::ReceiveResponse>& _msg);
+    static void ExchangeRequest(const ::fidl::DecodedMessage<Device::ExchangeRequest>& _msg);
+    static void ExchangeResponse(const ::fidl::DecodedMessage<Device::ExchangeResponse>& _msg);
+  };
 };
 
 constexpr uint32_t MAX_TRANSFER_SIZE = 8196u;

@@ -298,6 +298,16 @@ class ControlFlow final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void ShutdownRequest(const ::fidl::DecodedMessage<ControlFlow::ShutdownRequest>& _msg);
+    static void NoReplyMustSendAccessDeniedEpitaphRequest(const ::fidl::DecodedMessage<ControlFlow::NoReplyMustSendAccessDeniedEpitaphRequest>& _msg);
+    static void MustSendAccessDeniedEpitaphRequest(const ::fidl::DecodedMessage<ControlFlow::MustSendAccessDeniedEpitaphRequest>& _msg);
+    static void MustSendAccessDeniedEpitaphResponse(const ::fidl::DecodedMessage<ControlFlow::MustSendAccessDeniedEpitaphResponse>& _msg);
+  };
 };
 
 }  // namespace controlflow

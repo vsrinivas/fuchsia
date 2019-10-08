@@ -56,6 +56,12 @@ struct SimpleUnion {
 
   bool is_field_a() const { return tag_ == Tag::kFieldA; }
 
+  static SimpleUnion WithFieldA(int32_t&& val) {
+    SimpleUnion result;
+    result.set_field_a(std::move(val));
+    return result;
+  }
+
   int32_t& mutable_field_a();
 
   template <typename T>
@@ -73,6 +79,12 @@ struct SimpleUnion {
   int32_t const & field_a() const { return field_a_; }
 
   bool is_field_b() const { return tag_ == Tag::kFieldB; }
+
+  static SimpleUnion WithFieldB(int32_t&& val) {
+    SimpleUnion result;
+    result.set_field_b(std::move(val));
+    return result;
+  }
 
   int32_t& mutable_field_b();
 
@@ -405,6 +417,16 @@ class TestInterface final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void ConsumeSimpleStructRequest(const ::fidl::DecodedMessage<TestInterface::ConsumeSimpleStructRequest>& _msg);
+    static void ConsumeSimpleStructResponse(const ::fidl::DecodedMessage<TestInterface::ConsumeSimpleStructResponse>& _msg);
+    static void ConsumeSimpleUnionRequest(const ::fidl::DecodedMessage<TestInterface::ConsumeSimpleUnionRequest>& _msg);
+    static void ConsumeSimpleUnionResponse(const ::fidl::DecodedMessage<TestInterface::ConsumeSimpleUnionResponse>& _msg);
+  };
 };
 
 }  // namespace basictypes

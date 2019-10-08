@@ -528,6 +528,18 @@ class DebugDumper final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void DumpTreeRequest(const ::fidl::DecodedMessage<DebugDumper::DumpTreeRequest>& _msg);
+    static void DumpTreeResponse(const ::fidl::DecodedMessage<DebugDumper::DumpTreeResponse>& _msg);
+    static void DumpDriversRequest(const ::fidl::DecodedMessage<DebugDumper::DumpDriversRequest>& _msg);
+    static void DumpDriversResponse(const ::fidl::DecodedMessage<DebugDumper::DumpDriversResponse>& _msg);
+    static void DumpBindingPropertiesRequest(const ::fidl::DecodedMessage<DebugDumper::DumpBindingPropertiesRequest>& _msg);
+    static void DumpBindingPropertiesResponse(const ::fidl::DecodedMessage<DebugDumper::DumpBindingPropertiesResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_AdministratorSuspendRequestTable;
@@ -715,6 +727,14 @@ class Administrator final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void SuspendRequest(const ::fidl::DecodedMessage<Administrator::SuspendRequest>& _msg);
+    static void SuspendResponse(const ::fidl::DecodedMessage<Administrator::SuspendResponse>& _msg);
+  };
 };
 
 constexpr uint32_t SUSPEND_FLAG_SUSPEND_RAM = 3705406464u;
@@ -1161,6 +1181,16 @@ class DevhostController final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void CreateDeviceStubRequest(const ::fidl::DecodedMessage<DevhostController::CreateDeviceStubRequest>& _msg);
+    static void CreateDeviceRequest(const ::fidl::DecodedMessage<DevhostController::CreateDeviceRequest>& _msg);
+    static void CreateCompositeDeviceRequest(const ::fidl::DecodedMessage<DevhostController::CreateCompositeDeviceRequest>& _msg);
+    static void CreateCompositeDeviceResponse(const ::fidl::DecodedMessage<DevhostController::CreateCompositeDeviceResponse>& _msg);
+  };
 };
 
 
@@ -3312,6 +3342,20 @@ class DeviceController final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void BindDriverRequest(const ::fidl::DecodedMessage<DeviceController::BindDriverRequest>& _msg);
+    static void BindDriverResponse(const ::fidl::DecodedMessage<DeviceController::BindDriverResponse>& _msg);
+    static void ConnectProxyRequest(const ::fidl::DecodedMessage<DeviceController::ConnectProxyRequest>& _msg);
+    static void UnbindRequest(const ::fidl::DecodedMessage<DeviceController::UnbindRequest>& _msg);
+    static void CompleteRemovalRequest(const ::fidl::DecodedMessage<DeviceController::CompleteRemovalRequest>& _msg);
+    static void SuspendRequest(const ::fidl::DecodedMessage<DeviceController::SuspendRequest>& _msg);
+    static void SuspendResponse(const ::fidl::DecodedMessage<DeviceController::SuspendResponse>& _msg);
+    static void CompleteCompatibilityTestsRequest(const ::fidl::DecodedMessage<DeviceController::CompleteCompatibilityTestsRequest>& _msg);
+  };
 };
 
 // Maximum number of components that a composite device can have
@@ -5129,6 +5173,44 @@ class Coordinator final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void AddDeviceRequest(const ::fidl::DecodedMessage<Coordinator::AddDeviceRequest>& _msg);
+    static void AddDeviceResponse(const ::fidl::DecodedMessage<Coordinator::AddDeviceResponse>& _msg);
+    static void AddDeviceInvisibleRequest(const ::fidl::DecodedMessage<Coordinator::AddDeviceInvisibleRequest>& _msg);
+    static void AddDeviceInvisibleResponse(const ::fidl::DecodedMessage<Coordinator::AddDeviceInvisibleResponse>& _msg);
+    static void ScheduleRemoveRequest(const ::fidl::DecodedMessage<Coordinator::ScheduleRemoveRequest>& _msg);
+    static void ScheduleUnbindChildrenRequest(const ::fidl::DecodedMessage<Coordinator::ScheduleUnbindChildrenRequest>& _msg);
+    static void UnbindDoneRequest(const ::fidl::DecodedMessage<Coordinator::UnbindDoneRequest>& _msg);
+    static void UnbindDoneResponse(const ::fidl::DecodedMessage<Coordinator::UnbindDoneResponse>& _msg);
+    static void RemoveDoneRequest(const ::fidl::DecodedMessage<Coordinator::RemoveDoneRequest>& _msg);
+    static void RemoveDoneResponse(const ::fidl::DecodedMessage<Coordinator::RemoveDoneResponse>& _msg);
+    static void MakeVisibleRequest(const ::fidl::DecodedMessage<Coordinator::MakeVisibleRequest>& _msg);
+    static void MakeVisibleResponse(const ::fidl::DecodedMessage<Coordinator::MakeVisibleResponse>& _msg);
+    static void BindDeviceRequest(const ::fidl::DecodedMessage<Coordinator::BindDeviceRequest>& _msg);
+    static void BindDeviceResponse(const ::fidl::DecodedMessage<Coordinator::BindDeviceResponse>& _msg);
+    static void GetTopologicalPathRequest(const ::fidl::DecodedMessage<Coordinator::GetTopologicalPathRequest>& _msg);
+    static void GetTopologicalPathResponse(const ::fidl::DecodedMessage<Coordinator::GetTopologicalPathResponse>& _msg);
+    static void LoadFirmwareRequest(const ::fidl::DecodedMessage<Coordinator::LoadFirmwareRequest>& _msg);
+    static void LoadFirmwareResponse(const ::fidl::DecodedMessage<Coordinator::LoadFirmwareResponse>& _msg);
+    static void GetMetadataRequest(const ::fidl::DecodedMessage<Coordinator::GetMetadataRequest>& _msg);
+    static void GetMetadataResponse(const ::fidl::DecodedMessage<Coordinator::GetMetadataResponse>& _msg);
+    static void GetMetadataSizeRequest(const ::fidl::DecodedMessage<Coordinator::GetMetadataSizeRequest>& _msg);
+    static void GetMetadataSizeResponse(const ::fidl::DecodedMessage<Coordinator::GetMetadataSizeResponse>& _msg);
+    static void AddMetadataRequest(const ::fidl::DecodedMessage<Coordinator::AddMetadataRequest>& _msg);
+    static void AddMetadataResponse(const ::fidl::DecodedMessage<Coordinator::AddMetadataResponse>& _msg);
+    static void PublishMetadataRequest(const ::fidl::DecodedMessage<Coordinator::PublishMetadataRequest>& _msg);
+    static void PublishMetadataResponse(const ::fidl::DecodedMessage<Coordinator::PublishMetadataResponse>& _msg);
+    static void AddCompositeDeviceRequest(const ::fidl::DecodedMessage<Coordinator::AddCompositeDeviceRequest>& _msg);
+    static void AddCompositeDeviceResponse(const ::fidl::DecodedMessage<Coordinator::AddCompositeDeviceResponse>& _msg);
+    static void DirectoryWatchRequest(const ::fidl::DecodedMessage<Coordinator::DirectoryWatchRequest>& _msg);
+    static void DirectoryWatchResponse(const ::fidl::DecodedMessage<Coordinator::DirectoryWatchResponse>& _msg);
+    static void RunCompatibilityTestsRequest(const ::fidl::DecodedMessage<Coordinator::RunCompatibilityTestsRequest>& _msg);
+    static void RunCompatibilityTestsResponse(const ::fidl::DecodedMessage<Coordinator::RunCompatibilityTestsResponse>& _msg);
+  };
 };
 
 }  // namespace manager

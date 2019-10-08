@@ -78,12 +78,7 @@ DebugDumper::UnownedResultOf::DumpTree DebugDumper::Call::DumpTree(zx::unowned_c
 }
 
 ::fidl::DecodeResult<DebugDumper::DumpTreeResponse> DebugDumper::InPlace::DumpTree(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DumpTreeRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDebugDumper_DumpTree_Ordinal;
+  DebugDumper::SetTransactionHeaderFor::DumpTreeRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<DebugDumper::DumpTreeResponse>::FromFailure(
@@ -145,12 +140,7 @@ DebugDumper::UnownedResultOf::DumpDrivers DebugDumper::Call::DumpDrivers(zx::uno
 }
 
 ::fidl::DecodeResult<DebugDumper::DumpDriversResponse> DebugDumper::InPlace::DumpDrivers(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DumpDriversRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDebugDumper_DumpDrivers_Ordinal;
+  DebugDumper::SetTransactionHeaderFor::DumpDriversRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<DebugDumper::DumpDriversResponse>::FromFailure(
@@ -212,12 +202,7 @@ DebugDumper::UnownedResultOf::DumpBindingProperties DebugDumper::Call::DumpBindi
 }
 
 ::fidl::DecodeResult<DebugDumper::DumpBindingPropertiesResponse> DebugDumper::InPlace::DumpBindingProperties(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DumpBindingPropertiesRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDebugDumper_DumpBindingProperties_Ordinal;
+  DebugDumper::SetTransactionHeaderFor::DumpBindingPropertiesRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<DebugDumper::DumpBindingPropertiesResponse>::FromFailure(
@@ -300,11 +285,11 @@ void DebugDumper::Interface::DumpTreeCompleterBase::Reply(int32_t status, uint64
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DumpTreeResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DumpTreeResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDebugDumper_DumpTree_Ordinal;
+  DebugDumper::SetTransactionHeaderFor::DumpTreeResponse(
+      ::fidl::DecodedMessage<DumpTreeResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              DumpTreeResponse::PrimarySize,
+              DumpTreeResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.written = std::move(written);
   _response.available = std::move(available);
@@ -318,11 +303,11 @@ void DebugDumper::Interface::DumpTreeCompleterBase::Reply(::fidl::BytePart _buff
     return;
   }
   auto& _response = *reinterpret_cast<DumpTreeResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDebugDumper_DumpTree_Ordinal;
+  DebugDumper::SetTransactionHeaderFor::DumpTreeResponse(
+      ::fidl::DecodedMessage<DumpTreeResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              DumpTreeResponse::PrimarySize,
+              DumpTreeResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.written = std::move(written);
   _response.available = std::move(available);
@@ -331,12 +316,7 @@ void DebugDumper::Interface::DumpTreeCompleterBase::Reply(::fidl::BytePart _buff
 }
 
 void DebugDumper::Interface::DumpTreeCompleterBase::Reply(::fidl::DecodedMessage<DumpTreeResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDebugDumper_DumpTree_Ordinal;
+  DebugDumper::SetTransactionHeaderFor::DumpTreeResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -345,11 +325,11 @@ void DebugDumper::Interface::DumpDriversCompleterBase::Reply(int32_t status, uin
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DumpDriversResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DumpDriversResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDebugDumper_DumpDrivers_Ordinal;
+  DebugDumper::SetTransactionHeaderFor::DumpDriversResponse(
+      ::fidl::DecodedMessage<DumpDriversResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              DumpDriversResponse::PrimarySize,
+              DumpDriversResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.written = std::move(written);
   _response.available = std::move(available);
@@ -363,11 +343,11 @@ void DebugDumper::Interface::DumpDriversCompleterBase::Reply(::fidl::BytePart _b
     return;
   }
   auto& _response = *reinterpret_cast<DumpDriversResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDebugDumper_DumpDrivers_Ordinal;
+  DebugDumper::SetTransactionHeaderFor::DumpDriversResponse(
+      ::fidl::DecodedMessage<DumpDriversResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              DumpDriversResponse::PrimarySize,
+              DumpDriversResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.written = std::move(written);
   _response.available = std::move(available);
@@ -376,12 +356,7 @@ void DebugDumper::Interface::DumpDriversCompleterBase::Reply(::fidl::BytePart _b
 }
 
 void DebugDumper::Interface::DumpDriversCompleterBase::Reply(::fidl::DecodedMessage<DumpDriversResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDebugDumper_DumpDrivers_Ordinal;
+  DebugDumper::SetTransactionHeaderFor::DumpDriversResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -390,11 +365,11 @@ void DebugDumper::Interface::DumpBindingPropertiesCompleterBase::Reply(int32_t s
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DumpBindingPropertiesResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DumpBindingPropertiesResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDebugDumper_DumpBindingProperties_Ordinal;
+  DebugDumper::SetTransactionHeaderFor::DumpBindingPropertiesResponse(
+      ::fidl::DecodedMessage<DumpBindingPropertiesResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              DumpBindingPropertiesResponse::PrimarySize,
+              DumpBindingPropertiesResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.written = std::move(written);
   _response.available = std::move(available);
@@ -408,11 +383,11 @@ void DebugDumper::Interface::DumpBindingPropertiesCompleterBase::Reply(::fidl::B
     return;
   }
   auto& _response = *reinterpret_cast<DumpBindingPropertiesResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDebugDumper_DumpBindingProperties_Ordinal;
+  DebugDumper::SetTransactionHeaderFor::DumpBindingPropertiesResponse(
+      ::fidl::DecodedMessage<DumpBindingPropertiesResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              DumpBindingPropertiesResponse::PrimarySize,
+              DumpBindingPropertiesResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.written = std::move(written);
   _response.available = std::move(available);
@@ -421,15 +396,38 @@ void DebugDumper::Interface::DumpBindingPropertiesCompleterBase::Reply(::fidl::B
 }
 
 void DebugDumper::Interface::DumpBindingPropertiesCompleterBase::Reply(::fidl::DecodedMessage<DumpBindingPropertiesResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDebugDumper_DumpBindingProperties_Ordinal;
+  DebugDumper::SetTransactionHeaderFor::DumpBindingPropertiesResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
+
+
+void DebugDumper::SetTransactionHeaderFor::DumpTreeRequest(const ::fidl::DecodedMessage<DebugDumper::DumpTreeRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDebugDumper_DumpTree_Ordinal;
+}
+void DebugDumper::SetTransactionHeaderFor::DumpTreeResponse(const ::fidl::DecodedMessage<DebugDumper::DumpTreeResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDebugDumper_DumpTree_Ordinal;
+}
+
+void DebugDumper::SetTransactionHeaderFor::DumpDriversRequest(const ::fidl::DecodedMessage<DebugDumper::DumpDriversRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDebugDumper_DumpDrivers_Ordinal;
+}
+void DebugDumper::SetTransactionHeaderFor::DumpDriversResponse(const ::fidl::DecodedMessage<DebugDumper::DumpDriversResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDebugDumper_DumpDrivers_Ordinal;
+}
+
+void DebugDumper::SetTransactionHeaderFor::DumpBindingPropertiesRequest(const ::fidl::DecodedMessage<DebugDumper::DumpBindingPropertiesRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDebugDumper_DumpBindingProperties_Ordinal;
+}
+void DebugDumper::SetTransactionHeaderFor::DumpBindingPropertiesResponse(const ::fidl::DecodedMessage<DebugDumper::DumpBindingPropertiesResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDebugDumper_DumpBindingProperties_Ordinal;
+}
 
 namespace {
 
@@ -488,12 +486,7 @@ Administrator::UnownedResultOf::Suspend Administrator::Call::Suspend(zx::unowned
 }
 
 ::fidl::DecodeResult<Administrator::SuspendResponse> Administrator::InPlace::Suspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kAdministrator_Suspend_Ordinal;
+  Administrator::SetTransactionHeaderFor::SuspendRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Administrator::SuspendResponse>::FromFailure(
@@ -550,11 +543,11 @@ void Administrator::Interface::SuspendCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SuspendResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SuspendResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kAdministrator_Suspend_Ordinal;
+  Administrator::SetTransactionHeaderFor::SuspendResponse(
+      ::fidl::DecodedMessage<SuspendResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SuspendResponse::PrimarySize,
+              SuspendResponse::PrimarySize)));
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SuspendResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SuspendResponse>(std::move(_response_bytes)));
@@ -566,26 +559,31 @@ void Administrator::Interface::SuspendCompleterBase::Reply(::fidl::BytePart _buf
     return;
   }
   auto& _response = *reinterpret_cast<SuspendResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kAdministrator_Suspend_Ordinal;
+  Administrator::SetTransactionHeaderFor::SuspendResponse(
+      ::fidl::DecodedMessage<SuspendResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SuspendResponse::PrimarySize,
+              SuspendResponse::PrimarySize)));
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(SuspendResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SuspendResponse>(std::move(_buffer)));
 }
 
 void Administrator::Interface::SuspendCompleterBase::Reply(::fidl::DecodedMessage<SuspendResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kAdministrator_Suspend_Ordinal;
+  Administrator::SetTransactionHeaderFor::SuspendResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
+
+
+void Administrator::SetTransactionHeaderFor::SuspendRequest(const ::fidl::DecodedMessage<Administrator::SuspendRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kAdministrator_Suspend_Ordinal;
+}
+void Administrator::SetTransactionHeaderFor::SuspendResponse(const ::fidl::DecodedMessage<Administrator::SuspendResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kAdministrator_Suspend_Ordinal;
+}
 
 namespace {
 
@@ -659,12 +657,7 @@ DevhostController::UnownedResultOf::CreateDeviceStub DevhostController::Call::Cr
 }
 
 ::fidl::internal::StatusAndError DevhostController::InPlace::CreateDeviceStub(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateDeviceStubRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevhostController_CreateDeviceStub_Ordinal;
+  DevhostController::SetTransactionHeaderFor::CreateDeviceStubRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -742,12 +735,7 @@ DevhostController::UnownedResultOf::CreateDevice DevhostController::Call::Create
 }
 
 ::fidl::internal::StatusAndError DevhostController::InPlace::CreateDevice(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateDeviceRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevhostController_CreateDevice_Ordinal;
+  DevhostController::SetTransactionHeaderFor::CreateDeviceRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -820,12 +808,7 @@ DevhostController::UnownedResultOf::CreateCompositeDevice DevhostController::Cal
 }
 
 ::fidl::DecodeResult<DevhostController::CreateCompositeDeviceResponse> DevhostController::InPlace::CreateCompositeDevice(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateCompositeDeviceRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevhostController_CreateCompositeDevice_Ordinal;
+  DevhostController::SetTransactionHeaderFor::CreateCompositeDeviceRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<DevhostController::CreateCompositeDeviceResponse>::FromFailure(
@@ -908,11 +891,11 @@ void DevhostController::Interface::CreateCompositeDeviceCompleterBase::Reply(int
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateCompositeDeviceResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<CreateCompositeDeviceResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevhostController_CreateCompositeDevice_Ordinal;
+  DevhostController::SetTransactionHeaderFor::CreateCompositeDeviceResponse(
+      ::fidl::DecodedMessage<CreateCompositeDeviceResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              CreateCompositeDeviceResponse::PrimarySize,
+              CreateCompositeDeviceResponse::PrimarySize)));
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(CreateCompositeDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<CreateCompositeDeviceResponse>(std::move(_response_bytes)));
@@ -924,26 +907,41 @@ void DevhostController::Interface::CreateCompositeDeviceCompleterBase::Reply(::f
     return;
   }
   auto& _response = *reinterpret_cast<CreateCompositeDeviceResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevhostController_CreateCompositeDevice_Ordinal;
+  DevhostController::SetTransactionHeaderFor::CreateCompositeDeviceResponse(
+      ::fidl::DecodedMessage<CreateCompositeDeviceResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              CreateCompositeDeviceResponse::PrimarySize,
+              CreateCompositeDeviceResponse::PrimarySize)));
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(CreateCompositeDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<CreateCompositeDeviceResponse>(std::move(_buffer)));
 }
 
 void DevhostController::Interface::CreateCompositeDeviceCompleterBase::Reply(::fidl::DecodedMessage<CreateCompositeDeviceResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevhostController_CreateCompositeDevice_Ordinal;
+  DevhostController::SetTransactionHeaderFor::CreateCompositeDeviceResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
+
+
+void DevhostController::SetTransactionHeaderFor::CreateDeviceStubRequest(const ::fidl::DecodedMessage<DevhostController::CreateDeviceStubRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevhostController_CreateDeviceStub_Ordinal;
+}
+
+void DevhostController::SetTransactionHeaderFor::CreateDeviceRequest(const ::fidl::DecodedMessage<DevhostController::CreateDeviceRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevhostController_CreateDevice_Ordinal;
+}
+
+void DevhostController::SetTransactionHeaderFor::CreateCompositeDeviceRequest(const ::fidl::DecodedMessage<DevhostController::CreateCompositeDeviceRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevhostController_CreateCompositeDevice_Ordinal;
+}
+void DevhostController::SetTransactionHeaderFor::CreateCompositeDeviceResponse(const ::fidl::DecodedMessage<DevhostController::CreateCompositeDeviceResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevhostController_CreateCompositeDevice_Ordinal;
+}
 
 ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::Coordinator_AddDevice_Result() {
   tag_ = Tag::Invalid;
@@ -1918,12 +1916,7 @@ DeviceController::UnownedResultOf::BindDriver DeviceController::Call::BindDriver
 }
 
 ::fidl::DecodeResult<DeviceController::BindDriverResponse> DeviceController::InPlace::BindDriver(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindDriverRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDeviceController_BindDriver_Ordinal;
+  DeviceController::SetTransactionHeaderFor::BindDriverRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<DeviceController::BindDriverResponse>::FromFailure(
@@ -1986,12 +1979,7 @@ DeviceController::UnownedResultOf::ConnectProxy DeviceController::Call::ConnectP
 }
 
 ::fidl::internal::StatusAndError DeviceController::InPlace::ConnectProxy(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectProxyRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDeviceController_ConnectProxy_Ordinal;
+  DeviceController::SetTransactionHeaderFor::ConnectProxyRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -2033,12 +2021,7 @@ DeviceController::ResultOf::Unbind DeviceController::Call::Unbind(zx::unowned_ch
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<UnbindRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDeviceController_Unbind_Ordinal;
+  DeviceController::SetTransactionHeaderFor::UnbindRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -2080,12 +2063,7 @@ DeviceController::ResultOf::CompleteRemoval DeviceController::Call::CompleteRemo
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<CompleteRemovalRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDeviceController_CompleteRemoval_Ordinal;
+  DeviceController::SetTransactionHeaderFor::CompleteRemovalRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -2147,12 +2125,7 @@ DeviceController::UnownedResultOf::Suspend DeviceController::Call::Suspend(zx::u
 }
 
 ::fidl::DecodeResult<DeviceController::SuspendResponse> DeviceController::InPlace::Suspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDeviceController_Suspend_Ordinal;
+  DeviceController::SetTransactionHeaderFor::SuspendRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<DeviceController::SuspendResponse>::FromFailure(
@@ -2215,12 +2188,7 @@ DeviceController::UnownedResultOf::CompleteCompatibilityTests DeviceController::
 }
 
 ::fidl::internal::StatusAndError DeviceController::InPlace::CompleteCompatibilityTests(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CompleteCompatibilityTestsRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDeviceController_CompleteCompatibilityTests_Ordinal;
+  DeviceController::SetTransactionHeaderFor::CompleteCompatibilityTestsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -2340,11 +2308,11 @@ void DeviceController::Interface::BindDriverCompleterBase::Reply(int32_t status,
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindDriverResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<BindDriverResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDeviceController_BindDriver_Ordinal;
+  DeviceController::SetTransactionHeaderFor::BindDriverResponse(
+      ::fidl::DecodedMessage<BindDriverResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              BindDriverResponse::PrimarySize,
+              BindDriverResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.test_output = std::move(test_output);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(BindDriverResponse));
@@ -2357,11 +2325,11 @@ void DeviceController::Interface::BindDriverCompleterBase::Reply(::fidl::BytePar
     return;
   }
   auto& _response = *reinterpret_cast<BindDriverResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDeviceController_BindDriver_Ordinal;
+  DeviceController::SetTransactionHeaderFor::BindDriverResponse(
+      ::fidl::DecodedMessage<BindDriverResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              BindDriverResponse::PrimarySize,
+              BindDriverResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.test_output = std::move(test_output);
   _buffer.set_actual(sizeof(BindDriverResponse));
@@ -2369,12 +2337,7 @@ void DeviceController::Interface::BindDriverCompleterBase::Reply(::fidl::BytePar
 }
 
 void DeviceController::Interface::BindDriverCompleterBase::Reply(::fidl::DecodedMessage<BindDriverResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDeviceController_BindDriver_Ordinal;
+  DeviceController::SetTransactionHeaderFor::BindDriverResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -2383,11 +2346,11 @@ void DeviceController::Interface::SuspendCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SuspendResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SuspendResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDeviceController_Suspend_Ordinal;
+  DeviceController::SetTransactionHeaderFor::SuspendResponse(
+      ::fidl::DecodedMessage<SuspendResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SuspendResponse::PrimarySize,
+              SuspendResponse::PrimarySize)));
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SuspendResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SuspendResponse>(std::move(_response_bytes)));
@@ -2399,26 +2362,60 @@ void DeviceController::Interface::SuspendCompleterBase::Reply(::fidl::BytePart _
     return;
   }
   auto& _response = *reinterpret_cast<SuspendResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDeviceController_Suspend_Ordinal;
+  DeviceController::SetTransactionHeaderFor::SuspendResponse(
+      ::fidl::DecodedMessage<SuspendResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SuspendResponse::PrimarySize,
+              SuspendResponse::PrimarySize)));
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(SuspendResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SuspendResponse>(std::move(_buffer)));
 }
 
 void DeviceController::Interface::SuspendCompleterBase::Reply(::fidl::DecodedMessage<SuspendResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDeviceController_Suspend_Ordinal;
+  DeviceController::SetTransactionHeaderFor::SuspendResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
+
+
+void DeviceController::SetTransactionHeaderFor::BindDriverRequest(const ::fidl::DecodedMessage<DeviceController::BindDriverRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDeviceController_BindDriver_Ordinal;
+}
+void DeviceController::SetTransactionHeaderFor::BindDriverResponse(const ::fidl::DecodedMessage<DeviceController::BindDriverResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDeviceController_BindDriver_Ordinal;
+}
+
+void DeviceController::SetTransactionHeaderFor::ConnectProxyRequest(const ::fidl::DecodedMessage<DeviceController::ConnectProxyRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDeviceController_ConnectProxy_Ordinal;
+}
+
+void DeviceController::SetTransactionHeaderFor::UnbindRequest(const ::fidl::DecodedMessage<DeviceController::UnbindRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDeviceController_Unbind_Ordinal;
+}
+
+void DeviceController::SetTransactionHeaderFor::CompleteRemovalRequest(const ::fidl::DecodedMessage<DeviceController::CompleteRemovalRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDeviceController_CompleteRemoval_Ordinal;
+}
+
+void DeviceController::SetTransactionHeaderFor::SuspendRequest(const ::fidl::DecodedMessage<DeviceController::SuspendRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDeviceController_Suspend_Ordinal;
+}
+void DeviceController::SetTransactionHeaderFor::SuspendResponse(const ::fidl::DecodedMessage<DeviceController::SuspendResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDeviceController_Suspend_Ordinal;
+}
+
+void DeviceController::SetTransactionHeaderFor::CompleteCompatibilityTestsRequest(const ::fidl::DecodedMessage<DeviceController::CompleteCompatibilityTestsRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDeviceController_CompleteCompatibilityTests_Ordinal;
+}
 
 namespace {
 
@@ -2584,12 +2581,7 @@ Coordinator::UnownedResultOf::AddDevice Coordinator::Call::AddDevice(zx::unowned
 }
 
 ::fidl::DecodeResult<Coordinator::AddDeviceResponse> Coordinator::InPlace::AddDevice(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_AddDevice_Ordinal;
+  Coordinator::SetTransactionHeaderFor::AddDeviceRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Coordinator::AddDeviceResponse>::FromFailure(
@@ -2668,12 +2660,7 @@ Coordinator::UnownedResultOf::AddDeviceInvisible Coordinator::Call::AddDeviceInv
 }
 
 ::fidl::DecodeResult<Coordinator::AddDeviceInvisibleResponse> Coordinator::InPlace::AddDeviceInvisible(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceInvisibleRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_AddDeviceInvisible_Ordinal;
+  Coordinator::SetTransactionHeaderFor::AddDeviceInvisibleRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Coordinator::AddDeviceInvisibleResponse>::FromFailure(
@@ -2736,12 +2723,7 @@ Coordinator::UnownedResultOf::ScheduleRemove Coordinator::Call::ScheduleRemove(z
 }
 
 ::fidl::internal::StatusAndError Coordinator::InPlace::ScheduleRemove(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ScheduleRemoveRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_ScheduleRemove_Ordinal;
+  Coordinator::SetTransactionHeaderFor::ScheduleRemoveRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -2783,12 +2765,7 @@ Coordinator::ResultOf::ScheduleUnbindChildren Coordinator::Call::ScheduleUnbindC
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<ScheduleUnbindChildrenRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_ScheduleUnbindChildren_Ordinal;
+  Coordinator::SetTransactionHeaderFor::ScheduleUnbindChildrenRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -2849,12 +2826,7 @@ Coordinator::UnownedResultOf::UnbindDone Coordinator::Call::UnbindDone(zx::unown
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<UnbindDoneRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_UnbindDone_Ordinal;
+  Coordinator::SetTransactionHeaderFor::UnbindDoneRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Coordinator::UnbindDoneResponse>::FromFailure(
@@ -2915,12 +2887,7 @@ Coordinator::UnownedResultOf::RemoveDone Coordinator::Call::RemoveDone(zx::unown
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<RemoveDoneRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_RemoveDone_Ordinal;
+  Coordinator::SetTransactionHeaderFor::RemoveDoneRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Coordinator::RemoveDoneResponse>::FromFailure(
@@ -2981,12 +2948,7 @@ Coordinator::UnownedResultOf::MakeVisible Coordinator::Call::MakeVisible(zx::uno
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<MakeVisibleRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_MakeVisible_Ordinal;
+  Coordinator::SetTransactionHeaderFor::MakeVisibleRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Coordinator::MakeVisibleResponse>::FromFailure(
@@ -3053,12 +3015,7 @@ Coordinator::UnownedResultOf::BindDevice Coordinator::Call::BindDevice(zx::unown
 }
 
 ::fidl::DecodeResult<Coordinator::BindDeviceResponse> Coordinator::InPlace::BindDevice(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindDeviceRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_BindDevice_Ordinal;
+  Coordinator::SetTransactionHeaderFor::BindDeviceRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Coordinator::BindDeviceResponse>::FromFailure(
@@ -3119,12 +3076,7 @@ Coordinator::UnownedResultOf::GetTopologicalPath Coordinator::Call::GetTopologic
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetTopologicalPathRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_GetTopologicalPath_Ordinal;
+  Coordinator::SetTransactionHeaderFor::GetTopologicalPathRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Coordinator::GetTopologicalPathResponse>::FromFailure(
@@ -3191,12 +3143,7 @@ Coordinator::UnownedResultOf::LoadFirmware Coordinator::Call::LoadFirmware(zx::u
 }
 
 ::fidl::DecodeResult<Coordinator::LoadFirmwareResponse> Coordinator::InPlace::LoadFirmware(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LoadFirmwareRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_LoadFirmware_Ordinal;
+  Coordinator::SetTransactionHeaderFor::LoadFirmwareRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Coordinator::LoadFirmwareResponse>::FromFailure(
@@ -3258,12 +3205,7 @@ Coordinator::UnownedResultOf::GetMetadata Coordinator::Call::GetMetadata(zx::uno
 }
 
 ::fidl::DecodeResult<Coordinator::GetMetadataResponse> Coordinator::InPlace::GetMetadata(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetMetadataRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_GetMetadata_Ordinal;
+  Coordinator::SetTransactionHeaderFor::GetMetadataRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Coordinator::GetMetadataResponse>::FromFailure(
@@ -3325,12 +3267,7 @@ Coordinator::UnownedResultOf::GetMetadataSize Coordinator::Call::GetMetadataSize
 }
 
 ::fidl::DecodeResult<Coordinator::GetMetadataSizeResponse> Coordinator::InPlace::GetMetadataSize(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetMetadataSizeRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_GetMetadataSize_Ordinal;
+  Coordinator::SetTransactionHeaderFor::GetMetadataSizeRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Coordinator::GetMetadataSizeResponse>::FromFailure(
@@ -3399,12 +3336,7 @@ Coordinator::UnownedResultOf::AddMetadata Coordinator::Call::AddMetadata(zx::uno
 }
 
 ::fidl::DecodeResult<Coordinator::AddMetadataResponse> Coordinator::InPlace::AddMetadata(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddMetadataRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_AddMetadata_Ordinal;
+  Coordinator::SetTransactionHeaderFor::AddMetadataRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Coordinator::AddMetadataResponse>::FromFailure(
@@ -3475,12 +3407,7 @@ Coordinator::UnownedResultOf::PublishMetadata Coordinator::Call::PublishMetadata
 }
 
 ::fidl::DecodeResult<Coordinator::PublishMetadataResponse> Coordinator::InPlace::PublishMetadata(zx::unowned_channel _client_end, ::fidl::DecodedMessage<PublishMetadataRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_PublishMetadata_Ordinal;
+  Coordinator::SetTransactionHeaderFor::PublishMetadataRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Coordinator::PublishMetadataResponse>::FromFailure(
@@ -3553,12 +3480,7 @@ Coordinator::UnownedResultOf::AddCompositeDevice Coordinator::Call::AddComposite
 }
 
 ::fidl::DecodeResult<Coordinator::AddCompositeDeviceResponse> Coordinator::InPlace::AddCompositeDevice(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddCompositeDeviceRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_AddCompositeDevice_Ordinal;
+  Coordinator::SetTransactionHeaderFor::AddCompositeDeviceRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Coordinator::AddCompositeDeviceResponse>::FromFailure(
@@ -3624,12 +3546,7 @@ Coordinator::UnownedResultOf::DirectoryWatch Coordinator::Call::DirectoryWatch(z
 }
 
 ::fidl::DecodeResult<Coordinator::DirectoryWatchResponse> Coordinator::InPlace::DirectoryWatch(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DirectoryWatchRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_DirectoryWatch_Ordinal;
+  Coordinator::SetTransactionHeaderFor::DirectoryWatchRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Coordinator::DirectoryWatchResponse>::FromFailure(
@@ -3691,12 +3608,7 @@ Coordinator::UnownedResultOf::RunCompatibilityTests Coordinator::Call::RunCompat
 }
 
 ::fidl::DecodeResult<Coordinator::RunCompatibilityTestsResponse> Coordinator::InPlace::RunCompatibilityTests(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RunCompatibilityTestsRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_RunCompatibilityTests_Ordinal;
+  Coordinator::SetTransactionHeaderFor::RunCompatibilityTestsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Coordinator::RunCompatibilityTestsResponse>::FromFailure(
@@ -3956,11 +3868,11 @@ void Coordinator::Interface::AddDeviceCompleterBase::Reply(::llcpp::fuchsia::dev
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<AddDeviceResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_AddDevice_Ordinal;
+  Coordinator::SetTransactionHeaderFor::AddDeviceResponse(
+      ::fidl::DecodedMessage<AddDeviceResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              AddDeviceResponse::PrimarySize,
+              AddDeviceResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceResponse>(std::move(_response_bytes)));
@@ -3981,11 +3893,11 @@ void Coordinator::Interface::AddDeviceCompleterBase::Reply(::fidl::BytePart _buf
     return;
   }
   auto& _response = *reinterpret_cast<AddDeviceResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_AddDevice_Ordinal;
+  Coordinator::SetTransactionHeaderFor::AddDeviceResponse(
+      ::fidl::DecodedMessage<AddDeviceResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              AddDeviceResponse::PrimarySize,
+              AddDeviceResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(AddDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceResponse>(std::move(_buffer)));
@@ -3998,12 +3910,7 @@ void Coordinator::Interface::AddDeviceCompleterBase::ReplySuccess(::fidl::BytePa
 }
 
 void Coordinator::Interface::AddDeviceCompleterBase::Reply(::fidl::DecodedMessage<AddDeviceResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_AddDevice_Ordinal;
+  Coordinator::SetTransactionHeaderFor::AddDeviceResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -4012,11 +3919,11 @@ void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(::llcpp::fuc
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceInvisibleResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<AddDeviceInvisibleResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_AddDeviceInvisible_Ordinal;
+  Coordinator::SetTransactionHeaderFor::AddDeviceInvisibleResponse(
+      ::fidl::DecodedMessage<AddDeviceInvisibleResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              AddDeviceInvisibleResponse::PrimarySize,
+              AddDeviceInvisibleResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddDeviceInvisibleResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceInvisibleResponse>(std::move(_response_bytes)));
@@ -4037,11 +3944,11 @@ void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(::fidl::Byte
     return;
   }
   auto& _response = *reinterpret_cast<AddDeviceInvisibleResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_AddDeviceInvisible_Ordinal;
+  Coordinator::SetTransactionHeaderFor::AddDeviceInvisibleResponse(
+      ::fidl::DecodedMessage<AddDeviceInvisibleResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              AddDeviceInvisibleResponse::PrimarySize,
+              AddDeviceInvisibleResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(AddDeviceInvisibleResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceInvisibleResponse>(std::move(_buffer)));
@@ -4054,12 +3961,7 @@ void Coordinator::Interface::AddDeviceInvisibleCompleterBase::ReplySuccess(::fid
 }
 
 void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(::fidl::DecodedMessage<AddDeviceInvisibleResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_AddDeviceInvisible_Ordinal;
+  Coordinator::SetTransactionHeaderFor::AddDeviceInvisibleResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -4068,11 +3970,11 @@ void Coordinator::Interface::UnbindDoneCompleterBase::Reply(::llcpp::fuchsia::de
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnbindDoneResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<UnbindDoneResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_UnbindDone_Ordinal;
+  Coordinator::SetTransactionHeaderFor::UnbindDoneResponse(
+      ::fidl::DecodedMessage<UnbindDoneResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              UnbindDoneResponse::PrimarySize,
+              UnbindDoneResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(UnbindDoneResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<UnbindDoneResponse>(std::move(_response_bytes)));
@@ -4092,11 +3994,11 @@ void Coordinator::Interface::UnbindDoneCompleterBase::Reply(::fidl::BytePart _bu
     return;
   }
   auto& _response = *reinterpret_cast<UnbindDoneResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_UnbindDone_Ordinal;
+  Coordinator::SetTransactionHeaderFor::UnbindDoneResponse(
+      ::fidl::DecodedMessage<UnbindDoneResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              UnbindDoneResponse::PrimarySize,
+              UnbindDoneResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(UnbindDoneResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<UnbindDoneResponse>(std::move(_buffer)));
@@ -4108,12 +4010,7 @@ void Coordinator::Interface::UnbindDoneCompleterBase::ReplySuccess(::fidl::ByteP
 }
 
 void Coordinator::Interface::UnbindDoneCompleterBase::Reply(::fidl::DecodedMessage<UnbindDoneResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_UnbindDone_Ordinal;
+  Coordinator::SetTransactionHeaderFor::UnbindDoneResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -4122,11 +4019,11 @@ void Coordinator::Interface::RemoveDoneCompleterBase::Reply(::llcpp::fuchsia::de
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RemoveDoneResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<RemoveDoneResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_RemoveDone_Ordinal;
+  Coordinator::SetTransactionHeaderFor::RemoveDoneResponse(
+      ::fidl::DecodedMessage<RemoveDoneResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              RemoveDoneResponse::PrimarySize,
+              RemoveDoneResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(RemoveDoneResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<RemoveDoneResponse>(std::move(_response_bytes)));
@@ -4146,11 +4043,11 @@ void Coordinator::Interface::RemoveDoneCompleterBase::Reply(::fidl::BytePart _bu
     return;
   }
   auto& _response = *reinterpret_cast<RemoveDoneResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_RemoveDone_Ordinal;
+  Coordinator::SetTransactionHeaderFor::RemoveDoneResponse(
+      ::fidl::DecodedMessage<RemoveDoneResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              RemoveDoneResponse::PrimarySize,
+              RemoveDoneResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(RemoveDoneResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<RemoveDoneResponse>(std::move(_buffer)));
@@ -4162,12 +4059,7 @@ void Coordinator::Interface::RemoveDoneCompleterBase::ReplySuccess(::fidl::ByteP
 }
 
 void Coordinator::Interface::RemoveDoneCompleterBase::Reply(::fidl::DecodedMessage<RemoveDoneResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_RemoveDone_Ordinal;
+  Coordinator::SetTransactionHeaderFor::RemoveDoneResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -4176,11 +4068,11 @@ void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::llcpp::fuchsia::d
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MakeVisibleResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<MakeVisibleResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_MakeVisible_Ordinal;
+  Coordinator::SetTransactionHeaderFor::MakeVisibleResponse(
+      ::fidl::DecodedMessage<MakeVisibleResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              MakeVisibleResponse::PrimarySize,
+              MakeVisibleResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(MakeVisibleResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<MakeVisibleResponse>(std::move(_response_bytes)));
@@ -4200,11 +4092,11 @@ void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::fidl::BytePart _b
     return;
   }
   auto& _response = *reinterpret_cast<MakeVisibleResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_MakeVisible_Ordinal;
+  Coordinator::SetTransactionHeaderFor::MakeVisibleResponse(
+      ::fidl::DecodedMessage<MakeVisibleResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              MakeVisibleResponse::PrimarySize,
+              MakeVisibleResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(MakeVisibleResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<MakeVisibleResponse>(std::move(_buffer)));
@@ -4216,12 +4108,7 @@ void Coordinator::Interface::MakeVisibleCompleterBase::ReplySuccess(::fidl::Byte
 }
 
 void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::fidl::DecodedMessage<MakeVisibleResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_MakeVisible_Ordinal;
+  Coordinator::SetTransactionHeaderFor::MakeVisibleResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -4230,11 +4117,11 @@ void Coordinator::Interface::BindDeviceCompleterBase::Reply(::llcpp::fuchsia::de
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindDeviceResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<BindDeviceResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_BindDevice_Ordinal;
+  Coordinator::SetTransactionHeaderFor::BindDeviceResponse(
+      ::fidl::DecodedMessage<BindDeviceResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              BindDeviceResponse::PrimarySize,
+              BindDeviceResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(BindDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<BindDeviceResponse>(std::move(_response_bytes)));
@@ -4254,11 +4141,11 @@ void Coordinator::Interface::BindDeviceCompleterBase::Reply(::fidl::BytePart _bu
     return;
   }
   auto& _response = *reinterpret_cast<BindDeviceResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_BindDevice_Ordinal;
+  Coordinator::SetTransactionHeaderFor::BindDeviceResponse(
+      ::fidl::DecodedMessage<BindDeviceResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              BindDeviceResponse::PrimarySize,
+              BindDeviceResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(BindDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<BindDeviceResponse>(std::move(_buffer)));
@@ -4270,12 +4157,7 @@ void Coordinator::Interface::BindDeviceCompleterBase::ReplySuccess(::fidl::ByteP
 }
 
 void Coordinator::Interface::BindDeviceCompleterBase::Reply(::fidl::DecodedMessage<BindDeviceResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_BindDevice_Ordinal;
+  Coordinator::SetTransactionHeaderFor::BindDeviceResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -4285,11 +4167,11 @@ void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(::llcpp::fuc
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   GetTopologicalPathResponse _response = {};
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_GetTopologicalPath_Ordinal;
+  Coordinator::SetTransactionHeaderFor::GetTopologicalPathResponse(
+      ::fidl::DecodedMessage<GetTopologicalPathResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetTopologicalPathResponse::PrimarySize,
+              GetTopologicalPathResponse::PrimarySize)));
   _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
                                                                           _kWriteAllocSize));
@@ -4315,11 +4197,11 @@ void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::Byte
     return;
   }
   GetTopologicalPathResponse _response = {};
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_GetTopologicalPath_Ordinal;
+  Coordinator::SetTransactionHeaderFor::GetTopologicalPathResponse(
+      ::fidl::DecodedMessage<GetTopologicalPathResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetTopologicalPathResponse::PrimarySize,
+              GetTopologicalPathResponse::PrimarySize)));
   _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -4336,12 +4218,7 @@ void Coordinator::Interface::GetTopologicalPathCompleterBase::ReplySuccess(::fid
 }
 
 void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::DecodedMessage<GetTopologicalPathResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_GetTopologicalPath_Ordinal;
+  Coordinator::SetTransactionHeaderFor::GetTopologicalPathResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -4350,11 +4227,11 @@ void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(::llcpp::fuchsia::
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadFirmwareResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<LoadFirmwareResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_LoadFirmware_Ordinal;
+  Coordinator::SetTransactionHeaderFor::LoadFirmwareResponse(
+      ::fidl::DecodedMessage<LoadFirmwareResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              LoadFirmwareResponse::PrimarySize,
+              LoadFirmwareResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(LoadFirmwareResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<LoadFirmwareResponse>(std::move(_response_bytes)));
@@ -4376,11 +4253,11 @@ void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(::fidl::BytePart _
     return;
   }
   auto& _response = *reinterpret_cast<LoadFirmwareResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_LoadFirmware_Ordinal;
+  Coordinator::SetTransactionHeaderFor::LoadFirmwareResponse(
+      ::fidl::DecodedMessage<LoadFirmwareResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              LoadFirmwareResponse::PrimarySize,
+              LoadFirmwareResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(LoadFirmwareResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<LoadFirmwareResponse>(std::move(_buffer)));
@@ -4394,12 +4271,7 @@ void Coordinator::Interface::LoadFirmwareCompleterBase::ReplySuccess(::fidl::Byt
 }
 
 void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(::fidl::DecodedMessage<LoadFirmwareResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_LoadFirmware_Ordinal;
+  Coordinator::SetTransactionHeaderFor::LoadFirmwareResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -4409,11 +4281,11 @@ void Coordinator::Interface::GetMetadataCompleterBase::Reply(::llcpp::fuchsia::d
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   GetMetadataResponse _response = {};
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_GetMetadata_Ordinal;
+  Coordinator::SetTransactionHeaderFor::GetMetadataResponse(
+      ::fidl::DecodedMessage<GetMetadataResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetMetadataResponse::PrimarySize,
+              GetMetadataResponse::PrimarySize)));
   _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
                                                                           _kWriteAllocSize));
@@ -4439,11 +4311,11 @@ void Coordinator::Interface::GetMetadataCompleterBase::Reply(::fidl::BytePart _b
     return;
   }
   GetMetadataResponse _response = {};
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_GetMetadata_Ordinal;
+  Coordinator::SetTransactionHeaderFor::GetMetadataResponse(
+      ::fidl::DecodedMessage<GetMetadataResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetMetadataResponse::PrimarySize,
+              GetMetadataResponse::PrimarySize)));
   _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -4460,12 +4332,7 @@ void Coordinator::Interface::GetMetadataCompleterBase::ReplySuccess(::fidl::Byte
 }
 
 void Coordinator::Interface::GetMetadataCompleterBase::Reply(::fidl::DecodedMessage<GetMetadataResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_GetMetadata_Ordinal;
+  Coordinator::SetTransactionHeaderFor::GetMetadataResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -4474,11 +4341,11 @@ void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(::llcpp::fuchsi
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetMetadataSizeResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetMetadataSizeResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_GetMetadataSize_Ordinal;
+  Coordinator::SetTransactionHeaderFor::GetMetadataSizeResponse(
+      ::fidl::DecodedMessage<GetMetadataSizeResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetMetadataSizeResponse::PrimarySize,
+              GetMetadataSizeResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetMetadataSizeResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetMetadataSizeResponse>(std::move(_response_bytes)));
@@ -4499,11 +4366,11 @@ void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(::fidl::BytePar
     return;
   }
   auto& _response = *reinterpret_cast<GetMetadataSizeResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_GetMetadataSize_Ordinal;
+  Coordinator::SetTransactionHeaderFor::GetMetadataSizeResponse(
+      ::fidl::DecodedMessage<GetMetadataSizeResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetMetadataSizeResponse::PrimarySize,
+              GetMetadataSizeResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(GetMetadataSizeResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetMetadataSizeResponse>(std::move(_buffer)));
@@ -4516,12 +4383,7 @@ void Coordinator::Interface::GetMetadataSizeCompleterBase::ReplySuccess(::fidl::
 }
 
 void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(::fidl::DecodedMessage<GetMetadataSizeResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_GetMetadataSize_Ordinal;
+  Coordinator::SetTransactionHeaderFor::GetMetadataSizeResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -4530,11 +4392,11 @@ void Coordinator::Interface::AddMetadataCompleterBase::Reply(::llcpp::fuchsia::d
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddMetadataResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<AddMetadataResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_AddMetadata_Ordinal;
+  Coordinator::SetTransactionHeaderFor::AddMetadataResponse(
+      ::fidl::DecodedMessage<AddMetadataResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              AddMetadataResponse::PrimarySize,
+              AddMetadataResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddMetadataResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddMetadataResponse>(std::move(_response_bytes)));
@@ -4554,11 +4416,11 @@ void Coordinator::Interface::AddMetadataCompleterBase::Reply(::fidl::BytePart _b
     return;
   }
   auto& _response = *reinterpret_cast<AddMetadataResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_AddMetadata_Ordinal;
+  Coordinator::SetTransactionHeaderFor::AddMetadataResponse(
+      ::fidl::DecodedMessage<AddMetadataResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              AddMetadataResponse::PrimarySize,
+              AddMetadataResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(AddMetadataResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddMetadataResponse>(std::move(_buffer)));
@@ -4570,12 +4432,7 @@ void Coordinator::Interface::AddMetadataCompleterBase::ReplySuccess(::fidl::Byte
 }
 
 void Coordinator::Interface::AddMetadataCompleterBase::Reply(::fidl::DecodedMessage<AddMetadataResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_AddMetadata_Ordinal;
+  Coordinator::SetTransactionHeaderFor::AddMetadataResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -4584,11 +4441,11 @@ void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::llcpp::fuchsi
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<PublishMetadataResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<PublishMetadataResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_PublishMetadata_Ordinal;
+  Coordinator::SetTransactionHeaderFor::PublishMetadataResponse(
+      ::fidl::DecodedMessage<PublishMetadataResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              PublishMetadataResponse::PrimarySize,
+              PublishMetadataResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(PublishMetadataResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<PublishMetadataResponse>(std::move(_response_bytes)));
@@ -4608,11 +4465,11 @@ void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::fidl::BytePar
     return;
   }
   auto& _response = *reinterpret_cast<PublishMetadataResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_PublishMetadata_Ordinal;
+  Coordinator::SetTransactionHeaderFor::PublishMetadataResponse(
+      ::fidl::DecodedMessage<PublishMetadataResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              PublishMetadataResponse::PrimarySize,
+              PublishMetadataResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(PublishMetadataResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<PublishMetadataResponse>(std::move(_buffer)));
@@ -4624,12 +4481,7 @@ void Coordinator::Interface::PublishMetadataCompleterBase::ReplySuccess(::fidl::
 }
 
 void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::fidl::DecodedMessage<PublishMetadataResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_PublishMetadata_Ordinal;
+  Coordinator::SetTransactionHeaderFor::PublishMetadataResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -4638,11 +4490,11 @@ void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::llcpp::fuc
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddCompositeDeviceResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<AddCompositeDeviceResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_AddCompositeDevice_Ordinal;
+  Coordinator::SetTransactionHeaderFor::AddCompositeDeviceResponse(
+      ::fidl::DecodedMessage<AddCompositeDeviceResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              AddCompositeDeviceResponse::PrimarySize,
+              AddCompositeDeviceResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddCompositeDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddCompositeDeviceResponse>(std::move(_response_bytes)));
@@ -4662,11 +4514,11 @@ void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::fidl::Byte
     return;
   }
   auto& _response = *reinterpret_cast<AddCompositeDeviceResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_AddCompositeDevice_Ordinal;
+  Coordinator::SetTransactionHeaderFor::AddCompositeDeviceResponse(
+      ::fidl::DecodedMessage<AddCompositeDeviceResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              AddCompositeDeviceResponse::PrimarySize,
+              AddCompositeDeviceResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(AddCompositeDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<AddCompositeDeviceResponse>(std::move(_buffer)));
@@ -4678,12 +4530,7 @@ void Coordinator::Interface::AddCompositeDeviceCompleterBase::ReplySuccess(::fid
 }
 
 void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::fidl::DecodedMessage<AddCompositeDeviceResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_AddCompositeDevice_Ordinal;
+  Coordinator::SetTransactionHeaderFor::AddCompositeDeviceResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -4692,11 +4539,11 @@ void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::llcpp::fuchsia
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DirectoryWatchResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DirectoryWatchResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_DirectoryWatch_Ordinal;
+  Coordinator::SetTransactionHeaderFor::DirectoryWatchResponse(
+      ::fidl::DecodedMessage<DirectoryWatchResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              DirectoryWatchResponse::PrimarySize,
+              DirectoryWatchResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DirectoryWatchResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DirectoryWatchResponse>(std::move(_response_bytes)));
@@ -4716,11 +4563,11 @@ void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::fidl::BytePart
     return;
   }
   auto& _response = *reinterpret_cast<DirectoryWatchResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_DirectoryWatch_Ordinal;
+  Coordinator::SetTransactionHeaderFor::DirectoryWatchResponse(
+      ::fidl::DecodedMessage<DirectoryWatchResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              DirectoryWatchResponse::PrimarySize,
+              DirectoryWatchResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(DirectoryWatchResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DirectoryWatchResponse>(std::move(_buffer)));
@@ -4732,12 +4579,7 @@ void Coordinator::Interface::DirectoryWatchCompleterBase::ReplySuccess(::fidl::B
 }
 
 void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::fidl::DecodedMessage<DirectoryWatchResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_DirectoryWatch_Ordinal;
+  Coordinator::SetTransactionHeaderFor::DirectoryWatchResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -4746,11 +4588,11 @@ void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(::llcpp::
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RunCompatibilityTestsResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<RunCompatibilityTestsResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_RunCompatibilityTests_Ordinal;
+  Coordinator::SetTransactionHeaderFor::RunCompatibilityTestsResponse(
+      ::fidl::DecodedMessage<RunCompatibilityTestsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              RunCompatibilityTestsResponse::PrimarySize,
+              RunCompatibilityTestsResponse::PrimarySize)));
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(RunCompatibilityTestsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<RunCompatibilityTestsResponse>(std::move(_response_bytes)));
@@ -4770,11 +4612,11 @@ void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(::fidl::B
     return;
   }
   auto& _response = *reinterpret_cast<RunCompatibilityTestsResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kCoordinator_RunCompatibilityTests_Ordinal;
+  Coordinator::SetTransactionHeaderFor::RunCompatibilityTestsResponse(
+      ::fidl::DecodedMessage<RunCompatibilityTestsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              RunCompatibilityTestsResponse::PrimarySize,
+              RunCompatibilityTestsResponse::PrimarySize)));
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(RunCompatibilityTestsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<RunCompatibilityTestsResponse>(std::move(_buffer)));
@@ -4786,15 +4628,156 @@ void Coordinator::Interface::RunCompatibilityTestsCompleterBase::ReplySuccess(::
 }
 
 void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(::fidl::DecodedMessage<RunCompatibilityTestsResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kCoordinator_RunCompatibilityTests_Ordinal;
+  Coordinator::SetTransactionHeaderFor::RunCompatibilityTestsResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
+
+
+void Coordinator::SetTransactionHeaderFor::AddDeviceRequest(const ::fidl::DecodedMessage<Coordinator::AddDeviceRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_AddDevice_Ordinal;
+}
+void Coordinator::SetTransactionHeaderFor::AddDeviceResponse(const ::fidl::DecodedMessage<Coordinator::AddDeviceResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_AddDevice_Ordinal;
+}
+
+void Coordinator::SetTransactionHeaderFor::AddDeviceInvisibleRequest(const ::fidl::DecodedMessage<Coordinator::AddDeviceInvisibleRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_AddDeviceInvisible_Ordinal;
+}
+void Coordinator::SetTransactionHeaderFor::AddDeviceInvisibleResponse(const ::fidl::DecodedMessage<Coordinator::AddDeviceInvisibleResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_AddDeviceInvisible_Ordinal;
+}
+
+void Coordinator::SetTransactionHeaderFor::ScheduleRemoveRequest(const ::fidl::DecodedMessage<Coordinator::ScheduleRemoveRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_ScheduleRemove_Ordinal;
+}
+
+void Coordinator::SetTransactionHeaderFor::ScheduleUnbindChildrenRequest(const ::fidl::DecodedMessage<Coordinator::ScheduleUnbindChildrenRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_ScheduleUnbindChildren_Ordinal;
+}
+
+void Coordinator::SetTransactionHeaderFor::UnbindDoneRequest(const ::fidl::DecodedMessage<Coordinator::UnbindDoneRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_UnbindDone_Ordinal;
+}
+void Coordinator::SetTransactionHeaderFor::UnbindDoneResponse(const ::fidl::DecodedMessage<Coordinator::UnbindDoneResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_UnbindDone_Ordinal;
+}
+
+void Coordinator::SetTransactionHeaderFor::RemoveDoneRequest(const ::fidl::DecodedMessage<Coordinator::RemoveDoneRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_RemoveDone_Ordinal;
+}
+void Coordinator::SetTransactionHeaderFor::RemoveDoneResponse(const ::fidl::DecodedMessage<Coordinator::RemoveDoneResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_RemoveDone_Ordinal;
+}
+
+void Coordinator::SetTransactionHeaderFor::MakeVisibleRequest(const ::fidl::DecodedMessage<Coordinator::MakeVisibleRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_MakeVisible_Ordinal;
+}
+void Coordinator::SetTransactionHeaderFor::MakeVisibleResponse(const ::fidl::DecodedMessage<Coordinator::MakeVisibleResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_MakeVisible_Ordinal;
+}
+
+void Coordinator::SetTransactionHeaderFor::BindDeviceRequest(const ::fidl::DecodedMessage<Coordinator::BindDeviceRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_BindDevice_Ordinal;
+}
+void Coordinator::SetTransactionHeaderFor::BindDeviceResponse(const ::fidl::DecodedMessage<Coordinator::BindDeviceResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_BindDevice_Ordinal;
+}
+
+void Coordinator::SetTransactionHeaderFor::GetTopologicalPathRequest(const ::fidl::DecodedMessage<Coordinator::GetTopologicalPathRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_GetTopologicalPath_Ordinal;
+}
+void Coordinator::SetTransactionHeaderFor::GetTopologicalPathResponse(const ::fidl::DecodedMessage<Coordinator::GetTopologicalPathResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_GetTopologicalPath_Ordinal;
+}
+
+void Coordinator::SetTransactionHeaderFor::LoadFirmwareRequest(const ::fidl::DecodedMessage<Coordinator::LoadFirmwareRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_LoadFirmware_Ordinal;
+}
+void Coordinator::SetTransactionHeaderFor::LoadFirmwareResponse(const ::fidl::DecodedMessage<Coordinator::LoadFirmwareResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_LoadFirmware_Ordinal;
+}
+
+void Coordinator::SetTransactionHeaderFor::GetMetadataRequest(const ::fidl::DecodedMessage<Coordinator::GetMetadataRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_GetMetadata_Ordinal;
+}
+void Coordinator::SetTransactionHeaderFor::GetMetadataResponse(const ::fidl::DecodedMessage<Coordinator::GetMetadataResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_GetMetadata_Ordinal;
+}
+
+void Coordinator::SetTransactionHeaderFor::GetMetadataSizeRequest(const ::fidl::DecodedMessage<Coordinator::GetMetadataSizeRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_GetMetadataSize_Ordinal;
+}
+void Coordinator::SetTransactionHeaderFor::GetMetadataSizeResponse(const ::fidl::DecodedMessage<Coordinator::GetMetadataSizeResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_GetMetadataSize_Ordinal;
+}
+
+void Coordinator::SetTransactionHeaderFor::AddMetadataRequest(const ::fidl::DecodedMessage<Coordinator::AddMetadataRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_AddMetadata_Ordinal;
+}
+void Coordinator::SetTransactionHeaderFor::AddMetadataResponse(const ::fidl::DecodedMessage<Coordinator::AddMetadataResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_AddMetadata_Ordinal;
+}
+
+void Coordinator::SetTransactionHeaderFor::PublishMetadataRequest(const ::fidl::DecodedMessage<Coordinator::PublishMetadataRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_PublishMetadata_Ordinal;
+}
+void Coordinator::SetTransactionHeaderFor::PublishMetadataResponse(const ::fidl::DecodedMessage<Coordinator::PublishMetadataResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_PublishMetadata_Ordinal;
+}
+
+void Coordinator::SetTransactionHeaderFor::AddCompositeDeviceRequest(const ::fidl::DecodedMessage<Coordinator::AddCompositeDeviceRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_AddCompositeDevice_Ordinal;
+}
+void Coordinator::SetTransactionHeaderFor::AddCompositeDeviceResponse(const ::fidl::DecodedMessage<Coordinator::AddCompositeDeviceResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_AddCompositeDevice_Ordinal;
+}
+
+void Coordinator::SetTransactionHeaderFor::DirectoryWatchRequest(const ::fidl::DecodedMessage<Coordinator::DirectoryWatchRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_DirectoryWatch_Ordinal;
+}
+void Coordinator::SetTransactionHeaderFor::DirectoryWatchResponse(const ::fidl::DecodedMessage<Coordinator::DirectoryWatchResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_DirectoryWatch_Ordinal;
+}
+
+void Coordinator::SetTransactionHeaderFor::RunCompatibilityTestsRequest(const ::fidl::DecodedMessage<Coordinator::RunCompatibilityTestsRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_RunCompatibilityTests_Ordinal;
+}
+void Coordinator::SetTransactionHeaderFor::RunCompatibilityTestsResponse(const ::fidl::DecodedMessage<Coordinator::RunCompatibilityTestsResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kCoordinator_RunCompatibilityTests_Ordinal;
+}
 
 }  // namespace manager
 }  // namespace device

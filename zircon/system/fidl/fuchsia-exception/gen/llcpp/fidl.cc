@@ -66,12 +66,7 @@ Handler::UnownedResultOf::OnException Handler::Call::OnException(zx::unowned_cha
 }
 
 ::fidl::DecodeResult<Handler::OnExceptionResponse> Handler::InPlace::OnException(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OnExceptionRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kHandler_OnException_Ordinal;
+  Handler::SetTransactionHeaderFor::OnExceptionRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Handler::OnExceptionResponse>::FromFailure(
@@ -128,15 +123,25 @@ void Handler::Interface::OnExceptionCompleterBase::Reply() {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnExceptionResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<OnExceptionResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kHandler_OnException_Ordinal;
+  Handler::SetTransactionHeaderFor::OnExceptionResponse(
+      ::fidl::DecodedMessage<OnExceptionResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              OnExceptionResponse::PrimarySize,
+              OnExceptionResponse::PrimarySize)));
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(OnExceptionResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<OnExceptionResponse>(std::move(_response_bytes)));
 }
 
+
+
+void Handler::SetTransactionHeaderFor::OnExceptionRequest(const ::fidl::DecodedMessage<Handler::OnExceptionRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kHandler_OnException_Ordinal;
+}
+void Handler::SetTransactionHeaderFor::OnExceptionResponse(const ::fidl::DecodedMessage<Handler::OnExceptionResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kHandler_OnException_Ordinal;
+}
 
 ::llcpp::fuchsia::exception::ProcessExceptionMetadata::Builder ProcessExceptionMetadata::Build() {
   return ProcessExceptionMetadata::Builder();
@@ -328,12 +333,7 @@ ProcessLimbo::UnownedResultOf::ListProcessesWaitingOnException ProcessLimbo::Cal
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<ListProcessesWaitingOnExceptionRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kProcessLimbo_ListProcessesWaitingOnException_Ordinal;
+  ProcessLimbo::SetTransactionHeaderFor::ListProcessesWaitingOnExceptionRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<ProcessLimbo::ListProcessesWaitingOnExceptionResponse>::FromFailure(
@@ -395,12 +395,7 @@ ProcessLimbo::UnownedResultOf::RetrieveException ProcessLimbo::Call::RetrieveExc
 }
 
 ::fidl::DecodeResult<ProcessLimbo::RetrieveExceptionResponse> ProcessLimbo::InPlace::RetrieveException(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RetrieveExceptionRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kProcessLimbo_RetrieveException_Ordinal;
+  ProcessLimbo::SetTransactionHeaderFor::RetrieveExceptionRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<ProcessLimbo::RetrieveExceptionResponse>::FromFailure(
@@ -470,11 +465,11 @@ void ProcessLimbo::Interface::ListProcessesWaitingOnExceptionCompleterBase::Repl
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   ListProcessesWaitingOnExceptionResponse _response = {};
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kProcessLimbo_ListProcessesWaitingOnException_Ordinal;
+  ProcessLimbo::SetTransactionHeaderFor::ListProcessesWaitingOnExceptionResponse(
+      ::fidl::DecodedMessage<ListProcessesWaitingOnExceptionResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ListProcessesWaitingOnExceptionResponse::PrimarySize,
+              ListProcessesWaitingOnExceptionResponse::PrimarySize)));
   _response.exception_list = std::move(exception_list);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
                                                                           _kWriteAllocSize));
@@ -491,11 +486,11 @@ void ProcessLimbo::Interface::ListProcessesWaitingOnExceptionCompleterBase::Repl
     return;
   }
   ListProcessesWaitingOnExceptionResponse _response = {};
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kProcessLimbo_ListProcessesWaitingOnException_Ordinal;
+  ProcessLimbo::SetTransactionHeaderFor::ListProcessesWaitingOnExceptionResponse(
+      ::fidl::DecodedMessage<ListProcessesWaitingOnExceptionResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ListProcessesWaitingOnExceptionResponse::PrimarySize,
+              ListProcessesWaitingOnExceptionResponse::PrimarySize)));
   _response.exception_list = std::move(exception_list);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -506,12 +501,7 @@ void ProcessLimbo::Interface::ListProcessesWaitingOnExceptionCompleterBase::Repl
 }
 
 void ProcessLimbo::Interface::ListProcessesWaitingOnExceptionCompleterBase::Reply(::fidl::DecodedMessage<ListProcessesWaitingOnExceptionResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kProcessLimbo_ListProcessesWaitingOnException_Ordinal;
+  ProcessLimbo::SetTransactionHeaderFor::ListProcessesWaitingOnExceptionResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -521,11 +511,11 @@ void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::Reply(::llcpp::fuc
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   RetrieveExceptionResponse _response = {};
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kProcessLimbo_RetrieveException_Ordinal;
+  ProcessLimbo::SetTransactionHeaderFor::RetrieveExceptionResponse(
+      ::fidl::DecodedMessage<RetrieveExceptionResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              RetrieveExceptionResponse::PrimarySize,
+              RetrieveExceptionResponse::PrimarySize)));
   _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
                                                                           _kWriteAllocSize));
@@ -551,11 +541,11 @@ void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::Reply(::fidl::Byte
     return;
   }
   RetrieveExceptionResponse _response = {};
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kProcessLimbo_RetrieveException_Ordinal;
+  ProcessLimbo::SetTransactionHeaderFor::RetrieveExceptionResponse(
+      ::fidl::DecodedMessage<RetrieveExceptionResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              RetrieveExceptionResponse::PrimarySize,
+              RetrieveExceptionResponse::PrimarySize)));
   _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -572,15 +562,29 @@ void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::ReplySuccess(::fid
 }
 
 void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::Reply(::fidl::DecodedMessage<RetrieveExceptionResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kProcessLimbo_RetrieveException_Ordinal;
+  ProcessLimbo::SetTransactionHeaderFor::RetrieveExceptionResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
+
+
+void ProcessLimbo::SetTransactionHeaderFor::ListProcessesWaitingOnExceptionRequest(const ::fidl::DecodedMessage<ProcessLimbo::ListProcessesWaitingOnExceptionRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kProcessLimbo_ListProcessesWaitingOnException_Ordinal;
+}
+void ProcessLimbo::SetTransactionHeaderFor::ListProcessesWaitingOnExceptionResponse(const ::fidl::DecodedMessage<ProcessLimbo::ListProcessesWaitingOnExceptionResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kProcessLimbo_ListProcessesWaitingOnException_Ordinal;
+}
+
+void ProcessLimbo::SetTransactionHeaderFor::RetrieveExceptionRequest(const ::fidl::DecodedMessage<ProcessLimbo::RetrieveExceptionRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kProcessLimbo_RetrieveException_Ordinal;
+}
+void ProcessLimbo::SetTransactionHeaderFor::RetrieveExceptionResponse(const ::fidl::DecodedMessage<ProcessLimbo::RetrieveExceptionResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kProcessLimbo_RetrieveException_Ordinal;
+}
 
 }  // namespace exception
 }  // namespace fuchsia

@@ -874,6 +874,18 @@ class InputDevice final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetReportsEventRequest(const ::fidl::DecodedMessage<InputDevice::GetReportsEventRequest>& _msg);
+    static void GetReportsEventResponse(const ::fidl::DecodedMessage<InputDevice::GetReportsEventResponse>& _msg);
+    static void GetReportsRequest(const ::fidl::DecodedMessage<InputDevice::GetReportsRequest>& _msg);
+    static void GetReportsResponse(const ::fidl::DecodedMessage<InputDevice::GetReportsResponse>& _msg);
+    static void GetDescriptorRequest(const ::fidl::DecodedMessage<InputDevice::GetDescriptorRequest>& _msg);
+    static void GetDescriptorResponse(const ::fidl::DecodedMessage<InputDevice::GetDescriptorResponse>& _msg);
+  };
 };
 
 }  // namespace report

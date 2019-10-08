@@ -11,7 +11,7 @@ Reply(::fidl::DecodedMessage<{{ .Name }}Response> params)
 
 {{- define "ReplyInPlaceMethodDefinition" }}
 void {{ .LLProps.InterfaceName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyInPlaceMethodSignature" . }} {
-  {{- template "CreateTxnHeader" . }}
+  {{ .LLProps.InterfaceName }}::SetTransactionHeaderFor::{{ .Name }}Response(params);
   CompleterBase::SendReply(std::move(params));
 }
 {{- end }}

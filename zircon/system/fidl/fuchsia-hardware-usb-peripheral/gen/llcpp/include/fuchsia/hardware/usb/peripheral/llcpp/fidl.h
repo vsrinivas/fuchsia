@@ -217,6 +217,15 @@ class Events final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void FunctionRegisteredRequest(const ::fidl::DecodedMessage<Events::FunctionRegisteredRequest>& _msg);
+    static void FunctionRegisteredResponse(const ::fidl::DecodedMessage<Events::FunctionRegisteredResponse>& _msg);
+    static void FunctionsClearedRequest(const ::fidl::DecodedMessage<Events::FunctionsClearedRequest>& _msg);
+  };
 };
 
 constexpr uint32_t MAX_STRING_LENGTH = 127u;
@@ -706,6 +715,17 @@ class Device final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void SetConfigurationRequest(const ::fidl::DecodedMessage<Device::SetConfigurationRequest>& _msg);
+    static void SetConfigurationResponse(const ::fidl::DecodedMessage<Device::SetConfigurationResponse>& _msg);
+    static void ClearFunctionsRequest(const ::fidl::DecodedMessage<Device::ClearFunctionsRequest>& _msg);
+    static void ClearFunctionsResponse(const ::fidl::DecodedMessage<Device::ClearFunctionsResponse>& _msg);
+    static void SetStateChangeListenerRequest(const ::fidl::DecodedMessage<Device::SetStateChangeListenerRequest>& _msg);
+  };
 };
 
 }  // namespace peripheral

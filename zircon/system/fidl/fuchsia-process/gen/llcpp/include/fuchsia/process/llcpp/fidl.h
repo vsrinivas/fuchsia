@@ -354,6 +354,14 @@ class Resolver final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void ResolveRequest(const ::fidl::DecodedMessage<Resolver::ResolveRequest>& _msg);
+    static void ResolveResponse(const ::fidl::DecodedMessage<Resolver::ResolveResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t fuchsia_process_NameInfoTable;
@@ -1069,6 +1077,20 @@ class Launcher final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void LaunchRequest(const ::fidl::DecodedMessage<Launcher::LaunchRequest>& _msg);
+    static void LaunchResponse(const ::fidl::DecodedMessage<Launcher::LaunchResponse>& _msg);
+    static void CreateWithoutStartingRequest(const ::fidl::DecodedMessage<Launcher::CreateWithoutStartingRequest>& _msg);
+    static void CreateWithoutStartingResponse(const ::fidl::DecodedMessage<Launcher::CreateWithoutStartingResponse>& _msg);
+    static void AddArgsRequest(const ::fidl::DecodedMessage<Launcher::AddArgsRequest>& _msg);
+    static void AddEnvironsRequest(const ::fidl::DecodedMessage<Launcher::AddEnvironsRequest>& _msg);
+    static void AddNamesRequest(const ::fidl::DecodedMessage<Launcher::AddNamesRequest>& _msg);
+    static void AddHandlesRequest(const ::fidl::DecodedMessage<Launcher::AddHandlesRequest>& _msg);
+  };
 };
 
 }  // namespace process

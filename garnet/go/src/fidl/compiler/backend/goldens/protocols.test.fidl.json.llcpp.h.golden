@@ -627,6 +627,18 @@ class ChannelProtocol final {
   // Messages are encoded in-place.
   static zx_status_t SendEventAEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<EventAResponse> params);
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void MethodARequest(const ::fidl::DecodedMessage<ChannelProtocol::MethodARequest>& _msg);
+    static void EventAResponse(const ::fidl::DecodedMessage<ChannelProtocol::EventAResponse>& _msg);
+    static void MethodBRequest(const ::fidl::DecodedMessage<ChannelProtocol::MethodBRequest>& _msg);
+    static void MethodBResponse(const ::fidl::DecodedMessage<ChannelProtocol::MethodBResponse>& _msg);
+    static void MutateSocketRequest(const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketRequest>& _msg);
+    static void MutateSocketResponse(const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
@@ -1157,6 +1169,24 @@ class WithAndWithoutRequestResponse final {
   // Messages are encoded in-place.
   static zx_status_t SendOnWithResponseEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnWithResponseResponse> params);
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void NoRequestNoResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestNoResponseRequest>& _msg);
+    static void NoRequestEmptyResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestEmptyResponseRequest>& _msg);
+    static void NoRequestEmptyResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestEmptyResponseResponse>& _msg);
+    static void NoRequestWithResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestWithResponseRequest>& _msg);
+    static void NoRequestWithResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestWithResponseResponse>& _msg);
+    static void WithRequestNoResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestNoResponseRequest>& _msg);
+    static void WithRequestEmptyResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest>& _msg);
+    static void WithRequestEmptyResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>& _msg);
+    static void WithRequestWithResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestWithResponseRequest>& _msg);
+    static void WithRequestWithResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestWithResponseResponse>& _msg);
+    static void OnEmptyResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::OnEmptyResponseResponse>& _msg);
+    static void OnWithResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::OnWithResponseResponse>& _msg);
+  };
 };
 
 extern "C" const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
@@ -1578,6 +1608,18 @@ class WithErrorSyntax final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void ResponseAsStructRequest(const ::fidl::DecodedMessage<WithErrorSyntax::ResponseAsStructRequest>& _msg);
+    static void ResponseAsStructResponse(const ::fidl::DecodedMessage<WithErrorSyntax::ResponseAsStructResponse>& _msg);
+    static void ErrorAsPrimitiveRequest(const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveRequest>& _msg);
+    static void ErrorAsPrimitiveResponse(const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveResponse>& _msg);
+    static void ErrorAsEnumRequest(const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumRequest>& _msg);
+    static void ErrorAsEnumResponse(const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumResponse>& _msg);
+  };
 };
 
 }  // namespace name

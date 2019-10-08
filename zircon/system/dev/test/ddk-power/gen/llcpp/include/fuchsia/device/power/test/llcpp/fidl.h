@@ -510,6 +510,16 @@ class TestDevice final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void AddDeviceWithPowerArgsRequest(const ::fidl::DecodedMessage<TestDevice::AddDeviceWithPowerArgsRequest>& _msg);
+    static void AddDeviceWithPowerArgsResponse(const ::fidl::DecodedMessage<TestDevice::AddDeviceWithPowerArgsResponse>& _msg);
+    static void GetCurrentDevicePowerStateRequest(const ::fidl::DecodedMessage<TestDevice::GetCurrentDevicePowerStateRequest>& _msg);
+    static void GetCurrentDevicePowerStateResponse(const ::fidl::DecodedMessage<TestDevice::GetCurrentDevicePowerStateResponse>& _msg);
+  };
 };
 
 }  // namespace test

@@ -165,6 +165,13 @@ class Provider final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void RequestPersistentStorageRequest(const ::fidl::DecodedMessage<Provider::RequestPersistentStorageRequest>& _msg);
+  };
 };
 
 }  // namespace manager

@@ -207,6 +207,16 @@ class SwitchingOrdinals final {
 
   static zx_status_t SendEventOnlyGeneratedOrdinalEvent(::zx::unowned_channel _chan);
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void OrdinalFiveRequest(const ::fidl::DecodedMessage<SwitchingOrdinals::OrdinalFiveRequest>& _msg);
+    static void OnlyGeneratedOrdinalRequest(const ::fidl::DecodedMessage<SwitchingOrdinals::OnlyGeneratedOrdinalRequest>& _msg);
+    static void EventOrdinalFifteenResponse(const ::fidl::DecodedMessage<SwitchingOrdinals::EventOrdinalFifteenResponse>& _msg);
+    static void EventOnlyGeneratedOrdinalResponse(const ::fidl::DecodedMessage<SwitchingOrdinals::EventOnlyGeneratedOrdinalResponse>& _msg);
+  };
 };
 
 }  // namespace name

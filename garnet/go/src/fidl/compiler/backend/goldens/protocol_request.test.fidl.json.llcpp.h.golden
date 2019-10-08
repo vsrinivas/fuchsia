@@ -373,6 +373,18 @@ class Parent final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetChildRequest(const ::fidl::DecodedMessage<Parent::GetChildRequest>& _msg);
+    static void GetChildResponse(const ::fidl::DecodedMessage<Parent::GetChildResponse>& _msg);
+    static void GetChildRequestRequest(const ::fidl::DecodedMessage<Parent::GetChildRequestRequest>& _msg);
+    static void GetChildRequestResponse(const ::fidl::DecodedMessage<Parent::GetChildRequestResponse>& _msg);
+    static void TakeChildRequest(const ::fidl::DecodedMessage<Parent::TakeChildRequest>& _msg);
+    static void TakeChildRequestRequest(const ::fidl::DecodedMessage<Parent::TakeChildRequestRequest>& _msg);
+  };
 };
 
 class Child final {
@@ -425,6 +437,12 @@ class Child final {
     InPlace() = delete;
    public:
 
+  };
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
   };
 };
 

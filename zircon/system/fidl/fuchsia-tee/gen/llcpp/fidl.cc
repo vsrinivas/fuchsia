@@ -158,12 +158,7 @@ Device::UnownedResultOf::GetOsInfo Device::Call::GetOsInfo(zx::unowned_channel _
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetOsInfoRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevice_GetOsInfo_Ordinal;
+  Device::SetTransactionHeaderFor::GetOsInfoRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::GetOsInfoResponse>::FromFailure(
@@ -227,12 +222,7 @@ Device::UnownedResultOf::OpenSession Device::Call::OpenSession(zx::unowned_chann
 }
 
 ::fidl::DecodeResult<Device::OpenSessionResponse> Device::InPlace::OpenSession(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenSessionRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevice_OpenSession_Ordinal;
+  Device::SetTransactionHeaderFor::OpenSessionRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::OpenSessionResponse>::FromFailure(
@@ -298,12 +288,7 @@ Device::UnownedResultOf::InvokeCommand Device::Call::InvokeCommand(zx::unowned_c
 }
 
 ::fidl::DecodeResult<Device::InvokeCommandResponse> Device::InPlace::InvokeCommand(zx::unowned_channel _client_end, ::fidl::DecodedMessage<InvokeCommandRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevice_InvokeCommand_Ordinal;
+  Device::SetTransactionHeaderFor::InvokeCommandRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::InvokeCommandResponse>::FromFailure(
@@ -365,12 +350,7 @@ Device::UnownedResultOf::CloseSession Device::Call::CloseSession(zx::unowned_cha
 }
 
 ::fidl::DecodeResult<Device::CloseSessionResponse> Device::InPlace::CloseSession(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloseSessionRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevice_CloseSession_Ordinal;
+  Device::SetTransactionHeaderFor::CloseSessionRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::CloseSessionResponse>::FromFailure(
@@ -465,11 +445,11 @@ void Device::Interface::GetOsInfoCompleterBase::Reply(::llcpp::fuchsia::tee::OsI
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetOsInfoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetOsInfoResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevice_GetOsInfo_Ordinal;
+  Device::SetTransactionHeaderFor::GetOsInfoResponse(
+      ::fidl::DecodedMessage<GetOsInfoResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetOsInfoResponse::PrimarySize,
+              GetOsInfoResponse::PrimarySize)));
   _response.info = std::move(info);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetOsInfoResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetOsInfoResponse>(std::move(_response_bytes)));
@@ -481,23 +461,18 @@ void Device::Interface::GetOsInfoCompleterBase::Reply(::fidl::BytePart _buffer, 
     return;
   }
   auto& _response = *reinterpret_cast<GetOsInfoResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevice_GetOsInfo_Ordinal;
+  Device::SetTransactionHeaderFor::GetOsInfoResponse(
+      ::fidl::DecodedMessage<GetOsInfoResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetOsInfoResponse::PrimarySize,
+              GetOsInfoResponse::PrimarySize)));
   _response.info = std::move(info);
   _buffer.set_actual(sizeof(GetOsInfoResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetOsInfoResponse>(std::move(_buffer)));
 }
 
 void Device::Interface::GetOsInfoCompleterBase::Reply(::fidl::DecodedMessage<GetOsInfoResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevice_GetOsInfo_Ordinal;
+  Device::SetTransactionHeaderFor::GetOsInfoResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -506,11 +481,11 @@ void Device::Interface::OpenSessionCompleterBase::Reply(uint32_t session_id, ::l
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OpenSessionResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<OpenSessionResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevice_OpenSession_Ordinal;
+  Device::SetTransactionHeaderFor::OpenSessionResponse(
+      ::fidl::DecodedMessage<OpenSessionResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              OpenSessionResponse::PrimarySize,
+              OpenSessionResponse::PrimarySize)));
   _response.session_id = std::move(session_id);
   _response.op_result = std::move(op_result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(OpenSessionResponse));
@@ -523,11 +498,11 @@ void Device::Interface::OpenSessionCompleterBase::Reply(::fidl::BytePart _buffer
     return;
   }
   auto& _response = *reinterpret_cast<OpenSessionResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevice_OpenSession_Ordinal;
+  Device::SetTransactionHeaderFor::OpenSessionResponse(
+      ::fidl::DecodedMessage<OpenSessionResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              OpenSessionResponse::PrimarySize,
+              OpenSessionResponse::PrimarySize)));
   _response.session_id = std::move(session_id);
   _response.op_result = std::move(op_result);
   _buffer.set_actual(sizeof(OpenSessionResponse));
@@ -535,12 +510,7 @@ void Device::Interface::OpenSessionCompleterBase::Reply(::fidl::BytePart _buffer
 }
 
 void Device::Interface::OpenSessionCompleterBase::Reply(::fidl::DecodedMessage<OpenSessionResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevice_OpenSession_Ordinal;
+  Device::SetTransactionHeaderFor::OpenSessionResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -549,11 +519,11 @@ void Device::Interface::InvokeCommandCompleterBase::Reply(::llcpp::fuchsia::tee:
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<InvokeCommandResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<InvokeCommandResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevice_InvokeCommand_Ordinal;
+  Device::SetTransactionHeaderFor::InvokeCommandResponse(
+      ::fidl::DecodedMessage<InvokeCommandResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              InvokeCommandResponse::PrimarySize,
+              InvokeCommandResponse::PrimarySize)));
   _response.op_result = std::move(op_result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(InvokeCommandResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<InvokeCommandResponse>(std::move(_response_bytes)));
@@ -565,23 +535,18 @@ void Device::Interface::InvokeCommandCompleterBase::Reply(::fidl::BytePart _buff
     return;
   }
   auto& _response = *reinterpret_cast<InvokeCommandResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevice_InvokeCommand_Ordinal;
+  Device::SetTransactionHeaderFor::InvokeCommandResponse(
+      ::fidl::DecodedMessage<InvokeCommandResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              InvokeCommandResponse::PrimarySize,
+              InvokeCommandResponse::PrimarySize)));
   _response.op_result = std::move(op_result);
   _buffer.set_actual(sizeof(InvokeCommandResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<InvokeCommandResponse>(std::move(_buffer)));
 }
 
 void Device::Interface::InvokeCommandCompleterBase::Reply(::fidl::DecodedMessage<InvokeCommandResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDevice_InvokeCommand_Ordinal;
+  Device::SetTransactionHeaderFor::InvokeCommandResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -590,15 +555,52 @@ void Device::Interface::CloseSessionCompleterBase::Reply() {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseSessionResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<CloseSessionResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDevice_CloseSession_Ordinal;
+  Device::SetTransactionHeaderFor::CloseSessionResponse(
+      ::fidl::DecodedMessage<CloseSessionResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              CloseSessionResponse::PrimarySize,
+              CloseSessionResponse::PrimarySize)));
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(CloseSessionResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<CloseSessionResponse>(std::move(_response_bytes)));
 }
 
+
+
+void Device::SetTransactionHeaderFor::GetOsInfoRequest(const ::fidl::DecodedMessage<Device::GetOsInfoRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_GetOsInfo_Ordinal;
+}
+void Device::SetTransactionHeaderFor::GetOsInfoResponse(const ::fidl::DecodedMessage<Device::GetOsInfoResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_GetOsInfo_Ordinal;
+}
+
+void Device::SetTransactionHeaderFor::OpenSessionRequest(const ::fidl::DecodedMessage<Device::OpenSessionRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_OpenSession_Ordinal;
+}
+void Device::SetTransactionHeaderFor::OpenSessionResponse(const ::fidl::DecodedMessage<Device::OpenSessionResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_OpenSession_Ordinal;
+}
+
+void Device::SetTransactionHeaderFor::InvokeCommandRequest(const ::fidl::DecodedMessage<Device::InvokeCommandRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_InvokeCommand_Ordinal;
+}
+void Device::SetTransactionHeaderFor::InvokeCommandResponse(const ::fidl::DecodedMessage<Device::InvokeCommandResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_InvokeCommand_Ordinal;
+}
+
+void Device::SetTransactionHeaderFor::CloseSessionRequest(const ::fidl::DecodedMessage<Device::CloseSessionRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_CloseSession_Ordinal;
+}
+void Device::SetTransactionHeaderFor::CloseSessionResponse(const ::fidl::DecodedMessage<Device::CloseSessionResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_CloseSession_Ordinal;
+}
 
 }  // namespace tee
 }  // namespace fuchsia

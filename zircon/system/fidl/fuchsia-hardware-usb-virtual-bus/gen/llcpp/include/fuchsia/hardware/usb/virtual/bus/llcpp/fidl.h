@@ -437,6 +437,20 @@ class Bus final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void EnableRequest(const ::fidl::DecodedMessage<Bus::EnableRequest>& _msg);
+    static void EnableResponse(const ::fidl::DecodedMessage<Bus::EnableResponse>& _msg);
+    static void DisableRequest(const ::fidl::DecodedMessage<Bus::DisableRequest>& _msg);
+    static void DisableResponse(const ::fidl::DecodedMessage<Bus::DisableResponse>& _msg);
+    static void ConnectRequest(const ::fidl::DecodedMessage<Bus::ConnectRequest>& _msg);
+    static void ConnectResponse(const ::fidl::DecodedMessage<Bus::ConnectResponse>& _msg);
+    static void DisconnectRequest(const ::fidl::DecodedMessage<Bus::DisconnectRequest>& _msg);
+    static void DisconnectResponse(const ::fidl::DecodedMessage<Bus::DisconnectResponse>& _msg);
+  };
 };
 
 }  // namespace bus

@@ -61,12 +61,7 @@ Loader::ResultOf::Done Loader::Call::Done(zx::unowned_channel _client_end) {
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<DoneRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLoader_Done_Ordinal;
+  Loader::SetTransactionHeaderFor::DoneRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -133,12 +128,7 @@ Loader::UnownedResultOf::LoadObject Loader::Call::LoadObject(zx::unowned_channel
 }
 
 ::fidl::DecodeResult<Loader::LoadObjectResponse> Loader::InPlace::LoadObject(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LoadObjectRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLoader_LoadObject_Ordinal;
+  Loader::SetTransactionHeaderFor::LoadObjectRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Loader::LoadObjectResponse>::FromFailure(
@@ -205,12 +195,7 @@ Loader::UnownedResultOf::Config Loader::Call::Config(zx::unowned_channel _client
 }
 
 ::fidl::DecodeResult<Loader::ConfigResponse> Loader::InPlace::Config(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConfigRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLoader_Config_Ordinal;
+  Loader::SetTransactionHeaderFor::ConfigRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Loader::ConfigResponse>::FromFailure(
@@ -272,12 +257,7 @@ Loader::UnownedResultOf::Clone Loader::Call::Clone(zx::unowned_channel _client_e
 }
 
 ::fidl::DecodeResult<Loader::CloneResponse> Loader::InPlace::Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLoader_Clone_Ordinal;
+  Loader::SetTransactionHeaderFor::CloneRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Loader::CloneResponse>::FromFailure(
@@ -372,11 +352,11 @@ void Loader::Interface::LoadObjectCompleterBase::Reply(int32_t rv, ::zx::vmo obj
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadObjectResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<LoadObjectResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLoader_LoadObject_Ordinal;
+  Loader::SetTransactionHeaderFor::LoadObjectResponse(
+      ::fidl::DecodedMessage<LoadObjectResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              LoadObjectResponse::PrimarySize,
+              LoadObjectResponse::PrimarySize)));
   _response.rv = std::move(rv);
   _response.object = std::move(object);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(LoadObjectResponse));
@@ -389,11 +369,11 @@ void Loader::Interface::LoadObjectCompleterBase::Reply(::fidl::BytePart _buffer,
     return;
   }
   auto& _response = *reinterpret_cast<LoadObjectResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLoader_LoadObject_Ordinal;
+  Loader::SetTransactionHeaderFor::LoadObjectResponse(
+      ::fidl::DecodedMessage<LoadObjectResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              LoadObjectResponse::PrimarySize,
+              LoadObjectResponse::PrimarySize)));
   _response.rv = std::move(rv);
   _response.object = std::move(object);
   _buffer.set_actual(sizeof(LoadObjectResponse));
@@ -401,12 +381,7 @@ void Loader::Interface::LoadObjectCompleterBase::Reply(::fidl::BytePart _buffer,
 }
 
 void Loader::Interface::LoadObjectCompleterBase::Reply(::fidl::DecodedMessage<LoadObjectResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLoader_LoadObject_Ordinal;
+  Loader::SetTransactionHeaderFor::LoadObjectResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -415,11 +390,11 @@ void Loader::Interface::ConfigCompleterBase::Reply(int32_t rv) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConfigResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ConfigResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLoader_Config_Ordinal;
+  Loader::SetTransactionHeaderFor::ConfigResponse(
+      ::fidl::DecodedMessage<ConfigResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ConfigResponse::PrimarySize,
+              ConfigResponse::PrimarySize)));
   _response.rv = std::move(rv);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ConfigResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ConfigResponse>(std::move(_response_bytes)));
@@ -431,23 +406,18 @@ void Loader::Interface::ConfigCompleterBase::Reply(::fidl::BytePart _buffer, int
     return;
   }
   auto& _response = *reinterpret_cast<ConfigResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLoader_Config_Ordinal;
+  Loader::SetTransactionHeaderFor::ConfigResponse(
+      ::fidl::DecodedMessage<ConfigResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ConfigResponse::PrimarySize,
+              ConfigResponse::PrimarySize)));
   _response.rv = std::move(rv);
   _buffer.set_actual(sizeof(ConfigResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ConfigResponse>(std::move(_buffer)));
 }
 
 void Loader::Interface::ConfigCompleterBase::Reply(::fidl::DecodedMessage<ConfigResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLoader_Config_Ordinal;
+  Loader::SetTransactionHeaderFor::ConfigResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -456,11 +426,11 @@ void Loader::Interface::CloneCompleterBase::Reply(int32_t rv) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloneResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<CloneResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLoader_Clone_Ordinal;
+  Loader::SetTransactionHeaderFor::CloneResponse(
+      ::fidl::DecodedMessage<CloneResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              CloneResponse::PrimarySize,
+              CloneResponse::PrimarySize)));
   _response.rv = std::move(rv);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(CloneResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<CloneResponse>(std::move(_response_bytes)));
@@ -472,26 +442,54 @@ void Loader::Interface::CloneCompleterBase::Reply(::fidl::BytePart _buffer, int3
     return;
   }
   auto& _response = *reinterpret_cast<CloneResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kLoader_Clone_Ordinal;
+  Loader::SetTransactionHeaderFor::CloneResponse(
+      ::fidl::DecodedMessage<CloneResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              CloneResponse::PrimarySize,
+              CloneResponse::PrimarySize)));
   _response.rv = std::move(rv);
   _buffer.set_actual(sizeof(CloneResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<CloneResponse>(std::move(_buffer)));
 }
 
 void Loader::Interface::CloneCompleterBase::Reply(::fidl::DecodedMessage<CloneResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kLoader_Clone_Ordinal;
+  Loader::SetTransactionHeaderFor::CloneResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
+
+
+void Loader::SetTransactionHeaderFor::DoneRequest(const ::fidl::DecodedMessage<Loader::DoneRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLoader_Done_Ordinal;
+}
+
+void Loader::SetTransactionHeaderFor::LoadObjectRequest(const ::fidl::DecodedMessage<Loader::LoadObjectRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLoader_LoadObject_Ordinal;
+}
+void Loader::SetTransactionHeaderFor::LoadObjectResponse(const ::fidl::DecodedMessage<Loader::LoadObjectResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLoader_LoadObject_Ordinal;
+}
+
+void Loader::SetTransactionHeaderFor::ConfigRequest(const ::fidl::DecodedMessage<Loader::ConfigRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLoader_Config_Ordinal;
+}
+void Loader::SetTransactionHeaderFor::ConfigResponse(const ::fidl::DecodedMessage<Loader::ConfigResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLoader_Config_Ordinal;
+}
+
+void Loader::SetTransactionHeaderFor::CloneRequest(const ::fidl::DecodedMessage<Loader::CloneRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLoader_Clone_Ordinal;
+}
+void Loader::SetTransactionHeaderFor::CloneResponse(const ::fidl::DecodedMessage<Loader::CloneResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kLoader_Clone_Ordinal;
+}
 
 }  // namespace ldsvc
 }  // namespace fuchsia

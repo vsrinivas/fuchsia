@@ -1181,6 +1181,34 @@ class Device final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetInfoRequest(const ::fidl::DecodedMessage<Device::GetInfoRequest>& _msg);
+    static void GetInfoResponse(const ::fidl::DecodedMessage<Device::GetInfoResponse>& _msg);
+    static void GetDeviceInfoRequest(const ::fidl::DecodedMessage<Device::GetDeviceInfoRequest>& _msg);
+    static void GetDeviceInfoResponse(const ::fidl::DecodedMessage<Device::GetDeviceInfoResponse>& _msg);
+    static void GetDvfsInfoRequest(const ::fidl::DecodedMessage<Device::GetDvfsInfoRequest>& _msg);
+    static void GetDvfsInfoResponse(const ::fidl::DecodedMessage<Device::GetDvfsInfoResponse>& _msg);
+    static void GetTemperatureCelsiusRequest(const ::fidl::DecodedMessage<Device::GetTemperatureCelsiusRequest>& _msg);
+    static void GetTemperatureCelsiusResponse(const ::fidl::DecodedMessage<Device::GetTemperatureCelsiusResponse>& _msg);
+    static void GetStateChangeEventRequest(const ::fidl::DecodedMessage<Device::GetStateChangeEventRequest>& _msg);
+    static void GetStateChangeEventResponse(const ::fidl::DecodedMessage<Device::GetStateChangeEventResponse>& _msg);
+    static void GetStateChangePortRequest(const ::fidl::DecodedMessage<Device::GetStateChangePortRequest>& _msg);
+    static void GetStateChangePortResponse(const ::fidl::DecodedMessage<Device::GetStateChangePortResponse>& _msg);
+    static void SetTripCelsiusRequest(const ::fidl::DecodedMessage<Device::SetTripCelsiusRequest>& _msg);
+    static void SetTripCelsiusResponse(const ::fidl::DecodedMessage<Device::SetTripCelsiusResponse>& _msg);
+    static void GetDvfsOperatingPointRequest(const ::fidl::DecodedMessage<Device::GetDvfsOperatingPointRequest>& _msg);
+    static void GetDvfsOperatingPointResponse(const ::fidl::DecodedMessage<Device::GetDvfsOperatingPointResponse>& _msg);
+    static void SetDvfsOperatingPointRequest(const ::fidl::DecodedMessage<Device::SetDvfsOperatingPointRequest>& _msg);
+    static void SetDvfsOperatingPointResponse(const ::fidl::DecodedMessage<Device::SetDvfsOperatingPointResponse>& _msg);
+    static void GetFanLevelRequest(const ::fidl::DecodedMessage<Device::GetFanLevelRequest>& _msg);
+    static void GetFanLevelResponse(const ::fidl::DecodedMessage<Device::GetFanLevelResponse>& _msg);
+    static void SetFanLevelRequest(const ::fidl::DecodedMessage<Device::SetFanLevelRequest>& _msg);
+    static void SetFanLevelResponse(const ::fidl::DecodedMessage<Device::SetFanLevelResponse>& _msg);
+  };
 };
 
 

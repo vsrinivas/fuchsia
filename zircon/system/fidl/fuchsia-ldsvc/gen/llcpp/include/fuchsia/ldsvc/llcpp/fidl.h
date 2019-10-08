@@ -420,6 +420,19 @@ class Loader final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void DoneRequest(const ::fidl::DecodedMessage<Loader::DoneRequest>& _msg);
+    static void LoadObjectRequest(const ::fidl::DecodedMessage<Loader::LoadObjectRequest>& _msg);
+    static void LoadObjectResponse(const ::fidl::DecodedMessage<Loader::LoadObjectResponse>& _msg);
+    static void ConfigRequest(const ::fidl::DecodedMessage<Loader::ConfigRequest>& _msg);
+    static void ConfigResponse(const ::fidl::DecodedMessage<Loader::ConfigResponse>& _msg);
+    static void CloneRequest(const ::fidl::DecodedMessage<Loader::CloneRequest>& _msg);
+    static void CloneResponse(const ::fidl::DecodedMessage<Loader::CloneResponse>& _msg);
+  };
 };
 
 }  // namespace ldsvc

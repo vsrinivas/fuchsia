@@ -14,18 +14,28 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_CountNumDirectories_Ordinal = 0x6915d08800000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDirEntTestInterface_CountNumDirectories_GenOrdinal = 0x331f16100bcf01a1lu;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_ReadDir_Ordinal = 0x52407b00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDirEntTestInterface_ReadDir_GenOrdinal = 0x1b5e15bc80c7cf42lu;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_ConsumeDirectories_Ordinal = 0x19655c0700000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDirEntTestInterface_ConsumeDirectories_GenOrdinal = 0x5d25ec8ecff39cd9lu;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_OnDirents_Ordinal = 0x4c81d6ba00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDirEntTestInterface_OnDirents_GenOrdinal = 0x7a75e26a45782c25lu;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsEventTable;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_OneWayDirents_Ordinal = 0x6beae37500000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDirEntTestInterface_OneWayDirents_GenOrdinal = 0x3b04d61f058a9043lu;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsRequestTable;
 
 }  // namespace
@@ -81,8 +91,7 @@ DirEntTestInterface::UnownedResultOf::CountNumDirectories DirEntTestInterface::C
 }
 
 ::fidl::DecodeResult<DirEntTestInterface::CountNumDirectoriesResponse> DirEntTestInterface::InPlace::CountNumDirectories(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CountNumDirectoriesRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDirEntTestInterface_CountNumDirectories_Ordinal;
+  DirEntTestInterface::SetTransactionHeaderFor::CountNumDirectoriesRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<DirEntTestInterface::CountNumDirectoriesResponse>::FromFailure(
@@ -143,8 +152,7 @@ DirEntTestInterface::UnownedResultOf::ReadDir DirEntTestInterface::Call::ReadDir
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<ReadDirRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDirEntTestInterface_ReadDir_Ordinal;
+  DirEntTestInterface::SetTransactionHeaderFor::ReadDirRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<DirEntTestInterface::ReadDirResponse>::FromFailure(
@@ -211,8 +219,7 @@ DirEntTestInterface::UnownedResultOf::ConsumeDirectories DirEntTestInterface::Ca
 }
 
 ::fidl::DecodeResult<DirEntTestInterface::ConsumeDirectoriesResponse> DirEntTestInterface::InPlace::ConsumeDirectories(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeDirectoriesRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDirEntTestInterface_ConsumeDirectories_Ordinal;
+  DirEntTestInterface::SetTransactionHeaderFor::ConsumeDirectoriesRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<DirEntTestInterface::ConsumeDirectoriesResponse>::FromFailure(
@@ -282,8 +289,7 @@ DirEntTestInterface::UnownedResultOf::OneWayDirents DirEntTestInterface::Call::O
 }
 
 ::fidl::internal::StatusAndError DirEntTestInterface::InPlace::OneWayDirents(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OneWayDirentsRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDirEntTestInterface_OneWayDirents_Ordinal;
+  DirEntTestInterface::SetTransactionHeaderFor::OneWayDirentsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -358,6 +364,7 @@ zx_status_t DirEntTestInterface::Call::HandleEvents(zx::unowned_channel client_e
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
     case kDirEntTestInterface_OnDirents_Ordinal:
+    case kDirEntTestInterface_OnDirents_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<OnDirentsResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -381,6 +388,7 @@ bool DirEntTestInterface::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
     case kDirEntTestInterface_CountNumDirectories_Ordinal:
+    case kDirEntTestInterface_CountNumDirectories_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CountNumDirectoriesRequest>(msg);
       if (result.status != ZX_OK) {
@@ -393,6 +401,7 @@ bool DirEntTestInterface::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::
       return true;
     }
     case kDirEntTestInterface_ReadDir_Ordinal:
+    case kDirEntTestInterface_ReadDir_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ReadDirRequest>(msg);
       if (result.status != ZX_OK) {
@@ -404,6 +413,7 @@ bool DirEntTestInterface::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::
       return true;
     }
     case kDirEntTestInterface_ConsumeDirectories_Ordinal:
+    case kDirEntTestInterface_ConsumeDirectories_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ConsumeDirectoriesRequest>(msg);
       if (result.status != ZX_OK) {
@@ -416,6 +426,7 @@ bool DirEntTestInterface::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::
       return true;
     }
     case kDirEntTestInterface_OneWayDirents_Ordinal:
+    case kDirEntTestInterface_OneWayDirents_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<OneWayDirentsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -447,7 +458,11 @@ void DirEntTestInterface::Interface::CountNumDirectoriesCompleterBase::Reply(int
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CountNumDirectoriesResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<CountNumDirectoriesResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDirEntTestInterface_CountNumDirectories_Ordinal;
+  DirEntTestInterface::SetTransactionHeaderFor::CountNumDirectoriesResponse(
+      ::fidl::DecodedMessage<CountNumDirectoriesResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              CountNumDirectoriesResponse::PrimarySize,
+              CountNumDirectoriesResponse::PrimarySize)));
   _response.num_dir = std::move(num_dir);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(CountNumDirectoriesResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<CountNumDirectoriesResponse>(std::move(_response_bytes)));
@@ -459,15 +474,18 @@ void DirEntTestInterface::Interface::CountNumDirectoriesCompleterBase::Reply(::f
     return;
   }
   auto& _response = *reinterpret_cast<CountNumDirectoriesResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDirEntTestInterface_CountNumDirectories_Ordinal;
+  DirEntTestInterface::SetTransactionHeaderFor::CountNumDirectoriesResponse(
+      ::fidl::DecodedMessage<CountNumDirectoriesResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              CountNumDirectoriesResponse::PrimarySize,
+              CountNumDirectoriesResponse::PrimarySize)));
   _response.num_dir = std::move(num_dir);
   _buffer.set_actual(sizeof(CountNumDirectoriesResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<CountNumDirectoriesResponse>(std::move(_buffer)));
 }
 
 void DirEntTestInterface::Interface::CountNumDirectoriesCompleterBase::Reply(::fidl::DecodedMessage<CountNumDirectoriesResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDirEntTestInterface_CountNumDirectories_Ordinal;
+  DirEntTestInterface::SetTransactionHeaderFor::CountNumDirectoriesResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -476,7 +494,11 @@ void DirEntTestInterface::Interface::ReadDirCompleterBase::Reply(::fidl::VectorV
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadDirResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   ReadDirResponse _response = {};
-  _response._hdr.ordinal = kDirEntTestInterface_ReadDir_Ordinal;
+  DirEntTestInterface::SetTransactionHeaderFor::ReadDirResponse(
+      ::fidl::DecodedMessage<ReadDirResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ReadDirResponse::PrimarySize,
+              ReadDirResponse::PrimarySize)));
   _response.dirents = std::move(dirents);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
                                                                           _kWriteAllocSize));
@@ -493,7 +515,11 @@ void DirEntTestInterface::Interface::ReadDirCompleterBase::Reply(::fidl::BytePar
     return;
   }
   ReadDirResponse _response = {};
-  _response._hdr.ordinal = kDirEntTestInterface_ReadDir_Ordinal;
+  DirEntTestInterface::SetTransactionHeaderFor::ReadDirResponse(
+      ::fidl::DecodedMessage<ReadDirResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ReadDirResponse::PrimarySize,
+              ReadDirResponse::PrimarySize)));
   _response.dirents = std::move(dirents);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -504,8 +530,7 @@ void DirEntTestInterface::Interface::ReadDirCompleterBase::Reply(::fidl::BytePar
 }
 
 void DirEntTestInterface::Interface::ReadDirCompleterBase::Reply(::fidl::DecodedMessage<ReadDirResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDirEntTestInterface_ReadDir_Ordinal;
+  DirEntTestInterface::SetTransactionHeaderFor::ReadDirResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -514,7 +539,11 @@ void DirEntTestInterface::Interface::ConsumeDirectoriesCompleterBase::Reply() {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeDirectoriesResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ConsumeDirectoriesResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDirEntTestInterface_ConsumeDirectories_Ordinal;
+  DirEntTestInterface::SetTransactionHeaderFor::ConsumeDirectoriesResponse(
+      ::fidl::DecodedMessage<ConsumeDirectoriesResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ConsumeDirectoriesResponse::PrimarySize,
+              ConsumeDirectoriesResponse::PrimarySize)));
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ConsumeDirectoriesResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ConsumeDirectoriesResponse>(std::move(_response_bytes)));
 }
@@ -525,8 +554,11 @@ zx_status_t DirEntTestInterface::SendOnDirentsEvent(::zx::unowned_channel _chan,
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   OnDirentsResponse _response = {};
-  _response._hdr = {};
-  _response._hdr.ordinal = kDirEntTestInterface_OnDirents_Ordinal;
+  DirEntTestInterface::SetTransactionHeaderFor::OnDirentsResponse(
+      ::fidl::DecodedMessage<OnDirentsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              OnDirentsResponse::PrimarySize,
+              OnDirentsResponse::PrimarySize)));
   _response.dirents = std::move(dirents);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
                                                                           _kWriteAllocSize));
@@ -541,8 +573,11 @@ zx_status_t DirEntTestInterface::SendOnDirentsEvent(::zx::unowned_channel _chan,
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   OnDirentsResponse _response = {};
-  _response._hdr = {};
-  _response._hdr.ordinal = kDirEntTestInterface_OnDirents_Ordinal;
+  DirEntTestInterface::SetTransactionHeaderFor::OnDirentsResponse(
+      ::fidl::DecodedMessage<OnDirentsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              OnDirentsResponse::PrimarySize,
+              OnDirentsResponse::PrimarySize)));
   _response.dirents = std::move(dirents);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -552,11 +587,48 @@ zx_status_t DirEntTestInterface::SendOnDirentsEvent(::zx::unowned_channel _chan,
 }
 
 zx_status_t DirEntTestInterface::SendOnDirentsEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnDirentsResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDirEntTestInterface_OnDirents_Ordinal;
+  DirEntTestInterface::SetTransactionHeaderFor::OnDirentsResponse(params);
   return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
 }
 
+
+
+void DirEntTestInterface::SetTransactionHeaderFor::CountNumDirectoriesRequest(const ::fidl::DecodedMessage<DirEntTestInterface::CountNumDirectoriesRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDirEntTestInterface_CountNumDirectories_Ordinal;
+}
+void DirEntTestInterface::SetTransactionHeaderFor::CountNumDirectoriesResponse(const ::fidl::DecodedMessage<DirEntTestInterface::CountNumDirectoriesResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDirEntTestInterface_CountNumDirectories_Ordinal;
+}
+
+void DirEntTestInterface::SetTransactionHeaderFor::ReadDirRequest(const ::fidl::DecodedMessage<DirEntTestInterface::ReadDirRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDirEntTestInterface_ReadDir_Ordinal;
+}
+void DirEntTestInterface::SetTransactionHeaderFor::ReadDirResponse(const ::fidl::DecodedMessage<DirEntTestInterface::ReadDirResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDirEntTestInterface_ReadDir_Ordinal;
+}
+
+void DirEntTestInterface::SetTransactionHeaderFor::ConsumeDirectoriesRequest(const ::fidl::DecodedMessage<DirEntTestInterface::ConsumeDirectoriesRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDirEntTestInterface_ConsumeDirectories_Ordinal;
+}
+void DirEntTestInterface::SetTransactionHeaderFor::ConsumeDirectoriesResponse(const ::fidl::DecodedMessage<DirEntTestInterface::ConsumeDirectoriesResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDirEntTestInterface_ConsumeDirectories_Ordinal;
+}
+
+void DirEntTestInterface::SetTransactionHeaderFor::OnDirentsResponse(const ::fidl::DecodedMessage<DirEntTestInterface::OnDirentsResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDirEntTestInterface_OnDirents_Ordinal;
+}
+
+void DirEntTestInterface::SetTransactionHeaderFor::OneWayDirentsRequest(const ::fidl::DecodedMessage<DirEntTestInterface::OneWayDirentsRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDirEntTestInterface_OneWayDirents_Ordinal;
+}
 
 }  // namespace dirent
 }  // namespace llcpp

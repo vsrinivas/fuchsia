@@ -78,12 +78,7 @@ DebugData::UnownedResultOf::Publish DebugData::Call::Publish(zx::unowned_channel
 }
 
 ::fidl::internal::StatusAndError DebugData::InPlace::Publish(zx::unowned_channel _client_end, ::fidl::DecodedMessage<PublishRequest> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDebugData_Publish_Ordinal;
+  DebugData::SetTransactionHeaderFor::PublishRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -150,12 +145,7 @@ DebugData::UnownedResultOf::LoadConfig DebugData::Call::LoadConfig(zx::unowned_c
 }
 
 ::fidl::DecodeResult<DebugData::LoadConfigResponse> DebugData::InPlace::LoadConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LoadConfigRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDebugData_LoadConfig_Ordinal;
+  DebugData::SetTransactionHeaderFor::LoadConfigRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<DebugData::LoadConfigResponse>::FromFailure(
@@ -225,11 +215,11 @@ void DebugData::Interface::LoadConfigCompleterBase::Reply(::zx::vmo config) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadConfigResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<LoadConfigResponse*>(_write_bytes);
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDebugData_LoadConfig_Ordinal;
+  DebugData::SetTransactionHeaderFor::LoadConfigResponse(
+      ::fidl::DecodedMessage<LoadConfigResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              LoadConfigResponse::PrimarySize,
+              LoadConfigResponse::PrimarySize)));
   _response.config = std::move(config);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(LoadConfigResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<LoadConfigResponse>(std::move(_response_bytes)));
@@ -241,26 +231,36 @@ void DebugData::Interface::LoadConfigCompleterBase::Reply(::fidl::BytePart _buff
     return;
   }
   auto& _response = *reinterpret_cast<LoadConfigResponse*>(_buffer.data());
-  _response._hdr.flags[0] = 0;
-  _response._hdr.flags[1] = 0;
-  _response._hdr.flags[2] = 0;
-  _response._hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  _response._hdr.ordinal = kDebugData_LoadConfig_Ordinal;
+  DebugData::SetTransactionHeaderFor::LoadConfigResponse(
+      ::fidl::DecodedMessage<LoadConfigResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              LoadConfigResponse::PrimarySize,
+              LoadConfigResponse::PrimarySize)));
   _response.config = std::move(config);
   _buffer.set_actual(sizeof(LoadConfigResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<LoadConfigResponse>(std::move(_buffer)));
 }
 
 void DebugData::Interface::LoadConfigCompleterBase::Reply(::fidl::DecodedMessage<LoadConfigResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.flags[0] = 0;
-  params.message()->_hdr.flags[1] = 0;
-  params.message()->_hdr.flags[2] = 0;
-  params.message()->_hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  params.message()->_hdr.ordinal = kDebugData_LoadConfig_Ordinal;
+  DebugData::SetTransactionHeaderFor::LoadConfigResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
+
+
+void DebugData::SetTransactionHeaderFor::PublishRequest(const ::fidl::DecodedMessage<DebugData::PublishRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDebugData_Publish_Ordinal;
+}
+
+void DebugData::SetTransactionHeaderFor::LoadConfigRequest(const ::fidl::DecodedMessage<DebugData::LoadConfigRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDebugData_LoadConfig_Ordinal;
+}
+void DebugData::SetTransactionHeaderFor::LoadConfigResponse(const ::fidl::DecodedMessage<DebugData::LoadConfigResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDebugData_LoadConfig_Ordinal;
+}
 
 }  // namespace debugdata
 }  // namespace fuchsia

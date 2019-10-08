@@ -639,6 +639,20 @@ class SkipBlock final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetPartitionInfoRequest(const ::fidl::DecodedMessage<SkipBlock::GetPartitionInfoRequest>& _msg);
+    static void GetPartitionInfoResponse(const ::fidl::DecodedMessage<SkipBlock::GetPartitionInfoResponse>& _msg);
+    static void ReadRequest(const ::fidl::DecodedMessage<SkipBlock::ReadRequest>& _msg);
+    static void ReadResponse(const ::fidl::DecodedMessage<SkipBlock::ReadResponse>& _msg);
+    static void WriteRequest(const ::fidl::DecodedMessage<SkipBlock::WriteRequest>& _msg);
+    static void WriteResponse(const ::fidl::DecodedMessage<SkipBlock::WriteResponse>& _msg);
+    static void WriteBytesRequest(const ::fidl::DecodedMessage<SkipBlock::WriteBytesRequest>& _msg);
+    static void WriteBytesResponse(const ::fidl::DecodedMessage<SkipBlock::WriteBytesResponse>& _msg);
+  };
 };
 
 constexpr uint32_t GUID_LEN = 16u;
