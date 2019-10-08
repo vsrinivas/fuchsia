@@ -15,22 +15,48 @@ namespace btree {
 
 namespace {
 
-Status ForEachEntryInternal(SynchronousStorage* storage, LocatedObjectIdentifier root_identifier,
-                            fxl::StringView min_key,
-                            fit::function<bool(EntryAndNodeIdentifier)> on_next) {
+Status SynchronousForEachEntryInternal(SynchronousStorage* storage,
+                                       LocatedObjectIdentifier root_identifier,
+                                       std::optional<std::string> min_key,
+                                       fit::function<bool(Entry)> on_next_entry,
+                                       fit::function<bool(ObjectIdentifier)> on_next_node) {
   BTreeIterator iterator(storage);
   RETURN_ON_ERROR(iterator.Init(std::move(root_identifier)));
-  RETURN_ON_ERROR(iterator.SkipTo(min_key));
+  if (min_key) {
+    RETURN_ON_ERROR(iterator.SkipTo(*min_key));
+  }
   while (!iterator.Finished()) {
-    RETURN_ON_ERROR(iterator.AdvanceToValue());
-    if (iterator.HasValue()) {
-      if (!on_next({iterator.CurrentEntry(), iterator.GetIdentifier()})) {
+    if (iterator.IsNewNode()) {
+      if (!on_next_node(iterator.GetIdentifier())) {
         return Status::OK;
       }
-      RETURN_ON_ERROR(iterator.Advance());
     }
+    if (iterator.HasValue()) {
+      if (!on_next_entry(iterator.CurrentEntry())) {
+        return Status::OK;
+      }
+    }
+    RETURN_ON_ERROR(iterator.Advance());
   }
   return Status::OK;
+}
+
+void ForEachEntryInternal(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
+                          LocatedObjectIdentifier root_identifier,
+                          std::optional<std::string> min_key,
+                          fit::function<bool(Entry)> on_next_entry,
+                          fit::function<bool(ObjectIdentifier)> on_next_node,
+                          fit::function<void(Status)> on_done) {
+  FXL_DCHECK(root_identifier.identifier.object_digest().IsValid());
+  coroutine_service->StartCoroutine(
+      [page_storage, root_identifier = std::move(root_identifier), min_key = std::move(min_key),
+       on_next_entry = std::move(on_next_entry), on_next_node = std::move(on_next_node),
+       on_done = std::move(on_done)](coroutine::CoroutineHandler* handler) mutable {
+        SynchronousStorage storage(page_storage, handler);
+        on_done(SynchronousForEachEntryInternal(&storage, std::move(root_identifier),
+                                                std::move(min_key), std::move(on_next_entry),
+                                                std::move(on_next_node)));
+      });
 }
 
 }  // namespace
@@ -84,6 +110,10 @@ const ObjectIdentifier* BTreeIterator::GetNextChild() const {
 
 bool BTreeIterator::HasValue() const {
   return !stack_.empty() && !descending_ && CurrentIndex() < CurrentNode().entries().size();
+}
+
+bool BTreeIterator::IsNewNode() const {
+  return !stack_.empty() && descending_ && CurrentIndex() == 0;
 }
 
 bool BTreeIterator::Finished() const { return stack_.empty(); }
@@ -156,9 +186,12 @@ void GetObjectIdentifiers(coroutine::CoroutineService* coroutine_service, PageSt
   auto object_digests = std::make_unique<std::set<ObjectIdentifier>>();
   object_digests->insert(root_identifier.identifier);
 
-  auto on_next = [object_digests = object_digests.get()](EntryAndNodeIdentifier e) {
-    object_digests->insert(e.entry.object_identifier);
-    object_digests->insert(e.node_identifier);
+  auto on_next_entry = [object_digests = object_digests.get()](Entry e) {
+    object_digests->insert(e.object_identifier);
+    return true;
+  };
+  auto on_next_node = [object_digests = object_digests.get()](ObjectIdentifier node_identifier) {
+    object_digests->insert(node_identifier);
     return true;
   };
   auto on_done = [object_digests = std::move(object_digests),
@@ -169,8 +202,8 @@ void GetObjectIdentifiers(coroutine::CoroutineService* coroutine_service, PageSt
     }
     callback(status, std::move(*object_digests));
   };
-  ForEachEntry(coroutine_service, page_storage, root_identifier, "", std::move(on_next),
-               std::move(on_done));
+  ForEachEntryInternal(coroutine_service, page_storage, root_identifier, std::nullopt,
+                       std::move(on_next_entry), std::move(on_next_node), std::move(on_done));
 }
 
 void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
@@ -178,9 +211,9 @@ void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service, PageStor
                         fit::function<void(Status)> callback) {
   auto waiter =
       fxl::MakeRefCounted<callback::Waiter<Status, std::unique_ptr<const Object>>>(Status::OK);
-  auto on_next = [page_storage, waiter](EntryAndNodeIdentifier e) {
-    if (e.entry.priority == KeyPriority::EAGER) {
-      page_storage->GetObject(e.entry.object_identifier, PageStorage::Location::ValueFromNetwork(),
+  auto on_next = [page_storage, waiter](Entry e) {
+    if (e.priority == KeyPriority::EAGER) {
+      page_storage->GetObject(e.object_identifier, PageStorage::Location::ValueFromNetwork(),
                               waiter->NewCallback());
     }
     return true;
@@ -194,24 +227,17 @@ void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service, PageStor
         [callback = std::move(callback)](
             Status s, std::vector<std::unique_ptr<const Object>> objects) { callback(s); });
   };
-  ForEachEntry(coroutine_service, page_storage, root_identifier, "", std::move(on_next),
-               std::move(on_done));
+  ForEachEntryInternal(
+      coroutine_service, page_storage, root_identifier, std::nullopt, std::move(on_next),
+      [](ObjectIdentifier /*node*/) { return true; }, std::move(on_done));
 }
 
 void ForEachEntry(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
                   LocatedObjectIdentifier root_identifier, std::string min_key,
-                  fit::function<bool(EntryAndNodeIdentifier)> on_next,
-                  fit::function<void(Status)> on_done) {
-  FXL_DCHECK(root_identifier.identifier.object_digest().IsValid());
-  coroutine_service->StartCoroutine(
-      [page_storage, root_identifier = std::move(root_identifier), min_key = std::move(min_key),
-       on_next = std::move(on_next),
-       on_done = std::move(on_done)](coroutine::CoroutineHandler* handler) mutable {
-        SynchronousStorage storage(page_storage, handler);
-
-        on_done(ForEachEntryInternal(&storage, std::move(root_identifier), min_key,
-                                     std::move(on_next)));
-      });
+                  fit::function<bool(Entry)> on_next, fit::function<void(Status)> on_done) {
+  ForEachEntryInternal(
+      coroutine_service, page_storage, std::move(root_identifier), std::move(min_key),
+      std::move(on_next), [](ObjectIdentifier /*node*/) { return true; }, std::move(on_done));
 }
 
 }  // namespace btree

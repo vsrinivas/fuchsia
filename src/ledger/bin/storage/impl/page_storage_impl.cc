@@ -707,21 +707,16 @@ void PageStorageImpl::GetCommitContents(const Commit& commit, std::string min_ke
   btree::ForEachEntry(
       environment_->coroutine_service(), this,
       {commit.GetRootIdentifier(), PageStorage::Location::TreeNodeFromNetwork(commit.GetId())},
-      min_key,
-      [on_next = std::move(on_next)](btree::EntryAndNodeIdentifier next) {
-        return on_next(next.entry);
-      },
-      std::move(on_done));
+      min_key, std::move(on_next), std::move(on_done));
 }
 
 void PageStorageImpl::GetEntryFromCommit(const Commit& commit, std::string key,
                                          fit::function<void(Status, Entry)> callback) {
   std::unique_ptr<bool> key_found = std::make_unique<bool>(false);
-  auto on_next = [key, key_found = key_found.get(),
-                  callback = callback.share()](btree::EntryAndNodeIdentifier next) {
-    if (next.entry.key == key) {
+  auto on_next = [key, key_found = key_found.get(), callback = callback.share()](Entry next) {
+    if (next.key == key) {
       *key_found = true;
-      callback(Status::OK, next.entry);
+      callback(Status::OK, next);
     }
     return false;
   };

@@ -103,8 +103,8 @@ class BTreeUtilsTest : public StorageTest {
 
   std::vector<Entry> GetEntriesList(ObjectIdentifier root_identifier) {
     std::vector<Entry> entries;
-    auto on_next = [&entries](EntryAndNodeIdentifier entry) {
-      entries.push_back(entry.entry);
+    auto on_next = [&entries](Entry entry) {
+      entries.push_back(entry);
       return true;
     };
     auto on_done = [this](Status status) {
@@ -1148,6 +1148,34 @@ TEST_F(BTreeUtilsTest, GetObjectIdentifiersBigTree) {
   }
 }
 
+TEST_F(BTreeUtilsTest, GetObjectIdentifiersSkipLevel) {
+  std::vector<EntryChange> entries;
+  ASSERT_TRUE(CreateEntryChanges({50, 51}, &entries));
+  ObjectIdentifier root_identifier = CreateTree(entries);
+
+  // Expected layout:
+  //   [50]
+  //      \
+  //     [ ]
+  //      |
+  //     [51]
+  bool called;
+  Status status;
+  std::set<ObjectIdentifier> object_identifiers;
+  GetObjectIdentifiers(
+      environment_.coroutine_service(), &fake_storage_,
+      {root_identifier, PageStorage::Location::Local()},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifiers));
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
+  ASSERT_EQ(status, Status::OK);
+  EXPECT_EQ(object_identifiers.size(), 2u + 3);
+  EXPECT_TRUE(object_identifiers.find(root_identifier) != object_identifiers.end());
+  for (EntryChange& e : entries) {
+    EXPECT_TRUE(object_identifiers.find(e.entry.object_identifier) != object_identifiers.end());
+  }
+}
+
 TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   CommitId commit_id = "commit0";
   std::vector<EntryChange> entries;
@@ -1208,7 +1236,7 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
 TEST_F(BTreeUtilsTest, ForEachEmptyTree) {
   std::vector<EntryChange> entries = {};
   ObjectIdentifier root_identifier = CreateTree(entries);
-  auto on_next = [](EntryAndNodeIdentifier e) {
+  auto on_next = [](Entry e) {
     // Fail: There are no elements in the tree.
     EXPECT_TRUE(false);
     return false;
@@ -1230,8 +1258,8 @@ TEST_F(BTreeUtilsTest, ForEachAllEntries) {
   ObjectIdentifier root_identifier = CreateTree(entries);
 
   int current_key = 0;
-  auto on_next = [&current_key](EntryAndNodeIdentifier e) {
-    EXPECT_EQ(e.entry.key, fxl::StringPrintf("key%02d", current_key));
+  auto on_next = [&current_key](Entry e) {
+    EXPECT_EQ(e.key, fxl::StringPrintf("key%02d", current_key));
     current_key++;
     return true;
   };
@@ -1253,11 +1281,11 @@ TEST_F(BTreeUtilsTest, ForEachEntryPrefix) {
   // Find all entries with "key3" prefix in the key.
   std::string prefix = "key3";
   int current_key = 30;
-  auto on_next = [&current_key, &prefix](EntryAndNodeIdentifier e) {
-    if (e.entry.key.substr(0, prefix.length()) != prefix) {
+  auto on_next = [&current_key, &prefix](Entry e) {
+    if (e.key.substr(0, prefix.length()) != prefix) {
       return false;
     }
-    EXPECT_EQ(e.entry.key, fxl::StringPrintf("key%02d", current_key++));
+    EXPECT_EQ(e.key, fxl::StringPrintf("key%02d", current_key++));
     return true;
   };
   auto on_done = [this, &current_key](Status status) {
@@ -1268,6 +1296,81 @@ TEST_F(BTreeUtilsTest, ForEachEntryPrefix) {
   ForEachEntry(environment_.coroutine_service(), &fake_storage_,
                {root_identifier, PageStorage::Location::Local()}, prefix, on_next, on_done);
   RunLoopFor(kSufficientDelay);
+}
+
+TEST_F(BTreeUtilsTest, Iterator) {
+  ASSERT_TRUE(RunInCoroutine(
+      [&](coroutine::CoroutineHandler* handler) {
+        // Iterates on a tree and checks that each step returns the expected value.
+        // Expected layout:
+        //         [50]     <- node 0
+        //         /   \
+        //       [03]  []   <- node 1, node 3
+        //      /       |
+        // [01,02]    [62]  <- node 2, node 4
+        std::vector<EntryChange> changes;
+        ASSERT_TRUE(CreateEntryChanges(std::vector<size_t>({1, 2, 3, 50, 62}), &changes));
+        ObjectIdentifier root_identifier = CreateTree(changes);
+        SynchronousStorage storage(&fake_storage_, handler);
+        BTreeIterator it(&storage);
+        ASSERT_EQ(it.Init({root_identifier, PageStorage::Location::Local()}), Status::OK);
+
+        // Describes the expected states of the iterator. The first member is null if the node has
+        // not been seen before, or the index of the node (number of distinct nodes seen before).
+        // The second member is null if the iterator has no value, and the value of the key
+        // otherwise.
+        std::vector<std::tuple<std::optional<size_t>, std::optional<std::string>>> expected = {
+            {std::nullopt /* 0 */, std::nullopt},
+            {std::nullopt /* 1 */, std::nullopt},
+            {std::nullopt /* 2 */, std::nullopt},
+            {2, "key01"},
+            {2, std::nullopt},
+            {2, "key02"},
+            {2, std::nullopt},
+            {2, std::nullopt},
+            {1, "key03"},
+            {1, std::nullopt},
+            {1, std::nullopt},
+            {0, "key50"},
+            {0, std::nullopt},
+            {std::nullopt /* 3 */, std::nullopt},
+            {std::nullopt /* 4 */, std::nullopt},
+            {4, "key62"},
+            {4, std::nullopt},
+            {4, std::nullopt},
+            {3, std::nullopt},
+            {0, std::nullopt}};
+
+        // The expected levels for the nodes that will be collected.
+        std::vector<uint8_t> expected_levels = {2, 1, 0, 1, 0};
+        std::vector<ObjectIdentifier> nodes;
+        for (auto [node, key] : expected) {
+          ASSERT_FALSE(it.Finished());
+          if (node) {
+            ASSERT_GT(nodes.size(), *node);
+            EXPECT_FALSE(it.IsNewNode());
+            EXPECT_EQ(it.GetIdentifier(), nodes[*node]);
+          } else {
+            EXPECT_TRUE(it.IsNewNode());
+            node = nodes.size();
+            nodes.push_back(it.GetIdentifier());
+          }
+          EXPECT_EQ(it.GetLevel(), expected_levels[*node]);
+
+          if (key) {
+            ASSERT_TRUE(it.HasValue());
+            EXPECT_EQ(it.CurrentEntry().key, *key);
+          } else {
+            EXPECT_FALSE(it.HasValue());
+          }
+
+          ASSERT_EQ(it.Advance(), Status::OK);
+        }
+        EXPECT_TRUE(it.Finished());
+        EXPECT_FALSE(it.HasValue());
+        EXPECT_FALSE(it.IsNewNode());
+      },
+      kSufficientDelay));
 }
 
 }  // namespace

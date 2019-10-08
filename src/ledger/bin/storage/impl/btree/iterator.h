@@ -22,14 +22,19 @@
 namespace storage {
 namespace btree {
 
-// An entry and the id of the tree node in which it is stored.
-struct EntryAndNodeIdentifier {
-  const Entry& entry;                       // NOLINT
-  const ObjectIdentifier& node_identifier;  // NOLINT
-};
-
 // Iterator over a B-Tree. This iterator exposes the internal of the iteration
 // to allow to skip part of the tree.
+// Each node contains an alernating sequence of child nodes and entries, starting and ending with
+// child nodes, except for level 0 nodes that have no child nodes.
+// For each node:
+//  - before each potential children position, the iterator stops. When stopping before the first
+//  child, |IsNewNode| returns true.
+//  - the iterator visits the child if it is present
+//  - the iterator then stops on the key following this child (except if this is the last child). In
+//  this state, |HasValue| is true.
+//  - after all children are visited, the iterator stops once on the node before exiting it.
+// After the root node is completely visited, |Finished| is true. It is illegal to call |Advance|
+// in this state.
 class BTreeIterator {
  public:
   explicit BTreeIterator(SynchronousStorage* storage);
@@ -58,6 +63,9 @@ class BTreeIterator {
   // |CurrentEntry| is only valid when |HasValue| is true.
   bool HasValue() const;
 
+  // Returns whether the iterator is entering a node.
+  bool IsNewNode() const;
+
   // Returns whether the iteration is finished.
   bool Finished() const;
 
@@ -71,7 +79,7 @@ class BTreeIterator {
   // Returns the level of the node at the top of the stack.
   uint8_t GetLevel() const;
 
-  // Advances the iterator by a single step.
+  // Advances the iterator by a single step. This must not be called when the iterator is finished.
   Status Advance();
 
   // Advances the iterator until it has a value or it finishes.
@@ -121,8 +129,7 @@ void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service, PageStor
 // are no more elements or iteration was interrupted, or if an error occurs.
 void ForEachEntry(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
                   LocatedObjectIdentifier root_identifier, std::string min_key,
-                  fit::function<bool(EntryAndNodeIdentifier)> on_next,
-                  fit::function<void(Status)> on_done);
+                  fit::function<bool(Entry)> on_next, fit::function<void(Status)> on_done);
 
 }  // namespace btree
 }  // namespace storage
