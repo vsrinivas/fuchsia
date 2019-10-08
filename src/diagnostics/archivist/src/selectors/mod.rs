@@ -7,6 +7,7 @@ use {
     failure::{format_err, Error},
     fidl_fuchsia_diagnostics::{ComponentSelector, PathSelectionNode, PatternMatcher},
     fidl_fuchsia_diagnostics_inspect::{PropertySelector, Selector, TreeSelector},
+    regex::Regex,
     std::fs,
     std::io::{BufRead, BufReader},
     std::path::{Path, PathBuf},
@@ -27,6 +28,13 @@ static WILDCARD_SYMBOL: &str = "*";
 
 // Pattern used to encode globs.
 static GLOB_SYMBOL: &str = "**";
+
+// Globs will match everything along a moniker, but won't match empty strings.
+static GLOB_REGEX_EQUIVALENT: &str = ".+";
+
+// Wildcards will match anything except for an unescaped slash, since their match
+// only extends to a single moniker "node".
+static WILDCARD_REGEX_EQUIVALENT: &str = r#"(\\/|[^/])+"#;
 
 /// Parse a string into a FIDL PathSelectionNode structure.
 fn convert_string_to_path_selection_node(
@@ -228,6 +236,27 @@ pub fn parse_selectors(selector_path: impl Into<PathBuf>) -> Result<Vec<Selector
         }
     }
     Ok(selector_vec)
+}
+
+pub fn convert_selector_to_regex(selector: Vec<PathSelectionNode>) -> Result<Regex, Error> {
+    let mut regex_string = "^".to_string();
+    for path_selector in selector {
+        match path_selector {
+            PathSelectionNode::StringPattern(string_pattern) => {
+                // TODO(4601): Support regex conversion of wildcarded string literals.
+                regex_string.push_str(&string_pattern)
+            }
+            PathSelectionNode::PatternMatcher(enum_pattern) => match enum_pattern {
+                PatternMatcher::Wildcard => regex_string.push_str(WILDCARD_REGEX_EQUIVALENT),
+                PatternMatcher::Glob => regex_string.push_str(GLOB_REGEX_EQUIVALENT),
+            },
+            _ => unreachable!("no expected alternative variants of the path selection node."),
+        }
+        regex_string.push_str("/");
+    }
+    regex_string.push_str("$");
+
+    Ok(Regex::new(&regex_string)?)
 }
 
 #[cfg(test)]
@@ -466,5 +495,45 @@ mod tests {
             .write_all(b"**:**:**")
             .expect("writing test file");
         assert!(parse_selectors(tempdir.path()).is_err());
+    }
+
+    #[test]
+    fn canonical_regex_transpilation_test() {
+        // Note: We provide the full selector syntax but this test is only transpiling
+        // the node-path of the selector, and validating against that.
+        let test_cases = vec![
+            (r#"**:a/*/c:*"#, r#"a/b/c/"#),
+            (r#"**:a/**/c:*"#, r#"a/b/g/e/d/c/"#),
+            (r#"**:**:*"#, r#"a/b/\/c/d/e\*/f/"#),
+            (r#"**:a/**/d/*/**:*"#, r#"a/b/\/c/d/e\*/f/"#),
+        ];
+        for (selector, string_to_match) in test_cases {
+            let parsed_selector = parse_selector(selector).unwrap();
+            let tree_selector = parsed_selector.tree_selector;
+            let node_path = tree_selector.node_path.unwrap();
+            let selector_regex = convert_selector_to_regex(node_path).unwrap();
+            assert!(selector_regex.is_match(string_to_match));
+        }
+    }
+
+    #[test]
+    fn failing_regex_transpilation_test() {
+        // Note: We provide the full selector syntax but this test is only transpiling
+        // the node-path of the tree selector, and valdating against that.
+        let test_cases = vec![
+            // TODO(4601): This test case should pass when we support wildcarded string literals.
+            (r#"**:a/b*/c:*"#, r#"a/bob/c/"#),
+            // Failing because it's missing a required "d" directory node in the string.
+            (r#"**:a/**/d/*/**:*"#, r#"a/b/\/c/e\*/f/"#),
+            // Failing because the match string doesnt end at the c node.
+            (r#"**:a/**/c:*"#, r#"a/b/g/e/d/c/f/"#),
+        ];
+        for (selector, string_to_match) in test_cases {
+            let parsed_selector = parse_selector(selector).unwrap();
+            let tree_selector = parsed_selector.tree_selector;
+            let node_path = tree_selector.node_path.unwrap();
+            let selector_regex = convert_selector_to_regex(node_path).unwrap();
+            assert!(!selector_regex.is_match(string_to_match));
+        }
     }
 }
