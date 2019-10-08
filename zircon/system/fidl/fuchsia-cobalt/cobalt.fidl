@@ -40,9 +40,6 @@ using fuchsia.mem;
 // The maximum size of a single Event is 100 KB.
 const int64 MAX_BYTES_PER_EVENT = 102400;
 
-// TODO(fxb/37281): replace with built-in constant
-const uint32 MAX = 0xFFFFFFFF;
-
 // This is intended as a reasonable maximum number of histogram buckets per event.
 const uint32 MAX_HISTOGRAM_BUCKETS = 100;
 

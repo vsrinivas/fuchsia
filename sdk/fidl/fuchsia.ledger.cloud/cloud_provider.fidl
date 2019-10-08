@@ -9,9 +9,6 @@ using fuchsia.mem;
 // This file defines a cloud service that can be used by Ledger to power cloud
 // sync.
 
-// Constant for unbounded vectors.
-const uint32 NO_LINT = 4294967295;
-
 /// Identifier for a commit, controlled by Ledger.
 using CommitIdentifier = bytes:128;
 
@@ -162,7 +159,7 @@ table Diff {
     /// List of changes from the base state to the commit.
     ///
     /// The changes are to be applied in order.
-    2: vector<DiffEntry>:NO_LINT changes;
+    2: vector<DiffEntry>:MAX changes;
 };
 
 /// An entry in a Diff.
@@ -191,12 +188,12 @@ enum Operation : uint8 {
 
 /// A list of commits for serialization in CommitPack.
 struct Commits {
-    vector<Commit>:NO_LINT commits;
+    vector<Commit>:MAX commits;
 };
 
 /// A list of references for serialization in ReferencePack.
 struct References {
-    vector<ObjectIdentifier>:NO_LINT references;
+    vector<ObjectIdentifier>:MAX references;
 };
 
 /// Contains a Buffer containing the FIDL serialization of Diff.

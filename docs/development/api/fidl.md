@@ -146,16 +146,24 @@ which combines these primitives and names this common concept.
 
 ### Specify bounds for vector and string
 
-Most `vector` and `string` declarations should specify a length bound.  Whenever
-you omit a length bound, consider whether the receiver of the message would
+All `vector` and `string` declarations should specify a length bound.
+Declarations generally fall into one of two categories:
+
+* There is a constraint inherent to the data. For example, a string containing
+  a filesystem name component must not be longer than
+  `fuchsia.io.MAX_FILENAME`.
+* There is no constraint other than "as much as possible." In these cases, you
+  should use the built-in constant `MAX`.
+
+Whenever you use `MAX`, consider whether the receiver of the message would
 really want to process arbitrarily long sequences or whether extremely long
 sequences represent abuse.
 
-Bear in mind that declarations that lack an upper bound are implicitly bounded
-by the maximum message length when sent over a `zx::channel`.  If there really
-are use cases for arbitrarily long sequences, simply omitting a bound might not
-address those use cases because clients that attempt to provide extremely long
-sequences might hit the maximum message length.
+Bear in mind that all declarations are implicitly bounded by the maximum message
+length when sent over a `zx::channel`. If there really are use cases for
+arbitrarily long sequences, simply using `MAX` might not address those use cases
+because clients that attempt to provide extremely long sequences might hit the
+maximum message length.
 
 To address use cases with arbitrarily large sequences, consider breaking the
 sequence up into multiple messages using one of the pagination patterns
