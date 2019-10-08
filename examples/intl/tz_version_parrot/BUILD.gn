@@ -13,6 +13,7 @@ executable("tz_version_parrot_bin") {
 
   deps = [
     "//sdk/lib/sys/cpp",
+    "//src/lib/files",
     "//src/lib/icu_data/cpp",
     "//third_party/icu",
   ]
