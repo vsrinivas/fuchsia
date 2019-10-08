@@ -1,3 +1,4 @@
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ui/lib/escher/test/fake_gpu_allocator.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
@@ -10,6 +11,7 @@
 namespace {
 using namespace escher;
 using namespace escher::test;
+using ::testing::_;
 
 VulkanDeviceQueuesPtr CreateVulkanDeviceQueues(bool use_protected_memory) {
   VulkanInstance::Params instance_params(
@@ -330,7 +332,7 @@ class VmaAllocator : public ::testing::TestWithParam</*protected_memory=*/bool> 
 VK_TEST_P(VmaAllocator, Memory) {
   auto vulkan_queues = CreateVulkanDeviceQueues(GetParam());
   if (!vulkan_queues) {
-    return;
+    GTEST_SKIP();
   }
   VmaGpuAllocator allocator(vulkan_queues->GetVulkanContext());
 
@@ -340,7 +342,7 @@ VK_TEST_P(VmaAllocator, Memory) {
 VK_TEST_P(VmaAllocator, Buffers) {
   auto vulkan_queues = CreateVulkanDeviceQueues(GetParam());
   if (!vulkan_queues) {
-    return;
+    GTEST_SKIP();
   }
   VmaGpuAllocator allocator(vulkan_queues->GetVulkanContext());
 
@@ -350,7 +352,7 @@ VK_TEST_P(VmaAllocator, Buffers) {
 VK_TEST_P(VmaAllocator, Images) {
   auto vulkan_queues = CreateVulkanDeviceQueues(GetParam());
   if (!vulkan_queues) {
-    return;
+    GTEST_SKIP();
   }
   VmaGpuAllocator allocator(vulkan_queues->GetVulkanContext());
 
@@ -358,5 +360,32 @@ VK_TEST_P(VmaAllocator, Images) {
 }
 
 INSTANTIATE_TEST_SUITE_P(VmaAllocatorTestSuite, VmaAllocator, ::testing::Bool());
+
+class MockVmaGpuAllocator : public VmaGpuAllocator {
+ public:
+  MockVmaGpuAllocator(const VulkanContext& context) : VmaGpuAllocator(context) {}
+
+  MOCK_METHOD5(CreateImage,
+               bool(const VkImageCreateInfo& image_create_info,
+                    const VmaAllocationCreateInfo& allocation_create_info, VkImage* image,
+                    VmaAllocation* vma_allocation, VmaAllocationInfo* vma_allocation_info));
+};
+
+VK_TEST(VmaGpuAllocatorTest, ProtectedMemoryIsDedicated) {
+  auto vulkan_queues = CreateVulkanDeviceQueues(/*use_protected_memory=*/true);
+  if (!vulkan_queues) {
+    GTEST_SKIP();
+  }
+  MockVmaGpuAllocator allocator(vulkan_queues->GetVulkanContext());
+
+  VmaAllocationCreateInfo allocation_create_info;
+  EXPECT_CALL(allocator, CreateImage(_, _, _, _, _))
+      .Times(1)
+      .WillOnce(DoAll(::testing::SaveArg<1>(&allocation_create_info), ::testing::Return(false)));
+  ImageInfo info;
+  info.memory_flags = vk::MemoryPropertyFlagBits::eProtected;
+  auto image0 = allocator.AllocateImage(nullptr, info, nullptr);
+  EXPECT_TRUE(allocation_create_info.flags & VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
+}
 
 }  // namespace

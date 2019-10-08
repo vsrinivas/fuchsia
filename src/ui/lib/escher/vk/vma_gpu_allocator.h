@@ -5,11 +5,11 @@
 #ifndef SRC_UI_LIB_ESCHER_VK_VMA_GPU_ALLOCATOR_H_
 #define SRC_UI_LIB_ESCHER_VK_VMA_GPU_ALLOCATOR_H_
 
-#include <vulkan/vulkan.hpp>
-
 #include "src/ui/lib/escher/third_party/VulkanMemoryAllocator/vk_mem_alloc.h"
 #include "src/ui/lib/escher/vk/gpu_allocator.h"
 #include "src/ui/lib/escher/vk/vulkan_context.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 
@@ -37,6 +37,9 @@ class VmaGpuAllocator : public GpuAllocator {
   uint32_t GetTotalBytesAllocated() const override;
 
  private:
+  virtual bool CreateImage(const VkImageCreateInfo& image_create_info,
+                           const VmaAllocationCreateInfo& allocation_create_info, VkImage* image,
+                           VmaAllocation* vma_allocation, VmaAllocationInfo* vma_allocation_info);
   VmaAllocator allocator_;
 };
 

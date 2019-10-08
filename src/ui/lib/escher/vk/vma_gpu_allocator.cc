@@ -170,7 +170,9 @@ ImagePtr VmaGpuAllocator::AllocateImage(ResourceManager* manager, const ImageInf
                                          VK_NULL_HANDLE,
                                          nullptr};
 
-  if (out_ptr) {
+  // Create dedicated memory to reduce memory footprint of protected memory allocations, see
+  // fxb/36620 for motivation.
+  if (out_ptr || c_image_info.flags & VK_IMAGE_CREATE_PROTECTED_BIT) {
     create_info.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
   }
 
@@ -178,12 +180,9 @@ ImagePtr VmaGpuAllocator::AllocateImage(ResourceManager* manager, const ImageInf
   VkImage image;
   VmaAllocation allocation;
   VmaAllocationInfo allocation_info;
-  auto status = vmaCreateImage(allocator_, &c_image_info, &create_info, &image, &allocation,
-                               &allocation_info);
-
-  FXL_DCHECK(status == VK_SUCCESS) << "vmaAllocateMemory failed with status code " << status;
-  if (status != VK_SUCCESS)
+  if (!CreateImage(c_image_info, create_info, &image, &allocation, &allocation_info)) {
     return nullptr;
+  }
 
   auto retval =
       fxl::AdoptRef(new VmaImage(manager, info, image, allocator_, allocation, allocation_info));
@@ -200,6 +199,16 @@ uint32_t VmaGpuAllocator::GetTotalBytesAllocated() const {
   VmaStats stats;
   vmaCalculateStats(allocator_, &stats);
   return stats.total.usedBytes;
+}
+
+bool VmaGpuAllocator::CreateImage(const VkImageCreateInfo& image_create_info,
+                                  const VmaAllocationCreateInfo& allocation_create_info,
+                                  VkImage* image, VmaAllocation* vma_allocation,
+                                  VmaAllocationInfo* vma_allocation_info) {
+  auto status = vmaCreateImage(allocator_, &image_create_info, &allocation_create_info, image,
+                               vma_allocation, vma_allocation_info);
+  FXL_DCHECK(status == VK_SUCCESS) << "vmaAllocateMemory failed with status code " << status;
+  return status == VK_SUCCESS;
 }
 
 }  // namespace escher
