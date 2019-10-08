@@ -222,6 +222,11 @@ Status NodeBuilder::FromIdentifier(SynchronousStorage* page_storage,
   std::vector<Entry> entries;
   std::vector<NodeBuilder> children;
   ExtractContent(*node, &entries, &children, object_identifier.location);
+  // Check if we are reading the empty node.
+  if (entries.empty() && !children[0]) {
+    *node_builder = NodeBuilder();
+    return Status::OK;
+  }
   *node_builder =
       NodeBuilder(BuilderType::EXISTING_NODE, node->level(), std::move(object_identifier),
                   std::move(entries), std::move(children));

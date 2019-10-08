@@ -9,6 +9,7 @@
 
 #include <algorithm>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
@@ -24,6 +25,8 @@
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
+
+using testing::UnorderedElementsAre;
 
 namespace storage {
 namespace btree {
@@ -84,15 +87,17 @@ class BTreeUtilsTest : public StorageTest {
 
   std::set<ObjectIdentifier> GetTreeNodesList(ObjectIdentifier root_identifier) {
     std::set<ObjectIdentifier> identifiers;
-    EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
-      SynchronousStorage storage(&fake_storage_, handler);
-      BTreeIterator it(&storage);
-      ASSERT_EQ(it.Init({root_identifier, PageStorage::Location::Local()}), Status::OK);
-      while (!it.Finished()) {
-        identifiers.insert(it.GetIdentifier());
-        ASSERT_EQ(it.Advance(), Status::OK);
-      }
-    }));
+    EXPECT_TRUE(RunInCoroutine(
+        [&](coroutine::CoroutineHandler* handler) {
+          SynchronousStorage storage(&fake_storage_, handler);
+          BTreeIterator it(&storage);
+          ASSERT_EQ(it.Init({root_identifier, PageStorage::Location::Local()}), Status::OK);
+          while (!it.Finished()) {
+            identifiers.insert(it.GetIdentifier());
+            ASSERT_EQ(it.Advance(), Status::OK);
+          }
+        },
+        kSufficientDelay));
     return identifiers;
   }
 
@@ -187,6 +192,9 @@ TEST_F(BTreeUtilsTest, ApplyChangeSingleLevel1Entry) {
   ASSERT_EQ(status, Status::OK);
   EXPECT_EQ(new_nodes.size(), 1u);
   EXPECT_TRUE(new_nodes.find(new_root_identifier) != new_nodes.end());
+
+  std::set<ObjectIdentifier> tree_nodes = GetTreeNodesList(new_root_identifier);
+  EXPECT_THAT(tree_nodes, UnorderedElementsAre(new_root_identifier));
 
   std::vector<Entry> entries = GetEntriesList(new_root_identifier);
   ASSERT_EQ(entries.size(), golden_entries.size());

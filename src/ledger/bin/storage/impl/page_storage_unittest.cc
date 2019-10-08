@@ -2395,8 +2395,7 @@ TEST_F(PageStorageTestNoGc, AddAndGetHugeTreenodeFromSync) {
   EXPECT_EQ(content, data_str);
 }
 
-// TODO(fxb/37875) Test is flaky.
-TEST_F(PageStorageTest, DISABLED_UnsyncedPieces) {
+TEST_F(PageStorageTest, UnsyncedPieces) {
   ObjectData data_array[] = {
       MakeObject("Some data", InlineBehavior::PREVENT),
       MakeObject("Some more data", InlineBehavior::PREVENT),
