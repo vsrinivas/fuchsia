@@ -428,7 +428,9 @@ impl SwitchingOrdinalsEncoder {
 	pub fn encode_ordinal_five_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x7784636700000000,
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
+			ordinal: 0x7784636700000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -438,7 +440,9 @@ impl SwitchingOrdinalsEncoder {
 	pub fn encode_only_generated_ordinal_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x27c9581f00000000,
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
+			ordinal: 0x27c9581f00000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -448,7 +452,9 @@ impl SwitchingOrdinalsEncoder {
 	pub fn encode_event_ordinal_fifteen_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x577495a100000000,
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
+			ordinal: 0x577495a100000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -458,7 +464,9 @@ impl SwitchingOrdinalsEncoder {
 	pub fn encode_event_only_generated_ordinal_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x7fec464e00000000,
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
+			ordinal: 0x7fec464e00000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -493,6 +501,8 @@ impl SwitchingOrdinalsControlHandle {
 	pub fn send_event_ordinal_fifteen(&self) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: 0,
+			flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
 			ordinal: 0x577495a100000000,
 		};
 
@@ -513,6 +523,8 @@ impl SwitchingOrdinalsControlHandle {
 	pub fn send_event_only_generated_ordinal(&self) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: 0,
+			flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
 			ordinal: 0x7fec464e00000000,
 		};
 

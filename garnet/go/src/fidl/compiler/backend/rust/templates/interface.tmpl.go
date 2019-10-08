@@ -608,6 +608,8 @@ impl {{ $interface.Name }}Encoder {
 			{{- else -}}
 			tx_id: 0,
 			{{- end -}}
+			flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
 			ordinal: {{ $method.Ordinals.Write.Ordinal }},
 		};
 		let mut body = (
@@ -637,6 +639,8 @@ impl {{ $interface.Name }}Encoder {
 			{{- else -}}
 			tx_id: 0,
 			{{- end -}}
+			flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
 			ordinal: {{ $method.Ordinals.Write.Ordinal }},
 		};
 		let mut body = (
@@ -686,6 +690,8 @@ impl {{ $interface.Name }}ControlHandle {
 	) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: 0,
+			flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
 			ordinal: {{ $method.Ordinals.Write.Ordinal }},
 		};
 
@@ -797,6 +803,8 @@ impl {{ $interface.Name }}{{ $method.CamelName }}Responder {
 	) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: self.tx_id,
+			flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
 			ordinal: self.ordinal,
 		};
 

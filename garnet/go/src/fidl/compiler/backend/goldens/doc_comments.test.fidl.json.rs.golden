@@ -431,7 +431,9 @@ impl InterfaceEncoder {
 	pub fn encode_method_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x3f43684c00000000,
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
+			ordinal: 0x3f43684c00000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -441,7 +443,9 @@ impl InterfaceEncoder {
 	pub fn encode_on_event_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x136d200d00000000,
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
+			ordinal: 0x136d200d00000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -476,6 +480,8 @@ impl InterfaceControlHandle {
 	pub fn send_on_event(&self) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: 0,
+			flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
 			ordinal: 0x136d200d00000000,
 		};
 

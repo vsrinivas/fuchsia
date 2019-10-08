@@ -475,7 +475,9 @@ impl TestProtocolEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
-			tx_id,ordinal: 0x71a1b4b700000000,
+			tx_id,flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
+			ordinal: 0x71a1b4b700000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -487,7 +489,9 @@ impl TestProtocolEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_xu: &mut StrictBoundedXUnion,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
-			tx_id,ordinal: 0x71a1b4b700000000,
+			tx_id,flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
+			ordinal: 0x71a1b4b700000000,
 		};
 		let mut body = (in_xu,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -499,7 +503,9 @@ impl TestProtocolEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
-			tx_id,ordinal: 0x3959ff0900000000,
+			tx_id,flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
+			ordinal: 0x3959ff0900000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -511,7 +517,9 @@ impl TestProtocolEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_xu: &mut OlderSimpleUnion,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
-			tx_id,ordinal: 0x3959ff0900000000,
+			tx_id,flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
+			ordinal: 0x3959ff0900000000,
 		};
 		let mut body = (in_xu,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -606,6 +614,8 @@ impl TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponder {
 	fn send_raw(&self,mut xu: &mut StrictBoundedXUnion,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: self.tx_id,
+			flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
 			ordinal: self.ordinal,
 		};
 
@@ -685,6 +695,8 @@ impl TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponder {
 	fn send_raw(&self,mut xu: &mut OlderSimpleUnion,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: self.tx_id,
+			flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
 			ordinal: self.ordinal,
 		};
 

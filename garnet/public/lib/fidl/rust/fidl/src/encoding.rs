@@ -113,6 +113,9 @@ pub const ALLOC_ABSENT_U32: u32 = 0;
 /// Special ordinal signifying an epitaph message.
 pub const EPITAPH_ORDINAL: u64 = 0xffffffffffffffffu64;
 
+/// The current wire format magic number
+pub const MAGIC_NUMBER_INITIAL: u8 = 1;
+
 /// Encoding state
 #[derive(Debug)]
 pub struct Encoder<'a> {
@@ -2414,6 +2417,11 @@ macro_rules! fidl_xunion {
 pub struct TransactionHeader {
     /// Transaction ID which identifies a request-response pair
     pub tx_id: u32,
+    /// Flags set for this message. MUST NOT be validated by bindings
+    pub flags: [u8; 3],
+    /// Magic number indicating the message's wire format. Two sides with
+    /// different magic numbers are incompatible with each other.
+    pub magic_number: u8,
     /// Ordinal which identifies the FIDL method
     pub ordinal: u64,
 }
@@ -2424,6 +2432,14 @@ fidl_struct! {
         tx_id {
             ty: u32,
             offset: 0,
+        },
+        flags {
+            ty: [u8; 3],
+            offset: 4,
+        },
+        magic_number {
+            ty: u8,
+            offset: 7,
         },
         ordinal {
             ty: u64,
@@ -3491,7 +3507,7 @@ mod test {
 
     #[test]
     fn encode_decode_transaction_msg() {
-        let header = TransactionHeader { tx_id: 4, ordinal: 6 };
+        let header = TransactionHeader { tx_id: 4, ordinal: 6, flags: [0; 3], magic_number: 1 };
         let body = "hello".to_string();
 
         let start = &mut TransactionMessage { header, body: &mut body.clone() };

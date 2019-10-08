@@ -324,7 +324,9 @@ impl FirstProtocolEncoder {
 	pub fn encode_method_on_first_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x2838a83100000000,
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
+			ordinal: 0x2838a83100000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -661,7 +663,9 @@ impl SecondProtocolEncoder {
 	pub fn encode_method_on_second_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0xd09c00f00000000,
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
+			ordinal: 0xd09c00f00000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };

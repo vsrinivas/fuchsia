@@ -765,7 +765,9 @@ impl ParentEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
-			tx_id,ordinal: 0x3692bc6900000000,
+			tx_id,flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
+			ordinal: 0x3692bc6900000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -777,7 +779,9 @@ impl ParentEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_c: fidl::endpoints::ClientEnd<ChildMarker>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
-			tx_id,ordinal: 0x3692bc6900000000,
+			tx_id,flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
+			ordinal: 0x3692bc6900000000,
 		};
 		let mut body = (in_c,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -789,7 +793,9 @@ impl ParentEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
-			tx_id,ordinal: 0x3faacc7e00000000,
+			tx_id,flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
+			ordinal: 0x3faacc7e00000000,
 		};
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -801,7 +807,9 @@ impl ParentEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_r: fidl::endpoints::ServerEnd<ChildMarker>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
-			tx_id,ordinal: 0x3faacc7e00000000,
+			tx_id,flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
+			ordinal: 0x3faacc7e00000000,
 		};
 		let mut body = (in_r,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -811,7 +819,9 @@ impl ParentEncoder {
 	pub fn encode_take_child_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,mut in_c: fidl::endpoints::ClientEnd<ChildMarker>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x4c0642f900000000,
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
+			ordinal: 0x4c0642f900000000,
 		};
 		let mut body = (in_c,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -821,7 +831,9 @@ impl ParentEncoder {
 	pub fn encode_take_child_request_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,mut in_r: fidl::endpoints::ServerEnd<ChildMarker>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x5ec3867a00000000,
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
+			ordinal: 0x5ec3867a00000000,
 		};
 		let mut body = (in_r,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -916,6 +928,8 @@ impl ParentGetChildResponder {
 	fn send_raw(&self,mut c: fidl::endpoints::ClientEnd<ChildMarker>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: self.tx_id,
+			flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
 			ordinal: self.ordinal,
 		};
 
@@ -995,6 +1009,8 @@ impl ParentGetChildRequestResponder {
 	fn send_raw(&self,mut r: fidl::endpoints::ServerEnd<ChildMarker>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: self.tx_id,
+			flags: [0; 3],
+			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
 			ordinal: self.ordinal,
 		};
 
