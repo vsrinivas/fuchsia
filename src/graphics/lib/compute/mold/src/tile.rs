@@ -4,21 +4,20 @@
 
 use std::{
     cell::{Cell, RefCell},
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashSet},
     mem,
-    ops::Range,
+    ops::{Index, IndexMut, Range},
     ptr,
 };
 
 #[cfg(feature = "tracing")]
 use fuchsia_trace::{self, duration};
-use rayon::slice::ParallelSliceMut;
 
 use crate::{
     edge::Edge,
     painter::{Context, Painter},
     point::Point,
-    raster::Raster,
+    raster::{Raster, RasterEdges},
     PIXEL_SHIFT, PIXEL_WIDTH,
 };
 
@@ -130,6 +129,57 @@ impl Tile {
     pub fn reset(&mut self) {
         self.layers.clear();
         self.needs_render = true;
+    }
+}
+
+#[derive(Debug, Default)]
+struct Tiles {
+    tiles: Vec<Tile>,
+    width: usize,
+    height: usize,
+}
+
+impl Tiles {
+    pub fn get_mut(&mut self, i: usize, j: usize) -> &mut Tile {
+        &mut self.tiles[i + j * self.width]
+    }
+
+    fn print_edge(
+        &mut self,
+        height: usize,
+        edge: &Edge<i32>,
+        edge_range: Range<usize>,
+        raster: &Raster,
+        is_partial: bool,
+    ) {
+        let p0 = edge.p0;
+        let edge = edge.translate(Point::new(
+            raster.translation().x * PIXEL_WIDTH,
+            raster.translation().y * PIXEL_WIDTH,
+        ));
+        let (i, j) = edge_tile(&edge);
+
+        if 0 <= i && 0 <= j && (j as usize) < height {
+            raster.tile_contour().for_each_tile_from(self, i as usize, j as usize, |tile| {
+                if !is_partial || tile.needs_render {
+                    tile.push_edge(p0, edge_range.clone());
+                }
+            });
+        }
+    }
+}
+
+impl Index<usize> for Tiles {
+    type Output = Tile;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.tiles[index]
+    }
+}
+
+impl IndexMut<usize> for Tiles {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.tiles[index]
     }
 }
 
@@ -254,54 +304,52 @@ pub(crate) enum TileContour {
 }
 
 impl TileContour {
-    pub fn for_each_tile(&self, map: &mut Map, mut f: impl FnMut(&mut Tile)) {
+    fn for_each_tile(&self, tiles: &mut Tiles, mut f: impl FnMut(&mut Tile)) {
         match self {
-            Self::Tiles(tiles) => {
-                for &(j, i) in tiles {
-                    if 0 <= i
-                        && 0 <= j
-                        && (i as usize) < map.tile_width
-                        && (j as usize) < map.tile_height
+            Self::Tiles(inner_tiles) => {
+                for &(j, i) in inner_tiles {
+                    if 0 <= i && 0 <= j && (i as usize) < tiles.width && (j as usize) < tiles.height
                     {
-                        f(map.tile_mut(i as usize, j as usize));
+                        f(tiles.get_mut(i as usize, j as usize));
                     }
                 }
             }
             Self::Maxed => {
-                for j in 0..map.tile_height {
-                    for i in 0..map.tile_width {
-                        f(map.tile_mut(i, j));
+                for j in 0..tiles.height {
+                    for i in 0..tiles.width {
+                        f(tiles.get_mut(i, j));
                     }
                 }
             }
         }
     }
 
-    pub fn for_each_tile_from(
+    fn for_each_tile_from(
         &self,
-        map: &mut Map,
+        tiles: &mut Tiles,
         from_i: usize,
         from_j: usize,
         mut f: impl FnMut(&mut Tile),
     ) {
         match self {
-            Self::Tiles(tiles) => {
-                if from_i < map.tile_width && from_j < map.tile_height {
-                    let start = match tiles.binary_search(&(from_j as i32, from_i as i32)) {
+            Self::Tiles(inner_tiles) => {
+                if from_i < tiles.width && from_j < tiles.height {
+                    let start = match inner_tiles.binary_search(&(from_j as i32, from_i as i32)) {
                         Ok(i) | Err(i) => i,
                     };
-                    let end = match tiles.binary_search(&(from_j as i32, map.tile_width as i32)) {
+                    let end = match inner_tiles.binary_search(&(from_j as i32, tiles.width as i32))
+                    {
                         Ok(i) | Err(i) => i,
                     };
 
-                    for &(j, i) in &tiles[start as usize..end as usize] {
-                        f(map.tile_mut(i as usize, j as usize));
+                    for &(j, i) in &inner_tiles[start as usize..end as usize] {
+                        f(tiles.get_mut(i as usize, j as usize));
                     }
                 }
             }
             Self::Maxed => {
-                for i in from_i..map.tile_width {
-                    f(map.tile_mut(i, from_j));
+                for i in from_i..tiles.width {
+                    f(tiles.get_mut(i, from_j));
                 }
             }
         }
@@ -343,22 +391,49 @@ pub struct Layer {
     raster: Raster,
     ops: Vec<TileOp>,
     new_edges: Cell<bool>,
+    is_partial: Cell<bool>,
 }
 
 impl Layer {
     pub fn new(raster: Raster, ops: Vec<TileOp>) -> Self {
-        Self { raster, ops, new_edges: Cell::new(true) }
+        Self { raster, ops, new_edges: Cell::new(true), is_partial: Cell::new(false) }
     }
 }
 
+#[derive(Debug)]
+pub(crate) struct Layers<'m> {
+    layers: &'m mut BTreeMap<u32, Layer>,
+}
+
+impl<'m> Layers<'m> {
+    pub fn new(layers: &'m mut BTreeMap<u32, Layer>) -> Self {
+        Self { layers }
+    }
+
+    pub fn edges(&self, id: &u32) -> Option<&RasterEdges> {
+        self.layers.get(id).map(|layer| layer.raster.edges())
+    }
+
+    pub fn ops(&self, id: &u32) -> Option<&[TileOp]> {
+        self.layers.get(id).map(|layer| &layer.ops[..])
+    }
+}
+
+// This is safe as long as:
+//   1. The `Rc` in `Layer.raster` is not cloned.
+//   2. The `Cell` in the `Layer.new_edges` is not mutated.
+//
+// The interface above is made to ensure these requirements. The reference to the `HashMap` is
+// mutable in oder to guarantee unique access without having to move th whole `HashMap` in and out
+// of the `Map` through an `Option<HashMap<_, _>>`.
+unsafe impl Sync for Layers<'_> {}
+
 #[derive(Debug, Default)]
 pub struct Map {
-    tiles: Vec<Tile>,
-    layers: HashMap<u32, Layer>,
+    tiles: Tiles,
+    layers: BTreeMap<u32, Layer>,
     width: usize,
     height: usize,
-    tile_width: usize,
-    tile_height: usize,
 }
 
 impl Map {
@@ -383,48 +458,19 @@ impl Map {
         }
 
         Self {
-            tiles,
-            layers: HashMap::new(),
+            tiles: Tiles { tiles, width: tile_width, height: tile_height },
+            layers: BTreeMap::new(),
             width,
             height,
-            tile_width,
-            tile_height,
         }
-    }
-
-    fn tile_mut(&mut self, i: usize, j: usize) -> &mut Tile {
-        &mut self.tiles[i + j * self.tile_width]
     }
 
     pub fn global(&mut self, id: u32, ops: Vec<TileOp>) {
         self.print(id, Layer::new(Raster::maxed(), ops));
     }
 
-    fn print_edge(
-        &mut self,
-        edge: &Edge<i32>,
-        edge_range: Range<usize>,
-        raster: &Raster,
-        is_partial: bool,
-    ) {
-        let p0 = edge.p0;
-        let edge = edge.translate(Point::new(
-            raster.translation().x * PIXEL_WIDTH,
-            raster.translation().y * PIXEL_WIDTH,
-        ));
-        let (i, j) = edge_tile(&edge);
-
-        if 0 <= i && 0 <= j && (j as usize) < self.height {
-            raster.tile_contour().for_each_tile_from(self, i as usize, j as usize, |tile| {
-                if !is_partial || tile.needs_render {
-                    tile.push_edge(p0, edge_range.clone());
-                }
-            });
-        }
-    }
-
     fn touch_tiles(&mut self, raster: Raster) {
-        raster.tile_contour().for_each_tile(self, |tile| tile.needs_render = true);
+        raster.tile_contour().for_each_tile(&mut self.tiles, |tile| tile.needs_render = true);
     }
 
     pub fn print(&mut self, id: u32, layer: Layer) {
@@ -447,51 +493,51 @@ impl Map {
         }
     }
 
-    fn specialized_print(&mut self, id: u32, is_partial: bool) {
+    fn print_changes(tiles: &mut Tiles, height: usize, id: u32, layer: &Layer) {
         #[cfg(feature = "tracing")]
-        duration!("gfx", "Map::specialized_print");
-        if let Some(layer) = self.layers.get(&id) {
-            layer.new_edges.set(false);
-
-            let raster = layer.raster.clone();
-            raster.tile_contour().for_each_tile(self, |tile| {
-                if !is_partial || tile.needs_render {
-                    tile.new_layer(id, raster.translation());
-                }
-            });
-
-            let mut edges = raster.edges().iter();
-            let mut prev_index = edges.index();
-
-            while let Some(edge) = edges.next() {
-                self.print_edge(&edge, prev_index..edges.index(), &raster, is_partial);
-                prev_index = edges.index();
+        duration!("gfx", "Map::print_changes");
+        let raster = layer.raster.clone();
+        raster.tile_contour().for_each_tile(tiles, |tile| {
+            if !layer.is_partial.get() || tile.needs_render {
+                tile.new_layer(id, raster.translation());
             }
+        });
+
+        let mut edges = raster.edges().iter();
+        let mut prev_index = edges.index();
+
+        while let Some(edge) = edges.next() {
+            tiles.print_edge(
+                height,
+                &edge,
+                prev_index..edges.index(),
+                &raster,
+                layer.is_partial.get(),
+            );
+            prev_index = edges.index();
         }
     }
 
     fn reprint_all(&mut self) {
         #[cfg(feature = "tracing")]
         duration!("gfx", "Map::reprint_all");
-        let complete_reprints: HashSet<_> = self
-            .layers
-            .iter()
-            .filter_map(|(id, layer)| if layer.new_edges.get() { Some(*id) } else { None })
-            .collect();
-
-        let mut partial_reprints = vec![];
-
-        for id in &complete_reprints {
-            let raster = self.layers.get(id).unwrap().raster.clone();
-            raster.tile_contour().for_each_tile(self, |tile| tile.needs_render = true);
+        for layer in self.layers.values() {
+            if layer.new_edges.get() {
+                let raster = layer.raster.clone();
+                raster
+                    .tile_contour()
+                    .for_each_tile(&mut self.tiles, |tile| tile.needs_render = true);
+            }
         }
 
-        for tile in &mut self.tiles {
+        for tile in &mut self.tiles.tiles {
             if tile.needs_render {
                 for node in &tile.layers {
                     if let LayerNode::Layer(id, _) = node {
-                        if !complete_reprints.contains(id) {
-                            partial_reprints.push(*id);
+                        if let Some(layer) = self.layers.get(id) {
+                            if !layer.new_edges.get() {
+                                layer.is_partial.set(true);
+                            }
                         }
                     }
                 }
@@ -501,16 +547,13 @@ impl Map {
             }
         }
 
-        let mut reprints: Vec<_> = complete_reprints
-            .into_iter()
-            .map(|id| (id, false))
-            .chain(partial_reprints.into_iter().map(|id| (id, true)))
-            .collect();
-        reprints.par_sort();
-        reprints.dedup();
+        for (id, layer) in &self.layers {
+            if layer.new_edges.get() || layer.is_partial.get() {
+                Self::print_changes(&mut self.tiles, self.height, *id, layer);
 
-        for (id, is_partial) in reprints {
-            self.specialized_print(id, is_partial);
+                layer.new_edges.set(false);
+                layer.is_partial.set(false);
+            }
         }
     }
 
@@ -519,17 +562,14 @@ impl Map {
         duration!("gfx", "Map::render");
         self.reprint_all();
 
-        let edges: HashMap<_, _> =
-            self.layers.iter().map(|(&id, layer)| (id, layer.raster.edges())).collect();
-        let ops: HashMap<_, _> =
-            self.layers.iter().map(|(&id, layer)| (id, &layer.ops[..])).collect();
-
         let tiles = &self.tiles;
-        let tile_width = self.tile_width;
-        let tile_height = self.tile_height;
+        let tile_width = self.tiles.width;
+        let tile_height = self.tiles.height;
 
         let width = self.width;
         let height = self.height;
+
+        let layers = &Layers::new(&mut self.layers);
 
         rayon::scope(|s| {
             for j in 0..tile_height {
@@ -543,8 +583,7 @@ impl Map {
                             index,
                             width,
                             height,
-                            edges: &edges,
-                            ops: &ops,
+                            layers,
                             buffer: buffer.clone(),
                         };
 
@@ -558,9 +597,10 @@ impl Map {
             }
         });
 
-        for j in 0..self.tile_height {
-            for i in 0..self.tile_width {
-                self.tiles[i + j * self.tile_width].needs_render = false;
+        for j in 0..self.tiles.height {
+            for i in 0..self.tiles.width {
+                let tiles_width = self.tiles.width;
+                self.tiles[i + j * tiles_width].needs_render = false;
             }
         }
     }
@@ -574,7 +614,7 @@ impl Map {
     }
 
     pub fn reset(&mut self) {
-        self.tiles.iter_mut().for_each(Tile::reset);
+        self.tiles.tiles.iter_mut().for_each(Tile::reset);
     }
 }
 
@@ -648,11 +688,12 @@ mod tests {
 
         match from {
             Some((from_i, from_j)) => {
-                tile_contour.for_each_tile_from(map, from_i, from_j, |tile| {
+                tile_contour.for_each_tile_from(&mut map.tiles, from_i, from_j, |tile| {
                     tiles.push((tile.tile_i, tile.tile_j))
                 })
             }
-            None => tile_contour.for_each_tile(map, |tile| tiles.push((tile.tile_i, tile.tile_j))),
+            None => tile_contour
+                .for_each_tile(&mut map.tiles, |tile| tiles.push((tile.tile_i, tile.tile_j))),
         }
 
         tiles
@@ -802,7 +843,7 @@ mod tests {
     #[test]
     fn reprint() {
         fn need_render(map: &Map) -> Vec<bool> {
-            map.tiles.iter().map(|tile| tile.needs_render).collect()
+            map.tiles.tiles.iter().map(|tile| tile.needs_render).collect()
         }
 
         let mut map = Map::new(TILE_SIZE * 4, TILE_SIZE * 4);

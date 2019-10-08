@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{collections::HashMap, mem};
+use std::mem;
 
 #[cfg(feature = "tracing")]
 use fuchsia_trace::duration;
@@ -11,7 +11,7 @@ use crate::{
     edge::Edge,
     point::Point,
     raster::{RasterEdges, RasterEdgesIter},
-    tile::{LayerNode, Tile, TileOp, TILE_SIZE},
+    tile::{LayerNode, Layers, Tile, TileOp, TILE_SIZE},
     PIXEL_SHIFT, PIXEL_WIDTH,
 };
 
@@ -39,8 +39,7 @@ pub(crate) struct Context<'m, B: ColorBuffer> {
     pub index: usize,
     pub width: usize,
     pub height: usize,
-    pub edges: &'m HashMap<u32, &'m RasterEdges>,
-    pub ops: &'m HashMap<u32, &'m [TileOp]>,
+    pub layers: &'m Layers<'m>,
     pub buffer: B,
 }
 
@@ -406,7 +405,8 @@ impl Painter {
 
             let (edges, translation, ops) = match layer {
                 LayerNode::Layer(id, translation) => {
-                    if let (Some(edges), Some(ops)) = (context.edges.get(id), context.ops.get(id)) {
+                    let layers = &context.layers;
+                    if let (Some(edges), Some(ops)) = (layers.edges(id), layers.ops(id)) {
                         (edges, *translation, ops)
                     } else {
                         // Skip Layers that are not present in the Map anymore.
