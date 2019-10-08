@@ -2,10 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/fuzzer.gni")
 group("test") {
   testonly = true
   deps = [
     ":crypto",
+    ":hmac-fuzzer",
   ]
 }
 
@@ -26,5 +28,15 @@ test("crypto") {
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zxtest",
+  ]
+}
+
+fuzzer("hmac-fuzzer") {
+  sources = [
+    "hmac-fuzzer.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/crypto",
+    "$zx/system/ulib/fbl",
   ]
 }
