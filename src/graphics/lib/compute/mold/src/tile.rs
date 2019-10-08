@@ -10,6 +10,8 @@ use std::{
     ptr,
 };
 
+#[cfg(feature = "tracing")]
+use fuchsia_trace::{self, duration};
 use rayon::slice::ParallelSliceMut;
 
 use crate::{
@@ -26,8 +28,43 @@ pub(crate) const TILE_SIZE: usize = 32;
 
 thread_local!(static PAINTER: RefCell<Painter> = RefCell::new(Painter::new()));
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum TileOp {
+macro_rules! ops {
+    ( @filter $slf:expr, [], [ $( $v1:ident )* ],  [ $( $v2:ident )* ] ) => {
+        match $slf {
+            $( TileOp::$v1 => stringify!($v1), )*
+            $( TileOp::$v2(..) => stringify!($v2), )*
+        }
+    };
+
+    ( @filter $slf:expr, [ $var:ident ( $( $_:tt )* )  $( $tail:tt )* ], $v1:tt, [ $( $v2:tt )* ] ) => {
+        ops!(@filter $slf, [$($tail)*], $v1, [$var $($v2)*])
+    };
+
+    ( @filter $slf:expr, [ $var:ident $( $tail:tt )* ], [ $( $v1:tt )* ], $v2:tt ) => {
+        ops!(@filter $slf, [$($tail)*], [$var $($v1)*], $v2)
+    };
+
+    ( @filter $slf:expr, [ $_:tt $( $tail:tt )* ], $v1:tt, $v2:tt ) => {
+        ops!(@filter $slf, [$($tail)*], $v1, $v2)
+    };
+
+    ( $( $tokens:tt )* ) => {
+        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+        pub enum TileOp {
+            $( $tokens )*
+        }
+
+        impl TileOp {
+            #[cfg(feature = "tracing")]
+            #[inline]
+            pub(crate) fn name(&self) -> &'static str {
+                ops!(@filter self, [$( $tokens )*], [], [])
+            }
+        }
+    };
+}
+
+ops! {
     CoverWipZero,
     CoverWipNonZero,
     CoverWipEvenOdd,
@@ -176,6 +213,8 @@ impl TileContourBuilder {
     }
 
     pub fn build(self) -> TileContour {
+        #[cfg(feature = "tracing")]
+        duration!("gfx", "TileContourBuilder::build");
         let mut new_tiles = vec![];
         let mut tiles: Vec<_> = self.tiles.into_iter().collect();
         tiles.sort();
@@ -285,6 +324,8 @@ impl TileContour {
     }
 
     pub fn translated(&self, translation: Point<i32>) -> Self {
+        #[cfg(feature = "tracing")]
+        duration!("gfx", "TileContour::translated");
         match self {
             Self::Tiles(tiles) => {
                 let mut tile_contour_builder = TileContourBuilder::new();
@@ -313,7 +354,7 @@ impl Layer {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Map {
     tiles: Vec<Tile>,
     layers: HashMap<u32, Layer>,
@@ -344,7 +385,14 @@ impl Map {
             }
         }
 
-        Self { tiles, layers: HashMap::new(), width, height, tile_width, tile_height }
+        Self {
+            tiles,
+            layers: HashMap::new(),
+            width,
+            height,
+            tile_width,
+            tile_height,
+        }
     }
 
     fn tile_mut(&mut self, i: usize, j: usize) -> &mut Tile {
@@ -402,6 +450,8 @@ impl Map {
     }
 
     fn specialized_print(&mut self, id: u32, is_partial: bool) {
+        #[cfg(feature = "tracing")]
+        duration!("gfx", "Map::specialized_print");
         if let Some(layer) = self.layers.get(&id) {
             layer.new_edges.set(false);
 
@@ -419,6 +469,8 @@ impl Map {
     }
 
     fn reprint_all(&mut self) {
+        #[cfg(feature = "tracing")]
+        duration!("gfx", "Map::reprint_all");
         let complete_reprints: HashSet<_> = self
             .layers
             .iter()
@@ -470,6 +522,8 @@ impl Map {
     }
 
     pub fn render<B: ColorBuffer>(&mut self, buffer: B) {
+        #[cfg(feature = "tracing")]
+        duration!("gfx", "Map::render");
         self.reprint_all();
 
         let edges: HashMap<_, _> =
@@ -489,11 +543,13 @@ impl Map {
         rayon::scope(|s| {
             for j in 0..tile_height {
                 for i in 0..tile_width {
-                    let tile = &tiles[i + j * tile_width];
+                    let index = i + j * tile_width;
+                    let tile = &tiles[index];
 
                     if tile.needs_render {
                         let context = Context {
                             tile,
+                            index,
                             width,
                             height,
                             edges: &edges,
@@ -904,15 +960,9 @@ mod tests {
 
         let mut raster = Raster::new(&path);
 
-        assert_eq!(
-            all_tiles(&*raster.tile_contour(), &mut map, None),
-            vec![],
-        );
+        assert_eq!(all_tiles(&*raster.tile_contour(), &mut map, None), vec![]);
 
         raster.set_translation(Point::new(TILE_SIZE as i32, TILE_SIZE as i32));
-        assert_eq!(
-            all_tiles(&*raster.tile_contour(), &mut map, None),
-            vec![(0, 0)],
-        );
+        assert_eq!(all_tiles(&*raster.tile_contour(), &mut map, None), vec![(0, 0)]);
     }
 }

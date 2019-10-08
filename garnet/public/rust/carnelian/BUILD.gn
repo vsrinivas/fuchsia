@@ -21,6 +21,7 @@ rustc_library("carnelian") {
     "//garnet/public/rust/fuchsia-framebuffer",
     "//garnet/public/rust/fuchsia-scenic",
     "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-trace-provider",
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/mapped-vmo",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",

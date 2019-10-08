@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::rc::Rc;
+use std::{iter, rc::Rc};
+
+#[cfg(feature = "tracing")]
+use fuchsia_trace::duration;
 
 use crate::{
     edge::Edge,
@@ -27,14 +30,27 @@ pub struct Raster {
 }
 
 impl Raster {
-    fn from_edges(edges: Vec<Edge<i32>>) -> Self {
+    fn rasterize(edges: impl Iterator<Item = Edge<i32>>) -> Vec<Edge<i32>> {
+        #[cfg(feature = "tracing")]
+        duration!("gfx", "Raster::rasterize");
+        edges.collect()
+    }
+
+    fn build_contour(edges: &[Edge<i32>]) -> TileContour {
+        #[cfg(feature = "tracing")]
+        duration!("gfx", "Raster::tile_contour");
         let mut tile_contour_builder = TileContourBuilder::new();
 
-        for edge in &edges {
+        for edge in edges {
             tile_contour_builder.enclose(edge);
         }
 
-        let tile_contour = tile_contour_builder.build();
+        tile_contour_builder.build()
+    }
+
+    fn from_edges(edges: impl Iterator<Item = Edge<i32>>) -> Self {
+        let edges = Self::rasterize(edges);
+        let tile_contour = Self::build_contour(&edges);
 
         Self {
             inner: Rc::new(RasterInner { edges, tile_contour }),
@@ -44,17 +60,15 @@ impl Raster {
     }
 
     pub fn new(path: &Path) -> Self {
-        Self::from_edges(path.edges().flat_map(|edge| edge.to_sp_edges()).flatten().collect())
+        Self::from_edges(path.edges().flat_map(|edge| edge.to_sp_edges()).flatten())
     }
 
     pub fn with_transform(path: &Path, transform: &[f32; 9]) -> Self {
-        Self::from_edges(
-            path.transformed(transform).flat_map(|edge| edge.to_sp_edges()).flatten().collect(),
-        )
+        Self::from_edges(path.transformed(transform).flat_map(|edge| edge.to_sp_edges()).flatten())
     }
 
     pub fn empty() -> Self {
-        Self::from_edges(vec![])
+        Self::from_edges(iter::empty())
     }
 
     pub(crate) fn maxed() -> Self {
@@ -73,8 +87,7 @@ impl Raster {
                 .map(Path::edges)
                 .flatten()
                 .flat_map(|edge| edge.to_sp_edges())
-                .flatten()
-                .collect(),
+                .flatten(),
         )
     }
 
@@ -88,8 +101,7 @@ impl Raster {
                 .map(|(path, transform)| path.transformed(transform))
                 .flatten()
                 .flat_map(|edge| edge.to_sp_edges())
-                .flatten()
-                .collect(),
+                .flatten(),
         )
     }
 
@@ -109,6 +121,8 @@ impl Raster {
     }
 
     pub fn union(&self, other: &Self) -> Self {
+        #[cfg(feature = "tracing")]
+        duration!("gfx", "Raster::union");
         let inner = &self.inner;
         let other_inner = &other.inner;
 

@@ -17,6 +17,7 @@ use fuchsia_async::{self as fasync, DurationExt, Timer};
 use fuchsia_component::{self as component, client::connect_to_service};
 use fuchsia_framebuffer::{Frame, FrameBuffer, VSyncMessage};
 use fuchsia_scenic::{Session, SessionPtr, ViewTokenPair};
+use fuchsia_trace_provider;
 use fuchsia_zircon::{self as zx, DurationNum};
 use futures::{
     channel::{mpsc::unbounded, oneshot},
@@ -294,6 +295,7 @@ impl App {
         app.set_assistant(assistant);
         App::start_services(app)?;
         app.assistant.as_mut().unwrap().setup().context("app setup")?;
+        fuchsia_trace_provider::trace_provider_create_with_fdio();
         Ok(supports_scenic)
     }
 

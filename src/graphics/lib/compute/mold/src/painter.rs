@@ -4,6 +4,9 @@
 
 use std::{collections::HashMap, mem};
 
+#[cfg(feature = "tracing")]
+use fuchsia_trace::duration;
+
 use crate::{
     edge::Edge,
     point::Point,
@@ -32,6 +35,7 @@ pub trait ColorBuffer: Clone + Send + Sync {
 #[derive(Debug)]
 pub(crate) struct Context<'m, B: ColorBuffer> {
     pub tile: &'m Tile,
+    pub index: usize,
     pub width: usize,
     pub height: usize,
     pub edges: &'m HashMap<u32, &'m [Edge<i32>]>,
@@ -61,7 +65,6 @@ pub struct Color {
 }
 
 const ZERO: Color = Color { red: 0, green: 0, blue: 0, alpha: 0 };
-
 const BLACK: Color = Color { red: 0, green: 0, blue: 0, alpha: 255 };
 
 #[derive(Debug)]
@@ -464,8 +467,18 @@ impl Painter {
     }
 
     pub(crate) fn execute<B: ColorBuffer>(&mut self, mut context: Context<B>) {
+        #[cfg(feature = "tracing")]
+        duration!(
+            "gfx",
+            "Painter::execute",
+            "i" => context.tile.tile_i as u64,
+            "j" => context.tile.tile_j as u64
+        );
+
         while let Some((edges, ops)) = self.process_layer(&context) {
             for op in ops {
+                #[cfg(feature = "tracing")]
+                duration!("gfx:mold", "Painter::execute_op", "op" => op.name());
                 match op {
                     TileOp::CoverWipZero => self.cover_wip_zero(),
                     TileOp::CoverWipNonZero => self.cover_wip(
