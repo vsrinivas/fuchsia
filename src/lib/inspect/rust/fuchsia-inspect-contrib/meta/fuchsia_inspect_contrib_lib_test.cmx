@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/fuchsia_inspect_contrib_lib_test"
+    }
+}

@@ -229,7 +229,7 @@ assert_inspect_tree!(inspector, root: {
 });
 ```
 
-Learn more about [testing](/garnet/public/rust/fuchsia-inspect/src/testing.rs) inspect.
+Learn more about [testing](/src/lib/inspect/rust/fuchsia-inspect/src/testing.rs) inspect.
 
 See [the docs](https://fuchsia-docs.firebaseapp.com/rust/fuchsia_inspect/index.html)
 to learn about other methods offered by the Rust API.

@@ -10,7 +10,7 @@ This project should be automatically included in builds.
 ## Using
 
 `fuchsia_inspect` can be used by depending on the
-`//garnet/public/rust/fuchsia-inspect` GN target and then using
+`//src/lib/inspect/rust/fuchsia-inspect` GN target and then using
 the `fuchsia_inspect` crate in a Rust project.
 
 `fuchsia_inspect` is not available in the SDK.
@@ -24,6 +24,6 @@ Unit tests for `fuchsia_inspect` are available in the
 $ fx run-test fuchsia_inspect_tests
 ```
 
-You'll need to include `//garnet/public/rust/fuchsia-inspect:tests` in your
+You'll need to include `//src/lib/inspect/rust/fuchsia-inspect:tests` in your
 build, either by using `fx args` to put it under `universe_package_labels`, or
-by `fx set [....] --with //garnet/public/rust/fuchsia-inspect:tests`.
+by `fx set [....] --with //src/lib/inspect/rust/fuchsia-inspect:tests`.

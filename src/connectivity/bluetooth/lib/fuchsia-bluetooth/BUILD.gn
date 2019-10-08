@@ -19,8 +19,6 @@ rustc_library("fuchsia-bluetooth") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-inspect",
-    "//garnet/public/rust/fuchsia-inspect-contrib",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
     "//garnet/public/rust/fuchsia-zircon",
@@ -28,6 +26,8 @@ rustc_library("fuchsia-bluetooth") {
     "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
     "//sdk/fidl/fuchsia.bluetooth.test:fuchsia.bluetooth.test-rustc",
+    "//src/lib/inspect/rust/fuchsia-inspect",
+    "//src/lib/inspect/rust/fuchsia-inspect-contrib",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
@@ -59,6 +59,7 @@ test_package("tests") {
       name = "fuchsia_bluetooth_lib_test"
       dest = "bluetooth-crate-unittests"
       environments = basic_envs
+
       # TODO(35077) Re-enable once test flake is resolved
       disabled = true
     },

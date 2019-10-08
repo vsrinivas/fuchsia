@@ -169,7 +169,7 @@ the underlying array is not a specially formatted histogram.
 [cpp-reading-1]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/reader.h
 [cpp-reading-2]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/hierarchy.h
 
-## [Rust](/garnet/public/rust/fuchsia-inspect)
+## [Rust](/src/lib/inspect/rust/fuchsia-inspect)
 
 The Rust Inspect Library provides full [writing][rust-1] and
 [reading][rust-2] support for the Inspect File Format.

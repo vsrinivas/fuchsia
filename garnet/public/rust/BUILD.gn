@@ -12,7 +12,6 @@ unittest_package("rust-crates-tests") {
     "fuchsia-cprng:fuchsia-cprng_test",
     "fuchsia-framebuffer",
     "fuchsia-hyper:fuchsia-hyper-tests",
-    "fuchsia-inspect-contrib:fuchsia-inspect-contrib_test",
     "fuchsia-merkle:fuchsia-merkle_test",
     "fuchsia-scenic:fuchsia-scenic_test",
     "fuchsia-trace:fuchsia-trace_test",
@@ -34,10 +33,6 @@ unittest_package("rust-crates-tests") {
     },
     {
       name = "fuchsia_cprng_lib_test"
-      environments = basic_envs
-    },
-    {
-      name = "fuchsia_inspect_contrib_lib_test"
       environments = basic_envs
     },
     {
