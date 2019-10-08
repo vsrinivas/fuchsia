@@ -78,7 +78,7 @@ class AudioDriver {
     return plugged_;
   }
 
-  zx_time_t plug_time() const {
+  zx::time plug_time() const {
     fbl::AutoLock lock(&plugged_lock_);
     return plug_time_;
   }
@@ -177,7 +177,7 @@ class AudioDriver {
   void SetupCommandTimeout() FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
 
   // Update internal plug state bookkeeping and report up to our owner (if enabled).
-  void ReportPlugStateChange(bool plugged, zx_time_t plug_time)
+  void ReportPlugStateChange(bool plugged, zx::time plug_time)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
 
   // Handle a new piece of driver info being fetched.
@@ -275,7 +275,7 @@ class AudioDriver {
 
   mutable fbl::Mutex plugged_lock_;
   bool plugged_ FXL_GUARDED_BY(plugged_lock_) = false;
-  zx_time_t plug_time_ FXL_GUARDED_BY(plugged_lock_) = 0;
+  zx::time plug_time_ FXL_GUARDED_BY(plugged_lock_);
 };
 
 }  // namespace media::audio

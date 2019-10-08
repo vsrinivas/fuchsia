@@ -22,7 +22,7 @@ class FakeObjectRegistry : public ObjectRegistry {
   void ActivateDevice(const fbl::RefPtr<AudioDevice>& device) override {}
   void RemoveDevice(const fbl::RefPtr<AudioDevice>& device) override {}
   void OnPlugStateChanged(const fbl::RefPtr<AudioDevice>& device, bool plugged,
-                          zx_time_t plug_time) override {}
+                          zx::time plug_time) override {}
 };
 
 }  // namespace media::audio::testing

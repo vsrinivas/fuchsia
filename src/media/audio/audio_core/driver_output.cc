@@ -462,7 +462,7 @@ void DriverOutput::OnDriverStartComplete() {
   Process();
 }
 
-void DriverOutput::OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) {
+void DriverOutput::OnDriverPlugStateChange(bool plugged, zx::time plug_time) {
   TRACE_DURATION("audio", "DriverOutput::OnDriverPlugStateChange");
   // Reflect this message to the AudioDeviceManager so it can deal with the plug
   // state change.

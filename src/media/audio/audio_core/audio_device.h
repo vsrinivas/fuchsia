@@ -49,7 +49,7 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
   // plug_time : The time (per zx::clock::get_monotonic() at which the plugged/unplugged state of
   //             this output or input last changed.
   bool plugged() const { return plugged_; }
-  zx_time_t plug_time() const { return plug_time_; }
+  zx::time plug_time() const { return plug_time_; }
   AudioDriver* driver() const { return driver_.get(); }
   uint64_t token() const;
   uint64_t GetKey() const { return token(); }
@@ -176,7 +176,7 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
 
   virtual void OnDriverStopComplete() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()){};
 
-  virtual void OnDriverPlugStateChange(bool plugged, zx_time_t plug_time)
+  virtual void OnDriverPlugStateChange(bool plugged, zx::time plug_time)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()){};
 
   //////////////////////////////////////////////////////////////////////////////
@@ -192,7 +192,7 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
   // be used by derived classes during Init to set an initial plug state.
   //
   // Returns true if the plug state has changed, or false otherwise.
-  bool UpdatePlugState(bool plugged, zx_time_t plug_time);
+  bool UpdatePlugState(bool plugged, zx::time plug_time);
 
   // AudioDriver accessors.
   const fbl::RefPtr<RingBuffer>& driver_ring_buffer() const
@@ -241,7 +241,7 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
   // Plug state is protected by the fact that it is only ever accessed on the
   // main message loop thread.
   bool plugged_ = false;
-  zx_time_t plug_time_ = 0;
+  zx::time plug_time_;
 
   std::atomic<bool> shutting_down_{false};
   volatile bool shut_down_ = false;

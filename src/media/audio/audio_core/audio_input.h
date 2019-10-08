@@ -35,7 +35,7 @@ class AudioInput : public AudioDevice {
 
   void OnDriverStopComplete() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
-  void OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) override
+  void OnDriverPlugStateChange(bool plugged, zx::time plug_time) override
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   // AudioDevice impl

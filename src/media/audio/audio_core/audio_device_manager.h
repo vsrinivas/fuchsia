@@ -80,7 +80,7 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   void ActivateDevice(const fbl::RefPtr<AudioDevice>& device) override;
   void RemoveDevice(const fbl::RefPtr<AudioDevice>& device) override;
   void OnPlugStateChanged(const fbl::RefPtr<AudioDevice>& device, bool plugged,
-                          zx_time_t plug_time) override;
+                          zx::time plug_time) override;
 
   // |fuchsia::media::AudioDeviceEnumerator|
   void GetDevices(GetDevicesCallback cbk) final;
@@ -114,8 +114,8 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
 
   // Methods to handle routing policy -- when an existing device is unplugged or completely removed,
   // or when a new device is plugged or added to the system.
-  void OnDeviceUnplugged(const fbl::RefPtr<AudioDevice>& device, zx_time_t plug_time);
-  void OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device, zx_time_t plug_time);
+  void OnDeviceUnplugged(const fbl::RefPtr<AudioDevice>& device, zx::time plug_time);
+  void OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device, zx::time plug_time);
 
   void LinkToAudioCapturers(const fbl::RefPtr<AudioDevice>& device);
 

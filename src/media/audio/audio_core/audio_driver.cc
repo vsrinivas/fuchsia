@@ -531,7 +531,7 @@ zx_status_t AudioDriver::ProcessStreamChannelMessage() {
         }
       }
 
-      ReportPlugStateChange(plug_state, msg.pd_resp.plug_state_time);
+      ReportPlugStateChange(plug_state, zx::time(msg.pd_resp.plug_state_time));
 
       pd_enable_timeout_ = ZX_TIME_INFINITE;
       SetupCommandTimeout();
@@ -540,7 +540,7 @@ zx_status_t AudioDriver::ProcessStreamChannelMessage() {
     case AUDIO_STREAM_PLUG_DETECT_NOTIFY:
       CHECK_RESP(AUDIO_STREAM_CMD_PLUG_DETECT_NOTIFY, pd_notify, false, true);
       plug_state = ((msg.pd_notify.flags & AUDIO_PDNF_PLUGGED) != 0);
-      ReportPlugStateChange(plug_state, msg.pd_notify.plug_state_time);
+      ReportPlugStateChange(plug_state, zx::time(msg.pd_notify.plug_state_time));
       break;
 
     default:
@@ -999,7 +999,7 @@ void AudioDriver::SetupCommandTimeout() {
   }
 }
 
-void AudioDriver::ReportPlugStateChange(bool plugged, zx_time_t plug_time) {
+void AudioDriver::ReportPlugStateChange(bool plugged, zx::time plug_time) {
   TRACE_DURATION("audio", "AudioDriver::ReportPlugStateChange");
   {
     fbl::AutoLock lock(&plugged_lock_);

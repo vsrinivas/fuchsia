@@ -35,7 +35,7 @@ class ThrottleOutput : public AudioOutput {
   void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override {
     if (uninitialized_) {
       last_sched_time_ = fxl::TimePoint::Now();
-      UpdatePlugState(true, 0);
+      UpdatePlugState(true, zx::time(0));
       Process();
       uninitialized_ = false;
     }

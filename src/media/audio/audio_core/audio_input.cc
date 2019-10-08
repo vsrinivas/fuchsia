@@ -113,7 +113,7 @@ void AudioInput::OnDriverStopComplete() {
   }
 }
 
-void AudioInput::OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) {
+void AudioInput::OnDriverPlugStateChange(bool plugged, zx::time plug_time) {
   TRACE_DURATION("audio", "AudioInput::OnDriverPlugStateChange");
   if (plugged && (driver()->state() == AudioDriver::State::Configured)) {
     driver()->Start();

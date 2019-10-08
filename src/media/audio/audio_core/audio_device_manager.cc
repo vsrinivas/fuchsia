@@ -246,7 +246,7 @@ void AudioDeviceManager::ActivateDeviceWithSettings(fbl::RefPtr<AudioDevice> dev
 
   // Reconsider our current routing policy now that a new device has arrived.
   if (device->plugged()) {
-    zx_time_t plug_time = device->plug_time();
+    zx::time plug_time = device->plug_time();
     OnDevicePlugged(device, plug_time);
   }
 
@@ -292,7 +292,7 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
 }
 
 void AudioDeviceManager::OnPlugStateChanged(const fbl::RefPtr<AudioDevice>& device, bool plugged,
-                                            zx_time_t plug_time) {
+                                            zx::time plug_time) {
   TRACE_DURATION("audio", "AudioDeviceManager::OnPlugStateChanged");
   FXL_DCHECK(device != nullptr);
 
@@ -586,7 +586,7 @@ void AudioDeviceManager::SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPoli
 }
 
 void AudioDeviceManager::OnDeviceUnplugged(const fbl::RefPtr<AudioDevice>& device,
-                                           zx_time_t plug_time) {
+                                           zx::time plug_time) {
   TRACE_DURATION("audio", "AudioDeviceManager::OnDeviceUnplugged");
   FXL_DCHECK(device);
   FXL_DCHECK(ValidateRoutingPolicy(routing_policy_));
@@ -646,7 +646,7 @@ void AudioDeviceManager::OnDeviceUnplugged(const fbl::RefPtr<AudioDevice>& devic
 }
 
 void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
-                                         zx_time_t plug_time) {
+                                         zx::time plug_time) {
   TRACE_DURATION("audio", "AudioDeviceManager::OnDevicePlugged");
   FXL_DCHECK(device);
 

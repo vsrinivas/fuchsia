@@ -199,7 +199,7 @@ fit::promise<void> AudioDevice::Shutdown() {
   return bridge.consumer.promise();
 }
 
-bool AudioDevice::UpdatePlugState(bool plugged, zx_time_t plug_time) {
+bool AudioDevice::UpdatePlugState(bool plugged, zx::time plug_time) {
   TRACE_DURATION("audio", "AudioDevice::UpdatePlugState");
   if ((plugged != plugged_) && (plug_time >= plug_time_)) {
     plugged_ = plugged;

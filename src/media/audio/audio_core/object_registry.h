@@ -37,7 +37,7 @@ class ObjectRegistry {
 
   // Handles a plugged/unplugged state change for the supplied audio device.
   virtual void OnPlugStateChanged(const fbl::RefPtr<AudioDevice>& device, bool plugged,
-                                  zx_time_t plug_time) = 0;
+                                  zx::time plug_time) = 0;
 };
 
 }  // namespace media::audio
