@@ -66,7 +66,7 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
 
     bool is_first = true;
     for (std::vector<std::unique_ptr<flat::Struct>>::const_iterator it = begin; it != end; ++it) {
-      if ((*it)->anonymous)
+      if ((*it)->is_request_or_response)
         continue;
       if (is_first) {
         Indent();

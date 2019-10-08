@@ -874,7 +874,7 @@ std::map<const flat::Decl*, CGenerator::NamedStruct> CGenerator::NameStructs(
     const std::vector<std::unique_ptr<flat::Struct>>& struct_infos) {
   std::map<const flat::Decl*, NamedStruct> named_structs;
   for (const auto& struct_info : struct_infos) {
-    if (struct_info->anonymous)
+    if (struct_info->is_request_or_response)
       continue;
     std::string c_name = NameCodedName(struct_info->name);
     std::string coded_name = c_name + "Coded";

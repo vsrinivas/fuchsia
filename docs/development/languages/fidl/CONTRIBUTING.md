@@ -156,6 +156,22 @@ fx set core.x64 --variant=host_asan
 fx build zircon/tools
 ```
 
+If you're doing extensive edit-compile-test cycles on `fidlc`, building with no optimizations can
+make a significant difference in the build speed. To optimize the build, change the `opt_level`
+setting in `zircon/public/gn/config/levels.gni`.
+
+To avoid accidentally committing this change, run:
+
+```
+git update-index --skip-worktree zircon/public/gn/config/levels.gni
+```
+
+If you want to allow the changes to be committed again, run:
+
+```
+git update-index --no-skip-worktree zircon/public/gn/config/levels.gni
+```
+
 ### fidlc tests
 
 fidlc tests are at:

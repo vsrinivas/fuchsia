@@ -10,102 +10,67 @@
 // TODO(FIDL-710): We should revisit this namespace choice as part of improving code organization.
 namespace fidl {
 
-class TypeShape;
+namespace flat {
 
-struct TypeShapeBuilder {
-  uint32_t inline_size = 0;
-  uint32_t alignment = 1;
+struct Object;
+struct StructMember;
+struct TableMemberUsed;
+struct UnionMember;
+struct XUnionMember;
 
-  // These properties are calculated incorporating both the current TypeShape, and recursively over
-  // all child fields. For example, |has_padding| is true if either the current TypeShape has
-  // padding, or any child fields themselves have padding.
-  struct Recursive {
-    uint32_t depth = 0;
-    uint32_t max_handles = 0;
-    uint32_t max_out_of_line = 0;
-    bool has_padding = false;
-    bool has_flexible_envelope = false;
+}  // namespace flat
 
-    Recursive& AddStructLike(TypeShape typeshape);
-    Recursive& AddUnionLike(TypeShape typeshape);
-  } recursive = {};
+struct TypeShape {
+  TypeShape() = default;
+  explicit TypeShape(const flat::Object& object);
 
-  TypeShapeBuilder& operator+=(TypeShapeBuilder builder);
-};
+  // The inline size of this type, including padding for the type's minimum alignment. For example,
+  // "struct S { uint32 a; uint16 b; };" will have an inline_size of 8, not 6: the "packed" size of
+  // the struct is 6, but the alignment of its largest member is 4, so 6 is rounded up to 8.
+  uint32_t inline_size;
 
-// |TypeShape| describes the wire-format information of a type.
-class TypeShape {
- public:
-  explicit constexpr TypeShape(TypeShapeBuilder builder)
-      : inline_size_(builder.inline_size),
-        alignment_(builder.alignment),
-        depth_(builder.recursive.depth),
-        max_handles_(builder.recursive.max_handles),
-        max_out_of_line_(builder.recursive.max_out_of_line),
-        has_padding_(builder.recursive.has_padding),
-        has_flexible_envelope_(builder.recursive.has_flexible_envelope) {}
+  // The minimum alignment required by this type.
+  uint32_t alignment;
 
-  TypeShape() : TypeShape(TypeShapeBuilder{}) {}
+  // These values are calculated incorporating both the current TypeShape, and recursively over
+  // all child fields. A value of std::numeric_limits<uint32_t>::max() means that the value is
+  // potentially unbounded, which can happen for self-recursive aggregate objects. For flexible
+  // types, these values is calculated based on the currently-defined members, and does _not_ take
+  // potential future members into account.
+  uint32_t depth;
+  uint32_t max_handles;
+  uint32_t max_out_of_line;
 
-  TypeShape(const TypeShape&) = default;
-  TypeShape& operator=(const TypeShape&) = default;
+  // |has_padding| is true if this type has _either_ inline or out-of-line padding. For flexible
+  // types, |has_padding| is calculated based on the currently-defined members, and does _not_ take
+  // potential future members into account. (If it did, |has_padding| would have to be true for all
+  // flexible types, which doesn't make it very useful.)
+  bool has_padding;
 
-  // These properties describe this type only.
+  bool has_flexible_envelope;
 
-  uint32_t InlineSize() const { return inline_size_; }
-  uint32_t Alignment() const { return alignment_; }
-
-  // These properties are calculated incorporating both the current TypeShape, and recursively over
-  // all child fields.
-
-  uint32_t Depth() const { return depth_; }
-  uint32_t MaxHandles() const { return max_handles_; }
-  uint32_t MaxOutOfLine() const { return max_out_of_line_; }
-  bool HasPadding() const { return has_padding_; }
-  bool HasFlexibleEnvelope() const { return has_flexible_envelope_; }
-
- private:
-  uint32_t inline_size_;
-  uint32_t alignment_;
-  uint32_t depth_;
-  uint32_t max_handles_;
-  uint32_t max_out_of_line_;
-  bool has_padding_;
-  bool has_flexible_envelope_;
-};
-
-// An object that has a TypeShape is a TypeShapeContainer. This is a simple class that provides
-// accessors to a private typeshape_ member variable, but is a useful step in enabling existing
-// classes to encapsulate access to their typeshape.
-//
-// You should always _virtually_ inherit from this class, to ensure that your class only has one
-// definition of these members. For example:
-//
-//   struct Foo : public virtual TypeShapeContainer {
-//     ...
-//   };
-//
-// Google for "C++ virtual inheritance" for more information.
-class TypeShapeContainer {
- public:
-  virtual const TypeShape& typeshape() const { return typeshape_; }
-
-  // The method is named mutable_typeshape() to make it easy to identify where client code needs
-  // mutable (write) access to the typeshape_ member variable (grep for mutable_typeshape).
-  virtual TypeShape& mutable_typeshape() { return typeshape_; }
-
-  virtual ~TypeShapeContainer() = default;
-
- private:
-  // |typeshape_| is mutable since some overrides of typeshape(), which is a const method, may need
-  // to mutate it for e.g. memoization.
-  mutable TypeShape typeshape_;
+  // TODO(fxb/36337): These accessors are for backward compatibility with current code, and could be
+  // removed in the future.
+  uint32_t InlineSize() const { return inline_size; }
+  uint32_t Alignment() const { return alignment; }
+  uint32_t Depth() const { return depth; }
+  uint32_t MaxHandles() const { return max_handles; }
+  uint32_t MaxOutOfLine() const { return max_out_of_line; }
+  bool HasPadding() const { return has_padding; }
+  bool HasFlexibleEnvelope() const { return has_flexible_envelope; }
 };
 
 // |FieldShape| describes the offset and padding information for members that are contained within
 // an aggregate type (e.g. struct/union).
-class FieldShape {
- public:
+// TODO(fxb/36337): We can update |FieldShape| to be a simple offset+padding struct, and remove the
+// getter/setter methods since they're purely for backward-compatibility with existing code.
+struct FieldShape {
+  FieldShape() = default;
+  explicit FieldShape(const flat::StructMember&);
+  explicit FieldShape(const flat::TableMemberUsed&);
+  explicit FieldShape(const flat::UnionMember&);
+  explicit FieldShape(const flat::XUnionMember&);
+
   uint32_t Offset() const { return offset_; }
   // Padding after this field until the next field or the end of the container.
   // See
@@ -120,30 +85,7 @@ class FieldShape {
   uint32_t padding_ = 0;
 };
 
-// An object that has a FieldShape is a FieldShapeContainer. See the documentation above on
-// |TypeShapeContainer| for more details; this is the same thing, for FieldShape.
-class FieldShapeContainer {
- public:
-  virtual const FieldShape& fieldshape() const { return fieldshape_; }
-  virtual FieldShape& mutable_fieldshape() { return fieldshape_; }
-
-  virtual ~FieldShapeContainer() = default;
-
- private:
-  // |fieldshape_| is mutable since some overrides of fieldshape(), which is a const method, may
-  // need to mutate it for e.g. memoization.
-  mutable FieldShape fieldshape_;
-};
-
 constexpr uint32_t kMessageAlign = 8u;
-
-uint32_t AlignTo(uint64_t size, uint64_t alignment);
-
-// Multiply |a| and |b| with saturated arithmetic, clamped at UINT32_MAX.
-uint32_t ClampedMultiply(uint32_t a, uint32_t b);
-
-// Add |a| and |b| with saturated arithmetic, clamped at UINT32_MAX.
-uint32_t ClampedAdd(uint32_t a, uint32_t b);
 
 }  // namespace fidl
 

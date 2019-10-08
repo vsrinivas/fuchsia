@@ -50,6 +50,7 @@ if (defined(zx)) {
     public_deps = [
       "$zx/system/ulib/cmdline:headers",
       "$zx/system/ulib/fit:headers",
+      "$zx/third_party/ulib/safemath",
     ]
     deps = [
       ":json_schema",

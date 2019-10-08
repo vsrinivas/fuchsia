@@ -18,8 +18,8 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
         return iter->second;
       auto coded_element_type =
           CompileType(array_type->element_type, coded::CodingContext::kOutsideEnvelope);
-      uint32_t array_size = array_type->shape.InlineSize();
-      uint32_t element_size = array_type->element_type->shape.InlineSize();
+      uint32_t array_size = array_type->typeshape().InlineSize();
+      uint32_t element_size = array_type->element_type->typeshape().InlineSize();
       auto name = NameCodedArray(coded_element_type->coded_name, array_size);
       auto coded_array_type = std::make_unique<coded::ArrayType>(
           std::move(name), coded_element_type, array_size, element_size, context);
@@ -88,8 +88,9 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       if (iter != primitive_type_map_.end())
         return iter->second;
       auto name = NameFlatName(primitive_type->name);
-      auto coded_primitive_type = std::make_unique<coded::PrimitiveType>(
-          std::move(name), primitive_type->subtype, primitive_type->shape.InlineSize(), context);
+      auto coded_primitive_type =
+          std::make_unique<coded::PrimitiveType>(std::move(name), primitive_type->subtype,
+                                                 primitive_type->typeshape().InlineSize(), context);
       primitive_type_map_[WithContext(context, primitive_type)] = coded_primitive_type.get();
       coded_types_.push_back(std::move(coded_primitive_type));
       return coded_types_.back().get();
@@ -221,7 +222,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
     }
     case flat::Decl::Kind::kStruct: {
       auto struct_decl = static_cast<const flat::Struct*>(decl);
-      if (struct_decl->anonymous)
+      if (struct_decl->is_request_or_response)
         break;
       coded::StructType* coded_struct =
           static_cast<coded::StructType*>(named_coded_types_[&decl->name].get());
@@ -314,7 +315,9 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
       }
       break;
     }
-    default: { break; }
+    default: {
+      break;
+    }
   }
 }
 
@@ -327,8 +330,8 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
       named_coded_types_.emplace(
           &bits_decl->name,
           std::make_unique<coded::BitsType>(std::move(bits_name), primitive_type->subtype,
-                                            primitive_type->shape.InlineSize(), bits_decl->mask,
-                                            NameFlatName(bits_decl->name)));
+                                            primitive_type->typeshape().InlineSize(),
+                                            bits_decl->mask, NameFlatName(bits_decl->name)));
       break;
     }
     case flat::Decl::Kind::kEnum: {
@@ -356,8 +359,8 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
       named_coded_types_.emplace(
           &enum_decl->name,
           std::make_unique<coded::EnumType>(std::move(enum_name), enum_decl->type->subtype,
-                                            enum_decl->type->shape.InlineSize(), std::move(members),
-                                            NameFlatName(enum_decl->name)));
+                                            enum_decl->type->typeshape().InlineSize(),
+                                            std::move(members), NameFlatName(enum_decl->name)));
       break;
     }
     case flat::Decl::Kind::kProtocol: {
@@ -401,7 +404,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     }
     case flat::Decl::Kind::kStruct: {
       auto struct_decl = static_cast<const flat::Struct*>(decl);
-      if (struct_decl->anonymous)
+      if (struct_decl->is_request_or_response)
         break;
       std::string struct_name = NameCodedName(struct_decl->name);
       named_coded_types_.emplace(

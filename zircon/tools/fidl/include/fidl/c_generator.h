@@ -59,7 +59,7 @@ class CGenerator {
     std::string c_name;
     std::string coded_name;
     const std::vector<flat::Struct::Member>& parameters;
-    const TypeShape& typeshape;
+    const TypeShape typeshape;
   };
 
   struct NamedMethod {

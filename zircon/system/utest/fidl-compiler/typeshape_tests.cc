@@ -336,7 +336,7 @@ table TableWithBoolAndU64 {
       CheckTypeShape(no_members->typeshape(), Expected{
                                                 .inline_size = 16,
                                                 .alignment = 8,
-                                                .depth = 4294967295,  // TODO(FIDL-457): wrong.
+                                                .depth = 1,
                                                 .has_padding = false,
                                                 .has_flexible_envelope = true,
                                             }));
@@ -347,7 +347,7 @@ table TableWithBoolAndU64 {
                                                       .inline_size = 16,
                                                       .alignment = 8,
                                                       .max_out_of_line = 24,
-                                                      .depth = 3,  // TODO(FIDL-457): wrong.
+                                                      .depth = 2,
                                                       .has_padding = true,
                                                       .has_flexible_envelope = true,
                                                   }));
@@ -358,7 +358,7 @@ table TableWithBoolAndU64 {
                                                        .inline_size = 16,
                                                        .alignment = 8,
                                                        .max_out_of_line = 48,
-                                                       .depth = 3,  // TODO(FIDL-457): wrong.
+                                                       .depth = 2,
                                                        .has_padding = true,
                                                        .has_flexible_envelope = true,
                                                    }));
@@ -369,7 +369,7 @@ table TableWithBoolAndU64 {
                                                           .inline_size = 16,
                                                           .alignment = 8,
                                                           .max_out_of_line = 48,
-                                                          .depth = 3,  // TODO(FIDL-457): wrong.
+                                                          .depth = 2,
                                                           .has_padding = true,
                                                           .has_flexible_envelope = true,
                                                       }));
@@ -380,10 +380,74 @@ table TableWithBoolAndU64 {
                                                           .inline_size = 16,
                                                           .alignment = 8,
                                                           .max_out_of_line = 48,
-                                                          .depth = 3,  // TODO(FIDL-457): wrong.
+                                                          .depth = 2,
                                                           .has_padding = true,
                                                           .has_flexible_envelope = true,
                                                       }));
+
+  END_TEST;
+}
+
+static bool tables_with_reserved_fields() {
+  BEGIN_TEST;
+
+  TestLibrary test_library(R"FIDL(
+library example;
+
+table SomeReserved {
+  1: bool b;
+  2: reserved;
+  3: bool b2;
+  4: reserved;
+};
+
+table AllReserved {
+  1: reserved;
+  2: reserved;
+  3: reserved;
+};
+
+table OneReserved {
+  1: reserved;
+};
+    )FIDL");
+  ASSERT_TRUE(test_library.Compile());
+
+  auto some_reserved = test_library.LookupTable("SomeReserved");
+  ASSERT_NONNULL(some_reserved);
+  EXPECT_TRUE(
+      CheckTypeShape(some_reserved->typeshape(), Expected{
+                                                .inline_size = 16,
+                                                .alignment = 8,
+                                                .max_out_of_line = 48,
+                                                .depth = 2,
+                                                .has_padding = true,
+                                                .has_flexible_envelope = true,
+                                            }));
+
+  auto all_reserved = test_library.LookupTable("AllReserved");
+  ASSERT_NONNULL(all_reserved);
+  EXPECT_TRUE(
+      CheckTypeShape(all_reserved->typeshape(), Expected{
+                                                .inline_size = 16,
+                                                .alignment = 8,
+                                                .max_out_of_line = 0,
+                                                .depth = 1,
+                                                .has_padding = false,
+                                                .has_flexible_envelope = true,
+                                            }));
+
+  auto one_reserved = test_library.LookupTable("OneReserved");
+  ASSERT_NONNULL(one_reserved);
+  EXPECT_TRUE(
+      CheckTypeShape(one_reserved->typeshape(), Expected{
+                                                .inline_size = 16,
+                                                .alignment = 8,
+                                                .max_out_of_line = 0,
+                                                .depth = 1,
+                                                .has_padding = false,
+                                                .has_flexible_envelope = true,
+                                            }));
 
   END_TEST;
 }
@@ -408,7 +472,7 @@ table TableWithOneHandle {
                                                         .alignment = 8,
                                                         .max_out_of_line = 24,
                                                         .max_handles = 1,
-                                                        .depth = 3,
+                                                        .depth = 2,
                                                         .has_padding = true,
                                                         .has_flexible_envelope = true,
                                                     }));
@@ -590,7 +654,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                                       .inline_size = 16,
                                                       .alignment = 8,
                                                       .max_out_of_line = 24,
-                                                      .depth = 3,  // TODO(FIDL-457): wrong.
+                                                      .depth = 2,
                                                       .has_padding = true,
                                                       .has_flexible_envelope = true,
                                                   }));
@@ -602,7 +666,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                                          .inline_size = 16,
                                                          .alignment = 8,
                                                          .max_out_of_line = 56,
-                                                         .depth = 6,  // TODO(FIDL-457): wrong.
+                                                         .depth = 4,
                                                          .has_padding = true,
                                                          .has_flexible_envelope = true,
                                                      }));
@@ -613,7 +677,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                                        .inline_size = 16,
                                                        .alignment = 8,
                                                        .max_out_of_line = 24,
-                                                       .depth = 3,  // TODO(FIDL-457): wrong.
+                                                       .depth = 2,
                                                        .has_padding = true,
                                                        .has_flexible_envelope = true,
                                                    }));
@@ -625,7 +689,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                                           .inline_size = 16,
                                                           .alignment = 8,
                                                           .max_out_of_line = 80,
-                                                          .depth = 6,  // TODO(FIDL-457): wrong.
+                                                          .depth = 4,
                                                           .has_padding = true,
                                                           .has_flexible_envelope = true,
                                                       }));
@@ -636,7 +700,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                                           .inline_size = 16,
                                                           .alignment = 8,
                                                           .max_out_of_line = 24,
-                                                          .depth = 3,  // TODO(FIDL-457): wrong.
+                                                          .depth = 2,
                                                           .has_padding = true,
                                                           .has_flexible_envelope = true,
                                                       }));
@@ -648,7 +712,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                                              .inline_size = 16,
                                                              .alignment = 8,
                                                              .max_out_of_line = 80,
-                                                             .depth = 6,  // TODO(FIDL-457): wrong.
+                                                             .depth = 4,
                                                              .has_padding = true,
                                                              .has_flexible_envelope = true,
                                                          }));
@@ -659,7 +723,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                                           .inline_size = 16,
                                                           .alignment = 8,
                                                           .max_out_of_line = 32,
-                                                          .depth = 3,  // TODO(FIDL-457): wrong.
+                                                          .depth = 2,
                                                           .has_padding = true,
                                                           .has_flexible_envelope = true,
                                                       }));
@@ -671,7 +735,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                                              .inline_size = 16,
                                                              .alignment = 8,
                                                              .max_out_of_line = 80,
-                                                             .depth = 6,  // TODO(FIDL-457): wrong.
+                                                             .depth = 4,
                                                              .has_padding = true,
                                                              .has_flexible_envelope = true,
                                                          }));
@@ -743,7 +807,7 @@ table TableWithOptionalUnion {
       .inline_size = 16,
       .alignment = 8,
       .max_out_of_line = 40,
-      .depth = 3,
+      .depth = 2,
       .has_padding = true,
       .has_flexible_envelope = true,
   }));
@@ -917,7 +981,7 @@ table TableWithUnboundedVectors {
                                                               .inline_size = 16,
                                                               .alignment = 8,
                                                               .max_out_of_line = 48,
-                                                              .depth = 4,  // TODO(FIDL-457): wrong.
+                                                              .depth = 3,
                                                               .has_padding = true,
                                                               .has_flexible_envelope = true,
                                                           }));
@@ -929,7 +993,7 @@ table TableWithUnboundedVectors {
                                  .inline_size = 16,
                                  .alignment = 8,
                                  .max_out_of_line = std::numeric_limits<uint32_t>::max(),
-                                 .depth = 4,  // TODO(FIDL-457): wrong.
+                                 .depth = 3,
                                  .has_padding = true,
                                  .has_flexible_envelope = true,
                              }));
@@ -941,7 +1005,7 @@ table TableWithUnboundedVectors {
                                  .inline_size = 16,
                                  .alignment = 8,
                                  .max_out_of_line = std::numeric_limits<uint32_t>::max(),
-                                 .depth = 4,  // TODO(FIDL-457): wrong.
+                                 .depth = 3,
                                  .has_padding = true,
                                  .has_flexible_envelope = true,
                              }));
@@ -1041,7 +1105,7 @@ table TableWithHandleStructVector {
                                  .alignment = 8,
                                  .max_out_of_line = std::numeric_limits<uint32_t>::max(),
                                  .max_handles = std::numeric_limits<uint32_t>::max(),
-                                 .depth = 4,  // TODO(FIDL-457): wrong.
+                                 .depth = 3,
                                  .has_padding = true,
                                  .has_flexible_envelope = true,
                              }));
@@ -1065,7 +1129,7 @@ table TableWithHandleStructVector {
                                                          .alignment = 8,
                                                          .max_out_of_line = 320,
                                                          .max_handles = 8,
-                                                         .depth = 4,  // TODO(FIDL-457): wrong.
+                                                         .depth = 3,
                                                          .has_padding = true,
                                                          .has_flexible_envelope = true,
                                                      }));
@@ -1078,7 +1142,7 @@ table TableWithHandleStructVector {
                                  .alignment = 8,
                                  .max_out_of_line = 64,
                                  .max_handles = 8,
-                                 .depth = 4,  // TODO(FIDL-457): wrong.
+                                 .depth = 3,
                                  .has_padding = true,
                                  .has_flexible_envelope = true,
                              }));
@@ -1139,7 +1203,7 @@ table TableWithUnboundedString {
                                                              .inline_size = 16,
                                                              .alignment = 8,
                                                              .max_out_of_line = 40,
-                                                             .depth = 4,  // TODO(FIDL-457): wrong.
+                                                             .depth = 3,
                                                              .has_padding = true,
                                                              .has_flexible_envelope = true,
                                                          }));
@@ -1151,7 +1215,7 @@ table TableWithUnboundedString {
                                  .inline_size = 16,
                                  .alignment = 8,
                                  .max_out_of_line = std::numeric_limits<uint32_t>::max(),
-                                 .depth = 4,  // TODO(FIDL-457): wrong.
+                                 .depth = 3,
                                  .has_padding = true,
                                  .has_flexible_envelope = true,
                              }));
@@ -1198,7 +1262,7 @@ table TableWithAnInt32ArrayNoPadding {
                                                          .inline_size = 16,
                                                          .alignment = 8,
                                                          .max_out_of_line = 56,
-                                                         .depth = 3,  // TODO(FIDL-457): wrong.
+                                                         .depth = 2,
                                                          .has_padding = false,
                                                          .has_flexible_envelope = true,
                                                      }));
@@ -1211,7 +1275,7 @@ table TableWithAnInt32ArrayNoPadding {
           .inline_size = 16,
           .alignment = 8,
           .max_out_of_line = 32,  // 16 table header + ALIGN(4 * 3 array) = 32
-          .depth = 3,  // TODO(FIDL-457): wrong.
+          .depth = 2,
           .has_padding = true,
           .has_flexible_envelope = true,
       }));
@@ -1224,7 +1288,7 @@ table TableWithAnInt32ArrayNoPadding {
           .inline_size = 16,
           .alignment = 8,
           .max_out_of_line = 32,  // 16 table header + ALIGN(4 * 4 array) = 32
-          .depth = 3,  // TODO(FIDL-457): wrong.
+          .depth = 2,
           .has_padding = false,
           .has_flexible_envelope = true,
       }));
@@ -1273,7 +1337,7 @@ table TableWithNullableHandleArray {
                                                              .alignment = 8,
                                                              .max_out_of_line = 48,
                                                              .max_handles = 8,
-                                                             .depth = 3,  // TODO(FIDL-457): wrong.
+                                                             .depth = 2,
                                                              .has_padding = false,
                                                              .has_flexible_envelope = true,
                                                          }));
@@ -1294,7 +1358,7 @@ table TableWithNullableHandleArray {
                                  .alignment = 8,
                                  .max_out_of_line = 48,
                                  .max_handles = 8,
-                                 .depth = 3,  // TODO(FIDL-457): wrong.
+                                 .depth = 2,
                                  .has_padding = false,
                                  .has_flexible_envelope = true,
                              }));
@@ -1342,6 +1406,10 @@ xunion XUnionWithoutPayloadPadding {
   array<uint64>:7 a;
 };
 
+xunion PaddingCheck {
+  array<uint8>:3 three;
+  array<uint8>:5 five;
+};
     )FIDL");
   ASSERT_TRUE(test_library.Compile());
 
@@ -1351,7 +1419,7 @@ xunion XUnionWithoutPayloadPadding {
                                                       .inline_size = 24,
                                                       .alignment = 8,
                                                       .max_out_of_line = 8,
-                                                      .depth = 1,  // TODO(FIDL-457): wrong.
+                                                      .depth = 1,
                                                       .has_padding = true,
                                                       .has_flexible_envelope = true,
                                                   }));
@@ -1364,7 +1432,7 @@ xunion XUnionWithoutPayloadPadding {
                                                           .inline_size = 24,
                                                           .alignment = 8,
                                                           .max_out_of_line = 8,
-                                                          .depth = 1,  // TODO(FIDL-457): wrong.
+                                                          .depth = 2,
                                                           .has_padding = true,
                                                           .has_flexible_envelope = true,
                                                       }));
@@ -1375,7 +1443,7 @@ xunion XUnionWithoutPayloadPadding {
                                                 .inline_size = 24,
                                                 .alignment = 8,
                                                 .max_out_of_line = 256,
-                                                .depth = 3,  // TODO(FIDL-457): wrong.
+                                                .depth = 3,
                                                 .has_padding = true,
                                                 .has_flexible_envelope = true,
                                             }));
@@ -1387,7 +1455,7 @@ xunion XUnionWithoutPayloadPadding {
                                  .inline_size = 24,
                                  .alignment = 8,
                                  .max_out_of_line = std::numeric_limits<uint32_t>::max(),
-                                 .depth = 2,  // TODO(FIDL-457): wrong.
+                                 .depth = 2,
                                  .has_padding = true,
                                  .has_flexible_envelope = true,
                              }));
@@ -1399,13 +1467,27 @@ xunion XUnionWithoutPayloadPadding {
                                  .inline_size = 24,
                                  .alignment = 8,
                                  .max_out_of_line = 56,
-                                 .depth = 1,  // TODO(FIDL-457): wrong.
+                                 .depth = 1,
                                  // xunion always have padding, because its ordinal is 32 bits.
                                  // TODO(FIDL-648): increase the ordinal size to 64 bits, such that
                                  // there is no padding.
                                  .has_padding = true,
                                  .has_flexible_envelope = true,
                              }));
+
+  auto padding_check = test_library.LookupXUnion("PaddingCheck");
+  ASSERT_NONNULL(padding_check);
+  EXPECT_TRUE(CheckTypeShape(padding_check->typeshape(), Expected{
+                                                      .inline_size = 24,
+                                                      .alignment = 8,
+                                                      .max_out_of_line = 8,
+                                                      .depth = 1,
+                                                      .has_padding = true,
+                                                      .has_flexible_envelope = true,
+                                                  }));
+  ASSERT_EQ(padding_check->members.size(), 2);
+  EXPECT_TRUE(CheckFieldShape(padding_check->members[0].fieldshape(), ExpectedField{.padding = 5}));
+  EXPECT_TRUE(CheckFieldShape(padding_check->members[1].fieldshape(), ExpectedField{.padding = 3}));
 
   END_TEST;
 }
@@ -1457,7 +1539,7 @@ strict xunion StrictXUnionOfFlexibleTable {
                                  .inline_size = 24,
                                  .alignment = 8,
                                  .max_out_of_line = 8,
-                                 .depth = 1,  // TODO(FIDL-457): wrong.
+                                 .depth = 1,
                                  .has_padding = true,
                              }));
 
@@ -1468,7 +1550,7 @@ strict xunion StrictXUnionOfFlexibleTable {
                                  .inline_size = 24,
                                  .alignment = 8,
                                  .max_out_of_line = 8,
-                                 .depth = 1,  // TODO(FIDL-457): wrong.
+                                 .depth = 1,
                                  .has_padding = true,
                                  .has_flexible_envelope = true,
                              }));
@@ -1480,7 +1562,7 @@ strict xunion StrictXUnionOfFlexibleTable {
                                  .inline_size = 24,
                                  .alignment = 8,
                                  .max_out_of_line = 32,
-                                 .depth = 2,  // TODO(FIDL-457): wrong.
+                                 .depth = 2,
                                  .has_padding = true,
                                  .has_flexible_envelope = true,
                              }));
@@ -1492,7 +1574,7 @@ strict xunion StrictXUnionOfFlexibleTable {
                                  .inline_size = 24,
                                  .alignment = 8,
                                  .max_out_of_line = 32,
-                                 .depth = 2,  // TODO(FIDL-457): wrong.
+                                 .depth = 2,
                                  .has_padding = true,
                                  .has_flexible_envelope = true,
                              }));
@@ -1504,7 +1586,7 @@ strict xunion StrictXUnionOfFlexibleTable {
                                  .inline_size = 24,
                                  .alignment = 8,
                                  .max_out_of_line = 32,
-                                 .depth = 2,  // TODO(FIDL-457): wrong.
+                                 .depth = 2,
                                  .has_padding = true,
                                  .has_flexible_envelope = false,
                              }));
@@ -1516,7 +1598,7 @@ strict xunion StrictXUnionOfFlexibleTable {
                                  .inline_size = 24,
                                  .alignment = 8,
                                  .max_out_of_line = 32,
-                                 .depth = 2,  // TODO(FIDL-457): wrong.
+                                 .depth = 2,
                                  .has_padding = true,
                                  .has_flexible_envelope = true,
                              }));
@@ -1528,7 +1610,7 @@ strict xunion StrictXUnionOfFlexibleTable {
                                  .inline_size = 16,
                                  .alignment = 8,
                                  .max_out_of_line = 0,
-                                 .depth = 4294967295,  // TODO(FIDL-457): wrong.
+                                 .depth = 1,
                                  .has_padding = false,
                                  .has_flexible_envelope = true,
                              }));
@@ -1540,7 +1622,7 @@ strict xunion StrictXUnionOfFlexibleTable {
                                  .inline_size = 24,
                                  .alignment = 8,
                                  .max_out_of_line = 16,
-                                 .depth = 4294967295,  // TODO(FIDL-457): wrong.
+                                 .depth = 2,
                                  .has_padding = true,
                                  .has_flexible_envelope = true,
                              }));
@@ -1865,10 +1947,8 @@ struct TheStruct {
                      Expected{
                          .inline_size = 8,
                          .alignment = 8,
-                         // TODO(FIDL-457): Imprecision here, max out-of-line should be infinite.
-                         .max_out_of_line = 0,
-                         // TODO(FIDL-457): Incorrectly saturating, there are no handles here.
-                         .max_handles = std::numeric_limits<uint32_t>::max(),
+                         .max_out_of_line = std::numeric_limits<uint32_t>::max(),
+                         .max_handles = 0,
                          .depth = std::numeric_limits<uint32_t>::max(),
                      }));
   ASSERT_EQ(the_struct->members.size(), 1);
@@ -1896,8 +1976,7 @@ struct TheStruct {
       the_struct->typeshape(),
       Expected{.inline_size = 16,
                .alignment = 8,
-               // TODO(FIDL-457): Imprecision here, max out-of-line should be infinite.
-               .max_out_of_line = 0,
+               .max_out_of_line = std::numeric_limits<uint32_t>::max(),
                .max_handles = std::numeric_limits<uint32_t>::max(),
                .depth = std::numeric_limits<uint32_t>::max(),
                .has_padding = true}));
@@ -1935,10 +2014,8 @@ struct B {
                      Expected{
                          .inline_size = 8,
                          .alignment = 8,
-                         // TODO(FIDL-457): Imprecision here, max out-of-line should be infinite.
-                         .max_out_of_line = 16,
-                         // TODO(FIDL-457): Incorrectly saturating, there are no handles here.
-                         .max_handles = std::numeric_limits<uint32_t>::max(),
+                         .max_out_of_line = std::numeric_limits<uint32_t>::max(),
+                         .max_handles = 0,
                          .depth = std::numeric_limits<uint32_t>::max(),
                      }));
 
@@ -1949,10 +2026,8 @@ struct B {
                      Expected{
                          .inline_size = 8,
                          .alignment = 8,
-                         // TODO(FIDL-457): Imprecision here, max out-of-line should be infinite.
-                         .max_out_of_line = 8,
-                         // TODO(FIDL-457): Incorrectly saturating, there are no handles here.
-                         .max_handles = std::numeric_limits<uint32_t>::max(),
+                         .max_out_of_line = std::numeric_limits<uint32_t>::max(),
+                         .max_handles = 0,
                          .depth = std::numeric_limits<uint32_t>::max(),
                      }));
 
@@ -1984,8 +2059,7 @@ struct B {
                      Expected{
                          .inline_size = 16,
                          .alignment = 8,
-                         // TODO(FIDL-457): Imprecision here, max out-of-line should be infinite.
-                         .max_out_of_line = 32,
+                         .max_out_of_line = std::numeric_limits<uint32_t>::max(),
                          .max_handles = std::numeric_limits<uint32_t>::max(),
                          .depth = std::numeric_limits<uint32_t>::max(),
                          .has_padding = true,
@@ -1998,8 +2072,7 @@ struct B {
                      Expected{
                          .inline_size = 16,
                          .alignment = 8,
-                         // TODO(FIDL-457): Imprecision here, max out-of-line should be infinite.
-                         .max_out_of_line = 16,
+                         .max_out_of_line = std::numeric_limits<uint32_t>::max(),
                          .max_handles = std::numeric_limits<uint32_t>::max(),
                          .depth = std::numeric_limits<uint32_t>::max(),
                          .has_padding = true,
@@ -2031,10 +2104,8 @@ struct Bar {
                      Expected{
                          .inline_size = 8,
                          .alignment = 8,
-                         // TODO(FIDL-457): Imprecision here, max out-of-line should be infinite.
-                         .max_out_of_line = 0,
-                         // TODO(FIDL-457): Incorrectly saturating, there are no handles here.
-                         .max_handles = std::numeric_limits<uint32_t>::max(),
+                         .max_out_of_line = std::numeric_limits<uint32_t>::max(),
+                         .max_handles = 0,
                          .depth = std::numeric_limits<uint32_t>::max(),
                      }));
 
@@ -2045,10 +2116,8 @@ struct Bar {
                      Expected{
                          .inline_size = 8,
                          .alignment = 8,
-                         // TODO(FIDL-457): Imprecision here, max out-of-line should be infinite.
-                         .max_out_of_line = 0,
-                         // TODO(FIDL-457): Incorrectly saturating, there are no handles here.
-                         .max_handles = std::numeric_limits<uint32_t>::max(),
+                         .max_out_of_line = std::numeric_limits<uint32_t>::max(),
+                         .max_handles = 0,
                          .depth = std::numeric_limits<uint32_t>::max(),
                      }));
 
@@ -2173,6 +2242,7 @@ RUN_TEST(empty_struct_within_another_struct)
 RUN_TEST(simple_structs)
 RUN_TEST(simple_structs_with_handles)
 RUN_TEST(simple_tables)
+RUN_TEST(tables_with_reserved_fields)
 RUN_TEST(simple_tables_with_handles)
 RUN_TEST(optional_structs)
 RUN_TEST(optional_tables)

@@ -90,267 +90,6 @@ class Compiling {
 
 }  // namespace
 
-TypeShape AlignTypeshape(TypeShape shape,
-                         const std::vector<std::pair<const TypeShape*, FieldShape*>>& fields,
-                         uint32_t alignment) {
-  uint32_t new_alignment = std::max(shape.Alignment(), alignment);
-  uint32_t new_size = AlignTo(shape.InlineSize(), new_alignment);
-  auto aligned_typeshape =
-      TypeShape({.inline_size = new_size,
-                 .alignment = new_alignment,
-                 .recursive = {
-                     .depth = shape.Depth(),
-                     .max_handles = shape.MaxHandles(),
-                     .max_out_of_line = shape.MaxOutOfLine(),
-                     // If alignment happened, we've got padding
-                     .has_padding = shape.HasPadding() || (new_size != shape.InlineSize()),
-                     .has_flexible_envelope = shape.HasFlexibleEnvelope(),
-                 }});
-  // Fix-up padding in the last field according to the new typeshape.
-  if (!fields.empty()) {
-    auto [last_typeshape, last_fieldshape] = fields.back();
-    last_fieldshape->SetPadding(aligned_typeshape.InlineSize() - last_fieldshape->Offset() -
-                                last_typeshape->InlineSize());
-  }
-  return aligned_typeshape;
-}
-
-TypeShape Struct::Shape(const std::vector<const TypeShape*>& member_typeshapes,
-                        uint32_t extra_handles) {
-  std::vector<std::pair<const TypeShape*, FieldShape*>> shapes(member_typeshapes.size());
-
-  // We need to create some fieldshapes that we can pass as FieldShape* elements in the vector to
-  // the Shape() method. These fieldshapes are needed as temporary storage for Struct::Shape(),
-  // which uses them to store member offsets so that padding can be calculated, but are not needed
-  // after that.
-  //
-  // This is a non-straightforward API in many respects, but this method only exists for
-  // backward-compatibility with existing code, and will be removed once type shapes are calculated
-  // dynamically.
-  std::vector<FieldShape> transient_fieldshapes(member_typeshapes.size());
-  for (size_t i = 0; i < member_typeshapes.size(); i++) {
-    shapes.at(i) = std::make_pair(member_typeshapes.at(i), &transient_fieldshapes.at(i));
-  }
-
-  return Shape(shapes, extra_handles);
-}
-
-TypeShape Struct::Shape(const std::vector<std::pair<const TypeShape*, FieldShape*>>& member_shapes,
-                        uint32_t extra_handles) {
-  TypeShapeBuilder builder;
-
-  for (auto [typeshape, fieldshape] : member_shapes) {
-    builder.alignment = std::max(builder.alignment, typeshape->Alignment());
-    builder.inline_size = AlignTo(builder.inline_size, typeshape->Alignment());
-    fieldshape->SetOffset(builder.inline_size);
-    builder.inline_size += typeshape->InlineSize();
-    builder.recursive.AddStructLike(*typeshape);
-  }
-
-  builder.recursive.max_handles = ClampedAdd(builder.recursive.max_handles, extra_handles);
-
-  builder.inline_size = AlignTo(builder.inline_size, builder.alignment);
-
-  if (member_shapes.empty()) {
-    assert(builder.inline_size == 0);
-    assert(builder.alignment == 1);
-
-    // Empty structs are defined to have a size of 1 (a single byte).
-    builder.inline_size = 1;
-  }
-
-  // Struct padding is between one member and the next, or the end of the struct.
-  for (size_t i = 0; i + 1 < member_shapes.size(); i++) {
-    auto [typeshape, current] = member_shapes.at(i);
-    auto [_, next] = member_shapes.at(i + 1);
-
-    current->SetPadding(next->Offset() - current->Offset() - typeshape->InlineSize());
-    builder.recursive.has_padding |= current->Padding() > 0;
-  }
-
-  if (!member_shapes.empty()) {
-    auto [last_typeshape, last_fieldshape] = member_shapes.back();
-
-    last_fieldshape->SetPadding(builder.inline_size - last_fieldshape->Offset() -
-                                last_typeshape->InlineSize());
-    builder.recursive.has_padding |= last_fieldshape->Padding() > 0;
-  }
-
-  return TypeShape(builder);
-}
-
-TypeShape Union::Shape(const std::vector<std::pair<const TypeShape*, FieldShape*>>& member_shapes) {
-  TypeShapeBuilder builder;
-
-  for (auto [typeshape, _] : member_shapes) {
-    builder.inline_size = std::max(builder.inline_size, typeshape->InlineSize());
-    builder.alignment = std::max(builder.alignment, typeshape->Alignment());
-    builder.recursive.AddUnionLike(*typeshape);
-  }
-
-  builder.inline_size = AlignTo(builder.inline_size, builder.alignment);
-
-  // Calculate offset of the union tag.
-  auto member_typeshape = TypeShape(builder);
-  auto tag_typeshape = PrimitiveType::Shape(types::PrimitiveSubtype::kUint32);
-  std::vector<const TypeShape*> fidl_union = {&tag_typeshape, &member_typeshape};
-
-  // Union member alignment is either 4 or 8, depending on whether
-  // any union members have alignment 8.
-  auto union_typeshape = Struct::Shape(fidl_union);
-  auto offset = union_typeshape.Alignment();
-  assert(offset == 4 || offset == 8);
-  for (auto [_, fieldshape] : member_shapes) {
-    fieldshape->SetOffset(offset);
-  }
-
-  // A union's tag is a uint32 (4 bytes), so padding is required between the tag
-  // and the first union member if the union member has an alignment greater than 4.
-  // Union member alignment is either 4 or 8.
-  if (offset == 8) {
-    builder.recursive.has_padding = true;
-  }
-
-  // Union padding is from end of member to end of the entire union.
-  for (auto [typeshape, fieldshape] : member_shapes) {
-    fieldshape->SetPadding(union_typeshape.InlineSize() - offset - typeshape->InlineSize());
-    builder.recursive.has_padding |= fieldshape->Padding() > 0;
-  }
-
-  return TypeShape(builder);
-}
-
-uint32_t Union::DataOffset() const { return typeshape().Alignment(); }
-
-TypeShape PointerTypeShape(const TypeShape& element, uint32_t max_element_count = 1u) {
-  // Because FIDL supports recursive data structures, we might not have
-  // computed the TypeShape for the element we're pointing to. In that case,
-  // the size will be zero and we'll use |numeric_limits<uint32_t>::max()| as
-  // the depth. We'll never see a zero size for a real TypeShape because empty
-  // structs are banned.
-  //
-  // We're careful to check for saturation before incrementing the depth
-  // because recursive data structures have a depth pegged at the numeric
-  // limit.
-  uint32_t depth = std::numeric_limits<uint32_t>::max();
-  if (element.InlineSize() > 0 && element.Depth() < std::numeric_limits<uint32_t>::max())
-    depth = ClampedAdd(element.Depth(), 1);
-
-  // The element(s) will be stored out-of-line.
-  uint32_t elements_size = ClampedMultiply(element.InlineSize(), max_element_count);
-  // Out-of-line data is aligned to 8 bytes.
-  uint32_t aligned_elements_size = AlignTo(elements_size, 8);
-  // The elements may each carry their own out-of-line data.
-  uint32_t elements_out_of_line = ClampedMultiply(element.MaxOutOfLine(), max_element_count);
-
-  uint32_t max_handles = ClampedMultiply(element.MaxHandles(), max_element_count);
-  uint32_t max_out_of_line = ClampedAdd(aligned_elements_size, elements_out_of_line);
-
-  // Out-of-line objects in FIDL are always padded to |kMessageAlign| alignment.
-  // Therefore, if the element size do not end on an alignment boundary, there is padding.
-  bool trailing_padding = max_element_count == 1 ? elements_size != aligned_elements_size
-                                                 : element.InlineSize() % kMessageAlign != 0;
-
-  return TypeShape({.inline_size = 8u,
-                    .alignment = 8u,
-                    .recursive = {
-                        .depth = depth,
-                        .max_handles = max_handles,
-                        .max_out_of_line = max_out_of_line,
-                        .has_padding = element.HasPadding() || trailing_padding,
-                        .has_flexible_envelope = element.HasFlexibleEnvelope(),
-                    }});
-}
-
-TypeShape CEnvelopeTypeShape(const TypeShape& contained_type) {
-  const TypeShape packed_sizes_field = PrimitiveType::Shape(types::PrimitiveSubtype::kUint64);
-  const TypeShape pointer_type = PointerTypeShape(contained_type);
-  std::vector<const TypeShape*> header = {&packed_sizes_field, &pointer_type};
-  return Struct::Shape(header);
-}
-
-TypeShape Table::Shape(std::vector<TypeShape*>* fields, types::Strictness strictness,
-                       uint32_t extra_handles) {
-  TypeShapeBuilder builder{.alignment = 8};
-  for (auto field : *fields) {
-    if (field == nullptr) {
-      continue;
-    }
-    const auto& envelope = CEnvelopeTypeShape(*field);
-    assert(envelope.Alignment() == 8u);
-    builder.inline_size = ClampedAdd(builder.inline_size, envelope.InlineSize());
-    builder.recursive.AddStructLike(envelope);
-  }
-  builder.recursive.depth += 1;
-  builder.recursive.has_flexible_envelope |= strictness == types::Strictness::kFlexible;
-  auto pointer_element = TypeShape(builder);
-  // A table is a vector of envelopes, hence has the same header as a vector.
-  auto num_fields = PrimitiveType::Shape(types::PrimitiveSubtype::kUint64);
-  auto data_field = PointerTypeShape(pointer_element);
-  std::vector<const TypeShape*> header = {&num_fields, &data_field};
-  return Struct::Shape(header, extra_handles);
-}
-
-TypeShape XUnion::Shape(const std::vector<std::pair<const TypeShape*, FieldShape*>>& member_shapes,
-                        types::Strictness strictness, uint32_t extra_handles) {
-  TypeShapeBuilder builder{.inline_size = 24, .alignment = 8};
-  for (auto [typeshape, _] : member_shapes) {
-    const auto& envelope = CEnvelopeTypeShape(*typeshape);
-    builder.recursive.AddUnionLike(envelope);
-  }
-
-  // TODO(FIDL-648): Increase xunion ordinal size to 64 bits, to make it consistent with
-  // CEnvelopeTypeShape. Right now there is always padding after the 32 bit ordinal.
-  builder.recursive.has_padding = true;
-
-  // XUnion payload is aligned to 8 bytes.
-  for (auto [typeshape, fieldshape] : member_shapes) {
-    fieldshape->SetPadding(AlignTo(typeshape->InlineSize(), 8) - typeshape->InlineSize());
-    builder.recursive.has_padding |= fieldshape->Padding() > 0;
-  }
-
-  builder.recursive.max_handles = ClampedAdd(builder.recursive.max_handles, extra_handles);
-  builder.recursive.has_flexible_envelope |= strictness == types::Strictness::kFlexible;
-
-  return TypeShape(builder);
-}
-
-TypeShape ArrayType::Shape(TypeShape element, uint32_t count) {
-  // TODO(FIDL-345): once TypeShape builders are done and methods can fail, do a
-  // __builtin_mul_overflow and fail on overflow instead of ClampedMultiply(element.Size(), count)
-  return TypeShape({.inline_size = ClampedMultiply(element.InlineSize(), count),
-                    .alignment = element.Alignment(),
-                    .recursive = {
-                        .depth = element.Depth(),
-                        .max_handles = ClampedMultiply(element.MaxHandles(), count),
-                        .max_out_of_line = ClampedMultiply(element.MaxOutOfLine(), count),
-                        .has_padding = element.HasPadding(),
-                        .has_flexible_envelope = element.HasFlexibleEnvelope(),
-                    }});
-}
-
-TypeShape VectorType::Shape(TypeShape element, uint32_t max_element_count) {
-  auto size = PrimitiveType::Shape(types::PrimitiveSubtype::kUint64);
-  auto data = PointerTypeShape(element, max_element_count);
-  std::vector<const TypeShape*> header = {&size, &data};
-  return Struct::Shape(header);
-}
-
-TypeShape StringType::Shape(uint32_t max_length) {
-  auto size = PrimitiveType::Shape(types::PrimitiveSubtype::kInt64);
-  auto data = PointerTypeShape(PrimitiveType::Shape(types::PrimitiveSubtype::kUint8), max_length);
-  std::vector<const TypeShape*> header = {&size, &data};
-  return Struct::Shape(header);
-}
-
-TypeShape HandleType::Shape() {
-  return TypeShape({.inline_size = 4,
-                    .alignment = 4,
-                    .recursive = {
-                        .max_handles = 1,
-                    }});
-}
-
 uint32_t PrimitiveType::SubtypeSize(types::PrimitiveSubtype subtype) {
   switch (subtype) {
     case types::PrimitiveSubtype::kBool:
@@ -372,13 +111,6 @@ uint32_t PrimitiveType::SubtypeSize(types::PrimitiveSubtype subtype) {
     case types::PrimitiveSubtype::kUint64:
       return 8u;
   }
-}
-
-TypeShape PrimitiveType::Shape(types::PrimitiveSubtype subtype) {
-  return TypeShape({
-      .inline_size = SubtypeSize(subtype),
-      .alignment = SubtypeSize(subtype),
-  });
 }
 
 bool Decl::HasAttribute(std::string_view name) const {
@@ -450,6 +182,16 @@ bool IsSimple(const Type* type, const TypeShape& typeshape) {
     }
   }
 }
+
+FieldShape Struct::Member::fieldshape() const { return FieldShape(*this); }
+
+FieldShape Table::Member::Used::fieldshape() const { return FieldShape(*this); }
+
+FieldShape Union::Member::fieldshape() const { return FieldShape(*this); }
+
+FieldShape XUnion::Member::fieldshape() const { return FieldShape(*this); }
+
+uint32_t Union::DataOffset() const { return TypeShape(*this).Alignment(); }
 
 bool Typespace::Create(const flat::Name& name, const Type* arg_type,
                        const std::optional<types::HandleSubtype>& handle_subtype, const Size* size,
@@ -714,13 +456,11 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
         }
       }
     }
-    auto typeshape = type_decl_->typeshape();
     switch (type_decl_->kind) {
       case Decl::Kind::kService:
         return Fail(maybe_location, "cannot use services in other declarations");
 
       case Decl::Kind::kProtocol:
-        typeshape = HandleType::Shape();
         break;
 
       case Decl::Kind::kXUnion:
@@ -737,11 +477,10 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
 
       default:
         if (nullability == types::Nullability::kNullable)
-          typeshape = PointerTypeShape(typeshape);
-        break;
+          break;
     }
 
-    *out_type = std::make_unique<IdentifierType>(name_, nullability, type_decl_, typeshape);
+    *out_type = std::make_unique<IdentifierType>(name_, nullability, type_decl_);
     return true;
   }
 
@@ -1869,7 +1608,7 @@ std::unique_ptr<TypeConstructor> Library::IdentifierTypeForDecl(const Decl* decl
 }
 
 bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList> parameter_list,
-                                   bool anonymous, Struct** out_struct_decl) {
+                                   bool is_request_or_response, Struct** out_struct_decl) {
   std::vector<Struct::Member> members;
   for (auto& parameter : parameter_list->parameter_list) {
     const SourceLocation name = parameter->identifier->location();
@@ -1881,7 +1620,7 @@ bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList
   }
 
   if (!RegisterDecl(std::make_unique<Struct>(nullptr /* attributes */, std::move(name),
-                                             std::move(members), anonymous)))
+                                             std::move(members), is_request_or_response)))
     return false;
   *out_struct_decl = struct_declarations_.back().get();
   return true;
@@ -2967,8 +2706,7 @@ bool Library::VerifyDeclAttributes(Decl* decl) {
 }
 
 bool Library::CompileBits(Bits* bits_declaration) {
-  if (!CompileTypeConstructor(bits_declaration->subtype_ctor.get(),
-                              &bits_declaration->mutable_typeshape()))
+  if (!CompileTypeConstructor(bits_declaration->subtype_ctor.get()))
     return false;
 
   if (bits_declaration->subtype_ctor->type->kind != Type::Kind::kPrimitive) {
@@ -3024,8 +2762,7 @@ bool Library::CompileBits(Bits* bits_declaration) {
 }
 
 bool Library::CompileConst(Const* const_declaration) {
-  TypeShape typeshape;
-  if (!CompileTypeConstructor(const_declaration->type_ctor.get(), &typeshape))
+  if (!CompileTypeConstructor(const_declaration->type_ctor.get()))
     return false;
   const auto* const_type = const_declaration->type_ctor.get()->type;
   if (!TypeCanBeConst(const_type)) {
@@ -3040,8 +2777,7 @@ bool Library::CompileConst(Const* const_declaration) {
 }
 
 bool Library::CompileEnum(Enum* enum_declaration) {
-  if (!CompileTypeConstructor(enum_declaration->subtype_ctor.get(),
-                              &enum_declaration->mutable_typeshape()))
+  if (!CompileTypeConstructor(enum_declaration->subtype_ctor.get()))
     return false;
 
   if (enum_declaration->subtype_ctor->type->kind != Type::Kind::kPrimitive) {
@@ -3164,15 +2900,13 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
   if (!CheckScopes(protocol_declaration, CheckScopes))
     return false;
 
-  protocol_declaration->mutable_typeshape() = HandleType::Shape();
-
   for (auto& method : protocol_declaration->methods) {
     auto CreateMessage = [&](Struct* message) -> bool {
       Scope<std::string_view> scope;
       for (auto& param : message->members) {
         if (!scope.Insert(param.name.data(), param.name).ok())
           return Fail(param.name, "Multiple parameters with the same name in a method");
-        if (!CompileTypeConstructor(param.type_ctor.get(), &param.mutable_typeshape()))
+        if (!CompileTypeConstructor(param.type_ctor.get()))
           return false;
       }
       return true;
@@ -3197,7 +2931,7 @@ bool Library::CompileService(Service* service_decl) {
     if (!name_result.ok())
       return Fail(member.name, "multiple service members with the same name; previous was at " +
                                    name_result.previous_occurrence().position_str());
-    if (!CompileTypeConstructor(member.type_ctor.get(), nullptr /* out_typeshape */))
+    if (!CompileTypeConstructor(member.type_ctor.get()))
       return false;
     if (member.type_ctor->type->kind != Type::Kind::kIdentifier)
       return Fail(member.name, "only protocol members are allowed");
@@ -3212,15 +2946,13 @@ bool Library::CompileService(Service* service_decl) {
 
 bool Library::CompileStruct(Struct* struct_declaration) {
   Scope<std::string_view> scope;
-  std::vector<std::pair<const TypeShape*, FieldShape*>> fidl_struct;
-
-  uint32_t max_member_handles = 0;
   for (auto& member : struct_declaration->members) {
     auto name_result = scope.Insert(member.name.data(), member.name);
     if (!name_result.ok())
       return Fail(member.name, "Multiple struct fields with the same name; previous was at " +
                                    name_result.previous_occurrence().position_str());
-    if (!CompileTypeConstructor(member.type_ctor.get(), &member.mutable_typeshape()))
+
+    if (!CompileTypeConstructor(member.type_ctor.get()))
       return false;
     if (member.maybe_default_value) {
       const auto* default_value_type = member.type_ctor.get()->type;
@@ -3234,17 +2966,7 @@ bool Library::CompileStruct(Struct* struct_declaration) {
         return false;
       }
     }
-    fidl_struct.push_back({&member.typeshape(), &member.mutable_fieldshape()});
   }
-
-  if (struct_declaration->recursive) {
-    max_member_handles = std::numeric_limits<uint32_t>::max();
-  } else {
-    // Member handles will be counted by CStructTypeShape.
-    max_member_handles = 0;
-  }
-
-  struct_declaration->mutable_typeshape() = Struct::Shape(fidl_struct, max_member_handles);
 
   return true;
 }
@@ -3253,7 +2975,6 @@ bool Library::CompileTable(Table* table_declaration) {
   Scope<std::string_view> name_scope;
   Ordinal32Scope ordinal_scope;
 
-  uint32_t max_member_handles = 0;
   for (auto& member : table_declaration->members) {
     auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->location());
     if (!ordinal_result.ok())
@@ -3266,8 +2987,7 @@ bool Library::CompileTable(Table* table_declaration) {
         return Fail(member.maybe_used->name,
                     "Multiple table fields with the same name; previous was at " +
                         name_result.previous_occurrence().position_str());
-      if (!CompileTypeConstructor(member.maybe_used->type_ctor.get(),
-                                  &member.maybe_used->mutable_typeshape()))
+      if (!CompileTypeConstructor(member.maybe_used->type_ctor.get()))
         return false;
     }
   }
@@ -3284,23 +3004,6 @@ bool Library::CompileTable(Table* table_declaration) {
     last_ordinal_seen = ordinal_and_loc.first;
   }
 
-  if (table_declaration->recursive) {
-    max_member_handles = std::numeric_limits<uint32_t>::max();
-  } else {
-    // Member handles will be counted by CTableTypeShape.
-    max_member_handles = 0;
-  }
-
-  std::vector<TypeShape*> fields(table_declaration->members.size());
-  for (auto& member : table_declaration->members) {
-    if (member.maybe_used) {
-      fields[member.ordinal->value - 1] = &member.maybe_used->mutable_typeshape();
-    }
-  }
-
-  table_declaration->mutable_typeshape() =
-      Table::Shape(&fields, table_declaration->strictness, max_member_handles);
-
   return true;
 }
 
@@ -3311,22 +3014,9 @@ bool Library::CompileUnion(Union* union_declaration) {
     if (!name_result.ok())
       return Fail(member.name, "Multiple union members with the same name; previous was at " +
                                    name_result.previous_occurrence().position_str());
-    if (!CompileTypeConstructor(member.type_ctor.get(), &member.mutable_typeshape()))
+    if (!CompileTypeConstructor(member.type_ctor.get()))
       return false;
   }
-
-  auto tag = PrimitiveType::Shape(types::PrimitiveSubtype::kUint32);
-  std::vector<std::pair<const TypeShape*, FieldShape*>> fields;
-  for (auto& member : union_declaration->members) {
-    fields.push_back({&member.typeshape(), &member.mutable_fieldshape()});
-  }
-  union_declaration->mutable_typeshape() = Union::Shape(fields);
-  uint32_t extra_handles = 0;
-  if (union_declaration->recursive && union_declaration->typeshape().MaxHandles()) {
-    extra_handles = std::numeric_limits<uint32_t>::max();
-  }
-  std::vector<const TypeShape*> fidl_union = {&tag, &union_declaration->typeshape()};
-  union_declaration->mutable_typeshape() = Struct::Shape(fidl_union, extra_handles);
 
   return true;
 }
@@ -3347,24 +3037,9 @@ bool Library::CompileXUnion(XUnion* xunion_declaration) {
       return Fail(member.name, "Multiple xunion members with the same name; previous was at " +
                                    name_result.previous_occurrence().position_str());
 
-    if (!CompileTypeConstructor(member.type_ctor.get(), &member.mutable_typeshape()))
+    if (!CompileTypeConstructor(member.type_ctor.get()))
       return false;
   }
-
-  uint32_t max_member_handles;
-  if (xunion_declaration->recursive) {
-    max_member_handles = std::numeric_limits<uint32_t>::max();
-  } else {
-    // Member handles will be counted by CXUnionTypeShape.
-    max_member_handles = 0u;
-  }
-
-  std::vector<std::pair<const TypeShape*, FieldShape*>> fields;
-  for (auto& member : xunion_declaration->members) {
-    fields.push_back({&member.typeshape(), &member.mutable_fieldshape()});
-  }
-  xunion_declaration->mutable_typeshape() =
-      XUnion::Shape(fields, xunion_declaration->strictness, max_member_handles);
 
   return true;
 }
@@ -3384,12 +3059,10 @@ bool Library::CompileTypeAlias(TypeAlias* decl) {
   bool partial_type_ctor_compiled = false;
   {
     auto temporary_mode = error_reporter_->OverrideMode(ErrorReporter::ReportingMode::kDoNotReport);
-    partial_type_ctor_compiled =
-        CompileTypeConstructor(decl->partial_type_ctor.get(), nullptr /* out_typeshape */);
+    partial_type_ctor_compiled = CompileTypeConstructor(decl->partial_type_ctor.get());
   }
   if (decl->partial_type_ctor->maybe_arg_type_ctor && !partial_type_ctor_compiled) {
-    if (!CompileTypeConstructor(decl->partial_type_ctor->maybe_arg_type_ctor.get(),
-                                nullptr /* out_typeshape */))
+    if (!CompileTypeConstructor(decl->partial_type_ctor->maybe_arg_type_ctor.get()))
       return false;
   }
   return ResolveSizeBound(decl->partial_type_ctor.get(), nullptr /* out_size */);
@@ -3408,41 +3081,6 @@ bool Library::Compile() {
       return false;
   }
 
-  // Beware, hacky solution: method request and response are structs, whose
-  // typeshape is computed separately. However, in the JSON IR, we add 16 bytes
-  // to request and response to account for the header size (and ensure the
-  // alignment is at least 4 bytes). Now that we represent request and responses
-  // as structs, we should represent this differently in the JSON IR, and let the
-  // backends figure this out, or better yet, describe the header directly.
-  //
-  // For now though, we fixup the representation after the fact.
-  for (auto& protocol_decl : protocol_declarations_) {
-    for (auto& method_with_info : protocol_decl->all_methods) {
-      auto FixupMessage = [&](Struct* message) {
-        auto header_type_shape = TypeShape({
-            .inline_size = 16u,
-            .alignment = 4u,
-        });
-        std::vector<std::pair<const TypeShape*, FieldShape*>> message_struct;
-
-        // This fieldshape is only needed for the call to Struct::Shape below, and can be destroyed
-        // afterwards.
-        auto transient_fieldshape = FieldShape();
-
-        message_struct.push_back({&header_type_shape, &transient_fieldshape});
-        for (auto& param : message->members)
-          message_struct.push_back({&param.typeshape(), &param.mutable_fieldshape()});
-
-        auto struct_shape = Struct::Shape(message_struct);
-        message->mutable_typeshape() = AlignTypeshape(struct_shape, message_struct, kMessageAlign);
-      };
-      if (method_with_info.method->maybe_request)
-        FixupMessage(method_with_info.method->maybe_request);
-      if (method_with_info.method->maybe_response)
-        FixupMessage(method_with_info.method->maybe_response);
-    }
-  }
-
   for (Decl* decl : declaration_order_) {
     if (!VerifyDeclAttributes(decl))
       return false;
@@ -3454,10 +3092,10 @@ bool Library::Compile() {
   return error_reporter_->errors().size() == 0;
 }
 
-bool Library::CompileTypeConstructor(TypeConstructor* type_ctor, TypeShape* out_typeshape) {
+bool Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
   const Type* maybe_arg_type = nullptr;
   if (type_ctor->maybe_arg_type_ctor != nullptr) {
-    if (!CompileTypeConstructor(type_ctor->maybe_arg_type_ctor.get(), nullptr))
+    if (!CompileTypeConstructor(type_ctor->maybe_arg_type_ctor.get()))
       return false;
     maybe_arg_type = type_ctor->maybe_arg_type_ctor->type;
   }
@@ -3465,11 +3103,11 @@ bool Library::CompileTypeConstructor(TypeConstructor* type_ctor, TypeShape* out_
   if (!ResolveSizeBound(type_ctor, &size)) {
     return false;
   }
+
   if (!typespace_->Create(type_ctor->name, maybe_arg_type, type_ctor->handle_subtype, size,
                           type_ctor->nullability, &type_ctor->type, &type_ctor->from_type_alias))
     return false;
-  if (out_typeshape)
-    *out_typeshape = type_ctor->type->shape;
+
   return true;
 }
 

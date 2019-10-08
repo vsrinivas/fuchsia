@@ -62,9 +62,11 @@ if (current_toolchain == default_toolchain) {
       "json_generator_tests.cc",
       "lint_findings_tests.cc",
       "lint_tests.cc",
+      "main.cc",
       "ordinals_tests.cc",
       "parsing_tests.cc",
       "protocol_tests.cc",
+      "recursion_detector_tests.cc",
       "service_tests.cc",
       "strictness_tests.cc",
       "structs_tests.cc",
@@ -81,6 +83,7 @@ if (current_toolchain == default_toolchain) {
     deps = [
       ":examples",
       "$zx/system/ulib/unittest",
+      "$zx/system/ulib/zxtest",
       "$zx/third_party/ulib/uboringssl",
       "$zx/tools/fidl",
     ]

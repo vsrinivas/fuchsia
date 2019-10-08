@@ -376,7 +376,7 @@ void JSONGenerator::Generate(const flat::Struct& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.name, Position::kFirst);
     GenerateObjectMember("location", NameLocation(value.name));
-    GenerateObjectMember("anonymous", value.anonymous);
+    GenerateObjectMember("anonymous", value.is_request_or_response);
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
@@ -608,7 +608,7 @@ void JSONGenerator::GenerateDeclarationsMember(const flat::Library* library, Pos
       GenerateDeclarationsEntry(count++, decl->name, "service");
 
     for (const auto& decl : library->struct_declarations_) {
-      if (decl->anonymous)
+      if (decl->is_request_or_response)
         continue;
       GenerateDeclarationsEntry(count++, decl->name, "struct");
     }
@@ -708,7 +708,7 @@ std::ostringstream JSONGenerator::Produce() {
     for (flat::Decl* decl : library_->declaration_order_) {
       if (decl->kind == flat::Decl::Kind::kStruct) {
         auto struct_decl = static_cast<flat::Struct*>(decl);
-        if (struct_decl->anonymous)
+        if (struct_decl->is_request_or_response)
           continue;
       }
       if (decl->name.library() == library_)

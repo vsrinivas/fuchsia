@@ -8,10 +8,11 @@
 #ifndef ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_FLAT_AST_H_
 #define ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_FLAT_AST_H_
 
-#include <assert.h>
 #include <lib/fit/function.h>
-#include <stdint.h>
 
+#include <any>
+#include <cassert>
+#include <cstdint>
 #include <iostream>
 #include <limits>
 #include <map>
@@ -165,6 +166,7 @@ struct ConstantValue {
 
 template <typename ValueType>
 struct NumericConstantValue final : ConstantValue {
+  // TODO(fxb/7811): Try replacing this with saturated_cast<> from safemath.
   static_assert(std::is_arithmetic<ValueType>::value && !std::is_same<ValueType, bool>::value,
                 "NumericConstantValue can only be used with a numeric ValueType!");
 
@@ -486,14 +488,62 @@ struct Decl {
   bool compiled = false;
 };
 
-struct TypeDecl : public Decl, public virtual TypeShapeContainer {
+// An |Object| is anything that can be encoded in the FIDL wire format. Thus, all objects have
+// information such as as their size, alignment, and depth (how many levels of sub-objects are
+// contained within an object). See the FIDL wire format's definition of "object" for more details.
+// TODO(fxb/37535): Remove this Object class, since it forms a third type hierarchy along with Type
+// & Decl.
+struct Object {
+  virtual ~Object() = default;
+
+  TypeShape typeshape() const { return TypeShape(*this); }
+
+  // |Visitor|, and the corresponding |Accept()| method below, enable the visitor pattern to be used
+  // for derived classes of Object. See <https://en.wikipedia.org/wiki/Visitor_pattern> for
+  // background on the visitor pattern. Versus a textbook visitor pattern:
+  //
+  // * Visitor enables a value to be returned to the caller of Accept(): Visitor's template type |T|
+  //   is the type of the return value.
+  //
+  // * A Visitor's Visit() method returns an std::any. Visit() is responsible for returning a
+  //   std::any with the correct type |T| for its contained value; otherwise, an any_cast exception
+  //   will occur when the resulting std::any is any_casted back to |T| by Accept(). However, the
+  //   client API that uses a visitor via Accept() will have guaranteed type safety.
+  //
+  // The use of std::any is an explicit design choice. It's possible to have a visitor
+  // implementation that can completely retain type safety, but the use of std::any leads to a more
+  // straightforward, ergonomic API than a solution involving heavy template metaprogramming.
+  //
+  // Implementation details: Visitor<T> is derived from VisitorAny, which achieves type-erasure via
+  // std::any. Internally, only the type-erased VisitorAny class is used, along with a non-public
+  // AcceptAny() method. The public Visitor<T> class and Accept<T> methods are small wrappers around
+  // the internal type-erased versions. See
+  // <https://eli.thegreenplace.net/2018/type-erasure-and-reification/> for a good introduction to
+  // type erasure in C++.
+  //
+  // This struct is named Visitor since it's a visitor that cannot modify the Object, similarly
+  // named to const_iterators.
+  // TODO(fxb/37535): Refactor the visitor pattern here to be the simpler kind-enum + switch()
+  // dispatch.
+  template <typename T>
+  struct Visitor;
+
+  template <typename T>
+  T Accept(Visitor<T>* visitor) const;
+
+ protected:
+  struct VisitorAny;
+  virtual std::any AcceptAny(VisitorAny* visitor) const = 0;
+};
+
+struct TypeDecl : public Decl, public Object {
   TypeDecl(Kind kind, std::unique_ptr<raw::AttributeList> attributes, Name name)
       : Decl(kind, std::move(attributes), std::move(name)) {}
 
   bool recursive = false;
 };
 
-struct Type {
+struct Type : public Object {
   virtual ~Type() {}
 
   enum struct Kind {
@@ -506,13 +556,12 @@ struct Type {
     kIdentifier,
   };
 
-  explicit Type(const Name& name, Kind kind, types::Nullability nullability, TypeShape shape)
-      : name(name), kind(kind), nullability(nullability), shape(shape) {}
+  explicit Type(const Name& name, Kind kind, types::Nullability nullability)
+      : name(name), kind(kind), nullability(nullability) {}
 
   const Name& name;
   const Kind kind;
   const types::Nullability nullability;
-  TypeShape shape;
 
   // Comparison helper object.
   class Comparison {
@@ -555,13 +604,14 @@ struct Type {
 
 struct ArrayType final : public Type {
   ArrayType(const Name& name, const Type* element_type, const Size* element_count)
-      : Type(name, Kind::kArray, types::Nullability::kNonnullable,
-             Shape(element_type->shape, element_count->value)),
+      : Type(name, Kind::kArray, types::Nullability::kNonnullable),
         element_type(element_type),
         element_count(element_count) {}
 
   const Type* element_type;
   const Size* element_count;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
 
   Comparison Compare(const Type& other) const override {
     const auto& o = static_cast<const ArrayType&>(other);
@@ -569,19 +619,19 @@ struct ArrayType final : public Type {
         .Compare(element_count->value, o.element_count->value)
         .Compare(*element_type, *o.element_type);
   }
-
-  static TypeShape Shape(TypeShape element, uint32_t count);
 };
 
 struct VectorType final : public Type {
   VectorType(const Name& name, const Type* element_type, const Size* element_count,
              types::Nullability nullability)
-      : Type(name, Kind::kVector, nullability, Shape(element_type->shape, element_count->value)),
+      : Type(name, Kind::kVector, nullability),
         element_type(element_type),
         element_count(element_count) {}
 
   const Type* element_type;
   const Size* element_count;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
 
   Comparison Compare(const Type& other) const override {
     const auto& o = static_cast<const VectorType&>(other);
@@ -589,62 +639,60 @@ struct VectorType final : public Type {
         .Compare(element_count->value, o.element_count->value)
         .Compare(*element_type, *o.element_type);
   }
-
-  static TypeShape Shape(TypeShape element, uint32_t max_element_count);
 };
 
 struct StringType final : public Type {
   StringType(const Name& name, const Size* max_size, types::Nullability nullability)
-      : Type(name, Kind::kString, nullability, Shape(max_size->value)), max_size(max_size) {}
+      : Type(name, Kind::kString, nullability), max_size(max_size) {}
 
   const Size* max_size;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
 
   Comparison Compare(const Type& other) const override {
     const auto& o = static_cast<const StringType&>(other);
     return Type::Compare(o).Compare(max_size->value, o.max_size->value);
   }
-
-  static TypeShape Shape(uint32_t max_length);
 };
 
 struct HandleType final : public Type {
   HandleType(const Name& name, types::HandleSubtype subtype, types::Nullability nullability)
-      : Type(name, Kind::kHandle, nullability, Shape()), subtype(subtype) {}
+      : Type(name, Kind::kHandle, nullability), subtype(subtype) {}
 
   const types::HandleSubtype subtype;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
 
   Comparison Compare(const Type& other) const override {
     const auto& o = *static_cast<const HandleType*>(&other);
     return Type::Compare(o).Compare(subtype, o.subtype);
   }
-
-  static TypeShape Shape();
 };
 
 struct PrimitiveType final : public Type {
   explicit PrimitiveType(const Name& name, types::PrimitiveSubtype subtype)
-      : Type(name, Kind::kPrimitive, types::Nullability::kNonnullable, Shape(subtype)),
-        subtype(subtype) {}
+      : Type(name, Kind::kPrimitive, types::Nullability::kNonnullable), subtype(subtype) {}
 
   types::PrimitiveSubtype subtype;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
 
   Comparison Compare(const Type& other) const override {
     const auto& o = static_cast<const PrimitiveType&>(other);
     return Type::Compare(o).Compare(subtype, o.subtype);
   }
 
-  static TypeShape Shape(types::PrimitiveSubtype subtype);
-
  private:
   static uint32_t SubtypeSize(types::PrimitiveSubtype subtype);
 };
 
 struct IdentifierType final : public Type {
-  IdentifierType(const Name& name, types::Nullability nullability, const TypeDecl* type_decl,
-                 TypeShape shape)
-      : Type(name, Kind::kIdentifier, nullability, shape), type_decl(type_decl) {}
+  IdentifierType(const Name& name, types::Nullability nullability, const TypeDecl* type_decl)
+      : Type(name, Kind::kIdentifier, nullability), type_decl(type_decl) {}
 
   const TypeDecl* type_decl;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
 
   Comparison Compare(const Type& other) const override {
     const auto& o = static_cast<const IdentifierType&>(other);
@@ -655,10 +703,11 @@ struct IdentifierType final : public Type {
 struct RequestHandleType final : public Type {
   RequestHandleType(const Name& name, const IdentifierType* protocol_type,
                     types::Nullability nullability)
-      : Type(std::move(name), Kind::kRequestHandle, nullability, HandleType::Shape()),
-        protocol_type(protocol_type) {}
+      : Type(name, Kind::kRequestHandle, nullability), protocol_type(protocol_type) {}
 
   const IdentifierType* protocol_type;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
 
   Comparison Compare(const Type& other) const override {
     const auto& o = static_cast<const RequestHandleType&>(other);
@@ -752,6 +801,8 @@ struct Enum final : public TypeDecl {
   std::vector<Member> members;
   const types::Strictness strictness;
 
+  std::any AcceptAny(VisitorAny* visitor) const override;
+
   // Set during compilation.
   const PrimitiveType* type = nullptr;
 };
@@ -779,6 +830,8 @@ struct Bits final : public TypeDecl {
   std::vector<Member> members;
   const types::Strictness strictness;
 
+  std::any AcceptAny(VisitorAny* visitor) const override;
+
   // Set during compilation.
   uint64_t mask = 0;
 };
@@ -800,73 +853,104 @@ struct Service final : public TypeDecl {
       : TypeDecl(Kind::kService, std::move(attributes), std::move(name)),
         members(std::move(members)) {}
 
+  std::any AcceptAny(VisitorAny* visitor) const override;
+
   std::vector<Member> members;
+};
+
+struct Struct;
+
+// Historically, StructMember was a nested class inside Struct named Struct::Member. However, this
+// was made a top-level class since it's not possible to forward-declare nested classes in C++. For
+// backward-compatibility, Struct::Member is now an alias for this top-level StructMember.
+// TODO(fxb/37535): Move this to a nested class inside Struct.
+struct StructMember : public Object {
+  StructMember(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
+               std::unique_ptr<Constant> maybe_default_value,
+               std::unique_ptr<raw::AttributeList> attributes)
+      : type_ctor(std::move(type_ctor)),
+        name(std::move(name)),
+        maybe_default_value(std::move(maybe_default_value)),
+        attributes(std::move(attributes)) {}
+  std::unique_ptr<TypeConstructor> type_ctor;
+  SourceLocation name;
+  std::unique_ptr<Constant> maybe_default_value;
+  std::unique_ptr<raw::AttributeList> attributes;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
+
+  FieldShape fieldshape() const;
+
+  const Struct* parent = nullptr;
 };
 
 struct Struct final : public TypeDecl {
-  struct Member : public virtual FieldShapeContainer, public virtual TypeShapeContainer {
-    Member(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
-           std::unique_ptr<Constant> maybe_default_value,
-           std::unique_ptr<raw::AttributeList> attributes)
-        : type_ctor(std::move(type_ctor)),
-          name(std::move(name)),
-          maybe_default_value(std::move(maybe_default_value)),
-          attributes(std::move(attributes)) {}
-    std::unique_ptr<TypeConstructor> type_ctor;
-    SourceLocation name;
-    std::unique_ptr<Constant> maybe_default_value;
-    std::unique_ptr<raw::AttributeList> attributes;
-  };
+  using Member = StructMember;
 
-  Struct(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members,
-         bool anonymous = false)
+  Struct(std::unique_ptr<raw::AttributeList> attributes, Name name,
+         std::vector<Member> unparented_members, bool is_request_or_response = false)
       : TypeDecl(Kind::kStruct, std::move(attributes), std::move(name)),
-        members(std::move(members)),
-        anonymous(anonymous) {}
+        members(std::move(unparented_members)),
+        is_request_or_response(is_request_or_response) {
+    for (auto& member : members) {
+      member.parent = this;
+    }
+  }
 
   std::vector<Member> members;
-  const bool anonymous;
 
-  // Computes a resulting TypeShape appropriate for a struct, given |member_typeshapes|.
-  static TypeShape Shape(const std::vector<const TypeShape*>& member_typeshapes,
-                         uint32_t extra_handles = 0u);
+  // This is true iff this struct is a method request/response in a transaction header.
+  const bool is_request_or_response;
 
-  // Computes a resulting TypeShape for a struct given the TypeShapes in |member_shapes|, and also
-  // updates each member's FieldShape in |member_shapes| to have the correct padding and offsets for
-  // the resulting struct.
-  static TypeShape Shape(const std::vector<std::pair<const TypeShape*, FieldShape*>>& member_shapes,
-                         uint32_t extra_handles = 0u);
+  std::any AcceptAny(VisitorAny* visitor) const override;
+};
+
+struct Table;
+
+// See the comment on the StructMember class for why this is a top-level class.
+// TODO(fxb/37535): Move this to a nested class inside Table::Member.
+struct TableMemberUsed : public Object {
+  TableMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
+                  std::unique_ptr<Constant> maybe_default_value,
+                  std::unique_ptr<raw::AttributeList> attributes)
+      : type_ctor(std::move(type_ctor)),
+        name(std::move(name)),
+        maybe_default_value(std::move(maybe_default_value)),
+        attributes(std::move(attributes)) {}
+  std::unique_ptr<TypeConstructor> type_ctor;
+  SourceLocation name;
+  std::unique_ptr<Constant> maybe_default_value;
+  std::unique_ptr<raw::AttributeList> attributes;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
+
+  FieldShape fieldshape() const;
+};
+
+// See the comment on the StructMember class for why this is a top-level class.
+// TODO(fxb/37535): Move this to a nested class inside Table.
+struct TableMember : public Object {
+  using Used = TableMemberUsed;
+
+  TableMember(std::unique_ptr<raw::Ordinal32> ordinal, std::unique_ptr<TypeConstructor> type,
+              SourceLocation name, std::unique_ptr<Constant> maybe_default_value,
+              std::unique_ptr<raw::AttributeList> attributes)
+      : ordinal(std::move(ordinal)),
+        maybe_used(std::make_unique<Used>(std::move(type), std::move(name),
+                                          std::move(maybe_default_value), std::move(attributes))) {}
+  TableMember(std::unique_ptr<raw::Ordinal32> ordinal, SourceLocation location)
+      : ordinal(std::move(ordinal)), maybe_location(std::make_unique<SourceLocation>(location)) {}
+  std::unique_ptr<raw::Ordinal32> ordinal;
+  // The location for reserved table members.
+  std::unique_ptr<SourceLocation> maybe_location;
+
+  std::unique_ptr<Used> maybe_used;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
 };
 
 struct Table final : public TypeDecl {
-  struct Member {
-    Member(std::unique_ptr<raw::Ordinal32> ordinal, std::unique_ptr<TypeConstructor> type,
-           SourceLocation name, std::unique_ptr<Constant> maybe_default_value,
-           std::unique_ptr<raw::AttributeList> attributes)
-        : ordinal(std::move(ordinal)),
-          maybe_used(std::make_unique<Used>(std::move(type), std::move(name),
-                                            std::move(maybe_default_value),
-                                            std::move(attributes))) {}
-    Member(std::unique_ptr<raw::Ordinal32> ordinal, SourceLocation location)
-        : ordinal(std::move(ordinal)), maybe_location(std::make_unique<SourceLocation>(location)) {}
-    std::unique_ptr<raw::Ordinal32> ordinal;
-    // The location for reserved table members.
-    std::unique_ptr<SourceLocation> maybe_location;
-    struct Used : public virtual TypeShapeContainer {
-      Used(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
-           std::unique_ptr<Constant> maybe_default_value,
-           std::unique_ptr<raw::AttributeList> attributes)
-          : type_ctor(std::move(type_ctor)),
-            name(std::move(name)),
-            maybe_default_value(std::move(maybe_default_value)),
-            attributes(std::move(attributes)) {}
-      std::unique_ptr<TypeConstructor> type_ctor;
-      SourceLocation name;
-      std::unique_ptr<Constant> maybe_default_value;
-      std::unique_ptr<raw::AttributeList> attributes;
-    };
-    std::unique_ptr<Used> maybe_used;
-  };
+  using Member = TableMember;
 
   Table(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members,
         types::Strictness strictness)
@@ -877,62 +961,90 @@ struct Table final : public TypeDecl {
   std::vector<Member> members;
   const types::Strictness strictness;
 
-  static TypeShape Shape(std::vector<TypeShape*>* fields, types::Strictness strictness,
-                         uint32_t extra_handles = 0u);
+  std::any AcceptAny(VisitorAny* visitor) const override;
+};
+
+struct Union;
+
+// See the comment on the StructMember class for why this is a top-level class.
+// TODO(fxb/37535): Move this to a nested class inside Union.
+struct UnionMember : public Object {
+  UnionMember(std::unique_ptr<raw::Ordinal32> xunion_ordinal,
+  std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
+              std::unique_ptr<raw::AttributeList> attributes)
+      : xunion_ordinal(std::move(xunion_ordinal)), type_ctor(std::move(type_ctor)), name(std::move(name)), attributes(std::move(attributes)) {}
+    std::unique_ptr<raw::Ordinal32> xunion_ordinal;
+  std::unique_ptr<TypeConstructor> type_ctor;
+  SourceLocation name;
+  std::unique_ptr<raw::AttributeList> attributes;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
+
+  FieldShape fieldshape() const;
+
+  const Union* parent = nullptr;
 };
 
 struct Union final : public TypeDecl {
-  struct Member : public virtual FieldShapeContainer, public virtual TypeShapeContainer {
-    Member(std::unique_ptr<raw::Ordinal32> xunion_ordinal,
-           std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
-           std::unique_ptr<raw::AttributeList> attributes)
-        : xunion_ordinal(std::move(xunion_ordinal)),
-          type_ctor(std::move(type_ctor)),
-          name(std::move(name)),
-          attributes(std::move(attributes)) {}
-    std::unique_ptr<raw::Ordinal32> xunion_ordinal;
-    std::unique_ptr<TypeConstructor> type_ctor;
-    SourceLocation name;
-    std::unique_ptr<raw::AttributeList> attributes;
-  };
+  using Member = UnionMember;
 
-  Union(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
+  Union(std::unique_ptr<raw::AttributeList> attributes, Name name,
+        std::vector<Member> unparented_members)
       : TypeDecl(Kind::kUnion, std::move(attributes), std::move(name)),
-        members(std::move(members)) {}
+        members(std::move(unparented_members)) {
+    for (auto& member : members) {
+      member.parent = this;
+    }
+  }
 
   std::vector<Member> members;
 
-  // Returns the offset from the start of union where the union variant starts. (Either 4, or 8.)
-  uint32_t DataOffset() const;
+  std::any AcceptAny(VisitorAny* visitor) const override;
 
-  static TypeShape Shape(const std::vector<std::pair<const TypeShape*, FieldShape*>>& fields);
+  // Returns the offset from the start of union where the union data resides. (Either 4, or 8.)
+  uint32_t DataOffset() const;
+};
+
+struct XUnion;
+
+// See the comment on the StructMember class for why this is a top-level class.
+// TODO(fxb/37535): Move this to a nested class inside XUnion.
+struct XUnionMember : public Object {
+  XUnionMember(std::unique_ptr<raw::Ordinal32> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
+               SourceLocation name, std::unique_ptr<raw::AttributeList> attributes)
+      : ordinal(std::move(ordinal)),
+        type_ctor(std::move(type_ctor)),
+        name(std::move(name)),
+        attributes(std::move(attributes)) {}
+  std::unique_ptr<raw::Ordinal32> ordinal;
+  std::unique_ptr<TypeConstructor> type_ctor;
+  SourceLocation name;
+  std::unique_ptr<raw::AttributeList> attributes;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
+
+  FieldShape fieldshape() const;
+
+  const XUnion* parent = nullptr;
 };
 
 struct XUnion final : public TypeDecl {
-  struct Member : public virtual FieldShapeContainer, public virtual TypeShapeContainer {
-    Member(std::unique_ptr<raw::Ordinal32> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
-           SourceLocation name, std::unique_ptr<raw::AttributeList> attributes)
-        : ordinal(std::move(ordinal)),
-          type_ctor(std::move(type_ctor)),
-          name(std::move(name)),
-          attributes(std::move(attributes)) {}
-    std::unique_ptr<raw::Ordinal32> ordinal;
-    std::unique_ptr<TypeConstructor> type_ctor;
-    SourceLocation name;
-    std::unique_ptr<raw::AttributeList> attributes;
-  };
+  using Member = XUnionMember;
 
-  XUnion(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members,
-         types::Strictness strictness)
+  XUnion(std::unique_ptr<raw::AttributeList> attributes, Name name,
+         std::vector<Member> unparented_members, types::Strictness strictness)
       : TypeDecl(Kind::kXUnion, std::move(attributes), std::move(name)),
-        members(std::move(members)),
-        strictness(strictness) {}
+        members(std::move(unparented_members)),
+        strictness(strictness) {
+    for (auto& member : members) {
+      member.parent = this;
+    }
+  }
 
   std::vector<Member> members;
   const types::Strictness strictness;
 
-  static TypeShape Shape(const std::vector<std::pair<const TypeShape*, FieldShape*>>& fields,
-                         types::Strictness strictness, uint32_t extra_handles = 0u);
+  std::any AcceptAny(VisitorAny* visitor) const override;
 };
 
 struct Protocol final : public TypeDecl {
@@ -988,6 +1100,8 @@ struct Protocol final : public TypeDecl {
   std::set<Name> composed_protocols;
   std::vector<Method> methods;
   std::vector<MethodWithInfo> all_methods;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
 };
 
 struct TypeAlias final : public Decl {
@@ -1298,14 +1412,11 @@ class Library {
   bool CompileXUnion(XUnion* xunion_declaration);
   bool CompileTypeAlias(TypeAlias* type_alias);
 
-  // Compiling a type both validates the type, and computes shape
-  // information for the type. In particular, we validate that
-  // optional identifier types refer to things that can in fact be
-  // nullable (ie not enums).
-  bool CompileTypeConstructor(TypeConstructor* type_ctor, TypeShape* out_typeshape);
+  // Compiling a type validates the type: in particular, we validate that optional identifier types
+  // refer to things that can in fact be nullable (ie not enums).
+  bool CompileTypeConstructor(TypeConstructor* type);
 
   bool ResolveSizeBound(TypeConstructor* type_ctor, const Size** out_size);
-
   bool ResolveConstant(Constant* constant, const Type* type);
   bool ResolveIdentifierConstant(IdentifierConstant* identifier_constant, const Type* type);
   bool ResolveLiteralConstant(LiteralConstant* literal_constant, const Type* type);
@@ -1375,6 +1486,97 @@ class Library {
 
   VirtualSourceFile generated_source_file_{"generated"};
 };
+
+// See the comment on Object::Visitor<T> for more details.
+struct Object::VisitorAny {
+  virtual std::any Visit(const ArrayType&) = 0;
+  virtual std::any Visit(const VectorType&) = 0;
+  virtual std::any Visit(const StringType&) = 0;
+  virtual std::any Visit(const HandleType&) = 0;
+  virtual std::any Visit(const PrimitiveType&) = 0;
+  virtual std::any Visit(const IdentifierType&) = 0;
+  virtual std::any Visit(const RequestHandleType&) = 0;
+  virtual std::any Visit(const Enum&) = 0;
+  virtual std::any Visit(const Bits&) = 0;
+  virtual std::any Visit(const Service&) = 0;
+  virtual std::any Visit(const Struct&) = 0;
+  virtual std::any Visit(const Struct::Member&) = 0;
+  virtual std::any Visit(const Table&) = 0;
+  virtual std::any Visit(const Table::Member&) = 0;
+  virtual std::any Visit(const Table::Member::Used&) = 0;
+  virtual std::any Visit(const Union&) = 0;
+  virtual std::any Visit(const Union::Member&) = 0;
+  virtual std::any Visit(const XUnion&) = 0;
+  virtual std::any Visit(const XUnion::Member&) = 0;
+  virtual std::any Visit(const Protocol&) = 0;
+};
+
+// This Visitor<T> class is useful so that Object.Accept() can enforce that its return type
+// matches the template type of Visitor. See the comment on Object::Visitor<T> for more
+// details.
+template <typename T>
+struct Object::Visitor : public VisitorAny {};
+
+template <typename T>
+T Object::Accept(Visitor<T>* visitor) const {
+  return std::any_cast<T>(AcceptAny(visitor));
+}
+
+inline std::any ArrayType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
+
+inline std::any VectorType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
+
+inline std::any StringType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
+
+inline std::any HandleType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
+
+inline std::any PrimitiveType::AcceptAny(VisitorAny* visitor) const {
+  return visitor->Visit(*this);
+}
+
+inline std::any IdentifierType::AcceptAny(VisitorAny* visitor) const {
+  return visitor->Visit(*this);
+}
+
+inline std::any RequestHandleType::AcceptAny(VisitorAny* visitor) const {
+  return visitor->Visit(*this);
+}
+
+inline std::any Enum::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
+
+inline std::any Bits::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
+
+inline std::any Service::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
+
+inline std::any Struct::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
+
+inline std::any Struct::Member::AcceptAny(VisitorAny* visitor) const {
+  return visitor->Visit(*this);
+}
+
+inline std::any Table::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
+
+inline std::any Table::Member::AcceptAny(VisitorAny* visitor) const {
+  return visitor->Visit(*this);
+}
+
+inline std::any Table::Member::Used::AcceptAny(VisitorAny* visitor) const {
+  return visitor->Visit(*this);
+}
+
+inline std::any Union::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
+
+inline std::any Union::Member::AcceptAny(VisitorAny* visitor) const {
+  return visitor->Visit(*this);
+}
+
+inline std::any XUnion::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
+
+inline std::any XUnion::Member::AcceptAny(VisitorAny* visitor) const {
+  return visitor->Visit(*this);
+}
+
+inline std::any Protocol::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 
 }  // namespace flat
 }  // namespace fidl
