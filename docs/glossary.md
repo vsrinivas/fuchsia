@@ -447,8 +447,9 @@ manage their local checkouts.
 #### **Job** {#job}
 
 A Job is a [kernel object](#kernel-object) that groups a set of related
-processes, their child processes and their jobs (if any). Every process in the
-system belongs to a job and all jobs form a single rooted tree.
+[processes][#process], their child processes, and their jobs (if any).
+Every process in the system belongs to a job and all jobs form a single
+rooted tree.
 
 -   [Job Overview](/docs/zircon/objects/job.md)
 
@@ -542,6 +543,15 @@ The Platform Source Tree is the open source code hosted on
 fuchsia.googlesource.com, which comprises the source code for Fuchsia. A given
 Fuchsia system can include additional software from outside the Platform Source
 Tree by adding the appropriate [Fuchsia Package](#fuchsia-package).
+
+#### **Process** {#process}
+
+A Process is a [kernel object](#kernel-object) that represents an instance
+of a program as a set of instructions which are executed by one or more
+[threads](#thread) together with a collection of [capabilities](#capability).
+Every process is contained in a [job](#job).
+
+-   [Process Overview](/docs/zircon/objects/process.md)
 
 #### **Realm** {#realm}
 
@@ -656,6 +666,13 @@ find natural, without developers having to imagine all those ways ahead of time.
 
 The system responsible for the visual presentation of a story. Includes the
 presenter component, plus structure and state information read from each story.
+
+#### **Thread** {#thread}
+
+A Thread is a [kernel object](#kernel-object) that represents a time-shared
+CPU execution context. Each thread is contained in a [process](#process).
+
+-   [Thread Overview](/docs/zircon/objects/thread.md)
 
 #### **userboot** {#userboot}
 
