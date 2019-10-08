@@ -75,8 +75,21 @@ rustc_binary("bin") {
 
   # Component manager must always be small (even in debug builds) since it
   # is part of the Zircon boot image.
+  #
+  # We use a different link-time optimization (LTO) method in debug/release builds:
+  #
+  #   * For debug builds, we use thin LTO, providing a ~65% decrease in binary
+  #     size at the cost of ~5x increase in compile wall time.
+  #
+  #   * For release builds, we use fat LTO, providing another ~5% decrease in
+  #     binary size (i.e., ~70% decrease from not LTO), but requires ~6x
+  #     more time than Thin LTO (i.e., ~30x from no LTO).
   force_opt = "z"
-  with_lto = "fat"
+  if (is_debug) {
+    with_lto = "thin"
+  } else {
+    with_lto = "fat"
+  }
 
   deps = [
     ":lib",
