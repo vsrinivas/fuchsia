@@ -15,27 +15,15 @@ class RecentsContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Listener(
-      behavior: HitTestBehavior.translucent,
-      // ignore: deprecated_member_use
-      onPointerHover: (event) {
-        if (event.position.dx == 0) {
-          model.recentsVisibility.value = true;
-        } else if (model.recentsVisibility.value &&
-            event.position.dx > ErmineStyle.kRecentsBarWidth * 1.5) {
-          model.recentsVisibility.value = false;
-        }
-      },
-      child: LayoutBuilder(
-        builder: (context, constraint) => UnconstrainedBox(
-          alignment: Alignment.topLeft,
-          child: AnimatedBuilder(
-            animation: model.recentsVisibility,
-            builder: (context, _) => Container(
-              width: ErmineStyle.kRecentsBarWidth,
-              height: constraint.biggest.height,
-              child: Thumbnails(model: model.clustersModel),
-            ),
+    return LayoutBuilder(
+      builder: (context, constraint) => UnconstrainedBox(
+        alignment: Alignment.topLeft,
+        child: AnimatedBuilder(
+          animation: model.recentsVisibility,
+          builder: (context, _) => Container(
+            width: ErmineStyle.kRecentsBarWidth,
+            height: constraint.biggest.height,
+            child: Thumbnails(model: model.clustersModel),
           ),
         ),
       ),
