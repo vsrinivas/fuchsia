@@ -157,3 +157,19 @@ source_set("registers") {
     "platform:device",
   ]
 }
+
+source_set("ringbuffer") {
+  public_configs = [
+    ":magma_util_config",
+    "$magma_build_root:magma_src_include_config",
+  ]
+
+  sources = [
+    "instruction_writer.h",
+    "ringbuffer.h",
+  ]
+
+  public_deps = [
+    ":address_space",
+  ]
+}

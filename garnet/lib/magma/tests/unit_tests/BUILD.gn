@@ -62,6 +62,7 @@ source_set("magma_util_tests") {
     "test_inflight_list.cc",
     "test_macros.cc",
     "test_register_bitfields.cc",
+    "test_ringbuffer.cc",
     "test_semaphore_port.cc",
     "test_status.cc",
   ]
