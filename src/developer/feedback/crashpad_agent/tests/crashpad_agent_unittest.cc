@@ -463,7 +463,9 @@ TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
 
   ASSERT_TRUE(FileOneNativeCrashReport(std::nullopt).is_ok());
   CheckAttachmentsInDatabase();
-  CheckAnnotationsOnServer();
+  CheckAnnotationsOnServer({
+      {"signature", "fuchsia-no-minidump"},
+  });
   CheckAttachmentsOnServer();
 }
 
@@ -494,6 +496,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
   CheckAttachmentsInDatabase();
   CheckAnnotationsOnServer({
       {"type", "DartError"},
+      {"signature", "fuchsia-no-dart-stack-trace"},
   });
   CheckAttachmentsOnServer();
 }

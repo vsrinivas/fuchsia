@@ -112,6 +112,7 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
       *should_process = true;
     } else {
       FX_LOGS(WARNING) << "no minidump to attach to Crashpad report";
+      (*annotations)[kCrashSignatureKey] = "fuchsia-no-minidump";
     }
   }
 
@@ -124,6 +125,7 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
       *should_process = true;
     } else {
       FX_LOGS(WARNING) << "no Dart exception stack trace to attach to Crashpad report";
+      (*annotations)[kCrashSignatureKey] = "fuchsia-no-dart-stack-trace";
     }
   }
 }
