@@ -4,6 +4,7 @@
 
 group("ermine") {
   public_deps = [
+    "login_shell:userpicker_base_shell",
     "shell",
   ]
 }
