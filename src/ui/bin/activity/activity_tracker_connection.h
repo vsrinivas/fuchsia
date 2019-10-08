@@ -51,6 +51,8 @@ class ActivityTrackerConnection : public fuchsia::ui::activity::Tracker {
  private:
   OngoingActivityId GenerateActivityId() { return static_cast<OngoingActivityId>(random_()); }
 
+  zx::time last_activity_time_;
+
   StateMachineDriver* const state_machine_driver_;
 
   async_dispatcher_t* const dispatcher_;

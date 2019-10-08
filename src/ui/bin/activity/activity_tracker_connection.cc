@@ -7,6 +7,7 @@
 #include <fuchsia/ui/activity/cpp/fidl.h>
 #include <lib/async/cpp/time.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
@@ -37,30 +38,59 @@ void ActivityTrackerConnection::Stop() {
 
 void ActivityTrackerConnection::ReportDiscreteActivity(
     fuchsia::ui::activity::DiscreteActivity activity, zx_time_t time) {
+  if (time < last_activity_time_.get()) {
+    FXL_LOG(ERROR) << "activity-service: Received out-of-order events from client.";
+    binding_.Close(ZX_ERR_OUT_OF_RANGE);
+    return;
+  }
+  last_activity_time_ = zx::time(time);
   zx_status_t status = state_machine_driver_->ReceiveDiscreteActivity(activity, zx::time(time));
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "activity-service: Failed to receive activity: "
-                   << zx_status_get_string(status);
-    binding_.Close(status);
+    if (status == ZX_ERR_OUT_OF_RANGE) {
+      FXL_LOG(WARNING) << "activity-service: Ignoring activity due to stale timestamp ("
+                       << time << ")";
+    } else {
+      FXL_LOG(ERROR) << "activity-service: Failed to receive activity: "
+                     << zx_status_get_string(status);
+      binding_.Close(status);
+    }
   }
 }
 
 void ActivityTrackerConnection::StartOngoingActivity(
     fuchsia::ui::activity::OngoingActivity activity, zx_time_t time,
     StartOngoingActivityCallback callback) {
-  auto id = GenerateActivityId();
-  zx_status_t status = state_machine_driver_->StartOngoingActivity(id, zx::time(time));
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "activity-service: Failed to start activity: "
-                   << zx_status_get_string(status);
-    binding_.Close(status);
+  if (time < last_activity_time_.get()) {
+    FXL_LOG(ERROR) << "activity-service: Received out-of-order events from client.";
+    binding_.Close(ZX_ERR_OUT_OF_RANGE);
     return;
   }
-  ongoing_activities_.insert(id);
-  callback(id);
+  last_activity_time_ = zx::time(time);
+  auto id = GenerateActivityId();
+  zx_status_t status = state_machine_driver_->StartOngoingActivity(id, zx::time(time));
+  if (status == ZX_OK) {
+    ongoing_activities_.insert(id);
+    callback(id);
+  } else {
+    if (status == ZX_ERR_OUT_OF_RANGE) {
+      FXL_LOG(WARNING) << "activity-service: Ignoring activity due to stale timestamp ("
+                       << time << ")";
+      // Ignore the activity (don't close the binding or send an error to the client)
+    } else {
+      FXL_LOG(ERROR) << "activity-service: Failed to start activity: "
+                     << zx_status_get_string(status);
+      binding_.Close(status);
+    }
+  }
 }
 
 void ActivityTrackerConnection::EndOngoingActivity(OngoingActivityId id, zx_time_t time) {
+  if (time < last_activity_time_.get()) {
+    FXL_LOG(ERROR) << "activity-service: Received out-of-order events from client.";
+    binding_.Close(ZX_ERR_OUT_OF_RANGE);
+    return;
+  }
+  last_activity_time_ = zx::time(time);
   auto iter = ongoing_activities_.find(id);
   if (iter == ongoing_activities_.end()) {
     FXL_LOG(ERROR) << "activity-service: Invalid activity ID: " << id;
@@ -68,12 +98,19 @@ void ActivityTrackerConnection::EndOngoingActivity(OngoingActivityId id, zx_time
     return;
   }
   zx_status_t status = state_machine_driver_->EndOngoingActivity(id, zx::time(time));
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "activity-service: Failed to end activity: " << zx_status_get_string(status);
-    binding_.Close(status);
-    return;
+  if (status == ZX_OK) {
+    ongoing_activities_.erase(iter);
+  } else {
+    if (status == ZX_ERR_OUT_OF_RANGE) {
+      FXL_LOG(WARNING) << "activity-service: Ignoring activity due to stale timestamp ("
+                       << time << ")";
+      // Ignore the activity (don't close the binding or send an error to the client)
+    } else {
+      FXL_LOG(ERROR) << "activity-service: Failed to end activity: "
+                     << zx_status_get_string(status);
+      binding_.Close(status);
+    }
   }
-  ongoing_activities_.erase(iter);
 }
 
 }  // namespace activity

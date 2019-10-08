@@ -39,6 +39,8 @@ class ActivityTrackerConnectionTest : public ::gtest::TestLoopFixture {
     conn_ = std::make_unique<ActivityTrackerConnection>(
         &driver_, dispatcher(), client_.NewRequest(dispatcher()),
         ::testing::UnitTest::GetInstance()->random_seed());
+    // Some tests rely on subtracting from Now(), so advance to a nonzero time
+    RunLoopFor(zx::hour(1));
   }
 
  protected:
@@ -53,15 +55,37 @@ TEST_F(ActivityTrackerConnectionTest, ReportActivity) {
   EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::ACTIVE);
 }
 
-TEST_F(ActivityTrackerConnectionTest, ReportActivity_Failed) {
+TEST_F(ActivityTrackerConnectionTest, ReportActivity_StaleEventIgnored) {
   std::optional<zx_status_t> epitaph;
   client_.set_error_handler([&epitaph](zx_status_t status) { epitaph = status; });
+
+  // Send an event and then let the state machine driver time out (returning to IDLE).
+  driver_.ReceiveDiscreteActivity(DiscreteActivity(), Now());
+  RunLoopUntilIdle();
+  auto timeout = driver_.state_machine().TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
+  ASSERT_NE(timeout, std::nullopt);
+  RunLoopFor(*timeout);
 
   auto old_time = Now() - zx::duration(zx::sec(5));
   client_->ReportDiscreteActivity(DiscreteActivity(), old_time.get());
   RunLoopUntilIdle();
 
   EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::IDLE);
+  // Make sure no channel errors were received
+  EXPECT_FALSE(epitaph);
+}
+
+TEST_F(ActivityTrackerConnectionTest, ReportActivity_OutOfOrder) {
+  std::optional<zx_status_t> epitaph;
+  client_.set_error_handler([&epitaph](zx_status_t status) { epitaph = status; });
+
+  client_->ReportDiscreteActivity(DiscreteActivity(), Now().get());
+  RunLoopUntilIdle();
+
+  auto old_time = Now() - zx::duration(zx::sec(5));
+  client_->ReportDiscreteActivity(DiscreteActivity(), old_time.get());
+  RunLoopUntilIdle();
+
   EXPECT_TRUE(epitaph);
   EXPECT_EQ(*epitaph, ZX_ERR_OUT_OF_RANGE);
 }
@@ -89,7 +113,30 @@ TEST_F(ActivityTrackerConnectionTest, StartStopOngoingActivity) {
   EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::IDLE);
 }
 
-TEST_F(ActivityTrackerConnectionTest, StartOngoingActivity_Failed) {
+TEST_F(ActivityTrackerConnectionTest, StartOngoingActivity_StaleEventsIgnored) {
+  std::optional<zx_status_t> epitaph;
+  client_.set_error_handler([&epitaph](zx_status_t status) { epitaph = status; });
+
+  // Send an event and then let the state machine driver time out (returning to IDLE).
+  driver_.ReceiveDiscreteActivity(DiscreteActivity(), Now());
+  RunLoopUntilIdle();
+  auto timeout = driver_.state_machine().TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
+  ASSERT_NE(timeout, std::nullopt);
+  RunLoopFor(*timeout);
+
+  auto old_time = Now() - zx::duration(zx::sec(5));
+  client_->StartOngoingActivity(
+      OngoingActivity(), old_time.get(),
+      [](__UNUSED OngoingActivityId id) { ASSERT_FALSE("Callback was unexpectedly invoked"); });
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::IDLE);
+  // Make sure no channel errors were received
+  EXPECT_FALSE(epitaph);
+}
+
+
+TEST_F(ActivityTrackerConnectionTest, StartOngoingActivity_OutOfOrder) {
   // Send a discrete activity to bring the state machine to ACTIVE
   client_->ReportDiscreteActivity(DiscreteActivity(), Now().get());
   RunLoopUntilIdle();
