@@ -200,7 +200,11 @@ mod tests {
     use {
         super::*,
         crate::known_ess_store::KnownEss,
-        fidl::endpoints::{create_proxy, create_request_stream},
+        fidl::{
+            endpoints::{create_proxy, create_request_stream},
+            Error,
+        },
+        fuchsia_zircon as zx,
         futures::{channel::mpsc, task::Poll},
         pin_utils::pin_mut,
         std::path::Path,
@@ -361,6 +365,82 @@ mod tests {
         assert_variant!(
             exec.run_until_stalled(&mut listener_updates.next()),
             Poll::Ready(Some(listener::Message::NewListener(_)))
+        );
+    }
+
+    #[test]
+    fn multiple_controllers() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
+        let ess_store = create_ess_store(temp_dir.path());
+
+        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
+            .expect("failed to create ClientProvider proxy");
+        let requests = requests.into_stream().expect("failed to create stream");
+
+        let (update_sender, _listener_updates) = mpsc::unbounded();
+        let serve_fut = serve_provider_requests(update_sender, ess_store, requests);
+        pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a controller.
+        let (controller1, _) = request_controller(&provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request another controller.
+        let (controller2, _) = request_controller(&provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Ensure first controller is operable. Issue connect request.
+        let connect_fut = controller1.connect(&mut fidl_policy::NetworkIdentifier {
+            ssid: b"foobar".to_vec(),
+            type_: fidl_policy::SecurityType::None,
+        });
+        pin_mut!(connect_fut);
+
+        // Process connect request from first controller. Verify success.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut connect_fut),
+            Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
+        );
+
+        // Ensure second controller is not operable. Issue connect request.
+        let connect_fut = controller2.connect(&mut fidl_policy::NetworkIdentifier {
+            ssid: b"foobar".to_vec(),
+            type_: fidl_policy::SecurityType::None,
+        });
+        pin_mut!(connect_fut);
+
+        // Process connect request from second controller. Verify failure.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut connect_fut),
+            Poll::Ready(Err(Error::ClientWrite(zx::Status::PEER_CLOSED)))
+        );
+
+        // Drop first controller. A new controller can now take control.
+        drop(controller1);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request another controller.
+        let (controller3, _) = request_controller(&provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Ensure third controller is operable. Issue connect request.
+        let connect_fut = controller3.connect(&mut fidl_policy::NetworkIdentifier {
+            ssid: b"foobar".to_vec(),
+            type_: fidl_policy::SecurityType::None,
+        });
+        pin_mut!(connect_fut);
+
+        // Process connect request from third controller. Verify success.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut connect_fut),
+            Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
         );
     }
 }
