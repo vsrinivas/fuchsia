@@ -12,10 +12,6 @@
 
     Fuchsia-specific Futures executor and asynchronous primitives (Channel, Socket, Fifo, etc.)
 
-* [fuchsia-ddk/](/garnet/public/rust/fuchsia-ddk/)
-
-    Rust Driver Development Kit for Fuchsia (experimental - DO NOT USE)
-
 * [fuchsia-device/](/garnet/public/rust/fuchsia-device/)
 
     Rust bindings to common Fuchsia device libraries
