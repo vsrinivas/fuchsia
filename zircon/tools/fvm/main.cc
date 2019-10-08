@@ -63,6 +63,9 @@ int usage(void) {
           " --slice [bytes] - specify slice size - only valid on container creation.\n"
           "                   (default: %zu)\n",
           DEFAULT_SLICE_SIZE);
+  fprintf(stderr,
+          " --max-disk-size [bytes] Used for preallocating metadata. Only valid for sparse image. "
+          "(defaults to 0)\n");
   fprintf(stderr, " --offset [bytes] - offset at which container begins (fvm only)\n");
   fprintf(stderr, " --length [bytes] - length of container within file (fvm only)\n");
   fprintf(stderr, " --compress - specify that file should be compressed (sparse only)\n");
@@ -229,6 +232,7 @@ int main(int argc, char** argv) {
   size_t disk_size = 0;
 
   size_t max_bad_blocks = 0;
+  size_t max_disk_size = 0;
   bool is_max_bad_blocks_set = false;
   DiskType disk_type = DiskType::File;
 
@@ -271,6 +275,10 @@ int main(int argc, char** argv) {
       is_max_bad_blocks_set = true;
     } else if (!strcmp(argv[i], "--disk")) {
       if (parse_size(argv[++i], &disk_size) < 0) {
+        return -1;
+      }
+    } else if (!strcmp(argv[i], "--max-disk-size") && i + 1 < argc) {
+      if (parse_size(argv[++i], &max_disk_size) < 0) {
         return -1;
       }
     } else {
@@ -367,7 +375,8 @@ int main(int argc, char** argv) {
     }
 
     fbl::unique_ptr<SparseContainer> sparseContainer;
-    if (SparseContainer::CreateNew(path, slice_size, flags, &sparseContainer) != ZX_OK) {
+    if (SparseContainer::CreateNew(path, slice_size, flags, max_disk_size, &sparseContainer) !=
+        ZX_OK) {
       return -1;
     }
 
