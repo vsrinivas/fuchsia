@@ -10,6 +10,7 @@
 #include "lib/zx/time.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/gesture_arena.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
+#include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
 
 namespace a11y {
 
@@ -34,22 +35,6 @@ class OneFingerTapRecognizer : public GestureRecognizer {
     kInProgress,
     kDownFingerDetected,
     kGestureDetectedAndWaiting
-  };
-
-  // Struct for holding context(Koid, location) about Gesture.
-  struct GestureContext {
-    zx_koid_t view_ref_koid;
-    ::fuchsia::math::PointF local_point;
-  };
-
-  // Struct for holding initial information about Gesture under consideration.
-  struct GestureInfo {
-    uint64_t gesture_start_time;
-    uint32_t device_id;
-    uint32_t pointer_id;
-    ::fuchsia::math::PointF starting_global_position;
-    ::fuchsia::math::PointF starting_local_position;
-    zx_koid_t view_ref_koid;
   };
 
   // Max value by which pointer events can move(relative to first point of contact), and still are
@@ -91,22 +76,8 @@ class OneFingerTapRecognizer : public GestureRecognizer {
   TapGestureState GetGestureState() { return gesture_state_; }
 
  private:
-  // Helper function to schedule a DeclareDefeat() task with a timeout.
-  void ScheduleCallbackTask();
-
-  // Helper function to cancel DeclareDefeat() task.
-  void CancelCallbackTask();
-
   // Helper function to Reset the state of all the variables.
   void ResetState();
-
-  // Helper function to initialize GestureInfo using the provided pointer_event.
-  bool InitGestureInfo(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
-
-  // Helper function to make sure provided pointer_event is valid to be processed for the current
-  // gesture.
-  bool ValidatePointerEvent(
-      const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const;
 
   // Helper function which will be executed when recognizer is a winner and gesture is detected.
   // It also calls OnOneFingerTap() callback along with notifying GestureArena to Stop sending
@@ -116,6 +87,11 @@ class OneFingerTapRecognizer : public GestureRecognizer {
   // Helper function to either call DeclareDefeat or StopRoutingPpointerEvents based on the state of
   // the recognizer.
   void AbandonGesture();
+
+  // Helper funciton to check if the provided pointer event is valid for single tap gesture by
+  // verifying the move threshold and tap timeout.
+  bool ValidatePointerEventForTap(
+      const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
 
   // Stores the current state of the Gesture State Machine.
   TapGestureState gesture_state_ = kNotStarted;

@@ -15,6 +15,7 @@
 #include "gtest/gtest.h"
 #include "lib/fit/single_threaded_executor.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/tests/mocks/mock_arena_member.h"
+#include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
 
 namespace accessibility_test {
 
@@ -25,14 +26,14 @@ class OneFingerTapRecognizerTest : public gtest::TestLoopFixture {
  public:
   OneFingerTapRecognizerTest()
       : single_tap_recognizer_(
-            [this](a11y::OneFingerTapRecognizer::GestureContext context) {
+            [this](a11y::GestureContext context) {
               gesture_won_ = true;
               gesture_context_ = context;
             },
             a11y::OneFingerTapRecognizer::kOneFingerTapTimeout){};
   a11y::OneFingerTapRecognizer single_tap_recognizer_;
   bool gesture_won_ = false;
-  a11y::OneFingerTapRecognizer::GestureContext gesture_context_;
+  a11y::GestureContext gesture_context_;
 };
 
 // Returns a default Accessibility Pointer Event.

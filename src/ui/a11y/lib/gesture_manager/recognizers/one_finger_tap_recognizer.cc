@@ -26,18 +26,6 @@ void OneFingerTapRecognizer::AddArenaMember(ArenaMember* new_arena_member) {
   arena_member_ = new_arena_member;
 }
 
-void OneFingerTapRecognizer::ScheduleCallbackTask() {
-  gesture_task_.set_handler(
-      [this](async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
-        if (status == ZX_OK) {
-          AbandonGesture();
-        }
-      });
-
-  gesture_task_.PostDelayed(async_get_default_dispatcher(), zx::msec(one_finger_tap_timeout_));
-}
-void OneFingerTapRecognizer::CancelCallbackTask() { gesture_task_.Cancel(); }
-
 void OneFingerTapRecognizer::HandleEvent(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
   if (!pointer_event.has_phase()) {
@@ -51,27 +39,38 @@ void OneFingerTapRecognizer::HandleEvent(
       break;
 
     case fuchsia::ui::input::PointerEventPhase::DOWN:
-      if (!InitGestureInfo(pointer_event)) {
+      if (!InitGestureInfo(pointer_event, &gesture_start_info_, &gesture_context_)) {
         FX_LOGS(ERROR) << "Pointer Event is missing required fields. Dropping current event.";
         AbandonGesture();
         ResetState();
         break;
       }
 
-      if ((gesture_state_ != kInProgress) || !ValidatePointerEvent(pointer_event)) {
+      if ((gesture_state_ != kInProgress) ||
+          !ValidatePointerEvent(gesture_start_info_, pointer_event) ||
+          !ValidatePointerEventForTap(pointer_event)) {
         AbandonGesture();
         ResetState();
         break;
       }
 
       // Schedule a task to declare defeat with a timeout equal to one_finger_tap_timeout.
-      ScheduleCallbackTask();
+      ScheduleCallbackTask(
+          &gesture_task_,
+          [this](async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
+            if (status == ZX_OK) {
+              AbandonGesture();
+            }
+          },
+          one_finger_tap_timeout_);
       gesture_state_ = kDownFingerDetected;
 
       break;
 
     case fuchsia::ui::input::PointerEventPhase::MOVE:
-      if ((gesture_state_ != kDownFingerDetected) || !ValidatePointerEvent(pointer_event)) {
+      if ((gesture_state_ != kDownFingerDetected) ||
+          !ValidatePointerEvent(gesture_start_info_, pointer_event) ||
+          !ValidatePointerEventForTap(pointer_event)) {
         AbandonGesture();
         ResetState();
         break;
@@ -80,12 +79,14 @@ void OneFingerTapRecognizer::HandleEvent(
       break;
 
     case fuchsia::ui::input::PointerEventPhase::UP:
-      if ((gesture_state_ != kDownFingerDetected) || !ValidatePointerEvent(pointer_event)) {
+      if ((gesture_state_ != kDownFingerDetected) ||
+          !ValidatePointerEvent(gesture_start_info_, pointer_event) ||
+          !ValidatePointerEventForTap(pointer_event)) {
         AbandonGesture();
         ResetState();
         break;
       }
-      CancelCallbackTask();
+      CancelCallbackTask(&gesture_task_);
       if (is_winner_) {
         // One Tap Gesture detected.
         ExecuteOnWin();
@@ -133,7 +134,7 @@ void OneFingerTapRecognizer::AbandonGesture() {
 
 void OneFingerTapRecognizer::ResetState() {
   // Cancel any pending callback.
-  CancelCallbackTask();
+  CancelCallbackTask(&gesture_task_);
 
   // Reset GestureInfo.
   gesture_start_info_.gesture_start_time = 0;
@@ -150,67 +151,15 @@ void OneFingerTapRecognizer::ResetState() {
 
   // Reset Gesture Context.
   gesture_context_.view_ref_koid = 0;
-  gesture_context_.local_point.x = 0;
-  gesture_context_.local_point.y = 0;
+  gesture_context_.local_point->x = 0;
+  gesture_context_.local_point->y = 0;
 
   // Reset is_winner_ flag.
   is_winner_ = false;
 }
 
-bool OneFingerTapRecognizer::InitGestureInfo(
+bool OneFingerTapRecognizer::ValidatePointerEventForTap(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
-  if (!pointer_event.has_event_time()) {
-    return false;
-  }
-  gesture_start_info_.gesture_start_time = pointer_event.event_time();
-
-  if (!pointer_event.has_pointer_id()) {
-    return false;
-  }
-  gesture_start_info_.pointer_id = pointer_event.pointer_id();
-
-  if (!pointer_event.has_device_id()) {
-    return false;
-  }
-  gesture_start_info_.device_id = pointer_event.device_id();
-
-  if (!pointer_event.has_global_point()) {
-    return false;
-  }
-  gesture_start_info_.starting_global_position = pointer_event.global_point();
-
-  if (!pointer_event.has_local_point()) {
-    return false;
-  }
-  gesture_start_info_.starting_local_position = pointer_event.local_point();
-
-  if (pointer_event.has_viewref_koid()) {
-    gesture_start_info_.view_ref_koid = pointer_event.viewref_koid();
-  }
-
-  // Init GestureContext.
-  gesture_context_.view_ref_koid = gesture_start_info_.view_ref_koid;
-  gesture_context_.local_point = gesture_start_info_.starting_local_position;
-  return true;
-}
-
-bool OneFingerTapRecognizer::ValidatePointerEvent(
-    const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const {
-  // Check if pointer_event has all the required fields.
-  if (!pointer_event.has_event_time() || !pointer_event.has_pointer_id() ||
-      !pointer_event.has_device_id() || !pointer_event.has_global_point() ||
-      !pointer_event.has_local_point()) {
-    FX_LOGS(ERROR) << "Pointer Event is missing required information.";
-    return false;
-  }
-
-  // Check if pointer event information matches the gesture start information.
-  if ((gesture_start_info_.device_id != pointer_event.device_id()) ||
-      (gesture_start_info_.pointer_id != pointer_event.pointer_id())) {
-    FX_LOGS(INFO) << "Pointer event is not valid for current gesture.";
-    return false;
-  }
-
   // Check if the new pointer event is under the threshold value for the move.
   if ((std::abs(pointer_event.global_point().x - gesture_start_info_.starting_global_position.x) >
        kGestureMoveThreshold) ||

@@ -2,16 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("gesture_recognizers") {
+source_set("gesture_util") {
   sources = [
-    "one_finger_tap_recognizer.cc",
-    "one_finger_tap_recognizer.h",
+    "util.cc",
+    "util.h",
   ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.ui.input.accessibility",
-    "//src/ui/a11y/lib/gesture_manager/arena:gesture_arena",
-    "//src/ui/a11y/lib/gesture_manager/gesture_util",
   ]
 
   deps = [
