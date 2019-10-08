@@ -11,11 +11,33 @@
 
 #include "gtest/gtest.h"
 #include "src/lib/fidl_codec/library_loader_test_data.h"
+#include "src/lib/fidl_codec/list_test_data.h"
 
 namespace fidl_codec {
 
+// Check that we can load all the FIDL description files without errors (and without crash).
+TEST(LibraryLoader, CheckAll) {
+  fidl_codec_test::SdkExamples sdk_examples;
+  fidl_codec_test::FidlcodecExamples other_examples;
+  std::vector<std::unique_ptr<std::istream>> streams;
+  // Test all the files in sdk/core.fidl_json.txt.
+  for (const auto& element : sdk_examples.map()) {
+    streams.push_back(std::make_unique<std::istringstream>(std::istringstream(element.second)));
+  }
+  // Test all the fidl_codec files.
+  for (const auto& element : other_examples.map()) {
+    streams.push_back(std::make_unique<std::istringstream>(std::istringstream(element.second)));
+  }
+
+  // Do the tests.
+  LibraryReadError err;
+  LibraryLoader library_loader;
+  ASSERT_TRUE(library_loader.AddAll(&streams, &err));
+  ASSERT_TRUE(library_loader.DecodeAll());
+}
+
 TEST(LibraryLoader, LoadSimple) {
-  fidl_codec_test::ExampleMap examples;
+  fidl_codec_test::FidlcodecExamples examples;
   std::vector<std::unique_ptr<std::istream>> library_files;
   for (const auto& element : examples.map()) {
     std::unique_ptr<std::istream> file =
@@ -28,6 +50,7 @@ TEST(LibraryLoader, LoadSimple) {
   ASSERT_EQ(LibraryReadError::kOk, err.value);
 
   Library* library_ptr = loader.GetLibraryFromName("fidl.test.frobinator");
+  ASSERT_NE(library_ptr, nullptr);
 
   std::string kDesiredInterfaceName = "fidl.test.frobinator/Frobinator";
   const Interface* found_interface = nullptr;
@@ -44,7 +67,7 @@ TEST(LibraryLoader, LoadSimple) {
 
 // Makes sure that loading works when you load one IR at a time, instead of in a bunch.
 TEST(LibraryLoader, LoadSimpleOneAtATime) {
-  fidl_codec_test::ExampleMap examples;
+  fidl_codec_test::FidlcodecExamples examples;
   LibraryLoader loader;
   LibraryReadError err;
   for (const auto& element : examples.map()) {
@@ -55,6 +78,7 @@ TEST(LibraryLoader, LoadSimpleOneAtATime) {
   }
 
   Library* library_ptr = loader.GetLibraryFromName("fidl.test.frobinator");
+  ASSERT_NE(library_ptr, nullptr);
 
   std::string kDesiredInterfaceName = "fidl.test.frobinator/Frobinator";
   const Interface* found_interface = nullptr;
@@ -72,7 +96,7 @@ TEST(LibraryLoader, LoadSimpleOneAtATime) {
 // Ensure that, if you load two libraries with the same name, the last one in the list is the one
 // that sticks.
 TEST(LibraryLoader, LoadSecondWins) {
-  fidl_codec_test::ExampleMap examples;
+  fidl_codec_test::FidlcodecExamples examples;
   std::vector<std::unique_ptr<std::istream>> library_files;
   std::string frobinator_value;
   const std::string file_to_replace = "frobinator.fidl.json";
@@ -105,6 +129,7 @@ TEST(LibraryLoader, LoadSecondWins) {
   ASSERT_EQ(LibraryReadError::kOk, err.value);
 
   Library* library_ptr = loader.GetLibraryFromName("fidl.test.frobinator");
+  ASSERT_NE(library_ptr, nullptr);
 
   std::string kDesiredInterfaceName = "fidl.test.frobinator/Frobinator";
   const Interface* found_interface = nullptr;
@@ -127,7 +152,7 @@ TEST(LibraryLoader, LoadSecondWins) {
 }
 
 TEST(LibraryLoader, LoadFromOrdinal) {
-  fidl_codec_test::ExampleMap examples;
+  fidl_codec_test::FidlcodecExamples examples;
   std::vector<std::unique_ptr<std::istream>> library_files;
   for (const auto& element : examples.map()) {
     std::unique_ptr<std::istream> file =
@@ -214,7 +239,7 @@ void OrdinalCompositionBody(std::vector<std::unique_ptr<std::istream>>* library_
 TEST(LibraryLoader, OrdinalComposition) {
   {
     // Load the libraries in the order in examples.map().
-    fidl_codec_test::ExampleMap examples;
+    fidl_codec_test::FidlcodecExamples examples;
     std::vector<std::unique_ptr<std::istream>> library_files;
     for (const auto& element : examples.map()) {
       std::unique_ptr<std::istream> file =
@@ -227,7 +252,7 @@ TEST(LibraryLoader, OrdinalComposition) {
   }
   {
     // Load the libraries in the reverse of the order in examples.map().
-    fidl_codec_test::ExampleMap examples;
+    fidl_codec_test::FidlcodecExamples examples;
     std::vector<std::unique_ptr<std::istream>> library_files;
     for (const auto& element : examples.map()) {
       std::unique_ptr<std::istream> file =

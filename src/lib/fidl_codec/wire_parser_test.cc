@@ -47,7 +47,7 @@ async_dispatcher_t* AsyncLoopForTest::dispatcher() { return impl_->loop()->dispa
 
 LibraryLoader* InitLoader() {
   std::vector<std::unique_ptr<std::istream>> library_files;
-  fidl_codec_test::ExampleMap examples;
+  fidl_codec_test::FidlcodecExamples examples;
   for (const auto& element : examples.map()) {
     std::unique_ptr<std::istream> file =
         std::make_unique<std::istringstream>(std::istringstream(element.second));

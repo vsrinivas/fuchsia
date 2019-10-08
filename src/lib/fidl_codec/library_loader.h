@@ -87,11 +87,12 @@ class Enum {
   std::string GetNameFromBytes(const uint8_t* bytes) const;
 
  private:
-  explicit Enum(const rapidjson::Value& value);
+  Enum(Library* enclosing_library, const rapidjson::Value& value);
 
   // Decode all the values from the JSON definition.
   void DecodeTypes();
 
+  Library* enclosing_library_;
   const rapidjson::Value& value_;
   bool decoded_ = false;
   std::string name_;
@@ -102,12 +103,12 @@ class Enum {
 // TODO: Consider whether this is duplicative of Struct / Table member.
 class UnionMember {
  public:
-  UnionMember(const Library& enclosing_library, const rapidjson::Value& value);
+  UnionMember(Library* enclosing_library, const rapidjson::Value& value, bool for_xunion);
   ~UnionMember();
 
   std::string_view name() const { return name_; }
-  uint64_t size() const { return size_; }
   uint64_t offset() const { return offset_; }
+  uint64_t size() const { return size_; }
   Ordinal32 ordinal() const { return ordinal_; }
   const Type* type() const { return type_.get(); }
 
@@ -124,7 +125,7 @@ class Union {
   friend class Library;
   friend class XUnion;
 
-  const Library& enclosing_library() const { return enclosing_library_; }
+  Library* enclosing_library() const { return enclosing_library_; }
   const std::string& name() const { return name_; }
   uint64_t alignment() const { return alignment_; }
   uint32_t size() const { return size_; }
@@ -138,12 +139,14 @@ class Union {
                                           const Type* type, uint64_t offset, bool nullable) const;
 
  private:
-  Union(const Library& enclosing_library, const rapidjson::Value& value);
+  Union(Library* enclosing_library, const rapidjson::Value& value);
 
   // Decode all the values from the JSON definition.
-  void DecodeTypes();
+  void DecodeTypes(bool for_xunion);
+  void DecodeUnionTypes() { DecodeTypes(/*for_xunion=*/false); }
+  void DecodeXunionTypes() { DecodeTypes(/*for_xunion=*/true); }
 
-  const Library& enclosing_library_;
+  Library* enclosing_library_;
   const rapidjson::Value& value_;
   bool decoded_ = false;
   std::string name_;
@@ -157,13 +160,13 @@ class XUnion : public Union {
   friend class Library;
 
  private:
-  XUnion(const Library& enclosing_library, const rapidjson::Value& value)
+  XUnion(Library* enclosing_library, const rapidjson::Value& value)
       : Union(enclosing_library, value) {}
 };
 
 class StructMember {
  public:
-  StructMember(const Library& enclosing_library, const rapidjson::Value& value);
+  StructMember(Library* enclosing_library, const rapidjson::Value& value);
   ~StructMember();
 
   std::string_view name() const { return name_; }
@@ -183,7 +186,7 @@ class Struct {
   friend class Library;
   friend class InterfaceMethod;
 
-  const Library& enclosing_library() const { return enclosing_library_; }
+  Library* enclosing_library() const { return enclosing_library_; }
   const std::string& name() const { return name_; }
   uint32_t size() const { return size_; }
   const std::vector<std::unique_ptr<StructMember>>& members() const { return members_; }
@@ -192,7 +195,7 @@ class Struct {
                                        const Type* type, uint64_t offset, bool nullable) const;
 
  private:
-  Struct(const Library& enclosing_library, const rapidjson::Value& value);
+  Struct(Library* enclosing_library, const rapidjson::Value& value);
 
   // Decode all the values from the JSON definition if the object represents a
   // structure.
@@ -207,9 +210,9 @@ class Struct {
   void DecodeResponseTypes();
 
   // Decode all the values from the JSON definition.
-  void DecodeTypes(const std::string& size_name, const std::string& member_name);
+  void DecodeTypes(std::string_view container_type, const char* size_name, const char* member_name);
 
-  const Library& enclosing_library_;
+  Library* enclosing_library_;
   const rapidjson::Value& value_;
   bool decoded_ = false;
   std::string name_;
@@ -219,7 +222,7 @@ class Struct {
 
 class TableMember {
  public:
-  TableMember(const Library& enclosing_library, const rapidjson::Value& value);
+  TableMember(Library* enclosing_library, const rapidjson::Value& value);
   ~TableMember();
 
   const std::string_view name() const { return name_; }
@@ -228,6 +231,7 @@ class TableMember {
   const Type* type() const { return type_.get(); }
 
  private:
+  const bool reserved_;
   const std::string name_;
   const Ordinal32 ordinal_;
   const uint64_t size_;
@@ -240,7 +244,7 @@ class Table {
 
   ~Table();
 
-  const Library& enclosing_library() const { return enclosing_library_; }
+  Library* enclosing_library() const { return enclosing_library_; }
   const std::string& name() const { return name_; }
   uint32_t size() const { return size_; }
   const Type* unknown_member_type() const { return unknown_member_type_.get(); }
@@ -252,12 +256,12 @@ class Table {
   const std::vector<const TableMember*>& members() const { return members_; }
 
  private:
-  Table(const Library& enclosing_library, const rapidjson::Value& value);
+  Table(Library* enclosing_library, const rapidjson::Value& value);
 
   // Decode all the values from the JSON definition.
   void DecodeTypes();
 
-  const Library& enclosing_library_;
+  Library* enclosing_library_;
   const rapidjson::Value& value_;
   bool decoded_ = false;
   std::string name_;
@@ -303,11 +307,10 @@ class InterfaceMethod {
   InterfaceMethod(const Interface& interface, const rapidjson::Value& value);
 
   const Interface& enclosing_interface_;
-  const rapidjson::Value& value_;
+  const std::string name_;
   const Ordinal64 ordinal_;
   const Ordinal64 old_ordinal_;
   const bool is_composed_;
-  const std::string name_;
   std::unique_ptr<Struct> request_;
   std::unique_ptr<Struct> response_;
 };
@@ -319,7 +322,7 @@ class Interface {
   Interface(const Interface& other) = delete;
   Interface& operator=(const Interface&) = delete;
 
-  const Library& enclosing_library() const { return enclosing_library_; }
+  Library* enclosing_library() const { return enclosing_library_; }
   std::string_view name() const { return name_; }
 
   void AddMethodsToIndex(
@@ -356,14 +359,14 @@ class Interface {
   }
 
  private:
-  Interface(const Library& library, const rapidjson::Value& value)
-      : enclosing_library_(library), name_(value["name"].GetString()) {
+  Interface(Library* enclosing_library, const rapidjson::Value& value)
+      : enclosing_library_(enclosing_library), name_(value["name"].GetString()) {
     for (auto& method : value["methods"].GetArray()) {
       interface_methods_.emplace_back(new InterfaceMethod(*this, method));
     }
   }
 
-  const Library& enclosing_library_;
+  Library* enclosing_library_;
   std::string name_;
   std::vector<std::unique_ptr<InterfaceMethod>> interface_methods_;
 };
@@ -373,8 +376,11 @@ class Library {
   friend class LibraryLoader;
 
   LibraryLoader* enclosing_loader() const { return enclosing_loader_; }
-  const std::string name() { return name_; }
+  const std::string& name() const { return name_; }
   const std::vector<std::unique_ptr<Interface>>& interfaces() const { return interfaces_; }
+
+  // Decode all the content of this FIDL file.
+  bool DecodeAll();
 
   std::unique_ptr<Type> TypeFromIdentifier(bool is_nullable, std::string& identifier,
                                            size_t inline_size);
@@ -385,6 +391,31 @@ class Library {
 
   // Set *ptr to the Interface called |name|
   bool GetInterfaceByName(const std::string& name, const Interface** ptr) const;
+
+  // Extract a boolean field from a JSON value.
+  bool ExtractBool(const rapidjson::Value& value, std::string_view container_type,
+                   std::string_view container_name, const char* field_name);
+  // Extract a string field from a JSON value.
+  std::string ExtractString(const rapidjson::Value& value, std::string_view container_type,
+                            std::string_view container_name, const char* field_name);
+  // Extract a uint64_t field from a JSON value.
+  uint64_t ExtractUint64(const rapidjson::Value& value, std::string_view container_type,
+                         std::string_view container_name, const char* field_name);
+  // Extract a uint32_t field from a JSON value.
+  uint32_t ExtractUint32(const rapidjson::Value& value, std::string_view container_type,
+                         std::string_view container_name, const char* field_name);
+  // Extract a scalar type from a JSON value.
+  std::unique_ptr<Type> ExtractScalarType(const rapidjson::Value& value,
+                                          std::string_view container_type,
+                                          std::string_view container_name, const char* field_name,
+                                          uint64_t size);
+  // Extract a type from a JSON value.
+  std::unique_ptr<Type> ExtractType(const rapidjson::Value& value, std::string_view container_type,
+                                    std::string_view container_name, const char* field_name,
+                                    uint64_t size);
+  // Display an error when a field is not found.
+  void FieldNotFound(std::string_view container_type, std::string_view container_name,
+                     const char* field_name);
 
   Library& operator=(const Library&) = delete;
   Library(const Library&) = delete;
@@ -400,6 +431,7 @@ class Library {
   LibraryLoader* enclosing_loader_;
   rapidjson::Document backing_document_;
   bool decoded_ = false;
+  bool has_errors_ = false;
   std::string name_;
   std::vector<std::unique_ptr<Interface>> interfaces_;
   std::map<std::string, std::unique_ptr<Enum>> enums_;
@@ -424,6 +456,12 @@ class LibraryLoader {
 
   LibraryLoader& operator=(const LibraryLoader&) = delete;
   LibraryLoader(const LibraryLoader&) = delete;
+
+  // Add the libraries for all the streams.
+  bool AddAll(std::vector<std::unique_ptr<std::istream>>* library_streams, LibraryReadError* err);
+
+  // Decode all the FIDL files.
+  bool DecodeAll();
 
   // Adds a single library (read from library_stream) to this Loader. Sets err as appropriate.
   void Add(std::unique_ptr<std::istream>* library_stream, LibraryReadError* err);

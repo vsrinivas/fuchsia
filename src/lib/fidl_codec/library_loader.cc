@@ -14,7 +14,8 @@
 
 namespace fidl_codec {
 
-Enum::Enum(const rapidjson::Value& value) : value_(value) {}
+Enum::Enum(Library* enclosing_library, const rapidjson::Value& value)
+    : enclosing_library_(enclosing_library), value_(value) {}
 
 Enum::~Enum() = default;
 
@@ -23,52 +24,62 @@ void Enum::DecodeTypes() {
     return;
   }
   decoded_ = true;
-  name_ = value_["name"].GetString();
-  type_ = Type::ScalarTypeFromName(value_["type"].GetString(), 0);
+  name_ = enclosing_library_->ExtractString(value_, "enum", "<unknown>", "name");
+  type_ = enclosing_library_->ExtractScalarType(value_, "enum", name_, "type", 0);
+
+  if (!value_.HasMember("members")) {
+    enclosing_library_->FieldNotFound("enum", name_, "members");
+  }
+
   size_ = type_->InlineSize();
 }
 
 std::string Enum::GetNameFromBytes(const uint8_t* bytes) const {
-  for (auto& member : value_["members"].GetArray()) {
-    if (type_->ValueEquals(bytes, size_, member["value"]["literal"])) {
-      return member["name"].GetString();
+  if (value_.HasMember("members")) {
+    for (auto& member : value_["members"].GetArray()) {
+      if (member.HasMember("value") && member["value"].HasMember("literal") &&
+          (type_->ValueEquals(bytes, size_, member["value"]["literal"]))) {
+        if (!member.HasMember("name")) {
+          return "<unknown>";
+        }
+        return member["name"].GetString();
+      }
     }
   }
-  return "(Unknown enum member)";
+  return "<unknown>";
 }
 
-UnionMember::UnionMember(const Library& enclosing_library, const rapidjson::Value& value)
-    : name_(value["name"].GetString()),
-      offset_(std::strtoll(value["offset"].GetString(), nullptr, kDecimalBase)),
-      size_(std::strtoll(value["size"].GetString(), nullptr, kDecimalBase)),
-      ordinal_(value.HasMember("ordinal")
-                   ? std::strtoll(value["ordinal"].GetString(), nullptr, kDecimalBase)
-                   : 0) {
-  if (!value.HasMember("type")) {
-    FXL_LOG(ERROR) << "Type missing";
-    type_ = std::make_unique<RawType>(size_);
-    return;
-  }
-  type_ = Type::GetType(enclosing_library.enclosing_loader(), value["type"], size_);
-}
+UnionMember::UnionMember(Library* enclosing_library, const rapidjson::Value& value, bool for_xunion)
+    : name_(enclosing_library->ExtractString(value, "union member", "<unknown>", "name")),
+      offset_(enclosing_library->ExtractUint64(value, "union member", name_, "offset")),
+      size_(enclosing_library->ExtractUint64(value, "union member", name_, "size")),
+      ordinal_(for_xunion
+                   ? enclosing_library->ExtractUint32(value, "union member", name_, "ordinal")
+                   : 0),
+      type_(enclosing_library->ExtractType(value, "union member", name_, "type", size_)) {}
 
 UnionMember::~UnionMember() = default;
 
-Union::Union(const Library& enclosing_library, const rapidjson::Value& value)
+Union::Union(Library* enclosing_library, const rapidjson::Value& value)
     : enclosing_library_(enclosing_library), value_(value) {}
 
-void Union::DecodeTypes() {
+void Union::DecodeTypes(bool for_xunion) {
   if (decoded_) {
     return;
   }
   decoded_ = true;
-  name_ = value_["name"].GetString();
-  alignment_ = std::strtoll(value_["alignment"].GetString(), nullptr, kDecimalBase);
-  size_ = std::strtoll(value_["size"].GetString(), nullptr, kDecimalBase);
-  auto member_arr = value_["members"].GetArray();
-  members_.reserve(member_arr.Size());
-  for (auto& member : member_arr) {
-    members_.push_back(std::make_unique<UnionMember>(enclosing_library_, member));
+  name_ = enclosing_library_->ExtractString(value_, "union", "<unknown>", "name");
+  alignment_ = enclosing_library_->ExtractUint64(value_, "union", name_, "alignment");
+  size_ = enclosing_library_->ExtractUint64(value_, "union", name_, "size");
+
+  if (!value_.HasMember("members")) {
+    enclosing_library_->FieldNotFound("union", name_, "members");
+  } else {
+    auto member_arr = value_["members"].GetArray();
+    members_.reserve(member_arr.Size());
+    for (auto& member : member_arr) {
+      members_.push_back(std::make_unique<UnionMember>(enclosing_library_, member, for_xunion));
+    }
   }
 }
 
@@ -100,42 +111,36 @@ std::unique_ptr<UnionField> Union::DecodeUnion(MessageDecoder* decoder, std::str
   return result;
 }
 
-StructMember::StructMember(const Library& enclosing_library, const rapidjson::Value& value)
-    : name_(value["name"].GetString()),
-      offset_(std::strtoll(value["offset"].GetString(), nullptr, kDecimalBase)),
-      size_(std::strtoll(value["size"].GetString(), nullptr, kDecimalBase)) {
-  if (!value.HasMember("type")) {
-    FXL_LOG(ERROR) << "Type missing";
-    type_ = std::make_unique<RawType>(size());
-    return;
-  }
-  type_ = Type::GetType(enclosing_library.enclosing_loader(), value["type"], size_);
-}
+StructMember::StructMember(Library* enclosing_library, const rapidjson::Value& value)
+    : name_(enclosing_library->ExtractString(value, "struct member", "<unknown>", "name")),
+      offset_(enclosing_library->ExtractUint64(value, "struct member", name_, "offset")),
+      size_(enclosing_library->ExtractUint64(value, "struct member", name_, "size")),
+      type_(enclosing_library->ExtractType(value, "struct member", name_, "type", size_)) {}
 
 StructMember::~StructMember() = default;
 
-Struct::Struct(const Library& enclosing_library, const rapidjson::Value& value)
+Struct::Struct(Library* enclosing_library, const rapidjson::Value& value)
     : enclosing_library_(enclosing_library), value_(value) {}
 
 void Struct::DecodeStructTypes() {
   if (decoded_) {
     return;
   }
-  DecodeTypes("size", "members");
+  DecodeTypes("struct", "size", "members");
 }
 
 void Struct::DecodeRequestTypes() {
   if (decoded_) {
     return;
   }
-  DecodeTypes("maybe_request_size", "maybe_request");
+  DecodeTypes("request", "maybe_request_size", "maybe_request");
 }
 
 void Struct::DecodeResponseTypes() {
   if (decoded_) {
     return;
   }
-  DecodeTypes("maybe_response_size", "maybe_response");
+  DecodeTypes("response", "maybe_response_size", "maybe_response");
 }
 
 std::unique_ptr<Object> Struct::DecodeObject(MessageDecoder* decoder, std::string_view name,
@@ -150,33 +155,38 @@ std::unique_ptr<Object> Struct::DecodeObject(MessageDecoder* decoder, std::strin
   return result;
 }
 
-void Struct::DecodeTypes(const std::string& size_name, const std::string& member_name) {
+void Struct::DecodeTypes(std::string_view container_name, const char* size_name,
+                         const char* member_name) {
   FXL_DCHECK(!decoded_);
   decoded_ = true;
-  name_ = value_["name"].GetString();
-  size_ = std::strtoll(value_[size_name].GetString(), nullptr, kDecimalBase);
-  auto member_arr = value_[member_name].GetArray();
-  members_.reserve(member_arr.Size());
-  for (auto& member : member_arr) {
-    members_.push_back(std::make_unique<StructMember>(enclosing_library_, member));
+  name_ = enclosing_library_->ExtractString(value_, container_name, "<unknown>", "name");
+  size_ = enclosing_library_->ExtractUint64(value_, container_name, name_, size_name);
+
+  if (!value_.HasMember(member_name)) {
+    enclosing_library_->FieldNotFound(container_name, name_, member_name);
+  } else {
+    auto member_arr = value_[member_name].GetArray();
+    members_.reserve(member_arr.Size());
+    for (auto& member : member_arr) {
+      members_.push_back(std::make_unique<StructMember>(enclosing_library_, member));
+    }
   }
 }
 
-TableMember::TableMember(const Library& enclosing_library, const rapidjson::Value& value)
-    : name_(value["name"].GetString()),
-      ordinal_(std::strtoll(value["ordinal"].GetString(), nullptr, kDecimalBase)),
-      size_(std::strtoll(value["size"].GetString(), nullptr, kDecimalBase)) {
-  if (!value.HasMember("type")) {
-    FXL_LOG(ERROR) << "Type missing";
-    type_ = std::make_unique<RawType>(size_);
-    return;
-  }
-  type_ = Type::GetType(enclosing_library.enclosing_loader(), value["type"], size_);
-}
+TableMember::TableMember(Library* enclosing_library, const rapidjson::Value& value)
+    : reserved_(enclosing_library->ExtractBool(value, "table member", "<unknown>", "reserved")),
+      name_(reserved_
+                ? "<reserved>"
+                : enclosing_library->ExtractString(value, "table member", "<unknown>", "name")),
+      ordinal_(enclosing_library->ExtractUint32(value, "table member", name_, "ordinal")),
+      size_(reserved_ ? 0 : enclosing_library->ExtractUint64(value, "table member", name_, "size")),
+      type_(reserved_
+                ? std::make_unique<RawType>(0)
+                : enclosing_library->ExtractType(value, "table member", name_, "type", size_)) {}
 
 TableMember::~TableMember() = default;
 
-Table::Table(const Library& enclosing_library, const rapidjson::Value& value)
+Table::Table(Library* enclosing_library, const rapidjson::Value& value)
     : enclosing_library_(enclosing_library), value_(value) {}
 
 Table::~Table() = default;
@@ -186,38 +196,45 @@ void Table::DecodeTypes() {
     return;
   }
   decoded_ = true;
-  name_ = value_["name"].GetString();
-  size_ = std::strtoll(value_["size"].GetString(), nullptr, kDecimalBase);
-  unknown_member_type_ = std::make_unique<RawType>(size_);
-  auto member_arr = value_["members"].GetArray();
-  Ordinal32 max_ordinal = 0;
-  for (auto& member : member_arr) {
-    backing_members_.push_back(std::make_unique<TableMember>(enclosing_library_, member));
-    max_ordinal = std::max(max_ordinal, backing_members_.back()->ordinal());
-  }
+  name_ = enclosing_library_->ExtractString(value_, "table", "<unknown>", "name");
+  size_ = enclosing_library_->ExtractUint64(value_, "table", name_, "size");
 
-  // There is one element in this array for each possible ordinal value.  The
-  // array is dense, so there are unlikely to be gaps.
-  members_.resize(max_ordinal + 1, nullptr);
-  for (const auto& backing_member : backing_members_) {
-    members_[backing_member->ordinal()] = backing_member.get();
+  unknown_member_type_ = std::make_unique<RawType>(size_);
+
+  if (!value_.HasMember("members")) {
+    enclosing_library_->FieldNotFound("table", name_, "members");
+  } else {
+    auto member_arr = value_["members"].GetArray();
+    Ordinal32 max_ordinal = 0;
+    for (auto& member : member_arr) {
+      backing_members_.push_back(std::make_unique<TableMember>(enclosing_library_, member));
+      max_ordinal = std::max(max_ordinal, backing_members_.back()->ordinal());
+    }
+
+    // There is one element in this array for each possible ordinal value.  The
+    // array is dense, so there are unlikely to be gaps.
+    members_.resize(max_ordinal + 1, nullptr);
+    for (const auto& backing_member : backing_members_) {
+      members_[backing_member->ordinal()] = backing_member.get();
+    }
   }
 }
 
 InterfaceMethod::InterfaceMethod(const Interface& interface, const rapidjson::Value& value)
     : enclosing_interface_(interface),
-      value_(value),
+      name_(interface.enclosing_library()->ExtractString(value, "method", "<unknown>", "name")),
       // TODO(FIDL-524): Step 4, i.e. both ord and gen are prepared by fidlc for
       // direct consumption by the bindings.
-      ordinal_(std::strtoll(value["ordinal"].GetString(), nullptr, kDecimalBase)),
-      old_ordinal_(std::strtoll(value["generated_ordinal"].GetString(), nullptr, kDecimalBase)),
-      is_composed_(value["is_composed"].GetBool()),
-      name_(value["name"].GetString()) {
-  if (value_["has_request"].GetBool()) {
+      ordinal_(interface.enclosing_library()->ExtractUint64(value, "method", name_, "ordinal")),
+      old_ordinal_(interface.enclosing_library()->ExtractUint64(value, "method", name_,
+                                                                "generated_ordinal")),
+      is_composed_(
+          interface.enclosing_library()->ExtractBool(value, "method", name_, "is_composed")) {
+  if (interface.enclosing_library()->ExtractBool(value, "method", name_, "has_request")) {
     request_ = std::unique_ptr<Struct>(new Struct(interface.enclosing_library(), value));
   }
 
-  if (value_["has_response"].GetBool()) {
+  if (interface.enclosing_library()->ExtractBool(value, "method", name_, "has_response")) {
     response_ = std::unique_ptr<Struct>(new Struct(interface.enclosing_library(), value));
   }
 }
@@ -247,7 +264,7 @@ Library::Library(LibraryLoader* enclosing_loader, rapidjson::Document& document,
   interfaces_.reserve(interfaces_array.Size());
 
   for (auto& decl : interfaces_array) {
-    interfaces_.emplace_back(new Interface(*this, decl));
+    interfaces_.emplace_back(new Interface(this, decl));
     interfaces_.back()->AddMethodsToIndex(index);
   }
 }
@@ -259,27 +276,78 @@ void Library::DecodeTypes() {
     return;
   }
   decoded_ = true;
-  name_ = backing_document_["name"].GetString();
-  for (auto& enu : backing_document_["enum_declarations"].GetArray()) {
-    enums_.emplace(std::piecewise_construct, std::forward_as_tuple(enu["name"].GetString()),
-                   std::forward_as_tuple(new Enum(enu)));
+  name_ = ExtractString(backing_document_, "library", "<unknown>", "name");
+
+  if (!backing_document_.HasMember("enum_declarations")) {
+    FieldNotFound("library", name_, "enum_declarations");
+  } else {
+    for (auto& enu : backing_document_["enum_declarations"].GetArray()) {
+      enums_.emplace(std::piecewise_construct, std::forward_as_tuple(enu["name"].GetString()),
+                     std::forward_as_tuple(new Enum(this, enu)));
+    }
   }
-  for (auto& str : backing_document_["struct_declarations"].GetArray()) {
-    structs_.emplace(std::piecewise_construct, std::forward_as_tuple(str["name"].GetString()),
-                     std::forward_as_tuple(new Struct(*this, str)));
+
+  if (!backing_document_.HasMember("struct_declarations")) {
+    FieldNotFound("library", name_, "struct_declarations");
+  } else {
+    for (auto& str : backing_document_["struct_declarations"].GetArray()) {
+      structs_.emplace(std::piecewise_construct, std::forward_as_tuple(str["name"].GetString()),
+                       std::forward_as_tuple(new Struct(this, str)));
+    }
   }
-  for (auto& tab : backing_document_["table_declarations"].GetArray()) {
-    tables_.emplace(std::piecewise_construct, std::forward_as_tuple(tab["name"].GetString()),
-                    std::forward_as_tuple(new Table(*this, tab)));
+
+  if (!backing_document_.HasMember("table_declarations")) {
+    FieldNotFound("library", name_, "table_declarations");
+  } else {
+    for (auto& tab : backing_document_["table_declarations"].GetArray()) {
+      tables_.emplace(std::piecewise_construct, std::forward_as_tuple(tab["name"].GetString()),
+                      std::forward_as_tuple(new Table(this, tab)));
+    }
   }
-  for (auto& uni : backing_document_["union_declarations"].GetArray()) {
-    unions_.emplace(std::piecewise_construct, std::forward_as_tuple(uni["name"].GetString()),
-                    std::forward_as_tuple(new Union(*this, uni)));
+
+  if (!backing_document_.HasMember("union_declarations")) {
+    FieldNotFound("library", name_, "union_declarations");
+  } else {
+    for (auto& uni : backing_document_["union_declarations"].GetArray()) {
+      unions_.emplace(std::piecewise_construct, std::forward_as_tuple(uni["name"].GetString()),
+                      std::forward_as_tuple(new Union(this, uni)));
+    }
   }
-  for (auto& xuni : backing_document_["xunion_declarations"].GetArray()) {
-    xunions_.emplace(std::piecewise_construct, std::forward_as_tuple(xuni["name"].GetString()),
-                     std::forward_as_tuple(new XUnion(*this, xuni)));
+
+  if (!backing_document_.HasMember("xunion_declarations")) {
+    FieldNotFound("library", name_, "xunion_declarations");
+  } else {
+    for (auto& xuni : backing_document_["xunion_declarations"].GetArray()) {
+      xunions_.emplace(std::piecewise_construct, std::forward_as_tuple(xuni["name"].GetString()),
+                       std::forward_as_tuple(new XUnion(this, xuni)));
+    }
   }
+}
+
+bool Library::DecodeAll() {
+  DecodeTypes();
+  for (const auto& tmp : structs_) {
+    tmp.second->DecodeStructTypes();
+  }
+  for (const auto& tmp : enums_) {
+    tmp.second->DecodeTypes();
+  }
+  for (const auto& tmp : tables_) {
+    tmp.second->DecodeTypes();
+  }
+  for (const auto& tmp : unions_) {
+    tmp.second->DecodeUnionTypes();
+  }
+  for (const auto& tmp : xunions_) {
+    tmp.second->DecodeXunionTypes();
+  }
+  for (const auto& interface : interfaces_) {
+    for (const auto& method : interface->methods()) {
+      method->request();
+      method->response();
+    }
+  }
+  return !has_errors_;
 }
 
 std::unique_ptr<Type> Library::TypeFromIdentifier(bool is_nullable, std::string& identifier,
@@ -302,13 +370,13 @@ std::unique_ptr<Type> Library::TypeFromIdentifier(bool is_nullable, std::string&
   }
   auto uni = unions_.find(identifier);
   if (uni != unions_.end()) {
-    uni->second->DecodeTypes();
+    uni->second->DecodeUnionTypes();
     return std::make_unique<UnionType>(std::ref(*uni->second), is_nullable);
   }
   auto xuni = xunions_.find(identifier);
   if (xuni != xunions_.end()) {
     // Note: XUnion and nullable XUnion are encoded in the same way
-    xuni->second->DecodeTypes();
+    xuni->second->DecodeXunionTypes();
     return std::make_unique<XUnionType>(std::ref(*xuni->second), is_nullable);
   }
   const Interface* ifc;
@@ -328,17 +396,100 @@ bool Library::GetInterfaceByName(const std::string& name, const Interface** ptr)
   return false;
 }
 
+bool Library::ExtractBool(const rapidjson::Value& value, std::string_view container_type,
+                          std::string_view container_name, const char* field_name) {
+  if (!value.HasMember(field_name)) {
+    FieldNotFound(container_type, container_name, field_name);
+    return false;
+  }
+  return value[field_name].GetBool();
+}
+
+std::string Library::ExtractString(const rapidjson::Value& value, std::string_view container_type,
+                                   std::string_view container_name, const char* field_name) {
+  if (!value.HasMember(field_name)) {
+    FieldNotFound(container_type, container_name, field_name);
+    return "<unknown>";
+  }
+  return value["name"].GetString();
+}
+
+uint64_t Library::ExtractUint64(const rapidjson::Value& value, std::string_view container_type,
+                                std::string_view container_name, const char* field_name) {
+  if (!value.HasMember(field_name)) {
+    FieldNotFound(container_type, container_name, field_name);
+    return 0;
+  }
+  return std::strtoll(value[field_name].GetString(), nullptr, kDecimalBase);
+}
+
+uint32_t Library::ExtractUint32(const rapidjson::Value& value, std::string_view container_type,
+                                std::string_view container_name, const char* field_name) {
+  if (!value.HasMember(field_name)) {
+    FieldNotFound(container_type, container_name, field_name);
+    return 0;
+  }
+  return std::strtoll(value[field_name].GetString(), nullptr, kDecimalBase);
+}
+
+std::unique_ptr<Type> Library::ExtractScalarType(const rapidjson::Value& value,
+                                                 std::string_view container_type,
+                                                 std::string_view container_name,
+                                                 const char* field_name, uint64_t size) {
+  if (!value.HasMember(field_name)) {
+    FieldNotFound(container_type, container_name, field_name);
+    return std::make_unique<RawType>(size);
+  }
+  return Type::ScalarTypeFromName(value[field_name].GetString(), size);
+}
+
+std::unique_ptr<Type> Library::ExtractType(const rapidjson::Value& value,
+                                           std::string_view container_type,
+                                           std::string_view container_name, const char* field_name,
+                                           uint64_t size) {
+  if (!value.HasMember(field_name)) {
+    FieldNotFound(container_type, container_name, field_name);
+    return std::make_unique<RawType>(size);
+  }
+  return Type::GetType(enclosing_loader(), value[field_name], size);
+}
+
+void Library::FieldNotFound(std::string_view container_type, std::string_view container_name,
+                            const char* field_name) {
+  has_errors_ = true;
+  FXL_LOG(ERROR) << "File " << name() << " field '" << field_name << "' missing for "
+                 << container_type << ' ' << container_name;
+}
+
 LibraryLoader::LibraryLoader(std::vector<std::unique_ptr<std::istream>>* library_streams,
                              LibraryReadError* err) {
+  AddAll(library_streams, err);
+}
+
+bool LibraryLoader::AddAll(std::vector<std::unique_ptr<std::istream>>* library_streams,
+                           LibraryReadError* err) {
+  bool ok = true;
   err->value = LibraryReadError::kOk;
   // Go backwards through the streams; we refuse to load the same library twice, and the last one
   // wins.
   for (auto i = library_streams->rbegin(); i != library_streams->rend(); ++i) {
     Add(&(*i), err);
     if (err->value != LibraryReadError::kOk) {
-      return;
+      ok = false;
     }
   }
+  return ok;
+}
+
+bool LibraryLoader::DecodeAll() {
+  bool ok = true;
+  for (const auto& representation : representations_) {
+    Library* library = representation.second.get();
+    if (!library->DecodeAll()) {
+      ok = false;
+    }
+  }
+  return ok;
 }
 
 void LibraryLoader::Add(std::unique_ptr<std::istream>* library_stream, LibraryReadError* err) {
