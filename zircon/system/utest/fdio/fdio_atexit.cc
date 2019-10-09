@@ -93,11 +93,6 @@ class Server final : public llcpp::fuchsia::posix::socket::Control::Interface {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void IoctlPOSIX(int16_t req, fidl::VectorView<uint8_t> in,
-                  IoctlPOSIXCompleter::Sync completer) override {
-    return completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
   sync_completion_t accept_end_;
 
  private:

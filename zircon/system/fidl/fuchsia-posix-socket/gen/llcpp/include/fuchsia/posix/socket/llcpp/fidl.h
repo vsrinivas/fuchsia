@@ -248,8 +248,6 @@ extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetSockOptRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetSockOptResponseTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockOptRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockOptResponseTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlIoctlPOSIXRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlIoctlPOSIXResponseTable;
 
 // The control plane for a network socket.
 //
@@ -621,36 +619,6 @@ class Control final {
     using ResponseType = GetSockOptResponse;
   };
 
-  struct IoctlPOSIXResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int16_t code;
-    ::fidl::VectorView<uint8_t> out;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlIoctlPOSIXResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 4294967295;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct IoctlPOSIXRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int16_t req;
-    ::fidl::VectorView<uint8_t> in;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlIoctlPOSIXRequestTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 4294967295;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = IoctlPOSIXResponse;
-  };
-
 
   struct EventHandlers {
     // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
@@ -904,22 +872,6 @@ class Control final {
       using Super::operator->;
       using Super::operator*;
     };
-    template <typename ResponseType>
-    class IoctlPOSIX_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      IoctlPOSIX_Impl(zx::unowned_channel _client_end, int16_t req, ::fidl::VectorView<uint8_t> in);
-      ~IoctlPOSIX_Impl() = default;
-      IoctlPOSIX_Impl(IoctlPOSIX_Impl&& other) = default;
-      IoctlPOSIX_Impl& operator=(IoctlPOSIX_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
 
    public:
     using Clone = Clone_Impl;
@@ -937,7 +889,6 @@ class Control final {
     using GetPeerName = GetPeerName_Impl<GetPeerNameResponse>;
     using SetSockOpt = SetSockOpt_Impl<SetSockOptResponse>;
     using GetSockOpt = GetSockOpt_Impl<GetSockOptResponse>;
-    using IoctlPOSIX = IoctlPOSIX_Impl<IoctlPOSIXResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -1180,22 +1131,6 @@ class Control final {
       using Super::operator->;
       using Super::operator*;
     };
-    template <typename ResponseType>
-    class IoctlPOSIX_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      IoctlPOSIX_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t req, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
-      ~IoctlPOSIX_Impl() = default;
-      IoctlPOSIX_Impl(IoctlPOSIX_Impl&& other) = default;
-      IoctlPOSIX_Impl& operator=(IoctlPOSIX_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
 
    public:
     using Clone = Clone_Impl;
@@ -1213,7 +1148,6 @@ class Control final {
     using GetPeerName = GetPeerName_Impl<GetPeerNameResponse>;
     using SetSockOpt = SetSockOpt_Impl<SetSockOptResponse>;
     using GetSockOpt = GetSockOpt_Impl<GetSockOptResponse>;
-    using IoctlPOSIX = IoctlPOSIX_Impl<IoctlPOSIXResponse>;
   };
 
   class SyncClient final {
@@ -1406,14 +1340,6 @@ class Control final {
     // Retrieves the current value of a socket option.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetSockOpt GetSockOpt(::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::BytePart _response_buffer);
-
-    // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
-    // Request is heap-allocated. Response is heap-allocated.
-    ResultOf::IoctlPOSIX IoctlPOSIX(int16_t req, ::fidl::VectorView<uint8_t> in);
-
-    // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::IoctlPOSIX IoctlPOSIX(::fidl::BytePart _request_buffer, int16_t req, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -1609,14 +1535,6 @@ class Control final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetSockOpt GetSockOpt(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::BytePart _response_buffer);
 
-    // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
-    // Request is heap-allocated. Response is heap-allocated.
-    static ResultOf::IoctlPOSIX IoctlPOSIX(zx::unowned_channel _client_end, int16_t req, ::fidl::VectorView<uint8_t> in);
-
-    // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::IoctlPOSIX IoctlPOSIX(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t req, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
-
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
@@ -1704,9 +1622,6 @@ class Control final {
 
     // Retrieves the current value of a socket option.
     static ::fidl::DecodeResult<GetSockOptResponse> GetSockOpt(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSockOptRequest> params, ::fidl::BytePart response_buffer);
-
-    // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
-    static ::fidl::DecodeResult<IoctlPOSIXResponse> IoctlPOSIX(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlPOSIXRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1918,20 +1833,6 @@ class Control final {
 
     virtual void GetSockOpt(int16_t level, int16_t optname, GetSockOptCompleter::Sync _completer) = 0;
 
-    class IoctlPOSIXCompleterBase : public _Base {
-     public:
-      void Reply(int16_t code, ::fidl::VectorView<uint8_t> out);
-      void Reply(::fidl::BytePart _buffer, int16_t code, ::fidl::VectorView<uint8_t> out);
-      void Reply(::fidl::DecodedMessage<IoctlPOSIXResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using IoctlPOSIXCompleter = ::fidl::Completer<IoctlPOSIXCompleterBase>;
-
-    virtual void IoctlPOSIX(int16_t req, ::fidl::VectorView<uint8_t> in, IoctlPOSIXCompleter::Sync _completer) = 0;
-
   };
 
   // Attempts to dispatch the incoming message to a handler function in the server implementation.
@@ -2010,8 +1911,6 @@ class Control final {
     static void SetSockOptResponse(const ::fidl::DecodedMessage<Control::SetSockOptResponse>& _msg);
     static void GetSockOptRequest(const ::fidl::DecodedMessage<Control::GetSockOptRequest>& _msg);
     static void GetSockOptResponse(const ::fidl::DecodedMessage<Control::GetSockOptResponse>& _msg);
-    static void IoctlPOSIXRequest(const ::fidl::DecodedMessage<Control::IoctlPOSIXRequest>& _msg);
-    static void IoctlPOSIXResponse(const ::fidl::DecodedMessage<Control::IoctlPOSIXResponse>& _msg);
   };
 };
 
@@ -2248,23 +2147,5 @@ static_assert(sizeof(::llcpp::fuchsia::posix::socket::Control::GetSockOptRespons
     == ::llcpp::fuchsia::posix::socket::Control::GetSockOptResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::posix::socket::Control::GetSockOptResponse, code) == 16);
 static_assert(offsetof(::llcpp::fuchsia::posix::socket::Control::GetSockOptResponse, optval) == 24);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::posix::socket::Control::IoctlPOSIXRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::posix::socket::Control::IoctlPOSIXRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::posix::socket::Control::IoctlPOSIXRequest)
-    == ::llcpp::fuchsia::posix::socket::Control::IoctlPOSIXRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::posix::socket::Control::IoctlPOSIXRequest, req) == 16);
-static_assert(offsetof(::llcpp::fuchsia::posix::socket::Control::IoctlPOSIXRequest, in) == 24);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::posix::socket::Control::IoctlPOSIXResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::posix::socket::Control::IoctlPOSIXResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::posix::socket::Control::IoctlPOSIXResponse)
-    == ::llcpp::fuchsia::posix::socket::Control::IoctlPOSIXResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::posix::socket::Control::IoctlPOSIXResponse, code) == 16);
-static_assert(offsetof(::llcpp::fuchsia::posix::socket::Control::IoctlPOSIXResponse, out) == 24);
 
 }  // namespace fidl

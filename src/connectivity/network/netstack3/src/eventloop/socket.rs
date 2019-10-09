@@ -112,7 +112,6 @@ impl SocketControlWorkerInner {
             psocket::ControlRequest::GetPeerName { .. } => {}
             psocket::ControlRequest::SetSockOpt { .. } => {}
             psocket::ControlRequest::GetSockOpt { .. } => {}
-            psocket::ControlRequest::IoctlPosix { .. } => {}
         }
     }
 }

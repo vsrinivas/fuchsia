@@ -261,12 +261,6 @@ constexpr uint64_t kControl_GetSockOpt_Ordinal = 0x3685367800000000lu;
 constexpr uint64_t kControl_GetSockOpt_GenOrdinal = 0x66298180e94aa6b4lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockOptRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockOptResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kControl_IoctlPOSIX_Ordinal = 0x50a8f69d00000000lu;
-[[maybe_unused]]
-constexpr uint64_t kControl_IoctlPOSIX_GenOrdinal = 0x47466fcb0021432dlu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlIoctlPOSIXRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlIoctlPOSIXResponseTable;
 
 }  // namespace
 
@@ -1230,75 +1224,6 @@ Control::UnownedResultOf::GetSockOpt Control::Call::GetSockOpt(zx::unowned_chann
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
-template <>
-Control::ResultOf::IoctlPOSIX_Impl<Control::IoctlPOSIXResponse>::IoctlPOSIX_Impl(zx::unowned_channel _client_end, int16_t req, ::fidl::VectorView<uint8_t> in) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<IoctlPOSIXRequest, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
-  IoctlPOSIXRequest _request = {};
-  _request.req = std::move(req);
-  _request.in = std::move(in);
-  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<IoctlPOSIXRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      Control::InPlace::IoctlPOSIX(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
-}
-
-Control::ResultOf::IoctlPOSIX Control::SyncClient::IoctlPOSIX(int16_t req, ::fidl::VectorView<uint8_t> in) {
-  return ResultOf::IoctlPOSIX(zx::unowned_channel(this->channel_), std::move(req), std::move(in));
-}
-
-Control::ResultOf::IoctlPOSIX Control::Call::IoctlPOSIX(zx::unowned_channel _client_end, int16_t req, ::fidl::VectorView<uint8_t> in) {
-  return ResultOf::IoctlPOSIX(std::move(_client_end), std::move(req), std::move(in));
-}
-
-template <>
-Control::UnownedResultOf::IoctlPOSIX_Impl<Control::IoctlPOSIXResponse>::IoctlPOSIX_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t req, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < IoctlPOSIXRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<IoctlPOSIXResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
-  IoctlPOSIXRequest _request = {};
-  _request.req = std::move(req);
-  _request.in = std::move(in);
-  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<IoctlPOSIXRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      Control::InPlace::IoctlPOSIX(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
-}
-
-Control::UnownedResultOf::IoctlPOSIX Control::SyncClient::IoctlPOSIX(::fidl::BytePart _request_buffer, int16_t req, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::IoctlPOSIX(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(req), std::move(in), std::move(_response_buffer));
-}
-
-Control::UnownedResultOf::IoctlPOSIX Control::Call::IoctlPOSIX(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t req, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::IoctlPOSIX(std::move(_client_end), std::move(_request_buffer), std::move(req), std::move(in), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<Control::IoctlPOSIXResponse> Control::InPlace::IoctlPOSIX(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlPOSIXRequest> params, ::fidl::BytePart response_buffer) {
-  Control::SetTransactionHeaderFor::IoctlPOSIXRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::IoctlPOSIXResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<IoctlPOSIXRequest, IoctlPOSIXResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Control::IoctlPOSIXResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
 zx_status_t Control::SyncClient::HandleEvents(Control::EventHandlers handlers) {
   return Control::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
 }
@@ -1568,19 +1493,6 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       auto message = result.message.message();
       impl->GetSockOpt(std::move(message->level), std::move(message->optname),
         Interface::GetSockOptCompleter::Sync(txn));
-      return true;
-    }
-    case kControl_IoctlPOSIX_Ordinal:
-    case kControl_IoctlPOSIX_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<IoctlPOSIXRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->IoctlPOSIX(std::move(message->req), std::move(message->in),
-        Interface::IoctlPOSIXCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -2201,54 +2113,6 @@ void Control::Interface::GetSockOptCompleterBase::Reply(::fidl::DecodedMessage<G
 }
 
 
-void Control::Interface::IoctlPOSIXCompleterBase::Reply(int16_t code, ::fidl::VectorView<uint8_t> out) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<IoctlPOSIXResponse, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
-  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
-  IoctlPOSIXResponse _response = {};
-  Control::SetTransactionHeaderFor::IoctlPOSIXResponse(
-      ::fidl::DecodedMessage<IoctlPOSIXResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              IoctlPOSIXResponse::PrimarySize,
-              IoctlPOSIXResponse::PrimarySize)));
-  _response.code = std::move(code);
-  _response.out = std::move(out);
-  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
-                                                                          _kWriteAllocSize));
-  if (_linearize_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  CompleterBase::SendReply(std::move(_linearize_result.message));
-}
-
-void Control::Interface::IoctlPOSIXCompleterBase::Reply(::fidl::BytePart _buffer, int16_t code, ::fidl::VectorView<uint8_t> out) {
-  if (_buffer.capacity() < IoctlPOSIXResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  IoctlPOSIXResponse _response = {};
-  Control::SetTransactionHeaderFor::IoctlPOSIXResponse(
-      ::fidl::DecodedMessage<IoctlPOSIXResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              IoctlPOSIXResponse::PrimarySize,
-              IoctlPOSIXResponse::PrimarySize)));
-  _response.code = std::move(code);
-  _response.out = std::move(out);
-  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  CompleterBase::SendReply(std::move(_linearize_result.message));
-}
-
-void Control::Interface::IoctlPOSIXCompleterBase::Reply(::fidl::DecodedMessage<IoctlPOSIXResponse> params) {
-  Control::SetTransactionHeaderFor::IoctlPOSIXResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
 
 void Control::SetTransactionHeaderFor::CloneRequest(const ::fidl::DecodedMessage<Control::CloneRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
@@ -2384,15 +2248,6 @@ void Control::SetTransactionHeaderFor::GetSockOptRequest(const ::fidl::DecodedMe
 void Control::SetTransactionHeaderFor::GetSockOptResponse(const ::fidl::DecodedMessage<Control::GetSockOptResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
   _msg.message()->_hdr.ordinal = kControl_GetSockOpt_Ordinal;
-}
-
-void Control::SetTransactionHeaderFor::IoctlPOSIXRequest(const ::fidl::DecodedMessage<Control::IoctlPOSIXRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_IoctlPOSIX_Ordinal;
-}
-void Control::SetTransactionHeaderFor::IoctlPOSIXResponse(const ::fidl::DecodedMessage<Control::IoctlPOSIXResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_IoctlPOSIX_Ordinal;
 }
 
 }  // namespace socket

@@ -254,31 +254,6 @@ static void zxsio_wait_end_dgram(fdio_t* io, zx_signals_t signals, uint32_t* _ev
   *_events = events;
 }
 
-static ssize_t zxsio_ioctl(fdio_t* io, uint32_t op, const void* in_buf, size_t in_len,
-                           void* out_buf, size_t out_len) {
-  // Explicitly allocating message buffers to avoid heap allocation.
-  fidl::Buffer<fsocket::Control::IoctlPOSIXRequest> request_buffer;
-  fidl::Buffer<fsocket::Control::IoctlPOSIXResponse> response_buffer;
-  auto result = fdio_get_zxio_socket(io)->control.IoctlPOSIX(
-      request_buffer.view(), static_cast<int16_t>(op),
-      fidl::VectorView(const_cast<uint8_t*>(static_cast<const uint8_t*>(in_buf)), in_len),
-      response_buffer.view());
-  zx_status_t status = result.status();
-  if (status != ZX_OK) {
-    return status;
-  }
-  fsocket::Control::IoctlPOSIXResponse* response = result.Unwrap();
-  if (uint16_t out_code = response->code) {
-    return errno_to_fdio_status(out_code);
-  }
-  auto out = response->out;
-  if (out.count() > out_len) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  memcpy(out_buf, out.data(), out.count());
-  return static_cast<ssize_t>(out.count());
-}
-
 static zx_status_t fdio_socket_shutdown(fdio_t* io, int how) {
   if (!(*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTED)) {
     return ZX_ERR_BAD_STATE;
@@ -293,7 +268,7 @@ static fdio_ops_t fdio_socket_stream_ops = {
     .unwrap = fdio_zxio_unwrap,
     .wait_begin = zxsio_wait_begin_stream,
     .wait_end = zxsio_wait_end_stream,
-    .ioctl = zxsio_ioctl,
+    .ioctl = fdio_default_ioctl,
     .posix_ioctl = zxsio_posix_ioctl_stream,
     .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,
@@ -319,7 +294,7 @@ static fdio_ops_t fdio_socket_dgram_ops = {
     .unwrap = fdio_zxio_unwrap,
     .wait_begin = zxsio_wait_begin_dgram,
     .wait_end = zxsio_wait_end_dgram,
-    .ioctl = zxsio_ioctl,
+    .ioctl = fdio_default_ioctl,
     .posix_ioctl = fdio_default_posix_ioctl,  // not supported
     .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,

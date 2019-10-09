@@ -25,7 +25,6 @@ import (
 // #cgo CFLAGS: -I${SRCDIR}/../../../../garnet/public
 // #include <lib/zxs/protocol.h>
 // #include <netinet/in.h>
-// #include <lib/netstack/c/netconfig.h>
 import "C"
 
 // copyAsBytes exists because of a combination of issues:
@@ -92,16 +91,6 @@ func (v *C.struct_ipv6_mreq) Unmarshal(data []byte) error {
 		return fmt.Errorf("short %T: %d/%d", v, n, size)
 	}
 	return nil
-}
-
-func (v *C.netc_if_info_t) Marshal() []byte {
-	const size = C.sizeof_netc_if_info_t
-
-	b := make([]byte, size)
-	if n := copy(b, (*[size]byte)(unsafe.Pointer(v))[:]); n < size {
-		panic(fmt.Sprintf("short %T: %d/%d", v, n, size))
-	}
-	return b
 }
 
 func (v *C.struct_in_addr) Bytes() []byte {

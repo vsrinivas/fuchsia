@@ -36,9 +36,6 @@ protocol Control {
     /// Retrieves the current value of a socket option.
     // TODO(NET-1699): link to description of supported socket options.
     GetSockOpt(int16 level, int16 optname) -> (int16 code, vector<uint8> optval);
-    /// Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
-    // Not named `Ioctl` to avoid collision with composed protocols.
-    IoctlPOSIX(int16 req, vector<uint8> in) -> (int16 code, vector<uint8> out);
 };
 
 /// Provider implements the POSIX sockets API.

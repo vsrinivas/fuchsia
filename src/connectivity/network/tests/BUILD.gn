@@ -130,13 +130,11 @@ test("netstack_external_network_test_client") {
 test("netstack_fuchsia_c_api_test") {
   sources = [
     "fdio_test.cc",
-    "ioctl_test.cc",
     "util.cc",
     "util.h",
   ]
 
   deps = [
-    "//garnet/public/lib/netstack/c",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/sync",

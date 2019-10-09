@@ -18,7 +18,6 @@ import (
 	"syscall/zx/mxnet"
 	"syscall/zx/zxwait"
 
-	"netstack/fidlconv"
 	"syslog"
 
 	"fidl/fuchsia/io"
@@ -39,7 +38,6 @@ import (
 // #include <fcntl.h>
 // #include <lib/zxs/protocol.h>
 // #include <netinet/in.h>
-// #include <lib/netstack/c/netconfig.h>
 import "C"
 
 const localSignalClosing = zx.SignalUser5
@@ -47,8 +45,6 @@ const localSignalClosing = zx.SignalUser5
 type endpoint struct {
 	wq *waiter.Queue
 	ep tcpip.Endpoint
-
-	ns *Netstack
 
 	mu struct {
 		sync.Mutex
@@ -434,7 +430,7 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}) {
 	}
 }
 
-func newSocket(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, controlService *socket.ControlService) (socket.ControlInterface, error) {
+func newSocket(netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, controlService *socket.ControlService) (socket.ControlInterface, error) {
 	var flags uint32
 	if transProto == tcp.ProtocolNumber {
 		flags |= zx.SocketStream
@@ -455,7 +451,6 @@ func newSocket(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto tc
 		transProto:    transProto,
 		wq:            wq,
 		ep:            ep,
-		ns:            ns,
 		local:         localS,
 		peer:          peerS,
 		loopReadDone:  make(chan struct{}),
@@ -536,62 +531,6 @@ func (ios *endpoint) close(loopDone ...<-chan struct{}) int64 {
 
 	return clones
 }
-
-func (ios *endpoint) buildIfInfos() *C.netc_get_if_info_t {
-	rep := &C.netc_get_if_info_t{}
-
-	ios.ns.mu.Lock()
-	defer ios.ns.mu.Unlock()
-	var index C.uint
-	for nicid, ifs := range ios.ns.mu.ifStates {
-		ifs.mu.Lock()
-		info, err := ifs.toNetInterface2Locked()
-		ifs.mu.Unlock()
-		if err != nil {
-			syslog.Errorf("NIC %d: error getting info: %s", ifs.nicid, err)
-			continue
-		}
-		if info.Addr == fidlconv.ToNetIpAddress(ipv4Loopback) {
-			continue
-		}
-		name := info.Name
-		// leave one byte for the null terminator.
-		if l := len(rep.info[index].name) - 1; len(name) > l {
-			name = name[:l]
-		}
-		// memcpy with a cast to appease the type checker.
-		for i := range name {
-			rep.info[index].name[i] = C.char(name[i])
-		}
-		rep.info[index].index = C.ushort(index + 1)
-		rep.info[index].flags |= C.NETC_IFF_UP
-		rep.info[index].addr.Encode(ipv4.ProtocolNumber, tcpip.FullAddress{NIC: nicid, Addr: fidlconv.ToTCPIPAddress(info.Addr)})
-		rep.info[index].netmask.Encode(ipv4.ProtocolNumber, tcpip.FullAddress{NIC: nicid, Addr: fidlconv.ToTCPIPAddress(info.Netmask)})
-		rep.info[index].broadaddr.Encode(ipv4.ProtocolNumber, tcpip.FullAddress{NIC: nicid, Addr: fidlconv.ToTCPIPAddress(info.Broadaddr)})
-
-		index++
-	}
-	rep.n_info = index
-	return rep
-}
-
-func ioctlNum(kind, family, number uint32) uint32 {
-	return ((kind & 0xF) << 20) | ((family & 0xFF) << 8) | (number & 0xFF)
-}
-
-const (
-	ioctlKindDefault     = 0x0  // IOCTL_KIND_DEFAULT
-	ioctlFamilyNetconfig = 0x26 // IOCTL_FAMILY_NETCONFIG
-)
-
-var (
-	ioctlNetcGetNumIfs   = ioctlNum(ioctlKindDefault, ioctlFamilyNetconfig, 1)
-	ioctlNetcGetIfInfoAt = ioctlNum(ioctlKindDefault, ioctlFamilyNetconfig, 2)
-)
-
-// We remember the interface list from the last time ioctlNetcGetNumIfs was called. This avoids
-// a race condition if the interface list changes between calls to ioctlNetcGetIfInfoAt.
-var lastIfInfo *C.netc_get_if_info_t
 
 func tcpipErrorToCode(err *tcpip.Error) int16 {
 	if err != tcpip.ErrConnectStarted {
@@ -760,12 +699,6 @@ func (s *socketImpl) Ioctl(opcode uint32, maxOut uint64, handles []zx.Handle, in
 	return 0, nil, nil, &zx.Error{Status: zx.ErrNotSupported, Text: "fuchsia.posix.socket.Control"}
 }
 
-func (s *socketImpl) IoctlPosix(req int16, in []uint8) (int16, []uint8, error) {
-	syslog.VLogTf(syslog.DebugVerbosity, "IoctlPosix", "%p", s.endpoint)
-
-	return s.endpoint.Ioctl(req, in)
-}
-
 func (s *socketImpl) Accept(flags int16) (int16, socket.ControlInterface, error) {
 	ep, wq, err := s.endpoint.ep.Accept()
 	// NB: we need to do this before checking the error, or the incoming signal
@@ -795,7 +728,7 @@ func (s *socketImpl) Accept(flags int16) (int16, socket.ControlInterface, error)
 	syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: local=%+v, remote=%+v", s.endpoint, localAddr, remoteAddr)
 
 	{
-		controlInterface, err := newSocket(s.endpoint.ns, s.endpoint.netProto, s.endpoint.transProto, wq, ep, s.controlService)
+		controlInterface, err := newSocket(s.endpoint.netProto, s.endpoint.transProto, wq, ep, s.controlService)
 		return 0, controlInterface, err
 	}
 }
@@ -945,37 +878,6 @@ func (ios *endpoint) GetPeerName() (int16, []uint8, error) {
 		return tcpipErrorToCode(err), nil, nil
 	}
 	return 0, encodeAddr(ios.netProto, addr), nil
-}
-
-func (ios *endpoint) Ioctl(req int16, in []uint8) (int16, []uint8, error) {
-	switch uint32(req) {
-	// TODO(ZX-766): remove when dart/runtime/bin/socket_base_fuchsia.cc uses getifaddrs().
-	case ioctlNetcGetNumIfs:
-		lastIfInfo = ios.buildIfInfos()
-		var b [4]byte
-		binary.LittleEndian.PutUint32(b[:], uint32(lastIfInfo.n_info))
-		return 0, b[:], nil
-
-	// TODO(ZX-766): remove when dart/runtime/bin/socket_base_fuchsia.cc uses getifaddrs().
-	case ioctlNetcGetIfInfoAt:
-		if lastIfInfo == nil {
-			syslog.Infof("ioctlNetcGetIfInfoAt: called before ioctlNetcGetNumIfs")
-			return tcpipErrorToCode(tcpip.ErrInvalidEndpointState), nil, nil
-		}
-		if len(in) != 4 {
-			syslog.Errorf("ioctlNetcGetIfInfoAt: bad input length %d", len(in))
-			return tcpipErrorToCode(tcpip.ErrInvalidOptionValue), nil, nil
-		}
-		requestedIndex := binary.LittleEndian.Uint32(in)
-		if requestedIndex >= uint32(lastIfInfo.n_info) {
-			syslog.Infof("ioctlNetcGetIfInfoAt: index out of range (%d vs %d)", requestedIndex, lastIfInfo.n_info)
-			return tcpipErrorToCode(tcpip.ErrInvalidOptionValue), nil, nil
-		}
-		return 0, lastIfInfo.info[requestedIndex].Marshal(), nil
-
-	default:
-		return 0, nil, fmt.Errorf("opIoctl req=0x%x, in=%x", req, in)
-	}
 }
 
 func decodeAddr(addr []uint8) (tcpip.FullAddress, error) {
