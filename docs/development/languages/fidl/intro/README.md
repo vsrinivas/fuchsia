@@ -8,7 +8,8 @@ This document is a description of the Fuchsia Interface Definition Language
 *   [Wire Format Specification]
 *   [Language Specification]
 *   [Compiler Specification]
-*   [API Readability / Style Guide]
+*   [Style Guide]
+*   [API Rubric]
 *   [Linter to check API Readability / Style]
 *   [C Language Bindings]
 *   [Low-Level C++ Language Bindings]
@@ -22,7 +23,8 @@ This document is a description of the Fuchsia Interface Definition Language
 [Wire Format Specification]: ../reference/wire-format/README.md
 [Language Specification]: ../reference/language.md
 [Compiler Specification]: ../reference/compiler.md
-[API Readability / Style Guide]: ../../../api/fidl.md
+[Style Guide]: ../style.md
+[API Rubric]: ../../../api/fidl.md
 [Linter to Check API Readability / Style]: ../reference/linter.md
 [C Language Bindings]: ../tutorial/tutorial-c.md
 [Low-Level C++ Language Bindings]: ../tutorial/tutorial-llcpp.md
