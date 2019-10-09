@@ -712,8 +712,8 @@ Control::UnownedResultOf::Ioctl Control::Call::Ioctl(zx::unowned_channel _client
 template <>
 Control::ResultOf::Bind_Impl<Control::BindResponse>::Bind_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> addr) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindRequest, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
   BindRequest _request = {};
   _request.addr = std::move(addr);
   auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
@@ -779,8 +779,8 @@ Control::UnownedResultOf::Bind Control::Call::Bind(zx::unowned_channel _client_e
 template <>
 Control::ResultOf::Connect_Impl<Control::ConnectResponse>::Connect_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> addr) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConnectRequest, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
   ConnectRequest _request = {};
   _request.addr = std::move(addr);
   auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
@@ -1935,8 +1935,7 @@ void Control::Interface::AcceptCompleterBase::Reply(::fidl::DecodedMessage<Accep
 
 void Control::Interface::GetSockNameCompleterBase::Reply(int16_t code, ::fidl::VectorView<uint8_t> addr) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetSockNameResponse, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
-  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetSockNameResponse _response = {};
   Control::SetTransactionHeaderFor::GetSockNameResponse(
       ::fidl::DecodedMessage<GetSockNameResponse>(
@@ -1983,8 +1982,7 @@ void Control::Interface::GetSockNameCompleterBase::Reply(::fidl::DecodedMessage<
 
 void Control::Interface::GetPeerNameCompleterBase::Reply(int16_t code, ::fidl::VectorView<uint8_t> addr) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPeerNameResponse, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
-  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetPeerNameResponse _response = {};
   Control::SetTransactionHeaderFor::GetPeerNameResponse(
       ::fidl::DecodedMessage<GetPeerNameResponse>(

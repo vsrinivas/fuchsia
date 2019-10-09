@@ -6,6 +6,14 @@ library fuchsia.posix.socket;
 
 using fuchsia.io;
 
+/// Chosen to match `sizeof(struct sockaddr_storage)`.
+using sockaddr = bytes:128;
+
+/// Chosen to be large enough to hold whatever we might want to cram in it. So long as we support
+/// socket options, we don't have a good sense of what we might want to send as payload.
+//TODO(fxbug.dev/20966): link to description of supported socket options.
+using sockopt = bytes:900;
+
 /// The control plane for a network socket.
 ///
 /// Once a socket has been retrieved from a `Provider`, this interface is then used to further
@@ -19,29 +27,27 @@ protocol Control {
     compose fuchsia.io.Node;
 
     /// Sets the local address used for the socket.
-    Bind(vector<uint8> addr) -> (int16 code);
-    /// Initiates a connection to a network endpoint.
-    Connect(vector<uint8> addr) -> (int16 code);
-    /// Begin listening for new connections from network endpoints. At most `backlog` connections
-    /// will be buffered.
+    Bind(sockaddr addr) -> (int16 code);
+    /// Initiates a connection to a remote address.
+    Connect(sockaddr addr) -> (int16 code);
+    /// Begins listening for new incoming connections. At most `backlog` connections will be
+    /// buffered.
     Listen(int16 backlog) -> (int16 code);
-    /// Accepts an incoming connection from a network endpoint.
+    /// Accepts a buffered incoming connection.
     Accept(int16 flags) -> (int16 code, Control? s);
     /// Retrieves the local socket address.
-    GetSockName() -> (int16 code, vector<uint8> addr);
+    GetSockName() -> (int16 code, sockaddr addr);
     /// Retrieves the remote socket address.
-    GetPeerName() -> (int16 code, vector<uint8> addr);
-    /// Sets a socket option. TODO(NET-1699): link to description of supported socket options.
-    SetSockOpt(int16 level, int16 optname, vector<uint8> optval) -> (int16 code);
-    /// Retrieves the current value of a socket option.
-    // TODO(NET-1699): link to description of supported socket options.
-    GetSockOpt(int16 level, int16 optname) -> (int16 code, vector<uint8> optval);
+    GetPeerName() -> (int16 code, sockaddr addr);
+    /// Sets the value of a socket option.
+    SetSockOpt(int16 level, int16 optname, sockopt optval) -> (int16 code);
+    /// Retrieves the value of a socket option.
+    GetSockOpt(int16 level, int16 optname) -> (int16 code, sockopt optval);
 };
 
 /// Provider implements the POSIX sockets API.
 [Discoverable]
 protocol Provider {
-    /// Requests a socket with the specified parameters. Values for `code` are defined in
-    /// errno.h.
+    /// Requests a socket with the specified parameters. Values for `code` are defined in errno.h.
     Socket(int16 domain, int16 type, int16 protocol) -> (int16 code, Control? s);
 };

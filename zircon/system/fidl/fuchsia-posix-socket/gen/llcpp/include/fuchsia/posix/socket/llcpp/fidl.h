@@ -129,13 +129,11 @@ class Provider final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    // Requests a socket with the specified parameters. Values for `code` are defined in
-    // errno.h.
+    // Requests a socket with the specified parameters. Values for `code` are defined in errno.h.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Socket Socket(int16_t domain, int16_t type, int16_t protocol);
 
-    // Requests a socket with the specified parameters. Values for `code` are defined in
-    // errno.h.
+    // Requests a socket with the specified parameters. Values for `code` are defined in errno.h.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Socket Socket(::fidl::BytePart _request_buffer, int16_t domain, int16_t type, int16_t protocol, ::fidl::BytePart _response_buffer);
 
@@ -148,13 +146,11 @@ class Provider final {
     Call() = delete;
    public:
 
-    // Requests a socket with the specified parameters. Values for `code` are defined in
-    // errno.h.
+    // Requests a socket with the specified parameters. Values for `code` are defined in errno.h.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Socket Socket(zx::unowned_channel _client_end, int16_t domain, int16_t type, int16_t protocol);
 
-    // Requests a socket with the specified parameters. Values for `code` are defined in
-    // errno.h.
+    // Requests a socket with the specified parameters. Values for `code` are defined in errno.h.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Socket Socket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t domain, int16_t type, int16_t protocol, ::fidl::BytePart _response_buffer);
 
@@ -166,8 +162,7 @@ class Provider final {
     InPlace() = delete;
    public:
 
-    // Requests a socket with the specified parameters. Values for `code` are defined in
-    // errno.h.
+    // Requests a socket with the specified parameters. Values for `code` are defined in errno.h.
     static ::fidl::DecodeResult<SocketResponse> Socket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SocketRequest> params, ::fidl::BytePart response_buffer);
 
   };
@@ -435,7 +430,7 @@ class Control final {
     static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlBindRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t MaxOutOfLine = 128;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -463,7 +458,7 @@ class Control final {
     static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlConnectRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t MaxOutOfLine = 128;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -536,7 +531,7 @@ class Control final {
     static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlGetSockNameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t MaxOutOfLine = 128;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -552,7 +547,7 @@ class Control final {
     static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlGetPeerNameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t MaxOutOfLine = 128;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -582,7 +577,7 @@ class Control final {
     static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlSetSockOptRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t MaxOutOfLine = 904;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -598,7 +593,7 @@ class Control final {
     static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlGetSockOptResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t MaxOutOfLine = 904;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -1276,41 +1271,41 @@ class Control final {
     UnownedResultOf::Ioctl Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
 
     // Sets the local address used for the socket.
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Bind Bind(::fidl::VectorView<uint8_t> addr);
 
     // Sets the local address used for the socket.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Bind Bind(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer);
 
-    // Initiates a connection to a network endpoint.
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    // Initiates a connection to a remote address.
+    // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Connect Connect(::fidl::VectorView<uint8_t> addr);
 
-    // Initiates a connection to a network endpoint.
+    // Initiates a connection to a remote address.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Connect Connect(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer);
 
-    // Begin listening for new connections from network endpoints. At most `backlog` connections
-    // will be buffered.
+    // Begins listening for new incoming connections. At most `backlog` connections will be
+    // buffered.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Listen Listen(int16_t backlog);
 
-    // Begin listening for new connections from network endpoints. At most `backlog` connections
-    // will be buffered.
+    // Begins listening for new incoming connections. At most `backlog` connections will be
+    // buffered.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Listen Listen(::fidl::BytePart _request_buffer, int16_t backlog, ::fidl::BytePart _response_buffer);
 
-    // Accepts an incoming connection from a network endpoint.
+    // Accepts a buffered incoming connection.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Accept Accept(int16_t flags);
 
-    // Accepts an incoming connection from a network endpoint.
+    // Accepts a buffered incoming connection.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Accept Accept(::fidl::BytePart _request_buffer, int16_t flags, ::fidl::BytePart _response_buffer);
 
     // Retrieves the local socket address.
-    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
+    // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetSockName GetSockName();
 
     // Retrieves the local socket address.
@@ -1318,26 +1313,26 @@ class Control final {
     UnownedResultOf::GetSockName GetSockName(::fidl::BytePart _response_buffer);
 
     // Retrieves the remote socket address.
-    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
+    // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetPeerName GetPeerName();
 
     // Retrieves the remote socket address.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetPeerName GetPeerName(::fidl::BytePart _response_buffer);
 
-    // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
+    // Sets the value of a socket option.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::SetSockOpt SetSockOpt(int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval);
 
-    // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
+    // Sets the value of a socket option.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetSockOpt SetSockOpt(::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, ::fidl::BytePart _response_buffer);
 
-    // Retrieves the current value of a socket option.
+    // Retrieves the value of a socket option.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::GetSockOpt GetSockOpt(int16_t level, int16_t optname);
 
-    // Retrieves the current value of a socket option.
+    // Retrieves the value of a socket option.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetSockOpt GetSockOpt(::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::BytePart _response_buffer);
 
@@ -1470,41 +1465,41 @@ class Control final {
     static UnownedResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
 
     // Sets the local address used for the socket.
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Bind Bind(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> addr);
 
     // Sets the local address used for the socket.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Bind Bind(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer);
 
-    // Initiates a connection to a network endpoint.
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    // Initiates a connection to a remote address.
+    // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Connect Connect(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> addr);
 
-    // Initiates a connection to a network endpoint.
+    // Initiates a connection to a remote address.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Connect Connect(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer);
 
-    // Begin listening for new connections from network endpoints. At most `backlog` connections
-    // will be buffered.
+    // Begins listening for new incoming connections. At most `backlog` connections will be
+    // buffered.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Listen Listen(zx::unowned_channel _client_end, int16_t backlog);
 
-    // Begin listening for new connections from network endpoints. At most `backlog` connections
-    // will be buffered.
+    // Begins listening for new incoming connections. At most `backlog` connections will be
+    // buffered.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Listen Listen(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t backlog, ::fidl::BytePart _response_buffer);
 
-    // Accepts an incoming connection from a network endpoint.
+    // Accepts a buffered incoming connection.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Accept Accept(zx::unowned_channel _client_end, int16_t flags);
 
-    // Accepts an incoming connection from a network endpoint.
+    // Accepts a buffered incoming connection.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Accept Accept(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t flags, ::fidl::BytePart _response_buffer);
 
     // Retrieves the local socket address.
-    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
+    // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetSockName GetSockName(zx::unowned_channel _client_end);
 
     // Retrieves the local socket address.
@@ -1512,26 +1507,26 @@ class Control final {
     static UnownedResultOf::GetSockName GetSockName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Retrieves the remote socket address.
-    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
+    // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetPeerName GetPeerName(zx::unowned_channel _client_end);
 
     // Retrieves the remote socket address.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetPeerName GetPeerName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
+    // Sets the value of a socket option.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::SetSockOpt SetSockOpt(zx::unowned_channel _client_end, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval);
 
-    // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
+    // Sets the value of a socket option.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetSockOpt SetSockOpt(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, ::fidl::BytePart _response_buffer);
 
-    // Retrieves the current value of a socket option.
+    // Retrieves the value of a socket option.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::GetSockOpt GetSockOpt(zx::unowned_channel _client_end, int16_t level, int16_t optname);
 
-    // Retrieves the current value of a socket option.
+    // Retrieves the value of a socket option.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetSockOpt GetSockOpt(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::BytePart _response_buffer);
 
@@ -1601,14 +1596,14 @@ class Control final {
     // Sets the local address used for the socket.
     static ::fidl::DecodeResult<BindResponse> Bind(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer);
 
-    // Initiates a connection to a network endpoint.
+    // Initiates a connection to a remote address.
     static ::fidl::DecodeResult<ConnectResponse> Connect(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectRequest> params, ::fidl::BytePart response_buffer);
 
-    // Begin listening for new connections from network endpoints. At most `backlog` connections
-    // will be buffered.
+    // Begins listening for new incoming connections. At most `backlog` connections will be
+    // buffered.
     static ::fidl::DecodeResult<ListenResponse> Listen(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ListenRequest> params, ::fidl::BytePart response_buffer);
 
-    // Accepts an incoming connection from a network endpoint.
+    // Accepts a buffered incoming connection.
     static ::fidl::DecodeResult<AcceptResponse> Accept(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AcceptRequest> params, ::fidl::BytePart response_buffer);
 
     // Retrieves the local socket address.
@@ -1617,10 +1612,10 @@ class Control final {
     // Retrieves the remote socket address.
     static ::fidl::DecodeResult<GetPeerNameResponse> GetPeerName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
+    // Sets the value of a socket option.
     static ::fidl::DecodeResult<SetSockOptResponse> SetSockOpt(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetSockOptRequest> params, ::fidl::BytePart response_buffer);
 
-    // Retrieves the current value of a socket option.
+    // Retrieves the value of a socket option.
     static ::fidl::DecodeResult<GetSockOptResponse> GetSockOpt(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSockOptRequest> params, ::fidl::BytePart response_buffer);
 
   };
