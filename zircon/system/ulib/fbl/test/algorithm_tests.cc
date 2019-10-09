@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
-
 #include <limits>
-#include <unittest/unittest.h>
+
+#include <fbl/algorithm.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -16,29 +16,19 @@ T val(const T& x) {
   return x;
 }
 
-bool min_test() {
-  BEGIN_TEST;
-
+TEST(AlgorithmTest, Min) {
   EXPECT_EQ(val(fbl::min(1, 2)), 1);
   EXPECT_EQ(val(fbl::min(2.1, 1.1)), 1.1);
   EXPECT_EQ(val(fbl::min(1u, 1u)), 1u);
-
-  END_TEST;
 }
 
-bool max_test() {
-  BEGIN_TEST;
-
+TEST(AlgorithmTest, Max) {
   EXPECT_EQ(val(fbl::max(1, 2)), 2);
   EXPECT_EQ(val(fbl::max(2.1, 1.1)), 2.1);
   EXPECT_EQ(val(fbl::max(1u, 1u)), 1u);
-
-  END_TEST;
 }
 
-bool clamp_test() {
-  BEGIN_TEST;
-
+TEST(AlgorithmTest, Clamp) {
   EXPECT_EQ(val(fbl::clamp(1, 2, 6)), 2);
   EXPECT_EQ(val(fbl::clamp(2.1, 2.1, 6.1)), 2.1);
   EXPECT_EQ(val(fbl::clamp(3u, 2u, 6u)), 3u);
@@ -48,13 +38,9 @@ bool clamp_test() {
   EXPECT_EQ(val(fbl::clamp(1, 2, 2)), 2);
   EXPECT_EQ(val(fbl::clamp(2, 2, 2)), 2);
   EXPECT_EQ(val(fbl::clamp(3, 2, 2)), 2);
-
-  END_TEST;
 }
 
-bool round_up_test() {
-  BEGIN_TEST;
-
+TEST(AlgorithmTest, RoundUp) {
   EXPECT_EQ(fbl::round_up(0u, 1u), 0u);
   EXPECT_EQ(fbl::round_up(0u, 5u), 0u);
   EXPECT_EQ(fbl::round_up(5u, 5u), 5u);
@@ -80,13 +66,9 @@ bool round_up_test() {
 
   EXPECT_EQ(fbl::round_up(2U, large_int), large_int);
   EXPECT_EQ(fbl::round_up(2LLU, large_int), large_int);
-
-  END_TEST;
 }
 
-bool round_down_test() {
-  BEGIN_TEST;
-
+TEST(AlgorithmTest, RoundDown) {
   EXPECT_EQ(fbl::round_down(0u, 1u), 0u);
   EXPECT_EQ(fbl::round_down(0u, 5u), 0u);
   EXPECT_EQ(fbl::round_down(5u, 5u), 5u);
@@ -114,14 +96,10 @@ bool round_down_test() {
 
   EXPECT_EQ(fbl::round_down(2U, large_int), 0);
   EXPECT_EQ(fbl::round_down(2LLU, large_int), 0);
-
-  END_TEST;
 }
 
 template <typename T>
-bool is_pow2_test() {
-  BEGIN_TEST;
-
+void IsPowerOfTwo() {
   T val = 0;
   EXPECT_FALSE(fbl::is_pow2<T>(val));
   EXPECT_FALSE(fbl::is_pow2<T>(static_cast<T>(val - 1)));
@@ -131,12 +109,19 @@ bool is_pow2_test() {
     EXPECT_FALSE(fbl::is_pow2<T>(static_cast<T>(val - 5u)));
     EXPECT_FALSE(fbl::is_pow2<T>(static_cast<T>(val + 5u)));
   }
-
-  END_TEST;
 }
+// TODO(38140) : Get rid of this macro when there is a better way to expand templated tests.
+#define IS_POW2_TEST(_type) \
+  TEST(AlgorithmTest, IsPow2_##_type) { ASSERT_NO_FAILURES(IsPowerOfTwo<_type>()); }
 
-bool max_element_test() {
-  BEGIN_TEST;
+IS_POW2_TEST(uint8_t)
+IS_POW2_TEST(uint16_t)
+IS_POW2_TEST(uint32_t)
+IS_POW2_TEST(uint64_t)
+IS_POW2_TEST(size_t)
+#undef IS_POW2_TEST
+
+TEST(AlgorithmTest, MaxElement) {
   int* null = nullptr;
   EXPECT_EQ(fbl::max_element(null, null), null);
 
@@ -148,31 +133,25 @@ bool max_element_test() {
   int* first = values;
   int* last = values + count;
   EXPECT_EQ(fbl::max_element(first, last), values + 2);
-
-  END_TEST;
 }
 
-bool max_compare(int a, int b) { return a > b; }
+bool MaxCompare(int a, int b) { return a > b; }
 
-bool max_element_compare_test() {
-  BEGIN_TEST;
+TEST(AlgorithmTest, MaxElementCompare) {
   int* null = nullptr;
-  EXPECT_EQ(fbl::max_element(null, null, max_compare), null);
+  EXPECT_EQ(fbl::max_element(null, null, MaxCompare), null);
 
   int value = 5;
-  EXPECT_EQ(fbl::max_element(&value, &value, max_compare), &value);
+  EXPECT_EQ(fbl::max_element(&value, &value, MaxCompare), &value);
 
   int values[] = {1, 3, 7, -2, 5, 7};
   constexpr size_t count = fbl::count_of(values);
   int* first = values;
   int* last = values + count;
-  EXPECT_EQ(fbl::max_element(first, last, max_compare), values + 2);
-
-  END_TEST;
+  EXPECT_EQ(fbl::max_element(first, last, MaxCompare), values + 2);
 }
 
-bool min_element_test() {
-  BEGIN_TEST;
+TEST(AlgorithmTest, MinElement) {
   int* null = nullptr;
   EXPECT_EQ(fbl::min_element(null, null), null);
 
@@ -184,32 +163,25 @@ bool min_element_test() {
   int* first = values;
   int* last = values + count;
   EXPECT_EQ(fbl::min_element(first, last), values + 2);
-
-  END_TEST;
 }
 
-bool min_compare(int a, int b) { return a < b; }
+bool MinCompare(int a, int b) { return a < b; }
 
-bool min_element_compare_test() {
-  BEGIN_TEST;
+TEST(AlgorithmTest, MinElementCompare) {
   int* null = nullptr;
-  EXPECT_EQ(fbl::min_element(null, null, min_compare), null);
+  EXPECT_EQ(fbl::min_element(null, null, MinCompare), null);
 
   int value = 5;
-  EXPECT_EQ(fbl::min_element(&value, &value, min_compare), &value);
+  EXPECT_EQ(fbl::min_element(&value, &value, MinCompare), &value);
 
   int values[] = {1, 3, -7, -2, 5, -7};
   constexpr size_t count = fbl::count_of(values);
   int* first = values;
   int* last = values + count;
-  EXPECT_EQ(fbl::min_element(first, last, min_compare), values + 2);
-
-  END_TEST;
+  EXPECT_EQ(fbl::min_element(first, last, MinCompare), values + 2);
 }
 
-bool lower_bound_test() {
-  BEGIN_TEST;
-
+TEST(AlgorithmTest, LowerBound) {
   int* null = nullptr;
   EXPECT_EQ(fbl::lower_bound(null, null, 0), null);
 
@@ -236,17 +208,13 @@ bool lower_bound_test() {
   EXPECT_EQ(*fbl::lower_bound(first, last, 6), 7);
   EXPECT_EQ(*fbl::lower_bound(first, last, 7), 7);
   EXPECT_EQ(fbl::lower_bound(first, last, 8), last);
-
-  END_TEST;
 }
 
 struct LessThan {
   bool operator()(const int& lhs, const int& rhs) { return lhs < rhs; }
 };
 
-bool lower_bound_compare_test() {
-  BEGIN_TEST;
-
+TEST(AlgorithmTest, LowerBoundCompare) {
   LessThan lessThan;
 
   int* null = nullptr;
@@ -275,27 +243,6 @@ bool lower_bound_compare_test() {
   EXPECT_EQ(*fbl::lower_bound(first, last, 6, lessThan), 7);
   EXPECT_EQ(*fbl::lower_bound(first, last, 7, lessThan), 7);
   EXPECT_EQ(fbl::lower_bound(first, last, 8, lessThan), last);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(algorithm_tests)
-RUN_NAMED_TEST("min test", min_test)
-RUN_NAMED_TEST("max test", max_test)
-RUN_NAMED_TEST("clamp test", clamp_test)
-RUN_NAMED_TEST("round_up test", round_up_test)
-RUN_NAMED_TEST("round_down test", round_down_test)
-RUN_NAMED_TEST("is_pow2<uint8_t>", is_pow2_test<uint8_t>)
-RUN_NAMED_TEST("is_pow2<uint16_t>", is_pow2_test<uint16_t>)
-RUN_NAMED_TEST("is_pow2<uint32_t>", is_pow2_test<uint32_t>)
-RUN_NAMED_TEST("is_pow2<uint64_t>", is_pow2_test<uint64_t>)
-RUN_NAMED_TEST("is_pow2<size_t>", is_pow2_test<size_t>)
-RUN_NAMED_TEST("max_element test", max_element_test)
-RUN_NAMED_TEST("max_element_compare test", max_element_compare_test)
-RUN_NAMED_TEST("min_element test", min_element_test)
-RUN_NAMED_TEST("min_element_compare test", min_element_compare_test)
-RUN_NAMED_TEST("lower_bound test", lower_bound_test)
-RUN_NAMED_TEST("lower_bound_compare test", lower_bound_compare_test)
-END_TEST_CASE(algorithm_tests)
