@@ -2,9 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("bin") {
+group("examples") {
   deps = [
-    "simple_browser",
+    "hello_experiences",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":dart_unittests",
   ]
 }
 
@@ -12,6 +20,6 @@ group("dart_unittests") {
   testonly = true
 
   deps = [
-    "simple_browser:simple_browser_unittests($host_toolchain)",
+    "hello_experiences:hello_experiences_unittests($host_toolchain)",
   ]
 }

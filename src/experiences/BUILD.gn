@@ -6,6 +6,7 @@ group("experiences") {
   testonly = true
   public_deps = [
     "bin",
+    "examples",
     "session_shells",
     "settings",
     "story_shells",
@@ -15,6 +16,7 @@ group("experiences") {
 # All of the tests to run for the experiences repo
 group("tests") {
   testonly = true
+
   public_deps = [
     ":dart_unittests",
   ]
@@ -25,6 +27,7 @@ group("dart_unittests") {
   testonly = true
   public_deps = [
     "bin:dart_unittests",
+    "examples:dart_unittests",
     "session_shells:dart_unittests",
     "settings:dart_unittests",
     "story_shells:dart_unittests",
