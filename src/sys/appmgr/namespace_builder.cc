@@ -29,6 +29,9 @@ constexpr char kBlockedDataName[] = "data";
 constexpr char kGlobalDataAllowlist[] =
     "/pkgfs/packages/config-data/0/data/appmgr/allowlist/global_data.txt";
 
+constexpr char kDeprecatedShellAllowlist[] =
+    "/pkgfs/packages/config-data/0/data/appmgr/allowlist/deprecated_shell.txt";
+
 NamespaceBuilder::~NamespaceBuilder() = default;
 
 void NamespaceBuilder::AddFlatNamespace(fuchsia::sys::FlatNamespacePtr ns) {
@@ -136,29 +139,31 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
   for (const auto& feature : sandbox.features()) {
     if (feature == "build-info") {
       PushDirectoryFromPathAs("/pkgfs/packages/build-info/0/data", "/config/build-info");
-    } else if (feature == "root-ssl-certificates" || feature == "deprecated-shell") {
-      // "deprecated-shell" implies "root-ssl-certificates"
+    } else if (feature == "root-ssl-certificates") {
       PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data", "/config/ssl");
-
-      if (feature == "deprecated-shell") {
-        // TODO(abarth): These permissions should depend on the envionment
-        // in some way so that a shell running at a user-level scope doesn't
-        // have access to all the device drivers and such.
-        PushDirectoryFromPathAs("/pkgfs/packages/shell-commands/0/bin", "/bin");
-        PushDirectoryFromPath("/blob");
-        PushDirectoryFromPath("/boot");
-        // Note that if the 'isolated-persistent-storage' feature is present,
-        // this is a no-op since it has handled first above.
-        // PushDirectoryFromPath does not override existing directories.
-        PushDirectoryFromPath("/data");
-        PushDirectoryFromPath("/dev");
-        AddHub(hub_directory_factory);
-        PushDirectoryFromPath("/install");
-        PushDirectoryFromPath("/pkgfs");
-        PushDirectoryFromPath("/system");
-        PushDirectoryFromPath("/tmp");
-        PushDirectoryFromPath("/volume");
+    } else if (feature == "deprecated-shell") {
+      Allowlist deprecated_shell_allowlist(kDeprecatedShellAllowlist);
+      if (!deprecated_shell_allowlist.IsAllowed(ns_id)) {
+        FXL_LOG(INFO) << "Component " << ns_id
+                      << " is not allowed to use deprecated-shell. "
+                      << "This will be blocked in the near future. "
+                      << "go/ambient-computing-not-ambient-capabilities";
       }
+      PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data", "/config/ssl");
+      PushDirectoryFromPathAs("/pkgfs/packages/shell-commands/0/bin", "/bin");
+      PushDirectoryFromPath("/blob");
+      PushDirectoryFromPath("/boot");
+      // Note that if the 'isolated-persistent-storage' feature is present,
+      // this is a no-op since it has handled first above.
+      // PushDirectoryFromPath does not override existing directories.
+      PushDirectoryFromPath("/data");
+      PushDirectoryFromPath("/dev");
+      AddHub(hub_directory_factory);
+      PushDirectoryFromPath("/install");
+      PushDirectoryFromPath("/pkgfs");
+      PushDirectoryFromPath("/system");
+      PushDirectoryFromPath("/tmp");
+      PushDirectoryFromPath("/volume");
     } else if (feature == "shell-commands") {
       PushDirectoryFromPathAs("/pkgfs/packages/shell-commands/0/bin", "/bin");
     } else if (feature == "system-temp") {

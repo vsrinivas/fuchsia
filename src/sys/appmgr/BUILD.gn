@@ -195,6 +195,16 @@ config_data("appmgr_global_data_allowlist") {
   ]
 }
 
+config_data("appmgr_deprecated_shell_allowlist") {
+  for_pkg = "appmgr"
+  sources = [
+    "deprecated_shell_allowlist.txt",
+  ]
+  outputs = [
+    "allowlist/deprecated_shell.txt",
+  ]
+}
+
 group("unittests") {
   testonly = true
   public_deps = [
