@@ -404,7 +404,7 @@ static zx_status_t hci_open_channel(hci_t* hci, zx_handle_t* in_channel, zx_hand
   if (!hci->read_thread_running) {
     hci_build_read_wait_items_locked(hci);
     thrd_t read_thread;
-    thrd_create_with_name(&read_thread, hci_read_thread, hci, "bt_usb_read_thread");
+    thrd_create_with_name(&read_thread, hci_read_thread, hci, "bt_uart_read_thread");
     hci->read_thread_running = true;
     thrd_detach(read_thread);
   } else {
