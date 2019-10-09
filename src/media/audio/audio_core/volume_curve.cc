@@ -55,24 +55,24 @@ fit::result<VolumeCurve, VolumeCurve::Error> VolumeCurve::FromMappings(
 
   if (mappings.front().volume != fuchsia::media::audio::MIN_VOLUME ||
       mappings.back().volume != fuchsia::media::audio::MAX_VOLUME) {
-    return fit::error<Error>(kDomain0to1NotCovered);
+    return fit::error(kDomain0to1NotCovered);
   }
 
   if (mappings.back().gain_dbfs != Gain::kUnityGainDb) {
-    return fit::error<Error>(kRange0NotCovered);
+    return fit::error(kRange0NotCovered);
   }
 
   for (size_t i = 1; i < mappings.size(); ++i) {
     if (mappings[i - 1].volume >= mappings[i].volume) {
-      return fit::error<Error>(kNonIncreasingDomainIllegal);
+      return fit::error(kNonIncreasingDomainIllegal);
     }
 
     if (mappings[i - 1].gain_dbfs >= mappings[i].gain_dbfs) {
-      return fit::error<Error>(kNonIncreasingRangeIllegal);
+      return fit::error(kNonIncreasingRangeIllegal);
     }
   }
 
-  return fit::ok<VolumeCurve>(VolumeCurve(std::move(mappings)));
+  return fit::ok(VolumeCurve(std::move(mappings)));
 }
 
 VolumeCurve::VolumeCurve(std::vector<VolumeMapping> mappings) : mappings_(std::move(mappings)) {}
