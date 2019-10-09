@@ -235,16 +235,21 @@ The set of currently known features are as follows:
   for the device. These certificates are provided in the `/config/ssl` directory
   in the package's namespace.
 
-- `shell`, which requests access to the resources appropriate for an interactive
-  command line. Typically, shells are granted access to all the resources
-  available in the current environment. The `shell` feature also implies the
-  `root-ssl-certificates` feature.
+- `hub`, which requests access to the [Hub directory](/docs/the-book/hub.md)
+  scoped to the component instance's realm.
+
+- `deprecated-shell`, which requests access to the resources appropriate for an
+  interactive command line. Typically, shells are granted access to all the
+  resources available in the current environment. The `deprecated-shell` feature
+  also implies the `root-ssl-certificates` and `hub` features.
 
 - `shell-commands`, which requests access to the currently available shell
   binaries (note: not "installed", but "available"). Binaries are mapped into
   `/bin` in the requesters namespace. Running these commands may require the
   `fuchsia.process.Resolver` and `fuchsia.process.Launcher` services also
   be requested.
+  As the name suggests, this feature is to be removed. Current uses of this
+  feature are explicitly allowlisted, and new uses are discouraged.
 
 - `system-temp`, which requests access to the system temp directory, located at
   `/tmp` in the package's namespace. (Future work will likely remove access to
