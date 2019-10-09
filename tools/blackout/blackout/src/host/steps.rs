@@ -5,7 +5,7 @@
 //! test steps
 
 use {
-    crate::{Error, RebootError},
+    crate::{Error, RebootError, Seed},
     std::{
         fs::OpenOptions,
         io::Write,
@@ -64,12 +64,12 @@ trait Runner {
 struct CmdRunner {
     target: String,
     bin: String,
-    seed: u32,
+    seed: Seed,
     block_device: String,
 }
 
 impl CmdRunner {
-    fn new(target: &str, bin: &str, seed: u32, block_device: &str) -> Box<dyn Runner> {
+    fn new(target: &str, bin: &str, seed: Seed, block_device: &str) -> Box<dyn Runner> {
         Box::new(CmdRunner {
             target: target.into(),
             bin: bin.into(),
@@ -128,7 +128,7 @@ pub struct SetupStep {
 
 impl SetupStep {
     /// Create a new operation step.
-    pub fn new(target: &str, bin: &str, seed: u32, block_device: &str) -> Self {
+    pub fn new(target: &str, bin: &str, seed: Seed, block_device: &str) -> Self {
         Self { runner: CmdRunner::new(target, bin, seed, block_device) }
     }
 }
@@ -149,7 +149,13 @@ pub struct LoadStep {
 
 impl LoadStep {
     /// Create a new test step.
-    pub fn new(target: &str, bin: &str, seed: u32, block_device: &str, duration: Duration) -> Self {
+    pub fn new(
+        target: &str,
+        bin: &str,
+        seed: Seed,
+        block_device: &str,
+        duration: Duration,
+    ) -> Self {
         Self { runner: CmdRunner::new(target, bin, seed, block_device), duration }
     }
 }
@@ -179,7 +185,7 @@ pub struct OperationStep {
 
 impl OperationStep {
     /// Create a new operation step.
-    pub fn new(target: &str, bin: &str, seed: u32, block_device: &str) -> Self {
+    pub fn new(target: &str, bin: &str, seed: Seed, block_device: &str) -> Self {
         Self { runner: CmdRunner::new(target, bin, seed, block_device) }
     }
 }
@@ -233,7 +239,7 @@ impl VerifyStep {
     pub fn new(
         target: &str,
         bin: &str,
-        seed: u32,
+        seed: Seed,
         block_device: &str,
         num_retries: u32,
         retry_timeout: Duration,
