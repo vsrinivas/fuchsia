@@ -145,14 +145,14 @@ async fn do_add<T: Write>(
     printer: &mut Printer<T>,
 ) -> Result<(), Error> {
     match cmd {
-        Add::Wan { wan, ports, vlan } => {
+        Add::Wan { name, ports, vlan } => {
             let response = match vlan {
                 None => router_admin
-                    .create_wan(&wan, 0, &mut ports.into_iter())
+                    .create_wan(&name, 0, &mut ports.into_iter())
                     .await
                     .context("error getting response")?,
                 Some(vlan) => router_admin
-                    .create_wan(&wan, vlan, &mut ports.into_iter())
+                    .create_wan(&name, vlan, &mut ports.into_iter())
                     .await
                     .context("error getting response")?,
             };
@@ -160,14 +160,14 @@ async fn do_add<T: Write>(
             Ok(())
         }
 
-        Add::Lan { lan, vlan, ports } => {
+        Add::Lan { name, vlan, ports } => {
             let response = match vlan {
                 None => router_admin
-                    .create_lan(&lan, 0, &mut ports.into_iter())
+                    .create_lan(&name, 0, &mut ports.into_iter())
                     .await
                     .context("error getting response")?,
                 Some(vlan) => router_admin
-                    .create_lan(&lan, vlan, &mut ports.into_iter())
+                    .create_lan(&name, vlan, &mut ports.into_iter())
                     .await
                     .context("error getting response")?,
             };
@@ -207,26 +207,26 @@ async fn do_show<T: Write>(
     printer: &mut Printer<T>,
 ) -> Result<(), Error> {
     match cmd {
-        Show::Wan { mut wan } => {
+        Show::Wan { mut wan_id } => {
             let response =
-                router_state.get_wan(&mut wan).await.context("error getting response")?;
+                router_state.get_wan(&mut wan_id).await.context("error getting response")?;
             printer.println(format!("{:?}", response));
             Ok(())
         }
 
-        Show::Lan { mut lan } => {
+        Show::Lan { mut lan_id } => {
             let response =
-                router_state.get_lan(&mut lan).await.context("error getting response")?;
+                router_state.get_lan(&mut lan_id).await.context("error getting response")?;
             printer.println(format!("{:?}", response));
             Ok(())
         }
 
-        Show::WanConfig { mut wan } => {
+        Show::WanConfig { mut wan_id } => {
             let response = router_state
-                .get_wan_properties(&mut wan)
+                .get_wan_properties(&mut wan_id)
                 .await
                 .context("error getting response")?;
-            printer.println(format!("{:?} Response: {:?}", wan, response));
+            printer.println(format!("{:?} Response: {:?}", wan_id, response));
             Ok(())
         }
 
@@ -236,12 +236,12 @@ async fn do_show<T: Write>(
             Ok(())
         }
 
-        Show::LanConfig { mut lan } => {
+        Show::LanConfig { mut lan_id } => {
             let response = router_state
-                .get_lan_properties(&mut lan)
+                .get_lan_properties(&mut lan_id)
                 .await
                 .context("error getting response")?;
-            printer.println(format!("{:?} Response: {:?}", lan, response));
+            printer.println(format!("{:?} Response: {:?}", lan_id, response));
             Ok(())
         }
 
@@ -250,13 +250,13 @@ async fn do_show<T: Write>(
             Ok(())
         }
 
-        Show::DhcpConfig { lan } => {
-            printer.println(format!("{:?}", lan));
+        Show::DhcpConfig { lan_id } => {
+            printer.println(format!("{:?}", lan_id));
             Ok(())
         }
 
-        Show::ForwardState { lan } => {
-            printer.println(format!("{:?}", lan));
+        Show::ForwardState { lan_id } => {
+            printer.println(format!("{:?}", lan_id));
             Ok(())
         }
 
@@ -293,17 +293,17 @@ async fn do_show<T: Write>(
             Ok(())
         }
 
-        Show::WanPorts { mut wan } => {
+        Show::WanPorts { mut wan_id } => {
             let mut response =
-                router_state.get_wan_ports(&mut wan).await.context("error getting response")?;
+                router_state.get_wan_ports(&mut wan_id).await.context("error getting response")?;
             response.0.sort();
             printer.println(format!("Response: {:?}", response));
             Ok(())
         }
 
-        Show::LanPorts { mut lan } => {
+        Show::LanPorts { mut lan_id } => {
             let mut response =
-                router_state.get_lan_ports(&mut lan).await.context("error getting response")?;
+                router_state.get_lan_ports(&mut lan_id).await.context("error getting response")?;
             response.0.sort();
             printer.println(format!("Response: {:?}", response));
             Ok(())
@@ -663,8 +663,8 @@ async fn do_set<T: Write>(
             Ok(())
         }
 
-        Set::DhcpConfig { lan, dhcp_config } => {
-            printer.println(format!("Not Implemented {:?}, {:?}", lan, dhcp_config));
+        Set::DhcpConfig { lan_id, dhcp_config } => {
+            printer.println(format!("Not Implemented {:?}, {:?}", lan_id, dhcp_config));
             Ok(())
         }
 
@@ -673,8 +673,8 @@ async fn do_set<T: Write>(
             Ok(())
         }
 
-        Set::DnsForwarder { lan, enabled } => {
-            printer.println(format!("Not Implemented {:?}, {:?}", lan, enabled));
+        Set::DnsForwarder { lan_id, enabled } => {
+            printer.println(format!("Not Implemented {:?}, {:?}", lan_id, enabled));
             Ok(())
         }
 

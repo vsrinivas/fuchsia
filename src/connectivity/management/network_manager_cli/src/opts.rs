@@ -120,7 +120,7 @@ pub enum Add {
     /// Add a WAN interface
     Wan {
         #[structopt(raw(required = "true"))]
-        wan: String,
+        name: String,
         #[structopt(short, long, raw(required = "true"))]
         ports: Vec<u32>,
         #[structopt(short, long)]
@@ -130,7 +130,7 @@ pub enum Add {
     /// Add a LAN interface
     Lan {
         #[structopt(raw(required = "true"))]
-        lan: String,
+        name: String,
         #[structopt(short, long, raw(required = "true"))]
         ports: Vec<u32>,
         #[structopt(short, long)]
@@ -162,25 +162,25 @@ pub enum Show {
     /// Show a WAN interface
     Wan {
         #[structopt(parse(try_from_str = "construct_id"), raw(required = "true"))]
-        wan: Id,
+        wan_id: Id,
     },
     #[structopt(name = "lan")]
     /// Show a LAN interface
     Lan {
         #[structopt(parse(try_from_str = "construct_id"), raw(required = "true"))]
-        lan: Id,
+        lan_id: Id,
     },
     #[structopt(name = "wanconfig")]
     /// Show configuration for a WAN interface
     WanConfig {
         #[structopt(parse(try_from_str = "construct_id"), raw(required = "true"))]
-        wan: Id,
+        wan_id: Id,
     },
     #[structopt(name = "lanconfig")]
     /// Show configuration for a LAN interface
     LanConfig {
         #[structopt(parse(try_from_str = "construct_id"), raw(required = "true"))]
-        lan: Id,
+        lan_id: Id,
     },
     #[structopt(name = "wans")]
     /// List all WAN interfaces
@@ -192,7 +192,7 @@ pub enum Show {
     /// List all ports for a WAN interface
     WanPorts {
         #[structopt(parse(try_from_str = "construct_id"), raw(required = "true"))]
-        wan: Id,
+        wan_id: Id,
     },
 
     #[structopt(name = "filterstate")]
@@ -203,7 +203,7 @@ pub enum Show {
     /// List all ports for a LAN interface
     LanPorts {
         #[structopt(parse(try_from_str = "construct_id"), raw(required = "true"))]
-        lan: Id,
+        lan_id: Id,
     },
     #[structopt(name = "ports")]
     /// List all the ports
@@ -228,14 +228,14 @@ pub enum Show {
     DhcpConfig {
         #[structopt(parse(try_from_str = "construct_id"), raw(required = "true"))]
         /// ID of the target LAN interface
-        lan: Id,
+        lan_id: Id,
     },
     #[structopt(name = "forwardstate")]
     /// Show forward state for a LAN interface
     ForwardState {
         #[structopt(parse(try_from_str = "construct_id"), raw(required = "true"))]
         /// ID of the target WAN interface
-        lan: Id,
+        lan_id: Id,
     },
 }
 
@@ -346,7 +346,7 @@ pub enum Set {
     /// Configure DHCP settings for a LAN interface
     DhcpConfig {
         #[structopt(parse(try_from_str = "construct_id"), raw(required = "true"))]
-        lan: Id,
+        lan_id: Id,
         dhcp_config: String,
     },
 
@@ -361,7 +361,7 @@ pub enum Set {
     /// Configure DNS forwarder for a LAN interface
     DnsForwarder {
         #[structopt(parse(try_from_str = "construct_id"), raw(required = "true"))]
-        lan: Id,
+        lan_id: Id,
         enabled: bool,
     },
 
