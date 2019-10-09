@@ -22,6 +22,7 @@
 #include <zircon/syscalls/iommu.h>
 #include <zircon/syscalls/object.h>
 
+#include <algorithm>
 #include <atomic>
 #include <thread>
 
@@ -1285,6 +1286,50 @@ TEST(VmoTestCase, ResizeHazard) {
 
   EXPECT_OK(zx_handle_close(vmo));
   EXPECT_OK(zx_vmar_unmap(zx_vmar_root_self(), ptr_rw, size), "unmap");
+}
+
+TEST(VmoTestCase, CompressedContiguous) {
+  if (!get_root_resource) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
+  zx::unowned_resource root_res(get_root_resource());
+
+  zx::iommu iommu;
+  zx::bti bti;
+
+  zx_iommu_desc_dummy_t desc;
+  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
+
+  EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+
+  zx_info_bti_t bti_info;
+  EXPECT_OK(bti.get_info(ZX_INFO_BTI, &bti_info, sizeof(bti_info), nullptr, nullptr));
+
+  constexpr uint32_t kMaxAddrs = 2;
+  // If the minimum contiguity is too high this won't be an effective test, but
+  // the code should still work.
+  uint64_t size = std::min(128ul * 1024 * 1024, bti_info.minimum_contiguity * kMaxAddrs);
+
+  zx::vmo contig_vmo;
+  EXPECT_OK(zx::vmo::create_contiguous(bti, size, 0, &contig_vmo));
+
+  zx_paddr_t paddrs[kMaxAddrs];
+
+  uint64_t num_addrs =
+      fbl::round_up(size, bti_info.minimum_contiguity) / bti_info.minimum_contiguity;
+
+  zx::pmt pmt;
+  EXPECT_OK(
+      bti.pin(ZX_BTI_COMPRESS | ZX_BTI_PERM_READ, contig_vmo, 0, size, paddrs, num_addrs, &pmt));
+  pmt.unpin();
+
+  if (num_addrs > 1) {
+    zx::pmt pmt2;
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+              bti.pin(ZX_BTI_COMPRESS | ZX_BTI_PERM_READ, contig_vmo, 0, size, paddrs, 1, &pmt2));
+  }
 }
 
 }  // namespace

@@ -238,10 +238,24 @@ zx_status_t PinnedMemoryTokenDispatcher::EncodeAddrs(bool compress_results, bool
   const fbl::Array<dev_vaddr_t>& pmo_addrs = mapped_addrs_;
   const size_t found_addrs = pmo_addrs.size();
   if (compress_results) {
-    if (found_addrs != mapped_addrs_count) {
-      return ZX_ERR_INVALID_ARGS;
+    if (pinned_vmo_.vmo()->is_contiguous()) {
+      const size_t min_contig = bti_->minimum_contiguity();
+      DEBUG_ASSERT(fbl::is_pow2(min_contig));
+      DEBUG_ASSERT(found_addrs == 1);
+
+      uint64_t num_addrs = ROUNDUP(pinned_vmo_.size(), min_contig) / min_contig;
+      if (num_addrs != mapped_addrs_count) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      for (uint64_t i = 0; i < num_addrs; i++) {
+        mapped_addrs[i] = pmo_addrs[0] + min_contig * i;
+      }
+    } else {
+      if (found_addrs != mapped_addrs_count) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      memcpy(mapped_addrs, pmo_addrs.data(), found_addrs * sizeof(dev_vaddr_t));
     }
-    memcpy(mapped_addrs, pmo_addrs.data(), found_addrs * sizeof(dev_vaddr_t));
   } else if (contiguous) {
     if (mapped_addrs_count != 1 || !pinned_vmo_.vmo()->is_contiguous()) {
       return ZX_ERR_INVALID_ARGS;
