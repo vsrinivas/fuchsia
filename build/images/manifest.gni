@@ -115,6 +115,10 @@ template("generate_response_file") {
 #     [string] Comma-separated list of Zircon manifest groups to include
 #     in `bootfs_manifest`.
 #
+#   bootfs_allowlist (optional with `bootfs_manifest`)
+#     [list of strings] Comma-separated list of files to include in the bootfs
+#     manifest created. This overrides the option set by `bootfs_zircon_groups`
+#
 #   output_name (optional, default: target_name)
 #     [string] Root name of the output manifest file.
 #
@@ -211,24 +215,35 @@ template("generate_manifest") {
           defined(invoker.bootfs_zircon_groups),
           "generate_manifest with bootfs_manifest needs bootfs_zircon_groups")
       outputs += [ invoker.bootfs_manifest ]
-      manifests += [
-        {
-          output = invoker.bootfs_manifest
-          groups = invoker.bootfs_zircon_groups
-        },
-      ]
 
-      # Elide both devhost variants from the Zircon input manifest.
+      # Omit both devhost variants from the Zircon input manifest.
       # Each variant will be included if there is a driver that needs it.
       # That way we can tell whether both variants are actually in use.
       response_file_contents += [
         "--exclude=bin/devhost",
         "--exclude=bin/devhost.asan",
 
-        # Elide the empty file deposited by the Zircon build, since
+        # Omit the empty file deposited by the Zircon build, since
         # we will add our own.
         "--exclude=config/devmgr",
       ]
+
+      if (defined(invoker.bootfs_allowlist) && invoker.bootfs_allowlist != []) {
+        not_needed(invoker, [ "bootfs_zircon_groups" ])
+        response_file_contents += [ "--output=" +
+                                    rebase_path(invoker.bootfs_manifest,
+                                                root_build_dir) ]
+        foreach(binary, invoker.bootfs_allowlist) {
+          response_file_contents += [ "--binary=" + binary ]
+        }
+      } else {
+        manifests += [
+          {
+            output = invoker.bootfs_manifest
+            groups = invoker.bootfs_zircon_groups
+          },
+        ]
+      }
     }
 
     manifests += [

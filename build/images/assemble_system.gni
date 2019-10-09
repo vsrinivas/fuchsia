@@ -108,6 +108,10 @@ template("assemble_system") {
 
     bootfs_manifest = boot_manifest
     bootfs_zircon_groups = "all"
+    bootfs_allowlist = []
+    if (defined(invoker.bootfs_allowlist)) {
+      bootfs_allowlist = invoker.bootfs_allowlist
+    }
 
     deps = [
       ":pkgsvr_index",

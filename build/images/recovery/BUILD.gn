@@ -6,6 +6,13 @@ import("//build/config/fuchsia/zbi.gni")
 import("//build/images/assemble_system.gni")
 import("//build/images/pkgfs.gni")
 
+declare_args() {
+  # List of binaries to include in the bootfs manifest for recovery. This
+  # overrides the option set by `bootfs_zircon_groups` so that only the requested
+  # binaries are included in the final image.
+  bootfs_allowlist_recovery = []
+}
+
 recovery_packages = [
   "//build/info:build-info",
   "//src/sys/appmgr:appmgr_scheme_config",
@@ -50,6 +57,7 @@ assemble_system("recovery") {
   netboot = true
   devmgr_config = [ "virtcon.disable=true" ]
 
+  bootfs_allowlist = bootfs_allowlist_recovery
   metadata = {
     test_runtime_deps = [ "$root_out_dir/${target_name}.zbi" ]
   }
