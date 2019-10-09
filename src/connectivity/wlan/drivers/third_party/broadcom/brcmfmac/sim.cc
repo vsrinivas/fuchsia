@@ -20,6 +20,8 @@
 
 #include <memory>
 
+#include <wifi/wifi-config.h>
+
 #include "bus.h"
 #include "chip.h"
 #include "common.h"
@@ -49,6 +51,25 @@ static const struct brcmf_bus_ops brcmf_sim_bus_ops = {
     .get_bootloader_macaddr =
         [](brcmf_bus* bus, uint8_t* mac_addr) {
           return BUS_OP(bus)->BusGetBootloaderMacAddr(mac_addr);
+        },
+    .open_firmware_file = [](zx_device_t* zxdev, const char* name, zx_handle_t* out_handle,
+                             size_t* size) { return ZX_ERR_NOT_SUPPORTED; },
+    .get_wifi_metadata =
+        [](zx_device_t* zx_dev, void* data, size_t exp_size, size_t* actual) {
+          wifi_config_t wifi_config = {
+              .oob_irq_mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
+              .iovar_table =
+                  {
+                      {IOVAR_LIST_END_TYPE, {{0}}, 0},
+                  },
+              .cc_table =
+                  {
+                      {"", 0},
+                  },
+          };
+          memcpy(data, &wifi_config, sizeof(wifi_config));
+          *actual = sizeof(wifi_config);
+          return ZX_OK;
         },
     .device_add =
         [](brcmf_bus* bus, zx_device_t* parent, device_add_args_t* args, zx_device_t** out) {

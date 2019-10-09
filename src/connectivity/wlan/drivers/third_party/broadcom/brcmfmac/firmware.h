@@ -88,5 +88,8 @@ zx_status_t brcmf_fw_get_firmwares(brcmf_pub* drvr, uint16_t flags, const char* 
                                    void (*fw_cb)(brcmf_pub* drvr, zx_status_t err,
                                                  const brcmf_firmware* fw, void* nvram_image,
                                                  uint32_t nvram_len));
+zx_status_t request_firmware_nowait(const char* name, brcmf_pub* drvr, void* ctx,
+                                    zx_status_t (*callback)(const struct brcmf_firmware* fw,
+                                                            void* ctx));
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FIRMWARE_H_

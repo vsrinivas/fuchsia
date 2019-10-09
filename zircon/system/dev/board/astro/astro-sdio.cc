@@ -2,20 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/mmio/mmio.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <hw/reg.h>
 #include <hwreg/bitfields.h>
-#include <lib/mmio/mmio.h>
-#include <soc/aml-s905d2/s905d2-hw.h>
-#include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-common/aml-sd-emmc.h>
+#include <soc/aml-s905d2/s905d2-gpio.h>
+#include <soc/aml-s905d2/s905d2-hw.h>
 #include <wifi/wifi-config.h>
 
-#include "astro.h"
 #include "astro-gpios.h"
+#include "astro.h"
 
 namespace astro {
 
@@ -95,6 +96,23 @@ static aml_sd_emmc_config_t config = {
 
 static const wifi_config_t wifi_config = {
     .oob_irq_mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
+    .iovar_table =
+        {
+            {IOVAR_STR_TYPE, {"ampdu_ba_wsize"}, 32},
+            {IOVAR_CMD_TYPE, {{BRCMF_C_SET_PM}}, 0},
+            {IOVAR_CMD_TYPE, {{BRCMF_C_SET_FAKEFRAG}}, 1},
+            {IOVAR_LIST_END_TYPE, {{0}}, 0},
+        },
+    .cc_table =
+        {
+            {"WW", 0},   {"AU", 922}, {"CA", 900}, {"US", 842}, {"GB", 888}, {"BE", 888},
+            {"BG", 888}, {"CZ", 888}, {"DK", 888}, {"DE", 888}, {"EE", 888}, {"IE", 888},
+            {"GR", 888}, {"ES", 888}, {"FR", 888}, {"HR", 888}, {"IT", 888}, {"CY", 888},
+            {"LV", 888}, {"LT", 888}, {"LU", 888}, {"HU", 888}, {"MT", 888}, {"NL", 888},
+            {"AT", 888}, {"PL", 888}, {"PT", 888}, {"RO", 888}, {"SI", 888}, {"SK", 888},
+            {"FI", 888}, {"SE", 888}, {"JP", 1},   {"KR", 1},   {"TW", 1},   {"IN", 1},
+            {"SG", 1},   {"", 0},
+        },
 };
 
 static const pbus_metadata_t sd_emmc_metadata[] = {
@@ -200,8 +218,7 @@ zx_status_t Astro::SdEmmcConfigurePortB() {
   // Please do not use get_root_resource() in new code. See ZX-1467.
   zx::unowned_resource resource(get_root_resource());
 
-  size_t aligned_size =
-      ROUNDUP((S905D2_GPIO_BASE - kGpioBase) + S905D2_GPIO_LENGTH, PAGE_SIZE);
+  size_t aligned_size = ROUNDUP((S905D2_GPIO_BASE - kGpioBase) + S905D2_GPIO_LENGTH, PAGE_SIZE);
 
   status = ddk::MmioBuffer::Create(kGpioBase, aligned_size, *resource,
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &gpio_base);

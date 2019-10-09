@@ -856,7 +856,7 @@ struct brcmf_dload_data_le {
   uint16_t dload_type;
   uint32_t len;
   uint32_t crc;
-  uint8_t data[1];
+  uint8_t data[0];
 };
 
 /**

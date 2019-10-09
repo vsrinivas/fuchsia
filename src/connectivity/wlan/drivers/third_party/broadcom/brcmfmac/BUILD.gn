@@ -93,6 +93,8 @@ source_set("core") {
     "common.h",
     "core.h",
     "device.h",
+    "feature.h",
+    "firmware.h",
     "fweh.h",
     "fwil.h",
     "fwil_types.h",
@@ -102,6 +104,7 @@ source_set("core") {
   deps = [
     ":debug",
     "//src/connectivity/wlan/lib/common/cpp:common",
+    "//zircon/public/lib/broadcom",
     "//zircon/public/lib/ddk",
     "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
   ]
@@ -186,6 +189,7 @@ source_set("sim") {
     ":core",
     ":debug",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//zircon/public/lib/broadcom",
     "//zircon/public/lib/ddk",
     "//zircon/system/public",
   ]
@@ -232,6 +236,32 @@ if (internal_access) {
         "$root_out_dir/firmware/brcmfmac/{{source_file_part}}",
       ]
     }
+    copy("brcmfmac-clm-copy") {
+      sources = [
+        "firmware/brcmfmac43455-sdio-astro.clm_blob",
+      ]
+      outputs = [
+        "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.clm_blob",
+      ]
+    }
+  } else if (board_name == "sherlock") {
+    copy("brcmfmac-firmware-copy") {
+      sources = [
+        "firmware/brcmfmac43455-sdio.bin",
+        "firmware/brcmfmac43455-sdio.txt",
+      ]
+      outputs = [
+        "$root_out_dir/firmware/brcmfmac/{{source_file_part}}",
+      ]
+    }
+    copy("brcmfmac-clm-copy") {
+      sources = [
+        "firmware/brcmfmac43455-sdio-sherlock.clm_blob",
+      ]
+      outputs = [
+        "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.clm_blob",
+      ]
+    }
   } else {
     copy("brcmfmac-firmware-copy") {
       sources = [
@@ -269,12 +299,29 @@ package("brcmfmac") {
       ":brcmfmac-firmware-copy($shlib_toolchain)",
     ]
     if (board_name == "astro") {
+      deps += [ ":brcmfmac-clm-copy($shlib_toolchain)" ]
       libraries = [
         {
           name = "firmware/brcmfmac/brcmfmac43455-sdio.bin"
         },
         {
           name = "firmware/brcmfmac/brcmfmac43455-sdio.txt"
+        },
+        {
+          name = "firmware/brcmfmac/brcmfmac43455-sdio.clm_blob"
+        },
+      ]
+    } else if (board_name == "sherlock") {
+      deps += [ ":brcmfmac-clm-copy($shlib_toolchain)" ]
+      libraries = [
+        {
+          name = "firmware/brcmfmac/brcmfmac43455-sdio.bin"
+        },
+        {
+          name = "firmware/brcmfmac/brcmfmac43455-sdio.txt"
+        },
+        {
+          name = "firmware/brcmfmac/brcmfmac43455-sdio.clm_blob"
         },
       ]
     } else {

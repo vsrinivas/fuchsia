@@ -39,6 +39,7 @@ executable("lifecycle_test") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:driver_test",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:firmware",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fake_ddk",
   ]
@@ -69,6 +70,7 @@ executable("scan_test") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:driver_test",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:firmware",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fake_ddk",
   ]

@@ -16,8 +16,9 @@
 
 #include "firmware.h"
 
-#include <ddk/device.h>
 #include <zircon/syscalls.h>
+
+#include <ddk/device.h>
 
 #include "common.h"
 #include "core.h"
@@ -432,8 +433,8 @@ struct brcmf_fw {
   const char* nvram_name;
   uint16_t domain_nr;
   uint16_t bus_nr;
-  void (*done)(brcmf_pub* drvr, zx_status_t err, const struct brcmf_firmware* fw,
-               void* nvram_image, uint32_t nvram_len);
+  void (*done)(brcmf_pub* drvr, zx_status_t err, const struct brcmf_firmware* fw, void* nvram_image,
+               uint32_t nvram_len);
 };
 
 static zx_status_t brcmf_fw_request_nvram_done(const struct brcmf_firmware* fw, void* ctx) {
@@ -478,13 +479,14 @@ fail:
   return ZX_ERR_NO_RESOURCES;
 }
 
-zx_status_t request_firmware_nowait(bool b, const char* name, brcmf_pub* drvr, brcmf_fw* ctx,
+zx_status_t request_firmware_nowait(const char* name, brcmf_pub* drvr, void* ctx,
                                     zx_status_t (*callback)(const brcmf_firmware* fw, void* ctx)) {
   zx_status_t result;
   zx_handle_t fw_vmo;
   struct brcmf_firmware fw;
 
-  result = load_firmware(drvr->zxdev, name, &fw_vmo, &fw.size);
+  // Use the bus specific op to access the file
+  result = drvr->bus_if->ops->open_firmware_file(drvr->zxdev, name, &fw_vmo, &fw.size);
   BRCMF_DBG(TEMP, "load_firmware of '%s' -> ret %d, size %ld", name, result, fw.size);
   if (result != ZX_OK) {
     return result;
@@ -524,8 +526,8 @@ static zx_status_t brcmf_fw_request_code_done(const struct brcmf_firmware* fw, v
   }
 
   fwctx->code = fw;
-  result = request_firmware_nowait(true, fwctx->nvram_name, fwctx->drvr, fwctx,
-                                   brcmf_fw_request_nvram_done);
+  result =
+      request_firmware_nowait(fwctx->nvram_name, fwctx->drvr, fwctx, brcmf_fw_request_nvram_done);
 
   /* pass NULL to nvram callback for bcm47xx fallback */
   if (result != ZX_OK) {
@@ -572,7 +574,7 @@ zx_status_t brcmf_fw_get_firmwares_pcie(brcmf_pub* drvr, uint16_t flags, const c
   fwctx->domain_nr = domain_nr;
   fwctx->bus_nr = bus_nr;
 
-  return request_firmware_nowait(true, code, drvr, fwctx, brcmf_fw_request_code_done);
+  return request_firmware_nowait(code, drvr, fwctx, brcmf_fw_request_code_done);
 }
 
 zx_status_t brcmf_fw_get_firmwares(brcmf_pub* drvr, uint16_t flags, const char* code,

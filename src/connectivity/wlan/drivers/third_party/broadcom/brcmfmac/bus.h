@@ -88,6 +88,10 @@ struct brcmf_bus_ops {
   zx_status_t (*get_memdump)(brcmf_bus* bus, void* data, size_t len);
   zx_status_t (*get_fwname)(brcmf_bus* bus, uint chip, uint chiprev, unsigned char* fw_name);
   zx_status_t (*get_bootloader_macaddr)(brcmf_bus* bus, uint8_t* mac_addr);
+  zx_status_t (*open_firmware_file)(zx_device_t* zxdev, const char* name, zx_handle_t* out_handle,
+                                    size_t* size);
+  zx_status_t (*get_wifi_metadata)(zx_device_t* zxdev, void* config, size_t exp_size,
+                                   size_t* actual);
   zx_status_t (*device_add)(brcmf_bus* bus, zx_device_t* parent, device_add_args_t* args,
                             zx_device_t** out);
   zx_status_t (*device_remove)(brcmf_bus* bus, zx_device_t* dev);

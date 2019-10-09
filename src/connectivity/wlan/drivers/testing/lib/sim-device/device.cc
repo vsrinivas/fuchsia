@@ -24,8 +24,8 @@ zx_status_t FakeDevMgr::DeviceAdd(zx_device_t* parent, device_add_args_t* args, 
       *out = id.as_device();
     }
 
-    DBG_PRT("%s: Added SIM device. # devices: %lu Handle: %p\n", __func__, device_list_.size(),
-            dev_info);
+    DBG_PRT("%s: Added SIM device. proto %d # devices: %lu Handle: %p\n", __func__,
+            args ? args->proto_id : 0, devices_.size(), out ? *out : nullptr);
     return ZX_OK;
   }
 }
@@ -40,7 +40,7 @@ zx_status_t FakeDevMgr::DeviceRemove(zx_device_t* device) {
     return ZX_ERR_NOT_FOUND;
   }
   devices_.erase(iter);
-  DBG_PRT("%s: Removed SIM device %p. # devices: %lu\n", __func__, device, device_list_.size());
+  DBG_PRT("%s: Removed SIM device %p. # devices: %lu\n", __func__, device, devices_.size());
   return ZX_OK;
 }
 

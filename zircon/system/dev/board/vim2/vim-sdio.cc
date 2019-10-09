@@ -14,8 +14,8 @@
 #include <soc/aml-s912/s912-hw.h>
 #include <wifi/wifi-config.h>
 
-#include "vim.h"
 #include "vim-gpios.h"
+#include "vim.h"
 
 namespace vim {
 
@@ -59,6 +59,11 @@ static aml_sd_emmc_config_t config = {
 
 static const wifi_config_t wifi_config = {
     .oob_irq_mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
+    .iovar_table =
+        {
+            {IOVAR_LIST_END_TYPE, {{0}}, 0},
+        },
+    .cc_table = {},
 };
 
 static const pbus_metadata_t aml_sd_emmc_metadata[] = {

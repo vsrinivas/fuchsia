@@ -23,7 +23,9 @@
 #include <atomic>
 
 #include <ddk/device.h>
+#include <ddk/metadata.h>
 #include <ddk/trace/event.h>
+#include <wifi/wifi-config.h>
 
 #ifndef _ALL_SOURCE
 #define _ALL_SOURCE
@@ -127,7 +129,7 @@ struct rte_console {
 
 #define BRCMF_FIRSTREAD (1 << 6)
 
-#define BRCMF_CONSOLE 10 /* watchdog interval to poll console */
+#define BRCMF_CONSOLE_INTERVAL 100 /* watchdog interval to poll console */
 
 /* SBSDIO_DEVICE_CTL */
 
@@ -2624,7 +2626,7 @@ static zx_status_t brcmf_sdio_readconsole(struct brcmf_sdio* bus) {
         n--;
       }
       line[n] = 0;
-      BRCMF_DBG(TEMP, "CONSOLE: %s\n", line);
+      BRCMF_DBG(FWCON, "CONSOLE: %s\n", line);
     }
   }
 break2:
@@ -3132,7 +3134,10 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
   }
 #if !defined(NDEBUG)
   /* Poll for console output periodically */
-  if (bus->sdiodev->state == BRCMF_SDIOD_DATA && BRCMF_IS_ON(FWCON) && bus->console_interval != 0) {
+  // This was the original check. But for some reason sdiodev->state never gets set to
+  // BRCMF_SDIOD_DATA. Need to investiage TODO(WLAN-36618)
+  // (bus->sdiodev->state == BRCMF_SDIOD_DATA && BRCMF_IS_ON(FWCON) && bus->console_interval != 0)
+  if (BRCMF_IS_ON(FWCON) && bus->console_interval != 0) {
     bus->console.count += BRCMF_WD_POLL_MSEC;
     if (bus->console.count >= bus->console_interval) {
       bus->console.count -= bus->console_interval;
@@ -3537,6 +3542,11 @@ static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
 
   BRCMF_DBG(TEMP, "Exit\n");
   ZX_DEBUG_ASSERT(err == ZX_OK);
+#if !defined(NDEBUG)
+  if (BRCMF_IS_ON(FWCON)) {
+    bus->console_interval = BRCMF_CONSOLE_INTERVAL;
+  }
+#endif
   return err;
 
 fail:
@@ -3602,6 +3612,15 @@ static zx_status_t brcmf_sdio_get_fwname(brcmf_bus* bus_if, uint32_t chip, uint3
   return ret;
 }
 
+static zx_status_t brcmf_sdio_load_firmware(zx_device_t* zxdev, const char* name,
+                                            zx_handle_t* out_handle, size_t* size) {
+  return load_firmware(zxdev, name, out_handle, size);
+}
+
+static zx_status_t brcmf_get_wifi_metadata(zx_device_t* zx_dev, void* data, size_t exp_size,
+                                           size_t* actual) {
+  return device_get_metadata(zx_dev, DEVICE_METADATA_WIFI_CONFIG, data, exp_size, actual);
+}
 static zx_status_t brcmf_sdio_get_bootloader_macaddr(brcmf_bus* bus_if, uint8_t* mac_addr) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
   return brcmf_sdiod_get_bootloader_macaddr(sdiodev, mac_addr);
@@ -3620,6 +3639,8 @@ static const struct brcmf_bus_ops brcmf_sdio_bus_ops = {
     .get_memdump = brcmf_sdio_bus_get_memdump,
     .get_fwname = brcmf_sdio_get_fwname,
     .get_bootloader_macaddr = brcmf_sdio_get_bootloader_macaddr,
+    .open_firmware_file = brcmf_sdio_load_firmware,
+    .get_wifi_metadata = brcmf_get_wifi_metadata,
     .device_add = [](struct brcmf_bus* bus, zx_device_t* parent, device_add_args_t* args,
                      zx_device_t** out) { return device_add(parent, args, out); },
 };

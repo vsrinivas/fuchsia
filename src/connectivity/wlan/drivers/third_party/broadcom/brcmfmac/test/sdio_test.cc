@@ -22,6 +22,7 @@
 #include <tuple>
 
 #include <ddk/device.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/sdio.h>
 #include <mock/ddktl/protocol/gpio.h>
@@ -43,6 +44,10 @@ zx_status_t load_firmware(zx_device_t* dev, const char* path, zx_handle_t* fw, s
   *fw = ZX_HANDLE_INVALID;
   *size = 0;
   return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t get_wifi_metadata(zx_device_t* zx_dev, void* data, size_t exp_size, size_t* actual) {
+  return device_get_metadata(zx_dev, DEVICE_METADATA_WIFI_CONFIG, data, exp_size, actual);
 }
 
 namespace {
@@ -75,7 +80,9 @@ class MockSdio : public ddk::MockSdio {
 TEST(Sdio, IntrRegister) {
   fake_ddk::Bind ddk;
 
-  wifi_config_t config = {ZX_INTERRUPT_MODE_LEVEL_LOW};
+  wifi_config_t config = {
+      .oob_irq_mode = ZX_INTERRUPT_MODE_LEVEL_LOW,
+  };
   ddk.SetMetadata(&config, sizeof(config));
 
   brcmf_pub drvr = {};
@@ -86,12 +93,16 @@ TEST(Sdio, IntrRegister) {
   ddk::MockGpio gpio;
   brcmf_bus bus_if = {};
   brcmf_mp_device settings = {};
+  const struct brcmf_bus_ops sdio_bus_ops = {
+      .get_wifi_metadata = get_wifi_metadata,
+  };
 
   sdio_dev.func1 = &func1;
   sdio_dev.gpios[WIFI_OOB_IRQ_GPIO_INDEX] = *gpio.GetProto();
   sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
   sdio_dev.sdio_proto_fn2 = *sdio2.GetProto();
   sdio_dev.drvr = &drvr;
+  bus_if.ops = &sdio_bus_ops;
   sdio_dev.bus_if = &bus_if;
   sdio_dev.settings = &settings;
 

@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/mmio/mmio.h>
+#include <lib/zx/handle.h>
+
+#include <optional>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
@@ -10,14 +15,10 @@
 #include <fbl/algorithm.h>
 #include <hw/reg.h>
 #include <hwreg/bitfields.h>
-#include <lib/mmio/mmio.h>
-#include <lib/zx/handle.h>
 #include <soc/aml-common/aml-sd-emmc.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
 #include <wifi/wifi-config.h>
-
-#include <optional>
 
 #include "sherlock.h"
 
@@ -89,6 +90,26 @@ constexpr aml_sd_emmc_config_t sd_emmc_config = {
 
 constexpr wifi_config_t wifi_config = {
     .oob_irq_mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
+    .iovar_table =
+        {
+            {IOVAR_STR_TYPE, {"ampdu_ba_wsize"}, 32},
+            {IOVAR_STR_TYPE, {"stbc_tx"}, 1},
+            {IOVAR_STR_TYPE, {"stbc_rx"}, 1},
+            {IOVAR_CMD_TYPE, {{BRCMF_C_SET_PM}}, 0},
+            {IOVAR_CMD_TYPE, {{BRCMF_C_SET_FAKEFRAG}}, 1},
+            {IOVAR_LIST_END_TYPE, {{0}}, 0},
+        },
+    .cc_table =
+        {
+            {"WW", 1},   {"AU", 923}, {"CA", 901}, {"US", 843}, {"GB", 889}, {"BE", 889},
+            {"BG", 889}, {"CZ", 889}, {"DK", 889}, {"DE", 889}, {"EE", 889}, {"IE", 889},
+            {"GR", 889}, {"ES", 889}, {"FR", 889}, {"HR", 889}, {"IT", 889}, {"CY", 889},
+            {"LV", 889}, {"LT", 889}, {"LU", 889}, {"HU", 889}, {"MT", 889}, {"NL", 889},
+            {"AT", 889}, {"PL", 889}, {"PT", 889}, {"RO", 889}, {"SI", 889}, {"SK", 889},
+            {"FI", 889}, {"SE", 889}, {"EL", 889}, {"IS", 889}, {"LI", 889}, {"TR", 889},
+            {"CH", 889}, {"NO", 889}, {"JP", 2},   {"KR", 2},   {"TW", 2},   {"IN", 2},
+            {"SG", 2},   {"MX", 2},   {"NZ", 2},   {"", 0},
+        },
 };
 
 constexpr pbus_metadata_t sd_emmc_metadata[] = {

@@ -138,8 +138,8 @@ static zx_status_t brcmf_fil_cmd_data(struct brcmf_if* ifp, uint32_t cmd, void* 
   return err;
 }
 
-zx_status_t brcmf_fil_cmd_data_set(struct brcmf_if* ifp, uint32_t cmd, void* data, uint32_t len,
-                                   int32_t* fwerr_ptr) {
+zx_status_t brcmf_fil_cmd_data_set(struct brcmf_if* ifp, uint32_t cmd, const void* data,
+                                   uint32_t len, int32_t* fwerr_ptr) {
   zx_status_t err;
 
   ifp->drvr->proto_block.lock();
@@ -147,7 +147,7 @@ zx_status_t brcmf_fil_cmd_data_set(struct brcmf_if* ifp, uint32_t cmd, void* dat
   BRCMF_DBG(FIL, "ifidx=%d, cmd=%d, len=%d\n", ifp->ifidx, cmd, len);
   BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
 
-  err = brcmf_fil_cmd_data(ifp, cmd, data, len, true, fwerr_ptr);
+  err = brcmf_fil_cmd_data(ifp, cmd, (void*)data, len, true, fwerr_ptr);
   ifp->drvr->proto_block.unlock();
 
   return err;

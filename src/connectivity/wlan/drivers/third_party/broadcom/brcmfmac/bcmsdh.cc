@@ -113,12 +113,18 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
   pdata->oob_irq_supported = false;
   wifi_config_t config;
   size_t actual;
-  ret = device_get_metadata(sdiodev->drvr->zxdev, DEVICE_METADATA_WIFI_CONFIG, &config,
-                            sizeof(wifi_config_t), &actual);
-  if ((ret != ZX_OK && ret != ZX_ERR_NOT_FOUND) ||
-      (ret == ZX_OK && actual != sizeof(wifi_config_t))) {
-    BRCMF_ERR("brcmf_sdiod_intr_register: device_get_metadata failed\n");
-    return ret;
+
+  // Get Broadcom WiFi Metadata by calling the bus specific function
+  if (sdiodev && sdiodev->bus_if && sdiodev->bus_if->ops) {
+    ret = sdiodev->bus_if->ops->get_wifi_metadata(sdiodev->drvr->zxdev, &config,
+                                                  sizeof(wifi_config_t), &actual);
+    if ((ret != ZX_OK && ret != ZX_ERR_NOT_FOUND) ||
+        (ret == ZX_OK && actual != sizeof(wifi_config_t))) {
+      BRCMF_ERR("brcmf_sdiod_intr_register: device_get_metadata failed\n");
+      return ret;
+    }
+  } else {
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
   // If there is metadata, OOB is supported.
