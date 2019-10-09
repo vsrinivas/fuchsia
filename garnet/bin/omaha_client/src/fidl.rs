@@ -324,6 +324,15 @@ mod tests {
         state_machine::StubTimer, storage::MemStorage,
     };
 
+    type StubFidlServer = FidlServer<
+        StubPolicyEngine,
+        StubHttpRequest,
+        StubInstaller,
+        StubTimer,
+        StubMetricsReporter,
+        MemStorage,
+    >;
+
     struct FidlServerBuilder {
         apps: Vec<App>,
         channel_configs: Option<ChannelConfigs>,
@@ -344,16 +353,7 @@ mod tests {
             self
         }
 
-        async fn build(
-            self,
-        ) -> FidlServer<
-            StubPolicyEngine,
-            StubHttpRequest,
-            StubInstaller,
-            StubTimer,
-            StubMetricsReporter,
-            MemStorage,
-        > {
+        async fn build(self) -> StubFidlServer {
             let config = configuration::get_config("0.1.2");
             let storage_ref = Rc::new(Mutex::new(MemStorage::new()));
             let app_set = if self.apps.is_empty() {
@@ -381,6 +381,17 @@ mod tests {
         }
     }
 
+    fn spawn_fidl_server<M: fidl::endpoints::ServiceMarker>(
+        fidl: Rc<RefCell<StubFidlServer>>,
+        service: fn(M::RequestStream) -> IncomingServices,
+    ) -> M::Proxy {
+        let (proxy, stream) = create_proxy_and_stream::<M>().unwrap();
+        fasync::spawn_local(
+            FidlServer::handle_client(fidl, service(stream)).unwrap_or_else(|e| panic!(e)),
+        );
+        proxy
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_on_state_change() {
         let mut fidl = FidlServerBuilder::new().build().await;
@@ -391,11 +402,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_get_state() {
         let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
-        let (proxy, stream) = create_proxy_and_stream::<ManagerMarker>().unwrap();
-        fasync::spawn_local(
-            FidlServer::handle_client(fidl.clone(), IncomingServices::Manager(stream))
-                .unwrap_or_else(|e| panic!(e)),
-        );
+        let proxy = spawn_fidl_server::<ManagerMarker>(fidl.clone(), IncomingServices::Manager);
         let state = proxy.get_state().await.unwrap();
         let fidl = fidl.borrow();
         assert_eq!(state, fidl.state);
@@ -404,11 +411,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_monitor() {
         let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
-        let (proxy, stream) = create_proxy_and_stream::<ManagerMarker>().unwrap();
-        fasync::spawn_local(
-            FidlServer::handle_client(fidl.clone(), IncomingServices::Manager(stream))
-                .unwrap_or_else(|e| panic!(e)),
-        );
+        let proxy = spawn_fidl_server::<ManagerMarker>(fidl.clone(), IncomingServices::Manager);
         let (client_proxy, server_end) = create_proxy::<MonitorMarker>().unwrap();
         proxy.add_monitor(server_end).unwrap();
         let mut stream = client_proxy.take_event_stream();
@@ -425,11 +428,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_check_now() {
         let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
-        let (proxy, stream) = create_proxy_and_stream::<ManagerMarker>().unwrap();
-        fasync::spawn_local(
-            FidlServer::handle_client(fidl.clone(), IncomingServices::Manager(stream))
-                .unwrap_or_else(|e| panic!(e)),
-        );
+        let proxy = spawn_fidl_server::<ManagerMarker>(fidl, IncomingServices::Manager);
         let options = Options { initiator: Some(Initiator::User) };
         let result = proxy.check_now(options, None).await.unwrap();
         assert_eq!(result, CheckStartedResult::Started);
@@ -439,11 +438,7 @@ mod tests {
     async fn test_check_now_with_monitor() {
         let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
         FidlServer::setup_state_callback(fidl.clone());
-        let (proxy, stream) = create_proxy_and_stream::<ManagerMarker>().unwrap();
-        fasync::spawn_local(
-            FidlServer::handle_client(fidl.clone(), IncomingServices::Manager(stream))
-                .unwrap_or_else(|e| panic!(e)),
-        );
+        let proxy = spawn_fidl_server::<ManagerMarker>(fidl.clone(), IncomingServices::Manager);
         let (client_proxy, server_end) = create_proxy::<MonitorMarker>().unwrap();
         let options = Options { initiator: Some(Initiator::User) };
         let result = proxy.check_now(options, Some(server_end)).await.unwrap();
@@ -476,11 +471,9 @@ mod tests {
         )];
         let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().with_apps(apps).build().await));
 
-        let (proxy, stream) = create_proxy_and_stream::<ChannelControlMarker>().unwrap();
-        fasync::spawn_local(
-            FidlServer::handle_client(fidl, IncomingServices::ChannelControl(stream))
-                .unwrap_or_else(|e| panic!(e)),
-        );
+        let proxy =
+            spawn_fidl_server::<ChannelControlMarker>(fidl, IncomingServices::ChannelControl);
+
         assert_eq!("current-channel", proxy.get_current().await.unwrap());
     }
 
@@ -489,11 +482,8 @@ mod tests {
         let apps = vec![App::new("id", [1, 0], Cohort::from_hint("target-channel"))];
         let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().with_apps(apps).build().await));
 
-        let (proxy, stream) = create_proxy_and_stream::<ChannelControlMarker>().unwrap();
-        fasync::spawn_local(
-            FidlServer::handle_client(fidl, IncomingServices::ChannelControl(stream))
-                .unwrap_or_else(|e| panic!(e)),
-        );
+        let proxy =
+            spawn_fidl_server::<ChannelControlMarker>(fidl, IncomingServices::ChannelControl);
         assert_eq!("target-channel", proxy.get_target().await.unwrap());
     }
 
@@ -501,10 +491,9 @@ mod tests {
     async fn test_set_target() {
         let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
 
-        let (proxy, stream) = create_proxy_and_stream::<ChannelControlMarker>().unwrap();
-        fasync::spawn_local(
-            FidlServer::handle_client(fidl.clone(), IncomingServices::ChannelControl(stream))
-                .unwrap_or_else(|e| panic!(e)),
+        let proxy = spawn_fidl_server::<ChannelControlMarker>(
+            fidl.clone(),
+            IncomingServices::ChannelControl,
         );
         proxy.set_target("target-channel").await.unwrap();
         let fidl = fidl.borrow();
@@ -527,10 +516,9 @@ mod tests {
                 .await,
         ));
 
-        let (proxy, stream) = create_proxy_and_stream::<ChannelControlMarker>().unwrap();
-        fasync::spawn_local(
-            FidlServer::handle_client(fidl.clone(), IncomingServices::ChannelControl(stream))
-                .unwrap_or_else(|e| panic!(e)),
+        let proxy = spawn_fidl_server::<ChannelControlMarker>(
+            fidl.clone(),
+            IncomingServices::ChannelControl,
         );
         proxy.set_target("").await.unwrap();
         let fidl = fidl.borrow();
@@ -556,11 +544,8 @@ mod tests {
                 .await,
         ));
 
-        let (proxy, stream) = create_proxy_and_stream::<ChannelControlMarker>().unwrap();
-        fasync::spawn_local(
-            FidlServer::handle_client(fidl.clone(), IncomingServices::ChannelControl(stream))
-                .unwrap_or_else(|e| panic!(e)),
-        );
+        let proxy =
+            spawn_fidl_server::<ChannelControlMarker>(fidl, IncomingServices::ChannelControl);
         let response = proxy.get_target_list().await.unwrap();
 
         assert_eq!(2, response.len());
@@ -572,11 +557,8 @@ mod tests {
     async fn test_get_target_list_when_no_channels_configured() {
         let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
 
-        let (proxy, stream) = create_proxy_and_stream::<ChannelControlMarker>().unwrap();
-        fasync::spawn_local(
-            FidlServer::handle_client(fidl.clone(), IncomingServices::ChannelControl(stream))
-                .unwrap_or_else(|e| panic!(e)),
-        );
+        let proxy =
+            spawn_fidl_server::<ChannelControlMarker>(fidl, IncomingServices::ChannelControl);
         let response = proxy.get_target_list().await.unwrap();
 
         assert!(response.is_empty());
