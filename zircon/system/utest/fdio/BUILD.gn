@@ -16,7 +16,7 @@ test("fdio") {
     "fdio_path_canonicalize.c",
     "fdio_root.c",
     "fdio_socket.cc",
-    "fdio_socketpair.c",
+    "fdio_socketpair.cc",
     "fdio_stubs.cc",
     "fdio_unsafe.cc",
     "fdio_watcher.cc",

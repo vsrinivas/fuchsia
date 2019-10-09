@@ -15,6 +15,8 @@
 #include <unistd.h>
 #include <zircon/syscalls.h>
 
+#include <future>
+
 #include <zxtest/zxtest.h>
 
 TEST(SocketpairTest, Control) {
@@ -23,32 +25,22 @@ TEST(SocketpairTest, Control) {
   ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
 
   // write() and read() should work.
-  char buf[4] = "abc\0";
-  status = write(fds[0], buf, 4);
-  if (status < 0)
-    printf("write failed %s\n", strerror(errno));
-  EXPECT_EQ(status, 4, "write failed");
+  const char buf[] = "abc";
+  ASSERT_EQ(write(fds[0], buf, sizeof(buf)), sizeof(buf), "%s", strerror(errno));
 
-  char recvbuf[4];
-  status = read(fds[1], recvbuf, 4);
-  if (status < 0)
-    printf("read failed %s\n", strerror(errno));
-  EXPECT_EQ(status, 4, "read failed");
+  char recvbuf[sizeof(buf) + 1];
+  ASSERT_EQ(read(fds[1], recvbuf, sizeof(recvbuf)), sizeof(buf), "%s", strerror(errno));
 
-  EXPECT_EQ(memcmp(buf, recvbuf, 4), 0, "data did not make it after write+read");
+  recvbuf[sizeof(buf)] = 0;
+  ASSERT_STR_EQ(recvbuf, buf);
 
   // send() and recv() should also work.
-  memcpy(buf, "def", 4);
-  status = send(fds[1], buf, 4, 0);
-  if (status < 0)
-    printf("send failed %s\n", strerror(errno));
-  EXPECT_EQ(status, 4, "send failed");
+  ASSERT_EQ(send(fds[1], buf, sizeof(buf), 0), sizeof(buf), "%s", strerror(errno));
 
-  status = recv(fds[0], recvbuf, 4, 0);
-  if (status < 0)
-    printf("recv failed %s\n", strerror(errno));
+  ASSERT_EQ(recv(fds[0], recvbuf, sizeof(recvbuf), 0), sizeof(buf), "%s", strerror(errno));
 
-  EXPECT_EQ(memcmp(buf, recvbuf, 4), 0, "data did not make it after send+recv");
+  recvbuf[sizeof(buf)] = 0;
+  ASSERT_STR_EQ(recvbuf, buf);
 
   EXPECT_EQ(close(fds[0]), 0, "close(fds[0]) failed");
   EXPECT_EQ(close(fds[1]), 0, "close(fds[1]) failed");
@@ -67,12 +59,10 @@ void socketpair_shutdown_setup(int fds[2]) {
   char buf[1] = {};
   // Both sides should be readable.
   errno = 0;
-  status = read(fds[0], buf, sizeof(buf));
-  EXPECT_EQ(status, -1, "fds[0] should initially be readable");
+  EXPECT_EQ(read(fds[0], buf, sizeof(buf)), -1, "fds[0] should initially be readable");
   EXPECT_EQ(errno, EAGAIN);
   errno = 0;
-  status = read(fds[1], buf, sizeof(buf));
-  EXPECT_EQ(status, -1, "fds[1] should initially be readable");
+  EXPECT_EQ(read(fds[1], buf, sizeof(buf)), -1, "fds[1] should initially be readable");
   EXPECT_EQ(errno, EAGAIN);
 
   // Both sides should be writable.
@@ -231,7 +221,7 @@ TEST(SocketpairTest, ShutdownPeerWritePoll) {
 
 typedef struct recv_args {
   int fd;
-  int recv_result;
+  ssize_t recv_result;
   int recv_errno;
   char buf[BUF_SIZE];
 } recv_args_t;
@@ -286,7 +276,7 @@ TEST(SocketpairTest, ShutdownSelfWriteDuringRecv) {
 
 typedef struct send_args {
   int fd;
-  int send_result;
+  ssize_t send_result;
   int send_errno;
   char buf[BUF_SIZE];
 } send_args_t;
@@ -309,7 +299,7 @@ TEST(SocketpairTest, ShutdownSelfWriteDuringSend) {
   // First, fill up the socket so the next send() will block.
   char buf[BUF_SIZE] = {};
   while (true) {
-    status = send(fds[0], buf, sizeof(buf), MSG_DONTWAIT);
+    ssize_t status = send(fds[0], buf, sizeof(buf), MSG_DONTWAIT);
     if (status < 0) {
       ASSERT_EQ(errno, EAGAIN, "send should eventually return EAGAIN when full");
       break;
@@ -338,7 +328,7 @@ TEST(SocketpairTest, ShutdownPeerReadDuringSend) {
   // First, fill up the socket so the next send() will block.
   char buf[BUF_SIZE] = {};
   while (true) {
-    status = send(fds[0], buf, sizeof(buf), MSG_DONTWAIT);
+    ssize_t status = send(fds[0], buf, sizeof(buf), MSG_DONTWAIT);
     if (status < 0) {
       ASSERT_EQ(errno, EAGAIN, "send should eventually return EAGAIN when full");
       break;
@@ -540,41 +530,34 @@ TEST(SocketpairTest, WaitBeginEnd) {
 
 #define WRITE_DATA_SIZE 1024 * 1024
 
-struct full_read_args {
-  int fd;
-};
-int full_read_thread(void* arg) {
-  struct full_read_args* args = arg;
-
-  static char buf[WRITE_DATA_SIZE];
-  size_t progress = 0;
-  while (progress < WRITE_DATA_SIZE) {
-    size_t n = WRITE_DATA_SIZE - progress;
-    int status = read(args->fd, buf, n);
-    if (status < 0) {
-      return status;
-    }
-    progress += status;
-  }
-  return progress;
-}
-
 TEST(SocketpairTest, PartialWrite) {
   int fds[2];
   ASSERT_EQ(socketpair(AF_UNIX, SOCK_STREAM, 0, fds), 0);
 
   // Start a thread that reads everything we write.
-  thrd_t t;
-  struct full_read_args args = {.fd = fds[1]};
-  int thrd_create_result = thrd_create(&t, full_read_thread, &args);
-  ASSERT_EQ(thrd_create_result, thrd_success, "create reading thread");
+  auto fut = std::async(
+      std::launch::async,
+      [](int fd) {
+        static char buf[WRITE_DATA_SIZE];
+        ssize_t progress = 0;
+        while (progress < WRITE_DATA_SIZE) {
+          size_t n = WRITE_DATA_SIZE - progress;
+          ssize_t status = read(fd, buf, n);
+          if (status < 0) {
+            return status;
+          }
+          progress += status;
+        }
+        return progress;
+      },
+      fds[1]);
 
-  // Write more data that can fit in the socket send buffer.
+  // Write more data than can fit in the socket send buffer.
   static char buf[WRITE_DATA_SIZE];
   size_t progress = 0;
   while (progress < WRITE_DATA_SIZE) {
     size_t n = WRITE_DATA_SIZE - progress;
-    int status = write(fds[0], buf, n);
+    ssize_t status = write(fds[0], buf, n);
     if (status < 0) {
       ASSERT_EQ(errno, EAGAIN, "%s", strerror(errno));
     }
@@ -582,7 +565,6 @@ TEST(SocketpairTest, PartialWrite) {
   }
 
   // Make sure the other thread read everything.
-  int size_read;
-  ASSERT_EQ(thrd_join(t, &size_read), 0, "join reading thread");
-  ASSERT_EQ(size_read, WRITE_DATA_SIZE, "other thread did not read everything");
+  ASSERT_EQ(fut.wait_for(std::chrono::seconds(1)), std::future_status::ready);
+  ASSERT_EQ(fut.get(), WRITE_DATA_SIZE, "other thread did not read everything");
 }
