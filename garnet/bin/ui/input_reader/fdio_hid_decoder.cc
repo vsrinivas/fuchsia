@@ -21,8 +21,6 @@
 
 namespace {
 
-#define HID_REPORT_TRACE_ID(trace_id, report_id) (((uint64_t)(report_id) << 32) | (trace_id))
-
 bool log_err(zx_status_t status, const std::string& what, const std::string& name) {
   FXL_LOG(ERROR) << "hid: could not get " << what << " from " << name
                  << " (status=" << zx_status_get_string(status) << ")";
@@ -103,13 +101,15 @@ const std::vector<uint8_t>& FdioHidDecoder::ReadReportDescriptor(int* bytes_read
   return report_descriptor_;
 }
 
-int FdioHidDecoder::Read(uint8_t* data, size_t data_size) {
-  int bytes_read = read(caller_.fd().get(), data, data_size);
-
-  TRACE_FLOW_END("input", "hid_report", HID_REPORT_TRACE_ID(trace_id_, reports_read_));
-  ++reports_read_;
-
-  return bytes_read;
+size_t FdioHidDecoder::Read(uint8_t* data, size_t data_size) {
+  size_t size;
+  zx_status_t call_status;
+  zx_status_t status = fuchsia_hardware_input_DeviceGetReports(
+      caller_.borrow_channel(), &call_status, data, data_size, &size);
+  if ((call_status != ZX_OK) || (status != ZX_OK)) {
+    return 0;
+  }
+  return size;
 }
 
 zx_status_t FdioHidDecoder::Send(ReportType type, uint8_t report_id,

@@ -98,6 +98,9 @@ class InputInterpreter {
 
   void NotifyRegistry();
 
+  // Dispatches the report in |device|.
+  void DispatchReport(InputDevice* device);
+
   fuchsia::ui::input::InputDeviceRegistry* registry_;
 
   zx::event event_;
@@ -106,8 +109,14 @@ class InputInterpreter {
   std::vector<InputDevice> devices_;
 
   std::unique_ptr<HidDecoder> hid_decoder_;
+  // The descriptor memory is owned by the hid library. The InputInterpreter is responsible for
+  // calling into the hid library to free |hid_descriptor_|.
+  hid::DeviceDescriptor* hid_descriptor_ = nullptr;
   Protocol protocol_;
   Hardcoded hardcoded_ = {};
+
+  uint32_t trace_id_ = 0;
+  uint32_t reports_read_ = 0;
 };
 
 }  // namespace ui_input

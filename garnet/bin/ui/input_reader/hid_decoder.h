@@ -46,6 +46,10 @@ class HidDecoder {
   // Returns the event that signals when the device is ready to be read.
   virtual zx::event GetEvent() = 0;
 
+  // Get the TraceID. The full TraceID should have this ID as the bottom 32 bits and
+  // the report number as the top 32 bits.
+  virtual uint32_t GetTraceId() const = 0;
+
   // Checks if the kernel has set a bootmode for the device. If the kernel
   // has, then the hid descriptor and report must follow a specific format.
   // TODO (SCN-1266) - This should be removed when we can just run these
@@ -55,9 +59,10 @@ class HidDecoder {
   // Reads the Report descriptor from the device.
   virtual const std::vector<uint8_t>& ReadReportDescriptor(int* bytes_read) = 0;
 
-  // Reads a single Report from the device. This will block unless the
-  // device has signaled that it is ready to be read.
-  virtual int Read(uint8_t* data, size_t data_size) = 0;
+  // Reads up to |data_size| data of reports from the device. This API will never
+  // return partial reports, so it must be given a buffer large enough to read
+  // at least one report. This API may return multiple reports.
+  virtual size_t Read(uint8_t* data, size_t data_size) = 0;
 
   // Sends a single Report to the device. |type| must be either
   // OUTPUT or FEATURE.

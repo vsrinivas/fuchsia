@@ -13,6 +13,7 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <hid-parser/descriptor.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/report.h>
 #include <hid-parser/usages.h>
@@ -27,6 +28,10 @@
 
 namespace {
 
+uint64_t CalculateTraceId(uint32_t trace_id, uint32_t report_id) {
+  return (static_cast<uint64_t>(report_id) << 32) | (trace_id);
+}
+
 int64_t InputEventTimestampNow() { return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds(); }
 
 fuchsia::ui::input::InputReport CloneReport(const fuchsia::ui::input::InputReport& report) {
@@ -37,6 +42,7 @@ fuchsia::ui::input::InputReport CloneReport(const fuchsia::ui::input::InputRepor
 
 }  // namespace
 
+
 namespace ui_input {
 
 InputInterpreter::InputInterpreter(std::unique_ptr<HidDecoder> hid_decoder,
@@ -45,7 +51,19 @@ InputInterpreter::InputInterpreter(std::unique_ptr<HidDecoder> hid_decoder,
   FXL_DCHECK(hid_decoder_);
 }
 
-InputInterpreter::~InputInterpreter() {}
+InputInterpreter::~InputInterpreter() {
+  if (hid_descriptor_) {
+    hid::FreeDeviceDescriptor(hid_descriptor_);
+  }
+}
+
+void InputInterpreter::DispatchReport(InputDevice* device) {
+  device->report->event_time = InputEventTimestampNow();
+  device->report->trace_id = TRACE_NONCE();
+  TRACE_FLOW_BEGIN("input", "hid_read_to_listener", device->report->trace_id);
+  device->input_device->DispatchReport(CloneReport(*device->report));
+}
+
 
 bool InputInterpreter::Initialize() {
   if (!hid_decoder_->Init())
@@ -74,10 +92,7 @@ bool InputInterpreter::Initialize() {
       }
       if (device.device->ParseReport(initial_input.data(), initial_input.size(),
                                      device.report.get())) {
-        device.report->event_time = InputEventTimestampNow();
-        device.report->trace_id = TRACE_NONCE();
-        TRACE_FLOW_BEGIN("input", "hid_read_to_listener", device.report->trace_id);
-        device.input_device->DispatchReport(CloneReport(*device.report));
+        DispatchReport(&device);
       }
     }
   }
@@ -118,31 +133,39 @@ bool InputInterpreter::Read(bool discard) {
   TRACE_DURATION("input", "hid_read");
   std::array<uint8_t, fuchsia_hardware_input_MAX_REPORT_DATA> report_data;
 
-  // If positive |bytes_read| is the number of bytes read. If negative the error
-  // while reading.
-  int bytes_read = hid_decoder_->Read(report_data.data(), report_data.size());
+  size_t bytes_read = hid_decoder_->Read(report_data.data(), report_data.size());
 
-  if (bytes_read < 1) {
+  if (bytes_read == 0) {
     FXL_LOG(ERROR) << "Failed to read from input: " << bytes_read << " for " << name();
     // TODO(cpu) check whether the device was actually closed or not.
     return false;
   }
 
-  hardcoded_.Read(report_data.data(), bytes_read, discard);
+  size_t data_index = 0;
+  while (data_index < bytes_read) {
+    TRACE_FLOW_END("input", "hid_report", CalculateTraceId(trace_id_, reports_read_));
+    ++reports_read_;
 
-  for (size_t i = 0; i < devices_.size(); i++) {
-    InputDevice& device = devices_[i];
-    if (device.device->ReportId() != 0 && device.device->ReportId() != report_data[0]) {
-      continue;
+    uint8_t* report = &report_data[data_index];
+    size_t report_size =
+        hid::GetReportSizeFromFirstByte(*hid_descriptor_, hid::kReportInput, report[0]);
+    if (report_size == 0) {
+      FXL_LOG(ERROR) << "input_reader: Unable to get Report Size from Id " << report[0] << " : "
+                     << name();
+      return false;
     }
-    if (device.device->ParseReport(report_data.data(), bytes_read, device.report.get())) {
-      if (!discard) {
-        device.report->event_time = InputEventTimestampNow();
-        device.report->trace_id = TRACE_NONCE();
-        TRACE_FLOW_BEGIN("input", "hid_read_to_listener", device.report->trace_id);
-        device.input_device->DispatchReport(CloneReport(*device.report));
+
+    hardcoded_.Read(report, report_size, discard);
+
+    for (auto& device : devices_) {
+      if (!device.device->MatchesReportId(report[0])) {
+        continue;
+      }
+      if (device.device->ParseReport(report, report_size, device.report.get()) && !discard) {
+        DispatchReport(&device);
       }
     }
+    data_index += report_size;
   }
 
   return true;
@@ -330,9 +353,24 @@ bool InputInterpreter::ParseHidInputReportDescriptor(const hid::ReportDescriptor
 }
 
 bool InputInterpreter::ParseProtocol() {
-  HidDecoder::BootMode boot_mode = hid_decoder_->ReadBootMode();
-  // For most keyboards and mouses Zircon requests the boot protocol
+  trace_id_ = hid_decoder_->GetTraceId();
+
+  // Read and parse the hid desccriptor.
+  int desc_size;
+  const std::vector<uint8_t>& desc = hid_decoder_->ReadReportDescriptor(&desc_size);
+  if (desc_size <= 0) {
+    return false;
+  }
+  hid::ParseResult parse_res = hid::ParseReportDescriptor(desc.data(), desc.size(), &hid_descriptor_);
+  if (parse_res != hid::ParseResult::kParseOk) {
+    FXL_LOG(INFO) << "hid-parser: error " << int(parse_res) << " parsing report descriptor for "
+                  << name();
+    return false;
+  }
+
+  // Check the boot mode. For most keyboards and mouses Zircon requests the boot protocol
   // which has a fixed layout. This covers the following two cases:
+  HidDecoder::BootMode boot_mode = hid_decoder_->ReadBootMode();
   if (boot_mode == HidDecoder::BootMode::KEYBOARD) {
     protocol_ = Protocol::Keyboard;
     return true;
@@ -342,13 +380,7 @@ bool InputInterpreter::ParseProtocol() {
     return true;
   }
 
-  int desc_size;
-  auto desc = hid_decoder_->ReadReportDescriptor(&desc_size);
-  if (desc_size == 0) {
-    return false;
-  }
-
-  // See if we match a hardcoded descriptor. This involves memcmp() of the
+  // Check the report descriptor against a hardcoded one. This involves memcmp() of the
   // known hardcoded descriptors.
   Protocol protocol = hardcoded_.MatchProtocol(desc, hid_decoder_.get());
   if (protocol != Protocol::Other) {
@@ -358,16 +390,7 @@ bool InputInterpreter::ParseProtocol() {
 
   // For the rest of devices we use the new way; with the hid-parser
   // library.
-
-  hid::DeviceDescriptor* dev_desc = nullptr;
-  auto parse_res = hid::ParseReportDescriptor(desc.data(), desc.size(), &dev_desc);
-  if (parse_res != hid::ParseResult::kParseOk) {
-    FXL_LOG(INFO) << "hid-parser: error " << int(parse_res) << " parsing report descriptor for "
-                  << name();
-    return false;
-  }
-
-  auto count = dev_desc->rep_count;
+  auto count = hid_descriptor_->rep_count;
   if (count == 0) {
     FXL_LOG(ERROR) << "no report descriptors for " << name();
     return false;
@@ -375,7 +398,7 @@ bool InputInterpreter::ParseProtocol() {
 
   // Parse each input report.
   for (size_t rep = 0; rep < count; rep++) {
-    const hid::ReportDescriptor* desc = &dev_desc->report[rep];
+    const hid::ReportDescriptor* desc = &hid_descriptor_->report[rep];
     if (desc->input_count != 0) {
       if (!ParseHidInputReportDescriptor(desc)) {
         continue;

@@ -44,11 +44,13 @@ class FdioHidDecoder : public HidDecoder {
   // |HidDecoder|
   zx::event GetEvent() override;
   // |HidDecoder|
+  uint32_t GetTraceId() const override { return trace_id_; }
+  // |HidDecoder|
   BootMode ReadBootMode() const override { return boot_mode_; }
   // |HidDecoder|
   const std::vector<uint8_t>& ReadReportDescriptor(int* bytes_read) override;
   // |HidDecoder|
-  int Read(uint8_t* data, size_t data_size) override;
+  size_t Read(uint8_t* data, size_t data_size) override;
   // |HidDecoder|
   zx_status_t Send(ReportType type, uint8_t report_id, const std::vector<uint8_t>& report) override;
   // |HidDecoder|
@@ -59,9 +61,7 @@ class FdioHidDecoder : public HidDecoder {
   const std::string name_;
   BootMode boot_mode_ = BootMode::NONE;
   std::vector<uint8_t> report_descriptor_;
-
   uint32_t trace_id_ = 0;
-  uint32_t reports_read_ = 0;
 };
 
 }  // namespace ui_input

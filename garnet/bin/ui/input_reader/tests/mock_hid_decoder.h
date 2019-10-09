@@ -29,7 +29,12 @@ class MockHidDecoder : public HidDecoder {
     report_.data = initial_report;
     report_.length = initial_report.size();
   }
-  MockHidDecoder(BootMode boot_mode) : weak_ptr_factory_(this) { boot_mode_ = boot_mode; }
+  MockHidDecoder(std::vector<uint8_t> report_descriptor, BootMode boot_mode)
+      : weak_ptr_factory_(this) {
+    boot_mode_ = boot_mode;
+    report_descriptor_.data = report_descriptor;
+    report_descriptor_.length = report_descriptor.size();
+  }
   ~MockHidDecoder() override;
 
   fxl::WeakPtr<MockHidDecoder> GetWeakPtr();
@@ -40,12 +45,13 @@ class MockHidDecoder : public HidDecoder {
   bool Init() override;
   // |HidDecoder|
   zx::event GetEvent() override;
+  uint32_t GetTraceId() const override { return 0; }
   // |HidDecoder|
   BootMode ReadBootMode() const override;
   // |HidDecoder|
   const std::vector<uint8_t>& ReadReportDescriptor(int* bytes_read) override;
   // |HidDecoder|
-  int Read(uint8_t* data, size_t data_size) override;
+  size_t Read(uint8_t* data, size_t data_size) override;
   // |HidDecoder|
   zx_status_t Send(ReportType type, uint8_t report_id, const std::vector<uint8_t>& report) override;
   // |HidDecoder|

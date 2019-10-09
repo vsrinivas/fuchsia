@@ -6,6 +6,7 @@
 #define GARNET_BIN_UI_INPUT_READER_DEVICE_H_
 
 #include <fuchsia/ui/input/cpp/fidl.h>
+
 #include <hid-parser/parser.h>
 
 #include "garnet/bin/ui/input_reader/protocols.h"
@@ -58,6 +59,10 @@ class Device {
   // Returns the one byte ReportId identifier of this device. This ReportId
   // is parsed out of the Report Descriptor.
   virtual uint8_t ReportId() const = 0;
+
+  // Returns true if the device's report id matches the first byte of the report.
+  // Devices with a Report ID of 0 means that the device matches all reports.
+  bool MatchesReportId(uint8_t report_id) { return (ReportId() == 0) || (ReportId() == report_id); }
 };
 
 }  // namespace ui_input

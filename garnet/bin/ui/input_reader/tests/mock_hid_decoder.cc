@@ -39,7 +39,7 @@ const std::vector<uint8_t>& MockHidDecoder::ReadReportDescriptor(int* bytes_read
   return report_descriptor_.data;
 }
 
-int MockHidDecoder::Read(uint8_t* data, size_t data_size) {
+size_t MockHidDecoder::Read(uint8_t* data, size_t data_size) {
   FXL_CHECK(report_.length != 0);
   FXL_CHECK(data_size > report_.length);
 

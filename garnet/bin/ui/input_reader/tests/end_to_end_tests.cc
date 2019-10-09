@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <set>
+
 #include <hid/boot.h>
 #include <hid/buttons.h>
 #include <hid/egalax.h>
 #include <hid/paradise.h>
 #include <hid/usages.h>
-
-#include <set>
 
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "garnet/bin/ui/input_reader/tests/mock_device_watcher.h"
@@ -79,10 +79,14 @@ class ReaderInterpreterInputTest : public ReaderInterpreterTest {
 }  // namespace
 
 TEST_F(ReaderInterpreterInputTest, BootMouse) {
-  // Create the MockHidDecoder as a BootMouse. Note that when a boot protocol is
-  // set, InputInterpreter never reads a report descriptor so it is not
-  // necessary to set one.
-  fxl::WeakPtr<MockHidDecoder> device = AddDevice(HidDecoder::BootMode::MOUSE);
+  // Create the boot mouse report descriptor.
+  size_t desc_len;
+  const uint8_t* desc_data = get_boot_mouse_report_desc(&desc_len);
+  ASSERT_TRUE(desc_len > 0);
+  std::vector<uint8_t> report_descriptor(desc_data, desc_data + desc_len);
+
+  // Create the device.
+  fxl::WeakPtr<MockHidDecoder> device = AddDevice(report_descriptor, HidDecoder::BootMode::MOUSE);
   RunLoopUntilIdle();
 
   // Create a single boot mouse report.
@@ -101,9 +105,41 @@ TEST_F(ReaderInterpreterInputTest, BootMouse) {
   EXPECT_EQ(last_report_.mouse->rel_y, 100);
 }
 
-TEST_F(ReaderInterpreterInputTest, BootKeyboard) {
-  fxl::WeakPtr<MockHidDecoder> device = AddDevice(HidDecoder::BootMode::KEYBOARD);
+// Tests that InputReader reads multiple reports at once.
+TEST_F(ReaderInterpreterInputTest, BootMouseMultiReports) {
+  // Create the boot mouse report descriptor.
+  size_t desc_len;
+  const uint8_t* desc_data = get_boot_mouse_report_desc(&desc_len);
+  ASSERT_TRUE(desc_len > 0);
+  std::vector<uint8_t> report_descriptor(desc_data, desc_data + desc_len);
 
+  // Create the device.
+  fxl::WeakPtr<MockHidDecoder> device = AddDevice(report_descriptor, HidDecoder::BootMode::MOUSE);
+  RunLoopUntilIdle();
+
+  // Create multiple reports.
+  const size_t kNumMouseReports = 5;
+  hid_boot_mouse_report_t mouse_reports[kNumMouseReports] = {};
+  uint8_t* mouse_report_bytes = reinterpret_cast<uint8_t*>(&mouse_reports);
+  std::vector<uint8_t> reports(mouse_report_bytes, mouse_report_bytes + sizeof(mouse_reports));
+
+  // Send the boot mouse report.
+  device->SetHidDecoderRead(reports, sizeof(mouse_reports));
+  RunLoopUntilIdle();
+
+  ASSERT_EQ(kNumMouseReports, static_cast<size_t>(report_count_));
+}
+
+TEST_F(ReaderInterpreterInputTest, BootKeyboard) {
+  // Create the boot keyboard report descriptor.
+  size_t desc_len;
+  const uint8_t* desc_data = get_boot_kbd_report_desc(&desc_len);
+  ASSERT_TRUE(desc_len > 0);
+  std::vector<uint8_t> report_descriptor(desc_data, desc_data + desc_len);
+
+  // Create the device.
+  fxl::WeakPtr<MockHidDecoder> device =
+      AddDevice(report_descriptor, HidDecoder::BootMode::KEYBOARD);
   RunLoopUntilIdle();
 
   // A keyboard report is 8 bytes long, with bytes 3-8 containing HID usage
@@ -209,6 +245,45 @@ TEST_F(ReaderInterpreterInputTest, ParadiseTouchscreen) {
   EXPECT_TRUE(touch.finger_id = 1);
   EXPECT_TRUE(touch.x = 100);
   EXPECT_TRUE(touch.y = 200);
+}
+
+// Test that InputReader reads multiple different sized reports based on the report ID.
+TEST_F(ReaderInterpreterInputTest, TouchscreenMultiReport) {
+  // Create the paradise report descriptor.
+  size_t desc_len;
+  const uint8_t* desc_data = get_paradise_touch_report_desc(&desc_len);
+  ASSERT_TRUE(desc_len > 0);
+  std::vector<uint8_t> report_descriptor(desc_data, desc_data + desc_len);
+
+  // Create the MockHidDecoder with our report descriptor.
+  fxl::WeakPtr<MockHidDecoder> device = AddDevice(report_descriptor);
+  RunLoopUntilIdle();
+
+  // Create a touch report, stylus report, touch report, stylus report.
+  const size_t kReportsSize = (2 * sizeof(paradise_touch_t)) + (2 * sizeof(paradise_stylus_t));
+  uint8_t reports_data[kReportsSize] = {};
+  uint8_t* report_index = reports_data;
+  *report_index = PARADISE_RPT_ID_TOUCH;
+  report_index += sizeof(paradise_touch_t);
+
+  *report_index = PARADISE_RPT_ID_STYLUS;
+  report_index += sizeof(paradise_stylus_t);
+
+  *report_index = PARADISE_RPT_ID_TOUCH;
+  report_index += sizeof(paradise_touch_t);
+
+  *report_index = PARADISE_RPT_ID_STYLUS;
+  report_index += sizeof(paradise_stylus_t);
+  ASSERT_EQ(static_cast<size_t>(report_index - reports_data), kReportsSize);
+
+  std::vector<uint8_t> report(reports_data, report_index);
+
+  // Send the reports.
+  device->SetHidDecoderRead(report, report.size());
+  RunLoopUntilIdle();
+
+  // Check that we saw all of the reports.
+  ASSERT_EQ(4, report_count_);
 }
 
 TEST_F(ReaderInterpreterInputTest, ParadiseTouchpad) {
