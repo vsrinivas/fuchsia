@@ -10,14 +10,6 @@ metrics_registry("test_metrics_registry") {
   namespace = "cobalt_test_metrics"
 }
 
-source_set("cpp") {
-  sources = [
-    "observation.h",
-    "observations_collector.cc",
-    "observations_collector.h",
-  ]
-}
-
 source_set("cobalt_logger") {
   sources = [
     "cobalt_logger.cc",
@@ -46,7 +38,6 @@ source_set("unittests") {
   sources = [
     "cobalt_event_builder_unittest.cc",
     "cobalt_logger_unittest.cc",
-    "observations_collector_test.cc",
     "project_profile_unittest.cc",
   ]
 
@@ -57,7 +48,6 @@ source_set("unittests") {
   deps = [
     ":cobalt_event_builder",
     ":cobalt_logger",
-    ":cpp",
     ":project_profile",
     ":test_metrics_registry_cc",
     "//sdk/lib/sys/cpp/testing:unit",

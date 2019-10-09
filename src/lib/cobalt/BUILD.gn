@@ -11,7 +11,6 @@ group("cobalt") {
     ":cobalt_lib_tests",
     ":tests",
     ":unittests",
-    "cpp",
   ]
 }
 
