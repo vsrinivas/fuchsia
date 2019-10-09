@@ -173,7 +173,16 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // is enforced by basemgr which vends sessions.
   std::string session_id_;
 
-  sys::ComponentContext* const component_context_;
+  // The context in which the Sessionmgr was launched
+  sys::ComponentContext* const sessionmgr_context_;
+
+  // The launcher from the context in which the Sessionmgr was launched. The Sessionmgr will use
+  // this launcher to launch other dependent services such as ledger, cloud provider, etc.
+  fuchsia::sys::LauncherPtr sessionmgr_context_launcher_;
+
+  // The Sessionmgr creates a new environment as a child of its component context's environment.
+  // Stories, mods, and agents are launched within the |session_environment_|.
+  std::unique_ptr<Environment> session_environment_;
 
   fuchsia::modular::session::SessionmgrConfig config_;
 
@@ -197,8 +206,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   std::unique_ptr<LedgerClient> ledger_client_;
   // Provides services to the Ledger
   component::ServiceProviderImpl ledger_service_provider_;
-
-  std::unique_ptr<Environment> session_environment_;
 
   fuchsia::modular::auth::AccountPtr account_;
 
