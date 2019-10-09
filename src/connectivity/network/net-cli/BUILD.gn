@@ -15,6 +15,7 @@ rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
     "//garnet/lib/rust/fidl_fuchsia_netstack_ext",
+    "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//garnet/lib/rust/netfilter",
     "//garnet/public/lib/fidl/rust/fidl",
@@ -24,7 +25,6 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
-    "//src/sys/tools/cs:lib",
     "//third_party/rust_crates:clap",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
@@ -32,7 +32,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:prettytable-rs",
     "//third_party/rust_crates:structopt",
     "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
-    "//zircon/system/fidl/fuchsia-inspect-deprecated:fuchsia-inspect-deprecated-rustc",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]

@@ -39,14 +39,6 @@ import (
 	"github.com/google/netstack/tcpip/transport/udp"
 )
 
-type bindingSetCounterStat struct {
-	bindingSet *fidl.BindingSet
-}
-
-func (s *bindingSetCounterStat) Value() uint64 {
-	return uint64(s.bindingSet.Size())
-}
-
 func Main() {
 	logLevel := syslog.InfoLevel
 
@@ -133,36 +125,27 @@ func Main() {
 		}
 	}
 
+	const counters = "counters"
+
 	var posixSocketProviderService socket.ProviderService
 
+	ns.stats.Stats = stk.Stats()
+	ns.stats.SocketCount = &bindingSetCounterStat{bindingSet: &posixSocketProviderService.BindingSet}
+	stats := reflect.ValueOf(ns.stats)
 	var inspectService inspect.InspectService
-	ctx.OutgoingService.AddObjects("counters", &context.DirectoryWrapper{
-		Directory: &inspectDirectory{
-			asService: (&inspectImpl{
-				inner: &statCounterInspectImpl{
-					name: "Networking Stat Counters",
-					value: reflect.ValueOf(
-						struct {
-							tcpip.Stats
-							SocketCount *bindingSetCounterStat
-						}{
-							Stats:       stk.Stats(),
-							SocketCount: &bindingSetCounterStat{bindingSet: &posixSocketProviderService.BindingSet},
-						}),
-				},
-				service: &inspectService,
-			}).asService,
+	ctx.OutgoingService.AddObjects(counters, &context.DirectoryWrapper{
+		Directory: &context.DirectoryWrapper{
+			Directory: &statCounterInspectImpl{
+				svc:   &inspectService,
+				name:  "Networking Stat Counters",
+				Value: stats,
+			},
 		},
 	})
-	ctx.OutgoingService.AddObjects("interfaces", &context.DirectoryWrapper{
-		Directory: &inspectDirectory{
-			// asService is late-bound so that each call retrieves fresh NIC info.
-			asService: func() *context.Service {
-				return (&inspectImpl{
-					inner:   &nicInfoMapInspectImpl{value: stk.NICInfo()},
-					service: &inspectService,
-				}).asService()
-			},
+
+	ctx.OutgoingService.AddDebug(counters, &context.DirectoryWrapper{
+		Directory: &reflectNode{
+			Value: stats,
 		},
 	})
 
