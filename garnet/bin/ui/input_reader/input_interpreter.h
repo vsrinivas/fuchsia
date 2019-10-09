@@ -19,6 +19,7 @@
 #include "garnet/bin/ui/input_reader/buttons.h"
 #include "garnet/bin/ui/input_reader/hardcoded.h"
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
+#include "garnet/bin/ui/input_reader/keyboard.h"
 #include "garnet/bin/ui/input_reader/pointer.h"
 #include "garnet/bin/ui/input_reader/protocols.h"
 #include "garnet/bin/ui/input_reader/sensor.h"

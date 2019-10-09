@@ -11,6 +11,9 @@
 
 __BEGIN_CDECLS
 
+// |keymask| is a mask of keys that are pressed. Each bit in the keymask corresponds to the
+// Hid Usage in the Keyboard Usage Page.
+// (E.g: bit 4 corresponds to Hid Usage Page 'Keyboard' (0x7) Usage 'A' (0x4)
 typedef struct {
   uint32_t keymask[8];
 } hid_keys_t;

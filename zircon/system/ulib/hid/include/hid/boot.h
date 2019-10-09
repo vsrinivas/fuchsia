@@ -2,13 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef HID_BOOT_H_
+#define HID_BOOT_H_
 
 #include <stdint.h>
-#include <zircon/types.h>
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
+
+#define HID_KBD_MODIFIER_LEFT_CTL (1 << 0)
+#define HID_KBD_MODIFIER_LEFT_SHIFT (1 << 1)
+#define HID_KBD_MODIFIER_LEFT_ALT (1 << 2)
+#define HID_KBD_MODIFIER_LEFT_GUI (1 << 3)
+#define HID_KBD_MODIFIER_RIGHT_CTL (1 << 4)
+#define HID_KBD_MODIFIER_RIGHT_SHIFT (1 << 5)
+#define HID_KBD_MODIFIER_RIGHT_ALT (1 << 6)
+#define HID_KBD_MODIFIER_RIGHT_GUI (1 << 7)
 
 typedef struct hid_boot_kbd_report {
   uint8_t modifier;
@@ -27,3 +37,5 @@ typedef struct hid_boot_mouse_report {
 const uint8_t* get_boot_mouse_report_desc(size_t* size);
 
 __END_CDECLS
+
+#endif  // HID_BOOT_H_
