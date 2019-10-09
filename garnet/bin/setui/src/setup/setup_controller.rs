@@ -98,7 +98,7 @@ impl SetupController {
 
         fasync::spawn(async move {
             let mut storage_lock = storage_clone.lock().await;
-            storage_lock.write(info, true).await.unwrap();
+            storage_lock.write(&info, true).await.unwrap();
 
             responder.send(Ok(None)).ok();
 

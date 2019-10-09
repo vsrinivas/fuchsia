@@ -21,7 +21,7 @@ pub struct DeviceStorage<T> {
 }
 
 /// Structs that can be stored in device storage should derive the Serialize, Deserialize, and
-/// Copy traits, as well as provide constants.
+/// Clone traits, as well as provide constants.
 /// KEY should be unique the struct, usually the name of the struct itself.
 /// DEFAULT_VALUE will be the value returned when nothing has yet been stored.
 ///
@@ -29,8 +29,7 @@ pub struct DeviceStorage<T> {
 /// Clients that want to make a breaking change should create a new structure with a new key and
 /// implement conversion/cleanup logic. Adding optional fields to a struct is not breaking, but
 /// removing fields, renaming fields, or adding non-optional fields are.
-/// TODO(fxb/37035): Remove Copy trait.
-pub trait DeviceStorageCompatible: Serialize + DeserializeOwned + Copy + PartialEq {
+pub trait DeviceStorageCompatible: Serialize + DeserializeOwned + Clone + PartialEq {
     const DEFAULT_VALUE: Self;
     const KEY: &'static str;
 }
@@ -49,10 +48,9 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
         self.caching_enabled = enabled;
     }
 
-    pub async fn write(&mut self, new_value: T, flush: bool) -> Result<(), Error> {
-        if self.current_data != Some(new_value) {
-            self.current_data = Some(new_value);
-            let mut serialized = Value::Stringval(serde_json::to_string(&new_value).unwrap());
+    pub async fn write(&mut self, new_value: &T, flush: bool) -> Result<(), Error> {
+        if self.current_data.as_ref() != Some(new_value) {
+            let mut serialized = Value::Stringval(serde_json::to_string(new_value).unwrap());
             self.stash_proxy.set_value(&prefixed(T::KEY), &mut serialized)?;
             if flush {
                 if self.stash_proxy.flush().await.is_err() {
@@ -61,6 +59,7 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
             } else {
                 self.stash_proxy.commit()?;
             }
+            self.current_data = Some(new_value.clone());
         }
         Ok(())
     }
@@ -80,8 +79,8 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
                 self.current_data = Some(T::DEFAULT_VALUE);
             }
         }
-        if let Some(curent_value) = self.current_data {
-            curent_value
+        if let Some(curent_value) = &self.current_data {
+            curent_value.clone()
         } else {
             panic!("Should never have no value");
         }
@@ -262,7 +261,7 @@ mod tests {
     const VALUE1: i32 = 33;
     const VALUE2: i32 = 128;
 
-    #[derive(PartialEq, Clone, Copy, Serialize, Deserialize, Debug)]
+    #[derive(PartialEq, Clone, Serialize, Deserialize, Debug)]
     struct TestStruct {
         value: i32,
     }
@@ -333,7 +332,7 @@ mod tests {
 
         let mut storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
 
-        storage.write(TestStruct { value: VALUE2 }, false).await.expect("writing shouldn't fail");
+        storage.write(&TestStruct { value: VALUE2 }, false).await.expect("writing shouldn't fail");
 
         match stash_stream.next().await.unwrap() {
             Ok(StoreAccessorRequest::SetValue { key, val, control_handle: _ }) => {
@@ -381,7 +380,7 @@ mod tests {
                 request => panic!("Unexpected request: {:?}", request),
             }
         });
-        storage.write(TestStruct { value: VALUE2 }, true).await.expect("writing shouldn't fail");
+        storage.write(&TestStruct { value: VALUE2 }, true).await.expect("writing shouldn't fail");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -409,7 +408,7 @@ mod tests {
     ) {
         {
             let mut store_1_lock = store_1.lock().await;
-            assert!(store_1_lock.write(data, false).await.is_ok());
+            assert!(store_1_lock.write(&data, false).await.is_ok());
         }
 
         // Ensure it is read in from second store.

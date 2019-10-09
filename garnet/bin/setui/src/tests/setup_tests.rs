@@ -60,19 +60,15 @@ async fn test_setup() {
 
     // Prepopulate initial value
     {
+        let initial_data = SetupInfo {
+            configuration_interfaces: ConfigurationInterfaceFlags::WIFI
+                | ConfigurationInterfaceFlags::ETHERNET,
+        };
+
         let mut store_lock = store.lock().await;
         // Ethernet and WiFi is written out as initial value since the default
         // is currently WiFi only.
-        assert!(store_lock
-            .write(
-                SetupInfo {
-                    configuration_interfaces: ConfigurationInterfaceFlags::WIFI
-                        | ConfigurationInterfaceFlags::ETHERNET
-                },
-                false
-            )
-            .await
-            .is_ok());
+        assert!(store_lock.write(&initial_data, false).await.is_ok());
     }
 
     let service_registry = ServiceRegistry::create();

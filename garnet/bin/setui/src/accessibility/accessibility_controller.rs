@@ -106,7 +106,7 @@ async fn persist_accessibility_info(
     responder: SettingRequestResponder,
 ) {
     let mut storage_lock = storage.lock().await;
-    let write_request = storage_lock.write(info, false).await;
+    let write_request = storage_lock.write(&info, false).await;
     let _ = match write_request {
         Ok(_) => responder.send(Ok(None)),
         Err(err) => responder

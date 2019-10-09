@@ -54,7 +54,7 @@ pub fn spawn_system_controller(
                             fasync::spawn(async move {
                                 {
                                     let mut storage_lock = storage_clone.lock().await;
-                                    storage_lock.write(stored_value, true).await.unwrap();
+                                    storage_lock.write(&stored_value, true).await.unwrap();
                                 }
                                 responder.send(Ok(None)).ok();
 

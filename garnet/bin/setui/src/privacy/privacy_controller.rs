@@ -127,7 +127,7 @@ impl PrivacyController {
         // Spin off a separate thread to persist the value.
         fasync::spawn(async move {
             let mut storage_lock = storage_clone.lock().await;
-            let write_request = storage_lock.write(info, false).await;
+            let write_request = storage_lock.write(&info, false).await;
             let _ = match write_request {
                 Ok(_) => responder.send(Ok(None)),
                 Err(err) => responder

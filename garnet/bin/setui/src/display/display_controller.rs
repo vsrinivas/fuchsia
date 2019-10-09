@@ -126,7 +126,7 @@ async fn set_brightness(
     storage: Arc<Mutex<DeviceStorage<DisplayInfo>>>,
 ) -> Result<(), fidl::Error> {
     let mut storage_lock = storage.lock().await;
-    storage_lock.write(info, false).await.unwrap_or_else(move |e| {
+    storage_lock.write(&info, false).await.unwrap_or_else(move |e| {
         fx_log_err!("failed storing brightness, {}", e);
     });
     if info.auto_brightness {

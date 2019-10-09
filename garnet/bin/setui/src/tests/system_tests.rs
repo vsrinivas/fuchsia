@@ -39,7 +39,7 @@ async fn test_system() {
         let initial_value =
             SystemInfo { login_override_mode: SystemLoginOverrideMode::from(STARTING_LOGIN_MODE) };
         let mut store_lock = store.lock().await;
-        store_lock.write(initial_value, false).await.ok();
+        store_lock.write(&initial_value, false).await.ok();
     }
 
     let service_registry = ServiceRegistry::create();
