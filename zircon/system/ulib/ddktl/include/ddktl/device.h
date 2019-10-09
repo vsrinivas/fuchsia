@@ -41,7 +41,7 @@
 // |                      |                                                    |
 // | ddk::Closable        | zx_status_t DdkClose(uint32_t flags)               |
 // |                      |                                                    |
-// | ddk::UnbindableNew   | void DdkUnbind(ddk::UnbindTxn txn)                 |
+// | ddk::UnbindableNew   | void DdkUnbindNew(ddk::UnbindTxn txn)              |
 // |                      |                                                    |
 // | ddk::Readable        | zx_status_t DdkRead(void* buf, size_t count,       |
 // |                      |                     zx_off_t off, size_t* actual)  |
@@ -160,18 +160,6 @@ class Closable : public base_mixin {
   static zx_status_t Close(void* ctx, uint32_t flags) {
     return static_cast<D*>(ctx)->DdkClose(flags);
   }
-};
-
-template <typename D>
-class Unbindable : public base_mixin {
- protected:
-  static constexpr void InitOp(zx_protocol_device_t* proto) {
-    internal::CheckUnbindable<D>();
-    proto->unbind = Unbind;
-  }
-
- private:
-  static void Unbind(void* ctx) { static_cast<D*>(ctx)->DdkUnbind(); }
 };
 
 template <typename D>
@@ -393,12 +381,6 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
     zx_device_t* dev = this->zxdev_;
     this->zxdev_ = nullptr;
     return device_remove_deprecated(dev);
-  }
-
-  // DEPRECATED (fxb/34574).
-  // This is being renamed to DdkRemoveDeprecated.
-  zx_status_t DdkRemove() {
-    return DdkRemoveDeprecated();
   }
 
   // Schedules the removal of the device and its descendents.

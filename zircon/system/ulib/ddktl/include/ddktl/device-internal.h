@@ -177,16 +177,6 @@ constexpr void CheckClosable() {
                 "'zx_status_t DdkClose(uint32)'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_unbind, DdkUnbind);
-
-template <typename D>
-constexpr void CheckUnbindable() {
-  static_assert(has_ddk_unbind<D>::value, "Unbindable classes must implement DdkUnbind");
-  static_assert(std::is_same<decltype(&D::DdkUnbind), void (D::*)(void)>::value,
-                "DdkUnbind must be a public non-static member function with signature "
-                "'void DdkUnbind()'.");
-}
-
 DECLARE_HAS_MEMBER_FN(has_ddk_unbind_deprecated, DdkUnbindDeprecated);
 
 template <typename D>

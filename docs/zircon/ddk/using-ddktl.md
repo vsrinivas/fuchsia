@@ -24,7 +24,7 @@ Mixin class            | Function             | Purpose
 `ddk::GetProtocolable` | **DdkGetProtocol()** | fetches the protocol
 `ddk::Openable`        | **DdkOpen()**        | client's **open()**
 `ddk::Closable`        | **DdkClose()**       | client's **close()**
-`ddk::Unbindable`      | **DdkUnbind()**      | called when parent of this device is being removed
+`ddk::UnbindableNew`   | **DdkUnbindNew()**   | called when this device is being removed
 `ddk::Readable`        | **DdkRead()**        | client's **read()**
 `ddk::Writable`        | **DdkWrite()**       | client's **write()**
 `ddk::GetSizable`      | **DdkGetSize()**     | returns size of device
@@ -39,10 +39,10 @@ For example (line numbers added for documentation purposes only):
 
 ```c++
 [01] using DeviceType = ddk::Device<MyDevice,
-[02]                                ddk::Openable,     // we support open()
-[03]                                ddk::Closable,     // close()
-[04]                                ddk::Readable,     // read()
-[05]                                ddk::Unbindable>;  // and the device can be unbound
+[02]                                ddk::Openable,        // we support open()
+[03]                                ddk::Closable,        // close()
+[04]                                ddk::Readable,        // read()
+[05]                                ddk::UnbindableNew>;  // and the device can be unbound
 ```
 
 This creates a shortcut to `DeviceType`.
@@ -70,13 +70,13 @@ from `DeviceType`:
 [19]     zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
 [20]     zx_status_t DdkClose(uint32_t flags);
 [21]     zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
-[22]     void DdkUnbind();
+[22]     void DdkUnbindNew(ddk::UnbindTxn txn);
 [23]     void DdkRelease();
 [24] };
 ```
 
 Because the `DeviceType` class contains four mixins (lines `[02` .. `05]`: `Openable`,
-`Closable`, `Readable`, and `Unbindable`), we're required to provide
+`Closable`, `Readable`, and `UnbindableNew`), we're required to provide
 the respective function implementations (lines `[18` .. `22]`)
 in our class.
 
@@ -85,7 +85,7 @@ All DDKTL classes must provide a release function (here, line `[23]` provides
 for `DeviceType`.
 
 > Keep in mind that once you call **DdkAdd()** you _cannot_ safely use the
-> device instance &mdash; other threads may call **DdkUnbind()**, which typically
+> device instance &mdash; other threads may call **DdkUnbindNew()**, which typically
 > calls **DdkRelease()**, and that frees the driver's device context.
 > This would constitute a "use-after-free" violation.
 
@@ -125,7 +125,7 @@ we have a typical device declaration ([`device.h`][/zircon/system/dev/block/zxcr
 [02] using DeviceType = ddk::Device<Device,
 [03]                                ddk::GetProtocolable,
 [04]                                ddk::GetSizable,
-[05]                                ddk::Unbindable>;
+[05]                                ddk::UnbindableNew>;
 ...
 [06] class Device final : public DeviceType,
 [07]                      public ddk::BlockImplProtocol<Device, ddk::base_protocol>,
@@ -136,13 +136,13 @@ we have a typical device declaration ([`device.h`][/zircon/system/dev/block/zxcr
 [11]     // ddk::Device methods; see ddktl/device.h
 [12]     zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
 [13]     zx_off_t DdkGetSize();
-[14]     void DdkUnbind();
+[14]     void DdkUnbindNew(ddk::UnbindTxn txn);
 [15]     void DdkRelease();
 ...
 ```
 
 Lines `[01` .. `05]` declare the shortcut `DeviceType` with the base class
-`Device` and three mixins, `GetProtocolable`, `GetSizable`, and `Unbindable`.
+`Device` and three mixins, `GetProtocolable`, `GetSizable`, and `UnbindableNew`.
 
 What's interesting here is line `[06]`: we not only inherit from the `DeviceType`,
 but also from other classes on lines `[07` .. `09]`.

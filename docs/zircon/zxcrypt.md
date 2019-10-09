@@ -48,7 +48,7 @@ zxcrypt is written as a DDKTL device driver.  [ulib/ddktl](/zircon/system/ulib/d
 for writing drivers in Fuchsia.  It allows authors to automatically supply the
 [ulib/ddk](/zircon/system/ulib/ddk) function pointers and callbacks by using templatized mix-ins.  In the
 case of zxcrypt, the [device](/zircon/system/dev/block/zxcrypt/device.h) is "Messageable",
-"IotxnQueueable", "GetSizable", "Unbindable", and implements the methods listed in DDKTL's
+"IotxnQueueable", "GetSizable", "UnbindableDeprecated", and implements the methods listed in DDKTL's
 [BlockProtocol](/zircon/system/banjo/ddk.protocol.block/block.banjo).
 
 There are two small pieces of functionality which cannot be written in DDKTL and C++:

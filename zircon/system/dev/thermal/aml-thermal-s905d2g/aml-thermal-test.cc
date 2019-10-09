@@ -808,7 +808,7 @@ class FakeAmlThermal : public AmlThermal {
     return test;
   }
 
-  void DdkUnbind() { DdkRemove(); }
+  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
   void DdkRelease() { delete this; }
 
   FakeAmlThermal(fbl::unique_ptr<thermal::AmlTSensor> tsensor,
@@ -940,7 +940,7 @@ class AmlThermalTest : public zxtest::Test {
     cpufreq_scaling_mock_hiu_mmio_->VerifyAll();
 
     // Tear down
-    thermal_device_->DdkUnbind();
+    thermal_device_->DdkUnbindDeprecated();
     thermal_device_ = nullptr;
   }
 
