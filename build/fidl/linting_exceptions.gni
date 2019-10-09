@@ -22,7 +22,6 @@ unlinted_libraries = [
   "fuchsia.hardware.goldfish.control",
   "fuchsia.hardware.goldfish.pipe",
   "fuchsia.hardware.gpu.clock",
-  "fuchsia.hardware.intel.hda",
   "fuchsia.hardware.telephony.transport",
   "fuchsia.hardware.usb.device",
   "fuchsia.hardware.usb.fwloader",
