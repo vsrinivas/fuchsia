@@ -779,7 +779,7 @@ mod tests {
             format::{block_type::BlockType, constants},
             heap::Heap,
         },
-        fuchsia_async::{self as fasync, futures::StreamExt},
+        fuchsia_component::server::ServiceObj,
         mapped_vmo::Mapping,
     };
 
@@ -828,9 +828,9 @@ mod tests {
         assert!(!no_op_node.is_valid());
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn new_no_op() -> Result<(), Error> {
-        let mut fs = ServiceFs::new();
+    #[test]
+    fn new_no_op() {
+        let mut fs: ServiceFs<ServiceObj<'_, ()>> = ServiceFs::new();
 
         let inspector = Inspector::new_no_op();
         assert!(!inspector.is_valid());
@@ -838,10 +838,6 @@ mod tests {
 
         // Ensure export doesn't crash on a No-Op inspector
         inspector.export(&mut fs);
-
-        fs.take_and_serve_directory_handle()?;
-        fasync::spawn(fs.collect());
-        Ok(())
     }
 
     #[test]

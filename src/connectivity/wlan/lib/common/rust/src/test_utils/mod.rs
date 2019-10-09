@@ -147,48 +147,45 @@ mod tests {
     }
 
     #[test]
-    fn assert_variant_full_match() {
-        // Success:
+    fn assert_variant_full_match_success() {
         assert_variant!(Foo::A(8), Foo::A(8));
-
-        // Check same variant with different value:
-        let result = panic::catch_unwind(|| {
-            assert_variant!(Foo::A(8), Foo::A(7));
-        });
-        assert!(result.is_err());
-
-        // Check different variant:
-        let result = panic::catch_unwind(|| {
-            assert_variant!(Foo::A(8), Foo::C);
-        });
-        assert!(result.is_err());
     }
 
     #[test]
-    fn assert_variant_multi_variant() {
-        // Success:
+    #[should_panic(expected = "unexpected variant")]
+    fn assert_variant_full_match_fail_with_same_variant_different_value() {
+        assert_variant!(Foo::A(8), Foo::A(7));
+    }
+
+    #[test]
+    #[should_panic(expected = "unexpected variant")]
+    fn assert_variant_full_match_fail_with_different_variant() {
+        assert_variant!(Foo::A(8), Foo::C);
+    }
+
+    #[test]
+    fn assert_variant_multi_variant_success() {
         assert_variant!(Foo::A(8), Foo::A(8) | Foo::C);
         assert_variant!(Foo::C, Foo::A(8) | Foo::C);
-
-        // Failure:
-        let result = panic::catch_unwind(|| {
-            assert_variant!(Foo::C, Foo::A(_) | Foo::B { .. });
-        });
-        assert!(result.is_err());
     }
 
     #[test]
-    fn assert_variant_partial_match() {
-        // Success:
+    #[should_panic(expected = "unexpected variant")]
+    fn assert_variant_multi_variant_failure() {
+        assert_variant!(Foo::C, Foo::A(_) | Foo::B { .. });
+    }
+
+    #[test]
+    fn assert_variant_partial_match_success() {
         assert_variant!(Foo::A(8), Foo::A(_));
         assert_variant!(Foo::B { named: 7, bar: 8 }, Foo::B { .. });
         assert_variant!(Foo::B { named: 7, bar: 8 }, Foo::B { named: 7, .. });
+    }
 
-        // Failure:
-        let result = panic::catch_unwind(|| {
-            assert_variant!(Foo::A(8), Foo::B { .. });
-        });
-        assert!(result.is_err());
+    #[test]
+    #[should_panic(expected = "unexpected variant")]
+    fn assert_variant_partial_match_failure() {
+        assert_variant!(Foo::A(8), Foo::B { .. });
     }
 
     #[test]
@@ -207,17 +204,13 @@ mod tests {
     }
 
     #[test]
-    fn assert_variant_custom_message() {
-        // Success:
+    fn assert_variant_custom_message_success() {
         assert_variant!(Foo::A(8), Foo::A(_), "custom error message");
+    }
 
-        // Failure:
-        let result = panic::catch_unwind(|| {
-            assert_variant!(Foo::A(8), Foo::B { .. }, "custom error message");
-        });
-        let error = result.unwrap_err();
-        assert_variant!(error.downcast_ref::<&'static str>(), Some(message) => {
-            assert_eq!(message, &"custom error message")
-        });
+    #[test]
+    #[should_panic(expected = "custom error message")]
+    fn assert_variant_custom_message_failure() {
+        assert_variant!(Foo::A(8), Foo::B { .. }, "custom error message");
     }
 }

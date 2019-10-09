@@ -359,82 +359,76 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn test_exact_match_mismatched_property_name() {
         let node_hierarchy = simple_tree();
-        assert_fail(|| {
-            assert_inspect_tree!(node_hierarchy, key: {
-                sub: "sub_value",
-                sub3: "sub2_value",
-            });
+        assert_inspect_tree!(node_hierarchy, key: {
+            sub: "sub_value",
+            sub3: "sub2_value",
         });
     }
 
     #[test]
+    #[should_panic]
     fn test_exact_match_mismatched_child_name() {
         let node_hierarchy = complex_tree();
-        assert_fail(|| {
-            assert_inspect_tree!(node_hierarchy, key: {
-                sub: "sub_value",
-                sub2: "sub2_value",
-                child1: {
-                    child1_sub: 10i64,
-                },
-                child3: {
-                    child2_sub: 20u64,
-                },
-            });
+        assert_inspect_tree!(node_hierarchy, key: {
+            sub: "sub_value",
+            sub2: "sub2_value",
+            child1: {
+                child1_sub: 10i64,
+            },
+            child3: {
+                child2_sub: 20u64,
+            },
         });
     }
 
     #[test]
+    #[should_panic]
     fn test_exact_match_mismatched_property_name_in_child() {
         let node_hierarchy = complex_tree();
-        assert_fail(|| {
-            assert_inspect_tree!(node_hierarchy, key: {
-                sub: "sub_value",
-                sub2: "sub2_value",
-                child1: {
-                    child2_sub: 10i64,
-                },
-                child2: {
-                    child2_sub: 20u64,
-                },
-            });
+        assert_inspect_tree!(node_hierarchy, key: {
+            sub: "sub_value",
+            sub2: "sub2_value",
+            child1: {
+                child2_sub: 10i64,
+            },
+            child2: {
+                child2_sub: 20u64,
+            },
         });
     }
 
     #[test]
+    #[should_panic]
     fn test_exact_match_mismatched_property_value() {
         let node_hierarchy = simple_tree();
-        assert_fail(|| {
-            assert_inspect_tree!(node_hierarchy, key: {
-                sub: "sub2_value",
-                sub2: "sub2_value",
-            });
+        assert_inspect_tree!(node_hierarchy, key: {
+            sub: "sub2_value",
+            sub2: "sub2_value",
         });
     }
 
     #[test]
+    #[should_panic]
     fn test_exact_match_missing_property() {
         let node_hierarchy = simple_tree();
-        assert_fail(|| {
-            assert_inspect_tree!(node_hierarchy, key: {
-                sub: "sub_value",
-            });
+        assert_inspect_tree!(node_hierarchy, key: {
+            sub: "sub_value",
         });
     }
 
     #[test]
+    #[should_panic]
     fn test_exact_match_missing_child() {
         let node_hierarchy = complex_tree();
-        assert_fail(|| {
-            assert_inspect_tree!(node_hierarchy, key: {
-                sub: "sub_value",
-                sub2: "sub2_value",
-                child1: {
-                    child1_sub: 10i64,
-                },
-            });
+        assert_inspect_tree!(node_hierarchy, key: {
+            sub: "sub_value",
+            sub2: "sub2_value",
+            child1: {
+                child1_sub: 10i64,
+            },
         });
     }
 
@@ -453,12 +447,11 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn test_partial_match_nonexistent_property() {
         let node_hierarchy = simple_tree();
-        assert_fail(|| {
-            assert_inspect_tree!(node_hierarchy, key: contains {
-                sub3: AnyProperty,
-            });
+        assert_inspect_tree!(node_hierarchy, key: contains {
+            sub3: AnyProperty,
         });
     }
 
@@ -472,13 +465,12 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn test_ignore_property_value_property_name_is_still_checked() {
         let node_hierarchy = simple_tree();
-        assert_fail(|| {
-            assert_inspect_tree!(node_hierarchy, key: {
-                sub1: AnyProperty,
-                sub2: "sub2_value",
-            })
+        assert_inspect_tree!(node_hierarchy, key: {
+            sub1: AnyProperty,
+            sub2: "sub2_value",
         })
     }
 
@@ -583,12 +575,6 @@ mod tests {
     fn test_matching_with_inspector() {
         let inspector = Inspector::new();
         assert_inspect_tree!(inspector, root: {});
-    }
-
-    fn assert_fail<F: FnOnce() + std::panic::UnwindSafe>(f: F) {
-        if std::panic::catch_unwind(f).is_ok() {
-            panic!("expect test to fail");
-        }
     }
 
     fn simple_tree() -> NodeHierarchy {

@@ -321,11 +321,13 @@ mod tests {
             vmo_name_with_prefix(&max_vmo_name, max_vmo_name.to_bytes()).as_bytes(),
             max_vmo_name.to_bytes()
         );
-
-        let result = std::panic::catch_unwind(|| {
-            vmo_name_with_prefix(&empty_vmo_name, b"a_really_long_prefix_that_is_too_long");
-        });
-        assert!(result.is_err());
         Ok(())
+    }
+
+    #[test]
+    #[should_panic(expected = "MAX_LEN")]
+    fn test_vmo_name_with_prefix_too_long() {
+        let empty_vmo_name = CStr::from_bytes_with_nul(b"\0").unwrap();
+        vmo_name_with_prefix(&empty_vmo_name, b"a_really_long_prefix_that_is_too_long");
     }
 }

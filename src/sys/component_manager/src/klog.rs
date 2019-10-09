@@ -181,17 +181,25 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "panic_test")]
     fn log_panic_test() {
         let mut rng = rand::thread_rng();
         let logged_value: u64 = rng.gen();
 
-        init_logger_once();
-        let result = panic::catch_unwind(|| panic!("panic_test {}", logged_value));
-        assert!(result.is_err());
+        let old_hook = panic::take_hook();
+        panic::set_hook(Box::new(move |info| {
+            // This will panic again if the message is not found,
+            // and the message will not include "panic_test".
+            // TODO(tmandry): The order of these must be reversed when
+            // panic=abort is enabled. Ideally it wouldn't matter.
+            old_hook(info);
+            expect_message_in_debuglog(format!(
+                "[component_manager] PANIC: panic_test {}",
+                logged_value
+            ));
+        }));
 
-        expect_message_in_debuglog(format!(
-            "[component_manager] PANIC: panic_test {}",
-            logged_value
-        ));
+        init_logger_once();
+        panic!("panic_test {}", logged_value);
     }
 }

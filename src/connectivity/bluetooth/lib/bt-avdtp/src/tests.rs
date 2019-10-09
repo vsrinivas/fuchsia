@@ -93,7 +93,7 @@ fn closes_socket_when_dropped() {
 }
 
 #[test]
-#[should_panic] // TODO: can't use catch_unwind here because of PeerInner?
+#[should_panic]
 fn can_only_take_stream_once() {
     let mut _exec = fasync::Executor::new().expect("failed to create an executor");
     let (_, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();

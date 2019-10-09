@@ -780,7 +780,6 @@ pub mod tests {
     use rand::Rng;
     use std::convert::TryFrom;
     use std::net::Ipv4Addr;
-    use std::panic::{self, AssertUnwindSafe};
 
     pub fn random_ipv4_generator() -> Ipv4Addr {
         let octet1: u8 = rand::thread_rng().gen();
@@ -1249,9 +1248,10 @@ pub mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    #[should_panic(expected = "tried to release unallocated ip")]
     async fn test_dispatch_with_discover_client_binding_panics_when_addr_previously_not_allocated(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server(server_time_provider).await?;
+    ) {
+        let mut server = new_test_minimal_server(server_time_provider).await.unwrap();
         let disc = new_test_discover();
 
         let bound_client_ip = random_ipv4_generator();
@@ -1265,12 +1265,7 @@ pub mod tests {
             },
         );
 
-        // Make `server` explicitly unwind safe for `cacth_unwind`.
-        // https://doc.rust-lang.org/std/panic/struct.AssertUnwindSafe.html
-        let mut unwind_safe_server = AssertUnwindSafe(server);
-        let result = panic::catch_unwind(move || unwind_safe_server.dispatch(disc));
-        assert!(result.is_err());
-        Ok(())
+        let _ = server.dispatch(disc);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
