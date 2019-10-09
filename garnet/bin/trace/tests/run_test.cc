@@ -141,31 +141,29 @@ zx_status_t SpawnProgram(const zx::job& job, const std::vector<std::string>& arg
   return ZX_OK;
 }
 
-zx_status_t WaitAndGetReturnCode(const std::string& program_name, const zx::process& process,
-                                 int* out_return_code) {
+bool WaitAndGetReturnCode(const std::string& program_name, const zx::process& process,
+                          int64_t* out_return_code) {
   // Leave it to the test harness to provide a timeout. If it doesn't that's
   // its bug.
   auto status = process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed waiting for program " << program_name
-                   << " to exit: " << zx_status_get_string(status);
-    return status;
+    FXL_PLOG(ERROR, status) << "Failed waiting for program " << program_name << " to exit";
+    return false;
   }
 
   zx_info_process_t proc_info;
   status = zx_object_get_info(process.get(), ZX_INFO_PROCESS, &proc_info, sizeof(proc_info),
                               nullptr, nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error getting return code for program " << program_name << ": "
-                   << zx_status_get_string(status);
-    return status;
+    FXL_PLOG(ERROR, status) << "Error getting return code for program " << program_name;
+    return false;
   }
 
   if (proc_info.return_code != 0) {
-    FXL_LOG(ERROR) << program_name << " exited with return code " << proc_info.return_code;
+    FXL_LOG(INFO) << program_name << " exited with return code " << proc_info.return_code;
   }
   *out_return_code = proc_info.return_code;
-  return ZX_OK;
+  return true;
 }
 
 static bool LaunchTool(const std::vector<std::string>& argv) {
@@ -177,12 +175,12 @@ static bool LaunchTool(const std::vector<std::string>& argv) {
     return false;
   }
 
-  int return_code;
-  status = WaitAndGetReturnCode(argv[0], subprocess, &return_code);
-  if (status != ZX_OK) {
+  int64_t return_code;
+  if (!WaitAndGetReturnCode(argv[0], subprocess, &return_code)) {
     return false;
   }
   if (return_code != 0) {
+    FXL_LOG(ERROR) << argv[0] << " exited with return code " << return_code;
     return false;
   }
 

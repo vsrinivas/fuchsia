@@ -42,8 +42,8 @@ TEST(ProviderDestruction, StressTest) {
                                   std::string("--output-file=") + kOutputFile, kAppUrl};
     ASSERT_EQ(SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
 
-    int return_code;
-    ASSERT_EQ(WaitAndGetReturnCode(argv[0], child, &return_code), ZX_OK);
+    int64_t return_code;
+    ASSERT_TRUE(WaitAndGetReturnCode(argv[0], child, &return_code));
     EXPECT_EQ(return_code, 0);
 
     size_t num_events;

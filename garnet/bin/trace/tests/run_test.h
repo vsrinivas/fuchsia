@@ -20,8 +20,10 @@ void AppendLoggingArgs(std::vector<std::string>* argv, const char* prefix);
 zx_status_t SpawnProgram(const zx::job& job, const std::vector<std::string>& argv,
                          zx_handle_t arg_handle, zx::process* out_process);
 
-zx_status_t WaitAndGetReturnCode(const std::string& program_name, const zx::process& process,
-                                 int* out_return_code);
+// Wait for |process| to exit.
+// |program_name| is for logging purposes.
+bool WaitAndGetReturnCode(const std::string& program_name, const zx::process& process,
+                          int64_t* out_return_code);
 
 // We don't need to pass a context to RunTspec because the trace program
 // is currently a system app. If that changes then we will need a context

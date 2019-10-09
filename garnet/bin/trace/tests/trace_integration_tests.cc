@@ -88,10 +88,10 @@ class ExtraProvider : public ::testing::Test {
   void TearDown() override {
     if (provider_process_.is_valid()) {
       our_event_.reset();
-      int return_code;
-      auto status = WaitAndGetReturnCode(argv_[0], provider_process_, &return_code);
-      EXPECT_EQ(status, ZX_OK);
-      if (status == ZX_OK) {
+      int64_t return_code;
+      bool wait_success = WaitAndGetReturnCode(argv_[0], provider_process_, &return_code);
+      EXPECT_TRUE(wait_success);
+      if (wait_success) {
         EXPECT_EQ(return_code, 0);
       }
       provider_process_.reset();
