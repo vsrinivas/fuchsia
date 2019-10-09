@@ -3,10 +3,13 @@
 // found in the LICENSE file.
 
 pub use self::audio_controller::create_default_audio_stream;
-pub use self::audio_controller::get_gain_db;
 pub use self::audio_controller::spawn_audio_controller;
 pub use self::audio_controller::DEFAULT_STREAMS;
+pub use self::audio_controller::DEFAULT_VOLUME_LEVEL;
+pub use self::audio_controller::DEFAULT_VOLUME_MUTED;
 pub use self::audio_fidl_handler::spawn_audio_fidl_handler;
+pub use self::stream_volume_control::StreamVolumeControl;
 
 mod audio_controller;
 mod audio_fidl_handler;
+mod stream_volume_control;
