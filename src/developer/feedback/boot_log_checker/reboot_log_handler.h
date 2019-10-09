@@ -31,8 +31,9 @@ fit::promise<void> HandleRebootLog(const std::string& filepath,
 // The type of crashes we expect in the reboot log and want file crash reports for.
 enum class CrashType { KERNEL_PANIC, OOM };
 
-// Wraps around fuchsia::net::ConnectivityPtr and fuchsia::crash::Analyzer to handle establishing
-// the connection, losing the connection, waiting for the callback, etc.
+// Wraps around fuchsia.net.Connectivity, fuchsia.feedback.CrashReporter, fuchsia.cobalt.Logger and
+// fuchsia.cobalt.LoggerFactory to handle establishing the connection, losing the connection,
+// waiting for the callback, etc.
 //
 // Handle() is expected to be called only once.
 class RebootLogHandler {
