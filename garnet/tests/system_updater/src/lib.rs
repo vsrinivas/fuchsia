@@ -45,6 +45,12 @@ impl TestEnv {
     }
 
     fn new() -> Self {
+        Self::new_with_paver_service_call_hook(MockPaverService::hook_always_ok)
+    }
+
+    fn new_with_paver_service_call_hook(
+        call_hook: impl Fn(&PaverEvent) -> Status + Send + Sync + 'static,
+    ) -> Self {
         let mut fs = ServiceFs::new();
         let resolver = Arc::new(MockResolverService::new());
         let resolver_clone = resolver.clone();
@@ -56,7 +62,7 @@ impl TestEnv {
                     .unwrap_or_else(|e| panic!("error running resolver service: {:?}", e)),
             )
         });
-        let paver_service = Arc::new(MockPaverService::new());
+        let paver_service = Arc::new(MockPaverService::new_with_call_hook(call_hook));
         let paver_service_clone = paver_service.clone();
         fs.add_fidl_service(move |stream| {
             let paver_service_clone = paver_service_clone.clone();
@@ -247,24 +253,20 @@ enum PaverEvent {
     WriteBootloader(Vec<u8>),
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-enum PaverMode {
-    Record,
-    Fail,
-}
-
 struct MockPaverService {
-    mode: Mutex<PaverMode>,
     events: Mutex<Vec<PaverEvent>>,
+    call_hook: Box<dyn Fn(&PaverEvent) -> Status + Send + Sync>,
 }
 
 impl MockPaverService {
-    fn new() -> Self {
-        Self { mode: Mutex::new(PaverMode::Record), events: Mutex::new(vec![]) }
+    fn new_with_call_hook(
+        call_hook: impl Fn(&PaverEvent) -> Status + Send + Sync + 'static,
+    ) -> Self {
+        Self { events: Mutex::new(vec![]), call_hook: Box::new(call_hook) }
     }
 
-    fn set_mode(&self, mode: PaverMode) {
-        *self.mode.lock() = mode;
+    fn hook_always_ok(_: &PaverEvent) -> Status {
+        Status::OK
     }
 
     fn take_events(&self) -> Vec<PaverEvent> {
@@ -283,31 +285,17 @@ impl MockPaverService {
                     mut payload,
                     responder,
                 } => {
-                    let status = match *self.mode.lock() {
-                        PaverMode::Record => {
-                            let payload = verify_and_read_buffer(&mut payload);
-                            self.events.lock().push(PaverEvent::WriteAsset {
-                                configuration,
-                                asset,
-                                payload,
-                            });
-                            Status::OK
-                        }
-                        PaverMode::Fail => Status::INTERNAL,
-                    };
-
+                    let payload = verify_and_read_buffer(&mut payload);
+                    let event = PaverEvent::WriteAsset { configuration, asset, payload };
+                    let status = (*self.call_hook)(&event);
+                    self.events.lock().push(event);
                     responder.send(status.into_raw()).expect("paver response to send");
                 }
                 paver::PaverRequest::WriteBootloader { mut payload, responder } => {
-                    let status = match *self.mode.lock() {
-                        PaverMode::Record => {
-                            let payload = verify_and_read_buffer(&mut payload);
-                            self.events.lock().push(PaverEvent::WriteBootloader(payload));
-                            Status::OK
-                        }
-                        PaverMode::Fail => Status::INTERNAL,
-                    };
-
+                    let payload = verify_and_read_buffer(&mut payload);
+                    let event = PaverEvent::WriteBootloader(payload);
+                    let status = (*self.call_hook)(&event);
+                    self.events.lock().push(event);
                     responder.send(status.into_raw()).expect("paver response to send");
                 }
                 request => panic!("Unhandled method Paver::{}", request.method_name()),
@@ -744,6 +732,96 @@ async fn test_writes_recovery() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn test_writes_recovery_vbmeta() {
+    let mut env = TestEnv::new();
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zedboot", "new recovery")
+        .add_file("recovery.vbmeta", "new recovery vbmeta");
+
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+    })
+    .await
+    .expect("success");
+
+    assert_eq!(
+        env.paver_service.take_events(),
+        vec![
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::Recovery,
+                asset: paver::Asset::Kernel,
+                payload: b"new recovery".to_vec(),
+            },
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::Recovery,
+                asset: paver::Asset::VerifiedBootMetadata,
+                payload: b"new recovery vbmeta".to_vec(),
+            },
+        ]
+    );
+
+    assert_eq!(*env.reboot_service.called.lock(), 1);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_writes_fuchsia_vbmeta() {
+    let mut env = TestEnv::new();
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake zbi")
+        .add_file("fuchsia.vbmeta", "fake zbi vbmeta");
+
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+    })
+    .await
+    .expect("success");
+
+    assert_eq!(
+        env.paver_service.take_events(),
+        vec![
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel,
+                payload: b"fake zbi".to_vec(),
+            },
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::B,
+                asset: paver::Asset::Kernel,
+                payload: b"fake zbi".to_vec(),
+            },
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata,
+                payload: b"fake zbi vbmeta".to_vec(),
+            },
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::B,
+                asset: paver::Asset::VerifiedBootMetadata,
+                payload: b"fake zbi vbmeta".to_vec(),
+            },
+        ]
+    );
+
+    assert_eq!(*env.reboot_service.called.lock(), 1);
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn test_working_image_write() {
     let mut env = TestEnv::new();
 
@@ -779,19 +857,34 @@ async fn test_working_image_write() {
 
     assert_eq!(
         env.paver_service.take_events(),
-        vec![PaverEvent::WriteAsset {
-            configuration: paver::Configuration::A,
-            asset: paver::Asset::Kernel,
-            payload: b"fake_zbi".to_vec(),
-        }]
+        vec![
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel,
+                payload: b"fake_zbi".to_vec(),
+            },
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::B,
+                asset: paver::Asset::Kernel,
+                payload: b"fake_zbi".to_vec(),
+            }
+        ]
     );
 
     assert_eq!(*env.reboot_service.called.lock(), 1);
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_failing_image_write() {
-    let mut env = TestEnv::new();
+async fn test_unsupported_b_image_write() {
+    let mut env = TestEnv::new_with_paver_service_call_hook(|event| match event {
+        PaverEvent::WriteAsset { configuration, asset, .. }
+            if *configuration == paver::Configuration::B
+                && *asset == fidl_fuchsia_paver::Asset::Kernel =>
+        {
+            Status::NOT_SUPPORTED
+        }
+        _ => Status::OK,
+    });
 
     env.register_package("update", "upd4t3")
         .add_file(
@@ -800,7 +893,58 @@ async fn test_failing_image_write() {
         )
         .add_file("zbi", "fake_zbi");
 
-    env.paver_service.set_mode(PaverMode::Fail);
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+    })
+    .await
+    .expect("success");
+
+    let loggers = env.logger_factory.loggers.lock().clone();
+    assert_eq!(loggers.len(), 1);
+    let logger = loggers.into_iter().next().unwrap();
+    assert_eq!(
+        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        OtaMetrics {
+            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
+                as u32,
+            phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
+            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
+            target: "m3rk13".into(),
+        }
+    );
+
+    assert_eq!(
+        env.paver_service.take_events(),
+        vec![
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel,
+                payload: b"fake_zbi".to_vec(),
+            },
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::B,
+                asset: paver::Asset::Kernel,
+                payload: b"fake_zbi".to_vec(),
+            }
+        ]
+    );
+
+    assert_eq!(*env.reboot_service.called.lock(), 1);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_failing_image_write() {
+    let mut env = TestEnv::new_with_paver_service_call_hook(|_| Status::INTERNAL);
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake_zbi");
 
     let result = env
         .run_system_updater(SystemUpdaterArgs {

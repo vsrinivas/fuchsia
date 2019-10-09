@@ -218,6 +218,18 @@ func WriteImgs(svc *paver.PaverInterface, imgs []string, imgsPath string) error 
 	return nil
 }
 
+func writeAsset(svc *paver.PaverInterface, configuration paver.Configuration, asset paver.Asset, payload *mem.Buffer) error {
+	status, err := svc.WriteAsset(configuration, asset, *payload)
+	if err != nil {
+		return err
+	}
+	statusErr := zx.Status(status)
+	if statusErr != zx.ErrOk {
+		return &zx.Error{Status: statusErr}
+	}
+	return nil
+}
+
 func writeImg(svc *paver.PaverInterface, img string, imgsPath string) error {
 	imgPath := filepath.Join(imgsPath, img)
 
@@ -238,19 +250,67 @@ func writeImg(svc *paver.PaverInterface, img string, imgsPath string) error {
 	}
 	defer buffer.Vmo.Close()
 
-	var writeImg func() (int32, error)
+	var writeImg func() error
 	switch img {
 	case "zbi", "zbi.signed":
-		writeImg = func() (int32, error) {
-			return svc.WriteAsset(paver.ConfigurationA, paver.AssetKernel, *buffer)
+		childVmo, err := buffer.Vmo.CreateChild(zx.VMOChildOptionCopyOnWrite|zx.VMOChildOptionResizable, 0, buffer.Size)
+		if err != nil {
+			return fmt.Errorf("img_writer: while getting vmo for %q: %q", img, err)
+		}
+		buffer2 := &mem.Buffer{
+			Vmo:  childVmo,
+			Size: buffer.Size,
+		}
+		defer buffer2.Vmo.Close()
+		writeImg = func() error {
+			if err := writeAsset(svc, paver.ConfigurationA, paver.AssetKernel, buffer); err != nil {
+				return err
+			}
+			if err := writeAsset(svc, paver.ConfigurationB, paver.AssetKernel, buffer2); err != nil {
+				asZxErr, ok := err.(*zx.Error)
+				if ok && asZxErr.Status == zx.ErrNotSupported {
+					syslog.Warnf("img_writer: skipping writing %q to B: %v", img, err)
+				} else {
+					return err
+				}
+			}
+			return nil
+		}
+	case "fuchsia.vbmeta":
+		childVmo, err := buffer.Vmo.CreateChild(zx.VMOChildOptionCopyOnWrite|zx.VMOChildOptionResizable, 0, buffer.Size)
+		if err != nil {
+			return fmt.Errorf("img_writer: while getting vmo for %q: %q", img, err)
+		}
+		buffer2 := &mem.Buffer{
+			Vmo:  childVmo,
+			Size: buffer.Size,
+		}
+		defer buffer2.Vmo.Close()
+		writeImg = func() error {
+			if err := writeAsset(svc, paver.ConfigurationA, paver.AssetVerifiedBootMetadata, buffer); err != nil {
+				return err
+			}
+			return writeAsset(svc, paver.ConfigurationB, paver.AssetVerifiedBootMetadata, buffer2)
 		}
 	case "zedboot", "zedboot.signed":
-		writeImg = func() (int32, error) {
-			return svc.WriteAsset(paver.ConfigurationRecovery, paver.AssetKernel, *buffer)
+		writeImg = func() error {
+			return writeAsset(svc, paver.ConfigurationRecovery, paver.AssetKernel, buffer)
+		}
+	case "recovery.vbmeta":
+		writeImg = func() error {
+			return writeAsset(svc, paver.ConfigurationRecovery, paver.AssetVerifiedBootMetadata, buffer)
 		}
 	case "bootloader":
-		writeImg = func() (int32, error) {
-			return svc.WriteBootloader(*buffer)
+		writeImg = func() error {
+			status, err := svc.WriteBootloader(*buffer)
+			if err != nil {
+				return err
+			}
+			statusErr := zx.Status(status)
+			if statusErr != zx.ErrOk {
+				return fmt.Errorf("%s", statusErr)
+			}
+			return nil
 		}
 	case "board":
 		return nil
@@ -259,13 +319,8 @@ func writeImg(svc *paver.PaverInterface, img string, imgsPath string) error {
 	}
 
 	syslog.Infof("img_writer: writing %q from %q", img, imgPath)
-	status, err := writeImg()
-	if err != nil {
+	if err := writeImg(); err != nil {
 		return fmt.Errorf("img_writer: error writing %q: %q", img, err)
-	}
-	statusErr := zx.Status(status)
-	if statusErr != zx.ErrOk {
-		return fmt.Errorf("img_writer: error writing %q: %q", img, statusErr)
 	}
 	syslog.Infof("img_writer: wrote %q successfully from %q", img, imgPath)
 
