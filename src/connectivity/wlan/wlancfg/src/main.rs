@@ -20,9 +20,9 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::{channel::mpsc, future::try_join, prelude::*, select},
+    parking_lot::Mutex,
     pin_utils::pin_mut,
     std::sync::Arc,
-    parking_lot::Mutex,
     void::Void,
 };
 

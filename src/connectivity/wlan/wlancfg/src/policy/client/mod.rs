@@ -4,7 +4,8 @@
 
 ///! Serves Client policy services.
 ///! Note: This implementation is still under development.
-///!       No request is being processed and responded to yet.
+///!       Only connect requests will cause the underlying SME to attempt to connect to a given
+///!       network.
 ///!       Unfortunately, there is currently no way to send an Epitaph in Rust. Thus, inbound
 ///!       controller and listener requests are simply dropped, causing the underlying channel to
 ///!       get closed.
@@ -29,6 +30,8 @@ pub struct Client {
 }
 
 impl Client {
+    /// Creates a new, empty Client. The returned Client effectively represents the state in which
+    /// no client interface is available.
     pub fn new_empty() -> Self {
         Self { proxy: None }
     }
@@ -80,6 +83,7 @@ impl From<fidl::Error> for RequestError {
 
 // This number was chosen arbitrarily.
 const MAX_CONCURRENT_LISTENERS: usize = 1000;
+const PSK_HEX_STRING_LENGTH: usize = 64;
 
 type ClientRequests = fidl::endpoints::ServerEnd<fidl_policy::ClientControllerMarker>;
 type EssStorePtr = Arc<KnownEssStore>;
@@ -180,7 +184,8 @@ async fn handle_client_requests(
                 )
                 .await
                 {
-                    Ok(()) => {
+                    Ok(_txn) => {
+                        // TODO(hahnr): Await connection result.
                         responder.send(fidl_common::RequestStatus::Acknowledged)?;
                     }
                     Err(error) => {
@@ -201,22 +206,45 @@ async fn handle_client_request_connect(
     client: ClientPtr,
     ess_store: EssStorePtr,
     network: &fidl_policy::NetworkIdentifier,
-) -> Result<(), RequestError> {
-    let _network_config = ess_store.lookup(&network.ssid[..]).ok_or_else(|| {
+) -> Result<fidl_sme::ConnectTransactionProxy, RequestError> {
+    let network_config = ess_store.lookup(&network.ssid[..]).ok_or_else(|| {
         RequestError::new().with_cause(format_err!(
             "error network not found: {}",
             String::from_utf8_lossy(&network.ssid)
         ))
     })?;
 
+    // TODO(hahnr): Discuss whether every request should verify the existence of a Client, or
+    // whether that should be handled by either, closing the currently active controller if a
+    // client interface is brought down and not supporting controller requests if no client
+    // interface is active.
     let client = client.lock();
-    let _client_sme = client.access_sme().ok_or_else(|| {
+    let client_sme = client.access_sme().ok_or_else(|| {
         RequestError::new().with_cause(format_err!("error no active client interface"))
     })?;
 
-    // TODO(hahnr): Send connect request to SME.
+    // TODO(hahnr): The credential type from the given NetworkIdentifier is currently ignored.
+    // Instead the credentials are derived from the saved |network_config| which is looked-up.
+    // There has to be a decision how the case of two different credential types should be handled.
 
-    Ok(())
+    let credential = credential_from_bytes(network_config.password);
+    let mut request = fidl_sme::ConnectRequest {
+        ssid: network.ssid.to_vec(),
+        credential,
+        radio_cfg: fidl_sme::RadioConfig {
+            override_phy: false,
+            phy: fidl_common::Phy::Vht,
+            override_cbw: false,
+            cbw: fidl_common::Cbw::Cbw80,
+            override_primary_chan: false,
+            primary_chan: 0,
+        },
+        scan_type: fidl_common::ScanType::Passive,
+    };
+    let (local, remote) = fidl::endpoints::create_proxy()?;
+    client_sme.connect(&mut request, Some(remote))?;
+
+    Ok(local)
 }
 
 /// Handle inbound requests to register an additional ClientStateUpdates listener.
@@ -239,6 +267,21 @@ fn register_listener(
     listener: fidl_policy::ClientStateUpdatesProxy,
 ) {
     let _ignored = update_sender.unbounded_send(listener::Message::NewListener(listener));
+}
+
+/// Returns:
+/// - an Open-Credential instance iff `bytes` is empty,
+/// - a PSK-Credential instance iff `bytes` holds exactly 64 bytes,
+/// - a Password-Credential in all other cases.
+/// In the PSK case, the provided bytes must represent the PSK in hex format.
+/// Note: This function is of temporary nature until Wlancfg's ESS-Store supports richer
+/// credential types beyond plain passwords.
+fn credential_from_bytes(bytes: Vec<u8>) -> fidl_sme::Credential {
+    match bytes.len() {
+        0 => fidl_sme::Credential::None(fidl_sme::Empty),
+        PSK_HEX_STRING_LENGTH => fidl_sme::Credential::Psk(bytes),
+        _ => fidl_sme::Credential::Password(bytes),
+    }
 }
 
 #[cfg(test)]
@@ -342,7 +385,7 @@ mod tests {
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let (client, _sme_stream) = create_client();
+        let (client, mut sme_stream) = create_client();
         let (update_sender, _listener_updates) = mpsc::unbounded();
         let serve_fut = serve_provider_requests(client, update_sender, ess_store, requests);
         pin_mut!(serve_fut);
@@ -366,6 +409,65 @@ mod tests {
         assert_variant!(
             exec.run_until_stalled(&mut connect_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
+        );
+
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
+                req, ..
+            }))) => {
+                assert_eq!(b"foobar", &req.ssid[..]);
+                assert_eq!(fidl_sme::Credential::None(fidl_sme::Empty), req.credential);
+                // TODO(hahnr): Send connection response.
+            }
+        );
+    }
+
+    #[test]
+    fn connect_request_protected_network() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
+        let ess_store = create_ess_store(temp_dir.path());
+
+        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
+            .expect("failed to create ClientProvider proxy");
+        let requests = requests.into_stream().expect("failed to create stream");
+
+        let (update_sender, _listener_updates) = mpsc::unbounded();
+        let (client, mut sme_stream) = create_client();
+        let serve_fut = serve_provider_requests(client, update_sender, ess_store, requests);
+        pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a new controller.
+        let (controller, _update_stream) = request_controller(&provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Issue connect request.
+        let connect_fut = controller.connect(&mut fidl_policy::NetworkIdentifier {
+            ssid: b"foobar-protected".to_vec(),
+            type_: fidl_policy::SecurityType::None,
+        });
+        pin_mut!(connect_fut);
+
+        // Process connect request and verify connect response.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut connect_fut),
+            Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
+        );
+
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
+                req, ..
+            }))) => {
+                assert_eq!(b"foobar-protected", &req.ssid[..]);
+                assert_eq!(fidl_sme::Credential::Password(b"supersecure".to_vec()), req.credential);
+                // TODO(hahnr): Send connection response.
+            }
         );
     }
 
@@ -536,5 +638,13 @@ mod tests {
             exec.run_until_stalled(&mut connect_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::RejectedNotSupported))
         );
+    }
+
+    #[test]
+    fn test_credential_from_bytes() {
+        assert_eq!(credential_from_bytes(vec![1]), fidl_sme::Credential::Password(vec![1]));
+        assert_eq!(credential_from_bytes(vec![2; 63]), fidl_sme::Credential::Password(vec![2; 63]));
+        assert_eq!(credential_from_bytes(vec![2; 64]), fidl_sme::Credential::Psk(vec![2; 64]));
+        assert_eq!(credential_from_bytes(vec![]), fidl_sme::Credential::None(fidl_sme::Empty));
     }
 }
