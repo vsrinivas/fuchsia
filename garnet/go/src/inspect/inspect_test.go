@@ -5,7 +5,6 @@
 package inspect
 
 import (
-	"errors"
 	"testing"
 	"unsafe"
 )
@@ -17,55 +16,32 @@ type debugBlock struct {
 	e error
 }
 
-func scanBlocks(h *heap) <-chan debugBlock {
-	c := make(chan debugBlock)
-
-	go func(c chan debugBlock) {
-		off := uint64(0)
-		for off < h.curSize {
-			if h.curSize-off < uint64(unsafe.Sizeof(Block{})) {
-				c <- debugBlock{0, 0, 0, errors.New("block doesn't fit in remaining space")}
-				close(c)
-				return
-			}
-
-			b := (*Block)(unsafe.Pointer(uintptr(h.vmoAddr) + uintptr(off)))
-			order := b.GetOrder()
-			if order > BlockOrder(maxOrderShift) {
-				c <- debugBlock{0, 0, 0, errors.New("invalid block order found")}
-				close(c)
-				return
-			}
-
-			if BlockOrder(h.curSize-off) < orderSize[order] {
-				c <- debugBlock{0, 0, 0, errors.New("block can't fit in remaining space")}
-				close(c)
-				return
-			}
-
-			c <- debugBlock{BlockIndex(off / minOrderSize), b.GetType(), b.GetOrder(), nil}
-			off += uint64(orderSize[order])
-		}
-
-		close(c)
-	}(c)
-
-	return c
-}
-
 func matchLayout(t *testing.T, h *heap, l []debugBlock) {
-	c := scanBlocks(h)
+	var db debugBlock
 
-	for i, tb := range l {
-		db, ok := <-c
-		if !ok {
-			t.Errorf("channel closed at index %d with outstanding blocks to check", i)
-			return
+	i := 0
+	off := uint64(0)
+	for off < h.curSize {
+		if h.curSize-off < uint64(unsafe.Sizeof(Block{})) {
+			t.Fatalf("block doesn't fit in remaining space")
 		}
 
-		if db.e != nil {
-			t.Errorf("got error testing debug block %d; corresponding heap error: %v", i, db.e)
+		if i >= len(l) {
+			t.Fatalf("offset doesn't match blocks")
 		}
+
+		b := (*Block)(unsafe.Pointer(uintptr(h.vmoAddr) + uintptr(off)))
+		order := b.GetOrder()
+		if order > BlockOrder(maxOrderShift) {
+			t.Fatalf("invalid block order found")
+		}
+
+		if BlockOrder(h.curSize-off) < orderSize[order] {
+			t.Fatalf("block can't fit in remaining space")
+		}
+
+		db = debugBlock{BlockIndex(off / minOrderSize), b.GetType(), b.GetOrder(), nil}
+		tb := l[i]
 		if db.i != tb.i {
 			t.Errorf("heap block %d has index %d; want index %d", i, db.i, tb.i)
 		}
@@ -75,7 +51,11 @@ func matchLayout(t *testing.T, h *heap, l []debugBlock) {
 		if db.o != tb.o {
 			t.Errorf("heap block %d has order %d; want order %d", i, db.o, tb.o)
 		}
+
+		off += uint64(orderSize[order])
+		i++
 	}
+
 }
 
 func TestHeapCreation(t *testing.T) {
@@ -225,7 +205,11 @@ func TestReverseFree(t *testing.T) {
 
 	h.free(0)
 
-	matchLayout(t, h, []debugBlock{{0, FreeBlockType, 7, nil}})
+	blockLayout := []debugBlock{
+		{0, FreeBlockType, 7, nil},
+		{128, FreeBlockType, 7, nil},
+	}
+	matchLayout(t, h, blockLayout)
 }
 
 func TestMerge(t *testing.T) {
