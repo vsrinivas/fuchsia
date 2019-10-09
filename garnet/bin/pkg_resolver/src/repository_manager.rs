@@ -46,6 +46,23 @@ impl<A: AmberConnect> RepositoryManager<A> {
         self.dynamic_configs.get(repo_url).or_else(|| self.static_configs.get(repo_url))
     }
 
+    /// Returns a reference to the [RepositoryConfig] static config that matches the `channel`.
+    pub fn get_repo_for_channel(&self, channel: &str) -> Option<&Arc<RepositoryConfig>> {
+        for (repo_url, config) in self.static_configs.iter() {
+            let host = repo_url.host();
+            if let Some(n) = host.rfind(".fuchsia.com") {
+                let (prefix, _) = host.split_at(n);
+                if let Some(name) = prefix.split('.').nth(1) {
+                    if name == channel {
+                        return Some(config);
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
     /// Inserts a [RepositoryConfig] into this manager.
     ///
     /// If the manager did not have a [RepositoryConfig] with a corresponding repository url for
@@ -1069,5 +1086,70 @@ mod tests {
                 .build();
 
         assert_eq!(repomgr.list().collect::<Vec<_>>(), vec![&example_config, &fuchsia_config,]);
+    }
+
+    #[test]
+    fn test_get_repo_for_channel() {
+        let valid_static1_url = RepoUrl::parse("fuchsia-pkg://a.valid1.fuchsia.com").unwrap();
+        let valid_static1_config = RepositoryConfigBuilder::new(valid_static1_url).build();
+
+        let valid_static2_url = RepoUrl::parse("fuchsia-pkg://a.valid2.fuchsia.com").unwrap();
+        let valid_static2_config = RepositoryConfigBuilder::new(valid_static2_url).build();
+
+        let valid_static3_url = RepoUrl::parse("fuchsia-pkg://a.valid3.fuchsia.com").unwrap();
+        let valid_static3_config = RepositoryConfigBuilder::new(valid_static3_url).build();
+
+        let invalid_static1_url = RepoUrl::parse("fuchsia-pkg://invalid-static1").unwrap();
+        let invalid_static1_config = RepositoryConfigBuilder::new(invalid_static1_url).build();
+
+        let invalid_static2_url = RepoUrl::parse("fuchsia-pkg://a.invalid-static2").unwrap();
+        let invalid_static2_config = RepositoryConfigBuilder::new(invalid_static2_url).build();
+
+        let invalid_static3_url = RepoUrl::parse("fuchsia-pkg://a.invalid-static3.example.com").unwrap();
+        let invalid_static3_config = RepositoryConfigBuilder::new(invalid_static3_url).build();
+
+        let valid_dynamic_url = RepoUrl::parse("fuchsia-pkg://a.valid3.fuchsia.com").unwrap();
+        let valid_dynamic_config = RepositoryConfigBuilder::new(valid_dynamic_url).build();
+
+        let invalid_dynamic_url = RepoUrl::parse("fuchsia-pkg://a.invalid-dynamic.fuchsia.com").unwrap();
+        let invalid_dynamic_config = RepositoryConfigBuilder::new(invalid_dynamic_url).build();
+
+        let static_dir = create_dir(vec![
+            ("config", RepositoryConfigs::Version1(vec![
+                 valid_static1_config.clone(),
+                 valid_static2_config.clone(),
+                 valid_static3_config.clone(),
+                 invalid_static1_config,
+                 invalid_static2_config,
+                 invalid_static3_config,
+            ])),
+        ]);
+
+        let dynamic_dir =
+            create_dir(vec![
+                       ("config", RepositoryConfigs::Version1(vec![valid_dynamic_config.clone(),
+                                                                   invalid_dynamic_config]))]);
+        let dynamic_configs_path = dynamic_dir.path().join("config");
+
+        let repomgr =
+            RepositoryManagerBuilder::new_test(&dynamic_configs_path, ClosedAmberConnector)
+                .unwrap()
+                .load_static_configs_dir(static_dir.path())
+                .unwrap()
+                .build();
+
+        assert_eq!(repomgr.get_repo_for_channel("valid1").map(|r| &**r), Some(&valid_static1_config));
+        assert_eq!(repomgr.get_repo_for_channel("valid2").map(|r| &**r), Some(&valid_static2_config));
+
+        // Dynamic repos for a valid config overload the static config.
+        assert_eq!(repomgr.get_repo_for_channel("valid3").map(|r| &**r), Some(&valid_dynamic_config));
+
+        // Ignore repos that have a url that aren't `abc.${channel}.fuchsia.com`.
+        assert_eq!(repomgr.get_repo_for_channel("invalid-static1"), None);
+        assert_eq!(repomgr.get_repo_for_channel("invalid-static2"), None);
+        assert_eq!(repomgr.get_repo_for_channel("invalid-static3"), None);
+
+        // Ignore non-overloading dynamic repos.
+        assert_eq!(repomgr.get_repo_for_channel("invalid-dynamic"), None);
     }
 }

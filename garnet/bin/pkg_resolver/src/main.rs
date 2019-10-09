@@ -14,6 +14,7 @@ use {
     futures::{StreamExt, TryFutureExt},
     parking_lot::RwLock,
     std::{io, sync::Arc},
+    sysconfig_client,
 };
 
 mod amber_connector;
@@ -71,7 +72,8 @@ fn main() -> Result<(), Error> {
 
     let font_package_manager = Arc::new(load_font_package_manager());
     let repo_manager = Arc::new(RwLock::new(load_repo_manager(amber_connector, experiments)));
-    let rewrite_manager = Arc::new(RwLock::new(load_rewrite_manager(rewrite_inspect_node)));
+    let rewrite_manager =
+        Arc::new(RwLock::new(load_rewrite_manager(rewrite_inspect_node, &repo_manager.read())));
 
     let resolver_cb = {
         // Capture a clone of repo and rewrite manager's Arc so the new client callback has a copy
@@ -192,8 +194,11 @@ fn load_repo_manager(
         .build()
 }
 
-fn load_rewrite_manager(node: inspect::Node) -> RewriteManager {
-    RewriteManagerBuilder::new(DYNAMIC_RULES_PATH)
+fn load_rewrite_manager(
+    node: inspect::Node,
+    repo_manager: &RepositoryManager<AmberConnector>,
+) -> RewriteManager {
+    let builder = RewriteManagerBuilder::new(DYNAMIC_RULES_PATH)
         .unwrap_or_else(|(builder, err)| {
             if err.kind() != io::ErrorKind::NotFound {
                 fx_log_err!(
@@ -210,8 +215,40 @@ fn load_rewrite_manager(node: inspect::Node) -> RewriteManager {
                 fx_log_err!("unable to load static rewrite rules from disk: {}", err);
             }
             builder
-        })
-        .build()
+        });
+
+    // If we have a channel in sysconfig, we don't want to load the dynamic configs. Instead, we'll
+    // construct a unique rule for that channel.
+    let channel = match sysconfig_client::channel::read_channel_config() {
+        Ok(channel) => channel,
+        Err(err) => {
+            fx_log_info!("unable to load channel from sysconfig, using defaults: {}", err);
+            return builder.build();
+        }
+    };
+    let tuf_config_name = channel.tuf_config_name();
+    fx_log_info!("current TUF config name is {}", tuf_config_name);
+
+    let repo = match repo_manager.get_repo_for_channel(tuf_config_name) {
+        Some(repo) => repo,
+        None => {
+            fx_log_err!("unable to find repo for channel, using defaults");
+            return builder.build();
+        }
+    };
+    fx_log_info!("channel repo is {}", repo.repo_url());
+
+    match fuchsia_url_rewrite::Rule::new("fuchsia.com", repo.repo_url().host(), "/", "/") {
+        Ok(rule) => builder.replace_dynamic_rules(vec![rule]).build(),
+        Err(err) => {
+            fx_log_err!(
+                "failed to make rewrite rule for {}, using defaults: {}",
+                repo.repo_url(),
+                err
+            );
+            builder.build()
+        }
+    }
 }
 
 fn load_font_package_manager() -> FontPackageManager {

@@ -3,6 +3,10 @@
         "binary": "bin/pkg_resolver"
     },
     "sandbox": {
+        "dev": [
+            "class/skip-block",
+            "misc/sysinfo"
+        ],
         "features": [
             "config-data",
             "isolated-persistent-storage",
