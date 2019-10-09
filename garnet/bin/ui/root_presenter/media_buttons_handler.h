@@ -9,6 +9,8 @@
 #include <lib/ui/input/device_state.h>
 #include <lib/ui/input/input_device_impl.h>
 
+#include "garnet/bin/ui/root_presenter/activity_notifier.h"
+
 namespace root_presenter {
 
 // MediaButtonsHandler tracks input devices with media buttons and notifies
@@ -17,6 +19,7 @@ namespace root_presenter {
 // registration.
 class MediaButtonsHandler {
  public:
+  explicit MediaButtonsHandler(ActivityNotifier* activity_notifier);
   void RegisterListener(fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener);
   bool OnDeviceAdded(ui_input::InputDeviceImpl* input_device);
   bool OnDeviceRemoved(uint32_t device_id);
@@ -30,6 +33,7 @@ class MediaButtonsHandler {
 
   // A registry of listeners for media button events.
   std::vector<fuchsia::ui::policy::MediaButtonsListenerPtr> media_buttons_listeners_;
+  ActivityNotifier* activity_notifier_;
 
   std::map<uint32_t, std::pair<ui_input::InputDeviceImpl*, std::unique_ptr<ui_input::DeviceState>>>
       device_states_by_id_;

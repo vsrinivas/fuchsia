@@ -4,11 +4,15 @@
 
 #include "garnet/bin/ui/root_presenter/media_buttons_handler.h"
 
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 
 using fuchsia::ui::policy::MediaButtonsListenerPtr;
 
 namespace root_presenter {
+MediaButtonsHandler::MediaButtonsHandler(ActivityNotifier* activity_notifier)
+    : activity_notifier_(activity_notifier) {}
+
 bool MediaButtonsHandler::OnDeviceAdded(ui_input::InputDeviceImpl* input_device) {
   if (!input_device->descriptor()->media_buttons) {
     return false;
@@ -58,8 +62,8 @@ bool MediaButtonsHandler::OnDeviceRemoved(uint32_t device_id) {
   return true;
 }
 
-void SendMediaButtonReportToListener(const fuchsia::ui::input::InputReport& report,
-                                     fuchsia::ui::policy::MediaButtonsListener* listener) {
+fuchsia::ui::input::MediaButtonsEvent CreateMediaButtonsEvent(
+    const fuchsia::ui::input::InputReport& report) {
   fuchsia::ui::input::MediaButtonsEvent event;
   int8_t volume_gain = 0;
   if (report.media_buttons->volume_up) {
@@ -70,13 +74,14 @@ void SendMediaButtonReportToListener(const fuchsia::ui::input::InputReport& repo
   }
   event.set_volume(volume_gain);
   event.set_mic_mute(report.media_buttons->mic_mute);
-  listener->OnMediaButtonsEvent(std::move(event));
+  return event;
 }
 
 void MediaButtonsHandler::OnEvent(fuchsia::ui::input::InputReport report) {
   FXL_CHECK(report.media_buttons);
+  activity_notifier_->ReceiveMediaButtonsEvent(CreateMediaButtonsEvent(report));
   for (auto& listener : media_buttons_listeners_) {
-    SendMediaButtonReportToListener(report, listener.get());
+    listener->OnMediaButtonsEvent(CreateMediaButtonsEvent(report));
   }
 }
 
@@ -102,7 +107,7 @@ void MediaButtonsHandler::RegisterListener(
     const ui_input::InputDeviceImpl* device_impl = it->second.first;
     const fuchsia::ui::input::InputReport* report = device_impl->LastReport();
     if (report) {
-      SendMediaButtonReportToListener(*report, listener.get());
+      listener->OnMediaButtonsEvent(CreateMediaButtonsEvent(*report));
     }
   }
 

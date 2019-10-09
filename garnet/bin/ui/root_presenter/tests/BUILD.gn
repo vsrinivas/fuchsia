@@ -18,6 +18,7 @@ executable("root_presenter_tests") {
   sources = [
     "a11y_settings_watcher_unittest.cc",
     "accessibility_pointer_event_registry_test.cc",
+    "activity_notifier_test.cc",
     "display_configuration_unittest.cc",
     "factory_reset_manager_test.cc",
     "input_util_unittest.cc",
@@ -37,6 +38,7 @@ executable("root_presenter_tests") {
     "//garnet/public/lib/ui/tests/mocks",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.recovery",
+    "//sdk/fidl/fuchsia.ui.activity",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input.accessibility",
     "//sdk/fidl/fuchsia.ui.input2",

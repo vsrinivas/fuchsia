@@ -9,9 +9,13 @@
 #include <lib/component/cpp/testing/test_with_context.h>
 #include <lib/ui/input/input_device_impl.h>
 #include <lib/ui/tests/mocks/mock_input_device.h>
+
 #include <stdlib.h>
 
+#include <src/lib/fxl/macros.h>
+
 #include "gtest/gtest.h"
+#include "lib/async/dispatcher.h"
 
 namespace root_presenter {
 namespace {
@@ -20,30 +24,52 @@ namespace {
 class MockListener : public fuchsia::ui::policy::MediaButtonsListener {
  public:
   MockListener(fidl::InterfaceRequest<fuchsia::ui::policy::MediaButtonsListener> listener_request)
-      : binding_(this, std::move(listener_request)) {
-    media_button_event_count = 0;
+      : binding_(this, std::move(listener_request)) {}
+
+  void OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event) override {
+    if (!last_event_) {
+      last_event_ = std::make_unique<fuchsia::ui::input::MediaButtonsEvent>();
+    }
+    event.Clone(last_event_.get());
+    media_button_event_count_++;
   }
 
-  void OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event) {
-    last_event = std::make_unique<fuchsia::ui::input::MediaButtonsEvent>();
-    event.Clone(last_event.get());
-    media_button_event_count++;
-  }
-
-  fuchsia::ui::input::MediaButtonsEvent* GetLastEvent() { return last_event.get(); }
-
-  uint32_t GetMediaButtonEventCount() { return media_button_event_count; }
+  fuchsia::ui::input::MediaButtonsEvent* GetLastEvent() { return last_event_.get(); }
+  uint32_t GetMediaButtonEventCount() { return media_button_event_count_; }
 
  private:
   fidl::Binding<fuchsia::ui::policy::MediaButtonsListener> binding_;
-  uint32_t media_button_event_count = 0;
-  std::unique_ptr<fuchsia::ui::input::MediaButtonsEvent> last_event;
+  uint32_t media_button_event_count_ = 0;
+  std::unique_ptr<fuchsia::ui::input::MediaButtonsEvent> last_event_;
+};
+
+class MockActivityNotifier : public ActivityNotifier {
+ public:
+  void ReceiveInputEvent(const fuchsia::ui::input::InputEvent& event) override {
+    FXL_CHECK(false) << "unimplemented.";
+  }
+  void ReceiveMediaButtonsEvent(const fuchsia::ui::input::MediaButtonsEvent& event) override {
+    if (!last_event_) {
+      last_event_ = std::make_unique<fuchsia::ui::input::MediaButtonsEvent>();
+    }
+    event.Clone(last_event_.get());
+    media_button_event_count_++;
+  }
+
+  fuchsia::ui::input::MediaButtonsEvent* GetLastEvent() { return last_event_.get(); }
+  uint32_t GetMediaButtonEventCount() { return media_button_event_count_; }
+
+ private:
+  uint32_t media_button_event_count_ = 0;
+  std::unique_ptr<fuchsia::ui::input::MediaButtonsEvent> last_event_;
 };
 
 class MediaButtonsHandlerTest : public component::testing::TestWithContext,
                                 public ui_input::InputDeviceImpl::Listener {
  public:
   void SetUp() final {
+    handler = std::make_unique<MediaButtonsHandler>(&activity_notifier);
+
     fuchsia::ui::input::DeviceDescriptor device_descriptor;
     device_descriptor.media_buttons =
         std::make_unique<fuchsia::ui::input::MediaButtonsDescriptor>();
@@ -56,14 +82,14 @@ class MediaButtonsHandlerTest : public component::testing::TestWithContext,
 
   void OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device){};
   void OnReport(ui_input::InputDeviceImpl* input_device, fuchsia::ui::input::InputReport report) {
-    handler.OnReport(input_device->id(), std::move(report));
+    handler->OnReport(input_device->id(), std::move(report));
   };
 
  protected:
   std::unique_ptr<MockListener> CreateListener() {
     fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener_handle;
     auto mock_listener = std::make_unique<MockListener>(listener_handle.NewRequest());
-    handler.RegisterListener(std::move(listener_handle));
+    handler->RegisterListener(std::move(listener_handle));
     RunLoopUntilIdle();
 
     return mock_listener;
@@ -86,7 +112,8 @@ class MediaButtonsHandlerTest : public component::testing::TestWithContext,
   fuchsia::ui::input::InputDevicePtr input_device;
   std::unique_ptr<ui_input::InputDeviceImpl> device;
 
-  MediaButtonsHandler handler;
+  std::unique_ptr<MediaButtonsHandler> handler;
+  MockActivityNotifier activity_notifier;
   bool device_added;
 
  private:
@@ -95,7 +122,7 @@ class MediaButtonsHandlerTest : public component::testing::TestWithContext,
       return;
     }
 
-    handler.OnDeviceAdded(device.get());
+    handler->OnDeviceAdded(device.get());
     device_added = true;
   }
 };
@@ -111,6 +138,9 @@ TEST_F(MediaButtonsHandlerTest, ReportAfterRegistration) {
 
   EXPECT_TRUE(listener->GetMediaButtonEventCount() == 1);
   EXPECT_TRUE(listener->GetLastEvent()->volume() == -1);
+
+  EXPECT_TRUE(activity_notifier.GetMediaButtonEventCount() == 1);
+  EXPECT_TRUE(activity_notifier.GetLastEvent()->volume() == -1);
 }
 
 // This test exercises delivering a report to handler before registration. Upon
@@ -134,6 +164,10 @@ TEST_F(MediaButtonsHandlerTest, ReportBeforeRegistration) {
 
   EXPECT_TRUE(listener->GetMediaButtonEventCount() == 1);
   EXPECT_TRUE(listener->GetLastEvent()->mic_mute());
+
+  // |activity_notifier| receives all inputs before registration
+  EXPECT_TRUE(activity_notifier.GetMediaButtonEventCount() == 2);
+  EXPECT_TRUE(activity_notifier.GetLastEvent()->mic_mute());
 }
 
 // This test ensures multiple listeners receive messages when dispatched by an
@@ -152,6 +186,9 @@ TEST_F(MediaButtonsHandlerTest, MultipleListeners) {
 
   EXPECT_TRUE(listener2->GetMediaButtonEventCount() == 1);
   EXPECT_TRUE(listener2->GetLastEvent()->volume() == 1);
+
+  EXPECT_TRUE(activity_notifier.GetMediaButtonEventCount() == 1);
+  EXPECT_TRUE(activity_notifier.GetLastEvent()->volume() == 1);
 }
 
 }  // namespace

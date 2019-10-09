@@ -20,6 +20,8 @@ executable("root_presenter") {
 
 source_set("lib") {
   sources = [
+    "activity_notifier.cc",
+    "activity_notifier.h",
     "app.cc",
     "app.h",
     "display_rotater.cc",
@@ -44,6 +46,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.recovery.ui",
+    "//sdk/fidl/fuchsia.ui.activity",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input.accessibility",
@@ -54,6 +57,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/ui/scenic/cpp",
     "//src/ui/lib/glm_workaround",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 
   deps = [

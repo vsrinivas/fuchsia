@@ -12,11 +12,13 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/shortcut/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/ui/input/input_device_impl.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/zx/eventpair.h>
+#include <lib/zx/time.h>
 
 #include <limits>
 #include <memory>
@@ -27,6 +29,7 @@
 
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "garnet/bin/ui/root_presenter/a11y_settings_watcher.h"
+#include "garnet/bin/ui/root_presenter/activity_notifier.h"
 #include "garnet/bin/ui/root_presenter/factory_reset_manager.h"
 #include "garnet/bin/ui/root_presenter/media_buttons_handler.h"
 #include "garnet/bin/ui/root_presenter/presentation.h"
@@ -45,7 +48,7 @@ class App : public fuchsia::ui::policy::Presenter,
             public fuchsia::ui::input::accessibility::PointerEventRegistry,
             public ui_input::InputDeviceImpl::Listener {
  public:
-  explicit App(const fxl::CommandLine& command_line);
+  App(const fxl::CommandLine& command_line, async::Loop* loop);
   ~App();
 
   // |InputDeviceImpl::Listener|
@@ -105,6 +108,8 @@ class App : public fuchsia::ui::policy::Presenter,
   // listening for pointer events.
   fuchsia::ui::policy::accessibility::PointerEventRegistryPtr pointer_event_registry_;
   fuchsia::ui::input::ImeServicePtr ime_service_;
+
+  ActivityNotifierImpl activity_notifier_;
 
   // Today, we have a global, singleton compositor, and it is managed solely by
   // a root presenter. Hence, a single resource ID is sufficient to identify it.

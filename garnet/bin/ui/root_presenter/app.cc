@@ -5,10 +5,12 @@
 #include "garnet/bin/ui/root_presenter/app.h"
 
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/ui/input/cpp/formatting.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <lib/zx/clock.h>
 #include <zircon/status.h>
 
 #include <algorithm>
@@ -22,10 +24,13 @@
 
 namespace root_presenter {
 
-App::App(const fxl::CommandLine& command_line)
+App::App(const fxl::CommandLine& command_line, async::Loop* loop)
     : startup_context_(component::StartupContext::CreateFromStartupInfo()),
       input_reader_(this),
-      fdr_manager_(std::make_unique<FactoryResetManager>(startup_context_.get())) {
+      fdr_manager_(std::make_unique<FactoryResetManager>(startup_context_.get())),
+      activity_notifier_(loop->dispatcher(), ActivityNotifierImpl::kDefaultInterval,
+                         startup_context_.get()),
+      media_buttons_handler_(&activity_notifier_) {
   FXL_DCHECK(startup_context_);
 
   input_reader_.Start();
@@ -63,9 +68,8 @@ void App::PresentView(
 
   auto presentation = std::make_unique<Presentation>(
       scenic_.get(), session_.get(), compositor_->id(), std::move(view_holder_token),
-      std::move(presentation_request), shortcut_manager, ime_service_.get(), renderer_params_,
-      display_startup_rotation_adjustment,
-      [this](bool yield_to_next) {
+      std::move(presentation_request), shortcut_manager, ime_service_.get(), &activity_notifier_,
+      renderer_params_, display_startup_rotation_adjustment, [this](bool yield_to_next) {
         if (yield_to_next) {
           SwitchToNextPresentation();
         } else {

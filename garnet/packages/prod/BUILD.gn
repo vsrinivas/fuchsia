@@ -74,6 +74,7 @@ group("scenic") {
     "//garnet/packages/prod:sysmem_connector",
     "//garnet/packages/prod:ui_policy",
     "//garnet/packages/prod:vulkan",
+    "//src/ui/bin/activity",
     "//src/ui/bin/ime:ime_service",
     "//src/ui/scenic",
   ]

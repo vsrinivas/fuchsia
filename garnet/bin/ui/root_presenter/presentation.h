@@ -22,6 +22,7 @@
 #include <memory>
 
 #include "garnet/bin/ui/presentation_mode/detector.h"
+#include "garnet/bin/ui/root_presenter/activity_notifier.h"
 #include "garnet/bin/ui/root_presenter/display_rotater.h"
 #include "garnet/bin/ui/root_presenter/display_size_switcher.h"
 #include "garnet/bin/ui/root_presenter/display_usage_switcher.h"
@@ -61,9 +62,9 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
                fuchsia::ui::views::ViewHolderToken view_holder_token,
                fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
                fuchsia::ui::shortcut::Manager* shortcut_manager,
-               fuchsia::ui::input::ImeService* ime_service, RendererParams renderer_params,
-               int32_t display_startup_rotation_adjustment, YieldCallback yield_callback,
-               MediaButtonsHandler* media_buttons_handler);
+               fuchsia::ui::input::ImeService* ime_service, ActivityNotifier* activity_notifier,
+               RendererParams renderer_params, int32_t display_startup_rotation_adjustment,
+               YieldCallback yield_callback, MediaButtonsHandler* media_buttons_handler);
   ~Presentation();
 
   void OnReport(uint32_t device_id, fuchsia::ui::input::InputReport report);
@@ -146,6 +147,7 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   // connect the output of DeviceState to shortcut_manager_.
   fuchsia::ui::shortcut::Manager* shortcut_manager_;
   fuchsia::ui::input::ImeService* ime_service_;
+  ActivityNotifier* activity_notifier_;
 
   scenic::Layer layer_;
   scenic::Renderer renderer_;

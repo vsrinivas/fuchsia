@@ -42,6 +42,7 @@ trace_flow_id_t PointerTraceHACK(float fa, float fb) {
 // Light intensities.
 constexpr float kAmbient = 0.3f;
 constexpr float kNonAmbient = 1.f - kAmbient;
+
 }  // namespace
 
 Presentation::Presentation(
@@ -49,13 +50,15 @@ Presentation::Presentation(
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
     fuchsia::ui::shortcut::Manager* shortcut_manager, fuchsia::ui::input::ImeService* ime_service,
-    RendererParams renderer_params, int32_t display_startup_rotation_adjustment,
-    YieldCallback yield_callback, MediaButtonsHandler* media_buttons_handler)
+    ActivityNotifier* activity_notifier, RendererParams renderer_params,
+    int32_t display_startup_rotation_adjustment, YieldCallback yield_callback,
+    MediaButtonsHandler* media_buttons_handler)
     : scenic_(scenic),
       session_(session),
       compositor_id_(compositor_id),
       shortcut_manager_(shortcut_manager),
       ime_service_(ime_service),
+      activity_notifier_(activity_notifier),
       layer_(session_),
       renderer_(session_),
       scene_(session_),
@@ -536,6 +539,8 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
   trace_flow_id_t trace_id = 0;
 
   FXL_VLOG(1) << "OnEvent " << event;
+
+  activity_notifier_->ReceiveInputEvent(event);
 
   fuchsia::ui::input::Command input_cmd;
 
