@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+extern crate network_manager_cli_lib as network_manager_cli;
+
 use failure::{format_err, Error, ResultExt};
 use fidl::endpoints::{Proxy, ServiceMarker};
 use fidl_fuchsia_overnet::{OvernetMarker, OvernetProxy, Peer};

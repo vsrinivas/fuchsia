@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+extern crate network_manager_cli_lib as network_manager_cli;
+
 #[cfg(test)]
 use failure::{Error, ResultExt};
 use fidl::endpoints::{create_proxy, ServiceMarker};
