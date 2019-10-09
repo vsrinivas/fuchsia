@@ -32,7 +32,8 @@ SessionContextImpl::SessionContextImpl(
     OnSessionShutdownCallback on_session_shutdown)
     : session_context_binding_(this),
       get_presentation_(std::move(get_presentation)),
-      on_session_shutdown_(std::move(on_session_shutdown)) {
+      on_session_shutdown_(std::move(on_session_shutdown)),
+      weak_factory_(this) {
   FXL_CHECK(get_presentation_);
   FXL_CHECK(on_session_shutdown_);
 
@@ -58,16 +59,18 @@ SessionContextImpl::SessionContextImpl(
                           std::move(ledger_token_manager), std::move(agent_token_manager),
                           session_context_binding_.NewBinding(), std::move(view_token));
 
-  sessionmgr_app_->SetAppErrorHandler([this] {
+  sessionmgr_app_->SetAppErrorHandler([weak_this = weak_factory_.GetWeakPtr()] {
     FXL_LOG(ERROR) << "Sessionmgr seems to have crashed unexpectedly. "
                    << "Calling on_session_shutdown_().";
     // This prevents us from receiving any further requests.
-    session_context_binding_.Unbind();
+    weak_this->session_context_binding_.Unbind();
 
     // Shutdown(), which expects a graceful shutdown of sessionmgr, does not
-    // apply here because sessionmgr crashed. Just run |on_session_shutdown_|
-    // directly.
-    on_session_shutdown_(ShutDownReason::CRASHED, /* logout_users= */ false);
+    // apply here because sessionmgr crashed. Move |on_session_shutdown_| on to the stack before
+    // invoking it, in case the |on_session_shutdown_| deletes |this|.
+    auto on_session_shutdown = std::move(weak_this->on_session_shutdown_);
+    on_session_shutdown(ShutDownReason::CRASHED, /* logout_users= */ false);
+    // Don't touch |this|.
   });
 }
 
@@ -101,14 +104,22 @@ void SessionContextImpl::Shutdown(bool logout_users, fit::function<void()> callb
   // This should prevent us from receiving any further requests.
   session_context_binding_.Unbind();
 
-  sessionmgr_app_->Teardown(kSessionmgrTimeout, [this, logout_users] {
-    for (const auto& callback : shutdown_callbacks_) {
-      callback();
-    }
-    ShutDownReason shutdown_reason =
-        logout_users ? ShutDownReason::LOGGED_OUT : ShutDownReason::CRASHED;
-    on_session_shutdown_(shutdown_reason, logout_users);
-  });
+  sessionmgr_app_->Teardown(
+      kSessionmgrTimeout, [weak_this = weak_factory_.GetWeakPtr(), logout_users] {
+        // One of the callbacks might delete |SessionContextImpl|, so always guard against
+        // WeakPtr<SessionContextImpl>.
+        for (const auto& callback : weak_this->shutdown_callbacks_) {
+          callback();
+          if (!weak_this) {
+            return;
+          }
+        }
+        ShutDownReason shutdown_reason =
+            logout_users ? ShutDownReason::LOGGED_OUT : ShutDownReason::CRASHED;
+
+        auto on_session_shutdown = std::move(weak_this->on_session_shutdown_);
+        on_session_shutdown(shutdown_reason, logout_users);
+      });
 }
 
 void SessionContextImpl::GetPresentation(

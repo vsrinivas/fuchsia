@@ -72,6 +72,8 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
                      GetPresentationCallback get_presentation,
                      OnSessionShutdownCallback on_session_shutdown);
 
+  ~SessionContextImpl() override = default;
+
   // This will effectively tear down the entire instance by calling
   // |on_session_shutdown_|. If |logout_users| is true, all the users will be
   // logged out with the assumption that all users belong to the current
@@ -107,6 +109,8 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
 
   GetPresentationCallback get_presentation_;
   OnSessionShutdownCallback on_session_shutdown_;
+
+  fxl::WeakPtrFactory<SessionContextImpl> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionContextImpl);
 };
