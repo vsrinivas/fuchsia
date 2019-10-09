@@ -7,14 +7,12 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <fuchsia/io/c/fidl.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/coding.h>
 #include <lib/fzl/fdio.h>
-#include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <string.h>
@@ -25,7 +23,6 @@
 #include <zircon/syscalls.h>
 
 #include <list>
-#include <unordered_map>
 
 #include <ddk/protocol/display/controller.h>
 #include <fbl/unique_fd.h>
@@ -35,12 +32,12 @@
 #include "vc.h"
 
 namespace fhd = ::llcpp::fuchsia::hardware::display;
-namespace sysmem = ::llcpp::fuchsia::sysmem;
 
 namespace {
 
 // Arbitrary
 constexpr uint32_t kSingleBufferStride = 4;
+constexpr uint32_t kMultiBufferStride = 8;
 
 class StubDisplayController : public fhd::Controller::Interface {
  public:
@@ -54,10 +51,10 @@ class StubDisplayController : public fhd::Controller::Interface {
   }
   void ImportImage(fhd::ImageConfig image_config, uint64_t collection_id, uint32_t index,
                    ImportImageCompleter::Sync _completer) override {
-    EXPECT_TRUE(false);
+    _completer.Reply(ZX_OK, 1);
   }
   void ReleaseImage(uint64_t image_id, ReleaseImageCompleter::Sync _completer) override {
-    images_.remove_if([image_id](uint64_t image) { return (image == image_id); });
+    EXPECT_TRUE(false);
   }
   void ImportEvent(::zx::event event, uint64_t id, ImportEventCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
@@ -65,13 +62,10 @@ class StubDisplayController : public fhd::Controller::Interface {
   void ReleaseEvent(uint64_t id, ReleaseEventCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
-  void CreateLayer(CreateLayerCompleter::Sync _completer) override {
-    layers_.push_back(next_layer_);
-    _completer.Reply(ZX_OK, next_layer_++);
-  }
+  void CreateLayer(CreateLayerCompleter::Sync _completer) override { _completer.Reply(ZX_OK, 1); }
 
   void DestroyLayer(uint64_t layer_id, DestroyLayerCompleter::Sync _completer) override {
-    layers_.remove_if([layer_id](uint64_t layer) { return (layer == layer_id); });
+    EXPECT_TRUE(false);
   }
   void SetDisplayMode(uint64_t display_id, fhd::Mode mode,
                       SetDisplayModeCompleter::Sync _completer) override {
@@ -97,7 +91,7 @@ class StubDisplayController : public fhd::Controller::Interface {
   void SetLayerPrimaryPosition(uint64_t layer_id, fhd::Transform transform, fhd::Frame src_frame,
                                fhd::Frame dest_frame,
                                SetLayerPrimaryPositionCompleter::Sync _completer) override {
-    // Ignore
+    EXPECT_TRUE(false);
   }
 
   void SetLayerPrimaryAlpha(uint64_t layer_id, fhd::AlphaMode mode, float val,
@@ -127,7 +121,7 @@ class StubDisplayController : public fhd::Controller::Interface {
   }
 
   void CheckConfig(bool discard, CheckConfigCompleter::Sync _completer) override {
-    _completer.Reply(fhd::ConfigResult::OK, fidl::VectorView<fhd::ClientCompositionOp>());
+    EXPECT_TRUE(false);
   }
 
   void ApplyConfig(ApplyConfigCompleter::Sync _completer) override {
@@ -181,34 +175,10 @@ class StubDisplayController : public fhd::Controller::Interface {
   void ReleaseCapture(uint64_t image_id, ReleaseCaptureCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
-
-  const std::list<uint64_t>& images() const { return images_; }
-  const std::list<uint64_t>& layers() const { return layers_; }
-
-  const std::unordered_map<uint64_t, std::unique_ptr<sysmem::BufferCollection::SyncClient>>&
-  buffer_collections() const {
-    return buffer_collections_;
-  }
-
- protected:
-  std::list<uint64_t> images_;
-  uint64_t next_image_ = 1;
-  // We want to make sure that we destroy every layer we create.
-  std::list<uint64_t> layers_;
-  uint64_t next_layer_ = 1;
-
-  std::unordered_map<uint64_t, std::unique_ptr<sysmem::BufferCollection::SyncClient>>
-      buffer_collections_;
 };
 
 class StubSingleBufferDisplayController : public StubDisplayController {
  public:
-  void ImportVmoImage(fhd::ImageConfig image_config, ::zx::vmo vmo, int32_t offset,
-                      ImportVmoImageCompleter::Sync _completer) override {
-    EXPECT_NE(ZX_HANDLE_INVALID, vmo.get());
-    images_.push_back(next_image_);
-    _completer.Reply(ZX_OK, next_image_++);
-  }
   void GetSingleBufferFramebuffer(GetSingleBufferFramebufferCompleter::Sync _completer) override {
     zx::vmo vmo;
     zx::vmo::create(4096, 0, &vmo);
@@ -221,56 +191,16 @@ class StubMultiBufferDisplayController : public StubDisplayController {
   void GetSingleBufferFramebuffer(GetSingleBufferFramebufferCompleter::Sync _completer) override {
     _completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::vmo(), 0);
   }
-  void ImportImage(fhd::ImageConfig image_config, uint64_t collection_id, uint32_t index,
-                   ImportImageCompleter::Sync _completer) override {
-    images_.push_back(next_image_);
-    _completer.Reply(ZX_OK, next_image_++);
+
+  void ComputeLinearImageStride(uint32_t width, uint32_t pixel_format,
+                                ComputeLinearImageStrideCompleter::Sync _completer) override {
+    _completer.Reply(kMultiBufferStride);
   }
 
-  void ImportBufferCollection(uint64_t collection_id, ::zx::channel collection_token,
-                              ImportBufferCollectionCompleter::Sync _completer) override {
-    zx::channel server, client;
-    ASSERT_OK(zx::channel::create(0, &server, &client));
-    ASSERT_OK(get_sysmem_allocator()
-                  ->BindSharedCollection(std::move(collection_token), std::move(server))
-                  .status());
-    buffer_collections_[collection_id] =
-        std::make_unique<sysmem::BufferCollection::SyncClient>(std::move(client));
-
-    _completer.Reply(ZX_OK);
-  }
-  void ReleaseBufferCollection(uint64_t collection_id,
-                               ReleaseBufferCollectionCompleter::Sync _completer) override {
-    buffer_collections_.erase(collection_id);
-  }
-
-  void SetBufferCollectionConstraints(
-      uint64_t collection_id, fhd::ImageConfig config,
-      SetBufferCollectionConstraintsCompleter::Sync _completer) override {
-    sysmem::BufferCollectionConstraints constraints;
-    constraints.usage.cpu = sysmem::cpuUsageWriteOften | sysmem::cpuUsageRead;
-    constraints.min_buffer_count = 1;
-    constraints.image_format_constraints_count = 2;
-    for (uint32_t i = 0; i < 2; i++) {
-      auto& image_constraints = constraints.image_format_constraints[i];
-      image_constraints = image_format::GetDefaultImageFormatConstraints();
-      if (i == 0) {
-        image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
-      } else {
-        image_constraints.pixel_format.type = sysmem::PixelFormatType::RGB565;
-      }
-      image_constraints.pixel_format.has_format_modifier = true;
-      image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
-      image_constraints.color_spaces_count = 1;
-      image_constraints.color_space[0].type = sysmem::ColorSpaceType::SRGB;
-      image_constraints.max_coded_width = 0xffffffff;
-      image_constraints.max_coded_height = 0xffffffff;
-      image_constraints.max_bytes_per_row = 0xffffffff;
-      image_constraints.bytes_per_row_divisor = 4;
-    }
-
-    buffer_collections_[collection_id]->SetConstraints(true, constraints);
-    _completer.Reply(ZX_OK);
+  void AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync _completer) override {
+    zx::vmo vmo;
+    zx::vmo::create(size, 0, &vmo);
+    _completer.Reply(ZX_OK, std::move(vmo));
   }
 };
 }  // namespace
@@ -285,6 +215,41 @@ void set_log_listener_active(bool active) {}
 
 void vc_attach_gfx(vc_t* vc) {}
 
+// We want to make sure that we destroy every layer we create.
+std::list<uint64_t> layers;
+uint64_t next_layer = 1;
+zx_status_t create_layer(uint64_t display_id, uint64_t* layer_id) {
+  layers.push_back(next_layer);
+  *layer_id = next_layer++;
+  return ZX_OK;
+}
+
+void destroy_layer(uint64_t layer_id) {
+  layers.remove_if([layer_id](uint64_t layer) { return (layer == layer_id); });
+}
+
+// We want to make sure we release every image we create.
+std::list<uint64_t> images;
+uint64_t next_image = 1;
+zx_status_t import_vmo(zx_handle_t vmo, fhd::ImageConfig* config, uint64_t* id) {
+  images.push_back(next_image);
+  *id = next_image++;
+  return ZX_OK;
+}
+
+void release_image(uint64_t image_id) {
+  images.remove_if([image_id](uint64_t image) { return (image == image_id); });
+}
+
+zx_status_t set_display_layer(uint64_t display_id, uint64_t layer_id) { return ZX_OK; }
+
+zx_status_t configure_layer(display_info_t* display, uint64_t layer_id, uint64_t image_id,
+                            fhd::ImageConfig* config) {
+  return ZX_OK;
+}
+
+zx_status_t apply_configuration() { return ZX_OK; }
+
 zx_status_t vc_init_gfx(vc_gfx_t* gfx, zx_handle_t fb_vmo, int32_t width, int32_t height,
                         zx_pixel_format_t format, int32_t stride) {
   return ZX_OK;
@@ -293,23 +258,18 @@ zx_status_t vc_init_gfx(vc_gfx_t* gfx, zx_handle_t fb_vmo, int32_t width, int32_
 void vc_change_graphics(vc_gfx_t* graphics) {}
 
 class VcDisplayTest : public zxtest::Test {
-  void SetUp() override { vc_sysmem_connect(); }
+  void SetUp() override {
+    layers.clear();
+    next_layer = 1;
+
+    images.clear();
+    next_image = 1;
+  }
 
   void TearDown() override {
-    if (loop_) {
-      // Ensure the loop processes all queued FIDL messages.
-      loop_->Quit();
-      loop_->JoinThreads();
-      loop_->ResetQuit();
-      loop_->RunUntilIdle();
-    }
-
+    ASSERT_EQ(layers.size(), 0);
+    ASSERT_EQ(images.size(), 0);
     loop_.reset();
-    if (controller_) {
-      ASSERT_EQ(controller_->layers().size(), 0);
-      ASSERT_EQ(controller_->images().size(), 0);
-      ASSERT_EQ(controller_->buffer_collections().size(), 0u);
-    }
     controller_.reset();
   }
 
@@ -477,7 +437,6 @@ TEST_F(VcDisplayTest, SingleBufferVmo) {
 
   display_info_t* primary = list_peek_head_type(get_display_list(), display_info_t, node);
   ASSERT_TRUE(primary->bound);
-  EXPECT_EQ(1u, controller_->images().size());
 
   EXPECT_NE(ZX_HANDLE_INVALID, primary->image_vmo);
   EXPECT_EQ(kSingleBufferStride, primary->stride);
@@ -486,52 +445,28 @@ TEST_F(VcDisplayTest, SingleBufferVmo) {
   ProcessEvent();
 }
 
-class VcDisplayMultibufferTest : public VcDisplayTest {
- public:
-  void SetupMode(zx_pixel_format_t format) {
-    controller_ = std::make_unique<StubMultiBufferDisplayController>();
-    InitializeServer();
+TEST_F(VcDisplayTest, MultiBufferVmo) {
+  controller_ = std::make_unique<StubMultiBufferDisplayController>();
+  InitializeServer();
 
-    fhd::Info hardware_display;
-    hardware_display.id = 1;
-    fhd::Mode mode;
-    mode.horizontal_resolution = 641;
-    mode.vertical_resolution = 480;
-    hardware_display.modes = fidl::VectorView(&mode, 1);
-    hardware_display.pixel_format = fidl::VectorView(&format, 1);
+  fhd::Info hardware_display;
+  hardware_display.id = 1;
+  uint32_t format = 0x0;
+  fhd::Mode mode;
+  hardware_display.modes = fidl::VectorView(&mode, 1);
+  hardware_display.pixel_format = fidl::VectorView(&format, 1);
 
-    // Add the first display.
-    SendAddDisplay(&hardware_display);
-    ProcessEvent();
-    ASSERT_TRUE(is_primary_bound());
-  }
+  // Add the first display.
+  SendAddDisplay(&hardware_display);
+  ProcessEvent();
+  ASSERT_TRUE(is_primary_bound());
 
-  void TeardownDisplay() {
-    SendRemoveDisplay(1);
-    ProcessEvent();
-  }
-};
-
-TEST_F(VcDisplayMultibufferTest, RGBA32) {
-  SetupMode(ZX_PIXEL_FORMAT_ARGB_8888);
-  display_info_t* primary = list_peek_head_type(get_display_list(), display_info_t, node);
-  ASSERT_TRUE(primary->bound);
-  EXPECT_EQ(primary->format, ZX_PIXEL_FORMAT_ARGB_8888);
-
-  EXPECT_NE(ZX_HANDLE_INVALID, primary->image_vmo);
-  EXPECT_EQ(641, primary->stride);
-  TeardownDisplay();
-}
-
-TEST_F(VcDisplayMultibufferTest, RGB565) {
-  SetupMode(ZX_PIXEL_FORMAT_RGB_565);
   display_info_t* primary = list_peek_head_type(get_display_list(), display_info_t, node);
   ASSERT_TRUE(primary->bound);
 
-  EXPECT_EQ(primary->format, ZX_PIXEL_FORMAT_RGB_565);
-
   EXPECT_NE(ZX_HANDLE_INVALID, primary->image_vmo);
-  // Stride should be rounded up to be a multiple of 4 bytes.
-  EXPECT_EQ(642, primary->stride);
-  TeardownDisplay();
+  EXPECT_EQ(kMultiBufferStride, primary->stride);
+
+  SendRemoveDisplay(1);
+  ProcessEvent();
 }

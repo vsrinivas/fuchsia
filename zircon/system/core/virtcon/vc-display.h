@@ -8,7 +8,6 @@
 #include <zircon/listnode.h>
 
 #include "fuchsia/hardware/display/llcpp/fidl.h"
-#include "fuchsia/sysmem/llcpp/fidl.h"
 #include "vc.h"
 #include "zircon/types.h"
 
@@ -21,9 +20,6 @@ typedef struct display_info {
 
   uint64_t image_id;
   uint64_t layer_id;
-
-  // 0 means no collection.
-  uint64_t buffer_collection_id;
 
   bool bound;
 
@@ -60,7 +56,6 @@ zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals, uint32
 bool is_primary_bound();
 struct list_node* get_display_list();
 void initialize_display_channel(zx::channel channel);
-llcpp::fuchsia::sysmem::Allocator::SyncClient* get_sysmem_allocator();
 
 #endif
 
