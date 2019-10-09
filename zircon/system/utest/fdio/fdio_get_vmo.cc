@@ -363,9 +363,9 @@ TEST(GetVMOTest, VMOFile) {
   EXPECT_EQ(get_rights(received), expected_rights | ZX_RIGHT_EXECUTE);
 }
 
-TEST(MmapFileTest, FilterExec) {
-  // This test verifies that _mmap_file does not call GetBuffer with VMO_FLAG_EXEC
-  // when being called with PROT_EXEC.
+// Verify that mmap (or rather the internal fdio function used to implement mmap, _mmap_file, works
+// with PROT_EXEC).
+TEST(MmapFileTest, ProtExecWorks) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread("fake-filesystem"));
   async_dispatcher_t* dispatcher = loop.dispatcher();
@@ -394,10 +394,7 @@ TEST(MmapFileTest, FilterExec) {
   zx_vm_option_t zx_options = PROT_READ | PROT_EXEC;
   uintptr_t ptr;
   ASSERT_OK(_mmap_file(offset, len, zx_options, MAP_SHARED, fd.get(), fd_off, &ptr));
-  // Verify that FileGetBuffer was called without the exec bit for now, until
-  // we've plumbed executability and the enforcement thereof throughout the
-  // filesystems.
-  EXPECT_EQ(context.last_flags, fuchsia_io_VMO_FLAG_READ);
+  EXPECT_EQ(context.last_flags, fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_EXEC);
 }
 
 }  // namespace
