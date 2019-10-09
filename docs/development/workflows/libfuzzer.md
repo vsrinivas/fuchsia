@@ -181,15 +181,11 @@ binary, then [AFL] may be a be better suited.
 
 Note: AFL support on Fuchsia is [not yet supported][todo].
 
-* If you want to fuzz a service via [FIDL] calls in the style of an integration test, consider using
-[syzkaller]'s FIDL support.
-
-Note: FIDL support is in [development][todo].
+* If you want to fuzz a service through [FIDL] calls in the style of an integration
+  test, see [Fuzzing FIDL Servers with LibFuzzer on Fuchsia][fidl_fuzzing].
 
 * If none of these options fit your needs, you can still write a custom fuzzer and have it run
 continuously under [ClusterFuzz].
-
-Note: ClusterFuzz integration is in [development][todo].
 
 ## Q: How do I create a Fuchsia fuzzer? {#q-how-do-i-create-a-fuchsia-fuzzer}
 
@@ -451,8 +447,8 @@ A: As you can see from the various notes in this document, there's still plenty 
 * Add additional language support, e.g for [Rust][rust-fuzzing] and [Go][go-fuzzing].
 * Add support for [AFL]  on Fuchsia.  Some design questions need to be worked out, as processes will
 not typically be run executed from the shell in the long term.
-* Continue work on fuzzing FIDL via [syzkaller] and other efforts.
-* Integrate with [ClusterFuzz].  Eventually this *may* be extended to include [OSS-Fuzz] as well.
+* Continue to improve FIDL fuzzing, through both [libFuzzer][fidl_fuzzing] and [syzkaller].
+* *Maybe* extend [Clusterfuzz] work to include [OSS-Fuzz] as well.
 * Provide source-based code coverage.
 
 We will continue to work on these features and others, and update this document accordingly as they
@@ -468,7 +464,8 @@ become available.
 [compiler-rt]: https://compiler-rt.llvm.org/
 [corpus]: https://llvm.org/docs/LibFuzzer.html#corpus
 [dictionaries]: https://llvm.org/docs/LibFuzzer.html#dictionaries
-[FIDL]: ../languages/fidl/README.md
+[FIDL]: /docs/development/workflows/libfuzzer_fidl.md
+[fidl_fuzzing]: ../workflows/libfuzzer_fidl.md
 [fuzz target]: https://llvm.org/docs/LibFuzzer.html#fuzz-target
 [fuzz tool]: #q-how-do-i-run-a-fuzzer
 [fuzzed-data-provider]: https://github.com/llvm/llvm-project/blob/master/compiler-rt/include/fuzzer/FuzzedDataProvider.h
