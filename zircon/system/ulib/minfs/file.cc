@@ -45,7 +45,14 @@ File::~File() {
 
 #ifdef __Fuchsia__
 
-void File::AllocateData() {
+// AllocateAndCommitData does the following operations:
+//  - Allocates data blocks,
+//  - Frees old data blocks (if this were overwritten),
+//  - Issues data and metadata writes,
+//  - Updates inode to reflect new size and modification time.
+//      Writes or fragments of a write may change inode's size, block_count or
+//      file block table (dnum, inum, dinum).
+void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
   // Calculate the maximum number of data blocks we can update within one transaction. This is
   // the smallest between half the capacity of the writeback buffer, and the number of direct
   // blocks needed to touch the maximum allowed number of indirect blocks.
@@ -58,16 +65,13 @@ void File::AllocateData() {
 
   // Iterate through all relative block ranges and acquire absolute blocks for each of them.
   while (true) {
-    fbl::unique_ptr<Transaction> transaction;
-    ZX_ASSERT(fs_->BeginTransaction(0, 0, &transaction) == ZX_OK);
-
     blk_t expected_blocks = allocation_state_.GetTotalPending();
+    ZX_ASSERT(expected_blocks <= max_blocks);
 
     if (expected_blocks == 0) {
       if (inode_.size != allocation_state_.GetNodeSize()) {
         inode_.size = allocation_state_.GetNodeSize();
         ValidateVmoTail(inode_.size);
-        InodeSync(transaction.get(), kMxFsSyncMtime);
       }
 
       // Since we may have pending reservations from an expected update, reset the allocation
@@ -76,43 +80,15 @@ void File::AllocateData() {
       ZX_ASSERT(allocation_state_.GetNodeSize() == inode_.size);
       allocation_state_.Reset(allocation_state_.GetNodeSize());
       ZX_DEBUG_ASSERT(allocation_state_.IsEmpty());
-
-      // Stop processing if we have not found any data blocks to update.
-      fs_->CommitTransaction(std::move(transaction));
       break;
     }
 
     blk_t bno_start, bno_count;
     ZX_ASSERT(allocation_state_.GetNextRange(&bno_start, &bno_count) == ZX_OK);
+    ZX_ASSERT(bno_count <= max_blocks);
 
     // Transfer reserved blocks from the vnode's allocation state to the current Transaction.
-    transaction->MergeBlockPromise(allocation_state_.GetPromise());
-
-    if (bno_start + bno_count >= kMinfsDirect) {
-      // Calculate the number of pre-indirect blocks. These will not factor into the number
-      // of indirect blocks being touched, and can be added back at the end.
-      blk_t pre_indirect = bno_start < kMinfsDirect ? kMinfsDirect - bno_start : 0;
-
-      // First direct block managed by an indirect block.
-      blk_t indirect_start = bno_start - fbl::min(bno_start, kMinfsDirect);
-
-      // Index of that direct block within the indirect block.
-      blk_t indirect_index = indirect_start % kMinfsDirectPerIndirect;
-
-      // The maximum number of direct blocks that can be updated without touching beyond the
-      // maximum indirect blocks. This includes any direct blocks prior to the indirect
-      // section.
-      blk_t relative_direct_max = max_direct_blocks - kMinfsDirect - indirect_index + pre_indirect;
-
-      // Determine actual max count between the indirect and writeback constraints.
-      blk_t max_count = fbl::min(relative_direct_max, max_writeback_blocks);
-
-      // Subtract direct blocks contained within the same indirect block before our starting
-      // point to ensure that we do not go beyond the maximum number of indirect blocks.
-      bno_count = fbl::min(bno_count, max_count);
-    }
-
-    ZX_ASSERT(bno_count <= max_blocks);
+    transaction->TakeReservedBlocksFromReservation(allocation_state_.GetPromise());
 
     // Since we reserved enough space ahead of time, this should not fail.
     ZX_ASSERT(BlocksSwap(transaction.get(), bno_start, bno_count, &allocated_blocks[0]) == ZX_OK);
@@ -144,7 +120,6 @@ void File::AllocateData() {
     }
 
     ValidateVmoTail(inode_.size);
-    InodeSync(transaction.get(), kMxFsSyncMtime);
 
     // In the future we could resolve on a per state (i.e. promise) basis, but since swaps are
     // currently only made within a single thread, for now it is okay to resolve everything.
@@ -154,11 +129,10 @@ void File::AllocateData() {
     // Return remaining reserved blocks back to the allocation state.
     blk_t bno_remaining = expected_blocks - bno_count;
     transaction->GiveBlocksToPromise(bno_remaining, allocation_state_.GetPromise());
-
-    // Commit may fail if we are in a readonly state, but we should continue resolving all
-    // pending allocations.
-    fs_->CommitTransaction(std::move(transaction));
   }
+
+  InodeSync(transaction.get(), kMxFsSyncMtime);
+  fs_->CommitTransaction(std::move(transaction));
 }
 
 zx_status_t File::BlocksSwap(Transaction* transaction, blk_t start, blk_t count, blk_t* bnos) {
@@ -299,16 +273,17 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
   if (status != ZX_OK) {
     return status;
   }
+
+  // If anything was written, enqueue operations allocated within WriteInternal.
   if (*out_actual != 0) {
-    // Enqueue metadata allocated via write.
-    InodeSync(transaction.get(), kMxFsSyncMtime);  // Successful writes updates mtime
+    // Ensure this Vnode remains alive while it has an operation in-flight.
     transaction->PinVnode(fbl::RefPtr(this));
-    fs_->CommitTransaction(std::move(transaction));
 
 #ifdef __Fuchsia__
-    // Enqueue data allocated via write.
-    fs_->EnqueueDataTask(
-        [file = fbl::RefPtr(this)](TransactionalFs*) mutable { file->AllocateData(); });
+    AllocateAndCommitData(std::move(transaction));
+#else
+    InodeSync(transaction.get(), kMxFsSyncMtime);  // Successful writes updates mtime
+    fs_->CommitTransaction(std::move(transaction));
 #endif
   }
 
@@ -346,7 +321,7 @@ zx_status_t File::Truncate(size_t len) {
   // the inode by itself.
   //
   // This allows us to avoid "only setting inode_.size" in the data task responsible for
-  // calling "AllocateData()".
+  // calling "AllocateAndCommitData()".
   if (allocation_state_.IsEmpty()) {
     inode_.size = allocation_state_.GetNodeSize();
   }
@@ -356,15 +331,12 @@ zx_status_t File::Truncate(size_t len) {
   // later, the act of truncating may have allocated indirect blocks.
   //
   // Ensure our inode is consistent with that metadata.
-  InodeSync(transaction.get(), kMxFsSyncMtime);
   transaction->PinVnode(fbl::RefPtr(this));
-  fs_->CommitTransaction(std::move(transaction));
 #ifdef __Fuchsia__
-  // Enqueue data allocated via write.
-  if (len != inode_.size) {
-    fs_->EnqueueDataTask(
-        [file = fbl::RefPtr(this)](TransactionalFs*) mutable { file->AllocateData(); });
-  }
+  AllocateAndCommitData(std::move(transaction));
+#else
+  InodeSync(transaction.get(), kMxFsSyncMtime);
+  fs_->CommitTransaction(std::move(transaction));
 #endif
   return ZX_OK;
 }

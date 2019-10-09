@@ -412,8 +412,8 @@ TEST_F(TransactionTest, GiveBlocksToPromiseAddsAllocation) {
   ASSERT_EQ(1, promise.GetReserved());
 }
 
-// Checks that MergeBlockPromise correctly transfers block allocation from an external promise.
-TEST_F(TransactionTest, MergeBlockPromiseRemovesAllocation) {
+// Checks that TakeReservedBlocks correctly transfers block allocation from an external promise.
+TEST_F(TransactionTest, TakeReservedBlocksRemovesAllocation) {
   fbl::unique_ptr<Transaction> transaction;
   ASSERT_OK(CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
 
@@ -421,7 +421,7 @@ TEST_F(TransactionTest, MergeBlockPromiseRemovesAllocation) {
   ASSERT_OK(promise.Initialize(transaction.get(), 1, BlockAllocator()));
   ASSERT_EQ(1, promise.GetReserved());
 
-  transaction->MergeBlockPromise(&promise);
+  transaction->TakeReservedBlocksFromReservation(&promise);
   ASSERT_EQ(0, promise.GetReserved());
 }
 

@@ -101,7 +101,6 @@ library("minfs") {
       "inspector.cc",
       "superblock.cc",
       "vnode-allocation.cc",
-      "work-queue.cc",
     ]
   }
 }

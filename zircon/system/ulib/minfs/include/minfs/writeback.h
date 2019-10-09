@@ -105,8 +105,8 @@ class Transaction final : public PendingWork {
     block_promise_.GiveBlocks(requested, other_promise);
   }
 
-  // Removes |requested| blocks from |other_promise| and gives them to block_promise_.
-  void MergeBlockPromise(AllocatorPromise* other_promise) {
+  // Removes all reserved blocks from |other_promise| and gives them to block_promise_.
+  void TakeReservedBlocksFromReservation(AllocatorPromise* other_promise) {
     other_promise->GiveBlocks(other_promise->GetReserved(), &block_promise_);
   }
 

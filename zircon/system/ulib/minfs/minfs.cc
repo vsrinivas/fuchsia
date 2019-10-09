@@ -519,19 +519,11 @@ void Minfs::CommitTransaction(fbl::unique_ptr<Transaction> transaction) {
 
 #ifdef __Fuchsia__
 void Minfs::Sync(SyncCallback closure) {
-  if (assigner_ != nullptr) {
-    // This callback will be processed after all "delayed data" operations have completed:
-    // this is why we "enqueue a callback" that will later "enqueue a callback" somewhere
-    // else.
-    auto cb = [closure = std::move(closure)](TransactionalFs* minfs) mutable {
-      minfs->EnqueueCallback(std::move(closure));
-    };
-    assigner_->EnqueueCallback(std::move(cb));
-  } else {
-    // If Minfs is read-only (data block assigner has not been initialized), immediately
-    // resolve the callback.
+  if (journal_ == nullptr) {
     closure(ZX_OK);
+    return;
   }
+  EnqueueCallback(std::move(closure));
 }
 #endif
 
@@ -827,7 +819,6 @@ void Minfs::StopWriteback() {
     WriteCleanBit(is_clean);
   }
 
-  assigner_ = nullptr;
   journal_ = nullptr;
   bc_->Sync();
 }
@@ -1061,8 +1052,9 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
 
   std::unique_ptr<InodeManager> inodes;
 #ifdef __Fuchsia__
-  status = InodeManager::Create(bc->device(), sb.get(), &transaction, std::move(inode_allocator_meta),
-                                ino_start_block, info.inode_count, &inodes);
+  status =
+      InodeManager::Create(bc->device(), sb.get(), &transaction, std::move(inode_allocator_meta),
+                           ino_start_block, info.inode_count, &inodes);
 #else
   status = InodeManager::Create(bc.get(), sb.get(), &transaction, std::move(inode_allocator_meta),
                                 ino_start_block, info.inode_count, &inodes);
@@ -1086,18 +1078,17 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
     return status;
   }
 
-  *out_minfs = std::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb),
-                                                std::move(block_allocator), std::move(inodes), id));
+  *out_minfs = std::unique_ptr<Minfs>(
+      new Minfs(std::move(bc), std::move(sb), std::move(block_allocator), std::move(inodes), id));
 #else
-  *out_minfs = std::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb),
-                                                std::move(block_allocator), std::move(inodes),
-                                                std::move(offsets)));
+  *out_minfs =
+      std::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb), std::move(block_allocator),
+                                       std::move(inodes), std::move(offsets)));
 #endif
   return ZX_OK;
 }
 
-zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc,
-                          const MountOptions& options,
+zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const MountOptions& options,
                           fbl::unique_ptr<Minfs>* out) {
   // To use the journal, it must first be replayed.
   if (!options.repair_filesystem && options.use_journal) {
@@ -1169,12 +1160,6 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc,
     }
   }
 
-  status = fs->InitializeWorkQueue();
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("minfs: Cannot initialize work queue\n");
-    return status;
-  }
-
   if (options.repair_filesystem) {
     // On a read-write filesystem we unset the kMinfsFlagClean flag to indicate that the filesystem
     // may begin receiving modifications.
@@ -1209,8 +1194,7 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc,
 zx_status_t ReplayJournal(Bcache* bc, const Superblock& info, fs::JournalSuperblock* out) {
   FS_TRACE_INFO("minfs: Replaying journal\n");
 
-  zx_status_t status = fs::ReplayJournal(bc, bc, JournalStartBlock(info),
-                                         JournalBlocks(info), out);
+  zx_status_t status = fs::ReplayJournal(bc, bc, JournalStartBlock(info), JournalBlocks(info), out);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("minfs: Failed to replay journal\n");
     return status;
@@ -1266,8 +1250,6 @@ zx_status_t Minfs::InitializeUnjournalledWriteback() {
   journal_ = std::make_unique<fs::Journal>(GetMutableBcache(), std::move(writeback_buffer));
   return ZX_OK;
 }
-
-zx_status_t Minfs::InitializeWorkQueue() { return WorkQueue::Create(this, &assigner_); }
 
 zx_status_t CreateAndRegisterVmo(block_client::BlockDevice* device, zx::vmo* out_vmo, size_t blocks,
                                  fuchsia_hardware_block_VmoID* out_vmoid) {

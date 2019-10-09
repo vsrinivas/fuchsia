@@ -49,7 +49,6 @@
 
 #ifdef __Fuchsia__
 #include "vnode-allocation.h"
-#include "work-queue.h"
 #endif
 
 #include "allocator/allocator.h"
@@ -206,9 +205,6 @@ class Minfs :
   // unlinked nodes and existing journal entries). Does not enable the journal.
   zx_status_t InitializeUnjournalledWriteback();
 
-  // Initializes the Minfs work queue.
-  zx_status_t InitializeWorkQueue();
-
   // Queries the superblock flags for FVM as well as underlying FVM, if it exists.
   zx_status_t FVMQuery(fuchsia_hardware_block_volume_VolumeInfo* info) const;
 #endif
@@ -278,9 +274,6 @@ class Minfs :
   void CommitTransaction(fbl::unique_ptr<Transaction> transaction) final;
 
 #ifdef __Fuchsia__
-  // Hands off a work unit to be completed by the "data assigner" thread.
-  void EnqueueDataTask(TaskCallback callback) { assigner_->EnqueueCallback(std::move(callback)); }
-
   // Returns the capacity of the writeback buffer, in blocks.
   size_t WritebackCapacity() const {
     // Use a heuristics-based approach based on physical RAM size to
@@ -412,8 +405,7 @@ class Minfs :
   static zx_status_t CreateFsId(uint64_t* out);
 
   // Reads blocks from disk. Only to be called during "construction".
-  static zx_status_t ReadInitialBlocks(const Superblock& info,
-                                       std::unique_ptr<Bcache> bc,
+  static zx_status_t ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bcache> bc,
                                        std::unique_ptr<SuperblockManager> sb,
                                        std::unique_ptr<Minfs>* out_minfs);
 
@@ -449,7 +441,6 @@ class Minfs :
 #ifdef __Fuchsia__
   fbl::Closure on_unmount_{};
   MinfsMetrics metrics_ = {};
-  fbl::unique_ptr<WorkQueue> assigner_;
   fbl::unique_ptr<fs::Journal> journal_;
   uint64_t fs_id_ = 0;
 #else

@@ -24,7 +24,7 @@ zx_time_t nstimespec(struct timespec ts) {
   return zx_time_add_duration(ZX_SEC(ts.tv_sec), ts.tv_nsec);
 }
 
-bool test_attr(void) {
+bool test_create_mtime(void) {
   BEGIN_TEST;
   zx_time_t now = 0;
   ASSERT_EQ(ZX_OK, zx_clock_get(ZX_CLOCK_UTC, &now), "could not read clock");
@@ -47,6 +47,34 @@ bool test_attr(void) {
   ASSERT_EQ(statb1.st_mtim.tv_nsec, (long)(now % ZX_SEC(1)), "");
   ASSERT_EQ(close(fd1), 0, "");
 
+  ASSERT_EQ(unlink("::file.txt"), 0, "");
+
+  END_TEST;
+}
+
+bool test_utimes_mtime(void) {
+  BEGIN_TEST;
+  zx_time_t now = 0;
+  EXPECT_EQ(ZX_OK, zx_clock_get(ZX_CLOCK_UTC, &now), "could not read clock");
+  EXPECT_NE(now, 0u, "zx_clock_get only returns zero on error");
+
+  int fd1 = open("::file.txt", O_CREAT | O_RDWR, 0644);
+  EXPECT_GT(fd1, 0, "");
+
+  struct timespec ts[2];
+  ts[0].tv_nsec = UTIME_OMIT;
+  ts[1].tv_sec = (long)(now / ZX_SEC(1));
+  ts[1].tv_nsec = (long)(now % ZX_SEC(1));
+
+  // Make sure we get back "now" from stat().
+  EXPECT_EQ(futimens(fd1, ts), 0, "");
+  struct stat statb1;
+  EXPECT_EQ(fstat(fd1, &statb1), 0, "");
+  now = ROUND_DOWN(now, test_info->nsec_granularity);
+  EXPECT_EQ(statb1.st_mtim.tv_sec, (long)(now / ZX_SEC(1)), "");
+  EXPECT_EQ(statb1.st_mtim.tv_nsec, (long)(now % ZX_SEC(1)), "");
+  EXPECT_EQ(close(fd1), 0, "");
+
   zx_nanosleep(zx_deadline_after(test_info->nsec_granularity));
 
   ASSERT_EQ(utimes("::file.txt", NULL), 0, "");
@@ -55,6 +83,29 @@ bool test_attr(void) {
   ASSERT_GT(nstimespec(statb2.st_mtim), nstimespec(statb1.st_mtim), "");
 
   ASSERT_EQ(unlink("::file.txt"), 0, "");
+
+  END_TEST;
+}
+
+bool test_write_mtime(void) {
+  BEGIN_TEST;
+
+  int fd1 = open("::file.txt", O_CREAT | O_RDWR, 0644);
+  EXPECT_GT(fd1, 0, "");
+
+  struct stat stat1, stat2;
+  EXPECT_EQ(fstat(fd1, &stat1), 0, "");
+
+  char buffer[100];
+  memset(buffer, 'a', sizeof(buffer));
+  ssize_t ret = write(fd1, buffer, sizeof(buffer));
+  EXPECT_GT(ret, 0, "");
+  EXPECT_EQ((unsigned long)(ret), sizeof(buffer), "");
+  EXPECT_EQ(close(fd1), 0, "");
+  ASSERT_EQ(stat("::file.txt", &stat2), 0, "");
+
+  ASSERT_LE(nstimespec(stat1.st_mtim), nstimespec(stat2.st_mtim), "");
+  EXPECT_EQ(unlink("::file.txt"), 0, "");
 
   END_TEST;
 }
@@ -165,5 +216,13 @@ bool test_parent_directory_time(void) {
   END_TEST;
 }
 
-RUN_FOR_ALL_FILESYSTEMS(attr_tests, RUN_TEST_MEDIUM(test_attr) RUN_TEST_MEDIUM(test_blksize)
-                                        RUN_TEST_MEDIUM(test_parent_directory_time))
+// clang-format off
+RUN_FOR_ALL_FILESYSTEMS(
+attr_tests,
+RUN_TEST_MEDIUM(test_create_mtime)
+RUN_TEST_MEDIUM(test_utimes_mtime)
+RUN_TEST_MEDIUM(test_write_mtime)
+RUN_TEST_MEDIUM(test_blksize)
+RUN_TEST_MEDIUM(test_parent_directory_time)
+)
+// clang-format on

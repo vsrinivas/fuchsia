@@ -7,10 +7,6 @@
 #ifndef ZIRCON_SYSTEM_ULIB_MINFS_VNODE_ALLOCATION_H_
 #define ZIRCON_SYSTEM_ULIB_MINFS_VNODE_ALLOCATION_H_
 
-#ifndef __Fuchsia__
-#error Fuchsia-only Header
-#endif
-
 #include <bitmap/rle-bitmap.h>
 #include <minfs/format.h>
 

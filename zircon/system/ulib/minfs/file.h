@@ -63,7 +63,7 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
 
 #ifdef __Fuchsia__
   // Allocate all data blocks pending in |allocation_state_|.
-  void AllocateData();
+  void AllocateAndCommitData(std::unique_ptr<Transaction> transaction);
 
   // For all data blocks in the range |start| to |start + count|, reserve specific blocks in
   // the allocator to be swapped in at the time the old blocks are swapped out. Metadata blocks
