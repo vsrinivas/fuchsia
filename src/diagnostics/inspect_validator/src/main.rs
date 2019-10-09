@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod data; // Local data maintainer/updater, remote data reader, compare engine
+mod data; // Inspect data maintainer/updater/scanner-from-vmo; compare engine
 mod metrics; // Evaluates memory performance of Inspect library
 mod puppet; // Interface to target Inspect library wrapper programs (puppets)
 mod results; // Stores and formats reports-to-user

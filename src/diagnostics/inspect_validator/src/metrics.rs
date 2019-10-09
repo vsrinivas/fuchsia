@@ -43,7 +43,7 @@ impl Metrics {
         self.size += 16 << block.order();
     }
 
-    fn new(trial_name: &str, step_index: usize) -> Metrics {
+    pub fn new(trial_name: &str, step_index: usize) -> Metrics {
         Metrics { block_count: 0, size: 0, trial_name: trial_name.into(), step_index }
     }
 }
