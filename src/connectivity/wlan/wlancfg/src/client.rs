@@ -1070,7 +1070,7 @@ mod tests {
             ssid: ssid.to_vec(),
             rx_dbm: -30,
             channel: 1,
-            protected: true,
+            protection: fidl_sme::Protection::Wpa2Personal,
             compatible: true,
         }
     }

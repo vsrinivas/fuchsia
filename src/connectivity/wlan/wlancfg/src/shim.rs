@@ -64,11 +64,11 @@ pub async fn serve_legacy(
     client: ClientRef,
     ess_store: Arc<KnownEssStore>,
 ) -> Result<(), fidl::Error> {
-    requests.try_for_each_concurrent(MAX_CONCURRENT_WLAN_REQUESTS, |req| handle_request(
-        &client,
-        req,
-        Arc::clone(&ess_store)
-    )).await
+    requests
+        .try_for_each_concurrent(MAX_CONCURRENT_WLAN_REQUESTS, |req| {
+            handle_request(&client, req, Arc::clone(&ess_store))
+        })
+        .await
 }
 
 async fn handle_request(
@@ -152,7 +152,8 @@ async fn scan(client: &ClientRef, legacy_req: legacy::ScanRequest) -> legacy::Sc
             .map(|ess| convert_bss_info(&ess.best_bss))
             .sorted_by(|a, b| a.ssid.cmp(&b.ssid))
             .collect())
-    }.await;
+    }
+        .await;
 
     match r {
         Ok(aps) => legacy::ScanResult { error: success(), aps: Some(aps) },
@@ -188,7 +189,7 @@ fn convert_bss_info(bss: &fidl_sme::BssInfo) -> legacy::Ap {
         bssid: bss.bssid.to_vec(),
         ssid: String::from_utf8_lossy(&bss.ssid).to_string(),
         rssi_dbm: bss.rx_dbm,
-        is_secure: bss.protected,
+        is_secure: bss.protection != fidl_sme::Protection::Open,
         is_compatible: bss.compatible,
         chan: fidl_common::WlanChan {
             primary: bss.channel,
@@ -347,4 +348,39 @@ fn empty_packet_counter() -> fidl_wlan_stats::PacketCounter {
 
 fn empty_counter() -> fidl_wlan_stats::Counter {
     fidl_wlan_stats::Counter { count: 0, name: String::new() }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_convert_bss_to_legacy_ap() {
+        let bss = fidl_sme::BssInfo {
+            bssid: [0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f],
+            ssid: b"Foo".to_vec(),
+            rx_dbm: 20,
+            channel: 1,
+            protection: fidl_sme::Protection::Wpa2Personal,
+            compatible: true,
+        };
+        let ap = legacy::Ap {
+            bssid: vec![0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f],
+            ssid: "Foo".to_string(),
+            rssi_dbm: 20,
+            is_secure: true,
+            is_compatible: true,
+            chan: fidl_common::WlanChan {
+                primary: 1,
+                secondary80: 0,
+                cbw: fidl_common::Cbw::Cbw20,
+            },
+        };
+
+        assert_eq!(convert_bss_info(&bss), ap);
+
+        let bss = fidl_sme::BssInfo { protection: fidl_sme::Protection::Open, ..bss };
+        let ap = legacy::Ap { is_secure: false, ..ap };
+
+        assert_eq!(convert_bss_info(&bss), ap);
+    }
 }

@@ -5,8 +5,8 @@
 use {
     crate::ie::{self, rsn::suite_filter},
     failure::format_err,
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
-    std::{collections::HashMap, hash::Hash},
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme,
+    std::{collections::HashMap, fmt, hash::Hash},
 };
 
 // TODO(WLAN-1273): Represent this as bitfield instead.
@@ -27,6 +27,40 @@ pub enum Protection {
     /// about a non 192-bit version. Thus, colloquially, it's likely that the term WPA3 Enterprise
     /// will be used to refer to WPA3 Enterprise 192-bit mode.
     Wpa3Enterprise = 9,
+}
+
+impl From<Protection> for fidl_sme::Protection {
+    fn from(protection: Protection) -> fidl_sme::Protection {
+        match protection {
+            Protection::Unknown => fidl_sme::Protection::Unknown,
+            Protection::Open => fidl_sme::Protection::Open,
+            Protection::Wep => fidl_sme::Protection::Wep,
+            Protection::Wpa1 => fidl_sme::Protection::Wpa1,
+            Protection::Wpa1Wpa2Personal => fidl_sme::Protection::Wpa1Wpa2Personal,
+            Protection::Wpa2Personal => fidl_sme::Protection::Wpa2Personal,
+            Protection::Wpa2Wpa3Personal => fidl_sme::Protection::Wpa2Wpa3Personal,
+            Protection::Wpa3Personal => fidl_sme::Protection::Wpa3Personal,
+            Protection::Wpa2Enterprise => fidl_sme::Protection::Wpa2Enterprise,
+            Protection::Wpa3Enterprise => fidl_sme::Protection::Wpa3Enterprise,
+        }
+    }
+}
+
+impl fmt::Display for Protection {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Protection::Unknown => write!(f, "{}", "Unknown"),
+            Protection::Open => write!(f, "{}", "Open"),
+            Protection::Wep => write!(f, "{}", "Wep"),
+            Protection::Wpa1 => write!(f, "{}", "Wpa1"),
+            Protection::Wpa1Wpa2Personal => write!(f, "{}", "Wpa1Wpa2Personal"),
+            Protection::Wpa2Personal => write!(f, "{}", "Wpa2Personal"),
+            Protection::Wpa2Wpa3Personal => write!(f, "{}", "Wpa2Wpa3Personal"),
+            Protection::Wpa3Personal => write!(f, "{}", "Wpa3Personal"),
+            Protection::Wpa2Enterprise => write!(f, "{}", "Wpa2Enterprise"),
+            Protection::Wpa3Enterprise => write!(f, "{}", "Wpa3Enterprise"),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]

@@ -178,7 +178,7 @@ pub struct BssInfoNode {
     ssid: StringProperty,
     rx_dbm: IntProperty,
     channel: UintProperty,
-    protected: StringProperty,
+    protection: StringProperty,
 }
 
 impl BssInfoNode {
@@ -187,8 +187,8 @@ impl BssInfoNode {
         let ssid = node.create_string("ssid", ssid_inspect_str(&bss_info.ssid));
         let rx_dbm = node.create_int("rx_dbm", bss_info.rx_dbm as i64);
         let channel = node.create_uint("channel", bss_info.channel as u64);
-        let protected = node.create_string("protected", format!("{}", bss_info.protected));
-        Self { _node: node, bssid, ssid, rx_dbm, channel, protected }
+        let protection = node.create_string("protection", format!("{}", bss_info.protection));
+        Self { _node: node, bssid, ssid, rx_dbm, channel, protection }
     }
 
     fn update(&mut self, bss_info: &BssInfo) {
@@ -196,7 +196,7 @@ impl BssInfoNode {
         self.ssid.set(&ssid_inspect_str(&bss_info.ssid));
         self.rx_dbm.set(bss_info.rx_dbm as i64);
         self.channel.set(bss_info.channel as u64);
-        self.protected.set(&format!("{}", bss_info.protected));
+        self.protection.set(&format!("{}", bss_info.protection));
     }
 }
 

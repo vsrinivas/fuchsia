@@ -30,7 +30,9 @@ pub async fn get_iface_sme_proxy(
     iface_id: u16,
 ) -> Result<fidl_sme::ClientSmeProxy, Error> {
     let (sme_proxy, sme_remote) = endpoints::create_proxy()?;
-    let status = wlan_svc.get_client_sme(iface_id, sme_remote).await
+    let status = wlan_svc
+        .get_client_sme(iface_id, sme_remote)
+        .await
         .context("error sending GetClientSme request")?;
     if status == zx::sys::ZX_OK {
         Ok(sme_proxy)
@@ -118,7 +120,9 @@ async fn handle_connect_transaction(
 
     let mut result_code = fidl_sme::ConnectResultCode::Failed;
 
-    while let Some(evt) = event_stream.try_next().await
+    while let Some(evt) = event_stream
+        .try_next()
+        .await
         .context("failed to receive connect result before the channel was closed")?
     {
         match evt {
@@ -175,7 +179,9 @@ async fn get_scan_results(
     let mut stream = scan_txn.take_event_stream();
     let mut scan_results = vec![];
 
-    while let Some(event) = stream.try_next().await
+    while let Some(event) = stream
+        .try_next()
+        .await
         .context("failed to receive scan result before the channel was closed")?
     {
         match event {
@@ -218,6 +224,7 @@ mod tests {
         },
         fidl_fuchsia_wlan_sme::{
             BssInfo, ClientSmeMarker, ClientSmeRequest, ClientSmeRequestStream, ConnectResultCode,
+            Protection,
         },
         fuchsia_async::Executor,
         futures::stream::{StreamExt, StreamFuture},
@@ -644,7 +651,7 @@ mod tests {
                     ssid: ssid,
                     rx_dbm: -30,
                     channel: 1,
-                    protected: true,
+                    protection: Protection::Wpa2Personal,
                     compatible: true,
                 };
                 Some(Box::new(bss_info))
@@ -686,9 +693,23 @@ mod tests {
     fn scan_success_returns_results() {
         let mut scan_results_for_response = Vec::new();
         // due to restrictions for cloning fidl objects, forced to make a copy of the vector here
-        let entry1 = create_bss_info([0, 1, 2, 3, 4, 5], b"foo".to_vec(), -30, 1, true, true);
+        let entry1 = create_bss_info(
+            [0, 1, 2, 3, 4, 5],
+            b"foo".to_vec(),
+            -30,
+            1,
+            Protection::Wpa2Personal,
+            true,
+        );
         let entry1_copy = fidl_sme::BssInfo { ssid: entry1.ssid.clone(), ..entry1 };
-        let entry2 = create_bss_info([1, 2, 3, 4, 5, 6], b"hello".to_vec(), -60, 2, true, false);
+        let entry2 = create_bss_info(
+            [1, 2, 3, 4, 5, 6],
+            b"hello".to_vec(),
+            -60,
+            2,
+            Protection::Wpa2Personal,
+            false,
+        );
         let entry2_copy = fidl_sme::BssInfo { ssid: entry2.ssid.clone(), ..entry2 };
         scan_results_for_response.push(fidl_sme::EssInfo { best_bss: entry1 });
         scan_results_for_response.push(fidl_sme::EssInfo { best_bss: entry2 });
@@ -793,10 +814,10 @@ mod tests {
         ssid: Vec<u8>,
         rx_dbm: i8,
         channel: u8,
-        protected: bool,
+        protection: Protection,
         compatible: bool,
     ) -> fidl_sme::BssInfo {
-        fidl_sme::BssInfo { bssid, ssid, rx_dbm, channel, protected, compatible }
+        fidl_sme::BssInfo { bssid, ssid, rx_dbm, channel, protection, compatible }
     }
 
     fn assert_eq_credentials(
@@ -896,5 +917,4 @@ mod tests {
                                       Poll::Ready(Err(e)) => format !("{}", e));
         assert!(err_str.contains("PEER_CLOSED"));
     }
-
 }

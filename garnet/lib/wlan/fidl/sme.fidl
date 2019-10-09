@@ -7,12 +7,26 @@ library fuchsia.wlan.sme;
 using fuchsia.wlan.common;
 using fuchsia.wlan.mesh;
 
+/// Security protection which should mirror the Protection enum defined in wlan lib common
+enum Protection {
+    UNKNOWN = 0;
+    OPEN = 1;
+    WEP = 2;
+    WPA1 = 3;
+    WPA1_WPA2_PERSONAL = 4;
+    WPA2_PERSONAL = 5;
+    WPA2_WPA3_PERSONAL = 6;
+    WPA3_PERSONAL = 7;
+    WPA2_ENTERPRISE = 8;
+    WPA3_ENTERPRISE = 9;
+};
+
 struct BssInfo {
     array<uint8>:6 bssid;
     vector<uint8>:32 ssid;
     int8 rx_dbm;
     uint8 channel;
-    bool protected;
+    Protection protection;
     bool compatible;
 };
 
@@ -69,7 +83,8 @@ struct RadioConfig {
 };
 
 /// Empty struct used as credential value for open networks.
-struct Empty {};
+struct Empty {
+};
 
 /// Information required to connect to a protected network.
 xunion Credential {

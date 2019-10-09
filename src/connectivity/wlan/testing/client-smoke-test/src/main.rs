@@ -416,7 +416,7 @@ mod tests {
                 ssid: s.to_string().as_bytes().to_vec(),
                 rx_dbm: -30,
                 channel: 1,
-                protected: true,
+                protection: fidl_sme::Protection::Wpa2Personal,
                 compatible: true,
             };
             Box::new(bss_info)
@@ -449,5 +449,4 @@ mod tests {
         let error = Err(failure::format_err!("this is a failure"));
         assert_eq!(is_successful_download(&error), false);
     }
-
 }

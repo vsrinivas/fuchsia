@@ -10,8 +10,11 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
 };
-use wlan_common::ie::write_wpa1_ie;
-use wlan_common::{assert_variant, ie::rsn::rsne::RsnCapabilities};
+use wlan_common::{
+    assert_variant,
+    bss::Protection,
+    ie::{rsn::rsne::RsnCapabilities, write_wpa1_ie},
+};
 use wlan_rsn::rsna::UpdateSink;
 
 use crate::{
@@ -112,7 +115,7 @@ pub fn fake_bss_info() -> BssInfo {
         ssid: b"foo".to_vec(),
         rx_dbm: 0,
         channel: 1,
-        protected: true,
+        protection: Protection::Wpa2Personal,
         compatible: true,
     }
 }

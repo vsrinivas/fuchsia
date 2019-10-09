@@ -85,8 +85,7 @@ async fn do_phy(cmd: opts::PhyCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
             let mut alpha2 = [0u8; 2];
             alpha2.copy_from_slice(country.as_bytes());
             let mut req = wlan_service::SetCountryRequest { phy_id, alpha2 };
-            let response =
-                wlan_svc.set_country(&mut req).await.context("error setting country")?;
+            let response = wlan_svc.set_country(&mut req).await.context("error setting country")?;
             println!("response: {:?}", zx::Status::from_raw(response));
         }
     }
@@ -138,7 +137,9 @@ async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
             let ids = get_iface_ids(wlan_svc.clone(), iface_id).await?;
 
             for iface_id in ids {
-                let (status, resp) = wlan_svc.get_iface_stats(iface_id).await
+                let (status, resp) = wlan_svc
+                    .get_iface_stats(iface_id)
+                    .await
                     .context("error getting stats for iface")?;
                 match status {
                     zx::sys::ZX_OK => {
@@ -424,7 +425,9 @@ impl FromStr for MacAddr {
 async fn handle_scan_transaction(scan_txn: fidl_sme::ScanTransactionProxy) -> Result<(), Error> {
     let mut printed_header = false;
     let mut events = scan_txn.take_event_stream();
-    while let Some(evt) = events.try_next().await
+    while let Some(evt) = events
+        .try_next()
+        .await
         .context("failed to fetch all results before the channel was closed")?
     {
         match evt {
@@ -487,7 +490,7 @@ fn print_scan_result(ess: &fidl_sme::EssInfo) {
         MacAddr(ess.best_bss.bssid),
         ess.best_bss.rx_dbm,
         ess.best_bss.channel,
-        if ess.best_bss.protected { "Y" } else { "N" },
+        if ess.best_bss.protection != fidl_sme::Protection::Open { "Y" } else { "N" },
         ssid_str
     );
 }
@@ -496,7 +499,9 @@ async fn handle_connect_transaction(
     connect_txn: fidl_sme::ConnectTransactionProxy,
 ) -> Result<(), Error> {
     let mut events = connect_txn.take_event_stream();
-    while let Some(evt) = events.try_next().await
+    while let Some(evt) = events
+        .try_next()
+        .await
         .context("failed to receive connect result before the channel was closed")?
     {
         match evt {
@@ -523,7 +528,9 @@ async fn get_client_sme(
     iface_id: u16,
 ) -> Result<fidl_sme::ClientSmeProxy, Error> {
     let (proxy, remote) = endpoints::create_proxy()?;
-    let status = wlan_svc.get_client_sme(iface_id, remote).await
+    let status = wlan_svc
+        .get_client_sme(iface_id, remote)
+        .await
         .context("error sending GetClientSme request")?;
     if status == zx::sys::ZX_OK {
         Ok(proxy)
@@ -545,7 +552,9 @@ async fn get_ap_sme(wlan_svc: WlanSvc, iface_id: u16) -> Result<fidl_sme::ApSmeP
 
 async fn get_mesh_sme(wlan_svc: WlanSvc, iface_id: u16) -> Result<fidl_sme::MeshSmeProxy, Error> {
     let (proxy, remote) = endpoints::create_proxy()?;
-    let status = wlan_svc.get_mesh_sme(iface_id, remote).await
+    let status = wlan_svc
+        .get_mesh_sme(iface_id, remote)
+        .await
         .context("error sending GetMeshSme request")?;
     if status == zx::sys::ZX_OK {
         Ok(proxy)
@@ -565,7 +574,9 @@ async fn get_iface_ids(wlan_svc: WlanSvc, iface_id: Option<u16>) -> Result<Vec<u
 }
 
 async fn list_minstrel_peers(wlan_svc: WlanSvc, iface_id: u16) -> Result<Vec<MacAddr>, Error> {
-    let (status, resp) = wlan_svc.get_minstrel_list(iface_id).await
+    let (status, resp) = wlan_svc
+        .get_minstrel_list(iface_id)
+        .await
         .context(format!("Error getting minstrel peer list iface {}", iface_id))?;
     if status == zx::sys::ZX_OK {
         Ok(resp
@@ -591,7 +602,9 @@ async fn show_minstrel_peer_for_iface(
     let peer_addrs = get_peer_addrs(wlan_svc.clone(), id, peer_addr).await?;
     let mut first_peer = true;
     for mut peer_addr in peer_addrs {
-        let (status, resp) = wlan_svc.get_minstrel_stats(id, &mut peer_addr.0).await
+        let (status, resp) = wlan_svc
+            .get_minstrel_stats(id, &mut peer_addr.0)
+            .await
             .context(format!("Error getting minstrel stats from peer {}", peer_addr))?;
         if status != zx::sys::ZX_OK {
             println!(

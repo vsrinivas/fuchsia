@@ -28,7 +28,7 @@ impl ClientConfig {
             ssid: bss.ssid.clone(),
             rx_dbm: get_rx_dbm(bss),
             channel: bss.chan.primary,
-            protected: bss.cap.privacy,
+            protection: bss.get_protection(),
             compatible: self.is_bss_compatible(bss),
         }
     }
@@ -91,7 +91,7 @@ pub struct BssInfo {
     pub ssid: Ssid,
     pub rx_dbm: i8,
     pub channel: u8,
-    pub protected: bool,
+    pub protection: Protection,
     pub compatible: bool,
 }
 
@@ -246,7 +246,7 @@ mod tests {
                 ssid: vec![],
                 rx_dbm: -5,
                 channel: 1,
-                protected: true,
+                protection: Protection::Wpa2Personal,
                 compatible: true,
             }
         );
@@ -258,7 +258,7 @@ mod tests {
                 ssid: vec![],
                 rx_dbm: -5,
                 channel: 1,
-                protected: true,
+                protection: Protection::Wep,
                 compatible: false,
             }
         );
@@ -271,7 +271,7 @@ mod tests {
                 ssid: vec![],
                 rx_dbm: -5,
                 channel: 1,
-                protected: true,
+                protection: Protection::Wep,
                 compatible: true,
             }
         );
@@ -430,5 +430,4 @@ mod tests {
             1, 0, 0x00, 0x0F, 0xAC, 1, // 1 AKM:  802.1X
         ]
     }
-
 }
