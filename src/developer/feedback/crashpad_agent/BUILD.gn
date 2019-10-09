@@ -78,6 +78,8 @@ source_set("src") {
     "crash_server.h",
     "crashpad_agent.cc",
     "crashpad_agent.h",
+    "database.cc",
+    "database.h",
     "feedback_data_provider_ptr.cc",
     "feedback_data_provider_ptr.h",
     "inspect_manager.cc",
@@ -91,6 +93,8 @@ source_set("src") {
     "scoped_unlink.h",
     "settings.cc",
     "settings.h",
+    "upload_report.cc",
+    "upload_report.h",
   ]
 
   public_deps = [
