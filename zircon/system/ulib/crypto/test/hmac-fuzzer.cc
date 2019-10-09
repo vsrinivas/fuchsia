@@ -1,5 +1,6 @@
 #include <stddef.h>
 
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 
