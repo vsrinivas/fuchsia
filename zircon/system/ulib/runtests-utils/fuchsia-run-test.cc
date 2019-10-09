@@ -218,7 +218,7 @@ void TestFileComponentInfo(const fbl::String& path, fbl::String* component_url_o
 
 std::unique_ptr<Result> FuchsiaRunTest(const char* argv[], const char* output_dir,
                                        const char* output_filename, const char* test_name) {
-  // The arguments passed to fdio_spaws_etc. May be overridden.
+  // The arguments passed to fdio_spawn_etc. May be overridden.
   const char** args = argv;
   // calculate size of argv
   size_t argc = 0;
