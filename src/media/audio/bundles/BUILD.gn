@@ -9,3 +9,10 @@ group("audio") {
     "//src/media/audio/audio_core",
   ]
 }
+
+group("audio_config") {
+  testonly = true
+  deps = [
+    "//src/media/audio/config"
+  ]
+}
