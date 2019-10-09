@@ -245,6 +245,15 @@ async fn player_controls_are_proxied() -> Result<()> {
             PlayerRequest::Play { .. } => true,
             _ => false,
         })
+        .await?;
+
+    let (_volume_client, volume_server) = create_endpoints()?;
+    session.bind_volume_control(volume_server)?;
+    player
+        .wait_for_request(|request| match request {
+            PlayerRequest::BindVolumeControl { .. } => true,
+            _ => false,
+        })
         .await
 }
 

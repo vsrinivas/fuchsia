@@ -211,6 +211,10 @@ impl Player {
                             SessionControlRequest::BindGainControl {
                                 gain_control_request, ..
                             } => proxy.bind_gain_control(gain_control_request),
+                            SessionControlRequest::BindVolumeControl {
+                                volume_control_request,
+                                ..
+                            } => proxy.bind_volume_control(volume_control_request),
                         })
                     }) {}
                     drop(waiter);
