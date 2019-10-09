@@ -10,6 +10,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
+#include <fbl/vector.h>
 #include <trace-engine/instrumentation.h>
 #include <trace-test-utils/fixture.h>
 #include <trace/event.h>
@@ -268,6 +269,49 @@ bool large_blob_event_macro_rejected_test() {
   END_TRACE_TEST;
 }
 
+bool arg_value_null_ending_test() {
+  BEGIN_TRACE_TEST;
+
+  fixture_initialize_and_start_tracing();
+
+  static const char terminated[5] = {'1', '2', '3', '4', '\0'};
+  static const char unterminated[5] = {'1', '2', '3', '4', '5'};
+
+  TRACE_DURATION_BEGIN("+enabled", "name", "key", "literal");
+  TRACE_DURATION_BEGIN("+enabled", "name", "key", terminated);
+  TRACE_DURATION_BEGIN("+enabled", "name", "key", unterminated);
+  fbl::Vector<trace::Record> records;
+
+  fixture_stop_and_terminate_tracing();
+
+  EXPECT_TRUE(fixture_read_records(&records));
+
+  EXPECT_EQ(records.size(), 10);
+  EXPECT_TRUE(fixture_compare_raw_records(
+      records, 1, 6,
+      "String(index: 1, \"+enabled\")\n"
+      "String(index: 2, \"process\")\n"
+      "KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n"
+      "Thread(index: 1, <>)\n"
+      "String(index: 3, \"name\")\n"
+      "String(index: 4, \"key\")\n"));
+
+  // The comparison in the fixture_compare_*_records functions does not distinguish between strings
+  // that match up to the first null character. These checks ensure that the terminal null character
+  // is not included in the string argument values.
+  const auto& literal_arg = records[7].GetEvent().arguments[0].value().GetString();
+  EXPECT_EQ(literal_arg.length(), 7);
+  EXPECT_STR_EQ(literal_arg.c_str(), "literal");
+  const auto& terminated_arg = records[8].GetEvent().arguments[0].value().GetString();
+  EXPECT_EQ(terminated_arg.length(), 4);
+  EXPECT_STR_EQ(terminated_arg.c_str(), "1234");
+  const auto& unterminated_arg = records[9].GetEvent().arguments[0].value().GetString();
+  EXPECT_EQ(unterminated_arg.length(), 5);
+  EXPECT_STR_EQ(unterminated_arg.c_str(), "12345");
+
+  END_TRACE_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(records)
@@ -280,4 +324,5 @@ RUN_TEST(large_blob_event_macro_small_test)
 RUN_TEST(large_blob_event_macro_medium_test)
 RUN_TEST(large_blob_event_macro_big_test)
 RUN_TEST(large_blob_event_macro_rejected_test)
+RUN_TEST(arg_value_null_ending_test)
 END_TEST_CASE(records)

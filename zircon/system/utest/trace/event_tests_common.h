@@ -888,12 +888,16 @@ static bool test_string_arguments(void) {
   TRACE_DURATION_BEGIN("+enabled", "name", "key", TA_STRING(string));
 
 #ifdef __cplusplus
+  static const char nonterminated[5] = {'1', '2', '3', '4', '5'};
+
   TRACE_DURATION_BEGIN("+enabled", "name", "key", (const char*)nullptr);
   TRACE_DURATION_BEGIN("+enabled", "name", "key", "");
   TRACE_DURATION_BEGIN("+enabled", "name", "key", "literal");
   TRACE_DURATION_BEGIN("+enabled", "name", "key", string);
+  TRACE_DURATION_BEGIN("+enabled", "name", "key", nonterminated);
   TRACE_DURATION_BEGIN("+enabled", "name", "key", fbl::String("dynamic string"));
   TRACE_DURATION_BEGIN("+enabled", "name", "key", fbl::StringPiece("piece", 3u));
+  TRACE_DURATION_BEGIN("+enabled", "name", "key", nonterminated);
 #endif  // __cplusplus
 
   ASSERT_RECORDS(
@@ -914,8 +918,10 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {ke
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: string(\"\")})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: string(\"literal\")})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: string(\"1234\")})\n\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: string(\"12345\")})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: string(\"dynamic string\")})\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: string(\"pie\")})\n\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {key: string(\"12345\")})\n\
 ");
 
   END_TRACE_TEST;
