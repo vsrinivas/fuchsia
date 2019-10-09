@@ -54,6 +54,7 @@ impl CmInto<fsys::ComponentDecl> for cm::Document {
             collections: self.collections.cm_into()?,
             facets: self.facets.cm_into()?,
             storage: self.storage.cm_into()?,
+            runners: None,
         })
     }
 }
@@ -394,6 +395,7 @@ mod tests {
             children: None,
             collections: None,
             storage: None,
+            runners: None,
         }
     }
 
@@ -1360,6 +1362,7 @@ mod tests {
                     collections: Some(collections),
                     facets: Some(facets),
                     storage: Some(storages),
+                    runners: None,
                 }
             },
         },

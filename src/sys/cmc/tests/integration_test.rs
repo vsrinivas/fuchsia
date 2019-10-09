@@ -98,6 +98,8 @@ fn main() {
             collections: Some(collections),
             facets: Some(facets),
             storage: None,
+            // TODO(fxb/4761): Test runners.
+            runners: None,
         }
     };
     assert_eq!(cm_decl, expected_decl);

@@ -6,3 +6,4 @@ library fuchsia.sys2;
 
 using child_name = string:MAX_CHILD_NAME_LENGTH;
 using collection_name = string:MAX_COLLECTION_NAME_LENGTH;
+using runner_name = string:MAX_RUNNER_NAME_LENGTH;

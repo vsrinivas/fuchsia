@@ -132,6 +132,7 @@ mod tests {
                     children: None,
                     collections: None,
                     storage: None,
+                    runners: None,
                 }),
                 package: None,
             }))

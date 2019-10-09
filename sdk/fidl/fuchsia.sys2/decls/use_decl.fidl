@@ -87,3 +87,10 @@ table UseStorageDecl {
     /// Must be an absolute path starting with /.
     2: string:MAX_PATH_LENGTH target_path;
 };
+
+/// Declares a runner used by a component, which was offered to the component's
+/// environment.
+table UseRunnerDecl {
+    /// The name of the runner, as it was presented to this component.
+    1: runner_name name;
+};

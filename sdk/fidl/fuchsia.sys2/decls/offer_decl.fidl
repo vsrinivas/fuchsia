@@ -97,3 +97,22 @@ table OfferStorageDecl {
     /// `collection`.
     3: Ref target;
 };
+
+/// Declares a runner offered by a component to one of its children, which may
+/// have been offered by the component's containing realm, the component itself,
+/// or one of its other children.
+table OfferRunnerDecl {
+    /// The provider of the capability relative to the component itself. Must be
+    /// `realm`, `self`, or `child`.
+    1: Ref source;
+
+    /// Name of the runner being offered.
+    2: runner_name source_name;
+
+    /// Reference to the target of the capability. Must be `child` or
+    /// `collection`.
+    3: Ref target;
+
+    /// Name under which the capability is being offered.
+    4: runner_name target_name;
+};

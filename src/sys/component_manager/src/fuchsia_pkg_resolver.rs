@@ -180,6 +180,7 @@ mod tests {
             children: None,
             collections: None,
             storage: None,
+            runners: None,
         };
         assert_eq!(decl.unwrap(), expected_decl);
 

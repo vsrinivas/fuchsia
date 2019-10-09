@@ -200,7 +200,7 @@ struct ValidationContext<'a> {
 #[derive(Clone, Copy, PartialEq)]
 enum AllowablePaths {
     One,
-    Many
+    Many,
 }
 
 type PathMap<'a> = HashMap<String, HashMap<&'a str, AllowablePaths>>;
@@ -947,6 +947,7 @@ mod tests {
             storage: None,
             children: None,
             collections: None,
+            runners: None,
         }
     }
 

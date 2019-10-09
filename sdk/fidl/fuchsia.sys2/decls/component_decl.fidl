@@ -67,4 +67,8 @@ table ComponentDecl {
     /// List of storage capabilities created by this component.
     /// Storage capabilities can be offered to children.
     8: vector<StorageDecl> storage;
+
+    /// List of runner capabilities created by this component.
+    /// Runner capabilities can be exposed to the parent's realm or offered to children.
+    9: vector<RunnerDecl> runners;
 };

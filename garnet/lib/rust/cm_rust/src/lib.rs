@@ -301,6 +301,7 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
             collections: self.collections.native_into_fidl(),
             storage: self.storage.native_into_fidl(),
             facets: self.facets.native_into_fidl(),
+            runners: None,
         }
     }
 }
@@ -1169,6 +1170,7 @@ mod tests {
                 collections: None,
                 facets: None,
                 storage: None,
+                runners: None,
             },
             result = ComponentDecl {
                 program: None,
@@ -1340,7 +1342,8 @@ mod tests {
                        source_path: Some("/memfs".to_string()),
                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                    }
-               ])
+               ]),
+               runners: None,
             },
             result = {
                 ComponentDecl {

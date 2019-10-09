@@ -82,3 +82,21 @@ table ExposeDirectoryDecl {
     /// Must be an absolute path starting with /.
     4: string:MAX_PATH_LENGTH target_path;
 };
+
+/// Declares a runner exposed to a component's containing realm, such as a
+/// runner exposed by the component or one of its children at runtime.
+table ExposeRunnerDecl {
+    /// The provider of the capability relative to the component itself. Must
+    /// be `self` or `child`.
+    1: Ref source;
+
+    /// The name of the runner, by which it was presented to this component.
+    2: runner_name source_name;
+
+    /// The destination to which the runner is exposed: either the component's realm or the
+    /// framework.
+    3: Ref target;
+
+    /// The name by which the capability is being exposed.
+    4: runner_name target_name;
+};
