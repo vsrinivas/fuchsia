@@ -77,9 +77,11 @@ func (f *fakePacketConn) SetWriteDeadline(t time.Time) error {
 
 type fakeNetFactory struct {
 	packetCh chan []byte
+	ttlCh    chan int
 }
 
-func (f *fakeNetFactory) MakeUDPSocket(port int, ip net.IP, iface *net.Interface) (net.PacketConn, error) {
+func (f *fakeNetFactory) MakeUDPSocket(port, ttl int, ip net.IP, iface *net.Interface) (net.PacketConn, error) {
+	f.ttlCh <- ttl
 	return &fakePacketConn{packetCh: f.packetCh}, nil
 }
 
@@ -107,41 +109,63 @@ func (f *fakePacketReceiver) Close() error {
 	return nil
 }
 
-// Returns a fake mDNS connection, a multicast packet channel, and a unicast
-// packet channel, respectively.
+// Returns a fake mDNS connection, a multicast packet channel, a unicast
+// packet channel, and a TTL-to-be-sent channel respectively. The latter does
+// not return any data. It is to indicate the TTL that was set for all packets
+// on this connection.
 //
 // Keep in mind if running multiple ConnectTo's it will simply add multiple
 // readers to ONE channel. This doesn't support something like mapping ports to
 // specific channels or the like.
-func makeFakeMDNSConn(v6 bool) (mDNSConn, chan []byte, chan []byte) {
+func makeFakeMDNSConn(v6 bool) (mDNSConn, chan []byte, chan []byte, chan int) {
+	// NOTE: In the event that some sort of mapping is going to be made or
+	// multiple values intend to be pushed into these channels, then this
+	// implementation will need to be updated.
 	ucast := make(chan []byte, 1)
 	mcast := make(chan []byte, 1)
+	ttl := make(chan int, 1)
 	if v6 {
 		// TODO(awdavies): Should this be a dep injection from a function rather
 		// than constructed purely for tests?
-		c := &mDNSConn6{mDNSConnBase{netFactory: &fakeNetFactory{packetCh: ucast}}}
+		c := &mDNSConn6{mDNSConnBase{
+			netFactory: &fakeNetFactory{packetCh: ucast, ttlCh: ttl},
+			ttl:        -1,
+		}}
 		// This needs to be initialized, which happens in the |InitReceiver|
 		// function inside of the MDNS |Start| function.
-		c.receiver = &fakePacketReceiver{&fakePacketConn{packetCh: mcast}}
-		return c, mcast, ucast
+		c.receiver = &fakePacketReceiver{packetConn: &fakePacketConn{packetCh: mcast}}
+		return c, mcast, ucast, ttl
 	} else {
-		c := &mDNSConn4{mDNSConnBase{netFactory: &fakeNetFactory{packetCh: ucast}}}
-		c.receiver = &fakePacketReceiver{&fakePacketConn{packetCh: mcast}}
-		return c, mcast, ucast
+		c := &mDNSConn4{mDNSConnBase{
+			netFactory: &fakeNetFactory{packetCh: ucast, ttlCh: ttl},
+			ttl:        -1,
+		}}
+		c.receiver = &fakePacketReceiver{packetConn: &fakePacketConn{packetCh: mcast}}
+		return c, mcast, ucast, ttl
 	}
 }
 
 func TestUCast4(t *testing.T) {
-	c, _, ucast := makeFakeMDNSConn(false)
+	c, _, ucast, ttl := makeFakeMDNSConn(false)
+	defer c.Close()
 	c.SetAcceptUnicastResponses(true)
 	ip := net.ParseIP("192.168.2.2")
 	if err := c.ConnectTo(12345, ip, fakeInterface); err != nil {
 		t.Errorf("Unable to connect to port: %v", err)
 		return
 	}
+	ttlWant := -1
+	ttlGot := <-ttl
+	if d := cmp.Diff(ttlWant, ttlGot); d != "" {
+		t.Errorf("ttl for senders incorrect (-want +got)\n%s", d)
+	}
 	if err := c.ConnectTo(12345, ip, fakeInterface); err != nil {
 		t.Errorf("Unable to connect to port: %v", err)
 		return
+	}
+	ttlGot = <-ttl
+	if d := cmp.Diff(ttlWant, ttlGot); d != "" {
+		t.Errorf("ttl for senders incorrect (-want +got)\n%s", d)
 	}
 
 	rpChan := c.Listen()
@@ -156,17 +180,47 @@ func TestUCast4(t *testing.T) {
 	}
 }
 
+func TestTTLValues(t *testing.T) {
+	c, _, _, _ := makeFakeMDNSConn(false)
+	defer c.Close()
+	// Expecting errors.
+	if err := c.SetMCastTTL(256); err == nil {
+		t.Errorf("expecting error SetMCastTTL()")
+	}
+	if err := c.SetMCastTTL(10000); err == nil {
+		t.Errorf("expecting error SetMCastTTL()")
+	}
+
+	// Expecting no errors.
+	if err := c.SetMCastTTL(-10); err != nil {
+		t.Errorf("expecting no error SetMCastTTL()")
+	}
+}
+
 func TestUCast6(t *testing.T) {
-	c, _, ucast := makeFakeMDNSConn(true)
+	c, _, ucast, ttl := makeFakeMDNSConn(true)
+	defer c.Close()
 	c.SetAcceptUnicastResponses(true)
 	ip := net.ParseIP("2001:db8::1")
 	if err := c.ConnectTo(1234, ip, fakeInterface); err != nil {
 		t.Errorf("Unable to connect to port: %v", err)
 		return
 	}
+	ttlWant := -1
+	ttlGot := <-ttl
+	if d := cmp.Diff(ttlWant, ttlGot); d != "" {
+		t.Errorf("ttl for senders incorrect (-want +got)\n%s", d)
+	}
+
+	c.SetMCastTTL(0)
 	if err := c.ConnectTo(12345, ip, fakeInterface); err != nil {
 		t.Errorf("Unable to connect to port: %v", err)
 		return
+	}
+	ttlWant = 0
+	ttlGot = <-ttl
+	if d := cmp.Diff(ttlWant, ttlGot); d != "" {
+		t.Errorf("ttl for senders incorrect (-want +got)\n%s", d)
 	}
 
 	rpChan := c.Listen()
@@ -182,7 +236,8 @@ func TestUCast6(t *testing.T) {
 }
 
 func TestMCast6(t *testing.T) {
-	c, mcast, ucast := makeFakeMDNSConn(true)
+	c, mcast, ucast, ttl := makeFakeMDNSConn(true)
+	defer c.Close()
 	ip := net.ParseIP("2001:db8::1")
 	if err := c.ConnectTo(1234, ip, fakeInterface); err != nil {
 		t.Errorf("Unable to connect to port: %v", err)
@@ -202,14 +257,26 @@ func TestMCast6(t *testing.T) {
 	if d := cmp.Diff(want, got.data[:len(want)]); d != "" {
 		t.Errorf("read/write ucast mismatch (-wrote +read)\n%s", d)
 	}
+	ttlWant := -1
+	ttlGot := <-ttl
+	if d := cmp.Diff(ttlWant, ttlGot); d != "" {
+		t.Errorf("ttl for senders incorrect (-want +got)\n%s", d)
+	}
 }
 
 func TestMCast4(t *testing.T) {
-	c, mcast, ucast := makeFakeMDNSConn(false)
+	c, mcast, ucast, ttl := makeFakeMDNSConn(false)
+	defer c.Close()
 	ip := net.ParseIP("192.168.10.10")
+	ttlWant := 23
+	c.SetMCastTTL(ttlWant)
 	if err := c.ConnectTo(1234, ip, fakeInterface); err != nil {
 		t.Errorf("Unable to connect to port: %v", err)
 		return
+	}
+	ttlGot := <-ttl
+	if d := cmp.Diff(ttlWant, ttlGot); d != "" {
+		t.Errorf("ttl for senders incorrect (-want +got)\n%s", d)
 	}
 
 	rpChan := c.Listen()
@@ -228,7 +295,8 @@ func TestMCast4(t *testing.T) {
 }
 
 func TestConnectToRejectedMDNS4(t *testing.T) {
-	c, _, _ := makeFakeMDNSConn(false)
+	c, _, _, _ := makeFakeMDNSConn(false)
+	defer c.Close()
 	ip := net.ParseIP("2001:db8::1")
 	if err := c.ConnectTo(12345, ip, fakeInterface); err == nil {
 		t.Errorf("ConnectTo expected error when connecting to IPv6 addr")

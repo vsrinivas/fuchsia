@@ -83,6 +83,11 @@ type devFinderCmd struct {
 	// The limit of devices to discover. If this number of devices has been discovered before
 	// the timeout has been reached the program will exit successfully.
 	deviceLimit int
+	// The TTL for multicast messages. This is primarily for debugging and testing. Setting
+	// this to zero restricts all packets to the host machine. Setting this to a negative
+	// number is ignored (continues default behavior). Setting this to greater than
+	// 255 is an error.
+	ttl int
 
 	mdnsHandler mDNSHandler
 
@@ -104,6 +109,7 @@ func (cmd *devFinderCmd) SetCommonFlags(f *flag.FlagSet) {
 	f.BoolVar(&cmd.localResolve, "local", false, "Returns the address of the interface to the host when doing service lookup/domain resolution.")
 	f.BoolVar(&cmd.acceptUnicast, "accept-unicast", false, "Accepts unicast responses. For if the receiving device responds from a different subnet or behind port forwarding.")
 	f.IntVar(&cmd.deviceLimit, "device-limit", 0, "Exits before the timeout at this many devices per resolution (zero means no limit).")
+	f.IntVar(&cmd.ttl, "ttl", -1, "Sets the TTL for outgoing mcast messages. Primarily for debugging and testing. Setting this to zero limits messages to the localhost.")
 }
 
 func (cmd *devFinderCmd) Output() io.Writer {
@@ -139,6 +145,9 @@ func (cmd *devFinderCmd) newMDNS(address string) mdnsInterface {
 	}
 	m.SetAddress(address)
 	m.SetAcceptUnicastResponses(cmd.acceptUnicast)
+	if err := m.SetMCastTTL(cmd.ttl); err != nil {
+		log.Fatalf("unable to set mcast TTL: %v", err)
+	}
 	return m
 }
 

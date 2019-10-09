@@ -422,6 +422,13 @@ type MDNS interface {
 	// SetAddress sets a non-default listen address.
 	SetAddress(address string) error
 
+	// SetMCastTTL sets the multicast time to live. If this is set to less
+	// than zero it stays at the default. If it is set to zero this will mean
+	// no packets can escape the host.
+	//
+	// Must be no greater than 255.
+	SetMCastTTL(ttl int) error
+
 	// Sets whether to accept unicast responses. These can be received when
 	// the receiving device is in a different subnet, or if there is port
 	// forwarding occurring between the host and the device.
@@ -461,14 +468,14 @@ type MDNS interface {
 }
 
 type netConnectionFactory interface {
-	MakeUDPSocket(port int, ip net.IP, iface *net.Interface) (net.PacketConn, error)
+	MakeUDPSocket(port int, ttl int, ip net.IP, iface *net.Interface) (net.PacketConn, error)
 	MakePacketReceiver(conn net.PacketConn, v6 bool) packetReceiver
 }
 
 // Default connection factory that implementes |netConnectionFactory| interface.
 type defaultConnectionFactory struct{}
 
-func (r *defaultConnectionFactory) MakeUDPSocket(port int, ip net.IP, iface *net.Interface) (net.PacketConn, error) {
+func (r *defaultConnectionFactory) MakeUDPSocket(port, ttl int, ip net.IP, iface *net.Interface) (net.PacketConn, error) {
 	is_ipv6 := ip.To4() == nil
 	network := "udp4"
 	var zone string
@@ -492,6 +499,19 @@ func (r *defaultConnectionFactory) MakeUDPSocket(port int, ip net.IP, iface *net
 			err = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
 			if err != nil {
 				return
+			}
+			if ttl >= 0 {
+				if is_ipv6 {
+					err = unix.SetsockoptInt(int(fd), unix.IPPROTO_IPV6, unix.IPV6_MULTICAST_HOPS, ttl)
+					if err != nil {
+						return
+					}
+				} else {
+					err = unix.SetsockoptInt(int(fd), unix.IPPROTO_IP, unix.IP_MULTICAST_TTL, ttl)
+					if err != nil {
+						return
+					}
+				}
 			}
 		})
 		return err
@@ -603,16 +623,31 @@ type mDNSConn interface {
 	// of this function, then not all connections will be read from when
 	// |Listen| is called.
 	ConnectTo(port int, ip net.IP, iface *net.Interface) error
+	// SetMCastTTL sets the multicast time to live. If this is set to less
+	// than zero it stays at the default. If it is set to zero this will mean
+	// no packets can escape the host.
+	//
+	// Must be no greater than 255.
+	SetMCastTTL(ttl int) error
 	ReadFrom(buf []byte) (size int, iface *net.Interface, src net.Addr, err error)
 }
 
 type mDNSConnBase struct {
 	dst            net.UDPAddr
 	acceptUnicast  bool
+	ttl            int
 	receiver       packetReceiver
 	netFactory     netConnectionFactory
 	senders        []net.PacketConn
 	ucastReceivers []packetReceiver
+}
+
+func (c *mDNSConnBase) SetMCastTTL(ttl int) error {
+	if ttl > 255 {
+		return fmt.Errorf("TTL outside of valid range: %d", ttl)
+	}
+	c.ttl = ttl
+	return nil
 }
 
 func (c *mDNSConnBase) Close() error {
@@ -697,7 +732,10 @@ func startListenLoop(receiver packetReceiver, ch chan<- receivedPacketInfo) {
 }
 
 func newMDNSConn4() mDNSConn {
-	c := mDNSConn4{mDNSConnBase{netFactory: &defaultConnectionFactory{}}}
+	c := mDNSConn4{mDNSConnBase{
+		netFactory: &defaultConnectionFactory{},
+		ttl:        -1,
+	}}
 	c.SetIp(defaultMDNSMulticastIPv4)
 	return &c
 }
@@ -734,13 +772,14 @@ func (c *mDNSConn4) ConnectTo(port int, ip net.IP, iface *net.Interface) error {
 	if ip4 == nil {
 		return fmt.Errorf("Not a valid IPv4 address: %v", ip)
 	}
-	conn, err := c.netFactory.MakeUDPSocket(port, ip4, iface)
+	conn, err := c.netFactory.MakeUDPSocket(port, c.ttl, ip4, iface)
 	if err != nil {
 		return err
 	}
 	c.senders = append(c.senders, conn)
 	if c.acceptUnicast {
-		c.ucastReceivers = append(c.ucastReceivers, c.netFactory.MakePacketReceiver(conn, false))
+		newReceiver := c.netFactory.MakePacketReceiver(conn, false)
+		c.ucastReceivers = append(c.ucastReceivers, newReceiver)
 	}
 	return nil
 }
@@ -756,7 +795,10 @@ type mDNSConn6 struct {
 var defaultMDNSMulticastIPv6 = net.ParseIP("ff02::fb")
 
 func newMDNSConn6() mDNSConn {
-	c := mDNSConn6{mDNSConnBase{netFactory: &defaultConnectionFactory{}}}
+	c := mDNSConn6{mDNSConnBase{
+		netFactory: &defaultConnectionFactory{},
+		ttl:        -1,
+	}}
 	c.SetIp(defaultMDNSMulticastIPv6)
 	return &c
 }
@@ -793,13 +835,14 @@ func (c *mDNSConn6) ConnectTo(port int, ip net.IP, iface *net.Interface) error {
 	if ip6 == nil {
 		return fmt.Errorf("Not a valid IPv6 address: %v", ip)
 	}
-	conn, err := c.netFactory.MakeUDPSocket(port, ip6, iface)
+	conn, err := c.netFactory.MakeUDPSocket(port, c.ttl, ip6, iface)
 	if err != nil {
 		return err
 	}
 	c.senders = append(c.senders, conn)
 	if c.acceptUnicast {
-		c.ucastReceivers = append(c.ucastReceivers, c.netFactory.MakePacketReceiver(conn, true))
+		newReceiver := c.netFactory.MakePacketReceiver(conn, true)
+		c.ucastReceivers = append(c.ucastReceivers, newReceiver)
 	}
 	return nil
 }
@@ -875,6 +918,20 @@ func (m *mDNS) SetAddress(address string) error {
 		}
 		return m.conn6.SetIp(ip.To16())
 	}
+}
+
+func (m *mDNS) SetMCastTTL(ttl int) error {
+	if m.conn4 != nil {
+		if err := m.conn4.SetMCastTTL(ttl); err != nil {
+			return err
+		}
+	}
+	if m.conn6 != nil {
+		if err := m.conn6.SetMCastTTL(ttl); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (m *mDNS) ipToSend() net.IP {
