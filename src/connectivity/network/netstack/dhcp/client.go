@@ -20,6 +20,7 @@ import (
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/stack"
 	"github.com/google/netstack/waiter"
+	"github.com/pkg/errors"
 )
 
 const tag = "DHCP"
@@ -30,11 +31,18 @@ type AcquiredFunc func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config)
 
 // Client is a DHCP client.
 type Client struct {
-	stack          *stack.Stack
-	nicid          tcpip.NICID
-	linkAddr       tcpip.LinkAddress
-	acquireTimeout time.Duration
-	retryTime      time.Duration
+	stack    *stack.Stack
+	nicid    tcpip.NICID
+	linkAddr tcpip.LinkAddress
+	// acquisition is the duration within which a complete DHCP transaction must
+	// complete before timing out.
+	acquisition time.Duration
+	// backoff is the duration for which the client must wait before starting a
+	// new DHCP transaction after a failed transaction.
+	backoff time.Duration
+	// retransmission is the duration to wait before resending a DISCOVER or
+	// REQUEST within an active transaction.
+	retransmission time.Duration
 	acquiredFunc   AcquiredFunc
 
 	wq waiter.Queue
@@ -69,13 +77,14 @@ const (
 //
 // TODO: use (*stack.Stack).NICInfo()[nicid].LinkAddress instead of passing
 // linkAddr when broadcasting on multiple interfaces works.
-func NewClient(s *stack.Stack, nicid tcpip.NICID, linkAddr tcpip.LinkAddress, acquireTimeout, retryTime time.Duration, acquiredFunc AcquiredFunc) *Client {
+func NewClient(s *stack.Stack, nicid tcpip.NICID, linkAddr tcpip.LinkAddress, acquisition, backoff, retransmission time.Duration, acquiredFunc AcquiredFunc) *Client {
 	return &Client{
 		stack:          s,
 		nicid:          nicid,
 		linkAddr:       linkAddr,
-		acquireTimeout: acquireTimeout,
-		retryTime:      retryTime,
+		acquisition:    acquisition,
+		backoff:        backoff,
+		retransmission: retransmission,
 		acquiredFunc:   acquiredFunc,
 		sem:            make(chan struct{}, 1),
 	}
@@ -105,7 +114,7 @@ func (c *Client) Run(ctx context.Context) {
 
 		for {
 			if err := func() error {
-				ctx, cancel := context.WithTimeout(ctx, c.acquireTimeout)
+				ctx, cancel := context.WithTimeout(ctx, c.acquisition)
 				defer cancel()
 
 				cfg, err := c.acquire(ctx, clientState)
@@ -175,7 +184,7 @@ func (c *Client) Run(ctx context.Context) {
 				default:
 					panic(fmt.Sprintf("unknown client state: clientState=%s", clientState))
 				}
-				timer.Reset(c.retryTime)
+				timer.Reset(c.backoff)
 				syslog.VLogTf(syslog.DebugVerbosity, tag, "%s; retrying", err)
 			}
 
@@ -309,59 +318,67 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 		if len(requestedAddr.Address) != 0 {
 			discOpts = append(discOpts, option{optReqIPAddr, []byte(requestedAddr.Address)})
 		}
-		if err := c.send(
-			ctx,
-			ep,
-			discOpts,
-			writeOpts,
-			xid[:],
-			// DHCPDISCOVER is only performed when the client cannot receive unicast
-			// (i.e. it does not have an allocated IP address), so a broadcast reply
-			// is always requested, and the client's address is never supplied.
-			true,  /* broadcast */
-			false, /* ciaddr */
-		); err != nil {
-			return Config{}, fmt.Errorf("%s: %s", dhcpDISCOVER, err)
-		}
-
-		// Receive a DHCPOFFER message from a responding DHCP server.
-		//
+		// TODO(38166): Refactor retransmitDiscover and retransmitRequest
+	retransmitDiscover:
 		for {
-			srcAddr, addr, opts, typ, err := recv(ctx, ep, ch, xid[:])
-			if err != nil {
-				return Config{}, fmt.Errorf("recv %s: %s", dhcpOFFER, err)
+			if err := c.send(
+				ctx,
+				ep,
+				discOpts,
+				writeOpts,
+				xid[:],
+				// DHCPDISCOVER is only performed when the client cannot receive unicast
+				// (i.e. it does not have an allocated IP address), so a broadcast reply
+				// is always requested, and the client's address is never supplied.
+				true,  /* broadcast */
+				false, /* ciaddr */
+			); err != nil {
+				return Config{}, fmt.Errorf("%s: %s", dhcpDISCOVER, err)
 			}
 
-			if typ != dhcpOFFER {
-				syslog.VLogTf(syslog.DebugVerbosity, tag, "got DHCP type = %s, want = %s", typ, dhcpOFFER)
-				continue
-			}
-
-			var cfg Config
-			if err := cfg.decode(opts); err != nil {
-				return Config{}, fmt.Errorf("%s decode: %s", typ, err)
-			}
-
-			// We can overwrite the client's server notion, since there's no
-			// atomicity required for correctness.
+			// Receive a DHCPOFFER message from a responding DHCP server.
 			//
-			// We do not perform sophisticated offer selection and instead merely
-			// select the first valid offer we receive.
-			c.server = cfg.ServerAddress
+			for {
+				srcAddr, addr, opts, typ, timedOut, err := c.recv(ctx, ep, ch, xid[:])
+				if err != nil {
+					return Config{}, errors.Wrapf(err, "recv %s", dhcpOFFER)
+				}
+				if timedOut {
+					syslog.VLogTf(syslog.DebugVerbosity, tag, "recv timeout waiting for %s, retransmitting %s", dhcpOFFER, dhcpDISCOVER)
+					continue retransmitDiscover
+				}
 
-			if len(cfg.SubnetMask) == 0 {
-				cfg.SubnetMask = tcpip.AddressMask(net.IP(c.addr.Address).DefaultMask())
+				if typ != dhcpOFFER {
+					syslog.VLogTf(syslog.DebugVerbosity, tag, "got DHCP type = %s, want = %s", typ, dhcpOFFER)
+					continue
+				}
+
+				var cfg Config
+				if err := cfg.decode(opts); err != nil {
+					return Config{}, fmt.Errorf("%s decode: %s", typ, err)
+				}
+
+				// We can overwrite the client's server notion, since there's no
+				// atomicity required for correctness.
+				//
+				// We do not perform sophisticated offer selection and instead merely
+				// select the first valid offer we receive.
+				c.server = cfg.ServerAddress
+
+				if len(cfg.SubnetMask) == 0 {
+					cfg.SubnetMask = tcpip.AddressMask(net.IP(c.addr.Address).DefaultMask())
+				}
+
+				prefixLen, _ := net.IPMask(cfg.SubnetMask).Size()
+				requestedAddr = tcpip.AddressWithPrefix{
+					Address:   addr,
+					PrefixLen: prefixLen,
+				}
+
+				syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s: Address=%s, server=%s, leaseTime=%s, renewalTime=%s, rebindTime=%s", typ, srcAddr.Addr, requestedAddr, c.server, cfg.LeaseLength, cfg.RenewalTime, cfg.RebindingTime)
+
+				break retransmitDiscover
 			}
-
-			prefixLen, _ := net.IPMask(cfg.SubnetMask).Size()
-			requestedAddr = tcpip.AddressWithPrefix{
-				Address:   addr,
-				PrefixLen: prefixLen,
-			}
-
-			syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s: Address=%s, server=%s, leaseTime=%s, renewalTime=%s, rebindTime=%s", typ, srcAddr.Addr, requestedAddr, c.server, cfg.LeaseLength, cfg.RenewalTime, cfg.RebindingTime)
-
-			break
 		}
 	}
 
@@ -376,53 +393,60 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 			}...)
 	}
 
-	if err := c.send(
-		ctx,
-		ep,
-		reqOpts,
-		writeOpts,
-		xid[:],
-		clientState != renewing,      /* broadcast */
-		clientState != initSelecting, /* ciaddr */
-	); err != nil {
-		return Config{}, fmt.Errorf("%s: %s", dhcpREQUEST, err)
-	}
-
-	// Receive a DHCPACK/DHCPNAK from the server.
+retransmitRequest:
 	for {
-		fromAddr, addr, opts, typ, err := recv(ctx, ep, ch, xid[:])
-		if err != nil {
-			return Config{}, fmt.Errorf("recv %s: %s", dhcpACK, err)
+		if err := c.send(
+			ctx,
+			ep,
+			reqOpts,
+			writeOpts,
+			xid[:],
+			clientState != renewing,      /* broadcast */
+			clientState != initSelecting, /* ciaddr */
+		); err != nil {
+			return Config{}, fmt.Errorf("%s: %s", dhcpREQUEST, err)
 		}
 
-		switch typ {
-		case dhcpACK:
-			var cfg Config
-			if err := cfg.decode(opts); err != nil {
-				return Config{}, fmt.Errorf("%s decode: %s", typ, err)
+		// Receive a DHCPACK/DHCPNAK from the server.
+		for {
+			fromAddr, addr, opts, typ, timedOut, err := c.recv(ctx, ep, ch, xid[:])
+			if err != nil {
+				return Config{}, errors.Wrapf(err, "recv %s", dhcpACK)
 			}
-			prefixLen, _ := net.IPMask(cfg.SubnetMask).Size()
-			addr := tcpip.AddressWithPrefix{
-				Address:   addr,
-				PrefixLen: prefixLen,
-			}
-			if addr != requestedAddr {
-				return Config{}, fmt.Errorf("%s with unexpected address=%s expected=%s", typ, addr, requestedAddr)
+			if timedOut {
+				syslog.VLogTf(syslog.DebugVerbosity, tag, "recv timeout waiting for %s, retransmitting %s", dhcpACK, dhcpREQUEST)
+				continue retransmitRequest
 			}
 
-			// Now that we've successfully acquired the address, update the client state.
-			c.addr = requestedAddr
+			switch typ {
+			case dhcpACK:
+				var cfg Config
+				if err := cfg.decode(opts); err != nil {
+					return Config{}, fmt.Errorf("%s decode: %s", typ, err)
+				}
+				prefixLen, _ := net.IPMask(cfg.SubnetMask).Size()
+				addr := tcpip.AddressWithPrefix{
+					Address:   addr,
+					PrefixLen: prefixLen,
+				}
+				if addr != requestedAddr {
+					return Config{}, fmt.Errorf("%s with unexpected address=%s expected=%s", typ, addr, requestedAddr)
+				}
 
-			syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s with lease %s", typ, fromAddr.Addr, cfg.LeaseLength)
-			return cfg, nil
-		case dhcpNAK:
-			if msg := opts.message(); len(msg) != 0 {
-				return Config{}, fmt.Errorf("%s: %x", typ, msg)
+				// Now that we've successfully acquired the address, update the client state.
+				c.addr = requestedAddr
+
+				syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s with lease %s", typ, fromAddr.Addr, cfg.LeaseLength)
+				return cfg, nil
+			case dhcpNAK:
+				if msg := opts.message(); len(msg) != 0 {
+					return Config{}, fmt.Errorf("%s: %x", typ, msg)
+				}
+				return Config{}, fmt.Errorf("empty %s", typ)
+			default:
+				syslog.VLogTf(syslog.DebugVerbosity, tag, "got DHCP type = %s from %s, want = %s or %s", typ, fromAddr.Addr, dhcpACK, dhcpNAK)
+				continue
 			}
-			return Config{}, fmt.Errorf("empty %s", typ)
-		default:
-			syslog.VLogTf(syslog.DebugVerbosity, tag, "got DHCP type = %s from %s, want = %s or %s", typ, fromAddr.Addr, dhcpACK, dhcpNAK)
-			continue
 		}
 	}
 }
@@ -473,7 +497,7 @@ func (c *Client) send(ctx context.Context, ep tcpip.Endpoint, opts options, writ
 	}
 }
 
-func recv(ctx context.Context, ep tcpip.Endpoint, ch <-chan struct{}, xid []byte) (tcpip.FullAddress, tcpip.Address, options, dhcpMsgType, error) {
+func (c *Client) recv(ctx context.Context, ep tcpip.Endpoint, ch <-chan struct{}, xid []byte) (tcpip.FullAddress, tcpip.Address, options, dhcpMsgType, bool, error) {
 	for {
 		var srcAddr tcpip.FullAddress
 		v, _, err := ep.Read(&srcAddr)
@@ -481,22 +505,24 @@ func recv(ctx context.Context, ep tcpip.Endpoint, ch <-chan struct{}, xid []byte
 			select {
 			case <-ch:
 				continue
+			case <-time.After(c.retransmission):
+				return tcpip.FullAddress{}, "", nil, 0, true, nil
 			case <-ctx.Done():
-				return tcpip.FullAddress{}, "", nil, 0, fmt.Errorf("read: %s", ctx.Err())
+				return tcpip.FullAddress{}, "", nil, 0, false, errors.Wrap(ctx.Err(), "read failed")
 			}
 		}
 		if err != nil {
-			return tcpip.FullAddress{}, "", nil, 0, fmt.Errorf("read: %s", err)
+			return tcpip.FullAddress{}, "", nil, 0, false, fmt.Errorf("read: %s", err)
 		}
 
 		h := header(v)
 
 		if !h.isValid() {
-			return tcpip.FullAddress{}, "", nil, 0, fmt.Errorf("invalid header: %x", h)
+			return tcpip.FullAddress{}, "", nil, 0, false, fmt.Errorf("invalid header: %x", h)
 		}
 
 		if op := h.op(); op != opReply {
-			return tcpip.FullAddress{}, "", nil, 0, fmt.Errorf("op-code=%s, want=%s", h, opReply)
+			return tcpip.FullAddress{}, "", nil, 0, false, fmt.Errorf("op-code=%s, want=%s", h, opReply)
 		}
 
 		if !bytes.Equal(h.xidbytes(), xid[:]) {
@@ -507,15 +533,15 @@ func recv(ctx context.Context, ep tcpip.Endpoint, ch <-chan struct{}, xid []byte
 		{
 			opts, err := h.options()
 			if err != nil {
-				return tcpip.FullAddress{}, "", nil, 0, fmt.Errorf("invalid options: %s", err)
+				return tcpip.FullAddress{}, "", nil, 0, false, fmt.Errorf("invalid options: %s", err)
 			}
 
 			typ, err := opts.dhcpMsgType()
 			if err != nil {
-				return tcpip.FullAddress{}, "", nil, 0, fmt.Errorf("invalid type: %s", err)
+				return tcpip.FullAddress{}, "", nil, 0, false, fmt.Errorf("invalid type: %s", err)
 			}
 
-			return srcAddr, tcpip.Address(h.yiaddr()), opts, typ, nil
+			return srcAddr, tcpip.Address(h.yiaddr()), opts, typ, false, nil
 		}
 	}
 }

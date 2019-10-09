@@ -48,8 +48,9 @@ const (
 	ipv4Loopback tcpip.Address = "\x7f\x00\x00\x01"
 	ipv6Loopback tcpip.Address = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
 
-	dhcpAcquireTimeout = 15 * time.Second
-	dhcpRetryTime      = 1 * time.Second
+	dhcpAcquisition    = 60 * time.Second
+	dhcpBackoff        = 1 * time.Second
+	dhcpRetransmission = 4 * time.Second
 )
 
 var ipv4LoopbackBytes = func() [4]byte {
@@ -689,7 +690,7 @@ func (ns *Netstack) addEndpoint(
 			return nil, fmt.Errorf("NIC %s: adding link-local IPv6 %s failed: %s", name, lladdr, err)
 		}
 
-		ifs.mu.dhcp.Client = dhcp.NewClient(ns.mu.stack, ifs.nicid, linkAddr, dhcpAcquireTimeout, dhcpRetryTime, ifs.dhcpAcquired)
+		ifs.mu.dhcp.Client = dhcp.NewClient(ns.mu.stack, ifs.nicid, linkAddr, dhcpAcquisition, dhcpBackoff, dhcpRetransmission, ifs.dhcpAcquired)
 
 		syslog.Infof("NIC %s: link-local IPv6: %s", name, lladdr)
 	}

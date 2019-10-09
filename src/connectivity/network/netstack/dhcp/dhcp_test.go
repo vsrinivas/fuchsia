@@ -19,6 +19,7 @@ import (
 	"github.com/google/netstack/tcpip/stack"
 	"github.com/google/netstack/tcpip/transport/udp"
 	"github.com/google/netstack/waiter"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -26,7 +27,8 @@ const (
 	serverAddr = tcpip.Address("\xc0\xa8\x03\x01")
 
 	defaultAcquireTimeout = 1000 * time.Millisecond
-	defaultRetryTime      = 100 * time.Millisecond
+	defaulBackoffTime     = 100 * time.Millisecond
+	defaultResendTime     = 400 * time.Millisecond
 )
 
 func createTestStack(t *testing.T) *stack.Stack {
@@ -104,7 +106,7 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 			t.Fatalf("could not create NIC: %s", err)
 		}
 		const clientLinkAddr = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-		c := NewClient(s, clientNicid, clientLinkAddr, defaultAcquireTimeout, defaultRetryTime, nil)
+		c := NewClient(s, clientNicid, clientLinkAddr, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
 		go func() {
 			// Packets from the clients get sent to the server.
 			for pkt := range clientLinkEP.C {
@@ -181,7 +183,7 @@ func TestDHCP(t *testing.T) {
 	}
 
 	const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-	c0 := NewClient(s, nicid, clientLinkAddr0, defaultAcquireTimeout, defaultRetryTime, nil)
+	c0 := NewClient(s, nicid, clientLinkAddr0, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
 	{
 		{
 			cfg, err := c0.acquire(ctx, initSelecting)
@@ -211,7 +213,7 @@ func TestDHCP(t *testing.T) {
 
 	{
 		const clientLinkAddr1 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x53")
-		c1 := NewClient(s, nicid, clientLinkAddr1, defaultAcquireTimeout, defaultRetryTime, nil)
+		c1 := NewClient(s, nicid, clientLinkAddr1, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
 		cfg, err := c1.acquire(ctx, initSelecting)
 		if err != nil {
 			t.Fatal(err)
@@ -247,6 +249,111 @@ func TestDHCP(t *testing.T) {
 		if got, want := cfg, serverCfg; !equalConfig(got, want) {
 			t.Errorf("client config:\n\t%#+v\nwant:\n\t%#+v", got, want)
 		}
+	}
+}
+
+func TestDelayRetransmission(t *testing.T) {
+	var delayTests = []struct {
+		name           string
+		discoverDelay  time.Duration
+		requestDelay   time.Duration
+		acquisition    time.Duration
+		retransmission time.Duration
+		success        bool
+	}{
+		{name: "DelayedDiscoverWithLongAcquisitionSucceeds", discoverDelay: 500 * time.Millisecond, requestDelay: 0, acquisition: 5 * time.Second, retransmission: 100 * time.Millisecond, success: true},
+		{name: "DelayedRequestWithLongAcquisitionSucceeds", discoverDelay: 0, requestDelay: 500 * time.Millisecond, acquisition: 5 * time.Second, retransmission: 100 * time.Millisecond, success: true},
+		{name: "DelayedDiscoverWithShortAcquisitionFails", discoverDelay: 1 * time.Second, requestDelay: 0, acquisition: 500 * time.Millisecond, retransmission: 100 * time.Millisecond, success: false},
+		{name: "DelayedRequestWithShortAcquisitionFails", discoverDelay: 0, requestDelay: 1 * time.Second, acquisition: 500 * time.Millisecond, retransmission: 100 * time.Millisecond, success: false},
+	}
+	for _, tc := range delayTests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			s, ch := createTestStackWithChannel(t)
+			go func(discoverDelay, requestDelay time.Duration) {
+				if err := func() error {
+					discoverRcvd := 0
+					requestRcvd := 0
+					for pkt := range ch.C {
+						vv := buffer.NewVectorisedView(len(pkt.Header)+len(pkt.Payload), []buffer.View{pkt.Header, pkt.Payload})
+						buf := []byte(vv.ToView())
+						ip := tcpipHeader.IPv4(buf[:len(pkt.Header)])
+						udp := tcpipHeader.UDP(ip.Payload())
+						dhcp := header(udp.Payload())
+						opts, err := dhcp.options()
+						if err != nil {
+							return err
+						}
+						msgType, err := opts.dhcpMsgType()
+						if err != nil {
+							return err
+						}
+						// Avoid closing over a loop variable.
+						proto := pkt.Proto
+						switch msgType {
+						case dhcpDISCOVER:
+							if discoverRcvd == 0 {
+								discoverRcvd++
+								time.AfterFunc(discoverDelay, func() { ch.Inject(proto, vv) })
+							}
+						case dhcpREQUEST:
+							if requestRcvd == 0 {
+								requestRcvd++
+								time.AfterFunc(requestDelay, func() { ch.Inject(proto, vv) })
+							}
+						default:
+							ch.Inject(pkt.Proto, vv)
+						}
+					}
+					return nil
+				}(); err != nil {
+					t.Error(err)
+				}
+			}(tc.requestDelay, tc.discoverDelay)
+			clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02", "\xc0\xa8\x03\x03"}
+
+			serverCfg := Config{
+				ServerAddress: serverAddr,
+				SubnetMask:    "\xff\xff\xff\x00",
+				Gateway:       "\xc0\xa8\x03\xF0",
+				DNS: []tcpip.Address{
+					"\x08\x08\x08\x08", "\x08\x08\x04\x04",
+				},
+				LeaseLength: 24 * time.Hour,
+			}
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			if _, err := newEPConnServer(ctx, s, clientAddrs, serverCfg); err != nil {
+				t.Fatal(err)
+			}
+
+			const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
+			c0 := NewClient(s, nicid, clientLinkAddr0, tc.acquisition, defaulBackoffTime, tc.retransmission, nil)
+			ctx, cancel = context.WithTimeout(ctx, tc.acquisition)
+			defer cancel()
+			cfg, err := c0.acquire(ctx, initSelecting)
+			if tc.success {
+				if err != nil {
+					t.Error(err)
+					return
+				}
+				if got, want := c0.addr.Address, clientAddrs[0]; got != want {
+					t.Errorf("c.addr=%s, want=%s", got, want)
+				}
+				if got, want := cfg.SubnetMask, serverCfg.SubnetMask; got != want {
+					t.Errorf("cfg.SubnetMask=%s, want=%s", got, want)
+				}
+			} else {
+				err := errors.Cause(err)
+				switch err {
+				case context.DeadlineExceeded:
+					// Success case: error is expected type.
+				default:
+					t.Errorf("got err=%s, want=%s", err, context.DeadlineExceeded)
+				}
+			}
+		})
 	}
 }
 
@@ -362,7 +469,7 @@ func TestStateTransition(t *testing.T) {
 			}
 
 			const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-			c := NewClient(s, nicid, clientLinkAddr0, defaultAcquireTimeout, defaultRetryTime, acquiredFunc)
+			c := NewClient(s, nicid, clientLinkAddr0, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, acquiredFunc)
 
 			c.Run(ctx)
 
@@ -521,7 +628,7 @@ func TestTwoServers(t *testing.T) {
 	}
 
 	const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-	c := NewClient(s, nicid, clientLinkAddr0, defaultAcquireTimeout, defaultRetryTime, nil)
+	c := NewClient(s, nicid, clientLinkAddr0, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
 	if _, err := c.acquire(ctx, initSelecting); err != nil {
 		t.Fatal(err)
 	}
