@@ -22,6 +22,7 @@ use {
     futures::{channel::mpsc, future::try_join, prelude::*, select},
     pin_utils::pin_mut,
     std::sync::Arc,
+    parking_lot::Mutex,
     void::Void,
 };
 
@@ -42,6 +43,7 @@ async fn serve_fidl(
         })
         .add_fidl_service(move |reqs| {
             policy::client::spawn_provider_server(
+                Arc::new(Mutex::new(policy::client::Client::new_empty())),
                 listener_msg_sender1.clone(),
                 Arc::clone(&ess_store_clone),
                 reqs,
