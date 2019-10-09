@@ -62,11 +62,11 @@ test_package("camera_full_test") {
       manifest = "drivers/hw_accel/ge2d/test/meta/ge2d-task.cmx"
       environments = basic_envs
     },
-    {
-      name = "controller-test"
-      manifest = "drivers/controller/test/meta/controller-test.cmx"
-      environments = basic_envs
-    },
+    # {
+    #   name = "controller-test"
+    #   manifest = "drivers/controller/test/meta/controller-test.cmx"
+    #   environments = basic_envs
+    # },
     {
       name = "test_utils_test"
       manifest = "drivers/test_utils/test/meta/test_utils_test.cmx"
