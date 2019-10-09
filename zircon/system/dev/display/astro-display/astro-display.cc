@@ -481,7 +481,7 @@ zx_status_t AstroDisplay::DisplayControllerImplAllocateVmo(uint64_t size, zx::vm
   return zx::vmo::create_contiguous(bti_, size, 0, vmo_out);
 }
 
-void AstroDisplay::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+void AstroDisplay::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void AstroDisplay::DdkRelease() {
   if (osd_) {

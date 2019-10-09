@@ -155,7 +155,7 @@ class MtkFixedRegulator : public MtkRegulator {
 };
 
 class MtkPower;
-using MtkPowerType = ddk::Device<MtkPower, ddk::UnbindableDeprecated>;
+using MtkPowerType = ddk::Device<MtkPower, ddk::UnbindableNew>;
 
 class MtkPower : public MtkPowerType, public ddk::PowerImplProtocol<MtkPower, ddk::base_protocol> {
  public:
@@ -167,7 +167,7 @@ class MtkPower : public MtkPowerType, public ddk::PowerImplProtocol<MtkPower, dd
 
   // Device protocol implementation
   void DdkRelease();
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
 
   zx_status_t PowerImplGetPowerDomainStatus(uint32_t index, power_domain_status_t* out_status);
   zx_status_t PowerImplEnablePowerDomain(uint32_t index);

@@ -1050,7 +1050,7 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-void AmlSdEmmc::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+void AmlSdEmmc::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void AmlSdEmmc::DdkRelease() {
   irq_.destroy();

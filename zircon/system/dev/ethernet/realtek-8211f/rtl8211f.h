@@ -9,7 +9,7 @@
 namespace phy {
 
 class PhyDevice;
-using DeviceType = ddk::Device<PhyDevice, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<PhyDevice, ddk::UnbindableNew>;
 
 class PhyDevice : public DeviceType {
  public:
@@ -18,7 +18,7 @@ class PhyDevice : public DeviceType {
   static zx_status_t Create(void* ctx, zx_device_t* device);
 
   void DdkRelease();
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
 
   zx_status_t ConfigPhy(const uint8_t mac[MAC_ARRAY_LENGTH]);
 

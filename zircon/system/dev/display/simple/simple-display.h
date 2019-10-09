@@ -18,7 +18,7 @@
 #include <lib/zx/vmo.h>
 
 class SimpleDisplay;
-using DeviceType = ddk::Device<SimpleDisplay, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<SimpleDisplay, ddk::UnbindableNew>;
 
 class SimpleDisplay : public DeviceType,
                       public ddk::DisplayControllerImplProtocol<SimpleDisplay, ddk::base_protocol> {
@@ -27,7 +27,7 @@ class SimpleDisplay : public DeviceType,
                 uint32_t height, uint32_t stride, zx_pixel_format_t format);
   ~SimpleDisplay() = default;
 
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t Bind(const char* name, fbl::unique_ptr<SimpleDisplay>* controller_ptr);
 

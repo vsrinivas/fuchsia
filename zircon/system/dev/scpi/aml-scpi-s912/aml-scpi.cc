@@ -247,7 +247,7 @@ zx_status_t AmlSCPI::ScpiGetSensor(const char* name, uint32_t* sensor_value) {
   return ZX_OK;
 }
 
-void AmlSCPI::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+void AmlSCPI::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void AmlSCPI::DdkRelease() { delete this; }
 

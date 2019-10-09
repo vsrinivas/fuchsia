@@ -189,7 +189,7 @@ zx_status_t HiDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   return ZX_OK;
 }
 
-void HiDisplay::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+void HiDisplay::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void HiDisplay::DdkRelease() {
   vsync_shutdown_flag_.store(true);

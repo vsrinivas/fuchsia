@@ -16,7 +16,7 @@
 namespace i2c {
 
 class I2cChild;
-using I2cChildType = ddk::Device<I2cChild, ddk::UnbindableDeprecated>;
+using I2cChildType = ddk::Device<I2cChild, ddk::UnbindableNew>;
 
 class I2cChild : public I2cChildType, public ddk::I2cProtocol<I2cChild, ddk::base_protocol> {
  public:
@@ -26,7 +26,7 @@ class I2cChild : public I2cChildType, public ddk::I2cProtocol<I2cChild, ddk::bas
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
   void I2cTransact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,

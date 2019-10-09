@@ -334,7 +334,7 @@ zx_status_t Display::Bind() {
   return DdkAdd("goldfish-display");
 }
 
-void Display::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+void Display::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void Display::DdkRelease() { delete this; }
 

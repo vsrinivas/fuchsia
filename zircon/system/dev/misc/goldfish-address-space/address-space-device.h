@@ -17,7 +17,7 @@
 namespace goldfish {
 
 class AddressSpaceDevice;
-using DeviceType = ddk::Device<AddressSpaceDevice, ddk::UnbindableDeprecated, ddk::Openable>;
+using DeviceType = ddk::Device<AddressSpaceDevice, ddk::UnbindableNew, ddk::Openable>;
 
 class AddressSpaceDevice : public DeviceType {
  public:
@@ -34,7 +34,7 @@ class AddressSpaceDevice : public DeviceType {
 
   // Device protocol implementation.
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
  private:

@@ -76,7 +76,7 @@ zx_status_t PhyDevice::ConfigPhy(const uint8_t mac[MAC_ARRAY_LENGTH]) {
   return ZX_OK;
 }
 
-void PhyDevice::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+void PhyDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void PhyDevice::DdkRelease() { delete this; }
 

@@ -21,7 +21,7 @@
 namespace sdmmc {
 
 class AmlSdEmmc;
-using AmlSdEmmcType = ddk::Device<AmlSdEmmc, ddk::UnbindableDeprecated>;
+using AmlSdEmmcType = ddk::Device<AmlSdEmmc, ddk::UnbindableNew>;
 
 class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk::base_protocol> {
  public:
@@ -41,7 +41,7 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
 
   // Device protocol implementation
   void DdkRelease();
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
 
   // Sdmmc Protocol implementation
   zx_status_t SdmmcHostInfo(sdmmc_host_info_t* out_info);

@@ -153,7 +153,7 @@ zx_status_t SimpleDisplay::DisplayControllerImplGetSingleBufferFramebuffer(zx::v
 
 // implement device protocol
 
-void SimpleDisplay::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+void SimpleDisplay::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void SimpleDisplay::DdkRelease() { delete this; }
 

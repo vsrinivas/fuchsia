@@ -49,7 +49,7 @@ zx_status_t ClockDevice::ClockGetRate(uint64_t* out_current_rate) {
   return clock_.GetRate(id_, out_current_rate);
 }
 
-void ClockDevice::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+void ClockDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void ClockDevice::DdkRelease() { delete this; }
 

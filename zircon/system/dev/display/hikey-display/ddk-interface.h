@@ -22,7 +22,7 @@ namespace hi_display {
 class HiDisplay;
 
 // HiDisplay will implement only a few subset of Device.
-using DeviceType = ddk::Device<HiDisplay, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<HiDisplay, ddk::UnbindableNew>;
 
 class HiDisplay : public DeviceType,
                   public ddk::DisplayControllerImplProtocol<HiDisplay, ddk::base_protocol> {
@@ -54,7 +54,7 @@ class HiDisplay : public DeviceType,
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
  private:

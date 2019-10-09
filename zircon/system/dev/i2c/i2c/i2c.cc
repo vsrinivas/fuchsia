@@ -20,7 +20,7 @@
 
 namespace i2c {
 
-void I2cDevice::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+void I2cDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void I2cDevice::DdkRelease() { delete this; }
 

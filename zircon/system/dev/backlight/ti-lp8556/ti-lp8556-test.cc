@@ -37,7 +37,7 @@ class Lp8556DeviceTest : public zxtest::Test {
   void TestLifecycle() {
     fake_ddk::Bind ddk;
     EXPECT_OK(dev_->DdkAdd("ti-lp8556"));
-    dev_->DdkUnbindDeprecated();
+    dev_->DdkAsyncRemove();
     EXPECT_TRUE(ddk.Ok());
     dev_->DdkRelease();
     __UNUSED auto ptr = dev_.release();

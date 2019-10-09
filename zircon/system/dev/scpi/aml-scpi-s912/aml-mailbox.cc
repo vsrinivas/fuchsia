@@ -31,7 +31,7 @@ mailbox_type_t AmlMailbox::GetRxMailbox(mailbox_type_t tx_mailbox) {
 
 size_t AmlMailbox::GetNumWords(size_t size) { return (size / 4 + ((size % 4) ? 1 : 0)); }
 
-void AmlMailbox::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+void AmlMailbox::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void AmlMailbox::DdkRelease() { delete this; }
 

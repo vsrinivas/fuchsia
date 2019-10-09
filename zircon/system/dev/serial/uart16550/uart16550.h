@@ -16,7 +16,7 @@
 namespace uart16550 {
 
 class Uart16550;
-using DeviceType = ddk::Device<Uart16550, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<Uart16550, ddk::UnbindableNew>;
 
 class Uart16550 : public DeviceType, public ddk::SerialImplProtocol<Uart16550, ddk::base_protocol> {
  public:
@@ -62,8 +62,8 @@ class Uart16550 : public DeviceType, public ddk::SerialImplProtocol<Uart16550, d
   // ddk::Releasable
   void DdkRelease();
 
-  // ddk::UnbindableDeprecated
-  void DdkUnbindDeprecated();
+  // ddk::UnbindableNew
+  void DdkUnbindNew(ddk::UnbindTxn txn);
 
  private:
   class PortIo {

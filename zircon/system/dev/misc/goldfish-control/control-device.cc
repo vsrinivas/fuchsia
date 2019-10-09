@@ -368,7 +368,7 @@ zx_status_t Control::FidlGetColorBuffer(zx_handle_t vmo_handle, fidl_txn_t* txn)
   return fuchsia_hardware_goldfish_control_DeviceGetColorBuffer_reply(txn, ZX_OK, it->second);
 }
 
-void Control::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+void Control::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void Control::DdkRelease() { delete this; }
 

@@ -205,7 +205,7 @@ class AmlSdEmmcTest : public zxtest::Test {
 TEST_F(AmlSdEmmcTest, DdkLifecycle) {
   fake_ddk::Bind ddk;
   EXPECT_OK(dut_->TestDdkAdd());
-  dut_->DdkUnbindDeprecated();
+  dut_->DdkAsyncRemove();
   EXPECT_TRUE(ddk.Ok());
 }
 

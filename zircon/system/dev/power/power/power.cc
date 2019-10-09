@@ -48,7 +48,7 @@ zx_status_t PowerDevice::PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* out_v
   return power_.ReadPmicCtrlReg(index_, reg_addr, out_value);
 }
 
-void PowerDevice::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+void PowerDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void PowerDevice::DdkRelease() { delete this; }
 
