@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fs/managed-vfs.h>
+
 #include <lib/async/cpp/task.h>
 #include <lib/sync/completion.h>
 
@@ -9,7 +11,6 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <fs/managed-vfs.h>
 
 namespace fs {
 

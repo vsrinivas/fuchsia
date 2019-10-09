@@ -8,10 +8,11 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/vfs.h>
-#include <runtests-utils/service-proxy-dir.h>
 #include <zircon/status.h>
 
 #include <string>
+
+#include <runtests-utils/service-proxy-dir.h>
 
 namespace fio = ::llcpp::fuchsia::io;
 
@@ -31,7 +32,8 @@ zx_status_t ServiceProxyDir::Getattr(vnattr_t* attr) {
   return ZX_OK;
 }
 
-zx_status_t ServiceProxyDir::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+zx_status_t ServiceProxyDir::GetNodeInfo([[maybe_unused]] fs::Rights rights,
+                                         fuchsia_io_NodeInfo* info) {
   info->tag = fuchsia_io_NodeInfoTag_directory;
   return ZX_OK;
 }
@@ -52,8 +54,7 @@ zx_status_t ServiceProxyDir::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiec
       entry_name, *out = fbl::MakeRefCounted<fs::Service>([this, entry_name](zx::channel request) {
         return fio::Directory::Call::Open(zx::unowned_channel(proxy_dir_),
                                           fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, 0755,
-                                          fidl::StringView(entry_name),
-                                          std::move(request))
+                                          fidl::StringView(entry_name), std::move(request))
             .status();
       }));
 

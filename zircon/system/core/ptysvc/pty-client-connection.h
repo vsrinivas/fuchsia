@@ -11,6 +11,7 @@
 #include <fbl/ref_ptr.h>
 #include <fs/connection.h>
 #include <fs/vfs.h>
+#include <fs/vfs_types.h>
 #include <fs/vnode.h>
 
 #include "pty-client.h"
@@ -19,8 +20,8 @@ class PtyClientConnection : public ::llcpp::fuchsia::hardware::pty::Device::Inte
                             public fs::Connection {
  public:
   PtyClientConnection(fbl::RefPtr<PtyClient> client, fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
-                      zx::channel channel, uint32_t flags)
-      : fs::Connection(vfs, std::move(vnode), std::move(channel), flags),
+                      zx::channel channel, fs::VnodeConnectionOptions options)
+      : fs::Connection(vfs, std::move(vnode), std::move(channel), options),
         client_(std::move(client)) {}
 
   ~PtyClientConnection() override = default;

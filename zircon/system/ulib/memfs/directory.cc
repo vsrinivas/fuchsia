@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <inttypes.h>
 #include <fcntl.h>
+#include <inttypes.h>
+#include <lib/fdio/vfs.h>
+#include <lib/memfs/cpp/vnode.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <zircon/device/vfs.h>
+
+#include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
 #include <fbl/unique_ptr.h>
-#include <lib/fdio/vfs.h>
 #include <fs/vfs.h>
-#include <lib/memfs/cpp/vnode.h>
-#include <zircon/device/vfs.h>
-
-#include <utility>
 
 #include "dnode.h"
 
@@ -36,8 +36,8 @@ VnodeDir::VnodeDir(Vfs* vfs) : VnodeMemfs(vfs) {
 
 VnodeDir::~VnodeDir() = default;
 
-zx_status_t VnodeDir::ValidateFlags(uint32_t flags) {
-  if (flags & ZX_FS_FLAG_NOT_DIRECTORY) {
+zx_status_t VnodeDir::ValidateOptions(fs::VnodeConnectionOptions options) {
+  if (options.flags.not_directory) {
     return ZX_ERR_NOT_FILE;
   }
   return ZX_OK;
@@ -114,7 +114,7 @@ zx_status_t VnodeDir::Getattr(vnattr_t* attr) {
   return ZX_OK;
 }
 
-zx_status_t VnodeDir::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+zx_status_t VnodeDir::GetNodeInfo([[maybe_unused]] fs::Rights rights, fuchsia_io_NodeInfo* info) {
   info->tag = fuchsia_io_NodeInfoTag_directory;
   return ZX_OK;
 }

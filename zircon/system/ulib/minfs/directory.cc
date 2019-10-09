@@ -15,6 +15,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
+#include <fs/debug.h>
 
 #ifdef __Fuchsia__
 #include <lib/fdio/vfs.h>
@@ -97,10 +98,10 @@ void Directory::DeleteBlock(PendingWork* transaction, blk_t local_bno, blk_t old
 void Directory::IssueWriteback(Transaction* transaction, blk_t vmo_offset, blk_t dev_offset,
                                blk_t count) {
   fs::Operation op = {
-    .type = fs::OperationType::kWrite,
-    .vmo_offset = vmo_offset,
-    .dev_offset = dev_offset,
-    .length = count,
+      .type = fs::OperationType::kWrite,
+      .vmo_offset = vmo_offset,
+      .dev_offset = dev_offset,
+      .length = count,
   };
   transaction->EnqueueMetadata(vmo_.get(), std::move(op));
 }
@@ -448,9 +449,10 @@ zx_status_t Directory::ForEachDirent(DirArgs* args, const DirentCallback func) {
   return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t Directory::ValidateFlags(uint32_t flags) {
-  FS_TRACE_DEBUG("Directory::ValidateFlags(0x%x) vn=%p(#%u)\n", flags, this, GetIno());
-  if (flags & ZX_FS_FLAG_NOT_DIRECTORY) {
+zx_status_t Directory::ValidateOptions(fs::VnodeConnectionOptions options) {
+  FS_PRETTY_TRACE_DEBUG("Directory::ValidateOptions(", options, ") ",
+                        "vn=", static_cast<void*>(this), "(#", GetIno(), ")");
+  if (options.flags.not_directory) {
     return ZX_ERR_NOT_FILE;
   }
   return ZX_OK;
@@ -654,7 +656,7 @@ zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
   transaction->PinVnode(vn);
   fs_->CommitTransaction(std::move(transaction));
 
-  vn->Open(0, nullptr);
+  vn->Open(fs::VnodeConnectionOptions(), nullptr);
   *out = std::move(vn);
   success = true;
   return ZX_OK;

@@ -20,6 +20,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
+#include <fs/vfs_types.h>
 #include <minfs/format.h>
 #include <minfs/host.h>
 #include <minfs/minfs.h>
@@ -202,46 +203,46 @@ int emu_get_used_resources(const char* path, uint64_t* out_data_size, uint64_t* 
 
 bool emu_is_mounted() { return fakeFs.fake_root != nullptr; }
 
-// Since this is a host-side tool, the client may be bringing
-// their own C library, and we do not have the guarantee that
-// our ZX_FS flags align with the O_* flags.
-uint32_t fdio_flags_to_zxio(uint32_t flags) {
-  uint32_t result = 0;
+// Converts POSIX open() flags to |VnodeConnectionOptions|.
+fs::VnodeConnectionOptions fdio_flags_to_connection_options(uint32_t flags) {
+  fs::VnodeConnectionOptions options;
+
   switch (flags & O_ACCMODE) {
     case O_RDONLY:
-      result |= ZX_FS_RIGHT_READABLE;
+      options.rights.read = true;
       break;
     case O_WRONLY:
-      result |= ZX_FS_RIGHT_WRITABLE;
+      options.rights.write = true;
       break;
     case O_RDWR:
-      result |= ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
+      options.rights.read = true;
+      options.rights.write = true;
       break;
   }
 #ifdef O_PATH
   if (flags & O_PATH) {
-    result |= ZX_FS_FLAG_VNODE_REF_ONLY;
+    options.flags.node_reference = true;
   }
 #endif
 #ifdef O_DIRECTORY
   if (flags & O_DIRECTORY) {
-    result |= ZX_FS_FLAG_DIRECTORY;
+    options.flags.directory = true;
   }
 #endif
   if (flags & O_CREAT) {
-    result |= ZX_FS_FLAG_CREATE;
+    options.flags.create = true;
   }
   if (flags & O_EXCL) {
-    result |= ZX_FS_FLAG_EXCLUSIVE;
+    options.flags.fail_if_exists = true;
   }
   if (flags & O_TRUNC) {
-    result |= ZX_FS_FLAG_TRUNCATE;
+    options.flags.truncate = true;
   }
   if (flags & O_APPEND) {
-    result |= ZX_FS_FLAG_APPEND;
+    options.flags.append = true;
   }
 
-  return result;
+  return options;
 }
 
 int emu_open(const char* path, int flags, mode_t mode) {
@@ -256,8 +257,9 @@ int emu_open(const char* path, int flags, mode_t mode) {
     if (fdtab[fd].vn == nullptr) {
       fbl::RefPtr<fs::Vnode> vn_fs;
       fbl::StringPiece str(path + PREFIX_SIZE);
-      flags = fdio_flags_to_zxio(flags);
-      zx_status_t status = fakeFs.fake_vfs->Open(fakeFs.fake_root, &vn_fs, str, &str, flags, mode);
+      fs::VnodeConnectionOptions options = fdio_flags_to_connection_options(flags);
+      zx_status_t status =
+          fakeFs.fake_vfs->Open(fakeFs.fake_root, &vn_fs, str, &str, options, mode);
       if (status < 0) {
         STATUS(status);
       }
@@ -468,7 +470,10 @@ DIR* emu_opendir(const char* name) {
   ZX_DEBUG_ASSERT_MSG(!host_path(name), "'emu_' functions can only operate on target paths");
   fbl::RefPtr<fs::Vnode> vn;
   fbl::StringPiece path(name + PREFIX_SIZE);
-  zx_status_t status = fakeFs.fake_vfs->Open(fakeFs.fake_root, &vn, path, &path, O_RDONLY, 0);
+  fs::VnodeConnectionOptions options;
+  options.rights.read = true;
+  options.flags.posix = true;
+  zx_status_t status = fakeFs.fake_vfs->Open(fakeFs.fake_root, &vn, path, &path, options, 0);
   if (status != ZX_OK) {
     return nullptr;
   }

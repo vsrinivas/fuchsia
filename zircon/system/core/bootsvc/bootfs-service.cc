@@ -16,6 +16,7 @@
 
 #include <fbl/algorithm.h>
 #include <fs/connection.h>
+#include <fs/vfs_types.h>
 #include <launchpad/launchpad.h>
 
 #include "util.h"
@@ -54,22 +55,21 @@ zx_status_t BootfsService::AddBootfs(zx::vmo bootfs_vmo) {
 }
 
 zx_status_t BootfsService::CreateRootConnection(zx::channel* out) {
-  return CreateVnodeConnection(vfs_.get(), root_, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
-                               out);
+  return CreateVnodeConnection(vfs_.get(), root_, fs::VnodeConnectionOptions::ReadExec(), out);
 }
 
 zx_status_t BootfsService::Open(const char* path, zx::vmo* vmo, size_t* size) {
   fbl::RefPtr<fs::Vnode> node;
   fbl::StringPiece path_out;
-  zx_status_t status =
-      vfs_->Open(root_, &node, path, &path_out, ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_NOREMOTE, 0);
+  zx_status_t status = vfs_->Open(root_, &node, path, &path_out,
+                                  fs::VnodeConnectionOptions::ReadOnly().set_no_remote(), 0);
   if (status != ZX_OK) {
     return status;
   }
   ZX_ASSERT(path_out.size() == 0);
 
   fuchsia_io_NodeInfo info;
-  status = node->GetNodeInfo(ZX_FS_RIGHT_READABLE, &info);
+  status = node->GetNodeInfo(fs::Rights::ReadOnly(), &info);
   if (status != ZX_OK) {
     return status;
   }

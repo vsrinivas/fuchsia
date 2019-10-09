@@ -2,18 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_DEBUG_H_
+#define FS_DEBUG_H_
+
+#include <zircon/device/vfs.h>
 
 #include <cstdint>
 #include <cstdlib>
-#include <utility>
 #include <memory>
+#include <utility>
 
 #include <fbl/string_buffer.h>
 #include <fs/trace.h>
-#include <zircon/device/vfs.h>
+#include <fs/vfs_types.h>
 
-// fs-internal header defining utility functions for logging flags and paths.
+// debug-only header defining utility functions for logging flags and paths.
 
 namespace fs {
 
@@ -90,6 +93,60 @@ void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, ZxFlags flags) {
 }
 
 template <size_t N>
+void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, VnodeConnectionOptions options) {
+  auto make_append = [sb] {
+    return [sb, first = true](const char* str) mutable {
+      if (!first) {
+        sb->Append(", ");
+      }
+      sb->Append(str);
+      first = false;
+    };
+  };
+
+  {
+    auto append = make_append();
+    sb->Append("[flags: ");
+    if (options.flags.create)
+      append("create");
+    if (options.flags.fail_if_exists)
+      append("fail_if_exists");
+    if (options.flags.truncate)
+      append("truncate");
+    if (options.flags.directory)
+      append("directory");
+    if (options.flags.not_directory)
+      append("not_directory");
+    if (options.flags.append)
+      append("append");
+    if (options.flags.no_remote)
+      append("no_remote");
+    if (options.flags.node_reference)
+      append("node_reference");
+    if (options.flags.describe)
+      append("describe");
+    if (options.flags.posix)
+      append("posix");
+    if (options.flags.clone_same_rights)
+      append("clone_same_rights");
+  }
+
+  {
+    auto append = make_append();
+    sb->Append(", rights: ");
+    if (options.rights.read)
+      append("read");
+    if (options.rights.write)
+      append("write");
+    if (options.rights.admin)
+      append("admin");
+    if (options.rights.execute)
+      append("execute");
+    sb->Append("]");
+  }
+}
+
+template <size_t N>
 void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, const char* str) {
   sb->Append(str);
 }
@@ -97,6 +154,16 @@ void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, const char* str) {
 template <size_t N>
 void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, Path path) {
   sb->Append(path.str, path.size);
+}
+
+template <size_t N>
+void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, uint32_t num) {
+  sb->AppendPrintf("%u", num);
+}
+
+template <size_t N>
+void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, void* p) {
+  sb->AppendPrintf("%p", p);
 }
 
 template <size_t N>
@@ -126,3 +193,5 @@ void ConnectionTraceDebug(Args... args) {
 // Explicitly expand FS_PRETTY_TRACE_DEBUG into nothing when not debugging, to ensure zero overhead.
 #define FS_PRETTY_TRACE_DEBUG(args...)
 #endif
+
+#endif  // FS_DEBUG_H_

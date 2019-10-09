@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_VNODE_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_VNODE_H_
 
-#include <fs/pseudo-dir.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/zx/channel.h>
+
+#include <fs/pseudo-dir.h>
+#include <fs/vfs_types.h>
 
 namespace devmgr {
 namespace fshost {
@@ -23,10 +26,10 @@ class Vnode final : public fs::Vnode {
   zx_status_t AddFilesystem(zx::channel directory);
 
  private:
-  zx_status_t ValidateFlags(uint32_t flags) final;
+  zx_status_t ValidateOptions(fs::VnodeConnectionOptions options) final;
   zx_status_t Getattr(vnattr_t* attr) final;
-  zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;
-  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+  zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, fs::VnodeConnectionOptions options) final;
+  zx_status_t GetNodeInfo(fs::Rights rights, fuchsia_io_NodeInfo* info) final;
   bool IsDirectory() const final { return false; }
 
   // All registered filesystems known to the fshost.
@@ -38,3 +41,5 @@ class Vnode final : public fs::Vnode {
 
 }  // namespace fshost
 }  // namespace devmgr
+
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_VNODE_H_

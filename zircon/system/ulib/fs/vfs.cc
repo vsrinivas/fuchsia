@@ -2,32 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fs/vfs.h>
+
+#include <lib/fdio/watcher.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 #include <fbl/auto_call.h>
+#include <fs/debug.h>
 #include <fs/trace.h>
-#include <fs/vfs.h>
 #include <fs/vnode.h>
-#include <lib/fdio/watcher.h>
 
 #ifdef __Fuchsia__
+#include <lib/zx/event.h>
+#include <lib/zx/process.h>
 #include <threads.h>
+#include <zircon/assert.h>
+
+#include <utility>
 
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <fs/connection.h>
 #include <fs/remote.h>
-#include <lib/zx/event.h>
-#include <lib/zx/process.h>
-#include <zircon/assert.h>
-
-#include <utility>
 #endif
-
-#include "debug.h"
 
 namespace fs {
 namespace {
@@ -70,13 +70,13 @@ zx_status_t LookupNode(fbl::RefPtr<Vnode> vn, fbl::StringPiece name, fbl::RefPtr
 
 // Validate open flags as much as they can be validated
 // independently of the target node.
-zx_status_t PrevalidateFlags(uint32_t flags) {
-  if (!(flags & ZX_FS_RIGHT_WRITABLE)) {
-    if (flags & ZX_FS_FLAG_TRUNCATE) {
+zx_status_t PrevalidateOptions(VnodeConnectionOptions options) {
+  if (!options.rights.write) {
+    if (options.flags.truncate) {
       return ZX_ERR_INVALID_ARGS;
     }
-  } else if (!(flags & ZX_FS_RIGHTS)) {
-    if (!IsVnodeRefOnly(flags)) {
+  } else if (!options.rights.any()) {
+    if (!options.flags.node_reference) {
       return ZX_ERR_INVALID_ARGS;
     }
   }
@@ -108,20 +108,19 @@ Vfs::Vfs(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 #endif
 
 zx_status_t Vfs::Open(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out, fbl::StringPiece path,
-                      fbl::StringPiece* out_path, uint32_t flags, uint32_t mode) {
+                      fbl::StringPiece* out_path, VnodeConnectionOptions options, uint32_t mode) {
 #ifdef __Fuchsia__
   fbl::AutoLock lock(&vfs_lock_);
 #endif
-  return OpenLocked(std::move(vndir), out, path, out_path, flags, mode);
+  return OpenLocked(std::move(vndir), out, path, out_path, options, mode);
 }
 
 zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
-                            fbl::StringPiece path, fbl::StringPiece* out_path, uint32_t flags,
-                            uint32_t mode) {
-  FS_PRETTY_TRACE_DEBUG("VfsOpen: path='", Path(path.data(), path.size()),
-                        "' flags=", ZxFlags(flags));
+                            fbl::StringPiece path, fbl::StringPiece* out_path,
+                            VnodeConnectionOptions options, uint32_t mode) {
+  FS_PRETTY_TRACE_DEBUG("VfsOpen: path='", Path(path.data(), path.size()), "' options=", options);
   zx_status_t r;
-  if ((r = PrevalidateFlags(flags)) != ZX_OK) {
+  if ((r = PrevalidateOptions(options)) != ZX_OK) {
     return r;
   }
   if ((r = Vfs::Walk(vndir, &vndir, path, &path)) < 0) {
@@ -145,7 +144,7 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (flags & ZX_FS_FLAG_CREATE) {
+  if (options.flags.create) {
     if (must_be_dir && !S_ISDIR(mode)) {
       return ZX_ERR_INVALID_ARGS;
     } else if (path == ".") {
@@ -154,7 +153,7 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
       return ZX_ERR_ACCESS_DENIED;
     }
     if ((r = vndir->Create(&vn, path, mode)) < 0) {
-      if ((r == ZX_ERR_ALREADY_EXISTS) && (!(flags & ZX_FS_FLAG_EXCLUSIVE))) {
+      if ((r == ZX_ERR_ALREADY_EXISTS) && !options.flags.fail_if_exists) {
         goto try_open;
       }
       if (r == ZX_ERR_NOT_SUPPORTED) {
@@ -174,7 +173,7 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
       return r;
     }
 #ifdef __Fuchsia__
-    if (!(flags & ZX_FS_FLAG_NOREMOTE) && vn->IsRemote()) {
+    if (!options.flags.no_remote && vn->IsRemote()) {
       // Opening a mount point: Traverse across remote.
       *out_path = ".";
       *out = std::move(vn);
@@ -182,22 +181,22 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
     }
 
     if (must_be_dir) {
-      flags |= ZX_FS_FLAG_DIRECTORY;
+      options.flags.directory = true;
     }
 #endif
-    if (ReadonlyLocked() && IsWritable(flags)) {
+    if (ReadonlyLocked() && options.rights.write) {
       return ZX_ERR_ACCESS_DENIED;
     }
-    if ((r = vn->ValidateFlags(flags)) != ZX_OK) {
+    if ((r = vn->ValidateOptions(options)) != ZX_OK) {
       return r;
     }
-    // VNODE_REF_ONLY requests that we don't actually open the underlying Vnode,
+    // |node_reference| requests that we don't actually open the underlying Vnode,
     // but use the connection as a reference to the Vnode.
-    if (!IsVnodeRefOnly(flags)) {
-      if ((r = OpenVnode(flags, &vn)) != ZX_OK) {
+    if (!options.flags.node_reference) {
+      if ((r = OpenVnode(options, &vn)) != ZX_OK) {
         return r;
       }
-      if ((flags & ZX_FS_FLAG_TRUNCATE) && ((r = vn->Truncate(0)) < 0)) {
+      if (options.flags.truncate && ((r = vn->Truncate(0)) < 0)) {
         vn->Close();
         return r;
       }
@@ -410,12 +409,14 @@ void Vfs::OnConnectionClosedRemotely(Connection* connection) {
   UnregisterConnection(connection);
 }
 
-zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel, uint32_t rights) {
-  const uint32_t flags = ZX_FS_FLAG_DIRECTORY;
+zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel, Rights rights) {
+  VnodeConnectionOptions options;
+  options.flags.directory = true;
+  options.rights = rights;
   zx_status_t r;
-  if ((r = vn->ValidateFlags(flags)) != ZX_OK) {
+  if ((r = vn->ValidateOptions(options)) != ZX_OK) {
     return r;
-  } else if ((r = OpenVnode(flags, &vn)) != ZX_OK) {
+  } else if ((r = OpenVnode(options, &vn)) != ZX_OK) {
     return r;
   }
 
@@ -426,7 +427,7 @@ zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel, 
     return r;
   }
 
-  return vn->Serve(this, std::move(channel), flags | rights);
+  return vn->Serve(this, std::move(channel), options);
 }
 
 #endif  // ifdef __Fuchsia__

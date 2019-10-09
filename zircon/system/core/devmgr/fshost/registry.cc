@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/pseudo-dir.h>
+#include "registry.h"
+
 #include <fuchsia/fshost/c/fidl.h>
 
-#include "registry.h"
+#include <fs/pseudo-dir.h>
+#include <fs/vfs_types.h>
 
 namespace devmgr {
 namespace fshost {
@@ -27,8 +29,12 @@ Registry::Registry(async::Loop* loop) : vfs_(loop->dispatcher()) {
 }
 
 zx_status_t Registry::ServeRoot(zx::channel server) {
-  return root_->Serve(&vfs_, std::move(server),
-                      ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_ADMIN);
+  fs::VnodeConnectionOptions options;
+  options.rights.read = true;
+  options.rights.write = true;
+  options.rights.admin = true;
+
+  return root_->Serve(&vfs_, std::move(server), options);
 }
 
 }  // namespace fshost

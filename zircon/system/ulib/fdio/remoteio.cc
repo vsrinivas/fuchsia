@@ -89,7 +89,7 @@ zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle
   if (dir == ZX_HANDLE_INVALID) {
     return ZX_ERR_UNAVAILABLE;
   }
-  uint32_t flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
+  uint32_t flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
   return fio::Directory::Call::Open(zx::unowned_channel(dir), flags, FDIO_CONNECT_MODE,
                                     fidl::StringView(path, length), std::move(request))
       .status();

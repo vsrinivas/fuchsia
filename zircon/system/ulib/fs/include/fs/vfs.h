@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_VFS_H_
+#define FS_VFS_H_
 
+#include <lib/fdio/vfs.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-
-#include <lib/fdio/vfs.h>
-#include <fs/locking.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
 #include <zircon/types.h>
+
+#include <fs/locking.h>
+#include <fs/vfs_types.h>
 
 #ifdef __Fuchsia__
 #include <lib/async/dispatcher.h>
@@ -22,12 +24,15 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/vmo.h>
+
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/mutex.h>
 #include <fs/client.h>
 #include <fs/mount-channel.h>
 #include <fs/vnode.h>
 #endif  // __Fuchsia__
+
+#include <utility>
 
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
@@ -37,22 +42,10 @@
 #include <fbl/string_piece.h>
 #include <fbl/unique_ptr.h>
 
-#include <utility>
-
 namespace fs {
 
 class Connection;
 class Vnode;
-
-inline constexpr bool IsVnodeRefOnly(uint32_t flags) { return flags & ZX_FS_FLAG_VNODE_REF_ONLY; }
-
-inline constexpr bool IsWritable(uint32_t flags) { return flags & ZX_FS_RIGHT_WRITABLE; }
-
-inline constexpr bool IsReadable(uint32_t flags) { return flags & ZX_FS_RIGHT_READABLE; }
-
-inline constexpr bool HasAdminRight(uint32_t flags) { return flags & ZX_FS_RIGHT_ADMIN; }
-
-inline constexpr bool IsExecutable(uint32_t flags) { return flags & ZX_FS_RIGHT_EXECUTABLE; }
 
 // A storage class for a vdircookie which is passed to Readdir.
 // Common vnode implementations may use this struct as scratch
@@ -87,7 +80,7 @@ class Vfs {
   // be traversed (or ".", if the endpoint of |path| is the mount point),
   // and return the node containing the node in |out|.
   zx_status_t Open(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out, fbl::StringPiece path,
-                   fbl::StringPiece* pathout, uint32_t flags, uint32_t mode)
+                   fbl::StringPiece* pathout, VnodeConnectionOptions options, uint32_t mode)
       FS_TA_EXCLUDES(vfs_lock_);
   zx_status_t Unlink(fbl::RefPtr<Vnode> vn, fbl::StringPiece path) FS_TA_EXCLUDES(vfs_lock_);
 
@@ -130,12 +123,13 @@ class Vfs {
   // The VFS is now responsible for destroying the connection.
   void OnConnectionClosedRemotely(Connection* connection) FS_TA_EXCLUDES(vfs_lock_);
 
-  // Serves a Vnode over the specified channel (used for creating new filesystems)
-  zx_status_t ServeDirectory(fbl::RefPtr<Vnode> vn, zx::channel channel, uint32_t rights);
+  // Serves a Vnode over the specified channel (used for creating new filesystems);
+  // the Vnode must be a directory.
+  zx_status_t ServeDirectory(fbl::RefPtr<Vnode> vn, zx::channel channel, Rights rights);
 
-  // Convenience wrapper over |ServeDirectory| with maximum default permissions.
+  // Convenience wrapper over |ServeDirectory| with maximum rights.
   zx_status_t ServeDirectory(fbl::RefPtr<Vnode> vn, zx::channel channel) {
-    return ServeDirectory(vn, std::move(channel), ZX_FS_RIGHTS);
+    return ServeDirectory(vn, std::move(channel), fs::Rights::All());
   }
 
   // Pins a handle to a remote filesystem onto a vnode, if possible.
@@ -152,7 +146,8 @@ class Vfs {
   // If the remote handle is closed (handing off returns ZX_ERR_PEER_CLOSED),
   // it is automatically unmounted.
   zx_status_t ForwardOpenRemote(fbl::RefPtr<Vnode> vn, zx::channel channel, fbl::StringPiece path,
-                                uint32_t flags, uint32_t mode) FS_TA_EXCLUDES(vfs_lock_);
+                                VnodeConnectionOptions options, uint32_t mode)
+      FS_TA_EXCLUDES(vfs_lock_);
 
   // Unpins all remote filesystems in the current filesystem, and waits for the
   // response of each one with the provided deadline.
@@ -175,7 +170,7 @@ class Vfs {
                    fbl::StringPiece* pathout) FS_TA_REQUIRES(vfs_lock_);
 
   zx_status_t OpenLocked(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out, fbl::StringPiece path,
-                         fbl::StringPiece* pathout, uint32_t flags, uint32_t mode)
+                         fbl::StringPiece* pathout, VnodeConnectionOptions options, uint32_t mode)
       FS_TA_REQUIRES(vfs_lock_);
 
   bool readonly_{};
@@ -225,3 +220,5 @@ class Vfs {
 };
 
 }  // namespace fs
+
+#endif  // FS_VFS_H_

@@ -280,10 +280,10 @@ TEST_F(TransactionTest, EnqueueAndVerifyMetadataWork) {
   Transaction transaction(&minfs_);
 
   fs::Operation op = {
-    .type = fs::OperationType::kWrite,
-    .vmo_offset = 2,
-    .dev_offset = 3,
-    .length = 4,
+      .type = fs::OperationType::kWrite,
+      .vmo_offset = 2,
+      .dev_offset = 3,
+      .length = 4,
   };
   transaction.EnqueueMetadata(1, std::move(op));
 
@@ -301,10 +301,10 @@ TEST_F(TransactionTest, EnqueueAndVerifyDataWork) {
   Transaction transaction(&minfs_);
 
   fs::Operation op = {
-    .type = fs::OperationType::kWrite,
-    .vmo_offset = 2,
-    .dev_offset = 3,
-    .length = 4,
+      .type = fs::OperationType::kWrite,
+      .vmo_offset = 2,
+      .dev_offset = 3,
+      .length = 4,
   };
   transaction.EnqueueData(1, std::move(op));
 
@@ -343,7 +343,7 @@ class MockVnodeMinfs : public VnodeMinfs, public fbl::Recyclable<MockVnodeMinfs>
   void CancelPendingWriteback() final {}
 
   // fs::Vnode interface.
-  zx_status_t ValidateFlags(uint32_t flags) final { return ZX_OK; }
+  zx_status_t ValidateOptions(fs::VnodeConnectionOptions) final { return ZX_OK; }
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final { return ZX_OK; }
   zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final {
     return ZX_OK;

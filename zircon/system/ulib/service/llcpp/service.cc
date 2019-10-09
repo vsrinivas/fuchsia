@@ -48,7 +48,8 @@ fidl::result<fidl::StringView> ValidateAndJoinPath(fidl::Array<char, kMaxPath>* 
 namespace internal {
 
 zx_status_t DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path, zx::channel remote) {
-  constexpr uint32_t flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
+  constexpr uint32_t flags =
+      ::llcpp::fuchsia::io::OPEN_RIGHT_READABLE | ::llcpp::fuchsia::io::OPEN_RIGHT_WRITABLE;
   ::llcpp::fuchsia::io::Directory::ResultOf::Open result =
       ::llcpp::fuchsia::io::Directory::Call::Open(std::move(dir), flags, uint32_t(0755),
                                                   std::move(path), std::move(remote));

@@ -38,6 +38,7 @@
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <fs/vfs.h>
+#include <fs/vfs_types.h>
 #include <fs/vnode.h>
 
 #ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_FORMAT_ASSERTIONS_
@@ -84,7 +85,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   ////////////////
   // fs::Vnode interface.
 
-  zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
+  zx_status_t Open(fs::VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
   zx_status_t Close() final;
 
   ////////////////
@@ -142,8 +143,8 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   ////////////////
   // fs::Vnode interface.
 
-  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
-  zx_status_t ValidateFlags(uint32_t flags) final;
+  zx_status_t GetNodeInfo(fs::Rights rights, fuchsia_io_NodeInfo* info) final;
+  zx_status_t ValidateOptions(fs::VnodeConnectionOptions options) final;
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
   zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final;
   zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;

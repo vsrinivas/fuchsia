@@ -49,11 +49,11 @@ class PseudoFile : public Vnode {
   ~PseudoFile() override;
 
   // |Vnode| implementation:
-  zx_status_t ValidateFlags(uint32_t flags) override;
+  zx_status_t ValidateOptions(VnodeConnectionOptions options) override;
   zx_status_t Getattr(vnattr_t* a) final;
 
   bool IsDirectory() const final;
-  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+  zx_status_t GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) final;
 
  protected:
   PseudoFile(ReadHandler read_handler, WriteHandler write_handler);
@@ -99,16 +99,17 @@ class BufferedPseudoFile : public PseudoFile {
   ~BufferedPseudoFile() override;
 
   // |Vnode| implementation:
-  zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
+  zx_status_t Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
 
  private:
   class Content final : public Vnode {
    public:
-    Content(fbl::RefPtr<BufferedPseudoFile> file, uint32_t flags, fbl::String output);
+    Content(fbl::RefPtr<BufferedPseudoFile> file, VnodeConnectionOptions options,
+            fbl::String output);
     ~Content() override;
 
     // |Vnode| implementation:
-    zx_status_t ValidateFlags(uint32_t flags) final;
+    zx_status_t ValidateOptions(VnodeConnectionOptions options) final;
     zx_status_t Close() final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t Read(void* data, size_t length, size_t offset, size_t* out_actual) final;
@@ -116,13 +117,13 @@ class BufferedPseudoFile : public PseudoFile {
     zx_status_t Append(const void* data, size_t length, size_t* out_end, size_t* out_actual) final;
     zx_status_t Truncate(size_t length) final;
     bool IsDirectory() const final;
-    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+    zx_status_t GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) final;
 
    private:
     void SetInputLength(size_t length);
 
     fbl::RefPtr<BufferedPseudoFile> const file_;
-    uint32_t const flags_;
+    const VnodeConnectionOptions options_;
     fbl::String const output_;
 
     char* input_data_ = nullptr;
@@ -184,16 +185,16 @@ class UnbufferedPseudoFile : public PseudoFile {
   ~UnbufferedPseudoFile() override;
 
   // |Vnode| implementation:
-  zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
+  zx_status_t Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
 
  private:
   class Content final : public Vnode {
    public:
-    Content(fbl::RefPtr<UnbufferedPseudoFile> file, uint32_t flags);
+    Content(fbl::RefPtr<UnbufferedPseudoFile> file, VnodeConnectionOptions options);
     ~Content() override;
 
     // |Vnode| implementation:
-    zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
+    zx_status_t Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
     zx_status_t Close() final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t Read(void* data, size_t length, size_t offset, size_t* out_actual) final;
@@ -201,11 +202,11 @@ class UnbufferedPseudoFile : public PseudoFile {
     zx_status_t Append(const void* data, size_t length, size_t* out_end, size_t* out_actual) final;
     zx_status_t Truncate(size_t length) final;
     bool IsDirectory() const final;
-    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+    zx_status_t GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) final;
 
    private:
     fbl::RefPtr<UnbufferedPseudoFile> const file_;
-    uint32_t const flags_;
+    const VnodeConnectionOptions options_;
 
     bool truncated_since_last_successful_write_;
   };

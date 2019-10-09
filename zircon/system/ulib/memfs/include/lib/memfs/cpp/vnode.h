@@ -2,16 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <threads.h>
+#ifndef LIB_MEMFS_CPP_VNODE_H_
+#define LIB_MEMFS_CPP_VNODE_H_
 
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
+#include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #ifdef __cplusplus
+
+#include <lib/zx/vmo.h>
+
+#include <atomic>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
@@ -21,9 +25,6 @@
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <fs/watcher.h>
-#include <lib/zx/vmo.h>
-
-#include <atomic>
 
 namespace memfs {
 
@@ -84,7 +85,7 @@ class VnodeFile final : public VnodeMemfs {
   explicit VnodeFile(Vfs* vfs);
   ~VnodeFile() override;
 
-  virtual zx_status_t ValidateFlags(uint32_t flags) final;
+  virtual zx_status_t ValidateOptions(fs::VnodeConnectionOptions options) final;
 
  private:
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
@@ -92,7 +93,7 @@ class VnodeFile final : public VnodeMemfs {
   zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
   zx_status_t Truncate(size_t len) final;
   zx_status_t Getattr(vnattr_t* a) final;
-  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+  zx_status_t GetNodeInfo(fs::Rights rights, fuchsia_io_NodeInfo* info) final;
   zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) final;
 
   // Ensure the underlying vmo is filled with zero from:
@@ -111,7 +112,7 @@ class VnodeDir final : public VnodeMemfs {
   explicit VnodeDir(Vfs* vfs);
   ~VnodeDir() override;
 
-  zx_status_t ValidateFlags(uint32_t flags) final;
+  zx_status_t ValidateOptions(fs::VnodeConnectionOptions options) final;
   zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
   zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) final;
 
@@ -148,7 +149,7 @@ class VnodeDir final : public VnodeMemfs {
                      fbl::StringPiece newname, bool src_must_be_dir, bool dst_must_be_dir) final;
   zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) final;
   zx_status_t Getattr(vnattr_t* a) final;
-  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+  zx_status_t GetNodeInfo(fs::Rights rights, fuchsia_io_NodeInfo* info) final;
   zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) final;
 
   fs::RemoteContainer remoter_;
@@ -160,12 +161,12 @@ class VnodeVmo final : public VnodeMemfs {
   VnodeVmo(Vfs* vfs, zx_handle_t vmo, zx_off_t offset, zx_off_t length);
   ~VnodeVmo() override;
 
-  virtual zx_status_t ValidateFlags(uint32_t flags) override;
+  virtual zx_status_t ValidateOptions(fs::VnodeConnectionOptions options) override;
 
  private:
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
   zx_status_t Getattr(vnattr_t* a) final;
-  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+  zx_status_t GetNodeInfo(fs::Rights rights, fuchsia_io_NodeInfo* info) final;
   zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) final;
   zx_status_t MakeLocalClone(bool executable);
 
@@ -226,3 +227,5 @@ class Vfs : public fs::ManagedVfs {
 }  // namespace memfs
 
 #endif  // ifdef __cplusplus
+
+#endif  // LIB_MEMFS_CPP_VNODE_H_

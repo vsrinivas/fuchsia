@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <minfs/bcache.h>
-
 #include <assert.h>
 #include <fuchsia/device/c/fidl.h>
+#include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,6 +21,7 @@
 #include <fs/buffer/vmo-buffer.h>
 #include <fs/operation/operation.h>
 #include <fs/trace.h>
+#include <minfs/bcache.h>
 #include <minfs/format.h>
 
 #include "minfs-private.h"
@@ -83,15 +83,14 @@ int Bcache::Sync() {
   return sync_txn.Transact();
 }
 
-zx_status_t FdToBlockDevice(fbl::unique_fd& fd,
-                            std::unique_ptr<block_client::BlockDevice>* out) {
+zx_status_t FdToBlockDevice(fbl::unique_fd& fd, std::unique_ptr<block_client::BlockDevice>* out) {
   zx::channel channel, server;
   zx_status_t status = zx::channel::create(0, &channel, &server);
   if (status != ZX_OK) {
     return status;
   }
   fzl::UnownedFdioCaller caller(fd.get());
-  uint32_t flags = ZX_FS_FLAG_CLONE_SAME_RIGHTS;
+  uint32_t flags = fuchsia_io_CLONE_FLAG_SAME_RIGHTS;
   status = fuchsia_io_NodeClone(caller.borrow_channel(), flags, server.release());
   if (status != ZX_OK) {
     return status;
@@ -108,12 +107,12 @@ zx_status_t FdToBlockDevice(fbl::unique_fd& fd,
 }
 
 // Static.
-zx_status_t Bcache::Create(std::unique_ptr<block_client::BlockDevice> device,
-                           uint32_t max_blocks, std::unique_ptr<Bcache>* out) {
+zx_status_t Bcache::Create(std::unique_ptr<block_client::BlockDevice> device, uint32_t max_blocks,
+                           std::unique_ptr<Bcache>* out) {
   std::unique_ptr<Bcache> bcache(new Bcache(std::move(device), max_blocks));
 
-  zx_status_t status = bcache->buffer_.Initialize(bcache.get(), 1, kMinfsBlockSize,
-                                                  "scratch-block");
+  zx_status_t status =
+      bcache->buffer_.Initialize(bcache.get(), 1, kMinfsBlockSize, "scratch-block");
   if (status != ZX_OK) {
     return status;
   }
@@ -127,9 +126,7 @@ zx_status_t Bcache::Create(std::unique_ptr<block_client::BlockDevice> device,
   return ZX_OK;
 }
 
-groupid_t Bcache::BlockGroupID() {
-  return group_registry_.GroupID();
-}
+groupid_t Bcache::BlockGroupID() { return group_registry_.GroupID(); }
 
 uint32_t Bcache::DeviceBlockSize() const { return info_.block_size; }
 

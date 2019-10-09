@@ -4,9 +4,10 @@
 
 #include <fs/lazy-dir.h>
 
+#include <fuchsia/io/c/fidl.h>
+
 #include <fs/vfs.h>
 #include <fs/vnode.h>
-#include <fuchsia/io/c/fidl.h>
 
 namespace fs {
 
@@ -32,7 +33,9 @@ bool DoDot(vdircookie_t* cookie) {
 LazyDir::LazyDir() {}
 LazyDir::~LazyDir() = default;
 
-zx_status_t LazyDir::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) { return ZX_OK; }
+zx_status_t LazyDir::Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) {
+  return ZX_OK;
+}
 
 zx_status_t LazyDir::Getattr(vnattr_t* attr) {
   memset(attr, 0, sizeof(vnattr_t));
@@ -85,7 +88,7 @@ zx_status_t LazyDir::Readdir(vdircookie_t* cookie, void* dirents, size_t len, si
   return ZX_OK;
 }
 
-zx_status_t LazyDir::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+zx_status_t LazyDir::GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) {
   info->tag = fuchsia_io_NodeInfoTag_directory;
   return ZX_OK;
 }

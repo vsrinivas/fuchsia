@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <inttypes.h>
 #include <fcntl.h>
+#include <inttypes.h>
+#include <lib/fdio/vfs.h>
+#include <lib/memfs/cpp/vnode.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <zircon/device/vfs.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <lib/fdio/vfs.h>
 #include <fs/vfs.h>
-#include <lib/memfs/cpp/vnode.h>
-#include <zircon/device/vfs.h>
 
 #include "dnode.h"
 
@@ -29,8 +29,8 @@ VnodeFile::VnodeFile(Vfs* vfs) : VnodeMemfs(vfs), vmo_size_(0), length_(0) {}
 
 VnodeFile::~VnodeFile() { vfs()->WillFreeVMO(vmo_size_); }
 
-zx_status_t VnodeFile::ValidateFlags(uint32_t flags) {
-  if (flags & ZX_FS_FLAG_DIRECTORY) {
+zx_status_t VnodeFile::ValidateOptions(fs::VnodeConnectionOptions options) {
+  if (options.flags.directory) {
     return ZX_ERR_NOT_DIR;
   }
   return ZX_OK;
@@ -142,7 +142,7 @@ zx_status_t VnodeFile::Getattr(vnattr_t* attr) {
   return ZX_OK;
 }
 
-zx_status_t VnodeFile::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+zx_status_t VnodeFile::GetNodeInfo([[maybe_unused]] fs::Rights rights, fuchsia_io_NodeInfo* info) {
   info->tag = fuchsia_io_NodeInfoTag_file;
   return ZX_OK;
 }

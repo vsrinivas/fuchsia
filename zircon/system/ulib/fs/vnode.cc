@@ -5,9 +5,9 @@
 #include <fs/vnode.h>
 
 #ifdef __Fuchsia__
-#include <fs/connection.h>
-
 #include <utility>
+
+#include <fs/connection.h>
 #endif
 
 namespace fs {
@@ -17,9 +17,9 @@ Vnode::Vnode() = default;
 Vnode::~Vnode() = default;
 
 #ifdef __Fuchsia__
-zx_status_t Vnode::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
+zx_status_t Vnode::Serve(fs::Vfs* vfs, zx::channel channel, VnodeConnectionOptions options) {
   return vfs->ServeConnection(
-      std::make_unique<Connection>(vfs, fbl::RefPtr(this), std::move(channel), flags));
+      std::make_unique<Connection>(vfs, fbl::RefPtr(this), std::move(channel), options));
 }
 
 zx_status_t Vnode::WatchDir(Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) {
@@ -29,9 +29,11 @@ zx_status_t Vnode::WatchDir(Vfs* vfs, uint32_t mask, uint32_t options, zx::chann
 
 void Vnode::Notify(fbl::StringPiece name, unsigned event) {}
 
-zx_status_t Vnode::ValidateFlags(uint32_t flags) { return ZX_OK; }
+zx_status_t Vnode::ValidateOptions(VnodeConnectionOptions options) { return ZX_OK; }
 
-zx_status_t Vnode::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) { return ZX_OK; }
+zx_status_t Vnode::Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) {
+  return ZX_OK;
+}
 
 zx_status_t Vnode::Close() { return ZX_OK; }
 

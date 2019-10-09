@@ -1226,7 +1226,7 @@ void OpenBlockDevice(const std::string& path,
   zx::channel channel, server;
   ASSERT_OK(zx::channel::create(0, &channel, &server));
   fzl::FdioCaller caller(std::move(fd));
-  ASSERT_OK(fuchsia_io_NodeClone(caller.borrow_channel(), ZX_FS_FLAG_CLONE_SAME_RIGHTS,
+  ASSERT_OK(fuchsia_io_NodeClone(caller.borrow_channel(), fuchsia_io_CLONE_FLAG_SAME_RIGHTS,
                                  server.release()));
   ASSERT_OK(block_client::RemoteBlockDevice::Create(std::move(channel), block_device));
 }
@@ -1245,8 +1245,8 @@ void GetSliceRange(const BlobfsTestWithFvm& test, const std::vector<uint64_t>& s
 
   size_t ranges_count;
   SliceRange range_array[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
-  ASSERT_OK(block_device->VolumeQuerySlices(slices.data(), slices.size(), range_array,
-                                            &ranges_count));
+  ASSERT_OK(
+      block_device->VolumeQuerySlices(slices.data(), slices.size(), range_array, &ranges_count));
   ranges->clear();
   for (size_t i = 0; i < ranges_count; i++) {
     ranges->push_back(range_array[i]);

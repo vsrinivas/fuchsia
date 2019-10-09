@@ -4,19 +4,23 @@
 
 // This file contains a directory which contains blobs.
 
-#pragma once
+#ifndef BLOBFS_DIRECTORY_H_
+#define BLOBFS_DIRECTORY_H_
 
 #ifndef __Fuchsia__
 #error Fuchsia-only Header
 #endif
 
+#include <fuchsia/blobfs/c/fidl.h>
+#include <fuchsia/io/c/fidl.h>
+
+#include <blobfs/blob-cache.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
 #include <fs/vfs.h>
+#include <fs/vfs_types.h>
 #include <fs/vnode.h>
-#include <fuchsia/blobfs/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
 
 namespace blobfs {
 
@@ -40,8 +44,8 @@ class Directory final : public fs::Vnode {
   ////////////////
   // fs::Vnode interface.
 
-  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
-  zx_status_t ValidateFlags(uint32_t flags) final;
+  zx_status_t GetNodeInfo(fs::Rights rights, fuchsia_io_NodeInfo* info) final;
+  zx_status_t ValidateOptions(fs::VnodeConnectionOptions options) final;
   zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
                       size_t* out_actual) final;
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
@@ -54,7 +58,7 @@ class Directory final : public fs::Vnode {
   zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
   zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
   void Sync(SyncCallback closure) final;
-  zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;
+  zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, fs::VnodeConnectionOptions options) final;
   bool IsDirectory() const final { return true; }
 
   ////////////////
@@ -66,3 +70,5 @@ class Directory final : public fs::Vnode {
 };
 
 }  // namespace blobfs
+
+#endif  // BLOBFS_DIRECTORY_H_

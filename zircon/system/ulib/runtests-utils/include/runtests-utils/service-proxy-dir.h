@@ -5,13 +5,13 @@
 #ifndef RUNTESTS_UTILS_SERVICE_PROXY_DIR_H_
 #define RUNTESTS_UTILS_SERVICE_PROXY_DIR_H_
 
-#include <fbl/ref_ptr.h>
-#include <fbl/string_piece.h>
-#include <fs/service.h>
-
 #include <mutex>
 #include <string>
 #include <unordered_map>
+
+#include <fbl/ref_ptr.h>
+#include <fbl/string_piece.h>
+#include <fs/service.h>
 
 namespace runtests {
 
@@ -27,7 +27,7 @@ class ServiceProxyDir : public fs::Vnode {
 
   zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
   zx_status_t Getattr(vnattr_t* a) final;
-  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+  zx_status_t GetNodeInfo(fs::Rights rights, fuchsia_io_NodeInfo* info) final;
   bool IsDirectory() const final;
 
  private:

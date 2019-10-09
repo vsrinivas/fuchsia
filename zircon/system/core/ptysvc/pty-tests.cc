@@ -10,6 +10,7 @@
 #include <lib/zx/time.h>
 
 #include <fs/managed-vfs.h>
+#include <fs/vfs_types.h>
 #include <zxtest/zxtest.h>
 
 #include "pty-server-vnode.h"
@@ -66,7 +67,7 @@ class PtyTestCase : public zxtest::Test {
 
     zx::channel local, remote;
     ASSERT_OK(zx::channel::create(0, &local, &remote));
-    ASSERT_OK(vnode->Serve(vfs(), std::move(remote), ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE));
+    ASSERT_OK(vnode->Serve(vfs(), std::move(remote), fs::VnodeConnectionOptions::ReadWrite()));
     *conn = Connection(std::move(local));
   }
 

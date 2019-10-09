@@ -17,8 +17,9 @@ namespace fs_pty::internal {
 class TtyConnectionImpl : public ::llcpp::fuchsia::hardware::pty::Device::Interface,
                           public fs::Connection {
  public:
-  TtyConnectionImpl(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel, uint32_t flags)
-      : fs::Connection(vfs, std::move(vnode), std::move(channel), flags) {}
+  TtyConnectionImpl(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
+                    fs::VnodeConnectionOptions options)
+      : fs::Connection(vfs, std::move(vnode), std::move(channel), options) {}
 
   ~TtyConnectionImpl() override = default;
 
@@ -64,8 +65,8 @@ template <typename Console>
 class TtyConnection final : public TtyConnectionImpl {
  public:
   TtyConnection(Console, fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
-                uint32_t flags)
-      : TtyConnectionImpl(vfs, std::move(vnode), std::move(channel), flags) {}
+                fs::VnodeConnectionOptions options)
+      : TtyConnectionImpl(vfs, std::move(vnode), std::move(channel), options) {}
 
   ~TtyConnection() override = default;
 };

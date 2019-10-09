@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
-#include <fs/connection.h>
 #include <fuchsia/io/c/fidl.h>
-#include <lib/fdio/namespace.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
-#include <zxtest/zxtest.h>
 
 #include <utility>
+
+#include <fbl/algorithm.h>
+#include <fs/connection.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -23,8 +24,9 @@ void OpenHelper(const zx::channel& directory, const char* path, zx::channel* res
   // response on the accompanying channel.
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
-  ASSERT_EQ(fuchsia_io_DirectoryOpen(directory.get(), ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DESCRIBE, 0,
-                                     path, strlen(path), server.release()),
+  ASSERT_EQ(fuchsia_io_DirectoryOpen(directory.get(),
+                                     fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_FLAG_DESCRIBE,
+                                     0, path, strlen(path), server.release()),
             ZX_OK);
   zx_signals_t pending;
   ASSERT_EQ(

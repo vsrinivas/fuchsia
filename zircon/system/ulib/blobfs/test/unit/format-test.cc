@@ -214,12 +214,12 @@ TEST(FormatFilesystemTest, FormatDeviceNoJournalAutoConvertReadonly) {
   ASSERT_OK(FormatFilesystem(device.get()));
   device->SetInfoFlags(fuchsia_hardware_block_FLAG_READONLY);
 
-  MountOptions options = {};
-  options.writability = Writability::Writable;
-  options.metrics = false;
-  options.journal = false;
+  MountOptions mount_options = {};
+  mount_options.writability = Writability::Writable;
+  mount_options.metrics = false;
+  mount_options.journal = false;
   std::unique_ptr<Blobfs> blobfs = nullptr;
-  ASSERT_OK(Blobfs::Create(std::move(device), &options, &blobfs));
+  ASSERT_OK(Blobfs::Create(std::move(device), &mount_options, &blobfs));
   fbl::RefPtr<Directory> root = nullptr;
   ASSERT_OK(blobfs->OpenRootNode(&root));
 
@@ -228,8 +228,11 @@ TEST(FormatFilesystemTest, FormatDeviceNoJournalAutoConvertReadonly) {
   // request is detected on a read-only filesystem.
   fbl::RefPtr<fs::Vnode> unused_outvnode;
   fbl::StringPiece unused_outpath;
-  ASSERT_EQ(ZX_ERR_ACCESS_DENIED, blobfs->Open(root, &unused_outvnode, "foo", &unused_outpath,
-                                               ZX_FS_FLAG_CREATE | ZX_FS_RIGHT_WRITABLE, 0));
+  fs::VnodeConnectionOptions open_options;
+  open_options.flags.create = true;
+  open_options.rights.write = true;
+  ASSERT_EQ(ZX_ERR_ACCESS_DENIED,
+            blobfs->Open(root, &unused_outvnode, "foo", &unused_outpath, open_options, 0));
 }
 
 // Validates that a formatted filesystem mounted as writable with a journal cannot be mounted on a

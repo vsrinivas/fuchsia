@@ -5,9 +5,9 @@
 #ifndef FS_VMO_FILE_H_
 #define FS_VMO_FILE_H_
 
-#include <mutex>
-
 #include <lib/zx/vmo.h>
+
+#include <mutex>
 
 #include "vnode.h"
 
@@ -71,11 +71,11 @@ class VmoFile : public Vnode {
   VmoSharing vmo_sharing() const { return vmo_sharing_; }
 
   // |Vnode| implementation:
-  zx_status_t ValidateFlags(uint32_t flags) final;
+  zx_status_t ValidateOptions(VnodeConnectionOptions options) final;
   zx_status_t Getattr(vnattr_t* a) final;
   zx_status_t Read(void* data, size_t length, size_t offset, size_t* out_actual) final;
   zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;
-  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+  zx_status_t GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) final;
   bool IsDirectory() const final;
 
  private:

@@ -4,16 +4,16 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-#include <fs/synchronous-vfs.h>
-#include <fs/pseudo-dir.h>
-#include <fs/service.h>
-
-#include <unittest/unittest.h>
 
 #include <utility>
+
+#include <fs/pseudo-dir.h>
+#include <fs/service.h>
+#include <fs/synchronous-vfs.h>
+#include <unittest/unittest.h>
 
 namespace {
 
@@ -30,10 +30,13 @@ bool test_service() {
     return ZX_OK;
   }));
 
+  fs::VnodeConnectionOptions options_readable;
+  options_readable.rights.read = true;
+
   // open
   fbl::RefPtr<fs::Vnode> redirect;
-  EXPECT_EQ(ZX_OK, svc->ValidateFlags(ZX_FS_RIGHT_READABLE));
-  EXPECT_EQ(ZX_OK, svc->Open(ZX_FS_RIGHT_READABLE, &redirect));
+  EXPECT_EQ(ZX_OK, svc->ValidateOptions(options_readable));
+  EXPECT_EQ(ZX_OK, svc->Open(options_readable, &redirect));
   EXPECT_NULL(redirect);
 
   // get attr
@@ -49,12 +52,12 @@ bool test_service() {
 
   // serve, the connector will return success the first time
   fs::SynchronousVfs vfs;
-  EXPECT_EQ(ZX_OK, svc->Serve(&vfs, std::move(c1), ZX_FS_RIGHT_READABLE));
+  EXPECT_EQ(ZX_OK, svc->Serve(&vfs, std::move(c1), options_readable));
   EXPECT_EQ(hc1, bound_channel.get());
 
   // the connector will return failure because bound_channel is still valid
   // we test that the error is propagated back up through Serve
-  EXPECT_EQ(ZX_ERR_IO, svc->Serve(&vfs, std::move(c2), ZX_FS_RIGHT_READABLE));
+  EXPECT_EQ(ZX_ERR_IO, svc->Serve(&vfs, std::move(c2), options_readable));
   EXPECT_EQ(hc1, bound_channel.get());
 
   END_TEST;

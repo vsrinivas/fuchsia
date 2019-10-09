@@ -10,6 +10,7 @@
 #include <lib/sync/completion.h>
 
 #include <fs/managed-vfs.h>
+#include <fs/vfs_types.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -25,8 +26,8 @@ struct TestConsoleState {
 class TestConnection : public fs::Connection {
  public:
   TestConnection(TestConsoleState* state, fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
-                 zx::channel channel, uint32_t flags)
-      : fs::Connection(vfs, std::move(vnode), std::move(channel), flags), state_(state) {}
+                 zx::channel channel, fs::VnodeConnectionOptions options)
+      : fs::Connection(vfs, std::move(vnode), std::move(channel), options), state_(state) {}
 
   ~TestConnection() override = default;
 
@@ -81,7 +82,7 @@ class PtyTestCase : public zxtest::Test {
   void Connect(::llcpp::fuchsia::hardware::pty::Device::SyncClient* client) {
     zx::channel local, remote;
     ASSERT_OK(zx::channel::create(0, &local, &remote));
-    ASSERT_OK(svc_->Serve(&vfs_, std::move(remote), ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE));
+    ASSERT_OK(svc_->Serve(&vfs_, std::move(remote), fs::VnodeConnectionOptions::ReadWrite()));
     *client = ::llcpp::fuchsia::hardware::pty::Device::SyncClient{std::move(local)};
   }
 

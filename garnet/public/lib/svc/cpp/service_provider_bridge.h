@@ -5,8 +5,7 @@
 #ifndef LIB_SVC_CPP_SERVICE_PROVIDER_BRIDGE_H_
 #define LIB_SVC_CPP_SERVICE_PROVIDER_BRIDGE_H_
 
-#include <fbl/ref_ptr.h>
-#include <fs/synchronous-vfs.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
@@ -14,7 +13,9 @@
 #include <unordered_map>
 #include <utility>
 
-#include <fuchsia/sys/cpp/fidl.h>
+#include <fbl/ref_ptr.h>
+#include <fs/synchronous-vfs.h>
+
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -71,7 +72,7 @@ class ServiceProviderBridge : public fuchsia::sys::ServiceProvider {
     zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
     zx_status_t Getattr(vnattr_t* a) final;
     bool IsDirectory() const final;
-    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+    zx_status_t GetNodeInfo(fs::Rights rights, fuchsia_io_NodeInfo* info) final;
 
    private:
     fxl::WeakPtr<ServiceProviderBridge> const bridge_;

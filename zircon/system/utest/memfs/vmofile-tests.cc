@@ -5,25 +5,25 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <threads.h>
-#include <unistd.h>
-
-#include <fbl/unique_fd.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/memfs/cpp/vnode.h>
 #include <lib/memfs/memfs.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
-#include <unittest/unittest.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <threads.h>
+#include <unistd.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+
+#include <fbl/unique_fd.h>
+#include <unittest/unittest.h>
 
 namespace {
 
@@ -50,7 +50,7 @@ bool test_vmofile_basic() {
 
   zx::channel h, request;
   ASSERT_EQ(zx::channel::create(0, &h, &request), ZX_OK);
-  ASSERT_EQ(fuchsia_io_DirectoryOpen(client.get(), ZX_FS_RIGHT_READABLE, 0, "greeting", 8,
+  ASSERT_EQ(fuchsia_io_DirectoryOpen(client.get(), fuchsia_io_OPEN_RIGHT_READABLE, 0, "greeting", 8,
                                      request.release()),
             ZX_OK);
 

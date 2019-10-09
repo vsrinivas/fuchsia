@@ -5,11 +5,12 @@
 #ifndef FS_LAZY_DIR_H_
 #define FS_LAZY_DIR_H_
 
-#include "vnode.h"
 #include <fbl/function.h>
 #include <fbl/ref_counted.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
+
+#include "vnode.h"
 
 namespace fs {
 
@@ -35,14 +36,14 @@ class LazyDir : public Vnode {
   virtual ~LazyDir();
 
   // |Vnode| implementation.
-  zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
+  zx_status_t Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
   zx_status_t Getattr(vnattr_t* out_attr) final;
   // Read the directory contents. Note that cookie->p is used to denote
   // if the "." entry has been returned. All IDs other than 0 are valid.
   zx_status_t Readdir(vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual) final;
   zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out_vnode, fbl::StringPiece name) final;
   bool IsDirectory() const final { return true; }
-  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+  zx_status_t GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) final;
 
  protected:
   // Get the contents of the directory in an output vector.

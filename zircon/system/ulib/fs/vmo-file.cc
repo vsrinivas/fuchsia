@@ -2,29 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/vmo-file.h>
-
+#include <fuchsia/io/c/fidl.h>
 #include <limits.h>
 #include <string.h>
+#include <zircon/assert.h>
+#include <zircon/device/vfs.h>
+#include <zircon/syscalls.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fs/vfs.h>
-#include <fuchsia/io/c/fidl.h>
-#include <zircon/assert.h>
-#include <zircon/device/vfs.h>
-#include <zircon/syscalls.h>
+#include <fs/vmo-file.h>
 
 namespace fs {
 namespace {
 constexpr uint64_t kVmoFileBlksize = PAGE_SIZE;
 
-zx_rights_t GetVmoRightsForAccessMode(uint32_t flags) {
+zx_rights_t GetVmoRightsForAccessMode(fs::Rights fs_rights) {
   zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP;
-  if (flags & ZX_FS_RIGHT_READABLE) {
+  if (fs_rights.read) {
     rights |= ZX_RIGHT_READ;
   }
-  if (flags & ZX_FS_RIGHT_WRITABLE) {
+  if (fs_rights.write) {
     rights |= ZX_RIGHT_WRITE;
   }
   // TODO(mdempsky): Add ZX_FS_RIGHT_EXECUTABLE flag?
@@ -45,11 +44,11 @@ VmoFile::VmoFile(const zx::vmo& unowned_vmo, size_t offset, size_t length, bool 
 
 VmoFile::~VmoFile() {}
 
-zx_status_t VmoFile::ValidateFlags(uint32_t flags) {
-  if (flags & ZX_FS_FLAG_DIRECTORY) {
+zx_status_t VmoFile::ValidateOptions(fs::VnodeConnectionOptions options) {
+  if (options.flags.directory) {
     return ZX_ERR_NOT_DIR;
   }
-  if (IsWritable(flags) && !writable_) {
+  if (options.rights.write && !writable_) {
     return ZX_ERR_ACCESS_DENIED;
   }
   return ZX_OK;
@@ -109,12 +108,12 @@ zx_status_t VmoFile::Write(const void* data, size_t length, size_t offset, size_
   return status;
 }
 
-zx_status_t VmoFile::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
-  ZX_DEBUG_ASSERT(!IsWritable(flags) || writable_);  // checked by the VFS
+zx_status_t VmoFile::GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) {
+  ZX_DEBUG_ASSERT(!rights.write || writable_);  // checked by the VFS
 
   zx::vmo vmo;
   size_t offset;
-  zx_status_t status = AcquireVmo(GetVmoRightsForAccessMode(flags), &vmo, &offset);
+  zx_status_t status = AcquireVmo(GetVmoRightsForAccessMode(rights), &vmo, &offset);
   if (status != ZX_OK) {
     return status;
   }

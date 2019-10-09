@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <fs/pseudo-file.h>
+#include <zircon/device/vfs.h>
 
 #include <utility>
 
 #include <fs/vfs.h>
-#include <zircon/device/vfs.h>
 
 namespace fs {
 
@@ -16,14 +16,14 @@ PseudoFile::PseudoFile(ReadHandler read_handler, WriteHandler write_handler)
 
 PseudoFile::~PseudoFile() = default;
 
-zx_status_t PseudoFile::ValidateFlags(uint32_t flags) {
-  if (flags & ZX_FS_FLAG_DIRECTORY) {
+zx_status_t PseudoFile::ValidateOptions(VnodeConnectionOptions options) {
+  if (options.flags.directory) {
     return ZX_ERR_NOT_DIR;
   }
-  if (IsReadable(flags) && !read_handler_) {
+  if (options.rights.read && !read_handler_) {
     return ZX_ERR_ACCESS_DENIED;
   }
-  if (IsWritable(flags) && !write_handler_) {
+  if (options.rights.write && !write_handler_) {
     return ZX_ERR_ACCESS_DENIED;
   }
   return ZX_OK;
@@ -43,7 +43,7 @@ zx_status_t PseudoFile::Getattr(vnattr_t* attr) {
 
 bool PseudoFile::IsDirectory() const { return false; }
 
-zx_status_t PseudoFile::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+zx_status_t PseudoFile::GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) {
   info->tag = fuchsia_io_NodeInfoTag_file;
   return ZX_OK;
 }
@@ -55,31 +55,32 @@ BufferedPseudoFile::BufferedPseudoFile(ReadHandler read_handler, WriteHandler wr
 
 BufferedPseudoFile::~BufferedPseudoFile() = default;
 
-zx_status_t BufferedPseudoFile::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
+zx_status_t BufferedPseudoFile::Open(VnodeConnectionOptions options,
+                                     fbl::RefPtr<Vnode>* out_redirect) {
   fbl::String output;
-  if (IsReadable(flags)) {
+  if (options.rights.read) {
     zx_status_t status = read_handler_(&output);
     if (status != ZX_OK) {
       return status;
     }
   }
 
-  *out_redirect = fbl::AdoptRef(new Content(fbl::RefPtr(this), flags, std::move(output)));
+  *out_redirect = fbl::AdoptRef(new Content(fbl::RefPtr(this), options, std::move(output)));
   return ZX_OK;
 }
 
-BufferedPseudoFile::Content::Content(fbl::RefPtr<BufferedPseudoFile> file, uint32_t flags,
-                                     fbl::String output)
-    : file_(std::move(file)), flags_(flags), output_(std::move(output)) {}
+BufferedPseudoFile::Content::Content(fbl::RefPtr<BufferedPseudoFile> file,
+                                     VnodeConnectionOptions options, fbl::String output)
+    : file_(std::move(file)), options_(options), output_(std::move(output)) {}
 
 BufferedPseudoFile::Content::~Content() { delete[] input_data_; }
 
-zx_status_t BufferedPseudoFile::Content::ValidateFlags(uint32_t flags) {
+zx_status_t BufferedPseudoFile::Content::ValidateOptions(VnodeConnectionOptions options) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t BufferedPseudoFile::Content::Close() {
-  if (IsWritable(flags_)) {
+  if (options_.rights.write) {
     return file_->write_handler_(fbl::StringPiece(input_data_, input_length_));
   }
   return ZX_OK;
@@ -89,7 +90,7 @@ zx_status_t BufferedPseudoFile::Content::Getattr(vnattr_t* a) { return file_->Ge
 
 zx_status_t BufferedPseudoFile::Content::Read(void* data, size_t length, size_t offset,
                                               size_t* out_actual) {
-  ZX_DEBUG_ASSERT(IsReadable(flags_));
+  ZX_DEBUG_ASSERT(options_.rights.read);
 
   if (length == 0u || offset >= output_.length()) {
     *out_actual = 0u;
@@ -106,7 +107,7 @@ zx_status_t BufferedPseudoFile::Content::Read(void* data, size_t length, size_t 
 
 zx_status_t BufferedPseudoFile::Content::Write(const void* data, size_t length, size_t offset,
                                                size_t* out_actual) {
-  ZX_DEBUG_ASSERT(IsWritable(flags_));
+  ZX_DEBUG_ASSERT(options_.rights.write);
 
   if (length == 0u) {
     *out_actual = 0u;
@@ -130,7 +131,7 @@ zx_status_t BufferedPseudoFile::Content::Write(const void* data, size_t length, 
 
 zx_status_t BufferedPseudoFile::Content::Append(const void* data, size_t length, size_t* out_end,
                                                 size_t* out_actual) {
-  ZX_DEBUG_ASSERT(IsWritable(flags_));
+  ZX_DEBUG_ASSERT(options_.rights.write);
 
   zx_status_t status = Write(data, length, input_length_, out_actual);
   if (status == ZX_OK) {
@@ -140,7 +141,7 @@ zx_status_t BufferedPseudoFile::Content::Append(const void* data, size_t length,
 }
 
 zx_status_t BufferedPseudoFile::Content::Truncate(size_t length) {
-  ZX_DEBUG_ASSERT(IsWritable(flags_));
+  ZX_DEBUG_ASSERT(options_.rights.write);
 
   if (length > file_->input_buffer_capacity_) {
     return ZX_ERR_NO_SPACE;
@@ -156,8 +157,8 @@ zx_status_t BufferedPseudoFile::Content::Truncate(size_t length) {
 
 bool BufferedPseudoFile::Content::IsDirectory() const { return false; }
 
-zx_status_t BufferedPseudoFile::Content::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
-  return file_->GetNodeInfo(flags, info);
+zx_status_t BufferedPseudoFile::Content::GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) {
+  return file_->GetNodeInfo(rights, info);
 }
 
 void BufferedPseudoFile::Content::SetInputLength(size_t length) {
@@ -174,24 +175,27 @@ UnbufferedPseudoFile::UnbufferedPseudoFile(ReadHandler read_handler, WriteHandle
 
 UnbufferedPseudoFile::~UnbufferedPseudoFile() = default;
 
-zx_status_t UnbufferedPseudoFile::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
-  *out_redirect = fbl::AdoptRef(new Content(fbl::RefPtr(this), flags));
+zx_status_t UnbufferedPseudoFile::Open(VnodeConnectionOptions options,
+                                       fbl::RefPtr<Vnode>* out_redirect) {
+  *out_redirect = fbl::AdoptRef(new Content(fbl::RefPtr(this), options));
   return ZX_OK;
 }
 
-UnbufferedPseudoFile::Content::Content(fbl::RefPtr<UnbufferedPseudoFile> file, uint32_t flags)
+UnbufferedPseudoFile::Content::Content(fbl::RefPtr<UnbufferedPseudoFile> file,
+                                       VnodeConnectionOptions options)
     : file_(std::move(file)),
-      flags_(flags),
-      truncated_since_last_successful_write_(flags_ & (ZX_FS_FLAG_CREATE | ZX_FS_FLAG_TRUNCATE)) {}
+      options_(options),
+      truncated_since_last_successful_write_(options.flags.create || options.flags.truncate) {}
 
 UnbufferedPseudoFile::Content::~Content() = default;
 
-zx_status_t UnbufferedPseudoFile::Content::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
+zx_status_t UnbufferedPseudoFile::Content::Open(VnodeConnectionOptions options,
+                                                fbl::RefPtr<Vnode>* out_redirect) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t UnbufferedPseudoFile::Content::Close() {
-  if (IsWritable(flags_) && truncated_since_last_successful_write_) {
+  if (options_.rights.write && truncated_since_last_successful_write_) {
     return file_->write_handler_(fbl::StringPiece());
   }
   return ZX_OK;
@@ -201,7 +205,7 @@ zx_status_t UnbufferedPseudoFile::Content::Getattr(vnattr_t* a) { return file_->
 
 zx_status_t UnbufferedPseudoFile::Content::Read(void* data, size_t length, size_t offset,
                                                 size_t* out_actual) {
-  ZX_DEBUG_ASSERT(IsReadable(flags_));
+  ZX_DEBUG_ASSERT(options_.rights.read);
 
   if (offset != 0u) {
     // If the offset is non-zero, we assume the client already read the property.
@@ -224,7 +228,7 @@ zx_status_t UnbufferedPseudoFile::Content::Read(void* data, size_t length, size_
 
 zx_status_t UnbufferedPseudoFile::Content::Write(const void* data, size_t length, size_t offset,
                                                  size_t* out_actual) {
-  ZX_DEBUG_ASSERT(IsWritable(flags_));
+  ZX_DEBUG_ASSERT(options_.rights.write);
 
   if (offset != 0u) {
     // If the offset is non-zero, we assume the client already wrote the property.
@@ -243,7 +247,7 @@ zx_status_t UnbufferedPseudoFile::Content::Write(const void* data, size_t length
 
 zx_status_t UnbufferedPseudoFile::Content::Append(const void* data, size_t length, size_t* out_end,
                                                   size_t* out_actual) {
-  ZX_DEBUG_ASSERT(IsWritable(flags_));
+  ZX_DEBUG_ASSERT(options_.rights.write);
 
   zx_status_t status = Write(data, length, 0u, out_actual);
   if (status == ZX_OK) {
@@ -253,7 +257,7 @@ zx_status_t UnbufferedPseudoFile::Content::Append(const void* data, size_t lengt
 }
 
 zx_status_t UnbufferedPseudoFile::Content::Truncate(size_t length) {
-  ZX_DEBUG_ASSERT(IsWritable(flags_));
+  ZX_DEBUG_ASSERT(options_.rights.write);
 
   if (length != 0u) {
     return ZX_ERR_INVALID_ARGS;
@@ -265,8 +269,8 @@ zx_status_t UnbufferedPseudoFile::Content::Truncate(size_t length) {
 
 bool UnbufferedPseudoFile::Content::IsDirectory() const { return false; }
 
-zx_status_t UnbufferedPseudoFile::Content::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
-  return file_->GetNodeInfo(flags, info);
+zx_status_t UnbufferedPseudoFile::Content::GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) {
+  return file_->GetNodeInfo(rights, info);
 }
 
 }  // namespace fs

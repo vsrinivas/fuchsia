@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fs/pseudo-dir.h>
-
 #include <fs/pseudo-file.h>
+#include <fs/vfs_types.h>
 #include <unittest/unittest.h>
 
 namespace {
@@ -66,9 +66,11 @@ bool TestPseudoDir() {
   EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->RemoveEntry("file2"));
 
   // open as directory
+  fs::VnodeConnectionOptions options_directory;
+  options_directory.flags.directory = true;
   fbl::RefPtr<fs::Vnode> redirect;
-  EXPECT_EQ(ZX_OK, dir->ValidateFlags(ZX_FS_FLAG_DIRECTORY));
-  EXPECT_EQ(ZX_OK, dir->Open(ZX_FS_FLAG_DIRECTORY, &redirect));
+  EXPECT_EQ(ZX_OK, dir->ValidateOptions(options_directory));
+  EXPECT_EQ(ZX_OK, dir->Open(options_directory, &redirect));
   EXPECT_NULL(redirect);
 
   // get attributes

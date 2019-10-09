@@ -55,7 +55,7 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
 #endif
 
   // fs::Vnode interface.
-  zx_status_t ValidateFlags(uint32_t flags) final;
+  zx_status_t ValidateOptions(fs::VnodeConnectionOptions options) final;
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
   zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final;
   zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;

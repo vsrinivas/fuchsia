@@ -797,12 +797,12 @@ void Blob::ActivateLowMemory() {
 
 Blob::~Blob() { ActivateLowMemory(); }
 
-zx_status_t Blob::ValidateFlags(uint32_t flags) {
-  if (flags & ZX_FS_FLAG_DIRECTORY) {
+zx_status_t Blob::ValidateOptions(fs::VnodeConnectionOptions options) {
+  if (options.flags.directory) {
     return ZX_ERR_NOT_DIR;
   }
 
-  if (flags & ZX_FS_RIGHT_WRITABLE) {
+  if (options.rights.write) {
     if (GetState() != kBlobStateEmpty) {
       return ZX_ERR_ACCESS_DENIED;
     }
@@ -810,7 +810,7 @@ zx_status_t Blob::ValidateFlags(uint32_t flags) {
   return ZX_OK;
 }
 
-zx_status_t Blob::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+zx_status_t Blob::GetNodeInfo([[maybe_unused]] fs::Rights rights, fuchsia_io_NodeInfo* info) {
   info->tag = fuchsia_io_NodeInfoTag_file;
   return GetReadableEvent(&info->file.event);
 }
@@ -941,7 +941,8 @@ fbl::RefPtr<Blob> Blob::CloneWatcherTeardown() {
   return nullptr;
 }
 
-zx_status_t Blob::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
+zx_status_t Blob::Open([[maybe_unused]] fs::VnodeConnectionOptions options,
+                       fbl::RefPtr<Vnode>* out_redirect) {
   fd_count_++;
   return ZX_OK;
 }

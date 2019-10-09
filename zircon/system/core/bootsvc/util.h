@@ -14,6 +14,7 @@
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <fs/vfs.h>
+#include <fs/vfs_types.h>
 
 namespace bootsvc {
 
@@ -53,8 +54,8 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap
 zx_status_t ParseBootArgs(std::string_view str, fbl::Vector<char>* buf);
 
 // Create a connection to a |vnode| in a |vfs|.
-zx_status_t CreateVnodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, uint32_t flags,
-                                  zx::channel* out);
+zx_status_t CreateVnodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
+                                  fs::VnodeConnectionOptions options, zx::channel* out);
 
 // Path relative to /boot used for crashlogs.
 extern const char* const kLastPanicFilePath;

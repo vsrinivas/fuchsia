@@ -15,6 +15,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
+#include <fs/debug.h>
 #include <safemath/checked_math.h>
 
 #ifdef __Fuchsia__
@@ -119,10 +120,10 @@ void File::AllocateData() {
     // Enqueue each data block one at a time, as they may not be contiguous on disk.
     for (blk_t i = 0; i < bno_count; i++) {
       fs::Operation op = {
-        .type = fs::OperationType::kWrite,
-        .vmo_offset = bno_start + i,
-        .dev_offset = allocated_blocks[i] + fs_->Info().dat_block,
-        .length = 1,
+          .type = fs::OperationType::kWrite,
+          .vmo_offset = bno_start + i,
+          .dev_offset = allocated_blocks[i] + fs_->Info().dat_block,
+          .length = 1,
       };
       transaction->EnqueueData(vmo_.get(), std::move(op));
     }
@@ -251,9 +252,10 @@ void File::CancelPendingWriteback() {
 
 zx_status_t File::CanUnlink() const { return ZX_OK; }
 
-zx_status_t File::ValidateFlags(uint32_t flags) {
-  FS_TRACE_DEBUG("File::ValidateFlags(0x%x) vn=%p(#%u)\n", flags, this, GetIno());
-  if (flags & ZX_FS_FLAG_DIRECTORY) {
+zx_status_t File::ValidateOptions(fs::VnodeConnectionOptions options) {
+  FS_PRETTY_TRACE_DEBUG("File::ValidateOptions(", options, ") ", "vn=", static_cast<void*>(this),
+                        "(#", GetIno(), ")");
+  if (options.flags.directory) {
     return ZX_ERR_NOT_DIR;
   }
   return ZX_OK;

@@ -43,8 +43,9 @@ class MinfsConnection : public fs::Connection {
  public:
   using MinfsConnectionBinder = fidl::Binder<MinfsConnection>;
 
-  MinfsConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel, uint32_t flags)
-      : Connection(vfs, std::move(vnode), std::move(channel), flags) {}
+  MinfsConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
+                  fs::VnodeConnectionOptions options)
+      : Connection(vfs, std::move(vnode), std::move(channel), options) {}
 
  private:
   VnodeMinfs& GetVnodeMinfs() const { return reinterpret_cast<VnodeMinfs&>(GetVnode()); }
@@ -424,10 +425,10 @@ zx_status_t VnodeMinfs::BlockOpIndirect(BlockOpArgs* op_args, IndirectArgs* para
       // itself was not deleted.
 #ifdef __Fuchsia__
       fs::Operation op = {
-        .type = fs::OperationType::kWrite,
-        .vmo_offset = params->GetOffset() + i,
-        .dev_offset = params->GetBno(i) + fs_->Info().dat_block,
-        .length = 1,
+          .type = fs::OperationType::kWrite,
+          .vmo_offset = params->GetOffset() + i,
+          .dev_offset = params->GetBno(i) + fs_->Info().dat_block,
+          .length = 1,
       };
       op_args->transaction->EnqueueMetadata(vmo_indirect_->vmo().get(), std::move(op));
 #else
@@ -497,10 +498,10 @@ zx_status_t VnodeMinfs::BlockOpDindirect(BlockOpArgs* op_args, DindirectArgs* pa
       // itself was not deleted.
 #ifdef __Fuchsia__
       fs::Operation op = {
-        .type = fs::OperationType::kWrite,
-        .vmo_offset = params->GetOffset() + i,
-        .dev_offset = params->GetBno(i) + fs_->Info().dat_block,
-        .length = 1,
+          .type = fs::OperationType::kWrite,
+          .vmo_offset = params->GetOffset() + i,
+          .dev_offset = params->GetBno(i) + fs_->Info().dat_block,
+          .length = 1,
       };
       op_args->transaction->EnqueueMetadata(vmo_indirect_->vmo().get(), std::move(op));
 #else
@@ -803,13 +804,14 @@ VnodeMinfs::~VnodeMinfs() {
 }
 
 #ifdef __Fuchsia__
-zx_status_t VnodeMinfs::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
+zx_status_t VnodeMinfs::Serve(fs::Vfs* vfs, zx::channel channel,
+                              fs::VnodeConnectionOptions options) {
   return vfs->ServeConnection(
-      std::make_unique<MinfsConnection>(vfs, fbl::RefPtr(this), std::move(channel), flags));
+      std::make_unique<MinfsConnection>(vfs, fbl::RefPtr(this), std::move(channel), options));
 }
 #endif
 
-zx_status_t VnodeMinfs::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
+zx_status_t VnodeMinfs::Open(fs::VnodeConnectionOptions, fbl::RefPtr<Vnode>* out_redirect) {
   fd_count_++;
   return ZX_OK;
 }
@@ -1194,10 +1196,10 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
       if (status != ZX_OK) {
         // TODO(35948): This is a known issue; the additional logging here is to help
         // diagnose.
-        FS_TRACE_ERROR("TruncateInternal: Modifying node length from %zu to %zu\n",
-                       inode_size, len);
-        FS_TRACE_ERROR("  Decommit from offset %zu, length %zu. Status: %d\n",
-                       decommit_offset, decommit_length, status);
+        FS_TRACE_ERROR("TruncateInternal: Modifying node length from %zu to %zu\n", inode_size,
+                       len);
+        FS_TRACE_ERROR("  Decommit from offset %zu, length %zu. Status: %d\n", decommit_offset,
+                       decommit_length, status);
         ZX_ASSERT(status == ZX_OK);
       }
     }
@@ -1275,7 +1277,7 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
 }
 
 #ifdef __Fuchsia__
-zx_status_t VnodeMinfs::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+zx_status_t VnodeMinfs::GetNodeInfo([[maybe_unused]] fs::Rights rights, fuchsia_io_NodeInfo* info) {
   if (IsDirectory()) {
     info->tag = fuchsia_io_NodeInfoTag_directory;
   } else {

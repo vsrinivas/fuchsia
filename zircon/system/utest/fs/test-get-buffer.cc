@@ -14,6 +14,7 @@
 #include <fbl/mutex.h>
 #include <fs/connection.h>
 #include <fs/managed-vfs.h>
+#include <fs/vfs_types.h>
 #include <unittest/unittest.h>
 
 #include "filesystems.h"
@@ -31,12 +32,13 @@ bool TestConnectionRights() {
   // Set up a vnode for the root directory
   class TestVNode : public fs::Vnode {
    public:
-    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+    zx_status_t GetNodeInfo([[maybe_unused]] fs::Rights rights,
+                            fuchsia_io_NodeInfo* info) override {
       info->tag = fuchsia_io_NodeInfoTag_file;
       return ZX_OK;
     }
-    bool IsDirectory() const { return false; }
-    zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) {
+    bool IsDirectory() const override { return false; }
+    zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) override {
       zx::vmo vmo;
       ASSERT_EQ(zx::vmo::create(4096, 0u, &vmo), ZX_OK);
       *out_vmo = vmo.release();
@@ -84,7 +86,7 @@ bool TestConnectionRights() {
       zx::channel client, server;
       ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
       uint32_t flags = row.connection_flags;
-      vnode->Serve(vfs.get(), std::move(server), flags);
+      vnode->Serve(vfs.get(), std::move(server), fs::VnodeConnectionOptions::FromIoV1Flags(flags));
 
       // Call FileGetBuffer on the channel with the testcase's request flags.
       // Check that we get the expected result.

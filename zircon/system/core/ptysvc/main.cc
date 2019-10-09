@@ -10,6 +10,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <fs/vfs_types.h>
 #include <fs/vnode.h>
 
 #include "pty-server-vnode.h"
@@ -20,7 +21,7 @@ class PtyGeneratingVnode : public fs::Vnode {
  public:
   ~PtyGeneratingVnode() override = default;
 
-  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) override {
+  zx_status_t GetNodeInfo([[maybe_unused]] fs::Rights rights, fuchsia_io_NodeInfo* info) override {
     // This should only actually be seen by something querying with VNODE_REF_ONLY.
     info->tag = fuchsia_io_NodeInfoTag_service;
     return ZX_OK;
@@ -28,7 +29,7 @@ class PtyGeneratingVnode : public fs::Vnode {
 
   bool IsDirectory() const override { return false; }
 
-  zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) override {
+  zx_status_t Open(fs::VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) override {
     fbl::RefPtr<PtyServer> server;
     zx_status_t status = PtyServer::Create(&server);
     if (status != ZX_OK) {

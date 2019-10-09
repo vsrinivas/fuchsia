@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/managed-vfs.h>
-#include <fs/synchronous-vfs.h>
-#include <fs/vfs.h>
-#include <fs/vnode.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -14,9 +10,14 @@
 #include <lib/zx/channel.h>
 #include <zircon/assert.h>
 
-#include <unittest/unittest.h>
-
 #include <utility>
+
+#include <fs/managed-vfs.h>
+#include <fs/synchronous-vfs.h>
+#include <fs/vfs.h>
+#include <fs/vfs_types.h>
+#include <fs/vnode.h>
+#include <unittest/unittest.h>
 
 namespace {
 
@@ -27,7 +28,7 @@ class FdCountVnode : public fs::Vnode {
 
   int fds() const { return fd_count_; }
 
-  zx_status_t Open(uint32_t, fbl::RefPtr<Vnode>* redirect) final {
+  zx_status_t Open(fs::VnodeConnectionOptions, fbl::RefPtr<Vnode>* redirect) final {
     fd_count_++;
     return ZX_OK;
   }
@@ -40,7 +41,7 @@ class FdCountVnode : public fs::Vnode {
 
   bool IsDirectory() const final { return false; }
 
-  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+  zx_status_t GetNodeInfo([[maybe_unused]] fs::Rights rights, fuchsia_io_NodeInfo* info) {
     info->tag = fuchsia_io_NodeInfoTag_service;
     return ZX_OK;
   }
@@ -71,8 +72,7 @@ class AsyncTearDownVnode : public FdCountVnode {
   static int SyncThread(void* arg) {
     fs::Vnode::SyncCallback callback;
     {
-      fbl::RefPtr<AsyncTearDownVnode> vn =
-          fbl::RefPtr(reinterpret_cast<AsyncTearDownVnode*>(arg));
+      fbl::RefPtr<AsyncTearDownVnode> vn = fbl::RefPtr(reinterpret_cast<AsyncTearDownVnode*>(arg));
       // A) Identify when the sync has started being processed.
       sync_completion_signal(&vn->completions_[0]);
       // B) Wait until the connection has been closed.
@@ -111,8 +111,8 @@ bool sync_start(sync_completion_t* completions, async::Loop* loop,
   zx::channel client;
   zx::channel server;
   ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
-  ASSERT_EQ(vn->Open(0, nullptr), ZX_OK);
-  ASSERT_EQ(vn->Serve(vfs->get(), std::move(server), 0), ZX_OK);
+  ASSERT_EQ(vn->Open(fs::VnodeConnectionOptions(), nullptr), ZX_OK);
+  ASSERT_EQ(vn->Serve(vfs->get(), std::move(server), fs::VnodeConnectionOptions()), ZX_OK);
   vn = nullptr;
 
   ASSERT_TRUE(send_sync(client));
@@ -262,12 +262,12 @@ bool TestTeardownSlowClone() {
   auto vn = fbl::AdoptRef(new AsyncTearDownVnode(completions));
   zx::channel client, server;
   ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
-  ASSERT_EQ(vn->Open(0, nullptr), ZX_OK);
-  ASSERT_EQ(vn->Serve(vfs.get(), std::move(server), 0), ZX_OK);
+  ASSERT_EQ(vn->Open(fs::VnodeConnectionOptions(), nullptr), ZX_OK);
+  ASSERT_EQ(vn->Serve(vfs.get(), std::move(server), fs::VnodeConnectionOptions()), ZX_OK);
   vn = nullptr;
 
   // A) Wait for sync to begin.
-  // Block the connection to the server in a sync, while simultanously
+  // Block the connection to the server in a sync, while simultaneously
   // sending a request to open a new connection.
   send_sync(client);
   sync_completion_wait(&completions[0], ZX_TIME_INFINITE);
@@ -318,8 +318,8 @@ bool TestSynchronousTeardown() {
     auto vn = fbl::AdoptRef(new FdCountVnode());
     zx::channel server;
     ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
-    ASSERT_EQ(vn->Open(0, nullptr), ZX_OK);
-    ASSERT_EQ(vn->Serve(vfs.get(), std::move(server), 0), ZX_OK);
+    ASSERT_EQ(vn->Open(fs::VnodeConnectionOptions(), nullptr), ZX_OK);
+    ASSERT_EQ(vn->Serve(vfs.get(), std::move(server), fs::VnodeConnectionOptions()), ZX_OK);
   }
 
   loop.Quit();
@@ -330,8 +330,8 @@ bool TestSynchronousTeardown() {
     auto vn = fbl::AdoptRef(new FdCountVnode());
     zx::channel server;
     ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
-    ASSERT_EQ(vn->Open(0, nullptr), ZX_OK);
-    ASSERT_EQ(vn->Serve(vfs.get(), std::move(server), 0), ZX_OK);
+    ASSERT_EQ(vn->Open(fs::VnodeConnectionOptions(), nullptr), ZX_OK);
+    ASSERT_EQ(vn->Serve(vfs.get(), std::move(server), fs::VnodeConnectionOptions()), ZX_OK);
   }
 
   {

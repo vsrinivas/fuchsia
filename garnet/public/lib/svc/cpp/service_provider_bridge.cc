@@ -5,7 +5,6 @@
 #include "lib/svc/cpp/service_provider_bridge.h"
 
 #include <fcntl.h>
-#include <fs/service.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -13,6 +12,9 @@
 #include <zircon/device/vfs.h>
 
 #include <utility>
+
+#include <fs/service.h>
+#include <fs/vfs_types.h>
 
 namespace component {
 
@@ -100,8 +102,8 @@ zx_status_t ServiceProviderBridge::ServiceProviderDir::Getattr(vnattr_t* attr) {
 
 bool ServiceProviderBridge::ServiceProviderDir::IsDirectory() const { return true; }
 
-zx_status_t ServiceProviderBridge::ServiceProviderDir::GetNodeInfo(uint32_t flags,
-                                                                   fuchsia_io_NodeInfo* info) {
+zx_status_t ServiceProviderBridge::ServiceProviderDir::GetNodeInfo(
+    [[maybe_unused]] fs::Rights rights, fuchsia_io_NodeInfo* info) {
   info->tag = fuchsia_io_NodeInfoTag_directory;
   return ZX_OK;
 }

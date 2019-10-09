@@ -5,9 +5,10 @@
 #ifndef FS_SERVICE_H_
 #define FS_SERVICE_H_
 
+#include <lib/zx/channel.h>
+
 #include <fbl/function.h>
 #include <fbl/macros.h>
-#include <lib/zx/channel.h>
 
 #include "vnode.h"
 
@@ -31,11 +32,11 @@ class Service : public Vnode {
   ~Service() override;
 
   // |Vnode| implementation:
-  zx_status_t ValidateFlags(uint32_t flags) final;
+  zx_status_t ValidateOptions(VnodeConnectionOptions options) final;
   zx_status_t Getattr(vnattr_t* a) final;
-  zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;
+  zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, VnodeConnectionOptions options) final;
   bool IsDirectory() const final;
-  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+  zx_status_t GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) final;
 
  private:
   Connector connector_;

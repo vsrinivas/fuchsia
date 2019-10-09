@@ -333,8 +333,7 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[], const char* output_di
 
     // Setup VFS.
     vfs = std::make_unique<fs::SynchronousVfs>(loop.dispatcher());
-    vfs->ServeDirectory(std::move(proxy_dir), std::move(svc_proxy),
-                        ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE);
+    vfs->ServeDirectory(std::move(proxy_dir), std::move(svc_proxy), fs::Rights::ReadWrite());
     loop.StartThread();
   } else {
     for (size_t i = 0; i < flat->count; ++i) {

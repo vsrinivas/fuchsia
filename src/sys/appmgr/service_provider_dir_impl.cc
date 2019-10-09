@@ -86,7 +86,7 @@ void ServiceProviderDirImpl::ConnectToService(std::string service_name, zx::chan
   fbl::RefPtr<fs::Vnode> child;
   zx_status_t status = root_->Lookup(&child, service_name);
   if (status == ZX_OK) {
-    status = child->Serve(&vfs_, std::move(channel), 0);
+    status = child->Serve(&vfs_, std::move(channel), fs::VnodeConnectionOptions());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << ErrorServingService(component_url_, service_name, status);
     }
@@ -104,7 +104,8 @@ zx_status_t ServiceProviderDirImpl::Readdir(fs::vdircookie_t* cookie, void* dire
   return root_->Readdir(cookie, dirents, len, out_actual);
 }
 
-zx_status_t ServiceProviderDirImpl::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+zx_status_t ServiceProviderDirImpl::GetNodeInfo([[maybe_unused]] fs::Rights rights,
+                                                fuchsia_io_NodeInfo* info) {
   info->tag = fuchsia_io_NodeInfoTag_directory;
   return ZX_OK;
 }

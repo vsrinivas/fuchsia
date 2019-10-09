@@ -31,6 +31,7 @@
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
+#include <fs/vfs_types.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -67,9 +68,7 @@ struct DebugData : public ::llcpp::fuchsia::debugdata::DebugData::Interface {
     ASSERT_OK(zx::channel::create(0, client, &server));
 
     *vfs = std::make_unique<fs::SynchronousVfs>(dispatcher);
-    ASSERT_OK(
-        (*vfs)->ServeDirectory(std::move(dir), std::move(server),
-                               ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE));
+    ASSERT_OK((*vfs)->ServeDirectory(std::move(dir), std::move(server), fs::Rights::ReadWrite()));
   }
 };
 

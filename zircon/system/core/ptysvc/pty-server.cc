@@ -92,8 +92,7 @@ zx_status_t PtyServer::CreateClient(uint32_t id, zx::channel client_request) {
   clients_.push_back(client);
 
   auto vnode = fbl::MakeRefCounted<PtyClientVnode>(client);
-  status =
-      vnode->Serve(vfs_, std::move(client_request), ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE);
+  status = vnode->Serve(vfs_, std::move(client_request), fs::VnodeConnectionOptions::ReadWrite());
   if (status != ZX_OK) {
     return status;
   }

@@ -5,10 +5,17 @@
 #ifndef FS_VNODE_H_
 #define FS_VNODE_H_
 
+#include <lib/fdio/io.h>
+#include <lib/fdio/vfs.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
+#include <utility>
 
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
@@ -19,13 +26,7 @@
 #include <fbl/string_piece.h>
 #include <fs/mount-channel.h>
 #include <fs/ref-counted.h>
-#include <lib/fdio/io.h>
-#include <lib/fdio/vfs.h>
-#include <zircon/assert.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
-
-#include <utility>
+#include <fs/vfs_types.h>
 
 #ifdef __Fuchsia__
 #include <fuchsia/io/c/fidl.h>
@@ -44,37 +45,35 @@ inline bool vfs_valid_name(fbl::StringPiece name) {
 }
 
 // The VFS interface declares a default abstract Vnode class with
-// common operations that may be overwritten.
+// common operations that may be overridden.
 //
 // The ops are used for dispatch and the lifecycle of Vnodes are owned
 // by RefPtrs.
 //
 // All names passed to the Vnode class are valid according to "vfs_valid_name".
-//
-// The lower half of flags (VFS_FLAG_RESERVED_MASK) is reserved
-// for usage by fs::Vnode, but the upper half of flags may
-// be used by subclasses of Vnode.
 class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
  public:
   virtual ~Vnode();
   virtual void fbl_recycle() { delete this; }
 
-  // Ensures that it is valid to access the vnode with given flags.
-  virtual zx_status_t ValidateFlags(uint32_t flags);
+  // Ensures that it is valid to access the vnode with given connection options.
+  // The vnode will only be opened for a particular request if the validation
+  // returns |ZX_OK|.
+  virtual zx_status_t ValidateOptions(VnodeConnectionOptions options);
 
-  // Provides an opportunity to redirect subsequent I/O operations to a
-  // different vnode.
+  // Opens the vnode. In addition, provides an opportunity to redirect subsequent
+  // I/O operations to a different vnode.
   //
-  // Flags will have already been validated by "ValidateFlags".
-  // Open should never be invoked if flags includes "O_PATH".
+  // |options| contain the flags and rights supplied by the client, parsed into a struct
+  // with individual fields. It will have already been validated by |ValidateOptions|.
+  // Open is never invoked if flags includes "node_reference".
   //
-  // If the implementation of |Open()| sets |out_redirect| to a non-null value.
-  // all following I/O operations on the opened file will be redirected to the
-  // indicated vnode instead of being handled by this instance.
-  //
-  // |flags| are the open flags to be validated, such as |ZX_FS_RIGHT_READABLE| and
-  // |ZX_FS_FLAG_DIRECTORY|.
-  virtual zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect);
+  // If the implementation of |Open()| sets |out_redirect| to a non-null value,
+  // all following I/O operations on the opened object will be redirected to the
+  // indicated vnode instead of being handled by this instance. This is useful
+  // when implementing lazy files/pseudo files, where a different vnode may be
+  // used for each new connection to a file.
+  virtual zx_status_t Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect);
 
   // METHODS FOR OPENED NODES
   //
@@ -92,21 +91,23 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   //
   // |vfs| is the VFS which manages the Vnode.
   // |channel| is the channel over which the client will exchange messages with the Vnode.
-  // |flags| are the flags and rights which were previously provided to |Open()|.
-  virtual zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags);
+  // |options| are the flags and rights which were previously provided to |Open()|.
+  virtual zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, VnodeConnectionOptions options);
 
   // Extract handle, type, and extra info from a vnode.
-  virtual zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) = 0;
+  // The |rights| argument contain the access rights requested by the client, and should determine
+  // corresponding access rights on the returned handles if applicable.
+  virtual zx_status_t GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) = 0;
 
   virtual zx_status_t WatchDir(Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher);
 #endif
 
-  // Closes vn. Will be called once for each successful Open().
+  // Closes the vnode. Will be called once for each successful Open().
   //
   // Typically, most Vnodes simply return "ZX_OK".
   virtual zx_status_t Close();
 
-  // Read data from vn at offset.
+  // Read data from the vnode at offset.
   //
   // If successful, returns the number of bytes read in |out_actual|. This must be
   // less than or equal to |len|.
@@ -124,10 +125,10 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // returns the new end of file offset in |out_end|.
   virtual zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual);
 
-  // Change the size of vn
+  // Change the size of the vnode.
   virtual zx_status_t Truncate(size_t len);
 
-  // Set attributes of vn.
+  // Set attributes of the vnode.
   virtual zx_status_t Setattr(const vnattr_t* a);
 
   // Acquire a vmo from a vnode.
@@ -216,9 +217,9 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 
 // Opens a vnode by reference.
 // The |vnode| reference is updated in-place if redirection occurs.
-inline zx_status_t OpenVnode(uint32_t flags, fbl::RefPtr<Vnode>* vnode) {
+inline zx_status_t OpenVnode(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* vnode) {
   fbl::RefPtr<Vnode> redirect;
-  zx_status_t status = (*vnode)->Open(flags, &redirect);
+  zx_status_t status = (*vnode)->Open(options, &redirect);
   if (status == ZX_OK && redirect != nullptr) {
     *vnode = std::move(redirect);
   }

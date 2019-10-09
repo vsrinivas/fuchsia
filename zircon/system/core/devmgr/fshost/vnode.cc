@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <inttypes.h>
+#include "vnode.h"
 
-#include <fs/tracked-remote-dir.h>
 #include <fuchsia/fshost/c/fidl.h>
+#include <inttypes.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/memfs/cpp/vnode.h>
 
-#include "vnode.h"
+#include <fs/tracked-remote-dir.h>
+#include <fs/vfs_types.h>
 
 namespace devmgr {
 namespace fshost {
@@ -19,7 +20,8 @@ namespace {
 // requests.
 class Connection final : public fs::Connection {
  public:
-  Connection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel, uint32_t flags);
+  Connection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
+             fs::VnodeConnectionOptions options);
 
  private:
   static const fuchsia_fshost_Registry_ops* Ops() {
@@ -51,8 +53,8 @@ zx_status_t Vnode::AddFilesystem(zx::channel directory) {
   return directory_vnode->AddAsTrackedEntry(dispatcher_, filesystems_.get(), fbl::String(buf));
 }
 
-zx_status_t Vnode::ValidateFlags(uint32_t flags) {
-  if (flags & ZX_FS_FLAG_DIRECTORY) {
+zx_status_t Vnode::ValidateOptions(fs::VnodeConnectionOptions options) {
+  if (options.flags.directory) {
     return ZX_ERR_NOT_DIR;
   }
   return ZX_OK;
@@ -65,19 +67,19 @@ zx_status_t Vnode::Getattr(vnattr_t* attr) {
   return ZX_OK;
 }
 
-zx_status_t Vnode::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
+zx_status_t Vnode::Serve(fs::Vfs* vfs, zx::channel channel, fs::VnodeConnectionOptions options) {
   return vfs->ServeConnection(
-      std::make_unique<Connection>(vfs, fbl::RefPtr(this), std::move(channel), flags));
+      std::make_unique<Connection>(vfs, fbl::RefPtr(this), std::move(channel), options));
 }
 
-zx_status_t Vnode::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+zx_status_t Vnode::GetNodeInfo([[maybe_unused]] fs::Rights, fuchsia_io_NodeInfo* info) {
   info->tag = fuchsia_io_NodeInfoTag_service;
   return ZX_OK;
 }
 
 Connection::Connection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
-                       uint32_t flags)
-    : fs::Connection(vfs, std::move(vnode), std::move(channel), flags) {}
+                       fs::VnodeConnectionOptions options)
+    : fs::Connection(vfs, std::move(vnode), std::move(channel), options) {}
 
 Vnode& Connection::GetVnode() const { return reinterpret_cast<Vnode&>(fs::Connection::GetVnode()); }
 

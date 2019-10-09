@@ -2,8 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/device/c/fidl.h>
+#include <fuchsia/io/c/fidl.h>
+#include <lib/fidl-utils/bind.h>
+#include <lib/sync/completion.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/device/vfs.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+
+#include <utility>
 
 #include <blobfs/blobfs.h>
 #include <blobfs/metrics.h>
@@ -11,15 +20,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
 #include <fs/metrics/events.h>
-#include <fuchsia/device/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
-#include <lib/fidl-utils/bind.h>
-#include <lib/sync/completion.h>
-#include <zircon/device/vfs.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
-
-#include <utility>
+#include <fs/vfs_types.h>
 
 namespace blobfs {
 
@@ -29,13 +30,13 @@ BlobCache& Directory::Cache() { return blobfs_->Cache(); }
 
 Directory::~Directory() = default;
 
-zx_status_t Directory::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+zx_status_t Directory::GetNodeInfo([[maybe_unused]] fs::Rights rights, fuchsia_io_NodeInfo* info) {
   info->tag = fuchsia_io_NodeInfoTag_directory;
   return ZX_OK;
 }
 
-zx_status_t Directory::ValidateFlags(uint32_t flags) {
-  if (flags & ZX_FS_FLAG_NOT_DIRECTORY) {
+zx_status_t Directory::ValidateOptions(fs::VnodeConnectionOptions options) {
+  if (options.flags.not_directory) {
     return ZX_ERR_NOT_FILE;
   }
   return ZX_OK;
@@ -111,7 +112,7 @@ zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
   if ((status = Cache().Add(vn)) != ZX_OK) {
     return status;
   }
-  vn->Open(0, nullptr);
+  vn->Open(fs::VnodeConnectionOptions(), nullptr);
   *out = std::move(vn);
   return ZX_OK;
 }
@@ -182,8 +183,8 @@ class DirectoryConnection : public fs::Connection {
   using DirectoryConnectionBinder = fidl::Binder<DirectoryConnection>;
 
   DirectoryConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
-                      uint32_t flags)
-      : Connection(vfs, std::move(vnode), std::move(channel), flags) {}
+                      fs::VnodeConnectionOptions options)
+      : Connection(vfs, std::move(vnode), std::move(channel), options) {}
 
  private:
   Directory& GetDirectory() const { return reinterpret_cast<Directory&>(GetVnode()); }
@@ -206,9 +207,10 @@ class DirectoryConnection : public fs::Connection {
 };
 
 #ifdef __Fuchsia__
-zx_status_t Directory::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
+zx_status_t Directory::Serve(fs::Vfs* vfs, zx::channel channel,
+                             fs::VnodeConnectionOptions options) {
   return vfs->ServeConnection(
-      std::make_unique<DirectoryConnection>(vfs, fbl::RefPtr(this), std::move(channel), flags));
+      std::make_unique<DirectoryConnection>(vfs, fbl::RefPtr(this), std::move(channel), options));
 }
 #endif
 

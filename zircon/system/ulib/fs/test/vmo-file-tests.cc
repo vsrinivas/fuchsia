@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/vmo-file.h>
-
-#include <limits.h>
-
 #include <fuchsia/io/c/fidl.h>
+#include <lib/zx/vmo.h>
+#include <limits.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
-#include <lib/zx/vmo.h>
+#include <fs/vfs_types.h>
+#include <fs/vmo-file.h>
 #include <unittest/unittest.h>
 
 namespace {
+
+using VnodeOptions = fs::VnodeConnectionOptions;
 
 constexpr size_t VMO_SIZE = PAGE_SIZE * 3u;
 constexpr size_t PAGE_0 = 0u;
@@ -124,15 +125,14 @@ bool TestOpen() {
   {
     fs::VmoFile file(abc, 0u, 0u);
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file.ValidateFlags(ZX_FS_RIGHT_READABLE));
-    EXPECT_EQ(ZX_OK, file.Open(ZX_FS_RIGHT_READABLE, &redirect));
+    EXPECT_EQ(ZX_OK, file.ValidateOptions(VnodeOptions::ReadOnly()));
+    EXPECT_EQ(ZX_OK, file.Open(VnodeOptions::ReadOnly(), &redirect));
     EXPECT_NULL(redirect);
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED,
-              file.ValidateFlags(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE));
+    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file.ValidateOptions(VnodeOptions::ReadWrite()));
     EXPECT_NULL(redirect);
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file.ValidateFlags(ZX_FS_RIGHT_WRITABLE));
+    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file.ValidateOptions(VnodeOptions::WriteOnly()));
     EXPECT_NULL(redirect);
-    EXPECT_EQ(ZX_ERR_NOT_DIR, file.ValidateFlags(ZX_FS_FLAG_DIRECTORY));
+    EXPECT_EQ(ZX_ERR_NOT_DIR, file.ValidateOptions(VnodeOptions().set_directory()));
     EXPECT_NULL(redirect);
   }
 
@@ -140,16 +140,16 @@ bool TestOpen() {
   {
     fs::VmoFile file(abc, 0u, 0u, true);
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file.ValidateFlags(ZX_FS_RIGHT_READABLE));
-    EXPECT_EQ(ZX_OK, file.Open(ZX_FS_RIGHT_READABLE, &redirect));
+    EXPECT_EQ(ZX_OK, file.ValidateOptions(VnodeOptions::ReadOnly()));
+    EXPECT_EQ(ZX_OK, file.Open(VnodeOptions::ReadOnly(), &redirect));
     EXPECT_NULL(redirect);
-    EXPECT_EQ(ZX_OK, file.ValidateFlags(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE));
-    EXPECT_EQ(ZX_OK, file.Open(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, &redirect));
+    EXPECT_EQ(ZX_OK, file.ValidateOptions(VnodeOptions::ReadWrite()));
+    EXPECT_EQ(ZX_OK, file.Open(VnodeOptions::ReadWrite(), &redirect));
     EXPECT_NULL(redirect);
-    EXPECT_EQ(ZX_OK, file.ValidateFlags(ZX_FS_RIGHT_WRITABLE));
-    EXPECT_EQ(ZX_OK, file.Open(ZX_FS_RIGHT_WRITABLE, &redirect));
+    EXPECT_EQ(ZX_OK, file.ValidateOptions(VnodeOptions::WriteOnly()));
+    EXPECT_EQ(ZX_OK, file.Open(VnodeOptions::WriteOnly(), &redirect));
     EXPECT_NULL(redirect);
-    EXPECT_EQ(ZX_ERR_NOT_DIR, file.ValidateFlags(ZX_FS_FLAG_DIRECTORY));
+    EXPECT_EQ(ZX_ERR_NOT_DIR, file.ValidateOptions(VnodeOptions().set_directory()));
     EXPECT_NULL(redirect);
   }
 
@@ -367,7 +367,7 @@ bool TestGetNodeInfo() {
 
     fuchsia_io_NodeInfo info;
     fs::VmoFile file(abc, PAGE_1 - 5u, 23u, false, fs::VmoFile::VmoSharing::NONE);
-    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, file.GetNodeInfo(ZX_FS_RIGHT_READABLE, &info));
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, file.GetNodeInfo(fs::Rights::ReadOnly(), &info));
   }
 
   // sharing = VmoSharing::DUPLICATE, read only
@@ -377,7 +377,7 @@ bool TestGetNodeInfo() {
 
     fuchsia_io_NodeInfo info;
     fs::VmoFile file(abc, PAGE_1 - 5u, 23u, false, fs::VmoFile::VmoSharing::DUPLICATE);
-    EXPECT_EQ(ZX_OK, file.GetNodeInfo(ZX_FS_RIGHT_READABLE, &info));
+    EXPECT_EQ(ZX_OK, file.GetNodeInfo(fs::Rights::ReadOnly(), &info));
     zx::vmo vmo(info.vmofile.vmo);
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
@@ -397,7 +397,7 @@ bool TestGetNodeInfo() {
 
     fuchsia_io_NodeInfo info;
     fs::VmoFile file(abc, PAGE_1 - 5u, 23u, true, fs::VmoFile::VmoSharing::DUPLICATE);
-    EXPECT_EQ(ZX_OK, file.GetNodeInfo(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, &info));
+    EXPECT_EQ(ZX_OK, file.GetNodeInfo(fs::Rights::ReadWrite(), &info));
     zx::vmo vmo(info.vmofile.vmo);
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
@@ -425,7 +425,7 @@ bool TestGetNodeInfo() {
 
     fuchsia_io_NodeInfo info;
     fs::VmoFile file(abc, PAGE_1 - 5u, 23u, true, fs::VmoFile::VmoSharing::DUPLICATE);
-    EXPECT_EQ(ZX_OK, file.GetNodeInfo(ZX_FS_RIGHT_WRITABLE, &info));
+    EXPECT_EQ(ZX_OK, file.GetNodeInfo(fs::Rights::WriteOnly(), &info));
     zx::vmo vmo(info.vmofile.vmo);
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
@@ -452,7 +452,7 @@ bool TestGetNodeInfo() {
     // There is non-trivial lazy initialization happening here - repeat it
     // to make sure it's nice and deterministic.
     for (int i = 0; i < 2; i++) {
-      EXPECT_EQ(ZX_OK, file.GetNodeInfo(ZX_FS_RIGHT_READABLE, &info));
+      EXPECT_EQ(ZX_OK, file.GetNodeInfo(fs::Rights::ReadOnly(), &info));
     }
     zx::vmo vmo(info.vmofile.vmo);
     EXPECT_NE(abc.get(), vmo.get());
@@ -473,7 +473,7 @@ bool TestGetNodeInfo() {
 
     fuchsia_io_NodeInfo info;
     fs::VmoFile file(abc, PAGE_2 - 5u, 23u, true, fs::VmoFile::VmoSharing::CLONE_COW);
-    EXPECT_EQ(ZX_OK, file.GetNodeInfo(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, &info));
+    EXPECT_EQ(ZX_OK, file.GetNodeInfo(fs::Rights::ReadWrite(), &info));
     zx::vmo vmo(info.vmofile.vmo);
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
@@ -500,7 +500,7 @@ bool TestGetNodeInfo() {
 
     fuchsia_io_NodeInfo info;
     fs::VmoFile file(abc, PAGE_2 - 5u, 23u, true, fs::VmoFile::VmoSharing::CLONE_COW);
-    EXPECT_EQ(ZX_OK, file.GetNodeInfo(ZX_FS_RIGHT_WRITABLE, &info));
+    EXPECT_EQ(ZX_OK, file.GetNodeInfo(fs::Rights::WriteOnly(), &info));
     zx::vmo vmo(info.vmofile.vmo);
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));

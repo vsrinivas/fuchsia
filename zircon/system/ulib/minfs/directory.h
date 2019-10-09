@@ -61,7 +61,7 @@ class Directory final : public VnodeMinfs, public fbl::Recyclable<Directory> {
 
   // fs::Vnode interface.
   bool IsDirectory() const final { return true; }
-  zx_status_t ValidateFlags(uint32_t flags) final;
+  zx_status_t ValidateOptions(fs::VnodeConnectionOptions options) final;
   zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
   zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final;

@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 #include <fs/service.h>
+#include <zircon/device/vfs.h>
 
 #include <utility>
-
-#include <zircon/device/vfs.h>
 
 namespace fs {
 
@@ -14,7 +13,9 @@ Service::Service(Connector connector) : connector_(std::move(connector)) {}
 
 Service::~Service() = default;
 
-zx_status_t Service::ValidateFlags(uint32_t flags) { return ZX_OK; }
+zx_status_t Service::ValidateOptions([[maybe_unused]] VnodeConnectionOptions options) {
+  return ZX_OK;
+}
 
 zx_status_t Service::Getattr(vnattr_t* attr) {
   // TODO(ZX-1152): V_TYPE_FILE isn't right, we should use a type for services
@@ -25,7 +26,7 @@ zx_status_t Service::Getattr(vnattr_t* attr) {
   return ZX_OK;
 }
 
-zx_status_t Service::Serve(Vfs* vfs, zx::channel channel, uint32_t flags) {
+zx_status_t Service::Serve(Vfs* vfs, zx::channel channel, fs::VnodeConnectionOptions options) {
   if (!connector_) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -34,7 +35,7 @@ zx_status_t Service::Serve(Vfs* vfs, zx::channel channel, uint32_t flags) {
 
 bool Service::IsDirectory() const { return false; }
 
-zx_status_t Service::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+zx_status_t Service::GetNodeInfo([[maybe_unused]] Rights rights, fuchsia_io_NodeInfo* info) {
   info->tag = fuchsia_io_NodeInfoTag_service;
   return ZX_OK;
 }

@@ -2,10 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/vfs.h>
+#include <lib/zircon-internal/debug.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <threads.h>
+
+#include <utility>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
@@ -13,12 +17,8 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
+#include <fs/vfs_types.h>
 #include <fs/vnode.h>
-#include <fuchsia/io/c/fidl.h>
-#include <lib/zircon-internal/debug.h>
-#include <lib/fdio/vfs.h>
-
-#include <utility>
 
 namespace fs {
 
@@ -93,8 +93,7 @@ zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, fbl::StringPiece name, MountC
   fbl::AutoLock lock(&vfs_lock_);
   zx_status_t r = OpenLocked(
       vn, &vn, name, &name,
-      ZX_FS_FLAG_CREATE | ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE,
-      S_IFDIR);
+      fs::VnodeConnectionOptions::ReadOnly().set_create().set_directory().set_no_remote(), S_IFDIR);
   ZX_DEBUG_ASSERT(r <= ZX_OK);  // Should not be accessing remote nodes
   if (r < 0) {
     return r;
@@ -119,15 +118,16 @@ zx_status_t Vfs::UninstallRemote(fbl::RefPtr<Vnode> vn, zx::channel* h) {
 }
 
 zx_status_t Vfs::ForwardOpenRemote(fbl::RefPtr<Vnode> vn, zx::channel channel,
-                                   fbl::StringPiece path, uint32_t flags, uint32_t mode) {
+                                   fbl::StringPiece path, VnodeConnectionOptions options,
+                                   uint32_t mode) {
   fbl::AutoLock lock(&vfs_lock_);
   zx_handle_t h = vn->GetRemote();
   if (h == ZX_HANDLE_INVALID) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  zx_status_t r =
-      fuchsia_io_DirectoryOpen(h, flags, mode, path.data(), path.length(), channel.release());
+  zx_status_t r = fuchsia_io_DirectoryOpen(h, options.ToIoV1Flags(), mode, path.data(),
+                                           path.length(), channel.release());
   if (r == ZX_ERR_PEER_CLOSED) {
     zx::channel c;
     UninstallRemoteLocked(std::move(vn), &c);

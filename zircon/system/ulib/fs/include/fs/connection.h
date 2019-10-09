@@ -2,22 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_CONNECTION_H_
+#define FS_CONNECTION_H_
 
 #ifndef __Fuchsia__
 #error "Fuchsia-only header"
 #endif
 
+#include <fuchsia/io/c/fidl.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/zx/event.h>
 #include <stdint.h>
+#include <zircon/fidl.h>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
+#include <fs/vfs_types.h>
 #include <fs/vnode.h>
-#include <fuchsia/io/c/fidl.h>
-#include <lib/async/cpp/wait.h>
-#include <lib/zx/event.h>
-#include <zircon/fidl.h>
 
 namespace fs {
 
@@ -45,9 +47,11 @@ class Connection : public fbl::DoublyLinkedListable<fbl::unique_ptr<Connection>>
   // |vfs| is the VFS which is responsible for dispatching operations to the vnode.
   // |vnode| is the vnode which will handle I/O requests.
   // |channel| is the channel on which the FIDL protocol will be served.
-  // |flags| are the file flags passed to |open()|, such as |ZX_FS_FLAG_VNODE_REF_ONLY|;
-  //         they include rights granted to this connection, such as |ZX_FS_RIGHT_READABLE|.
-  Connection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel, uint32_t flags);
+  // |options| are client-specified options for this connection, converted from the
+  //           flags and rights passed during the |fuchsia.io/Directory.Open| or
+  //           |fuchsia.io/Node.Clone| FIDL call.
+  Connection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
+             VnodeConnectionOptions options);
 
   // Closes the connection.
   //
@@ -165,12 +169,13 @@ class Connection : public fbl::DoublyLinkedListable<fbl::unique_ptr<Connection>>
   // The object field is |ZX_HANDLE_INVALID| when not actively waiting.
   async::WaitMethod<Connection, &Connection::HandleSignals> wait_;
 
-  // Open flags such as |ZX_FS_RIGHT_READABLE|, |ZX_FS_FLAG_VNODE_REF_ONLY|, and other bits.
+  // Client-specified connection options containing flags and rights passed during the
+  // |fuchsia.io/Directory.Open| or |fuchsia.io/Node.Clone| FIDL call.
   // Permissions on the underlying Vnode are granted on a per-connection basis,
-  // and expressed as a combination of ZX_FS_RIGHT flags.
-  // Importantly, ZX_FS_RIGHT flags are hierarchical over Open/Clone. It is never allowed
+  // and accessible from |options_.rights|.
+  // Importantly, rights are hierarchical over Open/Clone. It is never allowed
   // to derive a Connection with more rights than the originating connection.
-  uint32_t flags_;
+  VnodeConnectionOptions options_;
 
   // Handle to event which allows client to refer to open vnodes in multi-path
   // operations (see: link, rename). Defaults to ZX_HANDLE_INVALID.
@@ -185,3 +190,5 @@ class Connection : public fbl::DoublyLinkedListable<fbl::unique_ptr<Connection>>
 };
 
 }  // namespace fs
+
+#endif  // FS_CONNECTION_H_

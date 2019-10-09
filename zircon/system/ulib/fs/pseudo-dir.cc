@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 #include <fs/pseudo-dir.h>
-
+#include <fuchsia/io/c/fidl.h>
 #include <sys/stat.h>
 
-#include <fbl/auto_lock.h>
-#include <fuchsia/io/c/fidl.h>
-
 #include <utility>
+
+#include <fbl/auto_lock.h>
 
 namespace fs {
 
@@ -20,7 +19,9 @@ PseudoDir::~PseudoDir() {
   entries_by_id_.clear();
 }
 
-zx_status_t PseudoDir::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) { return ZX_OK; }
+zx_status_t PseudoDir::Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) {
+  return ZX_OK;
+}
 
 zx_status_t PseudoDir::Getattr(vnattr_t* attr) {
   memset(attr, 0, sizeof(vnattr_t));
@@ -82,7 +83,7 @@ zx_status_t PseudoDir::Readdir(vdircookie_t* cookie, void* data, size_t len, siz
   return ZX_OK;
 }
 
-zx_status_t PseudoDir::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+zx_status_t PseudoDir::GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) {
   info->tag = fuchsia_io_NodeInfoTag_directory;
   return ZX_OK;
 }

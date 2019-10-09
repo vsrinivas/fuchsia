@@ -28,6 +28,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
+#include <fs/vfs_types.h>
 
 #include "cobalt-client/cpp/collector.h"
 #include "lib/async/cpp/task.h"
@@ -96,7 +97,7 @@ zx_status_t FsManager::Initialize() {
     fbl::StringPiece pathout;
     status =
         root_vfs_->Open(global_root_, &mount_nodes[n], fbl::StringPiece(kMountPoints[n]), &pathout,
-                        ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_CREATE, S_IFDIR);
+                        fs::VnodeConnectionOptions::ReadWrite().set_create(), S_IFDIR);
     if (status != ZX_OK) {
       return status;
     }
@@ -119,7 +120,12 @@ zx_status_t FsManager::InstallFs(const char* path, zx::channel h) {
 }
 
 zx_status_t FsManager::ServeRoot(zx::channel server) {
-  return root_vfs_->ServeDirectory(global_root_, std::move(server), ZX_FS_RIGHTS);
+  fs::Rights rights;
+  rights.read = true;
+  rights.write = true;
+  rights.admin = true;
+  rights.execute = true;
+  return root_vfs_->ServeDirectory(global_root_, std::move(server), rights);
 }
 
 void FsManager::WatchExit() {

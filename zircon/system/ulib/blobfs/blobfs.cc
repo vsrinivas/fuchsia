@@ -35,6 +35,7 @@
 #include <fs/journal/superblock.h>
 #include <fs/ticker.h>
 #include <fs/transaction/block-transaction.h>
+#include <fs/vfs_types.h>
 #include <fvm/client.h>
 
 #define ZXDEBUG 0
@@ -262,7 +263,7 @@ void Blobfs::WriteNode(uint32_t map_index, fs::UnbufferedOperationsBuilder* oper
   operations->Add(std::move(operation));
 }
 
-void Blobfs::UpdateFlags(fs::UnbufferedOperationsBuilder *operations, uint32_t flags, bool set) {
+void Blobfs::UpdateFlags(fs::UnbufferedOperationsBuilder* operations, uint32_t flags, bool set) {
   if (set) {
     info_.flags |= flags;
   } else {
@@ -358,9 +359,7 @@ zx_status_t Blobfs::RunOperation(const fs::Operation& operation, fs::BlockBuffer
   return block_device_->FifoTransaction(&request, 1);
 }
 
-groupid_t Blobfs::BlockGroupID() {
-  return group_registry_.GroupID();
-}
+groupid_t Blobfs::BlockGroupID() { return group_registry_.GroupID(); }
 
 zx_status_t Blobfs::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
   fuchsia_hardware_block_VmoID vmoid;
@@ -781,7 +780,7 @@ zx_status_t Blobfs::Reload() {
 zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<Directory>* out) {
   fbl::RefPtr<Directory> vn = fbl::AdoptRef(new Directory(this));
 
-  zx_status_t status = vn->Open(0, nullptr);
+  zx_status_t status = vn->Open(fs::VnodeConnectionOptions(), nullptr);
   if (status != ZX_OK) {
     return status;
   }

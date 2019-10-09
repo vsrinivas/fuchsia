@@ -24,6 +24,7 @@ library("fs") {
     "fs/ticker.h",
     "fs/trace.h",
     "fs/tracked-remote-dir.h",
+    "fs/vfs_types.h",
     "fs/vfs.h",
     "fs/vmo-file.h",
     "fs/vnode.h",
@@ -64,6 +65,7 @@ library("fs") {
       "synchronous-vfs.cc",
       "tracked-remote-dir.cc",
       "unmount.cc",
+      "vfs_types.cc",
       "vmo-file.cc",
       "watcher.cc",
     ]
@@ -73,6 +75,7 @@ library("fs") {
 
       # <fs/vnode.h> has #include <fuchsia/io/c/fidl.h>.
       "$zx/system/fidl/fuchsia-io:c.headers",
+      "$zx/system/fidl/fuchsia-io:llcpp.headers",
 
       # <fs/trace.h> has #include <trace/event.h>.
       "$zx/system/ulib/trace:headers",
@@ -83,6 +86,7 @@ library("fs") {
     deps += [
       "$zx/system/fidl/fuchsia-cobalt:c",
       "$zx/system/fidl/fuchsia-io:c",
+      "$zx/system/fidl/fuchsia-io:llcpp",
       "$zx/system/fidl/fuchsia-mem:c",
       "$zx/system/ulib/async",
       "$zx/system/ulib/async:async-cpp",
@@ -121,6 +125,7 @@ if (is_fuchsia) {
       "tracked-remote-dir.cc",
       "unmount.cc",
       "vfs.cc",
+      "vfs_types.cc",
       "vmo-file.cc",
       "vnode.cc",
       "watcher.cc",
@@ -138,6 +143,7 @@ if (is_fuchsia) {
 
       # <fs/vnode.h> has #include <fuchsia/io/c/fidl.h>.
       "$zx/system/fidl/fuchsia-io:c.headers",
+      "$zx/system/fidl/fuchsia-io:llcpp.headers",
 
       # <fs/trace.h> has #include <trace/event.h>.
       "$zx/system/ulib/trace:trace-driver.headers",
@@ -145,6 +151,7 @@ if (is_fuchsia) {
     deps = [
       "$zx/system/fidl/fuchsia-cobalt:c",
       "$zx/system/fidl/fuchsia-io:c",
+      "$zx/system/fidl/fuchsia-io:llcpp",
       "$zx/system/fidl/fuchsia-mem:c",
       "$zx/system/ulib/async",
       "$zx/system/ulib/async:async-cpp",

@@ -25,6 +25,7 @@
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
+#include <fs/vfs_types.h>
 
 #include "fbl/ref_ptr.h"
 
@@ -151,9 +152,9 @@ zx_status_t host_svc_directory(zx::channel bootsvc_server, GetBootItemFunction g
                     &root_job, &kRootJobOps);
 
   // Serve VFS on channel.
-  auto conn = std::make_unique<fs::Connection>(
-      &vfs, root, std::move(bootsvc_server),
-      ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE);
+  auto conn =
+      std::make_unique<fs::Connection>(&vfs, root, std::move(bootsvc_server),
+                                       fs::VnodeConnectionOptions::ReadWrite().set_directory());
   vfs.ServeConnection(std::move(conn));
 
   return loop.Run();

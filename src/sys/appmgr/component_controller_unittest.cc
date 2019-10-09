@@ -264,7 +264,7 @@ fbl::String get_value(const fbl::RefPtr<fs::PseudoDir>& hub_dir, std::string pat
     }
   }
   fbl::RefPtr<fs::Vnode> file;
-  if (node->Open(ZX_FS_RIGHT_READABLE, &file) != ZX_OK) {
+  if (node->Open(fs::VnodeConnectionOptions::ReadOnly(), &file) != ZX_OK) {
     EXPECT_FALSE(true) << "cannot open: " << path;
     return "";
   }

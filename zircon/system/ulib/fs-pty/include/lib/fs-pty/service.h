@@ -36,7 +36,7 @@ class Service : public fs::Vnode {
   SelfType& operator=(SelfType&&) = delete;
 
   // |Vnode| implementation:
-  zx_status_t ValidateFlags([[maybe_unused]] uint32_t flags) override { return ZX_OK; }
+  zx_status_t ValidateOptions(fs::VnodeConnectionOptions) override { return ZX_OK; }
 
   zx_status_t Getattr(vnattr_t* attr) override {
     memset(attr, 0, sizeof(vnattr_t));
@@ -45,14 +45,15 @@ class Service : public fs::Vnode {
     return ZX_OK;
   }
 
-  zx_status_t Serve(fs::Vfs* vfs, zx::channel svc_request, uint32_t flags) override {
+  zx_status_t Serve(fs::Vfs* vfs, zx::channel svc_request,
+                    fs::VnodeConnectionOptions options) override {
     return vfs->ServeConnection(std::make_unique<Connection>(console_, vfs, fbl::RefPtr(this),
-                                                             std::move(svc_request), flags));
+                                                             std::move(svc_request), options));
   }
 
   [[nodiscard]] bool IsDirectory() const override { return false; }
 
-  zx_status_t GetNodeInfo([[maybe_unused]] uint32_t flags, fuchsia_io_NodeInfo* info) override {
+  zx_status_t GetNodeInfo([[maybe_unused]] fs::Rights rights, fuchsia_io_NodeInfo* info) override {
     zx::eventpair event;
     zx_status_t status = ConsoleOps::GetEvent(console_, &event);
     if (status != ZX_OK) {

@@ -196,7 +196,7 @@ void SvcfsService::AddService(const char* service_name, fbl::RefPtr<fs::Service>
 }
 
 zx_status_t SvcfsService::CreateRootConnection(zx::channel* out) {
-  return CreateVnodeConnection(&vfs_, root_, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, out);
+  return CreateVnodeConnection(&vfs_, root_, fs::VnodeConnectionOptions::ReadWrite(), out);
 }
 
 fbl::RefPtr<fs::Service> CreateArgumentsService(async_dispatcher_t* dispatcher, zx::vmo vmo,
