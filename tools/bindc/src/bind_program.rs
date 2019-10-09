@@ -14,6 +14,7 @@ use nom::{
     sequence::{delimited, preceded, terminated, tuple},
     IResult,
 };
+use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Ast {
@@ -50,11 +51,18 @@ pub enum Statement {
 }
 
 // TODO(fxb/35146): Improve error reporting here.
-#[allow(dead_code)]
-pub fn parse(input: &str) -> Result<Ast, String> {
-    match program(input) {
-        Ok((_, ast)) => Ok(ast),
-        _ => Err("Could not parse bind program.".to_string()),
+impl FromStr for Ast {
+    type Err = BindParserError;
+
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        match program(input) {
+            Ok((_, ast)) => Ok(ast),
+            Err(nom::Err::Error(e)) => Err(e),
+            Err(nom::Err::Failure(e)) => Err(e),
+            Err(nom::Err::Incomplete(_)) => {
+                unreachable!("Parser should never generate Incomplete errors")
+            }
+        }
     }
 }
 
