@@ -647,6 +647,7 @@ void demo_draw(struct demo* demo) {
       .pImageIndices = &demo->current_buffer,
   };
 
+  TRACE_DURATION("gfx", "cube::demo_draw", "swapchain_image_index", demo->current_buffer);
   err = demo->fpQueuePresentKHR(demo->present_queue, &present);
   demo->frame_index += 1;
   demo->frame_index %= FRAME_LAG;

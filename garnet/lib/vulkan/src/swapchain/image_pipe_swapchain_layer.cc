@@ -10,6 +10,7 @@
 #include "image_pipe_surface_async.h"  // nogncheck
 #endif
 
+#include <lib/trace/event.h>
 #include <vk_dispatch_table_helper.h>
 #include <vk_layer_data.h>
 #include <vk_layer_extension_utils.h>
@@ -402,6 +403,8 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index, uint32_t wai
     std::vector<zx::event> release_fences;
     release_fences.push_back(std::move(release_fence));
 
+    TRACE_DURATION("gfx", "ImagePipeSwapchain::Present", "swapchain_image_index", index, "image_id",
+                   images_[index].id);
     surface()->PresentImage(images_[index].id, std::move(acquire_fences),
                             std::move(release_fences));
   }

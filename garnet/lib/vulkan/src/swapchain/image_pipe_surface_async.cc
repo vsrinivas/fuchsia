@@ -5,6 +5,7 @@
 #include "image_pipe_surface_async.h"
 
 #include <lib/fdio/directory.h>
+#include <lib/trace/event.h>
 
 #include "vk_dispatch_table_helper.h"
 #include "vulkan/vk_layer.h"
@@ -232,6 +233,7 @@ void ImagePipeSurfaceAsync::RemoveImage(uint32_t image_id) {
 void ImagePipeSurfaceAsync::PresentImage(uint32_t image_id, std::vector<zx::event> acquire_fences,
                                          std::vector<zx::event> release_fences) {
   std::lock_guard<std::mutex> lock(mutex_);
+  TRACE_FLOW_BEGIN("gfx", "image_pipe_swapchain_to_present", image_id);
   queue_.push_back({image_id, std::move(acquire_fences), std::move(release_fences)});
   if (!present_pending_) {
     PresentNextImageLocked();
@@ -243,6 +245,7 @@ void ImagePipeSurfaceAsync::PresentNextImageLocked() {
 
   if (queue_.empty())
     return;
+  TRACE_DURATION("gfx", "ImagePipeSurfaceAsync::PresentNextImageLocked");
 
   // To guarantee FIFO mode, we can't have Scenic drop any of our frames.
   // We accomplish that sending the next one only when we receive the callback
@@ -251,6 +254,8 @@ void ImagePipeSurfaceAsync::PresentNextImageLocked() {
   uint64_t presentation_time = zx_clock_get_monotonic();
 
   auto& present = queue_.front();
+  TRACE_FLOW_END("gfx", "image_pipe_swapchain_to_present", present.image_id);
+  TRACE_FLOW_BEGIN("gfx", "image_pipe_present_image", present.image_id);
   image_pipe_->PresentImage(present.image_id, presentation_time, std::move(present.acquire_fences),
                             std::move(present.release_fences),
                             // This callback happening in a separate thread.
