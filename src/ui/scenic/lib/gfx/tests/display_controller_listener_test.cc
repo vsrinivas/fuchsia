@@ -6,6 +6,7 @@
 
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/zx/channel.h>
+#include <zircon/pixelformat.h>
 
 #include <gtest/gtest.h>
 

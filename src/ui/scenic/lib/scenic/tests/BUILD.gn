@@ -29,6 +29,9 @@ source_set("testing_deps") {
     "//src/ui/scenic/lib/scenic",
     "//third_party/googletest:gtest",
   ]
+  deps = [
+    "//sdk/lib/sys/cpp/testing:unit",
+  ]
 }
 
 source_set("dummy_system") {

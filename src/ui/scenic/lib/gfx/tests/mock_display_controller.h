@@ -10,8 +10,6 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fsl/handles/object_info.h>
 
-#include <src/ui/scenic/lib/gfx/tests/gfx_test.h>
-
 namespace scenic_impl {
 namespace gfx {
 namespace test {
