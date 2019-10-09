@@ -588,6 +588,9 @@ void RecordCommand::LaunchComponentApp() {
   component_controller_.events().OnTerminated =
       [this](int64_t return_code, fuchsia::sys::TerminationReason termination_reason) {
         out() << "Application exited with return code " << return_code << std::endl;
+        // Disable the error handler, the application has terminated. We can see things like
+        // PEER_CLOSED for channels here which we don't care about any more.
+        component_controller_.set_error_handler([](zx_status_t error) {});
         if (!options_.decouple) {
           if (options_.return_child_result) {
             StopTrace(return_code);
