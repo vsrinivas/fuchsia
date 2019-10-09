@@ -1201,7 +1201,7 @@ uint64_t SocketDevice::Connection::VmoWalker::NextChunkLen(uint64_t max) {
   return fbl::min(next_len, max_in_contiguity);
 }
 
-uint64_t SocketDevice::Connection::VmoWalker::Consume(uint64_t len) {
+zx_paddr_t SocketDevice::Connection::VmoWalker::Consume(uint64_t len) {
   assert(NextChunkLen(len) >= len);
   // No need to subtract base_addr off transfer_offset since base_addr is
   // already defined to be aligned to contiguity_ and so is factored out of the

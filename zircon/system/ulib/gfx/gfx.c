@@ -646,8 +646,8 @@ gfx_surface* gfx_create_surface(void* ptr, unsigned width, unsigned height, unsi
   return surface;
 }
 
-int gfx_init_surface(gfx_surface* surface, void* ptr, unsigned width, unsigned height,
-                     unsigned stride, unsigned format, uint32_t flags) {
+zx_status_t gfx_init_surface(gfx_surface* surface, void* ptr, unsigned width, unsigned height,
+                             unsigned stride, unsigned format, uint32_t flags) {
   assert(width > 0);
   assert(height > 0);
   assert(stride >= width);
@@ -722,7 +722,7 @@ int gfx_init_surface(gfx_surface* surface, void* ptr, unsigned width, unsigned h
     surface->flags |= GFX_FLAG_FREE_ON_DESTROY;
   }
   surface->ptr = ptr;
-  return 0;
+  return ZX_OK;
 }
 
 /**

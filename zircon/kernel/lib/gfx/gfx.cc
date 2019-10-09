@@ -500,8 +500,8 @@ gfx_surface* gfx_create_surface(void* ptr, uint width, uint height, uint stride,
   return surface;
 }
 
-int gfx_init_surface(gfx_surface* surface, void* ptr, uint width, uint height, uint stride,
-                     gfx_format format, uint32_t flags) {
+zx_status_t gfx_init_surface(gfx_surface* surface, void* ptr, uint width, uint height, uint stride,
+                             gfx_format format, uint32_t flags) {
   if ((width == 0) || (height == 0) || (stride < width)) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -576,7 +576,7 @@ int gfx_init_surface(gfx_surface* surface, void* ptr, uint width, uint height, u
     surface->flags |= GFX_FLAG_FREE_ON_DESTROY;
   }
   surface->ptr = ptr;
-  return 0;
+  return ZX_OK;
 }
 
 /**
@@ -593,8 +593,8 @@ gfx_surface* gfx_create_surface_from_display(struct display_info* info) {
   return surface;
 }
 
-int gfx_init_surface_from_display(gfx_surface* surface, struct display_info* info) {
-  int r;
+zx_status_t gfx_init_surface_from_display(gfx_surface* surface, struct display_info* info) {
+  zx_status_t r;
   switch (info->format) {
     case ZX_PIXEL_FORMAT_RGB_565:
     case ZX_PIXEL_FORMAT_RGB_332:

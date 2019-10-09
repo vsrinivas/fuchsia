@@ -220,7 +220,7 @@ tftp_status tx_data(tftp_session* session, tftp_data_msg* resp, size_t* outlen, 
 
 size_t tftp_sizeof_session(void) { return sizeof(tftp_session); }
 
-int tftp_init(tftp_session** session, void* buffer, size_t size) {
+tftp_status tftp_init(tftp_session** session, void* buffer, size_t size) {
   if (buffer == NULL) {
     return TFTP_ERR_INVALID_ARGS;
   }
