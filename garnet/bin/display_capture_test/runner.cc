@@ -4,15 +4,15 @@
 
 #include "runner.h"
 
-#include <fbl/algorithm.h>
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/camera/c/fidl.h>
 #include <fuchsia/hardware/display/c/fidl.h>
 #include <lib/fzl/fdio.h>
-#include <zircon/device/display-controller.h>
 
 #include <cmath>
+
+#include <fbl/algorithm.h>
+#include <fbl/unique_fd.h>
 
 namespace display_test {
 namespace internal {
@@ -352,8 +352,7 @@ void Runner::SendFrameConfig(uint32_t frame_idx) {
     layer_ids.push_back(layer.first->id());
     layer.first->SendState(layer.second);
   }
-  display_controller_->SetDisplayLayers(display_id_,
-                                        std::move(layer_ids));
+  display_controller_->SetDisplayLayers(display_id_, std::move(layer_ids));
 }
 
 void Runner::CheckFrameConfig(uint32_t frame_idx) {

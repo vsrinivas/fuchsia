@@ -18,7 +18,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <zircon/assert.h>
-#include <zircon/device/display-controller.h>
 #include <zircon/pixelformat.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -26,6 +25,7 @@
 
 #include <variant>
 
+#include <ddk/protocol/display/controller.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 

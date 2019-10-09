@@ -6,8 +6,8 @@
 
 #include <math.h>
 #include <stdio.h>
-#include <zircon/device/display-controller.h>
 
+#include <ddk/protocol/display/controller.h>
 #include <fbl/algorithm.h>
 
 #include "utils.h"
@@ -73,8 +73,8 @@ VirtualLayer::VirtualLayer(const fbl::Vector<Display>& displays, bool tiled) {
   }
 }
 
-layer_t* VirtualLayer::CreateLayer(zx_handle_t dc_handle) {
-  layers_.push_back(layer_t());
+custom_layer_t* VirtualLayer::CreateLayer(zx_handle_t dc_handle) {
+  layers_.push_back(custom_layer_t());
   layers_[layers_.size() - 1].active = false;
 
   fuchsia_hardware_display_ControllerCreateLayerRequest create_layer_msg = {};
@@ -133,7 +133,7 @@ bool PrimaryLayer::Init(zx_handle_t dc_handle) {
   }
 
   for (unsigned i = 0; i < displays_.size(); i++) {
-    layer_t* layer = CreateLayer(dc_handle);
+    custom_layer_t* layer = CreateLayer(dc_handle);
     if (layer == nullptr) {
       return false;
     }
@@ -373,7 +373,7 @@ bool CursorLayer::Init(zx_handle_t dc_handle) {
   image_->Render(-1, -1);
 
   for (unsigned i = 0; i < displays_.size(); i++) {
-    layer_t* layer = CreateLayer(dc_handle);
+    custom_layer_t* layer = CreateLayer(dc_handle);
     if (layer == nullptr) {
       return false;
     }
@@ -434,7 +434,7 @@ ColorLayer::ColorLayer(const fbl::Vector<Display>& displays) : VirtualLayer(disp
 
 bool ColorLayer::Init(zx_handle_t dc_handle) {
   for (unsigned i = 0; i < displays_.size(); i++) {
-    layer_t* layer = CreateLayer(dc_handle);
+    custom_layer_t* layer = CreateLayer(dc_handle);
     if (layer == nullptr) {
       return false;
     }

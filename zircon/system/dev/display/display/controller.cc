@@ -4,16 +4,16 @@
 
 #include "controller.h"
 
+#include <lib/async/cpp/task.h>
+
+#include <utility>
+
 #include <audio-proto-utils/format-utils.h>
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/trace/event.h>
 #include <fbl/auto_lock.h>
-#include <lib/async/cpp/task.h>
-#include <zircon/device/display-controller.h>
-
-#include <utility>
 
 #include "client.h"
 #include "fuchsia/hardware/display/c/fidl.h"

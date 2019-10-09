@@ -6,11 +6,12 @@
 #define ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_TILING_H_
 
 #include <assert.h>
+#include <inttypes.h>
+#include <zircon/pixelformat.h>
+
+#include <ddk/protocol/display/controller.h>
 #include <ddk/protocol/intelgpucore.h>
 #include <fbl/algorithm.h>
-#include <inttypes.h>
-#include <zircon/device/display-controller.h>
-#include <zircon/pixelformat.h>
 
 namespace i915 {
 

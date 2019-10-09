@@ -16,8 +16,15 @@ enum ZxPixelFormat : uint32 {
 enum ZxUnownedHandle : uint32 {
 };
 
-/// The image is linear and VMO backed.
-const uint32 IMAGE_TYPE_SIMPLE = 0;
+enum ImageType : uint32 {
+    /// The image is linear and VMO backed.
+    SIMPLE = 0;
+
+    // Intentionally left some gap between SIMPLE and CAPTURE.
+
+    /// The image is used for capture
+    CAPTURE = 10;
+};
 
 /// A structure containing information about each plane of an image.
 struct ImagePlane {
@@ -46,6 +53,7 @@ struct Image {
 };
 
 const uint32 INVALID_DISPLAY_ID = 0;
+const uint32 INVALID_ID = 0;
 
 /// A fallback structure to convey display information without an edid.
 struct DisplayParams {

@@ -5,12 +5,6 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_CLIENT_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_CLIENT_H_
 
-#include <ddk/protocol/display/controller.h>
-#include <ddktl/device.h>
-#include <fbl/intrusive_double_list.h>
-#include <fbl/intrusive_hash_table.h>
-#include <fbl/unique_ptr.h>
-#include <fbl/vector.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/receiver.h>
@@ -19,10 +13,16 @@
 #include <lib/fidl/cpp/builder.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
-#include <zircon/device/display-controller.h>
 #include <zircon/listnode.h>
 
 #include <map>
+
+#include <ddk/protocol/display/controller.h>
+#include <ddktl/device.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/intrusive_hash_table.h>
+#include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 
 #include "controller.h"
 #include "fence.h"

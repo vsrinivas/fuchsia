@@ -2,24 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_VIRTUAL_LAYER_H_
+#define ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_VIRTUAL_LAYER_H_
 
-#include <zircon/device/display-controller.h>
-#include <zircon/types.h>
 #include <lib/zx/channel.h>
+#include <zircon/types.h>
+
+#include <ddk/protocol/display/controller.h>
 
 #include "display.h"
 #include "fuchsia/hardware/display/c/fidl.h"
 #include "image.h"
 
-typedef struct frame {
-  uint32_t width;
-  uint32_t height;
-  uint32_t x_pos;
-  uint32_t y_pos;
-} frame_t;
-
-typedef struct layer {
+typedef struct custom_layer {
   uint64_t id;
   bool active;
 
@@ -29,7 +24,7 @@ typedef struct layer {
   frame_t dest;
 
   image_import_t import_info[2];
-} layer_t;
+} custom_layer_t;
 
 // A layer whose output can appear on multiple displays.
 class VirtualLayer {
@@ -90,11 +85,11 @@ class VirtualLayer {
   }
 
  protected:
-  layer_t* CreateLayer(zx_handle_t dc_handle);
+  custom_layer_t* CreateLayer(zx_handle_t dc_handle);
   void SetLayerImages(zx_handle_t handle, bool alt_image);
 
   fbl::Vector<Display*> displays_;
-  fbl::Vector<layer_t> layers_;
+  fbl::Vector<custom_layer_t> layers_;
 
   uint32_t width_;
   uint32_t height_;
@@ -219,3 +214,5 @@ class ColorLayer : public VirtualLayer {
   uint64_t image_id(uint64_t display_id) const override { return INVALID_ID; }
   virtual bool is_done() const override { return true; }
 };
+
+#endif  // ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_VIRTUAL_LAYER_H_

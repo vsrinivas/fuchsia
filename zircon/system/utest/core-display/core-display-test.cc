@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/device/display-controller.h>
 #include <zircon/pixelformat.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -23,6 +22,7 @@
 
 #include <algorithm>
 
+#include <ddk/protocol/display/controller.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>

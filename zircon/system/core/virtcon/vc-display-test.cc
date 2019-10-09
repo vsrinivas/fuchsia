@@ -19,7 +19,6 @@
 #include <lib/zx/vmo.h>
 #include <string.h>
 #include <zircon/assert.h>
-#include <zircon/device/display-controller.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -28,6 +27,7 @@
 #include <list>
 #include <unordered_map>
 
+#include <ddk/protocol/display/controller.h>
 #include <fbl/unique_fd.h>
 #include <port/port.h>
 #include <zxtest/zxtest.h>

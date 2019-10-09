@@ -10,6 +10,7 @@ executable("display-test") {
     "virtual-layer.cc",
   ]
   deps = [
+    "$zx/system/banjo/ddk.protocol.display.controller",
     "$zx/system/fidl/fuchsia-hardware-display:c",
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/fbl",

@@ -11,7 +11,6 @@
 #include <lib/fidl/cpp/message.h>
 #include <lib/image-format/image_format.h>
 #include <math.h>
-#include <zircon/device/display-controller.h>
 #include <zircon/pixelformat.h>
 
 #include <utility>

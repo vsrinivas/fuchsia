@@ -14,12 +14,12 @@
 #include <lib/zx/vmo.h>
 #include <stdio.h>
 #include <string.h>
-#include <zircon/device/display-controller.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
 #include <limits>
 
+#include <ddk/protocol/display/controller.h>
 #include <fbl/algorithm.h>
 
 #include "fuchsia/hardware/display/c/fidl.h"
