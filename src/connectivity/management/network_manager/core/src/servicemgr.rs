@@ -51,57 +51,73 @@ impl Manager {
             },
         }
     }
-    /// `enable_server` sets dhcp dhcp_server as enabled on indicated interface.
+
+    /// Enables a DHCP server on the given interface.
+    ///
+    /// # Errors
+    ///
+    /// If the interface has a DHCP client enabled, returns [`error::Service::NotEnabled`].
     pub fn enable_server(&mut self, lif: &LIF) -> error::Result<bool> {
         if self.dhcp_client.contains(&lif.id().uuid) {
             return Err(error::NetworkManager::SERVICE(error::Service::NotEnabled));
         }
         Ok(self.dhcp_server.insert(lif.id().uuid))
     }
-    /// `disable_server` sets dhcp dhcp_server as disable on indicated interface.
+
+    /// Disables a DHCP server on the given interface.
     pub fn disable_server(&mut self, lif: &LIF) -> bool {
         self.dhcp_server.remove(&lif.id().uuid)
     }
-    /// `is_server_enabled` returns true if the DHCP dhcp_server is enabled on indicated interface.
+
+    /// Returns `true` if the DHCP server is enabled on given interface.
     pub fn is_server_enabled(&mut self, lif: &LIF) -> bool {
         self.dhcp_server.contains(&lif.id().uuid)
     }
-    /// `enable_client` sets dhcp dhcp_client as enabled on indicated interface.
+
+    /// Enables a DHCP client on the given interface.
     pub fn enable_client(&mut self, lif: &LIF) -> error::Result<bool> {
         if self.dhcp_server.contains(&lif.id().uuid) {
             return Err(error::NetworkManager::SERVICE(error::Service::NotEnabled));
         }
         Ok(self.dhcp_client.insert(lif.id().uuid))
     }
-    /// `disable_client` sets dhcp dhcp_client as disable on indicated interface.
+
+    /// Disables a DHCP client on the given interface.
     pub fn disable_client(&mut self, lif: &LIF) -> bool {
         self.dhcp_client.remove(&lif.id().uuid)
     }
-    /// `is_client_enabled` returns true if the DHCP dhcp_client is enabled on indicated interface.
+
+    /// Returns `true` if the DHCP client is enabled on given interface.
     pub fn is_client_enabled(&mut self, lif: &LIF) -> bool {
         self.dhcp_client.contains(&lif.id().uuid)
     }
-    /// `is_nat_enabled` returns true if NAT is enabled.
+
+    /// Returns `true` if NAT is enabled.
     pub(crate) fn is_nat_enabled(&self) -> bool {
         self.security.nat.enable
     }
-    /// `enable_nat` sets the NAT state to enabled.
+
+    /// Sets the NAT state to enabled.
     pub(crate) fn enable_nat(&mut self) {
         self.security.nat.enable = true;
     }
-    /// `disable_nat` sets the NAT state to disabled.
+
+    /// Sets the NAT state to disabled.
     pub(crate) fn disable_nat(&mut self) {
         self.security.nat.enable = false;
     }
-    /// `get_nat_config` returns the current NAT configuration.
+
+    /// Returns the current NAT configuration.
     pub(crate) fn get_nat_config(&mut self) -> &mut NatConfig {
         &mut self.security.nat
     }
-    /// `set_local_subnet_nat` sets the local subnet to be NATed.
+
+    /// Sets the local subnet to be NATed.
     pub(crate) fn set_local_subnet_nat(&mut self, s: LifIpAddr) {
         self.security.nat.local_subnet = Some(s);
     }
-    /// `set_global_ip_nat` sets the global IP to be NATed.
+
+    /// Sets the global IP to be NATed.
     pub(crate) fn set_global_ip_nat(&mut self, g: LifIpAddr, p: PortId) {
         self.security.nat.global_ip = Some(g);
         self.security.nat.pid = Some(p);

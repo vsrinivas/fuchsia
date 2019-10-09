@@ -18,7 +18,7 @@ pub struct Port {
 }
 
 impl Port {
-    /// `new` creates a physical port to be managed by the network manager.
+    /// Creates a physical port to be managed by the network manager.
     pub fn new(port_id: PortId, path: &str, v: Version) -> Self {
         //TODO(dpradilla) this has to check port actually exists and reference to it.
         Port { e_id: ElementId::new(v), port_id, path: path.to_string() }
@@ -36,7 +36,8 @@ impl PortManager {
     pub fn new() -> Self {
         PortManager { ports: HashMap::new() }
     }
-    /// `add_ports` adds a physical port to be manager by network manager.
+
+    /// Adds a physical port to be managed by network manager.
     pub fn add_port(&mut self, p: Port) {
         // When adding a new port, is is considered available as no one has yet used it.
         // If the port already exists, update the port, but keep availability unchanged.
@@ -44,21 +45,27 @@ impl PortManager {
             if let Some((_, available)) = self.ports.get(&p.port_id) { *available } else { true };
         self.ports.insert(p.port_id, (p, available));
     }
-    /// `remove_ports` removes a port from port manager.
+
+    /// Removes a port from port manager.
     pub fn remove_port(&mut self, id: PortId) -> Option<Port> {
         self.ports.remove(&id).map(|(p, _)| p)
     }
-    /// `port` gets information about a port in port manager.
+
+    /// Returns information about a port in port manager.
     pub fn port(&self, id: PortId) -> Option<&Port> {
         let (p, _) = self.ports.get(&id)?;
         Some(&p)
     }
-    /// `ports` returns all ports known by port manager.
+
+    /// Returns all ports known by port manager.
     pub fn ports(&self) -> impl ExactSizeIterator<Item = &Port> {
         self.ports.iter().map(|(_, (p, _))| p)
     }
-    /// `use_port` marks a port as in use, and returns true in that case.
-    /// It returns false if the port is already in use or doesnt exist.
+
+    /// Marks a port as in use.
+    ///
+    /// Returns true on success, otherwise returns false if the port is already in use or doesn't
+    /// exist.
     pub fn use_port(&mut self, id: &PortId) -> bool {
         if let Some((_, available)) = self.ports.get_mut(id) {
             if *available {
@@ -69,15 +76,20 @@ impl PortManager {
         }
         false
     }
-    /// `release_port` makes a port available if in use.
-    /// it does nothing if the port does not exist.
-    pub fn release_port(&mut self, id: &PortId) {
+
+    /// Marks a port as available, if in use.
+    ///
+    /// Returns true on success, otherwise returns false if the port does not exist or is not in
+    /// use.
+    pub fn release_port(&mut self, id: &PortId) -> bool {
         if let Some((_, available)) = self.ports.get_mut(id) {
             if !*available {
                 // Make it available.
                 *available = true;
+                return true;
             }
         }
+        false
     }
 
     /// Checks if the port is currently in use by a valid interface.

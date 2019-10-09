@@ -18,8 +18,9 @@ use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::net::IpAddr;
 
-// StackPortId is the port ID's used by the netstack.
-// This is what is passed in the stack FIDL to denote the port or nic id.
+/// The port ID's used by the netstack.
+///
+/// This is what is passed in the stack FIDL to denote the port or nic id.
 #[derive(Eq, PartialEq, Hash, Debug, Copy, Clone)]
 pub struct StackPortId(u64);
 impl From<u64> for StackPortId {
@@ -35,11 +36,11 @@ impl From<PortId> for StackPortId {
     }
 }
 impl StackPortId {
-    // to_u64 converts it to u64, as some FIDL interfaces use the ID as a u64.
+    /// Performs the conversion to `u64`, some FIDL interfaces need the ID as a `u64`.
     pub fn to_u64(self) -> u64 {
         self.0
     }
-    // to_u32 converts it to u32, as some FIDL interfaces use the ID as a u32.
+    /// Performs the conversion to `u32`, some FIDL interfaces need the ID as a `u32`.
     pub fn to_u32(self) -> u32 {
         match u32::try_from(self.0) {
             Ok(v) => v,
@@ -66,12 +67,12 @@ impl From<StackPortId> for PortId {
     }
 }
 impl PortId {
-    // to_u64 converts it to u64, as some FIDL interfaces use the ID as a u64.
+    /// Performs the conversion to `u64`, some FIDL interfaces need the ID as a `u64`.
     pub fn to_u64(self) -> u64 {
         self.0
     }
 
-    // to_u32 converts it to u32, as some FIDL interfaces use the ID as a u32.
+    /// Performs the conversion to `u32`, some FIDL interfaces need the ID as a `u32`.
     pub fn to_u32(self) -> u32 {
         match u32::try_from(self.0) {
             Ok(v) => v,
@@ -83,16 +84,16 @@ impl PortId {
     }
 }
 
-/// `Route` is route table entry.
+/// Route table entry.
 #[derive(PartialEq, Debug)]
 pub struct Route {
-    /// `target` is the target network address.
+    /// Target network address.
     pub target: LifIpAddr,
-    /// `gateway` is the next hop to reach `target`.
+    /// Next hop to reach `target`.
     pub gateway: Option<IpAddr>,
-    /// `port_id` is the port to reach `gateway`.
+    /// Port to reach `gateway`.
     pub port_id: Option<PortId>,
-    /// `metric` represents the route priority.
+    /// Represents the route priority.
     pub metric: Option<u32>,
 }
 
@@ -220,7 +221,7 @@ impl NetCfg {
         (self.stack.take_event_stream(), self.netstack.take_event_stream())
     }
 
-    /// Gets the interface associated with the specified port.
+    /// Returns the interface associated with the specified port.
     pub async fn get_interface(&mut self, port: u64) -> Option<Interface> {
         match self.stack.get_interface_info(port).await {
             Ok(Ok(info)) => Some((&info).into()),
@@ -228,7 +229,7 @@ impl NetCfg {
         }
     }
 
-    /// `ports` gets all physical ports in the system.
+    /// Returns all physical ports in the system.
     pub async fn ports(&self) -> error::Result<Vec<Port>> {
         let ports = self.stack.list_interfaces().await.map_err(|_| error::Hal::OperationFailed)?;
         let p = ports
@@ -239,7 +240,7 @@ impl NetCfg {
         Ok(p)
     }
 
-    /// `interfaces` returns all L3 interfaces with valid, non-local IPs in the system.
+    /// Returns all L3 interfaces with valid, non-local IPs in the system.
     pub async fn interfaces(&mut self) -> error::Result<Vec<Interface>> {
         let ifs = self
             .stack
@@ -253,7 +254,7 @@ impl NetCfg {
         Ok(ifs)
     }
 
-    /// Creates a new interface bridging the given ports.
+    /// Creates a new interface, bridging the given ports.
     pub async fn create_bridge(&mut self, ports: Vec<PortId>) -> error::Result<Interface> {
         let _br = self
             .netstack
@@ -268,14 +269,14 @@ impl NetCfg {
         }
     }
 
-    /// `delete_bridge` deletes a bridge.
+    /// Deletes the given bridge.
     pub async fn delete_bridge(&mut self, id: PortId) -> error::Result<()> {
         // TODO(dpradilla): what is the API for deleting a bridge? Call it
         info!("delete_bridge {:?} - Noop for now", id);
         Ok(())
     }
 
-    /// `set_ip_address` configures an IP address.
+    /// Configures an IP address.
     pub async fn set_ip_address<'a>(
         &'a mut self,
         pid: PortId,
@@ -291,7 +292,7 @@ impl NetCfg {
         r.squash_result().map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))
     }
 
-    /// `unset_ip_address` removes an IP address from the interface configuration.
+    /// Removes an IP address.
     pub async fn unset_ip_address<'a>(
         &'a mut self,
         pid: PortId,
@@ -313,7 +314,9 @@ impl NetCfg {
         Ok(())
     }
 
-    /// Enables/disables the interface at the specified port.
+    /// Sets the state of an interface.
+    ///
+    /// `state` controls whether the given `PortId` is enabled or disabled.
     pub async fn set_interface_state(&mut self, pid: PortId, state: bool) -> error::Result<()> {
         let r = if state {
             self.stack.enable_interface(StackPortId::from(pid).to_u64())
@@ -325,7 +328,9 @@ impl NetCfg {
         r.squash_result().map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))
     }
 
-    /// Start/stop the DHCP client on the specified interface.
+    /// Sets the state of the DHCP client on the specified interface.
+    ///
+    /// `enable` controls whether the given `PortId` has a DHCP client started or stopped.
     pub async fn set_dhcp_client_state(&mut self, pid: PortId, enable: bool) -> error::Result<()> {
         let (dhcp_client, server_end) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_net_dhcp::ClientMarker>()
@@ -349,7 +354,7 @@ impl NetCfg {
 
     /// Sets the state of IP forwarding.
     ///
-    /// `set_ip_forwarding` sets the IP forwarding state to `enabled`.
+    /// `enabled` controls whether IP forwarding is enabled or disabled.
     pub async fn set_ip_forwarding(&self, enabled: bool) -> error::Result<()> {
         let r = if enabled {
             self.stack.enable_ip_forwarding()
@@ -360,7 +365,7 @@ impl NetCfg {
         r.map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))
     }
 
-    /// `apply_manual_ip` updates the configured IP address.
+    /// Updates a configured IP address.
     async fn apply_manual_ip<'a>(
         &'a mut self,
         pid: PortId,
@@ -388,7 +393,7 @@ impl NetCfg {
         Ok(())
     }
 
-    /// `apply_properties` applies the indicated LIF properties.
+    /// Applies the given LIF properties.
     pub async fn apply_properties<'a>(
         &'a mut self,
         pid: PortId,
@@ -422,7 +427,7 @@ impl NetCfg {
         Ok(())
     }
 
-    /// `routes` returns the running routing table (as seen by the network stack).
+    /// Returns the running routing table (as seen by the network stack).
     pub async fn routes(&mut self) -> Option<Vec<Route>> {
         let table = self.stack.get_forwarding_table().await;
         match table {

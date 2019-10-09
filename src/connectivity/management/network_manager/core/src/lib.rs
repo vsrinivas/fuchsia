@@ -130,7 +130,7 @@ impl DeviceState {
         })
     }
 
-    /// `populate_state` populates the state based on lower layers state.
+    /// Populate state based on lower layers.
     pub async fn populate_state(&mut self) -> error::Result<()> {
         for p in self.hal.ports().await?.iter() {
             self.add_port(p.id, &p.path, self.version());
@@ -144,21 +144,21 @@ impl DeviceState {
         Ok(())
     }
 
-    /// `add_port` adds a new port.
+    /// Adds a new port.
     pub fn add_port(&mut self, id: PortId, path: &str, v: Version) {
         self.port_manager.add_port(portmgr::Port::new(id, path, v));
         // This is a response to an event, not a configuration change. Version should not be
         // incremented.
     }
 
-    // release_ports releases indicated ports.
+    /// Releases the given ports.
     fn release_ports(&mut self, ports: &Vec<PortId>) {
         ports.iter().for_each(|p| {
             self.port_manager.release_port(p);
         });
     }
 
-    /// `create_lif` creates a LIF of the indicated type.
+    /// Creates a LIF of the given type.
     pub async fn create_lif(
         &mut self,
         lif_type: LIFType,
@@ -209,7 +209,7 @@ impl DeviceState {
         Ok(l)
     }
 
-    /// `delete_lif` creates a LIF of the indicated type.
+    /// Deletes the LIF of the given type.
     pub async fn delete_lif(&mut self, lif_id: UUID) -> Result<(), error::NetworkManager> {
         // Locate the lif to delete.
         let lif = self.lif_manager.lif_mut(&lif_id);
@@ -242,7 +242,7 @@ impl DeviceState {
         Ok(())
     }
 
-    /// `update_lif_properties` configures an interface as indicated and updates the LIF information.
+    /// Configures an interface with the given properties, and updates the LIF information.
     pub async fn update_lif_properties(
         &mut self,
         lif_id: UUID,
@@ -488,32 +488,33 @@ impl DeviceState {
         }
     }
 
-    /// `lif` returns the LIF with the given uuid.
+    /// Returns the LIF with the given `UUID`.
     pub fn lif(&self, lif_id: UUID) -> Option<&lifmgr::LIF> {
         self.lif_manager.lif(&lif_id)
     }
-    /// `lifs` returns all the LIFs of the given type.
+    /// Returns all LIFs of the given type.
     pub fn lifs(&self, t: LIFType) -> impl Iterator<Item = &lifmgr::LIF> {
         self.lif_manager.lifs(t)
     }
-    /// `ports` returns all ports managed by configuration manager.
+    /// Returns all managed ports.
     pub fn ports(&self) -> impl ExactSizeIterator<Item = &portmgr::Port> {
         self.port_manager.ports()
     }
 
-    /// `version` returns the current configuration version.
+    /// Returns the current configuration version.
+    ///
     /// The configuration version is monotonically increased every time there is a configuration
     /// change.
     pub fn version(&self) -> Version {
         self.version
     }
 
-    /// `update_nat_config` updates the current NAT configuration.
+    /// Updates the current NAT configuration.
     pub async fn update_nat_config(&mut self) -> error::Result<()> {
         self.packet_filter.update_nat_config(self.service_manager.get_nat_config()).await
     }
 
-    /// `enable_nat` enables NAT support.
+    /// Enables NAT.
     pub async fn enable_nat(&mut self) -> error::Result<()> {
         if self.service_manager.is_nat_enabled() {
             return Err(error::NetworkManager::SERVICE(error::Service::NatAlreadyEnabled));
@@ -534,7 +535,7 @@ impl DeviceState {
         }
     }
 
-    /// `disable_nat` disables NAT support.
+    /// Disables NAT.
     pub async fn disable_nat(&mut self) -> error::Result<()> {
         if !self.service_manager.is_nat_enabled() {
             return Err(error::NetworkManager::SERVICE(error::Service::NatNotEnabled));
@@ -550,12 +551,12 @@ impl DeviceState {
         Ok(())
     }
 
-    /// `is_nat_enabled` returns whether NAT is enabled or not.
+    /// Returns whether NAT is enabled or not.
     pub fn is_nat_enabled(&self) -> bool {
         self.service_manager.is_nat_enabled()
     }
 
-    /// `set_filter` installs a new packet filter rule.
+    /// Installs a new packet filter rule.
     pub async fn set_filter(
         &self,
         rule: fidl_fuchsia_router_config::FilterRule,
@@ -569,7 +570,7 @@ impl DeviceState {
         }
     }
 
-    /// `get_filters` returns the currently installed packet filter rules.
+    /// Returns the currently installed packet filter rules.
     pub async fn get_filters(&self) -> error::Result<Vec<fidl_fuchsia_router_config::FilterRule>> {
         self.packet_filter.get_filters().await.map_err(|e| {
             warn!("Failed to get filter rules: {:?}", e);
@@ -579,6 +580,7 @@ impl DeviceState {
 }
 
 /// Log that the lif properties have changed.
+///
 /// This will be later use to update the operational state, but not the configuration state.
 /// (we are not currently caching operational state, just querying for it).
 fn log_property_change(lif: &mut lifmgr::LIF, iface: hal::Interface) {
@@ -589,17 +591,19 @@ fn log_property_change(lif: &mut lifmgr::LIF, iface: hal::Interface) {
     }
 }
 
-// Version represent the version of the configuration associated to a device object (i.e. an
-// interface, and ACL, etc)
-// It should only be updated when configuration state is updated. It should never be updated due to
-// operational state changes.
-// For example, if an interface is configured to get it's IP address via DHCP, the configuration is
-// changed to enable dhcp client on the interface. The address received from DHCP is an
-// operational state change. It is not to be saved in the configuration.
-// Adding a static neighbor entry to the neighbor table is a configuration change.
-// Learning  an entry dynamically and adding it to the neighbor table is an operational change.
-// For a good definition of configuration vs. operational state, please see:
-// https://tools.ietf.org/html/rfc6244#section-4.3
+/// Represents the version of the configuration associated to a device object (i.e. an
+/// interface, and ACL, etc). It should only be updated when configuration state is updated. It
+/// should never be updated due to operational state changes.
+///
+/// For example, if an interface is configured to get its IP address via DHCP, the configuration
+/// is changed to enable DHCP client on the interface. The address received from DHCP is an
+/// operational state change. It is not to be saved in the configuration.
+///
+/// Adding a static neighbor entry to the neighbor table is a configuration change. Learning an
+/// entry dynamically and adding it to the neighbor table is an operational change.
+///
+/// For a good definition of configuration vs. operational state, please see:
+/// https://tools.ietf.org/html/rfc6244#section-4.3
 type Version = u64;
 type UUID = u128;
 

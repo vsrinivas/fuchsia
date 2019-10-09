@@ -126,23 +126,24 @@ impl LIF {
         Ok(())
     }
 
+    /// Renames a LIF.
     fn rename(&mut self, v: Version, name: &'static str) -> error::Result<()> {
         self.id.version = v;
         self.name = name.to_string();
         Ok(())
     }
 
-    /// `id` returns the LIF ElementID.
+    /// Returns the LIF ElementID.
     pub fn id(&self) -> ElementId {
         self.id
     }
 
-    /// `set_pid` sets the Lif pid.
+    /// Sets the Lif pid.
     pub fn set_pid(&mut self, pid: PortId) {
         self.pid = pid;
     }
 
-    /// `pid` returns the Lif pid.
+    /// Returns the Lif pid.
     pub fn pid(&self) -> PortId {
         self.pid
     }
@@ -231,8 +232,7 @@ impl From<&fidl_fuchsia_router_config::CidrAddress> for LifIpAddr {
     }
 }
 
-/// `strip_host` takes an IP address and its prefix length and returns an address with the
-/// host part stripped.
+/// Strips the host part from a given `address` and `prefix`.
 fn strip_host(address: &IpAddr, prefix: u8) -> IpAddr {
     match address {
         IpAddr::V4(a) => {
@@ -313,7 +313,7 @@ impl LifIpAddr {
         }
     }
 
-    /// `is_in_same_subnet` returns true if `address` is in the same subnet as `LifIpAddr`.
+    /// Returns true if `address` is in the same subnet as `LifIpAddr`.
     pub fn is_in_same_subnet(&self, address: &IpAddr) -> bool {
         let local_subnet = strip_host(&self.address, self.prefix);
         let address_subnet = strip_host(address, self.prefix);
@@ -358,6 +358,7 @@ impl LIFProperties {
             ),
         })
     }
+
     /// Convert to fuchsia.router.config.LifProperties, LAN variant.
     pub fn to_fidl_lan(&self) -> fidl_fuchsia_router_config::LifProperties {
         fidl_fuchsia_router_config::LifProperties::Lan(fidl_fuchsia_router_config::LanProperties {
@@ -383,7 +384,9 @@ impl LIFManager {
     pub fn new() -> Self {
         LIFManager { lifs: HashMap::new(), lif_names: HashSet::new(), lif_vlans: HashSet::new() }
     }
-    /// `add_lif` adds a lif to be managed by network manager.
+
+    /// Adds a lif to be managed by network manager.
+    ///
     /// It verifies LIF is valid and does not colide with an exisiting one.
     pub fn add_lif(&mut self, l: &LIF) -> error::Result<()> {
         if self.lifs.contains_key(&l.id.uuid) {
@@ -404,7 +407,8 @@ impl LIFManager {
         self.lifs.insert(l.id.uuid, l.clone());
         Ok(())
     }
-    /// `remove_lif` removes a lif from lif manager.
+
+    /// Removes a lif from lif manager.
     pub fn remove_lif(&mut self, id: UUID) -> Option<LIF> {
         let l = self.lifs.remove(&id)?;
         self.lif_vlans.remove(&l.vlan);
@@ -412,26 +416,27 @@ impl LIFManager {
         Some(l)
     }
 
-    /// `lif` gets a reference to a lif in lif manager.
+    /// Returns a reference to a lif in lif manager.
     pub fn lif(&self, id: &UUID) -> Option<&LIF> {
         self.lifs.get(id)
     }
 
-    /// `lif_mut` gets a mutable reference to a lif in lif manager.
+    /// Returns a mutable reference to a lif in lif manager.
     pub fn lif_mut(&mut self, id: &UUID) -> Option<&mut LIF> {
         self.lifs.get_mut(id)
     }
 
-    /// `lifs` gets all LIFs of a given type.
+    /// Returns all LIFs of a given type.
     pub fn lifs(&self, lt: LIFType) -> impl Iterator<Item = &LIF> {
         self.lifs.iter().filter_map(move |(_, l)| if l.l_type == lt { Some(l) } else { None })
     }
 
-    /// `all_lifs` gets all LIFs.
+    /// Returns all LIFs.
     pub fn all_lifs(&self) -> impl Iterator<Item = &LIF> {
         self.lifs.iter().map(|(_, l)| l)
     }
 
+    /// Returns the lif at the given `PortId`.
     pub fn lif_at_port(&mut self, port: PortId) -> Option<&mut LIF> {
         self.lifs.iter_mut().find_map(|(_, lif)| if lif.pid == port { Some(lif) } else { None })
     }
