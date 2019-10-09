@@ -64,7 +64,9 @@ void GdcDevice::InitClocks() {
 zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_2_t* input_buffer_collection,
                                    const buffer_collection_info_2_t* output_buffer_collection,
                                    const image_format_2_t* input_image_format,
-                                   const image_format_2_t* output_image_format, zx::vmo config_vmo,
+                                   const image_format_2_t* output_image_format_table_list,
+                                   size_t output_image_format_table_count,
+                                   uint32_t output_image_format_index, zx::vmo config_vmo,
                                    const hw_accel_callback_t* callback, uint32_t* out_task_index) {
   if (out_task_index == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -77,7 +79,8 @@ zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_2_t* input_buffe
   }
   zx_status_t status =
       task->Init(input_buffer_collection, output_buffer_collection, input_image_format,
-                 output_image_format, config_vmo, callback, bti_);
+                 output_image_format_table_list, output_image_format_table_count,
+                 output_image_format_index, config_vmo, callback, bti_);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "%s: Task Creation Failed %d\n", __func__, status);
     return status;

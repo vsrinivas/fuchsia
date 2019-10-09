@@ -57,6 +57,8 @@ class TaskTest : public zxtest::Test {
   void SetUpBufferCollections(uint32_t buffer_collection_count) {
     camera::GetImageFormat2(input_image_format_, kWidth, kHeight);
     camera::GetImageFormat2(output_image_format_table_[0], kWidth, kHeight);
+    camera::GetImageFormat2(output_image_format_table_[1], kWidth / 2, kHeight / 2);
+    camera::GetImageFormat2(output_image_format_table_[2], kWidth / 4, kHeight / 4);
     // Set up fake Resize info, Watermark info, Watermark vmo.
     resize_info_.crop.crop_x = 100;
     resize_info_.crop.crop_y = 100;
@@ -170,6 +172,21 @@ TEST_F(TaskTest, BasicCreationTest) {
                                          output_image_format_table_, kImageFormatTableSize, 0,
                                          &callback_, bti_handle_);
   EXPECT_OK(status);
+}
+
+TEST_F(TaskTest, OutputResTest) {
+  SetUpBufferCollections(kNumberOfBuffers);
+  fbl::AllocChecker ac;
+  auto resize_task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
+  EXPECT_TRUE(ac.check());
+  zx_status_t status;
+  status = resize_task->InitResize(&input_buffer_collection_, &output_buffer_collection_,
+                                   &resize_info_, &input_image_format_, output_image_format_table_,
+                                   kImageFormatTableSize, 2, &callback_, bti_handle_);
+  EXPECT_OK(status);
+  image_format_2_t format = resize_task->output_format();
+  EXPECT_EQ(format.display_width, kWidth / 4);
+  EXPECT_EQ(format.display_height, kHeight / 4);
 }
 
 TEST_F(TaskTest, InvalidFormatTest) {
@@ -425,6 +442,7 @@ TEST(TaskTest, NonContigVmoTest) {
 
   image_format_2_t format;
   camera::GetImageFormat2(format, kWidth, kHeight);
+  camera::GetImageFormat2(image_format_table[0], kWidth, kHeight);
   zx_status_t status = camera::CreateContiguousBufferCollectionInfo2(
       input_buffer_collection, format, bti_handle, kWidth, kHeight, 0);
   ASSERT_OK(status);
@@ -461,6 +479,7 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
   EXPECT_TRUE(ac.check());
   image_format_2_t format;
   camera::GetImageFormat2(format, kWidth, kHeight);
+  camera::GetImageFormat2(image_format_table[0], kWidth, kHeight);
   status = task->InitWatermark(nullptr, nullptr, &watermark_info, zx::vmo(watermark_vmo), &format,
                                image_format_table, kImageFormatTableSize, 0, &callback,
                                zx::bti(bti_handle));

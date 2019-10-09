@@ -59,7 +59,9 @@ class GenericTask {
   zx_status_t ReleaseOutputBuffer(uint32_t index) { return output_buffers_.ReleaseBuffer(index); }
 
   image_format_2_t input_format() { return input_format_; }
-  image_format_2_t output_format() { return output_format_; }
+  image_format_2_t output_format() {
+    return output_image_format_list_[cur_output_image_format_index_];
+  }
   const hw_accel_callback_t* callback() { return callback_; }
 
  protected:
@@ -68,12 +70,16 @@ class GenericTask {
   zx_status_t InitBuffers(const buffer_collection_info_2_t* input_buffer_collection,
                           const buffer_collection_info_2_t* output_buffer_collection,
                           const image_format_2_t* input_image_format,
-                          const image_format_2_t* output_image_format, const zx::bti& bti,
+                          const image_format_2_t* output_image_format_table_list,
+                          size_t output_image_format_table_count,
+                          uint32_t output_image_format_index, const zx::bti& bti,
                           const hw_accel_callback_t* callback);
 
  private:
+  size_t output_image_format_count_;
+  std::unique_ptr<image_format_2_t[]> output_image_format_list_;
+  uint32_t cur_output_image_format_index_;
   image_format_2_t input_format_;
-  image_format_2_t output_format_;
   const hw_accel_callback_t* callback_;
   fzl::VmoPool output_buffers_;
   fbl::Array<fzl::PinnedVmo> input_buffers_;

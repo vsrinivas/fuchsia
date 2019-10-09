@@ -44,24 +44,12 @@ zx_status_t Ge2dTask::Init(const buffer_collection_info_2_t* input_buffer_collec
 
   zx_status_t status =
       InitBuffers(input_buffer_collection, output_buffer_collection, input_image_format,
-                  &output_image_format_table_list[output_image_format_index], bti, callback);
+                  output_image_format_table_list, output_image_format_table_count,
+                  output_image_format_index, bti, callback);
   if (status != ZX_OK) {
     FX_LOG(ERROR, "%s: InitBuffers Failed\n", __func__);
     return status;
   }
-
-  // Make a copy of the image_format_table.
-  fbl::AllocChecker ac;
-  image_format_list_ = std::unique_ptr<image_format_2_t[]>(
-      new (&ac) image_format_2_t[output_image_format_table_count]);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  for (uint32_t i = 0; i < output_image_format_table_count; i++) {
-    image_format_list_.get()[i] = output_image_format_table_list[i];
-  }
-  image_format_count_ = output_image_format_table_count;
-  current_image_format_index_ = output_image_format_index;
 
   return status;
 }
