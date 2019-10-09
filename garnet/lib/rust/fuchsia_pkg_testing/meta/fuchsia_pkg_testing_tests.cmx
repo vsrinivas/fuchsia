@@ -14,8 +14,7 @@
             "misc/ramctl"
         ],
         "features": [
-            "system-temp",
-            "deprecated-ambient-replace-as-executable"
+            "system-temp"
         ],
         "services": [
             "fuchsia.net.NameLookup",

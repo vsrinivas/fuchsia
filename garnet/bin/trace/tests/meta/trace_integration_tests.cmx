@@ -23,8 +23,7 @@
         "features": [
             "isolated-persistent-storage",
             "deprecated-shell",
-            "system-temp",
-            "deprecated-ambient-replace-as-executable"
+            "system-temp"
         ],
         "services": [
             "fuchsia.boot.RootJob",

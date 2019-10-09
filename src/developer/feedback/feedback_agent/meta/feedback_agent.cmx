@@ -9,7 +9,6 @@
         "features": [
             "build-info",
             "config-data",
-            "deprecated-ambient-replace-as-executable",
             "hub",
             "isolated-temp"
         ],

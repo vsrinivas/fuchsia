@@ -7,8 +7,7 @@
             "misc/ramctl"
         ],
         "features": [
-            "isolated-temp",
-            "deprecated-ambient-replace-as-executable"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.tracing.provider.Registry",

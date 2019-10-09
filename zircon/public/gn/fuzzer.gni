@@ -34,10 +34,7 @@ template("_fuzzer_cmx") {
       }
       sandbox = {
         services = [ "fuchsia.process.Launcher" ]
-        features = [
-          "isolated-persistent-storage",
-          "deprecated-ambient-replace-as-executable"
-        ]
+        features = [ "isolated-persistent-storage" ]
       }
     }
     outputs = [

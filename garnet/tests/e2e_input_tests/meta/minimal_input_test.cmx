@@ -16,8 +16,7 @@
     },
     "sandbox": {
         "features": [
-            "shell-commands",
-            "deprecated-ambient-replace-as-executable"
+            "shell-commands"
         ],
         "services": [
             "fuchsia.tracing.provider.Registry",

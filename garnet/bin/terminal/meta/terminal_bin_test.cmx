@@ -4,8 +4,7 @@
     },
     "sandbox": {
         "features": [
-            "shell-commands",
-            "deprecated-ambient-replace-as-executable"
+            "shell-commands"
         ],
         "boot": [ "bin" ],
         "services": [

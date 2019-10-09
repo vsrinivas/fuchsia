@@ -8,8 +8,7 @@
         ],
         "features": [
             "isolated-temp",
-            "shell-commands",
-            "deprecated-ambient-replace-as-executable"
+            "shell-commands"
         ],
         "services": [
             "fuchsia.logger.Log",

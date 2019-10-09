@@ -7,9 +7,6 @@
             "class/bt-host",
             "test/test"
         ],
-        "features": [
-            "deprecated-ambient-replace-as-executable"
-        ],
         "services": [
             "fuchsia.bluetooth.avrcp.PeerManager",
             "fuchsia.bluetooth.avrcp.test.TestPeerManager",
