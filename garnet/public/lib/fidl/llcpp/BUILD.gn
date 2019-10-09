@@ -59,6 +59,12 @@ fidl("llcpptest.protocol.test") {
   ]
 }
 
+fidl("llcpptest.transitional.test") {
+  sources = [
+    "transitional.test.fidl",
+  ]
+}
+
 executable("fidl_llcpp_types_test_bin") {
   testonly = true
 
@@ -69,6 +75,7 @@ executable("fidl_llcpp_types_test_bin") {
     "flexible_test.cc",
     "protocol_test.cc",
     "table_test.cc",
+    "transitional_test.cc",
     "union_test.cc",
   ]
 
@@ -76,6 +83,7 @@ executable("fidl_llcpp_types_test_bin") {
     ":fidl.llcpp.types.test_llcpp",
     ":llcpptest.flexible.test_llcpp",
     ":llcpptest.protocol.test_llcpp",
+    ":llcpptest.transitional.test_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",

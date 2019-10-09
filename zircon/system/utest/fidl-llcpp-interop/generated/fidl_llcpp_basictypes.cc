@@ -80,7 +80,7 @@ constexpr uint64_t kTestInterface_ConsumeSimpleUnion_GenOrdinal = 0x17c0e9fc41b0
 
 }  // namespace
 template <>
-TestInterface::ResultOf::ConsumeSimpleStruct_Impl<TestInterface::ConsumeSimpleStructResponse>::ConsumeSimpleStruct_Impl(zx::unowned_channel _client_end, SimpleStruct arg) {
+TestInterface::ResultOf::ConsumeSimpleStruct_Impl<TestInterface::ConsumeSimpleStructResponse>::ConsumeSimpleStruct_Impl(zx::unowned_channel _client_end, ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleStructRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -94,16 +94,16 @@ TestInterface::ResultOf::ConsumeSimpleStruct_Impl<TestInterface::ConsumeSimpleSt
       TestInterface::InPlace::ConsumeSimpleStruct(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-TestInterface::ResultOf::ConsumeSimpleStruct TestInterface::SyncClient::ConsumeSimpleStruct(SimpleStruct arg) {
+TestInterface::ResultOf::ConsumeSimpleStruct TestInterface::SyncClient::ConsumeSimpleStruct(::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg) {
   return ResultOf::ConsumeSimpleStruct(zx::unowned_channel(this->channel_), std::move(arg));
 }
 
-TestInterface::ResultOf::ConsumeSimpleStruct TestInterface::Call::ConsumeSimpleStruct(zx::unowned_channel _client_end, SimpleStruct arg) {
+TestInterface::ResultOf::ConsumeSimpleStruct TestInterface::Call::ConsumeSimpleStruct(zx::unowned_channel _client_end, ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg) {
   return ResultOf::ConsumeSimpleStruct(std::move(_client_end), std::move(arg));
 }
 
 template <>
-TestInterface::UnownedResultOf::ConsumeSimpleStruct_Impl<TestInterface::ConsumeSimpleStructResponse>::ConsumeSimpleStruct_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer) {
+TestInterface::UnownedResultOf::ConsumeSimpleStruct_Impl<TestInterface::ConsumeSimpleStructResponse>::ConsumeSimpleStruct_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < ConsumeSimpleStructRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<ConsumeSimpleStructResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -117,11 +117,11 @@ TestInterface::UnownedResultOf::ConsumeSimpleStruct_Impl<TestInterface::ConsumeS
       TestInterface::InPlace::ConsumeSimpleStruct(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-TestInterface::UnownedResultOf::ConsumeSimpleStruct TestInterface::SyncClient::ConsumeSimpleStruct(::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer) {
+TestInterface::UnownedResultOf::ConsumeSimpleStruct TestInterface::SyncClient::ConsumeSimpleStruct(::fidl::BytePart _request_buffer, ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ConsumeSimpleStruct(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(arg), std::move(_response_buffer));
 }
 
-TestInterface::UnownedResultOf::ConsumeSimpleStruct TestInterface::Call::ConsumeSimpleStruct(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer) {
+TestInterface::UnownedResultOf::ConsumeSimpleStruct TestInterface::Call::ConsumeSimpleStruct(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ConsumeSimpleStruct(std::move(_client_end), std::move(_request_buffer), std::move(arg), std::move(_response_buffer));
 }
 
@@ -142,7 +142,7 @@ TestInterface::UnownedResultOf::ConsumeSimpleStruct TestInterface::Call::Consume
 }
 
 template <>
-TestInterface::ResultOf::ConsumeSimpleUnion_Impl<TestInterface::ConsumeSimpleUnionResponse>::ConsumeSimpleUnion_Impl(zx::unowned_channel _client_end, SimpleUnion arg) {
+TestInterface::ResultOf::ConsumeSimpleUnion_Impl<TestInterface::ConsumeSimpleUnionResponse>::ConsumeSimpleUnion_Impl(zx::unowned_channel _client_end, ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleUnionRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -156,16 +156,16 @@ TestInterface::ResultOf::ConsumeSimpleUnion_Impl<TestInterface::ConsumeSimpleUni
       TestInterface::InPlace::ConsumeSimpleUnion(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-TestInterface::ResultOf::ConsumeSimpleUnion TestInterface::SyncClient::ConsumeSimpleUnion(SimpleUnion arg) {
+TestInterface::ResultOf::ConsumeSimpleUnion TestInterface::SyncClient::ConsumeSimpleUnion(::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg) {
   return ResultOf::ConsumeSimpleUnion(zx::unowned_channel(this->channel_), std::move(arg));
 }
 
-TestInterface::ResultOf::ConsumeSimpleUnion TestInterface::Call::ConsumeSimpleUnion(zx::unowned_channel _client_end, SimpleUnion arg) {
+TestInterface::ResultOf::ConsumeSimpleUnion TestInterface::Call::ConsumeSimpleUnion(zx::unowned_channel _client_end, ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg) {
   return ResultOf::ConsumeSimpleUnion(std::move(_client_end), std::move(arg));
 }
 
 template <>
-TestInterface::UnownedResultOf::ConsumeSimpleUnion_Impl<TestInterface::ConsumeSimpleUnionResponse>::ConsumeSimpleUnion_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer) {
+TestInterface::UnownedResultOf::ConsumeSimpleUnion_Impl<TestInterface::ConsumeSimpleUnionResponse>::ConsumeSimpleUnion_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < ConsumeSimpleUnionRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<ConsumeSimpleUnionResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -179,11 +179,11 @@ TestInterface::UnownedResultOf::ConsumeSimpleUnion_Impl<TestInterface::ConsumeSi
       TestInterface::InPlace::ConsumeSimpleUnion(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-TestInterface::UnownedResultOf::ConsumeSimpleUnion TestInterface::SyncClient::ConsumeSimpleUnion(::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer) {
+TestInterface::UnownedResultOf::ConsumeSimpleUnion TestInterface::SyncClient::ConsumeSimpleUnion(::fidl::BytePart _request_buffer, ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ConsumeSimpleUnion(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(arg), std::move(_response_buffer));
 }
 
-TestInterface::UnownedResultOf::ConsumeSimpleUnion TestInterface::Call::ConsumeSimpleUnion(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer) {
+TestInterface::UnownedResultOf::ConsumeSimpleUnion TestInterface::Call::ConsumeSimpleUnion(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ConsumeSimpleUnion(std::move(_client_end), std::move(_request_buffer), std::move(arg), std::move(_response_buffer));
 }
 
