@@ -99,6 +99,21 @@ pub enum Command {
     SET(Set),
 }
 
+#[derive(StructOpt, Clone, Debug, PartialEq)]
+pub enum SecurityFeature {
+    #[structopt(name = "nat")]
+    NAT,
+}
+impl FromStr for SecurityFeature {
+    type Err = Error;
+    fn from_str(feature: &str) -> Result<Self, Self::Err> {
+        match feature.to_lowercase().as_str() {
+            "nat" => Ok(SecurityFeature::NAT),
+            _ => Err(format_err!("Invalid security feature: '{}'", feature)),
+        }
+    }
+}
+
 #[derive(StructOpt, Clone, Debug)]
 pub enum Add {
     #[structopt(name = "wan")]
@@ -196,6 +211,9 @@ pub enum Show {
     #[structopt(name = "routes")]
     /// List all the routes
     Routes {},
+    #[structopt(name = "security-config")]
+    /// Shows the security configuration.
+    Security {},
     #[structopt(name = "port")]
     /// Show a port
     Port {
@@ -358,7 +376,8 @@ pub enum Set {
     /// Set security configuration
     SecurityConfig {
         #[structopt(raw(required = "true"))]
-        feature: String,
+        feature: SecurityFeature,
+        enabled: bool,
     },
 
     #[structopt(name = "port-forward")]
@@ -382,6 +401,7 @@ pub enum Set {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::opts::Ipv4AddrPrefix;
     use fidl_fuchsia_net::Ipv4Address;
     use std::convert::TryInto;
@@ -412,5 +432,16 @@ mod tests {
         };
         let actual: fidl_fuchsia_router_config::CidrAddress = ipv4addr.try_into().unwrap();
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_security_feature_from_str() {
+        assert_eq!(SecurityFeature::from_str("nat").unwrap(), SecurityFeature::NAT);
+        assert_eq!(SecurityFeature::from_str("NAT").unwrap(), SecurityFeature::NAT);
+        assert_eq!(SecurityFeature::from_str("NaT").unwrap(), SecurityFeature::NAT);
+        assert_eq!(
+            SecurityFeature::from_str("nnat").unwrap_err().to_string(),
+            format!("Invalid security feature: 'nnat'")
+        );
     }
 }

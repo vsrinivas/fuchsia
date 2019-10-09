@@ -4,6 +4,7 @@
 
 //! Handles packet filtering requests for Network Manager.
 
+use crate::error;
 use crate::servicemgr::NatConfig;
 use failure::{format_err, Error};
 use fidl_fuchsia_net_filter::{self as netfilter, Direction, FilterMarker, FilterProxy, Status};
@@ -232,7 +233,7 @@ impl PacketFilter {
     /// If the response from netfilter is anything other than [`netfilter::Status::Ok`] then
     /// produce an error result. Failure to convert from the [`netfilter::Rule`] to a
     /// [`router_config::FilterRule`] produces an error result to the caller.
-    pub async fn get_filters(&self) -> Result<Vec<router_config::FilterRule>, Error> {
+    pub(crate) async fn get_filters(&self) -> Result<Vec<router_config::FilterRule>, Error> {
         info!("Received request to get all active packet filters");
         let netfilter_rules: Vec<netfilter::Rule> = match self.filter_svc.get_rules().await {
             Ok((rules, _, Status::Ok)) => rules,
@@ -263,7 +264,7 @@ impl PacketFilter {
     /// request to netfilter is anything other than [`netfilter::Status::Ok`] then produce an error
     /// result. Failure to convert the [`router_config::FilterRule`] to a [`netfilter::Rule`] will
     /// produce an error result to the caller.
-    pub async fn set_filter(&self, rule: router_config::FilterRule) -> Result<(), Error> {
+    pub(crate) async fn set_filter(&self, rule: router_config::FilterRule) -> Result<(), Error> {
         info!("Received request to add new packet filter rule");
         let generation: u32 = match self.filter_svc.get_rules().await {
             Ok((_, generation, Status::Ok)) => generation,
@@ -283,26 +284,20 @@ impl PacketFilter {
         }
     }
 
-    /// Installs a Network Address Translation (NAT) rule.
+    /// Updates the NAT configuration.
     ///
-    /// This method calls the netfilter API to install a rule that rewrites source addresses on the
-    /// LAN side with a publicly routable IP address (SNAT). Reverse translation (DNAT) is handled
-    /// by netstack's connection state tracker.
-    ///
-    /// # Error
-    ///
-    /// If we fail to get the generation number from the netfilter service, or fail to update the
-    /// the NAT ruleset, then we'll return an error result to the caller.
-    ///
-    /// A complete [`servicemgr::NatConfig`] is required at this point. If any fields are missing,
-    /// then an appropriate error will be returned to the caller.
-    // TODO(cgibson): Currently there is no way for this to be called. Add a method to the CLI
-    // to actually enable NAT, which would allow this method to run: fxb/35788.
-    pub async fn update_nat(&self, nat_config: &mut NatConfig) -> Result<(), Error> {
-        info!("Received request to enable NAT");
-        let (src_subnet, wan_ip, nicid) = from_nat_config(nat_config)
-            .map_err(|e| format_err!("Failed to parse NAT config: {:?}", e))?;
-
+    /// Allow incremental updates to the NAT configuration before installing the actual NAT rules
+    /// once we have a complete configuration.
+    pub(crate) async fn update_nat_config(&self, nat_config: &NatConfig) -> error::Result<()> {
+        info!("Received request to update NAT config");
+        let (src_subnet, wan_ip, nicid) = from_nat_config(nat_config).map_err(|e| {
+            warn!("Failed to update NatConfig: {}", e);
+            error::Service::UpdateNatPendingConfig
+        })?;
+        // Make sure that NAT is enabled before we try to install any rules.
+        if nat_config.enable == false {
+            return Err(error::NetworkManager::SERVICE(error::Service::NatNotEnabled));
+        }
         // TODO(cgibson): NAT should work on IP packets, we shouldn't need to provide a proto field
         // here. This is a bug: fxb/35950.
         //
@@ -328,23 +323,75 @@ impl PacketFilter {
             },
         ];
 
+        // TODO(cgibson): We need to add an integration test that actually runs traffic so we can
+        // see it being correctly forwarded with nat enabled and disabled.
+        self.install_nat_rules(&mut nat_rules).await
+    }
+
+    /// Installs a Network Address Translation (NAT) rule.
+    ///
+    /// This method calls the netfilter API to install a rule that rewrites source addresses on the
+    /// LAN side with a publicly routable IP address (SNAT). Reverse translation (DNAT) is handled
+    /// by netstack's connection state tracker. A complete [`servicemgr::NatConfig`] is required
+    /// at this point.
+    ///
+    /// # Error
+    ///
+    /// If we fail to get the generation number from the netfilter service, or fail to update the
+    /// the NAT ruleset, then we'll return an error result to the caller.
+    async fn install_nat_rules(&self, nat_rules: &mut Vec<netfilter::Nat>) -> error::Result<()> {
         // Since we discard any existing NAT rules here, this is a pure "update-only" situation.
         let generation: u32 = match self.filter_svc.get_nat_rules().await {
             Ok((_, generation, Status::Ok)) => generation,
             Ok((_, _, status)) => {
-                return Err(format_err!(
-                    "Failed to get generation number! Status was: {:?}",
-                    status
-                ))
+                warn!("Failed to update NAT, status was: {:?}", status);
+                return Err(error::NetworkManager::SERVICE(error::Service::ErrorUpdateNatFailed));
             }
-            Err(e) => return Err(format_err!("fidl error: {:?}", e)),
+            Err(e) => {
+                warn!("fidl error: {:?}", e);
+                return Err(error::NetworkManager::SERVICE(error::Service::ErrorUpdateNatFailed));
+            }
         };
-        // TODO(cgibson): When we add the CLI command to enable/disable NAT, we will be able to use
-        // our CLI integration framework to test this.
         match self.filter_svc.update_nat_rules(&mut nat_rules.iter_mut(), generation).await {
             Ok(Status::Ok) => Ok(()),
-            Ok(status) => Err(format_err!("failed to set NAT state: {:?}", status)),
-            Err(e) => Err(format_err!("fidl error: {:?}", e)),
+            Ok(status) => {
+                warn!("Failed to set NAT state: {:?}", status);
+                Err(error::NetworkManager::SERVICE(error::Service::ErrorUpdateNatFailed))
+            }
+            Err(e) => {
+                warn!("fidl error: {:?}", e);
+                Err(error::NetworkManager::SERVICE(error::Service::ErrorUpdateNatFailed))
+            }
+        }
+    }
+
+    /// Clears any existing Network Address Translation (NAT) rules.
+    ///
+    /// This is a convenience wrapper around netfilter's `update_nat_rules()` and always sets an
+    /// empty ruleset.
+    pub(crate) async fn clear_nat_rules(&self) -> error::Result<()> {
+        let mut empty_ruleset = Vec::<netfilter::Nat>::new();
+        let generation: u32 = match self.filter_svc.get_nat_rules().await {
+            Ok((_, generation, Status::Ok)) => generation,
+            Ok((_, _, status)) => {
+                warn!("Failed to get generation number! Status was: {:?}", status);
+                return Err(error::NetworkManager::SERVICE(error::Service::ErrorUpdateNatFailed));
+            }
+            Err(e) => {
+                warn!("fidl error: {:?}", e);
+                return Err(error::NetworkManager::SERVICE(error::Service::ErrorUpdateNatFailed));
+            }
+        };
+        match self.filter_svc.update_nat_rules(&mut empty_ruleset.iter_mut(), generation).await {
+            Ok(Status::Ok) => Ok(()),
+            Ok(status) => {
+                warn!("failed to set NAT state: {:?}", status);
+                Err(error::NetworkManager::SERVICE(error::Service::ErrorUpdateNatFailed))
+            }
+            Err(e) => {
+                warn!("fidl error: {:?}", e);
+                Err(error::NetworkManager::SERVICE(error::Service::ErrorUpdateNatFailed))
+            }
         }
     }
 }

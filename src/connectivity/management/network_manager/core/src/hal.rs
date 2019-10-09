@@ -288,9 +288,7 @@ impl NetCfg {
                 &mut addr.to_fidl_interface_address(),
             )
             .await;
-        r.squash_result()
-            .map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))
-            .map(|_| ())
+        r.squash_result().map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))
     }
 
     /// `unset_ip_address` removes an IP address from the interface configuration.
@@ -310,10 +308,9 @@ impl NetCfg {
                 a.prefix_length.unwrap(),
             )
             .await;
-        match r {
-            Ok(netstack::NetErr { status: netstack::Status::Ok, message: _ }) => Ok(()),
-            _ => Err(error::NetworkManager::HAL(error::Hal::OperationFailed)),
-        }
+        r.map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))?;
+
+        Ok(())
     }
 
     /// Enables/disables the interface at the specified port.
@@ -322,11 +319,10 @@ impl NetCfg {
             self.stack.enable_interface(StackPortId::from(pid).to_u64())
         } else {
             self.stack.disable_interface(StackPortId::from(pid).to_u64())
-        };
-        match r.await {
-            Ok(_) => Ok(()),
-            _ => Err(error::NetworkManager::HAL(error::Hal::OperationFailed)),
         }
+        .await;
+
+        r.squash_result().map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))
     }
 
     /// Start/stop the DHCP client on the specified interface.
@@ -351,7 +347,20 @@ impl NetCfg {
         Ok(())
     }
 
-    /// `apply_manual_address` updates the configured IP address.
+    /// Sets the state of IP forwarding.
+    ///
+    /// `set_ip_forwarding` sets the IP forwarding state to `enabled`.
+    pub async fn set_ip_forwarding(&self, enabled: bool) -> error::Result<()> {
+        let r = if enabled {
+            self.stack.enable_ip_forwarding()
+        } else {
+            self.stack.disable_ip_forwarding()
+        }
+        .await;
+        r.map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))
+    }
+
+    /// `apply_manual_ip` updates the configured IP address.
     async fn apply_manual_ip<'a>(
         &'a mut self,
         pid: PortId,

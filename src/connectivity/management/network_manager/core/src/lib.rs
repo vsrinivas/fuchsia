@@ -338,7 +338,7 @@ impl DeviceState {
                             );
                             return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
                         }
-                        info!("setting ip to {:?} {:?}", address, prefix_length);
+                        info!("Setting WAN IPv4 address to {:?}/{:?}", address, prefix_length);
                         let v4addr = LifIpAddr::from(p.address_v4.as_ref().unwrap());
                         self.service_manager.set_global_ip_nat(v4addr.clone(), lif.pid());
                         lp.address = Some(v4addr);
@@ -376,7 +376,7 @@ impl DeviceState {
                             );
                             return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
                         }
-                        info!("setting ip to {:?} {:?}", address, prefix_length);
+                        info!("Setting WAN IPv6 to {:?}/{:?}", address, prefix_length);
                         let a = LifIpAddr::from(p.address_v6.as_ref().unwrap());
                         lp.address = Some(a);
                     }
@@ -425,7 +425,7 @@ impl DeviceState {
                         prefix_length: Some(prefix_length),
                     }) => {
                         // LAN IPv4 address is changing.
-                        info!("setting ip to {:?} {:?}", address, prefix_length);
+                        info!("Setting LAN IPv4 address to {:?}/{:?}", address, prefix_length);
                         let v4addr = LifIpAddr::from(p.address_v4.as_ref().unwrap());
                         self.service_manager.set_local_subnet_nat(v4addr.clone());
                         lp.address = Some(v4addr);
@@ -442,7 +442,7 @@ impl DeviceState {
                         prefix_length: Some(prefix_length),
                     }) => {
                         // LAN IPv6 address is changing.
-                        info!("setting ip to {:?} {:?}", address, prefix_length);
+                        info!("Setting LAN IPv6 address to {:?}/{:?}", address, prefix_length);
                         let a = LifIpAddr::from(p.address_v6.as_ref().unwrap());
                         lp.address = Some(a);
                     }
@@ -458,17 +458,28 @@ impl DeviceState {
                         lp.enabled = *enable
                     }
                 };
-
-                self.hal.apply_properties(lif.pid(), &old, &lp).await?;
-                lif.set_properties(self.version, lp)?;
-                if self.service_manager.is_nat_enabled() {
-                    if let Err(e) =
-                        self.packet_filter.update_nat(self.service_manager.get_nat_config()).await
-                    {
-                        warn!("Failed to enable nat: {:?}", e);
-                        return Err(error::NetworkManager::SERVICE(
-                            error::Service::ErrorFailedEnableNat,
-                        ));
+                if let Err(e) = self.hal.apply_properties(lif.pid(), &old, &lp).await {
+                    // TODO(cgibson): Need to roll back any partially applied configuration here.
+                    warn!("Failed to update HAL properties: {:?}; Version not incremented.", e);
+                    return Err(e);
+                }
+                if let Err(e) = lif.set_properties(self.version, lp) {
+                    // TODO(cgibson): Need to roll back any partially applied configuration here.
+                    warn!("Failed to update LIF properties: {:?}; Version not incremented.", e);
+                    return Err(e);
+                }
+                match self.update_nat_config().await {
+                    // If the result of this call was `UpdateNatPendingConfig` or `NatNotEnabled`,
+                    // then NAT is not yet ready to be enabled until we have more configuration
+                    // data.
+                    Ok(_)
+                    | Err(error::NetworkManager::SERVICE(error::Service::UpdateNatPendingConfig))
+                    | Err(error::NetworkManager::SERVICE(error::Service::NatNotEnabled)) => {}
+                    Err(e) => {
+                        // Otherwise, this was an actual error and we should not increment the
+                        // version number.
+                        error!("Failed to update NAT rules: {:?}; Version not incremented.", e);
+                        return Err(e);
                     }
                 }
                 self.version += 1;
@@ -495,6 +506,53 @@ impl DeviceState {
     /// change.
     pub fn version(&self) -> Version {
         self.version
+    }
+
+    /// `update_nat_config` updates the current NAT configuration.
+    pub async fn update_nat_config(&mut self) -> error::Result<()> {
+        self.packet_filter.update_nat_config(self.service_manager.get_nat_config()).await
+    }
+
+    /// `enable_nat` enables NAT support.
+    pub async fn enable_nat(&mut self) -> error::Result<()> {
+        if self.service_manager.is_nat_enabled() {
+            return Err(error::NetworkManager::SERVICE(error::Service::NatAlreadyEnabled));
+        }
+        if let Err(e) = self.hal.set_ip_forwarding(true).await {
+            warn!("Failed to enable IP forwarding: {:?}", e);
+            return Err(error::NetworkManager::SERVICE(
+                error::Service::ErrorEnableIpForwardingFailed,
+            ));
+        }
+        match self.packet_filter.update_nat_config(self.service_manager.get_nat_config()).await {
+            Err(error::NetworkManager::SERVICE(error::Service::NatNotEnabled)) => {
+                self.service_manager.enable_nat();
+                self.packet_filter.update_nat_config(self.service_manager.get_nat_config()).await
+            }
+            Err(e) => Err(e),
+            Ok(_) => Ok(()),
+        }
+    }
+
+    /// `disable_nat` disables NAT support.
+    pub async fn disable_nat(&mut self) -> error::Result<()> {
+        if !self.service_manager.is_nat_enabled() {
+            return Err(error::NetworkManager::SERVICE(error::Service::NatNotEnabled));
+        }
+        if let Err(e) = self.hal.set_ip_forwarding(false).await {
+            warn!("Failed to disable IP forwarding: {:?}", e);
+            return Err(error::NetworkManager::SERVICE(
+                error::Service::ErrorDisableIpForwardingFailed,
+            ));
+        }
+        self.packet_filter.clear_nat_rules().await?;
+        self.service_manager.disable_nat();
+        Ok(())
+    }
+
+    /// `is_nat_enabled` returns whether NAT is enabled or not.
+    pub fn is_nat_enabled(&self) -> bool {
+        self.service_manager.is_nat_enabled()
     }
 
     /// `set_filter` installs a new packet filter rule.

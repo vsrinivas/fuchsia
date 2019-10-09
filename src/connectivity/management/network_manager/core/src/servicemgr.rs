@@ -82,27 +82,27 @@ impl Manager {
         self.dhcp_client.contains(&lif.id().uuid)
     }
     /// `is_nat_enabled` returns true if NAT is enabled.
-    pub fn is_nat_enabled(&mut self) -> bool {
+    pub(crate) fn is_nat_enabled(&self) -> bool {
         self.security.nat.enable
     }
-    /// `enable_nat` method indicates that NAT is now enabled.
-    pub fn enable_nat(&mut self) {
+    /// `enable_nat` sets the NAT state to enabled.
+    pub(crate) fn enable_nat(&mut self) {
         self.security.nat.enable = true;
     }
-    /// `disable_nat` method indicates that NAT is now disabled.
-    pub fn disable_nat(&mut self) {
+    /// `disable_nat` sets the NAT state to disabled.
+    pub(crate) fn disable_nat(&mut self) {
         self.security.nat.enable = false;
     }
     /// `get_nat_config` returns the current NAT configuration.
-    pub fn get_nat_config(&mut self) -> &mut NatConfig {
+    pub(crate) fn get_nat_config(&mut self) -> &mut NatConfig {
         &mut self.security.nat
     }
     /// `set_local_subnet_nat` sets the local subnet to be NATed.
-    pub fn set_local_subnet_nat(&mut self, s: LifIpAddr) {
+    pub(crate) fn set_local_subnet_nat(&mut self, s: LifIpAddr) {
         self.security.nat.local_subnet = Some(s);
     }
     /// `set_global_ip_nat` sets the global IP to be NATed.
-    pub fn set_global_ip_nat(&mut self, g: LifIpAddr, p: PortId) {
+    pub(crate) fn set_global_ip_nat(&mut self, g: LifIpAddr, p: PortId) {
         self.security.nat.global_ip = Some(g);
         self.security.nat.pid = Some(p);
     }

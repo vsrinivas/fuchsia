@@ -12,7 +12,7 @@ use fidl_fuchsia_overnet_protocol::NodeId;
 use fidl_fuchsia_router_config::{
     Credentials, FilterAction, FilterRule, FlowSelector, Id, L2tp, LanProperties, PortRange, Pppoe,
     Pptp, Protocol, RouterAdminMarker, RouterAdminProxy, RouterStateMarker, RouterStateProxy,
-    WanConnection, WanProperties,
+    SecurityFeatures, WanConnection, WanProperties,
 };
 use fuchsia_async::{self as fasync};
 use fuchsia_component::client::connect_to_service;
@@ -321,6 +321,13 @@ async fn do_show<T: Write>(
 
         Show::Routes {} => {
             let response = router_state.get_routes().await.context("error getting response")?;
+            printer.println(format!("Response: {:?}", response));
+            Ok(())
+        }
+
+        Show::Security {} => {
+            let response =
+                router_state.get_security_features().await.context("error getting response")?;
             printer.println(format!("Response: {:?}", response));
             Ok(())
         }
@@ -676,8 +683,34 @@ async fn do_set<T: Write>(
             Ok(())
         }
 
-        Set::SecurityConfig { feature } => {
-            printer.println(format!("Not Implemented {:?}", feature));
+        Set::SecurityConfig { feature, enabled } => {
+            let mut security_features = SecurityFeatures {
+                pptp_passthru: None,
+                l2_tp_passthru: None,
+                ipsec_passthru: None,
+                rtsp_passthru: None,
+                h323_passthru: None,
+                sip_passthru: None,
+                allow_multicast: None,
+                nat: None,
+                firewall: None,
+                v6_firewall: None,
+                upnp: None,
+                drop_icmp_echo: None,
+            };
+            printer.println(format!(
+                "Setting security feature: {:?}, enabled: {:?}",
+                feature, enabled
+            ));
+            match feature {
+                SecurityFeature::NAT => security_features.nat = Some(enabled),
+                // TODO(cgibson): Support more security features.
+            }
+            let response = router_admin
+                .set_security_features(security_features)
+                .await
+                .context("error getting response")?;
+            printer.println(format!("Response: {:?}", response));
             Ok(())
         }
 

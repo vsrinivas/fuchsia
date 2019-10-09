@@ -34,9 +34,10 @@
 //! * Updates local state.
 
 use failure::{bail, Error, ResultExt};
-use fidl_fuchsia_router_config::RouterAdminRequest;
-use fidl_fuchsia_router_config::{Id, Lif, Port};
-use fidl_fuchsia_router_config::{RouterStateGetPortsResponder, RouterStateRequest};
+use fidl_fuchsia_router_config::{
+    Id, Lif, Port, RouterAdminRequest, RouterStateGetPortsResponder, RouterStateRequest,
+    SecurityFeatures,
+};
 use futures::channel::mpsc;
 use futures::prelude::*;
 use network_manager_core::{
@@ -282,8 +283,11 @@ impl EventLoop {
                 responder.send(not_supported!())
             }
             RouterAdminRequest::SetSecurityFeatures { features, responder } => {
-                info!("{:?}", features);
-                responder.send(not_supported!())
+                info!("Updating SecurityFeatures: {:?}", features);
+                match self.update_security_features(&features).await {
+                    Ok(_) => responder.send(None),
+                    Err(e) => responder.send(internal_error!(e.to_string())),
+                }
             }
             RouterAdminRequest::SetPortForward { rule, responder } => {
                 info!("{:?}", rule);
@@ -383,6 +387,21 @@ impl EventLoop {
             }
             Ok(()) => None,
         }
+    }
+
+    async fn update_security_features(
+        &mut self,
+        security_features: &SecurityFeatures,
+    ) -> Result<(), Error> {
+        if let Some(nat) = security_features.nat {
+            if nat {
+                self.device.enable_nat().await?;
+            } else {
+                self.device.disable_nat().await?;
+            }
+        }
+        // TODO(cgibson): Handle additional SecurityFeatures.
+        Ok(())
     }
 
     async fn handle_fidl_router_state_request(&mut self, req: RouterStateRequest) {
@@ -540,21 +559,21 @@ impl EventLoop {
                 responder.send(None, not_supported!())
             }
             RouterStateRequest::GetSecurityFeatures { responder } => {
-                let security = fidl_fuchsia_router_config::SecurityFeatures {
+                let security_features = fidl_fuchsia_router_config::SecurityFeatures {
                     allow_multicast: None,
                     drop_icmp_echo: None,
                     firewall: None,
                     h323_passthru: None,
                     ipsec_passthru: None,
                     l2_tp_passthru: None,
-                    nat: None,
+                    nat: Some(self.device.is_nat_enabled()),
                     pptp_passthru: None,
                     rtsp_passthru: None,
                     sip_passthru: None,
                     upnp: None,
                     v6_firewall: None,
                 };
-                responder.send(security)
+                responder.send(security_features)
             }
             RouterStateRequest::GetPortForwards { responder } => responder.send(&mut [].iter_mut()),
             RouterStateRequest::GetPortForward { rule_id, responder } => {

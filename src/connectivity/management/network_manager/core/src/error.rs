@@ -45,6 +45,11 @@ impl From<Hal> for NetworkManager {
         NetworkManager::HAL(e)
     }
 }
+impl From<Service> for NetworkManager {
+    fn from(e: Service) -> Self {
+        NetworkManager::SERVICE(e)
+    }
+}
 impl From<Context<&'static str>> for NetworkManager {
     fn from(inner: Context<&'static str>) -> Self {
         NetworkManager::INTERNAL(ErrorWithDetail { inner: Context::new(inner.to_string()) })
@@ -104,8 +109,18 @@ pub enum Service {
     ErrorAddingPacketFilterRules,
     #[fail(display = "Failed to get packet filter rules")]
     ErrorGettingPacketFilterRules,
-    #[fail(display = "Failed to enable NAT")]
-    ErrorFailedEnableNat,
+    #[fail(display = "Failed to enable IP forwarding")]
+    ErrorEnableIpForwardingFailed,
+    #[fail(display = "Failed to disable IP forwarding")]
+    ErrorDisableIpForwardingFailed,
+    #[fail(display = "Failed to update NAT rules")]
+    ErrorUpdateNatFailed,
+    #[fail(display = "Pending further config to update NAT rules")]
+    UpdateNatPendingConfig,
+    #[fail(display = "NAT is already enabled")]
+    NatAlreadyEnabled,
+    #[fail(display = "NAT is not enabled")]
+    NatNotEnabled,
     #[fail(display = "Service is not supported")]
     NotSupported,
 }
