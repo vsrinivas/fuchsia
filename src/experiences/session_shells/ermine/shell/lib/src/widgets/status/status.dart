@@ -4,7 +4,7 @@
 
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:flutter/material.dart';
-import 'package:internationalization/strings.dart' as strings;
+import 'package:internationalization/strings.dart';
 import 'package:quickui/uistream.dart';
 
 import '../../models/status_model.dart';
@@ -219,11 +219,11 @@ class _ManualStatusEntry extends StatelessWidget {
       height: kRowHeight,
       child: Row(
         children: <Widget>[
-          _buildButton(strings.restart(), model.restartDevice),
+          _buildButton(Strings.restart, model.restartDevice),
           Padding(padding: EdgeInsets.only(right: kPadding)),
-          _buildButton(strings.shutdown(), model.shutdownDevice),
+          _buildButton(Strings.shutdown, model.shutdownDevice),
           Spacer(),
-          _buildButton(strings.settings(), model.launchSettings),
+          _buildButton(Strings.settings, model.launchSettings),
         ],
       ),
     );

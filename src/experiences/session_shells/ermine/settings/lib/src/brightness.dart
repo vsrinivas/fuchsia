@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:fidl_fuchsia_ui_brightness/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:fuchsia_services/services.dart' show StartupContext;
-import 'package:internationalization/strings.dart' as strings;
+import 'package:internationalization/strings.dart';
 import 'package:quickui/quickui.dart';
 
 /// Defines a [UiSpec] for controlling screen brightness.
@@ -30,8 +30,8 @@ class Brightness extends UiSpec {
   static const autoAction = 2;
 
   // Localized strings.
-  static String get _title => strings.brightness();
-  static String get _auto => strings.auto();
+  static String get _title => Strings.brightness;
+  static String get _auto => Strings.auto;
 
   _BrightnessModel _model;
 

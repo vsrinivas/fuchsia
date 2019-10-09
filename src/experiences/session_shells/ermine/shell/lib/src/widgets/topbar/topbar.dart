@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
-import 'package:internationalization/strings.dart' as strings;
+import 'package:internationalization/strings.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/topbar_model.dart';
@@ -37,7 +37,7 @@ class Topbar extends StatelessWidget {
               children: <Widget>[
                 // Overview.
                 Button(
-                  child: Text(strings.overview().toUpperCase()),
+                  child: Text(Strings.overview.toUpperCase()),
                   decoration: BoxDecoration(
                     border: Border(
                       right: BorderSide(
@@ -50,7 +50,7 @@ class Topbar extends StatelessWidget {
                 ),
                 // Recents.
                 Button(
-                  child: Text(strings.recents().toUpperCase()),
+                  child: Text(Strings.recents.toUpperCase()),
                   decoration: BoxDecoration(
                     border: Border(
                       right: BorderSide(
@@ -88,7 +88,7 @@ class Topbar extends StatelessWidget {
                 // Ask.
                 Button(
                   key: model.askButtonKey,
-                  child: Text(strings.ask().toUpperCase()),
+                  child: Text(Strings.ask.toUpperCase()),
                   decoration: BoxDecoration(
                     border: Border(
                       left: BorderSide(

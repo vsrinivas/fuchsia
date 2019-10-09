@@ -9,13 +9,13 @@ import 'package:flutter/material.dart';
 import 'package:fidl_fuchsia_power/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:fuchsia_services/services.dart' show StartupContext;
-import 'package:internationalization/strings.dart' as strings;
+import 'package:internationalization/strings.dart';
 import 'package:quickui/quickui.dart';
 
 /// Defines a [UiSpec] for visualizing battery.
 class Battery extends UiSpec {
   // Localized strings.
-  static String get _title => strings.battery();
+  static String get _title => Strings.battery;
 
   static const _checkBatteryDuration = Duration(seconds: 1);
 

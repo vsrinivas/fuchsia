@@ -10,14 +10,12 @@ import 'package:flutter/material.dart';
 import 'package:fidl_fuchsia_memory/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:fuchsia_services/services.dart' show StartupContext;
-import 'package:internationalization/strings.dart' as strings;
+import 'package:internationalization/strings.dart';
 import 'package:quickui/quickui.dart';
 
 /// Defines a [UiSpec] for visualizing memory.
 class Memory extends UiSpec {
-
-  // Localized strings.
-  static String get _memory => strings.memory();
+  static String get _memory => Strings.memory;
 
   MemoryModel model;
 
