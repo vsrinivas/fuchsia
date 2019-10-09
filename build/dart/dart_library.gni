@@ -7,7 +7,6 @@ import("//build/dart/dart.gni")
 import("//build/dart/toolchain.gni")
 import("//build/json/validate_json.gni")
 import("//build/sdk/sdk_atom.gni")
-import("//third_party/flutter/lib/ui/dart_ui.gni")
 
 declare_args() {
   # Enable all dart analysis
