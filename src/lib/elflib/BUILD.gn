@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 
 # A collection of utilities useful to debuggers and similar programs.
@@ -67,4 +68,17 @@ test("elflib_tests") {
   data_deps = [
     ":copy_example_elf",
   ]
+}
+
+fuzzer("elflib_fuzzer") {
+  sources = [
+    "elflib_fuzztest.cc",
+  ]
+  deps = [
+    ":elflib",
+  ]
+}
+
+fuzzers_package("elflib_fuzzers") {
+  fuzzers = [ ":elflib_fuzzer" ]
 }
