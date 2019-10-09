@@ -43,6 +43,7 @@ void GuestDiscoveryServiceImpl::GetGuest(
                   if (!find_guest_ids(realm_name.value_or(fuchsia::netemul::guest::DEFAULT_REALM),
                                       guest_name, realm_infos, &guest_info)) {
                     completer.complete_error();
+                    return;
                   }
                   completer.complete_ok(guest_info);
                 });
@@ -55,7 +56,7 @@ void GuestDiscoveryServiceImpl::GetGuest(
             auto gis = guests_.find(guest_info);
             if (gis != guests_.end()) {
               gis->second->AddBinding(std::move(request));
-              return fit::make_promise([]() { return fit::ok(); });
+              return fit::make_ok_promise();
             }
 
             // If this is the first time that the requested guest has been discovered, connect to
@@ -70,7 +71,7 @@ void GuestDiscoveryServiceImpl::GetGuest(
             zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
 
             if (status != ZX_OK) {
-              return fit::make_promise([]() { return fit::error(); });
+              return fit::make_error_promise();
             }
 
             fit::bridge<void> bridge;
@@ -80,6 +81,7 @@ void GuestDiscoveryServiceImpl::GetGuest(
                          ep = std::move(ep)](zx_status_t status) mutable {
                           if (status != ZX_OK) {
                             completer.complete_error();
+                            return;
                           }
                           guests_.emplace(
                               guest_info,
