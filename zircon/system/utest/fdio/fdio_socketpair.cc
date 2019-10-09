@@ -296,6 +296,7 @@ int send_thread(void* arg) {
   return 0;
 }
 
+/* TODO(fxb/37892): Fix flakiness and re-enable.
 TEST(SocketpairTest, ShutdownSelfWriteDuringSend) {
   int fds[2];
   int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
@@ -324,7 +325,9 @@ TEST(SocketpairTest, ShutdownSelfWriteDuringSend) {
   EXPECT_EQ(send_args.send_result, -1, "send should have returned -1");
   EXPECT_EQ(send_args.send_errno, EPIPE, "send should have set errno to EPIPE");
 }
+*/
 
+/* TODO(fxb/37892): Fix flakiness and re-enable.
 TEST(SocketpairTest, ShutdownPeerReadDuringSend) {
   int fds[2];
   int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
@@ -352,6 +355,7 @@ TEST(SocketpairTest, ShutdownPeerReadDuringSend) {
   EXPECT_EQ(send_args.send_result, -1, "send should have returned -1");
   EXPECT_EQ(send_args.send_errno, EPIPE, "send should have set errno to EPIPE");
 }
+*/
 
 TEST(SocketpairTest, CloneOrUnwrapAndWrap) {
   int fds[2];
