@@ -6,6 +6,7 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/sdmmc.h>
 #include <hw/reg.h>
 #include <soc/aml-a113/a113-hw.h>
 #include <soc/aml-common/aml-sd-emmc.h>
@@ -44,8 +45,9 @@ static aml_sd_emmc_config_t config = {
     // As per AMlogic, on S912 chipset, HS400 mode can be operated at 125MHZ or low.
     .supports_dma = true,
     .min_freq = 400000,
-    .max_freq = 120000000,
+    .max_freq = 100000000,
     .version_3 = false,
+    .prefs = 0,
     .clock_phases =
         {
             .init = {.core_phase = 2, .tx_phase = 0},

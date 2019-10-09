@@ -43,8 +43,9 @@ static const pbus_bti_t aml_sd_emmc_btis[] = {
 static aml_sd_emmc_config_t config = {
     .supports_dma = true,
     .min_freq = 400000,
-    .max_freq = 100000000,
+    .max_freq = 200000000,
     .version_3 = false,
+    .prefs = 0,
     .clock_phases =
         {
             .init = {.core_phase = 2, .tx_phase = 0},

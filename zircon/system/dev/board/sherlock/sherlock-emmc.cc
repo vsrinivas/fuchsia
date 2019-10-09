@@ -8,6 +8,7 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/gpt.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/sdmmc.h>
 #include <hw/reg.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/handle.h>
@@ -48,6 +49,7 @@ static aml_sd_emmc_config_t config = {
     .min_freq = 400000,
     .max_freq = 120000000,
     .version_3 = true,
+    .prefs = SDMMC_HOST_PREFS_DISABLE_HS400,
     .clock_phases =
         {
             .init = {.core_phase = 3, .tx_phase = 0},

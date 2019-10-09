@@ -29,6 +29,7 @@ driver("vim2") {
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.scpi",
+    "$zx/system/banjo/ddk.protocol.sdmmc",
     "$zx/system/banjo/ddk.protocol.serial",
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/broadcom",

@@ -34,6 +34,7 @@ class TestAmlSdEmmc : public AmlSdEmmc {
                       .min_freq = 400000,
                       .max_freq = 120000000,
                       .version_3 = true,
+                      .prefs = 0,
                       .clock_phases =
                           {
                               .init = {.core_phase = 3, .tx_phase = 0},
@@ -79,8 +80,25 @@ class TestAmlSdEmmc : public AmlSdEmmc {
           return ZX_ERR_CANCELED;
         }
         if (cur_req_ != nullptr) {
-          // Indicate that the request completed successfully.
-          mmio_.Write32(1 << 13, kAmlSdEmmcStatusOffset);
+          if (request_index_ < request_results_.size() && request_results_[request_index_] == 0) {
+            // Indicate a receive CRC error.
+            mmio_.Write32(1, kAmlSdEmmcStatusOffset);
+
+            successful_transfers_ = 0;
+            request_index_++;
+          } else {
+            // Indicate that the request completed successfully.
+            mmio_.Write32(1 << 13, kAmlSdEmmcStatusOffset);
+
+            // Each tuning transfer is attempted five times with a short-circuit if one fails.
+            // Report every successful transfer five times to make the results arrays easier to
+            // follow.
+            if (++successful_transfers_ % AML_SD_EMMC_TUNING_TEST_ATTEMPTS == 0) {
+              successful_transfers_ = 0;
+              request_index_++;
+            }
+          }
+
           return ZX_OK;
         } else if (spurious_interrupt_) {
           spurious_interrupt_ = false;
@@ -139,12 +157,20 @@ class TestAmlSdEmmc : public AmlSdEmmc {
     return running_;
   }
 
+  void SetRequestResults(const std::vector<uint8_t>& request_results) {
+    request_results_ = request_results;
+    request_index_ = 0;
+  }
+
  private:
   bool running_ TA_GUARDED(mtx_) = true;
   bool spurious_interrupt_ TA_GUARDED(mtx_) = false;
   bool wait_for_interrupt_called_ TA_GUARDED(mtx_) = false;
   cnd_t wait_for_interrupt_condition_ TA_GUARDED(mtx_);
   cnd_t spurious_interrupt_received_;
+  std::vector<uint8_t> request_results_;
+  size_t request_index_ = 0;
+  uint32_t successful_transfers_ = 0;
 };
 
 class AmlSdEmmcTest : public zxtest::Test {
@@ -207,6 +233,7 @@ TEST_F(AmlSdEmmcTest, TuningV3) {
       .min_freq = 400000,
       .max_freq = 120000000,
       .version_3 = true,
+      .prefs = 0,
       .clock_phases =
           {
               .init = {.core_phase = 3, .tx_phase = 0},
@@ -235,8 +262,6 @@ TEST_F(AmlSdEmmcTest, TuningV3) {
 
   EXPECT_EQ(adjust.adj_fixed(), 1);
   EXPECT_EQ(adjust.adj_delay(), 0);
-  EXPECT_EQ(adjust_v2.adj_fixed(), 0);
-  EXPECT_EQ(adjust_v2.adj_delay(), 0x3f);
 }
 
 TEST_F(AmlSdEmmcTest, TuningV2) {
@@ -245,6 +270,7 @@ TEST_F(AmlSdEmmcTest, TuningV2) {
       .min_freq = 400000,
       .max_freq = 120000000,
       .version_3 = false,
+      .prefs = 0,
       .clock_phases =
           {
               .init = {.core_phase = 3, .tx_phase = 0},
@@ -273,8 +299,205 @@ TEST_F(AmlSdEmmcTest, TuningV2) {
 
   EXPECT_EQ(adjust_v2.adj_fixed(), 1);
   EXPECT_EQ(adjust_v2.adj_delay(), 0);
-  EXPECT_EQ(adjust.adj_fixed(), 0);
-  EXPECT_EQ(adjust.adj_delay(), 0x3f);
+}
+
+TEST_F(AmlSdEmmcTest, TuningAllPass) {
+  auto clock = AmlSdEmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+  auto adjust = AmlSdEmmcAdjust::Get().FromValue(0).set_adj_delay(0x3f).WriteTo(&mmio_);
+  auto delay1 = AmlSdEmmcDelay1::Get().FromValue(0).WriteTo(&mmio_);
+  auto delay2 = AmlSdEmmcDelay2::Get().FromValue(0).WriteTo(&mmio_);
+
+  ASSERT_OK(dut_->Init());
+  EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
+
+  clock.ReadFrom(&mmio_);
+  adjust.ReadFrom(&mmio_);
+  delay1.ReadFrom(&mmio_);
+  delay2.ReadFrom(&mmio_);
+
+  EXPECT_EQ(clock.cfg_co_phase(), 2);
+  EXPECT_EQ(clock.cfg_tx_phase(), 0);
+  EXPECT_EQ(adjust.adj_delay(), 0);
+  EXPECT_EQ(delay1.dly_0(), 32);
+  EXPECT_EQ(delay1.dly_1(), 32);
+  EXPECT_EQ(delay1.dly_2(), 32);
+  EXPECT_EQ(delay1.dly_3(), 32);
+  EXPECT_EQ(delay1.dly_4(), 32);
+  EXPECT_EQ(delay2.dly_5(), 32);
+  EXPECT_EQ(delay2.dly_6(), 32);
+  EXPECT_EQ(delay2.dly_7(), 32);
+  EXPECT_EQ(delay2.dly_8(), 32);
+  EXPECT_EQ(delay2.dly_9(), 32);
+}
+
+TEST_F(AmlSdEmmcTest, AdjDelayTuningNoWindowWrap) {
+  // clang-format off
+  dut_->SetRequestResults({
+    /*
+    0  1  2  3  4  5  6  7  8  9
+    */
+
+    0, 0, 1, 1, 1, 1, 1, 1, 0, 0,  // Phase 0
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  // Phase 1
+    0, 0, 0, 1, 1, 1, 1, 1, 1, 1,  // Phase 3
+  });
+  // clang-format on
+
+  auto clock = AmlSdEmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+  auto adjust = AmlSdEmmcAdjust::Get().FromValue(0).set_adj_delay(0x3f).WriteTo(&mmio_);
+
+  ASSERT_OK(dut_->Init());
+  EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
+
+  clock.ReadFrom(&mmio_);
+  adjust.ReadFrom(&mmio_);
+
+  EXPECT_EQ(clock.cfg_co_phase(), 2);
+  EXPECT_EQ(clock.cfg_tx_phase(), 3);
+  EXPECT_EQ(adjust.adj_delay(), 6);
+}
+
+TEST_F(AmlSdEmmcTest, AdjDelayTuningWindowWrap) {
+  // clang-format off
+  dut_->SetRequestResults({
+    /*
+    0  1  2  3  4  5  6  7  8  9
+    */
+
+    0, 1, 1, 0, 0, 1, 1, 1, 1, 0,  // Phase 0
+    1, 1, 1, 0, 0, 0, 0, 1, 1, 1,  // Phase 1
+    0, 0, 0, 1, 1, 1, 1, 1, 0, 0,  // Phase 3
+  });
+  // clang-format on
+
+  auto clock = AmlSdEmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+  auto adjust = AmlSdEmmcAdjust::Get().FromValue(0).set_adj_delay(0x3f).WriteTo(&mmio_);
+
+  ASSERT_OK(dut_->Init());
+  EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
+
+  clock.ReadFrom(&mmio_);
+  adjust.ReadFrom(&mmio_);
+
+  EXPECT_EQ(clock.cfg_co_phase(), 2);
+  EXPECT_EQ(clock.cfg_tx_phase(), 1);
+  EXPECT_EQ(adjust.adj_delay(), 0);
+}
+
+TEST_F(AmlSdEmmcTest, AdjDelayTuningAllFail) {
+  // clang-format off
+  dut_->SetRequestResults({
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  });
+  // clang-format on
+
+  AmlSdEmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+
+  ASSERT_OK(dut_->Init());
+  EXPECT_NOT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
+}
+
+TEST_F(AmlSdEmmcTest, DelayLineTuningNoWindowWrap) {
+  // clang-format off
+  dut_->SetRequestResults({
+    /*
+     0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+    32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63
+    */
+
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  // Phase 0
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  // Phase 1
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  // Phase 2
+
+    // Best window: start 12, size 10, delay 17.
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+  });
+  // clang-format on
+
+  AmlSdEmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+  auto delay1 = AmlSdEmmcDelay1::Get().FromValue(0).WriteTo(&mmio_);
+  auto delay2 = AmlSdEmmcDelay2::Get().FromValue(0).WriteTo(&mmio_);
+
+  ASSERT_OK(dut_->Init());
+  EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
+
+  delay1.ReadFrom(&mmio_);
+  delay2.ReadFrom(&mmio_);
+
+  EXPECT_EQ(delay1.dly_0(), 17);
+  EXPECT_EQ(delay1.dly_1(), 17);
+  EXPECT_EQ(delay1.dly_2(), 17);
+  EXPECT_EQ(delay1.dly_3(), 17);
+  EXPECT_EQ(delay1.dly_4(), 17);
+  EXPECT_EQ(delay2.dly_5(), 17);
+  EXPECT_EQ(delay2.dly_6(), 17);
+  EXPECT_EQ(delay2.dly_7(), 17);
+  EXPECT_EQ(delay2.dly_8(), 17);
+  EXPECT_EQ(delay2.dly_9(), 17);
+}
+
+TEST_F(AmlSdEmmcTest, DelayLineTuningWindowWrap) {
+  // clang-format off
+  dut_->SetRequestResults({
+    /*
+     0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+    32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63
+    */
+
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  // Phase 0
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  // Phase 1
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  // Phase 2
+
+    // Best window: start 54, size 25, delay 2.
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  });
+  // clang-format on
+
+  AmlSdEmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+  auto delay1 = AmlSdEmmcDelay1::Get().FromValue(0).WriteTo(&mmio_);
+  auto delay2 = AmlSdEmmcDelay2::Get().FromValue(0).WriteTo(&mmio_);
+
+  ASSERT_OK(dut_->Init());
+  EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
+
+  delay1.ReadFrom(&mmio_);
+  delay2.ReadFrom(&mmio_);
+
+  EXPECT_EQ(delay1.dly_0(), 2);
+  EXPECT_EQ(delay1.dly_1(), 2);
+  EXPECT_EQ(delay1.dly_2(), 2);
+  EXPECT_EQ(delay1.dly_3(), 2);
+  EXPECT_EQ(delay1.dly_4(), 2);
+  EXPECT_EQ(delay2.dly_5(), 2);
+  EXPECT_EQ(delay2.dly_6(), 2);
+  EXPECT_EQ(delay2.dly_7(), 2);
+  EXPECT_EQ(delay2.dly_8(), 2);
+  EXPECT_EQ(delay2.dly_9(), 2);
+}
+
+TEST_F(AmlSdEmmcTest, DelayLineTuningAllFail) {
+  // clang-format off
+  dut_->SetRequestResults({
+
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  // Phase 0
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  // Phase 1
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  // Phase 2
+
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+  });
+  // clang-format on
+
+  AmlSdEmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+
+  ASSERT_OK(dut_->Init());
+  EXPECT_NOT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
 }
 
 TEST_F(AmlSdEmmcTest, SpuriousInterrupt) {

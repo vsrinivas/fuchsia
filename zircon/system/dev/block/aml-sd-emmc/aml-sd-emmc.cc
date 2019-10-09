@@ -225,8 +225,13 @@ int AmlSdEmmc::IrqThread() {
       continue;
     }
     if (status_irq.resp_err()) {
-      AML_SD_EMMC_ERROR("Response CRC Error, cmd%d, status=0x%x\n", cur_req_->cmd_idx,
-                        status_irq.reg_value());
+      if (cur_req_->probe_tuning_cmd) {
+        AML_SD_EMMC_TRACE("Response CRC Error, cmd%d, status=0x%x\n", cur_req_->cmd_idx,
+                          status_irq.reg_value());
+      } else {
+        AML_SD_EMMC_ERROR("Response CRC Error, cmd%d, status=0x%x\n", cur_req_->cmd_idx,
+                          status_irq.reg_value());
+      }
       status = ZX_ERR_IO_DATA_INTEGRITY;
       continue;
     }
@@ -285,6 +290,7 @@ int AmlSdEmmc::IrqThread() {
 }
 
 zx_status_t AmlSdEmmc::SdmmcHostInfo(sdmmc_host_info_t* info) {
+  dev_info_.prefs = board_config_.prefs;
   memcpy(info, &dev_info_, sizeof(dev_info_));
   return ZX_OK;
 }
@@ -332,7 +338,8 @@ zx_status_t AmlSdEmmc::SdmmcSetBusFreq(uint32_t freq) {
     clk_src = AmlSdEmmcClock::kFClkDiv2Src;
     clk = AmlSdEmmcClock::kFClkDiv2Freq;
   }
-  clk_div = clk / freq;
+  // Round the divider up so the frequency is rounded down.
+  clk_div = (clk + freq - 1) / freq;
   AmlSdEmmcClock::Get().ReadFrom(&mmio_).set_cfg_div(clk_div).set_cfg_src(clk_src).WriteTo(&mmio_);
   return ZX_OK;
 }
@@ -734,14 +741,14 @@ zx_status_t AmlSdEmmc::SdmmcRequest(sdmmc_req_t* req) {
   return req->status;
 }
 
-zx_status_t AmlSdEmmc::TuningDoTransfer(uint8_t* tuning_res, uint16_t blk_pattern_size,
+zx_status_t AmlSdEmmc::TuningDoTransfer(uint8_t* tuning_res, size_t blk_pattern_size,
                                         uint32_t tuning_cmd_idx) {
   sdmmc_req_t tuning_req = {};
   tuning_req.cmd_idx = tuning_cmd_idx;
   tuning_req.cmd_flags = MMC_SEND_TUNING_BLOCK_FLAGS;
   tuning_req.arg = 0;
   tuning_req.blockcount = 1;
-  tuning_req.blocksize = blk_pattern_size;
+  tuning_req.blocksize = static_cast<uint16_t>(blk_pattern_size);
   tuning_req.use_dma = false;
   tuning_req.virt_buffer = tuning_res;
   tuning_req.virt_size = blk_pattern_size;
@@ -749,71 +756,61 @@ zx_status_t AmlSdEmmc::TuningDoTransfer(uint8_t* tuning_res, uint16_t blk_patter
   return AmlSdEmmc::SdmmcRequest(&tuning_req);
 }
 
-bool AmlSdEmmc::TuningTestDelay(const uint8_t* blk_pattern, uint16_t blk_pattern_size,
-                                uint32_t adj_delay, uint32_t tuning_cmd_idx) {
-  SetAdjDelay(adj_delay);
+bool AmlSdEmmc::TuningTestSettings(fbl::Span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx) {
   zx_status_t status = ZX_OK;
   size_t n;
-  for (n = 0; n < AML_SD_EMMC_ADJ_DELAY_TEST_ATTEMPTS; n++) {
+  for (n = 0; n < AML_SD_EMMC_TUNING_TEST_ATTEMPTS; n++) {
     uint8_t tuning_res[512] = {0};
-    status = TuningDoTransfer(tuning_res, blk_pattern_size, tuning_cmd_idx);
-    if (status != ZX_OK || memcmp(blk_pattern, tuning_res, blk_pattern_size)) {
+    status = TuningDoTransfer(tuning_res, tuning_blk.size(), tuning_cmd_idx);
+    if (status != ZX_OK || memcmp(tuning_blk.data(), tuning_res, tuning_blk.size())) {
       break;
     }
   }
-  return (n == AML_SD_EMMC_ADJ_DELAY_TEST_ATTEMPTS);
+  return (n == AML_SD_EMMC_TUNING_TEST_ATTEMPTS);
 }
 
-zx_status_t AmlSdEmmc::TuningCalculateBestWindow(const uint8_t* tuning_blk,
-                                                 uint16_t tuning_blk_size, uint32_t cur_clk_div,
-                                                 int* best_start, uint32_t* best_size,
-                                                 uint32_t tuning_cmd_idx) {
-  int cur_win_start = -1, best_win_start = -1;
-  uint32_t cycle_begin_win_size = 0, cur_win_size = 0, best_win_size = 0;
+template <typename SetParamCallback>
+AmlSdEmmc::TuneWindow AmlSdEmmc::TuneDelayParam(fbl::Span<const uint8_t> tuning_blk,
+                                                uint32_t tuning_cmd_idx, uint32_t param_max,
+                                                SetParamCallback& set_param) {
+  TuneWindow best_window, current_window;
+  uint32_t first_size = 0;
 
-  for (uint32_t adj_delay = 0; adj_delay < cur_clk_div; adj_delay++) {
-    if (TuningTestDelay(tuning_blk, tuning_blk_size, adj_delay, tuning_cmd_idx)) {
-      if (cur_win_start < 0) {
-        cur_win_start = static_cast<int>(adj_delay);
+  char tuning_results[fbl::max(AmlSdEmmcClock::kMaxClkDiv, AmlSdEmmcClock::kMaxDelay) + 2];
+
+  for (uint32_t param = 0; param <= param_max; param++) {
+    set_param(param);
+
+    if (TuningTestSettings(tuning_blk, tuning_cmd_idx)) {
+      tuning_results[param] = '|';
+
+      current_window.size++;
+      if (current_window.start == 0) {
+        first_size = current_window.size;
       }
-      cur_win_size++;
     } else {
-      if (cur_win_start >= 0) {
-        if (best_win_start < 0) {
-          best_win_start = cur_win_start;
-          best_win_size = cur_win_size;
-        } else if (best_win_size < cur_win_size) {
-          best_win_start = cur_win_start;
-          best_win_size = cur_win_size;
-        }
-        if (cur_win_start == 0) {
-          cycle_begin_win_size = cur_win_size;
-        }
-        cur_win_start = -1;
-        cur_win_size = 0;
+      tuning_results[param] = '-';
+
+      if (current_window.size > best_window.size) {
+        best_window = current_window;
       }
-    }
-  }
-  // Last delay is good
-  if (cur_win_start >= 0) {
-    if (best_win_start < 0) {
-      best_win_start = cur_win_start;
-      best_win_size = cur_win_size;
-    } else if (cycle_begin_win_size > 0) {
-      // Combine the cur window with the window starting next cycle
-      if (cur_win_size + cycle_begin_win_size > best_win_size) {
-        best_win_start = cur_win_start;
-        best_win_size = cur_win_size + cycle_begin_win_size;
-      }
-    } else if (best_win_size < cur_win_size) {
-      best_win_start = cur_win_start;
-      best_win_size = cur_win_size;
+
+      current_window = {param + 1, 0};
     }
   }
 
-  *best_start = best_win_start;
-  *best_size = best_win_size;
-  return ZX_OK;
+  tuning_results[param_max + 1] = '\0';
+
+  if (current_window.start == 0) {
+    best_window = {0, param_max + 1};
+  } else if (current_window.size + first_size > best_window.size) {
+    // Combine the last window with the first window.
+    best_window = {current_window.start, current_window.size + first_size};
+  }
+
+  AML_SD_EMMC_INFO("Tuning results: %s\n", tuning_results);
+
+  return best_window;
 }
 
 void AmlSdEmmc::SetAdjDelay(uint32_t adj_delay) {
@@ -826,67 +823,126 @@ void AmlSdEmmc::SetAdjDelay(uint32_t adj_delay) {
   }
 }
 
+void AmlSdEmmc::SetDelayLines(uint32_t delay) {
+  if (board_config_.version_3) {
+    AmlSdEmmcDelay1::Get()
+        .ReadFrom(&mmio_)
+        .set_dly_0(delay)
+        .set_dly_1(delay)
+        .set_dly_2(delay)
+        .set_dly_3(delay)
+        .set_dly_4(delay)
+        .WriteTo(&mmio_);
+    AmlSdEmmcDelay2::Get()
+        .ReadFrom(&mmio_)
+        .set_dly_5(delay)
+        .set_dly_6(delay)
+        .set_dly_7(delay)
+        .set_dly_8(delay)
+        .set_dly_9(delay)
+        .WriteTo(&mmio_);
+  } else {
+    AmlSdEmmcDelayV2::Get()
+        .ReadFrom(&mmio_)
+        .set_dly_0(delay)
+        .set_dly_1(delay)
+        .set_dly_2(delay)
+        .set_dly_3(delay)
+        .set_dly_4(delay)
+        .set_dly_5(delay)
+        .set_dly_6(delay)
+        .set_dly_7(delay)
+        .WriteTo(&mmio_);
+    AmlSdEmmcAdjustV2::Get().ReadFrom(&mmio_).set_dly_8(delay).set_dly_9(delay).WriteTo(&mmio_);
+  }
+}
+
+uint32_t AmlSdEmmc::max_delay() const {
+  return board_config_.version_3 ? AmlSdEmmcClock::kMaxDelay : AmlSdEmmcClock::kMaxDelayV2;
+}
+
 zx_status_t AmlSdEmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
-  const uint8_t* tuning_blk;
-  uint16_t tuning_blk_size = 0;
-  int best_win_start = -1;
-  uint32_t best_win_size = 0;
-  uint32_t tries = 0;
+  fbl::Span<const uint8_t> tuning_blk;
 
   uint32_t bw = AmlSdEmmcCfg::Get().ReadFrom(&mmio_).bus_width();
   if (bw == AmlSdEmmcCfg::kBusWidth4Bit) {
-    tuning_blk = aml_sd_emmc_tuning_blk_pattern_4bit;
-    tuning_blk_size = sizeof(aml_sd_emmc_tuning_blk_pattern_4bit);
+    tuning_blk = fbl::Span<const uint8_t>(aml_sd_emmc_tuning_blk_pattern_4bit,
+                                          sizeof(aml_sd_emmc_tuning_blk_pattern_4bit));
   } else if (bw == AmlSdEmmcCfg::kBusWidth8Bit) {
-    tuning_blk = aml_sd_emmc_tuning_blk_pattern_8bit;
-    tuning_blk_size = sizeof(aml_sd_emmc_tuning_blk_pattern_8bit);
+    tuning_blk = fbl::Span<const uint8_t>(aml_sd_emmc_tuning_blk_pattern_8bit,
+                                          sizeof(aml_sd_emmc_tuning_blk_pattern_8bit));
   } else {
     zxlogf(ERROR, "AmlSdEmmc::SdmmcPerformTuning: Tuning at wrong buswidth: %d\n", bw);
     return ZX_ERR_INTERNAL;
   }
 
-  auto clk = AmlSdEmmcClock::Get().ReadFrom(&mmio_);
-  uint32_t clk_div = clk.cfg_div();
+  auto clk = AmlSdEmmcClock::Get()
+                 .ReadFrom(&mmio_)
+                 .set_cfg_co_phase(AmlSdEmmcClock::kClkPhase180Degrees)
+                 .set_cfg_rx_phase(AmlSdEmmcClock::kClkPhase0Degrees)
+                 .WriteTo(&mmio_);
 
-  do {
-    TuningCalculateBestWindow(tuning_blk, tuning_blk_size, clk_div, &best_win_start, &best_win_size,
-                              tuning_cmd_idx);
-    if (best_win_size == 0) {
-      // Lower the frequency and try again
-      zxlogf(INFO,
-             "AmlSdEmmc::SdmmcPerformTuning: Tuning failed. Reducing the frequency "
-             "and trying again\n");
-      clk = AmlSdEmmcClock::Get().ReadFrom(&mmio_);
-      clk_div = clk.cfg_div();
-      clk_div += 2;
-      if (clk_div > AmlSdEmmcClock::kMaxClkDiv) {
-        clk_div = AmlSdEmmcClock::kMaxClkDiv;
-      }
-      clk.set_cfg_div(clk_div).WriteTo(&mmio_);
-      uint32_t cur_freq = (GetClkFreq(clk.cfg_src())) / clk_div;
-      if (max_freq_ > cur_freq) {
-        // Update max freq accordingly
-        max_freq_ = cur_freq;
+  auto set_adj_delay = [&](uint32_t param) -> void { SetAdjDelay(param); };
+  auto set_delay_lines = [&](uint32_t param) -> void { SetDelayLines(param); };
+
+  set_delay_lines(0);
+
+  TuneWindow phase_windows[AmlSdEmmcClock::kMaxClkPhase + 1] = {};
+  for (uint32_t phase = 0; phase < fbl::count_of(phase_windows); phase++) {
+    if (phase != clk.cfg_co_phase()) {
+      clk.set_cfg_tx_phase(phase).WriteTo(&mmio_);
+      phase_windows[phase] =
+          TuneDelayParam(tuning_blk, tuning_cmd_idx, clk.cfg_div() - 1, set_adj_delay);
+    }
+  }
+
+  TuneWindow adj_delay_window;
+  uint32_t best_phase = 0;
+
+  // First look for the largest window in which transfers failed at some settings.
+  for (uint32_t phase = 0; phase < fbl::count_of(phase_windows); phase++) {
+    if (phase_windows[phase].size < clk.cfg_div() &&
+        phase_windows[phase].size > adj_delay_window.size) {
+      adj_delay_window = phase_windows[phase];
+      best_phase = phase;
+    }
+  }
+
+  // If no such window is found just use the largest one.
+  if (adj_delay_window.size == 0) {
+    for (uint32_t phase = 0; phase < fbl::count_of(phase_windows); phase++) {
+      if (phase_windows[phase].size > adj_delay_window.size) {
+        adj_delay_window = phase_windows[phase];
+        best_phase = phase;
       }
     }
-  } while (best_win_size == 0 && ++tries < AML_SD_EMMC_MAX_TUNING_TRIES);
+  }
 
-  if (best_win_size == 0) {
-    zxlogf(ERROR,
-           "AmlSdEmmc::SdmmcPerformTuning: Tuning failed after :%d retries. "
-           "Giving up.\n",
-           AML_SD_EMMC_MAX_TUNING_TRIES);
+  if (adj_delay_window.size == 0) {
+    AML_SD_EMMC_ERROR("No window found for any phase\n");
     return ZX_ERR_IO;
   }
 
-  clk = AmlSdEmmcClock::Get().ReadFrom(&mmio_);
-  clk_div = clk.cfg_div();
-  uint32_t best_adj_delay = 0;
-  if (best_win_size != clk_div) {
-    best_adj_delay = best_win_start + ((best_win_size - 1) / 2) + ((best_win_size - 1) % 2);
-    best_adj_delay = best_adj_delay % clk_div;
+  const uint32_t best_adj_delay =
+      adj_delay_window.size == clk.cfg_div() ? 0 : adj_delay_window.middle() % clk.cfg_div();
+
+  clk.set_cfg_tx_phase(best_phase).WriteTo(&mmio_);
+  set_adj_delay(best_adj_delay);
+
+  TuneWindow delay_window =
+      TuneDelayParam(tuning_blk, tuning_cmd_idx, max_delay(), set_delay_lines);
+
+  if (delay_window.size == 0) {
+    AML_SD_EMMC_ERROR("No delay window found\n");
+    return ZX_ERR_IO;
   }
-  SetAdjDelay(best_adj_delay);
+
+  const uint32_t best_delay = delay_window.middle() % (max_delay() + 1);
+  set_delay_lines(best_delay);
+
+  AML_SD_EMMC_INFO("Clock divider %u, clock phase %u, adj delay %u, delay %u\n", clk.cfg_div(),
+                   best_phase, best_adj_delay, best_delay);
+
   return ZX_OK;
 }
 

@@ -52,8 +52,15 @@ class AmlSdEmmcClock : public hwreg::RegisterBase<AmlSdEmmcClock, uint32_t> {
   static constexpr uint32_t kFClkDiv2MinFreq = 20000000;  // 20MHz
   static constexpr uint32_t kDefaultClkSrc = 0;           // 24MHz
   static constexpr uint32_t kDefaultClkDiv = 60;          // Defaults to 400KHz
+  static constexpr uint32_t kClkPhase0Degrees = 0;
+  static constexpr uint32_t kClkPhase90Degrees = 1;
+  static constexpr uint32_t kClkPhase180Degrees = 2;
+  static constexpr uint32_t kClkPhase270Degrees = 3;
   static constexpr uint32_t kDefaultClkRxPhase = 0;
   static constexpr uint32_t kMaxClkDiv = 63;
+  static constexpr uint32_t kMaxClkPhase = 3;
+  static constexpr uint32_t kMaxDelay = 63;
+  static constexpr uint32_t kMaxDelayV2 = 15;
 
   static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcClock>(kAmlSdEmmcClockOffset); }
 
@@ -186,16 +193,37 @@ class AmlSdEmmcCmdResp3 : public hwreg::RegisterBase<AmlSdEmmcCmdResp3, uint32_t
 class AmlSdEmmcDelayV2 : public hwreg::RegisterBase<AmlSdEmmcDelayV2, uint32_t> {
  public:
   static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcDelayV2>(kAmlSdEmmcDelayV2Offset); }
+
+  DEF_FIELD(3, 0, dly_0);
+  DEF_FIELD(7, 4, dly_1);
+  DEF_FIELD(11, 8, dly_2);
+  DEF_FIELD(15, 12, dly_3);
+  DEF_FIELD(19, 16, dly_4);
+  DEF_FIELD(23, 20, dly_5);
+  DEF_FIELD(27, 24, dly_6);
+  DEF_FIELD(31, 28, dly_7);
 };
 
 class AmlSdEmmcDelay1 : public hwreg::RegisterBase<AmlSdEmmcDelay1, uint32_t> {
  public:
   static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcDelay1>(kAmlSdEmmcDelay1Offset); }
+
+  DEF_FIELD(5, 0, dly_0);
+  DEF_FIELD(11, 6, dly_1);
+  DEF_FIELD(17, 12, dly_2);
+  DEF_FIELD(23, 18, dly_3);
+  DEF_FIELD(29, 24, dly_4);
 };
 
 class AmlSdEmmcDelay2 : public hwreg::RegisterBase<AmlSdEmmcDelay2, uint32_t> {
  public:
   static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcDelay2>(kAmlSdEmmcDelay2Offset); }
+
+  DEF_FIELD(5, 0, dly_5);
+  DEF_FIELD(11, 6, dly_6);
+  DEF_FIELD(17, 12, dly_7);
+  DEF_FIELD(23, 18, dly_8);
+  DEF_FIELD(29, 24, dly_9);
 };
 
 class AmlSdEmmcCalout : public hwreg::RegisterBase<AmlSdEmmcCalout, uint32_t> {

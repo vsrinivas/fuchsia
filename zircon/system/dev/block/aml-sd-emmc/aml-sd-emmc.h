@@ -10,6 +10,7 @@
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/sdmmc.h>
 #include <fbl/auto_lock.h>
+#include <fbl/span.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/interrupt.h>
@@ -76,21 +77,29 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
     COMPONENT_COUNT,
   };
 
+  struct TuneWindow {
+    uint32_t start = 0;
+    uint32_t size = 0;
+
+    uint32_t middle() const { return start + (size / 2); }
+  };
+
   void DumpRegs();
   void DumpSdmmcStatus(uint32_t status) const;
   void DumpSdmmcCfg(uint32_t config) const;
   void DumpSdmmcClock(uint32_t clock) const;
   void DumpSdmmcCmdCfg(uint32_t cmd_desc) const;
   uint32_t GetClkFreq(uint32_t clk_src) const;
-  zx_status_t TuningDoTransfer(uint8_t* tuning_res, uint16_t blk_pattern_size,
+  zx_status_t TuningDoTransfer(uint8_t* tuning_res, size_t blk_pattern_size,
                                uint32_t tuning_cmd_idx);
-  bool TuningTestDelay(const uint8_t* blk_pattern, uint16_t blk_pattern_size, uint32_t adj_delay,
-                       uint32_t tuning_cmd_idx);
-  // Calculates the best window size for tuning
-  zx_status_t TuningCalculateBestWindow(const uint8_t* tuning_blk, uint16_t tuning_blk_size,
-                                        uint32_t cur_clk_div, int* best_start, uint32_t* best_size,
-                                        uint32_t tuning_cmd_idx);
+  bool TuningTestSettings(fbl::Span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx);
+  template <typename SetParamCallback>
+  TuneWindow TuneDelayParam(fbl::Span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx,
+                            uint32_t param_max, SetParamCallback& set_param);
+
   void SetAdjDelay(uint32_t adj_delay);
+  void SetDelayLines(uint32_t delay);
+  uint32_t max_delay() const;
 
   void ConfigureDefaultRegs();
   void SetupCmdDesc(sdmmc_req_t* req, aml_sd_emmc_desc_t** out_desc);

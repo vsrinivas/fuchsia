@@ -7,8 +7,7 @@
 
 #pragma once
 
-#define AML_SD_EMMC_MAX_TUNING_TRIES 7
-#define AML_SD_EMMC_ADJ_DELAY_TEST_ATTEMPTS 10
+#define AML_SD_EMMC_TUNING_TEST_ATTEMPTS 5
 
 #define AML_SD_EMMC_SRAM_MEMORY_BASE 0x200
 #define AML_SD_EMMC_SRAM_MEMORY_SIZE 512
@@ -34,6 +33,7 @@ typedef struct {
   uint32_t min_freq;
   uint32_t max_freq;
   bool version_3;
+  uint32_t prefs;
 
   struct {
     struct {
