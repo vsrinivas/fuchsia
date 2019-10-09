@@ -21,6 +21,7 @@ using off = uint64;
 using procarg = uint32;
 const uint64 CHANNEL_MAX_MSG_BYTES = 65536;
 const uint64 CHANNEL_MAX_MSG_HANDLES = 64;
+const uint64 MAX_NAME_LEN = 32;
 ```
 
 You can reference this library with the `using` statement:

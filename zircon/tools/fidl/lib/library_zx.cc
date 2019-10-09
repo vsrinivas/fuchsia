@@ -39,6 +39,7 @@ using procarg = uint32;
 
   out << "const uint64 CHANNEL_MAX_MSG_BYTES = " << ZX_CHANNEL_MAX_MSG_BYTES << ";\n";
   out << "const uint64 CHANNEL_MAX_MSG_HANDLES = " << ZX_CHANNEL_MAX_MSG_HANDLES << ";\n";
+  out << "const uint64 MAX_NAME_LEN = " << ZX_MAX_NAME_LEN << ";\n";
 
   return out.str();
 }

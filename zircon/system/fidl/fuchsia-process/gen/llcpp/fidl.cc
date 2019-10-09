@@ -212,8 +212,8 @@ extern "C" const fidl_type_t fuchsia_process_LauncherAddHandlesRequestTable;
 template <>
 Launcher::ResultOf::Launch_Impl<Launcher::LaunchResponse>::Launch_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LaunchRequest, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
   LaunchRequest _request = {};
   _request.info = std::move(info);
   auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
@@ -279,8 +279,8 @@ Launcher::UnownedResultOf::Launch Launcher::Call::Launch(zx::unowned_channel _cl
 template <>
 Launcher::ResultOf::CreateWithoutStarting_Impl<Launcher::CreateWithoutStartingResponse>::CreateWithoutStarting_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateWithoutStartingRequest, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
   CreateWithoutStartingRequest _request = {};
   _request.info = std::move(info);
   auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());

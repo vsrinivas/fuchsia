@@ -52,10 +52,7 @@ struct LaunchInfo {
     handle<job> job;
 
     /// The name to assign to the created process.
-    ///
-    // TODO(REVIEW): Define a zx.MAX_NAME_SIZE constant (i.e., 32) and limit
-    // this string to that size.
-    string name;
+    string:zx.MAX_NAME_LEN name;
 };
 
 /// The information required to start a process.
@@ -101,6 +98,9 @@ struct ProcessStartData {
     zx.vaddr base;
 };
 
+// TODO(fxb/37281): replace with built-in constant
+const uint32 MAX = 0xFFFFFFFF;
+
 /// A low-level interface for launching processes.
 ///
 /// This interface is used for manually assembling a process. The caller supplies
@@ -139,12 +139,12 @@ protocol Launcher {
     /// Adds the given arguments to the command-line for the process.
     ///
     /// Calling this method multiple times concatenates the arguments.
-    AddArgs(vector<vector<uint8>> args);
+    AddArgs(vector<vector<uint8>:MAX>:MAX args);
 
     /// Adds the given variables to the environment variables for the process.
     ///
     /// Calling this method multiple times concatenates the variables.
-    AddEnvirons(vector<vector<uint8>> environ);
+    AddEnvirons(vector<vector<uint8>:MAX>:MAX environ);
 
     /// Adds the given names to the namespace for the process.
     ///
@@ -153,10 +153,10 @@ protocol Launcher {
     /// for details.
     ///
     /// Calling this method multiple times concatenates the names.
-    AddNames(vector<NameInfo> names);
+    AddNames(vector<NameInfo>:MAX names);
 
     /// Adds the given handles to the startup handles for the process.
     ///
     /// Calling this method multiple times concatenates the handles.
-    AddHandles(vector<HandleInfo> handles);
+    AddHandles(vector<HandleInfo>:MAX handles);
 };

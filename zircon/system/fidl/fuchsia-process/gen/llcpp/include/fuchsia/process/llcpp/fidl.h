@@ -392,6 +392,8 @@ struct NameInfo {
 // The maximum size for a name used by `Resolver`.
 constexpr uint32_t MAX_RESOLVE_NAME_SIZE = 2048u;
 
+constexpr uint32_t MAX = 4294967295u;
+
 extern "C" const fidl_type_t fuchsia_process_LaunchInfoTable;
 
 // The information needed to launch a process.
@@ -400,7 +402,7 @@ struct LaunchInfo {
   static constexpr uint32_t MaxNumHandles = 2;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr uint32_t MaxOutOfLine = 32;
 
   // The executable to run in the process.
   ::zx::vmo executable = {};
@@ -409,7 +411,6 @@ struct LaunchInfo {
   ::zx::job job = {};
 
   // The name to assign to the created process.
-  //
   ::fidl::StringView name = {};
 };
 
@@ -462,7 +463,7 @@ class Launcher final {
     static constexpr const fidl_type_t* Type = &fuchsia_process_LauncherLaunchRequestTable;
     static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t MaxOutOfLine = 32;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -491,7 +492,7 @@ class Launcher final {
     static constexpr const fidl_type_t* Type = &fuchsia_process_LauncherCreateWithoutStartingRequestTable;
     static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t MaxOutOfLine = 32;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -753,7 +754,7 @@ class Launcher final {
     // state and is ready to launch another process.
     //
     // `process` is present if, and only if, `status` is `ZX_OK`.
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Launch Launch(::llcpp::fuchsia::process::LaunchInfo info);
 
     // Creates and starts the process described by `info`.
@@ -774,7 +775,7 @@ class Launcher final {
     // in `ProcessStartData` to actually start the process.
     //
     // `data` is present if, and only if, `status` is `ZX_OK`.
-    // Allocates 88 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 160 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::CreateWithoutStarting CreateWithoutStarting(::llcpp::fuchsia::process::LaunchInfo info);
 
     // Creates the process described by `info` but does not start it.
@@ -860,7 +861,7 @@ class Launcher final {
     // state and is ready to launch another process.
     //
     // `process` is present if, and only if, `status` is `ZX_OK`.
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Launch Launch(zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info);
 
     // Creates and starts the process described by `info`.
@@ -881,7 +882,7 @@ class Launcher final {
     // in `ProcessStartData` to actually start the process.
     //
     // `data` is present if, and only if, `status` is `ZX_OK`.
-    // Allocates 88 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 160 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::CreateWithoutStarting CreateWithoutStarting(zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info);
 
     // Creates the process described by `info` but does not start it.
