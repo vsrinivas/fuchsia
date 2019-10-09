@@ -302,8 +302,6 @@ executable("component_context_test") {
 }
 
 test_package("modular_integration_tests") {
-  deprecated_shell = "//build"
-
   tests = [
     {
       name = "agent_services_test"

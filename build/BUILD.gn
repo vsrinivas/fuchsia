@@ -99,7 +99,6 @@ group("deprecated_shell_allowlist") {
     "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
     "//src/devices/tests/libdriver-integration-test",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture_test",
-    "//src/modular/tests:modular_integration_tests",
     "//src/connectivity/network/netstack:netstack_gotests",
     "//src/connectivity/network/testing/netemul/runner:netemul_devmgr",
     "//src/devices/coordinator:coordinator_tests",
