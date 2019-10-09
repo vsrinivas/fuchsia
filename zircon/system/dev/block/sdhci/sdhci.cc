@@ -201,7 +201,8 @@ void Sdhci::DataStageReadReadyLocked() {
     return;
   }
 
-  if (data_req_->cmd_idx == MMC_SEND_TUNING_BLOCK) {
+  if ((data_req_->cmd_idx == MMC_SEND_TUNING_BLOCK) ||
+      (data_req_->cmd_idx == SD_SEND_TUNING_BLOCK)) {
     // tuning command is done here
     CompleteRequestLocked(data_req_, ZX_OK);
   } else {
@@ -885,14 +886,7 @@ zx_status_t Sdhci::Init() {
     }
   }
 
-  // Enable the SD clock.
-  zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
-  ctrl1 |= regs_->ctrl1;
-  ctrl1 |= SDHCI_SD_CLOCK_ENABLE;
-  regs_->ctrl1 = ctrl1;
-  zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
-
-  // Cut voltage to the card
+  // Cut voltage to the card. This may automatically gate the SD clock on some controllers.
   regs_->ctrl0 &= ~SDHCI_PWRCTRL_SD_BUS_POWER;
 
   // Set SD bus voltage to maximum supported by the host controller
@@ -906,6 +900,13 @@ zx_status_t Sdhci::Init() {
 
   // Restore voltage to the card.
   regs_->ctrl0 |= SDHCI_PWRCTRL_SD_BUS_POWER;
+
+  // Enable the SD clock.
+  zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
+  ctrl1 = regs_->ctrl1;
+  ctrl1 |= SDHCI_SD_CLOCK_ENABLE;
+  regs_->ctrl1 = ctrl1;
+  zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
 
   // Disable all interrupts
   regs_->irqen = 0;
