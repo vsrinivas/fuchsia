@@ -239,6 +239,11 @@ void msd_device_destroy(msd_device_t* device) { delete MsdVslDevice::cast(device
 
 magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* value_out) {
   switch (id) {
+    case MAGMA_QUERY_VENDOR_ID:
+      // VK_VENDOR_ID_VIV
+      *value_out = 0x10001;
+      return MAGMA_STATUS_OK;
+
     case MAGMA_QUERY_DEVICE_ID:
       *value_out = MsdVslDevice::cast(device)->device_id();
       return MAGMA_STATUS_OK;

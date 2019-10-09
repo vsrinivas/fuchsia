@@ -4,13 +4,13 @@
 
 #include "msd_arm_device.h"
 
-#include <fbl/algorithm.h>
-#include <fbl/string_printf.h>
-
 #include <bitset>
 #include <cinttypes>
 #include <cstdio>
 #include <string>
+
+#include <fbl/algorithm.h>
+#include <fbl/string_printf.h>
 
 #include "job_scheduler.h"
 #include "magma_util/dlog.h"
@@ -927,6 +927,10 @@ void MsdArmDevice::ReleaseMappingsForAtom(MsdArmAtom* atom) {
 
 magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out) {
   switch (id) {
+    case MAGMA_QUERY_VENDOR_ID:
+      *value_out = 0x13B5;
+      return MAGMA_STATUS_OK;
+
     case MAGMA_QUERY_DEVICE_ID:
       *value_out = gpu_features_.gpu_id.reg_value();
       return MAGMA_STATUS_OK;

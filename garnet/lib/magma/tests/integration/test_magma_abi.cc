@@ -59,6 +59,12 @@ class TestConnection {
     EXPECT_NE(0u, device_id);
   }
 
+  void GetVendorId() {
+    uint64_t vendor_id = 0;
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_query(fd_, MAGMA_QUERY_VENDOR_ID, &vendor_id));
+    EXPECT_NE(0u, vendor_id);
+  }
+
   magma_connection_t connection() { return connection_; }
 
   void Connection() { ASSERT_NE(connection_, nullptr); }
@@ -433,6 +439,11 @@ class TestConnectionWithContext : public TestConnection {
 TEST(MagmaAbi, DeviceId) {
   TestConnection test;
   test.GetDeviceId();
+}
+
+TEST(MagmaAbi, VendorId) {
+  TestConnection test;
+  test.GetVendorId();
 }
 
 TEST(MagmaAbi, Buffer) {
