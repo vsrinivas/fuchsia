@@ -53,14 +53,10 @@
 #include <vulkan/vulkan.h>
 #endif
 
-#include "platform_trace.h"
-
-#ifdef MAGMA_ENABLE_TRACING
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-
-#include <trace-provider/provider.h>
-#endif
+#include <lib/trace-provider/provider.h>
+#include <lib/trace/event.h>
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
@@ -565,7 +561,7 @@ void demo_draw(struct demo* demo) {
   // in jitter.
   demo_update_data_buffer(demo);
 
-  TRACE_NONCE_DECLARE(nonce);
+  auto nonce = TRACE_NONCE();
   TRACE_ASYNC_BEGIN("cube", "acquire next image", nonce);
 
   while (true) {
@@ -2927,9 +2923,7 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv) {
 
   demo->fuchsia_state->t0 = std::chrono::high_resolution_clock::now();
 
-#ifdef MAGMA_ENABLE_TRACING
   trace::TraceProviderWithFdio trace_provider(demo->fuchsia_state->loop.dispatcher());
-#endif
 
   demo->fuchsia_state->context = sys::ComponentContext::Create();
 
@@ -3056,10 +3050,8 @@ int test_vk_cube(int argc, char** argv) {
 #if defined(MAGMA_USE_SHIM)
   VulkanShimInit();
 #endif
-#if defined(MAGMA_ENABLE_TRACING)
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread();
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-#endif
   return cube_main(argc, argv);
 }
