@@ -19,7 +19,8 @@ uint64_t CacheConfig::InstructionBytesRequired() {
   return num_dwords * sizeof(uint32_t);
 }
 
-bool CacheConfig::InitCacheConfig(InstructionWriter* writer, EngineCommandStreamerId engine_id) {
+bool CacheConfig::InitCacheConfig(magma::InstructionWriter* writer,
+                                  EngineCommandStreamerId engine_id) {
   DASSERT(engine_id == RENDER_COMMAND_STREAMER);
 
   std::vector<uint32_t> graphics_mocs;

@@ -251,10 +251,12 @@ class TestMsdIntelDevice {
     device->register_io()->Write32(kScratchRegOffset, 0xdeadbeef);
 
     static constexpr uint32_t expected_val = 0x8000000;
-    ringbuffer->write_tail((0x22 << 23) | (3 - 2));  // store to mmio
-    ringbuffer->write_tail(kScratchRegOffset);
-    ringbuffer->write_tail(expected_val);
-    ringbuffer->write_tail(0);
+    constexpr uint32_t kCommandType = 0x22;     // store to mmio
+    constexpr uint32_t kEncodedLength = 3 - 2;  // per instruction encoding
+    ringbuffer->Write32((kCommandType << 23) | kEncodedLength);
+    ringbuffer->Write32(kScratchRegOffset);
+    ringbuffer->Write32(expected_val);
+    ringbuffer->Write32(0);
 
     TestEngineCommandStreamer::SubmitContext(device->render_engine_cs(),
                                              device->global_context().get(), ringbuffer->tail());

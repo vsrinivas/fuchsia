@@ -9,9 +9,9 @@
 
 #include <memory>
 
-#include "types.h"
+#include <magma_util/instruction_writer.h>
 
-class InstructionWriter;
+#include "types.h"
 
 class CacheConfig {
  public:
@@ -19,7 +19,7 @@ class CacheConfig {
   static uint64_t InstructionBytesRequired();
 
   // Assumes there is sufficient space available to write into the instruction stream.
-  static bool InitCacheConfig(InstructionWriter* writer, EngineCommandStreamerId engine_id);
+  static bool InitCacheConfig(magma::InstructionWriter* writer, EngineCommandStreamerId engine_id);
 
  private:
   static void GetLncfMemoryObjectControlState(std::vector<uint16_t>& mocs);

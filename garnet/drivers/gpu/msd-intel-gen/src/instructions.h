@@ -7,15 +7,10 @@
 
 #include <stdint.h>
 
-#include "magma_util/macros.h"
+#include <magma_util/instruction_writer.h>
+#include <magma_util/macros.h>
+
 #include "types.h"
-
-class InstructionWriter {
- public:
-  virtual ~InstructionWriter() = default;
-
-  virtual void write_dword(uint32_t dword) = 0;
-};
 
 // from intel-gfx-prm-osrc-bdw-vol02a-commandreference-instructions_2.pdf pp.870
 class MiNoop {
@@ -23,7 +18,7 @@ class MiNoop {
   static constexpr uint32_t kDwordCount = 1;
   static constexpr uint32_t kCommandType = 0;
 
-  static void write(InstructionWriter* writer) { writer->write_dword(kCommandType); }
+  static void write(magma::InstructionWriter* writer) { writer->Write32(kCommandType); }
 };
 
 // from intel-gfx-prm-osrc-bdw-vol02a-commandreference-instructions_2.pdf pp.793
@@ -33,12 +28,12 @@ class MiBatchBufferStart {
   static constexpr uint32_t kCommandType = 0x31 << 23;
   static constexpr uint32_t kAddressSpacePpgtt = 1 << 8;
 
-  static void write(InstructionWriter* writer, gpu_addr_t gpu_addr,
+  static void write(magma::InstructionWriter* writer, gpu_addr_t gpu_addr,
                     AddressSpaceType address_space_type) {
-    writer->write_dword(kCommandType | (kDwordCount - 2) |
-                        (address_space_type == ADDRESS_SPACE_PPGTT ? kAddressSpacePpgtt : 0));
-    writer->write_dword(magma::lower_32_bits(gpu_addr));
-    writer->write_dword(magma::upper_32_bits(gpu_addr));
+    writer->Write32(kCommandType | (kDwordCount - 2) |
+                    (address_space_type == ADDRESS_SPACE_PPGTT ? kAddressSpacePpgtt : 0));
+    writer->Write32(magma::lower_32_bits(gpu_addr));
+    writer->Write32(magma::upper_32_bits(gpu_addr));
   }
 };
 
@@ -48,7 +43,7 @@ class MiBatchBufferEnd {
   static constexpr uint32_t kDwordCount = 1;
   static constexpr uint32_t kCommandType = 0xA << 23;
 
-  static void write(InstructionWriter* writer) { writer->write_dword(kCommandType); }
+  static void write(magma::InstructionWriter* writer) { writer->Write32(kCommandType); }
 };
 
 // from intel-gfx-prm-osrc-bdw-vol02a-commandreference-instructions_2.pdf pp.940
@@ -58,13 +53,13 @@ class MiLoadDataImmediate {
 
   static uint32_t dword_count(uint32_t register_count) { return 2 * register_count + 1; }
 
-  static void write(InstructionWriter* writer, uint32_t register_offset, uint32_t register_count,
-                    uint32_t dword[]) {
+  static void write(magma::InstructionWriter* writer, uint32_t register_offset,
+                    uint32_t register_count, uint32_t dword[]) {
     DASSERT((register_offset & 0x3) == 0);
-    writer->write_dword(kCommandType | dword_count(register_count) - 2);
+    writer->Write32(kCommandType | dword_count(register_count) - 2);
     for (uint32_t i = 0; i < register_count; i++) {
-      writer->write_dword(register_offset + i * sizeof(uint32_t));
-      writer->write_dword(dword[i]);
+      writer->Write32(register_offset + i * sizeof(uint32_t));
+      writer->Write32(dword[i]);
     }
   }
 };
@@ -87,17 +82,17 @@ class MiPipeControl {
   static constexpr uint32_t kCommandStreamerStallEnableBit = 1 << 20;
   static constexpr uint32_t kAddressSpaceGlobalGttBit = 1 << 24;
 
-  static void write(InstructionWriter* writer, uint32_t sequence_number, uint64_t gpu_addr,
+  static void write(magma::InstructionWriter* writer, uint32_t sequence_number, uint64_t gpu_addr,
                     uint32_t flags) {
     DASSERT((flags & ~(kCommandStreamerStallEnableBit | kIndirectStatePointersDisableBit |
                        kGenericMediaStateClearBit | kDcFlushEnableBit)) == 0);
-    writer->write_dword(kCommandType | kCommandSubType | k3dCommandOpcode | k3dCommandSubOpcode |
-                        (kDwordCount - 2));
-    writer->write_dword(flags | kPostSyncWriteImmediateBit | kAddressSpaceGlobalGttBit);
-    writer->write_dword(magma::lower_32_bits(gpu_addr));
-    writer->write_dword(magma::upper_32_bits(gpu_addr));
-    writer->write_dword(sequence_number);
-    writer->write_dword(0);
+    writer->Write32(kCommandType | kCommandSubType | k3dCommandOpcode | k3dCommandSubOpcode |
+                    (kDwordCount - 2));
+    writer->Write32(flags | kPostSyncWriteImmediateBit | kAddressSpaceGlobalGttBit);
+    writer->Write32(magma::lower_32_bits(gpu_addr));
+    writer->Write32(magma::upper_32_bits(gpu_addr));
+    writer->Write32(sequence_number);
+    writer->Write32(0);
   }
 };
 
@@ -107,7 +102,7 @@ class MiUserInterrupt {
   static constexpr uint32_t kDwordCount = 1;
   static constexpr uint32_t kCommandType = 0x2 << 23;
 
-  static void write(InstructionWriter* writer) { writer->write_dword(kCommandType); }
+  static void write(magma::InstructionWriter* writer) { writer->Write32(kCommandType); }
 };
 
 #endif  // INSTRUCTIONS_H

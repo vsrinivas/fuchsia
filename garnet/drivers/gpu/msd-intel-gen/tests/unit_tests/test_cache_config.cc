@@ -12,11 +12,11 @@ using namespace registers;
 
 class TestCacheConfig {
  public:
-  class Writer : public InstructionWriter {
+  class Writer : public magma::InstructionWriter {
    public:
     Writer(uint32_t* ptr) : ptr_(ptr) {}
 
-    void write_dword(uint32_t dword) override { *ptr_++ = dword; }
+    void Write32(uint32_t dword) override { *ptr_++ = dword; }
 
    private:
     uint32_t* ptr_;
