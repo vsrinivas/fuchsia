@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <asm.h>
+#include <arch/arm64/asm.h>
 #include <arch/arm64/mmu.h>
 #include <arch/arm64.h>
 #include <arch/asm_macros.h>
@@ -18,7 +18,7 @@
 /*
  * Register use:
  *  x0-x3   Arguments
- *  x9-x15  Scratch
+ *  x9-x14  Scratch
  *  x19-x28 Globals
  */
 tmp                     .req x9
@@ -241,7 +241,7 @@ FUNCTION(_start)
     msr     tpidr_el1, tmp
 
     // set the per cpu pointer for cpu 0
-    adr_global x18, arm64_percpu_array
+    adr_global percpu_ptr, arm64_percpu_array
 
     // Choose a good (ideally random) stack-guard value as early as possible.
     bl      choose_stack_guard

@@ -53,8 +53,8 @@ FUNCTION(arm64_context_switch)
     push_regs x19, x20
 
     /* save old sp */
-    mov  x15, sp
-    str  x15, [x0]
+    mov  x9, sp
+    str  x9, [x0]
 
     /* load new sp */
     mov  sp, x1
