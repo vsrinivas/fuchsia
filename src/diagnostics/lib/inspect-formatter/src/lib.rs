@@ -4,6 +4,8 @@
 
 use {failure::Error, fuchsia_inspect::reader::NodeHierarchy};
 
+pub use crate::json::*;
+
 pub mod json;
 mod utils;
 

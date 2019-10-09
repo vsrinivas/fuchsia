@@ -171,6 +171,7 @@ impl<'a> Serialize for WrappedArrayBucket<'a, f64> {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use {super::*, fuchsia_inspect::reader::ArrayFormat};
 

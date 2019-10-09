@@ -9,7 +9,7 @@
 ///     format_parts("/some/path/root.inspect", vec!["root", "a", "b"]) will return
 ///     "/some/path/root.inspect#a/b"
 ///
-pub fn format_parts(file_path: &str, parts: &Vec<String>) -> String {
+pub fn format_parts(file_path: &str, parts: &[String]) -> String {
     if parts.is_empty() || (parts[0] == "root" && parts.len() == 1) {
         file_path.to_string()
     } else if parts[0] == "root" {
@@ -19,6 +19,7 @@ pub fn format_parts(file_path: &str, parts: &Vec<String>) -> String {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 
