@@ -338,7 +338,7 @@ void iwl_pcie_txq_check_wrptrs(struct iwl_trans* trans) {
   }
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static inline dma_addr_t iwl_pcie_tfd_tb_get_addr(struct iwl_trans* trans, void* _tfd,
                                                   uint8_t idx) {
     if (trans->cfg->use_tfh) {
@@ -364,34 +364,36 @@ static inline dma_addr_t iwl_pcie_tfd_tb_get_addr(struct iwl_trans* trans, void*
         return addr | ((hi_len << 16) << 16);
     }
 }
+#endif
 
 static inline void iwl_pcie_tfd_set_tb(struct iwl_trans* trans, void* tfd, uint8_t idx,
-                                       dma_addr_t addr, uint16_t len) {
-    struct iwl_tfd* tfd_fh = (void*)tfd;
-    struct iwl_tfd_tb* tb = &tfd_fh->tbs[idx];
+                                       zx_paddr_t addr, uint16_t len) {
+  struct iwl_tfd* tfd_fh = (void*)tfd;
+  struct iwl_tfd_tb* tb = &tfd_fh->tbs[idx];
 
-    uint16_t hi_n_len = len << 4;
+  uint16_t hi_n_len = len << 4;
 
-    put_unaligned_le32(addr, &tb->lo);
-    hi_n_len |= iwl_get_dma_hi_addr(addr);
+  tb->lo = cpu_to_le32(addr);
+  hi_n_len |= iwl_get_dma_hi_addr(addr);
 
-    tb->hi_n_len = cpu_to_le16(hi_n_len);
+  tb->hi_n_len = cpu_to_le16(hi_n_len);
 
-    tfd_fh->num_tbs = idx + 1;
+  tfd_fh->num_tbs = idx + 1;
 }
 
 static inline uint8_t iwl_pcie_tfd_get_num_tbs(struct iwl_trans* trans, void* _tfd) {
-    if (trans->cfg->use_tfh) {
-        struct iwl_tfh_tfd* tfd = _tfd;
+  if (trans->cfg->use_tfh) {
+    struct iwl_tfh_tfd* tfd = _tfd;
 
-        return le16_to_cpu(tfd->num_tbs) & 0x1f;
-    } else {
-        struct iwl_tfd* tfd = _tfd;
+    return le16_to_cpu(tfd->num_tbs) & 0x1f;
+  } else {
+    struct iwl_tfd* tfd = _tfd;
 
-        return tfd->num_tbs & 0x1f;
-    }
+    return tfd->num_tbs & 0x1f;
+  }
 }
 
+#if 0  // NEEDS_PORTING
 static void iwl_pcie_tfd_unmap(struct iwl_trans* trans, struct iwl_cmd_meta* meta,
                                struct iwl_txq* txq, int index) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
@@ -468,34 +470,39 @@ void iwl_pcie_txq_free_tfd(struct iwl_trans* trans, struct iwl_txq* txq) {
         }
     }
 }
+#endif
 
-static int iwl_pcie_txq_build_tfd(struct iwl_trans* trans, struct iwl_txq* txq, dma_addr_t addr,
-                                  uint16_t len, bool reset) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    void* tfd;
-    uint32_t num_tbs;
+// Build TX queue transfer descriptor.
+__UNUSED static zx_status_t iwl_pcie_txq_build_tfd(struct iwl_trans* trans, struct iwl_txq* txq,
+                                                   zx_paddr_t addr, uint16_t len, bool reset,
+                                                   uint32_t* num_tbs) {
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  void* tfd;
 
-    tfd = txq->tfds + trans_pcie->tfd_size * txq->write_ptr;
+  void* tfds = io_buffer_virt(&txq->tfds);
+  tfd = tfds + trans_pcie->tfd_size * txq->write_ptr;
 
-    if (reset) { memset(tfd, 0, trans_pcie->tfd_size); }
+  if (reset) {
+    memset(tfd, 0, trans_pcie->tfd_size);
+  }
 
-    num_tbs = iwl_pcie_tfd_get_num_tbs(trans, tfd);
+  *num_tbs = iwl_pcie_tfd_get_num_tbs(trans, tfd);
 
-    /* Each TFD can point to a maximum max_tbs Tx buffers */
-    if (num_tbs >= trans_pcie->max_tbs) {
-        IWL_ERR(trans, "Error can not send more than %d chunks\n", trans_pcie->max_tbs);
-        return -EINVAL;
-    }
+  /* Each TFD can point to a maximum max_tbs Tx buffers */
+  if (*num_tbs >= trans_pcie->max_tbs) {
+    IWL_ERR(trans, "Error can not send more than %d chunks\n", trans_pcie->max_tbs);
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-    if (WARN(addr & ~IWL_TX_DMA_MASK, "Unaligned address = %llx\n", (unsigned long long)addr)) {
-        return -EINVAL;
-    }
+  if (addr & ~IWL_TX_DMA_MASK) {
+    IWL_WARN(trans, "Unaligned address = %lx\n", addr);
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-    iwl_pcie_tfd_set_tb(trans, tfd, num_tbs, addr, len);
+  iwl_pcie_tfd_set_tb(trans, tfd, *num_tbs, addr, len);
 
-    return num_tbs;
+  return ZX_OK;
 }
-#endif  // NEEDS_PORTING
 
 zx_status_t iwl_pcie_txq_alloc(struct iwl_trans* trans, struct iwl_txq* txq, int slots_num,
                                bool cmd_queue) {
