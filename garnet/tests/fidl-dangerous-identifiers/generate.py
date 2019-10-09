@@ -5,6 +5,7 @@
 
 import datetime
 import os
+import platform
 import subprocess
 import sys
 
@@ -13,8 +14,17 @@ from typing import List
 # Where is this script?
 DIR = os.path.dirname(os.path.realpath(__file__))
 
+# What platform are we on?
+HOST_PLARFORM = "{}-{}".format(
+    platform.system().lower().replace("darwin", "mac"),
+    {
+        "x86_64": "x64",
+        "aarch64": "arm64",
+    }[platform.machine()],
+)
+
 # Where is gn?
-GN = os.path.realpath(os.path.join(DIR, '../../../buildtools/gn'))
+GN = os.path.realpath(os.path.join(DIR, '../../../prebuilt/third_party/gn', HOST_PLARFORM, 'gn'))
 
 # Define ways that identifiers may be rendered
 STYLES = []
@@ -50,6 +60,11 @@ def use(func):
 @use
 def constants(f, idents):
   for ident in idents:
+    # TODO(fxb/38124): Enable this case once we've clarified these edge cases
+    # and chosen a way to unambiguously reference the root library. Currently,
+    # "const uint32 uint32 = 1;" will fail with an includes-cycle fidlc error.
+    if ident == "uint32":
+      continue
     f.write('const uint32 %s = 1;\n' % ident)
 
 
@@ -290,7 +305,7 @@ def generate_cpp(identifiers: List[str], libraries: List[str]) -> None:
     with open(os.path.join(directory, '%s_test.cc' % library_name), 'w') as f:
       f.write(generated('//'))
       f.write('#include <%s/cpp/fidl.h>\n' % (library_name.replace('.', '/')))
-      f.write('\nint main() {\n  return 0;\n}\n')
+      f.write('\nint main() { return 0; }\n')
 
   # generate BUILD.gn for C++ test
   build_file = os.path.join(directory, 'BUILD.gn')

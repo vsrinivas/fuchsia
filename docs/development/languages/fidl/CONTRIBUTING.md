@@ -399,6 +399,57 @@ The following requires: fx set bringup.x64 --with-base //garnet/packages/tests:z
 | regen fidl-async test bindings       | fx exec $FUCHSIA_DIR/zircon/system/ulib/fidl-async/test/gen_llcpp.sh        | zircon/system/ulib/fidl-async/test/simple.test.fidl               | zircon/system/ulib/fidl-async/test/generated/                                                                                                                                                                                                                                                |
 | checked in production llcpp bindings | fx build -k 0 tools/fidlgen_llcpp_zircon:update                             | FIDL definitions in zircon/system/fidl/                           | "gen/" folder relative to the corresponding FIDL definition                                                                                                                                                                                                                                  |
 
+## Debugging (host)
+
+There are several ways of debugging issues in host binaries. This section gives
+instructions for the example case where `fidlc --files test.fidl` is crashing:
+
+- [GDB](#GDB)
+- [Asan](#ASan)
+- [Valgrind](#Valgrind)
+
+Note: Even with all optimizations turned off, the binaries in
+`out/default/host_x64` are stripped. For debugging, you should use the binaries
+with the `.debug` suffix, such as
+`out/default.zircon/host-x64-linux-clang/obj/tools/fidl/fidlc.debug`.
+
+### GDB {#GDB}
+
+Start GDB:
+
+```sh
+gdb --args out/default.zircon/host-x64-linux-clang/obj/tools/fidl/fidlc.debug --files test.fidl
+```
+
+Then, enter "r" to start the program.
+
+### ASan {#ASan}
+
+Ensure you are compiling with ASan enabled:
+
+```sh
+fx set core.x64 --variant=host_asan
+fx build host_x64/fidlc
+```
+
+Then run `out/default/host_x64/fidlc --files test.fidl`. That binary should be
+the same as `out/default.zircon/host-x64-linux-asan/obj/tools/fidl/fidlc`.
+
+### Valgrind {#Valgrind}
+
+On Google Linux machines, you may need to install a standard version of Valgrind
+instead of using the pre-installed binary:
+
+```
+sudo apt-get install valgrind
+```
+
+Then:
+
+```sh
+valgrind -v -- out/default.zircon/host-x64-linux-clang/obj/tools/fidl/fidlc.debug --files test.fidl
+```
+
 ## Workflows
 
 ### Language evolutions
@@ -466,6 +517,7 @@ fidl fmt --library my_library.fidl -i
 [compatibility_test]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidl_compatibility_test
 [fidlc-source]: /zircon/tools/fidl/
 [fidlc-coding-tables-tests]: /zircon/system/utest/fidl-coding-tables/
+[fidl-simple]: /zircon/system/utest/fidl-simple/
 [fidlc-compiler-tests]: /zircon/system/utest/fidl-compiler/
 [fidlc-tests]: /zircon/system/utest/fidl/
 [jsonir]: /docs/development/languages/fidl/reference/json-ir.md

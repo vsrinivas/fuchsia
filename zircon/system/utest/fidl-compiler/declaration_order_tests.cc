@@ -414,6 +414,78 @@ protocol ExampleDecl1 {
   END_TEST;
 }
 
+bool const_type_comes_first() {
+  BEGIN_TEST;
+
+  for (int i = 0; i < kRepeatTestCount; i++) {
+    Namer namer;
+    auto source = namer.mangle(R"FIDL(
+library example;
+
+const #Alias# #Constant# = 42;
+
+using #Alias# = uint32;
+
+)FIDL");
+    TestLibrary library(source);
+    ASSERT_TRUE(library.Compile());
+    auto decl_order = library.declaration_order();
+    ASSERT_EQ(2, decl_order.size());
+    ASSERT_DECL_NAME(decl_order[0], namer.of("Alias"));
+    ASSERT_DECL_NAME(decl_order[1], namer.of("Constant"));
+  }
+
+  END_TEST;
+}
+
+bool enum_ordinal_type_comes_first() {
+  BEGIN_TEST;
+
+  for (int i = 0; i < kRepeatTestCount; i++) {
+    Namer namer;
+    auto source = namer.mangle(R"FIDL(
+library example;
+
+enum #Enum# : #Alias# { A = 1; };
+
+using #Alias# = uint32;
+
+)FIDL");
+    TestLibrary library(source);
+    ASSERT_TRUE(library.Compile());
+    auto decl_order = library.declaration_order();
+    ASSERT_EQ(2, decl_order.size());
+    ASSERT_DECL_NAME(decl_order[0], namer.of("Alias"));
+    ASSERT_DECL_NAME(decl_order[1], namer.of("Enum"));
+  }
+
+  END_TEST;
+}
+
+bool bits_ordinal_type_comes_first() {
+  BEGIN_TEST;
+
+  for (int i = 0; i < kRepeatTestCount; i++) {
+    Namer namer;
+    auto source = namer.mangle(R"FIDL(
+library example;
+
+bits #Bits# : #Alias# { A = 1; };
+
+using #Alias# = uint32;
+
+)FIDL");
+    TestLibrary library(source);
+    ASSERT_TRUE(library.Compile());
+    auto decl_order = library.declaration_order();
+    ASSERT_EQ(2, decl_order.size());
+    ASSERT_DECL_NAME(decl_order[0], namer.of("Alias"));
+    ASSERT_DECL_NAME(decl_order[1], namer.of("Bits"));
+  }
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(declaration_order_test)
@@ -425,4 +497,7 @@ RUN_TEST(nullable_xunion)
 RUN_TEST(nonnullable_xunion_in_struct)
 RUN_TEST(nullable_xunion_in_struct)
 RUN_TEST(decls_across_libraries);
+RUN_TEST(const_type_comes_first);
+RUN_TEST(enum_ordinal_type_comes_first);
+RUN_TEST(bits_ordinal_type_comes_first);
 END_TEST_CASE(declaration_order_test)

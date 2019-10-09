@@ -2290,8 +2290,7 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
       }
     }
   };
-  auto maybe_add_constant = [this, &edges](const TypeConstructor* type_ctor,
-                                           const Constant* constant) -> bool {
+  auto maybe_add_constant = [this, &edges](const Constant* constant) -> bool {
     switch (constant->kind) {
       case Constant::Kind::kIdentifier: {
         auto identifier = static_cast<const flat::IdentifierConstant*>(constant);
@@ -2315,29 +2314,38 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
   switch (decl->kind) {
     case Decl::Kind::kBits: {
       auto bits_decl = static_cast<const Bits*>(decl);
+      maybe_add_decl(bits_decl->subtype_ctor.get());
       for (const auto& member : bits_decl->members) {
-        maybe_add_constant(bits_decl->subtype_ctor.get(), member.value.get());
+        if (!maybe_add_constant(member.value.get())) {
+          return false;
+        }
       }
       break;
     }
     case Decl::Kind::kConst: {
       auto const_decl = static_cast<const Const*>(decl);
-      if (!maybe_add_constant(const_decl->type_ctor.get(), const_decl->value.get()))
+      maybe_add_decl(const_decl->type_ctor.get());
+      if (!maybe_add_constant(const_decl->value.get())) {
         return false;
+      }
       break;
     }
     case Decl::Kind::kEnum: {
       auto enum_decl = static_cast<const Enum*>(decl);
+      maybe_add_decl(enum_decl->subtype_ctor.get());
       for (const auto& member : enum_decl->members) {
-        maybe_add_constant(enum_decl->subtype_ctor.get(), member.value.get());
+        if (!maybe_add_constant(member.value.get())) {
+          return false;
+        }
       }
       break;
     }
     case Decl::Kind::kProtocol: {
       auto protocol_decl = static_cast<const Protocol*>(decl);
       for (const auto& composed_protocol : protocol_decl->composed_protocols) {
-        if (auto type_decl = LookupDeclByName(composed_protocol); type_decl)
+        if (auto type_decl = LookupDeclByName(composed_protocol); type_decl) {
           edges.insert(type_decl);
+        }
       }
       for (const auto& method : protocol_decl->methods) {
         if (method.maybe_request != nullptr) {
@@ -2361,8 +2369,9 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
       for (const auto& member : struct_decl->members) {
         maybe_add_decl(member.type_ctor.get());
         if (member.maybe_default_value) {
-          if (!maybe_add_constant(member.type_ctor.get(), member.maybe_default_value.get()))
+          if (!maybe_add_constant(member.maybe_default_value.get())) {
             return false;
+          }
         }
       }
       break;
@@ -2374,9 +2383,9 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
           continue;
         maybe_add_decl(member.maybe_used->type_ctor.get());
         if (member.maybe_used->maybe_default_value) {
-          if (!maybe_add_constant(member.maybe_used->type_ctor.get(),
-                                  member.maybe_used->maybe_default_value.get()))
+          if (!maybe_add_constant(member.maybe_used->maybe_default_value.get())) {
             return false;
+          }
         }
       }
       break;
