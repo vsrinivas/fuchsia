@@ -11,10 +11,11 @@ executable("controller-test") {
     "controller-device-test.cc",
   ]
   deps = [
+    "//garnet/public/lib/gtest",
     "//sdk/banjo/ddk.protocol.isp",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
-    "//src/camera/drivers/controller/:controller-source",
+    "//src/camera/drivers/controller:controller-source",
     "//src/camera/drivers/test_utils",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-cpp",
@@ -39,7 +40,7 @@ executable("controller-test") {
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
-    "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
-    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
+    "//zircon/system/fidl/fuchsia-hardware-camera",
+    "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }
