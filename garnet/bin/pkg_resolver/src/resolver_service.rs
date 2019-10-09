@@ -82,7 +82,8 @@ where
         fx_log_warn!("resolve does not support selectors yet");
     }
 
-    let merkle = repo_manager.read().get_package(&url, cache).await?;
+    let fut = repo_manager.read().get_package(&url, cache);
+    let merkle = fut.await?;
 
     fx_log_info!(
         "resolved {} as {} with the selectors {:?} to {}",

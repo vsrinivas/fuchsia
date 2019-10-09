@@ -110,18 +110,21 @@ impl Server {
         &mut self,
         listener: PropertyProviderControlHandle,
     ) -> PropertyProviderListenerKey {
-        self.0.listeners.lock().map(|mut listeners| listeners.add(listener)).await
+        let fut = self.0.listeners.lock().map(|mut listeners| listeners.add(listener));
+        fut.await
     }
 
     /// Remove a registered listener by key.
     async fn remove_listener(&mut self, key: PropertyProviderListenerKey) {
-        self.0.listeners.lock().map(|mut listeners| listeners.remove(key)).await
+        let fut = self.0.listeners.lock().map(|mut listeners| listeners.remove(key));
+        fut.await
     }
 
     /// Send `OnChange` event to registered listeners of `PropertyProvider`.
     async fn notify_listeners(&mut self) {
         fx_log_verbose!("Notifying listeners");
-        self.0.listeners.lock().map(|mut listeners| listeners.notify()).await;
+        let fut = self.0.listeners.lock().map(|mut listeners| listeners.notify());
+        fut.await;
         fx_log_verbose!("Notified listeners");
     }
 

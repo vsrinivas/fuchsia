@@ -50,11 +50,9 @@ impl PackageCache {
         selectors: &Vec<String>,
         dir_request: ServerEnd<DirectoryMarker>,
     ) -> Result<(), PackageOpenError> {
-        match Status::from_raw(
-            self.cache
-                .open(&mut merkle.into(), &mut selectors.iter().map(|s| s.as_str()), dir_request)
-                .await?,
-        ) {
+        let fut = self.cache
+            .open(&mut merkle.into(), &mut selectors.iter().map(|s| s.as_str()), dir_request);
+        match Status::from_raw(fut.await?) {
             Status::OK => Ok(()),
             Status::NOT_FOUND => Err(PackageOpenError::NotFound),
             status => Err(PackageOpenError::UnexpectedStatus(status)),
@@ -573,8 +571,8 @@ async fn download_blob(
             let subchunk_len = chunk.len().min(fidl_fuchsia_io::MAX_BUF as usize);
             let subchunk = &chunk[..subchunk_len];
 
-            let (status, actual) =
-                dest.write(&mut subchunk.into_iter().cloned()).await.map_err(FetchError::Fidl)?;
+            let fut = dest.write(&mut subchunk.into_iter().cloned());
+            let (status, actual) = fut.await.map_err(FetchError::Fidl)?;
             match Status::from_raw(status) {
                 Status::OK => {}
                 Status::ALREADY_EXISTS => {

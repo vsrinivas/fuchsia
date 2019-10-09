@@ -123,7 +123,7 @@ async fn apply_system_update_impl<'a>(
         fx_log_err!("failed to garbage collect pkgfs, will still attempt system update: {}", err);
     }
     fx_log_info!("starting system_updater");
-    component_runner
+    let fut = component_runner
         .run_until_exit(
             SYSTEM_UPDATER_RESOURCE_URL.to_string(),
             Some(vec![
@@ -132,8 +132,8 @@ async fn apply_system_update_impl<'a>(
                 format!("-source={}", current_system_image),
                 format!("-target={}", latest_system_image),
             ]),
-        )
-        .await?;
+        );
+    fut.await?;
     Err(ErrorKind::SystemUpdaterFinished)?
 }
 

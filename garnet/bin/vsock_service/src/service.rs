@@ -407,20 +407,20 @@ impl Vsock {
         loop {
             select! {
                 shutdown_event = shutdown_event => {
-                    return future::ready(shutdown_event)
+                    let fut = future::ready(shutdown_event)
                         .err_into()
-                        .and_then(|()| self.lock().send_rst(&addr))
-                    .await;
+                        .and_then(|()| self.lock().send_rst(&addr));
+                    return fut.await;
                 },
                 request = requests.next() => {
                     match request {
                         Some(Ok(ConnectionRequest::Shutdown{control_handle: _control_handle})) => {
-                            return 
+                            let fut =
                                 self.lock().send_shutdown(&addr)
                                     // Wait to either receive the RST for the client or to be
                                     // shut down for some other reason
-                                    .and_then(|()| shutdown_event.err_into())
-                            .await;
+                                    .and_then(|()| shutdown_event.err_into());
+                            return fut.await;
                         },
                         Some(Ok(ConnectionRequest::SendVmo{vmo, off, len, responder})) => {
                             // Acquire the potential future from send_vmo in a temporary so we
@@ -445,11 +445,13 @@ impl Vsock {
                         },
                         // Generate a RST for a non graceful client disconnect.
                         Some(Err(e)) => {
-                            self.lock().send_rst(&addr).await?;
+                            let fut = self.lock().send_rst(&addr);
+                            fut.await?;
                             return Err(Error::ClientCommunication(e.into()));
                         },
                         None => {
-                            return self.lock().send_rst(&addr).await;
+                            let fut = self.lock().send_rst(&addr);
+                            return fut.await;
                         },
                     }
                 },
@@ -487,7 +489,10 @@ impl Vsock {
                         );
                         Ok(())
                     }
-                    None => self.lock().send_rst(&addr).await,
+                    None => {
+                        let fut = self.lock().send_rst(&addr);
+                        fut.await
+                    }
                 }
             }).await
     }

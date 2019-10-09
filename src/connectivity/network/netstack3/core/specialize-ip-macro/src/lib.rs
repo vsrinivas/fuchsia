@@ -301,14 +301,6 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
 
         quote! {
                 trait Ext: net_types::ip::#trait_ident {
-                    // This is a backstop against a bug in our logic; if the
-                    // function is somehow called on a type other than Ipv4/Ipv4Addr
-                    // or Ipv6/Ipv6Addr, constant evaluation will fail on this
-                    // constant (because of a divide by zero). Note that, since we
-                    // don't use the constant in the non-default impls, it will not
-                    // be evaluated there.
-                    const PREVENT_CONST_EVALUATION: usize = 0/0;
-
                     #[allow(patterns_in_fns_without_body)]
                     fn f #trait_decl;
                 }
@@ -316,9 +308,11 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
                 impl<__SpecializeIpDummyTypeParam: net_types::ip::#trait_ident> Ext for __SpecializeIpDummyTypeParam {
                     #![allow(unused_variables)]
                     default fn f #trait_decl {
-                        // It's important that we use the constant here to force
-                        // evaluation.
-                        panic!(format!("{}", Self::PREVENT_CONST_EVALUATION));
+                        // This is a backstop against a bug in our logic (if the
+                        // function is somehow called on a type other than Ipv4/
+                        // Ipv4Addr or Ipv6/Ipv6Addr).
+                        unreachable!("IP version-specialized function called on version \
+                                      other than IPv4 or IPv6");
                     }
                 }
 

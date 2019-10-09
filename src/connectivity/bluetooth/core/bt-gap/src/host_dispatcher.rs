@@ -336,7 +336,10 @@ impl HostDispatcher {
     pub async fn set_name(&mut self, name: String) -> types::Result<()> {
         self.state.write().name = name;
         match self.get_active_adapter().await {
-            Some(adapter) => adapter.write().set_name(self.state.read().name.clone()).await,
+            Some(adapter) => {
+                let fut = adapter.write().set_name(self.state.read().name.clone());
+                fut.await
+            }
             None => Err(types::Error::no_host()),
         }
     }
@@ -344,7 +347,10 @@ impl HostDispatcher {
     pub async fn set_device_class(&mut self, class: DeviceClass) -> types::Result<()> {
         let class_repr = class.debug();
         let res = match self.get_active_adapter().await {
-            Some(adapter) => adapter.write().set_device_class(class).await,
+            Some(adapter) => {
+                let fut = adapter.write().set_device_class(class);
+                fut.await
+            }
             None => Err(types::Error::no_host()),
         };
 
@@ -374,7 +380,8 @@ impl HostDispatcher {
         match self.get_active_adapter().await {
             Some(host) => {
                 let weak_host = Arc::downgrade(&host);
-                host.write().start_discovery().await?;
+                let fut = host.write().start_discovery();
+                fut.await?;
                 let token = Arc::new(DiscoveryRequestToken { adap: weak_host });
                 self.state.write().discovery = Some(Arc::downgrade(&token));
                 Ok(token)
@@ -393,7 +400,8 @@ impl HostDispatcher {
         match self.get_active_adapter().await {
             Some(host) => {
                 let weak_host = Arc::downgrade(&host);
-                host.write().set_discoverable(true).await?;
+                let fut = host.write().set_discoverable(true);
+                fut.await?;
                 let token = Arc::new(DiscoverableRequestToken { adap: weak_host });
                 self.state.write().discoverable = Some(Arc::downgrade(&token));
                 Ok(token)
@@ -413,7 +421,8 @@ impl HostDispatcher {
         for adapter in adapters {
             let adapter_path = adapter.read().path.clone();
 
-            match adapter.write().forget(peer_id.clone()).await {
+            let fut = adapter.write().forget(peer_id.clone());
+            match fut.await {
                 Ok(()) => adapters_removed += 1,
                 Err(types::Error::HostError(FidlError {
                     error_code: ErrorCode::NotFound, ..
@@ -439,7 +448,10 @@ impl HostDispatcher {
     pub async fn connect(&mut self, peer_id: String) -> types::Result<()> {
         let host = self.get_active_adapter().await;
         match host {
-            Some(host) => host.write().connect(peer_id).await,
+            Some(host) => {
+                let fut = host.write().connect(peer_id);
+                fut.await
+            }
             None => Err(types::Error::no_host()),
         }
     }
@@ -451,8 +463,10 @@ impl HostDispatcher {
             Some(host) => {
                 // Suppress the error from `rm_gatt`, as the peer not having a GATT entry
                 // (i.e. not using LE) is not a failure condition
-                let _ = host.write().rm_gatt(peer_id.clone()).await;
-                host.write().disconnect(peer_id).await
+                let fut = host.write().rm_gatt(peer_id.clone());
+                let _ = fut.await;
+                let fut = host.write().disconnect(peer_id);
+                fut.await
             }
             None => Err(types::Error::no_host()),
         }

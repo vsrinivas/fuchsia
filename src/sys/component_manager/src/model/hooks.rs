@@ -191,7 +191,8 @@ mod tests {
             let mut call_count = self.call_count.lock().await;
             *call_count += 1;
             if let Some(logger) = &self.logger {
-                logger.append(format!("{}::OnAddDynamicChild", self.name)).await;
+                let fut = logger.append(format!("{}::OnAddDynamicChild", self.name));
+                fut.await;
             }
             Ok(())
         }

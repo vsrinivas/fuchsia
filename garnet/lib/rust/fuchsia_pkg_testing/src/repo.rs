@@ -374,7 +374,8 @@ impl Repository {
         let wait_pm_up = fuchsia_backoff::retry_or_first_error(backoff, || {
             async move {
                 attempt += 1;
-                match get(format!("http://127.0.0.1:{}/config.json", port)).await {
+                let fut = get(format!("http://127.0.0.1:{}/config.json", port));
+                match fut.await {
                     Ok(_) => {
                         println!("server up on attempt {}", attempt);
                         return Ok(());

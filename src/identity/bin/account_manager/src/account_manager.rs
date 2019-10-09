@@ -409,13 +409,14 @@ impl AccountManager {
             client_secret: None,
             redirect_uri: None,
         };
-        match tm_proxy.authorize(
+        let fut = tm_proxy.authorize(
             &mut app_config,
             None, /* auth_ui_context */
             &mut APP_SCOPES.iter().map(|x| &**x),
             None, /* user_profile_id */
             None, /* auth_code */
-        ).await {
+        );
+        match fut.await {
             Ok((AuthStatus::Ok, None)) => Err(AccountManagerError::new(Status::InternalError)
                 .with_cause(format_err!("Invalid response from token manager"))),
             Ok((AuthStatus::Ok, Some(user_profile))) => Ok(*user_profile),

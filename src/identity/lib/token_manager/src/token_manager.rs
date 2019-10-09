@@ -404,13 +404,15 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             challenge: Some("".to_string()),
         };
 
-        let (status, updated_credential, access_token, auth_challenge) =
+        let fut =
             auth_provider_proxy.get_app_access_token_from_assertion_jwt(
                 attestation_signer,
                 &mut assertion_jwt_params,
                 &refresh_token,
                 &mut app_scopes.iter().map(|x| &**x),
-            ).await
+            );
+        let (status, updated_credential, access_token, auth_challenge) = fut
+            .await
             .map_err(|err| {
                 self.discard_auth_provider_proxy(auth_provider_type);
                 TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
@@ -452,15 +454,17 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         let auth_provider_type = &app_config.auth_provider_type;
         let auth_provider_proxy = self.get_auth_provider_proxy(auth_provider_type).await?;
 
-        let (status, provider_token) = auth_provider_proxy.get_app_access_token(
+        let fut = auth_provider_proxy.get_app_access_token(
             &refresh_token,
             app_config.client_id.as_ref().map(|x| &**x),
             &mut app_scopes.iter().map(|x| &**x),
-        ).await
-        .map_err(|err| {
-            self.discard_auth_provider_proxy(auth_provider_type);
-            TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
-        })?;
+        );
+        let (status, provider_token) = fut
+            .await
+            .map_err(|err| {
+                self.discard_auth_provider_proxy(auth_provider_type);
+                TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+            })?;
 
         let provider_token = provider_token.ok_or(TokenManagerError::from(status))?;
         let native_token = Arc::new(OAuthToken::from(*provider_token));

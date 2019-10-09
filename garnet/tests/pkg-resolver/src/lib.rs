@@ -694,7 +694,8 @@ where
             server_end.into_stream_and_control_handle().expect("split file server end");
         let handler = Clone::clone(self);
         fasync::spawn(async move {
-            (handler.stream_handler)(handler.call_count, stream, ch).await;
+            let fut = (handler.stream_handler)(handler.call_count, stream, ch);
+            fut.await;
         });
     }
     fn entry_info(&self) -> EntryInfo {

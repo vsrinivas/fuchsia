@@ -163,7 +163,8 @@ async fn read_sensor_and_get_brightness(sensor: Arc<Mutex<dyn SensorControl>>) -
         // Get the sensor reading in its own mutex block
         let sensor = sensor.lock().await;
         // TODO(kpt) Do we need a Mutex if sensor is only read?
-        let report = sensor.read().await.expect("Could not read from the sensor");
+        let fut = sensor.read();
+        let report = fut.await.expect("Could not read from the sensor");
         report.illuminance
     };
     brightness_curve_lux_to_nits(lux)
@@ -195,7 +196,8 @@ async fn set_brightness(nits: u16, backlight: Arc<Mutex<dyn BacklightControl>>) 
                 let mut backlight = backlight.lock().await;
                 let current_nits = {
                     //let backlight = backlight.lock().await;
-                    backlight.get_brightness().await.unwrap_or_else(|e| {
+                    let fut = backlight.get_brightness();
+                    fut.await.unwrap_or_else(|e| {
                         fx_log_err!("Failed to get backlight: {}. assuming 200", e);
                         200
                     }) as u16

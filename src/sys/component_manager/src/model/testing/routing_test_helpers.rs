@@ -977,8 +977,9 @@ impl OutDir {
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .unwrap();
-        let (s, _) = hippo_proxy
-            .write(&mut b"hippo".to_vec().drain(..))
+        let fut = hippo_proxy
+            .write(&mut b"hippo".to_vec().drain(..));
+        let (s, _) = fut
             .await
             .expect("failed to write to file");
         assert_eq!(zx::Status::OK, zx::Status::from_raw(s));

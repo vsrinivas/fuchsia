@@ -851,7 +851,8 @@ mod tests {
         let _ = Layer::new(session.clone());
 
         fasync::spawn(async move {
-            let _ = session.lock().present(0).await;
+            let fut = session.lock().present(0);
+            let _ = fut.await;
         });
 
         if let Some(session_request) = session_server.try_next().await.unwrap() {
@@ -877,7 +878,8 @@ mod tests {
             let _ = $resource_type::new($session.clone());
 
             fasync::spawn(async move {
-                let _ = $session.lock().present(0).await;
+                let fut = $session.lock().present(0);
+                let _ = fut.await;
             });
 
             while let Some(session_request) = $session_server.try_next().await.unwrap() {

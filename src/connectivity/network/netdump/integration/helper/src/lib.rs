@@ -289,7 +289,8 @@ impl TestEnvironment {
             status => Err(format_err!("Dumpfile watcher returned with status {:?}", status)),
         }?;
 
-        Self::watch_dumpfile_size(format!("{}/{}", DUMPFILE_DIR, &dumpfile)).await
+        let fut = Self::watch_dumpfile_size(format!("{}/{}", DUMPFILE_DIR, &dumpfile));
+        fut.await
     }
 
     // Periodically check for dumpfile size until it is at least minimum size.
