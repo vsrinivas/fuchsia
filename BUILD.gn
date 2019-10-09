@@ -301,9 +301,41 @@ build_api_module("tool_paths") {
   testonly = true
   data_keys = [ "tool_paths" ]
   deps = [
+    ":tool_paths.metadata",
     ":tool_paths.zircon",
     "//build/images:packages",
   ]
+}
+
+group("tool_paths.metadata") {
+  visibility = [ ":tool_paths" ]
+  prebuilt_tools = [
+    "//prebuilt/sdk/bazel/bazel",
+    "//prebuilt/third_party/rust/$host_platform/bin/cargo",
+    "//prebuilt/third_party/rust/$host_platform/bin/rustc",
+    "//prebuilt/third_party/rust/$host_platform/bin/rustdoc",
+    "//prebuilt/third_party/rust/$host_platform/bin/rustfmt",
+    "//prebuilt/third_party/clang/$host_platform/share/clang/clang-format-diff.py",
+    "//prebuilt/third_party/clang/$host_platform/share/clang/clang-tidy-diff.py",
+    "//prebuilt/third_party/go/$host_platform/bin/go",
+    "//prebuilt/third_party/go/$host_platform/bin/gofmt",
+    "//prebuilt/third_party/dart/$host_platform/bin/dartfmt",
+    "//prebuilt/third_party/yapf/yapf",
+  ]
+  metadata = {
+    tool_paths = []
+    foreach(tool, prebuilt_tools) {
+      tool_paths += [
+        {
+          cpu = host_cpu
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = get_path_info(tool, "name")
+          os = host_os
+          path = rebase_path(tool, root_build_dir)
+        },
+      ]
+    }
+  }
 }
 
 group("tool_paths.zircon") {
