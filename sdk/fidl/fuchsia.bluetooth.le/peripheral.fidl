@@ -19,6 +19,10 @@ enum PeripheralError {
     /// The requested parameters are invalid.
     INVALID_PARAMETERS = 4;
 
+    /// The request to start advertising was aborted, for example by issuing a new request with new
+    /// parameters.
+    ABORTED = 5;
+
     /// Advertising could not be initiated due to a hardware or system error.
     FAILED = 6;
 };
@@ -72,7 +76,8 @@ table AdvertisingParameters {
 /// Capability that is valid for the duration of advertising. The caller can close the handle to
 /// stop advertising. If the system internally stops advertising for any reason, the handle will be
 /// closed to communicate this to the client.
-protocol AdvertisingHandle {};
+protocol AdvertisingHandle {
+};
 
 [Discoverable]
 protocol Peripheral {
