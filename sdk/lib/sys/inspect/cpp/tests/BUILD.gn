@@ -44,8 +44,6 @@ executable("test") {
 }
 
 test_package("sys_inspect_cpp_tests") {
-  deprecated_shell = "//build"
-
   deps = [
     ":bin",
     ":test",

@@ -105,7 +105,6 @@ group("deprecated_shell_allowlist") {
     "//src/developer/memory/monitor/tests:memory_monitor_inspect_integration_tests",
     "//src/diagnostics/archivist:archivist",
     "//src/recovery/factory_reset:factory_reset_tests",
-    "//sdk/lib/sys/inspect/cpp/tests:sys_inspect_cpp_tests",
   ]
 }
 
