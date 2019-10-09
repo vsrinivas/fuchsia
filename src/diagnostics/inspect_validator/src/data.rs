@@ -762,6 +762,7 @@ impl Data {
                 Ok(BlockType::Extent) => objects.process_extent(block)?,
                 Ok(BlockType::Name) => objects.process_name(block)?,
                 Ok(BlockType::Tombstone) => objects.validate_tombstone(block)?,
+                Ok(t) => bail!("Unknown type scanned: {:?}", t),
                 Err(error) => return Err(error),
             }
         }

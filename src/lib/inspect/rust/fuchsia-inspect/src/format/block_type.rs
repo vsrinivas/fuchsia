@@ -41,6 +41,9 @@ pub enum BlockType {
 
     // An array value
     ArrayValue = 11,
+
+    // A link value
+    LinkValue = 12,
 }
 
 impl fmt::Display for BlockType {
@@ -58,6 +61,7 @@ impl fmt::Display for BlockType {
             BlockType::Name => write!(f, "NAME"),
             BlockType::Tombstone => write!(f, "TOMBSTONE"),
             BlockType::ArrayValue => write!(f, "ARRAY_VALUE"),
+            BlockType::LinkValue => write!(f, "LINK_VALUE"),
         }
     }
 }
@@ -70,7 +74,8 @@ impl BlockType {
             | BlockType::UintValue
             | BlockType::DoubleValue
             | BlockType::PropertyValue
-            | BlockType::ArrayValue => true,
+            | BlockType::ArrayValue
+            | BlockType::LinkValue => true,
             _ => false,
         }
     }
@@ -90,7 +95,7 @@ impl BlockType {
     }
 
     #[cfg(test)]
-    pub fn all() -> [BlockType; 12] {
+    pub fn all() -> [BlockType; 13] {
         [
             BlockType::Free,
             BlockType::Reserved,
@@ -104,6 +109,7 @@ impl BlockType {
             BlockType::Name,
             BlockType::Tombstone,
             BlockType::ArrayValue,
+            BlockType::LinkValue,
         ]
     }
 }

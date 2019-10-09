@@ -31,6 +31,13 @@ pub enum PropertyFormat {
     Bytes = 1,
 }
 
+/// Disposition of a Link value.
+#[derive(Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
+pub enum LinkNodeDisposition {
+    Child = 0,
+    Inline = 1,
+}
+
 #[derive(Debug)]
 pub struct Block<T> {
     index: u32,
@@ -269,6 +276,23 @@ impl<T: ReadableBlockContainer> Block<T> {
         self.container
             .read_bytes(utils::offset_for_index(self.index + 1) + slot_index * 8, &mut bytes);
         Ok(u64::from_le_bytes(bytes))
+    }
+
+    /// Gets the index of the content of this LINK_VALUE block.
+    pub fn link_content_index(&self) -> Result<u32, Error> {
+        self.check_type(BlockType::LinkValue)?;
+        let payload = self.read_payload();
+        Ok(payload.content_index())
+    }
+
+    /// Gets the node disposition of a LINK_VALUE block.
+    pub fn link_node_disposition(&self) -> Result<LinkNodeDisposition, Error> {
+        self.check_type(BlockType::LinkValue)?;
+        let payload = self.read_payload();
+        let flag = payload.disposition_flags();
+        LinkNodeDisposition::from_u8(flag).ok_or_else(|| {
+            format_err!("Invalid disposition type {} at index {}", flag, self.index())
+        })
     }
 
     /// Ensures the type of the array is the expected one.
@@ -722,6 +746,22 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         Ok(())
     }
 
+    /// Creates a LINK block.
+    pub fn become_link(
+        &self,
+        name_index: u32,
+        parent_index: u32,
+        content_index: u32,
+        disposition_flags: LinkNodeDisposition,
+    ) -> Result<(), Error> {
+        self.write_value_header(BlockType::LinkValue, name_index, parent_index)?;
+        let mut payload = Payload(0);
+        payload.set_content_index(content_index);
+        payload.set_disposition_flags(disposition_flags.to_u8().unwrap());
+        self.write_payload(payload);
+        Ok(())
+    }
+
     /// Initializes a *_VALUE block header.
     fn write_value_header(
         &self,
@@ -1060,6 +1100,7 @@ mod tests {
             BlockType::NodeValue,
             BlockType::PropertyValue,
             BlockType::ArrayValue,
+            BlockType::LinkValue,
         ]);
         test_ok_types(move |b| b.name_index(), &any_value);
         test_ok_types(move |b| b.parent_index(), &any_value);
@@ -1325,6 +1366,28 @@ mod tests {
         assert!(block
             .become_array_value(6, ArrayFormat::Default, BlockType::IntValue, 1, 2)
             .is_ok());
+    }
+
+    #[test]
+    fn become_link() {
+        let container = [0u8; constants::MIN_ORDER_SIZE];
+        let block = get_reserved(&container);
+        assert!(block.become_link(1, 2, 3, LinkNodeDisposition::Inline).is_ok());
+        assert_eq!(block.name_index().unwrap(), 1);
+        assert_eq!(block.parent_index().unwrap(), 2);
+        assert_eq!(block.link_content_index().unwrap(), 3);
+        assert_eq!(block.block_type(), BlockType::LinkValue);
+        assert_eq!(block.link_node_disposition().unwrap(), LinkNodeDisposition::Inline);
+        assert_eq!(container[..8], [0xc1, 0x02, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00]);
+        assert_eq!(container[8..], [0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10]);
+
+        let types = BTreeSet::from_iter(vec![BlockType::LinkValue]);
+        test_ok_types(move |b| b.link_content_index(), &types);
+        test_ok_types(move |b| b.link_node_disposition(), &types);
+        test_ok_types(
+            move |b| b.become_link(1, 2, 3, LinkNodeDisposition::Inline),
+            &BTreeSet::from_iter(vec![BlockType::Reserved]),
+        );
     }
 
     fn get_header(container: &[u8]) -> Block<&[u8]> {

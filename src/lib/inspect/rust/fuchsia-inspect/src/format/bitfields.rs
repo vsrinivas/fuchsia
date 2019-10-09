@@ -53,6 +53,10 @@ bitfield! {
     pub u8, array_entry_type, set_array_entry_type: 3, 0;
     pub u8, array_flags, set_array_flags: 7, 4;
     pub u8, array_slots_count, set_array_slots_count: 15, 8;
+
+    // Only for LINK_VALUE blocks.
+    pub u32, content_index, set_content_index: 19, 0;
+    pub u8, disposition_flags, set_disposition_flags: 63, 60;
 }
 
 #[cfg(test)]

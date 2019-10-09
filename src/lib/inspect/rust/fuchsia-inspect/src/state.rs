@@ -18,6 +18,10 @@ use {
     std::sync::Arc,
 };
 
+// TODO(fxb/38134): use this.
+#[cfg(test)]
+use crate::format::block::LinkNodeDisposition;
+
 /// Wraps a heap and implements the Inspect VMO API on top of it at a low level.
 #[derive(Debug)]
 pub struct State {
@@ -210,6 +214,47 @@ impl State {
         })
     }
 
+    // TODO(fxb/38134): use this.
+    #[cfg(test)]
+    pub fn create_link(
+        &mut self,
+        name: &str,
+        content: &str,
+        disposition: LinkNodeDisposition,
+        parent_index: u32,
+    ) -> Result<Block<Arc<Mapping>>, Error> {
+        with_header_lock!(self, {
+            let (value_block, name_block) =
+                self.allocate_reserved_value(name, parent_index, constants::MIN_ORDER_SIZE)?;
+            let result = self.allocate_name(content).and_then(|content_block| {
+                value_block.become_link(
+                    name_block.index(),
+                    parent_index,
+                    content_block.index(),
+                    disposition,
+                )
+            });
+            match result {
+                Ok(()) => Ok(value_block),
+                Err(e) => {
+                    self.delete_value(value_block)?;
+                    bail!("Failed to create link: {:?}", e);
+                }
+            }
+        })
+    }
+
+    // TODO(fxb/38134): use this.
+    #[cfg(test)]
+    pub fn free_link(&mut self, index: u32) -> Result<(), Error> {
+        with_header_lock!(self, {
+            let block = self.heap.get_block(index)?;
+            let content_block = self.heap.get_block(block.link_content_index()?)?;
+            self.delete_value(block)?;
+            self.heap.free_block(content_block)
+        })
+    }
+
     /// Free a *_VALUE block at the given |index|.
     pub fn free_value(&mut self, index: u32) -> Result<(), Error> {
         with_header_lock!(self, {
@@ -274,20 +319,13 @@ impl State {
         block_size: usize,
     ) -> Result<(Block<Arc<Mapping>>, Block<Arc<Mapping>>), Error> {
         let block = self.heap.allocate_block(block_size)?;
-        let mut bytes = name.as_bytes();
-        let max_bytes = constants::MAX_ORDER_SIZE - constants::HEADER_SIZE_BYTES;
-        if bytes.len() > max_bytes {
-            bytes = &bytes[..max_bytes];
-        }
-        let name_block = match self.heap.allocate_block(utils::block_size_for_payload(bytes.len()))
-        {
+        let name_block = match self.allocate_name(name) {
             Ok(b) => b,
             Err(err) => {
                 self.heap.free_block(block)?;
                 return Err(err);
             }
         };
-        name_block.become_name(name).expect("Failed to create name block");
 
         let result = self.heap.get_block(parent_index).and_then(|parent_block| match parent_block
             .block_type()
@@ -306,6 +344,17 @@ impl State {
                 bail!("Invalid parent index {}: {}", parent_index, e)
             }
         }
+    }
+
+    fn allocate_name(&mut self, name: &str) -> Result<Block<Arc<Mapping>>, Error> {
+        let mut bytes = name.as_bytes();
+        let max_bytes = constants::MAX_ORDER_SIZE - constants::HEADER_SIZE_BYTES;
+        if bytes.len() > max_bytes {
+            bytes = &bytes[..max_bytes];
+        }
+        let name_block = self.heap.allocate_block(utils::block_size_for_payload(bytes.len()))?;
+        name_block.become_name(name)?;
+        Ok(name_block)
     }
 
     fn delete_value(&mut self, block: Block<Arc<Mapping>>) -> Result<(), Error> {
@@ -843,6 +892,52 @@ mod tests {
         let result: Result<(), Error> = (|| with_header_lock!(state, { bail!("some error") }))();
         assert!(result.is_err());
         assert!(state.header.check_locked(false).is_ok());
+    }
+
+    #[test]
+    fn test_link() {
+        // Intialize state and create a link block.
+        let mut state = get_state(4096);
+        let block =
+            state.create_link("link-name", "link-content", LinkNodeDisposition::Inline, 0).unwrap();
+
+        // Verify link block.
+        assert_eq!(block.block_type(), BlockType::LinkValue);
+        assert_eq!(block.index(), 1);
+        assert_eq!(block.parent_index().unwrap(), 0);
+        assert_eq!(block.name_index().unwrap(), 2);
+        assert_eq!(block.link_content_index().unwrap(), 4);
+        assert_eq!(block.link_node_disposition().unwrap(), LinkNodeDisposition::Inline);
+
+        // Verify link's name block.
+        let name_block = state.heap.get_block(2).unwrap();
+        assert_eq!(name_block.block_type(), BlockType::Name);
+        assert_eq!(name_block.name_length().unwrap(), 9);
+        assert_eq!(name_block.name_contents().unwrap(), "link-name");
+
+        // Verify link's content block.
+        let content_block = state.heap.get_block(4).unwrap();
+        assert_eq!(content_block.block_type(), BlockType::Name);
+        assert_eq!(content_block.name_length().unwrap(), 12);
+        assert_eq!(content_block.name_contents().unwrap(), "link-content");
+
+        // Verfiy all the VMO blocks.
+        let bytes = &state.heap.bytes()[..];
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
+        assert_eq!(blocks.len(), 10);
+        assert_eq!(blocks[0].block_type(), BlockType::Header);
+        assert_eq!(blocks[1].block_type(), BlockType::LinkValue);
+        assert_eq!(blocks[2].block_type(), BlockType::Name);
+        assert_eq!(blocks[3].block_type(), BlockType::Name);
+        assert!(blocks[4..].iter().all(|b| b.block_type() == BlockType::Free));
+
+        // Free link
+        assert!(state.free_link(block.index()).is_ok());
+        let bytes = &state.heap.bytes()[..];
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
+        assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
     fn get_state(size: usize) -> State {
