@@ -159,15 +159,14 @@ std::optional<size_t> ReadArraySubrange(llvm::DWARFContext* context,
 }  // namespace
 
 DwarfSymbolFactory::DwarfSymbolFactory(fxl::WeakPtr<ModuleSymbolsImpl> symbols)
-    : symbols_(symbols) {}
+    : symbols_(std::move(symbols)) {}
 DwarfSymbolFactory::~DwarfSymbolFactory() = default;
 
-fxl::RefPtr<Symbol> DwarfSymbolFactory::CreateSymbol(void* data_ptr, uint32_t offset) {
+fxl::RefPtr<Symbol> DwarfSymbolFactory::CreateSymbol(uint32_t factory_data) {
   if (!symbols_)
     return fxl::MakeRefCounted<Symbol>();
 
-  auto* unit = static_cast<llvm::DWARFCompileUnit*>(data_ptr);
-  llvm::DWARFDie die = unit->getDIEForOffset(offset);
+  llvm::DWARFDie die = symbols_->context()->getDIEForOffset(factory_data);
   if (!die.isValid())
     return fxl::MakeRefCounted<Symbol>();
 
@@ -258,7 +257,11 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(const llvm::DWARFDie& die) 
 }
 
 LazySymbol DwarfSymbolFactory::MakeLazy(const llvm::DWARFDie& die) {
-  return LazySymbol(fxl::RefPtr<SymbolFactory>(this), die.getDwarfUnit(), die.getOffset());
+  return LazySymbol(fxl::RefPtr<SymbolFactory>(this), die.getOffset());
+}
+
+LazySymbol DwarfSymbolFactory::MakeLazy(uint32_t die_offset) {
+  return LazySymbol(fxl::RefPtr<SymbolFactory>(this), die_offset);
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(const llvm::DWARFDie& die, DwarfTag tag,

@@ -24,8 +24,7 @@ class LazySymbol {
   LazySymbol();  // Creates a !is_valid() one.
   LazySymbol(const LazySymbol& other);
   LazySymbol(LazySymbol&& other);
-  LazySymbol(fxl::RefPtr<SymbolFactory> factory, void* factory_data_ptr,
-             uint32_t factory_data_offset);
+  LazySymbol(fxl::RefPtr<SymbolFactory> factory, uint32_t factory_data);
 
   // Implicitly creates a non-lazy one with a pre-cooked object, mostly for tests.
   template <class SymbolType>
@@ -49,10 +48,9 @@ class LazySymbol {
   // May be null if this contains no type reference.
   fxl::RefPtr<SymbolFactory> factory_;
 
-  // Opaque data passed to the factory to construct a type Symbol for this.  In the DWARF factory,
-  // this is a DWARFUnit* and unit DIE offset.
-  void* factory_data_ptr_ = nullptr;
-  uint32_t factory_data_offset_ = 0;
+  // Opaque data passed to the factory to construct a type Symbol for this. In the DWARF factory,
+  // this is a DIE offset.
+  uint32_t factory_data_ = 0;
 
   mutable fxl::RefPtr<Symbol> symbol_;
 };

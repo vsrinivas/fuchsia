@@ -95,9 +95,7 @@ bool ReferencesMainFunction(const InputLocation& loc) {
 
 ModuleSymbolsImpl::ModuleSymbolsImpl(const std::string& name, const std::string& binary_name,
                                      const std::string& build_id)
-    : name_(name), binary_name_(binary_name), build_id_(build_id), weak_factory_(this) {
-  symbol_factory_ = fxl::MakeRefCounted<DwarfSymbolFactory>(GetWeakPtr());
-}
+    : name_(name), binary_name_(binary_name), build_id_(build_id), weak_factory_(this) {}
 
 ModuleSymbolsImpl::~ModuleSymbolsImpl() = default;
 
@@ -116,7 +114,7 @@ ModuleSymbolStatus ModuleSymbolsImpl::GetStatus() const {
   return status;
 }
 
-Err ModuleSymbolsImpl::Load() {
+Err ModuleSymbolsImpl::Load(bool create_index) {
   DEBUG_LOG(Session) << "Loading " << binary_name_ << " (" << name_ << ").";
 
   if (auto debug = elflib::ElfLib::Create(name_)) {
@@ -140,20 +138,23 @@ Err ModuleSymbolsImpl::Load() {
   binary_buffer_ = std::move(binary_pair.second);
   binary_ = std::move(binary_pair.first);
 
-  llvm::object::ObjectFile* obj = static_cast<llvm::object::ObjectFile*>(binary_.get());
-  context_ = llvm::DWARFContext::create(*obj, nullptr, llvm::DWARFContext::defaultErrorHandler);
-
+  context_ =
+      llvm::DWARFContext::create(*object_file(), nullptr, llvm::DWARFContext::defaultErrorHandler);
   context_->getDWARFObj().forEachInfoSections([this](const llvm::DWARFSection& s) {
     compile_units_.addUnitsForSection(*context_, s, llvm::DW_SECT_INFO);
   });
+  symbol_factory_ = fxl::MakeRefCounted<DwarfSymbolFactory>(GetWeakPtr());
 
-  // We could consider creating a new binary/object file just for indexing. The indexing will page
-  // all of the binary in, and most of it won't be needed again (it will be paged back in slowly,
-  // savings may make such a change worth it for large programs as needed).
-  //
-  // Although it will be slightly slower to create, the memory savings may make such a change worth
-  // it for large programs.
-  index_.CreateIndex(obj);
+  if (create_index) {
+    // We could consider creating a new binary/object file just for indexing. The indexing will page
+    // all of the binary in, and most of it won't be needed again (it will be paged back in slowly,
+    // savings may make such a change worth it for large programs as needed).
+    //
+    // Although it will be slightly slower to create, the memory savings may make such a change
+    // worth it for large programs.
+    index_.CreateIndex(object_file());
+  }
+
   return Err();
 }
 
@@ -255,7 +256,7 @@ std::vector<fxl::RefPtr<Function>> ModuleSymbolsImpl::GetMainFunctions() const {
 const Index& ModuleSymbolsImpl::GetIndex() const { return index_; }
 
 LazySymbol ModuleSymbolsImpl::IndexDieRefToSymbol(const IndexNode::DieRef& die_ref) const {
-  return symbol_factory_->MakeLazy(die_ref.ToDie(context_.get()));
+  return symbol_factory_->MakeLazy(die_ref.offset());
 }
 
 llvm::DWARFUnit* ModuleSymbolsImpl::CompileUnitForRelativeAddress(uint64_t relative_address) const {

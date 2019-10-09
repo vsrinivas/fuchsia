@@ -12,6 +12,8 @@
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_symbol_factory.h"
+#include "src/developer/debug/zxdb/symbols/module_symbols_impl.h"
 #include "src/developer/debug/zxdb/symbols/test_symbol_module.h"
 #include "src/lib/fxl/strings/split_string.h"
 
@@ -21,88 +23,88 @@ namespace zxdb {
 // but the important thing is that when this happens to check that the new index makes sense and
 // then add it.
 TEST(Index, IndexDump) {
-  TestSymbolModule module;
-
-  std::string err;
-  ASSERT_TRUE(module.LoadSpecific(TestSymbolModule::GetCheckedInTestFileName(), &err)) << err;
+  auto module = fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetCheckedInTestFileName(),
+                                                       "test", "build_id");
+  Err err = module->Load(false);
+  ASSERT_TRUE(err.ok()) << err.msg();
 
   Index index;
-  index.CreateIndex(module.object_file());
+  index.CreateIndex(module->object_file());
 
   // Symbol index.
   std::ostringstream out;
-  index.root().Dump(out, 0);
+  index.root().Dump(out, module->symbol_factory(), 0);
   const char kExpected[] = R"(  Namespaces:
     <<empty index string>>
       Functions:
-        AnonNSFunction
-        LineLookupTest<0>
-        LineLookupTest<1>
+        AnonNSFunction: {[0x1450, 0x145f)}
+        LineLookupTest<0>: {[0x1040, 0x104f)}
+        LineLookupTest<1>: {[0x1050, 0x105d)}
     my_ns
       Types:
-        Base1
-        Base2
-        MyClass
+        Base1: 0x26a
+        Base2: 0x280
+        MyClass: 0x733
           Types:
-            Inner
+            Inner: 0x75e
               Functions:
-                MyMemberTwo
+                MyMemberTwo: {[0x1370, 0x137b)}
           Functions:
-            MyMemberOne
+            MyMemberOne: {[0x1460, 0x146f)}
           Variables:
-            kClassStatic
-        Struct
+            kClassStatic: 0x720
+        Struct: 0x1f3
           Functions:
-            MyFunc
+            MyFunc: {[0x1310, 0x1323)}
           Variables:
-            kConstInt
-            kConstLongDouble
-        StructMemberPtr
-        TypeForUsing
+            kConstInt: 0x22d
+            kConstLongDouble: 0x239
+        StructMemberPtr: 0x35a
+        TypeForUsing: 0x1a3
       Functions:
-        DoStructCall
-        GetStruct
-        GetStructMemberPtr
-        InlinedFunction
-        NamespaceFunction
-        PassRValueRef
+        DoStructCall: {[0x1100, 0x114c)}
+        GetStruct: {[0x10a0, 0x10c5)}
+        GetStructMemberPtr: {[0x10d0, 0x10e1)}
+        InlinedFunction: {[0x1150, 0x115f)}
+        NamespaceFunction: {[0x1380, 0x138b)}
+        PassRValueRef: {[0x10f0, 0x10fa)}
       Variables:
-        kGlobal
+        kGlobal: 0x707
     std
       Types:
-        nullptr_t
+        nullptr_t: 0x186
   Types:
-    ClassInTest2
+    ClassInTest2: 0x873
       Functions:
-        FunctionInTest2
-    ForInline
+        FunctionInTest2: {[0x1470, 0x147b)}
+    ForInline: 0x4d4
       Functions:
-        ForInline
-    MyTemplate<my_ns::Struct, 42>
+        ForInline: {[0x1350, 0x1364)}
+    MyTemplate<my_ns::Struct, 42>: 0x465
       Functions:
-        MyTemplate
-    StructWithEnums
+        MyTemplate: {[0x1330, 0x1345)}
+    StructWithEnums: 0x104
       Types:
-        RegularEnum
-        TypedEnum
-    __ARRAY_SIZE_TYPE__
-    char
-    int
-    long double
-    signed char
-    unsigned int
+        RegularEnum: 0x119
+        TypedEnum: 0x152
+    __ARRAY_SIZE_TYPE__: 0x6a0
+    char: 0x3d7
+    int: 0xd2
+    long double: 0x3cb
+    signed char: 0x17a
+    unsigned int: 0x16c
   Functions:
-    CallInline
-    CallInlineMember
-    DoLineLookupTest
-    GetIntPtr
-    GetNullPtrT
-    GetString
-    GetStructWithEnums
-    GetTemplate
-    GetUsing
-    My2DArray
-    MyFunction
+    CallInline: {[0x1290, 0x12a8)}
+    CallInlineMember: {[0x11e0, 0x1287)}
+    DoLineLookupTest: {[0x1000, 0x1034)}
+    GetIntPtr: {[0x1060, 0x1068)}
+    GetNullPtrT: {[0x12e0, 0x12e8)}
+    GetString: {[0x1070, 0x1099)}
+    GetStructWithEnums: {[0x12b0, 0x12da)}
+    GetTemplate: {[0x1190, 0x11d6)}
+    GetUsing: {[0x12f0, 0x1309)}
+    My2DArray: {[0x1160, 0x118b)}
+    MyFunction: {[0x1390, 0x1446)}
 )";
   EXPECT_EQ(kExpected, out.str());
 
@@ -119,19 +121,20 @@ zxdb_symbol_test2.cc -> ../../src/developer/debug/zxdb/symbols/test_data/zxdb_sy
 
   // Test that the slow indexing path produces the same result as the fast path.
   Index slow_index;
-  slow_index.CreateIndex(module.object_file(), true);
+  slow_index.CreateIndex(module->object_file(), true);
   out = std::ostringstream();
-  slow_index.root().Dump(out, 0);
+  slow_index.root().Dump(out, module->symbol_factory(), 0);
   EXPECT_EQ(kExpected, out.str());
 }
 
 TEST(Index, FindExactFunction) {
-  TestSymbolModule module;
-  std::string err;
-  ASSERT_TRUE(module.Load(&err)) << err;
+  auto module = fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetCheckedInTestFileName(),
+                                                       "test", "build_id");
+  Err err = module->Load(false);
+  ASSERT_TRUE(err.ok()) << err.msg();
 
   Index index;
-  index.CreateIndex(module.object_file());
+  index.CreateIndex(module->object_file());
 
   // Standalone function search.
   auto result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kMyFunctionName));
@@ -172,12 +175,13 @@ TEST(Index, FindExactFunction) {
 }
 
 TEST(Index, FindFileMatches) {
-  TestSymbolModule module;
-  std::string err;
-  ASSERT_TRUE(module.Load(&err)) << err;
+  auto module = fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetCheckedInTestFileName(),
+                                                       "test", "build_id");
+  Err err = module->Load(false);
+  ASSERT_TRUE(err.ok()) << err.msg();
 
   Index index;
-  index.CreateIndex(module.object_file());
+  index.CreateIndex(module->object_file());
 
   // Simple filename-only query that succeeds.
   std::vector<std::string> result = index.FindFileMatches("zxdb_symbol_test.cc");
@@ -209,12 +213,13 @@ TEST(Index, FindFileMatches) {
 }
 
 TEST(Index, FindFilePrefixes) {
-  TestSymbolModule module;
-  std::string err;
-  ASSERT_TRUE(module.Load(&err)) << err;
+  auto module = fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetCheckedInTestFileName(),
+                                                       "test", "build_id");
+  Err err = module->Load(false);
+  ASSERT_TRUE(err.ok()) << err.msg();
 
   Index index;
-  index.CreateIndex(module.object_file());
+  index.CreateIndex(module->object_file());
 
   // Should find both files. Order not guaranteed.
   std::vector<std::string> result = index.FindFilePrefixes("z");
@@ -226,12 +231,13 @@ TEST(Index, FindFilePrefixes) {
 // Enable and substitute a path on your system to dump the index for a DWARF file.
 #if 0
 TEST(Index, DumpIndex) {
-  TestSymbolModule module;
-  std::string err;
-  ASSERT_TRUE(module.LoadSpecific("chrome", &err)) << err;
+  auto module= fxl::MakeRefCounted<ModuleSymbolsImpl>("chrome",
+  "test", "build_id");
+  Err err = module->Load(false);
+  ASSERT_TRUE(err.ok()) << err.msg();
 
   Index index;
-  index.CreateIndex(module.object_file());
+  index.CreateIndex(module->object_file());
 
   std::cout << index.main_functions().size() << " main function(s) found.\n\n";
 
@@ -262,14 +268,14 @@ TEST(Index, BenchmarkIndexing) {
   const char kFilename[] = "chrome";
   int64_t begin_us = GetTickMicroseconds();
 
-  TestSymbolModule module;
-  std::string err;
-  ASSERT_TRUE(module.LoadSpecific(kFilename, &err)) << err;
+  auto module = fxl::MakeRefCounted<ModuleSymbolsImpl>(kFilename, "test", "build_id");
+  Err err = module->Load(false);
+  ASSERT_TRUE(err.ok()) << err.msg();
 
   int64_t load_complete_us = GetTickMicroseconds();
 
   Index index;
-  index.CreateIndex(module.object_file());
+  index.CreateIndex(module->object_file());
 
   int64_t index_complete_us = GetTickMicroseconds();
 

@@ -10,6 +10,7 @@
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace llvm {
+class DWARFContext;
 class DWARFDie;
 }  // namespace llvm
 
@@ -23,16 +24,20 @@ class ModuleSymbolsImpl;
 // given module.
 class DwarfSymbolFactory : public SymbolFactory {
  public:
+  // SymbolFactory implementation.
+  fxl::RefPtr<Symbol> CreateSymbol(uint32_t factory_data) override;
+
+  // Returns a LazySymbol referencing the given DIE or DIE offset.
+  LazySymbol MakeLazy(const llvm::DWARFDie& die);
+  LazySymbol MakeLazy(uint32_t die_offset);
+
+ private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(DwarfSymbolFactory);
+  FRIEND_MAKE_REF_COUNTED(DwarfSymbolFactory);
+
   explicit DwarfSymbolFactory(fxl::WeakPtr<ModuleSymbolsImpl> symbols);
   ~DwarfSymbolFactory() override;
 
-  // SymbolFactory implementation.
-  fxl::RefPtr<Symbol> CreateSymbol(void* data_ptr, uint32_t offset) override;
-
-  // Returns a LazySymbol referencing the given DIE.
-  LazySymbol MakeLazy(const llvm::DWARFDie& die);
-
- private:
   // Internal version that creates a symbol from a Die.
   fxl::RefPtr<Symbol> DecodeSymbol(const llvm::DWARFDie& die);
 

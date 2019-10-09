@@ -8,19 +8,22 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_symbol_factory.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 
 namespace {
 
-void DumpMap(const IndexNode::Map& map, int indent, const char* heading, std::ostream& out) {
+void DumpMap(const IndexNode::Map& map, int indent, const char* heading,
+             DwarfSymbolFactory* factory_for_loc, std::ostream& out) {
   if (map.empty())
     return;
 
   out << std::string(indent * 2, ' ') << heading << std::endl;
   for (const auto& cur : map)
-    cur.second.Dump(cur.first, out, indent + 1);
+    cur.second.Dump(cur.first, out, factory_for_loc, indent + 1);
 }
 
 }  // namespace
@@ -93,25 +96,47 @@ IndexNode::Map& IndexNode::MapForKind(Kind kind) {
 
 std::string IndexNode::AsString(int indent_level) const {
   std::ostringstream out;
-  Dump(out, indent_level);
+  Dump(out, nullptr, indent_level);
   return out.str();
 }
 
-void IndexNode::Dump(std::ostream& out, int indent_level) const {
-  DumpMap(namespaces(), indent_level + 1, "Namespaces:", out);
-  DumpMap(types(), indent_level + 1, "Types:", out);
-  DumpMap(functions(), indent_level + 1, "Functions:", out);
-  DumpMap(vars(), indent_level + 1, "Variables:", out);
+void IndexNode::Dump(std::ostream& out, DwarfSymbolFactory* factory_for_loc,
+                     int indent_level) const {
+  DumpMap(namespaces(), indent_level + 1, "Namespaces:", factory_for_loc, out);
+  DumpMap(types(), indent_level + 1, "Types:", factory_for_loc, out);
+  DumpMap(functions(), indent_level + 1, "Functions:", factory_for_loc, out);
+  DumpMap(vars(), indent_level + 1, "Variables:", factory_for_loc, out);
 }
 
-void IndexNode::Dump(const std::string& name, std::ostream& out, int indent_level) const {
+void IndexNode::Dump(const std::string& name, std::ostream& out,
+                     DwarfSymbolFactory* factory_for_loc, int indent_level) const {
   out << std::string(indent_level * 2, ' ');
   if (name.empty())
     out << "<<empty index string>>";
   else
     out << name;
+
+  if (factory_for_loc) {
+    // Dump location information too.
+    const char* separator = ": ";
+    for (const DieRef& die_ref : dies_) {
+      out << separator;
+      separator = ", ";
+
+      LazySymbol lazy = factory_for_loc->MakeLazy(die_ref.offset());
+      const Symbol* symbol = lazy.Get();
+      if (const Function* function = symbol->AsFunction()) {
+        out << function->code_ranges().ToString();
+      } else {
+        // Everything else just gets the DIE offset so we can identify it. This can be customized
+        // in the future if needed.
+        out << std::hex << "0x" << die_ref.offset();
+      }
+    }
+  }
+
   out << std::endl;
-  Dump(out, indent_level);
+  Dump(out, factory_for_loc, indent_level);
 }
 
 }  // namespace zxdb

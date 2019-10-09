@@ -34,11 +34,17 @@ class Variable;
 // Represents the symbols for a module (executable or shared library). See ModuleSymbols.
 class ModuleSymbolsImpl : public ModuleSymbols {
  public:
+  // These are invalid until Load() has completed successfully.
   llvm::DWARFContext* context() { return context_.get(); }
   llvm::DWARFUnitVector& compile_units() { return compile_units_; }
   DwarfSymbolFactory* symbol_factory() { return symbol_factory_.get(); }
+  llvm::object::ObjectFile* object_file() {
+    return static_cast<llvm::object::ObjectFile*>(binary_.get());
+  }
 
-  Err Load();
+  // Normal callers will always want to create the index. The only time this is unnecessary is
+  // from certain tests that want to do it themselves.
+  Err Load(bool create_index = true);
 
   fxl::WeakPtr<ModuleSymbolsImpl> GetWeakPtr();
 
@@ -109,7 +115,7 @@ class ModuleSymbolsImpl : public ModuleSymbols {
 
   std::unique_ptr<llvm::MemoryBuffer> binary_buffer_;  // Backing for binary_.
   std::unique_ptr<llvm::object::Binary> binary_;
-  std::unique_ptr<llvm::DWARFContext> context_;
+  std::unique_ptr<llvm::DWARFContext> context_;  // binary_ must outlive this.
 
   llvm::DWARFUnitVector compile_units_;
 

@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/ObjectFile.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
+#include "src/developer/debug/zxdb/symbols/module_symbols_impl.h"
 #include "src/lib/fxl/macros.h"
 
 namespace llvm {
@@ -68,30 +69,11 @@ class TestSymbolModule {
   // Returns a stripped version of the file returned by GetCheckedInTestFileName().
   static std::string GetStrippedCheckedInTestFileName();
 
-  // Loads the test file. On failure, returns false and sets the given error message to be something
-  // helpful.
-  bool Load(std::string* err_msg);
-
-  // Loads a file at the given path. See Load().
-  bool LoadSpecific(const std::string& path, std::string* err_msg);
-
-  llvm::object::ObjectFile* object_file() {
-    return static_cast<llvm::object::ObjectFile*>(binary_.get());
-  }
-  llvm::DWARFContext* context() { return context_.get(); }
-  llvm::DWARFUnitVector& compile_units() { return compile_units_; }
-
   // Helper to convert symbol names to vectors of components without using the "expr" library. This
   // just splits on "::" which handles most cases but not elaborate templates.
   static Identifier SplitName(std::string_view input);
 
  private:
-  std::unique_ptr<llvm::MemoryBuffer> binary_buffer_;  // Backing for binary_.
-  std::unique_ptr<llvm::object::Binary> binary_;
-  std::unique_ptr<llvm::DWARFContext> context_;
-
-  llvm::DWARFUnitVector compile_units_;
-
   FXL_DISALLOW_COPY_AND_ASSIGN(TestSymbolModule);
 };
 
