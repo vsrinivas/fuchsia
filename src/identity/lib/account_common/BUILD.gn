@@ -12,7 +12,6 @@ rustc_library("account_common") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
-    "//sdk/fidl/fuchsia.auth.account:fuchsia.auth.account-rustc",
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
     "//src/identity/lib/identity_common",
     "//third_party/rust_crates:failure",

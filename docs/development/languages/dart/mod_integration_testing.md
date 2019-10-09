@@ -194,7 +194,7 @@ The component manifest for our tests is
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.auth.account.AccountManager": "fuchsia-pkg://fuchsia.com/account_manager#meta/account_manager.cmx",
+                "fuchsia.identity.account.AccountManager": "fuchsia-pkg://fuchsia.com/account_manager#meta/account_manager.cmx",
                 "fuchsia.devicesettings.DeviceSettingsManager": "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/device_settings_manager.cmx",
                 "fuchsia.fonts.Provider": "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx",
                 "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
@@ -219,7 +219,7 @@ The component manifest for our tests is
             "deprecated-ambient-replace-as-executable"
         ],
         "services": [
-            "fuchsia.auth.account.AccountManager",
+            "fuchsia.identity.account.AccountManager",
             "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.fonts.Provider",
             "fuchsia.net.NameLookup",

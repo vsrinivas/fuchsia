@@ -4,32 +4,32 @@
 
 use failure::{format_err, Error, Fail};
 use fidl_fuchsia_auth::Status::{self as TokenManagerStatus, *};
-use fidl_fuchsia_auth_account::Status;
+use fidl_fuchsia_identity_account::Error as ApiError;
 
 /// An extension trait to simplify conversion of results based on general errors to
 /// AccountManagerErrors.
 pub trait ResultExt<T, E> {
-    /// Wraps the error in a non-fatal `AccountManagerError` with the supplied `Status`.
-    fn account_manager_status(self, status: Status) -> Result<T, AccountManagerError>;
+    /// Wraps the error in a non-fatal `AccountManagerError` with the supplied `ApiError`.
+    fn account_manager_error(self, api_error: ApiError) -> Result<T, AccountManagerError>;
 }
 
 impl<T, E> ResultExt<T, E> for Result<T, E>
 where
     E: Into<Error> + Send + Sync + Sized,
 {
-    fn account_manager_status(self, status: Status) -> Result<T, AccountManagerError> {
-        self.map_err(|err| AccountManagerError::new(status).with_cause(err))
+    fn account_manager_error(self, api_error: ApiError) -> Result<T, AccountManagerError> {
+        self.map_err(|err| AccountManagerError::new(api_error).with_cause(err))
     }
 }
 
 /// An Error type for problems encountered in the account manager and account handler. Each error
-/// contains the fuchsia.auth.account.Status that should be reported back to the client and an
+/// contains the fuchsia.identity.account.Error that should be reported back to the client and an
 /// indication of whether it is fatal.
 #[derive(Debug, Fail)]
-#[fail(display = "AccountManager error, returning {:?}. ({:?})", status, cause)]
+#[fail(display = "AccountManager error, returning {:?}. ({:?})", api_error, cause)]
 pub struct AccountManagerError {
-    /// The most appropriate `fuchsia.auth.account.Status` to describe this problem.
-    pub status: Status,
+    /// The most appropriate `fuchsia.identity.account.Error` to describe this problem.
+    pub api_error: ApiError,
     /// Whether this error should be considered fatal, i.e. whether it should
     /// terminate processing of all requests on the current channel.
     pub fatal: bool,
@@ -38,9 +38,9 @@ pub struct AccountManagerError {
 }
 
 impl AccountManagerError {
-    /// Constructs a new non-fatal error based on the supplied `Status`.
-    pub fn new(status: Status) -> Self {
-        AccountManagerError { status, fatal: false, cause: None }
+    /// Constructs a new non-fatal error based on the supplied `fuchsia.identity.account.Error`.
+    pub fn new(api_error: ApiError) -> Self {
+        AccountManagerError { api_error, fatal: false, cause: None }
     }
 
     /// Sets a cause on the current error.
@@ -52,50 +52,33 @@ impl AccountManagerError {
 
 impl From<fidl::Error> for AccountManagerError {
     fn from(error: fidl::Error) -> Self {
-        AccountManagerError::new(Status::IoError).with_cause(error)
+        AccountManagerError::new(ApiError::Resource).with_cause(error)
     }
 }
 
-impl From<Status> for AccountManagerError {
-    fn from(status: Status) -> Self {
-        AccountManagerError::new(status)
-    }
-}
-
-impl From<fidl_fuchsia_identity_account::Error> for AccountManagerError {
-    fn from(error: fidl_fuchsia_identity_account::Error) -> Self {
-        let status = match error {
-            fidl_fuchsia_identity_account::Error::Unknown => Status::UnknownError,
-            fidl_fuchsia_identity_account::Error::Internal => Status::InternalError,
-            fidl_fuchsia_identity_account::Error::UnsupportedOperation => Status::InternalError,
-            fidl_fuchsia_identity_account::Error::InvalidRequest => Status::InvalidRequest,
-            fidl_fuchsia_identity_account::Error::Resource => Status::IoError,
-            fidl_fuchsia_identity_account::Error::Network => Status::NetworkError,
-            fidl_fuchsia_identity_account::Error::NotFound => Status::NotFound,
-            fidl_fuchsia_identity_account::Error::RemovalInProgress => Status::RemovalInProgress,
-            fidl_fuchsia_identity_account::Error::FailedPrecondition => Status::InvalidRequest,
-        };
-        AccountManagerError::new(status)
+impl From<ApiError> for AccountManagerError {
+    fn from(api_error: ApiError) -> Self {
+        AccountManagerError::new(api_error)
     }
 }
 
 impl From<TokenManagerStatus> for AccountManagerError {
     fn from(token_manager_status: TokenManagerStatus) -> Self {
         AccountManagerError {
-            status: match token_manager_status {
-                Ok => Status::Ok, // It is not adviced to create an error with an "ok" status
-                InternalError => Status::InternalError,
-                InvalidAuthContext => Status::InvalidRequest,
-                InvalidRequest => Status::InvalidRequest,
-                IoError => Status::IoError,
-                NetworkError => Status::NetworkError,
+            api_error: match token_manager_status {
+                Ok => ApiError::Internal, // Invalid conversion
+                InternalError => ApiError::Internal,
+                InvalidAuthContext => ApiError::InvalidRequest,
+                InvalidRequest => ApiError::InvalidRequest,
+                IoError => ApiError::Resource,
+                NetworkError => ApiError::Network,
 
                 AuthProviderServiceUnavailable
                 | AuthProviderServerError
                 | UserNotFound
                 | ReauthRequired
                 | UserCancelled
-                | UnknownError => Status::UnknownError,
+                | UnknownError => ApiError::Unknown,
             },
             fatal: false,
             cause: Some(format_err!("Token manager error: {:?}", token_manager_status)),
@@ -103,20 +86,9 @@ impl From<TokenManagerStatus> for AccountManagerError {
     }
 }
 
-// This is a utility for converting to the fuchsia.identity.account.Error
-// enum during the period that fuchsia.identity.account and
-// fuchsia.auth.account need to coexist.
-impl Into<fidl_fuchsia_identity_account::Error> for AccountManagerError {
-    fn into(self) -> fidl_fuchsia_identity_account::Error {
-        match self.status {
-            Status::Ok | Status::InternalError => fidl_fuchsia_identity_account::Error::Internal,
-            Status::InvalidRequest => fidl_fuchsia_identity_account::Error::InvalidRequest,
-            Status::IoError => fidl_fuchsia_identity_account::Error::Resource,
-            Status::NetworkError => fidl_fuchsia_identity_account::Error::Network,
-            Status::NotFound => fidl_fuchsia_identity_account::Error::NotFound,
-            Status::UnknownError => fidl_fuchsia_identity_account::Error::Unknown,
-            Status::RemovalInProgress => fidl_fuchsia_identity_account::Error::RemovalInProgress,
-        }
+impl Into<ApiError> for AccountManagerError {
+    fn into(self) -> ApiError {
+        self.api_error.clone()
     }
 }
 
@@ -125,7 +97,7 @@ mod tests {
     use super::*;
     use failure::format_err;
 
-    const TEST_STATUS: Status = Status::UnknownError;
+    const TEST_API_ERROR: ApiError = ApiError::Unknown;
 
     fn create_test_error() -> Error {
         format_err!("Test error")
@@ -135,8 +107,8 @@ mod tests {
     fn test_new() {
         let cause = format_err!("Example cause");
         let cause_str = format!("{:?}", cause);
-        let error = AccountManagerError::new(TEST_STATUS).with_cause(cause);
-        assert_eq!(error.status, TEST_STATUS);
+        let error = AccountManagerError::new(TEST_API_ERROR).with_cause(cause);
+        assert_eq!(error.api_error, TEST_API_ERROR);
         assert!(!error.fatal);
         assert_eq!(format!("{:?}", error.cause.unwrap()), cause_str);
     }
@@ -144,7 +116,7 @@ mod tests {
     #[test]
     fn test_from_fidl_error() {
         let error: AccountManagerError = fidl::Error::UnexpectedSyncResponse.into();
-        assert_eq!(error.status, Status::IoError);
+        assert_eq!(error.api_error, ApiError::Resource);
         assert!(!error.fatal);
         assert_eq!(
             format!("{:?}", error.cause.unwrap()),
@@ -153,33 +125,25 @@ mod tests {
     }
 
     #[test]
-    fn test_from_status() {
-        let error: AccountManagerError = TEST_STATUS.into();
-        assert_eq!(error.status, TEST_STATUS);
-        assert!(!error.fatal);
-        assert!(error.cause.is_none());
-    }
-
-    #[test]
     fn test_from_identity_error() {
-        let error: AccountManagerError = fidl_fuchsia_identity_account::Error::Unknown.into();
-        assert_eq!(error.status, Status::UnknownError);
+        let error: AccountManagerError = TEST_API_ERROR.into();
+        assert_eq!(error.api_error, TEST_API_ERROR);
         assert!(!error.fatal);
         assert!(error.cause.is_none());
     }
 
     #[test]
     fn test_to_identity_error() {
-        let manager_error = AccountManagerError::new(Status::InternalError);
-        let error: fidl_fuchsia_identity_account::Error = manager_error.into();
-        assert_eq!(error, fidl_fuchsia_identity_account::Error::Internal);
+        let manager_error = AccountManagerError::new(TEST_API_ERROR);
+        let error: ApiError = manager_error.into();
+        assert_eq!(error, TEST_API_ERROR);
     }
 
     #[test]
-    fn test_account_manager_status() {
+    fn test_account_manager_error() {
         let test_result: Result<(), Error> = Err(create_test_error());
-        let wrapped_result = test_result.account_manager_status(TEST_STATUS);
-        assert_eq!(wrapped_result.as_ref().unwrap_err().status, TEST_STATUS);
+        let wrapped_result = test_result.account_manager_error(TEST_API_ERROR);
+        assert_eq!(wrapped_result.as_ref().unwrap_err().api_error, TEST_API_ERROR);
         assert_eq!(
             format!("{:?}", wrapped_result.unwrap_err().cause.unwrap()),
             format!("{:?}", create_test_error())

@@ -5,8 +5,8 @@
 #ifndef SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_TEST_HARNESS_IMPL_H_
 #define SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_TEST_HARNESS_IMPL_H_
 
-#include <fuchsia/auth/account/cpp/fidl.h>
 #include <fuchsia/devicesettings/cpp/fidl.h>
+#include <fuchsia/identity/account/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <fuchsia/setui/cpp/fidl.h>

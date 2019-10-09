@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use account_common::{AccountManagerError, LocalPersonaId};
-use fidl_fuchsia_auth_account::Status;
+use fidl_fuchsia_identity_account::Error as ApiError;
 use log::warn;
 use serde_derive::{Deserialize, Serialize};
 use std::fs::{self, File};
@@ -42,15 +42,15 @@ impl StoredAccount {
         let path = Self::path(account_dir);
         if !path.exists() {
             warn!("Failed to locate account doc: {:?}", path);
-            return Err(AccountManagerError::new(Status::NotFound));
+            return Err(AccountManagerError::new(ApiError::NotFound));
         };
         let file = BufReader::new(File::open(path).map_err(|err| {
             warn!("Failed to read account doc: {:?}", err);
-            AccountManagerError::new(Status::IoError).with_cause(err)
+            AccountManagerError::new(ApiError::Resource).with_cause(err)
         })?);
         serde_json::from_reader(file).map_err(|err| {
             warn!("Failed to parse account doc: {:?}", err);
-            AccountManagerError::new(Status::InternalError).with_cause(err)
+            AccountManagerError::new(ApiError::Internal).with_cause(err)
         })
     }
 
@@ -72,20 +72,20 @@ impl StoredAccount {
         {
             let mut tmp_file = BufWriter::new(File::create(&tmp_path).map_err(|err| {
                 warn!("Failed to create account tmp doc: {:?}", err);
-                AccountManagerError::new(Status::IoError).with_cause(err)
+                AccountManagerError::new(ApiError::Resource).with_cause(err)
             })?);
             serde_json::to_writer(&mut tmp_file, self).map_err(|err| {
                 warn!("Failed to serialize account doc: {:?}", err);
-                AccountManagerError::new(Status::IoError).with_cause(err)
+                AccountManagerError::new(ApiError::Resource).with_cause(err)
             })?;
             tmp_file.flush().map_err(|err| {
                 warn!("Failed to flush serialized account doc: {:?}", err);
-                AccountManagerError::new(Status::IoError).with_cause(err)
+                AccountManagerError::new(ApiError::Resource).with_cause(err)
             })?;
         }
         fs::rename(&tmp_path, &path).map_err(|err| {
             warn!("Failed to rename account doc: {:?}", err);
-            AccountManagerError::new(Status::IoError).with_cause(err)
+            AccountManagerError::new(ApiError::Resource).with_cause(err)
         })
     }
 }
@@ -99,7 +99,7 @@ mod tests {
     fn load_fail() {
         let tmp_dir = TempDir::new().unwrap();
         let err = StoredAccount::load(&tmp_dir.path()).err().expect("load unexpectedly succeeded");
-        assert_eq!(err.status, Status::NotFound);
+        assert_eq!(err.api_error, ApiError::NotFound);
     }
 
     #[test]
@@ -108,7 +108,7 @@ mod tests {
         let data = "<INVALID_JSON>";
         fs::write(StoredAccount::path(&tmp_dir.path()), data).expect("failed writing test data");
         let err = StoredAccount::load(&tmp_dir.path()).err().expect("load unexpectedly succeeded");
-        assert_eq!(err.status, Status::InternalError);
+        assert_eq!(err.api_error, ApiError::Internal);
     }
 
     #[test]
@@ -127,6 +127,6 @@ mod tests {
         let path = tmp_dir.path().join("santa");
         let stored = StoredAccount::new(LocalPersonaId::new(4));
         let err = stored.save(&path).err().expect("save unexpectedly succeeded");
-        assert_eq!(err.status, Status::IoError);
+        assert_eq!(err.api_error, ApiError::Resource);
     }
 }

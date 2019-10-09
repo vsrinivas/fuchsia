@@ -274,8 +274,8 @@ executable("login_override_test") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.auth.account",
     "//sdk/fidl/fuchsia.devicesettings",
+    "//sdk/fidl/fuchsia.identity.account",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.setui",
     "//sdk/fidl/fuchsia.stash",

@@ -39,8 +39,8 @@ executable_package("basemgr") {
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/rapidjson",
     "//sdk/fidl/fuchsia.auth",
-    "//sdk/fidl/fuchsia.auth.account",
     "//sdk/fidl/fuchsia.devicesettings",
+    "//sdk/fidl/fuchsia.identity.account",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.modular.internal",
@@ -137,7 +137,7 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.auth",
-    "//sdk/fidl/fuchsia.auth.account",
+    "//sdk/fidl/fuchsia.identity.account",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.modular.internal",
@@ -162,7 +162,7 @@ executable_package("dev_base_shell") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.auth.account",
+    "//sdk/fidl/fuchsia.identity.account",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.views",
     "//src/lib/callback",
@@ -183,7 +183,7 @@ executable("auto_login_base_shell_bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.auth.account",
+    "//sdk/fidl/fuchsia.identity.account",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.views",
     "//src/lib/callback",

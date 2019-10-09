@@ -5,7 +5,6 @@
 library fuchsia.identity.internal;
 
 using fuchsia.auth;
-using fuchsia.auth.account;
 using fuchsia.identity.account;
 
 /// The control channel for an AccountHandler component.
@@ -28,7 +27,7 @@ protocol AccountHandlerControl {
     /// `id` The new account's local identifier.
     CreateAccount(
         AccountHandlerContext context,
-        fuchsia.auth.account.LocalAccountId id)
+        fuchsia.identity.account.LocalAccountId id)
         -> () error fuchsia.identity.account.Error;
 
     /// Loads information about a Fuchsia account that was previously provisioned
@@ -39,7 +38,7 @@ protocol AccountHandlerControl {
     /// `id` The account's local identifier.
     LoadAccount(
         AccountHandlerContext context,
-        fuchsia.auth.account.LocalAccountId id)
+        fuchsia.identity.account.LocalAccountId id)
         -> () error fuchsia.identity.account.Error;
 
     /// Deletes all persistent information about the Fuchsia account handled by
@@ -61,7 +60,7 @@ protocol AccountHandlerControl {
     /// Connects an interface to read properties of and perform operations on
     /// the account handled by this handler. The account must have previously
     /// been initialized using CreateAccount or LoadAccount, otherwise the call
-    /// will fail with a status of NOT_FOUND.
+    /// will fail with an error of NOT_FOUND.
     ///
     /// `context_provider` An `AuthenticationContextProvider` capable of
     ///                    supplying UI contexts used for interactive
@@ -69,7 +68,7 @@ protocol AccountHandlerControl {
     /// `account` The server end of an `Account` channel
     GetAccount(
         fuchsia.auth.AuthenticationContextProvider auth_context_provider,
-        request<fuchsia.auth.account.Account> account)
+        request<fuchsia.identity.account.Account> account)
         -> () error fuchsia.identity.account.Error;
 
     /// Signals that the AccountHandler should tear itself down. After the

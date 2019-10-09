@@ -14,11 +14,11 @@ None
 ## Design
 
 `error::AccountManagerError` defines an Error type implementing failure::Fail
-and containing the most appropriate fuchsia.auth.account.Status to communicate
-the error over FIDL.
+and containing the most appropriate fuchsia.identity.account.Error to
+communicate the error over FIDL.
 
 `identifiers` defines more ergonomic Rust wrapper types for the FIDL identifiers
-defined in fuchsia.auth.account.
+defined in fuchsia.identity.account.
 
 
 ## Future Work

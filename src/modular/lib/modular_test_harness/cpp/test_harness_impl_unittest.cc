@@ -114,7 +114,7 @@ TEST_F(TestHarnessImplTest, DefaultInjectedServices) {
   spec.mutable_env_services()->mutable_services_from_components()->push_back(
       fuchsia::modular::testing::ComponentService{
           // Override the default injected AccountManager.
-          .name = fuchsia::auth::account::AccountManager::Name_,
+          .name = fuchsia::identity::account::AccountManager::Name_,
           .url = generated_accountmgr_url});
 
   // Intercept the component URL which supplies AccountManager.
@@ -137,8 +137,8 @@ TEST_F(TestHarnessImplTest, DefaultInjectedServices) {
 
   test_harness()->Run(std::move(spec));
 
-  fuchsia::auth::account::AccountManagerPtr accountmgr;
-  test_harness()->ConnectToEnvironmentService(fuchsia::auth::account::AccountManager::Name_,
+  fuchsia::identity::account::AccountManagerPtr accountmgr;
+  test_harness()->ConnectToEnvironmentService(fuchsia::identity::account::AccountManager::Name_,
                                               accountmgr.NewRequest().TakeChannel());
 
   RunLoopUntil([&] { return intercepted_accountmgr; });

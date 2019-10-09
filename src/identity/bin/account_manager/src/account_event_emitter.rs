@@ -7,7 +7,7 @@
 //! presence and states during their lifetime.
 
 use account_common::{AccountAuthState, FidlAccountAuthState, LocalAccountId};
-use fidl_fuchsia_auth_account::{AccountListenerOptions, AccountListenerProxy};
+use fidl_fuchsia_identity_account::{AccountListenerOptions, AccountListenerProxy};
 use fuchsia_inspect::{Node, NumericProperty, Property};
 use futures::future::*;
 use futures::lock::Mutex;
@@ -53,12 +53,8 @@ impl Client {
         event: &'a AccountEvent,
     ) -> impl Future<Output = Result<(), fidl::Error>> {
         match event {
-            AccountEvent::AccountAdded(id) => {
-                self.listener.on_account_added(&mut id.clone().into())
-            }
-            AccountEvent::AccountRemoved(id) => {
-                self.listener.on_account_removed(&mut id.clone().into())
-            }
+            AccountEvent::AccountAdded(id) => self.listener.on_account_added(id.clone().into()),
+            AccountEvent::AccountRemoved(id) => self.listener.on_account_removed(id.clone().into()),
             AccountEvent::AuthStateChanged(account_auth_state) => {
                 self.listener.on_auth_state_changed(&mut (&account_auth_state.clone()).into())
             }
@@ -139,7 +135,7 @@ mod tests {
     use super::*;
     use fidl::endpoints::*;
     use fidl_fuchsia_auth::AuthChangeGranularity;
-    use fidl_fuchsia_auth_account::{AccountListenerMarker, AccountListenerRequest};
+    use fidl_fuchsia_identity_account::{AccountListenerMarker, AccountListenerRequest};
     use fuchsia_inspect::Inspector;
     use futures::prelude::*;
     use lazy_static::lazy_static;
@@ -303,19 +299,15 @@ mod tests {
 
         let request_fut = async move {
             assert_eq!(account_event_emitter.inspect.active.get().unwrap(), 0);
-            assert!(account_event_emitter.add_listener(
-                listener_1,
-                options_1,
-                &AUTH_STATES
-            ).await
-            .is_ok());
+            assert!(account_event_emitter
+                .add_listener(listener_1, options_1, &AUTH_STATES)
+                .await
+                .is_ok());
             assert_eq!(account_event_emitter.inspect.active.get().unwrap(), 1);
-            assert!(account_event_emitter.add_listener(
-                listener_2,
-                options_2,
-                &AUTH_STATES
-            ).await
-            .is_ok());
+            assert!(account_event_emitter
+                .add_listener(listener_2, options_2, &AUTH_STATES)
+                .await
+                .is_ok());
             assert_eq!(account_event_emitter.inspect.active.get().unwrap(), 2);
 
             assert_eq!(account_event_emitter.inspect.events.get().unwrap(), 0);

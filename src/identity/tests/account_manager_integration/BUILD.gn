@@ -29,7 +29,7 @@ rustc_test("test") {
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
-    "//sdk/fidl/fuchsia.auth.account:fuchsia.auth.account-rustc",
+    "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
     "//src/identity/lib/account_common",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",

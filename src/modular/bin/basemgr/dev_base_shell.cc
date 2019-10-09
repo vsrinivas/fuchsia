@@ -6,8 +6,8 @@
 // command line configurable user name to its fuchsia::modular::UserProvider,
 // and is able to run a story with a single module through its life cycle.
 
-#include <fuchsia/auth/account/cpp/fidl.h>
 #include <fuchsia/auth/cpp/fidl.h>
+#include <fuchsia/identity/account/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -138,21 +138,18 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
 
       // We provision a new auth account with the expectation that basemgr is
       // subscribed as an account listener.
-      account_manager_->GetAccountIds(
-          [this](std::vector<fuchsia::auth::account::LocalAccountId> accounts) {
-            if (!accounts.empty()) {
-              return;
-            }
+      account_manager_->GetAccountIds([this](std::vector<uint64_t> accounts) {
+        if (!accounts.empty()) {
+          return;
+        }
 
-            account_manager_->ProvisionNewAccount(
-                fuchsia::auth::account::Lifetime::PERSISTENT,
-                [](fuchsia::auth::account::Status,
-                   std::unique_ptr<fuchsia::auth::account::LocalAccountId>) {
-                  FXL_LOG(INFO) << "Provisioned new account. Translating "
-                                   "this account into a "
-                                   "fuchsia::modular::auth::Account.";
-                });
-          });
+        account_manager_->ProvisionNewAccount(
+            fuchsia::identity::account::Lifetime::PERSISTENT, [](auto) {
+              FXL_LOG(INFO) << "Provisioned new account. Translating "
+                               "this account into a "
+                               "fuchsia::modular::auth::Account.";
+            });
+      });
     }
   }
 
@@ -161,7 +158,7 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
   fuchsia::modular::BaseShellContextPtr base_shell_context_;
   fuchsia::modular::UserProviderPtr user_provider_;
 
-  fuchsia::auth::account::AccountManagerPtr account_manager_;
+  fuchsia::identity::account::AccountManagerPtr account_manager_;
 
   fxl::WeakPtrFactory<DevBaseShellApp> weak_ptr_factory_;
 

@@ -66,7 +66,7 @@ BasemgrImpl::BasemgrImpl(fuchsia::modular::session::BasemgrConfig config,
                          fuchsia::ui::policy::PresenterPtr presenter,
                          fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
                          fuchsia::wlan::service::WlanPtr wlan,
-                         fuchsia::auth::account::AccountManagerPtr account_manager,
+                         fuchsia::identity::account::AccountManagerPtr account_manager,
                          fuchsia::device::manager::AdministratorPtr device_administrator,
                          fit::function<void()> on_shutdown)
     : config_(std::move(config)),
@@ -362,16 +362,15 @@ void BasemgrImpl::ShowSetupOrLogin() {
     // Login as the first user, or show setup. This asssumes that:
     // 1) Basemgr has exclusive access to AccountManager.
     // 2) There are only 0 or 1 authenticated accounts ever.
-    account_manager_->GetAccountIds(
-        [this](std::vector<fuchsia::auth::account::LocalAccountId> account_ids) {
-          if (account_ids.empty()) {
-            StartBaseShell();
-          } else {
-            fuchsia::modular::UserLoginParams2 params;
-            params.account_id = std::to_string(account_ids.at(0).id);
-            session_user_provider_impl_->Login2(std::move(params));
-          }
-        });
+    account_manager_->GetAccountIds([this](std::vector<uint64_t> account_ids) {
+      if (account_ids.empty()) {
+        StartBaseShell();
+      } else {
+        fuchsia::modular::UserLoginParams2 params;
+        params.account_id = std::to_string(account_ids.at(0));
+        session_user_provider_impl_->Login2(std::move(params));
+      }
+    });
   };
 
   // TODO(MF-347): Handle scenario where device settings manager channel is

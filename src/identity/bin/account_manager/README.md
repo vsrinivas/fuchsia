@@ -12,11 +12,11 @@ authentication for each account.
 
 Each device that supports Fuchsia accounts will have a single instance of the
 Account Manager component, started on demand, that implements the discoverable
-fuchsia.auth.account.AccountManager FIDL protocols and acts as the entry point
+fuchsia.identity.account.AccountManager FIDL protocols and acts as the entry point
 to the account system. Only a small number of core system components should
 depend directly on Account Manager, the remaining components should only rely on
 the least powerful protocol required to perform their role, typically
-fuchsia.auth.account.Persona or fuchsia.auth.TokenManager.
+fuchsia.identity.account.Persona or fuchsia.auth.TokenManager.
 
 
 ## Key Dependencies
@@ -36,7 +36,7 @@ fuchsia.auth.account.Persona or fuchsia.auth.TokenManager.
 
 ## Design
 
-`AccountManager` implements the fuchsia.auth.account.AccountManager FIDL
+`AccountManager` implements the fuchsia.identity.account.AccountManager FIDL
 protocol. The crate's main function creates a single instance of this struct
 and uses it to handle all incoming requests.
 
@@ -52,12 +52,12 @@ an instance of the Account Handler component. Each component instance is
 launched in a separate environment based on the local account ID.
 
 `AccountHandlerContext` implements the
-fuchsia.auth.account.internal.AccountHandlerContext FIDL protocol, using a map
+fuchsia.identity.internal.AccountHandlerContext FIDL protocol, using a map
 from all configured auth_provider_type strings to an associated
 `AuthProviderConnection`.
 
 `AccountEventEmitter` serves clients implementing the
-fuchsia.auth.account.AccountListener FIDL protocol.
+fuchsia.identity.account.AccountListener FIDL protocol.
 
 
 ## Future Work

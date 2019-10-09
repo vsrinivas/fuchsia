@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/auth/account/cpp/fidl.h>
 #include <fuchsia/devicesettings/cpp/fidl.h>
+#include <fuchsia/identity/account/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <fuchsia/setui/cpp/fidl.h>
 #include <fuchsia/stash/cpp/fidl.h>
@@ -48,7 +48,7 @@ TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
   modular_testing::TestHarnessBuilder builder;
   builder.AddServiceFromComponent<fuchsia::setui::SetUiService>(
       "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx");
-  builder.AddServiceFromComponent<fuchsia::auth::account::AccountManager>(
+  builder.AddServiceFromComponent<fuchsia::identity::account::AccountManager>(
       "fuchsia-pkg://fuchsia.com/account_manager#meta/account_manager.cmx");
   builder.AddServiceFromComponent<fuchsia::devicesettings::DeviceSettingsManager>(
       "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/"
@@ -79,7 +79,7 @@ TEST_F(LoginOverrideTest, DISABLED_AutoLoginGuestOverrideSkipsBaseShell) {
   modular_testing::TestHarnessBuilder builder;
   builder.AddServiceFromComponent<fuchsia::setui::SetUiService>(
       "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx");
-  builder.AddServiceFromComponent<fuchsia::auth::account::AccountManager>(
+  builder.AddServiceFromComponent<fuchsia::identity::account::AccountManager>(
       "fuchsia-pkg://fuchsia.com/account_manager#meta/account_manager.cmx");
   builder.AddServiceFromComponent<fuchsia::devicesettings::DeviceSettingsManager>(
       "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/"

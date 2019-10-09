@@ -6,7 +6,7 @@ use crate::account_handler_context::AccountHandlerContext;
 use account_common::{AccountManagerError, LocalAccountId, ResultExt as AccountResultExt};
 use failure::{format_err, ResultExt};
 use fidl::endpoints::{ClientEnd, RequestStream};
-use fidl_fuchsia_auth_account::{Lifetime, Status};
+use fidl_fuchsia_identity_account::{Error, Lifetime};
 use fidl_fuchsia_identity_internal::{
     AccountHandlerContextMarker, AccountHandlerContextRequestStream, AccountHandlerControlMarker,
     AccountHandlerControlProxy,
@@ -78,12 +78,12 @@ impl AccountHandlerConnection {
                 env_label.as_ref(),
             )
             .context("Failed to start launcher")
-            .account_manager_status(Status::IoError)?;
+            .account_manager_error(Error::Resource)?;
         fasync::spawn(fs_for_account_handler.collect());
         let proxy = app
             .connect_to_service::<AccountHandlerControlMarker>()
             .context("Failed to connect to AccountHandlerControl")
-            .account_manager_status(Status::IoError)?;
+            .account_manager_error(Error::Resource)?;
 
         Ok(AccountHandlerConnection { _app: app, _env_controller: env_controller, lifetime, proxy })
     }
@@ -100,10 +100,10 @@ impl AccountHandlerConnection {
     ) -> Result<ClientEnd<AccountHandlerContextMarker>, AccountManagerError> {
         let (server_chan, client_chan) = zx::Channel::create()
             .context("Failed to create channel")
-            .account_manager_status(Status::IoError)?;
+            .account_manager_error(Error::Resource)?;
         let server_async_chan = fasync::Channel::from_channel(server_chan)
             .context("Failed to create async channel")
-            .account_manager_status(Status::IoError)?;
+            .account_manager_error(Error::Resource)?;
         let request_stream = AccountHandlerContextRequestStream::from_channel(server_async_chan);
         let context_clone = Arc::clone(&context);
         fasync::spawn(async move {
@@ -125,9 +125,9 @@ impl AccountHandlerConnection {
         let context_client_end = Self::spawn_context_channel(context)?;
         match connection
             .proxy
-            .load_account(context_client_end, account_id.clone().as_mut().into())
+            .load_account(context_client_end, account_id.clone().into())
             .await
-            .account_manager_status(Status::IoError)?
+            .account_manager_error(Error::Resource)?
         {
             Ok(()) => Ok(connection),
             Err(err) => Err(Into::<AccountManagerError>::into(err)
@@ -147,9 +147,9 @@ impl AccountHandlerConnection {
 
         match connection
             .proxy()
-            .create_account(context_client_end, account_id.clone().as_mut().into())
+            .create_account(context_client_end, account_id.clone().into())
             .await
-            .account_manager_status(Status::IoError)?
+            .account_manager_error(Error::Resource)?
         {
             Ok(()) => {
                 // TODO(jsankey): Longer term, local ID may need to be related to the global ID

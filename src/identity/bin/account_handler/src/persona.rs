@@ -8,13 +8,12 @@ use crate::inspect;
 use crate::TokenManager;
 use account_common::{LocalAccountId, LocalPersonaId};
 use failure::Error;
-use fidl::encoding::OutOfLine;
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::{
     AuthChangeGranularity, AuthState, AuthenticationContextProviderProxy, TokenManagerMarker,
 };
-use fidl_fuchsia_auth_account::{
-    AuthListenerMarker, Lifetime, PersonaRequest, PersonaRequestStream, Status,
+use fidl_fuchsia_identity_account::{
+    AuthListenerMarker, Error as ApiError, Lifetime, PersonaRequest, PersonaRequestStream,
 };
 use fuchsia_inspect::{Node, NumericProperty};
 use futures::prelude::*;
@@ -123,7 +122,7 @@ impl Persona {
             }
             PersonaRequest::GetAuthState { responder } => {
                 let mut response = self.get_auth_state();
-                responder.send(response.0, response.1.as_mut().map(OutOfLine))?;
+                responder.send(&mut response)?;
             }
             PersonaRequest::RegisterAuthListener {
                 listener,
@@ -131,13 +130,14 @@ impl Persona {
                 granularity,
                 responder,
             } => {
-                let response = self.register_auth_listener(listener, initial_state, granularity);
-                responder.send(response)?;
+                let mut response =
+                    self.register_auth_listener(listener, initial_state, granularity);
+                responder.send(&mut response)?;
             }
             PersonaRequest::GetTokenManager { application_url, token_manager, responder } => {
-                let response =
+                let mut response =
                     self.get_token_manager(context, application_url, token_manager).await;
-                responder.send(response)?;
+                responder.send(&mut response)?;
             }
         }
         Ok(())
@@ -147,9 +147,9 @@ impl Persona {
         Lifetime::from(self.lifetime.as_ref())
     }
 
-    fn get_auth_state(&self) -> (Status, Option<AuthState>) {
+    fn get_auth_state(&self) -> Result<AuthState, ApiError> {
         // TODO(jsankey): Return real authentication state once authenticators exist to create it.
-        (Status::Ok, Some(AccountHandler::DEFAULT_AUTH_STATE))
+        Ok(AccountHandler::DEFAULT_AUTH_STATE)
     }
 
     fn register_auth_listener(
@@ -157,10 +157,10 @@ impl Persona {
         _listener: ClientEnd<AuthListenerMarker>,
         _initial_state: bool,
         _granularity: AuthChangeGranularity,
-    ) -> Status {
+    ) -> Result<(), ApiError> {
         // TODO(jsankey): Implement this method.
         warn!("RegisterAuthListener not yet implemented");
-        Status::InternalError
+        Err(ApiError::Internal)
     }
 
     async fn get_token_manager<'a>(
@@ -168,38 +168,29 @@ impl Persona {
         context: &'a PersonaContext,
         application_url: String,
         token_manager_server_end: ServerEnd<TokenManagerMarker>,
-    ) -> Status {
+    ) -> Result<(), ApiError> {
         let token_manager_clone = Arc::clone(&self.token_manager);
         let token_manager_context = TokenManagerContext {
             application_url,
             auth_ui_context_provider: context.auth_ui_context_provider.clone(),
         };
-        match token_manager_server_end.into_stream() {
-            Ok(stream) => {
-                match self
-                    .token_manager
-                    .task_group()
-                    .spawn(|cancel| {
-                        async move {
-                            token_manager_clone
-                                .handle_requests_from_stream(&token_manager_context, stream, cancel)
-                                .await
-                                .unwrap_or_else(|e| {
-                                    error!("Error handling TokenManager channel {:?}", e)
-                                })
-                        }
-                    })
-                    .await
-                {
-                    Err(_) => Status::RemovalInProgress,
-                    Ok(()) => Status::Ok,
+        let stream = token_manager_server_end.into_stream().map_err(|err| {
+            error!("Error opening TokenManager channel {:?}", err);
+            ApiError::Resource
+        })?;
+        self.token_manager
+            .task_group()
+            .spawn(|cancel| {
+                async move {
+                    token_manager_clone
+                        .handle_requests_from_stream(&token_manager_context, stream, cancel)
+                        .await
+                        .unwrap_or_else(|e| error!("Error handling TokenManager channel {:?}", e))
                 }
-            }
-            Err(e) => {
-                error!("Error opening TokenManager channel {:?}", e);
-                Status::IoError
-            }
-        }
+            })
+            .await
+            .map_err(|_| ApiError::RemovalInProgress)?;
+        Ok(())
     }
 }
 
@@ -210,7 +201,7 @@ mod tests {
     use crate::test_util::*;
     use fidl::endpoints::create_endpoints;
     use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
-    use fidl_fuchsia_auth_account::{PersonaMarker, PersonaProxy};
+    use fidl_fuchsia_identity_account::{PersonaMarker, PersonaProxy};
     use fidl_fuchsia_identity_internal::AccountHandlerContextMarker;
     use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
@@ -322,10 +313,7 @@ mod tests {
         let mut test = Test::new();
         test.run(test.create_persona(), |proxy| {
             async move {
-                assert_eq!(
-                    proxy.get_auth_state().await?,
-                    (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
-                );
+                assert_eq!(proxy.get_auth_state().await?, Ok(AccountHandler::DEFAULT_AUTH_STATE));
                 Ok(())
             }
         })
@@ -346,7 +334,7 @@ mod tests {
                             &mut AuthChangeGranularity { summary_changes: true }
                         )
                         .await?,
-                    Status::InternalError
+                    Err(ApiError::Internal)
                 );
                 Ok(())
             }
@@ -365,7 +353,7 @@ mod tests {
                     proxy
                         .get_token_manager(&TEST_APPLICATION_URL, token_manager_server_end)
                         .await?,
-                    Status::Ok
+                    Ok(())
                 );
 
                 // The token manager channel should now be usable.

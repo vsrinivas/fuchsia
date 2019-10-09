@@ -15,13 +15,13 @@ use account_common::{
     AccountManagerError, FidlLocalPersonaId, LocalAccountId, LocalPersonaId, ResultExt,
 };
 use failure::Error;
-use fidl::encoding::OutOfLine;
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::{
     AuthChangeGranularity, AuthState, AuthenticationContextProviderProxy, ServiceProviderAccount,
 };
-use fidl_fuchsia_auth_account::{
-    AccountRequest, AccountRequestStream, AuthListenerMarker, Lifetime, PersonaMarker, Status,
+use fidl_fuchsia_identity_account::{
+    AccountRequest, AccountRequestStream, AuthListenerMarker, Error as ApiError, Lifetime,
+    PersonaMarker,
 };
 use fidl_fuchsia_identity_internal::AccountHandlerContextProxy;
 use fuchsia_inspect::{Node, NumericProperty};
@@ -86,11 +86,11 @@ impl Account {
         let token_manager_task_group = task_group
             .create_child()
             .await
-            .map_err(|_| AccountManagerError::new(Status::RemovalInProgress))?;
+            .map_err(|_| AccountManagerError::new(ApiError::RemovalInProgress))?;
         let default_persona_task_group = task_group
             .create_child()
             .await
-            .map_err(|_| AccountManagerError::new(Status::RemovalInProgress))?;
+            .map_err(|_| AccountManagerError::new(ApiError::RemovalInProgress))?;
         let auth_provider_supplier = AuthProviderSupplier::new(context_proxy);
         let token_manager = Arc::new(match &lifetime {
             AccountLifetime::Ephemeral => {
@@ -99,7 +99,7 @@ impl Account {
             AccountLifetime::Persistent { account_dir } => {
                 let token_db_path = account_dir.join(TOKEN_DB);
                 TokenManager::new(&token_db_path, auth_provider_supplier, token_manager_task_group)
-                    .account_manager_status(Status::UnknownError)?
+                    .account_manager_error(ApiError::Unknown)?
             }
         });
         let lifetime = Arc::new(lifetime);
@@ -131,7 +131,7 @@ impl Account {
         if let AccountLifetime::Persistent { ref account_dir } = lifetime {
             if StoredAccount::path(account_dir).exists() {
                 info!("Attempting to create account twice with local id: {:?}", account_id);
-                return Err(AccountManagerError::new(Status::InternalError));
+                return Err(AccountManagerError::new(ApiError::Internal));
             }
             let stored_account = StoredAccount::new(local_persona_id.clone());
             stored_account.save(account_dir)?;
@@ -153,7 +153,7 @@ impl Account {
                     "Attempting to load an ephemeral account from disk. This is not a ",
                     "supported operation."
                 ));
-                return Err(AccountManagerError::new(Status::InternalError));
+                return Err(AccountManagerError::new(ApiError::Internal));
             }
         };
         let stored_account = StoredAccount::load(account_dir)?;
@@ -175,13 +175,13 @@ impl Account {
                 if token_db_path.exists() {
                     fs::remove_file(token_db_path).map_err(|err| {
                         warn!("Failed to delete token db: {:?}", err);
-                        AccountManagerError::new(Status::IoError).with_cause(err)
+                        AccountManagerError::new(ApiError::Resource).with_cause(err)
                     })?;
                 }
                 let to_remove = StoredAccount::path(&account_dir.clone());
                 fs::remove_file(to_remove).map_err(|err| {
                     warn!("Failed to delete account doc: {:?}", err);
-                    AccountManagerError::new(Status::IoError).with_cause(err)
+                    AccountManagerError::new(ApiError::Resource).with_cause(err)
                 })
             }
         }
@@ -234,7 +234,7 @@ impl Account {
             }
             AccountRequest::GetAuthState { responder } => {
                 let mut response = self.get_auth_state();
-                responder.send(response.0, response.1.as_mut().map(OutOfLine))?;
+                responder.send(&mut response)?;
             }
             AccountRequest::RegisterAuthListener {
                 listener,
@@ -242,28 +242,30 @@ impl Account {
                 granularity,
                 responder,
             } => {
-                let response = self.register_auth_listener(listener, initial_state, granularity);
-                responder.send(response)?;
+                let mut response =
+                    self.register_auth_listener(listener, initial_state, granularity);
+                responder.send(&mut response)?;
             }
             AccountRequest::GetPersonaIds { responder } => {
-                let mut response = self.get_persona_ids();
-                responder.send(&mut response.iter_mut())?;
+                let mut response = self.get_persona_ids().into_iter();
+                responder.send(&mut response)?;
             }
             AccountRequest::GetDefaultPersona { persona, responder } => {
                 let mut response = self.get_default_persona(context, persona).await;
-                responder.send(response.0, response.1.as_mut().map(OutOfLine))?;
+                responder.send(&mut response)?;
             }
             AccountRequest::GetPersona { id, persona, responder } => {
-                let response = self.get_persona(context, id.into(), persona).await;
-                responder.send(response)?;
+                let mut response = self.get_persona(context, id.into(), persona).await;
+                responder.send(&mut response)?;
             }
             AccountRequest::GetRecoveryAccount { responder } => {
-                let mut response = self.get_recovery_account();
-                responder.send(response.0, response.1.as_mut().map(OutOfLine))?;
+                let mut response =
+                    self.get_recovery_account().map(|option| option.map(|value| Box::new(value)));
+                responder.send(&mut response)?;
             }
             AccountRequest::SetRecoveryAccount { account, responder } => {
-                let response = self.set_recovery_account(account);
-                responder.send(response)?;
+                let mut response = self.set_recovery_account(account);
+                responder.send(&mut response)?;
             }
         }
         Ok(())
@@ -279,9 +281,9 @@ impl Account {
         Self::DEFAULT_ACCOUNT_NAME.to_string()
     }
 
-    fn get_auth_state(&self) -> (Status, Option<AuthState>) {
+    fn get_auth_state(&self) -> Result<AuthState, ApiError> {
         // TODO(jsankey): Return real authentication state once authenticators exist to create it.
-        (Status::Ok, Some(AccountHandler::DEFAULT_AUTH_STATE))
+        Ok(AccountHandler::DEFAULT_AUTH_STATE)
     }
 
     fn register_auth_listener(
@@ -289,10 +291,10 @@ impl Account {
         _listener: ClientEnd<AuthListenerMarker>,
         _initial_state: bool,
         _granularity: AuthChangeGranularity,
-    ) -> Status {
+    ) -> Result<(), ApiError> {
         // TODO(jsankey): Implement this method.
         warn!("RegisterAuthListener not yet implemented");
-        Status::InternalError
+        Err(ApiError::Internal)
     }
 
     fn get_persona_ids(&self) -> Vec<FidlLocalPersonaId> {
@@ -303,36 +305,27 @@ impl Account {
         &'a self,
         context: &'a AccountContext,
         persona_server_end: ServerEnd<PersonaMarker>,
-    ) -> (Status, Option<FidlLocalPersonaId>) {
+    ) -> Result<FidlLocalPersonaId, ApiError> {
         let persona_clone = Arc::clone(&self.default_persona);
         let persona_context =
             PersonaContext { auth_ui_context_provider: context.auth_ui_context_provider.clone() };
-        match persona_server_end.into_stream() {
-            Ok(stream) => {
-                match self
-                    .default_persona
-                    .task_group()
-                    .spawn(|cancel| {
-                        async move {
-                            persona_clone
-                                .handle_requests_from_stream(&persona_context, stream, cancel)
-                                .await
-                                .unwrap_or_else(|e| {
-                                    error!("Error handling Persona channel {:?}", e)
-                                })
-                        }
-                    })
-                    .await
-                {
-                    Err(_) => (Status::RemovalInProgress, None),
-                    Ok(()) => (Status::Ok, Some(self.default_persona.id().clone().into())),
+        let stream = persona_server_end.into_stream().map_err(|err| {
+            error!("Error opening Persona channel {:?}", err);
+            ApiError::Resource
+        })?;
+        self.default_persona
+            .task_group()
+            .spawn(|cancel| {
+                async move {
+                    persona_clone
+                        .handle_requests_from_stream(&persona_context, stream, cancel)
+                        .await
+                        .unwrap_or_else(|e| error!("Error handling Persona channel {:?}", e))
                 }
-            }
-            Err(e) => {
-                error!("Error opening Persona channel {:?}", e);
-                (Status::IoError, None)
-            }
-        }
+            })
+            .await
+            .map_err(|_| ApiError::RemovalInProgress)?;
+        Ok(self.default_persona.id().clone().into())
     }
 
     async fn get_persona<'a>(
@@ -340,25 +333,25 @@ impl Account {
         context: &'a AccountContext,
         id: LocalPersonaId,
         persona_server_end: ServerEnd<PersonaMarker>,
-    ) -> Status {
+    ) -> Result<(), ApiError> {
         if &id == self.default_persona.id() {
-            self.get_default_persona(context, persona_server_end).await.0
+            self.get_default_persona(context, persona_server_end).await.map(|_| ())
         } else {
             warn!("Requested persona does not exist {:?}", id);
-            Status::NotFound
+            Err(ApiError::NotFound)
         }
     }
 
-    fn get_recovery_account(&self) -> (Status, Option<ServiceProviderAccount>) {
+    fn get_recovery_account(&self) -> Result<Option<ServiceProviderAccount>, ApiError> {
         // TODO(jsankey): Implement this method.
         warn!("GetRecoveryAccount not yet implemented");
-        (Status::InternalError, None)
+        Err(ApiError::Internal)
     }
 
-    fn set_recovery_account(&self, _account: ServiceProviderAccount) -> Status {
+    fn set_recovery_account(&self, _account: ServiceProviderAccount) -> Result<(), ApiError> {
         // TODO(jsankey): Implement this method.
         warn!("SetRecoveryAccount not yet implemented");
-        Status::InternalError
+        Err(ApiError::Internal)
     }
 }
 
@@ -368,7 +361,7 @@ mod tests {
     use crate::test_util::*;
     use fidl::endpoints::create_endpoints;
     use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
-    use fidl_fuchsia_auth_account::{AccountMarker, AccountProxy};
+    use fidl_fuchsia_identity_account::{AccountMarker, AccountProxy};
     use fidl_fuchsia_identity_internal::AccountHandlerContextMarker;
     use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
@@ -551,10 +544,7 @@ mod tests {
         let mut test = Test::new();
         test.run(test.create_persistent_account().await.unwrap(), |proxy| {
             async move {
-                assert_eq!(
-                    proxy.get_auth_state().await?,
-                    (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
-                );
+                assert_eq!(proxy.get_auth_state().await?, Ok(AccountHandler::DEFAULT_AUTH_STATE));
                 Ok(())
             }
         })
@@ -575,7 +565,7 @@ mod tests {
                             &mut AuthChangeGranularity { summary_changes: true }
                         )
                         .await?,
-                    Status::InternalError
+                    Err(ApiError::Internal)
                 );
                 Ok(())
             }
@@ -594,7 +584,7 @@ mod tests {
             async move {
                 let response = proxy.get_persona_ids().await?;
                 assert_eq!(response.len(), 1);
-                assert_eq!(&LocalPersonaId::new(response[0].id), persona_id);
+                assert_eq!(&LocalPersonaId::new(response[0]), persona_id);
                 Ok(())
             }
         })
@@ -612,14 +602,13 @@ mod tests {
             async move {
                 let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
                 let response = account_proxy.get_default_persona(persona_server_end).await?;
-                assert_eq!(response.0, Status::Ok);
-                assert_eq!(&LocalPersonaId::from(*response.1.unwrap()), persona_id);
+                assert_eq!(&LocalPersonaId::from(response.unwrap()), persona_id);
 
                 // The persona channel should now be usable.
                 let persona_proxy = persona_client_end.into_proxy().unwrap();
                 assert_eq!(
                     persona_proxy.get_auth_state().await?,
-                    (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
+                    Ok(AccountHandler::DEFAULT_AUTH_STATE)
                 );
                 assert_eq!(persona_proxy.get_lifetime().await?, Lifetime::Persistent);
 
@@ -637,10 +626,7 @@ mod tests {
         test.run(account, |account_proxy| {
             async move {
                 let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
-                assert_eq!(
-                    account_proxy.get_default_persona(persona_server_end).await?.0,
-                    Status::Ok
-                );
+                assert!(account_proxy.get_default_persona(persona_server_end).await?.is_ok());
                 let persona_proxy = persona_client_end.into_proxy().unwrap();
 
                 assert_eq!(persona_proxy.get_lifetime().await?, Lifetime::Ephemeral);
@@ -659,18 +645,16 @@ mod tests {
         test.run(account, |account_proxy| {
             async move {
                 let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
-                assert_eq!(
-                    account_proxy
-                        .get_persona(&mut FidlLocalPersonaId::from(persona_id), persona_server_end)
-                        .await?,
-                    Status::Ok
-                );
+                assert!(account_proxy
+                    .get_persona(FidlLocalPersonaId::from(persona_id), persona_server_end)
+                    .await?
+                    .is_ok());
 
                 // The persona channel should now be usable.
                 let persona_proxy = persona_client_end.into_proxy().unwrap();
                 assert_eq!(
                     persona_proxy.get_auth_state().await?,
-                    (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
+                    Ok(AccountHandler::DEFAULT_AUTH_STATE)
                 );
 
                 Ok(())
@@ -691,8 +675,8 @@ mod tests {
             async move {
                 let (_, persona_server_end) = create_endpoints().unwrap();
                 assert_eq!(
-                    proxy.get_persona(&mut wrong_id.into(), persona_server_end).await?,
-                    Status::NotFound
+                    proxy.get_persona(wrong_id.into(), persona_server_end).await?,
+                    Err(ApiError::NotFound)
                 );
 
                 Ok(())
@@ -713,7 +697,7 @@ mod tests {
             async move {
                 assert_eq!(
                     proxy.set_recovery_account(&mut service_provider_account).await?,
-                    Status::InternalError
+                    Err(ApiError::Internal)
                 );
                 Ok(())
             }
@@ -724,7 +708,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_recovery_account() {
         let mut test = Test::new();
-        let expectation = (Status::InternalError, None);
+        let expectation = Err(ApiError::Internal);
         test.run(test.create_persistent_account().await.unwrap(), |proxy| {
             async move {
                 assert_eq!(proxy.get_recovery_account().await?, expectation);

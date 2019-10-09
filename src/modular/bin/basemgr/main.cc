@@ -153,7 +153,7 @@ std::unique_ptr<modular::BasemgrImpl> ConfigureBasemgr(
   component_context->svc()->Connect(device_settings_manager.NewRequest());
   fuchsia::wlan::service::WlanPtr wlan;
   component_context->svc()->Connect(wlan.NewRequest());
-  fuchsia::auth::account::AccountManagerPtr account_manager;
+  fuchsia::identity::account::AccountManagerPtr account_manager;
   component_context->svc()->Connect(account_manager.NewRequest());
   fuchsia::device::manager::AdministratorPtr administrator;
   component_context->svc()->Connect(administrator.NewRequest());

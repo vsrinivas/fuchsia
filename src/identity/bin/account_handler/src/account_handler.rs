@@ -9,8 +9,7 @@ use account_common::{AccountManagerError, LocalAccountId, ResultExt};
 use failure::{format_err, ResultExt as _};
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::{AuthState, AuthStateSummary, AuthenticationContextProviderMarker};
-use fidl_fuchsia_auth_account::{AccountMarker, Status};
-use fidl_fuchsia_identity_account::Error;
+use fidl_fuchsia_identity_account::{AccountMarker, Error as ApiError};
 use fidl_fuchsia_identity_internal::{
     AccountHandlerContextMarker, AccountHandlerContextProxy, AccountHandlerControlRequest,
     AccountHandlerControlRequestStream,
@@ -124,7 +123,7 @@ impl AccountHandler {
         let context_proxy = context
             .into_proxy()
             .context("Invalid AccountHandlerContext given")
-            .account_manager_status(Status::InvalidRequest)?;
+            .account_manager_error(ApiError::InvalidRequest)?;
 
         // The function evaluation is front loaded because await is not allowed while holding the
         // lock.
@@ -138,7 +137,7 @@ impl AccountHandler {
                 self.inspect.lifecycle.set("initialized");
                 Ok(())
             }
-            _ => Err(AccountManagerError::new(Status::InternalError)
+            _ => Err(AccountManagerError::new(ApiError::Internal)
                 .with_cause(format_err!("AccountHandler is already initialized"))),
         }
     }
@@ -148,7 +147,7 @@ impl AccountHandler {
         &self,
         id: LocalAccountId,
         context: ClientEnd<AccountHandlerContextMarker>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), ApiError> {
         self.init_account(Account::create, id, context).await.map_err(|err| {
             warn!("Failed creating Fuchsia account: {:?}", err);
             err.into()
@@ -160,7 +159,7 @@ impl AccountHandler {
         &self,
         id: LocalAccountId,
         context: ClientEnd<AccountHandlerContextMarker>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), ApiError> {
         self.init_account(Account::load, id, context).await.map_err(|err| {
             warn!("Failed loading Fuchsia account: {:?}", err);
             err.into()
@@ -169,10 +168,10 @@ impl AccountHandler {
 
     /// Remove the active account. This method should not be retried on failure.
     // TODO(AUTH-212): Implement graceful account removal.
-    async fn remove_account(&self, force: bool) -> Result<(), Error> {
+    async fn remove_account(&self, force: bool) -> Result<(), ApiError> {
         if force == false {
             warn!("Graceful (non-force) account removal not yet implemented.");
-            return Err(Error::Internal);
+            return Err(ApiError::Internal);
         }
         let old_lifecycle = {
             let mut account_lock = self.account.write();
@@ -183,7 +182,7 @@ impl AccountHandler {
             Lifecycle::Initialized { account } => account,
             _ => {
                 warn!("No account is initialized");
-                return Err(Error::InvalidRequest);
+                return Err(ApiError::InvalidRequest);
             }
         };
         // TODO(AUTH-212): After this point, error recovery might include putting the account back
@@ -195,7 +194,7 @@ impl AccountHandler {
         // destroy it.
         let account = Arc::try_unwrap(account_arc).map_err(|_| {
             warn!("Could not acquire exclusive access to account");
-            Error::Internal
+            ApiError::Internal
         })?;
 
         let account_id = account.id().clone();
@@ -215,23 +214,23 @@ impl AccountHandler {
         &self,
         auth_context_provider_client_end: ClientEnd<AuthenticationContextProviderMarker>,
         account_server_end: ServerEnd<AccountMarker>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), ApiError> {
         let account_arc = match &*self.account.read() {
             Lifecycle::Initialized { account } => Arc::clone(account),
             _ => {
                 warn!("AccountHandler is not initialized");
-                return Err(Error::NotFound);
+                return Err(ApiError::NotFound);
             }
         };
 
         let acp = auth_context_provider_client_end.into_proxy().map_err(|err| {
             warn!("Error using AuthenticationContextProvider {:?}", err);
-            Error::InvalidRequest
+            ApiError::InvalidRequest
         })?;
         let context = AccountContext { auth_ui_context_provider: acp };
         let stream = account_server_end.into_stream().map_err(|err| {
             warn!("Error opening Account channel {:?}", err);
-            Error::Resource
+            ApiError::Resource
         })?;
 
         let account_arc_clone = Arc::clone(&account_arc);
@@ -249,7 +248,7 @@ impl AccountHandler {
             .map_err(|_| {
                 // Since AccountHandler serves only one channel of requests in serial, this is an
                 // inconsistent state rather than a conflict
-                Error::Internal
+                ApiError::Internal
             })
     }
 
@@ -271,7 +270,6 @@ impl AccountHandler {
 mod tests {
     use super::*;
     use crate::test_util::*;
-    use account_common::FidlLocalAccountId;
     use fidl::endpoints::create_endpoints;
     use fidl_fuchsia_identity_internal::{AccountHandlerControlMarker, AccountHandlerControlProxy};
     use fuchsia_async as fasync;
@@ -289,7 +287,7 @@ mod tests {
     #[derive(Debug)]
     enum AccountHandlerTestError {
         FidlError(fidl::Error),
-        AccountError(Error),
+        AccountError(ApiError),
     }
 
     impl From<fidl::Error> for AccountHandlerTestError {
@@ -298,8 +296,8 @@ mod tests {
         }
     }
 
-    impl From<Error> for AccountHandlerTestError {
-        fn from(err: Error) -> Self {
+    impl From<ApiError> for AccountHandlerTestError {
+        fn from(err: ApiError) -> Self {
             AccountHandlerTestError::AccountError(err)
         }
     }
@@ -347,7 +345,7 @@ mod tests {
                     let (acp_client_end, _) = create_endpoints().unwrap();
                     assert_eq!(
                         proxy.get_account(acp_client_end, account_server_end).await?,
-                        Err(Error::NotFound)
+                        Err(ApiError::NotFound)
                     );
                     Ok(())
                 }
@@ -363,20 +361,15 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy, ahc_client_end| {
                 async move {
-                    proxy
-                        .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into())
-                        .await??;
+                    proxy.create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().into()).await??;
 
                     let fake_context_2 = Arc::new(FakeAccountHandlerContext::new());
                     let ahc_client_end_2 = spawn_context_channel(fake_context_2.clone());
                     assert_eq!(
                         proxy
-                            .create_account(
-                                ahc_client_end_2,
-                                TEST_ACCOUNT_ID.clone().as_mut().into()
-                            )
+                            .create_account(ahc_client_end_2, TEST_ACCOUNT_ID.clone().into())
                             .await?,
-                        Err(Error::Internal)
+                        Err(ApiError::Internal)
                     );
                     Ok(())
                 }
@@ -394,7 +387,7 @@ mod tests {
             |account_handler_proxy, ahc_client_end| {
                 async move {
                     account_handler_proxy
-                        .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into())
+                        .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().into())
                         .await??;
 
                     assert_inspect_tree!(inspector, root: {
@@ -421,7 +414,7 @@ mod tests {
                     let account_proxy = account_client_end.into_proxy().unwrap();
                     assert_eq!(
                         account_proxy.get_auth_state().await?,
-                        (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
+                        Ok(AccountHandler::DEFAULT_AUTH_STATE)
                     );
                     Ok(())
                 }
@@ -438,9 +431,7 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy, ahc_client_end| {
                 async move {
-                    proxy
-                        .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into())
-                        .await??;
+                    proxy.create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().into()).await??;
                     Ok(())
                 }
             },
@@ -450,9 +441,7 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy, ahc_client_end| {
                 async move {
-                    proxy
-                        .load_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into())
-                        .await??;
+                    proxy.load_account(ahc_client_end, TEST_ACCOUNT_ID.clone().into()).await??;
                     Ok(())
                 }
             },
@@ -466,10 +455,10 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy, ahc_client_end| {
                 async move {
-                    let mut expected_id = TEST_ACCOUNT_ID.clone();
+                    let expected_id = TEST_ACCOUNT_ID.clone();
                     assert_eq!(
-                        proxy.load_account(ahc_client_end, expected_id.as_mut().into()).await?,
-                        Err(Error::Internal)
+                        proxy.load_account(ahc_client_end, expected_id.into()).await?,
+                        Err(ApiError::Internal)
                     );
                     Ok(())
                 }
@@ -492,9 +481,7 @@ mod tests {
                         }
                     });
 
-                    proxy
-                        .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into())
-                        .await??;
+                    proxy.create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().into()).await??;
                     assert_inspect_tree!(inspector, root: {
                         account_handler: {
                             lifecycle: "initialized",
@@ -516,7 +503,10 @@ mod tests {
                     let account_proxy = account_client_end.into_proxy().unwrap();
 
                     // Simple check that non-force account removal returns error due to not implemented.
-                    assert_eq!(proxy.remove_account(FORCE_REMOVE_OFF).await?, Err(Error::Internal));
+                    assert_eq!(
+                        proxy.remove_account(FORCE_REMOVE_OFF).await?,
+                        Err(ApiError::Internal)
+                    );
 
                     // Make sure remove_account() can make progress with an open channel.
                     proxy.remove_account(FORCE_REMOVE_ON).await??;
@@ -533,7 +523,7 @@ mod tests {
                     // We cannot remove twice.
                     assert_eq!(
                         proxy.remove_account(FORCE_REMOVE_ON).await?,
-                        Err(Error::InvalidRequest)
+                        Err(ApiError::InvalidRequest)
                     );
                     Ok(())
                 }
@@ -551,7 +541,7 @@ mod tests {
                 async move {
                     assert_eq!(
                         proxy.remove_account(FORCE_REMOVE_ON).await?,
-                        Err(Error::InvalidRequest)
+                        Err(ApiError::InvalidRequest)
                     );
                     Ok(())
                 }
@@ -567,9 +557,7 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy, ahc_client_end| {
                 async move {
-                    proxy
-                        .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into())
-                        .await??;
+                    proxy.create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().into()).await??;
 
                     // Keep an open channel to an account.
                     let (account_client_end, account_server_end) = create_endpoints().unwrap();
@@ -601,13 +589,8 @@ mod tests {
             |proxy, ahc_client_end| {
                 async move {
                     assert_eq!(
-                        proxy
-                            .load_account(
-                                ahc_client_end,
-                                &mut FidlLocalAccountId { id: WRONG_ACCOUNT_ID }
-                            )
-                            .await?,
-                        Err(Error::NotFound)
+                        proxy.load_account(ahc_client_end, WRONG_ACCOUNT_ID).await?,
+                        Err(ApiError::NotFound)
                     );
                     Ok(())
                 }

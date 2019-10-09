@@ -11,7 +11,7 @@ use std::io::{BufReader, BufWriter, Write};
 use std::path::{Path, PathBuf};
 
 use account_common::{AccountManagerError, LocalAccountId};
-use fidl_fuchsia_auth_account::Status;
+use fidl_fuchsia_identity_account::Error;
 use serde_derive::{Deserialize, Serialize};
 
 /// Name of account list file (one per account manager), within the account list dir.
@@ -64,11 +64,11 @@ impl StoredAccountList {
         };
         let file = BufReader::new(File::open(path).map_err(|err| {
             warn!("Failed to read account list: {:?}", err);
-            AccountManagerError::new(Status::IoError).with_cause(err)
+            AccountManagerError::new(Error::Resource).with_cause(err)
         })?);
         serde_json::from_reader(file).map_err(|err| {
             warn!("Failed to parse account list: {:?}", err);
-            AccountManagerError::new(Status::InternalError).with_cause(err)
+            AccountManagerError::new(Error::Internal).with_cause(err)
         })
     }
 
@@ -90,20 +90,20 @@ impl StoredAccountList {
         {
             let mut tmp_file = BufWriter::new(File::create(&tmp_path).map_err(|err| {
                 warn!("Failed to create account tmp list: {:?}", err);
-                AccountManagerError::new(Status::IoError).with_cause(err)
+                AccountManagerError::new(Error::Resource).with_cause(err)
             })?);
             serde_json::to_writer(&mut tmp_file, self).map_err(|err| {
                 warn!("Failed to serialize account list: {:?}", err);
-                AccountManagerError::new(Status::IoError).with_cause(err)
+                AccountManagerError::new(Error::Resource).with_cause(err)
             })?;
             tmp_file.flush().map_err(|err| {
                 warn!("Failed to flush serialized account list: {:?}", err);
-                AccountManagerError::new(Status::IoError).with_cause(err)
+                AccountManagerError::new(Error::Resource).with_cause(err)
             })?;
         }
         fs::rename(&tmp_path, &path).map_err(|err| {
             warn!("Failed to rename account list: {:?}", err);
-            AccountManagerError::new(Status::IoError).with_cause(err)
+            AccountManagerError::new(Error::Resource).with_cause(err)
         })
     }
 }

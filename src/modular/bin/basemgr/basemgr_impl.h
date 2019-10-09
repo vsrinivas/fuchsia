@@ -66,7 +66,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
                        fuchsia::ui::policy::PresenterPtr presenter,
                        fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
                        fuchsia::wlan::service::WlanPtr wlan,
-                       fuchsia::auth::account::AccountManagerPtr account_manager,
+                       fuchsia::identity::account::AccountManagerPtr account_manager,
                        fuchsia::device::manager::AdministratorPtr device_administrator,
                        fit::function<void()> on_shutdown);
 
@@ -160,7 +160,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // Used to reset Wi-Fi during factory reset.
   fuchsia::wlan::service::WlanPtr wlan_;
   // Used for account management in the framework.
-  fuchsia::auth::account::AccountManagerPtr account_manager_;
+  fuchsia::identity::account::AccountManagerPtr account_manager_;
   // Used to trigger device reboot.
   fuchsia::device::manager::AdministratorPtr device_administrator_;
   fit::function<void()> on_shutdown_;
