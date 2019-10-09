@@ -27,6 +27,7 @@
 #include <zircon/types.h>
 
 #include "../shared/async-loop-owned-rpc-handler.h"
+#include "devhost-context.h"
 #include "lock.h"
 #include "zx-device.h"
 
@@ -189,6 +190,9 @@ zx_status_t devhost_device_add_composite(const fbl::RefPtr<zx_device_t>& dev, co
                                          size_t components_count,
                                          uint32_t coresident_device_index) REQ_DM_LOCK;
 
+zx_status_t devhost_schedule_work(const fbl::RefPtr<zx_device_t>& dev, void (*callback)(void*),
+                                  void* cookie) REQ_DM_LOCK;
+
 class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostControllerConnection>,
                                     public fuchsia::device::manager::DevhostController::Interface {
  public:
@@ -257,6 +261,9 @@ zx_status_t dh_find_driver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx
 // Construct a string describing the path of |dev| relative to its most
 // distant ancestor in this devhost.
 const char* mkdevpath(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max);
+
+// Retrieve the singleton Devhost context.
+DevhostContext& DevhostCtx();
 
 // Retrieve the singleton async loop
 async::Loop* DevhostAsyncLoop();

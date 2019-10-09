@@ -317,3 +317,9 @@ __EXPORT zx_status_t device_add_composite(zx_device_t* dev, const char* name,
   return devhost_device_add_composite(dev_ref, name, props, props_count, components,
                                       components_count, coresident_device_index);
 }
+
+__EXPORT zx_status_t device_schedule_work(zx_device_t* dev, void (*callback)(void*), void* cookie) {
+  ApiAutoLock lock;
+  auto dev_ref = fbl::RefPtr(dev);
+  return devhost_schedule_work(dev_ref, callback, cookie);
+}

@@ -40,6 +40,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
 #include <fs/handler.h>
@@ -67,10 +68,14 @@ uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 static fbl::DoublyLinkedList<fbl::RefPtr<zx_driver>> dh_drivers;
 
+DevhostContext& DevhostCtx() {
+  static DevhostContext ctx(&kAsyncLoopConfigAttachToCurrentThread);
+  return ctx;
+}
+
 // Access the devhost's async event loop
 async::Loop* DevhostAsyncLoop() {
-  static async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  return &loop;
+  return &DevhostCtx().loop();
 }
 
 static zx_status_t SetupRootDevcoordinatorConnection(zx::channel ch) {
@@ -1057,6 +1062,15 @@ zx_status_t devhost_device_add_composite(const fbl::RefPtr<zx_device_t>& dev, co
   return call_status;
 }
 
+zx_status_t devhost_schedule_work(const fbl::RefPtr<zx_device_t>& dev, void (*callback)(void*),
+                                  void* cookie) {
+  if (!callback) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  DevhostCtx().PushWorkItem(dev, [callback, cookie]() { callback(cookie); });
+  return ZX_OK;
+}
+
 zx_handle_t root_resource_handle;
 
 zx_status_t devhost_start_connection(fbl::unique_ptr<DevfsConnection> conn, zx::channel h) {
@@ -1098,6 +1112,11 @@ int device_host_main(int argc, char** argv) {
 
   if ((r = SetupRootDevcoordinatorConnection(std::move(root_conn_channel))) != ZX_OK) {
     log(ERROR, "devhost: could not watch rpc channel: %d\n", r);
+    return -1;
+  }
+
+  if (r = DevhostCtx().SetupEventWaiter(); r != ZX_OK) {
+    log(ERROR, "devhost: could not setup event watcher: %d\n", r);
     return -1;
   }
 
