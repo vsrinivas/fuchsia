@@ -6,7 +6,7 @@ Fuchsia tracing library and utilities require access to the `trace_manager`'s
 services in the environment, which is typically set up by the
 [boot sequence](/docs/the-book/boot_sequence.md).
 
-Note that capturing traces requires that the `devtools` package be included.  If your build
+Note that capturing traces requires that the `devtools` package be included. If your build
 configuration does not include `devtools` by default, then you can add it manually by invoking
 `fx set` like:
 
@@ -22,32 +22,34 @@ fx set core.x64 --release --with-base=//garnet/packages/products:devtools,//peri
 
 ## Capturing Traces From a Development Host
 
-Traces are captured using the `fx traceutil` host utility.  To record a trace
+Traces are captured using the `fx traceutil` host utility. To record a trace
 simply run the following on your development host:
 
 ```{shell}
 fx traceutil record [program arg1 ...]
 ```
 
-This will:
- * Take a trace on the target using the default option.
+`fx traceutil record` will:
+
+ * Take a trace on the target using the default options.
  * Download it from the target to your development host.
  * Convert the trace into a viewable HTML file.
 
 If a program is specified it will be run after tracing has started to not
 miss any early trace events in the program.
 
-This is a great place to start an investigation.  It is also a good when you
+This is a great place to start an investigation. It is also a good when you
 are reporting a bug and are unsure what data is useful.
 
 Some additional command line arguments to `fx traceutil record` include:
+
  * `-duration <time>`
 
    Sets the duration of the trace in seconds.
 
  * `-target <hostname or ip address>`
 
-   Specifies which target to take a trace.  Useful if you have multiple
+   Specifies which target to take a trace. Useful if you have multiple
    targets on the same network or network discovery is not working.
 
  * `-binary`
@@ -90,29 +92,47 @@ For a complete list of command line arguments run `fx traceutil record --help`.
 ## Capturing Traces From a Fuchsia Target
 
 Under the hood `traceutil` uses the `trace` utility on the Fuchsia
-target to interact with the tracing manager.  To record a trace run the
+target to interact with the tracing manager. To record a trace run the
 following in a shell on your target:
 
 ```{shell}
 trace record
 ```
 
-This will save your trace in /data/trace.json by default.  For more information
-on, run `trace --help` at a Fuchsia shell.
+This will save your trace in /data/trace.json by default. For more information,
+run `trace --help` at a Fuchsia shell.
 
-## Converting a JSON Trace to a Viewable HTML Trace.
+## Viewing and Converting Between Trace Formats
 
-The Fuchsia tracing system uses Chromium's
-[Trace-Viewer](https://github.com/catapult-project/catapult/tree/master/tracing).
-The easiest way to view a JSON trace is to embed it into an HTML file with
-Trace-Viewer.  To convert one or more JSON files run:
+There are three trace file formats that can store Fuchsia trace data.
+
+ * FXT, or [Fuchsia Trace Format](trace-format/README.md), is a binary format
+   that is a direct encoding of the original trace data that is produced by
+   the various programs. To visualize this data, you can use the
+   [Perfetto Trace Viewer](https://ui.perfetto.dev), which also allows you to
+   [use SQL to query your trace
+   data](https://www.perfetto.dev/#/trace-processor.md).
+ * JSON, or
+   [Chrome Trace Format](https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/edit).
+   To visualize this data, you can use Chromium's
+   [Trace-Viewer](https://github.com/catapult-project/catapult/tree/master/tracing).
+ * HTML, a standalone file that includes both the viewer and trace data. To
+   visualize this data, you can use a web browser such as
+   [Chrome](https://google.com/chrome).
+
+You can convert one or more files from FXT to JSON, and then to HTML by running
 
 ```{shell}
 fx traceutil convert FILE ...
 ```
 
-The HTML files written are standalone and can be opened in the
-[Chrome](https://google.com/chrome) web browser.
+When you convert files with `fx traceutil convert`,
+
+ * FXT files produce a corresponding JSON file and a corresponding HTML file.
+ * JSON files produce a corresponding HTML file.
+
+Note: If you record your trace with `fx traceutil record`, this conversion is
+done automatically.
 
 ## Advanced Tracing
 
