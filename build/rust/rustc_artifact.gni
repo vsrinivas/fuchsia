@@ -547,6 +547,18 @@ template("rustc_artifact") {
               }
             },
           ]
+          if (is_host) {
+            tool_paths = [
+              {
+                cpu = current_cpu
+                label = get_label_info(":$build_target_name",
+                                       "label_with_toolchain")
+                name = output_filename
+                os = current_os
+                path = rebase_path(output_path, root_build_dir)
+              },
+            ]
+          }
         }
       }
     }
