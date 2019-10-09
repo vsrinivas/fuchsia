@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "test/devcoordinator-coordinator-test"
+    },
+    "sandbox": {
+        "features": [
+            "deprecated-shell",
+            "deprecated-ambient-replace-as-executable"
+        ],
+        "services": [ ]
+    }
+}
