@@ -13,15 +13,12 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:rand",
       "//third_party/rust_crates:structopt",
     ]
-    source_root = "src/host/lib.rs"
   }
 }
 
-rustc_library("blackout-target") {
-  edition = "2018"
-  deps = [
-    "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:structopt",
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":blackout-host_test($host_toolchain)",
   ]
-  source_root = "src/target.rs"
 }

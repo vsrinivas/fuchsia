@@ -13,7 +13,7 @@ if (host_toolchain == current_toolchain) {
     deps = [
       "//third_party/rust_crates:failure",
       "//third_party/rust_crates:structopt",
-      "//tools/blackout/blackout:blackout-host",
+      "//tools/blackout/blackout-host",
     ]
     source_root = "src/host.rs"
     with_unit_tests = true
@@ -40,7 +40,7 @@ rustc_binary("blobfs-fsck-soft-target-bin") {
     "//src/storage/ramdevice-client",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:structopt",
-    "//tools/blackout/blackout:blackout-target",
+    "//tools/blackout/blackout-target",
   ]
   source_root = "src/target.rs"
 }
