@@ -31,7 +31,9 @@ use sysconfig_client::{channel::OtaUpdateChannelConfig, SysconfigPartition};
 use sysconfig_client::channel::write_channel_config;
 
 #[cfg(test)]
-fn write_channel_config(_config: &OtaUpdateChannelConfig) -> Result<(), Error> {
+fn write_channel_config(config: &OtaUpdateChannelConfig) -> Result<(), Error> {
+    assert_eq!(config.channel_name(), "target-channel");
+    assert_eq!(config.tuf_config_name(), "target-channel-repo");
     Ok(())
 }
 
@@ -235,8 +237,26 @@ where
                     };
                     server.app_set.set_target_channel(target_channel).await;
                 } else {
-                    // TODO: Write tuf_config_name.
-                    let config = OtaUpdateChannelConfig::new(&channel, "")?;
+                    let tuf_repo = if let Some(channel_configs) = &server.channel_configs {
+                        if let Some(channel_config) = channel_configs
+                            .known_channels
+                            .iter()
+                            .find(|channel_config| channel_config.name == channel)
+                        {
+                            &channel_config.repo
+                        } else {
+                            error!(
+                                "Channel {} not found in known channels, using channel name as \
+                                 TUF repo name.",
+                                &channel
+                            );
+                            &channel
+                        }
+                    } else {
+                        warn!("No channel configs found, using channel name as TUF repo name.");
+                        &channel
+                    };
+                    let config = OtaUpdateChannelConfig::new(&channel, tuf_repo)?;
                     write_channel_config(&config)?;
 
                     let mut storage = server.storage_ref.lock().await;
@@ -489,7 +509,18 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_target() {
-        let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
+        let fidl = Rc::new(RefCell::new(
+            FidlServerBuilder::new()
+                .with_channel_configs(ChannelConfigs {
+                    default_channel: None,
+                    known_channels: vec![
+                        ChannelConfig::new("some-channel"),
+                        ChannelConfig::new("target-channel"),
+                    ],
+                })
+                .build()
+                .await,
+        ));
 
         let proxy = spawn_fidl_server::<ChannelControlMarker>(
             fidl.clone(),
