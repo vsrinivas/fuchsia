@@ -24,21 +24,20 @@ constexpr char kShufflerDevelTinkPublicKeyPath[] = "/pkg/data/keys/shuffler_deve
 constexpr char kAnalyzerProdTinkPublicKeyPath[] = "/pkg/data/keys/analyzer_prod_public";
 constexpr char kShufflerProdTinkPublicKeyPath[] = "/pkg/data/keys/shuffler_prod_public";
 
-const std::map<std::string, config::Environment> environmentStrings = {
-    {"PROD", config::Environment::PROD}, {"DEVEL", config::Environment::DEVEL}};
-
 // Parse the cobalt environment value from the config data.
-config::Environment LookupCobaltEnvironment(const std::string& config_dir) {
+std::vector<config::Environment> LookupCobaltEnvironment(const std::string& config_dir) {
   auto environment_path = files::JoinPath(config_dir, kCobaltEnvironmentFile);
   std::string cobalt_environment;
   if (files::ReadFileToString(environment_path, &cobalt_environment)) {
-    const config::Environment* found_environment =
-        google::protobuf::FindOrNull(environmentStrings, cobalt_environment);
-    if (found_environment != nullptr) {
-      FX_LOGS(INFO) << "Loaded Cobalt environment from config file " << environment_path << ": "
-                    << *found_environment;
-      return *found_environment;
-    }
+    FX_LOGS(INFO) << "Loaded Cobalt environment from config file " << environment_path << ": "
+                  << cobalt_environment;
+    if (cobalt_environment == "PROD")
+      return std::vector({config::Environment::PROD});
+    if (cobalt_environment == "DEVEL")
+      return std::vector({config::Environment::DEVEL});
+    // TODO(camrdale): remove this once the log source transition is complete.
+    if (cobalt_environment == "DEVEL_AND_PROD")
+      return std::vector({config::Environment::DEVEL, config::Environment::PROD});
     FX_LOGS(ERROR) << "Failed to parse the contents of config file " << environment_path << ": "
                    << cobalt_environment
                    << ". Falling back to default environment: " << kDefaultEnvironment;
@@ -46,38 +45,53 @@ config::Environment LookupCobaltEnvironment(const std::string& config_dir) {
     FX_LOGS(ERROR) << "Failed to read config file " << environment_path
                    << ". Falling back to default environment: " << kDefaultEnvironment;
   }
-  return kDefaultEnvironment;
+  return std::vector({kDefaultEnvironment});
 }
 
-FuchsiaConfigurationData::FuchsiaConfigurationData(const std::string& config_dir)
-    : ConfigurationData(LookupCobaltEnvironment(config_dir)) {}
-
-const char* FuchsiaConfigurationData::AnalyzerPublicKeyPath() {
-  switch (GetEnvironment()) {
-    case config::PROD:
-      return kAnalyzerProdTinkPublicKeyPath;
-    case config::DEVEL:
-      return kAnalyzerDevelTinkPublicKeyPath;
-    default: {
-      FX_LOGS(ERROR) << "Failed to handle environment enum: " << GetEnvironmentString()
-                     << ". Falling back to using analyzer key for DEVEL environment.";
-      return kAnalyzerDevelTinkPublicKeyPath;
-    }
+FuchsiaConfigurationData::FuchsiaConfigurationData(const std::string& config_dir) {
+  for (const auto& environment : LookupCobaltEnvironment(config_dir)) {
+    backend_configurations_.emplace(environment, environment);
   }
 }
 
-const char* FuchsiaConfigurationData::ShufflerPublicKeyPath() {
-  switch (GetEnvironment()) {
+std::vector<config::Environment> FuchsiaConfigurationData::GetBackendEnvironments() const {
+  std::vector<config::Environment> envs;
+  for (const auto& entry : backend_configurations_) {
+    envs.push_back(entry.first);
+  }
+  return envs;
+}
+
+const char* FuchsiaConfigurationData::AnalyzerPublicKeyPath() const {
+  // Use devel keys even if we are also writing to prod. The prod pipeline can handle Observations
+  // encrypted with the devel keys.
+  if (backend_configurations_.find(config::DEVEL) != backend_configurations_.end())
+    return kAnalyzerDevelTinkPublicKeyPath;
+  if (backend_configurations_.find(config::PROD) != backend_configurations_.end())
+    return kAnalyzerProdTinkPublicKeyPath;
+  FX_LOGS(ERROR) << "Failed to handle any environments. Falling back to using analyzer key for "
+                    "DEVEL environment.";
+  return kAnalyzerDevelTinkPublicKeyPath;
+}
+
+const char* FuchsiaConfigurationData::ShufflerPublicKeyPath(
+    const config::Environment& backend_environment) const {
+  switch (backend_environment) {
     case config::PROD:
       return kShufflerProdTinkPublicKeyPath;
     case config::DEVEL:
       return kShufflerDevelTinkPublicKeyPath;
     default: {
-      FX_LOGS(ERROR) << "Failed to handle environment enum: " << GetEnvironmentString()
+      FX_LOGS(ERROR) << "Failed to handle environment enum: " << backend_environment
                      << ". Falling back to using shuffler key for DEVEL environment.";
       return kShufflerDevelTinkPublicKeyPath;
     }
   }
+}
+
+int32_t FuchsiaConfigurationData::GetLogSourceId(
+    const config::Environment& backend_environment) const {
+  return backend_configurations_.find(backend_environment)->second.GetLogSourceId();
 }
 
 }  // namespace cobalt

@@ -100,16 +100,11 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
       encrypt_to_analyzer_(util::EncryptedMessageMaker::MakeForObservations(
                                ReadPublicKeyPem(configuration_data_.AnalyzerPublicKeyPath()))
                                .ValueOrDie()),
-      encrypt_to_shuffler_(util::EncryptedMessageMaker::MakeForEnvelopes(
-                               ReadPublicKeyPem(configuration_data_.ShufflerPublicKeyPath()))
-                               .ValueOrDie()),
-
       clearcut_shipping_manager_(UploadScheduler(target_interval, min_interval, initial_interval),
-                                 observation_store_.get(), encrypt_to_shuffler_.get(),
+                                 observation_store_.get(),
                                  std::make_unique<clearcut::ClearcutUploader>(
                                      kClearcutEndpoint, std::make_unique<FuchsiaHTTPClient>(
-                                                            &network_wrapper_, dispatcher)),
-                                 configuration_data_.GetLogSourceId()),
+                                                            &network_wrapper_, dispatcher))),
       timer_manager_(dispatcher),
       local_aggregate_proto_store_(kLocalAggregateProtoStorePath,
                                    std::make_unique<PosixFileSystem>()),
@@ -123,6 +118,17 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
                         &obs_history_proto_store_, event_aggregator_backfill_days),
       controller_impl_(new CobaltControllerImpl(dispatcher, &clearcut_shipping_manager_,
                                                 &event_aggregator_, observation_store_.get())) {
+  // TODO(camrdale): remove this once the log source transition is complete.
+  for (const auto& backend_environment : configuration_data_.GetBackendEnvironments()) {
+    auto encrypt_to_shuffler =
+        util::EncryptedMessageMaker::MakeForEnvelopes(
+            ReadPublicKeyPem(configuration_data_.ShufflerPublicKeyPath(backend_environment)))
+            .ValueOrDie();
+    clearcut_shipping_manager_.AddClearcutDestination(
+        encrypt_to_shuffler.get(), configuration_data_.GetLogSourceId(backend_environment));
+    encrypt_to_shufflers_.emplace_back(std::move(encrypt_to_shuffler));
+  }
+
   auto global_project_context_factory =
       std::make_shared<ProjectContextFactory>(ReadGlobalMetricsRegistryBytes(kMetricsRegistryPath));
   undated_event_manager_ = std::make_shared<logger::UndatedEventManager>(

@@ -6,25 +6,34 @@
 #define SRC_COBALT_BIN_APP_CONFIGURATION_DATA_H_
 
 #include <iostream>
+#include <map>
 #include <string>
+#include <vector>
 
 #include "third_party/cobalt/src/system_data/configuration_data.h"
 
 namespace cobalt {
 
 // Encapsulation of the configuration data used by Cobalt in Fuchsia.
-class FuchsiaConfigurationData : public config::ConfigurationData {
+class FuchsiaConfigurationData {
  public:
   explicit FuchsiaConfigurationData(const std::string& config_dir = kDefaultConfigDir);
 
+  // Get the (possibly multiple) backend environments to write to.
+  std::vector<config::Environment> GetBackendEnvironments() const;
+
   // Get the path to the public key file to use for encrypting Observations.
-  const char* AnalyzerPublicKeyPath();
+  const char* AnalyzerPublicKeyPath() const;
 
   // Get the path to the public key file to use for encrypting Envelopes.
-  const char* ShufflerPublicKeyPath();
+  const char* ShufflerPublicKeyPath(const config::Environment& backend_environment) const;
+
+  // Get the Clearcut Log Source ID that Cobalt should write its logs to.
+  int32_t GetLogSourceId(const config::Environment& backend_environment) const;
 
  private:
   static const char kDefaultConfigDir[];
+  std::map<config::Environment, const config::ConfigurationData> backend_configurations_;
 };
 
 }  // namespace cobalt
