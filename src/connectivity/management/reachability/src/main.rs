@@ -8,6 +8,7 @@
 extern crate fuchsia_syslog as syslog;
 #[macro_use]
 extern crate log;
+use reachability_core::Monitor;
 
 mod eventloop;
 mod worker;
@@ -24,6 +25,14 @@ fn main() -> Result<(), failure::Error> {
     info!("Starting reachability monitor!");
     let mut executor = fuchsia_async::Executor::new()?;
 
-    let eventloop = EventLoop::new();
-    executor.run_singlethreaded(eventloop.run())
+    info!("collecting initial state.");
+    let mut monitor = Monitor::new()?;
+    executor.run_singlethreaded(monitor.populate_state())?;
+
+    info!("monitoring");
+    let mut eventloop = EventLoop::new(monitor);
+    executor.run_singlethreaded(eventloop.run())?;
+
+    warn!("reachability monitor terminated");
+    Ok(())
 }

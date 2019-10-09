@@ -9,6 +9,8 @@ use {
     futures::{channel::mpsc, StreamExt, TryFutureExt},
 };
 
+/// `EventWorker` waits for events from netstack and stack and sends them on the indicated
+/// `event_chan`.
 pub struct EventWorker;
 
 impl EventWorker {
@@ -20,12 +22,12 @@ impl EventWorker {
         fasync::spawn_local(
             async move {
                 let mut select_stream = futures::stream::select(
-                    streams.0.map(|e| e.map(|x| Event::StackEvent(x))),
-                    streams.1.map(|e| e.map(|x| Event::NetstackEvent(x))),
+                    streams.0.map(|e| e.map(Event::StackEvent)),
+                    streams.1.map(|e| e.map(Event::NetstackEvent)),
                 );
 
                 while let Some(e) = select_stream.next().await {
-                    info!("Sending event: {:?}", e);
+                    debug!("Sending event: {:?}", e);
                     match e {
                         Ok(e) => event_chan.unbounded_send(e)?,
                         Err(e) => error!("Fidl event error: {}", e),
