@@ -13,8 +13,8 @@ namespace debug_agent {
 // to zircon in order to spin up threads.
 class MockProcess : public DebuggedProcess {
  public:
-  MockProcess(zx_koid_t koid, std::shared_ptr<ObjectProvider> object_provider);
-  MockProcess(zx_koid_t koid, std::string name, std::shared_ptr<ObjectProvider> object_provider);
+  MockProcess(zx_koid_t koid, std::string name, std::shared_ptr<ObjectProvider> object_provider,
+              std::shared_ptr<arch::ArchProvider> arch_provider);
   ~MockProcess();
 
   DebuggedThread* AddThread(zx_koid_t koid);
@@ -25,6 +25,8 @@ class MockProcess : public DebuggedProcess {
 
  private:
   std::map<zx_koid_t, std::unique_ptr<DebuggedThread>> threads_;
+
+  std::shared_ptr<arch::ArchProvider> arch_provider_;
 };
 
 }  // namespace debug_agent

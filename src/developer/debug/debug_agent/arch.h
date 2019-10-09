@@ -30,10 +30,7 @@ extern const BreakInstructionType kBreakInstruction;
 // This permits a virtual interface for your testing convenience.
 class ArchProvider {
  public:
-  static ArchProvider& Get();
-  // Permits to mock the ArchProvider. Set to nullptr to restore.
-  static void Set(std::unique_ptr<ArchProvider>);
-
+  ArchProvider();
   virtual ~ArchProvider();
 
   ::debug_ipc::Arch GetArch();

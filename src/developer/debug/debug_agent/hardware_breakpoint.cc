@@ -36,7 +36,11 @@ void Warn(WarningType type, zx_koid_t thread_koid, uint64_t address, zx_status_t
 
 }  // namespace
 
-HardwareBreakpoint::HardwareBreakpoint(ProcessBreakpoint* process_bp) : process_bp_(process_bp) {}
+HardwareBreakpoint::HardwareBreakpoint(std::shared_ptr<arch::ArchProvider> arch_provider,
+                                       ProcessBreakpoint* process_bp)
+    : arch_provider_(std::move(arch_provider)), process_bp_(process_bp) {
+  FXL_DCHECK(arch_provider_);
+}
 
 HardwareBreakpoint::~HardwareBreakpoint() { Uninstall(); }
 
@@ -90,8 +94,7 @@ zx_status_t HardwareBreakpoint::Install(zx_koid_t thread_koid) {
   bool was_running = thread->Suspend(true);
 
   // Do the actual installation.
-  auto& arch = arch::ArchProvider::Get();
-  zx_status_t status = arch.InstallHWBreakpoint(&thread->thread(), address);
+  zx_status_t status = arch_provider_->InstallHWBreakpoint(&thread->thread(), address);
   // TODO: Do we want to remove all other locations when one fails?
   if (status != ZX_OK) {
     Warn(WarningType::kInstall, thread_koid, address, status);
@@ -133,8 +136,7 @@ zx_status_t HardwareBreakpoint::Uninstall(zx_koid_t thread_koid) {
   // We make a synchronous (blocking) call.
   bool was_running = thread->Suspend(true);
 
-  auto& arch = arch::ArchProvider::Get();
-  zx_status_t status = arch.UninstallHWBreakpoint(&thread->thread(), address);
+  zx_status_t status = arch_provider_->UninstallHWBreakpoint(&thread->thread(), address);
   if (status != ZX_OK) {
     Warn(WarningType::kInstall, thread_koid, address, status);
     return status;

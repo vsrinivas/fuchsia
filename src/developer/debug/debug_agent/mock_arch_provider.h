@@ -43,23 +43,6 @@ class MockArchProvider : public arch::ArchProvider {
   std::map<debug_ipc::AddressRange, size_t, debug_ipc::AddressRangeCompare> wp_uninstalls_;
 };
 
-// Meant as an RAII container for MockArchProvider.
-class ScopedMockArchProvider {
- public:
-  ScopedMockArchProvider() {
-    auto fake_arch = std::make_unique<MockArchProvider>();
-    fake_arch_ = fake_arch.get();
-    arch::ArchProvider::Set(std::move(fake_arch));
-  }
-
-  ~ScopedMockArchProvider() { arch::ArchProvider::Set(nullptr); }
-
-  MockArchProvider* get_provider() const { return fake_arch_; }
-
- private:
-  MockArchProvider* fake_arch_;
-};
-
 }  // namespace debug_agent
 
 #endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_ARCH_PROVIDER_H_

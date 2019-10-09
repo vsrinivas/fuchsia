@@ -265,6 +265,8 @@ std::vector<DebuggedThread*> DebuggedProcess::GetThreads() const {
 }
 
 void DebuggedProcess::PopulateCurrentThreads() {
+  // TODO(donosoc): This should be an injected dependency upon the process if needed for testing.
+  auto arch_provider = std::make_shared<arch::ArchProvider>();
   for (zx_koid_t koid : object_provider_->GetChildKoids(process_.get(), ZX_INFO_PROCESS_THREADS)) {
     // We should never populate the same thread twice.
     if (threads_.find(koid) != threads_.end())
@@ -272,9 +274,10 @@ void DebuggedProcess::PopulateCurrentThreads() {
 
     zx_handle_t handle;
     if (zx_object_get_child(process_.get(), koid, ZX_RIGHT_SAME_RIGHTS, &handle) == ZX_OK) {
-      threads_.emplace(koid, std::make_unique<DebuggedThread>(
-                                 this, zx::thread(handle), koid, zx::exception(),
-                                 ThreadCreationOption::kRunningKeepRunning, object_provider_));
+      threads_.emplace(
+          koid, std::make_unique<DebuggedThread>(this, zx::thread(handle), koid, zx::exception(),
+                                                 ThreadCreationOption::kRunningKeepRunning,
+                                                 object_provider_, arch_provider));
     }
   }
 }
@@ -430,7 +433,9 @@ zx_status_t DebuggedProcess::RegisterWatchpoint(Watchpoint* wp,
   DEBUG_LOG(Process) << LogPreamble(this) << "Registering watchpoint: " << wp->id() << " on [0x"
                      << std::hex << range.begin << ", 0x" << range.end << ").";
 
-  auto process_wp = std::make_unique<ProcessWatchpoint>(wp, this, range);
+  // TODO(donosoc): This should be an injected dependency upon the process if needed for testing.
+  auto arch_provider = std::make_shared<arch::ArchProvider>();
+  auto process_wp = std::make_unique<ProcessWatchpoint>(wp, this, arch_provider, range);
   if (zx_status_t res = process_wp->Init(); res != ZX_OK)
     return res;
 
@@ -519,10 +524,13 @@ void DebuggedProcess::OnThreadStarting(zx::exception exception,
 
   zx::thread thread = object_provider_->GetThreadFromException(exception.get());
 
+  // TODO(donosoc): This should be an injected dependency upon the process if needed for testing.
+  auto arch_provider = std::make_shared<arch::ArchProvider>();
   auto added = threads_.emplace(
       exception_info.tid, std::make_unique<DebuggedThread>(
                               this, std::move(thread), exception_info.tid, std::move(exception),
-                              ThreadCreationOption::kSuspendedKeepSuspended, object_provider_));
+                              ThreadCreationOption::kSuspendedKeepSuspended, object_provider_,
+                              std::move(arch_provider)));
 
   // Notify the client.
   added.first->second->SendThreadNotification();

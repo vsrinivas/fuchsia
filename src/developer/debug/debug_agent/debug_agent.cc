@@ -121,7 +121,7 @@ void DebugAgent::OnConfigAgent(const debug_ipc::ConfigAgentRequest& request,
 
 void DebugAgent::OnHello(const debug_ipc::HelloRequest& request, debug_ipc::HelloReply* reply) {
   // Version and signature are default-initialized to their current values.
-  reply->arch = arch::ArchProvider::Get().GetArch();
+  reply->arch = arch::ArchProvider{}.GetArch();
 }
 
 void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::StatusReply* reply) {

@@ -156,16 +156,17 @@ zx_status_t UnwindStackNgUnwind(const zx::process& process, uint64_t dl_debug_ad
     return ZX_ERR_INTERNAL;
 
   // Compute the register IDs for this platform's IP/SP.
-  debug_ipc::Arch arch = arch::ArchProvider::Get().GetArch();
+  arch::ArchProvider arch_provider;
+  auto arch = arch_provider.GetArch();
   debug_ipc::RegisterID ip_reg_id = GetSpecialRegisterID(arch, debug_ipc::SpecialRegisterType::kIP);
   debug_ipc::RegisterID sp_reg_id = GetSpecialRegisterID(arch, debug_ipc::SpecialRegisterType::kSP);
 
   // Top stack frame.
   debug_ipc::StackFrame frame;
-  frame.ip = *arch::ArchProvider::Get().IPInRegs(const_cast<zx_thread_state_general_regs*>(&regs));
-  frame.sp = *arch::ArchProvider::Get().SPInRegs(const_cast<zx_thread_state_general_regs*>(&regs));
+  frame.ip = *arch_provider.IPInRegs(const_cast<zx_thread_state_general_regs*>(&regs));
+  frame.sp = *arch_provider.SPInRegs(const_cast<zx_thread_state_general_regs*>(&regs));
   frame.cfa = 0;
-  arch::ArchProvider::Get().SaveGeneralRegs(regs, &frame.regs);
+  arch_provider.SaveGeneralRegs(regs, &frame.regs);
   stack->push_back(std::move(frame));
 
   while (frame.sp >= 0x1000000 && stack->size() < max_depth + 1) {

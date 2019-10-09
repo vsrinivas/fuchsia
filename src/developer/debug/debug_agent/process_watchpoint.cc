@@ -30,8 +30,14 @@ std::string KoidsToString(const std::vector<DebuggedThread*>& threads) {
 }  // namespace
 
 ProcessWatchpoint::ProcessWatchpoint(Watchpoint* watchpoint, DebuggedProcess* process,
+                                     std::shared_ptr<arch::ArchProvider> arch_provider,
                                      const debug_ipc::AddressRange& range)
-    : watchpoint_(watchpoint), process_(process), range_(range) {}
+    : watchpoint_(watchpoint),
+      process_(process),
+      arch_provider_(std::move(arch_provider)),
+      range_(range) {
+  FXL_DCHECK(arch_provider_);
+}
 
 ProcessWatchpoint::~ProcessWatchpoint() { Uninstall(); }
 
@@ -119,16 +125,15 @@ zx_status_t ProcessWatchpoint::UpdateWatchpoints(
   std::vector<uint64_t> suspended_koids;
   process()->SuspendAll(true, &suspended_koids);
 
-  auto& arch_provider = arch::ArchProvider::Get();
   for (DebuggedThread* thread : threads_to_remove) {
-    auto res = arch_provider.UninstallWatchpoint(&thread->thread(), range());
+    auto res = arch_provider_->UninstallWatchpoint(&thread->thread(), range());
     if (res != ZX_OK)
       return res;
     installed_threads_.erase(thread->koid());
   }
 
   for (DebuggedThread* thread : threads_to_install) {
-    auto res = arch_provider.InstallWatchpoint(&thread->thread(), range());
+    auto res = arch_provider_->InstallWatchpoint(&thread->thread(), range());
     if (res != ZX_OK)
       return res;
     installed_threads_.insert(thread->koid());

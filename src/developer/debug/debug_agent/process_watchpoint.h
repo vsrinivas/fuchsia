@@ -10,6 +10,7 @@
 
 #include <set>
 
+#include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/lib/fxl/logging.h"
 
@@ -21,7 +22,9 @@ class Watchpoint;
 
 class ProcessWatchpoint {
  public:
-  ProcessWatchpoint(Watchpoint*, DebuggedProcess*, const debug_ipc::AddressRange& range);
+  ProcessWatchpoint(Watchpoint*, DebuggedProcess*,
+                    std::shared_ptr<arch::ArchProvider> arch_provider,
+                    const debug_ipc::AddressRange& range);
   ~ProcessWatchpoint();
 
   zx_status_t process_koid() const;
@@ -65,6 +68,8 @@ class ProcessWatchpoint {
 
   // The process this watchpoint is installed on.
   DebuggedProcess* process_ = nullptr;  // Not-owning.
+
+  std::shared_ptr<arch::ArchProvider> arch_provider_;
 
   // The span of addresses this
   debug_ipc::AddressRange range_ = {};

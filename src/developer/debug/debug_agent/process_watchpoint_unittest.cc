@@ -21,6 +21,9 @@ namespace {
 // A no-op process delegate.
 class TestProcessDelegate : public Watchpoint::ProcessDelegate {
  public:
+  TestProcessDelegate(std::shared_ptr<arch::ArchProvider> arch_provider)
+      : arch_provider_(std::move(arch_provider)) {}
+
   using WatchpointMap = std::multimap<debug_ipc::AddressRange, std::unique_ptr<ProcessWatchpoint>,
                                       debug_ipc::AddressRangeCompare>;
 
@@ -39,7 +42,8 @@ class TestProcessDelegate : public Watchpoint::ProcessDelegate {
     auto found = wps_.find(range);
     if (found != wps_.end())
       return ZX_ERR_INTERNAL;
-    auto pwp = std::make_unique<ProcessWatchpoint>(wp, proc_it->second.get(), range);
+    auto pwp =
+        std::make_unique<ProcessWatchpoint>(wp, proc_it->second.get(), arch_provider_, range);
 
     zx_status_t status = pwp->Init();
     if (status != ZX_OK) {
@@ -63,16 +67,20 @@ class TestProcessDelegate : public Watchpoint::ProcessDelegate {
  private:
   WatchpointMap wps_;
   std::map<zx_koid_t, std::unique_ptr<MockProcess>> procs_;
+
+  std::shared_ptr<arch::ArchProvider> arch_provider_;
 };
 
 // Tests -----------------------------------------------------------------------
 
 constexpr zx_koid_t kProcessId1 = 0x1;
-constexpr zx_koid_t kProcessId2 = 0x2;
+const std::string kProcessName1 = "process-1";
 constexpr zx_koid_t kThreadId11 = 0x1;
 constexpr zx_koid_t kThreadId12 = 0x2;
 constexpr zx_koid_t kThreadId13 = 0x3;
 
+constexpr zx_koid_t kProcessId2 = 0x2;
+const std::string kProcessName2 = "process-2";
 constexpr zx_koid_t kThreadId21 = 0x4;
 constexpr zx_koid_t kThreadId22 = 0x5;
 constexpr zx_koid_t kThreadId23 = 0x6;
@@ -83,18 +91,19 @@ constexpr debug_ipc::AddressRange kAddressRange1 = {0x1000, 0x2000};
 constexpr debug_ipc::AddressRange kAddressRange2 = {0x4000, 0x8000};
 
 TEST(ProcessWatchpoint, InstallAndRemove) {
-  ScopedMockArchProvider scoped_arch_provider;
-  MockArchProvider* arch_provider = scoped_arch_provider.get_provider();
+  auto arch_provider = std::make_shared<MockArchProvider>();
 
-  TestProcessDelegate process_delegate;
+  TestProcessDelegate process_delegate(arch_provider);
 
-  auto process1 = std::make_unique<MockProcess>(kProcessId1, ObjectProvider::Get());
+  auto process1 = std::make_unique<MockProcess>(kProcessId1, kProcessName1, ObjectProvider::Get(),
+                                                arch_provider);
   process1->AddThread(kThreadId11);
   process1->AddThread(kThreadId12);
   process1->AddThread(kThreadId13);
   process_delegate.InjectMockProcess(std::move(process1));
 
-  auto process2 = std::make_unique<MockProcess>(kProcessId2, ObjectProvider::Get());
+  auto process2 = std::make_unique<MockProcess>(kProcessId2, kProcessName2, ObjectProvider::Get(),
+                                                arch_provider);
   process2->AddThread(kThreadId21);
   process2->AddThread(kThreadId22);
   process2->AddThread(kThreadId23);

@@ -9,6 +9,7 @@
 #include <lib/zx/thread.h>
 #include <zircon/syscalls/exception.h>
 
+#include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/lib/fxl/macros.h"
@@ -62,13 +63,12 @@ class DebuggedThread {
   };
   const char* ClientStateToString(ClientState);
 
-  // When a thread is first created and we get a notification about it, it
-  // will be suspended, but when we attach to a process with existing threads
-  // it won't in in this state. The |starting| flag indicates that this is
-  // a thread discovered via a debug notification.
+  // TODO(donosoc): The thread constructor is getting too unwieldly. We should create an object that
+  //                has all the options and pass it in in order to have this interface be cleaner.
   DebuggedThread(DebuggedProcess* process, zx::thread thread, zx_koid_t thread_koid,
                  zx::exception exception, ThreadCreationOption option,
-                 std::shared_ptr<ObjectProvider> object_provider);
+                 std::shared_ptr<ObjectProvider> object_provider,
+                 std::shared_ptr<arch::ArchProvider> arch_provider);
   virtual ~DebuggedThread();
 
   const DebuggedProcess* process() const { return process_; }
@@ -251,6 +251,7 @@ class DebuggedThread {
   ProcessBreakpoint* current_breakpoint_ = nullptr;
 
   std::shared_ptr<ObjectProvider> object_provider_ = nullptr;
+  std::shared_ptr<arch::ArchProvider> arch_provider_ = nullptr;
 
   fxl::WeakPtrFactory<DebuggedThread> weak_factory_;
 

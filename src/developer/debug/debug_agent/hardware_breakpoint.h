@@ -9,13 +9,16 @@
 
 #include <set>
 
+#include "src/developer/debug/debug_agent/arch.h"
+
 namespace debug_agent {
 
 class ProcessBreakpoint;
 
 class HardwareBreakpoint {
  public:
-  explicit HardwareBreakpoint(ProcessBreakpoint*);
+  explicit HardwareBreakpoint(std::shared_ptr<arch::ArchProvider> arch_provider,
+                              ProcessBreakpoint*);
   ~HardwareBreakpoint();
 
   // Checks if any of the installations need to be added/removed.
@@ -29,6 +32,8 @@ class HardwareBreakpoint {
   // Install/Uninstall a particular thread.
   zx_status_t Install(zx_koid_t thread_koid);
   zx_status_t Uninstall(zx_koid_t thread_koid);
+
+  std::shared_ptr<arch::ArchProvider> arch_provider_;
 
   ProcessBreakpoint* process_bp_;  // Not-owning.
   std::set<zx_koid_t> installed_threads_;

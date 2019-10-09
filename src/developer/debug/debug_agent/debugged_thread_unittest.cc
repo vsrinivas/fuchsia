@@ -89,49 +89,34 @@ class FakeArchProvider : public arch::ArchProvider {
   std::map<RegisterCategory::Type, std::vector<Register>> regs_written_;
 };
 
-class ScopedFakeArchProvider {
- public:
-  ScopedFakeArchProvider() {
-    auto fake_arch = std::make_unique<FakeArchProvider>();
-    fake_arch_ = fake_arch.get();
-    arch::ArchProvider::Set(std::move(fake_arch));
-  }
-
-  ~ScopedFakeArchProvider() { arch::ArchProvider::Set(nullptr); }
-
-  FakeArchProvider* get() const { return fake_arch_; }
-
- private:
-  FakeArchProvider* fake_arch_;
-};
-
 class FakeProcess : public DebuggedProcess {
  public:
-  FakeProcess(zx_koid_t koid)
-      : DebuggedProcess(nullptr, {koid, zx::process()}, ObjectProvider::Get()) {}
+  FakeProcess(zx_koid_t koid, std::shared_ptr<FakeArchProvider> arch_provider)
+      : DebuggedProcess(nullptr, {koid, zx::process()}, ObjectProvider::Get()),
+        arch_provider_(std::move(arch_provider)) {}
   ~FakeProcess() = default;
 
   DebuggedThread* CreateThread(zx_koid_t tid) {
     if (!thread_) {
       thread_ = std::make_unique<DebuggedThread>(this, zx::thread(), tid, zx::exception(),
                                                  ThreadCreationOption::kSuspendedKeepSuspended,
-                                                 ObjectProvider::Get());
+                                                 ObjectProvider::Get(), arch_provider_);
     }
     return thread_.get();
   }
 
  private:
   std::unique_ptr<DebuggedThread> thread_;
+  std::shared_ptr<FakeArchProvider> arch_provider_;
 };
 
 TEST(DebuggedThread, ReadRegisters) {
-  ScopedFakeArchProvider scoped_arch_provider;
-  FakeArchProvider* arch = scoped_arch_provider.get();
+  auto arch_provider = std::make_shared<FakeArchProvider>();
 
   constexpr size_t kGeneralCount = 12u;
-  arch->AddCategory(RegisterCategory::Type::kGeneral, kGeneralCount);
+  arch_provider->AddCategory(RegisterCategory::Type::kGeneral, kGeneralCount);
 
-  FakeProcess fake_process(1u);
+  FakeProcess fake_process(1u, arch_provider);
   DebuggedThread* thread = fake_process.CreateThread(1u);
 
   std::vector<RegisterCategory::Type> cats_to_get = {RegisterCategory::Type::kGeneral};
@@ -146,16 +131,15 @@ TEST(DebuggedThread, ReadRegisters) {
 }
 
 TEST(DebuggedThread, ReadRegistersGettingErrorShouldStillReturnTheRest) {
-  ScopedFakeArchProvider scoped_arch_provider;
-  FakeArchProvider* arch = scoped_arch_provider.get();
+  auto arch_provider = std::make_shared<FakeArchProvider>();
 
-  FakeProcess fake_process(1u);
+  FakeProcess fake_process(1u, arch_provider);
   DebuggedThread* thread = fake_process.CreateThread(1u);
 
   constexpr size_t kGeneralCount = 12u;
   constexpr size_t kDebugCount = 33u;
-  arch->AddCategory(RegisterCategory::Type::kGeneral, kGeneralCount);
-  arch->AddCategory(RegisterCategory::Type::kDebug, kDebugCount);
+  arch_provider->AddCategory(RegisterCategory::Type::kGeneral, kGeneralCount);
+  arch_provider->AddCategory(RegisterCategory::Type::kDebug, kDebugCount);
 
   std::vector<RegisterCategory::Type> cats_to_get = {RegisterCategory::Type::kGeneral,
                                                      RegisterCategory::Type::kVector,
@@ -172,10 +156,9 @@ TEST(DebuggedThread, ReadRegistersGettingErrorShouldStillReturnTheRest) {
 }
 
 TEST(DebuggedThread, WriteRegisters) {
-  ScopedFakeArchProvider scoped_arch_provider;
-  FakeArchProvider* arch = scoped_arch_provider.get();
+  auto arch_provider = std::make_shared<FakeArchProvider>();
 
-  FakeProcess fake_process(1u);
+  FakeProcess fake_process(1u, arch_provider);
   DebuggedThread* thread = fake_process.CreateThread(1u);
 
   std::vector<Register> regs_to_write;
@@ -196,7 +179,7 @@ TEST(DebuggedThread, WriteRegisters) {
 
   thread->WriteRegisters(regs_to_write);
 
-  const auto& regs_written = arch->regs_written();
+  const auto& regs_written = arch_provider->regs_written();
   ASSERT_EQ(regs_written.size(), 4u);
   EXPECT_EQ(regs_written.count(RegisterCategory::Type::kNone), 0u);
 
@@ -229,8 +212,10 @@ TEST(DebuggedThread, WriteRegisters) {
 }
 
 TEST(DebuggedThread, FillThreadRecord) {
+  auto arch_provider = std::make_shared<FakeArchProvider>();
+
   constexpr zx_koid_t kProcessKoid = 0x8723456;
-  FakeProcess fake_process(kProcessKoid);
+  FakeProcess fake_process(kProcessKoid, arch_provider);
 
   zx::thread current_thread;
   zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &current_thread);
@@ -245,10 +230,9 @@ TEST(DebuggedThread, FillThreadRecord) {
   current_thread.set_property(ZX_PROP_NAME, thread_name.c_str(), thread_name.size());
   EXPECT_EQ(thread_name, provider->NameForObject(current_thread));
 
-  auto thread = std::make_unique<DebuggedThread>(&fake_process, std::move(current_thread),
-                                                 current_thread_koid, zx::exception(),
-                                                 ThreadCreationOption::kRunningKeepRunning,
-                                                 provider);
+  auto thread = std::make_unique<DebuggedThread>(
+      &fake_process, std::move(current_thread), current_thread_koid, zx::exception(),
+      ThreadCreationOption::kRunningKeepRunning, provider, arch_provider);
 
   // Request no stack since this thread should be running.
   debug_ipc::ThreadRecord record;
@@ -269,8 +253,10 @@ TEST(DebuggedThread, FillThreadRecord) {
 // Ref-counted Suspension --------------------------------------------------------------------------
 
 TEST(DebuggedThread, NormalSuspension) {
+  auto arch_provider = std::make_shared<FakeArchProvider>();
+
   constexpr zx_koid_t kProcessKoid = 0x8723456;
-  FakeProcess fake_process(kProcessKoid);
+  FakeProcess fake_process(kProcessKoid, arch_provider);
   std::shared_ptr<ObjectProvider> provider = ObjectProvider::Get();
 
   // Create the event for coordination.
@@ -287,7 +273,7 @@ TEST(DebuggedThread, NormalSuspension) {
 
     debugged_thread = std::make_unique<DebuggedThread>(
         &fake_process, std::move(current_thread), current_thread_koid, zx::exception(),
-        ThreadCreationOption::kRunningKeepRunning, provider);
+        ThreadCreationOption::kRunningKeepRunning, provider, arch_provider);
 
     // Let the test know it can continue.
     ASSERT_EQ(event.signal(0, ZX_USER_SIGNAL_0), ZX_OK);
@@ -331,9 +317,11 @@ TEST(DebuggedThread, NormalSuspension) {
 }
 
 TEST(DebuggedThread, RefCountedSuspension) {
-  constexpr zx_koid_t kProcessKoid = 0x8723456;
-  FakeProcess fake_process(kProcessKoid);
+  auto arch_provider = std::make_shared<FakeArchProvider>();
   std::shared_ptr<ObjectProvider> provider = ObjectProvider::Get();
+
+  constexpr zx_koid_t kProcessKoid = 0x8723456;
+  FakeProcess fake_process(kProcessKoid, arch_provider);
 
   // Create the event for coordination.
   zx::event event;
@@ -349,7 +337,7 @@ TEST(DebuggedThread, RefCountedSuspension) {
 
     debugged_thread = std::make_unique<DebuggedThread>(
         &fake_process, std::move(current_thread), current_thread_koid, zx::exception(),
-        ThreadCreationOption::kRunningKeepRunning, provider);
+        ThreadCreationOption::kRunningKeepRunning, provider, arch_provider);
 
     // Let the test know it can continue.
     ASSERT_EQ(event.signal(0, ZX_USER_SIGNAL_0), ZX_OK);
