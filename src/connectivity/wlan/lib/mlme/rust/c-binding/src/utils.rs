@@ -22,6 +22,6 @@ pub unsafe fn as_slice<'a>(data: *const u8, len: usize) -> &'a [u8] {
     if data.is_null() {
         &[]
     } else {
-        unsafe { std::slice::from_raw_parts(data, len) }
+        std::slice::from_raw_parts(data, len)
     }
 }

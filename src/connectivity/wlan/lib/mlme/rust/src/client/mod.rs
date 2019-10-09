@@ -14,19 +14,13 @@ use {
     },
     failure::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fuchsia_zircon::{self as zx, DurationNum},
     log::error,
-    std::ffi::c_void,
-    std::ops::Mul,
     wlan_common::{
-        appendable::Appendable,
-        big_endian::BigEndianU16,
         buffer_writer::BufferWriter,
         frame_len,
         mac::{self, Aid, MacAddr, OptionalField, Presence},
         sequence::SequenceManager,
     },
-    wlan_statemachine::*,
     zerocopy::ByteSlice,
 };
 
@@ -332,23 +326,29 @@ impl Client {
     /// Sends an MLME-AUTHENTICATE.confirm message to the joined BSS with authentication type
     /// `Open System` as only open authentication is supported.
     fn send_authenticate_conf(&mut self, result_code: fidl_mlme::AuthenticateResultCodes) {
-        self.device.access_sme_sender(|sender| {
+        let result = self.device.access_sme_sender(|sender| {
             sender.send_authenticate_conf(&mut fidl_mlme::AuthenticateConfirm {
                 peer_sta_address: self.bssid,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
                 result_code,
             })
         });
+        if let Err(e) = result {
+            error!("error sending MLME-AUTHENTICATE.confirm: {}", e);
+        }
     }
 
     /// Sends an MLME-DEAUTHENTICATE.indication message to the joined BSS.
     fn send_deauthenticate_ind(&mut self, reason_code: fidl_mlme::ReasonCode) {
-        self.device.access_sme_sender(|sender| {
+        let result = self.device.access_sme_sender(|sender| {
             sender.send_deauthenticate_ind(&mut fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: self.bssid,
                 reason_code,
             })
         });
+        if let Err(e) = result {
+            error!("error sending MLME-DEAUTHENTICATE.indication: {}", e);
+        }
     }
 }
 
@@ -713,10 +713,8 @@ mod tests {
     fn send_ps_poll_frame() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
-        let mut client = make_client_station(
-            fake_device.as_device_fail_wlan_tx(),
-            fake_scheduler.as_scheduler(),
-        );
-        client.send_ps_poll_frame(0xABCD);
+        let mut client =
+            make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
+        client.send_ps_poll_frame(0xABCD).expect("failed sending PS POLL frame");
     }
 }

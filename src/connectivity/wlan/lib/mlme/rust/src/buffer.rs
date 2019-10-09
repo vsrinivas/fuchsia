@@ -4,7 +4,6 @@
 
 use {
     crate::error::Error,
-    failure::ensure,
     std::{
         ffi::c_void,
         ops::{Deref, DerefMut},
@@ -172,10 +171,7 @@ mod tests {
         static mut RETURNED_RAW_BUFFER: *mut c_void = ptr::null_mut();
 
         unsafe extern "C" fn assert_free_buffer(raw: *mut c_void) {
-            // Safe, this is a function specific static field.
-            unsafe {
-                RETURNED_RAW_BUFFER = raw;
-            }
+            RETURNED_RAW_BUFFER = raw;
         }
 
         // Once buffer goes out of scope the raw pointer should be returned to the provider.
@@ -247,10 +243,7 @@ mod tests {
         static mut RETURNED_RAW_BUFFER: *mut c_void = ptr::null_mut();
 
         unsafe extern "C" fn assert_free_buffer(raw: *mut c_void) {
-            // Safe, this is a function specific static field.
-            unsafe {
-                RETURNED_RAW_BUFFER = raw;
-            }
+            RETURNED_RAW_BUFFER = raw;
         }
 
         let inbuf = InBuf {
@@ -269,5 +262,4 @@ mod tests {
             assert!(RETURNED_RAW_BUFFER.is_null());
         }
     }
-
 }

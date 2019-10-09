@@ -2,12 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::error::Error,
-    fuchsia_zircon::{self as zx, DurationNum},
-    std::collections::HashMap,
-    std::ffi::c_void,
-};
+use {fuchsia_zircon as zx, std::collections::HashMap, std::ffi::c_void};
 
 #[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, Default)]
 #[repr(C)]
@@ -52,7 +47,7 @@ impl<E> Timer<E> {
     }
 
     pub fn cancel_all(&mut self) {
-        for (event_id, event) in &self.events {
+        for (event_id, _event) in &self.events {
             (self.scheduler.cancel)(self.scheduler.cookie, *event_id);
         }
         self.events.clear();
@@ -71,13 +66,13 @@ pub struct FakeScheduler {
 
 #[cfg(test)]
 impl FakeScheduler {
-    pub extern "C" fn schedule(cookie: *mut c_void, deadline: i64) -> EventId {
+    pub extern "C" fn schedule(cookie: *mut c_void, _deadline: i64) -> EventId {
         unsafe {
             (*(cookie as *mut Self)).next_id += 1;
             EventId((*(cookie as *mut Self)).next_id)
         }
     }
-    pub extern "C" fn cancel(cookie: *mut c_void, id: EventId) {}
+    pub extern "C" fn cancel(_cookie: *mut c_void, _id: EventId) {}
 
     pub fn new() -> Self {
         Self { next_id: 0 }
@@ -94,7 +89,7 @@ impl FakeScheduler {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, fuchsia_zircon::DurationNum};
 
     #[test]
     fn schedule_cancel_event() {
@@ -106,7 +101,7 @@ mod tests {
 
         // Verify event triggers no more than once.
         let mut timer = Timer::<FooEvent>::new(scheduler);
-        let deadline = zx::Time::after(5i64.nanos());
+        let deadline = zx::Time::after(5_i64.nanos());
         let event_id = timer.schedule_event(deadline, FooEvent(8));
         assert_eq!(timer.triggered(&event_id), Some(FooEvent(8)));
         assert_eq!(timer.triggered(&event_id), None);
@@ -131,7 +126,7 @@ mod tests {
         let mut fake_scheduler = FakeScheduler::new();
         let scheduler = fake_scheduler.as_scheduler();
         let mut timer = Timer::<_>::new(scheduler);
-        let deadline = zx::Time::after(5i64.nanos());
+        let deadline = zx::Time::after(5_i64.nanos());
 
         let event_id_1 = timer.schedule_event(deadline, 8);
         let event_id_2 = timer.schedule_event(deadline, 9);

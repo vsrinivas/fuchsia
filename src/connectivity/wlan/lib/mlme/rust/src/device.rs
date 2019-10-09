@@ -120,7 +120,7 @@ impl FakeDevice {
 
         let (_, tail): (_, &[u8]) = decode_transaction_header(buf.bytes())?;
         let mut msg = Decodable::new_empty();
-        Decoder::decode_into(tail, &mut [], &mut msg);
+        Decoder::decode_into(tail, &mut [], &mut msg).expect("error decoding MLME message");
         Ok(msg)
     }
 
@@ -150,10 +150,7 @@ impl FakeDevice {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {
-        fidl::encoding::{self, decode_transaction_header, Decodable},
-        wlan_common::assert_variant,
-    };
+    use wlan_common::assert_variant;
 
     fn make_auth_confirm_msg() -> fidl_mlme::AuthenticateConfirm {
         fidl_mlme::AuthenticateConfirm {
@@ -171,7 +168,6 @@ mod tests {
             .expect("error sending MLME message");
 
         // Read message from channel.
-        let mut buf = zx::MessageBuf::new();
         let msg = fake_device
             .next_mlme_msg::<fidl_mlme::AuthenticateConfirm>()
             .expect("error reading message from channel");
@@ -180,7 +176,7 @@ mod tests {
 
     #[test]
     fn send_mlme_message_invalid_handle() {
-        unsafe extern "C" fn get_sme_channel(device: *mut c_void) -> u32 {
+        unsafe extern "C" fn get_sme_channel(_device: *mut c_void) -> u32 {
             return zx::sys::ZX_HANDLE_INVALID;
         }
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::utils, fuchsia_zircon::sys as zx, wlan_mlme::common::sequence::SequenceManager};
+use wlan_mlme::common::sequence::SequenceManager;
 
 #[no_mangle]
 pub extern "C" fn mlme_sequence_manager_new() -> *mut SequenceManager {

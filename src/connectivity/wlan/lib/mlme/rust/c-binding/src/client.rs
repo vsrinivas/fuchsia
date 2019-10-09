@@ -5,17 +5,11 @@
 use {
     crate::utils,
     fuchsia_zircon as zx,
-    num_traits::FromPrimitive,
-    wlan_common::buffer_writer::BufferWriter,
     wlan_mlme::{
-        buffer::{BufferProvider, InBuf, OutBuf},
-        client::{self, Client},
-        common::{
-            frame_len,
-            mac::{self, OptionalField},
-            sequence::SequenceManager,
-        },
-        device::{self, Device},
+        buffer::BufferProvider,
+        client::Client,
+        common::{mac, sequence::SequenceManager},
+        device::Device,
         error::ResultExt,
         timer::*,
     },

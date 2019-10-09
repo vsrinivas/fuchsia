@@ -4,10 +4,6 @@
 
 //! C bindings for wlan-mlme crate.
 
-// Allow while bringing up MLME.
-#![allow(unused)]
-
-#[macro_use]
 extern crate log;
 // Explicitly declare usage for cbindgen.
 extern crate wlan_common;

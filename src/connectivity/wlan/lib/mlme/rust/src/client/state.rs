@@ -11,30 +11,14 @@ use {
     crate::{
         auth,
         client::{Client, TimedEvent},
-        device::{Device, TxFlags},
-        error::Error,
         timer::*,
     },
-    failure::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fuchsia_zircon::{self as zx, DurationNum},
     log::{error, info},
-    std::ffi::c_void,
-    std::ops::Mul,
-    wlan_common::{
-        appendable::Appendable,
-        big_endian::BigEndianU16,
-        buffer_writer::BufferWriter,
-        frame_len,
-        mac::{self, OptionalField, Presence},
-        sequence::SequenceManager,
-        time::deadline_after_beacons,
-    },
-    wlan_statemachine::{self as statemachine, *},
+    wlan_common::{mac, time::deadline_after_beacons},
+    wlan_statemachine::*,
     zerocopy::ByteSlice,
 };
-
-type MacAddr = [u8; 6];
 
 /// Client joined a BSS (synchronized timers and prepared its underlying hardware).
 /// At this point the Client is able to listen to frames on the BSS' channel.
@@ -155,7 +139,7 @@ impl States {
     /// Only Open System authentication is supported.
     /// Shared Key authentication is intentionally unsupported within Fuchsia.
     /// SAE will be supported sometime in the future.
-    pub fn authenticate(mut self, sta: &mut Client, timeout_bcn_count: u8) -> States {
+    pub fn authenticate(self, sta: &mut Client, timeout_bcn_count: u8) -> States {
         match self {
             // MLME-AUTHENTICATE.request messages are only processed when the Client is "Joined".
             States::Joined(state) => match state.authenticate(sta, timeout_bcn_count) {
@@ -176,7 +160,7 @@ impl States {
     /// - frames are corrupted (too short)
     /// - frames' frame class is not yet permitted
     pub fn on_mac_frame<B: ByteSlice>(
-        mut self,
+        self,
         sta: &mut Client,
         bytes: B,
         body_aligned: bool,
@@ -203,7 +187,7 @@ impl States {
     /// Processes inbound management frames.
     /// Only frames from the joined BSS are processed. Frames from other STAs are dropped.
     fn on_mgmt_frame<B: ByteSlice>(
-        mut self,
+        self,
         sta: &mut Client,
         mgmt_hdr: &mac::MgmtHdr,
         body: B,
@@ -244,7 +228,7 @@ impl States {
     }
 
     /// Callback when a previously scheduled event fired.
-    pub fn on_timed_event(mut self, sta: &mut Client, event_id: EventId) -> States {
+    pub fn on_timed_event(self, sta: &mut Client, event_id: EventId) -> States {
         // Lookup the event matching the given id.
         let event = match sta.timer.triggered(&event_id) {
             Some(event) => event,
@@ -286,12 +270,15 @@ mod tests {
     use {
         super::*,
         crate::{
-            buffer::{BufferProvider, FakeBufferProvider},
-            device::FakeDevice,
+            buffer::FakeBufferProvider,
+            device::{Device, FakeDevice},
         },
+        fuchsia_zircon::{self as zx, DurationNum},
         wlan_common::assert_variant,
+        wlan_statemachine as statemachine,
     };
 
+    type MacAddr = [u8; 6];
     const BSSID: MacAddr = [6u8; 6];
     const IFACE_MAC: MacAddr = [7u8; 6];
 
@@ -512,7 +499,7 @@ mod tests {
     }
 
     #[test]
-    fn state_transitions_joined_flow() {
+    fn state_transitions_joined_authing() {
         let mut device = FakeDevice::new();
         let mut scheduler = FakeScheduler::new();
         let mut sta = make_client_station(device.as_device(), scheduler.as_scheduler());
@@ -525,7 +512,7 @@ mod tests {
     }
 
     #[test]
-    fn state_transitions_authed_success_flow() {
+    fn state_transitions_authing_success() {
         let mut device = FakeDevice::new();
         let mut scheduler = FakeScheduler::new();
         let mut sta = make_client_station(device.as_device(), scheduler.as_scheduler());
@@ -553,7 +540,7 @@ mod tests {
     }
 
     #[test]
-    fn state_transitions_authing_failure_flow() {
+    fn state_transitions_authing_failure() {
         let mut device = FakeDevice::new();
         let mut scheduler = FakeScheduler::new();
         let mut sta = make_client_station(device.as_device(), scheduler.as_scheduler());
@@ -598,7 +585,7 @@ mod tests {
     }
 
     #[test]
-    fn state_transitions_authing_deauth_flow() {
+    fn state_transitions_authing_deauth() {
         let mut device = FakeDevice::new();
         let mut scheduler = FakeScheduler::new();
         let mut sta = make_client_station(device.as_device(), scheduler.as_scheduler());
@@ -624,7 +611,7 @@ mod tests {
     }
 
     #[test]
-    fn state_transitions_authed_flow() {
+    fn state_transitions_authed() {
         let mut device = FakeDevice::new();
         let mut scheduler = FakeScheduler::new();
         let mut sta = make_client_station(device.as_device(), scheduler.as_scheduler());

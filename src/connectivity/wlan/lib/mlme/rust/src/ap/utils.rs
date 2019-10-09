@@ -3,15 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    crate::{auth, device, error::Error},
+    crate::{auth, error::Error},
     wlan_common::{
         appendable::Appendable,
-        mac::{self, FrameControl, MacAddr, StatusCode},
+        mac::{self, MacAddr, StatusCode},
         mgmt_writer,
         sequence::SequenceManager,
     },
 };
 
+#[allow(unused)]
 pub fn write_open_auth_frame<B: Appendable>(
     buf: &mut B,
     client_addr: MacAddr,

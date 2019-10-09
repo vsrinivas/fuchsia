@@ -3,19 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::{auth, device, error::Error},
-    fuchsia_zircon::sys as zx,
-    std::{ops::Deref, ops::DerefMut},
+    crate::{auth, error::Error},
     wlan_common::{
         appendable::Appendable,
         big_endian::BigEndianU16,
-        buffer_writer::BufferWriter,
         data_writer,
-        mac::{self, Aid, MacAddr, OptionalField},
+        mac::{self, Aid, MacAddr},
         mgmt_writer,
         sequence::SequenceManager,
     },
-    zerocopy::ByteSlice,
 };
 
 pub fn write_open_auth_frame<B: Appendable>(
@@ -168,8 +164,7 @@ pub fn write_ps_poll_frame<B: Appendable>(
 mod tests {
     use {
         super::*,
-        crate::device::FakeDevice,
-        wlan_common::{assert_variant, test_utils::fake_frames::*},
+        wlan_common::{assert_variant, buffer_writer::BufferWriter},
     };
 
     #[test]
