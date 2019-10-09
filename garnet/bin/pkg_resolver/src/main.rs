@@ -30,6 +30,9 @@ mod rewrite_service;
 #[cfg(test)]
 mod test_util;
 
+#[allow(dead_code)]
+mod queue;
+
 use crate::amber_connector::AmberConnector;
 use crate::cache::PackageCache;
 use crate::experiment::Experiments;
