@@ -72,9 +72,8 @@ use {
     proc_macro2::Span,
     quote::{quote, quote_spanned},
     syn::{
-        Ident,
         parse::{Error, Parse, ParseStream},
-        parse_macro_input,
+        parse_macro_input, Ident,
     },
 };
 
@@ -93,73 +92,46 @@ fn common(
     test: bool,
 ) -> TokenStream {
     let item = parse_macro_input!(item as syn::ItemFn);
-    let syn::ItemFn {
-        attrs,
-        vis: _,
-        constness,
-        unsafety,
-        asyncness,
-        abi,
-        ident,
-        decl,
-        block,
-    } = item;
+    let syn::ItemFn { attrs, sig, vis: _, block } = item;
     if let Err(e) = (|| {
         // Disallow const, unsafe or abi linkage, generics etc
-        if let Some(c) = constness {
+        if let Some(c) = &sig.constness {
             return Err(Error::new(c.span, "async entry may not be 'const'"));
         }
-        if let Some(u) = unsafety {
+        if let Some(u) = &sig.unsafety {
             return Err(Error::new(u.span, "async entry may not be 'unsafe'"));
         }
-        if let Some(abi) = abi {
+        if let Some(abi) = &sig.abi {
             return Err(Error::new(
                 abi.extern_token.span,
                 "async entry may not have custom linkage",
             ));
         }
-        if !decl.generics.params.is_empty() || decl.generics.where_clause.is_some() {
-            return Err(Error::new(
-                decl.fn_token.span,
-                "async entry may not have generics",
-            ));
+        if !sig.generics.params.is_empty() || sig.generics.where_clause.is_some() {
+            return Err(Error::new(sig.fn_token.span, "async entry may not have generics"));
         }
-        if !decl.inputs.is_empty() {
-            return Err(Error::new(
-                decl.paren_token.span,
-                "async entry takes no arguments",
-            ));
+        if !sig.inputs.is_empty() {
+            return Err(Error::new(sig.paren_token.span, "async entry takes no arguments"));
         }
-        if let Some(dot3) = decl.variadic {
-            return Err(Error::new(dot3.spans[0], "async entry may not be variadic"));
+        if let Some(dot3) = &sig.variadic {
+            return Err(Error::new(dot3.dots.spans[0], "async entry may not be variadic"));
         }
 
         // Require the target function acknowledge it is async.
-        if asyncness.is_none() {
-            return Err(Error::new(
-                ident.span(),
-                "async entry must be declared as 'async'",
-            ));
+        if sig.asyncness.is_none() {
+            return Err(Error::new(sig.ident.span(), "async entry must be declared as 'async'"));
         }
 
         // Only allow on 'main' or 'test' functions
-        if ident.to_string() != "main"
+        if sig.ident.to_string() != "main"
             && !test
             && !attrs.iter().any(|a| {
                 a.parse_meta()
-                    .map(|m| {
-                        if let syn::Meta::Word(w) = m {
-                            w == "test"
-                        } else {
-                            false
-                        }
-                    })
+                    .map(|m| if let syn::Meta::Path(p) = m { p.is_ident("test") } else { false })
                     .unwrap_or(false)
-            }) {
-            return Err(Error::new(
-                ident.span(),
-                "async entry must a 'main' or '#[test]'.",
-            ));
+            })
+        {
+            return Err(Error::new(sig.ident.span(), "async entry must a 'main' or '#[test]'."));
         }
         Ok(())
     })() {
@@ -167,14 +139,15 @@ fn common(
     }
 
     let test = if test {
-        quote!{#[test]}
+        quote! {#[test]}
     } else {
-        quote!{}
+        quote! {}
     };
     let run_executor = proc_macro2::TokenStream::from(run_executor);
-    let ret_type = decl.output;
-    let span = ident.span();
-    let output = quote_spanned!{span=>
+    let ret_type = sig.output;
+    let span = sig.ident.span();
+    let ident = sig.ident;
+    let output = quote_spanned! {span=>
         // Preserve any original attributes.
         #(#attrs)* #test
         fn #ident () #ret_type {
@@ -214,7 +187,7 @@ fn common(
 pub fn run_until_stalled(attr: TokenStream, item: TokenStream) -> TokenStream {
     let test = parse_macro_input!(attr as Option<kw::test>).is_some();
     let executor = executor_ident();
-    let run_executor = quote!{
+    let run_executor = quote! {
         let mut fut = func();
         ::fuchsia_async::pin_mut!(fut);
         match #executor.run_until_stalled(&mut fut) {
@@ -237,7 +210,7 @@ pub fn run_until_stalled(attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn run_singlethreaded(attr: TokenStream, item: TokenStream) -> TokenStream {
     let test = parse_macro_input!(attr as Option<kw::test>).is_some();
     let executor = executor_ident();
-    let run_executor = quote!{
+    let run_executor = quote! {
         #executor.run_singlethreaded(func())
     };
     common(item, executor, run_executor.into(), test)
@@ -250,13 +223,9 @@ struct RunAttributes {
 
 impl Parse for RunAttributes {
     fn parse(input: ParseStream) -> syn::parse::Result<Self> {
-        let threads = input.parse::<syn::LitInt>()?.value() as usize;
+        let threads = input.parse::<syn::LitInt>()?.base10_parse::<usize>()?;
         let comma = input.parse::<Option<syn::Token![,]>>()?.is_some();
-        let test = if comma {
-            input.parse::<Option<kw::test>>()?.is_some()
-        } else {
-            false
-        };
+        let test = if comma { input.parse::<Option<kw::test>>()?.is_some() } else { false };
         Ok(RunAttributes { threads, test })
     }
 }
@@ -275,7 +244,7 @@ pub fn run(attr: TokenStream, item: TokenStream) -> TokenStream {
     let RunAttributes { threads, test } = parse_macro_input!(attr as RunAttributes);
 
     let executor = executor_ident();
-    let run_executor = quote!{
+    let run_executor = quote! {
         #executor.run(func(), #threads)
     };
     common(item, executor, run_executor.into(), test)

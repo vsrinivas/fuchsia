@@ -5,12 +5,13 @@
 use {
     proc_macro2::TokenStream,
     syn::{
-        braced, parenthesized,
+        braced,
+        export::ToTokens,
+        parenthesized,
         parse::{Parse, ParseStream},
         punctuated::Punctuated,
         token, Ident, LitInt, Path, Result, Token, Type,
     },
-    synstructure::ToTokens,
 };
 
 pub enum BitRange {
@@ -105,7 +106,7 @@ impl AliasSpec {
             AliasSpec::SingleName(alias) => alias.name.to_string(),
             AliasSpec::Union { aliases, .. } => match aliases.first() {
                 None => "_".to_string(),
-                Some(alias) => alias.value().name.to_string(),
+                Some(alias) => alias.name.to_string(),
             },
         }
     }

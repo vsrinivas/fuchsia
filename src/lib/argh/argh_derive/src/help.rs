@@ -5,13 +5,8 @@
 use {
     crate::{
         errors::Errors,
-        parse_attrs::{
-            Description,
-            FieldKind,
-            TypeAttrs,
-        },
-        Optionality,
-        StructField,
+        parse_attrs::{Description, FieldKind, TypeAttrs},
+        Optionality, StructField,
     },
     argh_shared::INDENT,
     proc_macro2::{Span, TokenStream},
@@ -59,12 +54,7 @@ pub(crate) fn help(
 
     format_lit.push_str(SECTION_SEPARATOR);
 
-    let description = require_description(
-        errors,
-        Span::call_site(),
-        &ty_attrs.description,
-        "type",
-    );
+    let description = require_description(errors, Span::call_site(), &ty_attrs.description, "type");
     format_lit.push_str(&description);
 
     format_lit.push_str(SECTION_SEPARATOR);
@@ -73,12 +63,7 @@ pub(crate) fn help(
         option_description(errors, &mut format_lit, option);
     }
     // Also include "help"
-    option_description_format(
-        &mut format_lit,
-        None,
-        "--help",
-        "display usage information",
-    );
+    option_description_format(&mut format_lit, None, "--help", "display usage information");
 
     let subcommand_calculation;
     let subcommand_format_arg;
@@ -93,8 +78,8 @@ pub(crate) fn help(
             );
         };
     } else {
-         subcommand_calculation = TokenStream::new();
-         subcommand_format_arg = TokenStream::new()
+        subcommand_calculation = TokenStream::new();
+        subcommand_format_arg = TokenStream::new()
     }
 
     lits_section(&mut format_lit, "Examples:", &ty_attrs.examples);
@@ -107,7 +92,7 @@ pub(crate) fn help(
         for (code, text) in &ty_attrs.error_codes {
             format_lit.push('\n');
             format_lit.push_str(INDENT);
-            format_lit.push_str(&format!("{} {}", code.value(), text.value()));
+            format_lit.push_str(&format!("{} {}", code, text.value()));
         }
     }
 
@@ -169,12 +154,12 @@ fn option_usage(out: &mut String, field: &StructField<'_>) {
 
     match field.kind {
         FieldKind::SubCommand | FieldKind::Positional => unreachable!(), // don't have long_name
-        FieldKind::Switch => {},
+        FieldKind::Switch => {}
         FieldKind::Option => {
             out.push_str(" <");
             out.push_str(long_name.trim_start_matches("--"));
             out.push('>');
-        },
+        }
     }
 
     if !field.optionality.is_required() {
@@ -193,8 +178,11 @@ pub fn require_description(
     desc.as_ref().map(|d| d.content.value().trim().to_owned()).unwrap_or_else(|| {
         errors.err_span(
             err_span,
-            &format!("#[derive(FromArgs)] {} with no description.
-Add a doc comment or an `#[argh(description = \"...\")]` attribute.", kind),
+            &format!(
+                "#[derive(FromArgs)] {} with no description.
+Add a doc comment or an `#[argh(description = \"...\")]` attribute.",
+                kind
+            ),
         );
         "".to_string()
     })
@@ -206,19 +194,10 @@ Add a doc comment or an `#[argh(description = \"...\")]` attribute.", kind),
 fn option_description(errors: &Errors, out: &mut String, field: &StructField<'_>) {
     let short = field.attrs.short.as_ref().map(|s| s.value());
     let long_with_leading_dashes = field.long_name.as_ref().expect("missing long name for option");
-    let description = require_description(
-        errors,
-        field.name.span(),
-        &field.attrs.description,
-        "field",
-    );
+    let description =
+        require_description(errors, field.name.span(), &field.attrs.description, "field");
 
-    option_description_format(
-        out,
-        short,
-        long_with_leading_dashes,
-        &description,
-    )
+    option_description_format(out, short, long_with_leading_dashes, &description)
 }
 
 fn option_description_format(

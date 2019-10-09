@@ -74,41 +74,47 @@ impl FieldAttrs {
             };
 
             for meta in &ml.nested {
-                let meta = if let Some(m) = errors.expect_nested_meta(meta) {
-                    m
-                } else {
-                    continue
-                };
+                let meta = if let Some(m) = errors.expect_nested_meta(meta) { m } else { continue };
 
-                let name = meta.name();
-                if name == "default" {
+                let name = meta.path();
+                if name.is_ident("default") {
                     if let Some(m) = errors.expect_meta_name_value(&meta) {
                         this.parse_attr_default(errors, m);
                     }
-                } else if name == "description" {
+                } else if name.is_ident("description") {
                     if let Some(m) = errors.expect_meta_name_value(&meta) {
                         parse_attr_description(errors, m, &mut this.description);
                     }
-                } else if name == "from_str_fn" {
+                } else if name.is_ident("from_str_fn") {
                     if let Some(m) = errors.expect_meta_list(&meta) {
                         this.parse_attr_from_str_fn(errors, m);
                     }
-                } else if name == "long" {
+                } else if name.is_ident("long") {
                     if let Some(m) = errors.expect_meta_name_value(&meta) {
                         this.parse_attr_long(errors, m);
                     }
-                } else if name == "option" {
+                } else if name.is_ident("option") {
                     parse_attr_field_type(errors, meta, FieldKind::Option, &mut this.field_type);
-                } else if name == "short" {
+                } else if name.is_ident("short") {
                     if let Some(m) = errors.expect_meta_name_value(&meta) {
                         this.parse_attr_short(errors, m);
                     }
-                } else if name == "subcommand" {
-                    parse_attr_field_type(errors, meta, FieldKind::SubCommand, &mut this.field_type);
-                } else if name == "switch" {
+                } else if name.is_ident("subcommand") {
+                    parse_attr_field_type(
+                        errors,
+                        meta,
+                        FieldKind::SubCommand,
+                        &mut this.field_type,
+                    );
+                } else if name.is_ident("switch") {
                     parse_attr_field_type(errors, meta, FieldKind::Switch, &mut this.field_type);
-                } else if name == "positional" {
-                    parse_attr_field_type(errors, meta, FieldKind::Positional, &mut this.field_type);
+                } else if name.is_ident("positional") {
+                    parse_attr_field_type(
+                        errors,
+                        meta,
+                        FieldKind::Positional,
+                        &mut this.field_type,
+                    );
                 } else {
                     errors.err(
                         &meta,
@@ -125,13 +131,11 @@ impl FieldAttrs {
         if let (Some(default), Some(field_type)) = (&this.default, &this.field_type) {
             match field_type.kind {
                 FieldKind::Option | FieldKind::Positional => {}
-                FieldKind::SubCommand | FieldKind::Switch => {
-                    errors.err(
-                        default,
-                        "`default` may only be specified on `#[argh(option)]` \
-                        or `#[argh(subcommand)]` fields",
-                    )
-                }
+                FieldKind::SubCommand | FieldKind::Switch => errors.err(
+                    default,
+                    "`default` may only be specified on `#[argh(option)]` \
+                     or `#[argh(subcommand)]` fields",
+                ),
             }
         }
 
@@ -185,18 +189,14 @@ fn parse_attr_fn_name(
     }
 
     if m.nested.len() != 1 {
-        errors.err(
-            &m.nested,
-            "Expected a single argument containing the function name",
-        );
+        errors.err(&m.nested, "Expected a single argument containing the function name");
         return;
     }
 
     // `unwrap` will not fail because of the call above
     let nested = m.nested.first().unwrap();
-    let nm = nested.value();
-    if let Some(word) = errors.expect_nested_meta(nm).and_then(|m| errors.expect_meta_word(m)) {
-        *slot = Some(word.clone());
+    if let Some(path) = errors.expect_nested_meta(nested).and_then(|m| errors.expect_meta_word(m)) {
+        *slot = path.get_ident().cloned();
     }
 }
 
@@ -206,14 +206,13 @@ fn parse_attr_field_type(
     kind: FieldKind,
     slot: &mut Option<FieldType>,
 ) {
-    if let Some(word) = errors.expect_meta_word(meta) {
+    if let Some(path) = errors.expect_meta_word(meta) {
         if let Some(first) = slot {
-            errors.duplicate_attrs("field kind", &first.ident, word);
+            errors.duplicate_attrs("field kind", &first.ident, path);
         } else {
-            *slot = Some(FieldType {
-                kind,
-                ident: word.clone(),
-            });
+            if let Some(word) = path.get_ident() {
+                *slot = Some(FieldType { kind, ident: word.clone() });
+            }
         }
     }
 }
@@ -256,10 +255,7 @@ fn attr_to_meta_name_value(errors: &Errors, attr: &syn::Attribute) -> Option<syn
 }
 
 /// Filters out non-`#[argh(...)]` attributes and converts to `syn::MetaList`.
-fn argh_attr_to_meta_list(
-    errors: &Errors,
-    attr: &syn::Attribute,
-) -> Option<syn::MetaList> {
+fn argh_attr_to_meta_list(errors: &Errors, attr: &syn::Attribute) -> Option<syn::MetaList> {
     if !is_argh_attr(attr) {
         return None;
     }
@@ -279,10 +275,7 @@ pub struct TypeAttrs {
 
 impl TypeAttrs {
     /// Parse top-level `#[argh(...)]` attributes
-    pub fn parse(
-        errors: &Errors,
-        derive_input: &syn::DeriveInput,
-    ) -> Self {
+    pub fn parse(errors: &Errors, derive_input: &syn::DeriveInput) -> Self {
         let mut this = TypeAttrs::default();
 
         for attr in &derive_input.attrs {
@@ -298,35 +291,32 @@ impl TypeAttrs {
             };
 
             for meta in &ml.nested {
-                let meta = if let Some(m) = errors.expect_nested_meta(meta) {
-                    m
-                } else {
-                    continue
-                };
+                let meta = if let Some(m) = errors.expect_nested_meta(meta) { m } else { continue };
 
-                let name = meta.name();
-                if name == "description" {
+                let name = meta.path();
+                if name.is_ident("description") {
                     if let Some(m) = errors.expect_meta_name_value(&meta) {
                         parse_attr_description(errors, m, &mut this.description);
                     }
-                } else if name == "error_code" {
+                } else if name.is_ident("error_code") {
                     if let Some(m) = errors.expect_meta_list(&meta) {
                         this.parse_attr_error_code(errors, m);
                     }
-                } else if name == "example" {
+                } else if name.is_ident("example") {
                     if let Some(m) = errors.expect_meta_name_value(&meta) {
                         this.parse_attr_example(errors, m);
                     }
-                } else if name == "name" {
+                } else if name.is_ident("name") {
                     if let Some(m) = errors.expect_meta_name_value(&meta) {
                         this.parse_attr_name(errors, m);
                     }
-                } else if name == "note" {
+                } else if name.is_ident("note") {
                     if let Some(m) = errors.expect_meta_name_value(&meta) {
                         this.parse_attr_note(errors, m);
                     }
-                } else if name == "subcommand" {
-                    if let Some(ident) = errors.expect_meta_word(&meta) {
+                } else if name.is_ident("subcommand") {
+                    if let Some(ident) = errors.expect_meta_word(&meta).and_then(|p| p.get_ident())
+                    {
                         this.parse_attr_subcommand(errors, ident);
                     }
                 } else {
@@ -352,7 +342,13 @@ impl TypeAttrs {
         // map from error code to index
         let mut map: HashMap<u64, usize> = HashMap::new();
         for (index, (lit_int, _lit_str)) in self.error_codes.iter().enumerate() {
-            let value = lit_int.value();
+            let value = match lit_int.base10_parse::<u64>() {
+                Ok(v) => v,
+                Err(e) => {
+                    errors.push(e);
+                    continue;
+                }
+            };
             if value > (std::i32::MAX as u64) {
                 errors.err(lit_int, "Error code out of range for `i32`");
             }
@@ -365,20 +361,17 @@ impl TypeAttrs {
                         previous_lit_int,
                         &format!("Error code {} previously defined here", value),
                     );
-                },
+                }
                 Entry::Vacant(slot) => {
                     slot.insert(index);
-                },
+                }
             }
         }
     }
 
     fn parse_attr_error_code(&mut self, errors: &Errors, ml: &syn::MetaList) {
         if ml.nested.len() != 2 {
-            errors.err(
-                &ml,
-                "Expected two arguments, an error number and a string description",
-            );
+            errors.err(&ml, "Expected two arguments, an error number and a string description");
             return;
         }
 
@@ -419,17 +412,13 @@ impl TypeAttrs {
     }
 }
 
-fn check_option_description(
-    errors: &Errors,
-    desc: &str,
-    span: Span,
-) {
+fn check_option_description(errors: &Errors, desc: &str, span: Span) {
     let chars = &mut desc.trim().chars();
     match (chars.next(), chars.next()) {
-        (Some(x), _) if x.is_lowercase() => {},
+        (Some(x), _) if x.is_lowercase() => {}
         // If both the first and second letter are not lowercase,
         // this is likely an initialism which should be allowed.
-        (Some(x), Some(y)) if !x.is_lowercase() && !y.is_lowercase() => {},
+        (Some(x), Some(y)) if !x.is_lowercase() && !y.is_lowercase() => {}
         _ => {
             errors.err_span(span, "Descriptions must begin with a lowercase letter");
         }
@@ -449,11 +438,7 @@ fn parse_attr_single_string(
     }
 }
 
-fn parse_attr_multi_string(
-    errors: &Errors,
-    m: &syn::MetaNameValue,
-    list: &mut Vec<syn::LitStr>,
-) {
+fn parse_attr_multi_string(errors: &Errors, m: &syn::MetaNameValue, list: &mut Vec<syn::LitStr>) {
     if let Some(lit_str) = errors.expect_lit_str(&m.lit) {
         list.push(lit_str.clone());
     }
@@ -468,7 +453,7 @@ fn parse_attr_doc(errors: &Errors, attr: &syn::Attribute, slot: &mut Option<Desc
 
     // Don't replace an existing description.
     if slot.as_ref().map(|d| d.explicit).unwrap_or(false) {
-        return
+        return;
     }
 
     if let Some(lit_str) = errors.expect_lit_str(&nv.lit) {
@@ -479,19 +464,12 @@ fn parse_attr_doc(errors: &Errors, attr: &syn::Attribute, slot: &mut Option<Desc
         } else {
             lit_str.clone()
         };
-        *slot = Some(Description {
-            explicit: false,
-            content: lit_str,
-        });
+        *slot = Some(Description { explicit: false, content: lit_str });
     }
 }
 
 fn parse_attr_description(errors: &Errors, m: &syn::MetaNameValue, slot: &mut Option<Description>) {
-    let lit_str = if let Some(lit_str) = errors.expect_lit_str(&m.lit) {
-        lit_str
-    } else {
-        return
-    };
+    let lit_str = if let Some(lit_str) = errors.expect_lit_str(&m.lit) { lit_str } else { return };
 
     // Don't allow multiple explicit (non doc-comment) descriptions
     if let Some(description) = slot {
@@ -500,27 +478,13 @@ fn parse_attr_description(errors: &Errors, m: &syn::MetaNameValue, slot: &mut Op
         }
     }
 
-    *slot = Some(Description {
-        explicit: true,
-        content: lit_str.clone(),
-    });
+    *slot = Some(Description { explicit: true, content: lit_str.clone() });
 }
 
 /// Checks that a `#![derive(FromArgs)]` enum has an `#[argh(subcommand)]`
 /// attribute and that it does not have any other type-level `#[argh(...)]` attributes.
-pub fn check_enum_type_attrs(
-    errors: &Errors,
-    type_attrs: &TypeAttrs,
-    type_span: &Span,
-) {
-    let TypeAttrs {
-        is_subcommand,
-        name,
-        description,
-        examples,
-        notes,
-        error_codes,
-    } = type_attrs;
+pub fn check_enum_type_attrs(errors: &Errors, type_attrs: &TypeAttrs, type_span: &Span) {
+    let TypeAttrs { is_subcommand, name, description, examples, notes, error_codes } = type_attrs;
 
     // Ensure that `#[argh(subcommand)]` is present.
     if is_subcommand.is_none() {
@@ -529,7 +493,7 @@ pub fn check_enum_type_attrs(
             concat!(
                 "`#![derive(FromArgs)]` on `enum`s can only be used to enumerate subcommands.\n",
                 "Consider adding `#[argh(subcommand)]` to the `enum` declaration.",
-            )
+            ),
         );
     }
 
@@ -554,10 +518,7 @@ pub fn check_enum_type_attrs(
 }
 
 /// Checks that an enum variant and its fields have no `#[argh(...)]` attributes.
-pub fn check_enum_variant_attrs(
-    errors: &Errors,
-    variant: &syn::Variant,
-) {
+pub fn check_enum_variant_attrs(errors: &Errors, variant: &syn::Variant) {
     for attr in &variant.attrs {
         if is_argh_attr(attr) {
             err_unused_enum_attr(errors, attr);
@@ -586,6 +547,6 @@ fn err_unused_enum_attr(errors: &Errors, location: &impl syn::spanned::Spanned) 
             "Unused `argh` attribute on `#![derive(FromArgs)]` enum. ",
             "Such `enum`s can only be used to dispatch to subcommands, ",
             "and should only contain the #[argh(subcommand)] attribute.",
-        )
+        ),
     );
 }

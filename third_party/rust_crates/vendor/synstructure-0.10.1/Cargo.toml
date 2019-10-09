@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g., crates.io) dependencies
+# to registry (e.g. crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -11,9 +11,8 @@
 # will likely look very different (and much more reasonable)
 
 [package]
-edition = "2018"
 name = "synstructure"
-version = "0.12.1"
+version = "0.10.1"
 authors = ["Nika Layzell <nika@thelayzells.com>"]
 include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
 description = "Helper methods and macros for custom derives"
@@ -23,16 +22,19 @@ keywords = ["syn", "macros", "derive", "expand_substructure", "enum"]
 license = "MIT"
 repository = "https://github.com/mystor/synstructure"
 [dependencies.proc-macro2]
-version = "1"
+version = "0.4"
 
 [dependencies.quote]
-version = "1"
+version = "0.6"
 
 [dependencies.syn]
-version = "1"
+version = "0.15"
 features = ["visit", "extra-traits"]
 
 [dependencies.unicode-xid]
-version = "0.2"
+version = "0.1"
 [dev-dependencies.synstructure_test_traits]
 version = "0.1"
+
+[features]
+simple-derive = []

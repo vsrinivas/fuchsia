@@ -229,29 +229,7 @@ error[E0692]: transparent struct cannot have other repr hints
 98 | #[repr(transparent, align(2))]
    |        ^^^^^^^^^^^  ^^^^^^^^
 
-error[E0690]: transparent struct needs exactly one non-zero-sized field, but has 0
-  --> $DIR/struct.rs:64:1
-   |
-64 | struct Generic14;
-   | ^^^^^^^^^^^^^^^^^
-   |
-   = note: non-zero-sized field
+error: aborting due to 34 previous errors
 
-error[E0690]: transparent struct needs exactly one non-zero-sized field, but has 0
-  --> $DIR/struct.rs:68:1
-   |
-68 | struct Generic15;
-   | ^^^^^^^^^^^^^^^^^
-   |
-   = note: non-zero-sized field
-
-error[E0587]: type has conflicting packed and align representation hints
-   --> $DIR/struct.rs:105:1
-    |
-105 | struct Unaligned3;
-    | ^^^^^^^^^^^^^^^^^^
-
-error: aborting due to 37 previous errors
-
-Some errors occurred: E0517, E0552, E0565, E0587, E0690, E0692.
+Some errors have detailed explanations: E0517, E0552, E0565, E0692.
 For more information about an error, try `rustc --explain E0517`.

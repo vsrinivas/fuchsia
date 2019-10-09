@@ -164,27 +164,32 @@ pub enum Repr {
 impl Repr {
     fn from_nested_meta(meta: &NestedMeta) -> Result<Repr, Error> {
         match meta {
-            NestedMeta::Meta(Meta::Word(word)) => match format!("{}", word).as_str() {
-                "u8" => return Ok(Repr::U8),
-                "u16" => return Ok(Repr::U16),
-                "u32" => return Ok(Repr::U32),
-                "u64" => return Ok(Repr::U64),
-                "usize" => return Ok(Repr::Usize),
-                "i8" => return Ok(Repr::I8),
-                "i16" => return Ok(Repr::I16),
-                "i32" => return Ok(Repr::I32),
-                "i64" => return Ok(Repr::I64),
-                "isize" => return Ok(Repr::Isize),
-                "C" => return Ok(Repr::C),
-                "transparent" => return Ok(Repr::Transparent),
-                "packed" => return Ok(Repr::Packed),
-                _ => {}
-            },
+            NestedMeta::Meta(Meta::Path(path)) => {
+                let ident = path
+                    .get_ident()
+                    .ok_or(Error::new_spanned(meta, "unrecognized representation hint"))?;
+                match format!("{}", ident).as_str() {
+                    "u8" => return Ok(Repr::U8),
+                    "u16" => return Ok(Repr::U16),
+                    "u32" => return Ok(Repr::U32),
+                    "u64" => return Ok(Repr::U64),
+                    "usize" => return Ok(Repr::Usize),
+                    "i8" => return Ok(Repr::I8),
+                    "i16" => return Ok(Repr::I16),
+                    "i32" => return Ok(Repr::I32),
+                    "i64" => return Ok(Repr::I64),
+                    "isize" => return Ok(Repr::Isize),
+                    "C" => return Ok(Repr::C),
+                    "transparent" => return Ok(Repr::Transparent),
+                    "packed" => return Ok(Repr::Packed),
+                    _ => {}
+                }
+            }
             NestedMeta::Meta(Meta::List(list)) => {
-                if let [&NestedMeta::Literal(Lit::Int(ref n))] =
+                if let [&NestedMeta::Lit(Lit::Int(ref n))] =
                     list.nested.iter().collect::<Vec<_>>().as_slice()
                 {
-                    return Ok(Repr::Align(n.value()));
+                    return Ok(Repr::Align(n.base10_parse::<u64>()?));
                 }
             }
             _ => {}
@@ -226,15 +231,23 @@ fn reprs<R: KindRepr>(attrs: &[Attribute]) -> Result<Vec<R>, Vec<Error>> {
     let mut reprs = Vec::new();
     let mut errors = Vec::new();
     for attr in attrs {
-        if let Some(Meta::List(meta_list)) = attr.interpret_meta() {
-            if format!("{}", meta_list.ident) == "repr" {
-                for nested_meta in &meta_list.nested {
-                    match R::parse(nested_meta) {
-                        Ok(repr) => reprs.push(repr),
-                        Err(err) => errors.push(err),
+        // ignore documentation attributes
+        if attr.path.is_ident("doc") {
+            continue;
+        }
+        match attr.parse_meta() {
+            Ok(Meta::List(meta_list)) => {
+                if meta_list.path.is_ident("repr") {
+                    for nested_meta in &meta_list.nested {
+                        match R::parse(nested_meta) {
+                            Ok(repr) => reprs.push(repr),
+                            Err(err) => errors.push(err),
+                        }
                     }
                 }
             }
+            Err(e) => errors.push(e),
+            _ => {}
         }
     }
 

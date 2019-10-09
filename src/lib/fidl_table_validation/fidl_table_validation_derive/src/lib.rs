@@ -47,7 +47,7 @@ fn metas<'a>(attrs: &'a [Attribute]) -> impl Iterator<Item = Meta> + 'a {
 fn list_with_arg(meta: Meta, call: &str) -> Option<NestedMeta> {
     match meta {
         Meta::List(list) => {
-            if list.ident.to_string().as_str() == call && list.nested.len() == 1 {
+            if list.path.is_ident(call) && list.nested.len() == 1 {
                 Some(list.nested.into_pairs().next().unwrap().into_value())
             } else {
                 None
@@ -74,7 +74,10 @@ fn unique_list_with_arg(attrs: &[Attribute], call: &str) -> Result<Option<Nested
 fn fidl_table_type(span: Span, attrs: &[Attribute]) -> Result<Ident> {
     match unique_list_with_arg(attrs, "fidl_table_src")? {
         Some(nested) => match nested {
-            NestedMeta::Meta(Meta::Word(fidl_table_type)) => Ok(fidl_table_type),
+            NestedMeta::Meta(Meta::Path(fidl_table_type)) => fidl_table_type
+                .get_ident()
+                .cloned()
+                .ok_or(Error::new(fidl_table_type.span(), "Invalid identifier")),
             _ => Err(Error::new(
                 span,
                 concat!(
@@ -97,7 +100,10 @@ fn fidl_table_type(span: Span, attrs: &[Attribute]) -> Result<Ident> {
 fn fidl_table_validator(span: Span, attrs: &[Attribute]) -> Result<Option<Ident>> {
     unique_list_with_arg(attrs, "fidl_table_validator")?
         .map(|nested| match nested {
-            NestedMeta::Meta(Meta::Word(fidl_table_validator)) => Ok(fidl_table_validator),
+            NestedMeta::Meta(Meta::Path(fidl_table_validator)) => fidl_table_validator
+                .get_ident()
+                .cloned()
+                .ok_or(Error::new(fidl_table_validator.span(), "Invalid Identifier")),
             _ => Err(Error::new(
                 span,
                 concat!(
@@ -148,15 +154,16 @@ impl TryFrom<&[Attribute]> for FidlFieldKind {
     type Error = Error;
     fn try_from(attrs: &[Attribute]) -> Result<Self> {
         match unique_list_with_arg(attrs, "fidl_field_type")? {
-            Some(NestedMeta::Meta(Meta::Word(field_type))) => {
-                match field_type.to_string().as_str() {
-                    "required" => Ok(FidlFieldKind::Required),
-                    "optional" => Ok(FidlFieldKind::Optional),
-                    _ => Err(Error::new(field_type.span(), INVALID_FIDL_FIELD_ATTRIBUTE_MSG)),
-                }
-            }
+            Some(NestedMeta::Meta(Meta::Path(field_type))) => field_type
+                .get_ident()
+                .and_then(|i| match i.to_string().as_str() {
+                    "required" => Some(FidlFieldKind::Required),
+                    "optional" => Some(FidlFieldKind::Optional),
+                    _ => None,
+                })
+                .ok_or(Error::new(field_type.span(), INVALID_FIDL_FIELD_ATTRIBUTE_MSG)),
             Some(NestedMeta::Meta(Meta::NameValue(ref default_value)))
-                if default_value.ident.to_string().as_str() == "default" =>
+                if default_value.path.is_ident("default") =>
             {
                 Ok(FidlFieldKind::HasDefault(default_value.lit.clone()))
             }

@@ -15,9 +15,9 @@ use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::ToTokens;
 use syn::visit_mut::{self, VisitMut};
 use syn::{
-    punctuated::Punctuated, spanned::Spanned, ArgCaptured, AttrStyle, Attribute, Block, Error,
-    Expr, ExprMatch, FnArg, FnDecl, GenericParam, Ident, Item, ItemFn, Pat, Path, Stmt,
-    TypeImplTrait, TypeParamBound,
+    punctuated::Punctuated, spanned::Spanned, AttrStyle, Attribute, Block, Error, Expr, ExprMatch,
+    FnArg, GenericParam, Ident, Item, ItemFn, Pat, PatType, Path, Signature, Stmt, TypeImplTrait,
+    TypeParamBound,
 };
 
 #[proc_macro_attribute]
@@ -132,10 +132,10 @@ fn ip_test_inner(
     assert!(attr.is_empty(), "#[ip_test]: unexpected attribute argument");
 
     let item = parse_macro_input!(input as syn::ItemFn);
-    let syn::ItemFn { attrs, vis, constness, unsafety, asyncness, abi, ident, decl, block } = item;
+    let syn::ItemFn { attrs, vis, sig, block } = item;
     if let Err(e) = (|| {
-        if let Some(gen) = decl.generics.params.first() {
-            match gen.value() {
+        if let Some(gen) = sig.generics.params.first() {
+            match gen {
                 GenericParam::Type(tp) => {
                     if !tp.bounds.iter().any(|b| match b {
                         TypeParamBound::Trait(t) => t.path.is_ident(trait_name),
@@ -149,39 +149,33 @@ fn ip_test_inner(
                 }
                 _ => {
                     return Err(Error::new(
-                        decl.generics.span(),
+                        sig.generics.span(),
                         format!("{} entry must ONLY have a single type parameter", attr_name),
                     ))
                 }
             }
         } else {
             return Err(Error::new(
-                decl.fn_token.span,
+                sig.fn_token.span,
                 format!("{} entry must have exactly one type parameter", attr_name),
             ));
         }
 
-        if !decl.inputs.is_empty() {
+        if !sig.inputs.is_empty() {
             return Err(Error::new(
-                decl.inputs.span(),
+                sig.inputs.span(),
                 format!("{} entry takes no arguments", attr_name),
             ));
         }
-        if let Some(dot3) = decl.variadic {
+        if let Some(dot3) = &sig.variadic {
             return Err(Error::new(
-                dot3.spans[0],
+                dot3.dots.spans[0],
                 format!("{} entry may not be variadic", attr_name),
             ));
         }
         Ok(())
     })() {
         return e.to_compile_error().into();
-    }
-
-    fn quote_fn_decl(decl: &FnDecl) -> TokenStream2 {
-        let generics_params = &decl.generics.params;
-        let generics_where = &decl.generics.where_clause;
-        quote!(<#generics_params>() #generics_where)
     }
 
     // we need to check the attributes given to the function, test attributes
@@ -191,9 +185,9 @@ fn ip_test_inner(
     // borrow here because `test_attrs` is used twice in `quote_spanned!` below.
     let test_attrs = &test_attrs;
 
-    let span = ident.span();
-    let fn_decl = quote_fn_decl(&decl);
-    let output = decl.output;
+    let span = sig.ident.span();
+    let output = &sig.output;
+    let ident = &sig.ident;
     let v4_test = Ident::new(&format!("{}_v4", ident), Span::call_site());
     let v6_test = Ident::new(&format!("{}_v6", ident), Span::call_site());
 
@@ -202,7 +196,7 @@ fn ip_test_inner(
 
     let output = quote_spanned! { span =>
         #(#attrs)*
-        #vis #constness #unsafety #asyncness #abi fn #ident #fn_decl #output {
+        #vis #sig {
             #block
         }
 
@@ -250,12 +244,12 @@ struct Input {
     // - The type parameter in question has been removed
     // - In the remaining type parameters, function arguments, and return
     //   values, the type parameter is replaced with Self
-    trait_fn_decl: FnDecl,
+    traif_fn_sig: Signature,
     // The list of type identifiers to provide as arguments to the trait method
     // when calling it from the outer function. Equivalent to the full list of
     // type parameters minus the target type and lifetimes.
     trait_fn_type_params: Vec<Ident>,
-    // The type parameter name found while calculating trait_fn_decl
+    // The type parameter name found while calculating traif_fn_sig
     type_ident: Ident,
 
     // In both of these blocks, we have replaced instances of the target type
@@ -273,23 +267,14 @@ struct Input {
 
 // Given a parsed and processed input, serialize it.
 fn serialize(input: Input, cfg: &Config) -> TokenStream {
-    // FnDecl doesn't implement ToTokens, which is the trait that must be
-    // implemented in order to be used in the quote! macro.
-    fn quote_fn_decl(decl: &FnDecl) -> TokenStream2 {
-        let generics_params = &decl.generics.params;
-        let generics_where = &decl.generics.where_clause;
-        let inputs = &decl.inputs;
-        let output = &decl.output;
-        quote!(<#generics_params>(#inputs) #output #generics_where)
-    }
-
     // First generate the body of the function; we'll generate the declaration
     // later.
     let block = if input.errors.is_empty() {
         let ipv4_block = &input.ipv4_block;
         let ipv6_block = &input.ipv6_block;
 
-        let trait_decl = quote_fn_decl(&input.trait_fn_decl);
+        let mut trait_decl = input.traif_fn_sig.clone();
+        trait_decl.ident = Ident::new("f", Span::call_site());
 
         let trait_ident = Ident::new(&cfg.trait_name, Span::call_site());
         let ipv4_type_ident = &cfg.ipv4_type_ident;
@@ -302,12 +287,12 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
         quote! {
                 trait Ext: net_types::ip::#trait_ident {
                     #[allow(patterns_in_fns_without_body)]
-                    fn f #trait_decl;
+                    #trait_decl;
                 }
 
                 impl<__SpecializeIpDummyTypeParam: net_types::ip::#trait_ident> Ext for __SpecializeIpDummyTypeParam {
                     #![allow(unused_variables)]
-                    default fn f #trait_decl {
+                    default #trait_decl {
                         // This is a backstop against a bug in our logic (if the
                         // function is somehow called on a type other than Ipv4/
                         // Ipv4Addr or Ipv6/Ipv6Addr).
@@ -327,12 +312,12 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
                     // if they were added only to specific statements (probably
                     // just to the IPv4- or IPv6-specific statements).
                     #[allow(clippy::needless_return, clippy::let_and_return, unused_variables)]
-                    fn f #trait_decl #ipv4_block
+                    #trait_decl #ipv4_block
                 }
 
                 impl Ext for net_types::ip::#ipv6_type_ident {
                     #[allow(clippy::needless_return, clippy::let_and_return, unused_variables)]
-                    fn f #trait_decl #ipv6_block
+                    #trait_decl #ipv6_block
                 }
 
                 #type_ident::f::<#(#trait_fn_type_params),*>(#(#arg_idents),*)
@@ -350,12 +335,10 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
     // of certain user errors. It's much more user-friendly to do it this way,
     // which allows the compiler's parser to output errors and point out where
     // the error originated.
-    let ItemFn { attrs, vis, constness, unsafety, asyncness, abi, ident, decl, .. } =
-        input.original.clone();
-    let decl = quote_fn_decl(&decl);
+    let ItemFn { attrs, vis, sig, .. } = input.original.clone();
     quote!(
         #(#attrs)*
-        #vis #constness #unsafety #asyncness #abi fn #ident #decl {
+        #vis #sig {
             #block
         }
     )
@@ -476,15 +459,15 @@ fn parse_input(input: ItemFn, cfg: &Config) -> Input {
                 return true;
             };
 
-            if !attr.tts.is_empty() {
-                push_error(errors, &attr.tts, "unexpected attribute argument");
+            if !attr.tokens.is_empty() {
+                push_error(errors, &attr.tokens, "unexpected attribute argument");
             }
 
             match (ip_attr, result) {
                 (IpAttr::Ipv4, Some(IpAttr::Ipv6)) | (IpAttr::Ipv6, Some(IpAttr::Ipv4)) => {
                     push_error(
                         errors,
-                        &attr.tts,
+                        &attr.tokens,
                         format!(
                             "can't have both #[{}] and #[{}]",
                             cfg.ipv4_attr_name, cfg.ipv6_attr_name
@@ -512,9 +495,9 @@ fn parse_input(input: ItemFn, cfg: &Config) -> Input {
     // for us is that things like `mut buffer: B` and `(a, b): (usize, usize)`
     // won't be valid in the trait definiton (though they will still be valid in
     // the impl blocks). We will eventually need to strip these appropriately.
-    let mut trait_fn_decl = original.decl.as_ref().clone();
+    let mut traif_fn_sig = original.sig.clone();
     let type_ident = rewrite_types(
-        &mut trait_fn_decl,
+        &mut traif_fn_sig,
         &mut [&mut ipv4_block.stmts, &mut ipv6_block.stmts],
         &mut errors,
         cfg,
@@ -529,7 +512,7 @@ fn parse_input(input: ItemFn, cfg: &Config) -> Input {
     // If we wanted to pass lifetimes, we would need to add logic to first detect
     // whether any late bound lifetime parameters are present. Instead, we simply
     // do not specify any lifetime for the generated function and let rust infer them.
-    let trait_fn_type_params = trait_fn_decl
+    let trait_fn_type_params = traif_fn_sig
         .generics
         .params
         .iter()
@@ -542,35 +525,25 @@ fn parse_input(input: ItemFn, cfg: &Config) -> Input {
 
     // Get a list of the argument names.
     let arg_idents = original
-        .decl
+        .sig
         .inputs
         .iter()
         .map(|arg| match arg {
-            FnArg::SelfRef(_) | FnArg::SelfValue(_) => Ident::new("self", Span::call_site()),
-            FnArg::Captured(ArgCaptured { pat: Pat::Ident(pat), .. }) => {
-                if pat.subpat.is_some() {
-                    push_error(&mut errors, arg, "unexpected attribute argument");
-                    parse_quote!(dummy)
-                } else {
-                    pat.ident.clone()
+            FnArg::Receiver(_) => Ident::new("self", Span::call_site()),
+            FnArg::Typed(PatType { pat, .. }) => match pat.as_ref() {
+                Pat::Ident(pat) => {
+                    if pat.subpat.is_some() {
+                        push_error(&mut errors, arg, "unexpected attribute argument");
+                        parse_quote!(dummy)
+                    } else {
+                        pat.ident.clone()
+                    }
                 }
-            }
-            FnArg::Captured(_) => {
-                push_error(&mut errors, arg, "patterns in function arguments not supported");
-                parse_quote!(dummy)
-            }
-            FnArg::Inferred(_) => unreachable!(
-                "#[{}]: arguments with inferred types can only exist in closures",
-                cfg.attr_name
-            ),
-            FnArg::Ignored(_) => {
-                // TODO(joshlf): Support ignored function arguments by either a)
-                // giving them dummy names in the outer function definition and
-                // passing that through to the inner call or b) stripping these
-                // arguments from the inner functions entirely.
-                push_error(&mut errors, arg, "ignored function arguments not supported");
-                parse_quote!(dummy)
-            }
+                _ => {
+                    push_error(&mut errors, arg, "patterns in function arguments not supported");
+                    parse_quote!(dummy)
+                }
+            },
         })
         .collect();
 
@@ -579,7 +552,7 @@ fn parse_input(input: ItemFn, cfg: &Config) -> Input {
         type_ident,
         arg_idents,
         trait_fn_type_params,
-        trait_fn_decl,
+        traif_fn_sig,
         ipv4_block,
         ipv6_block,
         errors,
@@ -594,7 +567,7 @@ fn parse_input(input: ItemFn, cfg: &Config) -> Input {
 // instance of it in the other trait bounds, argument types, and return types
 // with `Self`.
 fn rewrite_types(
-    decl: &mut FnDecl,
+    sig: &mut Signature,
     stmts: &mut [&mut Vec<Stmt>],
     errors: &mut Vec<TokenStream2>,
     cfg: &Config,
@@ -607,15 +580,15 @@ fn rewrite_types(
     // bounds can appear in the where clause, and so if we support where
     // clauses, we need to look both in the list of type parameters and in the
     // where clause to find trait bounds.
-    if decl.generics.where_clause.is_some() {
+    if sig.generics.where_clause.is_some() {
         panic!("#[{}]: where clause are currently unsupported", cfg.attr_name);
     }
 
-    // The ident of the type and the index into decl.generics.params. We will
+    // The ident of the type and the index into sig.generics.params. We will
     // use the index to remove the type parameter from the list of parameters.
     let mut type_ident_and_index = None::<(Ident, usize)>;
 
-    for (idx, type_param) in decl.generics.params.iter().enumerate() {
+    for (idx, type_param) in sig.generics.params.iter().enumerate() {
         if let GenericParam::Type(type_param) = type_param {
             // number of bounds total for this type parameter
             let total_trait_bounds = type_param.bounds.len();
@@ -664,19 +637,19 @@ fn rewrite_types(
 
     if let Some((type_ident, idx)) = type_ident_and_index {
         // Remove the type with the `cfg.trait_name` bound.
-        decl.generics.params = remove_from_punctuated(decl.generics.params.clone(), idx);
+        sig.generics.params = remove_from_punctuated(sig.generics.params.clone(), idx);
 
         let mut rename = RenameVisit::new(type_ident.clone());
         // For `cfg.type_ident` `I`, rewrite bounds like `A: Foo<I>` to `A: Foo<Self>`.
-        rename.visit_generics_mut(&mut decl.generics);
+        rename.visit_generics_mut(&mut sig.generics);
         // For `cfg.type_ident` `I`, rewrite arguments like `a: Foo<I>` to `a: Foo<Self>`
-        for arg in &mut decl.inputs {
+        for arg in &mut sig.inputs {
             rename.visit_fn_arg_mut(arg);
         }
         // For `cfg.type_ident` `I`, rewrite return types like `Foo<I>` to `Foo<Self>`
-        rename.visit_return_type_mut(&mut decl.output);
+        rename.visit_return_type_mut(&mut sig.output);
         // Make sure no uses of "impl trait" are present in the return type.
-        ReturnImplTraitVisit(errors).visit_return_type_mut(&mut decl.output);
+        ReturnImplTraitVisit(errors).visit_return_type_mut(&mut sig.output);
 
         // Rewrite all types inside of the statements
         for stmts in stmts {
@@ -689,7 +662,7 @@ fn rewrite_types(
     } else {
         push_error(
             errors,
-            &decl.generics.params,
+            &sig.generics.params,
             format!("missing type with {} trait bound", cfg.trait_name),
         );
         parse_quote!(Dummy)
@@ -774,7 +747,6 @@ fn with_stmt_attrs<O, F: FnOnce(&mut Vec<Attribute>) -> O>(stmt: &mut Stmt, f: F
         Stmt::Item(Item::Mod(x)) => &mut x.attrs,
         Stmt::Item(Item::ForeignMod(x)) => &mut x.attrs,
         Stmt::Item(Item::Type(x)) => &mut x.attrs,
-        Stmt::Item(Item::Existential(x)) => &mut x.attrs,
         Stmt::Item(Item::Struct(x)) => &mut x.attrs,
         Stmt::Item(Item::Enum(x)) => &mut x.attrs,
         Stmt::Item(Item::Union(x)) => &mut x.attrs,
@@ -784,10 +756,11 @@ fn with_stmt_attrs<O, F: FnOnce(&mut Vec<Attribute>) -> O>(stmt: &mut Stmt, f: F
         Stmt::Item(Item::Macro(x)) => &mut x.attrs,
         Stmt::Item(Item::Macro2(x)) => &mut x.attrs,
         Stmt::Item(Item::Verbatim(_)) => &mut dummy,
+        Stmt::Item(Item::__Nonexhaustive) => unreachable!(),
         Stmt::Expr(expr) | Stmt::Semi(expr, _) => match expr {
             Expr::Box(x) => &mut x.attrs,
-            Expr::InPlace(x) => &mut x.attrs,
             Expr::Array(x) => &mut x.attrs,
+            Expr::Await(x) => &mut x.attrs,
             Expr::Call(x) => &mut x.attrs,
             Expr::MethodCall(x) => &mut x.attrs,
             Expr::Tuple(x) => &mut x.attrs,
@@ -825,6 +798,7 @@ fn with_stmt_attrs<O, F: FnOnce(&mut Vec<Attribute>) -> O>(stmt: &mut Stmt, f: F
             Expr::TryBlock(x) => &mut x.attrs,
             Expr::Yield(x) => &mut x.attrs,
             Expr::Verbatim(_) => &mut dummy,
+            Expr::__Nonexhaustive => unreachable!(),
         },
     })
 }

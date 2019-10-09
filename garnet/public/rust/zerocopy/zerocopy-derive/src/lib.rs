@@ -462,7 +462,7 @@ fn impl_block<D: DataExt>(
             visit::visit_type_path(self, i);
             if self.0.iter().any(|param| {
                 if let GenericParam::Type(param) = param {
-                    i.path.segments.first().unwrap().value().ident == param.ident
+                    i.path.segments.first().unwrap().ident == param.ident
                 } else {
                     false
                 }

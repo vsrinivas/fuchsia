@@ -192,7 +192,10 @@ fn generate(
     let mut methods = vec![];
     for f in &fields.fields {
         for name in f.aliases.all_aliases() {
-            methods.push(generate_methods_for_alias(f, name, len_bits));
+            match generate_methods_for_alias(f, name, len_bits) {
+                Ok(m) => methods.push(m),
+                Err(e) => errors.push(e),
+            }
         }
     }
 
@@ -217,25 +220,41 @@ fn check_overlaps_and_gaps(fields: &FieldList, len_bits: usize, errors: &mut Vec
             }
             BitRange::SingleBit { index } => (index, index),
         };
-        if start.value() as usize >= len_bits {
+        let start_value = match start.base10_parse::<usize>() {
+            Ok(v) => v,
+            Err(e) => {
+                errors.push(e);
+                // just default to a zero value so more errors can be gathered
+                0
+            }
+        };
+        let end_value = match end.base10_parse::<usize>() {
+            Ok(v) => v,
+            Err(e) => {
+                errors.push(e);
+                // just default to a zero value so more errors can be gathered
+                0
+            }
+        };
+        if start_value >= len_bits {
             errors.push(Error::new(
                 start.span(),
-                format!("start index {} is out of range of {}-bit value", start.value(), len_bits),
+                format!("start index {} is out of range of {}-bit value", start_value, len_bits),
             ));
         }
-        if end.value() as usize >= len_bits {
+        if end_value >= len_bits {
             errors.push(Error::new(
                 end.span(),
-                format!("end index {} is out of range of {}-bit value", end.value(), len_bits),
+                format!("end index {} is out of range of {}-bit value", end_value, len_bits),
             ));
         }
-        if start.value() > end.value() {
+        if start_value > end_value {
             errors.push(Error::new(
                 start.span(),
-                format!("start index {} exceeds end index {}", start.value(), end.value()),
+                format!("start index {} exceeds end index {}", start_value, end_value),
             ));
         }
-        for i in (start.value() as usize)..std::cmp::min(end.value() as usize + 1, used_by.len()) {
+        for i in start_value..std::cmp::min(end_value + 1, used_by.len()) {
             if let Some(other_field) = used_by[i] {
                 errors.push(Error::new(
                     f.bits.span(),
@@ -280,8 +299,27 @@ fn check_user_types(fields: &FieldList, errors: &mut Vec<Error>) {
             if let Some(user_type) = &alias.user_type {
                 match &field.bits {
                     BitRange::Closed { start_inclusive, end_inclusive, .. } => {
-                        let field_len = if start_inclusive.value() <= end_inclusive.value() {
-                            (end_inclusive.value() - start_inclusive.value() + 1) as usize
+                        let start_value = match start_inclusive.base10_parse::<usize>() {
+                            Ok(v) => v,
+                            Err(e) => {
+                                errors.push(e);
+                                // just default to a zero value so more errors
+                                // can be gathered
+                                0
+                            }
+                        };
+                        let end_value = match end_inclusive.base10_parse::<usize>() {
+                            Ok(v) => v,
+                            Err(e) => {
+                                errors.push(e);
+                                // just default to a zero value so more errors
+                                // can be gathered
+                                0
+                            }
+                        };
+
+                        let field_len = if start_value <= end_value {
+                            (end_value - start_value + 1)
                         } else {
                             continue;
                         };
@@ -332,10 +370,11 @@ fn get_underlying_bit_len(struct_def: &DeriveInput) -> Result<usize, Error> {
                     "expected a tuple struct with a single field",
                 ));
             }
-            let ty = &fields.unnamed.first().unwrap().value().ty;
+            let field = &fields.unnamed.first().unwrap();
+            let ty = &field.ty;
             match get_bit_len_from_unsigned_type(ty) {
                 Some(len) => len,
-                None => return Err(Error::new(ty.span(), "expected u8, u16, u32, u64 or u128")),
+                None => return Err(Error::new(field.span(), "expected u8, u16, u32, u64 or u128")),
             }
         }
         _ => {
@@ -362,7 +401,11 @@ fn add_suffix(ident: &Ident, suffix: &str) -> Ident {
     syn::Ident::new(&format!("{}{}", ident, suffix), Span::call_site())
 }
 
-fn generate_methods_for_alias(field: &FieldDef, alias: &Alias, len_bits: usize) -> TokenStream {
+fn generate_methods_for_alias(
+    field: &FieldDef,
+    alias: &Alias,
+    len_bits: usize,
+) -> Result<TokenStream, Error> {
     let int_type = syn::Ident::new(&format!("u{}", len_bits), Span::call_site());
     let getter_fn_name = &alias.name;
     let setter_fn_name = syn::Ident::new(&format!("set_{}", alias.name), alias.name.span());
@@ -380,8 +423,10 @@ fn generate_methods_for_alias(field: &FieldDef, alias: &Alias, len_bits: usize) 
     };
     let (raw, raw_type) = match &field.bits {
         BitRange::Closed { start_inclusive, end_inclusive, .. } => {
-            let len = if end_inclusive.value() >= start_inclusive.value() {
-                end_inclusive.value() - start_inclusive.value() + 1
+            let start_value = start_inclusive.base10_parse::<usize>()?;
+            let end_value = end_inclusive.base10_parse::<usize>()?;
+            let len = if end_value >= start_value {
+                end_value - start_value + 1
             } else {
                 // If start exceeds end, we will generate a compile error.
                 // Here, we still proceed with a fake value, so that calls to getters and setters
@@ -420,7 +465,7 @@ fn generate_methods_for_alias(field: &FieldDef, alias: &Alias, len_bits: usize) 
             (code, quote! { bool })
         }
     };
-    match &alias.user_type {
+    let value = match &alias.user_type {
         None => raw,
         Some(user_type) => {
             let user_int_type = &user_type.inner_int_type;
@@ -439,7 +484,8 @@ fn generate_methods_for_alias(field: &FieldDef, alias: &Alias, len_bits: usize) 
                 }
             }
         }
-    }
+    };
+    Ok(value)
 }
 
 fn generate_debug_impl(struct_name: &Ident, fields: &FieldList, len_bits: usize) -> TokenStream {

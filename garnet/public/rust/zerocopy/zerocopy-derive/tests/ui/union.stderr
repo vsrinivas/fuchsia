@@ -1,10 +1,26 @@
-error: proc-macro derive panicked
-  --> $DIR/union.rs:10:10
+error: unexpected unsupported untagged union
+  --> $DIR/union.rs:11:1
    |
-10 | #[derive(FromBytes)]
-   |          ^^^^^^^^^
-   |
-   = help: message: synstructure does not handle untagged unions (https://github.com/mystor/synstructure/issues/6)
+11 | union Foo {}
+   | ^^^^^^^^^^^^
 
-error: aborting due to previous error
+error: unexpected unsupported untagged union
+  --> $DIR/union.rs:14:1
+   |
+14 | union Bar {}
+   | ^^^^^^^^^^^^
+
+error: unions cannot have zero fields
+  --> $DIR/union.rs:11:1
+   |
+11 | union Foo {}
+   | ^^^^^^^^^^^^
+
+error: unions cannot have zero fields
+  --> $DIR/union.rs:14:1
+   |
+14 | union Bar {}
+   | ^^^^^^^^^^^^
+
+error: aborting due to 4 previous errors
 

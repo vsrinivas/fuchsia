@@ -205,23 +205,13 @@ error[E0552]: unrecognized representation hint
 23 | #[repr(foo)]
    |        ^^^
 
-error[E0517]: attribute should be applied to struct
-  --> $DIR/enum.rs:29:8
-   |
-29 |   #[repr(transparent)]
-   |          ^^^^^^^^^^^
-30 | / enum Generic3 {
-31 | |     A,
-32 | | }
-   | |_- not a struct
-
 warning[E0566]: conflicting representation hints
   --> $DIR/enum.rs:35:8
    |
 35 | #[repr(u8, u16)]
    |        ^^  ^^^
 
-error: aborting due to 26 previous errors
+error: aborting due to 25 previous errors
 
-Some errors occurred: E0517, E0552, E0565, E0566.
-For more information about an error, try `rustc --explain E0517`.
+Some errors have detailed explanations: E0552, E0565.
+For more information about an error, try `rustc --explain E0552`.

@@ -57,19 +57,10 @@ impl Errors {
         first: &impl syn::spanned::Spanned,
         second: &impl syn::spanned::Spanned,
     ) {
-        self.duplicate_attrs_inner(
-            attr_kind,
-            first.span(),
-            second.span(),
-        )
+        self.duplicate_attrs_inner(attr_kind, first.span(), second.span())
     }
 
-    fn duplicate_attrs_inner(
-        &self,
-        attr_kind: &str,
-        first: Span,
-        second: Span,
-    ) {
+    fn duplicate_attrs_inner(&self, attr_kind: &str, first: Span, second: Span) {
         self.err_span(second, &["Duplicate ", attr_kind, " attribute"].concat());
         self.err_span(first, &["First ", attr_kind, " attribute here"].concat());
     }
@@ -77,10 +68,10 @@ impl Errors {
     /// Error on literals, expecting attribute syntax.
     pub fn expect_nested_meta<'a>(&self, nm: &'a syn::NestedMeta) -> Option<&'a syn::Meta> {
         match nm {
-            syn::NestedMeta::Literal(l) => {
+            syn::NestedMeta::Lit(l) => {
                 self.err(l, "Unexpected literal");
                 None
-            },
+            }
             syn::NestedMeta::Meta(m) => Some(m),
         }
     }
@@ -91,8 +82,8 @@ impl Errors {
             syn::NestedMeta::Meta(m) => {
                 self.err(m, "Expected literal");
                 None
-            },
-            syn::NestedMeta::Literal(l) => Some(l),
+            }
+            syn::NestedMeta::Lit(l) => Some(l),
         }
     }
 
@@ -103,14 +94,14 @@ impl Errors {
     ];
 
     expect_meta_fn![
-        (expect_meta_word, Ident, Word, "single word"),
+        (expect_meta_word, Path, Path, "path"),
         (expect_meta_list, MetaList, List, "list"),
         (expect_meta_name_value, MetaNameValue, NameValue, "name-value pair"),
     ];
 
     fn unexpected_lit(&self, expected: &str, found: &syn::Lit) {
         fn lit_kind(lit: &syn::Lit) -> &'static str {
-            use syn::Lit::{Str, ByteStr, Byte, Char, Int, Float, Bool, Verbatim};
+            use syn::Lit::{Bool, Byte, ByteStr, Char, Float, Int, Str, Verbatim};
             match lit {
                 Str(_) => "string",
                 ByteStr(_) => "bytestring",
@@ -125,21 +116,15 @@ impl Errors {
 
         self.err(
             found,
-            &[
-                 "Expected ",
-                 expected,
-                 " literal, found ",
-                 lit_kind(found),
-                 " literal",
-            ].concat(),
+            &["Expected ", expected, " literal, found ", lit_kind(found), " literal"].concat(),
         )
     }
 
     fn unexpected_meta(&self, expected: &str, found: &syn::Meta) {
         fn meta_kind(meta: &syn::Meta) -> &'static str {
-            use syn::Meta::{Word, List, NameValue};
+            use syn::Meta::{List, NameValue, Path};
             match meta {
-                Word(_) => "single word",
+                Path(_) => "path",
                 List(_) => "list",
                 NameValue(_) => "name-value pair",
             }
@@ -147,31 +132,17 @@ impl Errors {
 
         self.err(
             found,
-            &[
-                 "Expected ",
-                 expected,
-                 " attribute, found ",
-                 meta_kind(found),
-                 " attribute",
-            ].concat(),
+            &["Expected ", expected, " attribute, found ", meta_kind(found), " attribute"].concat(),
         )
     }
 
     /// Issue an error relating to a particular `Spanned` structure.
-    pub fn err(
-        &self,
-        spanned: &impl syn::spanned::Spanned,
-        msg: &str,
-    ) {
+    pub fn err(&self, spanned: &impl syn::spanned::Spanned, msg: &str) {
         self.err_span(spanned.span(), msg);
     }
 
     /// Issue an error relating to a particular `Span`.
-    pub fn err_span(
-        &self,
-        span: Span,
-        msg: &str,
-    ) {
+    pub fn err_span(&self, span: Span, msg: &str) {
         self.push(syn::Error::new(span, msg));
     }
 
@@ -185,8 +156,6 @@ impl ToTokens for Errors {
     /// Convert the errors into tokens that, when emit, will cause
     /// the user of the macro to receive compiler errors.
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        tokens.extend(
-            self.errors.borrow().iter().map(|e| e.to_compile_error())
-        );
+        tokens.extend(self.errors.borrow().iter().map(|e| e.to_compile_error()));
     }
 }
