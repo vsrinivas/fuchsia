@@ -13,6 +13,8 @@
 
 #include <zxtest/zxtest.h>
 
+#include "zircon/rights.h"
+
 namespace {
 
 // These are integration tests of svchost which check whether certain services are present in
@@ -141,7 +143,8 @@ TEST(SvchostTest, FuchsiaRootJobForInspectPresent) {
   status =
       job.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(zx_info_handle_basic_t), nullptr, nullptr);
   ASSERT_EQ(ZX_OK, status, "zx_object_get_info failed");
-  ASSERT_EQ(ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_INSPECT | ZX_RIGHT_ENUMERATE,
+  ASSERT_EQ(ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_INSPECT | ZX_RIGHT_ENUMERATE |
+                ZX_RIGHT_GET_PROPERTY,
             info.rights);
 }
 
@@ -150,8 +153,7 @@ TEST(SvchostTest, FuchsiaKernelStatsPresent) {
   zx_status_t status = zx::channel::create(0, &client, &server);
   ASSERT_EQ(ZX_OK, status, "zx::channel::create failed");
 
-  fbl::String service_path =
-      fbl::String::Concat({"/svc/", llcpp::fuchsia::kernel::Stats::Name});
+  fbl::String service_path = fbl::String::Concat({"/svc/", llcpp::fuchsia::kernel::Stats::Name});
   status = fdio_service_connect(service_path.c_str(), server.release());
   ASSERT_EQ(ZX_OK, status, "fdio_service_connect failed");
 
@@ -163,8 +165,7 @@ TEST(SvchostTest, FuchsiaKernelStatsPresent) {
   auto mem_stats = mem_result.Unwrap();
   ASSERT_GT(mem_stats->stats.total_bytes(), 0);
 
-  llcpp::fuchsia::kernel::Stats::ResultOf::GetCpuStats cpu_result =
-      stats_client.GetCpuStats();
+  llcpp::fuchsia::kernel::Stats::ResultOf::GetCpuStats cpu_result = stats_client.GetCpuStats();
   ASSERT_EQ(ZX_OK, cpu_result.status(), "GetCpuStats failed");
 
   auto cpu_stats = cpu_result.Unwrap();

@@ -424,7 +424,8 @@ bool TestBootRootJobForInspect() {
   status = root_job.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(zx_info_handle_basic_t), nullptr,
                              nullptr);
   ASSERT_EQ(ZX_OK, status, "zx_object_get_info failed");
-  ASSERT_EQ(ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_INSPECT | ZX_RIGHT_ENUMERATE,
+  ASSERT_EQ(ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_INSPECT | ZX_RIGHT_ENUMERATE |
+                ZX_RIGHT_GET_PROPERTY,
             info.rights);
 
   END_TEST;

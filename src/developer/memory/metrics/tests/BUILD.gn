@@ -48,6 +48,7 @@ executable("memory_metrics_unittests") {
 
 test_package("memory_metrics_tests") {
   deps = [
+    ":memory_metrics_systemtests",
     ":memory_metrics_unittests",
   ]
 
@@ -56,5 +57,25 @@ test_package("memory_metrics_tests") {
       name = "memory_metrics_unittests"
       environments = basic_envs
     },
+    {
+      name = "memory_metrics_systemtests"
+      environments = basic_envs
+    },
+  ]
+}
+
+executable("memory_metrics_systemtests") {
+  testonly = true
+  output_name = "memory_metrics_systemtests"
+  sources = [
+    "capture_systemtest.cc",
+  ]
+
+  deps = [
+    ":utils",
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/developer/memory/metrics",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

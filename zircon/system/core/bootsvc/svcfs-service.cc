@@ -152,8 +152,10 @@ constexpr fuchsia_boot_RootJob_ops kRootJobOps = {
 
 zx_status_t RootJobForInspectGet(void* ctx, fidl_txn_t* txn) {
   zx::job dup;
-  zx_status_t status = zx::job::default_job()->duplicate(
-      ZX_RIGHT_INSPECT | ZX_RIGHT_ENUMERATE | ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER, &dup);
+  zx_status_t status =
+      zx::job::default_job()->duplicate(ZX_RIGHT_INSPECT | ZX_RIGHT_ENUMERATE | ZX_RIGHT_DUPLICATE |
+                                            ZX_RIGHT_TRANSFER | ZX_RIGHT_GET_PROPERTY,
+                                        &dup);
   if (status != ZX_OK) {
     printf("bootsvc: Failed to duplicate root job: %s\n", zx_status_get_string(status));
     return status;

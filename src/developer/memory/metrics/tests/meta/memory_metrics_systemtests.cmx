@@ -1,0 +1,19 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.boot.RootJobForInspect",
+                "fuchsia.kernel.Stats"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/memory_metrics_systemtests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.boot.RootJobForInspect",
+            "fuchsia.kernel.Stats"
+        ]
+    }
+}
