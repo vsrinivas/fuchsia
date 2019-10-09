@@ -182,7 +182,6 @@ func TestValidate(t *testing.T) {
 }
 
 func TestSeal(t *testing.T) {
-
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 	TestPackage(cfg)

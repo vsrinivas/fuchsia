@@ -55,6 +55,7 @@ func TestParseFlags(t *testing.T) {
 
 func TestServer(t *testing.T) {
 	cfg := build.TestConfig()
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 	build.BuildTestPackage(cfg)
 
 	repoDir, err := ioutil.TempDir("", "pm-serve-test-repo")

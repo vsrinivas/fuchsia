@@ -18,12 +18,12 @@ import (
 	"fuchsia.googlesource.com/pm/repo"
 )
 
-var cfg = build.TestConfig()
-
 func TestPublishArchive(t *testing.T) {
+	cfg := build.TestConfig()
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 	depfilePath := filepath.Join(cfg.OutputDir, "depfile.d")
 
-	archivePath, err := makePackageArchive()
+	archivePath, err := makePackageArchive(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,6 +68,8 @@ func TestPublishArchive(t *testing.T) {
 }
 
 func TestPublishListOfPackages(t *testing.T) {
+	cfg := build.TestConfig()
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 	build.BuildTestPackage(cfg)
 
 	depfilePath := filepath.Join(cfg.OutputDir, "depfile.d")
@@ -162,7 +164,7 @@ func assertHasTestPackage(t *testing.T, repoDir string) {
 	}
 }
 
-func makePackageArchive() (string, error) {
+func makePackageArchive(cfg *build.Config) (string, error) {
 	build.BuildTestPackage(cfg)
 	f, err := ioutil.TempFile("", "testpackage-0")
 	if err != nil {
