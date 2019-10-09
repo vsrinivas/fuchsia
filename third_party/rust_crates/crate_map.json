@@ -583,6 +583,11 @@
             "package_name": "csv"
         },
         {
+            "crate_name": "difference",
+            "crate_type": "lib",
+            "package_name": "difference"
+        },
+        {
             "crate_name": "failure",
             "crate_type": "lib",
             "package_name": "failure"

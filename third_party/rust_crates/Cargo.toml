@@ -8,6 +8,10 @@
 # Every edit to this file should be followed by `fx update-rustc-third-party`, a build,
 # and then `fx update-rustc-crate-map --output third_party/rust_crates/crate_map.json`.
 #
+# Always request non-default features you use. This can sometimes get missed if
+# another third-party crate in our build requests the same feature you use:
+# your builds will usually work, but `fx rustdoc` will fail.
+#
 # More information is available in docs/development/languages/rust/third_party.md.
 
 [package]
@@ -62,7 +66,7 @@ tempfile = "3"
 timebomb = "0.1.2"
 unicase = "2.2.0"
 url = "2.1"
-uuid = "0.7.2" # move ?
+uuid = { version = "0.7.2", features = ["v4"] } # move ?
 valico = "2.4.2"
 xml-rs = "0.8"
 # move once target-side tests of host-side code have been removed
