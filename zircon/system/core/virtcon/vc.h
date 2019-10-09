@@ -161,6 +161,7 @@ zx_status_t log_create_vc(vc_gfx_t* graphics, vc_t** vc_out);
 void log_delete_vc(vc_t* vc);
 
 bool vc_display_init(void);
+bool vc_sysmem_connect(void);
 void vc_attach_to_main_display(vc_t* vc);
 
 void set_log_listener_active(bool active);
