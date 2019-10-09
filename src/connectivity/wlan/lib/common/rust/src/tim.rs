@@ -1,6 +1,8 @@
 use crate::ie::TimHeader;
 
 pub fn is_traffic_buffered(header: &TimHeader, bitmap: &[u8], aid: usize) -> bool {
+    // IEEE 802.11-2016 Std, 9.4.2.6: When dot11MultiBSSIDActivated is false [...] In this case, the
+    // Bitmap Offset subfield value contains the number N1/2.
     let n1 = header.bmp_ctrl.offset() as usize * 2;
     let octet = aid / 8;
 
