@@ -6,6 +6,7 @@ group("uapp") {
   testonly = true
   deps = [
     "$zx/system/ulib/driver-info:driverinfo",
+    "$zx/system/dev/test/ddk-schedule-work:ddk-schedule-work-perf",
     "audio",
     "backlight",
     "biotime",

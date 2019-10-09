@@ -12,6 +12,7 @@
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/event.h>
 #include <zircon/fidl.h>
 
 namespace llcpp {
@@ -26,8 +27,11 @@ struct TestDevice_ScheduleWork_Response;
 struct TestDevice_ScheduleWork_Result;
 struct TestDevice_ScheduleWorkDifferentThread_Response;
 struct TestDevice_ScheduleWorkDifferentThread_Result;
+struct TestDevice_GetDoneEvent_Response;
+struct TestDevice_GetDoneEvent_Result;
 struct TestDevice_GetChannel_Response;
 struct TestDevice_GetChannel_Result;
+struct LatencyHistogram;
 class TestDevice;
 struct OwnedChannelDevice_ScheduleWork_Response;
 struct OwnedChannelDevice_ScheduleWork_Result;
@@ -247,6 +251,113 @@ struct TestDevice_ScheduleWorkDifferentThread_Result {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResponseTable;
+
+struct TestDevice_GetDoneEvent_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 4;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  ::zx::event event = {};
+};
+
+extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResultTable;
+
+struct TestDevice_GetDoneEvent_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  TestDevice_GetDoneEvent_Result();
+  ~TestDevice_GetDoneEvent_Result();
+
+  TestDevice_GetDoneEvent_Result(TestDevice_GetDoneEvent_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  TestDevice_GetDoneEvent_Result& operator=(TestDevice_GetDoneEvent_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static TestDevice_GetDoneEvent_Result WithResponse(::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response&& val) {
+    TestDevice_GetDoneEvent_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static TestDevice_GetDoneEvent_Result WithErr(int32_t&& val) {
+    TestDevice_GetDoneEvent_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+ private:
+  void Destroy();
+  void MoveImpl_(TestDevice_GetDoneEvent_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response response_;
+    int32_t err_;
+  };
+};
+
 
 
 struct TestDevice_GetChannel_Response {
@@ -354,8 +465,32 @@ struct TestDevice_GetChannel_Result {
   };
 };
 
+
+
+// Buckets are arranged as following:
+// [0] => [0ns, 100ns]
+// [1] => [100ns, 250ns]
+// [2] => [250ns, 500ns]
+// [3] => [500ns, 1us]
+// [4] => [1us, 2us]
+// [5] => [2us, 4us]
+// [6] => [4us, 7us]
+// [7] => [7us, 15us]
+// [8] => [15us, 30us]
+// [9] => [30us, infinity]
+struct LatencyHistogram {
+  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 80;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  ::fidl::Array<uint64_t, 10> buckets = {};
+};
+
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduleWorkResponseTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduleWorkDifferentThreadResponseTable;
+extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceGetDoneEventResponseTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduledWorkRanResponseTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceGetChannelRequestTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceGetChannelResponseTable;
@@ -377,7 +512,21 @@ class TestDevice final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
-  using ScheduleWorkRequest = ::fidl::AnyZeroArgMessage;
+  struct ScheduleWorkRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    uint32_t batch_size;
+    uint32_t num_work_items;
+
+    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = ScheduleWorkResponse;
+  };
 
   struct ScheduleWorkDifferentThreadResponse final {
     FIDL_ALIGNDECL
@@ -394,14 +543,30 @@ class TestDevice final {
   };
   using ScheduleWorkDifferentThreadRequest = ::fidl::AnyZeroArgMessage;
 
+  struct GetDoneEventResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDeviceGetDoneEventResponseTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using GetDoneEventRequest = ::fidl::AnyZeroArgMessage;
+
   struct ScheduledWorkRanResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    bool ran;
+    uint32_t work_items_run;
+    ::llcpp::fuchsia::device::schedule::work::test::LatencyHistogram histogram;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDeviceScheduledWorkRanResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t PrimarySize = 104;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -446,7 +611,7 @@ class TestDevice final {
     class ScheduleWork_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ScheduleWork_Impl(zx::unowned_channel _client_end);
+      ScheduleWork_Impl(zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items);
       ~ScheduleWork_Impl() = default;
       ScheduleWork_Impl(ScheduleWork_Impl&& other) = default;
       ScheduleWork_Impl& operator=(ScheduleWork_Impl&& other) = default;
@@ -466,6 +631,22 @@ class TestDevice final {
       ~ScheduleWorkDifferentThread_Impl() = default;
       ScheduleWorkDifferentThread_Impl(ScheduleWorkDifferentThread_Impl&& other) = default;
       ScheduleWorkDifferentThread_Impl& operator=(ScheduleWorkDifferentThread_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class GetDoneEvent_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetDoneEvent_Impl(zx::unowned_channel _client_end);
+      ~GetDoneEvent_Impl() = default;
+      GetDoneEvent_Impl(GetDoneEvent_Impl&& other) = default;
+      GetDoneEvent_Impl& operator=(GetDoneEvent_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -510,6 +691,7 @@ class TestDevice final {
    public:
     using ScheduleWork = ScheduleWork_Impl<ScheduleWorkResponse>;
     using ScheduleWorkDifferentThread = ScheduleWorkDifferentThread_Impl<ScheduleWorkDifferentThreadResponse>;
+    using GetDoneEvent = GetDoneEvent_Impl<GetDoneEventResponse>;
     using ScheduledWorkRan = ScheduledWorkRan_Impl<ScheduledWorkRanResponse>;
     using GetChannel = GetChannel_Impl<GetChannelResponse>;
   };
@@ -523,7 +705,7 @@ class TestDevice final {
     class ScheduleWork_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ScheduleWork_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ScheduleWork_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer);
       ~ScheduleWork_Impl() = default;
       ScheduleWork_Impl(ScheduleWork_Impl&& other) = default;
       ScheduleWork_Impl& operator=(ScheduleWork_Impl&& other) = default;
@@ -543,6 +725,22 @@ class TestDevice final {
       ~ScheduleWorkDifferentThread_Impl() = default;
       ScheduleWorkDifferentThread_Impl(ScheduleWorkDifferentThread_Impl&& other) = default;
       ScheduleWorkDifferentThread_Impl& operator=(ScheduleWorkDifferentThread_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class GetDoneEvent_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetDoneEvent_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetDoneEvent_Impl() = default;
+      GetDoneEvent_Impl(GetDoneEvent_Impl&& other) = default;
+      GetDoneEvent_Impl& operator=(GetDoneEvent_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -587,6 +785,7 @@ class TestDevice final {
    public:
     using ScheduleWork = ScheduleWork_Impl<ScheduleWorkResponse>;
     using ScheduleWorkDifferentThread = ScheduleWorkDifferentThread_Impl<ScheduleWorkDifferentThreadResponse>;
+    using GetDoneEvent = GetDoneEvent_Impl<GetDoneEventResponse>;
     using ScheduledWorkRan = ScheduledWorkRan_Impl<ScheduledWorkRanResponse>;
     using GetChannel = GetChannel_Impl<GetChannelResponse>;
   };
@@ -602,13 +801,17 @@ class TestDevice final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    // Schedules work.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::ScheduleWork ScheduleWork();
+    // Schedules work. |batch_size| refers to how many work_items to keep
+    // outstanding at any given time, while |num_work_items| refers to total
+    // number of work items.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::ScheduleWork ScheduleWork(uint32_t batch_size, uint32_t num_work_items);
 
-    // Schedules work.
+    // Schedules work. |batch_size| refers to how many work_items to keep
+    // outstanding at any given time, while |num_work_items| refers to total
+    // number of work items.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::ScheduleWork ScheduleWork(::fidl::BytePart _response_buffer);
+    UnownedResultOf::ScheduleWork ScheduleWork(::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer);
 
     // Spawns a thread which schedules work.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -618,11 +821,19 @@ class TestDevice final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ScheduleWorkDifferentThread ScheduleWorkDifferentThread(::fidl::BytePart _response_buffer);
 
-    // Returns whether work ran since last time it was invoked.
+    // Triggers once all outstanding work is complete.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::GetDoneEvent GetDoneEvent();
+
+    // Triggers once all outstanding work is complete.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetDoneEvent GetDoneEvent(::fidl::BytePart _response_buffer);
+
+    // Returns whether how many work items ran since last time it was invoked.
+    // Allocates 120 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ScheduledWorkRan ScheduledWorkRan();
 
-    // Returns whether work ran since last time it was invoked.
+    // Returns whether how many work items ran since last time it was invoked.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ScheduledWorkRan ScheduledWorkRan(::fidl::BytePart _response_buffer);
 
@@ -643,13 +854,17 @@ class TestDevice final {
     Call() = delete;
    public:
 
-    // Schedules work.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ScheduleWork ScheduleWork(zx::unowned_channel _client_end);
+    // Schedules work. |batch_size| refers to how many work_items to keep
+    // outstanding at any given time, while |num_work_items| refers to total
+    // number of work items.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::ScheduleWork ScheduleWork(zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items);
 
-    // Schedules work.
+    // Schedules work. |batch_size| refers to how many work_items to keep
+    // outstanding at any given time, while |num_work_items| refers to total
+    // number of work items.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ScheduleWork ScheduleWork(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ScheduleWork ScheduleWork(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer);
 
     // Spawns a thread which schedules work.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -659,11 +874,19 @@ class TestDevice final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ScheduleWorkDifferentThread ScheduleWorkDifferentThread(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Returns whether work ran since last time it was invoked.
+    // Triggers once all outstanding work is complete.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::GetDoneEvent GetDoneEvent(zx::unowned_channel _client_end);
+
+    // Triggers once all outstanding work is complete.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetDoneEvent GetDoneEvent(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Returns whether how many work items ran since last time it was invoked.
+    // Allocates 120 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ScheduledWorkRan ScheduledWorkRan(zx::unowned_channel _client_end);
 
-    // Returns whether work ran since last time it was invoked.
+    // Returns whether how many work items ran since last time it was invoked.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ScheduledWorkRan ScheduledWorkRan(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
@@ -683,13 +906,18 @@ class TestDevice final {
     InPlace() = delete;
    public:
 
-    // Schedules work.
-    static ::fidl::DecodeResult<ScheduleWorkResponse> ScheduleWork(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    // Schedules work. |batch_size| refers to how many work_items to keep
+    // outstanding at any given time, while |num_work_items| refers to total
+    // number of work items.
+    static ::fidl::DecodeResult<ScheduleWorkResponse> ScheduleWork(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ScheduleWorkRequest> params, ::fidl::BytePart response_buffer);
 
     // Spawns a thread which schedules work.
     static ::fidl::DecodeResult<ScheduleWorkDifferentThreadResponse> ScheduleWorkDifferentThread(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    // Returns whether work ran since last time it was invoked.
+    // Triggers once all outstanding work is complete.
+    static ::fidl::DecodeResult<GetDoneEventResponse> GetDoneEvent(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Returns whether how many work items ran since last time it was invoked.
     static ::fidl::DecodeResult<ScheduledWorkRanResponse> ScheduledWorkRan(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Spawns an thread with a dedicated async loop.
@@ -720,7 +948,7 @@ class TestDevice final {
 
     using ScheduleWorkCompleter = ::fidl::Completer<ScheduleWorkCompleterBase>;
 
-    virtual void ScheduleWork(ScheduleWorkCompleter::Sync _completer) = 0;
+    virtual void ScheduleWork(uint32_t batch_size, uint32_t num_work_items, ScheduleWorkCompleter::Sync _completer) = 0;
 
     class ScheduleWorkDifferentThreadCompleterBase : public _Base {
      public:
@@ -739,10 +967,27 @@ class TestDevice final {
 
     virtual void ScheduleWorkDifferentThread(ScheduleWorkDifferentThreadCompleter::Sync _completer) = 0;
 
+    class GetDoneEventCompleterBase : public _Base {
+     public:
+      void Reply(::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result result);
+      void ReplySuccess(::zx::event event);
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::zx::event event);
+      void Reply(::fidl::DecodedMessage<GetDoneEventResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using GetDoneEventCompleter = ::fidl::Completer<GetDoneEventCompleterBase>;
+
+    virtual void GetDoneEvent(GetDoneEventCompleter::Sync _completer) = 0;
+
     class ScheduledWorkRanCompleterBase : public _Base {
      public:
-      void Reply(bool ran);
-      void Reply(::fidl::BytePart _buffer, bool ran);
+      void Reply(uint32_t work_items_run, ::llcpp::fuchsia::device::schedule::work::test::LatencyHistogram histogram);
+      void Reply(::fidl::BytePart _buffer, uint32_t work_items_run, ::llcpp::fuchsia::device::schedule::work::test::LatencyHistogram histogram);
       void Reply(::fidl::DecodedMessage<ScheduledWorkRanResponse> params);
 
      protected:
@@ -799,6 +1044,8 @@ class TestDevice final {
     static void ScheduleWorkResponse(const ::fidl::DecodedMessage<TestDevice::ScheduleWorkResponse>& _msg);
     static void ScheduleWorkDifferentThreadRequest(const ::fidl::DecodedMessage<TestDevice::ScheduleWorkDifferentThreadRequest>& _msg);
     static void ScheduleWorkDifferentThreadResponse(const ::fidl::DecodedMessage<TestDevice::ScheduleWorkDifferentThreadResponse>& _msg);
+    static void GetDoneEventRequest(const ::fidl::DecodedMessage<TestDevice::GetDoneEventRequest>& _msg);
+    static void GetDoneEventResponse(const ::fidl::DecodedMessage<TestDevice::GetDoneEventResponse>& _msg);
     static void ScheduledWorkRanRequest(const ::fidl::DecodedMessage<TestDevice::ScheduledWorkRanRequest>& _msg);
     static void ScheduledWorkRanResponse(const ::fidl::DecodedMessage<TestDevice::ScheduledWorkRanResponse>& _msg);
     static void GetChannelRequest(const ::fidl::DecodedMessage<TestDevice::GetChannelRequest>& _msg);
@@ -811,11 +1058,11 @@ class TestDevice final {
 struct OwnedChannelDevice_ScheduleWork_Response {
   static constexpr const fidl_type_t* Type = nullptr;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 1;
+  static constexpr uint32_t PrimarySize = 80;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  uint8_t __reserved = {};
+  ::llcpp::fuchsia::device::schedule::work::test::LatencyHistogram histogram = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResultTable;
@@ -898,7 +1145,7 @@ struct OwnedChannelDevice_ScheduleWork_Result {
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
+  static constexpr uint32_t PrimarySize = 88;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
@@ -926,13 +1173,27 @@ class OwnedChannelDevice final {
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t PrimarySize = 104;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
-  using ScheduleWorkRequest = ::fidl::AnyZeroArgMessage;
+  struct ScheduleWorkRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    uint32_t batch_size;
+    uint32_t num_work_items;
+
+    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = ScheduleWorkResponse;
+  };
 
 
   // Collection of return types of FIDL calls in this interface.
@@ -943,7 +1204,7 @@ class OwnedChannelDevice final {
     class ScheduleWork_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ScheduleWork_Impl(zx::unowned_channel _client_end);
+      ScheduleWork_Impl(zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items);
       ~ScheduleWork_Impl() = default;
       ScheduleWork_Impl(ScheduleWork_Impl&& other) = default;
       ScheduleWork_Impl& operator=(ScheduleWork_Impl&& other) = default;
@@ -969,7 +1230,7 @@ class OwnedChannelDevice final {
     class ScheduleWork_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ScheduleWork_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ScheduleWork_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer);
       ~ScheduleWork_Impl() = default;
       ScheduleWork_Impl(ScheduleWork_Impl&& other) = default;
       ScheduleWork_Impl& operator=(ScheduleWork_Impl&& other) = default;
@@ -997,13 +1258,17 @@ class OwnedChannelDevice final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    // Schedules work and blocks until it completes.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::ScheduleWork ScheduleWork();
+    // Schedules work and blocks until it completes. |batch_size| refers to how
+    // many work_items to keep outstanding at any given time, while
+    // |num_work_items| refers to total number of work items.
+    // Allocates 128 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::ScheduleWork ScheduleWork(uint32_t batch_size, uint32_t num_work_items);
 
-    // Schedules work and blocks until it completes.
+    // Schedules work and blocks until it completes. |batch_size| refers to how
+    // many work_items to keep outstanding at any given time, while
+    // |num_work_items| refers to total number of work items.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::ScheduleWork ScheduleWork(::fidl::BytePart _response_buffer);
+    UnownedResultOf::ScheduleWork ScheduleWork(::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -1014,13 +1279,17 @@ class OwnedChannelDevice final {
     Call() = delete;
    public:
 
-    // Schedules work and blocks until it completes.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ScheduleWork ScheduleWork(zx::unowned_channel _client_end);
+    // Schedules work and blocks until it completes. |batch_size| refers to how
+    // many work_items to keep outstanding at any given time, while
+    // |num_work_items| refers to total number of work items.
+    // Allocates 128 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::ScheduleWork ScheduleWork(zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items);
 
-    // Schedules work and blocks until it completes.
+    // Schedules work and blocks until it completes. |batch_size| refers to how
+    // many work_items to keep outstanding at any given time, while
+    // |num_work_items| refers to total number of work items.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ScheduleWork ScheduleWork(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ScheduleWork ScheduleWork(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1030,8 +1299,10 @@ class OwnedChannelDevice final {
     InPlace() = delete;
    public:
 
-    // Schedules work and blocks until it completes.
-    static ::fidl::DecodeResult<ScheduleWorkResponse> ScheduleWork(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    // Schedules work and blocks until it completes. |batch_size| refers to how
+    // many work_items to keep outstanding at any given time, while
+    // |num_work_items| refers to total number of work items.
+    static ::fidl::DecodeResult<ScheduleWorkResponse> ScheduleWork(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ScheduleWorkRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1046,10 +1317,10 @@ class OwnedChannelDevice final {
     class ScheduleWorkCompleterBase : public _Base {
      public:
       void Reply(::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result result);
-      void ReplySuccess();
+      void ReplySuccess(::llcpp::fuchsia::device::schedule::work::test::LatencyHistogram histogram);
       void ReplyError(int32_t error);
       void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer);
+      void ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::schedule::work::test::LatencyHistogram histogram);
       void Reply(::fidl::DecodedMessage<ScheduleWorkResponse> params);
 
      protected:
@@ -1058,7 +1329,7 @@ class OwnedChannelDevice final {
 
     using ScheduleWorkCompleter = ::fidl::Completer<ScheduleWorkCompleterBase>;
 
-    virtual void ScheduleWork(ScheduleWorkCompleter::Sync _completer) = 0;
+    virtual void ScheduleWork(uint32_t batch_size, uint32_t num_work_items, ScheduleWorkCompleter::Sync _completer) = 0;
 
   };
 
@@ -1120,6 +1391,16 @@ struct IsFidlType<::llcpp::fuchsia::device::schedule::work::test::TestDevice_Sch
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result>);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response>);
+static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response, event) == 0);
+static_assert(sizeof(::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response) == ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result>);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Response> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Response>);
 static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Response, __reserved) == 0);
@@ -1128,6 +1409,21 @@ static_assert(sizeof(::llcpp::fuchsia::device::schedule::work::test::TestDevice_
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::schedule::work::test::LatencyHistogram> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::schedule::work::test::LatencyHistogram>);
+static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::LatencyHistogram, buckets) == 0);
+static_assert(sizeof(::llcpp::fuchsia::device::schedule::work::test::LatencyHistogram) == ::llcpp::fuchsia::device::schedule::work::test::LatencyHistogram::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::schedule::work::test::TestDevice::ScheduleWorkRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::schedule::work::test::TestDevice::ScheduleWorkRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::schedule::work::test::TestDevice::ScheduleWorkRequest)
+    == ::llcpp::fuchsia::device::schedule::work::test::TestDevice::ScheduleWorkRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::TestDevice::ScheduleWorkRequest, batch_size) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::TestDevice::ScheduleWorkRequest, num_work_items) == 20);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::schedule::work::test::TestDevice::ScheduleWorkResponse> : public std::true_type {};
@@ -1146,12 +1442,21 @@ static_assert(sizeof(::llcpp::fuchsia::device::schedule::work::test::TestDevice:
 static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::TestDevice::ScheduleWorkDifferentThreadResponse, result) == 16);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::device::schedule::work::test::TestDevice::GetDoneEventResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::schedule::work::test::TestDevice::GetDoneEventResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::schedule::work::test::TestDevice::GetDoneEventResponse)
+    == ::llcpp::fuchsia::device::schedule::work::test::TestDevice::GetDoneEventResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::TestDevice::GetDoneEventResponse, result) == 16);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::device::schedule::work::test::TestDevice::ScheduledWorkRanResponse> : public std::true_type {};
 template <>
 struct IsFidlMessage<::llcpp::fuchsia::device::schedule::work::test::TestDevice::ScheduledWorkRanResponse> : public std::true_type {};
 static_assert(sizeof(::llcpp::fuchsia::device::schedule::work::test::TestDevice::ScheduledWorkRanResponse)
     == ::llcpp::fuchsia::device::schedule::work::test::TestDevice::ScheduledWorkRanResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::TestDevice::ScheduledWorkRanResponse, ran) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::TestDevice::ScheduledWorkRanResponse, work_items_run) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::TestDevice::ScheduledWorkRanResponse, histogram) == 24);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::schedule::work::test::TestDevice::GetChannelRequest> : public std::true_type {};
@@ -1172,12 +1477,21 @@ static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::TestDevic
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Response> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Response>);
-static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Response, __reserved) == 0);
+static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Response, histogram) == 0);
 static_assert(sizeof(::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Response) == ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Response::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice::ScheduleWorkRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice::ScheduleWorkRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice::ScheduleWorkRequest)
+    == ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice::ScheduleWorkRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice::ScheduleWorkRequest, batch_size) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice::ScheduleWorkRequest, num_work_items) == 20);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice::ScheduleWorkResponse> : public std::true_type {};

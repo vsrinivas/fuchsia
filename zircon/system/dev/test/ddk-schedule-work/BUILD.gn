@@ -7,12 +7,13 @@ import("$zx/public/gn/fidl.gni")
 fidl_library("fuchsia.device.schedule.work.test") {
   visibility = [ ":*" ]
   sources = [
-    "test.fidl",
+    "schedule-work.test.fidl",
   ]
 }
 
 if (current_toolchain != default_toolchain) {
   driver("ddk-schedule-work-test") {
+    testonly = true
     sources = [
       "test-driver.cc",
     ]
@@ -49,4 +50,23 @@ if (current_toolchain != default_toolchain) {
       "$zx/system/ulib/zxtest",
     ]
   }
+
+  executable("ddk-schedule-work-perf") {
+    testonly = true
+    sources = [
+      "perf-test.cc",
+    ]
+    deps = [
+      ":fuchsia.device.schedule.work.test.llcpp",
+      "$zx/system/ulib/ddk",
+      "$zx/system/ulib/devmgr-integration-test",
+      "$zx/system/ulib/devmgr-launcher",
+      "$zx/system/ulib/driver-integration-test",
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zx",
+    ]
+  }
 }
+
