@@ -5,7 +5,7 @@
 #ifndef ZIRCON_SYSTEM_DEV_TEE_OPTEE_OPTEE_CONTROLLER_H_
 #define ZIRCON_SYSTEM_DEV_TEE_OPTEE_OPTEE_CONTROLLER_H_
 
-#include <fuchsia/hardware/tee/c/fidl.h>
+#include <fuchsia/hardware/tee/llcpp/fidl.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
@@ -15,6 +15,7 @@
 #include <ddk/protocol/sysmem.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
+#include <ddktl/fidl.h>
 #include <ddktl/protocol/tee.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
@@ -31,9 +32,10 @@ class OpteeClient;
 
 class OpteeController;
 using OpteeControllerBase =
-    ddk::Device<OpteeController, ddk::Messageable, ddk::Openable, ddk::UnbindableDeprecated>;
+  ddk::Device<OpteeController, ddk::Messageable, ddk::Openable, ddk::UnbindableDeprecated>;
 class OpteeController : public OpteeControllerBase,
-                        public ddk::TeeProtocol<OpteeController, ddk::base_protocol> {
+                        public ddk::TeeProtocol<OpteeController, ddk::base_protocol>,
+                        public fuchsia_hardware_tee::DeviceConnector::Interface {
  public:
   using RpcHandler = fbl::Function<zx_status_t(const RpcFunctionArgs&, RpcFunctionResult*)>;
 
@@ -61,10 +63,10 @@ class OpteeController : public OpteeControllerBase,
   //                       support for the driver.
   //  * device_request:    The server end of a channel to the `fuchsia.tee.Device` protocol that
   //                       is requesting to be served.
-  zx_status_t ConnectDevice(zx_handle_t service_provider, zx_handle_t device_request);
+  void ConnectTee(zx::channel service_provider, zx::channel tee_request, ConnectTeeCompleter::Sync completer) override;
 
   // Client FIDL commands
-  zx_status_t GetOsInfo(fidl_txn_t* txn) const;
+  fuchsia_tee::OsInfo GetOsInfo() const;
 
   uint32_t CallWithMessage(const optee::Message& message, RpcHandler rpc_handler);
 
@@ -84,13 +86,11 @@ class OpteeController : public OpteeControllerBase,
   zx_status_t InitializeSharedMemory();
   zx_status_t DiscoverSharedMemoryConfig(zx_paddr_t* out_start_addr, size_t* out_size);
 
-  static fuchsia_hardware_tee_DeviceConnector_ops_t kFidlOps;
-
   pdev_protocol_t pdev_proto_ = {};
   sysmem_protocol_t sysmem_proto_ = {};
   zx::resource secure_monitor_;
   uint32_t secure_world_capabilities_ = 0;
-  fuchsia_tee_OsRevision os_revision_ = {};
+  fuchsia_tee::OsRevision os_revision_ = {};
   fbl::unique_ptr<SharedMemoryManager> shared_memory_manager_;
 };
 

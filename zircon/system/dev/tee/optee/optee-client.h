@@ -5,7 +5,7 @@
 #ifndef ZIRCON_SYSTEM_DEV_TEE_OPTEE_OPTEE_CLIENT_H_
 #define ZIRCON_SYSTEM_DEV_TEE_OPTEE_OPTEE_CLIENT_H_
 
-#include <fuchsia/tee/c/fidl.h>
+#include <fuchsia/tee/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 
 #include <atomic>
@@ -37,7 +37,8 @@ using OpteeClientProtocol = ddk::EmptyProtocol<ZX_PROTOCOL_TEE>;
 
 class OpteeClient : public OpteeClientBase,
                     public OpteeClientProtocol,
-                    public fbl::DoublyLinkedListable<OpteeClient*> {
+                    public fbl::DoublyLinkedListable<OpteeClient*>,
+                    public fuchsia_tee::Device::Interface {
  public:
   explicit OpteeClient(OpteeController* controller, zx::channel provider_channel)
       : OpteeClientBase(controller->zxdev()),
@@ -55,12 +56,13 @@ class OpteeClient : public OpteeClientBase,
   void Shutdown();
 
   // FIDL Handlers
-  zx_status_t GetOsInfo(fidl_txn_t* txn) const;
-  zx_status_t OpenSession(const fuchsia_tee_Uuid* trusted_app,
-                          const fuchsia_tee_ParameterSet* parameter_set, fidl_txn_t* txn);
-  zx_status_t InvokeCommand(uint32_t session_id, uint32_t command_id,
-                            const fuchsia_tee_ParameterSet* parameter_set, fidl_txn_t* txn);
-  zx_status_t CloseSession(uint32_t session_id, fidl_txn_t* txn);
+  void GetOsInfo(GetOsInfoCompleter::Sync completer) override;
+  void OpenSession(fuchsia_tee::Uuid trusted_app, fuchsia_tee::ParameterSet parameter_set,
+                   OpenSessionCompleter::Sync completer) override;
+  void InvokeCommand(uint32_t session_id, uint32_t command_id,
+                     fuchsia_tee::ParameterSet parameter_set,
+                     InvokeCommandCompleter::Sync completer) override;
+  void CloseSession(uint32_t session_id, CloseSessionCompleter::Sync completer) override;
 
  private:
   using SharedMemoryList = fbl::DoublyLinkedList<fbl::unique_ptr<SharedMemory>>;
@@ -216,7 +218,6 @@ class OpteeClient : public OpteeClientBase,
   zx_status_t HandleRpcCommandFileSystemTruncateFile(TruncateFileFileSystemRpcMessage* message);
   zx_status_t HandleRpcCommandFileSystemRemoveFile(RemoveFileFileSystemRpcMessage* message);
   zx_status_t HandleRpcCommandFileSystemRenameFile(RenameFileFileSystemRpcMessage* message);
-  static fuchsia_tee_Device_ops_t kFidlOps;
 
   OpteeController* controller_;
   SharedMemoryList allocated_shared_memory_;

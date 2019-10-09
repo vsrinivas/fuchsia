@@ -36,7 +36,8 @@ static inline bool is_shared_mem_flag_inout(uint32_t flags) {
 }
 
 static inline bool is_direction_input(fuchsia_tee::Direction direction) {
-  return ((direction == fuchsia_tee::Direction::INPUT) || (direction == fuchsia_tee::Direction::INOUT));
+  return ((direction == fuchsia_tee::Direction::INPUT) ||
+          (direction == fuchsia_tee::Direction::INOUT));
 }
 
 static inline bool is_direction_output(fuchsia_tee::Direction direction) {
@@ -337,7 +338,8 @@ static TEEC_Result postprocess_value(uint32_t param_type, const fuchsia_tee::Par
   if ((param_type == TEEC_VALUE_INPUT) && (zx_value->direction != fuchsia_tee::Direction::INPUT)) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
-  if ((param_type == TEEC_VALUE_OUTPUT) && (zx_value->direction != fuchsia_tee::Direction::OUTPUT)) {
+  if ((param_type == TEEC_VALUE_OUTPUT) &&
+      (zx_value->direction != fuchsia_tee::Direction::OUTPUT)) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
   if ((param_type == TEEC_VALUE_INOUT) && (zx_value->direction != fuchsia_tee::Direction::INOUT)) {
@@ -384,7 +386,8 @@ static TEEC_Result postprocess_temporary_memref(uint32_t param_type,
     // copy the data out, we still need to update the size to indicate to the user how large of
     // a buffer they need to perform the requested operation.
     if (out_temp_memory_ref->buffer && out_temp_memory_ref->size >= zx_buffer->size) {
-      zx_status_t status = zx_buffer->vmo.read(out_temp_memory_ref->buffer, zx_buffer->offset, zx_buffer->size);
+      zx_status_t status =
+          zx_buffer->vmo.read(out_temp_memory_ref->buffer, zx_buffer->offset, zx_buffer->size);
       rc = convert_status_to_result(status);
     }
     out_temp_memory_ref->size = zx_buffer->size;
@@ -702,7 +705,7 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
   }
 
   auto result = fuchsia_tee::Device::Call::OpenSession(
-    zx::unowned_channel(context->imp.tee_channel), trusted_app, std::move(parameter_set));
+      zx::unowned_channel(context->imp.tee_channel), trusted_app, std::move(parameter_set));
   zx_status_t status = result.status();
 
   if (status != ZX_OK) {
@@ -711,7 +714,6 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
     }
     return convert_status_to_result(status);
   }
-
 
   uint32_t out_session_id = result->session_id;
   fuchsia_tee::OpResult out_result = std::move(result->op_result);
@@ -749,7 +751,7 @@ void TEEC_CloseSession(TEEC_Session* session) {
 
   // TEEC_CloseSession simply swallows errors, so no need to check here.
   fuchsia_tee::Device::Call::CloseSession(
-    zx::unowned_channel(session->imp.context_imp->tee_channel), session->imp.session_id);
+      zx::unowned_channel(session->imp.context_imp->tee_channel), session->imp.session_id);
   session->imp.context_imp = NULL;
 }
 
@@ -773,11 +775,8 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session* session, uint32_t commandID, TEEC_O
   }
 
   auto result = fuchsia_tee::Device::Call::InvokeCommand(
-    zx::unowned_channel(session->imp.context_imp->tee_channel),
-    session->imp.session_id,
-    commandID,
-    std::move(parameter_set)
-  );
+      zx::unowned_channel(session->imp.context_imp->tee_channel), session->imp.session_id,
+      commandID, std::move(parameter_set));
   zx_status_t status = result.status();
   if (status != ZX_OK) {
     if (returnOrigin) {

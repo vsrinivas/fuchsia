@@ -2,14 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_TEE_OPTEE_UTIL_H_
+#define ZIRCON_SYSTEM_DEV_TEE_OPTEE_UTIL_H_
 
+#include <fuchsia/hardware/tee/llcpp/fidl.h>
 #include <inttypes.h>
 #include <stddef.h>
 
-#include <fuchsia/hardware/tee/c/fidl.h>
-
 namespace optee {
+
+namespace fuchsia_tee = ::llcpp::fuchsia::tee;
+namespace fuchsia_hardware_tee = ::llcpp::fuchsia::hardware::tee;
 
 // Uuid
 //
@@ -20,7 +23,7 @@ namespace optee {
 // network byte order. This class stores the data as a sequence of bytes.
 struct Uuid final {
  public:
-  explicit Uuid(const fuchsia_tee_Uuid& zx_uuid);
+  explicit Uuid(const fuchsia_tee::Uuid& zx_uuid);
 
   void ToUint64Pair(uint64_t* out_hi, uint64_t* out_low) const;
 
@@ -32,3 +35,5 @@ struct Uuid final {
 static_assert(sizeof(Uuid) == 16, "Uuid must remain exactly 16 bytes");
 
 }  // namespace optee
+
+#endif  // ZIRCON_SYSTEM_DEV_TEE_OPTEE_UTIL_H_

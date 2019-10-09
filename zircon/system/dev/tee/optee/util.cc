@@ -5,12 +5,11 @@
 #include "util.h"
 
 #include <string.h>
-
 #include <zircon/assert.h>
 
 namespace optee {
 
-Uuid::Uuid(const fuchsia_tee_Uuid& uuid) {
+Uuid::Uuid(const fuchsia_tee::Uuid& uuid) {
   data_[0] = static_cast<uint8_t>(uuid.time_low >> 24);
   data_[1] = static_cast<uint8_t>(uuid.time_low >> 16);
   data_[2] = static_cast<uint8_t>(uuid.time_low >> 8);
