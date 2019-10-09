@@ -10,7 +10,7 @@
 
 static zx_device_t* dev = NULL;
 
-static void unbind(void* ctx) { device_remove_deprecated(dev); }
+static void unbind(void* ctx) { device_unbind_reply(dev); }
 
 static constexpr zx_protocol_device_t dev_ops = []() {
   zx_protocol_device_t ops = {};

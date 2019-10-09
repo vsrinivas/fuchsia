@@ -60,7 +60,7 @@ static zx_status_t ddk_test_func(void* cookie, test_report_t* report) {
 
 static zx_device_t* child_dev = NULL;
 
-static void child_unbind(void* ctx) { device_remove_deprecated(child_dev); }
+static void child_unbind(void* ctx) { device_unbind_reply(child_dev); }
 
 static zx_protocol_device_t child_device_ops = {
     .version = DEVICE_OPS_VERSION,

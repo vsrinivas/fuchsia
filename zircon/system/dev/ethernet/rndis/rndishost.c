@@ -324,7 +324,7 @@ done:
 
 static void rndishost_unbind(void* ctx) {
   rndishost_t* eth = (rndishost_t*)ctx;
-  device_remove_deprecated(eth->zxdev);
+  device_unbind_reply(eth->zxdev);
 }
 
 static void rndishost_release(void* ctx) {

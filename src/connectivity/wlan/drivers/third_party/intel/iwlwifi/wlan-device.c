@@ -161,17 +161,12 @@ wlanmac_protocol_ops_t wlanmac_ops = {
 
 static void mac_unbind(void* ctx) {
   struct iwl_mvm_vif* mvmvif = ctx;
-  zx_status_t status;
 
   if (!mvmvif->zxdev) {
     return;
   }
 
-  status = device_remove_deprecated(mvmvif->zxdev);
-  if (status != ZX_OK) {
-    IWL_WARN(mvmvif, "Unbind MAC failed. Cannot remove device from devhost: %s\n",
-             zx_status_get_string(status));
-  }
+  device_unbind_reply(mvmvif->zxdev);
   mvmvif->zxdev = NULL;
 }
 

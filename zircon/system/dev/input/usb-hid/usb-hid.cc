@@ -233,7 +233,7 @@ static hidbus_protocol_ops_t usb_hid_bus_ops = {
 
 static void usb_hid_unbind(void* ctx) {
   usb_hid_device_t* hid = static_cast<usb_hid_device_t*>(ctx);
-  device_remove_deprecated(hid->zxdev);
+  device_unbind_reply(hid->zxdev);
 }
 
 static void usb_hid_release(void* ctx) {

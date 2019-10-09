@@ -93,7 +93,7 @@ static void bootpart_queue(void* ctx, block_op_t* bop, block_impl_queue_callback
 
 static void bootpart_unbind(void* ctx) {
   bootpart_device_t* device = ctx;
-  device_remove_deprecated(device->zxdev);
+  device_unbind_reply(device->zxdev);
 }
 
 static void bootpart_release(void* ctx) {

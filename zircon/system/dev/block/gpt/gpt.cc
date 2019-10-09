@@ -172,7 +172,7 @@ void gpt_queue(void* ctx, block_op_t* bop, block_impl_queue_callback completion_
 
 void gpt_unbind(void* ctx) {
   gptpart_device_t* device = static_cast<gptpart_device_t*>(ctx);
-  device_remove_deprecated(device->zxdev);
+  device_unbind_reply(device->zxdev);
 }
 
 void gpt_release(void* ctx) {

@@ -123,7 +123,7 @@ static zx_status_t bcm_hci_get_protocol(void* ctx, uint32_t proto_id, void* out_
 static void bcm_hci_unbind(void* ctx) {
   bcm_hci_t* hci = ctx;
 
-  device_remove_deprecated(hci->zxdev);
+  device_unbind_reply(hci->zxdev);
 }
 
 static void bcm_hci_release(void* ctx) {

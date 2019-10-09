@@ -408,7 +408,7 @@ static void ax88772b_unbind(void* ctx) {
   mtx_unlock(&eth->mutex);
 
   // this must be last since this can trigger releasing the device
-  device_remove_deprecated(eth->device);
+  device_unbind_reply(eth->device);
 }
 
 static void ax88772b_free(ax88772b_t* eth) {

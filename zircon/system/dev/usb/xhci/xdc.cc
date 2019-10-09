@@ -712,7 +712,7 @@ static void xdc_unbind(void* ctx) {
   }
   mtx_unlock(&xdc->instance_list_lock);
 
-  device_remove_deprecated(xdc->zxdev);
+  device_unbind_reply(xdc->zxdev);
 }
 
 static void xdc_release(void* ctx) {

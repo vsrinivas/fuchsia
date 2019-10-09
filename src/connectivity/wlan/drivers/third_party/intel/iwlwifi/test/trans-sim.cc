@@ -194,7 +194,7 @@ static struct iwl_trans* iwl_trans_transport_sim_alloc(const struct iwl_cfg* cfg
 
 static void transport_sim_unbind(void* ctx) {
   struct iwl_trans* trans = (struct iwl_trans*)ctx;
-  device_remove_deprecated(trans->zxdev);
+  device_unbind_reply(trans->zxdev);
 }
 
 static void transport_sim_release(void* ctx) {

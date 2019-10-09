@@ -655,7 +655,7 @@ static void usb_cdc_unbind(void* ctx) {
       complete_txn(txn, ZX_ERR_PEER_CLOSED);
     }
   }
-  device_remove_deprecated(cdc->zxdev);
+  device_unbind_reply(cdc->zxdev);
 }
 
 static void usb_cdc_release(void* ctx) {

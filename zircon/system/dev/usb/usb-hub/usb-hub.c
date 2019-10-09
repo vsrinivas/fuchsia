@@ -284,7 +284,7 @@ static void usb_hub_unbind(void* ctx) {
   sync_completion_signal(&hub->completion);
   thrd_join(hub->thread, NULL);
 
-  device_remove_deprecated(hub->zxdev);
+  device_unbind_reply(hub->zxdev);
 }
 
 static zx_status_t usb_hub_free(usb_hub_t* hub) {

@@ -699,7 +699,7 @@ static void display_release(void* ctx) {
 static void display_unbind(void* ctx) {
   vim2_display_t* display = static_cast<vim2_display_t*>(ctx);
   vim2_audio_shutdown(&display->audio);
-  device_remove_deprecated(display->mydevice);
+  device_unbind_reply(display->mydevice);
 }
 
 zx_status_t display_get_protocol(void* ctx, uint32_t proto_id, void* protocol) {

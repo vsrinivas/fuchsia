@@ -449,7 +449,7 @@ static void dwc3_unbind(void* ctx) {
   auto* dwc = static_cast<dwc3_t*>(ctx);
   dwc->irq_handle.destroy();
   thrd_join(dwc->irq_thread, nullptr);
-  device_remove_deprecated(dwc->zxdev);
+  device_unbind_reply(dwc->zxdev);
 }
 
 static zx_status_t dwc3_get_protocol(void* ctx, uint32_t proto_id, void* out) {
