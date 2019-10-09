@@ -26,6 +26,11 @@
 // function pointer for testability, used to mock out AcpiEvaluateObject where necessary
 typedef ACPI_STATUS (*AcpiObjectEvalFunc)(ACPI_HANDLE, char*, ACPI_OBJECT_LIST*, ACPI_BUFFER*);
 
+// constant used for rate-limiting ACPI event notifications due to some EC
+// implementations that can enter an infinite loop by triggering notifications
+// as a result of ACPI BST object evaluation.
+static const uint8_t ACPI_EVENT_NOTIFY_LIMIT_MS = 10;
+
 typedef struct acpi_battery_device {
   zx_device_t* zxdev;
 
@@ -34,13 +39,11 @@ typedef struct acpi_battery_device {
   ACPI_BUFFER bst_buffer;
   ACPI_BUFFER bif_buffer;
 
-  // thread to poll for battery status
-  thrd_t poll_thread;
-
   mtx_t lock;
 
   // event to notify on
   zx_handle_t event;
+  zx_time_t last_notify_timestamp;
 
   power_info_t power_info;
   battery_info_t battery_info;
@@ -210,11 +213,22 @@ err:
 
 static void acpi_battery_notify(ACPI_HANDLE handle, UINT32 value, void* ctx) {
   acpi_battery_device_t* dev = ctx;
+  zx_time_t timestamp;
+
   zxlogf(TRACE, "acpi-battery: got event 0x%x\n", value);
   switch (value) {
     case 0x80:
+      timestamp = zx_clock_get_monotonic();
+      if (timestamp < (dev->last_notify_timestamp + ZX_MSEC(ACPI_EVENT_NOTIFY_LIMIT_MS))) {
+        // Rate limiting is required here due to some ACPI EC implementations
+        // that trigger event notification directly from evaluation that occurs
+        // in call_BST, which would otherwise create an infinite loop.
+        zxlogf(TRACE, "acpi-battery: rate limiting event 0x%x\n", value);
+        return;
+      }
       // battery state has changed
       call_BST(dev);
+      dev->last_notify_timestamp = timestamp;
       break;
     case 0x81:
       // static battery information has changed
@@ -227,7 +241,6 @@ static void acpi_battery_notify(ACPI_HANDLE handle, UINT32 value, void* ctx) {
 static void acpi_battery_release(void* ctx) {
   acpi_battery_device_t* dev = ctx;
   atomic_store(&dev->shutdown, true);
-  thrd_join(dev->poll_thread, NULL);
 
   AcpiRemoveNotifyHandler(dev->acpi_handle, ACPI_DEVICE_NOTIFY, acpi_battery_notify);
   if (dev->bst_buffer.Length != ACPI_ALLOCATE_BUFFER) {
@@ -250,7 +263,6 @@ static zx_status_t acpi_battery_suspend(void* ctx, uint32_t flags) {
   }
 
   atomic_store(&dev->shutdown, true);
-  thrd_join(dev->poll_thread, NULL);
   return ZX_OK;
 }
 
@@ -323,26 +335,6 @@ static zx_protocol_device_t acpi_battery_device_proto = {
     .suspend = acpi_battery_suspend,
 };
 
-static int acpi_battery_poll_thread(void* arg) {
-  acpi_battery_device_t* dev = arg;
-  while (!atomic_load(&dev->shutdown)) {
-    zx_status_t status = call_BST(dev);
-    if (status != ZX_OK) {
-      goto out;
-    }
-
-    status = call_BIF(dev);
-    if (status != ZX_OK) {
-      goto out;
-    }
-
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(1000)));
-  }
-out:
-  zxlogf(TRACE, "acpi-battery: poll thread exiting\n");
-  return 0;
-}
-
 zx_status_t battery_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
   // driver trace logging can be enabled for debug as needed
   // driver_set_log_flags(driver_get_log_flags() | DDK_LOG_TRACE);
@@ -382,6 +374,8 @@ zx_status_t battery_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
   // use real AcpiEvaluateObject
   dev->acpi_eval = &AcpiEvaluateObject;
 
+  dev->last_notify_timestamp = 0;
+
   // get initial values
   call_STA(dev);
   call_BIF(dev);
@@ -394,15 +388,6 @@ zx_status_t battery_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
     zxlogf(ERROR, "acpi-battery: could not install notify handler\n");
     acpi_battery_release(dev);
     return acpi_to_zx_status(acpi_status);
-  }
-
-  // deprecated - create polling thread
-  int rc =
-      thrd_create_with_name(&dev->poll_thread, acpi_battery_poll_thread, dev, "acpi-battery-poll");
-  if (rc != thrd_success) {
-    zxlogf(ERROR, "acpi-battery: polling thread did not start (%d)\n", rc);
-    acpi_battery_release(dev);
-    return rc;
   }
 
   device_add_args_t args = {
