@@ -5,6 +5,7 @@
 group("examples") {
   deps = [
     "hello_experiences",
+    "localized_flutter_app",
   ]
 }
 
@@ -20,6 +21,7 @@ group("dart_unittests") {
   testonly = true
 
   deps = [
+    "localized_flutter_app:localized_flutter_app_unittests($host_toolchain)",
     "hello_experiences:hello_experiences_unittests($host_toolchain)",
   ]
 }

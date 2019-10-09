@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//topaz/runtime/flutter_runner/flutter_app.gni")
+import("//topaz/runtime/dart/flutter_test.gni")
+
+flutter_app("localized_flutter_app") {
+  main_dart = "lib/main.dart"
+  package_name = "localized_flutter_app"
+
+  sources = []
+
+  deps = [
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
+    "//third_party/dart/third_party/pkg/intl",
+    "//topaz/public/dart/widgets:lib.widgets",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/localized_flutter_app.cmx")
+      dest = "localized_flutter_app.cmx"
+    },
+  ]
+}
+
+flutter_test("localized_flutter_app_unittests") {
+  sources = [
+    "sample_test.dart",
+  ]
+
+  deps = [
+   "//third_party/dart-pkg/pub/test",
+  ]
+}

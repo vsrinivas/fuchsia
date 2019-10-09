@@ -1,0 +1,25 @@
+{
+  "@@last_modified": "2019-01-24T15:29:41.574074",
+  "appTitle": "Localized Mod",
+  "@appTitle": {
+    "description": "Title of the demo application. \"Mod\" is short for \"module\" (can also be translated as \"app\").",
+    "type": "text",
+    "placeholders": {}
+  },
+  "bodyText": "{itemCount,plural, =0{There are no messages.}=1{There is one message.}other{There are {itemCount} messages.}}",
+  "@bodyText": {
+    "description": "How many messages are in the list.",
+    "type": "text",
+    "placeholders": {
+      "itemCount": {
+        "example": 42
+      }
+    }
+  },
+  "footer": "Coming soon: actually reading those messages!",
+  "@footer": {
+    "description": "Footer text of the demo application. Implies that messages cannot currently be read.",
+    "type": "text",
+    "placeholders": {}
+  }
+}
