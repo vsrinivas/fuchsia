@@ -17,14 +17,18 @@ pub trait Hook {
     fn on<'a>(self: Arc<Self>, event: &'a Event<'_>) -> BoxFuture<'a, Result<(), ModelError>>;
 }
 
+// Keep the event types listed below in alphabetical order!
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub enum EventType {
     AddDynamicChild,
-    RemoveDynamicChild,
     BindInstance,
+    // TODO(xbhatnag): Rename DestroyInstance to PostDestroyInstance
+    DestroyInstance,
+    // TODO(xbhatnag): Unify PreDestroyInstance and RemoveDynamicChild
+    PreDestroyInstance,
+    RemoveDynamicChild,
     RouteFrameworkCapability,
     StopInstance,
-    DestroyInstance,
 }
 
 pub struct HookRegistration {
@@ -32,17 +36,25 @@ pub struct HookRegistration {
     pub callback: Arc<dyn Hook + Send + Sync>,
 }
 
+// Keep the events listed below in alphabetical order!
 pub enum Event<'a> {
     AddDynamicChild {
-        realm: Arc<Realm>,
-    },
-    RemoveDynamicChild {
         realm: Arc<Realm>,
     },
     BindInstance {
         realm: Arc<Realm>,
         realm_state: &'a RealmState,
         routing_facade: RoutingFacade,
+    },
+    DestroyInstance {
+        realm: Arc<Realm>,
+    },
+    PreDestroyInstance {
+        parent_realm: Arc<Realm>,
+        child_moniker: ChildMoniker,
+    },
+    RemoveDynamicChild {
+        realm: Arc<Realm>,
     },
     RouteFrameworkCapability {
         realm: Arc<Realm>,
@@ -55,20 +67,18 @@ pub enum Event<'a> {
     StopInstance {
         realm: Arc<Realm>,
     },
-    DestroyInstance {
-        realm: Arc<Realm>,
-    },
 }
 
 impl Event<'_> {
     pub fn type_(&self) -> EventType {
         match self {
             Event::AddDynamicChild { .. } => EventType::AddDynamicChild,
-            Event::RemoveDynamicChild { .. } => EventType::RemoveDynamicChild,
             Event::BindInstance { .. } => EventType::BindInstance,
+            Event::DestroyInstance { .. } => EventType::DestroyInstance,
+            Event::PreDestroyInstance { .. } => EventType::PreDestroyInstance,
+            Event::RemoveDynamicChild { .. } => EventType::RemoveDynamicChild,
             Event::RouteFrameworkCapability { .. } => EventType::RouteFrameworkCapability,
             Event::StopInstance { .. } => EventType::StopInstance,
-            Event::DestroyInstance { .. } => EventType::DestroyInstance,
         }
     }
 }

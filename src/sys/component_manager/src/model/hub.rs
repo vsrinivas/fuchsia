@@ -11,6 +11,7 @@ use {
             addable_directory::{AddableDirectory, AddableDirectoryWithResult},
             error::ModelError,
             hooks::*,
+            ChildMoniker,
         },
     },
     cm_rust::FrameworkCapabilityDecl,
@@ -78,6 +79,7 @@ struct Instance {
     pub execution: Option<Execution>,
     pub directory: directory::controlled::Controller<'static>,
     pub children_directory: directory::controlled::Controller<'static>,
+    pub deleting_directory: directory::controlled::Controller<'static>,
 }
 
 /// The execution state for a component that has started running.
@@ -112,7 +114,7 @@ impl Hub {
                 callback: self.inner.clone(),
             },
             HookRegistration {
-                event_type: EventType::RemoveDynamicChild,
+                event_type: EventType::PreDestroyInstance,
                 callback: self.inner.clone(),
             },
             HookRegistration { event_type: EventType::BindInstance, callback: self.inner.clone() },
@@ -220,6 +222,11 @@ impl HubInner {
             directory::controlled::controlled(directory::simple::empty());
         instance_controlled.add_node("children", children_controlled, &abs_moniker)?;
 
+        // Add a deleting directory.
+        let (deleting_controller, deleting_controlled) =
+            directory::controlled::controlled(directory::simple::empty());
+        instance_controlled.add_node("deleting", deleting_controlled, &abs_moniker)?;
+
         instance_map.insert(
             abs_moniker.clone(),
             Instance {
@@ -228,6 +235,7 @@ impl HubInner {
                 execution: None,
                 directory: instance_controller,
                 children_directory: children_controller,
+                deleting_directory: deleting_controller,
             },
         );
 
@@ -433,7 +441,7 @@ impl HubInner {
             realm.abs_moniker.parent().expect("a root component cannot be dynamic");
         let leaf = realm.abs_moniker.leaf().expect("a root component cannot be dynamic");
 
-        instance_map[&parent_moniker].children_directory.remove_node(leaf.as_str()).await?;
+        instance_map[&parent_moniker].deleting_directory.remove_node(leaf.as_str()).await?;
         instance_map
             .remove(&realm.abs_moniker)
             .expect("the dynamic component must exist in the instance map");
@@ -444,6 +452,32 @@ impl HubInner {
         let mut instance_map = self.instances.lock().await;
         instance_map[&realm.abs_moniker].directory.remove_node("exec").await?;
         instance_map.get_mut(&realm.abs_moniker).expect("instance must exist").execution = None;
+        Ok(())
+    }
+
+    async fn on_pre_destroy_instance_async(
+        &self,
+        parent_realm: Arc<model::Realm>,
+        child_moniker: ChildMoniker,
+    ) -> Result<(), ModelError> {
+        let instance_map = self.instances.lock().await;
+
+        let moniker = parent_realm.abs_moniker.child(child_moniker);
+
+        let parent_moniker = moniker.parent().expect("A root component cannot be destroyed");
+        let leaf = moniker.leaf().expect("A root component cannot be destroyed");
+
+        let directory = instance_map[&parent_moniker]
+            .children_directory
+            .remove_node(leaf.as_str())
+            .await?
+            .ok_or(ModelError::remove_entry_error(leaf.as_str()))?;
+
+        instance_map[&parent_moniker]
+            .deleting_directory
+            .add_node(leaf.as_str(), directory, &moniker)
+            .await?;
+
         Ok(())
     }
 
@@ -494,6 +528,10 @@ impl model::Hook for HubInner {
                 Event::AddDynamicChild { realm } => {
                     self.on_add_dynamic_child_async(realm.clone()).await?;
                 }
+                Event::PreDestroyInstance { parent_realm, child_moniker } => {
+                    self.on_pre_destroy_instance_async(parent_realm.clone(), child_moniker.clone())
+                        .await?;
+                }
                 Event::StopInstance { realm } => {
                     self.on_stop_instance_async(realm.clone()).await?;
                 }
@@ -510,7 +548,7 @@ impl model::Hook for HubInner {
                         )
                         .await?;
                 }
-                _ => (),
+                _ => {}
             };
             Ok(())
         })

@@ -243,6 +243,10 @@ async fn do_delete_child(
         // Child was not found.
         NotFound,
     }
+    let event =
+        Event::PreDestroyInstance { parent_realm: realm.clone(), child_moniker: moniker.clone() };
+    realm.hooks.dispatch(&event).await?;
+
     let result = {
         let state = realm.lock_state().await;
         let state = state.as_ref().expect("do_delete_child: not resolved");

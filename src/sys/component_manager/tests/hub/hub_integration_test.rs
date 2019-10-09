@@ -4,7 +4,7 @@
 
 use {
     component_manager_lib::{
-        model::{self, hooks::*, testing::test_helpers, Hub, Model},
+        model::{self, hooks::*, testing::test_helpers, Hub, Model, AbsoluteMoniker},
         startup,
     },
     failure::{self, Error},
@@ -69,24 +69,15 @@ impl TestRunner {
 
     async fn new_with_breakpoints(
         root_component_url: &str,
-        breakpoints: Vec<BreakpointEvent>,
+        event_types: Vec<EventType>,
     ) -> Result<Self, Error> {
         let model = create_model(root_component_url).await?;
         let (hub, hub_proxy) = install_hub(&model).await?;
         let hub_test_hook = install_hub_test_hook(&model).await;
 
-        let hooks = breakpoints
-            .iter()
-            .map(|breakpoint| match breakpoint {
-                BreakpointEvent::OnStop => HookRegistration {
-                    event_type: EventType::StopInstance,
-                    callback: hub_test_hook.clone(),
-                },
-                BreakpointEvent::OnDestroy => HookRegistration {
-                    event_type: EventType::DestroyInstance,
-                    callback: hub_test_hook.clone(),
-                },
-            })
+        let hooks = event_types
+            .into_iter()
+            .map(|event_type| HookRegistration { event_type, callback: hub_test_hook.clone() })
             .collect();
         model.root_realm.hooks.install(hooks).await;
 
@@ -97,10 +88,11 @@ impl TestRunner {
         Ok(Self { model, hub, hub_proxy, hub_test_hook })
     }
 
-    async fn expect_breakpoint(&self, event: BreakpointEvent, component_url: &str) -> Breakpoint {
+    async fn expect_breakpoint(&self, expected_event: EventType, components: Vec<&str>) -> Breakpoint {
         let breakpoint = self.hub_test_hook.wait_for_breakpoint().await;
-        assert_eq!(breakpoint.event, event);
-        assert_eq!(breakpoint.realm.component_url, component_url);
+        let expected_moniker = AbsoluteMoniker::from(components);
+        assert_eq!(breakpoint.event, expected_event);
+        assert_eq!(breakpoint.moniker, expected_moniker);
         breakpoint
     }
 
@@ -271,7 +263,7 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/hub_collection_realm.cm";
     let test_runner = TestRunner::new_with_breakpoints(
         root_component_url,
-        vec![BreakpointEvent::OnStop, BreakpointEvent::OnDestroy],
+        vec![EventType::PreDestroyInstance, EventType::StopInstance, EventType::DestroyInstance],
     )
     .await?;
 
@@ -281,7 +273,10 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
     // Before binding, verify that the dynamic child's hub has the directories we expect
     // i.e. "children" and "url" but no "exec" because the child has not been bound.
     test_runner
-        .verify_directory_listing("children/coll:simple_instance:1", vec!["children", "url"])
+        .verify_directory_listing(
+            "children/coll:simple_instance:1",
+            vec!["children", "deleting", "url"],
+        )
         .await;
 
     // Before binding, verify that the dynamic child's static children are invisible
@@ -291,7 +286,7 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
     test_runner
         .verify_directory_listing(
             "children/coll:simple_instance:1",
-            vec!["children", "exec", "url"],
+            vec!["children", "deleting", "exec", "url"],
         )
         .await;
 
@@ -300,17 +295,69 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
         .verify_directory_listing("children/coll:simple_instance:1/children", vec!["child:0"])
         .await;
 
+    // Wait for the dynamic child to begin deletion
+    let breakpoint = test_runner
+        .expect_breakpoint(
+            EventType::PreDestroyInstance,
+            vec!["coll:simple_instance:1"]
+        )
+        .await;
+
+    // When deletion begins, the dynamic child should be moved to the deleting directory
+    test_runner.verify_global_directory_listing("children", vec![]).await;
+    test_runner.verify_global_directory_listing("deleting", vec!["coll:simple_instance:1"]).await;
+    test_runner
+        .verify_global_directory_listing(
+            "deleting/coll:simple_instance:1",
+            vec!["children", "deleting", "exec", "url"],
+        )
+        .await;
+
+    // Unblock the ComponentManager
+    breakpoint.resume();
+
     // Wait for the dynamic child to stop
     let breakpoint = test_runner
         .expect_breakpoint(
-            BreakpointEvent::OnStop,
-            "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/simple.cm",
+            EventType::StopInstance,
+            vec!["coll:simple_instance:1"],
         )
         .await;
 
     // After stopping, the dynamic child should not have an exec directory
     test_runner
-        .verify_global_directory_listing("children/coll:simple_instance:1", vec!["children", "url"])
+        .verify_global_directory_listing(
+            "deleting/coll:simple_instance:1",
+            vec!["children", "deleting", "url"],
+        )
+        .await;
+
+    // Unblock the Component Manager
+    breakpoint.resume();
+
+    // Wait for the dynamic child's static child to begin deletion
+    let breakpoint = test_runner
+        .expect_breakpoint(
+            EventType::PreDestroyInstance,
+            vec!["coll:simple_instance:1", "child:0"],
+        )
+        .await;
+
+    // When deletion begins, the dynamic child's static child should be moved to the deleting directory
+    test_runner
+        .verify_global_directory_listing("deleting/coll:simple_instance:1/children", vec![])
+        .await;
+    test_runner
+        .verify_global_directory_listing(
+            "deleting/coll:simple_instance:1/deleting",
+            vec!["child:0"],
+        )
+        .await;
+    test_runner
+        .verify_global_directory_listing(
+            "deleting/coll:simple_instance:1/deleting/child:0",
+            vec!["children", "deleting", "url"],
+        )
         .await;
 
     // Unblock the Component Manager
@@ -319,14 +366,14 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
     // Wait for the dynamic child's static child to be destroyed
     let breakpoint = test_runner
         .expect_breakpoint(
-            BreakpointEvent::OnDestroy,
-            "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/hub_client.cm",
+            EventType::DestroyInstance,
+            vec!["coll:simple_instance:1", "child:0"],
         )
         .await;
 
     // The dynamic child's static child should not be visible in the hub anymore
     test_runner
-        .verify_global_directory_listing("children/coll:simple_instance:1/children", vec![])
+        .verify_global_directory_listing("deleting/coll:simple_instance:1/deleting", vec![])
         .await;
 
     // Unblock the Component Manager
@@ -335,13 +382,13 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
     // Wait for the dynamic child to be destroyed
     let breakpoint = test_runner
         .expect_breakpoint(
-            BreakpointEvent::OnDestroy,
-            "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/simple.cm",
+            EventType::DestroyInstance,
+            vec!["coll:simple_instance:1"],
         )
         .await;
 
     // After deletion, verify that parent can no longer see the dynamic child in the Hub
-    test_runner.verify_global_directory_listing("children", vec![]).await;
+    test_runner.verify_global_directory_listing("deleting", vec![]).await;
 
     // Unblock the Component Manager
     breakpoint.resume();
@@ -359,7 +406,9 @@ async fn grandchild_of_lazy_child_is_not_shown_test() -> Result<(), Error> {
 
     // Verify that the child's hub has the directories we expect
     // i.e. "children" and "url" but no "exec" because the child has not been bound.
-    test_runner.verify_directory_listing("children/child:0", vec!["children", "url"]).await;
+    test_runner
+        .verify_directory_listing("children/child:0", vec!["children", "deleting", "url"])
+        .await;
 
     // Verify that the grandchild is not shown because the child is lazy
     test_runner.verify_directory_listing("children/child:0/children", vec![]).await;
