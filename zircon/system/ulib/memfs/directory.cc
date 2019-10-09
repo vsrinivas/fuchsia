@@ -114,8 +114,9 @@ zx_status_t VnodeDir::GetAttributes(fs::VnodeAttributes* attr) {
   return ZX_OK;
 }
 
-zx_status_t VnodeDir::GetNodeInfo([[maybe_unused]] fs::Rights rights, fuchsia_io_NodeInfo* info) {
-  info->tag = fuchsia_io_NodeInfoTag_directory;
+zx_status_t VnodeDir::GetNodeInfo([[maybe_unused]] fs::Rights rights,
+                                  fs::VnodeRepresentation* info) {
+  *info = fs::VnodeRepresentation::Directory();
   return ZX_OK;
 }
 

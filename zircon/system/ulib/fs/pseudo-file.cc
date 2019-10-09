@@ -44,8 +44,8 @@ zx_status_t PseudoFile::GetAttributes(VnodeAttributes* attr) {
 
 bool PseudoFile::IsDirectory() const { return false; }
 
-zx_status_t PseudoFile::GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) {
-  info->tag = fuchsia_io_NodeInfoTag_file;
+zx_status_t PseudoFile::GetNodeInfo(Rights rights, VnodeRepresentation* info) {
+  *info = VnodeRepresentation::File();
   return ZX_OK;
 }
 
@@ -160,7 +160,8 @@ zx_status_t BufferedPseudoFile::Content::Truncate(size_t length) {
 
 bool BufferedPseudoFile::Content::IsDirectory() const { return false; }
 
-zx_status_t BufferedPseudoFile::Content::GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) {
+zx_status_t BufferedPseudoFile::Content::GetNodeInfo(fs::Rights rights,
+                                                     fs::VnodeRepresentation* info) {
   return file_->GetNodeInfo(rights, info);
 }
 
@@ -274,7 +275,8 @@ zx_status_t UnbufferedPseudoFile::Content::Truncate(size_t length) {
 
 bool UnbufferedPseudoFile::Content::IsDirectory() const { return false; }
 
-zx_status_t UnbufferedPseudoFile::Content::GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) {
+zx_status_t UnbufferedPseudoFile::Content::GetNodeInfo(Rights rights,
+                                                       fs::VnodeRepresentation* info) {
   return file_->GetNodeInfo(rights, info);
 }
 

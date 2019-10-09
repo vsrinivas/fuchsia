@@ -53,7 +53,7 @@ class PseudoFile : public Vnode {
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
 
   bool IsDirectory() const final;
-  zx_status_t GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) final;
+  zx_status_t GetNodeInfo(Rights rights, VnodeRepresentation* info) final;
 
  protected:
   PseudoFile(ReadHandler read_handler, WriteHandler write_handler);
@@ -117,7 +117,7 @@ class BufferedPseudoFile : public PseudoFile {
     zx_status_t Append(const void* data, size_t length, size_t* out_end, size_t* out_actual) final;
     zx_status_t Truncate(size_t length) final;
     bool IsDirectory() const final;
-    zx_status_t GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) final;
+    zx_status_t GetNodeInfo(Rights rights, fs::VnodeRepresentation* info) final;
 
    private:
     void SetInputLength(size_t length);
@@ -202,7 +202,7 @@ class UnbufferedPseudoFile : public PseudoFile {
     zx_status_t Append(const void* data, size_t length, size_t* out_end, size_t* out_actual) final;
     zx_status_t Truncate(size_t length) final;
     bool IsDirectory() const final;
-    zx_status_t GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) final;
+    zx_status_t GetNodeInfo(Rights rights, fs::VnodeRepresentation* info) final;
 
    private:
     fbl::RefPtr<UnbufferedPseudoFile> const file_;

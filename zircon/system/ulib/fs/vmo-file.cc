@@ -108,7 +108,7 @@ zx_status_t VmoFile::Write(const void* data, size_t length, size_t offset, size_
   return status;
 }
 
-zx_status_t VmoFile::GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) {
+zx_status_t VmoFile::GetNodeInfo(Rights rights, VnodeRepresentation* info) {
   ZX_DEBUG_ASSERT(!rights.write || writable_);  // checked by the VFS
 
   zx::vmo vmo;
@@ -118,10 +118,8 @@ zx_status_t VmoFile::GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) {
     return status;
   }
 
-  info->tag = fuchsia_io_NodeInfoTag_vmofile;
-  info->vmofile.vmo = vmo.release();
-  info->vmofile.offset = offset;
-  info->vmofile.length = length_;
+  *info =
+      fs::VnodeRepresentation::Memory{.vmo = std::move(vmo), .offset = offset, .length = length_};
   return ZX_OK;
 }
 

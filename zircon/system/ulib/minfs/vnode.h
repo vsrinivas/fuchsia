@@ -404,7 +404,7 @@ class VnodeMinfs : public fs::Vnode,
   void Purge(PendingWork* transaction);
 
 #ifdef __Fuchsia__
-  zx_status_t GetNodeInfo(fs::Rights rights, fuchsia_io_NodeInfo* info) final;
+  zx_status_t GetNodeInfo(fs::Rights rights, fs::VnodeRepresentation* info) final;
 
   void Sync(SyncCallback closure) final;
   zx_status_t AttachRemote(fs::MountChannel h) final;

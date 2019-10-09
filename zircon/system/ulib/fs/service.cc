@@ -37,8 +37,8 @@ zx_status_t Service::Serve(Vfs* vfs, zx::channel channel, fs::VnodeConnectionOpt
 
 bool Service::IsDirectory() const { return false; }
 
-zx_status_t Service::GetNodeInfo([[maybe_unused]] Rights rights, fuchsia_io_NodeInfo* info) {
-  info->tag = fuchsia_io_NodeInfoTag_service;
+zx_status_t Service::GetNodeInfo([[maybe_unused]] Rights rights, VnodeRepresentation* info) {
+  *info = fs::VnodeRepresentation::Connector();
   return ZX_OK;
 }
 

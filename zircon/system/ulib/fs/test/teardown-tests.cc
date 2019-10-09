@@ -41,8 +41,8 @@ class FdCountVnode : public fs::Vnode {
 
   bool IsDirectory() const final { return false; }
 
-  zx_status_t GetNodeInfo([[maybe_unused]] fs::Rights rights, fuchsia_io_NodeInfo* info) {
-    info->tag = fuchsia_io_NodeInfoTag_service;
+  zx_status_t GetNodeInfo([[maybe_unused]] fs::Rights rights, fs::VnodeRepresentation* info) {
+    *info = fs::VnodeRepresentation::Connector();
     return ZX_OK;
   }
 

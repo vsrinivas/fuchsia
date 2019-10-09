@@ -37,8 +37,8 @@ class TestNode : public CacheNode, fbl::Recyclable<TestNode> {
 
   bool IsDirectory() const final { return false; }
 
-  zx_status_t GetNodeInfo(fs::Rights rights, fuchsia_io_NodeInfo* info) {
-    info->tag = fuchsia_io_NodeInfoTag_service;
+  zx_status_t GetNodeInfo(fs::Rights rights, fs::VnodeRepresentation* representation) {
+    *representation = fs::VnodeRepresentation::Connector();
     return ZX_OK;
   }
 

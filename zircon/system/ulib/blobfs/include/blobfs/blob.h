@@ -143,7 +143,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   ////////////////
   // fs::Vnode interface.
 
-  zx_status_t GetNodeInfo(fs::Rights rights, fuchsia_io_NodeInfo* info) final;
+  zx_status_t GetNodeInfo(fs::Rights rights, fs::VnodeRepresentation* info) final;
   zx_status_t ValidateOptions(fs::VnodeConnectionOptions options) final;
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
   zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final;
@@ -171,9 +171,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Returns a handle to an event which will be signalled when
   // the blob is readable.
   //
-  // Returns "ZX_OK" if blob is already readable.
-  // Otherwise, returns size of the handle.
-  zx_status_t GetReadableEvent(zx_handle_t* out);
+  // Returns "ZX_OK" if successful, otherwise the error code
+  // will indicate the failure status.
+  zx_status_t GetReadableEvent(zx::event* out);
 
   // Returns a clone of the blobfs VMO.
   //

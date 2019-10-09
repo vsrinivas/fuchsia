@@ -107,8 +107,8 @@ zx_status_t ServiceProviderDirImpl::Readdir(fs::vdircookie_t* cookie, void* dire
 }
 
 zx_status_t ServiceProviderDirImpl::GetNodeInfo([[maybe_unused]] fs::Rights rights,
-                                                fuchsia_io_NodeInfo* info) {
-  info->tag = fuchsia_io_NodeInfoTag_directory;
+                                                fs::VnodeRepresentation* representation) {
+  *representation = fs::VnodeRepresentation::Directory();
   return ZX_OK;
 }
 

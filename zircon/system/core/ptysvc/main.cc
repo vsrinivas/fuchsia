@@ -21,9 +21,10 @@ class PtyGeneratingVnode : public fs::Vnode {
  public:
   ~PtyGeneratingVnode() override = default;
 
-  zx_status_t GetNodeInfo([[maybe_unused]] fs::Rights rights, fuchsia_io_NodeInfo* info) override {
+  zx_status_t GetNodeInfo([[maybe_unused]] fs::Rights rights,
+                          fs::VnodeRepresentation* info) override {
     // This should only actually be seen by something querying with VNODE_REF_ONLY.
-    info->tag = fuchsia_io_NodeInfoTag_service;
+    *info = fs::VnodeRepresentation::Connector();
     return ZX_OK;
   }
 

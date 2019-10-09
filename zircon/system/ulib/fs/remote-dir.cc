@@ -28,8 +28,8 @@ bool RemoteDir::IsRemote() const { return true; }
 
 zx_handle_t RemoteDir::GetRemote() const { return remote_dir_client_.get(); }
 
-zx_status_t RemoteDir::GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) {
-  info->tag = fuchsia_io_NodeInfoTag_directory;
+zx_status_t RemoteDir::GetNodeInfo(Rights rights, VnodeRepresentation* info) {
+  *info = fs::VnodeRepresentation::Directory();
   return ZX_OK;
 }
 

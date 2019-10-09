@@ -16,6 +16,7 @@
 namespace {
 
 using VnodeOptions = fs::VnodeConnectionOptions;
+using VnodeInfo = fs::VnodeRepresentation;
 
 constexpr size_t VMO_SIZE = PAGE_SIZE * 3u;
 constexpr size_t PAGE_0 = 0u;
@@ -363,7 +364,7 @@ bool TestGetNodeInfo() {
     zx::vmo abc;
     ASSERT_TRUE(CreateVmoABC(&abc));
 
-    fuchsia_io_NodeInfo info;
+    fs::VnodeRepresentation info;
     fs::VmoFile file(abc, PAGE_1 - 5u, 23u, false, fs::VmoFile::VmoSharing::NONE);
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, file.GetNodeInfo(fs::Rights::ReadOnly(), &info));
   }
@@ -373,16 +374,17 @@ bool TestGetNodeInfo() {
     zx::vmo abc;
     ASSERT_TRUE(CreateVmoABC(&abc));
 
-    fuchsia_io_NodeInfo info;
+    fs::VnodeRepresentation info;
     fs::VmoFile file(abc, PAGE_1 - 5u, 23u, false, fs::VmoFile::VmoSharing::DUPLICATE);
     EXPECT_EQ(ZX_OK, file.GetNodeInfo(fs::Rights::ReadOnly(), &info));
-    zx::vmo vmo(info.vmofile.vmo);
+    ASSERT_TRUE(info.is_memory());
+    VnodeInfo::Memory& memory = info.memory();
+    zx::vmo vmo = std::move(memory.vmo);
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
     EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ, GetRights(vmo.get()));
-    EXPECT_EQ(fuchsia_io_NodeInfoTag_vmofile, info.tag);
-    EXPECT_EQ(PAGE_1 - 5u, info.vmofile.offset);
-    EXPECT_EQ(23u, info.vmofile.length);
+    EXPECT_EQ(PAGE_1 - 5u, memory.offset);
+    EXPECT_EQ(23u, memory.length);
 
     EXPECT_TRUE(CheckVmo(vmo, PAGE_1 - 5u, 5u, 'A'));
     EXPECT_TRUE(CheckVmo(vmo, PAGE_1, 18u, 'B'));
@@ -393,17 +395,18 @@ bool TestGetNodeInfo() {
     zx::vmo abc;
     ASSERT_TRUE(CreateVmoABC(&abc));
 
-    fuchsia_io_NodeInfo info;
+    fs::VnodeRepresentation info;
     fs::VmoFile file(abc, PAGE_1 - 5u, 23u, true, fs::VmoFile::VmoSharing::DUPLICATE);
     EXPECT_EQ(ZX_OK, file.GetNodeInfo(fs::Rights::ReadWrite(), &info));
-    zx::vmo vmo(info.vmofile.vmo);
+    ASSERT_TRUE(info.is_memory());
+    VnodeInfo::Memory& memory = info.memory();
+    zx::vmo vmo = std::move(memory.vmo);
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
     EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_WRITE,
               GetRights(vmo.get()));
-    EXPECT_EQ(fuchsia_io_NodeInfoTag_vmofile, info.tag);
-    EXPECT_EQ(PAGE_1 - 5u, info.vmofile.offset);
-    EXPECT_EQ(23u, info.vmofile.length);
+    EXPECT_EQ(PAGE_1 - 5u, memory.offset);
+    EXPECT_EQ(23u, memory.length);
 
     EXPECT_TRUE(CheckVmo(vmo, PAGE_1 - 5u, 5u, 'A'));
     EXPECT_TRUE(CheckVmo(vmo, PAGE_1, 18u, 'B'));
@@ -421,16 +424,17 @@ bool TestGetNodeInfo() {
     zx::vmo abc;
     ASSERT_TRUE(CreateVmoABC(&abc));
 
-    fuchsia_io_NodeInfo info;
+    fs::VnodeRepresentation info;
     fs::VmoFile file(abc, PAGE_1 - 5u, 23u, true, fs::VmoFile::VmoSharing::DUPLICATE);
     EXPECT_EQ(ZX_OK, file.GetNodeInfo(fs::Rights::WriteOnly(), &info));
-    zx::vmo vmo(info.vmofile.vmo);
+    ASSERT_TRUE(info.is_memory());
+    VnodeInfo::Memory& memory = info.memory();
+    zx::vmo vmo = std::move(memory.vmo);
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
     EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_WRITE, GetRights(vmo.get()));
-    EXPECT_EQ(fuchsia_io_NodeInfoTag_vmofile, info.tag);
-    EXPECT_EQ(PAGE_1 - 5u, info.vmofile.offset);
-    EXPECT_EQ(23u, info.vmofile.length);
+    EXPECT_EQ(PAGE_1 - 5u, memory.offset);
+    EXPECT_EQ(23u, memory.length);
 
     EXPECT_TRUE(FillVmo(vmo, PAGE_1 - 5u, 23u, '!'));
 
@@ -445,20 +449,21 @@ bool TestGetNodeInfo() {
     zx::vmo abc;
     ASSERT_TRUE(CreateVmoABC(&abc));
 
-    fuchsia_io_NodeInfo info;
+    fs::VnodeRepresentation info;
     fs::VmoFile file(abc, PAGE_2 - 5u, 23u, false, fs::VmoFile::VmoSharing::CLONE_COW);
     // There is non-trivial lazy initialization happening here - repeat it
     // to make sure it's nice and deterministic.
     for (int i = 0; i < 2; i++) {
       EXPECT_EQ(ZX_OK, file.GetNodeInfo(fs::Rights::ReadOnly(), &info));
     }
-    zx::vmo vmo(info.vmofile.vmo);
+    ASSERT_TRUE(info.is_memory());
+    VnodeInfo::Memory& memory = info.memory();
+    zx::vmo vmo = std::move(memory.vmo);
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
     EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ, GetRights(vmo.get()));
-    EXPECT_EQ(fuchsia_io_NodeInfoTag_vmofile, info.tag);
-    EXPECT_EQ(PAGE_SIZE - 5u, info.vmofile.offset);
-    EXPECT_EQ(23u, info.vmofile.length);
+    EXPECT_EQ(PAGE_SIZE - 5u, memory.offset);
+    EXPECT_EQ(23u, memory.length);
 
     EXPECT_TRUE(CheckVmo(vmo, PAGE_SIZE - 5u, 5u, 'B'));
     EXPECT_TRUE(CheckVmo(vmo, PAGE_SIZE, 18u, 'C'));
@@ -469,17 +474,18 @@ bool TestGetNodeInfo() {
     zx::vmo abc;
     ASSERT_TRUE(CreateVmoABC(&abc));
 
-    fuchsia_io_NodeInfo info;
+    fs::VnodeRepresentation info;
     fs::VmoFile file(abc, PAGE_2 - 5u, 23u, true, fs::VmoFile::VmoSharing::CLONE_COW);
     EXPECT_EQ(ZX_OK, file.GetNodeInfo(fs::Rights::ReadWrite(), &info));
-    zx::vmo vmo(info.vmofile.vmo);
+    ASSERT_TRUE(info.is_memory());
+    VnodeInfo::Memory& memory = info.memory();
+    zx::vmo vmo = std::move(memory.vmo);
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
     EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_WRITE,
               GetRights(vmo.get()));
-    EXPECT_EQ(fuchsia_io_NodeInfoTag_vmofile, info.tag);
-    EXPECT_EQ(PAGE_SIZE - 5u, info.vmofile.offset);
-    EXPECT_EQ(23u, info.vmofile.length);
+    EXPECT_EQ(PAGE_SIZE - 5u, memory.offset);
+    EXPECT_EQ(23u, memory.length);
 
     EXPECT_TRUE(CheckVmo(vmo, PAGE_SIZE - 5u, 5u, 'B'));
     EXPECT_TRUE(CheckVmo(vmo, PAGE_SIZE, 18u, 'C'));
@@ -496,16 +502,17 @@ bool TestGetNodeInfo() {
     zx::vmo abc;
     ASSERT_TRUE(CreateVmoABC(&abc));
 
-    fuchsia_io_NodeInfo info;
+    fs::VnodeRepresentation info;
     fs::VmoFile file(abc, PAGE_2 - 5u, 23u, true, fs::VmoFile::VmoSharing::CLONE_COW);
     EXPECT_EQ(ZX_OK, file.GetNodeInfo(fs::Rights::WriteOnly(), &info));
-    zx::vmo vmo(info.vmofile.vmo);
+    ASSERT_TRUE(info.is_memory());
+    VnodeInfo::Memory& memory = info.memory();
+    zx::vmo vmo = std::move(memory.vmo);
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
     EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_WRITE, GetRights(vmo.get()));
-    EXPECT_EQ(fuchsia_io_NodeInfoTag_vmofile, info.tag);
-    EXPECT_EQ(PAGE_SIZE - 5u, info.vmofile.offset);
-    EXPECT_EQ(23u, info.vmofile.length);
+    EXPECT_EQ(PAGE_SIZE - 5u, memory.offset);
+    EXPECT_EQ(23u, memory.length);
 
     EXPECT_TRUE(FillVmo(vmo, PAGE_SIZE - 5u, 23u, '!'));
 

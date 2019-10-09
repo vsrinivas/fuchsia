@@ -142,8 +142,9 @@ zx_status_t VnodeFile::GetAttributes(fs::VnodeAttributes* attr) {
   return ZX_OK;
 }
 
-zx_status_t VnodeFile::GetNodeInfo([[maybe_unused]] fs::Rights rights, fuchsia_io_NodeInfo* info) {
-  info->tag = fuchsia_io_NodeInfoTag_file;
+zx_status_t VnodeFile::GetNodeInfo([[maybe_unused]] fs::Rights rights,
+                                   fs::VnodeRepresentation* info) {
+  *info = fs::VnodeRepresentation::File();
   return ZX_OK;
 }
 

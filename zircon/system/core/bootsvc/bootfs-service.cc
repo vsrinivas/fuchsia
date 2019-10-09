@@ -68,20 +68,20 @@ zx_status_t BootfsService::Open(const char* path, zx::vmo* vmo, size_t* size) {
   }
   ZX_ASSERT(path_out.size() == 0);
 
-  fuchsia_io_NodeInfo info;
+  fs::VnodeRepresentation info;
   status = node->GetNodeInfo(fs::Rights::ReadOnly(), &info);
   if (status != ZX_OK) {
     return status;
   }
 
-  if (info.tag != fuchsia_io_NodeInfoTag_vmofile) {
+  if (!info.is_memory()) {
     return ZX_ERR_WRONG_TYPE;
   }
-  ZX_ASSERT(info.vmofile.offset == 0);
-  zx::vmo underlying_vmo(info.vmofile.vmo);
+  fs::VnodeRepresentation::Memory& memory = info.memory();
+  ZX_ASSERT(memory.offset == 0);
 
-  *vmo = std::move(underlying_vmo);
-  *size = info.vmofile.length;
+  *vmo = std::move(memory.vmo);
+  *size = memory.length;
   return ZX_OK;
 }
 

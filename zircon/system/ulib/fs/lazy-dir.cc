@@ -89,8 +89,8 @@ zx_status_t LazyDir::Readdir(vdircookie_t* cookie, void* dirents, size_t len, si
   return ZX_OK;
 }
 
-zx_status_t LazyDir::GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) {
-  info->tag = fuchsia_io_NodeInfoTag_directory;
+zx_status_t LazyDir::GetNodeInfo(Rights rights, VnodeRepresentation* representation) {
+  *representation = fs::VnodeRepresentation::Directory();
   return ZX_OK;
 }
 

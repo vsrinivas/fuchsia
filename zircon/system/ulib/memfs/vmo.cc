@@ -53,7 +53,7 @@ zx_status_t VnodeVmo::ValidateOptions(fs::VnodeConnectionOptions options) {
   return ZX_OK;
 }
 
-zx_status_t VnodeVmo::GetNodeInfo(fs::Rights rights, fuchsia_io_NodeInfo* info) {
+zx_status_t VnodeVmo::GetNodeInfo(fs::Rights rights, fs::VnodeRepresentation* info) {
   zx_info_handle_basic_t handle_info;
   zx_status_t status =
       zx_object_get_info(vmo_, ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info), NULL, NULL);
@@ -79,10 +79,8 @@ zx_status_t VnodeVmo::GetNodeInfo(fs::Rights rights, fuchsia_io_NodeInfo* info) 
     return status;
   }
 
-  info->tag = fuchsia_io_NodeInfoTag_vmofile;
-  info->vmofile.vmo = vmo;
-  info->vmofile.offset = offset_;
-  info->vmofile.length = length_;
+  *info =
+      fs::VnodeRepresentation::Memory{.vmo = zx::vmo(vmo), .offset = offset_, .length = length_};
   return ZX_OK;
 }
 

@@ -18,6 +18,7 @@
 #include <zircon/assert.h>
 
 #include <memory>
+#include <type_traits>
 #include <utility>
 
 #include <fbl/string_buffer.h>
@@ -53,7 +54,42 @@ zx_status_t GetNodeInfo(const fbl::RefPtr<Vnode>& vn, VnodeConnectionOptions opt
     info->tag = fuchsia_io_NodeInfoTag_service;
     return ZX_OK;
   } else {
-    return vn->GetNodeInfo(options.rights, info);
+    fs::VnodeRepresentation representation;
+    zx_status_t status = vn->GetNodeInfo(options.rights, &representation);
+    if (status != ZX_OK) {
+      return status;
+    }
+    representation.visit([info](auto&& repr) {
+      using T = std::decay_t<decltype(repr)>;
+      if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Connector>) {
+        info->tag = fuchsia_io_NodeInfoTag_service;
+      } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::File>) {
+        info->tag = fuchsia_io_NodeInfoTag_file;
+        info->file.event = repr.observer.release();
+      } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Directory>) {
+        info->tag = fuchsia_io_NodeInfoTag_directory;
+      } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Pipe>) {
+        info->tag = fuchsia_io_NodeInfoTag_pipe;
+        info->pipe.socket = repr.socket.release();
+      } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Memory>) {
+        info->tag = fuchsia_io_NodeInfoTag_vmofile;
+        info->vmofile.vmo = repr.vmo.release();
+        info->vmofile.offset = repr.offset;
+        info->vmofile.length = repr.length;
+      } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Device>) {
+        info->tag = fuchsia_io_NodeInfoTag_device;
+        info->device.event = repr.event.release();
+      } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Tty>) {
+        info->tag = fuchsia_io_NodeInfoTag_tty;
+        info->device.event = repr.event.release();
+      } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Socket>) {
+        info->tag = fuchsia_io_NodeInfoTag_socket;
+        info->socket.socket = repr.socket.release();
+      } else {
+        ZX_ASSERT_MSG(false, "Representation variant is not initialized");
+      }
+    });
+    return ZX_OK;
   }
 }
 
@@ -93,6 +129,9 @@ void Describe(const fbl::RefPtr<Vnode>& vn, VnodeConnectionOptions options, OnOp
       break;
     case fuchsia_io_NodeInfoTag_tty:
       encode_handle(&response->extra.tty.event, handle);
+      break;
+    case fuchsia_io_NodeInfoTag_socket:
+      encode_handle(&response->extra.socket.socket, handle);
       break;
     default:
       ZX_DEBUG_ASSERT_MSG(false, "Unsupported NodeInfoTag: %d\n", response->extra.tag);

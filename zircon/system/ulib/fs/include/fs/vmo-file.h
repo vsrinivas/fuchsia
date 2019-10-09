@@ -75,7 +75,7 @@ class VmoFile : public Vnode {
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t Read(void* data, size_t length, size_t offset, size_t* out_actual) final;
   zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;
-  zx_status_t GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) final;
+  zx_status_t GetNodeInfo(Rights rights, VnodeRepresentation* info) final;
   bool IsDirectory() const final;
 
  private:

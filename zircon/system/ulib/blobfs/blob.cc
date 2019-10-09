@@ -638,7 +638,7 @@ void Blob::ConsiderCompressionAbort() {
   }
 }
 
-zx_status_t Blob::GetReadableEvent(zx_handle_t* out) {
+zx_status_t Blob::GetReadableEvent(zx::event* out) {
   TRACE_DURATION("blobfs", "Blobfs::GetReadableEvent");
   zx_status_t status;
   // This is the first 'wait until read event' request received.
@@ -656,7 +656,7 @@ zx_status_t Blob::GetReadableEvent(zx_handle_t* out) {
     return status;
   }
 
-  *out = out_event.release();
+  *out = std::move(out_event);
   return ZX_OK;
 }
 
@@ -811,9 +811,14 @@ zx_status_t Blob::ValidateOptions(fs::VnodeConnectionOptions options) {
   return ZX_OK;
 }
 
-zx_status_t Blob::GetNodeInfo([[maybe_unused]] fs::Rights rights, fuchsia_io_NodeInfo* info) {
-  info->tag = fuchsia_io_NodeInfoTag_file;
-  return GetReadableEvent(&info->file.event);
+zx_status_t Blob::GetNodeInfo([[maybe_unused]] fs::Rights rights, fs::VnodeRepresentation* info) {
+  zx::event observer;
+  zx_status_t status = GetReadableEvent(&observer);
+  if (status != ZX_OK) {
+    return status;
+  }
+  *info = fs::VnodeRepresentation::File{.observer = std::move(observer)};
+  return ZX_OK;
 }
 
 zx_status_t Blob::Read(void* data, size_t len, size_t off, size_t* out_actual) {

@@ -93,7 +93,7 @@ class VnodeFile final : public VnodeMemfs {
   zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
   zx_status_t Truncate(size_t len) final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
-  zx_status_t GetNodeInfo(fs::Rights rights, fuchsia_io_NodeInfo* info) final;
+  zx_status_t GetNodeInfo(fs::Rights rights, fs::VnodeRepresentation* info) final;
   zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) final;
 
   // Ensure the underlying vmo is filled with zero from:
@@ -149,7 +149,7 @@ class VnodeDir final : public VnodeMemfs {
                      fbl::StringPiece newname, bool src_must_be_dir, bool dst_must_be_dir) final;
   zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
-  zx_status_t GetNodeInfo(fs::Rights rights, fuchsia_io_NodeInfo* info) final;
+  zx_status_t GetNodeInfo(fs::Rights rights, fs::VnodeRepresentation* info) final;
   zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) final;
 
   fs::RemoteContainer remoter_;
@@ -166,7 +166,7 @@ class VnodeVmo final : public VnodeMemfs {
  private:
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
-  zx_status_t GetNodeInfo(fs::Rights rights, fuchsia_io_NodeInfo* info) final;
+  zx_status_t GetNodeInfo(fs::Rights rights, fs::VnodeRepresentation* info) final;
   zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) final;
   zx_status_t MakeLocalClone(bool executable);
 

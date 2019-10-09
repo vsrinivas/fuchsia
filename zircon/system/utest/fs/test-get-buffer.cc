@@ -33,8 +33,8 @@ bool TestConnectionRights() {
   class TestVNode : public fs::Vnode {
    public:
     zx_status_t GetNodeInfo([[maybe_unused]] fs::Rights rights,
-                            fuchsia_io_NodeInfo* info) override {
-      info->tag = fuchsia_io_NodeInfoTag_file;
+                            fs::VnodeRepresentation* info) override {
+      *info = fs::VnodeRepresentation::File();
       return ZX_OK;
     }
     bool IsDirectory() const override { return false; }

@@ -103,8 +103,8 @@ zx_status_t ServiceProviderBridge::ServiceProviderDir::GetAttributes(fs::VnodeAt
 bool ServiceProviderBridge::ServiceProviderDir::IsDirectory() const { return true; }
 
 zx_status_t ServiceProviderBridge::ServiceProviderDir::GetNodeInfo(
-    [[maybe_unused]] fs::Rights rights, fuchsia_io_NodeInfo* info) {
-  info->tag = fuchsia_io_NodeInfoTag_directory;
+    [[maybe_unused]] fs::Rights rights, fs::VnodeRepresentation* representation) {
+  *representation = fs::VnodeRepresentation::Directory();
   return ZX_OK;
 }
 

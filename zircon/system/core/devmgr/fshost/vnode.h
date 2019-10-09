@@ -29,7 +29,7 @@ class Vnode final : public fs::Vnode {
   zx_status_t ValidateOptions(fs::VnodeConnectionOptions options) final;
   zx_status_t GetAttributes(fs::VnodeAttributes* attr) final;
   zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, fs::VnodeConnectionOptions options) final;
-  zx_status_t GetNodeInfo(fs::Rights rights, fuchsia_io_NodeInfo* info) final;
+  zx_status_t GetNodeInfo(fs::Rights rights, fs::VnodeRepresentation* info) final;
   bool IsDirectory() const final { return false; }
 
   // All registered filesystems known to the fshost.

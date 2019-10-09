@@ -10,10 +10,21 @@
 #include <zircon/device/vfs.h>
 #include <zircon/types.h>
 
+#ifdef __Fuchsia__
+#include <lib/zx/channel.h>
+#include <lib/zx/event.h>
+#include <lib/zx/eventpair.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/socket.h>
+#include <lib/zx/vmo.h>
+#endif
+
 #include <cstdint>
 #include <cstring>
 #include <optional>
+#include <type_traits>
 #include <utility>
+#include <variant>
 
 #include <fbl/bitfield.h>
 
@@ -203,10 +214,6 @@ struct VnodeAttributes {
   }
 };
 
-}  // namespace fs
-
-namespace fs {
-
 // A request to update pieces of the |VnodeAttributes|. The fuchsia.io protocol only
 // allows mutating the creation time and modification time.
 // When a field is present, it indicates that the corresponding field should be updated.
@@ -248,6 +255,101 @@ class VnodeAttributesUpdate {
   std::optional<uint64_t> creation_time_ = {};
   std::optional<uint64_t> modification_time_ = {};
 };
+
+#ifdef __Fuchsia__
+
+// Describe how the vnode connection should be handled, and provides auxiliary handles
+// and information for the connection where applicable.
+class VnodeRepresentation {
+ public:
+  struct Connector {};
+
+  struct File {
+    zx::event observer = {};
+  };
+
+  struct Directory {};
+
+  struct Pipe {
+    zx::socket socket = {};
+  };
+
+  struct Memory {
+    zx::vmo vmo = {};
+    uint64_t offset = {};
+    uint64_t length = {};
+  };
+
+  struct Device {
+    zx::eventpair event = {};
+  };
+
+  struct Tty {
+    zx::eventpair event = {};
+  };
+
+  struct Socket {
+    zx::socket socket = {};
+  };
+
+  VnodeRepresentation() = default;
+
+  // Forwards the constructor arguments into the underlying |std::variant|.
+  // This allows |VnodeRepresentation| to be constructed directly from one of the variants, e.g.
+  //
+  //     VnodeRepresentation repr = VnodeRepresentation::Socket{.socket = zx::socket(...)};
+  //
+  template <typename T>
+  VnodeRepresentation(T&& v) : variants_(std::forward<T>(v)) {}
+
+  // Applies the |visitor| function to the variant payload. It simply forwards the visitor into
+  // the underlying |std::variant|. Returns the return value of |visitor|.
+  // Refer to C++ documentation for |std::visit|.
+  template <class Visitor>
+  constexpr auto visit(Visitor&& visitor) -> decltype(visitor(std::declval<Connector>())) {
+    return std::visit(std::forward<Visitor>(visitor), variants_);
+  }
+
+  Connector& connector() { return std::get<Connector>(variants_); }
+
+  bool is_connector() const { return std::holds_alternative<Connector>(variants_); }
+
+  File& file() { return std::get<File>(variants_); }
+
+  bool is_file() const { return std::holds_alternative<File>(variants_); }
+
+  Directory& directory() { return std::get<Directory>(variants_); }
+
+  bool is_directory() const { return std::holds_alternative<Directory>(variants_); }
+
+  Pipe& pipe() { return std::get<Pipe>(variants_); }
+
+  bool is_pipe() const { return std::holds_alternative<Pipe>(variants_); }
+
+  Memory& memory() { return std::get<Memory>(variants_); }
+
+  bool is_memory() const { return std::holds_alternative<Memory>(variants_); }
+
+  Device& device() { return std::get<Device>(variants_); }
+
+  bool is_device() const { return std::holds_alternative<Device>(variants_); }
+
+  Tty& tty() { return std::get<Tty>(variants_); }
+
+  bool is_tty() const { return std::holds_alternative<Tty>(variants_); }
+
+  Socket& socket() { return std::get<Socket>(variants_); }
+
+  bool is_socket() const { return std::holds_alternative<Socket>(variants_); }
+
+ private:
+  using Variants =
+      std::variant<std::monostate, Connector, File, Directory, Pipe, Memory, Device, Tty, Socket>;
+
+  Variants variants_ = {};
+};
+
+#endif  // __Fuchsia__
 
 }  // namespace fs
 

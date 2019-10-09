@@ -53,14 +53,14 @@ class Service : public fs::Vnode {
 
   [[nodiscard]] bool IsDirectory() const override { return false; }
 
-  zx_status_t GetNodeInfo([[maybe_unused]] fs::Rights rights, fuchsia_io_NodeInfo* info) override {
+  zx_status_t GetNodeInfo([[maybe_unused]] fs::Rights rights,
+                          fs::VnodeRepresentation* info) override {
     zx::eventpair event;
     zx_status_t status = ConsoleOps::GetEvent(console_, &event);
     if (status != ZX_OK) {
       return status;
     }
-    info->tag = static_cast<fidl_union_tag_t>(::llcpp::fuchsia::io::NodeInfo::Tag::kTty);
-    info->tty.event = event.release();
+    *info = fs::VnodeRepresentation::Tty{.event = std::move(event)};
     return ZX_OK;
   }
 

@@ -72,8 +72,8 @@ zx_status_t Vnode::Serve(fs::Vfs* vfs, zx::channel channel, fs::VnodeConnectionO
       std::make_unique<Connection>(vfs, fbl::RefPtr(this), std::move(channel), options));
 }
 
-zx_status_t Vnode::GetNodeInfo([[maybe_unused]] fs::Rights, fuchsia_io_NodeInfo* info) {
-  info->tag = fuchsia_io_NodeInfoTag_service;
+zx_status_t Vnode::GetNodeInfo([[maybe_unused]] fs::Rights, fs::VnodeRepresentation* info) {
+  *info = fs::VnodeRepresentation::Connector();
   return ZX_OK;
 }
 

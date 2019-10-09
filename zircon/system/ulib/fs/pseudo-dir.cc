@@ -84,8 +84,8 @@ zx_status_t PseudoDir::Readdir(vdircookie_t* cookie, void* data, size_t len, siz
   return ZX_OK;
 }
 
-zx_status_t PseudoDir::GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) {
-  info->tag = fuchsia_io_NodeInfoTag_directory;
+zx_status_t PseudoDir::GetNodeInfo(Rights rights, VnodeRepresentation* info) {
+  *info = fs::VnodeRepresentation::Directory();
   return ZX_OK;
 }
 

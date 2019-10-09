@@ -97,7 +97,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // Extract handle, type, and extra info from a vnode.
   // The |rights| argument contain the access rights requested by the client, and should determine
   // corresponding access rights on the returned handles if applicable.
-  virtual zx_status_t GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) = 0;
+  virtual zx_status_t GetNodeInfo(Rights rights, VnodeRepresentation* info) = 0;
 
   virtual zx_status_t WatchDir(Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher);
 #endif
