@@ -21,6 +21,7 @@ type Build struct {
 	archive  *Archive
 	packages *packages.Repository
 	snapshot *SystemSnapshot
+	dir      string
 }
 
 // GetPackageRepository returns a Repository for this build.
@@ -29,12 +30,12 @@ func (b *Build) GetPackageRepository() (*packages.Repository, error) {
 		return b.packages, nil
 	}
 
-	path, err := b.archive.download(b.ID, "packages.tar.gz")
+	path, err := b.archive.download(b.dir, b.ID, "packages.tar.gz")
 	if err != nil {
 		return nil, fmt.Errorf("failed to download packages.tar.gz: %s", err)
 	}
 
-	packagesDir := filepath.Join(b.archive.dir, b.ID, "packages")
+	packagesDir := filepath.Join(b.dir, b.ID, "packages")
 
 	if err := os.MkdirAll(packagesDir, 0755); err != nil {
 		return nil, err
@@ -53,12 +54,12 @@ func (b *Build) GetPackageRepository() (*packages.Repository, error) {
 // build id `buildId`. Returns a path to the directory of the extracted files,
 // or an error if it fails to download or extract.
 func (b *Build) GetBuildArchive() (string, error) {
-	path, err := b.archive.download(b.ID, "build-archive.tgz")
+	path, err := b.archive.download(b.dir, b.ID, "build-archive.tgz")
 	if err != nil {
 		return "", fmt.Errorf("failed to download build-archive.tar.gz: %s", err)
 	}
 
-	buildArchiveDir := filepath.Join(b.archive.dir, b.ID, "build-archive")
+	buildArchiveDir := filepath.Join(b.dir, b.ID, "build-archive")
 
 	if err := os.MkdirAll(buildArchiveDir, 0755); err != nil {
 		return "", err
@@ -113,7 +114,7 @@ func (b *Build) GetSystemSnapshot() (*SystemSnapshot, error) {
 		return b.snapshot, nil
 	}
 
-	path, err := b.archive.download(b.ID, "system.snapshot.json")
+	path, err := b.archive.download(b.dir, b.ID, "system.snapshot.json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to download system.snapshot.json: %s", err)
 	}

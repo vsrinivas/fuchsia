@@ -40,7 +40,6 @@ type Config struct {
 	upgradeBuildID           string
 	upgradeAmberFilesDir     string
 	LongevityTest            bool
-	cleanupOutputDir         bool
 	archive                  *artifacts.Archive
 	sshPrivateKey            ssh.Signer
 }
@@ -67,15 +66,6 @@ func NewConfig(fs *flag.FlagSet) (*Config, error) {
 	fs.StringVar(&c.upgradeBuildID, "upgrade-build-id", os.Getenv("BUILDBUCKET_ID"), "upgrade to this build id (default is $BUILDBUCKET_ID)")
 	fs.StringVar(&c.upgradeAmberFilesDir, "upgrade-amber-files", "", "Path to the upgrade amber-files repository")
 	fs.BoolVar(&c.LongevityTest, "longevity-test", false, "Continuously update to the latest repository")
-
-	if c.OutputDir == "" {
-		outputDir, err := ioutil.TempDir("", "system_ota_tests")
-		if err != nil {
-			return nil, fmt.Errorf("failed to create a temporary directory: %s", err)
-		}
-		c.OutputDir = outputDir
-		c.cleanupOutputDir = true
-	}
 
 	return c, nil
 }
@@ -118,12 +108,6 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-func (c *Config) Close() {
-	if c.cleanupOutputDir {
-		os.RemoveAll(c.OutputDir)
-	}
-}
-
 func (c *Config) SshPrivateKey() (ssh.Signer, error) {
 	if c.sshPrivateKey == nil {
 		if c.sshKeyFile == "" {
@@ -162,7 +146,7 @@ func (c *Config) NewDeviceClient() (*device.Client, error) {
 func (c *Config) BuildArchive() *artifacts.Archive {
 	if c.archive == nil {
 		// Connect to the build archive service.
-		c.archive = artifacts.NewArchive(c.LkgbPath, c.ArtifactsPath, c.OutputDir)
+		c.archive = artifacts.NewArchive(c.LkgbPath, c.ArtifactsPath)
 	}
 
 	return c.archive
@@ -172,10 +156,21 @@ func (c *Config) ShouldRepaveDevice() bool {
 	return c.downgradeBuildID != "" || c.downgradeBuilderName != "" || c.downgradePaveZedbootPath != "" || c.downgradePavePath != ""
 }
 
+func (c *Config) GetDowngradeBuilder() (*artifacts.Builder, error) {
+	if c.downgradeBuilderName == "" {
+		return nil, fmt.Errorf("downgrade builder not specified")
+	}
+
+	return c.BuildArchive().GetBuilder(c.downgradeBuilderName), nil
+}
+
 func (c *Config) GetDowngradeBuildID() (string, error) {
 	if c.downgradeBuilderName != "" && c.downgradeBuildID == "" {
-		a := c.BuildArchive()
-		id, err := a.LookupBuildID(c.downgradeBuilderName)
+		b, err := c.GetDowngradeBuilder()
+		if err != nil {
+			return "", err
+		}
+		id, err := b.GetLatestBuildID()
 		if err != nil {
 			return "", fmt.Errorf("failed to lookup build id: %s", err)
 		}
@@ -209,14 +204,14 @@ func (c *Config) GetUpgradeBuildID() (string, error) {
 	return c.upgradeBuildID, nil
 }
 
-func (c *Config) GetDowngradeRepository() (*packages.Repository, error) {
+func (c *Config) GetDowngradeRepository(dir string) (*packages.Repository, error) {
 	buildID, err := c.GetDowngradeBuildID()
 	if err != nil {
 		return nil, err
 	}
 
 	if buildID != "" {
-		build, err := c.BuildArchive().GetBuildByID(buildID)
+		build, err := c.BuildArchive().GetBuildByID(buildID, dir)
 		if err != nil {
 			return nil, err
 		}
@@ -231,14 +226,14 @@ func (c *Config) GetDowngradeRepository() (*packages.Repository, error) {
 	return nil, fmt.Errorf("downgrade repository not specified")
 }
 
-func (c *Config) GetUpgradeRepository() (*packages.Repository, error) {
+func (c *Config) GetUpgradeRepository(dir string) (*packages.Repository, error) {
 	buildID, err := c.GetUpgradeBuildID()
 	if err != nil {
 		return nil, err
 	}
 
 	if buildID != "" {
-		build, err := c.BuildArchive().GetBuildByID(buildID)
+		build, err := c.BuildArchive().GetBuildByID(buildID, dir)
 		if err != nil {
 			return nil, err
 		}
@@ -253,7 +248,7 @@ func (c *Config) GetUpgradeRepository() (*packages.Repository, error) {
 	return nil, fmt.Errorf("upgrade repository not specified")
 }
 
-func (c *Config) GetDowngradePaver() (*paver.Paver, error) {
+func (c *Config) GetDowngradePaver(dir string) (*paver.Paver, error) {
 	sshPrivateKey, err := c.SshPrivateKey()
 	if err != nil {
 		return nil, err
@@ -266,7 +261,7 @@ func (c *Config) GetDowngradePaver() (*paver.Paver, error) {
 	}
 
 	if buildID != "" {
-		build, err := c.BuildArchive().GetBuildByID(buildID)
+		build, err := c.BuildArchive().GetBuildByID(buildID, dir)
 		if err != nil {
 			return nil, err
 		}

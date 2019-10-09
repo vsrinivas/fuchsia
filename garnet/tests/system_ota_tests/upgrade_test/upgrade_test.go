@@ -8,6 +8,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"sync"
@@ -29,7 +30,6 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("failed to create config: %s", err)
 	}
-	defer c.Close()
 
 	flag.Parse()
 
@@ -54,16 +54,26 @@ func TestOTA(t *testing.T) {
 	if c.LongevityTest {
 		doTestLongevityOTAs(t, device)
 	} else {
-		repo, err := c.GetUpgradeRepository()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		doTestOTAs(t, device, repo)
+		doTestOTAs(t, device)
 	}
 }
 
-func doTestOTAs(t *testing.T, device *device.Client, repo *packages.Repository) {
+func doTestOTAs(t *testing.T, device *device.Client) {
+	outputDir := c.OutputDir
+	if outputDir == "" {
+		var err error
+		outputDir, err = ioutil.TempDir("", "system_ota_tests")
+		if err != nil {
+			t.Fatalf("failed to create a temporary directory: %s", err)
+		}
+		defer os.RemoveAll(c.OutputDir)
+	}
+
+	repo, err := c.GetUpgradeRepository(outputDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Install version N on the device if it is not already on that version.
 	expectedSystemImageMerkle, err := extractUpdateSystemImage(repo)
 	if err != nil {
@@ -94,53 +104,81 @@ func doTestLongevityOTAs(t *testing.T, device *device.Client) {
 	lastBuildID := ""
 	attempt := 1
 	for {
+
 		log.Printf("Lookup up latest build for builder %s", builder)
 
-		build, err := builder.GetLatestBuild()
+		buildID, err := builder.GetLatestBuildID()
 		if err != nil {
 			t.Fatalf("error getting latest build for builder %s: %s", builder, err)
 		}
 
-		if build.ID == lastBuildID {
-			log.Printf("already updated to %s, sleeping", build)
+		if buildID == lastBuildID {
+			log.Printf("already updated to %s, sleeping", buildID)
 			time.Sleep(60 * time.Second)
 			continue
 		}
-		log.Printf("new build %s is available, downloading", build)
+		log.Printf("Longevity Test Attempt %d  upgrading from build %s to build %s", attempt, lastBuildID, buildID)
 
-		repo, err := build.GetPackageRepository()
-		if err != nil {
-			t.Fatalf("failed to get repo for build: %s", err)
-		}
-
-		expectedSystemImageMerkle, err := extractUpdateSystemImage(repo)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if isDeviceUpToDate(t, device, expectedSystemImageMerkle) {
-			log.Printf("device is already up to date, sleeping")
-			time.Sleep(60 * time.Second)
-		} else {
-			log.Printf("Longevity Test Attempt %d from %s to %s", attempt, lastBuildID, build)
-			doSystemOTA(t, device, repo)
-		}
+		doTestLongevityOTAAttempt(t, device, buildID)
 
 		log.Printf("Longevity Test Attempt %d successful", attempt)
 		log.Printf("------------------------------------------------------------------------------")
 
-		lastBuildID = build.ID
+		lastBuildID = buildID
 		attempt += 1
 	}
 }
 
-func doPaveDevice(t *testing.T, device *device.Client) {
-	downgradePaver, err := c.GetDowngradePaver()
+func doTestLongevityOTAAttempt(t *testing.T, device *device.Client, buildID string) {
+	// Use the output dir if specified, otherwise download into a temporary directory.
+	outputDir := c.OutputDir
+	if outputDir == "" {
+		var err error
+		outputDir, err = ioutil.TempDir("", "system_ota_tests")
+		if err != nil {
+			t.Fatalf("failed to create a temporary directory: %s", err)
+		}
+		defer os.RemoveAll(c.OutputDir)
+	}
+
+	build, err := c.BuildArchive().GetBuildByID(buildID, outputDir)
+
+	repo, err := build.GetPackageRepository()
+	if err != nil {
+		t.Fatalf("failed to get repo for build: %s", err)
+	}
+
+	expectedSystemImageMerkle, err := extractUpdateSystemImage(repo)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	downgradeRepo, err := c.GetDowngradeRepository()
+	if isDeviceUpToDate(t, device, expectedSystemImageMerkle) {
+		log.Printf("device already up to date")
+		return
+	}
+
+	log.Printf("OTAing to %s", build)
+	doSystemOTA(t, device, repo)
+}
+
+func doPaveDevice(t *testing.T, device *device.Client) {
+	// Use the output dir if specified, otherwise download into a temporary directory.
+	outputDir := c.OutputDir
+	if outputDir == "" {
+		var err error
+		outputDir, err = ioutil.TempDir("", "system_ota_tests")
+		if err != nil {
+			t.Fatalf("failed to create a temporary directory: %s", err)
+		}
+		defer os.RemoveAll(c.OutputDir)
+	}
+	downgradePaver, err := c.GetDowngradePaver(outputDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	downgradeRepo, err := c.GetDowngradeRepository(outputDir)
 	if err != nil {
 		t.Fatal(err)
 	}

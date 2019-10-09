@@ -27,13 +27,13 @@ func (b *Builder) GetLatestBuildID() (string, error) {
 }
 
 // GetLatestBuild looks up the latest build for a given builder.
-func (b *Builder) GetLatestBuild() (*Build, error) {
+func (b *Builder) GetLatestBuild(dir string) (*Build, error) {
 	id, err := b.GetLatestBuildID()
 	if err != nil {
 		return nil, err
 	}
 
-	return b.archive.GetBuildByID(id)
+	return b.archive.GetBuildByID(id, dir)
 }
 
 func (b *Builder) String() string {
