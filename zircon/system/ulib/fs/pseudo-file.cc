@@ -8,6 +8,7 @@
 #include <utility>
 
 #include <fs/vfs.h>
+#include <fs/vfs_types.h>
 
 namespace fs {
 
@@ -29,15 +30,15 @@ zx_status_t PseudoFile::ValidateOptions(VnodeConnectionOptions options) {
   return ZX_OK;
 }
 
-zx_status_t PseudoFile::Getattr(vnattr_t* attr) {
-  memset(attr, 0, sizeof(vnattr_t));
+zx_status_t PseudoFile::GetAttributes(VnodeAttributes* attr) {
+  *attr = VnodeAttributes();
   attr->mode = V_TYPE_FILE;
   if (read_handler_)
     attr->mode |= V_IRUSR;
   if (write_handler_)
     attr->mode |= V_IWUSR;
   attr->inode = fuchsia_io_INO_UNKNOWN;
-  attr->nlink = 1;
+  attr->link_count = 1;
   return ZX_OK;
 }
 
@@ -86,7 +87,9 @@ zx_status_t BufferedPseudoFile::Content::Close() {
   return ZX_OK;
 }
 
-zx_status_t BufferedPseudoFile::Content::Getattr(vnattr_t* a) { return file_->Getattr(a); }
+zx_status_t BufferedPseudoFile::Content::GetAttributes(fs::VnodeAttributes* a) {
+  return file_->GetAttributes(a);
+}
 
 zx_status_t BufferedPseudoFile::Content::Read(void* data, size_t length, size_t offset,
                                               size_t* out_actual) {
@@ -201,7 +204,9 @@ zx_status_t UnbufferedPseudoFile::Content::Close() {
   return ZX_OK;
 }
 
-zx_status_t UnbufferedPseudoFile::Content::Getattr(vnattr_t* a) { return file_->Getattr(a); }
+zx_status_t UnbufferedPseudoFile::Content::GetAttributes(fs::VnodeAttributes* a) {
+  return file_->GetAttributes(a);
+}
 
 zx_status_t UnbufferedPseudoFile::Content::Read(void* data, size_t length, size_t offset,
                                                 size_t* out_actual) {

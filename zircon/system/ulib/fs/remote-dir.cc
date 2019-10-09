@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fs/remote-dir.h>
+#include <fs/vfs_types.h>
 
 #include <utility>
 
@@ -15,11 +16,11 @@ RemoteDir::RemoteDir(zx::channel remote_dir_client)
 
 RemoteDir::~RemoteDir() = default;
 
-zx_status_t RemoteDir::Getattr(vnattr_t* attr) {
-  memset(attr, 0, sizeof(vnattr_t));
+zx_status_t RemoteDir::GetAttributes(VnodeAttributes* attr) {
+  *attr = VnodeAttributes();
   attr->mode = V_TYPE_DIR | V_IRUSR;
   attr->inode = fuchsia_io_INO_UNKNOWN;
-  attr->nlink = 1;
+  attr->link_count = 1;
   return ZX_OK;
 }
 

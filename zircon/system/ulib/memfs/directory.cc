@@ -20,6 +20,7 @@
 #include <fbl/string_piece.h>
 #include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
+#include <fs/vfs_types.h>
 
 #include "dnode.h"
 
@@ -101,16 +102,15 @@ zx_status_t VnodeDir::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name)
   return r;
 }
 
-zx_status_t VnodeDir::Getattr(vnattr_t* attr) {
-  memset(attr, 0, sizeof(vnattr_t));
+zx_status_t VnodeDir::GetAttributes(fs::VnodeAttributes* attr) {
+  *attr = fs::VnodeAttributes();
   attr->inode = ino_;
   attr->mode = V_TYPE_DIR | V_IRUSR;
-  attr->size = 0;
-  attr->blksize = kMemfsBlksize;
-  attr->blkcount = fbl::round_up(attr->size, kMemfsBlksize) / VNATTR_BLKSIZE;
-  attr->nlink = link_count_;
-  attr->create_time = create_time_;
-  attr->modify_time = modify_time_;
+  attr->content_size = 0;
+  attr->storage_size = 0;
+  attr->link_count = link_count_;
+  attr->creation_time = create_time_;
+  attr->modification_time = modify_time_;
   return ZX_OK;
 }
 

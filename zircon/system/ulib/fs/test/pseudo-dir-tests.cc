@@ -74,10 +74,10 @@ bool TestPseudoDir() {
   EXPECT_NULL(redirect);
 
   // get attributes
-  vnattr_t attr;
-  EXPECT_EQ(ZX_OK, dir->Getattr(&attr));
+  fs::VnodeAttributes attr;
+  EXPECT_EQ(ZX_OK, dir->GetAttributes(&attr));
   EXPECT_EQ(V_TYPE_DIR | V_IRUSR, attr.mode);
-  EXPECT_EQ(1, attr.nlink);
+  EXPECT_EQ(1, attr.link_count);
 
   // lookup entries
   fbl::RefPtr<fs::Vnode> node;

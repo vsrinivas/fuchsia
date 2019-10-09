@@ -40,10 +40,10 @@ bool test_service() {
   EXPECT_NULL(redirect);
 
   // get attr
-  vnattr_t attr;
-  EXPECT_EQ(ZX_OK, svc->Getattr(&attr));
+  fs::VnodeAttributes attr;
+  EXPECT_EQ(ZX_OK, svc->GetAttributes(&attr));
   EXPECT_EQ(V_TYPE_FILE, attr.mode);
-  EXPECT_EQ(1, attr.nlink);
+  EXPECT_EQ(1, attr.link_count);
 
   // make some channels we can use for testing
   zx::channel c1, c2;

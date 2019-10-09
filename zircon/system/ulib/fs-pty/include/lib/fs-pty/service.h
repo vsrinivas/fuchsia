@@ -38,10 +38,10 @@ class Service : public fs::Vnode {
   // |Vnode| implementation:
   zx_status_t ValidateOptions(fs::VnodeConnectionOptions) override { return ZX_OK; }
 
-  zx_status_t Getattr(vnattr_t* attr) override {
-    memset(attr, 0, sizeof(vnattr_t));
+  zx_status_t GetAttributes(fs::VnodeAttributes* attr) override {
+    *attr = fs::VnodeAttributes();
     attr->mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
-    attr->nlink = 1;
+    attr->link_count = 1;
     return ZX_OK;
   }
 

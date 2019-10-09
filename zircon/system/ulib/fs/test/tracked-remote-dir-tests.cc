@@ -4,11 +4,11 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <fs/tracked-remote-dir.h>
-
-#include <unittest/unittest.h>
 
 #include <utility>
+
+#include <fs/tracked-remote-dir.h>
+#include <unittest/unittest.h>
 
 namespace {
 
@@ -36,10 +36,10 @@ bool TestAddingTrackedDirectory() {
   auto dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
 
   // Get attributes.
-  vnattr_t attr;
-  EXPECT_EQ(ZX_OK, dir->Getattr(&attr));
+  fs::VnodeAttributes attr;
+  EXPECT_EQ(ZX_OK, dir->GetAttributes(&attr));
   EXPECT_EQ(V_TYPE_DIR | V_IRUSR, attr.mode);
-  EXPECT_EQ(1, attr.nlink);
+  EXPECT_EQ(1, attr.link_count);
 
   // "name" should not yet exist within the directory.
   fbl::RefPtr<fs::Vnode> node;

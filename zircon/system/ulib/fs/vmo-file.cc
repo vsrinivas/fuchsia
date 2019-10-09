@@ -12,6 +12,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fs/vfs.h>
+#include <fs/vfs_types.h>
 #include <fs/vmo-file.h>
 
 namespace fs {
@@ -54,17 +55,16 @@ zx_status_t VmoFile::ValidateOptions(fs::VnodeConnectionOptions options) {
   return ZX_OK;
 }
 
-zx_status_t VmoFile::Getattr(vnattr_t* attr) {
-  memset(attr, 0, sizeof(vnattr_t));
+zx_status_t VmoFile::GetAttributes(VnodeAttributes* attr) {
+  *attr = VnodeAttributes();
   attr->mode = V_TYPE_FILE | V_IRUSR;
   if (writable_) {
     attr->mode |= V_IWUSR;
   }
   attr->inode = fuchsia_io_INO_UNKNOWN;
-  attr->size = length_;
-  attr->blksize = kVmoFileBlksize;
-  attr->blkcount = fbl::round_up(attr->size, kVmoFileBlksize) / VNATTR_BLKSIZE;
-  attr->nlink = 1;
+  attr->content_size = length_;
+  attr->storage_size = fbl::round_up(attr->content_size, kVmoFileBlksize);
+  attr->link_count = 1;
   return ZX_OK;
 }
 

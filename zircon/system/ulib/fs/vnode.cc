@@ -53,9 +53,9 @@ zx_status_t Vnode::Lookup(fbl::RefPtr<Vnode>* out, fbl::StringPiece name) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Vnode::Getattr(vnattr_t* a) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t Vnode::GetAttributes(VnodeAttributes* a) { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t Vnode::Setattr(const vnattr_t* a) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t Vnode::SetAttributes(VnodeAttributesUpdate a) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t Vnode::Readdir(vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual) {
   return ZX_ERR_NOT_SUPPORTED;

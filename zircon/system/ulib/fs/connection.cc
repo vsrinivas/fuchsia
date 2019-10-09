@@ -556,30 +556,26 @@ zx_status_t Connection::NodeGetAttr(fidl_txn_t* txn) {
   fuchsia_io_NodeAttributes attributes;
   memset(&attributes, 0, sizeof(attributes));
 
-  // TODO(smklein): Consider using "NodeAttributes" within
-  // ulib/fs, rather than vnattr_t.
-  // Alternatively modify vnattr_t to match "NodeAttributes"
-  vnattr_t attr;
+  fs::VnodeAttributes attr;
   zx_status_t r;
-  if ((r = vnode_->Getattr(&attr)) != ZX_OK) {
+  if ((r = vnode_->GetAttributes(&attr)) != ZX_OK) {
     return fuchsia_io_NodeGetAttr_reply(txn, r, &attributes);
   }
 
   attributes.mode = attr.mode;
   attributes.id = attr.inode;
-  attributes.content_size = attr.size;
-  attributes.storage_size = VNATTR_BLKSIZE * attr.blkcount;
-  attributes.link_count = attr.nlink;
-  attributes.creation_time = attr.create_time;
-  attributes.modification_time = attr.modify_time;
+  attributes.content_size = attr.content_size;
+  attributes.storage_size = attr.storage_size;
+  attributes.link_count = attr.link_count;
+  attributes.creation_time = attr.creation_time;
+  attributes.modification_time = attr.modification_time;
 
   return fuchsia_io_NodeGetAttr_reply(txn, ZX_OK, &attributes);
 }
 
 zx_status_t Connection::NodeSetAttr(uint32_t flags, const fuchsia_io_NodeAttributes* attributes,
                                     fidl_txn_t* txn) {
-  FS_PRETTY_TRACE_DEBUG("[NodeSetAttr] our options: ", options_,
-                        ", incoming flags: ", ZxFlags(flags));
+  FS_PRETTY_TRACE_DEBUG("[NodeSetAttr] our options: ", options_, ", incoming flags: ", flags);
 
   if (options_.flags.node_reference) {
     return fuchsia_io_NodeSetAttr_reply(txn, ZX_ERR_BAD_HANDLE);
@@ -587,12 +583,20 @@ zx_status_t Connection::NodeSetAttr(uint32_t flags, const fuchsia_io_NodeAttribu
   if (!options_.rights.write) {
     return fuchsia_io_NodeSetAttr_reply(txn, ZX_ERR_BAD_HANDLE);
   }
+  constexpr uint32_t supported_flags = fuchsia_io_NODE_ATTRIBUTE_FLAG_CREATION_TIME |
+                                       fuchsia_io_NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME;
+  if (flags & ~supported_flags) {
+    return fuchsia_io_NodeSetAttr_reply(txn, ZX_ERR_INVALID_ARGS);
+  }
 
-  vnattr_t attr;
-  attr.valid = flags;
-  attr.create_time = attributes->creation_time;
-  attr.modify_time = attributes->modification_time;
-  zx_status_t status = vnode_->Setattr(&attr);
+  zx_status_t status = vnode_->SetAttributes(
+      fs::VnodeAttributesUpdate()
+          .set_creation_time(flags & fuchsia_io_NODE_ATTRIBUTE_FLAG_CREATION_TIME
+                                 ? std::make_optional(attributes->creation_time)
+                                 : std::nullopt)
+          .set_modification_time(flags & fuchsia_io_NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME
+                                     ? std::make_optional(attributes->modification_time)
+                                     : std::nullopt));
   return fuchsia_io_NodeSetAttr_reply(txn, status);
 }
 
@@ -696,9 +700,9 @@ zx_status_t Connection::FileSeek(int64_t offset, fuchsia_io_SeekOrigin start, fi
   if (options_.flags.node_reference) {
     return fuchsia_io_FileSeek_reply(txn, ZX_ERR_BAD_HANDLE, offset_);
   }
-  vnattr_t attr;
+  fs::VnodeAttributes attr;
   zx_status_t r;
-  if ((r = vnode_->Getattr(&attr)) < 0) {
+  if ((r = vnode_->GetAttributes(&attr)) < 0) {
     return r;
   }
   size_t n;
@@ -726,16 +730,16 @@ zx_status_t Connection::FileSeek(int64_t offset, fuchsia_io_SeekOrigin start, fi
       }
       break;
     case SEEK_END:
-      n = attr.size + offset;
+      n = attr.content_size + offset;
       if (offset < 0) {
         // if negative seek
-        if (n > attr.size) {
+        if (n > attr.content_size) {
           // wrapped around. attempt to seek before start
           return fuchsia_io_FileSeek_reply(txn, ZX_ERR_INVALID_ARGS, offset_);
         }
       } else {
         // positive seek
-        if (n < attr.size) {
+        if (n < attr.content_size) {
           // wrapped around
           return fuchsia_io_FileSeek_reply(txn, ZX_ERR_INVALID_ARGS, offset_);
         }

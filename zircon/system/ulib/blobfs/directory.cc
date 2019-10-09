@@ -84,16 +84,15 @@ zx_status_t Directory::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
   return ZX_OK;
 }
 
-zx_status_t Directory::Getattr(vnattr_t* a) {
-  memset(a, 0, sizeof(vnattr_t));
+zx_status_t Directory::GetAttributes(fs::VnodeAttributes* a) {
+  *a = fs::VnodeAttributes();
   a->mode = V_TYPE_DIR | V_IRUSR;
   a->inode = fuchsia_io_INO_UNKNOWN;
-  a->size = 0;
-  a->blksize = kBlobfsBlockSize;
-  a->blkcount = 0;
-  a->nlink = 1;
-  a->create_time = 0;
-  a->modify_time = 0;
+  a->content_size = 0;
+  a->storage_size = 0;
+  a->link_count = 1;
+  a->creation_time = 0;
+  a->modification_time = 0;
   return ZX_OK;
 }
 

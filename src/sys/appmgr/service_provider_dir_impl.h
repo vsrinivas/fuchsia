@@ -47,7 +47,7 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider, public fs::
 
   zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
 
-  zx_status_t Getattr(vnattr_t* a) final;
+  zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
 
   zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
                       size_t* out_actual) final;

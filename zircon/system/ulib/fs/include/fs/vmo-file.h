@@ -72,7 +72,7 @@ class VmoFile : public Vnode {
 
   // |Vnode| implementation:
   zx_status_t ValidateOptions(VnodeConnectionOptions options) final;
-  zx_status_t Getattr(vnattr_t* a) final;
+  zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t Read(void* data, size_t length, size_t offset, size_t* out_actual) final;
   zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;
   zx_status_t GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) final;

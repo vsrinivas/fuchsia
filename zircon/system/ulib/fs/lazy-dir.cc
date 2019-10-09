@@ -7,6 +7,7 @@
 #include <fuchsia/io/c/fidl.h>
 
 #include <fs/vfs.h>
+#include <fs/vfs_types.h>
 #include <fs/vnode.h>
 
 namespace fs {
@@ -37,11 +38,11 @@ zx_status_t LazyDir::Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* ou
   return ZX_OK;
 }
 
-zx_status_t LazyDir::Getattr(vnattr_t* attr) {
-  memset(attr, 0, sizeof(vnattr_t));
+zx_status_t LazyDir::GetAttributes(VnodeAttributes* attr) {
+  *attr = VnodeAttributes();
   attr->mode = V_TYPE_DIR | V_IRUSR;
   attr->inode = fuchsia_io_INO_UNKNOWN;
-  attr->nlink = 1;
+  attr->link_count = 1;
   return ZX_OK;
 }
 

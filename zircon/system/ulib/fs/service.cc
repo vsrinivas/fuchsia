@@ -7,6 +7,8 @@
 
 #include <utility>
 
+#include <fs/vfs_types.h>
+
 namespace fs {
 
 Service::Service(Connector connector) : connector_(std::move(connector)) {}
@@ -17,12 +19,12 @@ zx_status_t Service::ValidateOptions([[maybe_unused]] VnodeConnectionOptions opt
   return ZX_OK;
 }
 
-zx_status_t Service::Getattr(vnattr_t* attr) {
+zx_status_t Service::GetAttributes(VnodeAttributes* attr) {
   // TODO(ZX-1152): V_TYPE_FILE isn't right, we should use a type for services
-  memset(attr, 0, sizeof(vnattr_t));
+  *attr = VnodeAttributes();
   attr->mode = V_TYPE_FILE;
   attr->inode = fuchsia_io_INO_UNKNOWN;
-  attr->nlink = 1;
+  attr->link_count = 1;
   return ZX_OK;
 }
 

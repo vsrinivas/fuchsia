@@ -33,6 +33,7 @@
 #include <fs/journal/data-streamer.h>
 #include <fs/metrics/events.h>
 #include <fs/transaction/writeback.h>
+#include <fs/vfs_types.h>
 
 namespace blobfs {
 namespace {
@@ -840,17 +841,16 @@ zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* 
   return status;
 }
 
-zx_status_t Blob::Getattr(vnattr_t* a) {
+zx_status_t Blob::GetAttributes(fs::VnodeAttributes* a) {
   auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kGetAttr);
-  memset(a, 0, sizeof(vnattr_t));
+  *a = fs::VnodeAttributes();
   a->mode = V_TYPE_FILE | V_IRUSR;
   a->inode = Ino();
-  a->size = SizeData();
-  a->blksize = kBlobfsBlockSize;
-  a->blkcount = inode_.block_count * (kBlobfsBlockSize / VNATTR_BLKSIZE);
-  a->nlink = 1;
-  a->create_time = 0;
-  a->modify_time = 0;
+  a->content_size = SizeData();
+  a->storage_size = inode_.block_count * kBlobfsBlockSize;
+  a->link_count = 1;
+  a->creation_time = 0;
+  a->modification_time = 0;
   return ZX_OK;
 }
 

@@ -66,7 +66,7 @@ class PseudoDir : public Vnode {
 
   // |Vnode| implementation:
   zx_status_t Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
-  zx_status_t Getattr(vnattr_t* a) final;
+  zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
   void Notify(fbl::StringPiece name, unsigned event) final;
   zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;

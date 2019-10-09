@@ -333,25 +333,23 @@ bool TestGetattr() {
   // read-only
   {
     fs::VmoFile file(abc, 0u, PAGE_SIZE * 3u + 117u);
-    vnattr_t attr;
-    EXPECT_EQ(ZX_OK, file.Getattr(&attr));
+    fs::VnodeAttributes attr;
+    EXPECT_EQ(ZX_OK, file.GetAttributes(&attr));
     EXPECT_EQ(V_TYPE_FILE | V_IRUSR, attr.mode);
-    EXPECT_EQ(PAGE_SIZE * 3u + 117u, attr.size);
-    EXPECT_EQ(PAGE_SIZE, attr.blksize);
-    EXPECT_EQ(4u * PAGE_SIZE / VNATTR_BLKSIZE, attr.blkcount);
-    EXPECT_EQ(1u, attr.nlink);
+    EXPECT_EQ(PAGE_SIZE * 3u + 117u, attr.content_size);
+    EXPECT_EQ(4u * PAGE_SIZE, attr.storage_size);
+    EXPECT_EQ(1u, attr.link_count);
   }
 
   // writable
   {
     fs::VmoFile file(abc, 0u, PAGE_SIZE * 3u + 117u, true);
-    vnattr_t attr;
-    EXPECT_EQ(ZX_OK, file.Getattr(&attr));
+    fs::VnodeAttributes attr;
+    EXPECT_EQ(ZX_OK, file.GetAttributes(&attr));
     EXPECT_EQ(V_TYPE_FILE | V_IRUSR | V_IWUSR, attr.mode);
-    EXPECT_EQ(PAGE_SIZE * 3u + 117u, attr.size);
-    EXPECT_EQ(PAGE_SIZE, attr.blksize);
-    EXPECT_EQ(4u * PAGE_SIZE / VNATTR_BLKSIZE, attr.blkcount);
-    EXPECT_EQ(1u, attr.nlink);
+    EXPECT_EQ(PAGE_SIZE * 3u + 117u, attr.content_size);
+    EXPECT_EQ(4u * PAGE_SIZE, attr.storage_size);
+    EXPECT_EQ(1u, attr.link_count);
   }
 
   END_TEST;

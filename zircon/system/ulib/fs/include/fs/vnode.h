@@ -128,9 +128,6 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // Change the size of the vnode.
   virtual zx_status_t Truncate(size_t len);
 
-  // Set attributes of the vnode.
-  virtual zx_status_t Setattr(const vnattr_t* a);
-
   // Acquire a vmo from a vnode.
   //
   // At the moment, mmap can only map files from read-only filesystems,
@@ -161,8 +158,11 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // Name is len bytes long, and does not include a null terminator.
   virtual zx_status_t Lookup(fbl::RefPtr<Vnode>* out, fbl::StringPiece name);
 
-  // Read attributes of vn.
-  virtual zx_status_t Getattr(vnattr_t* a);
+  // Read attributes of the vnode.
+  virtual zx_status_t GetAttributes(fs::VnodeAttributes* a);
+
+  // Set attributes of the vnode.
+  virtual zx_status_t SetAttributes(VnodeAttributesUpdate a);
 
   // Create a new node under vn.
   // Name is len bytes long, and does not include a null terminator.

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/memfs/cpp/vnode.h>
-
 #include <sys/stat.h>
 
 #include <zxtest/zxtest.h>
@@ -24,16 +23,16 @@ TEST(MemfsTest, CreateFile) {
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_OK(root->Create(&file, "foobar", S_IFREG));
   auto directory = static_cast<fbl::RefPtr<fs::Vnode>>(root);
-  vnattr_t directory_attr, file_attr;
-  ASSERT_OK(directory->Getattr(&directory_attr));
-  ASSERT_OK(file->Getattr(&file_attr));
+  fs::VnodeAttributes directory_attr, file_attr;
+  ASSERT_OK(directory->GetAttributes(&directory_attr));
+  ASSERT_OK(file->GetAttributes(&file_attr));
 
   // Directory created before file.
-  ASSERT_LE(directory_attr.create_time, file_attr.create_time);
+  ASSERT_LE(directory_attr.creation_time, file_attr.creation_time);
 
   // Observe that the modify time of the directory is larger than the file.
   // This implies "the file is created, then the directory is updated".
-  ASSERT_GE(directory_attr.modify_time, file_attr.modify_time);
+  ASSERT_GE(directory_attr.modification_time, file_attr.modification_time);
 }
 
 TEST(MemfsTest, UpdateTimeLargeFile) {
@@ -52,16 +51,16 @@ TEST(MemfsTest, UpdateTimeLargeFile) {
   // when ZX_ERR_FILE_BIG was returned.
   size_t offset = (512 * 1024 * 1024) - PAGE_SIZE / 2;
   ASSERT_OK(file->Truncate(offset));
-  vnattr_t before_file_attr, after_file_attr;
-  ASSERT_OK(file->Getattr(&before_file_attr));
+  fs::VnodeAttributes before_file_attr, after_file_attr;
+  ASSERT_OK(file->GetAttributes(&before_file_attr));
   size_t actual;
   uint8_t buf[PAGE_SIZE]{};
   ASSERT_EQ(ZX_ERR_FILE_BIG, file->Write(buf, PAGE_SIZE, offset, &actual));
   ASSERT_EQ(PAGE_SIZE / 2, actual);
-  ASSERT_OK(file->Getattr(&after_file_attr));
+  ASSERT_OK(file->GetAttributes(&after_file_attr));
 
-  ASSERT_EQ(after_file_attr.create_time, before_file_attr.create_time);
-  ASSERT_GT(after_file_attr.modify_time, before_file_attr.modify_time);
+  ASSERT_EQ(after_file_attr.creation_time, before_file_attr.creation_time);
+  ASSERT_GT(after_file_attr.modification_time, before_file_attr.modification_time);
 }
 
 TEST(MemfsTest, SubdirectoryUpdateTime) {
@@ -85,12 +84,12 @@ TEST(MemfsTest, SubdirectoryUpdateTime) {
   ASSERT_OK(index->Write(buf, PAGE_SIZE, 0, &actual));
   ASSERT_EQ(PAGE_SIZE, actual);
 
-  vnattr_t subdirectory_attr, index_attr;
-  ASSERT_OK(subdirectory->Getattr(&subdirectory_attr));
-  ASSERT_OK(index->Getattr(&index_attr));
+  fs::VnodeAttributes subdirectory_attr, index_attr;
+  ASSERT_OK(subdirectory->GetAttributes(&subdirectory_attr));
+  ASSERT_OK(index->GetAttributes(&index_attr));
 
   // "index" was written after "subdirectory".
-  ASSERT_LE(subdirectory_attr.modify_time, index_attr.modify_time);
+  ASSERT_LE(subdirectory_attr.modification_time, index_attr.modification_time);
 }
 
 }  // namespace

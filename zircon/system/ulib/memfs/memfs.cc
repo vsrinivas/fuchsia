@@ -2,13 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <lib/fdio/namespace.h>
+#include <lib/fdio/vfs.h>
+#include <lib/memfs/cpp/vnode.h>
+#include <lib/memfs/memfs.h>
+#include <lib/sync/completion.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <zircon/device/vfs.h>
+
+#include <atomic>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -16,13 +23,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <lib/fdio/namespace.h>
-#include <lib/fdio/vfs.h>
 #include <fs/vfs.h>
-#include <lib/memfs/cpp/vnode.h>
-#include <lib/memfs/memfs.h>
-#include <lib/sync/completion.h>
-#include <zircon/device/vfs.h>
 
 #include "dnode.h"
 
@@ -130,13 +131,13 @@ VnodeMemfs::VnodeMemfs(Vfs* vfs)
 
 VnodeMemfs::~VnodeMemfs() { deleted_ino_ctr_.fetch_add(1, std::memory_order_relaxed); }
 
-zx_status_t VnodeMemfs::Setattr(const vnattr_t* attr) {
-  if ((attr->valid & ~(ATTR_MTIME)) != 0) {
-    // only attr currently supported
-    return ZX_ERR_INVALID_ARGS;
+zx_status_t VnodeMemfs::SetAttributes(fs::VnodeAttributesUpdate attr) {
+  if (attr.has_modification_time()) {
+    modify_time_ = attr.take_modification_time();
   }
-  if (attr->valid & ATTR_MTIME) {
-    modify_time_ = attr->modify_time;
+  if (attr.any()) {
+    // any unhandled field update is unsupported
+    return ZX_ERR_INVALID_ARGS;
   }
   return ZX_OK;
 }

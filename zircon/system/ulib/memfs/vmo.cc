@@ -102,16 +102,15 @@ zx_status_t VnodeVmo::Read(void* data, size_t len, size_t off, size_t* out_actua
   return status;
 }
 
-zx_status_t VnodeVmo::Getattr(vnattr_t* attr) {
-  memset(attr, 0, sizeof(vnattr_t));
+zx_status_t VnodeVmo::GetAttributes(fs::VnodeAttributes* attr) {
+  *attr = fs::VnodeAttributes();
   attr->inode = ino_;
   attr->mode = V_TYPE_FILE | V_IRUSR;
-  attr->size = length_;
-  attr->blksize = kMemfsBlksize;
-  attr->blkcount = fbl::round_up(attr->size, kMemfsBlksize) / VNATTR_BLKSIZE;
-  attr->nlink = link_count_;
-  attr->create_time = create_time_;
-  attr->modify_time = modify_time_;
+  attr->content_size = length_;
+  attr->storage_size = fbl::round_up(attr->content_size, kMemfsBlksize);
+  attr->link_count = link_count_;
+  attr->creation_time = create_time_;
+  attr->modification_time = modify_time_;
   return ZX_OK;
 }
 

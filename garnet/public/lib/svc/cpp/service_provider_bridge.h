@@ -70,7 +70,7 @@ class ServiceProviderBridge : public fuchsia::sys::ServiceProvider {
 
     // Overridden from |fs::Vnode|:
     zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
-    zx_status_t Getattr(vnattr_t* a) final;
+    zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
     bool IsDirectory() const final;
     zx_status_t GetNodeInfo(fs::Rights rights, fuchsia_io_NodeInfo* info) final;
 

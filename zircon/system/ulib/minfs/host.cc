@@ -30,15 +30,15 @@
 namespace {
 
 zx_status_t do_stat(fbl::RefPtr<fs::Vnode> vn, struct stat* s) {
-  vnattr_t a;
-  zx_status_t status = vn->Getattr(&a);
+  fs::VnodeAttributes a;
+  zx_status_t status = vn->GetAttributes(&a);
   if (status == ZX_OK) {
     memset(s, 0, sizeof(struct stat));
     s->st_mode = static_cast<mode_t>(a.mode);
-    s->st_size = a.size;
+    s->st_size = a.content_size;
     s->st_ino = a.inode;
-    s->st_ctime = a.create_time;
-    s->st_mtime = a.modify_time;
+    s->st_ctime = a.creation_time;
+    s->st_mtime = a.modification_time;
   }
   return status;
 }
@@ -364,7 +364,7 @@ off_t emu_lseek(int fd, off_t offset, int whence) {
 
   uint64_t old = f->off;
   uint64_t n;
-  vnattr_t a;
+  fs::VnodeAttributes a;
 
   switch (whence) {
     case SEEK_SET:
@@ -374,10 +374,10 @@ off_t emu_lseek(int fd, off_t offset, int whence) {
       f->off = offset;
       break;
     case SEEK_END:
-      if (f->vn->Getattr(&a)) {
+      if (f->vn->GetAttributes(&a)) {
         FAIL(EINVAL);
       }
-      old = a.size;
+      old = a.content_size;
       __FALLTHROUGH;
     case SEEK_CUR:
       n = old + offset;

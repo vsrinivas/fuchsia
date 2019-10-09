@@ -33,7 +33,7 @@ class Service : public Vnode {
 
   // |Vnode| implementation:
   zx_status_t ValidateOptions(VnodeConnectionOptions options) final;
-  zx_status_t Getattr(vnattr_t* a) final;
+  zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, VnodeConnectionOptions options) final;
   bool IsDirectory() const final;
   zx_status_t GetNodeInfo(Rights rights, fuchsia_io_NodeInfo* info) final;

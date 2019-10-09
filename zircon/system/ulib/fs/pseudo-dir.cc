@@ -9,6 +9,7 @@
 #include <utility>
 
 #include <fbl/auto_lock.h>
+#include <fs/vfs_types.h>
 
 namespace fs {
 
@@ -23,11 +24,11 @@ zx_status_t PseudoDir::Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* 
   return ZX_OK;
 }
 
-zx_status_t PseudoDir::Getattr(vnattr_t* attr) {
-  memset(attr, 0, sizeof(vnattr_t));
+zx_status_t PseudoDir::GetAttributes(VnodeAttributes* attr) {
+  *attr = VnodeAttributes();
   attr->mode = V_TYPE_DIR | V_IRUSR;
   attr->inode = fuchsia_io_INO_UNKNOWN;
-  attr->nlink = 1;
+  attr->link_count = 1;
   return ZX_OK;
 }
 
@@ -68,8 +69,8 @@ zx_status_t PseudoDir::Readdir(vdircookie_t* cookie, void* data, size_t len, siz
     if (cookie->n >= it->id()) {
       continue;
     }
-    vnattr_t attr;
-    if ((r = it->node()->Getattr(&attr)) != ZX_OK) {
+    VnodeAttributes attr;
+    if ((r = it->node()->GetAttributes(&attr)) != ZX_OK) {
       continue;
     }
     if (df.Next(it->name().ToStringPiece(), VTYPE_TO_DTYPE(attr.mode), attr.inode) != ZX_OK) {

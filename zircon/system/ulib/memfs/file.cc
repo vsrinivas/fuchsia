@@ -17,6 +17,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
+#include <fs/vfs_types.h>
 
 #include "dnode.h"
 
@@ -129,16 +130,15 @@ zx_status_t VnodeFile::GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size)
   return ZX_OK;
 }
 
-zx_status_t VnodeFile::Getattr(vnattr_t* attr) {
-  memset(attr, 0, sizeof(vnattr_t));
+zx_status_t VnodeFile::GetAttributes(fs::VnodeAttributes* attr) {
+  *attr = fs::VnodeAttributes();
   attr->inode = ino_;
   attr->mode = V_TYPE_FILE | V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH;
-  attr->size = length_;
-  attr->blksize = kMemfsBlksize;
-  attr->blkcount = fbl::round_up(attr->size, kMemfsBlksize) / VNATTR_BLKSIZE;
-  attr->nlink = link_count_;
-  attr->create_time = create_time_;
-  attr->modify_time = modify_time_;
+  attr->content_size = length_;
+  attr->storage_size = fbl::round_up(attr->content_size, kMemfsBlksize);
+  attr->link_count = link_count_;
+  attr->creation_time = create_time_;
+  attr->modification_time = modify_time_;
   return ZX_OK;
 }
 

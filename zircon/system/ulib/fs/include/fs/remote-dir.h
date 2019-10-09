@@ -32,7 +32,7 @@ class RemoteDir : public Vnode {
   ~RemoteDir() override;
 
   // |Vnode| implementation:
-  zx_status_t Getattr(vnattr_t* a) final;
+  zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   bool IsRemote() const final;
   zx_handle_t GetRemote() const final;
   bool IsDirectory() const final { return true; }

@@ -60,10 +60,10 @@ zx_status_t Vnode::ValidateOptions(fs::VnodeConnectionOptions options) {
   return ZX_OK;
 }
 
-zx_status_t Vnode::Getattr(vnattr_t* attr) {
-  memset(attr, 0, sizeof(vnattr_t));
+zx_status_t Vnode::GetAttributes(fs::VnodeAttributes* attr) {
+  *attr = fs::VnodeAttributes();
   attr->mode = V_TYPE_FILE;
-  attr->nlink = 1;
+  attr->link_count = 1;
   return ZX_OK;
 }
 

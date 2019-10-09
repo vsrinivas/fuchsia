@@ -93,10 +93,10 @@ zx_status_t ServiceProviderBridge::ServiceProviderDir::Lookup(fbl::RefPtr<fs::Vn
   return ZX_OK;
 }
 
-zx_status_t ServiceProviderBridge::ServiceProviderDir::Getattr(vnattr_t* attr) {
-  memset(attr, 0, sizeof(vnattr_t));
+zx_status_t ServiceProviderBridge::ServiceProviderDir::GetAttributes(fs::VnodeAttributes* attr) {
+  *attr = fs::VnodeAttributes();
   attr->mode = V_TYPE_DIR | V_IRUSR;
-  attr->nlink = 1;
+  attr->link_count = 1;
   return ZX_OK;
 }
 

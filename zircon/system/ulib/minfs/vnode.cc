@@ -15,6 +15,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
+#include <fs/vfs_types.h>
 #include <safemath/checked_math.h>
 
 #ifdef __Fuchsia__
@@ -1009,37 +1010,38 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const void* data
   return ZX_OK;
 }
 
-zx_status_t VnodeMinfs::Getattr(vnattr_t* a) {
+zx_status_t VnodeMinfs::GetAttributes(fs::VnodeAttributes* a) {
   FS_TRACE_DEBUG("minfs_getattr() vn=%p(#%u)\n", this, ino_);
   // This transaction exists because acquiring the block size and block
   // count may be unsafe without locking.
   //
   // TODO: Improve locking semantics of pending data allocation to make this less confusing.
   Transaction transaction(fs_);
+  *a = fs::VnodeAttributes();
   a->mode = DTYPE_TO_VTYPE(MinfsMagicType(inode_.magic)) | V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH;
   a->inode = ino_;
-  a->size = GetSize();
-  a->blksize = kMinfsBlockSize;
-  a->blkcount = GetBlockCount() * (kMinfsBlockSize / VNATTR_BLKSIZE);
-  a->nlink = inode_.link_count;
-  a->create_time = inode_.create_time;
-  a->modify_time = inode_.modify_time;
+  a->content_size = GetSize();
+  a->storage_size = GetBlockCount() * kMinfsBlockSize;
+  a->link_count = inode_.link_count;
+  a->creation_time = inode_.create_time;
+  a->modification_time = inode_.modify_time;
   return ZX_OK;
 }
 
-zx_status_t VnodeMinfs::Setattr(const vnattr_t* a) {
+zx_status_t VnodeMinfs::SetAttributes(fs::VnodeAttributesUpdate attr) {
   int dirty = 0;
   FS_TRACE_DEBUG("minfs_setattr() vn=%p(#%u)\n", this, ino_);
-  if ((a->valid & ~(ATTR_CTIME | ATTR_MTIME)) != 0) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  if ((a->valid & ATTR_CTIME) != 0) {
-    inode_.create_time = a->create_time;
+  if (attr.has_creation_time()) {
+    inode_.create_time = attr.take_creation_time();
     dirty = 1;
   }
-  if ((a->valid & ATTR_MTIME) != 0) {
-    inode_.modify_time = a->modify_time;
+  if (attr.has_modification_time()) {
+    inode_.modify_time = attr.take_modification_time();
     dirty = 1;
+  }
+  if (attr.any()) {
+    // any unhandled field update is unsupported
+    return ZX_ERR_INVALID_ARGS;
   }
   if (dirty) {
     // write to disk, but don't overwrite the time

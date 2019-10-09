@@ -97,7 +97,9 @@ void ServiceProviderDirImpl::ConnectToService(std::string service_name, zx::chan
 
 bool ServiceProviderDirImpl::IsDirectory() const { return true; }
 
-zx_status_t ServiceProviderDirImpl::Getattr(vnattr_t* a) { return root_->Getattr(a); }
+zx_status_t ServiceProviderDirImpl::GetAttributes(fs::VnodeAttributes* a) {
+  return root_->GetAttributes(a);
+}
 
 zx_status_t ServiceProviderDirImpl::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
                                             size_t* out_actual) {

@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/remote-dir.h>
-
-#include <unittest/unittest.h>
-
 #include <utility>
+
+#include <fs/remote-dir.h>
+#include <unittest/unittest.h>
 
 namespace {
 
@@ -20,10 +19,10 @@ bool TestRemoteDir() {
   auto dir = fbl::AdoptRef<fs::RemoteDir>(new fs::RemoteDir(std::move(client)));
 
   // get attributes
-  vnattr_t attr;
-  EXPECT_EQ(ZX_OK, dir->Getattr(&attr));
+  fs::VnodeAttributes attr;
+  EXPECT_EQ(ZX_OK, dir->GetAttributes(&attr));
   EXPECT_EQ(V_TYPE_DIR | V_IRUSR, attr.mode);
-  EXPECT_EQ(1, attr.nlink);
+  EXPECT_EQ(1, attr.link_count);
 
   // get remote properties
   EXPECT_TRUE(dir->IsRemote());

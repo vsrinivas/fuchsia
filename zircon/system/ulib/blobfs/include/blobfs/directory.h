@@ -52,7 +52,7 @@ class Directory final : public fs::Vnode {
   zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final;
   zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
   zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
-  zx_status_t Getattr(vnattr_t* a) final;
+  zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) final;
   zx_status_t QueryFilesystem(fuchsia_io_FilesystemInfo* out) final;
   zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
