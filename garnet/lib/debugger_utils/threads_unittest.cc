@@ -111,7 +111,8 @@ TEST(Threads, WithThreadSuspended) {
   ShutdownThreads(threads, &keep_running);
 }
 
-TEST(Threads, WithAllThreadsSuspended) {
+// TODO(34880): Disabled until fixed.
+TEST(Threads, DISABLED_WithAllThreadsSuspended) {
   std::atomic_bool keep_running{true};
   std::vector<thrd_t> threads;
   std::vector<zx::thread> zx_threads;
