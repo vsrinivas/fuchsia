@@ -12,7 +12,7 @@
     },
     "sandbox": {
         "features": [
-            "deprecated-shell"
+            "hub"
         ],
         "services": [
             "fuchsia.boot.RootJob",

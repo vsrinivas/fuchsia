@@ -88,8 +88,6 @@ group("deprecated_shell_allowlist") {
     "//garnet/bin/run_test_component/test:run_test_component_test",
     "//garnet/bin/sl4f:sl4f",
     "//garnet/bin/sshd-host:sshd-host",
-    "//garnet/bin/system_monitor/harvester:system_monitor_harvester",
-    "//garnet/bin/system_monitor/harvester:system_monitor_harvester_tests",
     "//garnet/bin/trace:trace",
     "//garnet/bin/trace/tests:trace_tests",
     "//garnet/bin/zircon_benchmarks:zircon_benchmarks",

@@ -67,7 +67,6 @@ executable("bin") {
 }
 
 package("system_monitor_harvester") {
-  deprecated_shell = "//build"
   rootresource_svc = "//build"
   rootjob_svc = "//build"
 
@@ -114,7 +113,6 @@ executable("system_monitor_harvester_test") {
 }
 
 test_package("system_monitor_harvester_tests") {
-  deprecated_shell = "//build"
   rootresource_svc = "//build"
   rootjob_svc = "//build"
 
