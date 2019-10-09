@@ -9,11 +9,20 @@
 #include <hw/sdmmc.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <soc/aml-s912/s912-hw.h>
+#include <threads.h>
 #include <zxtest/zxtest.h>
 
 #include "aml-sd-emmc-regs.h"
 
 namespace sdmmc {
+
+static void AddTimeSpecNanos(struct timespec* ts, long nanos) {
+  ts->tv_nsec += nanos;
+  if (ts->tv_nsec > 1'000'000'000) {
+    ts->tv_sec += 1;
+    ts->tv_nsec -= 1'000'000'000;
+  }
+}
 
 class TestAmlSdEmmc : public AmlSdEmmc {
  public:
@@ -36,7 +45,15 @@ class TestAmlSdEmmc : public AmlSdEmmc {
                               .sdr104 = {.core_phase = 2, .tx_phase = 0},
                           },
                   },
-                  zx::interrupt(ZX_HANDLE_INVALID), ddk::GpioProtocolClient()) {}
+                  zx::interrupt(ZX_HANDLE_INVALID), ddk::GpioProtocolClient()) {
+    ASSERT_EQ(thrd_success, cnd_init(&spurious_interrupt_received_));
+    ASSERT_EQ(thrd_success, cnd_init(&wait_for_interrupt_condition_));
+  }
+  ~TestAmlSdEmmc() {
+    cnd_destroy(&spurious_interrupt_received_);
+    cnd_destroy(&wait_for_interrupt_condition_);
+  }
+
   zx_status_t TestDdkAdd() {
     // call parent's bind
     return Bind();
@@ -55,6 +72,8 @@ class TestAmlSdEmmc : public AmlSdEmmc {
     for (;;) {
       {
         fbl::AutoLock mutex_al(&mtx_);
+        wait_for_interrupt_called_ = true;
+        cnd_signal(&wait_for_interrupt_condition_);
 
         if (!running_) {
           return ZX_ERR_CANCELED;
@@ -63,6 +82,10 @@ class TestAmlSdEmmc : public AmlSdEmmc {
           // Indicate that the request completed successfully.
           mmio_.Write32(1 << 13, kAmlSdEmmcStatusOffset);
           return ZX_OK;
+        } else if (spurious_interrupt_) {
+          spurious_interrupt_ = false;
+          cnd_signal(&spurious_interrupt_received_);
+          return ZX_OK;
         }
       }
 
@@ -70,8 +93,58 @@ class TestAmlSdEmmc : public AmlSdEmmc {
     }
   }
 
+  void OnIrqThreadExit() override {
+    fbl::AutoLock mutex_al(&mtx_);
+    running_ = false;
+  }
+
+  // This method will trigger a spurious interrupt and wait until the interrupt
+  // thread has received and processed it. If the interrupt thread exits before
+  // the spurious interrupt is processed the method returns false.
+  bool TriggerSpuriousInterrupt() {
+    fbl::AutoLock lock(&mtx_);
+
+    // Set the flag to trigger the interrupt.
+    spurious_interrupt_ = true;
+    while (spurious_interrupt_ && running_) {
+      // Wait for the interrupt to be received.
+      struct timespec ts;
+      clock_gettime(CLOCK_REALTIME, &ts);
+      AddTimeSpecNanos(&ts, 1'000'000);
+      int res = cnd_timedwait(&spurious_interrupt_received_, mtx_.GetInternal(), &ts);
+      if (res != thrd_success && res != thrd_timedout) {
+        // Unexpected result, something went wrong
+        return false;
+      }
+    }
+    // Either we're no longer running or the spurious interrupt was received.
+    wait_for_interrupt_called_ = false;
+    while (!wait_for_interrupt_called_ && running_) {
+      // Wait until the next call to WaitForInterrupt to ensure that the entire
+      // interrupt handler has run. This ensures that it's safe to send requests
+      // once this method returns.
+      struct timespec ts;
+      clock_gettime(CLOCK_REALTIME, &ts);
+      AddTimeSpecNanos(&ts, 1'000'000);
+      // It doesn't really matter why the wait returned here, we just check the
+      // loop conditions anyway.
+      int res = cnd_timedwait(&wait_for_interrupt_condition_, mtx_.GetInternal(), &ts);
+      if (res != thrd_success && res != thrd_timedout) {
+        // Unexpected result, something went wrong
+        return false;
+      }
+    }
+    // Either we're no longer running or WaitForInterrupt was called, if we're
+    // no longer running that's failure. Otherwise we succeeded.
+    return running_;
+  }
+
  private:
   bool running_ TA_GUARDED(mtx_) = true;
+  bool spurious_interrupt_ TA_GUARDED(mtx_) = false;
+  bool wait_for_interrupt_called_ TA_GUARDED(mtx_) = false;
+  cnd_t wait_for_interrupt_condition_ TA_GUARDED(mtx_);
+  cnd_t spurious_interrupt_received_;
 };
 
 class AmlSdEmmcTest : public zxtest::Test {
@@ -202,6 +275,22 @@ TEST_F(AmlSdEmmcTest, TuningV2) {
   EXPECT_EQ(adjust_v2.adj_delay(), 0);
   EXPECT_EQ(adjust.adj_fixed(), 0);
   EXPECT_EQ(adjust.adj_delay(), 0x3f);
+}
+
+TEST_F(AmlSdEmmcTest, SpuriousInterrupt) {
+  ASSERT_OK(dut_->Init());
+
+  sdmmc_req_t request;
+  memset(&request, 0, sizeof(request));
+  request.cmd_idx = SDMMC_READ_BLOCK;
+  ASSERT_OK(dut_->SdmmcRequest(&request));
+
+  // Trigger a spurious interrupt and ensure that it was successfully processed
+  ASSERT_TRUE(dut_->TriggerSpuriousInterrupt());
+
+  // And just to be sure send another request which will also require the
+  // interrupt thread to be running.
+  ASSERT_OK(dut_->SdmmcRequest(&request));
 }
 
 }  // namespace sdmmc

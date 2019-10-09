@@ -164,7 +164,13 @@ zx_status_t AmlSdEmmc::WaitForInterrupt() {
   return irq_.wait(&timestamp);
 }
 
+void AmlSdEmmc::OnIrqThreadExit() {
+}
+
 int AmlSdEmmc::IrqThread() {
+  auto on_thread_exit = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
+    OnIrqThreadExit();
+  });
   while (1) {
     zx_status_t status = WaitForInterrupt();
     if (status == ZX_ERR_CANCELED) {
@@ -177,9 +183,9 @@ int AmlSdEmmc::IrqThread() {
     if (cur_req_ == NULL) {
       status = ZX_ERR_IO_INVALID;
       zxlogf(ERROR, "AmlSdEmmc::IrqThread: Got a spurious interrupt\n");
-      // TODO(ravoorir): Do some error recovery here and continue instead
-      // of breaking.
-      break;
+      // Ignore this interrupt and keep going
+      // TODO(ravoorir): Do some error recovery here
+      continue;
     }
 
     auto status_irq = AmlSdEmmcStatus::Get().ReadFrom(&mmio_);

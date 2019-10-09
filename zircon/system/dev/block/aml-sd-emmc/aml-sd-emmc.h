@@ -62,6 +62,7 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
   zx_status_t Bind();
 
   virtual zx_status_t WaitForInterrupt();
+  virtual void OnIrqThreadExit();
 
   ddk::MmioBuffer mmio_;
   fbl::Mutex mtx_;
