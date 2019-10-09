@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_UI_SCENIC_APP_H_
-#define GARNET_BIN_UI_SCENIC_APP_H_
+#ifndef SRC_UI_SCENIC_BIN_APP_H_
+#define SRC_UI_SCENIC_BIN_APP_H_
 
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/function.h>
@@ -39,4 +39,4 @@ class App {
 
 }  // namespace scenic_impl
 
-#endif  // GARNET_BIN_UI_SCENIC_APP_H_
+#endif  // SRC_UI_SCENIC_BIN_APP_H_

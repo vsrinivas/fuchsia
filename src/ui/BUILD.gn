@@ -7,6 +7,7 @@ group("ui") {
     "a11y",
     "bin",
     "policy",
+    "scenic",
     "tools",
   ]
 }
@@ -15,7 +16,9 @@ group("tests") {
   testonly = true
 
   deps = [
+    "a11y:tests",
     "bin:tests",
+    "scenic:tests",
     "tests",
   ]
 }

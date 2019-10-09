@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/scenic/app.h"
+#include "src/ui/scenic/bin/app.h"
 
 #include <lib/fit/bridge.h>
 #include <lib/fit/function.h>

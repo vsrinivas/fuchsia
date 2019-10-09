@@ -70,12 +70,12 @@ group("scenic") {
   testonly = true
   public_deps = [
     "//garnet/bin/ui:root_presenter",
-    "//garnet/bin/ui:scenic",
     "//garnet/packages/prod:factory_reset",
-    "//garnet/packages/prod:ui_policy",
     "//garnet/packages/prod:sysmem_connector",
+    "//garnet/packages/prod:ui_policy",
     "//garnet/packages/prod:vulkan",
     "//src/ui/bin/ime:ime_service",
+    "//src/ui/scenic",
   ]
 }
 
@@ -195,7 +195,6 @@ group("all") {
     "//garnet/packages/prod:display_manager",
     "//garnet/packages/prod:drivers",
     "//garnet/packages/prod:factory_reset",
-    "//garnet/packages/prod:ui_policy",
     "//garnet/packages/prod:far",
     "//garnet/packages/prod:fortune",
     "//garnet/packages/prod:guest_runner",
@@ -250,6 +249,7 @@ group("all") {
     "//garnet/packages/prod:tracing",
     "//garnet/packages/prod:tts",
     "//garnet/packages/prod:tz-util",
+    "//garnet/packages/prod:ui_policy",
     "//garnet/packages/prod:vboot_reference",
     "//garnet/packages/prod:vim",
     "//garnet/packages/prod:wlan_drivers",
@@ -1040,4 +1040,3 @@ group("ui_policy") {
     "//src/ui/policy:configs",
   ]
 }
-

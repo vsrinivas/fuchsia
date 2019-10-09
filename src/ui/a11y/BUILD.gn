@@ -8,3 +8,12 @@ group("a11y") {
     "lib",
   ]
 }
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    "bin/a11y_manager/tests",
+    "lib:tests",
+  ]
+}
