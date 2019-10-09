@@ -5,9 +5,9 @@
 #ifndef SRC_UI_LIB_ESCHER_TEST_FAKE_GPU_ALLOCATOR_H_
 #define SRC_UI_LIB_ESCHER_TEST_FAKE_GPU_ALLOCATOR_H_
 
-#include <vulkan/vulkan.hpp>
-
 #include "src/ui/lib/escher/vk/gpu_allocator.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 namespace test {
@@ -41,6 +41,9 @@ class FakeGpuAllocator : public GpuAllocator {
 
   // |GpuAllocator|
   uint32_t GetTotalBytesAllocated() const override;
+
+  // |GpuAllocator|
+  uint32_t GetUnusedBytesAllocated() const override { return 0u; }
 
   // These functions are public because this is a test class, and unit tests may
   // wish to indirectly mock GetTotalBytesAllocated() behavior.

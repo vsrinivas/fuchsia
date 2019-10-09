@@ -36,6 +36,9 @@ class VmaGpuAllocator : public GpuAllocator {
   // |GpuAllocator|
   uint32_t GetTotalBytesAllocated() const override;
 
+  // |GpuAllocator|
+  uint32_t GetUnusedBytesAllocated() const override;
+
  private:
   virtual bool CreateImage(const VkImageCreateInfo& image_create_info,
                            const VmaAllocationCreateInfo& allocation_create_info, VkImage* image,

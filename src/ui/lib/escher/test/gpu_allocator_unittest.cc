@@ -51,6 +51,9 @@ VulkanDeviceQueuesPtr CreateVulkanDeviceQueues(bool use_protected_memory) {
 // tests easier to verify.
 const vk::DeviceSize kMemorySize = 1024;
 
+// Don't allow too much wasted memory.
+const vk::DeviceSize kMaxUnusedMemory = 4u * 1024 * 1024;
+
 void TestAllocationOfMemory(GpuAllocator* allocator) {
   // Confirm that all memory has been released.
   EXPECT_EQ(0u, allocator->GetTotalBytesAllocated());
@@ -87,6 +90,7 @@ void TestAllocationOfMemory(GpuAllocator* allocator) {
   EXPECT_EQ(kMemorySize, allocator->GetTotalBytesAllocated());
   sub_alloc2b = nullptr;
   EXPECT_EQ(0U, allocator->GetTotalBytesAllocated());
+  EXPECT_GE(kMaxUnusedMemory, allocator->GetUnusedBytesAllocated());
 }
 
 void TestAllocationOfBuffers(GpuAllocator* allocator) {

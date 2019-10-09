@@ -80,6 +80,9 @@ VmaGpuAllocator::VmaGpuAllocator(const VulkanContext& context) {
   allocatorInfo.physicalDevice = context.physical_device;
   allocatorInfo.device = context.device;
   allocatorInfo.flags = VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
+  // This number was tuned for Skia on Android, but might be a good starting point for us. The
+  // allocator starts making blocks at 1/8 this size, and doubles until capping out at this value.
+  allocatorInfo.preferredLargeHeapBlockSize = 4 * 1024 * 1024;
   vmaCreateAllocator(&allocatorInfo, &allocator_);
 }
 
@@ -199,6 +202,12 @@ uint32_t VmaGpuAllocator::GetTotalBytesAllocated() const {
   VmaStats stats;
   vmaCalculateStats(allocator_, &stats);
   return stats.total.usedBytes;
+}
+
+uint32_t VmaGpuAllocator::GetUnusedBytesAllocated() const {
+  VmaStats stats;
+  vmaCalculateStats(allocator_, &stats);
+  return stats.total.unusedBytes;
 }
 
 bool VmaGpuAllocator::CreateImage(const VkImageCreateInfo& image_create_info,

@@ -5,12 +5,12 @@
 #ifndef SRC_UI_LIB_ESCHER_VK_GPU_ALLOCATOR_H_
 #define SRC_UI_LIB_ESCHER_VK_GPU_ALLOCATOR_H_
 
-#include <vulkan/vulkan.hpp>
-
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/lib/escher/vk/buffer.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 #include "src/ui/lib/escher/vk/image.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 
@@ -48,6 +48,7 @@ class GpuAllocator {
                                  GpuMemPtr* out_ptr = nullptr) = 0;
 
   virtual uint32_t GetTotalBytesAllocated() const = 0;
+  virtual uint32_t GetUnusedBytesAllocated() const = 0;
 
   fxl::WeakPtrFactory<GpuAllocator> weak_factory_;  // must be last
 

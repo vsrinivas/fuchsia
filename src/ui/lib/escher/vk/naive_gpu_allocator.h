@@ -5,11 +5,11 @@
 #ifndef SRC_UI_LIB_ESCHER_VK_NAIVE_GPU_ALLOCATOR_H_
 #define SRC_UI_LIB_ESCHER_VK_NAIVE_GPU_ALLOCATOR_H_
 
-#include <vulkan/vulkan.hpp>
-
 #include "src/ui/lib/escher/impl/gpu_mem_slab.h"
 #include "src/ui/lib/escher/vk/gpu_allocator.h"
 #include "src/ui/lib/escher/vk/vulkan_context.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 
@@ -36,6 +36,13 @@ class NaiveGpuAllocator : public GpuAllocator {
 
   // |GpuAllocator|
   uint32_t GetTotalBytesAllocated() const override;
+
+  // |GpuAllocator|
+  uint32_t GetUnusedBytesAllocated() const override {
+    // Only the minimum needed memory size is allocated, though it's possible
+    // the driver may round up the allocation size.
+    return 0u;
+  }
 
  private:
   // Callbacks to allow a GpuMemSlab to notify its GpuAllocator of changes.
