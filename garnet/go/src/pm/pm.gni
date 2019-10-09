@@ -39,6 +39,21 @@ template("pm_publish") {
     ]
   }
 
+  # TODO(38262) In order to be TUF-1.0 conformant, we need to have
+  # versioned-prefixed root metadata files. Fow now this just hard-codes
+  # copying the current metadata to the correct place, but long term this
+  # should be computed so we don't forget to copy the file when we rotate the
+  # root metadata.
+  copy("versioned_root_manifest") {
+    sources = [
+      "$amber_keys_dir/root_manifest.json",
+    ]
+
+    outputs = [
+      "$amber_repository_dir/repository/6.root.json",
+    ]
+  }
+
   compiled_action(target_name) {
     tool = "//garnet/go/src/pm:pm_bin"
     tool_output_name = "pm"
@@ -54,6 +69,7 @@ template("pm_publish") {
     deps += [
       ":keys",
       ":root_manifest",
+      ":versioned_root_manifest",
     ]
 
     depfile = "${target_gen_dir}/${target_name}.d"
