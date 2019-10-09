@@ -42,12 +42,14 @@ class StreamProvider {
   //   |event_handler|: a caller-provided implementation of Stream event handlers
   //   |format_out|: output parameter that describes the format of the created stream
   //   |buffers_out|: output parameter that describes the buffers backing the created stream
+  //   |should_rotate_out|: output parameter that indicates whether the stream should be rotated in
+  //                        order to appear correct
   // Returns:
   //   A Stream instance, or nullptr on error.
   virtual std::unique_ptr<fuchsia::camera2::Stream> ConnectToStream(
       fuchsia::camera2::Stream_EventSender* event_handler,
       fuchsia::sysmem::ImageFormat_2* format_out,
-      fuchsia::sysmem::BufferCollectionInfo_2* buffers_out) = 0;
+      fuchsia::sysmem::BufferCollectionInfo_2* buffers_out, bool* should_rotate_out) = 0;
 };
 
 #endif  // SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_STREAM_PROVIDER_H_

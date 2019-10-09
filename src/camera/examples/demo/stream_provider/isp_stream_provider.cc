@@ -33,8 +33,8 @@ std::unique_ptr<StreamProvider> IspStreamProvider::Create() {
 // Offer a stream as served through the tester interface.
 std::unique_ptr<fuchsia::camera2::Stream> IspStreamProvider::ConnectToStream(
     fuchsia::camera2::Stream_EventSender* event_handler, fuchsia::sysmem::ImageFormat_2* format_out,
-    fuchsia::sysmem::BufferCollectionInfo_2* buffers_out) {
-  if (!format_out || !buffers_out) {
+    fuchsia::sysmem::BufferCollectionInfo_2* buffers_out, bool* should_rotate_out) {
+  if (!format_out || !buffers_out || !should_rotate_out) {
     return nullptr;
   }
 
@@ -68,6 +68,9 @@ std::unique_ptr<fuchsia::camera2::Stream> IspStreamProvider::ConnectToStream(
     buffers_out->buffers[i].vmo = std::move(buffers.vmos[i]);
     buffers_out->buffers[i].vmo_usable_start = 0;
   }
+
+  // The stream coming directly from the ISP is not oriented properly.
+  *should_rotate_out = true;
 
   return std::make_unique<camera::CameraCommonStreamShim>(std::move(stream), event_handler);
 }

@@ -86,7 +86,8 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream_EventS
 
     fuchsia::sysmem::ImageFormat_2 format;
     fuchsia::sysmem::BufferCollectionInfo_2 buffers;
-    view->stream_ = stream_provider->ConnectToStream(view.get(), &format, &buffers);
+    view->stream_ =
+        stream_provider->ConnectToStream(view.get(), &format, &buffers, &view->should_rotate_);
 
     uint32_t image_pipe_id = view->session()->AllocResourceId();
     view->session()->Enqueue(
@@ -96,6 +97,7 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream_EventS
     view->session()->ReleaseResource(image_pipe_id);
     scenic::Rectangle shape(view->session(), format.display_width, format.display_height);
     view->shape_width_ = format.display_width;
+    view->shape_height_ = format.display_height;
     view->node_.SetShape(shape);
     view->node_.SetMaterial(material);
     view->root_node().AddChild(view->node_);
@@ -125,10 +127,13 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream_EventS
   void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override {
     if (!has_logical_size())
       return;
-    auto rotation = glm::angleAxis(glm::half_pi<float>(), glm::vec3(0, 0, 1));
-    node_.SetRotation(rotation.x, rotation.y, rotation.z, rotation.w);
+    if (should_rotate_) {
+      auto rotation = glm::angleAxis(glm::half_pi<float>(), glm::vec3(0, 0, 1));
+      node_.SetRotation(rotation.x, rotation.y, rotation.z, rotation.w);
+    }
     node_.SetTranslation(logical_size().x * 0.5f, logical_size().y * 0.5f, -5.0f);
-    const float scale = logical_size().y / shape_width_;  // Fit portrait vertically after rotation.
+    const float shape_vertical_size = should_rotate_ ? shape_width_ : shape_height_;
+    const float scale = logical_size().y / shape_vertical_size;  // Fit vertically.
     node_.SetScale(scale, scale, 1.0f);
   }
 
@@ -220,6 +225,8 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream_EventS
   fuchsia::images::ImagePipePtr image_pipe_;
   std::map<uint32_t, uint32_t> image_ids_;
   float shape_width_;
+  float shape_height_;
+  bool should_rotate_;
   std::queue<std::pair<std::unique_ptr<async::Wait>, zx::event>> waiters_;
 };
 
