@@ -25,8 +25,7 @@ base_package_labels += [
 cache_package_labels += [
   "//garnet/packages/prod:battery_manager",
   "//src/experiences/bin/simple_browser",
-  "//src/media/audio/audio",
-  "//src/media/audio/audio_core",
+  "//src/media/audio/bundles:audio",
 ]
 
 universe_package_labels += [

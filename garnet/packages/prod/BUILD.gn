@@ -206,7 +206,6 @@ group("all") {
     "//garnet/packages/prod:magma-img-rgx-mt8167",
     "//garnet/packages/prod:magma-qcom-adreno",
     "//garnet/packages/prod:media",
-    "//garnet/packages/prod:media_audio",
     "//garnet/packages/prod:media_codec_all",
     "//garnet/packages/prod:mediaplayer",
     "//garnet/packages/prod:mediasession",
@@ -401,14 +400,6 @@ group("virtual_camera") {
   ]
 }
 
-group("media_audio") {
-  testonly = true
-  public_deps = [
-    "//src/media/audio/audio",
-    "//src/media/audio/audio_core",
-  ]
-}
-
 group("bluetooth_atheros") {
   testonly = true
   public_deps = [
@@ -552,13 +543,13 @@ group("bluetooth_profiles") {
 group("media") {
   testonly = true
   public_deps = [
-    "//garnet/packages/prod:media_audio",
     "//garnet/packages/prod:media_codec_all",
     "//garnet/packages/prod:mediaplayer",
     "//garnet/packages/prod:mediasession",
     "//garnet/packages/prod:tts",
     "//src//camera/simple_camera/simple_camera_server:simple_camera_server_cpp",
     "//src/camera/camera_manager",
+    "//src/media/audio/bundles:audio",
   ]
 }
 
@@ -826,7 +817,7 @@ group("wlanif") {
 group("tts") {
   testonly = true
   public_deps = [
-    "//garnet/packages/prod:media_audio",
+    "//src/media/audio/bundles:audio",
     "//src/speech/tts:tts_service",
   ]
 }

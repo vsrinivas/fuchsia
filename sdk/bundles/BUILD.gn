@@ -8,7 +8,6 @@ group("tools") {
   public_deps = [
     "//garnet/packages/prod:factory_reset",
     "//garnet/packages/prod:iquery",
-    "//garnet/packages/prod:media_audio",
     "//garnet/packages/prod:media_codec_all",
     "//garnet/packages/prod:mediaplayer",
     "//garnet/packages/prod:mediasession",
@@ -27,6 +26,7 @@ group("tools") {
     "//src/flutter:flutter_jit",
     "//src/flutter:flutter_jit_product",
     "//src/fonts",
+    "//src/media/audio/bundles:audio",
     "//src/modular/bundles:framework",
     "//src/modular/bundles:tools",
   ]

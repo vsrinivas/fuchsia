@@ -6,8 +6,7 @@ import("//products/core.gni")
 
 base_package_labels += [
   "//src/modular/bundles:framework",
-  "//src/media/audio/audio",
-  "//src/media/audio/audio_core",
+  "//src/media/audio/bundles:audio",
 ]
 
 cache_package_labels += []
