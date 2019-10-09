@@ -83,8 +83,9 @@ const (
 
 // Params describes how to run a QEMU instance.
 type Params struct {
-	Arch Arch
-	ZBI  string
+	Arch          Arch
+	ZBI           string
+	AppendCmdline string
 }
 
 type Instance struct {
@@ -171,6 +172,10 @@ func (d *Distribution) Create(params Params) *Instance {
 		"-machine", "q35", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04",
 		"-cpu", "Haswell,+smap,-check,-fsgsbase")
 	cmdline := "kernel.serial=legacy kernel.entropy-mixin=1420bb81dc0396b37cc2d0aa31bb2785dadaf9473d0780ecee1751afb5867564 kernel.halt-on-panic=true"
+	if params.AppendCmdline != "" {
+		cmdline += " "
+		cmdline += params.AppendCmdline
+	}
 	args = append(args, "-append", cmdline)
 	return &Instance{
 		cmd: exec.Command(path, args...),

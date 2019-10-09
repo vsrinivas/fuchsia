@@ -164,6 +164,11 @@ The compile switch setting overrides the cmdline parameter (if both are present)
 Note that both the compile switch and the cmdline parameter have the side effect
 of disabling irq driven uart Tx.
 
+## kernel.enable-debugging-syscalls=\<bool>
+
+When disabled, certain debugging-related syscalls will fail with
+`ZX_ERR_NOT_SUPPORTED`. Defaults to false (debugging syscalls disabled).
+
 ## kernel.entropy-mixin=\<hex>
 
 Provides entropy to be mixed into the kernel's CPRNG.

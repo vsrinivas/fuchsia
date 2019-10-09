@@ -57,6 +57,7 @@ group("uapp") {
     "spawn",
     "spiutil",
     "storage-metrics",
+    "syscall-check",
     "tee-test",
     "thermal-cli",
     "trace-benchmark",

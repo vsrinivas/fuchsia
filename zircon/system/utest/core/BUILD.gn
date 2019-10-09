@@ -106,7 +106,10 @@ test("standalone") {
 zbi_test("core-tests") {
   assert(current_cpu != "")
 
-  args = [ "userboot=test/core/standalone-test" ]
+  args = [
+    "userboot=test/core/standalone-test",
+    "kernel.enable-debugging-syscalls=true",
+  ]
   deps = [
     ":standalone",
     "$zx/kernel",
@@ -126,6 +129,7 @@ if (current_cpu == "x64") {
     args = [
       "userboot=test/core/standalone-test",
       "kernel.wallclock=hpet",
+      "kernel.enable-debugging-syscalls=true",
     ]
     deps = [
       ":standalone",

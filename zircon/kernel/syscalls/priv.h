@@ -67,4 +67,7 @@ class user_out_handle final {
   HandleOwner h_;
 };
 
+// Returns |true| if debugging syscalls have been enabled (see kernel.enable-debugging-syscalls).
+bool DebuggingSyscallsEnabled();
+
 #endif  // ZIRCON_KERNEL_SYSCALLS_PRIV_H_
