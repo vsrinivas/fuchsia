@@ -18,7 +18,7 @@ use {
     wlan_common::{
         buffer_writer::BufferWriter,
         frame_len,
-        mac::{self, Aid, MacAddr, OptionalField, Presence},
+        mac::{self, Aid, Bssid, MacAddr, OptionalField, Presence},
         sequence::SequenceManager,
     },
     zerocopy::ByteSlice,
@@ -43,7 +43,7 @@ pub struct Client {
     buf_provider: BufferProvider,
     timer: Timer<TimedEvent>,
     seq_mgr: SequenceManager,
-    bssid: MacAddr,
+    bssid: Bssid,
     iface_mac: MacAddr,
     state: Option<States>,
 }
@@ -53,7 +53,7 @@ impl Client {
         device: Device,
         buf_provider: BufferProvider,
         scheduler: Scheduler,
-        bssid: MacAddr,
+        bssid: Bssid,
         iface_mac: MacAddr,
     ) -> Self {
         let timer = Timer::<TimedEvent>::new(scheduler);
@@ -328,7 +328,7 @@ impl Client {
     fn send_authenticate_conf(&mut self, result_code: fidl_mlme::AuthenticateResultCodes) {
         let result = self.device.access_sme_sender(|sender| {
             sender.send_authenticate_conf(&mut fidl_mlme::AuthenticateConfirm {
-                peer_sta_address: self.bssid,
+                peer_sta_address: self.bssid.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
                 result_code,
             })
@@ -342,7 +342,7 @@ impl Client {
     fn send_deauthenticate_ind(&mut self, reason_code: fidl_mlme::ReasonCode) {
         let result = self.device.access_sme_sender(|sender| {
             sender.send_deauthenticate_ind(&mut fidl_mlme::DeauthenticateIndication {
-                peer_sta_address: self.bssid,
+                peer_sta_address: self.bssid.0,
                 reason_code,
             })
         });
@@ -359,7 +359,7 @@ mod tests {
         crate::{buffer::FakeBufferProvider, device::FakeDevice},
         wlan_common::test_utils::fake_frames::*,
     };
-    const BSSID: MacAddr = [6u8; 6];
+    const BSSID: Bssid = Bssid([6u8; 6]);
     const IFACE_MAC: MacAddr = [7u8; 6];
 
     fn make_client_station(device: Device, scheduler: Scheduler) -> Client {
@@ -654,7 +654,7 @@ mod tests {
         let mut fake_scheduler = FakeScheduler::new();
         let mut client =
             make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
-        client.send_eapol_frame(IFACE_MAC, BSSID, false, &[5; 8]);
+        client.send_eapol_frame(IFACE_MAC, BSSID.0, false, &[5; 8]);
 
         // Verify EAPOL.confirm message was sent to SME.
         let eapol_confirm = fake_device

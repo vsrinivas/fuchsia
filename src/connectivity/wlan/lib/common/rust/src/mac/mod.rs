@@ -5,7 +5,7 @@
 use {
     crate::{buffer_reader::BufferReader, unaligned_view::UnalignedView},
     num::Unsigned,
-    zerocopy::{ByteSlice, LayoutVerified},
+    zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
 
 mod ctrl;
@@ -33,6 +33,14 @@ macro_rules! frame_len {
 pub type Aid = u16;
 
 pub type MacAddr = [u8; 6];
+
+// Bssid is a newtype to wrap MacAddr where a BSSID is explicitly required, e.g. for beacon fields
+// or management frame helper functions (e.g. ap::write_open_auth_frame and
+// client::write_open_auth_frame).
+#[repr(transparent)]
+#[derive(FromBytes, AsBytes, Unaligned, Clone, Copy, Debug)]
+pub struct Bssid(pub MacAddr);
+
 pub const BCAST_ADDR: MacAddr = [0xFF; 6];
 
 pub enum MacFrame<B> {

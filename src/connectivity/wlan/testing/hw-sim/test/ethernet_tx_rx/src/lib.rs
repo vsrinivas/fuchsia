@@ -14,7 +14,7 @@ use {
     wlan_hw_sim::*,
 };
 
-const BSS: [u8; 6] = [0x65, 0x74, 0x68, 0x6e, 0x65, 0x74];
+const BSS: mac::Bssid = mac::Bssid([0x65, 0x74, 0x68, 0x6e, 0x65, 0x74]);
 const SSID: &[u8] = b"ethernet";
 const PAYLOAD: &[u8] = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
@@ -29,7 +29,7 @@ fn handle_eth_tx(event: WlantapPhyEvent, actual: &mut Vec<u8>, phy: &WlantapPhyP
                     rx_wlan_data_frame(
                         &CHANNEL,
                         &CLIENT_MAC_ADDR,
-                        &BSS,
+                        &BSS.0,
                         &ETH_DST_MAC,
                         &PAYLOAD,
                         mac::ETHER_TYPE_IPV4,

@@ -185,7 +185,7 @@ async fn verify_ethernet_in_both_directions(
         .await
         .expect("creating client side ethernet")
         .expect("looking for client side ethernet");
-    let mut ap_eth = create_eth_client(&AP_MAC_ADDR)
+    let mut ap_eth = create_eth_client(&AP_MAC_ADDR.0)
         .await
         .expect("creating ap side ethernet")
         .expect("looking for ap side ethernet");

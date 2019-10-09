@@ -8,7 +8,8 @@ use {
         big_endian::BigEndianU16,
         error::FrameWriteError,
         mac::{
-            self, FixedDataHdrFields, FrameControl, MacAddr, OptionalDataHdrFields, SequenceControl,
+            self, Bssid, FixedDataHdrFields, FrameControl, MacAddr, OptionalDataHdrFields,
+            SequenceControl,
         },
     },
     failure::Error,
@@ -16,7 +17,7 @@ use {
 
 pub fn data_hdr_client_to_ap(
     mut frame_ctrl: FrameControl,
-    bssid: MacAddr,
+    bssid: Bssid,
     client_addr: MacAddr,
     seq_ctrl: SequenceControl,
 ) -> FixedDataHdrFields {
@@ -25,9 +26,9 @@ pub fn data_hdr_client_to_ap(
     FixedDataHdrFields {
         frame_ctrl,
         duration: 0,
-        addr1: bssid.clone(),
+        addr1: bssid.0,
         addr2: client_addr,
-        addr3: bssid,
+        addr3: bssid.0,
         seq_ctrl,
     }
 }
@@ -107,7 +108,7 @@ mod tests {
     fn client_to_ap() {
         let got = data_hdr_client_to_ap(
             FrameControl(0b00110000_00110000),
-            [1; 6],
+            Bssid([1; 6]),
             [2; 6],
             SequenceControl(4321),
         );

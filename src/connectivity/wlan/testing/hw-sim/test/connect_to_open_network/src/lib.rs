@@ -4,6 +4,7 @@
 
 use {
     fidl_fuchsia_wlan_service::WlanMarker, fuchsia_component::client::connect_to_service,
+    wlan_common::mac::Bssid,
     wlan_hw_sim::*,
 };
 
@@ -11,7 +12,7 @@ use {
 /// hard coded authentication and association response frames.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn connect_to_open_network() {
-    const BSS: [u8; 6] = [0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f];
+    const BSS: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f]);
     const SSID: &[u8] = b"open";
 
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;

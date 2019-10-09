@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::mac::{FrameControl, MacAddr},
+    crate::mac::{Bssid, FrameControl, MacAddr},
     zerocopy::{AsBytes, FromBytes, Unaligned},
 };
 
@@ -13,6 +13,6 @@ use {
 pub struct PsPoll {
     pub frame_ctrl: FrameControl,
     pub id: u16,
-    pub bssid: MacAddr,
+    pub bssid: Bssid,
     pub ta: MacAddr,
 }

@@ -7,16 +7,16 @@ use {
     fidl_fuchsia_wlan_tap::{WlantapPhyEvent, WlantapPhyProxy},
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
-    wlan_common::bss::Protection,
+    wlan_common::{bss::Protection, mac::Bssid},
     wlan_hw_sim::*,
 };
 
 const CHANNEL: u8 = 1;
-const BSS_WPA1: [u8; 6] = [0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f];
+const BSS_WPA1: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f]);
 const SSID_WPA1: &[u8] = b"wpa1___how_nice";
-const BSS_WEP: [u8; 6] = [0x62, 0x73, 0x73, 0x66, 0x6f, 0x72];
+const BSS_WEP: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x72]);
 const SSID_WEP: &[u8] = b"wep_is_soooo_secure";
-const BSS_MIXED: [u8; 6] = [0x62, 0x73, 0x73, 0x66, 0x6f, 0x7a];
+const BSS_MIXED: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x7a]);
 const SSID_MIXED: &[u8] = b"this_is_fine";
 
 // TODO(fxb/36399): Refactor this test and other config tests to remove duplicate scan code.
@@ -94,7 +94,7 @@ async fn configure_legacy_privacy_off() {
         .collect();
     aps.sort();
     let mut expected_aps =
-        [(BSS_WPA1.to_vec(), false), (BSS_WEP.to_vec(), false), (BSS_MIXED.to_vec(), true)];
+        [(BSS_WPA1.0.to_vec(), false), (BSS_WEP.0.to_vec(), false), (BSS_MIXED.0.to_vec(), true)];
     expected_aps.sort();
     assert_eq!(&expected_aps, &aps[..]);
 }

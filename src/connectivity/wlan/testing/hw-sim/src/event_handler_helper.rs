@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_wlan_tap as wlantap,
     std::collections::hash_map::HashMap,
     wlan_common::bss::Protection,
-    wlan_common::mac::MacAddr,
+    wlan_common::mac::Bssid,
 };
 
 /// An Action is a unary function with no return value. It can be passed to the various `on_`-
@@ -83,17 +83,17 @@ impl<'a> Action<wlantap::SetChannelArgs> for MatchChannel<'a> {
 ///  send a beacon with the provided BSSID + SSID + protection.
 pub struct Beacon<'a> {
     phy: &'a wlantap::WlantapPhyProxy,
-    bssid: MacAddr,
+    bssid: Bssid,
     ssid: Vec<u8>,
     protection: Protection,
 }
 
 impl<'a> Beacon<'a> {
     pub fn send(phy: &'a wlantap::WlantapPhyProxy) -> Self {
-        Self { phy: phy, bssid: [1; 6], ssid: vec![], protection: Protection::Open }
+        Self { phy: phy, bssid: Bssid([1; 6]), ssid: vec![], protection: Protection::Open }
     }
 
-    pub fn bssid(self, bssid: MacAddr) -> Self {
+    pub fn bssid(self, bssid: Bssid) -> Self {
         Self { bssid, ..self }
     }
 

@@ -6,7 +6,7 @@ use {
     crate::{auth, error::Error},
     wlan_common::{
         appendable::Appendable,
-        mac::{self, MacAddr, StatusCode},
+        mac::{self, Bssid, MacAddr, StatusCode},
         mgmt_writer,
         sequence::SequenceManager,
     },
@@ -16,7 +16,7 @@ use {
 pub fn write_open_auth_frame<B: Appendable>(
     buf: &mut B,
     client_addr: MacAddr,
-    bssid: MacAddr,
+    bssid: Bssid,
     seq_mgr: &mut SequenceManager,
     status_code: StatusCode,
 ) -> Result<(), Error> {
@@ -45,7 +45,7 @@ mod test {
         write_open_auth_frame(
             &mut buf,
             [1; 6],
-            [2; 6],
+            Bssid([2; 6]),
             &mut seq_mgr,
             StatusCode::TRANSACTION_SEQUENCE_ERROR,
         )

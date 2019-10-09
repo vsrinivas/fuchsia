@@ -8,7 +8,10 @@ use {
     wlan_mlme::{
         buffer::BufferProvider,
         client::Client,
-        common::{mac, sequence::SequenceManager},
+        common::{
+            mac::{self, Bssid},
+            sequence::SequenceManager,
+        },
         device::Device,
         error::ResultExt,
         timer::*,
@@ -23,7 +26,7 @@ pub extern "C" fn client_sta_new(
     bssid: &[u8; 6],
     iface_mac: &[u8; 6],
 ) -> *mut Client {
-    Box::into_raw(Box::new(Client::new(device, buf_provider, scheduler, *bssid, *iface_mac)))
+    Box::into_raw(Box::new(Client::new(device, buf_provider, scheduler, Bssid(*bssid), *iface_mac)))
 }
 
 #[no_mangle]

@@ -8,7 +8,7 @@ use {
         appendable::Appendable,
         big_endian::BigEndianU16,
         data_writer,
-        mac::{self, Aid, MacAddr},
+        mac::{self, Aid, Bssid, MacAddr},
         mgmt_writer,
         sequence::SequenceManager,
     },
@@ -16,14 +16,14 @@ use {
 
 pub fn write_open_auth_frame<B: Appendable>(
     buf: &mut B,
-    bssid: MacAddr,
+    bssid: Bssid,
     client_addr: MacAddr,
     seq_mgr: &mut SequenceManager,
 ) -> Result<(), Error> {
     let frame_ctrl = mac::FrameControl(0)
         .with_frame_type(mac::FrameType::MGMT)
         .with_mgmt_subtype(mac::MgmtSubtype::AUTH);
-    let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&bssid) as u16);
+    let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&bssid.0) as u16);
     mgmt_writer::write_mgmt_hdr(
         buf,
         mgmt_writer::mgmt_hdr_to_ap(frame_ctrl, bssid, client_addr, seq_ctrl),
@@ -36,7 +36,7 @@ pub fn write_open_auth_frame<B: Appendable>(
 
 pub fn write_deauth_frame<B: Appendable>(
     buf: &mut B,
-    bssid: MacAddr,
+    bssid: Bssid,
     client_addr: MacAddr,
     reason_code: mac::ReasonCode,
     seq_mgr: &mut SequenceManager,
@@ -44,7 +44,7 @@ pub fn write_deauth_frame<B: Appendable>(
     let frame_ctrl = mac::FrameControl(0)
         .with_frame_type(mac::FrameType::MGMT)
         .with_mgmt_subtype(mac::MgmtSubtype::DEAUTH);
-    let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&bssid) as u16);
+    let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&bssid.0) as u16);
     mgmt_writer::write_mgmt_hdr(
         buf,
         mgmt_writer::mgmt_hdr_to_ap(frame_ctrl, bssid, client_addr, seq_ctrl),
@@ -58,14 +58,14 @@ pub fn write_deauth_frame<B: Appendable>(
 /// Fills a given buffer with a null-data frame.
 pub fn write_keep_alive_resp_frame<B: Appendable>(
     buf: &mut B,
-    bssid: MacAddr,
+    bssid: Bssid,
     client_addr: MacAddr,
     seq_mgr: &mut SequenceManager,
 ) -> Result<(), Error> {
     let frame_ctrl = mac::FrameControl(0)
         .with_frame_type(mac::FrameType::DATA)
         .with_data_subtype(mac::DataSubtype(0).with_null(true));
-    let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&bssid) as u16);
+    let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&bssid.0) as u16);
 
     data_writer::write_data_hdr(
         buf,
@@ -98,7 +98,7 @@ pub fn write_eth_frame<B: Appendable>(
 pub fn write_data_frame<B: Appendable>(
     buf: &mut B,
     seq_mgr: &mut SequenceManager,
-    bssid: MacAddr,
+    bssid: Bssid,
     src: MacAddr,
     dst: MacAddr,
     protected: bool,
@@ -125,7 +125,7 @@ pub fn write_data_frame<B: Appendable>(
         mac::FixedDataHdrFields {
             frame_ctrl,
             duration: 0,
-            addr1: bssid,
+            addr1: bssid.0,
             addr2: src,
             addr3: dst,
             seq_ctrl,
@@ -141,7 +141,7 @@ pub fn write_data_frame<B: Appendable>(
 pub fn write_ps_poll_frame<B: Appendable>(
     buf: &mut B,
     aid: Aid,
-    bssid: MacAddr,
+    bssid: Bssid,
     ta: MacAddr,
 ) -> Result<(), Error> {
     const PS_POLL_ID_MASK: u16 = 0b11000000_00000000;
@@ -171,7 +171,7 @@ mod tests {
     fn open_auth_frame() {
         let mut buf = vec![];
         let mut seq_mgr = SequenceManager::new();
-        write_open_auth_frame(&mut buf, [1; 6], [2; 6], &mut seq_mgr)
+        write_open_auth_frame(&mut buf, Bssid([1; 6]), [2; 6], &mut seq_mgr)
             .expect("failed writing frame");
         assert_eq!(
             &[
@@ -195,7 +195,7 @@ mod tests {
     fn deauth_frame() {
         let mut buf = vec![];
         let mut seq_mgr = SequenceManager::new();
-        write_deauth_frame(&mut buf, [1; 6], [2; 6], mac::ReasonCode::TIMEOUT, &mut seq_mgr)
+        write_deauth_frame(&mut buf, Bssid([1; 6]), [2; 6], mac::ReasonCode::TIMEOUT, &mut seq_mgr)
             .expect("failed writing frame");
         assert_eq!(
             &[
@@ -217,7 +217,7 @@ mod tests {
     fn keep_alive_resp_frame() {
         let mut buf = vec![];
         let mut seq_mgr = SequenceManager::new();
-        write_keep_alive_resp_frame(&mut buf, [1; 6], [2; 6], &mut seq_mgr)
+        write_keep_alive_resp_frame(&mut buf, Bssid([1; 6]), [2; 6], &mut seq_mgr)
             .expect("failed writing frame");
         assert_eq!(
             &[
@@ -279,7 +279,7 @@ mod tests {
         write_data_frame(
             &mut buf,
             &mut seq_mgr,
-            [1; 6],
+            Bssid([1; 6]),
             [2; 6],
             [3; 6],
             false, // protected
@@ -313,7 +313,7 @@ mod tests {
         write_data_frame(
             &mut buf,
             &mut seq_mgr,
-            [1; 6],
+            Bssid([1; 6]),
             [2; 6],
             [3; 6],
             true, // protected
@@ -348,7 +348,7 @@ mod tests {
         write_data_frame(
             &mut buf,
             &mut seq_mgr,
-            [1; 6],
+            Bssid([1; 6]),
             [2; 6],
             [3; 6],
             true,  // protected
@@ -380,7 +380,7 @@ mod tests {
         let result = write_data_frame(
             &mut BufferWriter::new(&mut buf[..]),
             &mut seq_mgr,
-            [1; 6],
+            Bssid([1; 6]),
             [2; 6],
             [3; 6],
             false, // protected
@@ -394,7 +394,7 @@ mod tests {
     #[test]
     fn ps_poll_frame() {
         let mut buf = vec![];
-        write_ps_poll_frame(&mut buf, 0b00100000_00100001, [1; 6], [2; 6])
+        write_ps_poll_frame(&mut buf, 0b00100000_00100001, Bssid([1; 6]), [2; 6])
             .expect("failed writing frame");
         let expected = [
             0b10100100, 0, // Frame control

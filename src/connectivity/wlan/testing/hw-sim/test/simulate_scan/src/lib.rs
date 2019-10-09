@@ -7,14 +7,15 @@ use {
     fidl_fuchsia_wlan_tap::WlantapPhyProxy,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
+    wlan_common::mac::Bssid,
     wlan_hw_sim::*,
 };
 
-const BSS_FOO: [u8; 6] = [0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f];
+const BSS_FOO: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f]);
 const SSID_FOO: &[u8] = b"foo";
-const BSS_BAR: [u8; 6] = [0x62, 0x73, 0x73, 0x62, 0x61, 0x72];
+const BSS_BAR: Bssid = Bssid([0x62, 0x73, 0x73, 0x62, 0x61, 0x72]);
 const SSID_BAR: &[u8] = b"bar";
-const BSS_BAZ: [u8; 6] = [0x62, 0x73, 0x73, 0x62, 0x61, 0x7a];
+const BSS_BAZ: Bssid = Bssid([0x62, 0x73, 0x73, 0x62, 0x61, 0x7a]);
 const SSID_BAZ: &[u8] = b"baz";
 
 async fn scan(
@@ -68,9 +69,9 @@ async fn simulate_scan() {
         .collect();
     aps.sort();
     let mut expected_aps = [
-        (String::from_utf8_lossy(SSID_FOO).to_string(), BSS_FOO.to_vec()),
-        (String::from_utf8_lossy(SSID_BAR).to_string(), BSS_BAR.to_vec()),
-        (String::from_utf8_lossy(SSID_BAZ).to_string(), BSS_BAZ.to_vec()),
+        (String::from_utf8_lossy(SSID_FOO).to_string(), BSS_FOO.0.to_vec()),
+        (String::from_utf8_lossy(SSID_BAR).to_string(), BSS_BAR.0.to_vec()),
+        (String::from_utf8_lossy(SSID_BAZ).to_string(), BSS_BAZ.0.to_vec()),
     ];
     expected_aps.sort();
     assert_eq!(&expected_aps, &aps[..]);

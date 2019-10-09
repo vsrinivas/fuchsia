@@ -192,7 +192,7 @@ impl States {
         mgmt_hdr: &mac::MgmtHdr,
         body: B,
     ) -> States {
-        if mgmt_hdr.addr3 != sta.bssid {
+        if mgmt_hdr.addr3 != sta.bssid.0 {
             return self;
         }
 
@@ -274,12 +274,14 @@ mod tests {
             device::{Device, FakeDevice},
         },
         fuchsia_zircon::{self as zx, DurationNum},
-        wlan_common::assert_variant,
+        wlan_common::{
+            assert_variant,
+            mac::{Bssid, MacAddr},
+        },
         wlan_statemachine as statemachine,
     };
 
-    type MacAddr = [u8; 6];
-    const BSSID: MacAddr = [6u8; 6];
+    const BSSID: Bssid = Bssid([6u8; 6]);
     const IFACE_MAC: MacAddr = [7u8; 6];
 
     fn make_client_station(device: Device, scheduler: Scheduler) -> Client {
@@ -340,7 +342,7 @@ mod tests {
         assert_eq!(
             msg,
             fidl_mlme::AuthenticateConfirm {
-                peer_sta_address: BSSID,
+                peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
                 result_code: fidl_mlme::AuthenticateResultCodes::Refused,
             }
@@ -376,7 +378,7 @@ mod tests {
         assert_eq!(
             msg,
             fidl_mlme::AuthenticateConfirm {
-                peer_sta_address: BSSID,
+                peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
                 result_code: fidl_mlme::AuthenticateResultCodes::Success,
             }
@@ -412,7 +414,7 @@ mod tests {
         assert_eq!(
             msg,
             fidl_mlme::AuthenticateConfirm {
-                peer_sta_address: BSSID,
+                peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
                 result_code: fidl_mlme::AuthenticateResultCodes::Refused,
             }
@@ -438,7 +440,7 @@ mod tests {
         assert_eq!(
             msg,
             fidl_mlme::AuthenticateConfirm {
-                peer_sta_address: BSSID,
+                peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
                 result_code: fidl_mlme::AuthenticateResultCodes::AuthFailureTimeout,
             }
@@ -467,7 +469,7 @@ mod tests {
         assert_eq!(
             msg,
             fidl_mlme::AuthenticateConfirm {
-                peer_sta_address: BSSID,
+                peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
                 result_code: fidl_mlme::AuthenticateResultCodes::Refused,
             }
@@ -492,7 +494,7 @@ mod tests {
         assert_eq!(
             msg,
             fidl_mlme::DeauthenticateIndication {
-                peer_sta_address: BSSID,
+                peer_sta_address: BSSID.0,
                 reason_code: fidl_mlme::ReasonCode::NoMoreStas,
             }
         );

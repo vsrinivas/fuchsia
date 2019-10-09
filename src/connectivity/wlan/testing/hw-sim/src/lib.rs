@@ -36,7 +36,7 @@ mod event_handler_helper;
 mod wlanstack_helper;
 
 pub const CLIENT_MAC_ADDR: [u8; 6] = [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b];
-pub const AP_MAC_ADDR: [u8; 6] = [0x70, 0xf1, 0x1c, 0x05, 0x2d, 0x7f];
+pub const AP_MAC_ADDR: mac::Bssid = mac::Bssid([0x70, 0xf1, 0x1c, 0x05, 0x2d, 0x7f]);
 pub const ETH_DST_MAC: [u8; 6] = [0x65, 0x74, 0x68, 0x64, 0x73, 0x74];
 pub const CHANNEL: WlanChan = WlanChan { primary: 1, secondary80: 0, cbw: Cbw::Cbw20 };
 
@@ -45,7 +45,7 @@ pub fn default_wlantap_config_client() -> WlantapPhyConfig {
 }
 
 pub fn default_wlantap_config_ap() -> WlantapPhyConfig {
-    config::create_wlantap_config(format!("wlantap-ap"), AP_MAC_ADDR, MacRole::Ap)
+    config::create_wlantap_config(format!("wlantap-ap"), AP_MAC_ADDR.0, MacRole::Ap)
 }
 
 pub fn create_rx_info(channel: &WlanChan) -> WlanRxInfo {
@@ -70,7 +70,7 @@ pub fn create_rx_info(channel: &WlanChan) -> WlanRxInfo {
 pub fn send_beacon(
     frame_buf: &mut Vec<u8>,
     channel: &WlanChan,
-    bss_id: &[u8; 6],
+    bss_id: &mac::Bssid,
     ssid: &[u8],
     protection: &Protection,
     proxy: &WlantapPhyProxy,
@@ -116,7 +116,7 @@ pub fn send_beacon(
 fn send_authentication(
     frame_buf: &mut Vec<u8>,
     channel: &WlanChan,
-    bss_id: &[u8; 6],
+    bss_id: &mac::Bssid,
     proxy: &WlantapPhyProxy,
 ) -> Result<(), failure::Error> {
     frame_buf.clear();
@@ -144,7 +144,7 @@ fn send_authentication(
 fn send_association_response(
     frame_buf: &mut Vec<u8>,
     channel: &WlanChan,
-    bss_id: &[u8; 6],
+    bss_id: &mac::Bssid,
     proxy: &WlantapPhyProxy,
 ) -> Result<(), failure::Error> {
     frame_buf.clear();
@@ -203,11 +203,11 @@ pub fn create_connect_config<S: ToString>(ssid: &[u8], passphrase: S) -> Connect
 }
 
 fn create_wpa2_psk_authenticator(
-    bssid: &[u8; 6],
+    bssid: &mac::Bssid,
     ssid: &[u8],
     passphrase: &str,
 ) -> wlan_rsn::Authenticator {
-    let nonce_rdr = wlan_rsn::nonce::NonceReader::new(bssid).expect("creating nonce reader");
+    let nonce_rdr = wlan_rsn::nonce::NonceReader::new(&bssid.0).expect("creating nonce reader");
     let gtk_provider = wlan_rsn::GtkProvider::new(cipher::Cipher::new_dot11(cipher::CCMP_128))
         .expect("creating gtk provider");
     let psk = wlan_rsn::psk::compute(passphrase.as_bytes(), ssid).expect("computing PSK");
@@ -219,7 +219,7 @@ fn create_wpa2_psk_authenticator(
         psk,
         CLIENT_MAC_ADDR,
         s_rsne,
-        *bssid,
+        bssid.0,
         a_rsne,
     )
     .expect("creating authenticator")
@@ -228,7 +228,7 @@ fn create_wpa2_psk_authenticator(
 fn process_auth_update(
     updates: &mut wlan_rsn::rsna::UpdateSink,
     channel: &WlanChan,
-    bssid: &[u8; 6],
+    bssid: &mac::Bssid,
     phy: &WlantapPhyProxy,
 ) -> Result<(), failure::Error> {
     for update in updates {
@@ -236,8 +236,8 @@ fn process_auth_update(
             rx_wlan_data_frame(
                 channel,
                 &CLIENT_MAC_ADDR,
-                bssid,
-                bssid,
+                &bssid.0,
+                &bssid.0,
                 &frame[..],
                 mac::ETHER_TYPE_EAPOL,
                 phy,
@@ -251,7 +251,7 @@ fn handle_connect_events(
     event: WlantapPhyEvent,
     phy: &WlantapPhyProxy,
     ssid: &[u8],
-    bssid: &[u8; 6],
+    bssid: &mac::Bssid,
     protection: &Protection,
     authenticator: &mut Option<wlan_rsn::Authenticator>,
 ) {
@@ -320,7 +320,7 @@ pub async fn connect(
     phy: &WlantapPhyProxy,
     helper: &mut test_utils::TestHelper,
     ssid: &[u8],
-    bssid: &[u8; 6],
+    bssid: &mac::Bssid,
     passphrase: Option<&str>,
 ) {
     let mut connect_config = create_connect_config(ssid, passphrase.unwrap_or(&""));
@@ -346,7 +346,7 @@ pub async fn connect(
 
 pub fn assert_associated_state(
     status: WlanStatus,
-    bssid: &[u8; 6],
+    bssid: &mac::Bssid,
     ssid: &[u8],
     channel: &WlanChan,
     is_secure: bool,
@@ -354,7 +354,7 @@ pub fn assert_associated_state(
     assert_eq!(status.error.code, ErrCode::Ok);
     assert_eq!(status.state, State::Associated);
     let ap = status.current_ap.expect("expect to be associated to an AP");
-    assert_eq!(ap.bssid, bssid.to_vec());
+    assert_eq!(ap.bssid, bssid.0.to_vec());
     assert_eq!(ap.ssid, String::from_utf8_lossy(ssid).to_string());
     assert_eq!(ap.chan, *channel);
     assert!(ap.is_compatible);

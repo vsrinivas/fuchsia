@@ -22,7 +22,7 @@ use {
 // Refer to |KMinstrelUpdateIntervalForHwSim| in //src/connectivity/wlan/drivers/wlan/device.cpp
 const DATA_FRAME_INTERVAL_NANOS: i64 = 4_000_000;
 
-const BSS_MINSTL: [u8; 6] = [0x6d, 0x69, 0x6e, 0x73, 0x74, 0x0a];
+const BSS_MINSTL: mac::Bssid = mac::Bssid([0x6d, 0x69, 0x6e, 0x73, 0x74, 0x0a]);
 const SSID_MINSTREL: &[u8] = b"minstrel";
 
 fn create_wlan_tx_status_entry(tx_vec_idx: u16) -> WlanTxStatusEntry {
@@ -30,7 +30,7 @@ fn create_wlan_tx_status_entry(tx_vec_idx: u16) -> WlanTxStatusEntry {
 }
 
 fn send_tx_status_report(
-    bssid: [u8; 6],
+    bssid: mac::Bssid,
     tx_vec_idx: u16,
     is_successful: bool,
     proxy: &WlantapPhyProxy,
@@ -38,7 +38,7 @@ fn send_tx_status_report(
     use fidl_fuchsia_wlan_tap::WlanTxStatus;
 
     let mut ts = WlanTxStatus {
-        peer_addr: bssid,
+        peer_addr: bssid.0,
         success: is_successful,
         tx_status_entries: [
             create_wlan_tx_status_entry(tx_vec_idx),
@@ -58,7 +58,7 @@ fn send_tx_status_report(
 fn handle_rate_selection_event<F, G>(
     event: WlantapPhyEvent,
     phy: &WlantapPhyProxy,
-    bssid: &[u8; 6],
+    bssid: &mac::Bssid,
     hm: &mut HashMap<u16, u64>,
     should_succeed: F,
     is_converged: &mut G,
