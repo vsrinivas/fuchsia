@@ -4,15 +4,41 @@
 
 driver("sdhci") {
   sources = [
-    "sdhci.c",
+    "sdhci.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/banjo/ddk.protocol.sdhci",
     "$zx/system/banjo/ddk.protocol.sdmmc",
+    "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",
-    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
+  ]
+}
+
+test("sdhci-test") {
+  output_name = "sdhci-test"
+  sources = [
+    "sdhci.cc",
+    "sdhci-test.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.block",
+    "$zx/system/banjo/ddk.protocol.sdhci",
+    "$zx/system/banjo/ddk.protocol.sdmmc",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/mock-function",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }

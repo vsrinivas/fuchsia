@@ -1,0 +1,180 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef ZIRCON_SYSTEM_DEV_BLOCK_SDHCI_SDHCI_H_
+#define ZIRCON_SYSTEM_DEV_BLOCK_SDHCI_SDHCI_H_
+
+#include <ddk/io-buffer.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/sdhci.h>
+#include <ddktl/protocol/sdmmc.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
+#include <hw/sdhci.h>
+#include <hw/sdmmc.h>
+#include <lib/mmio/mmio.h>
+#include <lib/sync/completion.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/interrupt.h>
+#include <zircon/threads.h>
+
+namespace sdhci {
+
+class Sdhci;
+using DeviceType = ddk::Device<Sdhci, ddk::UnbindableNew>;
+
+class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_protocol> {
+ public:
+  Sdhci(zx_device_t* parent, ddk::MmioBuffer regs_mmio_buffer, zx::bti bti, zx::interrupt irq,
+        const ddk::SdhciProtocolClient sdhci)
+      : DeviceType(parent),
+        regs_mmio_buffer_(std::move(regs_mmio_buffer)),
+        irq_(std::move(irq)),
+        // TODO(fxb/38209): Use hwreg instead of doing this.
+        regs_(reinterpret_cast<sdhci_regs_t*>(regs_mmio_buffer_.get())),
+        sdhci_(sdhci),
+        bti_(std::move(bti)),
+        quirks_(sdhci_.GetQuirks()) {}
+
+  virtual ~Sdhci() = default;
+
+  static zx_status_t Create(void* ctx, zx_device_t* parent);
+
+  void DdkRelease();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
+
+  zx_status_t SdmmcHostInfo(sdmmc_host_info_t* out_info);
+  zx_status_t SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) TA_EXCL(mtx_);
+  zx_status_t SdmmcSetBusWidth(sdmmc_bus_width_t bus_width) TA_EXCL(mtx_);
+  zx_status_t SdmmcSetBusFreq(uint32_t bus_freq) TA_EXCL(mtx_);
+  zx_status_t SdmmcSetTiming(sdmmc_timing_t timing) TA_EXCL(mtx_);
+  void SdmmcHwReset() TA_EXCL(mtx_);
+  zx_status_t SdmmcPerformTuning(uint32_t cmd_idx) TA_EXCL(mtx_);
+  zx_status_t SdmmcRequest(sdmmc_req_t* req) TA_EXCL(mtx_);
+  zx_status_t SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb);
+
+  // Visible for testing.
+  zx_status_t Init();
+
+  uint32_t base_clock() const { return base_clock_; }
+
+ protected:
+  // Visible for testing.
+  enum class RequestStatus {
+    IDLE,
+    COMMAND,
+    TRANSFER_DATA_DMA,
+    READ_DATA_PIO,
+    WRITE_DATA_PIO,
+  };
+
+  virtual zx_status_t WaitForReset(const uint32_t mask, zx::duration timeout) const;
+  virtual zx_status_t WaitForInterrupt() { return irq_.wait(nullptr); }
+
+  RequestStatus GetRequestStatus() TA_EXCL(mtx_) {
+    fbl::AutoLock lock(&mtx_);
+    if (cmd_req_ != nullptr) {
+      return RequestStatus::COMMAND;
+    }
+    if (data_req_ != nullptr) {
+      if (data_req_->use_dma) {
+        return RequestStatus::TRANSFER_DATA_DMA;
+      }
+      if ((data_req_->cmd_flags & SDMMC_CMD_READ) == 0) {
+        return RequestStatus::WRITE_DATA_PIO;
+      }
+      return RequestStatus::READ_DATA_PIO;
+    }
+    return RequestStatus::IDLE;
+  }
+
+  ddk::MmioBuffer regs_mmio_buffer_;
+
+ private:
+  struct Adma64Descriptor {
+    // 64k max per descriptor
+    static constexpr size_t kMaxDescriptorLength = 0x1'0000;  // 64k
+    static constexpr size_t kDescriptorLengthMask = kMaxDescriptorLength - 1;
+
+    union {
+      struct {
+        // TODO(fxb/38209): Don't use bitfields.
+        uint8_t valid : 1;
+        uint8_t end : 1;
+        uint8_t intr : 1;
+        uint8_t rsvd0 : 1;
+        uint8_t act1 : 1;
+        uint8_t act2 : 1;
+        uint8_t rsvd1 : 2;
+        uint8_t rsvd2;
+      } __PACKED;
+      uint16_t attr;
+    } __PACKED;
+    uint16_t length;
+    uint64_t address;
+  } __PACKED;
+
+  static_assert(sizeof(Adma64Descriptor) == 12, "unexpected ADMA2 descriptor size");
+
+  static uint32_t PrepareCmd(sdmmc_req_t* req);
+  static zx_status_t FinishRequest(sdmmc_req_t* req);
+
+  bool SupportsAdma2_64Bit() const {
+    return (info_.caps & SDMMC_HOST_CAP_ADMA2) && (info_.caps & SDMMC_HOST_CAP_SIXTY_FOUR_BIT) &&
+           !(quirks_ & SDHCI_QUIRK_NO_DMA);
+  }
+
+  void CompleteRequestLocked(sdmmc_req_t* req, zx_status_t status) TA_REQ(mtx_);
+  void CmdStageCompleteLocked() TA_REQ(mtx_);
+  void DataStageReadReadyLocked() TA_REQ(mtx_);
+  void DataStageWriteReadyLocked() TA_REQ(mtx_);
+  void TransferCompleteLocked() TA_REQ(mtx_);
+  void ErrorRecoveryLocked() TA_REQ(mtx_);
+
+  int IrqThread() TA_EXCL(mtx_);
+
+  zx_status_t BuildDmaDescriptor(sdmmc_req_t* req);
+  zx_status_t StartRequestLocked(sdmmc_req_t* req) TA_REQ(mtx_);
+
+  zx::interrupt irq_;
+  thrd_t irq_thread_;
+
+  volatile sdhci_regs_t* regs_;
+
+  const ddk::SdhciProtocolClient sdhci_;
+
+  zx::bti bti_;
+
+  // DMA descriptors
+  ddk::IoBuffer iobuf_ = {};
+  Adma64Descriptor* descs_ = nullptr;
+
+  // Held when a command or action is in progress.
+  fbl::Mutex mtx_;
+
+  // Current command request
+  sdmmc_req_t* cmd_req_ TA_GUARDED(mtx_) = nullptr;
+  // Current data line request
+  sdmmc_req_t* data_req_ TA_GUARDED(mtx_) = nullptr;
+  // Current block id to transfer (PIO)
+  uint16_t data_blockid_ TA_GUARDED(mtx_) = 0;
+  // Set to true if the data stage completed before the command stage
+  bool data_done_ TA_GUARDED(mtx_) = false;
+  // used to signal request complete
+  sync_completion_t req_completion_;
+
+  // Controller info
+  sdmmc_host_info_t info_ = {};
+
+  // Controller specific quirks
+  const uint64_t quirks_;
+
+  // Base clock rate
+  uint32_t base_clock_ = 0;
+};
+
+}  // namespace sdhci
+
+#endif  // ZIRCON_SYSTEM_DEV_BLOCK_SDHCI_SDHCI_H_
