@@ -7,8 +7,6 @@
 
 #include <type_traits>
 
-#include <fbl/algorithm.h>
-
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 

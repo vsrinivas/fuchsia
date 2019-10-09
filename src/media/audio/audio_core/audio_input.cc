@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/audio_input.h"
 
+#include <algorithm>
+
 #include <trace/event.h>
 
 #include "src/media/audio/audio_core/audio_driver.h"

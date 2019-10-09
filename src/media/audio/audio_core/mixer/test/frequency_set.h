@@ -8,8 +8,6 @@
 
 #include <array>
 
-#include <fbl/algorithm.h>
-
 namespace media::audio::test {
 
 //

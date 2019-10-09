@@ -3,6 +3,7 @@
 
 #include "src/media/audio/audio_core/mixer/position_manager.h"
 
+#include <fbl/algorithm.h>
 #include <gtest/gtest.h>
 
 namespace media::audio::mixer {

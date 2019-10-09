@@ -7,6 +7,7 @@
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <iomanip>
 
@@ -986,8 +987,8 @@ void AudioDriver::SetupCommandTimeout() {
   zx_time_t timeout;
 
   timeout = fetch_driver_info_timeout_;
-  timeout = fbl::min(timeout, configuration_timeout_);
-  timeout = fbl::min(timeout, pd_enable_timeout_);
+  timeout = std::min(timeout, configuration_timeout_);
+  timeout = std::min(timeout, pd_enable_timeout_);
 
   if (last_set_timeout_ != timeout) {
     if (timeout != ZX_TIME_INFINITE) {

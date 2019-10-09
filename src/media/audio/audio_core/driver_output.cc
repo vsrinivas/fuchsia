@@ -8,6 +8,7 @@
 #include <lib/fit/defer.h>
 #include <lib/zx/clock.h>
 
+#include <algorithm>
 #include <iomanip>
 
 #include <trace/event.h>
@@ -213,7 +214,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
       return false;
     }
 
-    frames_to_mix_ = static_cast<uint32_t>(fbl::min<int64_t>(rb_space, desired_frames));
+    frames_to_mix_ = static_cast<uint32_t>(std::min<int64_t>(rb_space, desired_frames));
   }
 
   uint32_t to_mix = frames_to_mix_;

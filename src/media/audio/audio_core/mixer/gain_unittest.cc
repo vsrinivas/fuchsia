@@ -4,6 +4,7 @@
 
 #include "src/media/audio/audio_core/mixer/gain.h"
 
+#include <fbl/algorithm.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 

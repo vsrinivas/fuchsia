@@ -8,10 +8,9 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <stdint.h>
 
+#include <algorithm>
 #include <atomic>
 #include <cmath>
-
-#include <fbl/algorithm.h>
 
 #include "lib/media/cpp/timeline_rate.h"
 #include "src/lib/fxl/logging.h"

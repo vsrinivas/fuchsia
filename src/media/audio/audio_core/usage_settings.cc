@@ -4,7 +4,6 @@
 
 #include "src/media/audio/audio_core/usage_settings.h"
 
-#include <fbl/algorithm.h>
 #include <trace/event.h>
 
 #include "src/media/audio/audio_core/mixer/gain.h"
