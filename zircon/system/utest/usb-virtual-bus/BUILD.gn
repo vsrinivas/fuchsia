@@ -8,7 +8,6 @@ group("test") {
     ":usb-virtual-bus-cdc-acm",
     ":usb-virtual-bus-ftdi",
     ":usb-virtual-bus-hid",
-    ":usb-virtual-bus-ums",
   ]
 }
 
