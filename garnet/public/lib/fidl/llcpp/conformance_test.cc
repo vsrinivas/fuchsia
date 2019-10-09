@@ -1434,6 +1434,28 @@ TEST(Conformance, Float64Max_Encode) {
   }
 }
 
+TEST(Conformance, UnionWithBoundString_Encode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x61, 0x62, 0x63, 0x64, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(
+        sizeof(llcpp::conformance::UnionWithBoundStringStruct))];
+    llcpp::conformance::UnionWithBoundStringStruct* v1 =
+        new (buf_v2) llcpp::conformance::UnionWithBoundStringStruct();
+    llcpp::conformance::UnionWithBoundString v3;
+    fidl::StringView v4("abcd", 4);
+    v3.set_boundFiveStr(std::move(v4));
+    v1->v = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+  }
+}
+
 TEST(Conformance, 3ByteObjectAlignmentInStruct_Decode) {
   const auto expected = std::vector<uint8_t>{
       0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
@@ -2849,6 +2871,28 @@ TEST(Conformance, Float64Max_Decode) {
     double v3 =
         179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368.000000;
     v1->value = std::move(v3);
+
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+  }
+}
+
+TEST(Conformance, UnionWithBoundString_Decode) {
+  const auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x61, 0x62, 0x63, 0x64, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  {
+    char buf_v2[llcpp_conformance_utils::FidlAlign(
+        sizeof(llcpp::conformance::UnionWithBoundStringStruct))];
+    llcpp::conformance::UnionWithBoundStringStruct* v1 =
+        new (buf_v2) llcpp::conformance::UnionWithBoundStringStruct();
+    llcpp::conformance::UnionWithBoundString v3;
+    fidl::StringView v4("abcd", 4);
+    v3.set_boundFiveStr(std::move(v4));
+    v1->v = std::move(v3);
 
     EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
   }

@@ -144,7 +144,7 @@ func bytesBuilder(bytes []byte) string {
 
 type llcppValueBuilder struct {
 	strings.Builder
-	varidx int
+	varidx  int
 	lastVar string
 }
 
@@ -330,10 +330,14 @@ func (b *llcppValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDe
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
 
-		if _, ok := fieldDecl.(*gidlmixer.StructDecl); ok {
+		switch fieldDecl.(type) {
+		case *gidlmixer.StringDecl:
+			b.Builder.WriteString(fmt.Sprintf(
+				"%s.set_%s(std::move(%s));\n", containerVar, field.Key.Name, fieldVar))
+		case *gidlmixer.StructDecl:
 			b.Builder.WriteString(fmt.Sprintf(
 				"%s.set_%s(*%s);\n", containerVar, field.Key.Name, fieldVar))
-		} else {
+		default:
 			b.Builder.WriteString(fmt.Sprintf(
 				"%s.set_%s(&%s);\n", containerVar, field.Key.Name, fieldVar))
 		}
@@ -350,7 +354,7 @@ func (b *llcppValueBuilder) OnArray(value []interface{}, decl *gidlmixer.ArrayDe
 	}
 	for _, item := range value {
 		gidlmixer.Visit(b, item, elemDecl)
-		elements = append(elements, dereference + b.lastVar)
+		elements = append(elements, dereference+b.lastVar)
 	}
 	sliceVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf("auto %s = %s{%s};\n",
@@ -375,7 +379,7 @@ func (b *llcppValueBuilder) OnVector(value []interface{}, decl *gidlmixer.Vector
 	}
 	for _, item := range value {
 		gidlmixer.Visit(b, item, elemDecl)
-		elements = append(elements, dereference + b.lastVar)
+		elements = append(elements, dereference+b.lastVar)
 	}
 	arrayVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf("auto %s = fidl::Array<%s, %d>{%s};\n",
@@ -401,14 +405,14 @@ func typeName(decl gidlmixer.Declaration) string {
 	case *gidlmixer.StringDecl:
 		return "fidl::StringView"
 	case *gidlmixer.StructDecl:
-		if (decl.IsNullable()) {
+		if decl.IsNullable() {
 			return fmt.Sprintf("%s*", identifierName(decl.Name))
 		}
 		return identifierName(decl.Name)
 	case *gidlmixer.TableDecl:
 		return identifierName(decl.Name)
 	case *gidlmixer.UnionDecl:
-		if (decl.IsNullable()) {
+		if decl.IsNullable() {
 			return fmt.Sprintf("%s*", identifierName(decl.Name))
 		}
 		return identifierName(decl.Name)

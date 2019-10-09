@@ -1370,6 +1370,25 @@ TEST(Conformance, Float64Max_Encode) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
+TEST(Conformance, UnionWithBoundString_Encode) {
+  conformance::UnionWithBoundStringStruct v1;
+
+  conformance::UnionWithBoundString v2;
+
+  std::string v3("abcd");
+  v2.set_boundFiveStr(std::move(v3));
+  v1.v = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x61, 0x62, 0x63, 0x64, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
 TEST(Conformance, 3ByteObjectAlignmentInStruct_Decode) {
   auto input = std::vector<uint8_t>{
       0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
@@ -2789,11 +2808,45 @@ TEST(Conformance, Float64Max_Decode) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
+TEST(Conformance, UnionWithBoundString_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x61, 0x62, 0x63, 0x64, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::UnionWithBoundStringStruct v1;
+
+  conformance::UnionWithBoundString v2;
+
+  std::string v3("abcd");
+  v2.set_boundFiveStr(std::move(v3));
+  v1.v = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
 TEST(Conformance, StringExceedsLimit_Encode_Failure) {
   conformance::Length2StringWrapper v1;
 
   std::string v2("abc");
   v1.length_2_string = std::move(v2);
+
+  zx_status_t expected = ZX_ERR_INVALID_ARGS;
+
+  ::fidl::test::util::CheckEncodeFailure(v1, expected);
+}
+
+TEST(Conformance, UnionWithBoundString_ExceedsBounds_Encode_Failure) {
+  conformance::UnionWithBoundStringStruct v1;
+
+  conformance::UnionWithBoundString v2;
+
+  std::string v3("abcdef");
+  v2.set_boundFiveStr(std::move(v3));
+  v1.v = std::move(v2);
 
   zx_status_t expected = ZX_ERR_INVALID_ARGS;
 
