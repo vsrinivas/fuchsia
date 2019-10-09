@@ -17,6 +17,7 @@
 
 #include <future>
 
+#include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
 TEST(SocketpairTest, Control) {
@@ -184,6 +185,10 @@ int poll_for_read_with_timeout(void* arg) {
 TEST(SocketpairTest, ShutdownSelfWritePoll) {
   int fds[2];
   socketpair_shutdown_setup(fds);
+  fbl::unique_fd cleanup_fds[] = {
+      fbl::unique_fd(fds[0]),
+      fbl::unique_fd(fds[1]),
+  };
 
   poll_for_read_args_t poll_args = {};
   poll_args.fd = fds[0];
