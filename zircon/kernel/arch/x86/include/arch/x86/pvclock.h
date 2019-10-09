@@ -36,7 +36,7 @@ struct pvclock_boot_time {
   uint32_t version;
   uint32_t seconds;
   uint32_t nseconds;
-} __PACKED;
+};
 static_assert(sizeof(struct pvclock_boot_time) == 12, "sizeof(pvclock_boot_time) should be 12");
 
 struct pvclock_system_time {
@@ -48,7 +48,7 @@ struct pvclock_system_time {
   int8_t tsc_shift;
   uint8_t flags;
   uint8_t pad1[2];
-} __PACKED;
+};
 static_assert(sizeof(struct pvclock_system_time) == 32, "sizeof(pvclock_system_time) should be 32");
 
 zx_status_t pvclock_init();

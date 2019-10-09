@@ -41,7 +41,8 @@ typedef struct {
     uint32_t dboff;         // Doorbell Offset
     uint32_t rtsoff;        // Runtime Register Space Offset
     uint32_t hccparams2;    // Capability Parameters 2
-} __PACKED xhci_cap_regs_t;
+} xhci_cap_regs_t;
+static_assert(sizeof(xhci_cap_regs_t) == 32);
 
 // XHCI Port Register Set
 typedef struct {

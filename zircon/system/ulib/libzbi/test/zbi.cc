@@ -44,7 +44,10 @@ typedef struct test_zbi {
 
   zbi_header_t bootfs_hdr;
   char bootfs_payload[kBootfsPayloadLen];
-} __PACKED test_zbi_t;
+} test_zbi_t;
+static_assert(offsetof(test_zbi, cmdline_hdr) == sizeof(test_zbi::header));
+static_assert(offsetof(test_zbi, ramdisk_hdr) == offsetof(test_zbi, cmdline_payload[kCmdlinePayloadLen]));
+static_assert(offsetof(test_zbi, bootfs_hdr) == offsetof(test_zbi, ramdisk_payload[kRdPayloadLen]));
 
 static_assert(sizeof(test_zbi_t) % ZBI_ALIGNMENT == 0, "");
 

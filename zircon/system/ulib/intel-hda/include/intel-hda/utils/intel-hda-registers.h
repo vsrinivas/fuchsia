@@ -55,7 +55,8 @@ typedef struct hda_stream_desc_regs {
   uint32_t bdpl;          // (0x18) SD_n Buffer Descriptor List Pointer - Lower
   uint32_t bdpu;          // (0x1C) SD_n Buffer Descriptor List Pointer - Upper
   // clang-format on
-} __PACKED hda_stream_desc_regs_t;
+} hda_stream_desc_regs_t;
+static_assert(sizeof(hda_stream_desc_regs) == 32);
 
 typedef struct hda_registers {
   // clang-format off
@@ -113,7 +114,8 @@ typedef struct hda_registers {
   hda_stream_desc_regs_t stream_desc[30]; // (0x80)
   uint8_t __rsvd9[0x1BC0];                // (0x440 - 0x1FFF)
   // clang-format on
-} __PACKED hda_registers_t;
+} hda_registers_t;
+static_assert(sizeof(hda_registers) == 8192);
 
 typedef struct hda_stream_desc_alias_regs {
   // clang-format off
@@ -139,7 +141,8 @@ typedef struct hda_pp_registers {
   uint32_t ppctl;         // (0x04) Processing Pipe Control
   uint32_t ppsts;         // (0x08) Processing Pipe Status
   // clang-format on
-} __PACKED hda_pp_registers_t;
+} hda_pp_registers_t;
+static_assert(sizeof(hda_pp_registers) == 12);
 
 typedef struct hda_all_registers {
   // clang-format off
@@ -183,7 +186,8 @@ typedef struct adsp_registers {
 
   uint8_t  _rsvd3[0xFF50];// (0xB0 - 0xFFFF)
   // clang-format on
-} __PACKED adsp_registers_t;
+} adsp_registers_t;
+static_assert(sizeof(adsp_registers) == 65536);
 
 typedef struct adsp_fw_registers {
   // clang-format off
@@ -194,6 +198,7 @@ typedef struct adsp_fw_registers {
   uint32_t rom_info;      // (0x18) Basic platform configuration reported by ROM
   // clang-format on
 } __PACKED adsp_fw_registers_t;
+static_assert(sizeof(adsp_fw_registers) == 28);
 
 #ifdef __cplusplus
 

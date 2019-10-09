@@ -418,7 +418,6 @@ config("default_warnings") {
     "-Wno-unused-function",
     "-Werror=unused-label",
     "-Werror=return-type",
-    "-Wno-address-of-packed-member",
   ]
   cflags_c = [
     "-Werror=implicit-function-declaration",

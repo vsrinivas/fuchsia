@@ -31,6 +31,12 @@ constexpr uint8_t SAMPLES_TO_TRIGGER = 0x01;
 
 #define GET_BYTE(val, shift) static_cast<uint8_t>((val >> shift) & 0xFF)
 
+// TODO(37765): -Waddress-of-packed-member warns on pointers to members of
+// packed structs because those pointers could be misaligned. The warning
+// however can appear on areas where we just copy the value of the pointer
+// instead of access it. These macros silence it by casting to a void* and back.
+#define UNALIGNED_U16_PTR(val) (uint16_t *)((void *)val)
+
 // clang-format off
 // zx_port_packet::type
 #define TCS_SHUTDOWN  0x01
@@ -58,10 +64,10 @@ zx_status_t Tcs3400Device::FillInputRpt() {
     uint8_t reg_h;
     uint8_t reg_l;
   } regs[] = {
-      {&input_rpt_.illuminance, TCS_I2C_CDATAH, TCS_I2C_CDATAL},
-      {&input_rpt_.red, TCS_I2C_RDATAH, TCS_I2C_RDATAL},
-      {&input_rpt_.green, TCS_I2C_GDATAH, TCS_I2C_GDATAL},
-      {&input_rpt_.blue, TCS_I2C_BDATAH, TCS_I2C_BDATAL},
+      {UNALIGNED_U16_PTR(&input_rpt_.illuminance), TCS_I2C_CDATAH, TCS_I2C_CDATAL},
+      {UNALIGNED_U16_PTR(&input_rpt_.red), TCS_I2C_RDATAH, TCS_I2C_RDATAL},
+      {UNALIGNED_U16_PTR(&input_rpt_.green), TCS_I2C_GDATAH, TCS_I2C_GDATAL},
+      {UNALIGNED_U16_PTR(&input_rpt_.blue), TCS_I2C_BDATAH, TCS_I2C_BDATAL},
   };
   for (const auto& i : regs) {
     uint8_t buf_h, buf_l;
@@ -83,8 +89,14 @@ zx_status_t Tcs3400Device::FillInputRpt() {
     }
     auto linear_part = static_cast<uint16_t>(
         lux_linear_coefficient_ * static_cast<float>(((buf_h & 0xFF) << 8) | (buf_l & 0xFF)));
-    *i.out = static_cast<uint16_t>(lux_constant_coefficient_ + linear_part);
-    zxlogf(TRACE, "Lux (a + b x raw): %u  raw: 0x%04X  a: %u  b: %f\n", *i.out,
+
+    uint16_t out = static_cast<uint16_t>(lux_constant_coefficient_ + linear_part);
+
+    // Use memcpy here because i.out is a misaligned pointer and dereferencing a
+    // misaligned pointer is UB. This ends up getting lowered to a 16-bit store.
+    memcpy(i.out, &out, sizeof(out));
+
+    zxlogf(TRACE, "Lux (a + b x raw): %u  raw: 0x%04X  a: %u  b: %f\n", out,
            (((buf_h & 0xFF) << 8) | (buf_l & 0xFF)), lux_constant_coefficient_,
            lux_linear_coefficient_);
   }

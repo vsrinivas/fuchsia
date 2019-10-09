@@ -44,7 +44,7 @@ typedef struct gpt_entry {
   uint64_t last;
   uint64_t flags;
   uint8_t name[GPT_NAME_LEN];  // UTF-16 on disk
-} __PACKED gpt_entry_t;
+} gpt_entry_t;
 
 static_assert(GPT_ENTRY_SIZE == sizeof(gpt_entry_t), "Gpt entry size invalid");
 
