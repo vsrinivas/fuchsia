@@ -168,7 +168,8 @@ TEST_F(InspectSessionTest, NodeHierarchyNoStories) {
               AllOf(inspect::testing::NodeMatches(inspect::testing::NameMatches("root"))));
 }
 
-TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
+// Disabled: fxb/37256
+TEST_F(InspectSessionTest, DISABLED_CheckNodeHierarchyStartAndStopStory) {
   RunHarnessAndInterceptSessionShell();
 
   // Create a new story using PuppetMaster and launch a new story shell.
