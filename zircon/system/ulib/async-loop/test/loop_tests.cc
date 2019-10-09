@@ -1167,4 +1167,5 @@ for (int i = 0; i < 3; i++) {
   RUN_TEST(threads_tasks_run_sequentially_test)
   RUN_TEST(threads_receivers_run_concurrently_test)
 }
+RUN_TEST(create_default_test)
 END_TEST_CASE(loop_tests)
