@@ -2,19 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg(target_os = "fuchsia")]
-
 //! Wrapper types for the endpoints of a connection.
 
 use {
-    crate::{epitaph::ChannelEpitaphExt, Error, ServeInner},
-    fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_err,
-    fuchsia_zircon as zx,
-    futures::{self, Future, FutureExt, Stream, TryFutureExt, TryStream, TryStreamExt},
+    crate::{
+        epitaph::ChannelEpitaphExt, AsHandleRef, AsyncChannel, Channel, Error, Handle, HandleBased,
+        HandleRef, ServeInner,
+    },
+    fuchsia_zircon_status as zx_status,
+    futures::{Stream, TryStream},
     std::convert::From,
     std::marker::{PhantomData, Unpin},
     std::sync::Arc,
+};
+
+#[cfg(target_os = "fuchsia")]
+use {
+    fuchsia_async as fasync,
+    fuchsia_syslog::fx_log_err,
+    futures::{self, Future, FutureExt, TryFutureExt, TryStreamExt},
 };
 
 /// A marker for a particular FIDL service.
@@ -57,7 +63,7 @@ pub trait Proxy: Sized + Send + Sync {
     type Service: ServiceMarker<Proxy = Self>;
 
     /// Create a proxy over the given channel.
-    fn from_channel(inner: fasync::Channel) -> Self;
+    fn from_channel(inner: AsyncChannel) -> Self;
 }
 
 /// A stream of requests coming into a FIDL server over a channel.
@@ -73,7 +79,7 @@ pub trait RequestStream: Sized + Send + Stream + TryStream<Error = crate::Error>
     fn control_handle(&self) -> Self::ControlHandle;
 
     /// Create a request stream from the given channel.
-    fn from_channel(inner: fasync::Channel) -> Self;
+    fn from_channel(inner: AsyncChannel) -> Self;
 
     /// Convert this channel into its underlying components.
     fn into_inner(self) -> (Arc<ServeInner>, bool);
@@ -93,6 +99,7 @@ pub type Request<Marker> = <<Marker as ServiceMarker>::RequestStream as futures:
 
 /// Utility that spawns a new task to handle requests of a particular type, requiring a
 /// singlethreaded executor. The requests are handled one at a time.
+#[cfg(target_os = "fuchsia")]
 pub fn spawn_local_stream_handler<P, F, Fut>(f: F) -> Result<P, Error>
 where
     P: Proxy,
@@ -106,6 +113,7 @@ where
 
 /// Utility that spawns a new task to handle requests of a particular type. The request handler
 /// must be threadsafe. The requests are handled one at a time.
+#[cfg(target_os = "fuchsia")]
 pub fn spawn_stream_handler<P, F, Fut>(f: F) -> Result<P, Error>
 where
     P: Proxy,
@@ -117,6 +125,7 @@ where
     Ok(proxy)
 }
 
+#[cfg(target_os = "fuchsia")]
 fn for_each_or_log<St, F, Fut>(stream: St, mut f: F) -> impl Future<Output = ()>
 where
     St: RequestStream,
@@ -131,23 +140,23 @@ where
 /// The `Client` end of a FIDL connection.
 #[derive(Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ClientEnd<T> {
-    inner: zx::Channel,
+    inner: Channel,
     phantom: PhantomData<T>,
 }
 
 impl<T> ClientEnd<T> {
     /// Create a new client from the provided channel.
-    pub fn new(inner: zx::Channel) -> Self {
+    pub fn new(inner: Channel) -> Self {
         ClientEnd { inner, phantom: PhantomData }
     }
 
     /// Get a reference to the underlying channel
-    pub fn channel(&self) -> &zx::Channel {
+    pub fn channel(&self) -> &Channel {
         &self.inner
     }
 
     /// Extract the underlying channel.
-    pub fn into_channel(self) -> zx::Channel {
+    pub fn into_channel(self) -> Channel {
         self.inner
     }
 }
@@ -156,31 +165,31 @@ impl<T: ServiceMarker> ClientEnd<T> {
     /// Convert the `ClientEnd` into a `Proxy` through which FIDL calls may be made.
     pub fn into_proxy(self) -> Result<T::Proxy, Error> {
         Ok(T::Proxy::from_channel(
-            fasync::Channel::from_channel(self.inner).map_err(Error::AsyncChannel)?,
+            AsyncChannel::from_channel(self.inner).map_err(Error::AsyncChannel)?,
         ))
     }
 }
 
-impl<T> zx::AsHandleRef for ClientEnd<T> {
-    fn as_handle_ref(&self) -> zx::HandleRef {
+impl<T> AsHandleRef for ClientEnd<T> {
+    fn as_handle_ref(&self) -> HandleRef {
         self.inner.as_handle_ref()
     }
 }
 
-impl<T> From<ClientEnd<T>> for zx::Handle {
-    fn from(client: ClientEnd<T>) -> zx::Handle {
+impl<T> From<ClientEnd<T>> for Handle {
+    fn from(client: ClientEnd<T>) -> Handle {
         client.into_channel().into()
     }
 }
 
-impl<T> From<zx::Handle> for ClientEnd<T> {
-    fn from(handle: zx::Handle) -> Self {
+impl<T> From<Handle> for ClientEnd<T> {
+    fn from(handle: Handle) -> Self {
         ClientEnd { inner: handle.into(), phantom: PhantomData }
     }
 }
 
-impl<T> From<zx::Channel> for ClientEnd<T> {
-    fn from(chan: zx::Channel) -> Self {
+impl<T> From<Channel> for ClientEnd<T> {
+    fn from(chan: Channel) -> Self {
         ClientEnd { inner: chan, phantom: PhantomData }
     }
 }
@@ -191,28 +200,28 @@ impl<T: ServiceMarker> ::std::fmt::Debug for ClientEnd<T> {
     }
 }
 
-impl<T> zx::HandleBased for ClientEnd<T> {}
+impl<T> HandleBased for ClientEnd<T> {}
 
 /// The `Server` end of a FIDL connection.
 #[derive(Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ServerEnd<T> {
-    inner: zx::Channel,
+    inner: Channel,
     phantom: PhantomData<T>,
 }
 
 impl<T> ServerEnd<T> {
     /// Create a new `ServerEnd` from the provided channel.
-    pub fn new(inner: zx::Channel) -> ServerEnd<T> {
+    pub fn new(inner: Channel) -> ServerEnd<T> {
         ServerEnd { inner, phantom: PhantomData }
     }
 
     /// Get a reference to the undelrying channel
-    pub fn channel(&self) -> &zx::Channel {
+    pub fn channel(&self) -> &Channel {
         &self.inner
     }
 
     /// Extract the inner channel.
-    pub fn into_channel(self) -> zx::Channel {
+    pub fn into_channel(self) -> Channel {
         self.inner
     }
 
@@ -222,7 +231,7 @@ impl<T> ServerEnd<T> {
         T: ServiceMarker,
     {
         Ok(T::RequestStream::from_channel(
-            fasync::Channel::from_channel(self.inner).map_err(Error::AsyncChannel)?,
+            AsyncChannel::from_channel(self.inner).map_err(Error::AsyncChannel)?,
         ))
     }
 
@@ -240,31 +249,31 @@ impl<T> ServerEnd<T> {
     }
 
     /// Writes an epitaph into the underlying channel before closing it.
-    pub fn close_with_epitaph(self, status: zx::Status) -> Result<(), Error> {
+    pub fn close_with_epitaph(self, status: zx_status::Status) -> Result<(), Error> {
         self.inner.close_with_epitaph(status)
     }
 }
 
-impl<T> zx::AsHandleRef for ServerEnd<T> {
-    fn as_handle_ref(&self) -> zx::HandleRef {
+impl<T> AsHandleRef for ServerEnd<T> {
+    fn as_handle_ref(&self) -> HandleRef {
         self.inner.as_handle_ref()
     }
 }
 
-impl<T> From<ServerEnd<T>> for zx::Handle {
-    fn from(server: ServerEnd<T>) -> zx::Handle {
+impl<T> From<ServerEnd<T>> for Handle {
+    fn from(server: ServerEnd<T>) -> Handle {
         server.into_channel().into()
     }
 }
 
-impl<T> From<zx::Handle> for ServerEnd<T> {
-    fn from(handle: zx::Handle) -> Self {
+impl<T> From<Handle> for ServerEnd<T> {
+    fn from(handle: Handle) -> Self {
         ServerEnd { inner: handle.into(), phantom: PhantomData }
     }
 }
 
-impl<T> From<zx::Channel> for ServerEnd<T> {
-    fn from(chan: zx::Channel) -> Self {
+impl<T> From<Channel> for ServerEnd<T> {
+    fn from(chan: Channel) -> Self {
         ServerEnd { inner: chan, phantom: PhantomData }
     }
 }
@@ -275,13 +284,13 @@ impl<T: ServiceMarker> ::std::fmt::Debug for ServerEnd<T> {
     }
 }
 
-impl<T> zx::HandleBased for ServerEnd<T> {}
+impl<T> HandleBased for ServerEnd<T> {}
 
 handle_based_codable![ClientEnd :- <T,>, ServerEnd :- <T,>,];
 
 /// Creates client and server endpoints connected to by a channel.
 pub fn create_endpoints<T: ServiceMarker>() -> Result<(ClientEnd<T>, ServerEnd<T>), Error> {
-    let (client, server) = zx::Channel::create().map_err(Error::ChannelPairCreate)?;
+    let (client, server) = Channel::create().map_err(|e| Error::ChannelPairCreate(e.into()))?;
     let client_end = ClientEnd::<T>::new(client);
     let server_end = ServerEnd::new(server);
     Ok((client_end, server_end))

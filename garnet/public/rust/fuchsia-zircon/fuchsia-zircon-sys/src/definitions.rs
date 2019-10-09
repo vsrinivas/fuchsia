@@ -1,6 +1,7 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // The license governing this file can be found in the LICENSE file.
 
+#[cfg(target_os = "fuchsia")]
 #[link(name = "zircon")]
 extern {
     pub fn zx_clock_get(

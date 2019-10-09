@@ -11,6 +11,7 @@ rustc_library("fidl") {
   with_unit_tests = true
   edition = "2018"
   deps = [
+    "//garnet/public/rust/fuchsia-zircon/fuchsia-zircon-status",
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",
@@ -25,6 +26,8 @@ rustc_library("fidl") {
       "//garnet/public/rust/fuchsia-syslog",
       "//garnet/public/rust/fuchsia-zircon",
     ]
+  } else {
+    deps += [ "//third_party/rust_crates:lazy_static" ]
   }
   test_deps = [ "//src/lib/test_util" ]
 }

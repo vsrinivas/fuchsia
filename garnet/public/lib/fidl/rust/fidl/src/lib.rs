@@ -19,7 +19,6 @@ pub use self::error::{Error, Result};
 #[doc(hidden)]
 pub use bitflags::bitflags;
 
-#[cfg(target_os = "fuchsia")]
 pub use server::ServeInner;
 
 pub use handle::*;

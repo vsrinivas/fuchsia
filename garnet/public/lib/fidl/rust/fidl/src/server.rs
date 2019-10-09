@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg(target_os = "fuchsia")]
-
 //! An implementation of a server for a fidl interface.
 
 use {
-    crate::epitaph,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    crate::{epitaph, AsyncChannel},
+    fuchsia_zircon_status as zx_status,
     futures::task::{AtomicWaker, Context},
     std::sync::atomic::{self, AtomicBool},
 };
@@ -18,19 +16,19 @@ use {
 pub struct ServeInner {
     waker: AtomicWaker,
     shutdown: AtomicBool,
-    channel: fasync::Channel,
+    channel: AsyncChannel,
 }
 
 impl ServeInner {
     /// Create a new set of server innards.
-    pub fn new(channel: fasync::Channel) -> Self {
+    pub fn new(channel: AsyncChannel) -> Self {
         let waker = AtomicWaker::new();
         let shutdown = AtomicBool::new(false);
         ServeInner { waker, shutdown, channel }
     }
 
     /// Get a reference to the inner channel.
-    pub fn channel(&self) -> &fasync::Channel {
+    pub fn channel(&self) -> &AsyncChannel {
         &self.channel
     }
 
@@ -41,7 +39,7 @@ impl ServeInner {
     }
 
     /// Set the server to shutdown with an epitaph.
-    pub fn shutdown_with_epitaph(&self, status: zx::Status) {
+    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
         let already_shutting_down = self.shutdown.swap(true, atomic::Ordering::Relaxed);
         if !already_shutting_down {
             // Ignore the error, best effort sending an epitaph.

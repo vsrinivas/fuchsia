@@ -17,7 +17,6 @@ const Interface = `
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct {{ $interface.Name }}Marker;
 
-#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::ServiceMarker for {{ $interface.Name }}Marker {
 	type Proxy = {{ $interface.Name }}Proxy;
 	type RequestStream = {{ $interface.Name }}RequestStream;
@@ -29,11 +28,9 @@ impl fidl::endpoints::ServiceMarker for {{ $interface.Name }}Marker {
 }
 
 {{- if $interface.ServiceName }}
-#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::DiscoverableService for {{ $interface.Name }}Marker {}
 {{- end }}
 
-#[cfg(target_os = "fuchsia")]
 pub trait {{ $interface.Name }}ProxyInterface: Send + Sync {
 	{{- range $method := $interface.Methods }}
 	{{- if $method.HasResponse }}
@@ -68,11 +65,11 @@ pub struct {{ $interface.Name }}SynchronousProxy {
 
 #[cfg(target_os = "fuchsia")]
 impl {{ $interface.Name }}SynchronousProxy {
-	pub fn new(channel: zx::Channel) -> Self {
+	pub fn new(channel: ::fidl::Channel) -> Self {
 		Self { client: fidl::client::sync::Client::new(channel) }
 	}
 
-	pub fn into_channel(self) -> zx::Channel {
+	pub fn into_channel(self) -> ::fidl::Channel {
 		self.client.into_channel()
 	}
 
@@ -119,21 +116,18 @@ impl {{ $interface.Name }}SynchronousProxy {
 	{{- end }}
 }
 
-#[cfg(target_os = "fuchsia")]
 #[derive(Debug, Clone)]
 pub struct {{ $interface.Name }}Proxy {
 	client: fidl::client::Client,
 }
 
-#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::Proxy for {{ $interface.Name }}Proxy {
 	type Service = {{ $interface.Name }}Marker;
-	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
+	fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
 		Self::new(inner)
 	}
 }
 
-#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for {{ $interface.Name }}Proxy {
 	type Target = fidl::client::Client;
 
@@ -142,11 +136,9 @@ impl ::std::ops::Deref for {{ $interface.Name }}Proxy {
 	}
 }
 
-/// Proxy object for communicating with interface {{ $interface.Name }}
-#[cfg(target_os = "fuchsia")]
 impl {{ $interface.Name }}Proxy {
 	/// Create a new Proxy for {{ $interface.Name }}
-	pub fn new(channel: ::fuchsia_async::Channel) -> Self {
+	pub fn new(channel: ::fidl::AsyncChannel) -> Self {
 		Self { client: fidl::client::Client::new(channel) }
 	}
 
@@ -155,7 +147,7 @@ impl {{ $interface.Name }}Proxy {
 	/// This will only succeed if there are no active clones of this Proxy
 	/// and no currently-alive EventStream or response futures that came from
 	/// this Proxy.
-	pub fn into_channel(self) -> Result<::fuchsia_async::Channel, Self> {
+	pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
 		self.client.into_channel().map_err(|client| Self { client })
 	}
 
@@ -196,7 +188,6 @@ impl {{ $interface.Name }}Proxy {
 	{{- end }}
 }
 
-#[cfg(target_os = "fuchsia")]
 impl {{ $interface.Name}}ProxyInterface for {{ $interface.Name}}Proxy {
 	{{- range $method := $interface.Methods }}
 	{{- if $method.HasResponse }}
@@ -231,22 +222,18 @@ impl {{ $interface.Name}}ProxyInterface for {{ $interface.Name}}Proxy {
 	{{- end -}}
 }
 
-#[cfg(target_os = "fuchsia")]
 pub struct {{ $interface.Name }}EventStream {
 	event_receiver: fidl::client::EventReceiver,
 }
 
-#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for {{ $interface.Name }}EventStream {}
 
-#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for {{ $interface.Name }}EventStream {
 	fn is_terminated(&self) -> bool {
 		self.event_receiver.is_terminated()
 	}
 }
 
-#[cfg(target_os = "fuchsia")]
 impl futures::Stream for {{ $interface.Name }}EventStream {
 	type Item = Result<{{ $interface.Name }}Event, fidl::Error>;
 
@@ -298,7 +285,6 @@ impl futures::Stream for {{ $interface.Name }}EventStream {
 }
 
 {{ $interface.EventDerives }}
-#[cfg(target_os = "fuchsia")]
 pub enum {{ $interface.Name }}Event {
 	{{ range $method := $interface.Methods }}
 	{{ if not $method.HasRequest }}
@@ -311,7 +297,6 @@ pub enum {{ $interface.Name }}Event {
 	{{- end -}}
 }
 
-#[cfg(target_os = "fuchsia")]
 impl {{ $interface.Name }}Event {
 	{{- range $method := $interface.Methods }}
 	{{- if not $method.HasRequest }}
@@ -347,16 +332,14 @@ impl {{ $interface.Name }}Event {
 /// borrowed. For a typical sending of events, use the send_ methods
 /// on the ControlHandle types, which can be acquired through a
 /// RequestStream or Responder type.
-#[cfg(target_os = "fuchsia")]
 pub struct {{ $interface.Name }}EventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
-	channel: &'a zx::Channel,
+	channel: &'a ::fidl::Channel,
 }
 
-#[cfg(target_os = "fuchsia")]
 impl <'a> {{ $interface.Name }}EventSender<'a> {
-	pub fn new(channel: &'a zx::Channel) -> Self {
+	pub fn new(channel: &'a ::fidl::Channel) -> Self {
 		Self { channel }
 	}
 	{{- range $method := $interface.Methods }}
@@ -382,28 +365,24 @@ impl <'a> {{ $interface.Name }}EventSender<'a> {
 }
 
 /// A Stream of incoming requests for {{ $interface.Name }}
-#[cfg(target_os = "fuchsia")]
 pub struct {{ $interface.Name }}RequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 	is_terminated: bool,
 }
 
-#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for {{ $interface.Name }}RequestStream {}
 
-#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for {{ $interface.Name }}RequestStream {
 	fn is_terminated(&self) -> bool {
 		self.is_terminated
 	}
 }
 
-#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::RequestStream for {{ $interface.Name }}RequestStream {
 	type Service = {{ $interface.Name }}Marker;
 
 	/// Consume a channel to make a {{ $interface.Name }}RequestStream
-	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
+	fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
 		Self {
 			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
 			is_terminated: false,
@@ -429,7 +408,6 @@ impl fidl::endpoints::RequestStream for {{ $interface.Name }}RequestStream {
 	}
 }
 
-#[cfg(target_os = "fuchsia")]
 impl futures::Stream for {{ $interface.Name }}RequestStream {
 	type Item = Result<{{ $interface.Name }}Request, fidl::Error>;
 
@@ -448,12 +426,11 @@ impl futures::Stream for {{ $interface.Name }}RequestStream {
 			match this.inner.channel().read(cx, bytes, handles) {
 				futures::Poll::Ready(Ok(())) => {},
 				futures::Poll::Pending => return futures::Poll::Pending,
-				futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
+				futures::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
 					this.is_terminated = true;
-					return futures::Poll::Ready(None)
-				},
-				futures::Poll::Ready(Err(e)) =>
-				return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
+					return futures::Poll::Ready(None);
+				}
+				futures::Poll::Ready(Err(e)) => return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
 			}
 
 			// A message has been received from the channel
@@ -509,7 +486,6 @@ impl futures::Stream for {{ $interface.Name }}RequestStream {
 {{- range .DocComments}}
 ///{{ . }}
 {{- end}}
-#[cfg(target_os = "fuchsia")]
 {{ $interface.RequestDerives }}
 pub enum {{ $interface.Name }}Request {
 	{{- range $method := $interface.Methods }}
@@ -531,7 +507,6 @@ pub enum {{ $interface.Name }}Request {
 	{{- end }}
 }
 
-#[cfg(target_os = "fuchsia")]
 impl {{ $interface.Name }}Request {
 	{{- range $method := $interface.Methods }}
 	{{- if $method.HasRequest }}
@@ -585,10 +560,8 @@ impl {{ $interface.Name }}Request {
         }
 }
 
-#[cfg(target_os = "fuchsia")]
 pub struct {{ $interface.Name }}Encoder;
 
-#[cfg(target_os = "fuchsia")]
 impl {{ $interface.Name }}Encoder {
 	{{- range $method := $interface.Methods }}
 	{{- if $method.HasRequest }}
@@ -657,12 +630,10 @@ impl {{ $interface.Name }}Encoder {
 }
 
 #[derive(Debug, Clone)]
-#[cfg(target_os = "fuchsia")]
 pub struct {{ $interface.Name }}ControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
-#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for {{ $interface.Name }}ControlHandle {
 	type Target = ::std::sync::Arc<fidl::ServeInner>;
 
@@ -671,13 +642,12 @@ impl ::std::ops::Deref for {{ $interface.Name }}ControlHandle {
 	}
 }
 
-#[cfg(target_os = "fuchsia")]
 impl {{ $interface.Name }}ControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
 	}
 
-	pub fn shutdown_with_epitaph(&self, status: zx::Status) {
+	pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
 		self.inner.shutdown_with_epitaph(status)
 	}
 
@@ -723,7 +693,6 @@ impl {{ $interface.Name }}ControlHandle {
 {{- range $method := $interface.Methods }}
 {{- if and $method.HasRequest $method.HasResponse }}
 #[must_use = "FIDL methods require a response to be sent"]
-#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub struct {{ $interface.Name }}{{ $method.CamelName }}Responder {
 	control_handle: ::std::mem::ManuallyDrop<{{ $interface.Name }}ControlHandle>,
@@ -731,7 +700,6 @@ pub struct {{ $interface.Name }}{{ $method.CamelName }}Responder {
 	ordinal: u64,
 }
 
-#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Drop for {{ $interface.Name }}{{ $method.CamelName }}Responder {
 	fn drop(&mut self) {
 		// Shutdown the channel if the responder is dropped without sending a response
@@ -743,7 +711,6 @@ impl ::std::ops::Drop for {{ $interface.Name }}{{ $method.CamelName }}Responder 
 	}
 }
 
-#[cfg(target_os = "fuchsia")]
 impl {{ $interface.Name }}{{ $method.CamelName }}Responder {
 	pub fn control_handle(&self) -> &{{ $interface.Name }}ControlHandle {
 		&self.control_handle

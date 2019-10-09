@@ -6,11 +6,9 @@
 
 use {
     failure::Fail,
+    fuchsia_zircon_status as zx_status,
     std::{io, result},
 };
-
-#[cfg(target_os = "fuchsia")]
-use fuchsia_zircon as zx;
 
 /// A specialized `Result` type for FIDL operations.
 pub type Result<T> = result::Result<T, Error>;
@@ -105,58 +103,51 @@ pub enum Error {
     InvalidResponseTxid,
 
     /// A FIDL server encountered an IO error writing a response to a channel.
-    #[cfg(target_os = "fuchsia")]
     #[fail(
         display = "A server encountered an IO error writing a FIDL response to a channel: {}",
         _0
     )]
-    ServerResponseWrite(#[cause] zx::Status),
+    ServerResponseWrite(#[cause] zx_status::Status),
 
     /// A FIDL server encountered an IO error reading incoming requests from a channel.
-    #[cfg(target_os = "fuchsia")]
     #[fail(
         display = "A FIDL server encountered an IO error reading incoming FIDL requests from a channel: {}",
         _0
     )]
-    ServerRequestRead(#[cause] zx::Status),
+    ServerRequestRead(#[cause] zx_status::Status),
 
     /// A FIDL server encountered an IO error writing an epitaph to a channel.
-    #[cfg(target_os = "fuchsia")]
     #[fail(
         display = "A FIDL server encountered an IO error writing an epitaph into a channel: {}",
         _0
     )]
-    ServerEpitaphWrite(#[cause] zx::Status),
+    ServerEpitaphWrite(#[cause] zx_status::Status),
 
     /// A FIDL client encountered an IO error reading a response from a channel.
-    #[cfg(target_os = "fuchsia")]
     #[fail(
         display = "A FIDL client encountered an IO error reading a response from a channel: {}",
         _0
     )]
-    ClientRead(#[cause] zx::Status),
+    ClientRead(#[cause] zx_status::Status),
 
     /// A FIDL client encountered an IO error writing a request to a channel.
-    #[cfg(target_os = "fuchsia")]
     #[fail(
         display = "A FIDL client encountered an IO error writing a request into a channel: {}",
         _0
     )]
-    ClientWrite(#[cause] zx::Status),
+    ClientWrite(#[cause] zx_status::Status),
 
     /// A FIDL client's channel was closed. Contains an epitaph if one was sent by the server, or
-    /// `zx::Status::PEER_CLOSED` otherwise.
-    #[cfg(target_os = "fuchsia")]
+    /// `zx_status::Status::PEER_CLOSED` otherwise.
     #[fail(display = "A FIDL client's channel was closed: {}", _0)]
-    ClientChannelClosed(#[cause] zx::Status),
+    ClientChannelClosed(#[cause] zx_status::Status),
 
     /// There was an error creating a channel to be used for a FIDL client-server pair.
-    #[cfg(target_os = "fuchsia")]
     #[fail(
         display = "There was an error creating a channel to be used for a FIDL client-server pair: {}",
         _0
     )]
-    ChannelPairCreate(#[cause] zx::Status),
+    ChannelPairCreate(#[cause] zx_status::Status),
 
     /// There was an error attaching a FIDL channel to the Tokio reactor.
     #[fail(display = "There was an error attaching a FIDL channel to the Tokio reactor: {}", _0)]
@@ -165,8 +156,8 @@ pub enum Error {
     /// There was a miscellaneous io::Error during a test.
     #[cfg(target_os = "fuchsia")]
     #[cfg(test)]
-    #[fail(display = "Test zx::Status: {}", _0)]
-    TestIo(#[cause] zx::Status),
+    #[fail(display = "Test zx_status::Status: {}", _0)]
+    TestIo(#[cause] zx_status::Status),
 
     #[doc(hidden)]
     #[fail(display = "__Nonexhaustive error should never be created.")]
@@ -182,12 +173,12 @@ impl Error {
     #[cfg(target_os = "fuchsia")]
     fn is_closed_impl(&self) -> bool {
         match self {
-            Error::ClientRead(zx::Status::PEER_CLOSED)
-            | Error::ClientWrite(zx::Status::PEER_CLOSED)
+            Error::ClientRead(zx_status::Status::PEER_CLOSED)
+            | Error::ClientWrite(zx_status::Status::PEER_CLOSED)
             | Error::ClientChannelClosed(_)
-            | Error::ServerRequestRead(zx::Status::PEER_CLOSED)
-            | Error::ServerResponseWrite(zx::Status::PEER_CLOSED)
-            | Error::ServerEpitaphWrite(zx::Status::PEER_CLOSED) => true,
+            | Error::ServerRequestRead(zx_status::Status::PEER_CLOSED)
+            | Error::ServerResponseWrite(zx_status::Status::PEER_CLOSED)
+            | Error::ServerEpitaphWrite(zx_status::Status::PEER_CLOSED) => true,
             _ => false,
         }
     }

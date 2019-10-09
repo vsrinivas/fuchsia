@@ -10,6 +10,8 @@ use std::ffi::NulError;
 use std::fmt;
 use std::io;
 
+pub use sys::zx_status_t;
+
 // Creates associated constants of TypeName of the form
 // `pub const NAME: TypeName = TypeName(path::to::value);`
 // and provides a private `assoc_const_name` method and a `Debug` implementation

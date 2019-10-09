@@ -8,6 +8,7 @@ use {
     crate::handle::{Handle, HandleBased, MessageBuf},
     crate::{Error, Result},
     byteorder::{ByteOrder, LittleEndian},
+    fuchsia_zircon_status as zx_status,
     std::{cell::RefCell, mem, ptr, str, u32, u64},
 };
 
@@ -1371,81 +1372,75 @@ macro_rules! handle_based_codable {
     )* }
 }
 
+impl Encodable for zx_status::Status {
+    fn inline_align(&self) -> usize {
+        mem::size_of::<zx_status::zx_status_t>()
+    }
+    fn inline_size(&self) -> usize {
+        mem::size_of::<zx_status::zx_status_t>()
+    }
+    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+        let slot = encoder.next_slice(mem::size_of::<zx_status::zx_status_t>())?;
+        LittleEndian::write_i32(slot, self.into_raw());
+        Ok(())
+    }
+}
+
+impl Decodable for zx_status::Status {
+    fn new_empty() -> Self {
+        Self::from_raw(0)
+    }
+    fn inline_size() -> usize {
+        mem::size_of::<zx_status::zx_status_t>()
+    }
+    fn inline_align() -> usize {
+        mem::size_of::<zx_status::zx_status_t>()
+    }
+    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+        let end = mem::size_of::<zx_status::zx_status_t>();
+        let range = split_off_front(&mut decoder.buf, end)?;
+        *self = Self::from_raw(LittleEndian::read_i32(range));
+        Ok(())
+    }
+}
+
+/// The body of a FIDL Epitaph
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct EpitaphBody {
+    /// The error status
+    pub error: zx_status::Status,
+}
+
+impl Encodable for EpitaphBody {
+    fn inline_size(&self) -> usize {
+        self.error.inline_size()
+    }
+    fn inline_align(&self) -> usize {
+        self.error.inline_align()
+    }
+    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+        self.error.encode(encoder)
+    }
+}
+
+impl Decodable for EpitaphBody {
+    fn new_empty() -> Self {
+        Self { error: zx_status::Status::new_empty() }
+    }
+    fn inline_size() -> usize {
+        <zx_status::Status as Decodable>::inline_size()
+    }
+    fn inline_align() -> usize {
+        <zx_status::Status as Decodable>::inline_align()
+    }
+    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+        self.error.decode(decoder)
+    }
+}
+
 #[cfg(target_os = "fuchsia")]
 mod zx_encoding {
-
-    use {
-        super::{split_off_front, Decodable, Decoder, Encodable, Encoder, Result},
-        byteorder::{ByteOrder, LittleEndian},
-        fuchsia_zircon as zx,
-        std::mem,
-    };
-
-    impl Encodable for zx::Status {
-        fn inline_align(&self) -> usize {
-            mem::size_of::<zx::sys::zx_status_t>()
-        }
-        fn inline_size(&self) -> usize {
-            mem::size_of::<zx::sys::zx_status_t>()
-        }
-        fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
-            let slot = encoder.next_slice(mem::size_of::<zx::sys::zx_status_t>())?;
-            LittleEndian::write_i32(slot, self.into_raw());
-            Ok(())
-        }
-    }
-
-    impl Decodable for zx::Status {
-        fn new_empty() -> Self {
-            Self::from_raw(0)
-        }
-        fn inline_size() -> usize {
-            mem::size_of::<zx::sys::zx_status_t>()
-        }
-        fn inline_align() -> usize {
-            mem::size_of::<zx::sys::zx_status_t>()
-        }
-        fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
-            let end = mem::size_of::<zx::sys::zx_status_t>();
-            let range = split_off_front(&mut decoder.buf, end)?;
-            *self = Self::from_raw(LittleEndian::read_i32(range));
-            Ok(())
-        }
-    }
-
-    /// The body of a FIDL Epitaph
-    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-    pub struct EpitaphBody {
-        /// The error status
-        pub error: zx::Status,
-    }
-
-    impl Encodable for EpitaphBody {
-        fn inline_size(&self) -> usize {
-            self.error.inline_size()
-        }
-        fn inline_align(&self) -> usize {
-            self.error.inline_align()
-        }
-        fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
-            self.error.encode(encoder)
-        }
-    }
-
-    impl Decodable for EpitaphBody {
-        fn new_empty() -> Self {
-            Self { error: zx::Status::new_empty() }
-        }
-        fn inline_size() -> usize {
-            <zx::Status as Decodable>::inline_size()
-        }
-        fn inline_align() -> usize {
-            <zx::Status as Decodable>::inline_align()
-        }
-        fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
-            self.error.decode(decoder)
-        }
-    }
+    use fuchsia_zircon as zx;
 
     type ZxChannel = zx::Channel;
     type ZxEvent = zx::Event;
