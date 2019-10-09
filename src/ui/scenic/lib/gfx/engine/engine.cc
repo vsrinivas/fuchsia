@@ -154,6 +154,12 @@ RenderFrameResult Engine::RenderFrame(const FrameTimingsPtr& timings, zx::time p
     last_frame_uses_protected_memory_ = uses_protected_memory;
   }
 
+  if (uses_protected_memory) {
+    // NOTE: this name is important for benchmarking.  Do not remove or modify it
+    // without also updating the "process_uiperf_trace.go" script.
+    TRACE_INSTANT("gfx", "RenderProtectedFrame", TRACE_SCOPE_THREAD);
+  }
+
   escher::FramePtr frame = escher()->NewFrame("Scenic Compositor", frame_number, false,
                                               escher::CommandBuffer::Type::kGraphics,
                                               uses_protected_memory ? true : false);
