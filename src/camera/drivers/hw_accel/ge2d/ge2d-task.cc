@@ -95,8 +95,7 @@ zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buff
   // Make copy of watermark info, pin watermark vmo.
   wm_.loc_x = info->loc_x;
   wm_.loc_y = info->loc_y;
-  wm_.size_width = info->size_width;
-  wm_.size_height = info->size_height;
+  wm_.wm_image_format = info->wm_image_format;
   status = PinWatermarkVmo(watermark_vmo, bti);
   if (status != ZX_OK)
     return status;

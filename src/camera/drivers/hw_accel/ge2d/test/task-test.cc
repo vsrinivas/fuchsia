@@ -67,8 +67,7 @@ class TaskTest : public zxtest::Test {
     resize_info_.output_rotation = GE2D_ROTATION_ROTATION_0;
     watermark_info_.loc_x = 100;
     watermark_info_.loc_y = 100;
-    watermark_info_.size_width = 100;
-    watermark_info_.size_height = 100;
+    camera::GetImageFormat2(watermark_info_.wm_image_format, kWidth / 4, kHeight / 4);
     ASSERT_OK(fake_bti_create(bti_handle_.reset_and_get_address()));
     zx_status_t status = zx_vmo_create_contiguous(bti_handle_.get(), kWatermarkSize, 0,
                                                   watermark_vmo_.reset_and_get_address());
@@ -172,6 +171,22 @@ TEST_F(TaskTest, BasicCreationTest) {
                                          output_image_format_table_, kImageFormatTableSize, 0,
                                          &callback_, bti_handle_);
   EXPECT_OK(status);
+}
+
+TEST_F(TaskTest, WatermarkResTest) {
+  SetUpBufferCollections(kNumberOfBuffers);
+  fbl::AllocChecker ac;
+  auto wm_task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
+  EXPECT_TRUE(ac.check());
+  zx_status_t status;
+  status = wm_task->InitWatermark(&input_buffer_collection_, &output_buffer_collection_,
+                                  &watermark_info_, watermark_vmo_,
+                                  &input_image_format_, output_image_format_table_,
+                                  kImageFormatTableSize, 0, &callback_, bti_handle_);
+  EXPECT_OK(status);
+  image_format_2_t format = wm_task->WatermarkFormat();
+  EXPECT_EQ(format.display_width, kWidth / 4);
+  EXPECT_EQ(format.display_height, kHeight / 4);
 }
 
 TEST_F(TaskTest, OutputResTest) {
@@ -456,6 +471,7 @@ TEST(TaskTest, NonContigVmoTest) {
   fbl::AllocChecker ac;
   auto task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
   EXPECT_TRUE(ac.check());
+  camera::GetImageFormat2(watermark_info.wm_image_format, kWidth / 4, kHeight / 4);
   status = task->InitWatermark(&input_buffer_collection, &output_buffer_collection, &watermark_info,
                                zx::vmo(watermark_vmo), &format, image_format_table,
                                kImageFormatTableSize, 0, &callback, zx::bti(bti_handle));
@@ -480,6 +496,7 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
   image_format_2_t format;
   camera::GetImageFormat2(format, kWidth, kHeight);
   camera::GetImageFormat2(image_format_table[0], kWidth, kHeight);
+  camera::GetImageFormat2(watermark_info.wm_image_format, kWidth / 4, kHeight / 4);
   status = task->InitWatermark(nullptr, nullptr, &watermark_info, zx::vmo(watermark_vmo), &format,
                                image_format_table, kImageFormatTableSize, 0, &callback,
                                zx::bti(bti_handle));

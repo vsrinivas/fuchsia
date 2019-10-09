@@ -29,6 +29,10 @@ class Ge2dTask : public generictask::GenericTask {
                          size_t output_image_format_table_count, uint32_t output_image_format_index,
                          const hw_accel_callback_t* callback, const zx::bti& bti);
 
+  image_format_2_t WatermarkFormat() {
+    return wm_.wm_image_format;
+  }
+
   zx_status_t InitWatermark(const buffer_collection_info_2_t* input_buffer_collection,
                             const buffer_collection_info_2_t* output_buffer_collection,
                             const water_mark_info_t* info, const zx::vmo& watermark_vmo,
@@ -51,8 +55,7 @@ class Ge2dTask : public generictask::GenericTask {
     fzl::PinnedVmo watermark_vmo_pinned_;
     uint32_t loc_x;
     uint32_t loc_y;
-    uint32_t size_width;
-    uint32_t size_height;
+    image_format_2_t wm_image_format;
   };
   watermark_info wm_;
   resize_info_t res_info_;

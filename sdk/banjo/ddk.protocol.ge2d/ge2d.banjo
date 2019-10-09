@@ -32,9 +32,8 @@ struct WaterMarkInfo {
     // Where to place WaterMark on the input image
     uint32 loc_x;
     uint32 loc_y;
-    // Size of WaterMark image
-    uint32 size_width;
-    uint32 size_height;
+    // Watermark Image Format
+    zircon.device.sysmem.ImageFormat_2 wm_image_format;
 };
 
 [Layout = "ddk-protocol"]
