@@ -10,6 +10,7 @@ use crate::stash::Stash;
 use byteorder::{BigEndian, ByteOrder};
 use failure::{Error, Fail, ResultExt};
 use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
+use fuchsia_zircon::Status;
 use serde_derive::{Deserialize, Serialize};
 use std::cmp;
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -471,6 +472,33 @@ where
         }
         let _result = self.stash.clear();
     }
+}
+
+/// The ability to dispatch fuchsia.net.dhcp.Server protocol requests and return a value.
+///
+/// Implementers of this trait can be used as the backing server-side logic of the
+/// fuchsia.net.dhcp.Server protocol. Implementers must maintain a store of DHCP Options and
+/// DHCP server parameters and support the trait methods to retrieve and modify them.
+pub trait ServerDispatcher {
+    /// Retrieves the stored DHCP option value that corresponds to the OptionCode argument.
+    fn dispatch_get_option(
+        &self,
+        code: fidl_fuchsia_net_dhcp::OptionCode,
+    ) -> Result<fidl_fuchsia_net_dhcp::Option_, Status>;
+    /// Retrieves the stored DHCP server parameter value that corresponds to the ParameterName argument.
+    fn dispatch_get_parameter(
+        &self,
+        name: fidl_fuchsia_net_dhcp::ParameterName,
+    ) -> Result<fidl_fuchsia_net_dhcp::Parameter, Status>;
+    /// Updates the stored DHCP option value to the argument.
+    fn dispatch_set_option(&self, value: fidl_fuchsia_net_dhcp::Option_) -> Result<(), Status>;
+    /// Updates the stored DHCP server parameter to the argument.
+    fn dispatch_set_parameter(&self, value: fidl_fuchsia_net_dhcp::Parameter)
+        -> Result<(), Status>;
+    /// Retrieves all of the stored DHCP option values.
+    fn dispatch_list_options(&self) -> Result<Vec<fidl_fuchsia_net_dhcp::Option_>, Status>;
+    /// Retrieves all of the stored DHCP parameter values.
+    fn dispatch_list_parameters(&self) -> Result<Vec<fidl_fuchsia_net_dhcp::Parameter>, Status>;
 }
 
 /// A cache mapping clients to their configuration data.

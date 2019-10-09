@@ -8,13 +8,14 @@ use {
     dhcp::{
         configuration,
         protocol::{Message, SERVER_PORT},
-        server::{Server, ServerAction, DEFAULT_STASH_ID, DEFAULT_STASH_PREFIX},
+        server::{Server, ServerAction, ServerDispatcher, DEFAULT_STASH_ID, DEFAULT_STASH_PREFIX},
     },
     failure::{Error, Fail, ResultExt},
     fuchsia_async::{self as fasync, net::UdpSocket, Interval},
+    fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as fx_syslog, fx_log_err, fx_log_info},
-    fuchsia_zircon::{self as zx, DurationNum},
-    futures::{future::try_join, Future, StreamExt, TryFutureExt, TryStreamExt},
+    fuchsia_zircon::{self as zx, DurationNum, Status},
+    futures::{Future, StreamExt, TryFutureExt, TryStreamExt},
     getopts::Options,
     std::{
         cell::RefCell,
@@ -31,6 +32,10 @@ const DEFAULT_CONFIG_PATH: &str = "/pkg/data/config.json";
 /// pool. The current value of 5 is meant to facilitate manual testing.
 // TODO(atait): Replace with Duration type after it has been updated to const fn.
 const EXPIRATION_INTERVAL_SECS: i64 = 5;
+
+enum IncomingService {
+    Server(fidl_fuchsia_net_dhcp::Server_RequestStream),
+}
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
@@ -54,8 +59,28 @@ async fn main() -> Result<(), Error> {
     let msg_handling_loop = define_msg_handling_loop_future(udp_socket, &server);
     let lease_expiration_handler = define_lease_expiration_handler_future(&server);
 
+    let mut fs = ServiceFs::new_local();
+    fs.dir("svc").add_fidl_service(IncomingService::Server);
+    fs.take_and_serve_directory_handle()?;
+    let server_dispatcher = RefCell::new(CannedDispatcher {});
+    let admin_fut = fs
+        .then(|incoming_service| {
+            async {
+                match incoming_service {
+                    IncomingService::Server(stream) => {
+                        run_server(stream, &server_dispatcher)
+                            .inspect_err(|e| log::info!("{:?}", e))
+                            .await?;
+                        Ok(())
+                    }
+                }
+            }
+        })
+        .try_for_each_concurrent(None, |()| futures::future::ok(()));
+
     fx_log_info!("starting server");
-    try_join(msg_handling_loop, lease_expiration_handler).err_into::<Error>().await?;
+    let (_void, (), ()) =
+        futures::try_join!(msg_handling_loop, admin_fut, lease_expiration_handler)?;
     Ok(())
 }
 
@@ -122,4 +147,202 @@ fn define_lease_expiration_handler_future<'a, F: Fn() -> i64>(
         .map(move |()| server.borrow_mut().release_expired_leases())
         .map(|_| Ok(()))
         .try_collect::<()>()
+}
+
+// CannedDispatcher will be moved to the tests module once Server implements ServerDispatcher. In
+// the meantime, this struct provides a fake implementation of ServerDispatcher.
+struct CannedDispatcher {}
+
+impl ServerDispatcher for CannedDispatcher {
+    fn dispatch_get_option(
+        &self,
+        _code: fidl_fuchsia_net_dhcp::OptionCode,
+    ) -> Result<fidl_fuchsia_net_dhcp::Option_, Status> {
+        Ok(fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_fuchsia_net::Ipv4Address {
+            addr: [0, 0, 0, 0],
+        }))
+    }
+    fn dispatch_get_parameter(
+        &self,
+        _name: fidl_fuchsia_net_dhcp::ParameterName,
+    ) -> Result<fidl_fuchsia_net_dhcp::Parameter, Status> {
+        Ok(fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
+            default: None,
+            max: None,
+        }))
+    }
+    fn dispatch_set_option(&self, _value: fidl_fuchsia_net_dhcp::Option_) -> Result<(), Status> {
+        Ok(())
+    }
+    fn dispatch_set_parameter(
+        &self,
+        _value: fidl_fuchsia_net_dhcp::Parameter,
+    ) -> Result<(), Status> {
+        Ok(())
+    }
+    fn dispatch_list_options(&self) -> Result<Vec<fidl_fuchsia_net_dhcp::Option_>, Status> {
+        Ok(vec![])
+    }
+    fn dispatch_list_parameters(&self) -> Result<Vec<fidl_fuchsia_net_dhcp::Parameter>, Status> {
+        Ok(vec![])
+    }
+}
+
+async fn run_server<S: ServerDispatcher>(
+    stream: fidl_fuchsia_net_dhcp::Server_RequestStream,
+    server: &RefCell<S>,
+) -> Result<(), fidl::Error> {
+    stream
+        .try_for_each(|request| {
+            async {
+                match request {
+                    fidl_fuchsia_net_dhcp::Server_Request::GetOption { code: c, responder: r } => r
+                        .send(
+                            &mut server.borrow().dispatch_get_option(c).map_err(|e| e.into_raw()),
+                        ),
+                    fidl_fuchsia_net_dhcp::Server_Request::GetParameter {
+                        name: n,
+                        responder: r,
+                    } => r.send(
+                        &mut server.borrow().dispatch_get_parameter(n).map_err(|e| e.into_raw()),
+                    ),
+                    fidl_fuchsia_net_dhcp::Server_Request::SetOption { value: v, responder: r } => {
+                        r.send(
+                            &mut server.borrow().dispatch_set_option(v).map_err(|e| e.into_raw()),
+                        )
+                    }
+                    fidl_fuchsia_net_dhcp::Server_Request::SetParameter {
+                        value: v,
+                        responder: r,
+                    } => r.send(
+                        &mut server.borrow().dispatch_set_parameter(v).map_err(|e| e.into_raw()),
+                    ),
+                    fidl_fuchsia_net_dhcp::Server_Request::ListOptions { responder: r } => r.send(
+                        &mut server.borrow().dispatch_list_options().map_err(|e| e.into_raw()),
+                    ),
+                    fidl_fuchsia_net_dhcp::Server_Request::ListParameters { responder: r } => r
+                        .send(
+                            &mut server
+                                .borrow()
+                                .dispatch_list_parameters()
+                                .map_err(|e| e.into_raw()),
+                        ),
+                }
+            }
+        })
+        .await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[fasync::run_singlethreaded(test)]
+    async fn get_option_with_subnet_mask_returns_subnet_mask() -> Result<(), Error> {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+        let server = RefCell::new(CannedDispatcher {});
+
+        let res = proxy.get_option(fidl_fuchsia_net_dhcp::OptionCode::SubnetMask);
+        fasync::spawn_local(async move {
+            let () = run_server(stream, &server).await.unwrap_or(());
+        });
+        let res = res.await?;
+
+        let expected_result =
+            Ok(fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_fuchsia_net::Ipv4Address {
+                addr: [0, 0, 0, 0],
+            }));
+        assert_eq!(res, expected_result);
+        Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn get_parameter_with_lease_length_returns_lease_length() -> Result<(), Error> {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+        let server = RefCell::new(CannedDispatcher {});
+
+        let res = proxy.get_parameter(fidl_fuchsia_net_dhcp::ParameterName::LeaseLength);
+        fasync::spawn_local(async move {
+            let () = run_server(stream, &server).await.unwrap_or(());
+        });
+        let res = res.await?;
+
+        let expected_result =
+            Ok(fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
+                default: None,
+                max: None,
+            }));
+        assert_eq!(res, expected_result);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn set_option_with_subnet_mask_returns_unit() -> Result<(), Error> {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+        let server = RefCell::new(CannedDispatcher {});
+
+        let res = proxy.set_option(&mut fidl_fuchsia_net_dhcp::Option_::SubnetMask(
+            fidl_fuchsia_net::Ipv4Address { addr: [0, 0, 0, 0] },
+        ));
+        fasync::spawn_local(async move {
+            let () = run_server(stream, &server).await.unwrap_or(());
+        });
+        let res = res.await?;
+
+        assert_eq!(res, Ok(()));
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn set_parameter_with_lease_length_returns_unit() -> Result<(), Error> {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+        let server = RefCell::new(CannedDispatcher {});
+
+        let res = proxy.set_parameter(&mut fidl_fuchsia_net_dhcp::Parameter::Lease(
+            fidl_fuchsia_net_dhcp::LeaseLength { default: None, max: None },
+        ));
+        fasync::spawn_local(async move {
+            let () = run_server(stream, &server).await.unwrap_or(());
+        });
+        let res = res.await?;
+
+        assert_eq!(res, Ok(()));
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn list_options_returns_empty_vec() -> Result<(), Error> {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+        let server = RefCell::new(CannedDispatcher {});
+
+        let res = proxy.list_options();
+        fasync::spawn_local(async move {
+            let () = run_server(stream, &server).await.unwrap_or(());
+        });
+        let res = res.await?;
+
+        assert_eq!(res, Ok(vec![]));
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn list_parameters_returns_empty_vec() -> Result<(), Error> {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+        let server = RefCell::new(CannedDispatcher {});
+
+        let res = proxy.list_parameters();
+        fasync::spawn_local(async move {
+            let () = run_server(stream, &server).await.unwrap_or(());
+        });
+        let res = res.await?;
+
+        assert_eq!(res, Ok(vec![]));
+        Ok(())
+    }
 }

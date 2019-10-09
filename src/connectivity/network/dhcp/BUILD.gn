@@ -16,6 +16,8 @@ rustc_library("dhcp") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:bytes",
@@ -45,17 +47,28 @@ test_package("dhcp_tests") {
 
 rustc_binary("bin") {
   name = "dhcpd"
+  with_unit_tests = true
   edition = "2018"
 
   deps = [
     ":dhcp",
+    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:getopts",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:void",
+    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
+  ]
+
+  test_deps = [
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
+    "//third_party/rust_crates:rand",
   ]
 }
 
@@ -78,6 +91,19 @@ package("dhcpd") {
   binaries = [
     {
       name = "dhcpd"
+    },
+  ]
+}
+
+test_package("dhcpd_tests") {
+  deps = [
+    ":bin_test",
+  ]
+
+  tests = [
+    {
+      name = "dhcpd_bin_test"
+      environments = [ qemu_env ]
     },
   ]
 }
