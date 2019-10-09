@@ -109,18 +109,19 @@ use integration_tests::TestEvent;
 use log::{debug, error, info, trace};
 use net_types::ethernet::Mac;
 use net_types::ip::IpVersion;
+use net_types::SpecifiedAddr;
 use packet::{Buf, BufferMut, Serializer};
 use rand::rngs::OsRng;
-use util::{ContextFidlCompatible, ConversionContext, CoreCompatible, FidlCompatible};
+use util::{ContextFidlCompatible, ConversionContext, CoreCompatible, FidlCompatible, IntoFidlExt};
 
 use crate::devices::{BindingId, CommonInfo, DeviceInfo, Devices, ToggleError};
 
 use netstack3_core::icmp::{IcmpConnId, IcmpEventDispatcher, Icmpv4EventDispatcher};
 use netstack3_core::{
-    add_ip_addr_subnet, add_route, del_device_route, get_all_ip_addr_subnets, get_all_routes,
-    handle_timeout, initialize_device, receive_frame, remove_device, Context, DeviceId,
-    DeviceLayerEventDispatcher, EntryEither, EventDispatcher, IpLayerEventDispatcher,
-    NetstackError, StackState, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
+    add_ip_addr_subnet, add_route, del_device_route, del_ip_addr, get_all_ip_addr_subnets,
+    get_all_routes, handle_timeout, initialize_device, receive_frame, remove_device, Context,
+    DeviceId, DeviceLayerEventDispatcher, EntryEither, EventDispatcher, IpLayerEventDispatcher,
+    StackState, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
 };
 
 /// The message that is sent to the main event loop to indicate that an
@@ -617,35 +618,29 @@ impl EventLoop {
         id: u64,
         addr: InterfaceAddress,
     ) -> Result<(), fidl_net_stack::Error> {
-        let device_info = self.ctx.dispatcher().get_device_info(id);
-        if let Some(device_info) = device_info {
-            match device_info.core_id() {
-                Some(device_id) => {
-                    // TODO(wesleyac): Check for address already existing.
-                    // TODO(joshlf): Return an error if the address/subnet pair is invalid.
-                    if let Ok(addr_sub) = addr.try_into_core() {
-                        add_ip_addr_subnet(&mut self.ctx, device_id, addr_sub);
-                    }
-                    Ok(())
-                }
-                None => {
-                    // TODO(brunodalbo): We should probably allow adding static addresses
-                    // to interfaces that are not installed, return BadState for now
-                    Err(fidl_net_stack::Error::BadState)
-                }
-            }
-        } else {
-            Err(fidl_net_stack::Error::NotFound) // Invalid device ID
-        }
+        let device_info =
+            self.ctx.dispatcher().get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
+        // TODO(brunodalbo): We should probably allow adding static addresses
+        // to interfaces that are not installed, return BadState for now
+        let device_id = device_info.core_id().ok_or(fidl_net_stack::Error::BadState)?;
+
+        add_ip_addr_subnet(&mut self.ctx, device_id, addr.try_into_core()?)
+            .map_err(IntoFidlExt::into_fidl)
     }
 
     fn fidl_del_interface_address(
         &mut self,
-        _id: u64,
-        _addr: fidl_net_stack::InterfaceAddress,
+        id: u64,
+        addr: InterfaceAddress,
     ) -> Result<(), fidl_net_stack::Error> {
-        // TODO(eyalsoha): Implement this.
-        Err(fidl_net_stack::Error::NotSupported)
+        let device_info =
+            self.ctx.dispatcher().get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
+        // TODO(gongt): Since addresses can't be added to inactive interfaces
+        // they can't be deleted either; return BadState for now.
+        let device_id = device_info.core_id().ok_or(fidl_net_stack::Error::BadState)?;
+        let addr: SpecifiedAddr<_> = addr.ip_address.try_into_core()?;
+
+        del_ip_addr(&mut self.ctx, device_id, addr.into()).map_err(IntoFidlExt::into_fidl)
     }
 
     fn fidl_get_forwarding_table(&self) -> Vec<fidl_net_stack::ForwardingEntry> {
@@ -668,14 +663,7 @@ impl EventLoop {
             Ok(entry) => entry,
             Err(e) => return Err(e.into()),
         };
-        match add_route(&mut self.ctx, entry) {
-            Ok(_) => Ok(()),
-            Err(NetstackError::Exists) => {
-                // Subnet already in routing table.
-                Err(fidl_net_stack::Error::AlreadyExists)
-            }
-            Err(_) => unreachable!(),
-        }
+        add_route(&mut self.ctx, entry).map_err(IntoFidlExt::into_fidl)
     }
 
     fn fidl_del_forwarding_entry(
@@ -683,11 +671,7 @@ impl EventLoop {
         subnet: fidl_net::Subnet,
     ) -> Result<(), fidl_net_stack::Error> {
         if let Ok(subnet) = subnet.try_into_core() {
-            match del_device_route(&mut self.ctx, subnet) {
-                Ok(_) => Ok(()),
-                Err(NetstackError::NotFound) => Err(fidl_net_stack::Error::NotFound),
-                Err(_) => unreachable!(),
-            }
+            del_device_route(&mut self.ctx, subnet).map_err(IntoFidlExt::into_fidl)
         } else {
             Err(fidl_net_stack::Error::InvalidArgs)
         }
@@ -892,9 +876,7 @@ impl UdpEventDispatcher for EventLoopInner {}
 
 impl TransportLayerEventDispatcher for EventLoopInner {}
 
-impl Icmpv4EventDispatcher for EventLoopInner {
-    // TODO(joshlf): Override default impl of `receive_icmpv4_error`.
-}
+impl Icmpv4EventDispatcher for EventLoopInner {}
 
 // TODO(rheacock): remove `allow(unused)` once the implementation uses the inputs
 #[allow(unused)]

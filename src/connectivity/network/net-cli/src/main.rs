@@ -154,7 +154,7 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy, netstack: NetstackProxy) -> 
                 .context("error adding device")?;
             match response {
                 Ok(id) => println!("Added interface {}", id),
-                Err(e) => println!("Error adding interface {}: {:?}", path, e),
+                Err(e) => eprintln!("Error adding interface {}: {:?}", path, e),
             }
         }
         IfCmd::Del { id } => {
@@ -162,28 +162,28 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy, netstack: NetstackProxy) -> 
                 stack.del_ethernet_interface(id).await.context("error removing device")?;
             match response {
                 Ok(()) => println!("Interface {} deleted", id),
-                Err(e) => println!("Error removing interface {}: {:?}", id, e),
+                Err(e) => eprintln!("Error removing interface {}: {:?}", id, e),
             }
         }
         IfCmd::Get { id } => {
             let response = stack.get_interface_info(id).await.context("error getting response")?;
             match response {
                 Ok(info) => println!("{}", pretty::InterfaceInfo::from(info)),
-                Err(e) => println!("Error getting interface {}: {:?}", id, e),
+                Err(e) => eprintln!("Error getting interface {}: {:?}", id, e),
             }
         }
         IfCmd::Enable { id } => {
             let response = stack.enable_interface(id).await.context("error getting response")?;
             match response {
                 Ok(()) => println!("Interface {} enabled", id),
-                Err(e) => println!("Error enabling interface {}: {:?}", id, e),
+                Err(e) => eprintln!("Error enabling interface {}: {:?}", id, e),
             }
         }
         IfCmd::Disable { id } => {
             let response = stack.disable_interface(id).await.context("error getting response")?;
             match response {
                 Ok(()) => println!("Interface {} disabled", id),
-                Err(e) => println!("Error disabling interface {}: {:?}", id, e),
+                Err(e) => eprintln!("Error disabling interface {}: {:?}", id, e),
             }
         }
         IfCmd::Addr(AddrCmd::Add { id, addr, prefix }) => {
@@ -200,11 +200,30 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy, netstack: NetstackProxy) -> 
                     pretty::InterfaceAddress::from(fidl_addr),
                     id
                 ),
-                Err(e) => println!("Error adding interface address {}: {:?}", id, e),
+                Err(e) => eprintln!("Error adding interface address to interface {}: {:?}", id, e),
             }
         }
-        IfCmd::Addr(AddrCmd::Del { .. }) => {
-            println!("{:?} not implemented!", cmd);
+        IfCmd::Addr(AddrCmd::Del { id, addr, prefix }) => {
+            let parsed_addr = parse_ip_addr(&addr)?;
+            let prefix_len = prefix.unwrap_or_else(|| match parsed_addr {
+                net::IpAddress::Ipv4(_) => 32,
+                net::IpAddress::Ipv6(_) => 128,
+            });
+            let mut fidl_addr = netstack::InterfaceAddress { ip_address: parsed_addr, prefix_len };
+            let response = stack
+                .del_interface_address(id, &mut fidl_addr)
+                .await
+                .context("error deleting interface address")?;
+            match response {
+                Ok(()) => println!(
+                    "Address {} deleted from interface {}",
+                    pretty::InterfaceAddress::from(fidl_addr),
+                    id
+                ),
+                Err(e) => {
+                    eprintln!("Error deleting interface address from interface {}: {:?}", id, e)
+                }
+            }
         }
     }
     Ok(())
@@ -231,7 +250,7 @@ async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
                 Ok(()) => {
                     println!("Added forwarding entry for {}/{} to device {}", addr, prefix, id)
                 }
-                Err(e) => println!("Error adding forwarding entry: {:?}", e),
+                Err(e) => eprintln!("Error adding forwarding entry: {:?}", e),
             }
         }
         FwdCmd::AddHop { next_hop, addr, prefix } => {
@@ -248,7 +267,7 @@ async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
                 Ok(()) => {
                     println!("Added forwarding entry for {}/{} to {}", addr, prefix, next_hop)
                 }
-                Err(e) => println!("Error adding forwarding entry: {:?}", e),
+                Err(e) => eprintln!("Error adding forwarding entry: {:?}", e),
             }
         }
         FwdCmd::Del { addr, prefix } => {
@@ -261,7 +280,7 @@ async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
                 .context("error removing forwarding entry")?;
             match response {
                 Ok(()) => println!("Removed forwarding entry for {}/{}", addr, prefix),
-                Err(e) => println!("Error removing forwarding entry: {:?}", e),
+                Err(e) => eprintln!("Error removing forwarding entry: {:?}", e),
             }
         }
     }
@@ -501,6 +520,9 @@ async fn dump_stat(path: &str) -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
+    use fidl_fuchsia_net as net;
+    use fuchsia_async as fasync;
+    use futures::prelude::*;
     use {super::*, fidl_fuchsia_net_stack::*};
 
     fn get_fake_interface(id: u64, name: &str) -> InterfaceInfo {
@@ -566,5 +588,79 @@ mod tests {
         assert_eq!((249, 'T'), display_unit(x));
         x = x * KILO;
         assert_eq!((249, 'P'), display_unit(x));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_if_del_addr() {
+        async fn next_request(
+            requests: &mut StackRequestStream,
+        ) -> (u64, InterfaceAddress, StackDelInterfaceAddressResponder) {
+            requests
+                .try_next()
+                .await
+                .expect("del interface address FIDL error")
+                .expect("request stream should not have ended")
+                .into_del_interface_address()
+                .expect("request should be of type DelInterfaceAddress")
+        }
+
+        let (stack, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<StackMarker>().unwrap();
+        let (netstack, _) = fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
+
+        fasync::spawn_local(async move {
+            // Verify that the first request is as expected and return OK.
+            let (id, addr, responder) = next_request(&mut requests).await;
+            assert_eq!(id, 1);
+            assert_eq!(
+                addr,
+                InterfaceAddress {
+                    ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 0, 1] }),
+                    prefix_len: 32
+                }
+            );
+            responder.send(&mut Ok(())).unwrap();
+
+            // Verify that the second request is as expected and return a NotFound error.
+            let (id, addr, responder) = next_request(&mut requests).await;
+            assert_eq!(id, 2);
+            assert_eq!(
+                addr,
+                InterfaceAddress {
+                    ip_address: net::IpAddress::Ipv6(net::Ipv6Address {
+                        addr: [0xfd, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+                    }),
+                    prefix_len: 128
+                }
+            );
+            responder.send(&mut Err(fidl_fuchsia_net_stack::Error::NotFound)).unwrap();
+        });
+
+        // Make the first request.
+        let () = do_if(
+            opts::IfCmd::Addr(opts::AddrCmd::Del {
+                id: 1,
+                addr: String::from("192.168.0.1"),
+                prefix: None, // The prefix should be set to the default of 32 for IPv4.
+            }),
+            stack.clone(),
+            netstack.clone(),
+        )
+        .await
+        .expect("net-cli do_if del address should succeed");
+
+        // Make the second request.
+        let () = do_if(
+            opts::IfCmd::Addr(opts::AddrCmd::Del {
+                id: 2,
+                addr: String::from("fd00::1"),
+                prefix: None, // The prefix should be set to the default of 128 for IPv6.
+            }),
+            stack.clone(),
+            netstack.clone(),
+        )
+        .await
+        .expect("net-cli do_if del address should succeed");
+        // TODO(gongt) do_if should probably return an error if the FIDL method returns an error.
     }
 }

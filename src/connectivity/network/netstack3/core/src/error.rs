@@ -8,6 +8,7 @@ use failure::Fail;
 use net_types::ip::{Ip, IpAddress};
 use net_types::MulticastAddress;
 
+use crate::device::AddressError;
 use crate::wire::icmp::IcmpIpTypes;
 
 /// Results returned from many functions in the netstack.
@@ -20,7 +21,7 @@ pub(crate) type ParseResult<T> = std::result::Result<T, ParseError>;
 pub(crate) type IpParseResult<I, T> = std::result::Result<T, IpParseError<I>>;
 
 /// Top-level error type the netstack.
-#[derive(Fail, Debug)]
+#[derive(Fail, Debug, PartialEq)]
 pub enum NetstackError {
     #[fail(display = "{}", _0)]
     /// Errors related to packet parsing.
@@ -34,6 +35,15 @@ pub enum NetstackError {
     #[fail(display = "Item not found")]
     NotFound,
     // Add error types here as we add more to the stack
+}
+
+impl From<AddressError> for NetstackError {
+    fn from(error: AddressError) -> Self {
+        match error {
+            AddressError::AlreadyExists => Self::Exists,
+            AddressError::NotFound => Self::NotFound,
+        }
+    }
 }
 
 /// Error type for packet parsing.

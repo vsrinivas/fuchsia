@@ -61,6 +61,7 @@ use std::time;
 
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither};
+use net_types::SpecifiedAddr;
 use packet::{Buf, BufferMut, EmptyBuf};
 use rand::{CryptoRng, RngCore};
 
@@ -491,11 +492,25 @@ pub fn add_ip_addr_subnet<D: EventDispatcher>(
     ctx: &mut Context<D>,
     device: DeviceId,
     addr_sub: AddrSubnetEither,
-) {
+) -> Result<(), error::NetstackError> {
     map_addr_version!(
         addr_sub: AddrSubnetEither;
         crate::device::add_ip_addr_subnet(ctx, device, addr_sub)
-    );
+    )
+    .map_err(From::from)
+}
+
+/// Delete an IP address on a device.
+pub fn del_ip_addr<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    addr: IpAddr<SpecifiedAddr<Ipv4Addr>, SpecifiedAddr<Ipv6Addr>>,
+) -> Result<(), error::NetstackError> {
+    map_addr_version!(
+        addr: IpAddr;
+        crate::device::del_ip_addr(ctx, device, &addr)
+    )
+    .map_err(From::from)
 }
 
 /// Adds a route to the forwarding table.
@@ -539,4 +554,66 @@ pub fn get_all_routes<'a, D: EventDispatcher>(
     let v4_routes = ip::iter_all_routes::<_, Ipv4Addr>(ctx);
     let v6_routes = ip::iter_all_routes::<_, Ipv6Addr>(ctx);
     v4_routes.cloned().map(From::from).chain(v6_routes.cloned().map(From::from))
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::testutil::{
+        get_dummy_config, get_other_ip_address, DummyEventDispatcher, DummyEventDispatcherBuilder,
+    };
+    use net_types::ip::{Ip, Ipv4, Ipv6};
+    use net_types::Witness;
+
+    fn test_add_remove_ip_addresses<I: Ip>() {
+        let config = get_dummy_config::<I::Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+
+        let ip: IpAddr = get_other_ip_address::<I::Addr>(1).get().into();
+        let prefix = config.subnet.prefix();
+        let addr_subnet = AddrSubnetEither::new(ip, prefix).unwrap();
+
+        // ip doesn't exist initially
+        assert!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet).is_none());
+
+        // Add ip (ok)
+        let () = add_ip_addr_subnet(&mut ctx, device, addr_subnet).unwrap();
+        assert!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet).is_some());
+
+        // Add ip again (already exists)
+        assert_eq!(
+            add_ip_addr_subnet(&mut ctx, device, addr_subnet).unwrap_err(),
+            NetstackError::Exists
+        );
+        assert!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet).is_some());
+
+        // Add ip with different subnet (already exists)
+        let wrong_addr_subnet = AddrSubnetEither::new(ip, prefix - 1).unwrap();
+        assert_eq!(
+            add_ip_addr_subnet(&mut ctx, device, wrong_addr_subnet).unwrap_err(),
+            NetstackError::Exists
+        );
+        assert!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet).is_some());
+
+        let ip = SpecifiedAddr::new(ip).unwrap();
+        // Del ip (ok)
+        let () = del_ip_addr(&mut ctx, device, ip.into()).unwrap();
+        assert!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet).is_none());
+
+        // Del ip again (not found)
+        assert_eq!(del_ip_addr(&mut ctx, device, ip.into()).unwrap_err(), NetstackError::NotFound);
+        assert!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet).is_none());
+    }
+
+    #[test]
+    fn test_add_remove_ipv4_addresses() {
+        test_add_remove_ip_addresses::<Ipv4>();
+    }
+
+    #[test]
+    fn test_add_remove_ipv6_addresses() {
+        test_add_remove_ip_addresses::<Ipv6>();
+    }
 }

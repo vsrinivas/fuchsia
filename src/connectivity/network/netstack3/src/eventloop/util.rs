@@ -6,12 +6,18 @@ use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use net_types::ip::{AddrSubnetEither, IpAddr, SubnetEither};
 use net_types::{SpecifiedAddr, Witness};
-use netstack3_core::{DeviceId, EntryDest, EntryDestEither, EntryEither};
+use netstack3_core::{DeviceId, EntryDest, EntryDestEither, EntryEither, NetstackError};
 use never::Never;
 
-/// Error returned when trying create `core` subnets with invalid values.
+/// Error returned when trying to create `core` subnets with invalid values.
 #[derive(Debug)]
 pub struct InvalidSubnetError;
+
+impl From<InvalidSubnetError> for fidl_net_stack::Error {
+    fn from(_error: InvalidSubnetError) -> Self {
+        Self::InvalidArgs
+    }
+}
 
 /// Defines a type that can be converted to a FIDL type `F`.
 ///
@@ -101,6 +107,37 @@ impl<C, F: CoreCompatible<C, IntoError = Never>> IntoCoreExt<C> for F {}
 impl<C, F: CoreCompatible<C, FromError = Never>> FromCoreExt<C> for F {}
 impl<F, C: FidlCompatible<F, IntoError = Never>> IntoFidlExt<F> for C {}
 impl<F, C: FidlCompatible<F, FromError = Never>> FromFidlExt<F> for C {}
+
+// NOTE This error exists solely to support implementing
+// `FidlCompatible<fidl_net_stack::Error>` for `NetstackError` so that the
+// latter can be converted into the former. There is no real use case for
+// converting in the other direction, so realistically this error should never
+// be seen.
+/// Error indicating that a value cannot be converted into another type because
+/// there is no appropriate representation of the value in the target type.
+#[derive(Debug)]
+pub struct NotRepresentedError;
+
+impl FidlCompatible<fidl_net_stack::Error> for NetstackError {
+    type FromError = NotRepresentedError;
+    type IntoError = Never;
+
+    fn try_from_fidl(fidl: fidl_net_stack::Error) -> Result<Self, Self::FromError> {
+        match fidl {
+            fidl_net_stack::Error::AlreadyExists => Ok(NetstackError::Exists),
+            fidl_net_stack::Error::NotFound => Ok(NetstackError::NotFound),
+            _ => Err(NotRepresentedError),
+        }
+    }
+
+    fn try_into_fidl(self) -> Result<fidl_net_stack::Error, Self::IntoError> {
+        match self {
+            NetstackError::Exists => Ok(fidl_net_stack::Error::AlreadyExists),
+            NetstackError::NotFound => Ok(fidl_net_stack::Error::NotFound),
+            _ => Ok(fidl_net_stack::Error::Internal),
+        }
+    }
+}
 
 impl FidlCompatible<fidl_net::IpAddress> for IpAddr {
     type FromError = Never;

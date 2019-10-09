@@ -131,6 +131,8 @@ pub enum AddrCmd {
         id: u64,
         #[structopt(raw(required = "true"))]
         addr: String,
+        /// optional address subnet prefix (defaults to 32 for v4, 128 for v6)
+        prefix: Option<u8>,
     },
 }
 

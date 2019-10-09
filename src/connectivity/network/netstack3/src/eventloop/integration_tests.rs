@@ -55,6 +55,7 @@ fn set_logger_for_test() {
     })
 }
 
+#[derive(Debug)]
 pub enum TestEvent {
     DeviceStatusChanged { id: u64, status: EthernetStatus },
     IcmpEchoReply { conn: IcmpConnId, seq_num: u16, data: Vec<u8> },
@@ -552,10 +553,6 @@ async fn test_ping() {
         .await
         .expect("Test Setup succeeds");
 
-    // wait for interfaces on both stacks to signal online correctly:
-    t.get(0).wait_for_interface_online(1).await;
-    t.get(1).wait_for_interface_online(1).await;
-
     const ICMP_ID: u16 = 1;
 
     debug!("creating icmp connection");
@@ -771,10 +768,7 @@ async fn test_list_interfaces() {
         let ep_name = test_ep_name(i);
         let ep = t.get_endpoint(&ep_name).await.unwrap().into_proxy().unwrap();
         let ep_info = ep.get_info().await.unwrap();
-        let mut if_ip = AddrSubnetEither::new(Ipv4Addr::from([192, 168, 0, i as u8]).into(), 24)
-            .unwrap()
-            .try_into_fidl()
-            .unwrap();
+        let mut if_ip = new_ipv4_addr_subnet([192, 168, 0, i as u8], 24).into_fidl();
 
         let ep = t.get_endpoint(&ep_name).await.unwrap();
         let if_id = t
@@ -816,7 +810,7 @@ async fn test_list_interfaces() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_get_interface_info() {
-    let ip = AddrSubnetEither::new(Ipv4Addr::from([192, 168, 0, 1]).into(), 24).unwrap();
+    let ip = new_ipv4_addr_subnet([192, 168, 0, 1], 24);
     let mut t = TestSetupBuilder::new()
         .add_endpoint()
         .add_stack(StackSetupBuilder::new().add_endpoint(1, Some(ip.clone())))
@@ -1082,6 +1076,68 @@ async fn test_phy_admin_interface_state_interaction() {
 
     // Ensure that the device has been added to the core.
     assert!(t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active());
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_add_del_interface_address() {
+    let mut t = TestSetupBuilder::new()
+        .add_endpoint()
+        .add_stack(StackSetupBuilder::new().add_endpoint(1, None))
+        .build()
+        .await
+        .unwrap();
+    let test_stack = t.get(0);
+    let stack = test_stack.connect_stack().unwrap();
+    let if_id = test_stack.get_endpoint_id(1);
+    let mut addr = new_ipv4_addr_subnet([192, 168, 0, 1], 24).into_fidl();
+
+    // The first IP address added should succeed.
+    let () = t
+        .get(0)
+        .run_future(stack.add_interface_address(if_id, &mut addr))
+        .await
+        .squash_result()
+        .expect("Add interface address should succeed");
+    let if_info = t
+        .get(0)
+        .run_future(stack.get_interface_info(if_id))
+        .await
+        .squash_result()
+        .expect("Get interface info should succeed");
+    assert!(if_info.properties.addresses.contains(&addr));
+
+    // Adding the same IP address again should fail with already exists.
+    let err = t
+        .get(0)
+        .run_future(stack.add_interface_address(if_id, &mut addr))
+        .await
+        .expect("Add interface address FIDL call should succeed")
+        .expect_err("Adding same address should fail");
+    assert_eq!(err, fidl_net_stack::Error::AlreadyExists);
+
+    // Deleting an IP address that exists should succeed.
+    let () = t
+        .get(0)
+        .run_future(stack.del_interface_address(if_id, &mut addr))
+        .await
+        .squash_result()
+        .expect("Delete interface address succeeds");
+    let if_info = t
+        .get(0)
+        .run_future(stack.get_interface_info(if_id))
+        .await
+        .squash_result()
+        .expect("Get interface info should succeed");
+    assert!(!if_info.properties.addresses.contains(&addr));
+
+    // Deleting an IP address that doesn't exist should fail with not found.
+    let err = t
+        .get(0)
+        .run_future(stack.del_interface_address(if_id, &mut addr))
+        .await
+        .expect("Delete interface address FIDL call should succeed")
+        .expect_err("Deleting non-existent address should fail");
+    assert_eq!(err, fidl_net_stack::Error::NotFound);
 }
 
 #[fasync::run_singlethreaded(test)]
