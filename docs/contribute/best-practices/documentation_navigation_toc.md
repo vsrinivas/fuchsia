@@ -41,7 +41,7 @@ To add navigation for a new document:
 1. Edit the `_toc.yaml` file.
    See [`_toc.yaml` reference](#toc-reference).
 
-## `_toc.yaml` reference <a name="toc-reference"></a>
+## `_toc.yaml` reference {#toc-reference}
 
 A `_toc.yaml` file can contain single entries or expandable sections
 with multiple entries:

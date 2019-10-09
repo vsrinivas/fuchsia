@@ -5,10 +5,10 @@
 - [Concepts](#concepts)
   - [Setting View Bounds](#setting-view-bounds)
     - [Bound Extent and Insets](#bound-extent-and-insets)
-    - [Example](#example1)
+    - [Example](#example-1)
     - [Example 2](#example-2)
   - [Coordinate System](#coordinate-system)
-    - [Example](#example3)
+    - [Example](#example-3)
   - [Centering Geometry](#centering-geometry)
   - [Debug Wireframe Rendering](#debug-wireframe-rendering)
   - [Ray Casting and Hit Testing](#ray-casting-and-hit-testing)
@@ -23,11 +23,11 @@ This is a guide that explains how view bounds and clipping work in Scenic. This 
 
 # Concepts
 
-## Setting View Bounds
+## Setting View Bounds {#setting-view-bounds}
 
 An embedder must create a pair of tokens for a view and view holder, and must also allocate space within its view for the embedded view holder to be laid out. This is done by setting the bounds on the view holder of the embedded view. To set the view bounds on a view, you have to call `SetViewProperties` on its respective ViewHolder. You can call `SetViewProperties` either before or after the view itself is created and linked to the ViewHolder, so you do not have to worry about the order in which you do your setup. The bounds themselves are set by specifying their minimum and maximum points (xyz) in 3D space.
 
-### Bound Extent and Insets
+### Bound Extent and Insets {#bound-extent-and-insets}
 
 There are four values needed to set a view's bounds properly, `bounds_min`, `bounds_max`, `inset_min` and `inset_max`. The minimum and maximum bounds represent the minimum and maximum coordinate points of an axis-aligned bounding box. The minimum and maximum insets specify the distances between the view’s bounding box and that of its parent. So the final extent of a view's bounds can be defined with the following formula:
 
@@ -35,7 +35,7 @@ There are four values needed to set a view's bounds properly, `bounds_min`, `bou
 { bounds_min + inset_min, bounds_max - inset_max}
 ```
 
-### Example <a name="example1"></a>
+### Example 1 {#example-1}
 
 ```cpp
 
@@ -61,7 +61,7 @@ The above code creates a View and ViewHolder pair whose bounds start at (20,30,-
 
 The above version of `SetViewProperties` requires you to supply each parameter individually, but you can also call another version of the function which takes in a `ViewProperties` struct, instead.
 
-### Example 2
+### Example 2 {#example-2}
 
 ```cpp
 
@@ -77,11 +77,11 @@ properties.bounding_box.max =
 view_holder.SetViewProperties(std::move(properties));
 ```
 
-## Coordinate System
+## Coordinate System {#coordinate-system}
 
 View bounds are specified in local coordinates, and their world-space position is determined by the global transform of the view node.
 
-### Example <a name="example3"></a>
+### Example 3 {#example-3}
 
 ```cpp
 // Create an entity node and translate it by (100,100,200).
@@ -111,13 +111,13 @@ view_holder.SetViewProperties(bounds_min, bounds_max,
 
 In the above code, the view bounds in local space have a min and max value of (0,0,0) and (500,500,200), but since the parent node is translated by (100,100,200) the view bounds in world space will actually have a world space bounds min and max of (100,100,200) and (600,600,400) respectively. However, the view itself doesn’t see these world-space bounds, and only deals with its bounds in its own local space.
 
-## Centering Geometry
+## Centering Geometry {#centering-geometry}
 
 The center of mass for a piece of geometry such as a `RoundedRectangle` is its center, whereas for a view, the center of mass for its bounds is its minimum coordinate. This means that if a view and a rounded-rectangle that is a child of that view both have the same translation, the center of the rounded-rectangle will render at the minimum-coordinate of the view’s bounds. To fix this, apply another translation on the shape node to move it to the center of the view’s bounds.
 
 ![Centering Geometry Diagram](meta/scenic_centering_geometry.png)
 
-## Debug Wireframe Rendering
+## Debug Wireframe Rendering {#debug-wireframe-rendering}
 
 To help with debugging view bounds, you can render the edges of the bounds in wire-frame mode to see where exactly your view is located in world space. This functionality can be applied per-view using a Scenic command:
 
@@ -141,11 +141,11 @@ struct SetViewHolderBoundsColorCmd {
 };
 ```
 
-## Ray Casting and Hit Testing
+## Ray Casting and Hit Testing {#ray-casting-and-hit-testing}
 
 When performing hit tests, Scenic runs tests against the bounds of a `ViewNode` before determining whether the ray should continue checking children of that node. If you forget to set the bounds for a view, any geometry that exists as a child of that view cannot be hit. This is because the bounds would be null and therefore infinitely small, which also means that there would be no geometry rendered to the screen.
 
-### Rules
+### Rules {#rules}
 
 These are the rules for ray casting:
 
@@ -155,11 +155,11 @@ These are the rules for ray casting:
 
 In debug mode, a null bounding box will trigger an FXL_DCHECK in the escher::BoundingBox class stating that the bounding box dimensions need to be greater than or equal to 2.
 
-### Edge Cases
+### Edge Cases {#edge-cases}
 
  Situations where a ray is perpendicular to a side of a bounding box and just grazes its edge will not count as a hit. Since the six planes that constitute the bounding box are themselves the clip planes, it follows that anything that is directly on a clip plane would also get clipped.
 
-### Collisions
+### Collisions {#collisions}
 
 A collision occurs when a ray cast detects two or more hits at the same distance. A collision indicates that hittable targets are overlapping and occupying the same position in the scene. This is considered incorrect behavior and Scenic does not provide hit test ordering guarantees in case of collisions. The client must prevent collisions.
 
@@ -173,11 +173,11 @@ It is also best practice to follow these rules to avoid Z-fighting for visual co
 
 When a collision is detected, a warning is logged of the colliding nodes by session id and resource id.
 
-### Pixel Offsets
+### Pixel Offsets {#pixel-offsets}
 
 When issuing input commands in screen space, pixel values are jittered by (0.5, 0.5) so that commands are issued from the center of the pixel and not the top-left corner. This is important to take into account when testing ray-hit tests with bounding boxes, as it will affect the ray origins in world space after they have been transformed, and thus whether or not it results in an intersection.
 
-#### Example <a name="example4"></a>
+#### Example 4 {#example-4}
 
 ```cpp
 // Create a 'ViewProperties' struct and set the bounding box dimensions,

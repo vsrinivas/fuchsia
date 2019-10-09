@@ -505,7 +505,7 @@ struct Widget {
 };
 ```
 
-### Files <a name="files"></a>
+### Files {#files}
 
 A library is comprised of one or more files.  The files are stored in a
 directory hierarchy with the following conventions:

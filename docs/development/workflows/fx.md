@@ -6,7 +6,7 @@ subcommands, which can be discovered by running `fx help`. If you use `bash`
 or `zsh` as a shell, you can get some auto-completion for `fx` by sourcing
 `scripts/fx-env.sh` into your shell.
 
-## Setting up fx {: #setting-up-fx}
+## Setting up fx {#setting-up-fx}
 
 It is strongly recommended that you `source scripts/fx-env.sh` into your
 shell. This is tested and regularly used with Bash and ZSH. It may work for
@@ -46,7 +46,7 @@ unpredictable behaviors (for example, that directory contains binaries with
 generic names like "bootstrap" which may unintentionally override the
 behavior of other systems).
 cco
-## Common daily tools {: #common-daily-tools}
+## Common daily tools {#common-daily-tools}
 
 The first thing you will want to do after checking out a Fuchsia tree is to
 build Fuchsia, and then get it onto a device. `fx` has some commands to help
@@ -61,7 +61,7 @@ with this:
 * `fx shell` [connect to a target shell](#connect-to-a-target-shell)
 * [and many other small tasks](#performing-other-common-tasks)
 
-## Configure a build {: #configure-a-build}
+## Configure a build {#configure-a-build}
 
 First let's configure the build. To do this we need to make a few choices:
 
@@ -129,7 +129,7 @@ represent. A speaker product, for example, adds many audio-media-related
 packages to the base. A workstation product adds a wide range of GUI,
 media and many other packages to the base.
 
-### Key product configurations {: #key-product-configurations}
+### Key product configurations {#key-product-configurations}
 
 There are many more than below, but the following three particularly
 important configurations to be familiar with:
@@ -149,7 +149,7 @@ important configurations to be familiar with:
   for working on UI, media and many other high-level features. This is also
   the best environment for enthusiasts to play with and explore.
 
-### Key bundles {: #key-bundles}
+### Key bundles {#key-bundles}
 
 As with products, there are many more, but the following bundles are most
 important to be familiar with:
@@ -169,7 +169,7 @@ important to be familiar with:
   20GB of build artifacts and requires at least 2GB of storage on the target
   device (size estimates from Q1/2019).
 
-## Execute a build {: #execute-a-build}
+## Execute a build {#execute-a-build}
 
 For most use cases, only `fx build` is needed. `fx build` builds both Zircon
 and the Fuchsia portions of the build. The build process is optimized
@@ -186,7 +186,7 @@ more granular control:
   fine grained build argument changes (e.g. by editing `args.gn` directly) can
   run `fx gen` to reconfigure their build.
 
-### Building a specific target {: #building-a-specific target}
+### Building a specific target {#building-a-specific target}
 
 `fx build` can be given the name of a specific target or file to build. For
 example, a target with the label `//examples/hello_world:hello_world` can be built with
@@ -201,7 +201,7 @@ example, an executable target with the label
 See the [build system overview][build-overview] for a more detailed discussion
 of build targets.
 
-## Flash a board and prepare Zedboot {: #flash-a-board-and-prepare-zedboot}
+## Flash a board and prepare Zedboot {#flash-a-board-and-prepare-zedboot}
 
 The exact preparation required to put Fuchsia onto a target device varies by
 specific device, but there are two general groups in common use today, made
@@ -212,7 +212,7 @@ convenient behind `fx` commands:
 * `fx mkzedboot` is used with most `x64` devices to prepare a bootable USB key
   that boots into Zedboot, preparing the device for [Paving](#what-is-paving).
 
-### What is Zedboot? {: #what-is-zedboot}
+### What is Zedboot? {#what-is-zedboot}
 
 Zedboot is a special configuration of Zircon that contains a simple network
 stack, a simple device advertisement and discovery protocols, and a suite of
@@ -233,7 +233,7 @@ insert it to the target device, and reboot the target device, selecting "Boot
 from USB" from the boot options, or in the device BIOS. There are additional
 instructions for preparing a [Pixelbook](/docs/development/hardware/pixelbook.md).
 
-### What is Paving? {: #what-is-paving}
+### What is Paving? {#what-is-paving}
 
 Paving is in many ways similar to "flashing" from other worlds, however, it
 has some differences. Specifically, paving refers to a group of processes and
@@ -248,7 +248,7 @@ on the host system. In general most users actually will want to use `fx serve`
 instead of `fx pave`. `fx serve` is covered in the [serve a build](#serve-a-build)
 section.
 
-### What is Netbooting? {: #what-is-netbooting}
+### What is Netbooting? {#what-is-netbooting}
 
 In Fuchsia, "netboot" refers to sending a set of artifacts to a Zedboot
 instance that instead of making changes to the disk, will just be booted from
@@ -264,7 +264,7 @@ configuration always prepares `netboot` artifacts. For all other build
 configurations, a user can optionally build the netboot artifacts using
 `fx build netboot`.
 
-## Serve a build {: #serve-a-build}
+## Serve a build {#serve-a-build}
 
 A lot of build configurations for Fuchsia include software that is not
 immediately included in the base images that a build produces, that are
@@ -284,7 +284,7 @@ configure, and upon discovery (which may be restricted/modulated with
 `fx set-device` or `fx -d`) the target device is configured to use the
 repository server as a source of dynamic packages and system updates.
 
-## Update a target device {: #update-a-target-device}
+## Update a target device {#update-a-target-device}
 
 As described in prior sections, there are different groups of software on a
 Fuchsia device:
@@ -341,7 +341,7 @@ components, e.g. if basemgr spawned things under a job or a component
 topology, a method to restart that topology (e.g. `killall basemgr.cmx`,
 however that's no good today).
 
-## Execute tests {: #execute-tests}
+## Execute tests {#execute-tests}
 
 The Fuchsia codebase contains many tests. Most of these tests are themselves
 Components, and can be launched on the target device in the same way as other
@@ -376,7 +376,7 @@ high focus workflows like test driven development.
 Note: Iterative mode (indicated by the *-i* option) requires the `inotify-tools`
 or `fswatch` package on the host system.
 
-## Connect to a target shell {: #connect-to-a-target-shell}
+## Connect to a target shell {#connect-to-a-target-shell}
 
 Most [product configurations](#key-product-configurations) include an SSH
 server with a Fuchsia specific configuration. The command `fx shell` is a
@@ -397,9 +397,9 @@ the `tools` bundle is available in the build configuration, many tools common
 to unix shell environments have been ported and are available, such as `ps`,
 `ls`, `cat`, `curl`, `vim`, `fortune` and so on.
 
-## Performing other common tasks {: #performing-other-common-tasks}
+## Performing other common tasks {#performing-other-common-tasks}
 
-### Getting logs {: #getting-logs}
+### Getting logs {#getting-logs}
 
 `fx syslog` captures all logs from low-level and high-level programs,
 including the kernel, drivers and other userspace programs. `fx syslog`
@@ -417,7 +417,7 @@ also always available in "bringup" product configurations, as such, `fx log`
 is most useful when working on low-level software, such as the Zircon kernel,
 or drivers.
 
-### Copying files {: #copying-files}
+### Copying files {#copying-files}
 
 `fx cp` provides a basic wrapper around `scp`, similar to how `fx shell` is a
 wrapper around `ssh`.
@@ -429,7 +429,7 @@ $ fx cp book.txt /tmp/book.txt
 $ fx cp --to-host /tmp/poem.txt poem.txt
 ```
 
-### Start Fuchsia in QEMU {: #start-fuchsia-in-qemu}
+### Start Fuchsia in QEMU {#start-fuchsia-in-qemu}
 
 `fx run` starts a Fuchsia build under QEMU, a general purpose virtual
 machine. Users on Linux host systems with KVM can execute `fx run -k` for
@@ -439,7 +439,7 @@ The QEMU environment does not support any GUI programs. It also has limiting
 network capabilities. Hardware devices are recommended for day-to-day Fuchsia
 software development whenever possible.
 
-### Using multiple Fuchsia devices {: #using-multiple-fuchsia-devices} 
+### Using multiple Fuchsia devices {#using-multiple-fuchsia-devices} 
 
 Some users will have more than one Fuchsia device on a network, and will want
 to limit the effects of various commands to particular of those devices. The
@@ -472,7 +472,7 @@ Fuchsia device from the current default build directory, as a one-off
 command, the `fx` global flag `-d` allows overriding the target node name for
 a single command invocation.
 
-### Reboot a device {: #reboot-a-device}
+### Reboot a device {#reboot-a-device}
 
 `fx reboot`
 
@@ -481,7 +481,7 @@ On some devices (most arm64 devices at present) there are also some useful flags
 * `fx reboot -r` reboot into "recovery" (Zedboot)
 * `fx reboot -b` reboot into "bootloader" (Flash)
 
-### Determine a CL's status {: #determine-a-cls-status}
+### Determine a CL's status {#determine-a-cls-status}
 
 `fx whereiscl <query>`
 
@@ -507,7 +507,7 @@ CL status: MERGED
 GI status: PENDING
 ```
 
-### Debugging and developing `fx` commands {: #debugging-and-developing-fx-commands}
+### Debugging and developing `fx` commands {#debugging-and-developing-fx-commands}
 
 * `fx -x` the `-x` flag turns on tracing for the `fx` scripts, printing out all
   expressions evaluated during the `fx` invocation.
@@ -516,7 +516,7 @@ GI status: PENDING
   variables in that environment (`fx exec env | grep FUCHSIA` is likely of
   interest).
 
-### Getting help with `fx` {: #getting-help-with-fx}
+### Getting help with `fx` {#getting-help-with-fx}
 
 `fx help <command>` provides the best introductory documentation for that
 command. Some commands also support/provide `fx <command> -h` or

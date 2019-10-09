@@ -102,7 +102,7 @@ A program loading request starts with:
 
 Three types of file are handled:
 
-* <b>A script file starting with `#!` </b> <a name="hashbang"</a>
+### A script file starting with `#!` {#hashbang}
 
   The first line of the file starts with `#!` and must be no more than 127
   characters long. The first non-whitespace word following `#!` is the
@@ -123,7 +123,7 @@ Three types of file are handled:
      There is a maximum nesting limit (currently 5) constraining how many
      such restarts will be allowed before program loading just fails.
 
-* <b>An ELF `ET_DYN` file with no `PT_INTERP` </b>
+### An ELF `ET_DYN` file with no `PT_INTERP`
 
   * The system chooses a random base address for the first `PT_LOAD` segment
     and then maps in each `PT_LOAD` segment relative to that base address.
@@ -173,9 +173,7 @@ Three types of file are handled:
      noreturn void _start(zx_handle_t bootstrap_channel, uintptr_t vdso_base);
      ```
 
-<a name="PT_INTERP"></a>
-
-* <b>An ELF `ET_DYN` file with a `PT_INTERP`</b>
+### An ELF `ET_DYN` file with a `PT_INTERP` {#pt-interp}
 
   In this case, the program loader does not directly use the VMO containing
   the ELF executable after reading its `PT_INTERP` header. Instead, it
@@ -259,8 +257,7 @@ A bootstrap message conveys:
  * a list of argument strings (to become `argv[]` in a C/C++ program)
  * a list of environment strings (to become `environ[]` in a C/C++ program)
 
-<a name="handle-info-entry"></a>
-
+### Handle info entry {#handle-info-entry}
 The handles serve many purposes, indicated by the *handle info entry* type:
 
  * essential handles for the process to make [system calls](/docs/reference/syscalls/README.md):
@@ -281,7 +278,7 @@ which does not need to know what they're for.
 
 In dynamic linking systems, an executable file refers to and uses at
 runtime additional files containing shared libraries and plugins. The
-dynamic linker is loaded as an [*ELF interpreter*](#PT_INTERP) and is
+dynamic linker is loaded as an [*ELF interpreter*](#pt-interp) and is
 responsible getting access to all these additional files to complete
 dynamic linking before the main program's entry point gets control.
 
