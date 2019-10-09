@@ -81,7 +81,7 @@ view_holder.SetViewProperties(std::move(properties));
 
 View bounds are specified in local coordinates, and their world-space position is determined by the global transform of the view node.
 
-### Example 3 {#example-3}
+### Example {#example-3}
 
 ```cpp
 // Create an entity node and translate it by (100,100,200).
@@ -177,7 +177,7 @@ When a collision is detected, a warning is logged of the colliding nodes by sess
 
 When issuing input commands in screen space, pixel values are jittered by (0.5, 0.5) so that commands are issued from the center of the pixel and not the top-left corner. This is important to take into account when testing ray-hit tests with bounding boxes, as it will affect the ray origins in world space after they have been transformed, and thus whether or not it results in an intersection.
 
-#### Example 4 {#example-4}
+#### Example {#example-4}
 
 ```cpp
 // Create a 'ViewProperties' struct and set the bounding box dimensions,
