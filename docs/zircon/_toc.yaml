@@ -27,9 +27,6 @@ toc:
   - title: "fit::promise<> guide"
     path: /docs/zircon/fit_promise_guide.md
 
-- title: "Editors"
-  path: /docs/zircon/editors.md
-
 - title: "libc support"
   path: /docs/zircon/libc.md
 

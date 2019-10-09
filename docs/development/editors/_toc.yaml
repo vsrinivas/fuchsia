@@ -4,5 +4,9 @@
 toc:
 - title: "Editors"
   path: /docs/development/editors
+- title: "YouCompleteMe integration"
+  path: /docs/development/editors/youcompleteme.md
 - title: "VS Code"
   path: /docs/development/editors/vscode.md
+- title: "VIM"
+  path: /docs/development/editors/vim.md
