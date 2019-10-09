@@ -8,7 +8,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/test.h>
 
 #include "src/camera/drivers/virtual_camera/virtual_camera_device.h"
 
