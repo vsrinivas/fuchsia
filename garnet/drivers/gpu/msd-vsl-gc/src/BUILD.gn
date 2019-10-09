@@ -29,6 +29,7 @@ source_set("src") {
     "page_table_arrays.h",
   ]
   public_deps = [
+    "../include",
     "//garnet/lib/magma/include:msd_abi",
   ]
   deps = [

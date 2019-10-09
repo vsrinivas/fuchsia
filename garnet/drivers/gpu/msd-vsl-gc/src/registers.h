@@ -34,6 +34,34 @@ class Revision : public magma::RegisterBase {
   static auto Get() { return magma::RegisterAddr<Revision>(0x24); }
 };
 
+class ChipDate : public magma::RegisterBase {
+ public:
+  DEF_FIELD(31, 0, chip_date);
+
+  static auto Get() { return magma::RegisterAddr<ChipDate>(0x28); }
+};
+
+class ProductId : public magma::RegisterBase {
+ public:
+  DEF_FIELD(31, 0, product_id);
+
+  static auto Get() { return magma::RegisterAddr<ProductId>(0xA8); }
+};
+
+class EcoId : public magma::RegisterBase {
+ public:
+  DEF_FIELD(31, 0, eco_id);
+
+  static auto Get() { return magma::RegisterAddr<EcoId>(0xE8); }
+};
+
+class CustomerId : public magma::RegisterBase {
+ public:
+  DEF_FIELD(31, 0, customer_id);
+
+  static auto Get() { return magma::RegisterAddr<CustomerId>(0x30); }
+};
+
 class Features : public magma::RegisterBase {
  public:
   DEF_BIT(0, fast_clear);

@@ -8,6 +8,7 @@
 #include <thread>
 
 #include "magma_util/macros.h"
+#include "magma_vendor_queries.h"
 #include "msd.h"
 #include "platform_mmio.h"
 #include "registers.h"
@@ -36,7 +37,7 @@ bool MsdVslDevice::Init(void* device_handle, bool enable_mmu) {
   device_id_ = registers::ChipId::Get().ReadFrom(register_io_.get()).chip_id().get();
   DLOG("Detected vsl chip id 0x%x", device_id_);
 
-  if (device_id_ != 0x7000)
+  if (device_id_ != 0x7000 && device_id_ != 0x8000)
     return DRETF(false, "Unspported gpu model 0x%x\n", device_id_);
 
   gpu_features_ = std::make_unique<GpuFeatures>(register_io_.get());
@@ -195,6 +196,36 @@ std::unique_ptr<MsdVslConnection> MsdVslDevice::Open(msd_client_id_t client_id) 
                                             client_id);
 }
 
+magma_status_t MsdVslDevice::ChipIdentity(magma_vsl_gc_chip_identity* out_identity) {
+  if (device_id() != 0x8000) {
+    // TODO(fxb/37962): Read hardcoded values from features database instead.
+    return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "unhandled device id 0x%x", device_id());
+  }
+  memset(out_identity, 0, sizeof(*out_identity));
+  out_identity->chip_model = device_id();
+  out_identity->chip_revision = registers::Revision::Get().ReadFrom(
+      register_io_.get()).chip_revision().get();
+  out_identity->chip_date = registers::ChipDate::Get().ReadFrom(
+      register_io_.get()).chip_date().get();
+
+  out_identity->stream_count = gpu_features_->stream_count();
+  out_identity->pixel_pipes = gpu_features_->pixel_pipes();
+  out_identity->resolve_pipes = 0x0;
+  out_identity->instruction_count = gpu_features_->instruction_count();
+  out_identity->num_constants = gpu_features_->num_constants();
+  out_identity->varyings_count = gpu_features_->varyings_count();
+  out_identity->gpu_core_count = 0x1;
+
+  out_identity->product_id = registers::ProductId::Get().ReadFrom(
+      register_io_.get()).product_id().get();
+  out_identity->chip_flags = 0x4;
+  out_identity->eco_id = registers::EcoId::Get().ReadFrom(
+      register_io_.get()).eco_id().get();
+  out_identity->customer_id = registers::CustomerId::Get().ReadFrom(
+      register_io_.get()).customer_id().get();
+  return MAGMA_STATUS_OK;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 msd_connection_t* msd_device_open(msd_device_t* device, msd_client_id_t client_id) {
@@ -221,6 +252,11 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* val
 
 magma_status_t msd_device_query_returns_buffer(msd_device_t* device, uint64_t id,
                                                uint32_t* buffer_out) {
+  switch (id) {
+    case kMsdVslVendorQueryChipIdentity:
+      return MsdVslDevice::cast(device)->ChipIdentity(
+          reinterpret_cast<magma_vsl_gc_chip_identity*>(buffer_out));
+  }
   return DRET(MAGMA_STATUS_UNIMPLEMENTED);
 }
 

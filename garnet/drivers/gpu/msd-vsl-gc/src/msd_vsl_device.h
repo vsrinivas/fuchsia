@@ -10,6 +10,7 @@
 #include "gpu_features.h"
 #include "magma_util/macros.h"
 #include "magma_util/register_io.h"
+#include "magma_vsl_gc_types.h"
 #include "msd.h"
 #include "msd_vsl_connection.h"
 #include "page_table_arrays.h"
@@ -31,6 +32,8 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   bool IsIdle();
 
   std::unique_ptr<MsdVslConnection> Open(msd_client_id_t client_id);
+
+  magma_status_t ChipIdentity(magma_vsl_gc_chip_identity* out_identity);
 
   static MsdVslDevice* cast(msd_device_t* dev) {
     DASSERT(dev);
@@ -68,6 +71,8 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   std::unique_ptr<PageTableSlotAllocator> page_table_slot_allocator_;
 
   friend class TestMsdVslDevice;
+  friend class MsdVslDeviceTest_FetchEngineDma_Test;
+  friend class MsdVslDeviceTest_LoadAddressSpace_Test;
 };
 
 #endif  // MSD_VSL_DEVICE_H
