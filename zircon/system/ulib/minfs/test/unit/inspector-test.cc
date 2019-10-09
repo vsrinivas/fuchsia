@@ -6,10 +6,15 @@
 
 #include <minfs/inspector.h>
 
+#include <fbl/string_printf.h>
 #include <lib/disk-inspector/disk-inspector.h>
 #include <zxtest/zxtest.h>
 
+#include "inspector-inode.h"
+#include "inspector-inode-table.h"
+#include "inspector-journal.h"
 #include "inspector-private.h"
+#include "inspector-superblock.h"
 #include "minfs-private.h"
 
 namespace minfs {
@@ -84,11 +89,13 @@ TEST(InspectorTest, TestInodeTable) {
   ASSERT_EQ(2, inode_mgr->GetNumElements());
 
   std::unique_ptr<disk_inspector::DiskObject> obj0 = inode_mgr->GetElementAt(0);
-  ASSERT_STR_EQ(kInodeName, obj0->GetName());
+  fbl::String name = fbl::StringPrintf("%s #%d", kInodeName, 0);
+  ASSERT_STR_EQ(name, obj0->GetName());
   ASSERT_EQ(kInodeNumElements, obj0->GetNumElements());
 
   std::unique_ptr<disk_inspector::DiskObject> obj1 = inode_mgr->GetElementAt(1);
-  ASSERT_STR_EQ(kInodeName, obj1->GetName());
+  name = fbl::StringPrintf("%s #%d", kInodeName, 1);
+  ASSERT_STR_EQ(name, obj1->GetName());
   ASSERT_EQ(kInodeNumElements, obj1->GetNumElements());
 }
 
@@ -162,8 +169,9 @@ TEST(InspectorTest, TestInode) {
   fileInode.block_count = 2;
   fileInode.link_count = 1;
 
-  std::unique_ptr<InodeObject> finodeObj(new InodeObject(fileInode));
-  ASSERT_STR_EQ(kInodeName, finodeObj->GetName());
+  std::unique_ptr<InodeObject> finodeObj(new InodeObject(1, fileInode));
+  fbl::String name = fbl::StringPrintf("%s #%d", kInodeName, 1);
+  ASSERT_STR_EQ(name, finodeObj->GetName());
   ASSERT_EQ(kInodeNumElements, finodeObj->GetNumElements());
 
   size_t size;

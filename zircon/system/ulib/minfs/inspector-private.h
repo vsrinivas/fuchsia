@@ -25,126 +25,6 @@ namespace minfs {
 constexpr uint32_t kRootNumElements = 3;
 constexpr char kRootName[] = "minfs-root";
 
-// Total number of fields in the on-disk superblock structure.
-constexpr uint32_t kSuperblockNumElements = 28;
-constexpr char kSuperBlockName[] = "superblock";
-
-// Total number of fields in the on-disk inode structure.
-constexpr uint32_t kInodeNumElements = 15;
-constexpr char kInodeName[] = "inode";
-
-constexpr char kInodeTableName[] = "inode table";
-
-// Total number of fields in the on-disk journal structure.
-constexpr uint32_t kJournalNumElements = 5;
-constexpr char kJournalName[] = "journal";
-
-class InodeObject : public disk_inspector::DiskObject {
- public:
-  InodeObject() = delete;
-  InodeObject(const InodeObject&) = delete;
-  InodeObject(InodeObject&&) = delete;
-  InodeObject& operator=(const InodeObject&) = delete;
-  InodeObject& operator=(InodeObject&&) = delete;
-
-  InodeObject(Inode& inode) : inode_(inode) {}
-
-  // DiskObject interface:
-  const char* GetName() const override { return kInodeName; }
-
-  uint32_t GetNumElements() const override { return kInodeNumElements; }
-
-  void GetValue(const void** out_buffer, size_t* out_buffer_size) const override;
-
-  std::unique_ptr<DiskObject> GetElementAt(uint32_t index) const override;
-
- private:
-  // In-memory inode from the inode table.
-  Inode inode_;
-};
-
-class InodeTableObject : public disk_inspector::DiskObject {
- public:
-  InodeTableObject() = delete;
-  InodeTableObject(const InodeTableObject&) = delete;
-  InodeTableObject(InodeTableObject&&) = delete;
-  InodeTableObject& operator=(const InodeTableObject&) = delete;
-  InodeTableObject& operator=(InodeTableObject&&) = delete;
-
-  InodeTableObject(const InspectableInodeManager* inodes, const uint32_t inode_ct)
-      : inode_table_(inodes), inode_count_(inode_ct) {}
-
-  // DiskObject interface:
-  const char* GetName() const override { return kInodeTableName; }
-
-  uint32_t GetNumElements() const override { return inode_count_; }
-
-  void GetValue(const void** out_buffer, size_t* out_buffer_size) const override;
-
-  std::unique_ptr<DiskObject> GetElementAt(uint32_t index) const override;
-
- private:
-  // Gets inode DiskObject using the inode number |ino|.
-  std::unique_ptr<disk_inspector::DiskObject> GetInode(ino_t inode) const;
-
-  // Pointer to the minfs 'inodes_' field.
-  const InspectableInodeManager* inode_table_;
-
-  // Number of inodes allocated in the inode_table_.
-  const uint32_t inode_count_;
-};
-
-class SuperBlockObject : public disk_inspector::DiskObject {
- public:
-  SuperBlockObject() = delete;
-  SuperBlockObject(const SuperBlockObject&) = delete;
-  SuperBlockObject(SuperBlockObject&&) = delete;
-  SuperBlockObject& operator=(const SuperBlockObject&) = delete;
-  SuperBlockObject& operator=(SuperBlockObject&&) = delete;
-
-  SuperBlockObject(const Superblock& sb) : sb_(sb) {}
-
-  // DiskObject interface:
-  const char* GetName() const override { return kSuperBlockName; }
-
-  uint32_t GetNumElements() const override { return kSuperblockNumElements; }
-
-  void GetValue(const void** out_buffer, size_t* out_buffer_size) const override;
-
-  std::unique_ptr<DiskObject> GetElementAt(uint32_t index) const override;
-
- private:
-  // minfs superblock object.
-  const Superblock sb_;
-};
-
-class JournalObject : public disk_inspector::DiskObject {
- public:
-  JournalObject() = delete;
-  JournalObject(const JournalObject&) = delete;
-  JournalObject(JournalObject&&) = delete;
-  JournalObject& operator=(const JournalObject&) = delete;
-  JournalObject& operator=(JournalObject&&) = delete;
-
-  explicit JournalObject(std::unique_ptr<fs::JournalInfo> info) : journal_info_(std::move(info)) {}
-
-  // DiskObject interface:
-  const char* GetName() const override { return kJournalName; }
-
-  uint32_t GetNumElements() const override { return kJournalNumElements; }
-
-  void GetValue(const void** out_buffer, size_t* out_buffer_size) const override;
-
-  std::unique_ptr<DiskObject> GetElementAt(uint32_t index) const override;
-
- private:
-  // Name of DiskObject journal.
-  fbl::String name_;
-
-  // Pointer to the minfs journal info.
-  std::unique_ptr<fs::JournalInfo> journal_info_;
-};
-
 class RootObject : public disk_inspector::DiskObject {
  public:
   RootObject() = delete;
@@ -177,6 +57,18 @@ class RootObject : public disk_inspector::DiskObject {
   // Pointer to the Minfs instance.
   std::unique_ptr<InspectableFilesystem> fs_;
 };
+
+std::unique_ptr<disk_inspector::DiskObjectUint64> CreateUint64DiskObj(fbl::String fieldName,
+                                                                      const uint64_t* value);
+
+std::unique_ptr<disk_inspector::DiskObjectUint32> CreateUint32DiskObj(fbl::String fieldName,
+                                                                      const uint32_t* value);
+
+std::unique_ptr<disk_inspector::DiskObjectUint64Array> CreateUint64ArrayDiskObj(
+    fbl::String fieldName, const uint64_t* value, size_t size);
+
+std::unique_ptr<disk_inspector::DiskObjectUint32Array> CreateUint32ArrayDiskObj(
+    fbl::String fieldName, const uint32_t* value, size_t size);
 
 }  // namespace minfs
 
