@@ -100,14 +100,17 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
                              int current_level, std::string* tree_log);
 
   // Detect directed and undirected cycles in the tree rooted at "node".
-  bool IsCyclic(fuchsia::accessibility::semantics::NodePtr node,
-                std::unordered_set<uint32_t>* visited);
+  // For a tree to have cycles there should be atleast one node which should have multiple parents.
+  // And because of multiple parents it will be visited twice through different paths.
+  // In a tree without cycles every node should have just 1 path from root node.
+  bool CheckTreeIsWellFormed(fuchsia::accessibility::semantics::NodePtr node,
+                             std::unordered_set<uint32_t>* visited);
 
-  // Helper function to delete subtree rooted at node_id.
-  void DeleteSubtree(uint32_t node_id);
-
-  // Helper function to delete pointer from parent node to given node.
-  void DeletePointerFromParent(uint32_t node_id);
+  // Checks if there are multiple disjoint subtrees in the semantic tree. In other words it
+  // ensures that every node is reachable from the root node. This function uses "visited"
+  // flags(which was created while checking cycles in the tree) to see which nodes are
+  // unreachable.
+  bool CheckIfAllNodesReachable(const std::unordered_set<uint32_t>& visited);
 
   // Internal helper function to check if a point is within a bounding box.
   static bool BoxContainsPoint(const fuchsia::ui::gfx::BoundingBox& box, const escher::vec2& point);
@@ -123,6 +126,10 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   // channel.
   void SignalHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                      const zx_packet_signal* signal);
+
+  // Helper function to check if the node with node_id exists in the semantic tree. If the
+  // node is present then it returns true.
+  bool NodeExists(const fuchsia::accessibility::semantics::NodePtr& node_ptr, uint32_t node_id);
 
   // Helper function to partially update fields from input node to output_node.
   static fuchsia::accessibility::semantics::NodePtr UpdateNode(

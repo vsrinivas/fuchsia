@@ -86,8 +86,8 @@ bool SemanticTree::ApplyCommit() {
   // Apply transactions in the order in which they have arrived.
   for (auto& transaction : pending_transactions_) {
     if (transaction.delete_node) {
-      DeleteSubtree(transaction.node_id);
-      DeletePointerFromParent(transaction.node_id);
+      // Delete node.
+      nodes_.erase(transaction.node_id);
     } else {
       // Update Node.
       nodes_[transaction.node_id] = std::move(transaction.node);
@@ -97,6 +97,8 @@ bool SemanticTree::ApplyCommit() {
   pending_transactions_.clear();
 
   // Get root node of the tree after all the updates/commits are applied.
+  // If no tree is found, then commit is unsuccessful and this should result in closing of the fidl
+  // channel with semantic provider.
   fuchsia::accessibility::semantics::NodePtr root_node = GetAccessibilityNode(kRootNode);
   if (!root_node) {
     FX_LOGS(ERROR) << "No root node found after applying commit for view(koid):"
@@ -105,10 +107,20 @@ bool SemanticTree::ApplyCommit() {
     return false;
   }
 
-  // A tree must be acyclic. Delete if cycle found.
+  // Semantic tree must be acyclic. Delete if cycle found.
+  // This also ensures that every node has exactly one parent.
   std::unordered_set<uint32_t> visited;
-  if (IsCyclic(std::move(root_node), &visited)) {
-    FX_LOGS(ERROR) << "Cycle found in semantic tree with View Id:" << GetKoid(view_ref_);
+  if (CheckTreeIsWellFormed(std::move(root_node), &visited)) {
+    FX_LOGS(ERROR) << "Semantic tree with View Id:" << GetKoid(view_ref_) << " is not well formed.";
+    nodes_.clear();
+    return false;
+  }
+
+  // Using visited node information, check if every node is reachable from the root node and there
+  // are no dangling subtrees.
+  if (!CheckIfAllNodesReachable(visited)) {
+    FX_LOGS(ERROR) << "Multiple subtrees found in semantic tree with View Id:"
+                   << GetKoid(view_ref_);
     nodes_.clear();
     return false;
   }
@@ -234,8 +246,8 @@ std::string SemanticTree::LogSemanticTree() {
   return tree_log;
 }
 
-bool SemanticTree::IsCyclic(fuchsia::accessibility::semantics::NodePtr node,
-                            std::unordered_set<uint32_t>* visited) {
+bool SemanticTree::CheckTreeIsWellFormed(fuchsia::accessibility::semantics::NodePtr node,
+                                         std::unordered_set<uint32_t>* visited) {
   FXL_CHECK(node);
   FXL_CHECK(visited);
 
@@ -250,52 +262,34 @@ bool SemanticTree::IsCyclic(fuchsia::accessibility::semantics::NodePtr node,
   }
   for (const auto& child : node->child_ids()) {
     fuchsia::accessibility::semantics::NodePtr child_ptr = GetAccessibilityNode(child);
-    if (!child_ptr) {
-      FX_LOGS(ERROR) << "Child Node(id:" << child
-                     << ") not found in the semantic tree for View(koid):" << GetKoid(view_ref_);
-      continue;
+
+    if (!NodeExists(child_ptr, child)) {
+      return true;
     }
-    if (IsCyclic(std::move(child_ptr), visited)) {
+    if (CheckTreeIsWellFormed(std::move(child_ptr), visited)) {
       return true;
     }
   }
   return false;
 }
 
-void SemanticTree::DeleteSubtree(uint32_t node_id) {
-  // Recursively delete the entire subtree at given node_id.
-  fuchsia::accessibility::semantics::NodePtr node = GetAccessibilityNode(node_id);
-  if (!node) {
-    return;
+bool SemanticTree::NodeExists(const fuchsia::accessibility::semantics::NodePtr& node_ptr,
+                              uint32_t node_id) {
+  if (!node_ptr) {
+    FX_LOGS(ERROR) << "Child Node(id:" << node_id
+                   << ") not found in the semantic tree for View(koid):" << GetKoid(view_ref_);
+    return false;
   }
-
-  if (node->has_child_ids()) {
-    for (const auto& child : node->child_ids()) {
-      DeleteSubtree(child);
-    }
-  }
-  nodes_.erase(node_id);
+  return true;
 }
 
-void SemanticTree::DeletePointerFromParent(uint32_t node_id) {
-  // Assumption: There is only 1 parent per node.
-  // In future, we would like to delete trees not rooted at root node.
-  // Loop through all the nodes in the tree, since there can be trees not rooted
-  // at 0(root-node).
-  for (auto it = nodes_.begin(); it != nodes_.end(); ++it) {
-    if (it->second.has_child_ids()) {
-      // Loop through all the children of the node.
-      for (auto child_it = it->second.child_ids().begin(); child_it != it->second.child_ids().end();
-           ++child_it) {
-        // If a child node is same as node_id, then delete child node from the
-        // list.
-        if (*child_it == node_id) {
-          it->second.mutable_child_ids()->erase(child_it);
-          return;
-        }
-      }
-    }
+bool SemanticTree::CheckIfAllNodesReachable(const std::unordered_set<uint32_t>& visited) {
+  if (visited.size() != size(nodes_)) {
+    FX_LOGS(ERROR) << "All nodes in the semantic are not reachable. Semantic Tree size:"
+                   << size(nodes_) << ", Visited Nodes List size :" << visited.size();
+    return false;
   }
+  return true;
 }
 
 void SemanticTree::InitializeDebugEntry() {
