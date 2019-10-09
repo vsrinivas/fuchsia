@@ -72,6 +72,7 @@ DECLARE_DISPTAG(PinnedMemoryTokenDispatcher, ZX_OBJ_TYPE_PMT, "PIMT")
 DECLARE_DISPTAG(SuspendTokenDispatcher, ZX_OBJ_TYPE_SUSPEND_TOKEN, "SUTD")
 DECLARE_DISPTAG(PagerDispatcher, ZX_OBJ_TYPE_PAGER, "PGRD")
 DECLARE_DISPTAG(ExceptionDispatcher, ZX_OBJ_TYPE_EXCEPTION, "EXCD")
+DECLARE_DISPTAG(ClockDispatcher, ZX_OBJ_TYPE_CLOCK, "CLOK")
 
 #undef DECLARE_DISPTAG
 
@@ -109,9 +110,7 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
     return handle_count_.fetch_sub(1, ktl::memory_order_seq_cst) == 1u;
   }
 
-  uint32_t current_handle_count() const {
-    return handle_count_.load(ktl::memory_order_seq_cst);
-  }
+  uint32_t current_handle_count() const { return handle_count_.load(ktl::memory_order_seq_cst); }
 
   using ObserverList = fbl::DoublyLinkedList<StateObserver*, StateObserver::ObserverListTraits>;
 

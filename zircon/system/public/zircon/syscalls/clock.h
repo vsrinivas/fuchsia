@@ -50,9 +50,6 @@
 // clang-format on
 
 typedef struct zx_clock_create_args_v1 {
-#ifdef __cplusplus
-  constexpr zx_clock_create_args_v1() : backstop_time(0) {}
-#endif
   zx_time_t backstop_time;
 } zx_clock_create_args_v1_t;
 
@@ -81,9 +78,6 @@ typedef struct zx_clock_details_v1 {
 } zx_clock_details_v1_t;
 
 typedef struct zx_clock_update_args_v1 {
-#ifdef __cplusplus
-  constexpr zx_clock_update_args_v1() : rate_adjust(0), value(0), error_bound(0) {}
-#endif
   int32_t rate_adjust;
   int64_t value;
   uint64_t error_bound;

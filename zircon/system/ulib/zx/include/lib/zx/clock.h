@@ -43,7 +43,7 @@ class clock final : public object<clock> {
 
    private:
     friend class ::zx::clock;
-    zx_clock_update_args_v1_t args_;
+    zx_clock_update_args_v1_t args_{};
     uint64_t options_ = 0;
   };
 

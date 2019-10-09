@@ -8,6 +8,7 @@ library("object") {
     "buffer_chain.cc",
     "bus_transaction_initiator_dispatcher.cc",
     "channel_dispatcher.cc",
+    "clock_dispatcher.cc",
     "diagnostics.cc",
     "dispatcher.cc",
     "event_dispatcher.cc",
@@ -81,6 +82,9 @@ library("object") {
 
     # <object/process_dispatcher.h> has #include <vm/vm_aspace.h>.
     "$zx/kernel/vm:headers",
+
+    # <object/clock_dispatcher.h> has #include <lib/affine/transform.h>.
+    "$zx/system/ulib/affine",
   ]
 }
 
