@@ -65,14 +65,7 @@ queue. This can be achieved in the following ways:
 
 -   If the flake has been prompted by a recent patch: Submitting a revert of a
     patch which triggers this flake.
--   Submitting a change to mark the test as flaky. You can do this by adding
-    "flaky" to the `tags` field in the
-    [test environment](/docs/development/testing/environments.md). This will remove
-    it from the builders that run in the commit queue, and onto special flaky
-    builders that continue to run the test in CI. Be sure to note the bug in a
-    comment in the BUILD.gn file.
-    [Example change](https://fuchsia-review.googlesource.com/c/topaz/+/296629/3/bin/flutter_screencap_test/BUILD.gn).
-
+-   [Disable the test](/docs/development/testing/faq.md#disable-test).
 
 The above mechanisms are recommended because they remove the flaky test and
 prevent the commit queue from becoming unreliable. The first option (reverting code)
@@ -103,4 +96,3 @@ These include:
     committed. Tracked by 10011.
 
 As improvements are made, this document will be updated with the latest policy.
-

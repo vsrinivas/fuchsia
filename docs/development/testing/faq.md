@@ -105,9 +105,28 @@ A: The output is directed to your terminal.
 There does exist a way to write test output into files (including a summary JSON
 file), which is how CQ bots collect the test output for automated runs.
 
-## Q: How to disable a test? How to find and run disabled tests?
+## Q: How to disable a test? How to find and run disabled tests? {#disable-test}
 
-A: To temporary prevent a particular test to being run as part of a test suite,
+A: There are several ways to do this. Whenever doing any of these, be sure to
+file a bug and reference that bug in a comment in the code that disables the
+test.
+
+### Tag the test as flaky
+
+You can do this by adding "flaky" to the `tags` field in the
+[test environment](/docs/development/testing/environments.md). This operates
+on the entire test target (which corresponds to an executable). It will prevent this target
+from running on the builders in the commit queue, and enable the target on special flaky
+builders that continue to run the test in CI. Be sure to note the bug in a
+comment in the BUILD.gn file.
+[Example change](https://fuchsia-review.googlesource.com/c/topaz/+/296629/3/bin/flutter_screencap_test/BUILD.gn).
+
+If you want to disable only some tests that are part of a larger test target, you'll
+need to split the target into two GN targets, and tag one as flaky.
+
+### C++ googletest only: Prefix name with DISABLED
+
+To disable a particular test inside of a larger test executable,
 you can mark it as disabled. Disabled tests are defined by having their name
 prefixed with `DISABLED_`. One way to find them is therefore simply `git grep
 DISABLED_`.
@@ -119,11 +138,18 @@ following flags to find out which test is disabled: `fx run-test scenic_tests --
 To force-run disabled tests: `fx run-test scenic_tests --
 --gtest_also_run_disabled_tests`.
 
-Alternatively, you may also want to disable an entire test *executable* within a
+### Mark test disabled
+
+Alternatively, you may also disable an entire test executable within a
 package containing several test executables. To do this, edit the `BUILD.gn` as
 follows: `tests = [ { name = "scenic_unittests", disabled = true } ]`. As a
 result, `scenic_unittests` will be put in a `disabled` sub-directory of
 `/pkgfs/packages/<package_name>/0/test`, and will not be run by the CQ system.
+
+### Comment out the test
+
+To disable a particular test inside of a larger test executable, you can comment
+out the code that defines that test.
 
 ## Q: How do I run a bunch of tests automatically? How do I ensure all dependencies are tested?
 

@@ -272,7 +272,7 @@ Fuchsia with networking enabled in one terminal, then in another terminal, run:
 fx run-test <test name> [<test args>]
 ```
 
-You may wish to peruse the [testing FAQ](development/workflows/testing_faq.md).
+You may wish to peruse the [testing FAQ](development/testing/faq.md).
 
 ## Contribute changes
 

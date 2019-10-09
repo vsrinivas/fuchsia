@@ -14,6 +14,6 @@ with Fuchsia.
 * [Working across different petals](working_across_petals.md)
 * [Developing with Fuchsia packages](package_update.md)
 * [Putting Fuchsia on a device](paving.md)
-* [Testing: questions and answers](testing_faq.md)
+* [Testing: questions and answers](../testing/faq.md)
 * [Workflow: tips](workflow_tips_and_faq.md)
 * [Packet capture](packet_capture.md)

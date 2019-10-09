@@ -24,8 +24,6 @@ toc:
   path: /docs/development/workflows/package_update.md
 - title: "Putting Fuchsia on a device"
   path: /docs/development/workflows/paving.md
-- title: "Testing: questions and answers"
-  path: /docs/development/workflows/testing_faq.md
 - title: "Workflow: tips"
   path: /docs/development/workflows/workflow_tips_and_faq.md
 - title: "Packet capture"

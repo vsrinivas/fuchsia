@@ -19,7 +19,7 @@ and debugging Fuchsia and programs running on Fuchsia.
  - [Fuzz testing with LibFuzzer](workflows/libfuzzer.md)
  - [Build system](build/README.md)
  - [Workflow tips and FAQ](workflows/workflow_tips_and_faq.md)
- - [Testing FAQ](workflows/testing_faq.md)
+ - [Testing FAQ](testing/faq.md)
 
 ## Languages
 
