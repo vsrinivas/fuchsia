@@ -48,7 +48,7 @@
 static int timer_irq;
 
 zx_time_t cntpct_to_zx_time(uint64_t cntpct) {
-  DEBUG_ASSERT(cntpct < ktl::numeric_limits<int64_t>::max());
+  DEBUG_ASSERT(cntpct < static_cast<uint64_t>(ktl::numeric_limits<int64_t>::max()));
   return platform_get_ticks_to_time_ratio().Scale(static_cast<int64_t>(cntpct));
 }
 
