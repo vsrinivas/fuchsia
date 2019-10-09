@@ -58,6 +58,7 @@ pub enum BluetoothMethod {
     ProfileServerAddService,
     ProfileServerCleanup,
     ProfileServerInit,
+    ProfileServerRemoveService,
 }
 
 impl BluetoothMethod {
@@ -105,6 +106,7 @@ impl BluetoothMethod {
             "ProfileServerAddService" => BluetoothMethod::ProfileServerAddService,
             "ProfileServerCleanup" => BluetoothMethod::ProfileServerCleanup,
             "ProfileServerInit" => BluetoothMethod::ProfileServerInit,
+            "ProfileServerRemoveService" => BluetoothMethod::ProfileServerRemoveService,
             _ => BluetoothMethod::BleUndefined,
         }
     }

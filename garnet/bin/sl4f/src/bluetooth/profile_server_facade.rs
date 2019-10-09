@@ -21,6 +21,10 @@ use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 struct InnerProfileServerFacade {
     /// The current Profile Server Proxy
     profile_server_proxy: Option<ProfileProxy>,
+
+    /// Service IDs currently active on the Profile Server Proxy
+    service_ids: Vec<u64>,
+
 }
 
 /// Perform Profile Server operations.
@@ -34,7 +38,10 @@ pub struct ProfileServerFacade {
 impl ProfileServerFacade {
     pub fn new() -> ProfileServerFacade {
         ProfileServerFacade {
-            inner: RwLock::new(InnerProfileServerFacade { profile_server_proxy: None }),
+            inner: RwLock::new(InnerProfileServerFacade {
+                profile_server_proxy: None,
+                service_ids: Vec::new(),
+                }),
         }
     }
 
@@ -434,7 +441,7 @@ impl ProfileServerFacade {
     ///         }
     ///    }]
     ///}
-    pub async fn add_service(&self, args: Value) -> Result<(), Error> {
+    pub async fn add_service(&self, args: Value) -> Result<u64, Error> {
         let tag = "ProfileServerFacade::write_sdp_record";
         fx_log_info!(tag: &with_line!(tag), "Writing SDP record");
 
@@ -529,21 +536,35 @@ impl ProfileServerFacade {
             additional_attributes,
         };
 
-        let add_service_future = match &self.inner.read().profile_server_proxy {
+        let (status, service_id) = match &self.inner.read().profile_server_proxy {
             Some(server) => {
-                server.add_service(&mut service_def, SecurityLevel::EncryptionOptional, false)
+                server.add_service(&mut service_def, SecurityLevel::EncryptionOptional, false).await?
             }
             None => fx_err_and_bail!(&with_line!(tag), "No Server Proxy created."),
         };
 
-        let add_service_future = async {
-            let result = add_service_future.await;
-            if let Err(err) = result {
-                fx_log_err!("Failed to add service with: {:?}", err);
-            };
-        };
-        fasync::spawn(add_service_future);
+        if let Some(e) = status.error {
+            let log_err = format!("Couldn't add service: {:?}", e);
+            fx_err_and_bail!(&with_line!(tag), log_err)
+        } else {
+            self.inner.write().service_ids.push(service_id);
+        }
 
+        Ok(service_id)
+    }
+
+    /// Removes a remote service by id.
+    ///
+    /// # Arguments:
+    /// * `service_id`: The u64 service id to remove.
+    pub async fn remove_service(&self, service_id: u64) -> Result<(), Error> {
+        let tag = "ProfileServerFacade::remove_service";
+        match &self.inner.read().profile_server_proxy {
+            Some(server) => {
+                let _result = server.remove_service(service_id);
+            },
+            None => fx_err_and_bail!(&with_line!(tag), "No profile proxy set")
+        };
         Ok(())
     }
 
@@ -642,6 +663,16 @@ impl ProfileServerFacade {
 
     /// Cleanup any Profile Server related objects.
     pub async fn cleanup(&self) -> Result<(), Error> {
+        let tag = "ProfileServerFacade::cleanup";
+        match &self.inner.read().profile_server_proxy {
+            Some(server) => {
+                for id in &self.inner.read().service_ids {
+                    let _result = server.remove_service(*id);
+                }
+            },
+            None => fx_err_and_bail!(&with_line!(tag), "No profile proxy set")
+        };
+        self.inner.write().service_ids.clear();
         self.inner.write().profile_server_proxy = None;
         Ok(())
     }

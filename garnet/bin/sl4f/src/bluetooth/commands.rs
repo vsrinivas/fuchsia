@@ -365,6 +365,11 @@ pub async fn profile_server_method_to_fidl(
             let result = facade.cleanup().await?;
             Ok(to_value(result)?)
         }
+        BluetoothMethod::ProfileServerRemoveService => {
+            let service_id = parse_u64_identifier(args)?;
+            let result = facade.remove_service(service_id).await?;
+            Ok(to_value(result)?)
+        }
         _ => bail!("Invalid Profile Server FIDL method: {:?}", method_name),
     }
 }
