@@ -22,7 +22,7 @@ using inspect::contrib::VisitProperties;
 //     v1 = -1
 //     v2 = 12u
 //     v3 = -12
-//     hist = [[0, 1) = 0, [1, 2) = 0, [2, 4) = 0, [4, 8) = 0, [8, 16) = 1, [16, max) = 0]
+//     hist = [[0, 1) = 0, [1, 2) = 0, [2, 3) = 0, [3, 5) = 0, [5, 9) = 1, [9, max) = 0]
 //   test2:
 //     v4 = "Hello"
 //     other_int = -1
@@ -35,7 +35,7 @@ using inspect::contrib::VisitProperties;
   auto v2 = child.CreateUint("v2", 12);                                 \
   auto v3 = child.CreateInt("v3", -12);                                 \
   auto hist = child.CreateExponentialUintHistogram("hist", 1, 1, 2, 4); \
-  hist.Insert(10);                                                      \
+  hist.Insert(8);                                                       \
   auto child2 = child.CreateChild("test2");                             \
   auto v4 = child2.CreateString("v4", "Hello");                         \
   auto other_int = child2.CreateInt("other_int", -1);                   \
@@ -115,10 +115,10 @@ TEST(ReaderTest, VisitPropertiesHistogram) {
   ASSERT_EQ(6, hist_result.value().size());
   EXPECT_EQ(inspect::UintArrayValue::HistogramBucket(0, 1, 0), hist_result.value()[0]);
   EXPECT_EQ(inspect::UintArrayValue::HistogramBucket(1, 2, 0), hist_result.value()[1]);
-  EXPECT_EQ(inspect::UintArrayValue::HistogramBucket(2, 4, 0), hist_result.value()[2]);
-  EXPECT_EQ(inspect::UintArrayValue::HistogramBucket(4, 8, 0), hist_result.value()[3]);
-  EXPECT_EQ(inspect::UintArrayValue::HistogramBucket(8, 16, 1), hist_result.value()[4]);
-  EXPECT_EQ(inspect::UintArrayValue::HistogramBucket(16, ULLONG_MAX, 0), hist_result.value()[5]);
+  EXPECT_EQ(inspect::UintArrayValue::HistogramBucket(2, 3, 0), hist_result.value()[2]);
+  EXPECT_EQ(inspect::UintArrayValue::HistogramBucket(3, 5, 0), hist_result.value()[3]);
+  EXPECT_EQ(inspect::UintArrayValue::HistogramBucket(5, 9, 1), hist_result.value()[4]);
+  EXPECT_EQ(inspect::UintArrayValue::HistogramBucket(9, ULLONG_MAX, 0), hist_result.value()[5]);
 }
 
 TEST(ReaderTest, VisitPropertiesRecursive) {

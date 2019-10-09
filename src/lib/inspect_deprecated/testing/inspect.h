@@ -158,22 +158,31 @@ class PropertyListMatcher : public ::testing::MatcherInterface<const hierarchy::
 ::testing::Matcher<const ObjectHierarchy&> ChildrenMatch(ChildrenMatcher matcher);
 
 // Computes the bucket index for a value in a linear histogram.
+// |total_buckets| is the number of buckets initially defined when the histogram
+// property was created plus 2 (overflow and underflow).
 template <typename T>
-size_t ComputeLinearBucketIndex(T floor, T step_size, size_t buckets, T value) {
-  size_t ret;
-  for (ret = 0; value >= floor && ret < buckets + 1; floor += step_size, ret++) {
+size_t ComputeLinearBucketIndex(T floor, T step_size, size_t total_buckets, T value) {
+  size_t ret = 0;
+  while (value >= floor && ret < total_buckets - 1) {
+    floor += step_size;
+    ret++;
   }
   return ret;
 }
 
 // Computes the bucket index for a value in an exponential histogram.
+// |total_buckets| is the number of buckets initially defined when the histogram
+// property was created plus 2 (overflow and underflow).
 template <typename T>
-size_t ComputeExponentialBucketIndex(T floor, T initial_step, T step_multiplier, size_t buckets,
-                                     T value) {
+size_t ComputeExponentialBucketIndex(T floor, T initial_step, T step_multiplier,
+                                     size_t total_buckets, T value) {
+  T current_floor = floor;
   T current_step = initial_step;
-  size_t ret;
-  for (ret = 0; value >= floor && ret < buckets + 1;
-       floor += current_step, current_step *= step_multiplier, ret++) {
+  size_t ret = 0;
+  while (value >= current_floor && ret < total_buckets - 1) {
+    current_floor = floor + current_step;
+    current_step *= step_multiplier;
+    ret++;
   }
   return ret;
 }
@@ -183,13 +192,16 @@ size_t ComputeExponentialBucketIndex(T floor, T initial_step, T step_multiplier,
 template <typename T>
 std::vector<T> CreateExpectedLinearHistogramContents(T floor, T step_size, size_t buckets,
                                                      const std::vector<T>& values) {
+  // Linear Histogram arrays contain 2 fields with metadata.
   const size_t underflow_bucket_offset = 2;
-  const size_t array_size = 4 + buckets;
+  // |buckets| + 1 underflow bucket + 1 overflow bucket
+  const size_t total_buckets = 2 + buckets;
+  const size_t array_size = underflow_bucket_offset + total_buckets;
   std::vector<T> expected = {floor, step_size};
   expected.resize(array_size);
   for (T value : values) {
     expected[underflow_bucket_offset +
-             ComputeLinearBucketIndex(floor, step_size, buckets, value)]++;
+             ComputeLinearBucketIndex(floor, step_size, total_buckets, value)]++;
   }
   return expected;
 }
@@ -200,13 +212,17 @@ template <typename T>
 std::vector<T> CreateExpectedExponentialHistogramContents(T floor, T initial_step,
                                                           T step_multiplier, size_t buckets,
                                                           const std::vector<T>& values) {
+  // Exp. Histogram arrays contain 3 fields with metadata.
   const size_t underflow_bucket_offset = 3;
-  const size_t array_size = 5 + buckets;
+  // |buckets| + 1 underflow bucket + 1 overflow bucket
+  const size_t total_buckets = 2 + buckets;
+  const size_t array_size = underflow_bucket_offset + total_buckets;
   std::vector<T> expected = {floor, initial_step, step_multiplier};
   expected.resize(array_size);
   for (T value : values) {
-    expected[underflow_bucket_offset +
-             ComputeExponentialBucketIndex(floor, initial_step, step_multiplier, buckets, value)]++;
+    expected[underflow_bucket_offset + ComputeExponentialBucketIndex(floor, initial_step,
+                                                                     step_multiplier, total_buckets,
+                                                                     value)]++;
   }
   return expected;
 }

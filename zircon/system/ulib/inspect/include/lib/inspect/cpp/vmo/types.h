@@ -189,8 +189,10 @@ class ExponentialHistogram final {
     T current_floor = floor_;
     T current_step = initial_step_;
     size_t ret = kBucketOffset - 1;
-    for (; value >= current_floor && ret < array_size_ - 1;
-         current_floor += current_step, current_step *= step_multiplier_, ret++) {
+    while (value >= current_floor && ret < array_size_ - 1) {
+      current_floor = floor_ + current_step;
+      current_step *= step_multiplier_;
+      ret++;
     }
     return ret;
   }

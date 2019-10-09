@@ -193,7 +193,7 @@ int main(int argc, char** argv) {
         root->CreateExponentialIntHistogramMetric(UniqueName("histogram"), -10, 5, 2, 3), -20, 1,
         40));
     histograms.emplace_back(PopulatedHistogram(
-        root->CreateExponentialUIntHistogramMetric(UniqueName("histogram"), 1, 1, 2, 3), 0, 1, 40));
+        root->CreateExponentialUIntHistogramMetric(UniqueName("histogram"), 0, 1, 2, 3), 0, 1, 40));
     histograms.emplace_back(PopulatedHistogram(
         root->CreateExponentialDoubleHistogramMetric(UniqueName("histogram"), 0, 1.25, 3, 3), -1.0,
         .1, 40.0));

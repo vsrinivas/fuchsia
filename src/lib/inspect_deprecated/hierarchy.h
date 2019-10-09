@@ -141,17 +141,21 @@ std::vector<typename Array<T, FormatIndex>::HistogramBucket> Array<T, FormatInde
       ret.push_back(HistogramBucket(std::numeric_limits<T>::min(), floor, value[3]));
     }
 
+    T current_floor = floor;
+    T offset = current_step;
     for (size_t i = 4; i < value.size() - 1; i++) {
-      ret.push_back(HistogramBucket(floor, floor + current_step, value[i]));
-      floor += current_step;
-      current_step *= step_multiplier;
+      T upper = floor + offset;
+      ret.push_back(HistogramBucket(current_floor, upper, value[i]));
+      offset *= step_multiplier;
+      current_floor = upper;
     }
 
     if (std::numeric_limits<T>::has_infinity) {
-      ret.push_back(
-          HistogramBucket(floor, std::numeric_limits<T>::infinity(), value[value.size() - 1]));
+      ret.push_back(HistogramBucket(current_floor, std::numeric_limits<T>::infinity(),
+                                    value[value.size() - 1]));
     } else {
-      ret.push_back(HistogramBucket(floor, std::numeric_limits<T>::max(), value[value.size() - 1]));
+      ret.push_back(
+          HistogramBucket(current_floor, std::numeric_limits<T>::max(), value[value.size() - 1]));
     }
   }
 

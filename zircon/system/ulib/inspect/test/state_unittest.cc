@@ -665,7 +665,7 @@ TEST(State, CreateExponentialHistogramChildren) {
                       ArrayBlockPayload::Count::Make(10)));
     // Array is:
     // <floor>, <initial_step>, <step_multipler>, <underflow>, <N buckets>..., <overflow>
-    int64_t a_array_values[] = {1, 1, 2, 3, 0, 0, 1, 0, 1, 1};
+    int64_t a_array_values[] = {1, 1, 2, 3, 0, 0, 1, 0, 0, 2};
     CompareArray(blocks.find(8)->block, a_array_values, 10);
   }
 
@@ -684,7 +684,7 @@ TEST(State, CreateExponentialHistogramChildren) {
                       ArrayBlockPayload::Count::Make(10)));
     // Array is:
     // <floor>, <initial_step>, <step_multipler>, <underflow>, <N buckets>..., <overflow>
-    uint64_t b_array_values[] = {1, 1, 2, 3, 0, 0, 1, 0, 1, 1};
+    uint64_t b_array_values[] = {1, 1, 2, 3, 0, 0, 1, 0, 0, 2};
     CompareArray(blocks.find(16)->block, b_array_values, 10);
   }
 
@@ -703,7 +703,7 @@ TEST(State, CreateExponentialHistogramChildren) {
                       ArrayBlockPayload::Count::Make(10)));
     // Array is:
     // <floor>, <initial_step>, <step_multipler>, <underflow>, <N buckets>..., <overflow>
-    double c_array_values[] = {1, 1, 2, 3, 0, 0, 1, 0, 1, 1};
+    double c_array_values[] = {1, 1, 2, 3, 0, 0, 1, 0, 0, 2};
     CompareArray(blocks.find(24)->block, c_array_values, 10);
   }
 }

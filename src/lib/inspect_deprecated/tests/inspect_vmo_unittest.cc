@@ -215,13 +215,16 @@ TEST(InspectVmo, ExponentialHistograms) {
   auto tree = inspect_deprecated::Inspector().CreateTree();
   Node& root = tree.GetRoot();
   {
-    auto metric_int = root.CreateExponentialIntHistogramMetric("int", 1, 1, 2, 4);
-    metric_int.Insert(0, 2);
-    metric_int.Insert(8);
-    metric_int.Insert(230);
+    auto metric_int = root.CreateExponentialIntHistogramMetric("int", 0, 2, 4, 4);
+    std::vector<int64_t> values;
+    for (auto i = -200; i < 200; i++) {
+      metric_int.Insert(i);
+      values.emplace_back(i);
+    }
     auto expected_int_values =
-        CreateExpectedExponentialHistogramContents<int64_t>(1, 1, 2, 4, {0, 0, 8, 230});
-    EXPECT_THAT(expected_int_values, ::testing::ElementsAre(1, 1, 2, 2, 0, 0, 0, 1, 1));
+        CreateExpectedExponentialHistogramContents<int64_t>(0, 2, 4, 4, values);
+    EXPECT_THAT(expected_int_values, ::testing::ElementsAre(0, 2, 4, 200, 2, 6, 24, 96, 72));
+
     auto metric_uint = root.CreateExponentialUIntHistogramMetric("uint", 1, 1, 2, 4);
     metric_uint.Insert(0, 2);
     metric_uint.Insert(8);
