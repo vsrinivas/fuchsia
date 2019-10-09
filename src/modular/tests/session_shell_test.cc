@@ -242,43 +242,6 @@ TEST_F(SessionShellTest, StoryInfoBeforeAndAfterDelete) {
   RunLoopUntil([&] { return delete_called; });
 }
 
-TEST_F(SessionShellTest, KindOfProtoStoryNotInStoryList) {
-  RunHarnessAndInterceptSessionShell();
-
-  // Create a new story using PuppetMaster and launch a new story shell,
-  // adding the kind of proto option.
-  fuchsia::modular::PuppetMasterPtr puppet_master;
-  fuchsia::modular::StoryPuppetMasterPtr story_master;
-
-  fuchsia::modular::testing::ModularService svc;
-  svc.set_puppet_master(puppet_master.NewRequest());
-  test_harness()->ConnectToModularService(std::move(svc));
-
-  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_->story_provider();
-  ASSERT_TRUE(story_provider != nullptr);
-
-  const char kStoryId[] = "my_story";
-  puppet_master->ControlStory(kStoryId, story_master.NewRequest());
-
-  fuchsia::modular::StoryOptions story_options;
-  story_options.kind_of_proto_story = true;
-  story_master->SetCreateOptions(std::move(story_options));
-
-  bool called_get_stories = false;
-  story_master->Execute([&called_get_stories,
-                         story_provider](fuchsia::modular::ExecuteResult result) {
-    // Confirm that even after the story is created, GetStories() returns
-    // empty.
-    story_provider->GetStories2(
-        nullptr, [&called_get_stories](const std::vector<fuchsia::modular::StoryInfo2>& stories) {
-          EXPECT_THAT(stories, testing::IsEmpty());
-          called_get_stories = true;
-        });
-  });
-
-  RunLoopUntil([&] { return called_get_stories; });
-}
-
 TEST_F(SessionShellTest, AttachesAndDetachesView) {
   RunHarnessAndInterceptSessionShell();
 

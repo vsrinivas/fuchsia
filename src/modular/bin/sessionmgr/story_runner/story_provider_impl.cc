@@ -531,12 +531,10 @@ void StoryProviderImpl::GetStories(
             std::vector<fuchsia::modular::StoryInfo> result;
 
             for (auto& story_data : all_story_data) {
-              if (!story_data.story_options().kind_of_proto_story) {
-                if (!story_data.has_story_info()) {
-                  continue;
-                }
-                result.push_back(StoryInfo2ToStoryInfo(story_data.story_info()));
+              if (!story_data.has_story_info()) {
+                continue;
               }
+              result.push_back(StoryInfo2ToStoryInfo(story_data.story_info()));
             }
 
             if (watcher_ptr) {
@@ -562,12 +560,10 @@ void StoryProviderImpl::GetStories2(
             std::vector<fuchsia::modular::StoryInfo2> result;
 
             for (auto& story_data : all_story_data) {
-              if (!story_data.story_options().kind_of_proto_story) {
-                if (!story_data.has_story_info()) {
-                  continue;
-                }
-                result.push_back(std::move(*story_data.mutable_story_info()));
+              if (!story_data.has_story_info()) {
+                continue;
               }
+              result.push_back(std::move(*story_data.mutable_story_info()));
             }
 
             if (watcher_ptr) {
@@ -649,7 +645,7 @@ void StoryProviderImpl::NotifyStoryWatchers(
     const fuchsia::modular::internal::StoryData* story_data,
     const fuchsia::modular::StoryState story_state,
     const fuchsia::modular::StoryVisibilityState story_visibility_state) {
-  if (!story_data || story_data->story_options().kind_of_proto_story) {
+  if (!story_data) {
     return;
   }
   for (const auto& i : watchers_.ptrs()) {

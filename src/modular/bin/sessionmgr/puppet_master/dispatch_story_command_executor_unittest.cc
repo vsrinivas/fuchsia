@@ -65,7 +65,7 @@ class DispatchStoryCommandExecutorTest : public modular_testing::TestWithLedger 
   fidl::StringPtr CreateStory() {
     bool done{};
     fidl::StringPtr ret;
-    session_storage_->CreateStory({} /* extra_info */, {} /* story_options */)
+    session_storage_->CreateStory({} /* extra_info */, {})
         ->Then([&](fidl::StringPtr story_id, fuchsia::ledger::PageId) {
           ret = story_id;
           done = true;

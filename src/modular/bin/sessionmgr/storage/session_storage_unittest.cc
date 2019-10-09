@@ -31,10 +31,8 @@ class SessionStorageTest : public modular_testing::TestWithLedger {
 
   // Convenience method to create a story for the test cases where
   // we're not testing CreateStory().
-  fidl::StringPtr CreateStory(SessionStorage* storage,
-                              fuchsia::modular::StoryOptions story_options = {}) {
-    auto future_story =
-        storage->CreateStory(/*name=*/nullptr, std::move(story_options), /*annotations=*/{});
+  fidl::StringPtr CreateStory(SessionStorage* storage) {
+    auto future_story = storage->CreateStory(/*name=*/nullptr, /*annotations=*/{});
     bool done{};
     fidl::StringPtr story_name;
     future_story->Then([&](fidl::StringPtr name, fuchsia::ledger::PageId page_id) {
@@ -52,9 +50,6 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
   // correct.
   auto storage = CreateStorage("page");
 
-  fuchsia::modular::StoryOptions story_options;
-  story_options.kind_of_proto_story = true;
-
   std::vector<fuchsia::modular::Annotation> annotations{};
   fuchsia::modular::AnnotationValue annotation_value;
   annotation_value.set_text("test_annotation_value");
@@ -62,8 +57,7 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
       .key = "test_annotation_key", .value = fidl::MakeOptional(std::move(annotation_value))};
   annotations.push_back(fidl::Clone(annotation));
 
-  auto future_story =
-      storage->CreateStory("story_name", std::move(story_options), std::move(annotations));
+  auto future_story = storage->CreateStory("story_name", std::move(annotations));
   bool done{};
   fidl::StringPtr story_name;
   fuchsia::ledger::PageId page_id;
@@ -82,7 +76,6 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
     ASSERT_TRUE(data);
 
     EXPECT_EQ("story_name", data->story_name());
-    EXPECT_TRUE(data->story_options().kind_of_proto_story);
     ASSERT_TRUE(story_name.has_value());
     EXPECT_EQ(story_name.value(), data->story_info().id());
 
@@ -129,7 +122,7 @@ TEST_F(SessionStorageTest, CreateGetAllDelete) {
   // Pipeline all the calls such to show that we data consistency based on call
   // order.
   auto storage = CreateStorage("page");
-  auto future_story = storage->CreateStory("story_name", /*story_options=*/{}, /*annotations=*/{});
+  auto future_story = storage->CreateStory("story_name", /*annotations=*/{});
 
   // Immediately after creation is complete, delete it.
   FuturePtr<> delete_done;
@@ -166,8 +159,8 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
   // * If we GetAllStoryData() we should see both of them.
   auto storage = CreateStorage("page");
 
-  auto future_story1 = storage->CreateStory("story1", /*story_options=*/{}, /*annotations=*/{});
-  auto future_story2 = storage->CreateStory("story2", /*story_options=*/{}, /*annotations=*/{});
+  auto future_story1 = storage->CreateStory("story1", /*annotations=*/{});
+  auto future_story2 = storage->CreateStory("story2", /*annotations=*/{});
 
   fidl::StringPtr story1_name;
   fuchsia::ledger::PageId story1_pageid;
@@ -239,7 +232,7 @@ TEST_F(SessionStorageTest, DISABLED_DeleteStoryDeletesStoryPage) {
   // When we call DeleteStory, we expect the story's page to be completely
   // emptied.
   auto storage = CreateStorage("page");
-  auto future_story = storage->CreateStory("story_name", /*story_options=*/{}, /*annotations=*/{});
+  auto future_story = storage->CreateStory("story_name", /*annotations=*/{});
 
   bool done{false};
   auto story_page_id = fuchsia::ledger::PageId::New();
@@ -327,17 +320,6 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Local) {
   EXPECT_EQ(created_story_name, updated_story_name);
   EXPECT_EQ(42, updated_story_data.story_info().last_focus_time());
 
-  // Update options and see a new notification.
-  updated = false;
-  fuchsia::modular::StoryOptions story_options;
-  story_options.kind_of_proto_story = true;
-  storage->UpdateStoryOptions(created_story_name, std::move(story_options));
-  RunLoopUntil([&] { return updated; });
-  EXPECT_EQ(created_story_name, updated_story_name);
-  ASSERT_TRUE(created_story_name.has_value());
-  EXPECT_EQ(created_story_name.value(), updated_story_data.story_info().id());
-  EXPECT_TRUE(updated_story_data.story_options().kind_of_proto_story);
-
   // Delete the story and expect to see a notification.
   storage->DeleteStory(created_story_name);
   RunLoopUntil([&] { return deleted; });
@@ -381,56 +363,10 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Remote) {
   EXPECT_EQ(created_story_name, updated_story_name);
   EXPECT_EQ(42, updated_story_data.story_info().last_focus_time());
 
-  // Update options and see a new notification.
-  updated = false;
-  fuchsia::modular::StoryOptions story_options;
-  story_options.kind_of_proto_story = true;
-  remote_storage->UpdateStoryOptions(created_story_name, std::move(story_options));
-  RunLoopUntil([&] { return updated; });
-  EXPECT_EQ(created_story_name, updated_story_name);
-  ASSERT_TRUE(created_story_name.has_value());
-  EXPECT_EQ(created_story_name.value(), updated_story_data.story_info().id());
-  EXPECT_TRUE(updated_story_data.story_options().kind_of_proto_story);
-
   // Delete the story and expect to see a notification.
   remote_storage->DeleteStory(created_story_name);
   RunLoopUntil([&] { return deleted; });
   EXPECT_EQ(created_story_name, deleted_story_name);
-}
-
-TEST_F(SessionStorageTest, UpdateStoryOptions) {
-  auto storage = CreateStorage("page");
-  auto story_name = CreateStory(storage.get());
-  bool done{};
-
-  // Start by setting an option.
-  fuchsia::modular::StoryOptions story_options;
-  story_options.kind_of_proto_story = true;
-  storage->UpdateStoryOptions(story_name, std::move(story_options))->Then([&] { done = true; });
-  RunLoopUntil([&] { return done; });
-
-  // Read the options (we should only see 1 even when we added 2 since it's the
-  // same).
-  done = false;
-  storage->GetStoryData(story_name)->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-    EXPECT_TRUE(data->story_options().kind_of_proto_story);
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
-
-  // Update the option again.
-  fuchsia::modular::StoryOptions story_options2;
-  story_options.kind_of_proto_story = false;
-  storage->UpdateStoryOptions(story_name, std::move(story_options2))->Then([&] { done = true; });
-  RunLoopUntil([&] { return done; });
-
-  // We should see the last value we set.
-  done = false;
-  storage->GetStoryData(story_name)->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-    EXPECT_FALSE(data->story_options().kind_of_proto_story);
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
 }
 
 TEST_F(SessionStorageTest, GetStoryStorage) {

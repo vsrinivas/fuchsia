@@ -60,12 +60,11 @@ std::unique_ptr<OperationBase> MakeWriteStoryDataCall(
 class CreateStoryCall : public LedgerOperation<fidl::StringPtr, fuchsia::ledger::PageId> {
  public:
   CreateStoryCall(fuchsia::ledger::Ledger* const ledger, fuchsia::ledger::Page* const root_page,
-                  fidl::StringPtr story_name, fuchsia::modular::StoryOptions story_options,
-                  std::vector<fuchsia::modular::Annotation> annotations, ResultCall result_call)
+                  fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations,
+                  ResultCall result_call)
       : LedgerOperation("SessionStorage::CreateStoryCall", ledger, root_page,
                         std::move(result_call)),
         story_name_(std::move(story_name)),
-        story_options_(std::move(story_options)),
         annotations_(std::move(annotations)) {}
 
  private:
@@ -90,7 +89,6 @@ class CreateStoryCall : public LedgerOperation<fidl::StringPtr, fuchsia::ledger:
 
     story_data_ = fuchsia::modular::internal::StoryData::New();
     story_data_->set_story_name(story_name_.value_or(""));
-    story_data_->set_story_options(std::move(story_options_));
     story_data_->set_story_page_id(std::move(story_page_id_));
     story_data_->mutable_story_info()->set_id(story_name_.value_or(""));
     story_data_->mutable_story_info()->set_last_focus_time(0);
@@ -101,7 +99,6 @@ class CreateStoryCall : public LedgerOperation<fidl::StringPtr, fuchsia::ledger:
   }
 
   fidl::StringPtr story_name_;
-  fuchsia::modular::StoryOptions story_options_;
   std::vector<fuchsia::modular::Annotation> annotations_;
 
   fuchsia::ledger::PagePtr story_page_;
@@ -116,20 +113,18 @@ class CreateStoryCall : public LedgerOperation<fidl::StringPtr, fuchsia::ledger:
 }  // namespace
 
 FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> SessionStorage::CreateStory(
-    fidl::StringPtr story_name, fuchsia::modular::StoryOptions story_options,
-    std::vector<fuchsia::modular::Annotation> annotations) {
+    fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations) {
   auto ret =
       Future<fidl::StringPtr, fuchsia::ledger::PageId>::Create("SessionStorage.CreateStory.ret");
-  operation_queue_.Add(std::make_unique<CreateStoryCall>(
-      ledger_client_->ledger(), page(), std::move(story_name), std::move(story_options),
-      std::move(annotations), ret->Completer()));
+  operation_queue_.Add(std::make_unique<CreateStoryCall>(ledger_client_->ledger(), page(),
+                                                         std::move(story_name),
+                                                         std::move(annotations), ret->Completer()));
   return ret;
 }
 
 FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> SessionStorage::CreateStory(
-    fuchsia::modular::StoryOptions story_options,
     std::vector<fuchsia::modular::Annotation> annotations) {
-  return CreateStory(/*story_name=*/nullptr, std::move(story_options), std::move(annotations));
+  return CreateStory(/*story_name=*/nullptr, std::move(annotations));
 }
 
 namespace {
@@ -251,22 +246,6 @@ FuturePtr<std::vector<fuchsia::modular::internal::StoryData>> SessionStorage::Ge
       "SessionStorage.GetAllStoryData.ret");
   operation_queue_.Add(std::make_unique<ReadAllDataCall<fuchsia::modular::internal::StoryData>>(
       page(), kStoryDataKeyPrefix, XdrStoryData, ret->Completer()));
-  return ret;
-}
-
-FuturePtr<> SessionStorage::UpdateStoryOptions(fidl::StringPtr story_name,
-                                               fuchsia::modular::StoryOptions story_options) {
-  auto ret = Future<>::Create("SessionStorage.UpdateStoryOptions.ret");
-  auto mutate = [story_options = std::move(story_options)](
-                    fuchsia::modular::internal::StoryData* story_data) mutable {
-    if (!fidl::Equals(story_data->story_options(), story_options)) {
-      story_data->set_story_options(std::move(story_options));
-      return true;
-    }
-    return false;
-  };
-  operation_queue_.Add(std::make_unique<MutateStoryDataCall>(page(), story_name, std::move(mutate),
-                                                             ret->Completer()));
   return ret;
 }
 

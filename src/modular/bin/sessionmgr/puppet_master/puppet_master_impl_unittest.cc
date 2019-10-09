@@ -265,73 +265,6 @@ TEST_F(PuppetMasterTest, ControlExistingStory) {
   EXPECT_EQ("two", executor_.last_commands().at(0).remove_mod().mod_name_transitional);
 }
 
-TEST_F(PuppetMasterTest, CreateStoryWithOptions) {
-  // Verify that options are set when the story is created (as result of an
-  // execution) and are not updated in future executions.
-  auto story = ControlStory("foo");
-
-  fuchsia::modular::StoryOptions options;
-  options.kind_of_proto_story = true;
-  story->SetCreateOptions(std::move(options));
-
-  // Enqueue some commands.
-  std::vector<fuchsia::modular::StoryCommand> commands;
-  commands.push_back(MakeRemoveModCommand("one"));
-  story->Enqueue(std::move(commands));
-
-  // Options are not set until execute that triggers the creation of a story.
-  bool done{};
-  session_storage_->GetStoryData("foo")->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-    EXPECT_EQ(nullptr, data);
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
-
-  done = false;
-  story->Execute([&](fuchsia::modular::ExecuteResult result) {
-    EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
-  auto story_id = executor_.last_story_id();
-
-  // Options should have been set.
-  done = false;
-  session_storage_->GetStoryData("foo")->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-    EXPECT_TRUE(data->story_options().kind_of_proto_story);
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
-
-  // Setting new options and executing again should have no effect.
-  fuchsia::modular::StoryOptions options2;
-  options2.kind_of_proto_story = false;
-  story->SetCreateOptions(std::move(options2));
-
-  // Enqueue some commands.
-  std::vector<fuchsia::modular::StoryCommand> commands2;
-  commands2.push_back(MakeRemoveModCommand("two"));
-  story->Enqueue(std::move(commands2));
-
-  done = false;
-  story->Execute([&](fuchsia::modular::ExecuteResult result) {
-    EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
-
-  EXPECT_EQ(story_id, executor_.last_story_id());
-
-  // Options should not have changed.
-  done = false;
-  session_storage_->GetStoryData("foo")->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-    EXPECT_TRUE(data->story_options().kind_of_proto_story);
-    done = true;
-  });
-
-  RunLoopUntil([&] { return done; });
-}
-
 // Verifies that calls to SetStoryInfoExtra after the story is created
 // do not modify the original value.
 TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterCreateStory) {
@@ -389,7 +322,7 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterDeleteStory) {
 
   // Create the story.
   bool done{};
-  session_storage_->CreateStory(story_name, /*story_options=*/{}, /*annotations=*/{})
+  session_storage_->CreateStory(story_name, /*annotations=*/{})
       ->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) { done = true; });
   RunLoopUntil([&] { return done; });
 
@@ -431,7 +364,7 @@ TEST_F(PuppetMasterTest, DeleteStory) {
   std::string story_id;
 
   // Create a story.
-  session_storage_->CreateStory("foo", /*story_options=*/{}, /*annotations=*/{})
+  session_storage_->CreateStory("foo", /*annotations=*/{})
       ->Then(
           [&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) { story_id = id.value_or(""); });
 
@@ -461,7 +394,7 @@ TEST_F(PuppetMasterTest, GetStories) {
 
   // Create a story.
 
-  session_storage_->CreateStory("foo", /*story_options=*/{}, /*annotations=*/{});
+  session_storage_->CreateStory("foo", /*annotations=*/{});
   // "foo" should be listed.
   done = false;
   ptr_->GetStories([&](std::vector<std::string> story_names) {

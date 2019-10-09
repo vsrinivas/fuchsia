@@ -32,6 +32,7 @@ union StoryCommand {
     FocusMod focus_mod;
 
     /// Updates the kind_of_proto_story option in a story.
+    /// DEPRECATED. This command is a no-op.
     SetKindOfProtoStoryOption set_kind_of_proto_story_option;
 };
 

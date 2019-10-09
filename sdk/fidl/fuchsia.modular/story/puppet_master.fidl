@@ -86,13 +86,6 @@ protocol StoryPuppetMaster {
     // and message are returned in `result`.
     Execute() -> (ExecuteResult result);
 
-    // If this story is new, sets the options for its creation. Must be called
-    // before the first call to Execute(). Any subsequent calls (either on the
-    // same channel or on a new StoryPuppetMaster for an existing story) are
-    // ignored. Some StoryOptions can be changed through specific story commands.
-    // See story_command.fidl for details.
-    SetCreateOptions(StoryOptions story_options);
-
     // Set the `StoryInfo` extra field for a story that is to be
     // created. This should be called before the first call to Execute().
     // Any subsequent calls (either on the same channel or on a new

@@ -21,13 +21,12 @@ namespace {
 class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
  public:
   ExecuteOperation(SessionStorage* const session_storage, StoryCommandExecutor* const executor,
-                   std::string story_name, fuchsia::modular::StoryOptions story_options,
-                   std::vector<fuchsia::modular::StoryCommand> commands, ResultCall done)
+                   std::string story_name, std::vector<fuchsia::modular::StoryCommand> commands,
+                   ResultCall done)
       : Operation("StoryPuppetMasterImpl.ExecuteOperation", std::move(done)),
         session_storage_(session_storage),
         executor_(executor),
         story_name_(std::move(story_name)),
-        story_options_(std::move(story_options)),
         commands_(std::move(commands)) {}
 
  private:
@@ -45,7 +44,7 @@ class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
   }
 
   void CreateStory() {
-    session_storage_->CreateStory(story_name_, std::move(story_options_), /*annotations=*/{})
+    session_storage_->CreateStory(story_name_, /*annotations=*/{})
         ->WeakThen(GetWeakPtr(), [this](fidl::StringPtr story_id, auto /* ignored */) {
           story_id_ = std::move(story_id);
           ExecuteCommands();
@@ -63,7 +62,6 @@ class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
   SessionStorage* const session_storage_;
   StoryCommandExecutor* const executor_;
   std::string story_name_;
-  fuchsia::modular::StoryOptions story_options_;
   std::vector<fuchsia::modular::StoryCommand> commands_;
 
   fidl::StringPtr story_id_;
@@ -72,12 +70,10 @@ class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
 class AnnotateOperation : public Operation<fuchsia::modular::StoryPuppetMaster_Annotate_Result> {
  public:
   AnnotateOperation(SessionStorage* const session_storage, std::string story_name,
-                    fuchsia::modular::StoryOptions story_options,
                     std::vector<fuchsia::modular::Annotation> annotations, ResultCall done)
       : Operation("StoryPuppetMasterImpl.AnnotateOperation", std::move(done)),
         session_storage_(session_storage),
         story_name_(std::move(story_name)),
-        story_options_(std::move(story_options)),
         annotations_(std::move(annotations)) {}
 
  private:
@@ -111,7 +107,7 @@ class AnnotateOperation : public Operation<fuchsia::modular::StoryPuppetMaster_A
       return;
     }
 
-    session_storage_->CreateStory(story_name_, std::move(story_options_), std::move(annotations_))
+    session_storage_->CreateStory(story_name_, std::move(annotations_))
         ->WeakThen(GetWeakPtr(), [this](fidl::StringPtr story_id, auto /* ignored */) {
           fuchsia::modular::StoryPuppetMaster_Annotate_Result result{};
           result.set_response({});
@@ -145,7 +141,6 @@ class AnnotateOperation : public Operation<fuchsia::modular::StoryPuppetMaster_A
 
   SessionStorage* const session_storage_;
   std::string story_name_;
-  fuchsia::modular::StoryOptions story_options_;
   std::vector<fuchsia::modular::Annotation> annotations_;
 };
 
@@ -270,12 +265,7 @@ void StoryPuppetMasterImpl::Enqueue(std::vector<fuchsia::modular::StoryCommand> 
 
 void StoryPuppetMasterImpl::Execute(ExecuteCallback done) {
   operations_->Add(std::make_unique<ExecuteOperation>(
-      session_storage_, executor_, story_name_, std::move(story_options_),
-      std::move(enqueued_commands_), std::move(done)));
-}
-
-void StoryPuppetMasterImpl::SetCreateOptions(fuchsia::modular::StoryOptions story_options) {
-  story_options_ = std::move(story_options);
+      session_storage_, executor_, story_name_, std::move(enqueued_commands_), std::move(done)));
 }
 
 void StoryPuppetMasterImpl::SetStoryInfoExtra(
@@ -289,9 +279,8 @@ void StoryPuppetMasterImpl::SetStoryInfoExtra(
 
 void StoryPuppetMasterImpl::Annotate(std::vector<fuchsia::modular::Annotation> annotations,
                                      AnnotateCallback callback) {
-  operations_->Add(
-      std::make_unique<AnnotateOperation>(session_storage_, story_name_, std::move(story_options_),
-                                          std::move(annotations), std::move(callback)));
+  operations_->Add(std::make_unique<AnnotateOperation>(
+      session_storage_, story_name_, std::move(annotations), std::move(callback)));
 }
 
 void StoryPuppetMasterImpl::AnnotateModule(std::string module_id,

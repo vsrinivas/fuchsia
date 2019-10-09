@@ -36,9 +36,6 @@ class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
   void Execute(ExecuteCallback done) override;
 
   // |StoryPuppetMaster|
-  void SetCreateOptions(fuchsia::modular::StoryOptions story_options) override;
-
-  // |StoryPuppetMaster|
   void SetStoryInfoExtra(std::vector<fuchsia::modular::StoryInfoExtraEntry> story_info_extra,
                          SetStoryInfoExtraCallback callback) override;
 
@@ -57,11 +54,6 @@ class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
   std::vector<fuchsia::modular::StoryCommand> enqueued_commands_;
 
   OperationContainer* const operations_;  // Not owned.
-
-  // Story options passed to |session_storage_.CreateStory|, set
-  // by |SetCreateOptions|. This value is reset after the story is created
-  // in the first call to |Execute|, and subsequent values are ignored.
-  fuchsia::modular::StoryOptions story_options_;
 
   fxl::WeakPtrFactory<StoryPuppetMasterImpl> weak_ptr_factory_;
 

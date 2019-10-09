@@ -33,10 +33,6 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
 
   const std::string& last_created_story() const { return last_created_story_; }
 
-  const std::string& last_created_kind_of_story() const {
-    return last_created_kind_of_proto_story_;
-  }
-
   const std::string& deleted_story() const { return deleted_story_; }
 
  private:
@@ -64,7 +60,6 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
   }
 
   std::string last_created_story_;
-  std::string last_created_kind_of_proto_story_;
   std::string deleted_story_;
   StoryControllerMock controller_mock_;
   fidl::BindingSet<fuchsia::modular::StoryController> binding_set_;

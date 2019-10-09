@@ -11,7 +11,6 @@
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/no_op_command_runner.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/remove_mod_command_runner.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/set_focus_state_command_runner.h"
-#include "src/modular/bin/sessionmgr/puppet_master/command_runners/set_kind_of_proto_story_option_command_runner.h"
 #include "src/modular/bin/sessionmgr/puppet_master/dispatch_story_command_executor.h"
 
 namespace modular {
@@ -41,7 +40,7 @@ std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kRemoveMod,
                           new RemoveModCommandRunner());
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kSetKindOfProtoStoryOption,
-                          new SetKindOfProtoStoryOptionCommandRunner(session_storage));
+                          new NoOpCommandRunner());
 
   auto executor =
       std::make_unique<DispatchStoryCommandExecutor>(session_storage, std::move(command_runners));

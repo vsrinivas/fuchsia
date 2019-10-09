@@ -16,8 +16,6 @@ group("command_runners") {
     ":remove_mod_command_runner_unittest",
     ":set_focus_state_command_runner",
     ":set_focus_state_command_runner_unittest",
-    ":set_kind_of_proto_story_option_command_runner",
-    ":set_kind_of_proto_story_option_command_runner_unittest",
     "operation_calls",
   ]
 }
@@ -184,36 +182,5 @@ executable("focus_mod_command_runner_unittest") {
     ":focus_mod_command_runner",
     "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
-  ]
-}
-
-source_set("set_kind_of_proto_story_option_command_runner") {
-  sources = [
-    "set_kind_of_proto_story_option_command_runner.cc",
-    "set_kind_of_proto_story_option_command_runner.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.modular",
-  ]
-
-  deps = [
-    ":command_runner",
-    "//src/modular/lib/async/cpp:operation",
-  ]
-}
-
-executable("set_kind_of_proto_story_option_command_runner_unittest") {
-  testonly = true
-
-  sources = [
-    "set_kind_of_proto_story_option_command_runner_unittest.cc",
-  ]
-
-  deps = [
-    ":set_kind_of_proto_story_option_command_runner",
-    "//garnet/public/lib/gtest",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/modular/lib/testing:test_with_session_storage",
   ]
 }
