@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/array.h>
-
-#include <fbl/alloc_checker.h>
 #include <fbl/algorithm.h>
-#include <unittest/unittest.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/array.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -22,9 +21,7 @@ class DestructorSignaler {
   DestructorSignaler** result;
 };
 
-bool destructor_test() {
-  BEGIN_TEST;
-
+TEST(ArrayTest, Destructor) {
   DestructorSignaler bogus;
   DestructorSignaler* result = &bogus;
 
@@ -40,13 +37,9 @@ bool destructor_test() {
 
   EXPECT_FALSE(result == &bogus);
   EXPECT_TRUE(result == nullptr);
-
-  END_TEST;
 }
 
-bool move_to_const_ctor_test() {
-  BEGIN_TEST;
-
+TEST(ArrayTest, MoveToConstCtor) {
   constexpr size_t kSize = 10;
   fbl::Array<uint32_t> array(new uint32_t[kSize], kSize);
   for (uint32_t i = 0; i < kSize; ++i) {
@@ -62,13 +55,9 @@ bool move_to_const_ctor_test() {
   for (size_t i = 0; i < kSize; ++i) {
     EXPECT_EQ(const_array[i], i);
   }
-
-  END_TEST;
 }
 
-bool move_to_const_assignment_test() {
-  BEGIN_TEST;
-
+TEST(ArrayTest, MoveToConstAssignment) {
   constexpr size_t kSize = 10;
   fbl::Array<uint32_t> array(new uint32_t[kSize], kSize);
   for (uint32_t i = 0; i < kSize; ++i) {
@@ -85,14 +74,6 @@ bool move_to_const_assignment_test() {
   for (size_t i = 0; i < kSize; ++i) {
     EXPECT_EQ(const_array[i], i);
   }
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(array_tests)
-RUN_NAMED_TEST("destructor test", destructor_test)
-RUN_TEST(move_to_const_ctor_test)
-RUN_TEST(move_to_const_assignment_test)
-END_TEST_CASE(array_tests)
