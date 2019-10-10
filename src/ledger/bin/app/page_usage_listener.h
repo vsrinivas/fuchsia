@@ -14,8 +14,8 @@ namespace ledger {
 // Unused call may be reordered after a Used.
 class PageUsageListener {
  public:
-  PageUsageListener() {}
-  virtual ~PageUsageListener() {}
+  PageUsageListener() = default;
+  virtual ~PageUsageListener() = default;
 
   // Called when an external page connection has been requested. In case of concurrent external
   // connections to the same page, this should only be called once, on the first connection.

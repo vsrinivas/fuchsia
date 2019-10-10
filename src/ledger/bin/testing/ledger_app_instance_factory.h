@@ -80,7 +80,7 @@ class LedgerAppInstanceFactory {
     FXL_DISALLOW_COPY_AND_ASSIGN(LedgerAppInstance);
   };
 
-  virtual ~LedgerAppInstanceFactory() {}
+  virtual ~LedgerAppInstanceFactory() = default;
 
   // Starts a new instance of the Ledger. The |loop_controller| must allow to
   // control the loop that is used to access the LedgerAppInstance.

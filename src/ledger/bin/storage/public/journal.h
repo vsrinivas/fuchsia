@@ -17,8 +17,8 @@ namespace storage {
 // A |Journal| represents a commit in progress.
 class Journal {
  public:
-  Journal() {}
-  virtual ~Journal() {}
+  Journal() = default;
+  virtual ~Journal() = default;
 
   // Adds an entry with the given |key| and |object_identifier| to this
   // |Journal|.

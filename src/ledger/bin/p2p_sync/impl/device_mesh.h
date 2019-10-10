@@ -18,8 +18,8 @@ class DeviceMesh {
  public:
   using DeviceSet = std::set<p2p_provider::P2PClientId>;
 
-  DeviceMesh() {}
-  virtual ~DeviceMesh() {}
+  DeviceMesh() = default;
+  virtual ~DeviceMesh() = default;
 
   // Returns the current active device set.
   virtual DeviceSet GetDeviceList() = 0;

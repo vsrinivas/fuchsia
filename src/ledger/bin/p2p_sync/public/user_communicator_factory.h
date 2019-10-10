@@ -14,8 +14,8 @@ namespace p2p_sync {
 // Factory for creating UserCommunicators with default configuration.
 class UserCommunicatorFactory {
  public:
-  UserCommunicatorFactory() {}
-  virtual ~UserCommunicatorFactory() {}
+  UserCommunicatorFactory() = default;
+  virtual ~UserCommunicatorFactory() = default;
 
   virtual std::unique_ptr<UserCommunicator> GetUserCommunicator(
       std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider) = 0;

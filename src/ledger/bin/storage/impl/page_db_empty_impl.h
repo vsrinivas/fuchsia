@@ -12,8 +12,8 @@ namespace storage {
 
 class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
  public:
-  PageDbEmptyImpl() {}
-  ~PageDbEmptyImpl() override {}
+  PageDbEmptyImpl() = default;
+  ~PageDbEmptyImpl() override = default;
 
   // PageDb:
   Status StartBatch(coroutine::CoroutineHandler* handler,

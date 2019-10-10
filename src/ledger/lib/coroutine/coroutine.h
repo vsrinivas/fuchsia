@@ -37,7 +37,7 @@ enum class ContinuationStatus : bool {
 // thread that called Resume().
 class CoroutineHandler {
  public:
-  virtual ~CoroutineHandler() {}
+  virtual ~CoroutineHandler() = default;
 
   // Yield the current coroutine. This must only be called from inside the
   // coroutine associated with this handler. If Yield returns |INTERRUPTED|, the
@@ -57,7 +57,7 @@ class CoroutineHandler {
 // terminate.
 class CoroutineService {
  public:
-  virtual ~CoroutineService() {}
+  virtual ~CoroutineService() = default;
 
   // Starts a new coroutine that will execute |runnable|.
   virtual void StartCoroutine(fit::function<void(CoroutineHandler*)> runnable) = 0;

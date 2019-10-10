@@ -14,8 +14,8 @@ namespace encryption {
 // Factory for building EncryptionService per namespace.
 class EncryptionServiceFactory {
  public:
-  EncryptionServiceFactory() {}
-  virtual ~EncryptionServiceFactory() {}
+  EncryptionServiceFactory() = default;
+  virtual ~EncryptionServiceFactory() = default;
 
   // Creates the encryption service for the given namespace.
   virtual std::unique_ptr<EncryptionService> MakeEncryptionService(std::string namespace_id) = 0;

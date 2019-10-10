@@ -22,8 +22,8 @@ namespace sync_coordinator {
 // throught the cloud and through local peers.
 class PageSync {
  public:
-  PageSync() {}
-  virtual ~PageSync() {}
+  PageSync() = default;
+  virtual ~PageSync() = default;
 
   // Starts syncing. Upon connection drop, the sync will restart automatically,
   // the client doesn't need to call Start() again.

@@ -93,7 +93,7 @@ class SyncStateWatcher {
     void Merge(SyncStateContainer other);
   };
 
-  virtual ~SyncStateWatcher() {}
+  virtual ~SyncStateWatcher() = default;
 
   // Notifies the watcher of a new state.
   virtual void Notify(SyncStateContainer sync_state) = 0;

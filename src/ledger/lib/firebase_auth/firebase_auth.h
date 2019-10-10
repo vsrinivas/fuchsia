@@ -27,8 +27,8 @@ enum class AuthStatus {
 // Each instance of this class is tied to exactly one user.
 class FirebaseAuth {
  public:
-  FirebaseAuth() {}
-  virtual ~FirebaseAuth() {}
+  FirebaseAuth() = default;
+  virtual ~FirebaseAuth() = default;
 
   virtual void set_error_handler(fit::closure /*on_error*/) {}
 

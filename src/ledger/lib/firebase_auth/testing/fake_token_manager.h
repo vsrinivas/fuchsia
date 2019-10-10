@@ -27,7 +27,7 @@ using fuchsia::auth::AuthenticationUIContext;
 class FakeTokenManager : public fuchsia::auth::TokenManager {
  public:
   FakeTokenManager(rng::Random* random);
-  ~FakeTokenManager() override {}
+  ~FakeTokenManager() override = default;
 
  private:
   // fuchsia::auth::TokenManager:

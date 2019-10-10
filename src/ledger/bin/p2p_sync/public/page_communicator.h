@@ -15,8 +15,8 @@ namespace p2p_sync {
 // PageCommunicator handles page-level data transfer between peers.
 class PageCommunicator {
  public:
-  PageCommunicator() {}
-  virtual ~PageCommunicator() {}
+  PageCommunicator() = default;
+  virtual ~PageCommunicator() = default;
 
   // Start should be called at most once. It signals that this page is active on
   // this device.

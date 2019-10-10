@@ -81,8 +81,8 @@ class PageStorage : public PageSyncClient {
     CommitId in_commit_;
   };
 
-  PageStorage() {}
-  ~PageStorage() override {}
+  PageStorage() = default;
+  ~PageStorage() override = default;
 
   // Returns the id of this page.
   virtual PageId GetId() = 0;

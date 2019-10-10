@@ -17,8 +17,8 @@ namespace sync_coordinator {
 // Top level factory for every object sync related for a given user.
 class UserSync {
  public:
-  UserSync() {}
-  virtual ~UserSync() {}
+  UserSync() = default;
+  virtual ~UserSync() = default;
 
   // Starts the user-level synchronization.
   virtual void Start() = 0;

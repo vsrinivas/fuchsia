@@ -19,8 +19,8 @@ namespace cloud_sync {
 // Top level factory for every object sync related for a given user.
 class UserSync {
  public:
-  UserSync() {}
-  virtual ~UserSync() {}
+  UserSync() = default;
+  virtual ~UserSync() = default;
 
   // Sets a synchronization state watcher for this user.
   //

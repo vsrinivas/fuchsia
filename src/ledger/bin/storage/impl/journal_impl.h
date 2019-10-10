@@ -71,7 +71,7 @@ class JournalImpl : public Journal {
  private:
   class Token {
    private:
-    Token() {}
+    Token() = default;
     friend JournalImpl;
   };
 

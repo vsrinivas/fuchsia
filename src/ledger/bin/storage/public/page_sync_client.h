@@ -14,8 +14,8 @@ namespace storage {
 // the synchronization objects.
 class PageSyncClient {
  public:
-  PageSyncClient() {}
-  virtual ~PageSyncClient() {}
+  PageSyncClient() = default;
+  virtual ~PageSyncClient() = default;
 
   // Sets the PageSyncDelegate for this page. A nullptr can be passed to unset a
   // previously set value.

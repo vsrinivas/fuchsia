@@ -24,8 +24,8 @@ class P2PProvider {
                               convert::ExtendedStringView message) = 0;
   };
 
-  P2PProvider() {}
-  virtual ~P2PProvider() {}
+  P2PProvider() = default;
+  virtual ~P2PProvider() = default;
 
   // Starts participating in the device mesh.
   // To stop participating, destroy this class instance.

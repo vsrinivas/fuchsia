@@ -24,10 +24,10 @@ class DbFactory {
     CREATE
   };
 
-  DbFactory() {}
+  DbFactory() = default;
   // |Close| must have been called and its callback executed before this object can be safely
   // destroyed.
-  virtual ~DbFactory() {}
+  virtual ~DbFactory() = default;
 
   // Opens and returns an initialized instance of Db in the given |db_path|.
   // Depending on the value of |on_db_not_found|, if the Db doesn't already

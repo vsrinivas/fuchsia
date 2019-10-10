@@ -32,7 +32,7 @@ class FileIndexSerialization {
                              std::unique_ptr<DataSource::DataChunk>* output, size_t* total_size);
 
  private:
-  FileIndexSerialization() {}
+  FileIndexSerialization() = default;
 };
 
 }  // namespace storage

@@ -49,8 +49,8 @@ enum class PageDbObjectStatus {
 // over |PageDb|.
 class PageDbMutator {
  public:
-  PageDbMutator() {}
-  virtual ~PageDbMutator() {}
+  PageDbMutator() = default;
+  virtual ~PageDbMutator() = default;
 
   // Heads.
   // Adds the given |head| in the set of commit heads.
@@ -154,8 +154,8 @@ class PageDb : public PageDbMutator {
   // if they cannot ensure that they already have on-disk references at that point.
   class Batch : public PageDbMutator {
    public:
-    Batch() {}
-    ~Batch() override {}
+    Batch() = default;
+    ~Batch() override = default;
 
     // Executes this batch. No further operations in this batch are supported
     // after a successful execution.
@@ -165,8 +165,8 @@ class PageDb : public PageDbMutator {
     FXL_DISALLOW_COPY_AND_ASSIGN(Batch);
   };
 
-  PageDb() {}
-  ~PageDb() override {}
+  PageDb() = default;
+  ~PageDb() override = default;
 
   // Starts a new batch. The batch will be written when Execute is called on the
   // returned object. The PageDb object must outlive the batch object. If the

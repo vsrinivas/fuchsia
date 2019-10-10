@@ -33,8 +33,8 @@ bool IsPermanentError(Status status);
 // Handles all encryption for a page of the Ledger.
 class EncryptionService {
  public:
-  EncryptionService() {}
-  virtual ~EncryptionService() {}
+  EncryptionService() = default;
+  virtual ~EncryptionService() = default;
 
   // Construct the object identifier for the given digest using the latest key
   // index.

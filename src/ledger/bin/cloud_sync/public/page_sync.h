@@ -21,8 +21,8 @@ namespace cloud_sync {
 // artifacts of the same page from the cloud and putting them in storage.
 class PageSync {
  public:
-  PageSync() {}
-  virtual ~PageSync() {}
+  PageSync() = default;
+  virtual ~PageSync() = default;
 
   // Starts syncing. Upon connection drop, the sync will restart automatically,
   // the client doesn't need to call Start() again.

@@ -63,8 +63,8 @@ class PageEvictionManager {
                                    fit::function<void(Status)> callback) = 0;
   };
 
-  PageEvictionManager() {}
-  virtual ~PageEvictionManager() {}
+  PageEvictionManager() = default;
+  virtual ~PageEvictionManager() = default;
 
   // Sets the callback to be called every time the PageEvictionManager is empty.
   virtual void SetOnDiscardable(fit::closure on_discardable) = 0;

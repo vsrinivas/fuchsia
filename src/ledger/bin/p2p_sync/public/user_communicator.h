@@ -16,8 +16,8 @@ namespace p2p_sync {
 // with the mesh of devices of a user.
 class UserCommunicator {
  public:
-  UserCommunicator() {}
-  virtual ~UserCommunicator() {}
+  UserCommunicator() = default;
+  virtual ~UserCommunicator() = default;
 
   // Connects this device to its device mesh. To be called exactly once before
   // any other method.

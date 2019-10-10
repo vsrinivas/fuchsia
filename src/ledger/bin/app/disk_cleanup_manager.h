@@ -18,8 +18,8 @@ namespace ledger {
 // each cleanup operation is executed in Ledger.
 class DiskCleanupManager {
  public:
-  DiskCleanupManager() {}
-  virtual ~DiskCleanupManager() {}
+  DiskCleanupManager() = default;
+  virtual ~DiskCleanupManager() = default;
 
   // Sets the callback to be called every time the DiskCleanupManager is empty.
   virtual void SetOnDiscardable(fit::closure on_discardable) = 0;

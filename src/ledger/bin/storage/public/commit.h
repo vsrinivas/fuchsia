@@ -18,8 +18,8 @@ namespace storage {
 
 class Commit {
  public:
-  Commit() {}
-  virtual ~Commit() {}
+  Commit() = default;
+  virtual ~Commit() = default;
 
   // Returns a copy of the commit.
   virtual std::unique_ptr<const Commit> Clone() const = 0;

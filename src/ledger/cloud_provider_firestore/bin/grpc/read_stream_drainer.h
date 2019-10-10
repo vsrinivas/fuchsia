@@ -33,7 +33,7 @@ class ReadStreamDrainer {
         stream_(std::move(stream)),
         stream_controller_(stream_.get()),
         stream_reader_(stream_.get()) {}
-  ~ReadStreamDrainer() {}
+  ~ReadStreamDrainer() = default;
 
   void SetOnDiscardable(fit::closure on_discardable) {
     on_discardable_ = std::move(on_discardable);

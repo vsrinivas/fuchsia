@@ -14,8 +14,8 @@ namespace storage {
 template <class T>
 class Iterator {
  public:
-  Iterator() {}
-  virtual ~Iterator() {}
+  Iterator() = default;
+  virtual ~Iterator() = default;
 
   // Advances to the next element in the collection. Should only be called on a
   // valid iterator.

@@ -27,8 +27,8 @@ enum class RetrievedObjectType {
 // storage objects from the network (cloud or P2P).
 class PageSyncDelegate {
  public:
-  PageSyncDelegate() {}
-  virtual ~PageSyncDelegate() {}
+  PageSyncDelegate() = default;
+  virtual ~PageSyncDelegate() = default;
 
   // Retrieves the piece of the given id from the network.
   //

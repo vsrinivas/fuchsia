@@ -24,8 +24,8 @@ namespace cloud_provider_firestore {
 // client callbacks are called on the |main_runner|.
 class FirestoreService {
  public:
-  FirestoreService() {}
-  virtual ~FirestoreService() {}
+  FirestoreService() = default;
+  virtual ~FirestoreService() = default;
 
   // Returns the Firestore path to the managed database.
   //

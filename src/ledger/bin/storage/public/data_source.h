@@ -27,8 +27,8 @@ class DataSource {
   // recipient.
   class DataChunk {
    public:
-    DataChunk() {}
-    virtual ~DataChunk() {}
+    DataChunk() = default;
+    virtual ~DataChunk() = default;
 
     virtual fxl::StringView Get() = 0;
 
@@ -53,8 +53,8 @@ class DataSource {
   static std::unique_ptr<DataSource> Create(fsl::SizedVmo vmo);
   static std::unique_ptr<DataSource> Create(zx::socket socket, uint64_t size);
 
-  DataSource() {}
-  virtual ~DataSource() {}
+  DataSource() = default;
+  virtual ~DataSource() = default;
 
   // Returns the total size of the data in the DataSource.
   virtual uint64_t GetSize() = 0;

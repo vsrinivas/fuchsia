@@ -16,8 +16,8 @@ namespace p2p_sync {
 // LedgerCommunicator handles ledger-level data transfer between peers.
 class LedgerCommunicator {
  public:
-  LedgerCommunicator() {}
-  virtual ~LedgerCommunicator() {}
+  LedgerCommunicator() = default;
+  virtual ~LedgerCommunicator() = default;
 
   // Returns a page-specific communicator.
   // All |PageCommunicator| objects obtained through this method must be

@@ -29,8 +29,8 @@ namespace ledger {
 // returned callback will be equivalent.
 class CallbackWaiter {
  public:
-  CallbackWaiter() {}
-  virtual ~CallbackWaiter() {}
+  CallbackWaiter() = default;
+  virtual ~CallbackWaiter() = default;
   virtual fit::function<void()> GetCallback() = 0;
   virtual bool RunUntilCalled() FXL_WARN_UNUSED_RESULT = 0;
   // Returns whether the next expected calback has not already been called. If
@@ -41,7 +41,7 @@ class CallbackWaiter {
 // A subloop.
 class SubLoop {
  public:
-  virtual ~SubLoop() {}
+  virtual ~SubLoop() = default;
 
   // Runs all currently enqueued tasks on the loop and quits the loop. The
   // SubLoop must not be used again once this method returns.

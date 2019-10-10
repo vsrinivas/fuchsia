@@ -19,8 +19,8 @@ namespace storage {
 // Manages storage for a single Ledger instance.
 class LedgerStorage {
  public:
-  LedgerStorage() {}
-  virtual ~LedgerStorage() {}
+  LedgerStorage() = default;
+  virtual ~LedgerStorage() = default;
 
   // Finds the PageIds of pages that occupy storage on disk.
   virtual void ListPages(fit::function<void(Status, std::set<PageId>)> callback) = 0;

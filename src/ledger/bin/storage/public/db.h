@@ -30,8 +30,8 @@ class Db {
   class Batch {
    public:
     // A |Batch| can be used to execute a number of updates in |Db| atomically.
-    Batch() {}
-    virtual ~Batch() {}
+    Batch() = default;
+    virtual ~Batch() = default;
 
     // Inserts the given key-value pair in the database.
     FXL_WARN_UNUSED_RESULT virtual Status Put(coroutine::CoroutineHandler* handler,
@@ -50,8 +50,8 @@ class Db {
     FXL_DISALLOW_COPY_AND_ASSIGN(Batch);
   };
 
-  Db() {}
-  virtual ~Db() {}
+  Db() = default;
+  virtual ~Db() = default;
 
   // Starts a new batch. The batch will be written when Execute is called on the
   // returned object. The Db object must outlive the batch object.

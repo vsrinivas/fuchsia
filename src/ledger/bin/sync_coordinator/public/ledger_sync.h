@@ -21,8 +21,8 @@ namespace sync_coordinator {
 // Manages synchronization for a ledger.
 class LedgerSync {
  public:
-  LedgerSync() {}
-  virtual ~LedgerSync() {}
+  LedgerSync() = default;
+  virtual ~LedgerSync() = default;
 
   // Creates a new page sync for the given page.
   //

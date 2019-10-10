@@ -25,7 +25,7 @@ class FakeOvernet : public fuchsia::overnet::Overnet {
       std::vector<std::string> services;
     };
 
-    virtual ~Delegate() {}
+    virtual ~Delegate() = default;
 
     // Returns the list of known devices. See Overnet::GetKnownDeviceNames
     // for more details.
@@ -41,7 +41,7 @@ class FakeOvernet : public fuchsia::overnet::Overnet {
   };
 
   explicit FakeOvernet(async_dispatcher_t* dispatcher, uint64_t self_id, Delegate* delegate);
-  ~FakeOvernet() override {}
+  ~FakeOvernet() override = default;
 
   // Connects to the service provider of this (virtual) host
   void GetService(std::string service_name, zx::channel chan);

@@ -19,8 +19,8 @@ namespace cloud_provider_firestore {
 // Firestore requests.
 class CredentialsProvider {
  public:
-  CredentialsProvider() {}
-  virtual ~CredentialsProvider() {}
+  CredentialsProvider() = default;
+  virtual ~CredentialsProvider() = default;
 
   // Retrieves call credentials.
   virtual void GetCredentials(

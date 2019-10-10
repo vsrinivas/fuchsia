@@ -12,8 +12,8 @@ namespace storage {
 
 class CommitWatcher {
  public:
-  CommitWatcher() {}
-  virtual ~CommitWatcher() {}
+  CommitWatcher() = default;
+  virtual ~CommitWatcher() = default;
 
   // Called when new commits have been created.
   virtual void OnNewCommits(const std::vector<std::unique_ptr<const Commit>>& commits,

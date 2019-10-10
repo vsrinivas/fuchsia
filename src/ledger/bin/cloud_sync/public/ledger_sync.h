@@ -22,8 +22,8 @@ namespace cloud_sync {
 // Manages Cloud Sync for a particular ledger.
 class LedgerSync {
  public:
-  LedgerSync() {}
-  virtual ~LedgerSync() {}
+  LedgerSync() = default;
+  virtual ~LedgerSync() = default;
 
   // Creates a new page sync for the given page. The page could already have
   // data synced to the cloud or not.

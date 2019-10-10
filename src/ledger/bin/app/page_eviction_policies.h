@@ -22,8 +22,8 @@ using PageWasEvicted = bool;
 // The policy for evicting pages.
 class PageEvictionPolicy {
  public:
-  PageEvictionPolicy() {}
-  virtual ~PageEvictionPolicy() {}
+  PageEvictionPolicy() = default;
+  virtual ~PageEvictionPolicy() = default;
 
   // Given an iterator over all pages currently stored on disk, chooses and
   // tries to evict those that match the implementing policy. The status
@@ -49,8 +49,8 @@ enum PageEvictionCondition {
 // necessary to evict pages.
 class PageEvictionDelegate {
  public:
-  PageEvictionDelegate() {}
-  virtual ~PageEvictionDelegate() {}
+  PageEvictionDelegate() = default;
+  virtual ~PageEvictionDelegate() = default;
 
   // Checks whether the given page can be evicted based on the given
   // |condition| and if it can, evicts it. Note that evicting a page with

@@ -21,8 +21,8 @@ namespace cloud_provider_firestore {
 // No methods will be called after the associated ListenCallHandler is deleted.
 class ListenCallClient {
  public:
-  ListenCallClient() {}
-  virtual ~ListenCallClient() {}
+  ListenCallClient() = default;
+  virtual ~ListenCallClient() = default;
 
   // Called when the connection is established.
   //
@@ -55,9 +55,9 @@ class ListenCallClient {
 // correctly terminate if needed.
 class ListenCallHandler {
  public:
-  ListenCallHandler() {}
+  ListenCallHandler() = default;
 
-  virtual ~ListenCallHandler() {}
+  virtual ~ListenCallHandler() = default;
 
   // Writes the given |request| into the outgoing stream.
   //

@@ -32,7 +32,7 @@ class SyncStateWatcher {
     UploadSyncState upload = UPLOAD_IDLE;
   };
 
-  virtual ~SyncStateWatcher() {}
+  virtual ~SyncStateWatcher() = default;
 
   // Notifies the watcher of a new state.
   virtual void Notify(SyncStateContainer sync_state) = 0;

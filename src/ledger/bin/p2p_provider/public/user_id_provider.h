@@ -19,8 +19,8 @@ class UserIdProvider {
     ERROR,
   };
 
-  UserIdProvider() {}
-  virtual ~UserIdProvider() {}
+  UserIdProvider() = default;
+  virtual ~UserIdProvider() = default;
 
   // GetUserId calls its callback with the user id.
   virtual void GetUserId(fit::function<void(Status, std::string)> callback) = 0;

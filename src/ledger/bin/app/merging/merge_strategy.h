@@ -20,8 +20,8 @@ class ActivePageManager;
 // Interface for a merge algorithm.
 class MergeStrategy {
  public:
-  MergeStrategy() {}
-  virtual ~MergeStrategy() {}
+  MergeStrategy() = default;
+  virtual ~MergeStrategy() = default;
 
   // Sets a callback that will be called if this strategy is not to be used
   // anymore, for instance when the underlying merge mechanism is no longer

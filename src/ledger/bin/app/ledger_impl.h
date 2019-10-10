@@ -36,7 +36,7 @@ class LedgerImpl : public fuchsia::ledger::LedgerSyncableDelegate {
       NAMED,
     };
 
-    Delegate() {}
+    Delegate() = default;
     virtual ~Delegate() = default;
 
     virtual void GetPage(convert::ExtendedStringView page_id, PageState page_state,

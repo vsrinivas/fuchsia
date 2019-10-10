@@ -17,8 +17,8 @@ namespace storage {
 // be mapped into memory on-demand.
 class Object {
  public:
-  Object() {}
-  virtual ~Object() {}
+  Object() = default;
+  virtual ~Object() = default;
 
   // Returns the identifier of this storage object.
   virtual ObjectIdentifier GetIdentifier() const = 0;
@@ -44,8 +44,8 @@ class Object {
 // pieces before being stored in Ledger.
 class Piece {
  public:
-  Piece() {}
-  virtual ~Piece() {}
+  Piece() = default;
+  virtual ~Piece() = default;
 
   // Returns the identifier of this storage object.
   virtual ObjectIdentifier GetIdentifier() const = 0;
