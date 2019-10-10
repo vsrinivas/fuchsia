@@ -19,6 +19,7 @@ base_package_labels += [
   "//src/modular/bundles:framework_experimental",
   "//src/ui/bin/brightness_manager",
   "//src/ui/bin/shortcut",
+  "//third_party/dart-pkg/git/flutter/examples/flutter_gallery",
   "//topaz/shell/story_shell_labs",
 ]
 
