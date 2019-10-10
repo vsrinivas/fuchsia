@@ -11,12 +11,17 @@
 ///!       get closed.
 ///!
 use {
-    crate::known_ess_store::KnownEssStore,
+    crate::{fuse_pending::FusePending, known_ess_store::KnownEssStore},
     failure::{format_err, Error},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
-    futures::{prelude::*, select, stream::FuturesUnordered},
-    log::error,
+    futures::{
+        channel::mpsc,
+        prelude::*,
+        select,
+        stream::{FuturesOrdered, FuturesUnordered},
+    },
+    log::{error, info},
     parking_lot::Mutex,
     std::sync::Arc,
 };
@@ -81,6 +86,14 @@ impl From<fidl::Error> for RequestError {
     }
 }
 
+#[derive(Debug)]
+enum InternalMsg {
+    /// Sent when a new connection request was issued. Holds the NetworkIdentifier and the
+    /// Transaction which will the connection result will be reported through.
+    NewPendingConnectRequest(fidl_policy::NetworkIdentifier, fidl_sme::ConnectTransactionProxy),
+}
+type InternalMsgSink = mpsc::UnboundedSender<InternalMsg>;
+
 // This number was chosen arbitrarily.
 const MAX_CONCURRENT_LISTENERS: usize = 1000;
 const PSK_HEX_STRING_LENGTH: usize = 64;
@@ -114,10 +127,15 @@ async fn serve_provider_requests(
     ess_store: EssStorePtr,
     mut requests: fidl_policy::ClientProviderRequestStream,
 ) {
+    let (internal_messages_sink, mut internal_messages_stream) = mpsc::unbounded();
     let mut controller_reqs = FuturesUnordered::new();
+    let mut pending_con_reqs = FusePending(FuturesOrdered::new());
 
     loop {
         select! {
+            // Progress controller requests.
+            _ = controller_reqs.select_next_some() => (),
+            // Process provider requests.
             req = requests.select_next_some() => if let Ok(req) = req {
                 // If there is an active controller - reject new requests.
                 // Rust cannot yet send Epitaphs when closing a channel, thus, simply drop the
@@ -125,6 +143,7 @@ async fn serve_provider_requests(
                 if controller_reqs.is_empty() {
                     let fut = handle_provider_request(
                         Arc::clone(&client),
+                        internal_messages_sink.clone(),
                         update_sender.clone(),
                         Arc::clone(&ess_store),
                         req
@@ -132,8 +151,18 @@ async fn serve_provider_requests(
                     controller_reqs.push(fut);
                 }
             },
-            // Progress controller requests.
-            _ = controller_reqs.select_next_some() => (),
+            // Progress internal messages.
+            msg = internal_messages_stream.select_next_some() => match msg {
+                InternalMsg::NewPendingConnectRequest(id, txn) => {
+                    let connect_result_fut = txn.take_event_stream().into_future()
+                        .map(|(first, _next)| (id, first));
+                    pending_con_reqs.push(connect_result_fut);
+                }
+            },
+            // Pending connect request finished.
+            resp = pending_con_reqs.select_next_some() => if let (id, Some(Ok(txn))) = resp {
+                handle_sme_connect_response(update_sender.clone(), id, txn).await;
+            }
         }
     }
 }
@@ -154,6 +183,7 @@ async fn serve_listener_requests(
 /// Handle inbound requests to acquire a new ClientController.
 async fn handle_provider_request(
     client: ClientPtr,
+    internal_msg_sink: InternalMsgSink,
     update_sender: listener::MessageSender,
     ess_store: EssStorePtr,
     req: fidl_policy::ClientProviderRequest,
@@ -161,7 +191,7 @@ async fn handle_provider_request(
     match req {
         fidl_policy::ClientProviderRequest::GetController { requests, updates, .. } => {
             register_listener(update_sender, updates.into_proxy()?);
-            handle_client_requests(client, ess_store, requests).await?;
+            handle_client_requests(client, internal_msg_sink, ess_store, requests).await?;
             Ok(())
         }
     }
@@ -170,6 +200,7 @@ async fn handle_provider_request(
 /// Handles all incoming requests from a ClientController.
 async fn handle_client_requests(
     client: ClientPtr,
+    internal_msg_sink: InternalMsgSink,
     ess_store: EssStorePtr,
     requests: ClientRequests,
 ) -> Result<(), fidl::Error> {
@@ -184,9 +215,11 @@ async fn handle_client_requests(
                 )
                 .await
                 {
-                    Ok(_txn) => {
-                        // TODO(hahnr): Await connection result.
+                    Ok(txn) => {
                         responder.send(fidl_common::RequestStatus::Acknowledged)?;
+                        // TODO(hahnr): Send connecting update.
+                        let _ignored = internal_msg_sink
+                            .unbounded_send(InternalMsg::NewPendingConnectRequest(id, txn));
                     }
                     Err(error) => {
                         error!("error while connection attempt: {}", error.cause);
@@ -198,6 +231,36 @@ async fn handle_client_requests(
         }
     }
     Ok(())
+}
+
+async fn handle_sme_connect_response(
+    update_sender: listener::MessageSender,
+    id: fidl_policy::NetworkIdentifier,
+    txn_event: fidl_sme::ConnectTransactionEvent,
+) {
+    match txn_event {
+        fidl_sme::ConnectTransactionEvent::OnFinished { code } => match code {
+            fidl_sme::ConnectResultCode::Success => {
+                info!("connection request successful to: {:?}", id);
+                let update = fidl_policy::ClientStateSummary {
+                    state: None,
+                    networks: Some(vec![fidl_policy::NetworkState {
+                        id: Some(id),
+                        state: Some(fidl_policy::ConnectionState::Connected),
+                        status: None,
+                    }]),
+                };
+                let _ignored =
+                    update_sender.unbounded_send(listener::Message::NotifyListeners(update));
+            }
+            // No-op. Connect request was replaced.
+            fidl_sme::ConnectResultCode::Canceled => (),
+            error_code => {
+                error!("connection request failed to: {:?} - {:?}", id, error_code);
+                // TODO(hahnr): Send failure update.
+            }
+        },
+    }
 }
 
 /// Attempts to issue a new connect request to the currently active Client.
@@ -418,7 +481,6 @@ mod tests {
             }))) => {
                 assert_eq!(b"foobar", &req.ssid[..]);
                 assert_eq!(fidl_sme::Credential::None(fidl_sme::Empty), req.credential);
-                // TODO(hahnr): Send connection response.
             }
         );
     }
@@ -469,6 +531,129 @@ mod tests {
                 // TODO(hahnr): Send connection response.
             }
         );
+    }
+
+    #[test]
+    fn connect_request_success() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
+        let ess_store = create_ess_store(temp_dir.path());
+
+        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
+            .expect("failed to create ClientProvider proxy");
+        let requests = requests.into_stream().expect("failed to create stream");
+
+        let (client, mut sme_stream) = create_client();
+        let (update_sender, mut listener_updates) = mpsc::unbounded();
+        let serve_fut = serve_provider_requests(client, update_sender, ess_store, requests);
+        pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a new controller.
+        let (controller, _update_stream) = request_controller(&provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut listener_updates.next()), Poll::Ready(_));
+
+        // Issue connect request.
+        let connect_fut = controller.connect(&mut fidl_policy::NetworkIdentifier {
+            ssid: b"foobar".to_vec(),
+            type_: fidl_policy::SecurityType::None,
+        });
+        pin_mut!(connect_fut);
+
+        // Process connect request and verify connect response.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Ok(_)));
+
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
+                txn, ..
+            }))) => {
+                // Send connection response.
+                let (_stream, ctrl) = txn.expect("connect txn unused")
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_finished(fidl_sme::ConnectResultCode::Success)
+                    .expect("failed to send connection completion");
+            }
+        );
+
+        // Process SME result.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Verify status update.
+        let summary = assert_variant!(
+            exec.run_until_stalled(&mut listener_updates.next()),
+            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
+        );
+        let expected_summary = fidl_policy::ClientStateSummary {
+            state: None,
+            networks: Some(vec![fidl_policy::NetworkState {
+                id: Some(fidl_policy::NetworkIdentifier {
+                    ssid: b"foobar".to_vec(),
+                    type_: fidl_policy::SecurityType::None,
+                }),
+                state: Some(fidl_policy::ConnectionState::Connected),
+                status: None,
+            }]),
+        };
+        assert_eq!(summary, expected_summary);
+    }
+
+    #[test]
+    fn connect_request_failure() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
+        let ess_store = create_ess_store(temp_dir.path());
+
+        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
+            .expect("failed to create ClientProvider proxy");
+        let requests = requests.into_stream().expect("failed to create stream");
+
+        let (client, mut sme_stream) = create_client();
+        let (update_sender, mut listener_updates) = mpsc::unbounded();
+        let serve_fut = serve_provider_requests(client, update_sender, ess_store, requests);
+        pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a new controller.
+        let (controller, _update_stream) = request_controller(&provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut listener_updates.next()), Poll::Ready(_));
+
+        // Issue connect request.
+        let connect_fut = controller.connect(&mut fidl_policy::NetworkIdentifier {
+            ssid: b"foobar".to_vec(),
+            type_: fidl_policy::SecurityType::None,
+        });
+        pin_mut!(connect_fut);
+
+        // Process connect request and verify connect response.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Ok(_)));
+
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
+                txn, ..
+            }))) => {
+                // Send failed connection response.
+                let (_stream, ctrl) = txn.expect("connect txn unused")
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_finished(fidl_sme::ConnectResultCode::Failed)
+                    .expect("failed to send connection completion");
+            }
+        );
+
+        // Process SME result.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Verify status was not updated.
+        assert_variant!(exec.run_until_stalled(&mut listener_updates.next()), Poll::Pending);
     }
 
     #[test]

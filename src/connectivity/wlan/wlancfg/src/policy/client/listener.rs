@@ -61,6 +61,8 @@ pub async fn serve(mut messages: MessageStream) {
             // Enqueue every listener back into the listener pool once they ack'ed the reception
             // of a previously sent update.
             // Listeners which already closed their channel will be dropped.
+            // TODO(38128): Clients must be send the latest update if they weren't updated due to
+            // their inactivity.
             listener = unacked_listeners.select_next_some() => if let Some(listener) = listener {
                 acked_listeners.lock().push(listener);
             },

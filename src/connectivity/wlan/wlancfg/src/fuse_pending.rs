@@ -19,7 +19,7 @@ use futures::{
 /// return `Poll::Pending`. `FusePending` provides this mapping.
 /// Note: This wrapper should only be used if the underlying Stream defined its behavior if no
 /// work is scheduled. Usually, such Streams are expected to never terminate.
-struct FusePending<F>(F);
+pub struct FusePending<F>(pub F);
 
 impl<F> std::ops::Deref for FusePending<F> {
     type Target = F;
