@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
@@ -16,6 +17,8 @@
 #include <unittest/unittest.h>
 
 namespace {
+
+namespace fio = ::llcpp::fuchsia::io;
 
 bool test_service() {
   BEGIN_TEST;
@@ -96,9 +99,63 @@ bool TestServeDirectory() {
   END_TEST;
 }
 
+bool TestServiceNodeIsNotDirectory() {
+  BEGIN_TEST;
+
+  // Set up the server
+  zx::channel client_end, server_end;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0u, &client_end, &server_end));
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  fs::SynchronousVfs vfs(loop.dispatcher());
+
+  auto directory = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
+  auto vnode = fbl::AdoptRef<fs::Service>(new fs::Service([](zx::channel channel) {
+    // Should never reach here, because the directory flag is not allowed.
+    EXPECT_TRUE(false, "Should not be able to open the service");
+    channel.reset();
+    return ZX_OK;
+  }));
+  directory->AddEntry("abc", vnode);
+  ASSERT_EQ(ZX_OK, vfs.ServeDirectory(directory, std::move(server_end)));
+
+  // Call |ValidateOptions| with the directory flag should fail.
+  ASSERT_EQ(ZX_ERR_NOT_DIR,
+            vnode->ValidateOptions(fs::VnodeConnectionOptions::ReadWrite().set_directory()));
+
+  // Open the service through FIDL with the directory flag, which should fail.
+  zx::channel abc_client_end, abc_server_end;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0u, &abc_client_end, &abc_server_end));
+
+  loop.StartThread();
+
+  auto open_result =
+      fio::Directory::Call::Open(zx::unowned_channel(client_end),
+                                 fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_DIRECTORY |
+                                     fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                                 0755, fidl::StringView("abc"), std::move(abc_server_end));
+  EXPECT_EQ(open_result.status(), ZX_OK);
+  zx_status_t event_status = fio::Node::Call::HandleEvents(zx::unowned_channel(abc_client_end),
+                                                           fio::Node::EventHandlers{
+      .on_open = [](zx_status_t status, fio::NodeInfo* info) {
+        EXPECT_EQ(ZX_ERR_NOT_DIR, status);
+        EXPECT_EQ(nullptr, info);
+        return ZX_OK;
+      },
+      .unknown = []() { return ZX_ERR_INVALID_ARGS; }
+  });
+  // Expect that |on_open| was received
+  EXPECT_EQ(ZX_OK, event_status);
+
+  loop.Shutdown();
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(service_tests)
 RUN_TEST(test_service)
 RUN_TEST(TestServeDirectory)
+RUN_TEST(TestServiceNodeIsNotDirectory)
 END_TEST_CASE(service_tests)

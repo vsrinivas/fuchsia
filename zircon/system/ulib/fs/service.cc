@@ -15,7 +15,10 @@ Service::Service(Connector connector) : connector_(std::move(connector)) {}
 
 Service::~Service() = default;
 
-zx_status_t Service::ValidateOptions([[maybe_unused]] VnodeConnectionOptions options) {
+zx_status_t Service::ValidateOptions(VnodeConnectionOptions options) {
+  if (options.flags.directory) {
+    return ZX_ERR_NOT_DIR;
+  }
   return ZX_OK;
 }
 
