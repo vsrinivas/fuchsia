@@ -29,8 +29,7 @@ std::shared_ptr<test_effects_module_ext> OpenTestEffectsExt() {
 
 void EffectsLoaderTestBase::SetUp() {
   testing::Test::SetUp();
-  ASSERT_EQ(EffectsLoader::CreateWithModule(kTestEffectsModuleName, &effects_loader_), ZX_OK);
-  ASSERT_TRUE(effects_loader_);
+  RecreateLoader();
   test_effects_ = OpenTestEffectsExt();
   ASSERT_TRUE(test_effects_ != nullptr);
 }
@@ -40,6 +39,11 @@ void EffectsLoaderTestBase::TearDown() {
   ASSERT_EQ(0u, test_effects_->num_instances());
   ASSERT_EQ(ZX_OK, test_effects_->clear_effects());
   testing::Test::TearDown();
+}
+
+void EffectsLoaderTestBase::RecreateLoader() {
+  ASSERT_EQ(EffectsLoader::CreateWithModule(kTestEffectsModuleName, &effects_loader_), ZX_OK);
+  ASSERT_TRUE(effects_loader_);
 }
 
 }  // namespace media::audio::test

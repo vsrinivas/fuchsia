@@ -78,7 +78,7 @@ TEST_F(EffectsLoaderTest, GetEffectInfoInvalidEffectId) {
   EXPECT_EQ(effects_loader()->GetEffectInfo(kInvalidEffectId, &dfx_desc), ZX_ERR_OUT_OF_RANGE);
 }
 
-TEST_F(EffectsLoaderTest, CreateEffect) {
+TEST_F(EffectsLoaderTest, CreateEffectByEffectId) {
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                 FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                                TEST_EFFECTS_ACTION_ASSIGN,
@@ -102,6 +102,47 @@ TEST_F(EffectsLoaderTest, CreateEffectInvalidEffectId) {
   Effect e = effects_loader()->CreateEffect(0, kFrameRate, kTwoChannels, kTwoChannels, {});
   EXPECT_FALSE(e);
   ASSERT_EQ(0u, test_effects()->num_instances());
+}
+
+TEST_F(EffectsLoaderTest, CreateEffectByName) {
+  ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                                FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                               TEST_EFFECTS_ACTION_ASSIGN,
+                                               1.0}));
+  // The fixture creates the loader by default. Since the loader caches the set of effects at
+  // create time, we need to recreate the loader to see the new effect name.
+  RecreateLoader();
+  {
+    ASSERT_EQ(0u, test_effects()->num_instances());
+    Effect e = effects_loader()->CreateEffectByName("assign_to_1.0", kFrameRate, kTwoChannels,
+                                                    kTwoChannels, {});
+    EXPECT_TRUE(e);
+    ASSERT_EQ(1u, test_effects()->num_instances());
+  }
+
+  // Let |e| go out of scope, verify the instance was removed.
+  ASSERT_EQ(0u, test_effects()->num_instances());
+
+  test_effects()->clear_effects();
+}
+
+TEST_F(EffectsLoaderTest, CreateEffectByNameInvalidName) {
+  ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                                FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                               TEST_EFFECTS_ACTION_ASSIGN,
+                                               1.0}));
+  // The fixture creates the loader by default. Since the loader caches the set of effects at
+  // create time, we need to recreate the loader to see the new effect name.
+  RecreateLoader();
+  {
+    ASSERT_EQ(0u, test_effects()->num_instances());
+    Effect e = effects_loader()->CreateEffectByName("invalid_name", kFrameRate, kTwoChannels,
+                                                    kTwoChannels, {});
+    EXPECT_FALSE(e);
+    ASSERT_EQ(0u, test_effects()->num_instances());
+  }
+
+  test_effects()->clear_effects();
 }
 
 TEST_F(EffectsLoaderTest, CreateEffectInvalidChannelConfiguration) {

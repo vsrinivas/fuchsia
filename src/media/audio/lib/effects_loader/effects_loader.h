@@ -9,6 +9,7 @@
 #include <zircon/types.h>
 
 #include <string_view>
+#include <vector>
 
 #include "src/media/audio/lib/effects_loader/effect.h"
 #include "src/media/audio/lib/effects_loader/effects_module.h"
@@ -38,13 +39,18 @@ class EffectsLoader {
   zx_status_t GetEffectInfo(uint32_t effect_id,
                             fuchsia_audio_effects_description* effect_desc) const;
 
+  Effect CreateEffectByName(std::string_view name, uint32_t frame_rate, uint16_t channels_in,
+                            uint16_t channels_out, std::string_view config) const;
+
   Effect CreateEffect(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in,
                       uint16_t channels_out, std::string_view config) const;
 
  private:
-  explicit EffectsLoader(EffectsModuleV1 module) : module_(std::move(module)) {}
+  EffectsLoader(EffectsModuleV1 module,
+                std::vector<fuchsia_audio_effects_description> effect_infos);
 
   EffectsModuleV1 module_;
+  std::vector<fuchsia_audio_effects_description> effect_infos_;
 };
 
 }  // namespace media::audio

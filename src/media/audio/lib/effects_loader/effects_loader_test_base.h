@@ -27,6 +27,8 @@ class EffectsLoaderTestBase : public testing::Test {
   test_effects_module_ext* test_effects() { return test_effects_.get(); }
   EffectsLoader* effects_loader() { return effects_loader_.get(); }
 
+  void RecreateLoader();
+
  private:
   std::unique_ptr<EffectsLoader> effects_loader_;
   std::shared_ptr<test_effects_module_ext> test_effects_;

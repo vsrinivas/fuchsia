@@ -7,6 +7,9 @@
 #include <dlfcn.h>
 #include <lib/trace/event.h>
 
+#include <algorithm>
+#include <optional>
+
 #include "src/lib/fxl/logging.h"
 
 namespace media::audio {
@@ -26,6 +29,17 @@ const fuchsia_audio_effects_module_v1 kNullEffectModuleV1 = {
     .flush = nullptr,
 };
 
+std::optional<uint32_t> FindEffectIdForEffectName(
+    std::string_view name, const std::vector<fuchsia_audio_effects_description>& effect_infos) {
+  auto it = std::find_if(effect_infos.cbegin(), effect_infos.cend(), [name] (const auto& info) {
+      return info.name == name;
+  });
+  if (it == effect_infos.cend()) {
+    return std::nullopt;
+  }
+  return {it - effect_infos.cbegin()};
+}
+
 }  // namespace
 
 zx_status_t EffectsLoader::CreateWithModule(const char* lib_name,
@@ -35,7 +49,13 @@ zx_status_t EffectsLoader::CreateWithModule(const char* lib_name,
   if (!module) {
     return ZX_ERR_UNAVAILABLE;
   }
-  *out = std::unique_ptr<EffectsLoader>(new EffectsLoader(std::move(module)));
+  std::vector<fuchsia_audio_effects_description> infos(module->num_effects);
+  for (uint32_t effect_id = 0; effect_id < module->num_effects; ++effect_id) {
+    if (!module->get_info(effect_id, &infos[effect_id])) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+  }
+  *out = std::unique_ptr<EffectsLoader>(new EffectsLoader(std::move(module), std::move(infos)));
   return ZX_OK;
 }
 
@@ -44,7 +64,13 @@ std::unique_ptr<EffectsLoader> EffectsLoader::CreateWithNullModule() {
   // want to make sure we don't free this pointer.
   auto module = std::shared_ptr<const fuchsia_audio_effects_module_v1>(&kNullEffectModuleV1,
                                                                        [](auto* ptr) {});
-  return std::unique_ptr<EffectsLoader>(new EffectsLoader(EffectsModuleV1(std::move(module))));
+  return std::unique_ptr<EffectsLoader>(new EffectsLoader(EffectsModuleV1(std::move(module)), {}));
+}
+
+EffectsLoader::EffectsLoader(EffectsModuleV1 module,
+                             std::vector<fuchsia_audio_effects_description> effect_infos)
+    : module_(std::move(module)), effect_infos_(std::move(effect_infos)) {
+  FXL_CHECK(module_->num_effects == effect_infos_.size());
 }
 
 uint32_t EffectsLoader::GetNumEffects() const {
@@ -67,6 +93,18 @@ zx_status_t EffectsLoader::GetEffectInfo(uint32_t effect_id,
     return ZX_ERR_NOT_SUPPORTED;
   }
   return ZX_OK;
+}
+
+Effect EffectsLoader::CreateEffectByName(std::string_view name, uint32_t frame_rate,
+                                         uint16_t channels_in, uint16_t channels_out,
+                                         std::string_view config) const {
+  TRACE_DURATION("audio", "EffectsLoader::CreateEffectByName");
+
+  auto effect_id = FindEffectIdForEffectName(name, effect_infos_);
+  if (!effect_id) {
+    return {};
+  }
+  return CreateEffect(*effect_id, frame_rate, channels_in, channels_out, config);
 }
 
 Effect EffectsLoader::CreateEffect(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in,
