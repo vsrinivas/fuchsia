@@ -75,6 +75,12 @@ class TargetImpl : public Target, public SettingStoreObserver {
   void OnLaunchOrAttachReply(Callback callback, const Err& err, uint64_t koid,
                              debug_ipc::zx_status_t status, const std::string& process_name);
 
+  // Different status returned by the agent can mean different things.
+  // ZX_ERR_IO = Process doesn't exist.
+  // ZX_ERR_ALREADY_BOUND = The agent is already bound.
+  void HandleAttachStatus(Callback callback, uint64_t koid, debug_ipc::zx_status_t status,
+                          const std::string& process_name);
+
   void OnKillOrDetachReply(TargetObserver::DestroyReason reason, const Err& err,
                            debug_ipc::zx_status_t status, Callback callback);
 

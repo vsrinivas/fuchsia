@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/shared/test_stream_buffer.h"
+#include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -48,12 +49,27 @@ class TargetSink : public RemoteAPI {
         FROM_HERE, [this, cb = std::move(cb)]() mutable { cb(attach_err_, attach_reply_); });
   }
 
+  void ProcessStatus(
+      const debug_ipc::ProcessStatusRequest& request,
+      fit::callback<void(const Err& err, debug_ipc::ProcessStatusReply)> cb) override {
+    process_status_requests_.push_back(request);
+    MessageLoop::Current()->PostTask(
+        FROM_HERE,
+        [this, cb = std::move(cb)]() mutable { cb(process_status_err_, process_status_reply_); }
+
+    );
+  }
+
   void Detach(const debug_ipc::DetachRequest& request,
               fit::callback<void(const Err&, debug_ipc::DetachReply)> cb) override {
     MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
       // For now, always report success.
       cb(Err(), debug_ipc::DetachReply());
     });
+  }
+
+  const std::vector<debug_ipc::ProcessStatusRequest>& process_status_requests() const {
+    return process_status_requests_;
   }
 
  private:
@@ -64,6 +80,11 @@ class TargetSink : public RemoteAPI {
   // These two variables are returned from Attach().
   Err attach_err_;
   debug_ipc::AttachReply attach_reply_;
+
+  // These variables are received/returned from ProcessStatus().
+  Err process_status_err_;
+  std::vector<debug_ipc::ProcessStatusRequest> process_status_requests_;
+  debug_ipc::ProcessStatusReply process_status_reply_;
 };
 
 class TargetImplTest : public testing::Test {
@@ -249,6 +270,34 @@ TEST_F(TargetImplTest, AttachDetach) {
 
   // Should be in a non-running state.
   EXPECT_EQ(Target::State::kNone, target->GetState());
+}
+
+TEST_F(TargetImplTest, AttachToAlreadyAttached) {
+  auto target_impls = session().system_impl().GetTargetImpls();
+
+  constexpr uint64_t kProcessKoid = 0x1;
+  const std::string kProcessName = "process-1";
+
+  // Add a reply that says the process is already bound.
+  debug_ipc::AttachReply reply = {};
+  reply.koid = kProcessKoid;
+  reply.name = kProcessName;
+  reply.status = debug_ipc::kZxErrAlreadyBound;
+  sink().set_attach_reply(reply);
+
+  TargetImpl* target = target_impls[0];
+
+  Err out_err("NOT CALLED");
+  target->Attach(kProcessKoid,
+                 [&out_err](fxl::WeakPtr<Target> target, const Err& err) { out_err = err; });
+
+  loop().RunUntilNoTasks();
+
+  ASSERT_FALSE(out_err.has_error()) << out_err.msg();
+
+  // Should have called the status report.
+  ASSERT_EQ(sink().process_status_requests().size(), 1u);
+  EXPECT_EQ(sink().process_status_requests()[0].process_koid, kProcessKoid);
 }
 
 }  // namespace zxdb

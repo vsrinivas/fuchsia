@@ -250,15 +250,8 @@ void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err, uint64
     state_ = State::kNone;
     issue_err = err;
   } else if (status != 0) {
-    // Error from launching.
     state_ = State::kNone;
-    if (status == debug_ipc::kZxErrIO) {
-      issue_err =
-          Err("Error launching: Binary not found [%s]", debug_ipc::ZxStatusToString(status));
-    } else {
-      issue_err = Err(
-          fxl::StringPrintf("Error launching, status = %s.", debug_ipc::ZxStatusToString(status)));
-    }
+    return HandleAttachStatus(std::move(callback), koid, status, process_name);
   } else {
     Process::StartType start_type =
         state_ == State::kAttaching ? Process::StartType::kAttach : Process::StartType::kLaunch;
@@ -274,6 +267,47 @@ void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err, uint64
     for (auto& observer : observers())
       observer.DidCreateProcess(this, process_.get(), false);
   }
+}
+
+void TargetImpl::HandleAttachStatus(Callback callback, uint64_t koid, debug_ipc::zx_status_t status,
+                                    const std::string& process_name) {
+  Err err;
+  if (status == debug_ipc::kZxErrIO) {
+    err = Err("Error launching: Binary not found [%s]", debug_ipc::ZxStatusToString(status));
+  } else if (status == debug_ipc::kZxErrAlreadyBound) {
+    // Already bound means that the user is trying to re-attach, so we need to ask for the "status"
+    // for that particular process.
+    //
+    // We avoid sending the initial attach request as in most cases the agent won't be connected to
+    // the process we want to attach to, so it's not really efficient to pre-track this case.
+    debug_ipc::ProcessStatusRequest request = {};
+    request.process_koid = koid;
+
+    DEBUG_LOG(Session) << "Re-attaching to process " << process_name << " (" << koid << ").";
+    session()->remote_api()->ProcessStatus(
+        request, [target = GetWeakPtr(), callback = std::move(callback), process_name](
+                     const Err& err, debug_ipc::ProcessStatusReply reply) mutable {
+          if (!target)
+            return;
+
+          if (err.has_error())
+            return callback(target, err);
+
+          if (reply.status != debug_ipc::kZxOk) {
+            Err error("Could not attach to process %s: %s", process_name.c_str(),
+                      debug_ipc::ZxStatusToString(reply.status));
+            return callback(target, err);
+          }
+
+          return callback(target, Err());
+        });
+    return;
+  } else {
+    err = Err(
+        fxl::StringPrintf("Error launching, status = %s.", debug_ipc::ZxStatusToString(status)));
+  }
+
+  callback(GetWeakPtr(), err);
 }
 
 void TargetImpl::OnKillOrDetachReply(TargetObserver::DestroyReason reason, const Err& err,
