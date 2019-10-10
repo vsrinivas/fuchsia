@@ -277,12 +277,12 @@ void AudioRendererImpl::UnlinkThrottle() {
 }
 
 void AudioRendererImpl::UnderflowOccurred(int64_t frac_source_start, int64_t frac_source_mix_point,
-                                          zx_duration_t underflow_duration) {
+                                          zx::duration underflow_duration) {
   TRACE_INSTANT("audio", "AudioRendererImpl::UnderflowOccurred", TRACE_SCOPE_PROCESS);
   uint16_t underflow_count = std::atomic_fetch_add<uint16_t>(&underflow_count_, 1u);
 
   if constexpr (kLogRenderUnderflow) {
-    auto underflow_msec = static_cast<double>(underflow_duration) / ZX_MSEC(1);
+    auto underflow_msec = static_cast<double>(underflow_duration.to_nsecs()) / ZX_MSEC(1);
 
     if ((kRenderUnderflowErrorInterval > 0) &&
         (underflow_count % kRenderUnderflowErrorInterval == 0)) {

@@ -78,7 +78,7 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
 
   // Hooks to add logging or metrics for [Partial]Underflow events.
   virtual void UnderflowOccurred(int64_t source_start, int64_t mix_point,
-                                 zx_duration_t underflow_duration) {}
+                                 zx::duration underflow_duration) {}
   virtual void PartialUnderflowOccurred(int64_t source_offset, int64_t mix_offset) {}
 
   Type type() const { return type_; }

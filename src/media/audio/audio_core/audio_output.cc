@@ -351,9 +351,9 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Bookkeeping
   // Returning true means we're done with the packet (it can be completed) and we would like another
   if (frac_source_for_final_packet_frame <
       (frac_source_for_first_mix_job_frame - mixer.neg_filter_width())) {
-    auto clock_mono_late = info->clock_mono_to_frac_source_frames.rate().Inverse().Scale(
+    auto clock_mono_late = zx::nsec(info->clock_mono_to_frac_source_frames.rate().Inverse().Scale(
         frac_source_for_first_mix_job_frame - mixer.neg_filter_width() -
-        frac_source_for_first_packet_frame);
+        frac_source_for_first_packet_frame));
 
     source->UnderflowOccurred(frac_source_for_first_packet_frame,
                               frac_source_for_first_mix_job_frame, clock_mono_late);

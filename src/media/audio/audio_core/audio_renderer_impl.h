@@ -143,7 +143,7 @@ class AudioRendererImpl : public AudioObject,
   // |media::audio::AudioObject|
   void OnLinkAdded() override;
   void UnderflowOccurred(int64_t source_start, int64_t mix_point,
-                         zx_duration_t underflow_duration) final;
+                         zx::duration underflow_duration) final;
   void PartialUnderflowOccurred(int64_t source_offset, int64_t mix_offset) final;
   const fbl::RefPtr<AudioRendererFormatInfo>& format_info() const final { return format_info_; }
   std::optional<std::pair<TimelineFunction, uint32_t>> SnapshotCurrentTimelineFunction(
