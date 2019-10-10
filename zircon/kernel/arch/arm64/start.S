@@ -239,6 +239,10 @@ FUNCTION(_start)
     // path, which (unlike on x86, e.g.) is enough to get annoying.
     adr_global tmp, boot_cpu_fake_thread_pointer_location
     msr     tpidr_el1, tmp
+#if __has_feature(shadow_call_stack)
+    // The shadow call stack grows up.
+    adr_global shadow_call_sp, boot_cpu_shadow_call_kstack
+#endif
 
     // set the per cpu pointer for cpu 0
     adr_global percpu_ptr, arm64_percpu_array
@@ -258,6 +262,9 @@ FUNCTION(_start)
     cbz     x0, .Lunsupported_cpu_trap
     mov     sp, x0
     msr     tpidr_el1, x1
+#if __has_feature(shadow_call_stack)
+    mov     shadow_call_sp, x2
+#endif
 
     bl      arm64_secondary_entry
 
@@ -310,6 +317,13 @@ LOCAL_DATA(boot_cpu_unsafe_kstack)
     .balign 16
 LOCAL_DATA(boot_cpu_unsafe_kstack_end)
 END_DATA(boot_cpu_unsafe_kstack)
+#endif
+
+#if __has_feature(shadow_call_stack)
+    .balign 8
+LOCAL_DATA(boot_cpu_shadow_call_kstack)
+    .skip PAGE_SIZE
+END_DATA(boot_cpu_shadow_call_kstack)
 #endif
 
 .section .bss.prebss.translation_table, "aw", @nobits

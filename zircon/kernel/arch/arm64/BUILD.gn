@@ -48,10 +48,22 @@ if (current_toolchain == default_toolchain) {
     cflags = [ "-ffixed-x15" ]
 
     if (!is_gcc) {
-      # Clang needs -mcmodel=kernel to tell it to use the right safe-stack
-      # ABI for the kernel.
-      cflags += [ "-mcmodel=kernel" ]
+      cflags += [
+        # Clang needs -mcmodel=kernel to tell it to use the right
+        # thread-pointer ABI for the kernel.
+        "-mcmodel=kernel",
+
+        # Use shadow-call-stack rather than safe-stack for the kernel,
+        # regardless of the compiler's default.
+        "-fno-sanitize=safe-stack",
+        "-fsanitize=shadow-call-stack",
+      ]
     }
+
+    # Assembly code needs to use `#if __has_feature(...)` so make sure
+    # it always sees all the same `-fsanitize=...` flags and the like.
+    asmflags = cflags
+    ldflags = cflags
 
     defines = [
       "ARCH_ARM64",

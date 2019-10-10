@@ -253,6 +253,9 @@ static void free_thread_resources(thread_t* t) {
 #if __has_feature(safe_stack)
     DEBUG_ASSERT(t->stack.unsafe_vmar != nullptr);
 #endif
+#if __has_feature(shadow_call_stack)
+    DEBUG_ASSERT(t->stack.shadow_call_vmar != nullptr);
+#endif
     zx_status_t status = vm_free_kstack(&t->stack);
     DEBUG_ASSERT(status == ZX_OK);
   }
@@ -1296,6 +1299,10 @@ void dump_thread_locked(thread_t* t, bool full_dump) {
 #if __has_feature(safe_stack)
     dprintf(INFO, "\tstack.unsafe_base 0x%lx, stack.unsafe_vmar %p\n", t->stack.unsafe_base,
             t->stack.unsafe_vmar);
+#endif
+#if __has_feature(shadow_call_stack)
+    dprintf(INFO, "\tstack.shadow_call_base 0x%lx, stack.shadow_call_vmar %p\n",
+            t->stack.shadow_call_base, t->stack.shadow_call_vmar);
 #endif
     dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s\n", t->entry, t->arg, t->flags,
             (t->flags & THREAD_FLAG_DETACHED) ? "Dt" : "",

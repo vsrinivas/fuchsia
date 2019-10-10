@@ -12,6 +12,10 @@
 #include <arch/asm_macros.h>
 #include <zircon/zx-syscall-numbers.h>
 
+#ifndef __has_feature
+#define __has_feature(x) 0
+#endif
+
 .section .text.boot.vectab,"ax",@progbits
 .align 12
 
@@ -233,9 +237,45 @@ mark_lr_sp_inaccessible
     setup_long_helper_cfi
 .endm
 
+// All normal C code in the kernel expects the invariants that the fixed
+// registers assigned to the percpu_ptr and the shadow-call-stack pointer have
+// the correct values for the current CPU and kernel thread.  When an exception
+// happens in the kernel, these are already in place and don't need to be
+// reloaded.  (In fact, it would be disastrous to reload the shadow-call-stack
+// pointer because the correct value to reflect the interrupted thread's kernel
+// call stack exists only in the register!)  But when an exception happens in a
+// lower EL (i.e. user mode), these registers must be reloaded from the struct
+// arch_thread accessible via TPIDR_EL1 before reaching any C functions.
+.macro restore_fixed_regs temp
+    mrs \temp, tpidr_el1
+#if __has_feature(shadow_call_stack)
+# if CURRENT_SCSP_OFFSET != CURRENT_PERCPU_PTR_OFFSET + 8
+#  error "shadow_call_sp must follow current_percpu_ptr in struct arch_thread"
+# endif
+    ldp percpu_ptr, shadow_call_sp, [\temp, #CURRENT_PERCPU_PTR_OFFSET]
+#else
+    ldr percpu_ptr, [\temp, #CURRENT_PERCPU_PTR_OFFSET]
+#endif
+.endm
+
+// The shadow-call-stack pointer (x18) is saved/restored in struct arch_thread
+// on context switch.  On entry from a lower EL (i.e. user mode), it gets
+// reloaded from there via the restore_fixed_regs macro above.  So when
+// returning to user mode, we must make sure to write back the current value
+// (which should always be the base, since returning to user should be the
+// base of the call stack) so that the next kernel entry reloads that instead
+// of whatever was current last time this thread context-switched out.
+.macro save_shadow_call_sp temp
+#if __has_feature(shadow_call_stack)
+    mrs \temp, tpidr_el1
+    str shadow_call_sp, [\temp, #CURRENT_SCSP_OFFSET]
+#endif
+.endm
+
 .macro invalid_exception, which
     start_isr_func
     regsave_long
+    restore_fixed_regs x9
     mov x1, #\which
     mov x0, sp
     bl  arm64_invalid_exception
@@ -247,11 +287,18 @@ mark_lr_sp_inaccessible
     regsave_short
     msr daifclr, #1 /* reenable fiqs once elr and spsr have been saved */
     mov x0, sp
-    mov x1, \exception_flags
+    mov x1, #\exception_flags
+.if (\exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL)
+    restore_fixed_regs x9
+.endif
     bl  arm64_irq
     cbnz x0, arm64_finish_user_irq_wrapper /* anything extra to do? */
     msr daifset, #1 /* disable fiqs to protect elr and spsr restore */
+.if (\exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL)
+    b   arm64_exc_shared_restore_short_lower_el
+.else
     b   arm64_exc_shared_restore_short
+.endif
 .endm
 
 .macro sync_exception, exception_flags, from_lower_el_64=0
@@ -266,11 +313,15 @@ mark_lr_sp_inaccessible
     beq arm64_syscall_dispatcher  // and jump to syscall handler
 .endif
     // Prepare the default sync_exception args
-    mov x0, sp
-    mov x1, \exception_flags
     mov w2, w9
-    bl  arm64_sync_exception
+    mov x1, #\exception_flags
+.if (\exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL)
+    b arm64_sync_exception_lower_el
+.else
+    mov x0, sp
+    bl arm64_sync_exception
     b  arm64_exc_shared_restore_long
+.endif
 .endm
 
 FUNCTION_LABEL(arm64_el1_exception_base)
@@ -299,12 +350,12 @@ END_FUNCTION(arm64_el1_err_exc_current_el_SP0)
 /* exceptions from current EL, using SPx */
 .org 0x200
 LOCAL_FUNCTION_LABEL(arm64_el1_sync_exc_current_el_SPx)
-    sync_exception #0 /* same EL, arm64 */
+    sync_exception 0 /* same EL, arm64 */
 END_FUNCTION(arm64_el1_sync_exc_current_el_SPx)
 
 .org 0x280
 LOCAL_FUNCTION_LABEL(arm64_el1_irq_current_el_SPx)
-    irq_exception #0 /* same EL, arm64 */
+    irq_exception 0 /* same EL, arm64 */
 END_FUNCTION(arm64_el1_irq_current_el_SPx)
 
 .org 0x300
@@ -324,21 +375,22 @@ END_FUNCTION(arm64_el1_err_exc_current_el_SPx)
 /* exceptions from lower EL, running arm64 */
 .org 0x400
 LOCAL_FUNCTION_LABEL(arm64_el1_sync_exc_lower_el_64)
-    sync_exception #(ARM64_EXCEPTION_FLAG_LOWER_EL), 1
+    sync_exception (ARM64_EXCEPTION_FLAG_LOWER_EL), 1
 END_FUNCTION(arm64_el1_sync_exc_lower_el_64)
 
 .org 0x480
 LOCAL_FUNCTION_LABEL(arm64_el1_irq_lower_el_64)
-    irq_exception #(ARM64_EXCEPTION_FLAG_LOWER_EL)
+    irq_exception (ARM64_EXCEPTION_FLAG_LOWER_EL)
 END_FUNCTION(arm64_el1_irq_lower_el_64)
 
 .org 0x500
 LOCAL_FUNCTION_LABEL(arm64_el1_fiq_lower_el_64)
     start_isr_func
     regsave_short
+    restore_fixed_regs x9
     mov x0, sp
     bl  platform_fiq
-    b  arm64_exc_shared_restore_short
+    b  arm64_exc_shared_restore_short_lower_el
 END_FUNCTION(arm64_el1_fiq_lower_el_64)
 
 .org 0x580
@@ -349,21 +401,17 @@ END_FUNCTION(arm64_el1_err_exc_lower_el_64)
 /* exceptions from lower EL, running arm32 */
 .org 0x600
 LOCAL_FUNCTION_LABEL(arm64_el1_sync_exc_lower_el_32)
-    sync_exception #(ARM64_EXCEPTION_FLAG_LOWER_EL|ARM64_EXCEPTION_FLAG_ARM32)
+    sync_exception (ARM64_EXCEPTION_FLAG_LOWER_EL|ARM64_EXCEPTION_FLAG_ARM32)
 END_FUNCTION(arm64_el1_sync_exc_lower_el_32)
 
 .org 0x680
 LOCAL_FUNCTION_LABEL(arm64_el1_irq_lower_el_32)
-    irq_exception #(ARM64_EXCEPTION_FLAG_LOWER_EL|ARM64_EXCEPTION_FLAG_ARM32)
+    irq_exception (ARM64_EXCEPTION_FLAG_LOWER_EL|ARM64_EXCEPTION_FLAG_ARM32)
 END_FUNCTION(arm64_el1_irq_lower_el_32)
 
 .org 0x700
-LOCAL_FUNCTION_LABEL(arm64_el1_fiq_lower_el_32)
-    start_isr_func
-    regsave_short
-    mov x0, sp
-    bl  platform_fiq
-    b  arm64_exc_shared_restore_short
+LOCAL_FUNCTION(arm64_el1_fiq_lower_el_32)
+    b arm64_el1_fiq_lower_el_64
 END_FUNCTION(arm64_el1_fiq_lower_el_32)
 
 .org 0x780
@@ -386,27 +434,51 @@ LOCAL_FUNCTION_LABEL(arm64_finish_user_irq_wrapper)
     mov x1, #0 /* don't need an iframe, just pass NULL */
     bl  arm64_finish_user_irq
     msr daifset, #1 /* disable fiqs to protect elr and spsr restore */
-    b   arm64_exc_shared_restore_short
+    b   arm64_exc_shared_restore_short_lower_el
 1:
     /* convert the short to a long frame */
     regsave_short_to_long
     mov x1, sp
     bl  arm64_finish_user_irq
     msr daifset, #1 /* disable fiqs to protect elr and spsr restore */
-    b   arm64_exc_shared_restore_long
+    b   arm64_exc_shared_restore_long_lower_el
 END_FUNCTION(arm64_finish_user_irq_wrapper)
 
-LOCAL_FUNCTION_LABEL(arm64_exc_shared_restore_long)
+LOCAL_FUNCTION_LABEL(arm64_sync_exception_lower_el)
+    start_isr_func
+    mov x0, sp
+    restore_fixed_regs x9
+    bl  arm64_sync_exception
+    b arm64_exc_shared_restore_long_lower_el
+END_FUNCTION(arm64_sync_exception_lower_el)
+
+// CFI is independent of any other concept of function boundary.
+// Everything in start_long_helper applies the same whether entering at
+// the first or the second entry point.  The first entry point is used
+// when returning to user mode, the second when returning to kernel.
+LOCAL_FUNCTION_LABEL(arm64_exc_shared_restore_long_lower_el)
     start_long_helper
+    save_shadow_call_sp x9
+    // Fall through to join the same-EL case.
+LOCAL_FUNCTION_LABEL(arm64_exc_shared_restore_long)
     regrestore_long
     eret
 END_FUNCTION(arm64_exc_shared_restore_long)
+END_DATA(arm64_exc_shared_restore_long_lower_el)
 
-LOCAL_FUNCTION_LABEL(arm64_exc_shared_restore_short)
+// CFI is independent of any other concept of function boundary.
+// Everything in start_short_helper applies the same whether entering at
+// the first or the second entry point.  The first entry point is used
+// when returning to user mode, the second when returning to kernel.
+LOCAL_FUNCTION_LABEL(arm64_exc_shared_restore_short_lower_el)
     start_short_helper
+    save_shadow_call_sp x9
+    // Fall through to join the same-EL case.
+LOCAL_FUNCTION_LABEL(arm64_exc_shared_restore_short)
     regrestore_short
     eret
 END_FUNCTION(arm64_exc_shared_restore_short)
+END_DATA(arm64_exc_shared_restore_short_lower_el)
 
 //
 // Syscall args are in x0-x7 already.
@@ -444,9 +516,7 @@ END_FUNCTION(arm64_exc_shared_restore_short)
 //
 LOCAL_FUNCTION_LABEL(arm64_syscall_dispatcher)
     start_isr_func
-    // Restore per cpu pointer
-    mrs  x11, tpidr_el1
-    ldr  percpu_ptr, [x11, #CURRENT_PERCPU_PTR_OFFSET]
+    restore_fixed_regs x11
     // Verify syscall number and call the unknown handler if bad.
     cmp  x16, #ZX_SYS_COUNT
     bhs  .Lunknown_syscall
@@ -465,10 +535,10 @@ LOCAL_FUNCTION_LABEL(arm64_syscall_dispatcher)
     // Move the status to frame->r[0] for return to userspace.
     str  x0, [sp]
     // Check for pending signals. If none, just return.
-    cbz  x1, arm64_exc_shared_restore_long
+    cbz  x1, arm64_exc_shared_restore_long_lower_el
     mov  x0, sp
     bl   arch_iframe_process_pending_signals
-    b    arm64_exc_shared_restore_long
+    b    arm64_exc_shared_restore_long_lower_el
 END_FUNCTION(arm64_syscall_dispatcher)
 
 // Adds a label for making the syscall and adds it to the jump table.

@@ -87,7 +87,11 @@ struct arm64_context_switch_frame {
 
 struct thread_t;
 
-void arm64_context_switch(vaddr_t* old_sp, vaddr_t new_sp);
+#if __has_feature(shadow_call_stack)
+void arm64_context_switch(addr_t* old_sp, addr_t new_sp, uintptr_t** old_scsp, uintptr_t* new_scsp);
+#else
+void arm64_context_switch(addr_t* old_sp, addr_t new_sp);
+#endif
 void arm64_uspace_entry(iframe_t* iframe, vaddr_t kstack) __NO_RETURN;
 arm64_context_switch_frame* arm64_get_context_switch_frame(thread_t* thread);
 

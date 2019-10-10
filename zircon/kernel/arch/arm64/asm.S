@@ -5,8 +5,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <asm.h>
+#include <arch/arm64/asm.h>
 #include <arch/asm_macros.h>
+
+#ifndef __has_feature
+#define __has_feature(x) 0
+#endif
 
 #define CURRENTEL_EL1           (0b01 << 2)
 #define CURRENTEL_EL2           (0b10 << 2)
@@ -31,7 +35,11 @@
 #define ICH_HCR_EL2             S3_4_C12_C11_0
 #define ICC_SRE_EL2             S3_4_C12_C9_5
 
-/* void arm64_context_switch(vaddr_t *old_sp, vaddr_t new_sp); */
+#if __has_feature(shadow_call_stack)
+// void arm64_context_switch(addr_t* old_sp, addr_t new_sp, uintptr_t** old_scsp, uintptr_t* new_scsp);
+#else
+// void arm64_context_switch(addr_t* old_sp, addr_t new_sp);
+#endif
 FUNCTION(arm64_context_switch)
     /* The exclusive monitor is logically part of a thread's context.  Clear it to ensure the new
        thread does not complete the store half of a load-exclusive/store-exclusive started by the
@@ -58,6 +66,11 @@ FUNCTION(arm64_context_switch)
 
     /* load new sp */
     mov  sp, x1
+
+#if __has_feature(shadow_call_stack)
+    str shadow_call_sp, [x2]
+    mov shadow_call_sp, x3
+#endif
 
     /* restore new frame */
     pop_regs x19, x20
@@ -161,15 +174,17 @@ FUNCTION(arm64_get_secondary_sp)
     ldr     x12, [x11, #0]
     cmp     x12, x9
     beq     .Lsp_found
-    add     x11, x11, #32
+    add     x11, x11, #40
     subs    x10, x10, #1
     bne     .Lsp_loop
     mov     x0, xzr
     mov     x1, xzr
+    mov     x2, xzr
     ret
 
 .Lsp_found:
     ldr     x0, [x11, #8]
-    add     x1, x11, #32
+    ldr     x2, [x11, #16]
+    add     x1, x11, #40
     ret
 END_FUNCTION(arm64_get_secondary_sp)

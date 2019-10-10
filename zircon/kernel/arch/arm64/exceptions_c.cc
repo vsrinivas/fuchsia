@@ -274,10 +274,6 @@ static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flag
   }
 }
 
-static inline void arm64_restore_percpu_pointer() {
-  arm64_write_percpu_ptr(get_current_thread()->arch.current_percpu_ptr);
-}
-
 static inline void fix_exception_percpu_pointer(uint32_t exception_flags, uint64_t* regs) {
   // If we're returning to kernel space, make sure we restore the correct
   // per-CPU pointer to the fixed register.
@@ -289,11 +285,6 @@ static inline void fix_exception_percpu_pointer(uint32_t exception_flags, uint64
 /* called from assembly */
 extern "C" void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr) {
   uint32_t ec = BITS_SHIFT(esr, 31, 26);
-
-  if (exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) {
-    // if we came from a lower level, restore the per cpu pointer
-    arm64_restore_percpu_pointer();
-  }
 
   switch (ec) {
     case 0b000000: /* unknown reason */
@@ -364,11 +355,6 @@ extern "C" void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flag
 
 /* called from assembly */
 extern "C" uint32_t arm64_irq(iframe_short_t* iframe, uint exception_flags) {
-  if (exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) {
-    // if we came from a lower level, restore the per cpu pointer
-    arm64_restore_percpu_pointer();
-  }
-
   LTRACEF("iframe %p, flags 0x%x\n", iframe, exception_flags);
 
   int_handler_saved_state_t state;
@@ -403,9 +389,6 @@ extern "C" uint32_t arm64_irq(iframe_short_t* iframe, uint exception_flags) {
 
 /* called from assembly */
 extern "C" void arm64_finish_user_irq(uint32_t exit_flags, arm64_iframe_t* iframe) {
-  // we came from a lower level, so restore the per cpu pointer
-  arm64_restore_percpu_pointer();
-
   /* in the case of receiving a kill signal, this function may not return,
    * but the scheduler would have been invoked so it's fine.
    */
@@ -422,9 +405,6 @@ extern "C" void arm64_finish_user_irq(uint32_t exit_flags, arm64_iframe_t* ifram
 
 /* called from assembly */
 extern "C" void arm64_invalid_exception(arm64_iframe_t* iframe, unsigned int which) {
-  // Restore the percpu pointer unconditionally.
-  arm64_restore_percpu_pointer();
-
   printf("invalid exception, which 0x%x\n", which);
   dump_iframe(iframe);
 

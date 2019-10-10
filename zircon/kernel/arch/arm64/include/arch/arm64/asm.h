@@ -11,4 +11,8 @@
 // this register.
 percpu_ptr .req x15
 
+// This register is permanently reserved by the ABI in the compiler.
+// #if __has_feature(shadow_call_stack) it's used for the SCSP.
+shadow_call_sp .req x18
+
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_ASM_H_

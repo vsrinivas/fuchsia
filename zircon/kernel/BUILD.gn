@@ -23,7 +23,7 @@ if (current_toolchain == default_toolchain) {
       common_configs = configs + standard_fuchsia_configs
       configs = []
       configs = [
-        ":kernel_config",
+        ":headers",
 
         # <stdio.h> has #include <lib/io.h>.
         "$zx/kernel/lib/io:headers.config",
@@ -58,7 +58,10 @@ if (current_toolchain == default_toolchain) {
         # <dev/iommu.h> has #include <fbl/name.h>
         "lib/fbl:headers.config",
       ]
-      configs += common_configs
+
+      # The rest of kernel-specific config goes after the defaults
+      # so it can override explicit code-generation switches.
+      configs += common_configs + [ ":kernel_config" ]
 
       tags = [ "standalone" ]
 
@@ -83,7 +86,6 @@ if (current_toolchain == default_toolchain) {
   # This is the top config for all kernel code.
   config("kernel_config") {
     configs = [
-      ":headers",
       ":lock_dep",
       ":scheduler",
       ":standalone",

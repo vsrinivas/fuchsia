@@ -19,15 +19,23 @@ typedef struct kstack {
   size_t size;
   vaddr_t top;
 
-  // When non-null, |vmar| (and, if safe-stack is enabled, |unsafe_vmar|) points to a ref-counted
-  // VmAddressRegion that must be freed via |vm_free_kstack|.
+  // When non-null, |vmar| (and, if safe-stack is enabled, |unsafe_vmar|; and,
+  // if shadow-call-stack is enabled, |shadow_call_vmar|) points to a
+  // ref-counted VmAddressRegion that must be freed via |vm_free_kstack|.
   //
   // Note, the type is void* rather than |fbl::RefPtr| because this struct is used by C code.
   void* vmar;
+
 #if __has_feature(safe_stack)
   vaddr_t unsafe_base;
   // See comment for |vmar|.
   void* unsafe_vmar;
+#endif
+
+#if __has_feature(shadow_call_stack)
+  vaddr_t shadow_call_base;
+  // See comment for |vmar|.
+  void* shadow_call_vmar;
 #endif
 } kstack_t;
 

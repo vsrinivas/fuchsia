@@ -581,7 +581,7 @@ int platform_pgetc(char* c, bool wait) {
 }
 
 /* stub out the hardware rng entropy generator, which doesn't exist on this platform */
-size_t hw_rng_get_entropy(void* buf, size_t len, bool block) { return 0; }
+__NO_SAFESTACK size_t hw_rng_get_entropy(void* buf, size_t len, bool block) { return 0; }
 
 /* no built in framebuffer */
 zx_status_t display_get_info(struct display_info* info) { return ZX_ERR_NOT_FOUND; }

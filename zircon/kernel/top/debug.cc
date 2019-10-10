@@ -56,7 +56,7 @@ void _panic_no_format(const char* msg, size_t len) {
 
 void __stack_chk_fail(void) { panic_no_format("stack canary corrupted!\n"); }
 
-uintptr_t choose_stack_guard(void) {
+__NO_SAFESTACK uintptr_t choose_stack_guard(void) {
   uintptr_t guard;
   if (hw_rng_get_entropy(&guard, sizeof(guard), true) != sizeof(guard)) {
     // We can't get a random value, so use a randomish value.

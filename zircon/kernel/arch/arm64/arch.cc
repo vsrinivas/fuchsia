@@ -60,7 +60,8 @@ static constexpr uint64_t SCTLR_EL1_AC = 1 << 1;    // Enable Alignment Checking
 
 struct arm64_sp_info_t {
   uint64_t mpid;
-  void* sp;
+  void* sp;                   // Stack pointer points to arbitrary data.
+  uintptr_t* shadow_call_sp;  // SCS pointer points to array of addresses.
 
   // This part of the struct itself will serve temporarily as the
   // fake arch_thread in the thread pointer, so that safe-stack
@@ -70,7 +71,7 @@ struct arm64_sp_info_t {
   void* unsafe_sp;
 };
 
-static_assert(sizeof(arm64_sp_info_t) == 32, "check arm64_get_secondary_sp assembly");
+static_assert(sizeof(arm64_sp_info_t) == 40, "check arm64_get_secondary_sp assembly");
 static_assert(offsetof(arm64_sp_info_t, sp) == 8, "check arm64_get_secondary_sp assembly");
 static_assert(offsetof(arm64_sp_info_t, mpid) == 0, "check arm64_get_secondary_sp assembly");
 
@@ -107,9 +108,15 @@ zx_status_t arm64_create_secondary_stack(uint cpu_num, uint64_t mpid) {
   // Get the stack pointers.
   void* sp = reinterpret_cast<void*>(stack->top);
   void* unsafe_sp = nullptr;
+  uintptr_t* shadow_call_sp = nullptr;
 #if __has_feature(safe_stack)
   DEBUG_ASSERT(stack->unsafe_base != 0);
   unsafe_sp = reinterpret_cast<void*>(stack->unsafe_base + stack->size);
+#endif
+#if __has_feature(shadow_call_stack)
+  DEBUG_ASSERT(stack->shadow_call_base != 0);
+  // The shadow call stack grows up.
+  shadow_call_sp = reinterpret_cast<uintptr_t*>(stack->shadow_call_base);
 #endif
 
   // Find an empty slot for the low-level stack info.
@@ -126,10 +133,14 @@ zx_status_t arm64_create_secondary_stack(uint cpu_num, uint64_t mpid) {
 #if __has_feature(safe_stack)
   LTRACEF("set mpid 0x%lx unsafe-sp to %p\n", mpid, unsafe_sp);
 #endif
+#if __has_feature(shadow_call_stack)
+  LTRACEF("set mpid 0x%lx shadow-call-sp to %p\n", mpid, shadow_call_sp);
+#endif
   arm64_secondary_sp_list[i].mpid = mpid;
   arm64_secondary_sp_list[i].sp = sp;
   arm64_secondary_sp_list[i].stack_guard = get_current_thread()->arch.stack_guard;
   arm64_secondary_sp_list[i].unsafe_sp = unsafe_sp;
+  arm64_secondary_sp_list[i].shadow_call_sp = shadow_call_sp;
 
   return ZX_OK;
 }

@@ -9,6 +9,7 @@
 #define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARCH_THREAD_H_
 
 #define CURRENT_PERCPU_PTR_OFFSET 16
+#define CURRENT_SCSP_OFFSET 24
 
 #ifndef __ASSEMBLER__
 
@@ -63,6 +64,10 @@ struct arch_thread {
   // restore the fixed register on exception entry. Swapped on context switch.
   struct arm64_percpu* current_percpu_ptr;
 
+#if __has_feature(shadow_call_stack)
+  uintptr_t* shadow_call_sp;
+#endif
+
   // If non-NULL, address to return to on data fault. Additionally the
   // ARM64_DFR_RUN_FAULT_HANDLER_BIT controls whether the fault handler is invoked or not. If not
   // invoked resume is called with iframe_t::r[1] = fault address and iframe_t::r[2] = page fault
@@ -94,6 +99,10 @@ static_assert(thread_pointer_offsetof(unsafe_sp) == ZX_TLS_UNSAFE_SP_OFFSET,
               "unsafe_sp field in wrong place");
 static_assert(thread_pointer_offsetof(current_percpu_ptr) == CURRENT_PERCPU_PTR_OFFSET,
               "per cpu ptr offset in wrong place");
+#if __has_feature(shadow_call_stack)
+static_assert(thread_pointer_offsetof(shadow_call_sp) == CURRENT_SCSP_OFFSET,
+              "shadow call stack pointer offset in wrong place");
+#endif
 
 __END_CDECLS
 

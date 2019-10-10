@@ -21,8 +21,6 @@
 // stack alignment requirements per ABI
 static_assert(sizeof(arm64_context_switch_frame) % 16 == 0, "");
 
-extern void arm64_context_switch(addr_t* old_sp, addr_t new_sp);
-
 void arch_thread_initialize(thread_t* t, vaddr_t entry_point) {
   // zero out the entire arch state
   t->arch = {};
@@ -49,6 +47,10 @@ void arch_thread_initialize(thread_t* t, vaddr_t entry_point) {
   t->arch.sp = (vaddr_t)frame;
 #if __has_feature(safe_stack)
   t->arch.unsafe_sp = ROUNDDOWN(t->stack.unsafe_base + t->stack.size, 16);
+#endif
+#if __has_feature(shadow_call_stack)
+  // The shadow call stack grows up.
+  t->arch.shadow_call_sp = reinterpret_cast<uintptr_t*>(t->stack.shadow_call_base);
 #endif
 
   // Initialize the debug state to a valid initial state.
@@ -90,7 +92,12 @@ __NO_SAFESTACK void arch_context_switch(thread_t* oldthread, thread_t* newthread
 
   arm64_fpu_context_switch(oldthread, newthread);
   arm64_debug_state_context_switch(oldthread, newthread);
+#if __has_feature(shadow_call_stack)
+  arm64_context_switch(&oldthread->arch.sp, newthread->arch.sp, &oldthread->arch.shadow_call_sp,
+                       newthread->arch.shadow_call_sp);
+#else
   arm64_context_switch(&oldthread->arch.sp, newthread->arch.sp);
+#endif
 }
 
 void arch_dump_thread(thread_t* t) {
