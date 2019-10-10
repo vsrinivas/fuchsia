@@ -12,6 +12,11 @@ autogen_warning = """
 include_guard = "SRC_CONNECTIVITY_WLAN_LIB_MLME_RUST_C_BINDING_BINDINGS_H_"
 language = "C"
 
+sys_includes = [
+    # Banjo types.
+    "ddk/protocol/wlan/info.h",  # wlan_channel_t
+]
+
 [parse]
 parse_deps = true
 include = ["wlan_mlme", "wlan_common"]
@@ -20,6 +25,9 @@ include = ["wlan_mlme", "wlan_common"]
 # Explicitly declare types to export as cbindgen seems to have trouble
 # detecting their usage.
 include = ["BufferProvider", "Device", "InBuf", "OutBuf", "Client", "Scheduler", "EventId"]
+
+# Banjo types.
+exclude = ["WlanChannel"]
 
 [export.rename]
 # Unfortunately cbindgen's rename machinery is rather simple
@@ -33,6 +41,9 @@ include = ["BufferProvider", "Device", "InBuf", "OutBuf", "Client", "Scheduler",
 "Client" = "wlan_client_sta_t"
 "Scheduler" = "wlan_scheduler_ops_t"
 "EventId" = "wlan_scheduler_event_id_t"
+
+# Banjo types.
+"WlanChannel" = "wlan_channel_t"
 
 [fn]
 prefix = 'extern "C"'

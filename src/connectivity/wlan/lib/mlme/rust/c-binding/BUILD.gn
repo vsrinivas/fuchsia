@@ -21,7 +21,7 @@ rustc_staticlib("wlan-mlme-c") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:num-traits",
   ]
-  non_rust_deps = []
+  non_rust_deps = [ "//zircon/system/banjo/ddk.hw.wlan.wlaninfo" ]
 
   public = [
     "bindings.h",

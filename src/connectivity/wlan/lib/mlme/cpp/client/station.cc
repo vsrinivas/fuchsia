@@ -62,6 +62,12 @@ Station::Station(DeviceInterface* device, TimerManager<TimeoutTarget>&& timer_mg
       .get_sme_channel = [](void* sta) -> zx_handle_t {
         return STA(sta)->device_->GetSmeChannelRef();
       },
+      .set_wlan_channel = [](void* sta, wlan_channel_t chan) -> zx_status_t {
+        return STA(sta)->device_->SetChannel(chan);
+      },
+      .get_wlan_channel = [](void* sta) -> wlan_channel_t {
+        return STA(sta)->device_->GetState()->channel();
+      },
   };
   wlan_scheduler_ops_t scheduler = {
       .cookie = static_cast<void*>(this),

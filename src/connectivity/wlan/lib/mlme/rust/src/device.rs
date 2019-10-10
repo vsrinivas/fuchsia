@@ -7,6 +7,7 @@ use {
     failure::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::ffi::c_void,
+    wlan_ddk_compat::ddk_protocol_wlan_info,
 };
 
 pub struct TxFlags(u32);
@@ -29,6 +30,12 @@ pub struct Device {
     /// Returns an unowned channel handle to MLME's SME peer, or ZX_HANDLE_INVALID
     /// if no SME channel is available.
     get_sme_channel: unsafe extern "C" fn(device: *mut c_void) -> u32,
+    /// Returns the currently set WLAN channel.
+    get_wlan_channel: extern "C" fn(device: *mut c_void) -> ddk_protocol_wlan_info::WlanChannel,
+    /// Request the PHY to change its channel. If successful, get_wlan_channel will return the
+    /// chosen channel.
+    set_wlan_channel:
+        extern "C" fn(device: *mut c_void, channel: ddk_protocol_wlan_info::WlanChannel) -> i32,
 }
 
 impl Device {
@@ -60,6 +67,15 @@ impl Device {
                 .map_err(|e| format_err!("error sending MLME message: {}", e).into())
         }
     }
+
+    pub fn set_channel(&self, chan: ddk_protocol_wlan_info::WlanChannel) -> Result<(), zx::Status> {
+        let status = (self.set_wlan_channel)(self.device, chan);
+        zx::ok(status)
+    }
+
+    pub fn channel(&self) -> ddk_protocol_wlan_info::WlanChannel {
+        (self.get_wlan_channel)(self.device)
+    }
 }
 
 #[cfg(test)]
@@ -67,13 +83,23 @@ pub struct FakeDevice {
     pub eth_queue: Vec<Vec<u8>>,
     pub wlan_queue: Vec<(Vec<u8>, u32)>,
     pub sme_sap: (zx::Channel, zx::Channel),
+    pub wlan_channel: ddk_protocol_wlan_info::WlanChannel,
 }
 
 #[cfg(test)]
 impl FakeDevice {
     pub fn new() -> Self {
         let sme_sap = zx::Channel::create().expect("error creating channel");
-        Self { eth_queue: vec![], wlan_queue: vec![], sme_sap }
+        Self {
+            eth_queue: vec![],
+            wlan_queue: vec![],
+            sme_sap,
+            wlan_channel: ddk_protocol_wlan_info::WlanChannel {
+                primary: 0,
+                cbw: ddk_protocol_wlan_info::WlanChannelBandwidth::_20,
+                secondary80: 0,
+            },
+        }
     }
 
     pub extern "C" fn deliver_eth_frame(device: *mut c_void, data: *const u8, len: usize) -> i32 {
@@ -108,6 +134,20 @@ impl FakeDevice {
         unsafe { (*(device as *mut Self)).sme_sap.0.as_handle_ref().raw_handle() }
     }
 
+    pub extern "C" fn get_wlan_channel(device: *mut c_void) -> ddk_protocol_wlan_info::WlanChannel {
+        unsafe { (*(device as *const Self)).wlan_channel }
+    }
+
+    pub extern "C" fn set_wlan_channel(
+        device: *mut c_void,
+        wlan_channel: ddk_protocol_wlan_info::WlanChannel,
+    ) -> i32 {
+        unsafe {
+            (*(device as *mut Self)).wlan_channel = wlan_channel;
+        }
+        zx::sys::ZX_OK
+    }
+
     pub fn next_mlme_msg<T: fidl::encoding::Decodable>(&mut self) -> Result<T, Error> {
         use fidl::encoding::{decode_transaction_header, Decodable, Decoder};
 
@@ -134,6 +174,8 @@ impl FakeDevice {
             deliver_eth_frame: Self::deliver_eth_frame,
             send_wlan_frame: Self::send_wlan_frame,
             get_sme_channel: Self::get_sme_channel,
+            get_wlan_channel: Self::get_wlan_channel,
+            set_wlan_channel: Self::set_wlan_channel,
         }
     }
 
@@ -143,6 +185,8 @@ impl FakeDevice {
             deliver_eth_frame: Self::deliver_eth_frame,
             send_wlan_frame: Self::send_wlan_frame_with_failure,
             get_sme_channel: Self::get_sme_channel,
+            set_wlan_channel: Self::set_wlan_channel,
+            get_wlan_channel: Self::get_wlan_channel,
         }
     }
 }
@@ -185,6 +229,8 @@ mod tests {
             deliver_eth_frame: FakeDevice::deliver_eth_frame,
             send_wlan_frame: FakeDevice::send_wlan_frame,
             get_sme_channel,
+            get_wlan_channel: FakeDevice::get_wlan_channel,
+            set_wlan_channel: FakeDevice::set_wlan_channel,
         };
 
         let result = dev.access_sme_sender(|sender| {
@@ -218,5 +264,35 @@ mod tests {
         assert_eq!(fake_device.eth_queue.len(), 2);
         assert_eq!(&fake_device.eth_queue[0], &first_frame);
         assert_eq!(&fake_device.eth_queue[1], &second_frame);
+    }
+
+    #[test]
+    fn get_set_channel() {
+        let mut fake_device = FakeDevice::new();
+        let dev = fake_device.as_device();
+        dev.set_channel(ddk_protocol_wlan_info::WlanChannel {
+            primary: 2,
+            cbw: ddk_protocol_wlan_info::WlanChannelBandwidth::_80P80,
+            secondary80: 4,
+        })
+        .expect("set_channel failed?");
+        // Check the internal state.
+        assert_eq!(
+            fake_device.wlan_channel,
+            ddk_protocol_wlan_info::WlanChannel {
+                primary: 2,
+                cbw: ddk_protocol_wlan_info::WlanChannelBandwidth::_80P80,
+                secondary80: 4,
+            }
+        );
+        // Check the external view of the internal state.
+        assert_eq!(
+            dev.channel(),
+            ddk_protocol_wlan_info::WlanChannel {
+                primary: 2,
+                cbw: ddk_protocol_wlan_info::WlanChannelBandwidth::_80P80,
+                secondary80: 4,
+            }
+        );
     }
 }

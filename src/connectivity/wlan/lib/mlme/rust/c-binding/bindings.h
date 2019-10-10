@@ -14,6 +14,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <ddk/protocol/wlan/info.h>
+
 /**
  * A STA running in Client mode.
  * The Client STA is in its early development process and does not yet manage its internal state
@@ -60,6 +62,15 @@ typedef struct {
    * if no SME channel is available.
    */
   uint32_t (*get_sme_channel)(void *device);
+  /**
+   * Returns the currently set WLAN channel.
+   */
+  wlan_channel_t (*get_wlan_channel)(void *device);
+  /**
+   * Request the PHY to change its channel. If successful, get_wlan_channel will return the
+   * chosen channel.
+   */
+  int32_t (*set_wlan_channel)(void *device, wlan_channel_t channel);
 } mlme_device_ops_t;
 
 /**
