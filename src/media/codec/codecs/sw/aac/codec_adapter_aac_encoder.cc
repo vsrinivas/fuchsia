@@ -565,7 +565,7 @@ ChunkInputStream::ControlFlow CodecAdapterAacEncoder::ProcessInputBlock(
 
 fit::result<CodecAdapterAacEncoder::EncodeResult, AACENC_ERROR> CodecAdapterAacEncoder::Encode(
     ChunkInputStream::InputBlock input_block, OutputSink::OutputBlock output_block) {
-  void* input_buffers[] = {reinterpret_cast<void*>(const_cast<uint8_t*>(input_block.data))};
+  void* input_buffers[] = {const_cast<uint8_t*>(input_block.data)};
   INT input_buffer_identifiers[] = {IN_AUDIO_DATA};
   INT input_buffer_sizes[] = {static_cast<INT>(input_block.non_padding_len)};
   INT input_buffer_element_sizes[] = {sizeof(int16_t)};
@@ -603,7 +603,7 @@ fit::result<CodecAdapterAacEncoder::EncodeResult, AACENC_ERROR> CodecAdapterAacE
 
 fit::result<CodecAdapterAacEncoder::EncodeResult, AACENC_ERROR> CodecAdapterAacEncoder::CallEncoder(
     AACENC_InArgs* in_args, AACENC_BufDesc* in_buffer, OutputSink::OutputBlock output_block) {
-  void* output_buffers[] = {reinterpret_cast<void*>(output_block.data)};
+  void* output_buffers[] = {output_block.data};
   INT output_buffer_identifiers[] = {OUT_BITSTREAM_DATA};
   INT output_buffer_sizes[] = {static_cast<INT>(output_block.len)};
   INT output_buffer_element_sizes[] = {sizeof(uint8_t)};

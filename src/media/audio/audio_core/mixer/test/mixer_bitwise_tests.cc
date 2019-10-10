@@ -446,7 +446,7 @@ TEST(PassThru, Output_8) {
 
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1);
 
-  output_producer->ProduceOutput(accum, reinterpret_cast<void*>(dest), fbl::count_of(accum));
+  output_producer->ProduceOutput(accum, dest, fbl::count_of(accum));
   EXPECT_THAT(dest, Pointwise(FloatEq(), expect));
 }
 
@@ -463,7 +463,7 @@ TEST(PassThru, Output_16) {
 
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2);
 
-  output_producer->ProduceOutput(accum, reinterpret_cast<void*>(dest), fbl::count_of(accum) / 2);
+  output_producer->ProduceOutput(accum, dest, fbl::count_of(accum) / 2);
   EXPECT_THAT(dest, Pointwise(FloatEq(), expect));
 }
 
@@ -482,7 +482,7 @@ TEST(PassThru, Output_24) {
   auto output_producer =
       SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 4);
 
-  output_producer->ProduceOutput(accum, reinterpret_cast<void*>(dest), fbl::count_of(accum) / 4);
+  output_producer->ProduceOutput(accum, dest, fbl::count_of(accum) / 4);
   EXPECT_THAT(dest, Pointwise(FloatEq(), expect));
 }
 
@@ -501,7 +501,7 @@ TEST(PassThru, Output_Float) {
 
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 1);
 
-  output_producer->ProduceOutput(accum, reinterpret_cast<void*>(dest), fbl::count_of(accum));
+  output_producer->ProduceOutput(accum, dest, fbl::count_of(accum));
   EXPECT_THAT(dest, Pointwise(FloatEq(), expect));
 }
 
@@ -516,7 +516,7 @@ TEST(PassThru, Output_8_Silence) {
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 2);
   ASSERT_NE(nullptr, output_producer);
 
-  output_producer->FillWithSilence(reinterpret_cast<void*>(dest.data()), silent_elements / 2);
+  output_producer->FillWithSilence(dest.data(), silent_elements / 2);
 
   auto& init = reinterpret_cast<const std::array<uint8_t, silent_elements>&>(dest);
   EXPECT_THAT(init, Each(Eq(0x80)));
@@ -534,7 +534,7 @@ TEST(PassThru, Output_16_Silence) {
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_16, 3);
   ASSERT_NE(output_producer, nullptr);
 
-  output_producer->FillWithSilence(reinterpret_cast<void*>(dest.data()), silent_elements / 3);
+  output_producer->FillWithSilence(dest.data(), silent_elements / 3);
   auto& init = reinterpret_cast<const std::array<int16_t, silent_elements>&>(dest);
   EXPECT_THAT(init, Each(Eq(0)));
   EXPECT_EQ(dest[silent_elements], 7890);
@@ -552,7 +552,7 @@ TEST(PassThru, Output_24_Silence) {
       SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1);
   ASSERT_NE(output_producer, nullptr);
 
-  output_producer->FillWithSilence(reinterpret_cast<void*>(dest.data()), silent_elements);
+  output_producer->FillWithSilence(dest.data(), silent_elements);
   auto& init = reinterpret_cast<const std::array<int32_t, silent_elements>&>(dest);
   EXPECT_THAT(init, Each(Eq(0)));
   EXPECT_EQ(dest[silent_elements], 7890);
@@ -569,7 +569,7 @@ TEST(PassThru, Output_Float_Silence) {
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 2);
   ASSERT_NE(output_producer, nullptr);
 
-  output_producer->FillWithSilence(reinterpret_cast<void*>(dest.data()), silent_elements / 2);
+  output_producer->FillWithSilence(dest.data(), silent_elements / 2);
   auto& init = reinterpret_cast<const std::array<uint8_t, silent_elements>&>(dest);
   EXPECT_THAT(init, Each(Eq(0.0f)));
   EXPECT_EQ(dest[silent_elements], 7.8f);

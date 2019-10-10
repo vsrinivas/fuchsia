@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/errors.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/log.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/device.h>
-#include <zircon/errors.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/log.h>
 
 #include "device_ctx.h"
 #include "driver_ctx.h"
@@ -29,8 +30,7 @@ static constexpr zx_driver_ops_t amlogic_video_driver_ops = [] {
 }();
 
 zx_status_t amlogic_video_encoder_init(void** out_ctx) {
-  auto* driver_ctx = new DriverCtx();
-  *out_ctx = reinterpret_cast<void*>(driver_ctx);
+  *out_ctx = new DriverCtx();
   return ZX_OK;
 }
 
