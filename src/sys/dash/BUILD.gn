@@ -37,7 +37,6 @@ test_package("dash_test") {
     ":dash_test_bin",
     ":zircon-bin-manifest",
     "//examples/components/basic:hello_world_bin",
-    "//src/sys/component_manager/tests:mock_pkg_resolver_bin",
   ]
 
   components = [
@@ -50,16 +49,6 @@ test_package("dash_test") {
   binaries = [
     {
       name = "hello_world"
-    },
-    {
-      name = "mock_pkg_resolver"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/mock_pkg_resolver_for_dash_test.cmx")
-      dest = "mock_pkg_resolver.cmx"
     },
   ]
 

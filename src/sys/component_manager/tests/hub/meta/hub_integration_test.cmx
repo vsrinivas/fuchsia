@@ -1,19 +1,12 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.pkg.PackageResolver": "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/mock_pkg_resolver.cmx"
-            }
-        }
-    },
     "program": {
         "binary": "test/hub_integration_test"
     },
     "sandbox": {
         "services": [
             "fuchsia.process.Launcher",
-            "fuchsia.pkg.PackageResolver",
-            "fuchsia.test.hub.HubReport"
+            "fuchsia.test.hub.HubReport",
+            "fuchsia.sys.Loader"
         ],
         "features": [
             "deprecated-ambient-replace-as-executable"

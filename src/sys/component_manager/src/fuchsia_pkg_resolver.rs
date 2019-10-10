@@ -6,12 +6,11 @@ use {
     crate::model::{Resolver, ResolverError, ResolverFut},
     cm_fidl_translator,
     failure::format_err,
-    fidl::endpoints::{ClientEnd, ServerEnd},
+    fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_pkg::{PackageResolverProxy, UpdatePolicy},
+    fidl_fuchsia_sys::LoaderProxy,
     fidl_fuchsia_sys2 as fsys,
     fuchsia_url::pkg_url::PkgUrl,
-    fuchsia_zircon as zx,
     std::path::Path,
 };
 
@@ -20,12 +19,12 @@ pub static SCHEME: &str = "fuchsia-pkg";
 /// Resolves component URLs with the "fuchsia-pkg" scheme. See the fuchsia_pkg_url crate for URL
 /// syntax.
 pub struct FuchsiaPkgResolver {
-    pkg_resolver: PackageResolverProxy,
+    loader: LoaderProxy,
 }
 
 impl FuchsiaPkgResolver {
-    pub fn new(pkg_resolver: PackageResolverProxy) -> FuchsiaPkgResolver {
-        FuchsiaPkgResolver { pkg_resolver }
+    pub fn new(loader: LoaderProxy) -> FuchsiaPkgResolver {
+        FuchsiaPkgResolver { loader }
     }
 
     async fn resolve_async<'a>(
@@ -43,28 +42,22 @@ impl FuchsiaPkgResolver {
         let package_url = fuchsia_pkg_url.root_url().to_string();
 
         // Resolve package.
-        let (package_dir_c, package_dir_s) = zx::Channel::create()
-            .map_err(|e| ResolverError::component_not_available(component_url, e))?;
-        let selectors: [&str; 0] = [];
-        let mut update_policy = UpdatePolicy { fetch_if_absent: true, allow_old_versions: false };
-        let fut = self.pkg_resolver.resolve(
-            &package_url,
-            &mut selectors.iter().map(|s| *s),
-            &mut update_policy,
-            ServerEnd::new(package_dir_s),
-        );
-        let status =
-            fut.await.map_err(|e| ResolverError::component_not_available(component_url, e))?;
-        let status = zx::Status::from_raw(status);
-        if status != zx::Status::OK {
-            return Err(ResolverError::component_not_available(
+        let package = self
+            .loader
+            .load_url(&package_url)
+            .await
+            .map_err(|e| ResolverError::component_not_available(component_url, e))?
+            .ok_or(ResolverError::component_not_available(
                 component_url,
-                format_err!("{}", status),
-            ));
-        }
+                format_err!("package not available"),
+            ))?;
+        let dir = package.directory.ok_or(ResolverError::component_not_available(
+            component_url,
+            format_err!("package is missing directory handle"),
+        ))?;
 
         // Read component manifest from package.
-        let dir = ClientEnd::<DirectoryMarker>::new(package_dir_c)
+        let dir = ClientEnd::<DirectoryMarker>::new(dir)
             .into_proxy()
             .expect("failed to create directory proxy");
         let file = io_util::open_file(&dir, cm_path, io_util::OPEN_RIGHT_READABLE)
@@ -98,62 +91,60 @@ mod tests {
     use {
         super::*,
         cm_fidl_translator,
-        fidl::endpoints,
+        fidl::encoding::OutOfLine,
+        fidl::endpoints::{self, ServerEnd},
         fidl_fuchsia_data as fdata,
-        fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverRequest},
+        fidl_fuchsia_sys::{LoaderMarker, LoaderRequest, Package},
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::TryStreamExt,
         std::path::Path,
     };
 
-    struct MockPackageResolver {}
+    struct MockLoader {}
 
-    impl MockPackageResolver {
-        fn start() -> PackageResolverProxy {
-            let (proxy, server): (_, ServerEnd<PackageResolverMarker>) =
-                endpoints::create_proxy().unwrap();
+    impl MockLoader {
+        fn start() -> LoaderProxy {
+            let (proxy, server): (_, ServerEnd<LoaderMarker>) = endpoints::create_proxy().unwrap();
             fasync::spawn_local(async move {
-                let pkg_resolver = MockPackageResolver {};
+                let loader = MockLoader {};
                 let mut stream = server.into_stream().unwrap();
-                while let Some(PackageResolverRequest::Resolve {
-                    package_url,
-                    dir,
-                    responder,
-                    ..
-                }) = stream.try_next().await.expect("failed to read request")
+                while let Some(LoaderRequest::LoadUrl { url, responder }) =
+                    stream.try_next().await.expect("failed to read request")
                 {
-                    let s = match pkg_resolver.resolve(&package_url, dir) {
-                        Ok(()) => 0,
-                        Err(s) => s.into_raw(),
-                    };
-                    responder.send(s).expect("responder failed");
+                    let mut package = loader.load_url(&url);
+                    let package = package.as_mut().map(OutOfLine);
+                    responder.send(package).expect("responder failed");
                 }
             });
             proxy
         }
 
-        fn resolve(
-            &self,
-            package_url: &str,
-            dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
-        ) -> Result<(), zx::Status> {
-            let package_url = PkgUrl::parse(&package_url).expect("bad url");
-            if package_url.name().unwrap() != "hello_world" {
-                return Err(zx::Status::NOT_FOUND);
+        fn load_url(&self, package_url: &str) -> Option<Package> {
+            let (dir_c, dir_s) = zx::Channel::create().unwrap();
+            let parsed_url = PkgUrl::parse(&package_url).expect("bad url");
+            // Simulate a package server that only contains the "hello_world" package.
+            if parsed_url.name().unwrap() != "hello_world" {
+                return None;
             }
             let path = Path::new("/pkg");
             io_util::connect_in_namespace(
                 path.to_str().unwrap(),
-                dir.into_channel(),
+                dir_s,
                 io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
             )
+            .expect("could not connect to /pkg");
+            Some(Package {
+                data: None,
+                directory: Some(dir_c),
+                resolved_url: package_url.to_string(),
+            })
         }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn resolve_test() {
-        let pkg_resolver = MockPackageResolver::start();
-        let resolver = FuchsiaPkgResolver::new(pkg_resolver);
+        let loader = MockLoader::start();
+        let resolver = FuchsiaPkgResolver::new(loader);
         let url = "fuchsia-pkg://fuchsia.com/hello_world#\
                    meta/component_manager_tests_hello_world.cm";
         let component = resolver.resolve_async(url).await.expect("resolve failed");
@@ -210,8 +201,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn resolve_errors_test() {
-        let pkg_resolver = MockPackageResolver::start();
-        let resolver = FuchsiaPkgResolver::new(pkg_resolver);
+        let loader = MockLoader::start();
+        let resolver = FuchsiaPkgResolver::new(loader);
         test_resolve_error!(
             resolver,
             "fuchsia-pkg:///hello_world#meta/component_manager_tests_hello_world.cm",

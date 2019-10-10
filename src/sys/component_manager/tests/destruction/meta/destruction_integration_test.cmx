@@ -9,14 +9,7 @@
         "services": [
             "fuchsia.process.Launcher",
             "fuchsia.logger.LogSink",
-            "fuchsia.pkg.PackageResolver"
+            "fuchsia.sys.Loader"
         ]
-    },
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.pkg.PackageResolver": "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/mock_pkg_resolver.cmx"
-            }
-        }
     }
 }

@@ -6,12 +6,5 @@
         "services": [
             "fuchsia.sys.Launcher"
         ]
-    },
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.pkg.PackageResolver": "fuchsia-pkg://fuchsia.com/elf_runner_test#meta/mock_pkg_resolver.cmx"
-            }
-        }
     }
 }

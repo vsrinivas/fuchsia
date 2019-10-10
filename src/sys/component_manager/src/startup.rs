@@ -17,9 +17,9 @@ use {
     failure::{format_err, Error, ResultExt},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-    fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy},
     fidl_fuchsia_process::LauncherMarker,
     fidl_fuchsia_security_resource::VmexMarker,
+    fidl_fuchsia_sys::{LoaderMarker, LoaderProxy},
     fidl_fuchsia_sys2::{SystemControllerMarker, WorkSchedulerControlMarker},
     fuchsia_async as fasync,
     fuchsia_component::{
@@ -128,27 +128,27 @@ pub fn available_resolvers() -> Result<ResolverRegistry, Error> {
         }
     };
 
-    if let Some(pkg_resolver) = connect_pkg_resolver()? {
+    if let Some(loader) = connect_sys_loader()? {
         resolver_registry.register(
             fuchsia_pkg_resolver::SCHEME.to_string(),
-            Box::new(FuchsiaPkgResolver::new(pkg_resolver)),
+            Box::new(FuchsiaPkgResolver::new(loader)),
         );
     }
 
     Ok(resolver_registry)
 }
 
-/// Checks if a package resolver service is available through our namespace and connects to it if
+/// Checks if the appmgr loader service is available through our namespace and connects to it if
 /// so. If not availble, returns Ok(None).
-fn connect_pkg_resolver() -> Result<Option<PackageResolverProxy>, Error> {
-    let service_path = PathBuf::from(format!("/svc/{}", PackageResolverMarker::NAME));
+fn connect_sys_loader() -> Result<Option<LoaderProxy>, Error> {
+    let service_path = PathBuf::from(format!("/svc/{}", LoaderMarker::NAME));
     if !service_path.exists() {
         return Ok(None);
     }
 
-    let pkg_resolver = client::connect_to_service::<PackageResolverMarker>()
-        .context("error connecting to package resolver")?;
-    return Ok(Some(pkg_resolver));
+    let loader = client::connect_to_service::<LoaderMarker>()
+        .context("error connecting to system loader")?;
+    return Ok(Some(loader));
 }
 
 /// Installs a Hub if possible.

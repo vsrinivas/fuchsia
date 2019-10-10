@@ -66,14 +66,9 @@ test_package("destruction_integration_test") {
     ":destruction_collection_realm_bin",
     ":destruction_integration_test_bin",
     ":destruction_trigger_bin",
-    "//src/sys/component_manager/tests:mock_pkg_resolver_bin",
   ]
 
   meta = [
-    {
-      path = rebase_path("meta/mock_pkg_resolver.cmx")
-      dest = "mock_pkg_resolver.cmx"
-    },
     {
       path = rebase_path("meta/trigger.cml")
       dest = "trigger.cm"
@@ -89,9 +84,6 @@ test_package("destruction_integration_test") {
   ]
 
   binaries = [
-    {
-      name = "mock_pkg_resolver"
-    },
     {
       name = "trigger"
       source = "${root_out_dir}/destruction_trigger"

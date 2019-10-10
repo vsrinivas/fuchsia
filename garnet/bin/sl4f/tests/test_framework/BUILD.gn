@@ -42,7 +42,6 @@ test_package("sl4f_test_integration_tests") {
     ":facade_tests_bin",
     "//examples/components/routing/echo_server",
     "//examples/tests:all_bins",
-    "//src/sys/component_manager/tests:mock_pkg_resolver_bin",
   ]
 
   meta = [
@@ -66,10 +65,6 @@ test_package("sl4f_test_integration_tests") {
     {
       path = rebase_path("//examples/tests/meta/passing-test-example_v2.cml")
       dest = "passing-test-example_v2.cm"
-    },
-    {
-      path = rebase_path("meta/mock_pkg_resolver.cmx")
-      dest = "mock_pkg_resolver.cmx"
     },
     {
       path = rebase_path("//examples/components/routing/meta/echo_server.cml")
@@ -103,9 +98,6 @@ test_package("sl4f_test_integration_tests") {
     },
     {
       name = "invalid-test-example"
-    },
-    {
-      name = "mock_pkg_resolver"
     },
   ]
 

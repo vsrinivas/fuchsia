@@ -71,17 +71,12 @@ test_package("storage_integration_test") {
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
-    "//src/sys/component_manager/tests:mock_pkg_resolver_bin",
     "//src/sys/component_manager/tests/memfs",
     "//third_party/rust_crates:failure",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 
   meta = [
-    {
-      path = rebase_path("meta/mock_pkg_resolver.cmx")
-      dest = "mock_pkg_resolver.cmx"
-    },
     {
       path = rebase_path("meta/memfs.cml")
       dest = "memfs.cm"
@@ -97,9 +92,6 @@ test_package("storage_integration_test") {
   ]
 
   binaries = [
-    {
-      name = "mock_pkg_resolver"
-    },
     {
       name = "memfs"
     },

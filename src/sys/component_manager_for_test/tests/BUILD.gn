@@ -22,15 +22,10 @@ test_package("component_manager_for_test_integration_test") {
   deps = [
     ":bin",
     "//examples/tests:passing-test-example",
-    "//src/sys/component_manager/tests:mock_pkg_resolver_bin",
     "//src/sys/component_manager_for_test:bin",
   ]
 
   meta = [
-    {
-      path = rebase_path("meta/mock_pkg_resolver.cmx")
-      dest = "mock_pkg_resolver.cmx"
-    },
     {
       path = rebase_path("//examples/tests/meta/passing-test-example_v2.cml")
       dest = "passing-test-example_v2.cm"
@@ -43,9 +38,6 @@ test_package("component_manager_for_test_integration_test") {
   ]
 
   binaries = [
-    {
-      name = "mock_pkg_resolver"
-    },
     {
       name = "passing-test-example"
     },

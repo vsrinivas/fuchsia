@@ -68,18 +68,12 @@ test_package("routing_integration_test") {
     ":routing_integration_test_bin",
     "//examples/components/routing/echo_client",
     "//examples/components/routing/echo_server",
-    "//src/sys/component_manager/tests:mock_pkg_resolver_bin",
   ]
 
   components =
       [ "//src/sys/component_manager:component_manager_as_v1_component" ]
 
   meta = [
-    {
-      path =
-          rebase_path("meta/mock_pkg_resolver_for_routing_integration_test.cmx")
-      dest = "mock_pkg_resolver.cmx"
-    },
     {
       path = rebase_path("//examples/components/routing/meta/echo_server.cml")
       dest = "echo_server.cm"
@@ -107,9 +101,6 @@ test_package("routing_integration_test") {
   ]
 
   binaries = [
-    {
-      name = "mock_pkg_resolver"
-    },
     {
       name = "echo_server"
     },

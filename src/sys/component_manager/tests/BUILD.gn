@@ -61,29 +61,8 @@ rustc_binary("system_controller_client") {
   ]
 }
 
-rustc_binary("mock_pkg_resolver_bin") {
-  name = "mock_pkg_resolver"
-  edition = "2018"
-  source_root = "mock_pkg_resolver.rs"
-  deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-syslog",
-    "//garnet/public/rust/fuchsia-zircon",
-    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
-    "//src/sys/lib/fuchsia_url:fuchsia_url",
-    "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
-    "//third_party/rust_crates:lazy_static",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-  ]
-}
-
 test_package("shutdown_integration_test") {
   deps = [
-    ":mock_pkg_resolver_bin",
     ":shutdown_integration_test_bin",
     ":system_controller_client",
     ":test_utils",
@@ -93,11 +72,6 @@ test_package("shutdown_integration_test") {
       [ "//src/sys/component_manager:component_manager_as_v1_component" ]
 
   meta = [
-    {
-      path = rebase_path(
-              "meta/mock_pkg_resolver_for_shutdown_integration_test.cmx")
-      dest = "mock_pkg_resolver.cmx"
-    },
     {
       path = rebase_path("meta/shutdown_integration_root.cml")
       dest = "shutdown_integration_root.cm"
@@ -109,9 +83,6 @@ test_package("shutdown_integration_test") {
   ]
 
   binaries = [
-    {
-      name = "mock_pkg_resolver"
-    },
     {
       name = "system_controller_client"
     },
@@ -144,7 +115,6 @@ rustc_test("elf_runner_test_bin") {
 test_package("elf_runner_test") {
   deps = [
     ":elf_runner_test_bin",
-    ":mock_pkg_resolver_bin",
     "//examples/components/basic:echo_args_bin",
   ]
 
@@ -152,10 +122,6 @@ test_package("elf_runner_test") {
       [ "//src/sys/component_manager:component_manager_as_v1_component" ]
 
   meta = [
-    {
-      path = rebase_path("meta/mock_pkg_resolver_for_elf_runner_test.cmx")
-      dest = "mock_pkg_resolver.cmx"
-    },
     {
       path = rebase_path("meta/echo_no_args.cml")
       dest = "echo_no_args.cm"
@@ -167,9 +133,6 @@ test_package("elf_runner_test") {
   ]
 
   binaries = [
-    {
-      name = "mock_pkg_resolver"
-    },
     {
       name = "echo_args"
     },
