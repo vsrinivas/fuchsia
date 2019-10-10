@@ -53,7 +53,6 @@ zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals, uint32
 
 #if BUILD_FOR_DISPLAY_TEST
 
-bool is_primary_bound();
 struct list_node* get_display_list();
 void initialize_display_channel(zx::channel channel);
 

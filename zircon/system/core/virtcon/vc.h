@@ -162,6 +162,7 @@ void log_delete_vc(vc_t* vc);
 
 bool vc_display_init(void);
 void vc_attach_to_main_display(vc_t* vc);
+bool is_primary_bound();
 
 void set_log_listener_active(bool active);
 zx_status_t handle_device_dir_event(port_handler_t* ph, zx_signals_t signals,

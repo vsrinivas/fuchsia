@@ -84,3 +84,16 @@ test("virtual-console-test") {
     "$zx/system/ulib/zxtest",
   ]
 }
+
+test("virtual-console-integration") {
+  sources = [
+    "vc-integration-test.cc",
+  ]
+
+  deps = [
+    "$zx/system/fidl/fuchsia-virtualconsole:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}

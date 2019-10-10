@@ -14,4 +14,7 @@ protocol SessionManager {
     // TODO(ZX-3407): Remove response status and debug why this doesn't work async when we switch
     // to new pty impl.
     CreateSession(request<fuchsia.hardware.pty.Device> session) -> (zx.status status);
+
+    /// Returns true if virtcon currently has a display that it can display something on.
+    HasPrimaryConnected() -> (bool connected);
 };

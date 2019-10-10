@@ -251,6 +251,10 @@ static zx_status_t new_vc_cb(void*, zx_handle_t session, fidl_txn_t* txn) {
   return fuchsia_virtualconsole_SessionManagerCreateSession_reply(txn, ZX_OK);
 }
 
+static zx_status_t has_primary_cb(void*, fidl_txn_t* txn) {
+  return fuchsia_virtualconsole_SessionManagerHasPrimaryConnected_reply(txn, is_primary_bound());
+}
+
 static zx_status_t fidl_message_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
   if ((signals & ZX_CHANNEL_PEER_CLOSED) && !(signals & ZX_CHANNEL_READABLE)) {
     zx_handle_close(ph->handle);
@@ -261,6 +265,7 @@ static zx_status_t fidl_message_cb(port_handler_t* ph, zx_signals_t signals, uin
   auto status = fs::ReadMessage(ph->handle, [](fidl_msg_t* message, fs::FidlConnection* txn) {
     static constexpr fuchsia_virtualconsole_SessionManager_ops_t kOps{
         .CreateSession = new_vc_cb,
+        .HasPrimaryConnected = has_primary_cb,
     };
 
     return fuchsia_virtualconsole_SessionManager_dispatch(

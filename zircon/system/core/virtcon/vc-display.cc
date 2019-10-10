@@ -43,9 +43,9 @@ bool g_vc_owns_display = false;
 
 static void vc_find_display_controller();
 
-#if BUILD_FOR_DISPLAY_TEST
-
 bool is_primary_bound() { return primary_bound; }
+
+#if BUILD_FOR_DISPLAY_TEST
 
 struct list_node* get_display_list() {
   return &display_list;
