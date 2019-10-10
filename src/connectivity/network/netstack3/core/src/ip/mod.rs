@@ -348,44 +348,42 @@ fn get_state_inner_mut<I: Ip, D: EventDispatcher>(
     return &mut state.ipv6.inner;
 }
 
-impl<D: EventDispatcher> StateContext<DeviceId, IgmpInterface<D::Instant>> for Context<D> {
-    fn get_state(&self, device: DeviceId) -> &IgmpInterface<D::Instant> {
+impl<D: EventDispatcher> StateContext<IgmpInterface<D::Instant>, DeviceId> for Context<D> {
+    fn get_state_with(&self, device: DeviceId) -> &IgmpInterface<D::Instant> {
         self.state().ipv4.get_igmp_state(device.id())
     }
 
-    fn get_state_mut(&mut self, device: DeviceId) -> &mut IgmpInterface<D::Instant> {
+    fn get_state_mut_with(&mut self, device: DeviceId) -> &mut IgmpInterface<D::Instant> {
         self.state_mut().ipv4.get_igmp_state_mut(device.id())
     }
 }
 
-impl<D: EventDispatcher> StateContext<DeviceId, MldInterface<D::Instant>> for Context<D> {
-    fn get_state(&self, device: DeviceId) -> &MldInterface<D::Instant> {
+impl<D: EventDispatcher> StateContext<MldInterface<D::Instant>, DeviceId> for Context<D> {
+    fn get_state_with(&self, device: DeviceId) -> &MldInterface<D::Instant> {
         self.state().ipv6.get_mld_state(device.id())
     }
 
-    fn get_state_mut(&mut self, device: DeviceId) -> &mut MldInterface<D::Instant> {
+    fn get_state_mut_with(&mut self, device: DeviceId) -> &mut MldInterface<D::Instant> {
         self.state_mut().ipv6.get_mld_state_mut(device.id())
     }
 }
 
-impl<I: Ip, D: EventDispatcher> StateContext<(), IpLayerFragmentCache<I>> for Context<D> {
-    fn get_state(&self, _id: ()) -> &IpLayerFragmentCache<I> {
+impl<I: Ip, D: EventDispatcher> StateContext<IpLayerFragmentCache<I>> for Context<D> {
+    fn get_state_with(&self, _id: ()) -> &IpLayerFragmentCache<I> {
         &get_state_inner(self.state()).fragment_cache
     }
 
-    fn get_state_mut(&mut self, _id: ()) -> &mut IpLayerFragmentCache<I> {
+    fn get_state_mut_with(&mut self, _id: ()) -> &mut IpLayerFragmentCache<I> {
         &mut get_state_inner_mut(self.state_mut()).fragment_cache
     }
 }
 
-impl<I: Ip, D: EventDispatcher> StateContext<(), IpLayerPathMtuCache<I, D::Instant>>
-    for Context<D>
-{
-    fn get_state(&self, _id: ()) -> &IpLayerPathMtuCache<I, D::Instant> {
+impl<I: Ip, D: EventDispatcher> StateContext<IpLayerPathMtuCache<I, D::Instant>> for Context<D> {
+    fn get_state_with(&self, _id: ()) -> &IpLayerPathMtuCache<I, D::Instant> {
         &get_state_inner(self.state()).path_mtu
     }
 
-    fn get_state_mut(&mut self, _id: ()) -> &mut IpLayerPathMtuCache<I, D::Instant> {
+    fn get_state_mut_with(&mut self, _id: ()) -> &mut IpLayerPathMtuCache<I, D::Instant> {
         &mut get_state_inner_mut(self.state_mut()).path_mtu
     }
 }
@@ -1667,22 +1665,22 @@ impl<D: EventDispatcher> MldContext for Context<D> {
     }
 }
 
-impl<D: EventDispatcher> StateContext<(), Icmpv4State<D::Instant>> for Context<D> {
-    fn get_state(&self, _id: ()) -> &Icmpv4State<D::Instant> {
+impl<D: EventDispatcher> StateContext<Icmpv4State<D::Instant>> for Context<D> {
+    fn get_state_with(&self, _id: ()) -> &Icmpv4State<D::Instant> {
         &self.state().ipv4.icmp
     }
 
-    fn get_state_mut(&mut self, _id: ()) -> &mut Icmpv4State<D::Instant> {
+    fn get_state_mut_with(&mut self, _id: ()) -> &mut Icmpv4State<D::Instant> {
         &mut self.state_mut().ipv4.icmp
     }
 }
 
-impl<D: EventDispatcher> StateContext<(), Icmpv6State<D::Instant>> for Context<D> {
-    fn get_state(&self, _id: ()) -> &Icmpv6State<D::Instant> {
+impl<D: EventDispatcher> StateContext<Icmpv6State<D::Instant>> for Context<D> {
+    fn get_state_with(&self, _id: ()) -> &Icmpv6State<D::Instant> {
         &self.state().ipv6.icmp
     }
 
-    fn get_state_mut(&mut self, _id: ()) -> &mut Icmpv6State<D::Instant> {
+    fn get_state_mut_with(&mut self, _id: ()) -> &mut Icmpv6State<D::Instant> {
         &mut self.state_mut().ipv6.icmp
     }
 }

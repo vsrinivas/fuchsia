@@ -74,14 +74,12 @@ const MAX_FRAGMENT_BLOCKS: u16 = 8191;
 
 /// The execution context for the fragment cache.
 pub(crate) trait FragmentContext<I: Ip>:
-    TimerContext<FragmentCacheKey<I::Addr>> + StateContext<(), IpLayerFragmentCache<I>>
+    TimerContext<FragmentCacheKey<I::Addr>> + StateContext<IpLayerFragmentCache<I>>
 {
 }
 
-impl<
-        I: Ip,
-        C: TimerContext<FragmentCacheKey<I::Addr>> + StateContext<(), IpLayerFragmentCache<I>>,
-    > FragmentContext<I> for C
+impl<I: Ip, C: TimerContext<FragmentCacheKey<I::Addr>> + StateContext<IpLayerFragmentCache<I>>>
+    FragmentContext<I> for C
 {
 }
 
@@ -92,7 +90,7 @@ pub(crate) fn handle_reassembly_timer<I: Ip, C: FragmentContext<I>>(
     ctx: &mut C,
     key: FragmentCacheKey<I::Addr>,
 ) {
-    ctx.get_state_mut(()).handle_reassembly_timer(key);
+    ctx.get_state_mut().handle_reassembly_timer(key);
 }
 
 /// Trait that must be implemented by any packet type that is fragmentable.
@@ -366,7 +364,7 @@ where
             //               does not say we MUST, so we would not be violating
             //               the RFC if we don't check for this case and just
             //               drop the packet.
-            assert!(ctx.get_state_mut(()).cache.remove(&key).is_some());
+            assert!(ctx.get_state_mut().cache.remove(&key).is_some());
             assert!(ctx.cancel_timer(key).is_some());
 
             return FragmentProcessingState::InvalidFragment;
@@ -492,7 +490,7 @@ pub(crate) fn reassemble_packet<
     buffer: BV,
 ) -> Result<<I as IpExtByteSlice<B>>::Packet, FragmentReassemblyError> {
     // Get the fragment cache data.
-    let fragment_data = match ctx.get_state_mut(()).cache.get_mut(key) {
+    let fragment_data = match ctx.get_state_mut().cache.get_mut(key) {
         // Either there are no fragments for the given `key`, or we timed out
         // and removed all fragment data for `key`.
         None => return Err(FragmentReassemblyError::InvalidKey),
@@ -513,7 +511,7 @@ pub(crate) fn reassemble_packet<
 
     // Take the header and body fragments from the cache data and remove the
     // cache data associated with `key` since it will no longer be needed.
-    let data = ctx.get_state_mut(()).cache.remove(key).unwrap();
+    let data = ctx.get_state_mut().cache.remove(key).unwrap();
     let (header, body_fragments) = (data.header.unwrap(), data.body_fragments);
 
     // Attempt to actually reassemble the packet.
@@ -527,16 +525,16 @@ fn get_or_create<'a, I: Ip, C: FragmentContext<I>>(
     ctx: &'a mut C,
     key: &FragmentCacheKey<I::Addr>,
 ) -> &'a mut FragmentCacheData {
-    if ctx.get_state(()).cache.contains_key(key) {
-        ctx.get_state_mut(()).cache.get_mut(key).unwrap()
+    if ctx.get_state().cache.contains_key(key) {
+        ctx.get_state_mut().cache.get_mut(key).unwrap()
     } else {
         // We have no reassembly data yet so this fragment is the first one
         // associated with the given `key`. Create a new entry in the hash table
         // and schedule a timer to reset the entry after
         // `REASSEMBLY_TIMEOUT_SECONDS` seconds.
-        ctx.get_state_mut(()).cache.insert(key.clone(), FragmentCacheData::new());
+        ctx.get_state_mut().cache.insert(key.clone(), FragmentCacheData::new());
         ctx.schedule_timer(Duration::from_secs(REASSEMBLY_TIMEOUT_SECONDS), *key);
-        ctx.get_state_mut(()).cache.get_mut(key).unwrap()
+        ctx.get_state_mut().cache.get_mut(key).unwrap()
     }
 }
 

@@ -220,7 +220,7 @@ impl<
 
 /// An execution context for the ARP protocol.
 pub(super) trait ArpContext<D: ArpDevice, P: PType>:
-    StateContext<<Self as ArpContext<D, P>>::DeviceId, ArpState<D, P>>
+    StateContext<ArpState<D, P>, <Self as ArpContext<D, P>>::DeviceId>
     + TimerContext<ArpTimerId<D, P, <Self as ArpContext<D, P>>::DeviceId>>
     + FrameContext<EmptyBuf, ArpFrameMetadata<D, <Self as ArpContext<D, P>>::DeviceId>>
     + CounterContext
@@ -278,7 +278,7 @@ impl<D: ArpDevice, P: PType, C: ArpContext<D, P>> TimerHandler<C, ArpTimerId<D, 
                 send_arp_request(ctx, id.device_id, proto_addr)
             }
             ArpTimerIdInner::EntryExpiration { proto_addr } => {
-                ctx.get_state_mut(id.device_id).table.remove(proto_addr);
+                ctx.get_state_mut_with(id.device_id).table.remove(proto_addr);
                 ctx.address_resolution_expired(id.device_id, proto_addr);
 
                 // There are several things to notice:
@@ -438,7 +438,11 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
         // to update the table, and one to send a response).
 
         if addressed_to_me
-            || ctx.get_state(device_id).table.lookup(packet.sender_protocol_address()).is_some()
+            || ctx
+                .get_state_with(device_id)
+                .table
+                .lookup(packet.sender_protocol_address())
+                .is_some()
         {
             insert_dynamic(
                 ctx,
@@ -501,7 +505,7 @@ pub(super) fn insert_static<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
         ctx.address_resolved(device_id, net, hw);
     }
 
-    ctx.get_state_mut(device_id).table.insert_static(net, hw);
+    ctx.get_state_mut_with(device_id).table.insert_static(net, hw);
 }
 
 /// Insert a dynamic entry into this device's ARP table.
@@ -519,7 +523,7 @@ fn insert_dynamic<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
     // assumed that `schedule_timer` will first cancel the timer that is already
     // there.
     let expiration = ArpTimerId::new_entry_expiration(device_id, net);
-    if ctx.get_state_mut(device_id).table.insert_dynamic(net, hw) {
+    if ctx.get_state_mut_with(device_id).table.insert_dynamic(net, hw) {
         ctx.schedule_timer(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD, expiration);
     }
 }
@@ -531,7 +535,7 @@ pub(super) fn lookup<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
     local_addr: D::HType,
     lookup_addr: P,
 ) -> Option<D::HType> {
-    let result = ctx.get_state(device_id).table.lookup(lookup_addr).cloned();
+    let result = ctx.get_state_with(device_id).table.lookup(lookup_addr).cloned();
 
     // Send an ARP Request if the address is not in our cache
     if result.is_none() {
@@ -557,7 +561,7 @@ fn send_arp_request<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
     lookup_addr: P,
 ) {
     let tries_remaining = ctx
-        .get_state_mut(device_id)
+        .get_state_mut_with(device_id)
         .table
         .get_remaining_tries(lookup_addr)
         .unwrap_or(DEFAULT_ARP_REQUEST_MAX_TRIES);
@@ -584,10 +588,10 @@ fn send_arp_request<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
         if tries_remaining > 1 {
             // TODO(wesleyac): Configurable timer.
             ctx.schedule_timer(DEFAULT_ARP_REQUEST_PERIOD, id);
-            ctx.get_state_mut(device_id).table.set_waiting(lookup_addr, tries_remaining - 1);
+            ctx.get_state_mut_with(device_id).table.set_waiting(lookup_addr, tries_remaining - 1);
         } else {
             ctx.cancel_timer(id);
-            ctx.get_state_mut(device_id).table.remove(lookup_addr);
+            ctx.get_state_mut_with(device_id).table.remove(lookup_addr);
             ctx.address_resolution_failed(device_id, lookup_addr);
         }
     } else {
@@ -766,12 +770,12 @@ mod tests {
         }
     }
 
-    impl StateContext<(), ArpState<EthernetLinkDevice, Ipv4Addr>> for DummyContext {
-        fn get_state(&self, _id: ()) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
+    impl StateContext<ArpState<EthernetLinkDevice, Ipv4Addr>> for DummyContext {
+        fn get_state_with(&self, _id: ()) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
             &self.get_ref().arp_state
         }
 
-        fn get_state_mut(&mut self, _id: ()) -> &mut ArpState<EthernetLinkDevice, Ipv4Addr> {
+        fn get_state_mut_with(&mut self, _id: ()) -> &mut ArpState<EthernetLinkDevice, Ipv4Addr> {
             &mut self.get_mut().arp_state
         }
     }
@@ -979,12 +983,15 @@ mod tests {
             }
         }
 
-        impl StateContext<usize, ArpState<EthernetLinkDevice, Ipv4Addr>> for DummyContext2 {
-            fn get_state(&self, _id: usize) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
+        impl StateContext<ArpState<EthernetLinkDevice, Ipv4Addr>, usize> for DummyContext2 {
+            fn get_state_with(&self, _id: usize) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
                 &self.get_ref().arp_state
             }
 
-            fn get_state_mut(&mut self, _id: usize) -> &mut ArpState<EthernetLinkDevice, Ipv4Addr> {
+            fn get_state_mut_with(
+                &mut self,
+                _id: usize,
+            ) -> &mut ArpState<EthernetLinkDevice, Ipv4Addr> {
                 &mut self.get_mut().arp_state
             }
         }

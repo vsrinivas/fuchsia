@@ -59,8 +59,8 @@ pub(crate) trait IgmpContext:
     + TimerContext<IgmpTimerId<<Self as IpDeviceIdContext>::DeviceId>>
     + RngContext
     + StateContext<
-        <Self as IpDeviceIdContext>::DeviceId,
         IgmpInterface<<Self as InstantContext>::Instant>,
+        <Self as IpDeviceIdContext>::DeviceId,
     > + FrameContext<EmptyBuf, IgmpPacketMetadata<<Self as IpDeviceIdContext>::DeviceId>>
 {
     /// Gets an IP address and subnet associated with this device.
@@ -132,7 +132,7 @@ where
     let group_addr = msg.group_addr();
     if !group_addr.is_specified() {
         let mut addr_and_actions = ctx
-            .get_state_mut(device)
+            .get_state_mut_with(device)
             .groups
             .iter_mut()
             .map(|(addr, state)| (addr.clone(), handler(&mut rng, state, &msg)))
@@ -144,7 +144,7 @@ where
         }
         Ok(())
     } else if let Some(group_addr) = MulticastAddr::new(group_addr) {
-        let actions = match ctx.get_state_mut(device).groups.get_mut(&group_addr) {
+        let actions = match ctx.get_state_mut_with(device).groups.get_mut(&group_addr) {
             Some(state) => handler(&mut rng, state, &msg),
             None => return Err(IgmpError::NotAMember { addr: *group_addr }),
         };
@@ -193,7 +193,7 @@ impl<D> IgmpTimerId<D> {
 pub(crate) fn handle_timeout<C: IgmpContext>(ctx: &mut C, timer: IgmpTimerId<C::DeviceId>) {
     match timer {
         IgmpTimerId::ReportDelay { device, group_addr } => {
-            let actions = match ctx.get_state_mut(device).groups.get_mut(&group_addr) {
+            let actions = match ctx.get_state_mut_with(device).groups.get_mut(&group_addr) {
                 Some(state) => state.report_timer_expired(),
                 None => {
                     error!("Not already a member");
@@ -203,7 +203,7 @@ pub(crate) fn handle_timeout<C: IgmpContext>(ctx: &mut C, timer: IgmpTimerId<C::
             run_actions(ctx, device, actions, group_addr);
         }
         IgmpTimerId::V1RouterPresent { device } => {
-            for (_, state) in ctx.get_state_mut(device).groups.iter_mut() {
+            for (_, state) in ctx.get_state_mut_with(device).groups.iter_mut() {
                 state.v1_router_present_timer_expired();
             }
         }
@@ -438,7 +438,7 @@ pub(crate) fn igmp_join_group<C: IgmpContext>(
     // seed is, which means that, at worst, an attacker will be able to
     // correlate events generated during this one function call.
     let mut rng = ctx.new_xorshift_rng();
-    let actions = ctx.get_state_mut(device).join_group(&mut rng, group_addr, now);
+    let actions = ctx.get_state_mut_with(device).join_group(&mut rng, group_addr, now);
     // actions will be `Nothing` if the the host is not in the `NonMember` state.
     run_actions(ctx, device, actions, group_addr);
 }
@@ -452,7 +452,7 @@ pub(crate) fn igmp_leave_group<C: IgmpContext>(
     device: C::DeviceId,
     group_addr: MulticastAddr<Ipv4Addr>,
 ) -> IgmpResult<(), C::DeviceId> {
-    let actions = ctx.get_state_mut(device).leave_group(group_addr)?;
+    let actions = ctx.get_state_mut_with(device).leave_group(group_addr)?;
     run_actions(ctx, device, actions, group_addr);
     Ok(())
 }

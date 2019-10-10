@@ -61,8 +61,8 @@ pub(crate) trait MldContext:
     + TimerContext<MldReportDelay<<Self as IpDeviceIdContext>::DeviceId>>
     + RngContext
     + StateContext<
-        <Self as IpDeviceIdContext>::DeviceId,
         MldInterface<<Self as InstantContext>::Instant>,
+        <Self as IpDeviceIdContext>::DeviceId,
     > + FrameContext<EmptyBuf, MldFrameMetadata<<Self as IpDeviceIdContext>::DeviceId>>
 {
     /// Gets the IPv6 link local address on `device`.
@@ -140,7 +140,7 @@ where
     let group_addr = body.group_addr;
     if !group_addr.is_specified() {
         let addr_and_actions = ctx
-            .get_state_mut(device)
+            .get_state_mut_with(device)
             .groups
             .iter_mut()
             .map(|(addr, state)| (addr.clone(), handler(&mut rng, state)))
@@ -152,7 +152,7 @@ where
         }
         Ok(())
     } else if let Some(group_addr) = MulticastAddr::new(group_addr) {
-        let actions = match ctx.get_state_mut(device).groups.get_mut(&group_addr) {
+        let actions = match ctx.get_state_mut_with(device).groups.get_mut(&group_addr) {
             Some(state) => handler(&mut rng, state),
             None => return Err(MldError::NotAMember { addr: group_addr.get() }),
         };
@@ -288,7 +288,7 @@ pub(crate) fn mld_join_group<C: MldContext>(
     // correlate events generated during this one function call.
     let mut rng = ctx.new_xorshift_rng();
     let now = ctx.now();
-    let actions = ctx.get_state_mut(device).join_group(&mut rng, group_addr, now);
+    let actions = ctx.get_state_mut_with(device).join_group(&mut rng, group_addr, now);
     // actions will be `Nothing` if the the host is not in the `NonMember` state.
     run_actions(ctx, device, actions, group_addr);
 }
@@ -302,7 +302,7 @@ pub(crate) fn mld_leave_group<C: MldContext>(
     device: C::DeviceId,
     group_addr: MulticastAddr<Ipv6Addr>,
 ) -> MldResult<()> {
-    let actions = ctx.get_state_mut(device).leave_group(group_addr)?;
+    let actions = ctx.get_state_mut_with(device).leave_group(group_addr)?;
     run_actions(ctx, device, actions, group_addr);
     Ok(())
 }
@@ -367,7 +367,7 @@ fn run_action<C: MldContext>(
         ),
         Action::Specific(ImmediateIdleState) => {
             ctx.cancel_timer(MldReportDelay::new(device, group_addr));
-            ctx.get_state_mut(device).report_timer_expired(group_addr)
+            ctx.get_state_mut_with(device).report_timer_expired(group_addr)
         }
     }
 }
@@ -420,7 +420,7 @@ pub(crate) fn handle_timeout<C: MldContext>(ctx: &mut C, timer: MldReportDelay<C
         group_addr,
         (),
     );
-    if let Err(e) = ctx.get_state_mut(device).report_timer_expired(group_addr) {
+    if let Err(e) = ctx.get_state_mut_with(device).report_timer_expired(group_addr) {
         error!("MLD timer fired, but an error has occurred: {}", e);
     }
 }

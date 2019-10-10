@@ -218,12 +218,35 @@ impl<D: EventDispatcher> RngContext for Context<D> {
 /// `StateContext` stores instances of `State` keyed by `Id`, and provides
 /// getters for this state. If `Id` is `()`, then `StateContext` represents a
 /// single instance of `State`.
-pub trait StateContext<Id, State> {
+pub trait StateContext<State, Id = ()> {
     /// Get the state immutably.
-    fn get_state(&self, id: Id) -> &State;
+    fn get_state_with(&self, id: Id) -> &State;
 
     /// Get the state mutably.
-    fn get_state_mut(&mut self, id: Id) -> &mut State;
+    fn get_state_mut_with(&mut self, id: Id) -> &mut State;
+
+    // TODO(joshlf): Change the `where` bounds in `get_state` and
+    // `get_state_mut` to `where Id = ()` when equality bounds are supported.
+
+    /// Get the state immutably when the `Id` type is `()`.
+    ///
+    /// `x.get_state()` is shorthand for `x.get_state_with(())`.
+    fn get_state(&self) -> &State
+    where
+        Self: StateContext<State, ()>,
+    {
+        self.get_state_with(())
+    }
+
+    /// Get the state mutably when the `Id` type is `()`.
+    ///
+    /// `x.get_state_mut()` is shorthand for `x.get_state_mut_with(())`.
+    fn get_state_mut(&mut self) -> &mut State
+    where
+        Self: StateContext<State, ()>,
+    {
+        self.get_state_mut_with(())
+    }
 }
 
 /// A context for receiving frames.

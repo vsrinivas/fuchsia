@@ -75,14 +75,14 @@ pub(crate) struct PmtuTimerId<I: Ip>(PhantomData<I>);
 /// The execution context for the path MTU cache.
 pub(crate) trait PmtuContext<I: Ip>:
     TimerContext<PmtuTimerId<I>>
-    + StateContext<(), IpLayerPathMtuCache<I, <Self as InstantContext>::Instant>>
+    + StateContext<IpLayerPathMtuCache<I, <Self as InstantContext>::Instant>>
 {
 }
 
 impl<
         I: Ip,
         C: TimerContext<PmtuTimerId<I>>
-            + StateContext<(), IpLayerPathMtuCache<I, <C as InstantContext>::Instant>>,
+            + StateContext<IpLayerPathMtuCache<I, <C as InstantContext>::Instant>>,
     > PmtuContext<I> for C
 {
 }
@@ -107,7 +107,7 @@ pub(crate) fn get_pmtu<A: IpAddress, C: PmtuContext<A::Version>>(
     src_ip: A,
     dst_ip: A,
 ) -> Option<u32> {
-    ctx.get_state(()).get_pmtu(src_ip, dst_ip)
+    ctx.get_state().get_pmtu(src_ip, dst_ip)
 }
 
 /// A handler for PMTU events.
@@ -303,25 +303,25 @@ fn update_pmtu_inner<I: Ip, C: PmtuContext<I>>(
 ) -> Result<Option<u32>, Option<u32>> {
     // New MTU must not be smaller than the minimum MTU for an IP.
     if new_mtu < min_mtu::<I>() {
-        return Err(ctx.get_state_mut(()).get_pmtu(src_ip, dst_ip));
+        return Err(ctx.get_state_mut().get_pmtu(src_ip, dst_ip));
     }
 
     let key = PathMtuCacheKey::new(src_ip, dst_ip);
     let now = ctx.now();
-    let ret = if let Some(data) = ctx.get_state_mut(()).cache.get_mut(&key) {
+    let ret = if let Some(data) = ctx.get_state_mut().cache.get_mut(&key) {
         let prev_pmtu = data.pmtu;
         data.pmtu = new_mtu;
         data.last_updated = now;
         Ok(Some(prev_pmtu))
     } else {
         let val = PathMtuCacheData::new(new_mtu, ctx.now());
-        assert!(ctx.get_state_mut(()).cache.insert(key, val).is_none());
+        assert!(ctx.get_state_mut().cache.insert(key, val).is_none());
         Ok(None)
     };
 
     // Make sure we have a scheduled task to handle PMTU maintenance. If we
     // don't, create one.
-    if !ctx.get_state(()).timer_scheduled {
+    if !ctx.get_state().timer_scheduled {
         // We are guaranteed that this call will not panic because a panic will
         // only occur if there is already a PMTU maintenance task scheduled. We
         // will only reach here if there is no maintenance task scheduled so we
@@ -338,7 +338,7 @@ fn update_pmtu_inner<I: Ip, C: PmtuContext<I>>(
 /// values of stale cached values to restart the PMTU discovery process.
 pub(crate) fn handle_pmtu_timer<I: Ip, C: PmtuContext<I>>(ctx: &mut C) {
     let curr_time = ctx.now();
-    let mut cache = ctx.get_state_mut(());
+    let mut cache = ctx.get_state_mut();
 
     // Make sure we expected this timer to fire.
     assert!(cache.timer_scheduled);
@@ -391,7 +391,7 @@ pub(crate) fn handle_pmtu_timer<I: Ip, C: PmtuContext<I>>(ctx: &mut C) {
 /// Panics if there is already a maintenance task scheduled that has not yet
 /// run.
 fn create_maintenance_timer<I: Ip, C: PmtuContext<I>>(ctx: &mut C) {
-    let mut cache = ctx.get_state_mut(());
+    let mut cache = ctx.get_state_mut();
     // Should not create a new job if we already have a maintenance job to be
     // run.
     assert!(!cache.timer_scheduled);

@@ -444,7 +444,7 @@ pub(super) fn initialize_device<C: EthernetIpDeviceContext>(ctx: &mut C, device_
     // Assign a link-local address.
     //
 
-    let state = ctx.get_state(device_id);
+    let state = ctx.get_state_with(device_id);
 
     // Must not have a link local address yet.
     assert!(state.ipv6_link_local_addr_sub.is_none());
@@ -454,7 +454,7 @@ pub(super) fn initialize_device<C: EthernetIpDeviceContext>(ctx: &mut C, device_
     // First, join the solicited-node multicast group for the link-local address.
     join_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
 
-    let state = ctx.get_state_mut(device_id);
+    let state = ctx.get_state_mut_with(device_id);
 
     // Associate the link-local address to the device, and mark it as Tentative, configured by
     // SLAAC, and not set to expire.
@@ -488,7 +488,7 @@ pub(super) fn send_ip_frame<
 ) -> Result<(), S> {
     trace!("ethernet::send_ip_frame: local_addr = {:?}; device = {:?}", local_addr, device_id);
 
-    let state = ctx.get_state_mut(device_id);
+    let state = ctx.get_state_mut_with(device_id);
     let (local_mac, mtu) = (state.mac, state.mtu);
 
     let local_addr = local_addr.get();
@@ -518,7 +518,7 @@ pub(super) fn send_ip_frame<
             )
             .map_err(|ser| ser.into_inner().into_inner()),
         Err(local_addr) => {
-            let state = ctx.get_state_mut(device_id);
+            let state = ctx.get_state_mut_with(device_id);
             // The `serialize_vec_outer` call returns an `Either<B,
             // Buf<Vec<u8>>`. We could naively call `.as_ref().to_vec()` on it,
             // but if it were the `Buf<Vec<u8>>` variant, we'd be unnecessarily
@@ -561,7 +561,7 @@ pub(super) fn receive_frame<B: BufferMut, C: BufferEthernetIpDeviceContext<B>>(
 
     let (src, dst) = (frame.src_mac(), frame.dst_mac());
 
-    if !ctx.get_state(device_id).should_deliver(&dst) {
+    if !ctx.get_state_with(device_id).should_deliver(&dst) {
         trace!("ethernet::receive_frame: destination mac {:?} not for device {:?}", dst, device_id);
         return;
     }
@@ -599,7 +599,7 @@ pub(super) fn set_promiscuous_mode<C: EthernetIpDeviceContext>(
     device_id: C::DeviceId,
     enabled: bool,
 ) {
-    ctx.get_state_mut(device_id).promiscuous_mode = enabled;
+    ctx.get_state_mut_with(device_id).promiscuous_mode = enabled;
 }
 
 /// Get a single IP address for a device.
@@ -632,7 +632,7 @@ pub(super) fn get_ip_addr_subnets<C: EthernetIpDeviceContext, A: IpAddress>(
     Iter<AddressEntry<A, C::Instant>>,
     fn(&AddressEntry<A, C::Instant>) -> Option<AddrSubnet<A>>,
 > {
-    let state = ctx.get_state(device_id);
+    let state = ctx.get_state_with(device_id);
 
     #[ipv4addr]
     let addresses = &state.ipv4_addr_sub;
@@ -669,7 +669,7 @@ pub(super) fn get_ip_addr_subnets_with_tentative<C: EthernetIpDeviceContext, A: 
     Iter<AddressEntry<A, C::Instant>>,
     fn(&AddressEntry<A, C::Instant>) -> Option<Tentative<AddrSubnet<A>>>,
 > {
-    let state = ctx.get_state(device_id);
+    let state = ctx.get_state_with(device_id);
 
     #[ipv4addr]
     let addresses = &state.ipv4_addr_sub;
@@ -709,7 +709,7 @@ fn get_ip_addr_state_inner<C: EthernetIpDeviceContext, A: IpAddress>(
     addr: &A,
     configuration_type: Option<AddressConfigurationType>,
 ) -> Option<AddressState> {
-    let state = ctx.get_state(device_id);
+    let state = ctx.get_state_with(device_id);
 
     #[ipv4addr]
     return state.ipv4_addr_sub.iter().find_map(|a| {
@@ -788,7 +788,7 @@ fn add_ip_addr_subnet_inner<C: EthernetIpDeviceContext, A: IpAddress>(
         return Err(AddressError::AlreadyExists);
     }
 
-    let state = ctx.get_state_mut(device_id);
+    let state = ctx.get_state_mut_with(device_id);
 
     #[ipv4addr]
     state.ipv4_addr_sub.push(AddressEntry::new(
@@ -803,7 +803,7 @@ fn add_ip_addr_subnet_inner<C: EthernetIpDeviceContext, A: IpAddress>(
         // First, join the solicited-node multicast group.
         join_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
 
-        let state = ctx.get_state_mut(device_id);
+        let state = ctx.get_state_mut_with(device_id);
 
         state.ipv6_addr_sub.push(AddressEntry::new(
             addr_sub,
@@ -853,7 +853,7 @@ fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
 
     #[ipv4addr]
     {
-        let state = ctx.get_state_mut(device_id);
+        let state = ctx.get_state_mut_with(device_id);
 
         let original_size = state.ipv4_addr_sub.len();
         if let Some(configuration_type) = configuration_type {
@@ -895,7 +895,7 @@ fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
             return Err(AddressError::NotFound);
         }
 
-        let state = ctx.get_state_mut(device_id);
+        let state = ctx.get_state_mut_with(device_id);
 
         let original_size = state.ipv6_addr_sub.len();
         state.ipv6_addr_sub.retain(|x| x.addr_sub().addr().get() != *addr);
@@ -923,7 +923,7 @@ pub(super) fn get_ipv6_link_local_addr<C: EthernetIpDeviceContext>(
     //  verifications as prefix global addresses, we should keep a state machine
     //  about that check and cache the adopted address. For now, we just compose
     //  the link-local from the ethernet MAC.
-    ctx.get_state(device_id)
+    ctx.get_state_with(device_id)
         .ipv6_link_local_addr_sub
         .as_ref()
         .map(|a| if a.state().is_assigned() { Some(a.addr_sub().addr()) } else { None })
@@ -947,7 +947,7 @@ pub(super) fn join_link_multicast<C: EthernetIpDeviceContext>(
     device_id: C::DeviceId,
     multicast_addr: MulticastAddr<Mac>,
 ) {
-    let device_state = ctx.get_state_mut(device_id);
+    let device_state = ctx.get_state_mut_with(device_id);
 
     let groups = &mut device_state.link_multicast_groups;
 
@@ -986,7 +986,7 @@ fn leave_link_multicast<C: EthernetIpDeviceContext>(
     device_id: C::DeviceId,
     multicast_addr: MulticastAddr<Mac>,
 ) {
-    let device_state = ctx.get_state_mut(device_id);
+    let device_state = ctx.get_state_mut_with(device_id);
 
     let groups = &mut device_state.link_multicast_groups;
 
@@ -1026,7 +1026,7 @@ pub(super) fn join_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
     device_id: C::DeviceId,
     multicast_addr: MulticastAddr<A>,
 ) {
-    let device_state = ctx.get_state_mut(device_id);
+    let device_state = ctx.get_state_mut_with(device_id);
 
     #[ipv4addr]
     let groups = &mut device_state.ipv4_multicast_groups;
@@ -1078,7 +1078,7 @@ pub(super) fn leave_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
     device_id: C::DeviceId,
     multicast_addr: MulticastAddr<A>,
 ) {
-    let device_state = ctx.get_state_mut(device_id);
+    let device_state = ctx.get_state_mut_with(device_id);
     let mac = MulticastAddr::from(&multicast_addr);
 
     #[ipv4addr]
@@ -1122,15 +1122,15 @@ pub(super) fn is_in_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
     multicast_addr: MulticastAddr<A>,
 ) -> bool {
     #[ipv4addr]
-    return ctx.get_state(device_id).ipv4_multicast_groups.contains_key(&multicast_addr);
+    return ctx.get_state_with(device_id).ipv4_multicast_groups.contains_key(&multicast_addr);
 
     #[ipv6addr]
-    return ctx.get_state(device_id).ipv6_multicast_groups.contains_key(&multicast_addr);
+    return ctx.get_state_with(device_id).ipv6_multicast_groups.contains_key(&multicast_addr);
 }
 
 /// Get the MTU associated with this device.
 pub(super) fn get_mtu<C: EthernetIpDeviceContext>(ctx: &C, device_id: C::DeviceId) -> u32 {
-    ctx.get_state(device_id).mtu
+    ctx.get_state_with(device_id).mtu
 }
 
 /// Get the hop limit for new IPv6 packets that will be sent out from `device_id`.
@@ -1138,7 +1138,7 @@ pub(super) fn get_ipv6_hop_limit<C: EthernetIpDeviceContext>(
     ctx: &C,
     device_id: C::DeviceId,
 ) -> NonZeroU8 {
-    ctx.get_state(device_id).ipv6_hop_limit
+    ctx.get_state_with(device_id).ipv6_hop_limit
 }
 
 /// Is IP packet routing enabled on `device_id`?
@@ -1152,10 +1152,10 @@ pub(super) fn is_routing_enabled<C: EthernetIpDeviceContext, I: Ip>(
     device_id: C::DeviceId,
 ) -> bool {
     #[ipv4]
-    return ctx.get_state(device_id).route_ipv4;
+    return ctx.get_state_with(device_id).route_ipv4;
 
     #[ipv6]
-    return ctx.get_state(device_id).route_ipv6;
+    return ctx.get_state_with(device_id).route_ipv6;
 }
 
 /// Sets the IP packet routing flag on `device_id`.
@@ -1170,7 +1170,7 @@ pub(super) fn set_routing_enabled_inner<C: EthernetIpDeviceContext, I: Ip>(
     device_id: C::DeviceId,
     enabled: bool,
 ) {
-    let state = ctx.get_state_mut(device_id);
+    let state = ctx.get_state_mut_with(device_id);
 
     #[ipv4]
     state.route_ipv4 = enabled;
@@ -1219,15 +1219,15 @@ pub(super) fn deinitialize<C: EthernetIpDeviceContext>(ctx: &mut C, device_id: C
 
 impl<
         Id,
-        C: InstantContext + StateContext<Id, EthernetDeviceState<<C as InstantContext>::Instant>>,
-    > StateContext<Id, ArpState<EthernetLinkDevice, Ipv4Addr>> for C
+        C: InstantContext + StateContext<EthernetDeviceState<<C as InstantContext>::Instant>, Id>,
+    > StateContext<ArpState<EthernetLinkDevice, Ipv4Addr>, Id> for C
 {
-    fn get_state(&self, id: Id) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
-        &self.get_state(id).ipv4_arp
+    fn get_state_with(&self, id: Id) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
+        &self.get_state_with(id).ipv4_arp
     }
 
-    fn get_state_mut(&mut self, id: Id) -> &mut ArpState<EthernetLinkDevice, Ipv4Addr> {
-        &mut self.get_state_mut(id).ipv4_arp
+    fn get_state_mut_with(&mut self, id: Id) -> &mut ArpState<EthernetLinkDevice, Ipv4Addr> {
+        &mut self.get_state_mut_with(id).ipv4_arp
     }
 }
 
@@ -1242,7 +1242,7 @@ impl<
         meta: ArpFrameMetadata<EthernetLinkDevice, C::DeviceId>,
         body: S,
     ) -> Result<(), S> {
-        let src = self.get_state(meta.device_id).mac;
+        let src = self.get_state_with(meta.device_id).mac;
         self.send_frame(
             meta.device_id,
             body.encapsulate(EthernetFrameBuilder::new(src, meta.dst_addr, EtherType::Arp)),
@@ -1259,7 +1259,7 @@ impl<C: EthernetIpDeviceContext> ArpContext<EthernetLinkDevice, Ipv4Addr> for C 
     }
 
     fn get_hardware_addr(&self, device_id: C::DeviceId) -> Mac {
-        self.get_state(device_id).mac
+        self.get_state_with(device_id).mac
     }
 
     fn address_resolved(&mut self, device_id: C::DeviceId, proto_addr: Ipv4Addr, hw_addr: Mac) {
@@ -1277,32 +1277,35 @@ impl<C: EthernetIpDeviceContext> ArpContext<EthernetLinkDevice, Ipv4Addr> for C 
 
 impl<
         Id,
-        C: InstantContext + StateContext<Id, EthernetDeviceState<<C as InstantContext>::Instant>>,
-    > StateContext<Id, NdpState<EthernetLinkDevice, <C as InstantContext>::Instant>> for C
+        C: InstantContext + StateContext<EthernetDeviceState<<C as InstantContext>::Instant>, Id>,
+    > StateContext<NdpState<EthernetLinkDevice, <C as InstantContext>::Instant>, Id> for C
 {
-    fn get_state(&self, id: Id) -> &NdpState<EthernetLinkDevice, <C as InstantContext>::Instant> {
-        &self.get_state(id).ndp
+    fn get_state_with(
+        &self,
+        id: Id,
+    ) -> &NdpState<EthernetLinkDevice, <C as InstantContext>::Instant> {
+        &self.get_state_with(id).ndp
     }
 
-    fn get_state_mut(
+    fn get_state_mut_with(
         &mut self,
         id: Id,
     ) -> &mut NdpState<EthernetLinkDevice, <C as InstantContext>::Instant> {
-        &mut self.get_state_mut(id).ndp
+        &mut self.get_state_mut_with(id).ndp
     }
 }
 
 impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
     fn get_link_layer_addr(&self, device_id: C::DeviceId) -> Mac {
-        self.get_state(device_id).mac
+        self.get_state_with(device_id).mac
     }
 
     fn get_interface_identifier(&self, device_id: C::DeviceId) -> [u8; 8] {
-        self.get_state(device_id).mac.to_eui64()
+        self.get_state_with(device_id).mac.to_eui64()
     }
 
     fn get_link_local_addr(&self, device_id: C::DeviceId) -> Option<Tentative<Ipv6Addr>> {
-        self.get_state(device_id).ipv6_link_local_addr_sub.as_ref().map(|a| {
+        self.get_state_with(device_id).ipv6_link_local_addr_sub.as_ref().map(|a| {
             if a.state().is_tentative() {
                 Tentative::new_tentative(a.addr_sub().addr().get())
             } else {
@@ -1327,7 +1330,7 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
         &self,
         device_id: C::DeviceId,
     ) -> Iter<AddressEntry<Ipv6Addr, C::Instant>> {
-        self.get_state(device_id).ipv6_addr_sub.iter()
+        self.get_state_with(device_id).ipv6_addr_sub.iter()
     }
 
     fn ipv6_addr_state(&self, device_id: C::DeviceId, address: &Ipv6Addr) -> Option<AddressState> {
@@ -1336,7 +1339,7 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
         if let Some(state) = get_ip_addr_state::<_, Ipv6Addr>(self, device_id, &address) {
             Some(state)
         } else {
-            self.get_state(device_id)
+            self.get_state_with(device_id)
                 .ipv6_link_local_addr_sub
                 .as_ref()
                 .map(|a| if a.addr_sub().addr().get() == *address { Some(a.state()) } else { None })
@@ -1353,7 +1356,7 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
     }
 
     fn duplicate_address_detected(&mut self, device_id: C::DeviceId, addr: Ipv6Addr) {
-        let state = self.get_state_mut(device_id);
+        let state = self.get_state_mut_with(device_id);
 
         let original_size = state.ipv6_addr_sub.len();
         state.ipv6_addr_sub.retain(|x| x.addr_sub().addr().get() != addr);
@@ -1388,7 +1391,7 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
             addr
         );
 
-        let state = self.get_state_mut(device_id);
+        let state = self.get_state_mut_with(device_id);
 
         if let Some(entry) =
             state.ipv6_addr_sub.iter_mut().find(|a| a.addr_sub().addr().get() == addr)
@@ -1410,7 +1413,7 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
         // `mtu` must not be less than the minimum IPv6 MTU.
         assert!(mtu >= crate::ip::path_mtu::IPV6_MIN_MTU);
 
-        let dev_state = self.get_state_mut(device_id);
+        let dev_state = self.get_state_mut_with(device_id);
 
         // If `mtu` is greater than what the device supports, set `mtu` to the maximum MTU the
         // device supports.
@@ -1424,7 +1427,7 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
     }
 
     fn set_hop_limit(&mut self, device_id: Self::DeviceId, hop_limit: NonZeroU8) {
-        self.get_state_mut(device_id).ipv6_hop_limit = hop_limit;
+        self.get_state_mut_with(device_id).ipv6_hop_limit = hop_limit;
     }
 
     fn add_slaac_addr_sub(
@@ -1455,7 +1458,7 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
             device_id
         );
 
-        let state = self.get_state_mut(device_id);
+        let state = self.get_state_mut_with(device_id);
 
         if let Some(entry) = state.ipv6_addr_sub.iter_mut().find(|a| {
             (a.addr_sub().addr().get() == *addr)
@@ -1513,7 +1516,7 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
             device_id
         );
 
-        let state = self.get_state_mut(device_id);
+        let state = self.get_state_mut_with(device_id);
 
         if let Some(entry) = state.ipv6_addr_sub.iter_mut().find(|a| {
             (a.addr_sub().addr().get() == *addr)
@@ -1562,7 +1565,7 @@ fn mac_resolved<C: EthernetIpDeviceContext>(
     address: IpAddr,
     dst_mac: Mac,
 ) {
-    let state = ctx.get_state_mut(device_id);
+    let state = ctx.get_state_mut_with(device_id);
     let src_mac = state.mac;
     let ether_type = match &address {
         IpAddr::V4(_) => EtherType::Ipv4,
@@ -1608,7 +1611,7 @@ fn mac_resolution_failed<C: EthernetIpDeviceContext>(
     //  resolution."
     //  For ARP, we don't have such a clear statement on the RFC, it would make
     //  sense to do the same thing though.
-    let state = ctx.get_state_mut(device_id);
+    let state = ctx.get_state_mut_with(device_id);
     if let Some(pending) = state.take_pending_frames(address) {
         log_unimplemented!((), "ethernet mac resolution failed not implemented");
     }

@@ -57,7 +57,7 @@ trait IpDeviceContext<D: LinkDevice, TimerId, State>:
     DeviceIdContext<D>
     + CounterContext
     + RngContext
-    + StateContext<<Self as DeviceIdContext<D>>::DeviceId, State>
+    + StateContext<State, <Self as DeviceIdContext<D>>::DeviceId>
     + TimerContext<TimerId>
     + FrameContext<EmptyBuf, <Self as DeviceIdContext<D>>::DeviceId>
     + FrameContext<Buf<Vec<u8>>, <Self as DeviceIdContext<D>>::DeviceId>
@@ -131,14 +131,14 @@ impl<B: BufferMut, D: BufferDispatcher<B>>
     }
 }
 
-impl<D: EventDispatcher> StateContext<EthernetDeviceId, EthernetDeviceState<D::Instant>>
+impl<D: EventDispatcher> StateContext<EthernetDeviceState<D::Instant>, EthernetDeviceId>
     for Context<D>
 {
-    fn get_state(&self, id: EthernetDeviceId) -> &EthernetDeviceState<D::Instant> {
+    fn get_state_with(&self, id: EthernetDeviceId) -> &EthernetDeviceState<D::Instant> {
         self.state().device.ethernet.get(id.0).unwrap().device()
     }
 
-    fn get_state_mut(&mut self, id: EthernetDeviceId) -> &mut EthernetDeviceState<D::Instant> {
+    fn get_state_mut_with(&mut self, id: EthernetDeviceId) -> &mut EthernetDeviceState<D::Instant> {
         self.state_mut().device.ethernet.get_mut(id.0).unwrap().device_mut()
     }
 }

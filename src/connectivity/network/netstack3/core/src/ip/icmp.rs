@@ -330,7 +330,7 @@ pub(crate) trait IcmpContext<I: IcmpIpExt, B: BufferMut>:
 /// The execution context for ICMP(v4).
 pub(crate) trait Icmpv4Context<B: BufferMut>:
     IcmpContext<Ipv4, B>
-    + StateContext<(), Icmpv4State<<Self as InstantContext>::Instant>>
+    + StateContext<Icmpv4State<<Self as InstantContext>::Instant>>
     + Icmpv4SocketContext
 {
     // TODO(joshlf): If we end up needing to respond to these messages with new
@@ -348,12 +348,12 @@ pub(crate) trait Icmpv4Context<B: BufferMut>:
 
 /// The execution context for ICMPv6.
 pub(crate) trait Icmpv6Context<B: BufferMut>:
-    IcmpContext<Ipv6, B> + StateContext<(), Icmpv6State<<Self as InstantContext>::Instant>>
+    IcmpContext<Ipv6, B> + StateContext<Icmpv6State<<Self as InstantContext>::Instant>>
 {
 }
 impl<
         B: BufferMut,
-        C: IcmpContext<Ipv6, B> + StateContext<(), Icmpv6State<<Self as InstantContext>::Instant>>,
+        C: IcmpContext<Ipv6, B> + StateContext<Icmpv6State<<Self as InstantContext>::Instant>>,
     > Icmpv6Context<B> for C
 {
 }
@@ -361,7 +361,7 @@ impl<
 /// Attempt to send an ICMP or ICMPv6 error message, applying a rate limit.
 ///
 /// `try_send_error!($ctx, $e)` attempts to consume a token from the token
-/// bucket at `$ctx.get_state_mut(()).error_send_bucket`. If it succeeds, it
+/// bucket at `$ctx.get_state_mut().error_send_bucket`. If it succeeds, it
 /// invokes the expression `$e`, and otherwise does nothing. It assumes that the
 /// type of `$e` is `Result<(), _>` and, in the case that the rate limit is
 /// exceeded and it does not invoke `$e`, returns `Ok(())`.
@@ -377,7 +377,7 @@ macro_rules! try_send_error {
         // unconditionally. See the documentation on the `CachedInstantContext`
         // type for more information.
         let instant_ctx = crate::context::new_cached_instant_context($ctx);
-        if $ctx.get_state_mut(()).error_send_bucket.try_take(&instant_ctx) {
+        if $ctx.get_state_mut().error_send_bucket.try_take(&instant_ctx) {
             $e
         } else {
             trace!("ip::icmp::try_send_error!: dropping rate-limited ICMP error message");
@@ -434,7 +434,7 @@ pub(crate) fn receive_icmpv4_packet<B: BufferMut, C: Icmpv4Context<B> + PmtuHand
         Icmpv4Packet::TimestampRequest(timestamp_request) => {
             ctx.increment_counter("receive_icmpv4_packet::timestamp_request");
             if let Some(src_ip) = SpecifiedAddr::new(src_ip) {
-                if StateContext::<(), Icmpv4State<_>>::get_state(ctx, ()).send_timestamp_reply {
+                if StateContext::<Icmpv4State<_>>::get_state(ctx).send_timestamp_reply {
                     trace!("receive_icmpv4_packet: Responding to Timestamp Request message");
                     // We're supposed to respond with the time that we processed
                     // this message as measured in milliseconds since midnight
@@ -1389,7 +1389,7 @@ fn receive_icmp_echo_reply<
     I: IcmpIpExt,
     B: BufferMut,
     S: AsRef<ConnAddrMap<IcmpAddr<I::Addr>>>,
-    C: IcmpContext<I, B> + StateContext<(), S>,
+    C: IcmpContext<I, B> + StateContext<S>,
 >(
     ctx: &mut C,
     src_ip: I::Addr,
@@ -1399,10 +1399,8 @@ fn receive_icmp_echo_reply<
     body: B,
 ) {
     if let Some(src_ip) = SpecifiedAddr::new(src_ip) {
-        if let Some(conn) = ctx
-            .get_state(())
-            .as_ref()
-            .get_id_by_addr(&IcmpAddr { remote_addr: src_ip, icmp_id: id })
+        if let Some(conn) =
+            ctx.get_state().as_ref().get_id_by_addr(&IcmpAddr { remote_addr: src_ip, icmp_id: id })
         {
             ctx.receive_icmp_echo_reply(IcmpConnId(conn), seq, body);
         } else {
@@ -1441,10 +1439,8 @@ pub(crate) fn receive_icmpv4_socket_error<B: BufferMut, C: Icmpv4Context<B>>(
 
     if let Some(dst_ip) = SpecifiedAddr::new(original_packet.dst_ip()) {
         let id = echo_request.message().id();
-        if let Some(conn) = ctx
-            .get_state(())
-            .as_ref()
-            .get_id_by_addr(&IcmpAddr { remote_addr: dst_ip, icmp_id: id })
+        if let Some(conn) =
+            ctx.get_state().as_ref().get_id_by_addr(&IcmpAddr { remote_addr: dst_ip, icmp_id: id })
         {
             let seq = echo_request.message().seq();
             Icmpv4SocketContext::receive_icmpv4_error(ctx, IcmpConnId(conn), seq, err);
@@ -2071,12 +2067,12 @@ mod tests {
                 }
             }
 
-            impl StateContext<(), $state<DummyInstant>> for $outer {
-                fn get_state(&self, _id: ()) -> &$state<DummyInstant> {
+            impl StateContext<$state<DummyInstant>> for $outer {
+                fn get_state_with(&self, _id: ()) -> &$state<DummyInstant> {
                     &self.get_ref().icmp_state
                 }
 
-                fn get_state_mut(&mut self, _id: ()) -> &mut $state<DummyInstant> {
+                fn get_state_mut_with(&mut self, _id: ()) -> &mut $state<DummyInstant> {
                     &mut self.get_mut().icmp_state
                 }
             }

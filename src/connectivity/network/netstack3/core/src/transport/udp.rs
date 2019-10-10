@@ -115,7 +115,7 @@ impl UdpListenerId {
 }
 
 /// An execution context for the UDP protocol.
-pub trait UdpContext<I: Ip>: TransportIpContext<I> + StateContext<(), UdpState<I>> {}
+pub trait UdpContext<I: Ip>: TransportIpContext<I> + StateContext<UdpState<I>> {}
 
 /// An execution context for the UDP protocol when a buffer is provided.
 ///
@@ -146,8 +146,8 @@ pub trait BufferUdpContext<I: Ip, B: BufferMut>:
     }
 }
 
-impl<I: Ip, D: EventDispatcher> StateContext<(), UdpState<I>> for Context<D> {
-    fn get_state(&self, _id: ()) -> &UdpState<I> {
+impl<I: Ip, D: EventDispatcher> StateContext<UdpState<I>> for Context<D> {
+    fn get_state_with(&self, _id: ()) -> &UdpState<I> {
         #[specialize_ip]
         fn get_state<I: Ip, D: EventDispatcher>(ctx: &Context<D>) -> &UdpState<I> {
             #[ipv4]
@@ -159,7 +159,7 @@ impl<I: Ip, D: EventDispatcher> StateContext<(), UdpState<I>> for Context<D> {
         get_state(self)
     }
 
-    fn get_state_mut(&mut self, _id: ()) -> &mut UdpState<I> {
+    fn get_state_mut_with(&mut self, _id: ()) -> &mut UdpState<I> {
         #[specialize_ip]
         fn get_state_mut<I: Ip, D: EventDispatcher>(ctx: &mut Context<D>) -> &mut UdpState<I> {
             #[ipv4]
@@ -233,7 +233,7 @@ pub(crate) fn receive_ip_packet<A: IpAddress, B: BufferMut, C: BufferUdpContext<
         return Ok(());
     };
 
-    let state = ctx.get_state(());
+    let state = ctx.get_state();
 
     if let Some(conn) = SpecifiedAddr::new(src_ip)
         .and_then(|src_ip| Conn::from_packet(src_ip, dst_ip, &packet))
@@ -296,7 +296,7 @@ pub(crate) fn send_udp_conn<I: Ip, B: BufferMut, C: BufferUdpContext<I, B>>(
     conn: UdpConnId,
     body: B,
 ) {
-    let state = ctx.get_state(());
+    let state = ctx.get_state();
     let Conn { local_addr, local_port, remote_addr, remote_port } =
         *state.conns.get_conn_by_id(conn.0).expect("transport::udp::send_udp_conn: no such conn");
 
@@ -335,7 +335,7 @@ pub(crate) fn send_udp_listener<A: IpAddress, B: BufferMut, C: BufferUdpContext<
         panic!("transport::udp::send_udp::listener: invalid local addr");
     }
 
-    let state = ctx.get_state(());
+    let state = ctx.get_state();
 
     let local_port = match listener.listener_type {
         ListenerType::Specified => {
@@ -404,7 +404,7 @@ pub(crate) fn connect_udp<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Ver
     if let Some(local_port) = local_port {
         let c = Conn { local_addr, local_port, remote_addr, remote_port };
         let listener = Listener { addr: local_addr, port: local_port };
-        let state = ctx.get_state_mut(());
+        let state = ctx.get_state_mut();
         if state.conns.get_id_by_addr(&c).is_some()
             || state.listeners.get_by_addr(&listener).is_some()
         {
@@ -437,7 +437,7 @@ pub(crate) fn listen_udp<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Vers
     addrs: Vec<SpecifiedAddr<A>>,
     port: NonZeroU16,
 ) -> UdpListenerId {
-    let mut state = ctx.get_state_mut(());
+    let mut state = ctx.get_state_mut();
     if addrs.is_empty() {
         if state.wildcard_listeners.get_by_addr(&port).is_some() {
             // TODO(joshlf): Return error
@@ -510,12 +510,12 @@ mod tests {
         }
     }
 
-    impl<I: Ip> StateContext<(), UdpState<I>> for DummyContext<I> {
-        fn get_state(&self, _id: ()) -> &UdpState<I> {
+    impl<I: Ip> StateContext<UdpState<I>> for DummyContext<I> {
+        fn get_state_with(&self, _id: ()) -> &UdpState<I> {
             &self.get_ref().state
         }
 
-        fn get_state_mut(&mut self, _id: ()) -> &mut UdpState<I> {
+        fn get_state_mut_with(&mut self, _id: ()) -> &mut UdpState<I> {
             &mut self.get_mut().state
         }
     }
