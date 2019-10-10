@@ -7,13 +7,13 @@ use {
     fuchsia_zircon::{DurationNum, Signals, Status},
     futures::{stream::Stream, task::Context, Poll},
     parking_lot::Mutex,
-    std::{fmt, pin::Pin, sync::Arc, sync::Weak},
+    std::{convert::TryFrom, fmt, pin::Pin, sync::Arc, sync::Weak},
 };
 
 use crate::{
     types::{
         EndpointType, Error, ErrorCode, MediaType, Result, ServiceCapability, StreamEndpointId,
-        StreamInformation, TryFrom,
+        StreamInformation,
     },
     Peer, SimpleResponder,
 };

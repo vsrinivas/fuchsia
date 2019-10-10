@@ -5,7 +5,6 @@
 #![recursion_limit = "256"]
 
 use {
-    crate::inspect_types::{RemoteCapabilitiesInspect, RemotePeerInspect, StreamingInspectData},
     bt_a2dp::media_types::*,
     bt_a2dp_sink_metrics as metrics, bt_avdtp as avdtp,
     failure::{format_err, Error, ResultExt},
@@ -39,6 +38,8 @@ use {
         sync::Arc,
     },
 };
+
+use crate::inspect_types::{RemoteCapabilitiesInspect, RemotePeerInspect, StreamingInspectData};
 
 lazy_static! {
     /// COBALT_SENDER must only be accessed from within an async context;

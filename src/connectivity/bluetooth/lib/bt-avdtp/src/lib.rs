@@ -15,7 +15,9 @@ use {
     },
     parking_lot::Mutex,
     slab::Slab,
-    std::{collections::VecDeque, marker::Unpin, mem, pin::Pin, result, sync::Arc},
+    std::{
+        collections::VecDeque, convert::TryFrom, marker::Unpin, mem, pin::Pin, result, sync::Arc,
+    },
 };
 
 #[cfg(test)]
@@ -25,7 +27,7 @@ mod stream_endpoint;
 mod types;
 
 use crate::types::{
-    Decodable, Encodable, SignalIdentifier, SignalingHeader, SignalingMessageType, TryFrom, TxLabel,
+    Decodable, Encodable, SignalIdentifier, SignalingHeader, SignalingMessageType, TxLabel,
 };
 
 pub use crate::{

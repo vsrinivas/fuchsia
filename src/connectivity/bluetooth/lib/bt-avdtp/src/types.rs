@@ -7,6 +7,7 @@ use {
     fuchsia_syslog::fx_log_warn,
     fuchsia_zircon as zx,
     std::{
+        convert::TryFrom,
         fmt,
         io::{Cursor, Write},
         result,
@@ -163,6 +164,8 @@ macro_rules! tofrom_decodable_enum {
         }
 
         impl TryFrom<$raw_type> for $name {
+            type Error = Error;
+
             fn try_from(value: $raw_type) -> Result<Self> {
                 match value {
                     $($val => Ok($name::$variant)),*,
@@ -204,10 +207,6 @@ pub_decodable_enum! {
     }
 }
 
-pub(crate) trait TryFrom<T>: Sized {
-    fn try_from(value: T) -> Result<Self>;
-}
-
 /// A decodable type can be created from a byte buffer.
 /// The type returned is separate (copied) from the buffer once decoded.
 pub(crate) trait Decodable: Sized {
@@ -235,6 +234,8 @@ pub struct TxLabel(u8);
 const MAX_TX_LABEL: u8 = 0xF;
 
 impl TryFrom<u8> for TxLabel {
+    type Error = Error;
+
     fn try_from(value: u8) -> Result<Self> {
         if value > MAX_TX_LABEL {
             fx_log_warn!("TxLabel out of range: {}", value);
@@ -439,6 +440,8 @@ impl StreamEndpointId {
 }
 
 impl TryFrom<u8> for StreamEndpointId {
+    type Error = Error;
+
     fn try_from(value: u8) -> Result<Self> {
         if value == 0 || value > 0x3E {
             Err(Error::OutOfRange)
@@ -508,6 +511,8 @@ impl ContentProtectionType {
 }
 
 impl TryFrom<u16> for ContentProtectionType {
+    type Error = Error;
+
     fn try_from(val: u16) -> Result<Self> {
         match val {
             1 => Ok(ContentProtectionType::DigitalTransmissionContentProtection),
