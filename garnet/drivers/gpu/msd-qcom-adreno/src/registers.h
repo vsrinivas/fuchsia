@@ -221,6 +221,35 @@ class A6xxCpProtect : public A6xxCpProtectBase {
   }
 };
 
+class A6xxCpRingbufferControl : public magma::RegisterBase {
+ public:
+  static constexpr uint64_t kBufferSizeShift = 0;
+  static constexpr uint64_t kBlockSizeShift = 8;
+
+  void set(uint64_t ringbuffer_size, uint64_t ringbuffer_block_size) {
+    uint64_t size_pow2, block_size_pow2;
+    bool success = magma::get_pow2(ringbuffer_size / 8, &size_pow2);
+    DASSERT(success);
+    success = magma::get_pow2(ringbuffer_block_size / 8, &block_size_pow2);
+    DASSERT(success);
+    uint64_t value = (size_pow2 << kBufferSizeShift) | (block_size_pow2 << kBlockSizeShift);
+    set_reg_value(value);
+  }
+
+  void disable_read_ptr_update() { set_reg_value(reg_value() | 0x08000000); }
+
+  static auto CreateFrom(uint32_t value) {
+    return magma::RegisterAddr<A6xxCpRingbufferControl>(0x00000802 << 2).FromValue(value);
+  }
+};
+
+class A6xxCpRingbufferBase : public magma::RegisterPairBase {
+ public:
+  static auto CreateFrom(uint64_t value) {
+    return magma::RegisterAddr<A6xxCpRingbufferBase>(0x00000800 << 2).FromValue(value);
+  }
+};
+
 }  // namespace registers
 
 #endif  // REGISTERS_H

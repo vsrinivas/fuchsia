@@ -23,21 +23,71 @@ bool MsdQcomDevice::Init(void* device_handle, std::unique_ptr<magma::RegisterIo:
   if (!qcom_platform_device_)
     return DRETF(false, "Failed to create platform device from handle: %p", device_handle);
 
-  std::unique_ptr<magma::PlatformMmio> mmio(qcom_platform_device_->platform_device()->CpuMapMmio(
-      0, magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE));
-  if (!mmio)
-    return DRETF(false, "Failed to map mmio");
+  {
+    std::unique_ptr<magma::PlatformMmio> mmio(qcom_platform_device_->platform_device()->CpuMapMmio(
+        0, magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE));
+    if (!mmio)
+      return DRETF(false, "Failed to map mmio");
 
-  register_io_ = std::make_unique<magma::RegisterIo>(std::move(mmio));
-  if (!register_io_)
-    return DRETF(false, "Failed to create register io");
+    register_io_ = std::make_unique<magma::RegisterIo>(std::move(mmio));
+    if (!register_io_)
+      return DRETF(false, "Failed to create register io");
+  }
 
   if (hook) {
     register_io_->InstallHook(std::move(hook));
   }
 
+  bus_mapper_ = magma::PlatformBusMapper::Create(
+      qcom_platform_device_->platform_device()->GetBusTransactionInitiator());
+
+  {
+    auto iommu =
+        magma::PlatformIommu::Create(qcom_platform_device_->platform_device()->GetIommuConnector());
+
+    address_space_ = std::make_shared<AllocatingAddressSpace>(this);
+    if (!address_space_->Init(kClientGpuAddrBase, UINT32_MAX - kClientGpuAddrBase,
+                              std::move(iommu)))
+      return DRETF(false, "Failed to initialize address space");
+  }
+
   if (!HardwareInit())
     return DRETF(false, "HardwareInit failed");
+
+  if (!InitRingbuffer())
+    return DRETF(false, "InitRingbuffer failed");
+
+  return true;
+}
+
+bool MsdQcomDevice::InitRingbuffer() {
+  static constexpr uint64_t kRingbufferSize = 32 * 1024;
+  static constexpr uint64_t kRingbufferBlockSize = 32;
+
+  {
+    auto buffer = magma::PlatformBuffer::Create(kRingbufferSize, "ringbuffer");
+    if (!buffer)
+      return DRETF(false, "Failed to create ringbuffer");
+
+    ringbuffer_ = std::make_unique<Ringbuffer>(std::move(buffer), 0);
+  }
+
+  DASSERT(address_space_);
+  if (!ringbuffer_->Map(address_space_))
+    return DRETF(false, "Failed to map ringbuffer");
+
+  {
+    auto reg = registers::A6xxCpRingbufferControl::CreateFrom(0);
+    reg.set(kRingbufferSize, kRingbufferBlockSize);
+    reg.disable_read_ptr_update();
+    reg.WriteTo(register_io_.get());
+  }
+
+  uint64_t gpu_addr;
+  if (!ringbuffer_->GetGpuAddress(&gpu_addr))
+    return DRETF(false, "Failed to get ringbuffer gpu addr");
+
+  registers::A6xxCpRingbufferBase::CreateFrom(gpu_addr).WriteTo(register_io_.get());
 
   return true;
 }

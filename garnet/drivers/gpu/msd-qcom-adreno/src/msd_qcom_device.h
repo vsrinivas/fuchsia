@@ -5,11 +5,15 @@
 #ifndef MSD_QCOM_DEVICE_H
 #define MSD_QCOM_DEVICE_H
 
+#include <platform_bus_mapper.h>
+
 #include <magma_util/register_io.h>
 
+#include "allocating_address_space.h"
 #include "msd_qcom_platform_device.h"
+#include "ringbuffer.h"
 
-class MsdQcomDevice {
+class MsdQcomDevice : public magma::AddressSpaceOwner {
  public:
   static std::unique_ptr<MsdQcomDevice> Create(void* device_handle);
 
@@ -19,6 +23,10 @@ class MsdQcomDevice {
 
  private:
   magma::RegisterIo* register_io() { return register_io_.get(); }
+  magma::Ringbuffer<GpuMapping>* ringbuffer() { return ringbuffer_.get(); }
+
+  // magma::AddressSpaceOwner
+  magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
 
   static constexpr uint64_t kGmemGpuAddrBase = 0x00100000;
   static constexpr uint64_t kClientGpuAddrBase = 0x01000000;
@@ -26,9 +34,13 @@ class MsdQcomDevice {
   bool Init(void* device_handle, std::unique_ptr<magma::RegisterIo::Hook> hook);
   bool HardwareInit();
   bool EnableClockGating(bool enable);
+  bool InitRingbuffer();
 
   std::unique_ptr<MsdQcomPlatformDevice> qcom_platform_device_;
   std::unique_ptr<magma::RegisterIo> register_io_;
+  std::unique_ptr<magma::PlatformBusMapper> bus_mapper_;
+  std::shared_ptr<AllocatingAddressSpace> address_space_;
+  std::unique_ptr<Ringbuffer> ringbuffer_;
 
   friend class TestQcomDevice;
 };
