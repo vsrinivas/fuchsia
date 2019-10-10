@@ -6,8 +6,10 @@ use {
     crate::switchboard::base::{AudioStream, AudioStreamType},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_media::{AudioRenderUsage, Usage},
-    fidl_fuchsia_media_audio::VolumeControlProxy,
+    fidl_fuchsia_media_audio::{VolumeControlEvent, VolumeControlProxy},
+    fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
+    futures::TryStreamExt,
 };
 
 // Stores an AudioStream and a VolumeControl proxy bound to the AudioCore
@@ -66,8 +68,27 @@ fn bind_volume_control(
 ) -> Option<VolumeControlProxy> {
     let (vol_control_proxy, server_end) = create_proxy().unwrap();
     let mut usage = Usage::RenderUsage(AudioRenderUsage::from(stream_type));
-    match audio_service.bind_usage_volume_control(&mut usage, server_end) {
-        Ok(_) => Some(vol_control_proxy),
-        Err(_) => None,
+
+    if let Err(err) = audio_service.bind_usage_volume_control(&mut usage, server_end) {
+        fx_log_err!("failed to bind volume control for usage, {}", err);
+        return None;
     }
+
+    // TODO(fxb/37777): Update |stored_stream| in StreamVolumeControl and send a notification
+    // when we receive an update.
+    let proxy_clone = vol_control_proxy.clone();
+    fasync::spawn(async move {
+        let mut stream = proxy_clone.take_event_stream();
+        while let Some(evt) = stream.try_next().await.unwrap() {
+            match evt {
+                VolumeControlEvent::OnVolumeMuteChanged { new_volume: _, new_muted: _ } => {
+                    proxy_clone.notify_volume_mute_changed_handled().unwrap_or_else(move |e| {
+                        fx_log_err!("failed to notify volume mute change handling, {}", e);
+                    });
+                }
+            }
+        }
+    });
+
+    Some(vol_control_proxy)
 }
