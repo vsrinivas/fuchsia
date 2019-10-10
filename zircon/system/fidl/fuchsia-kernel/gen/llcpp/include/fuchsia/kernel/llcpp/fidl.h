@@ -455,7 +455,7 @@ struct CpuStats {
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr uint32_t MaxOutOfLine = 192512;
 
   uint64_t actual_num_cpus = {};
 
@@ -916,8 +916,8 @@ class DebugBroker final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_kernel_CounterGetInspectVMOResponseTable;
-extern "C" const fidl_type_t fuchsia_kernel_CounterUpdateInspectVMOResponseTable;
+extern "C" const fidl_type_t fuchsia_kernel_CounterGetInspectVmoResponseTable;
+extern "C" const fidl_type_t fuchsia_kernel_CounterUpdateInspectVmoResponseTable;
 
 // Protocol for retrieving kcounter information.
 class Counter final {
@@ -925,13 +925,13 @@ class Counter final {
  public:
   static constexpr char Name[] = "fuchsia.kernel.Counter";
 
-  struct GetInspectVMOResponse final {
+  struct GetInspectVmoResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
     ::llcpp::fuchsia::mem::Buffer buffer;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_kernel_CounterGetInspectVMOResponseTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_kernel_CounterGetInspectVmoResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -939,14 +939,14 @@ class Counter final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
-  using GetInspectVMORequest = ::fidl::AnyZeroArgMessage;
+  using GetInspectVmoRequest = ::fidl::AnyZeroArgMessage;
 
-  struct UpdateInspectVMOResponse final {
+  struct UpdateInspectVmoResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_kernel_CounterUpdateInspectVMOResponseTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_kernel_CounterUpdateInspectVmoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -954,7 +954,7 @@ class Counter final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
-  using UpdateInspectVMORequest = ::fidl::AnyZeroArgMessage;
+  using UpdateInspectVmoRequest = ::fidl::AnyZeroArgMessage;
 
 
   // Collection of return types of FIDL calls in this interface.
@@ -962,13 +962,13 @@ class Counter final {
     ResultOf() = delete;
    private:
     template <typename ResponseType>
-    class GetInspectVMO_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class GetInspectVmo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetInspectVMO_Impl(zx::unowned_channel _client_end);
-      ~GetInspectVMO_Impl() = default;
-      GetInspectVMO_Impl(GetInspectVMO_Impl&& other) = default;
-      GetInspectVMO_Impl& operator=(GetInspectVMO_Impl&& other) = default;
+      GetInspectVmo_Impl(zx::unowned_channel _client_end);
+      ~GetInspectVmo_Impl() = default;
+      GetInspectVmo_Impl(GetInspectVmo_Impl&& other) = default;
+      GetInspectVmo_Impl& operator=(GetInspectVmo_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -978,13 +978,13 @@ class Counter final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class UpdateInspectVMO_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class UpdateInspectVmo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      UpdateInspectVMO_Impl(zx::unowned_channel _client_end);
-      ~UpdateInspectVMO_Impl() = default;
-      UpdateInspectVMO_Impl(UpdateInspectVMO_Impl&& other) = default;
-      UpdateInspectVMO_Impl& operator=(UpdateInspectVMO_Impl&& other) = default;
+      UpdateInspectVmo_Impl(zx::unowned_channel _client_end);
+      ~UpdateInspectVmo_Impl() = default;
+      UpdateInspectVmo_Impl(UpdateInspectVmo_Impl&& other) = default;
+      UpdateInspectVmo_Impl& operator=(UpdateInspectVmo_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -995,8 +995,8 @@ class Counter final {
     };
 
    public:
-    using GetInspectVMO = GetInspectVMO_Impl<GetInspectVMOResponse>;
-    using UpdateInspectVMO = UpdateInspectVMO_Impl<UpdateInspectVMOResponse>;
+    using GetInspectVmo = GetInspectVmo_Impl<GetInspectVmoResponse>;
+    using UpdateInspectVmo = UpdateInspectVmo_Impl<UpdateInspectVmoResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -1005,13 +1005,13 @@ class Counter final {
     UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
-    class GetInspectVMO_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class GetInspectVmo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetInspectVMO_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~GetInspectVMO_Impl() = default;
-      GetInspectVMO_Impl(GetInspectVMO_Impl&& other) = default;
-      GetInspectVMO_Impl& operator=(GetInspectVMO_Impl&& other) = default;
+      GetInspectVmo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetInspectVmo_Impl() = default;
+      GetInspectVmo_Impl(GetInspectVmo_Impl&& other) = default;
+      GetInspectVmo_Impl& operator=(GetInspectVmo_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -1021,13 +1021,13 @@ class Counter final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class UpdateInspectVMO_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class UpdateInspectVmo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      UpdateInspectVMO_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~UpdateInspectVMO_Impl() = default;
-      UpdateInspectVMO_Impl(UpdateInspectVMO_Impl&& other) = default;
-      UpdateInspectVMO_Impl& operator=(UpdateInspectVMO_Impl&& other) = default;
+      UpdateInspectVmo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~UpdateInspectVmo_Impl() = default;
+      UpdateInspectVmo_Impl(UpdateInspectVmo_Impl&& other) = default;
+      UpdateInspectVmo_Impl& operator=(UpdateInspectVmo_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -1038,8 +1038,8 @@ class Counter final {
     };
 
    public:
-    using GetInspectVMO = GetInspectVMO_Impl<GetInspectVMOResponse>;
-    using UpdateInspectVMO = UpdateInspectVMO_Impl<UpdateInspectVMOResponse>;
+    using GetInspectVmo = GetInspectVmo_Impl<GetInspectVmoResponse>;
+    using UpdateInspectVmo = UpdateInspectVmo_Impl<UpdateInspectVmoResponse>;
   };
 
   class SyncClient final {
@@ -1056,24 +1056,24 @@ class Counter final {
     // Retrives a VMO containining summarized kcounter data. The vmo returned
     // in |buffer| is in "inspect-vmo" format, documented elsewhere.
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::GetInspectVMO GetInspectVMO();
+    ResultOf::GetInspectVmo GetInspectVmo();
 
     // Retrives a VMO containining summarized kcounter data. The vmo returned
     // in |buffer| is in "inspect-vmo" format, documented elsewhere.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::GetInspectVMO GetInspectVMO(::fidl::BytePart _response_buffer);
+    UnownedResultOf::GetInspectVmo GetInspectVmo(::fidl::BytePart _response_buffer);
 
     // Request that the previously-returned VMO buffer's data be updated. The
     // data may not be updated if it was already recently updated (updates are
     // limited to an unspecified rate, but approximately every few seconds).
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::UpdateInspectVMO UpdateInspectVMO();
+    ResultOf::UpdateInspectVmo UpdateInspectVmo();
 
     // Request that the previously-returned VMO buffer's data be updated. The
     // data may not be updated if it was already recently updated (updates are
     // limited to an unspecified rate, but approximately every few seconds).
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::UpdateInspectVMO UpdateInspectVMO(::fidl::BytePart _response_buffer);
+    UnownedResultOf::UpdateInspectVmo UpdateInspectVmo(::fidl::BytePart _response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -1087,24 +1087,24 @@ class Counter final {
     // Retrives a VMO containining summarized kcounter data. The vmo returned
     // in |buffer| is in "inspect-vmo" format, documented elsewhere.
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetInspectVMO GetInspectVMO(zx::unowned_channel _client_end);
+    static ResultOf::GetInspectVmo GetInspectVmo(zx::unowned_channel _client_end);
 
     // Retrives a VMO containining summarized kcounter data. The vmo returned
     // in |buffer| is in "inspect-vmo" format, documented elsewhere.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetInspectVMO GetInspectVMO(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetInspectVmo GetInspectVmo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Request that the previously-returned VMO buffer's data be updated. The
     // data may not be updated if it was already recently updated (updates are
     // limited to an unspecified rate, but approximately every few seconds).
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::UpdateInspectVMO UpdateInspectVMO(zx::unowned_channel _client_end);
+    static ResultOf::UpdateInspectVmo UpdateInspectVmo(zx::unowned_channel _client_end);
 
     // Request that the previously-returned VMO buffer's data be updated. The
     // data may not be updated if it was already recently updated (updates are
     // limited to an unspecified rate, but approximately every few seconds).
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::UpdateInspectVMO UpdateInspectVMO(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::UpdateInspectVmo UpdateInspectVmo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1116,12 +1116,12 @@ class Counter final {
 
     // Retrives a VMO containining summarized kcounter data. The vmo returned
     // in |buffer| is in "inspect-vmo" format, documented elsewhere.
-    static ::fidl::DecodeResult<GetInspectVMOResponse> GetInspectVMO(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetInspectVmoResponse> GetInspectVmo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Request that the previously-returned VMO buffer's data be updated. The
     // data may not be updated if it was already recently updated (updates are
     // limited to an unspecified rate, but approximately every few seconds).
-    static ::fidl::DecodeResult<UpdateInspectVMOResponse> UpdateInspectVMO(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<UpdateInspectVmoResponse> UpdateInspectVmo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1133,33 +1133,33 @@ class Counter final {
     using _Outer = Counter;
     using _Base = ::fidl::CompleterBase;
 
-    class GetInspectVMOCompleterBase : public _Base {
+    class GetInspectVmoCompleterBase : public _Base {
      public:
       void Reply(int32_t status, ::llcpp::fuchsia::mem::Buffer buffer);
       void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::mem::Buffer buffer);
-      void Reply(::fidl::DecodedMessage<GetInspectVMOResponse> params);
+      void Reply(::fidl::DecodedMessage<GetInspectVmoResponse> params);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
 
-    using GetInspectVMOCompleter = ::fidl::Completer<GetInspectVMOCompleterBase>;
+    using GetInspectVmoCompleter = ::fidl::Completer<GetInspectVmoCompleterBase>;
 
-    virtual void GetInspectVMO(GetInspectVMOCompleter::Sync _completer) = 0;
+    virtual void GetInspectVmo(GetInspectVmoCompleter::Sync _completer) = 0;
 
-    class UpdateInspectVMOCompleterBase : public _Base {
+    class UpdateInspectVmoCompleterBase : public _Base {
      public:
       void Reply(int32_t status);
       void Reply(::fidl::BytePart _buffer, int32_t status);
-      void Reply(::fidl::DecodedMessage<UpdateInspectVMOResponse> params);
+      void Reply(::fidl::DecodedMessage<UpdateInspectVmoResponse> params);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
 
-    using UpdateInspectVMOCompleter = ::fidl::Completer<UpdateInspectVMOCompleterBase>;
+    using UpdateInspectVmoCompleter = ::fidl::Completer<UpdateInspectVmoCompleterBase>;
 
-    virtual void UpdateInspectVMO(UpdateInspectVMOCompleter::Sync _completer) = 0;
+    virtual void UpdateInspectVmo(UpdateInspectVmoCompleter::Sync _completer) = 0;
 
   };
 
@@ -1186,10 +1186,10 @@ class Counter final {
   class SetTransactionHeaderFor final {
     SetTransactionHeaderFor() = delete;
    public:
-    static void GetInspectVMORequest(const ::fidl::DecodedMessage<Counter::GetInspectVMORequest>& _msg);
-    static void GetInspectVMOResponse(const ::fidl::DecodedMessage<Counter::GetInspectVMOResponse>& _msg);
-    static void UpdateInspectVMORequest(const ::fidl::DecodedMessage<Counter::UpdateInspectVMORequest>& _msg);
-    static void UpdateInspectVMOResponse(const ::fidl::DecodedMessage<Counter::UpdateInspectVMOResponse>& _msg);
+    static void GetInspectVmoRequest(const ::fidl::DecodedMessage<Counter::GetInspectVmoRequest>& _msg);
+    static void GetInspectVmoResponse(const ::fidl::DecodedMessage<Counter::GetInspectVmoResponse>& _msg);
+    static void UpdateInspectVmoRequest(const ::fidl::DecodedMessage<Counter::UpdateInspectVmoRequest>& _msg);
+    static void UpdateInspectVmoResponse(const ::fidl::DecodedMessage<Counter::UpdateInspectVmoResponse>& _msg);
   };
 };
 
@@ -1229,7 +1229,7 @@ class Stats final {
     static constexpr const fidl_type_t* Type = &fuchsia_kernel_StatsGetCpuStatsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t MaxOutOfLine = 192512;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -1510,21 +1510,21 @@ static_assert(sizeof(::llcpp::fuchsia::kernel::DebugBroker::SetTracingEnabledRes
 static_assert(offsetof(::llcpp::fuchsia::kernel::DebugBroker::SetTracingEnabledResponse, status) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::kernel::Counter::GetInspectVMOResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::kernel::Counter::GetInspectVmoResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::kernel::Counter::GetInspectVMOResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::kernel::Counter::GetInspectVMOResponse)
-    == ::llcpp::fuchsia::kernel::Counter::GetInspectVMOResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::kernel::Counter::GetInspectVMOResponse, status) == 16);
-static_assert(offsetof(::llcpp::fuchsia::kernel::Counter::GetInspectVMOResponse, buffer) == 24);
+struct IsFidlMessage<::llcpp::fuchsia::kernel::Counter::GetInspectVmoResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::kernel::Counter::GetInspectVmoResponse)
+    == ::llcpp::fuchsia::kernel::Counter::GetInspectVmoResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::kernel::Counter::GetInspectVmoResponse, status) == 16);
+static_assert(offsetof(::llcpp::fuchsia::kernel::Counter::GetInspectVmoResponse, buffer) == 24);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::kernel::Counter::UpdateInspectVMOResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::kernel::Counter::UpdateInspectVmoResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::kernel::Counter::UpdateInspectVMOResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::kernel::Counter::UpdateInspectVMOResponse)
-    == ::llcpp::fuchsia::kernel::Counter::UpdateInspectVMOResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::kernel::Counter::UpdateInspectVMOResponse, status) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::kernel::Counter::UpdateInspectVmoResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::kernel::Counter::UpdateInspectVmoResponse)
+    == ::llcpp::fuchsia::kernel::Counter::UpdateInspectVmoResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::kernel::Counter::UpdateInspectVmoResponse, status) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::kernel::MemoryStats> : public std::true_type {};

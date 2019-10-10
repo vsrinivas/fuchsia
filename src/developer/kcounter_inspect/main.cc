@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
 
   fuchsia::mem::Buffer buffer;
   zx_status_t status;
-  ZX_ASSERT(kcounter->GetInspectVMO(&status, &buffer) == ZX_OK);
+  ZX_ASSERT(kcounter->GetInspectVmo(&status, &buffer) == ZX_OK);
   ZX_ASSERT(status == ZX_OK);
 
   auto vmo_file =

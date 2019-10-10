@@ -55,7 +55,7 @@ zx_status_t VmoFileWithUpdate::GetAttr(fuchsia::io::NodeAttributes* out_attribut
 
 zx_status_t VmoFileWithUpdate::Update() {
   zx_status_t status;
-  zx_status_t fidl_status = (*kcounter_)->UpdateInspectVMO(&status);
+  zx_status_t fidl_status = (*kcounter_)->UpdateInspectVmo(&status);
   if (fidl_status != ZX_OK) {
     return fidl_status;
   }

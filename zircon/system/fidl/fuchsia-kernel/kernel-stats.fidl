@@ -45,7 +45,7 @@ struct CpuStats {
   // of the vector `per_cpu_stats` as it is possible the underlying syscall will not return stats
   // for all CPUs.
   uint64 actual_num_cpus;
-  vector<PerCpuStats>? per_cpu_stats;
+  vector<PerCpuStats>:zx.MAX_CPUS? per_cpu_stats;
 };
 
 /// Protocol for providing kernel stats. This is roughly a wrapper around zx_object_get_info for

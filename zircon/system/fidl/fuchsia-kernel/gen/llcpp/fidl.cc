@@ -555,134 +555,134 @@ void DebugBroker::SetTransactionHeaderFor::SetTracingEnabledResponse(const ::fid
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kCounter_GetInspectVMO_Ordinal = 0x6d0e779600000000lu;
+constexpr uint64_t kCounter_GetInspectVmo_Ordinal = 0x1ba5957d00000000lu;
 [[maybe_unused]]
-constexpr uint64_t kCounter_GetInspectVMO_GenOrdinal = 0x60b72cf2b2b7a42alu;
-extern "C" const fidl_type_t fuchsia_kernel_CounterGetInspectVMOResponseTable;
+constexpr uint64_t kCounter_GetInspectVmo_GenOrdinal = 0x6ea9b2e6b2791b81lu;
+extern "C" const fidl_type_t fuchsia_kernel_CounterGetInspectVmoResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kCounter_UpdateInspectVMO_Ordinal = 0x4844746000000000lu;
+constexpr uint64_t kCounter_UpdateInspectVmo_Ordinal = 0x4556672400000000lu;
 [[maybe_unused]]
-constexpr uint64_t kCounter_UpdateInspectVMO_GenOrdinal = 0x50102ae9da53b142lu;
-extern "C" const fidl_type_t fuchsia_kernel_CounterUpdateInspectVMOResponseTable;
+constexpr uint64_t kCounter_UpdateInspectVmo_GenOrdinal = 0x1d25eb7995a0539flu;
+extern "C" const fidl_type_t fuchsia_kernel_CounterUpdateInspectVmoResponseTable;
 
 }  // namespace
 template <>
-Counter::ResultOf::GetInspectVMO_Impl<Counter::GetInspectVMOResponse>::GetInspectVMO_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInspectVMORequest, ::fidl::MessageDirection::kSending>();
+Counter::ResultOf::GetInspectVmo_Impl<Counter::GetInspectVmoResponse>::GetInspectVmo_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInspectVmoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, GetInspectVMORequest::PrimarySize);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetInspectVMORequest));
-  ::fidl::DecodedMessage<GetInspectVMORequest> _decoded_request(std::move(_request_bytes));
+  memset(_write_bytes, 0, GetInspectVmoRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetInspectVmoRequest));
+  ::fidl::DecodedMessage<GetInspectVmoRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
-      Counter::InPlace::GetInspectVMO(std::move(_client_end), Super::response_buffer()));
+      Counter::InPlace::GetInspectVmo(std::move(_client_end), Super::response_buffer()));
 }
 
-Counter::ResultOf::GetInspectVMO Counter::SyncClient::GetInspectVMO() {
-  return ResultOf::GetInspectVMO(zx::unowned_channel(this->channel_));
+Counter::ResultOf::GetInspectVmo Counter::SyncClient::GetInspectVmo() {
+  return ResultOf::GetInspectVmo(zx::unowned_channel(this->channel_));
 }
 
-Counter::ResultOf::GetInspectVMO Counter::Call::GetInspectVMO(zx::unowned_channel _client_end) {
-  return ResultOf::GetInspectVMO(std::move(_client_end));
+Counter::ResultOf::GetInspectVmo Counter::Call::GetInspectVmo(zx::unowned_channel _client_end) {
+  return ResultOf::GetInspectVmo(std::move(_client_end));
 }
 
 template <>
-Counter::UnownedResultOf::GetInspectVMO_Impl<Counter::GetInspectVMOResponse>::GetInspectVMO_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInspectVMORequest)] = {};
+Counter::UnownedResultOf::GetInspectVmo_Impl<Counter::GetInspectVmoResponse>::GetInspectVmo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInspectVmoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, GetInspectVMORequest::PrimarySize);
-  _request_buffer.set_actual(sizeof(GetInspectVMORequest));
-  ::fidl::DecodedMessage<GetInspectVMORequest> _decoded_request(std::move(_request_buffer));
+  memset(_request_buffer.data(), 0, GetInspectVmoRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetInspectVmoRequest));
+  ::fidl::DecodedMessage<GetInspectVmoRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
-      Counter::InPlace::GetInspectVMO(std::move(_client_end), std::move(_response_buffer)));
+      Counter::InPlace::GetInspectVmo(std::move(_client_end), std::move(_response_buffer)));
 }
 
-Counter::UnownedResultOf::GetInspectVMO Counter::SyncClient::GetInspectVMO(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetInspectVMO(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+Counter::UnownedResultOf::GetInspectVmo Counter::SyncClient::GetInspectVmo(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetInspectVmo(zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Counter::UnownedResultOf::GetInspectVMO Counter::Call::GetInspectVMO(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetInspectVMO(std::move(_client_end), std::move(_response_buffer));
+Counter::UnownedResultOf::GetInspectVmo Counter::Call::GetInspectVmo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetInspectVmo(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Counter::GetInspectVMOResponse> Counter::InPlace::GetInspectVMO(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  constexpr uint32_t _write_num_bytes = sizeof(GetInspectVMORequest);
+::fidl::DecodeResult<Counter::GetInspectVmoResponse> Counter::InPlace::GetInspectVmo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(GetInspectVmoRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::DecodedMessage<GetInspectVMORequest> params(std::move(_request_buffer));
-  Counter::SetTransactionHeaderFor::GetInspectVMORequest(params);
+  ::fidl::DecodedMessage<GetInspectVmoRequest> params(std::move(_request_buffer));
+  Counter::SetTransactionHeaderFor::GetInspectVmoRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Counter::GetInspectVMOResponse>::FromFailure(
+    return ::fidl::DecodeResult<Counter::GetInspectVmoResponse>::FromFailure(
         std::move(_encode_request_result));
   }
-  auto _call_result = ::fidl::Call<GetInspectVMORequest, GetInspectVMOResponse>(
+  auto _call_result = ::fidl::Call<GetInspectVmoRequest, GetInspectVmoResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Counter::GetInspectVMOResponse>::FromFailure(
+    return ::fidl::DecodeResult<Counter::GetInspectVmoResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
 template <>
-Counter::ResultOf::UpdateInspectVMO_Impl<Counter::UpdateInspectVMOResponse>::UpdateInspectVMO_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UpdateInspectVMORequest, ::fidl::MessageDirection::kSending>();
+Counter::ResultOf::UpdateInspectVmo_Impl<Counter::UpdateInspectVmoResponse>::UpdateInspectVmo_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UpdateInspectVmoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, UpdateInspectVMORequest::PrimarySize);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(UpdateInspectVMORequest));
-  ::fidl::DecodedMessage<UpdateInspectVMORequest> _decoded_request(std::move(_request_bytes));
+  memset(_write_bytes, 0, UpdateInspectVmoRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(UpdateInspectVmoRequest));
+  ::fidl::DecodedMessage<UpdateInspectVmoRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
-      Counter::InPlace::UpdateInspectVMO(std::move(_client_end), Super::response_buffer()));
+      Counter::InPlace::UpdateInspectVmo(std::move(_client_end), Super::response_buffer()));
 }
 
-Counter::ResultOf::UpdateInspectVMO Counter::SyncClient::UpdateInspectVMO() {
-  return ResultOf::UpdateInspectVMO(zx::unowned_channel(this->channel_));
+Counter::ResultOf::UpdateInspectVmo Counter::SyncClient::UpdateInspectVmo() {
+  return ResultOf::UpdateInspectVmo(zx::unowned_channel(this->channel_));
 }
 
-Counter::ResultOf::UpdateInspectVMO Counter::Call::UpdateInspectVMO(zx::unowned_channel _client_end) {
-  return ResultOf::UpdateInspectVMO(std::move(_client_end));
+Counter::ResultOf::UpdateInspectVmo Counter::Call::UpdateInspectVmo(zx::unowned_channel _client_end) {
+  return ResultOf::UpdateInspectVmo(std::move(_client_end));
 }
 
 template <>
-Counter::UnownedResultOf::UpdateInspectVMO_Impl<Counter::UpdateInspectVMOResponse>::UpdateInspectVMO_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(UpdateInspectVMORequest)] = {};
+Counter::UnownedResultOf::UpdateInspectVmo_Impl<Counter::UpdateInspectVmoResponse>::UpdateInspectVmo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(UpdateInspectVmoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, UpdateInspectVMORequest::PrimarySize);
-  _request_buffer.set_actual(sizeof(UpdateInspectVMORequest));
-  ::fidl::DecodedMessage<UpdateInspectVMORequest> _decoded_request(std::move(_request_buffer));
+  memset(_request_buffer.data(), 0, UpdateInspectVmoRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(UpdateInspectVmoRequest));
+  ::fidl::DecodedMessage<UpdateInspectVmoRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
-      Counter::InPlace::UpdateInspectVMO(std::move(_client_end), std::move(_response_buffer)));
+      Counter::InPlace::UpdateInspectVmo(std::move(_client_end), std::move(_response_buffer)));
 }
 
-Counter::UnownedResultOf::UpdateInspectVMO Counter::SyncClient::UpdateInspectVMO(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::UpdateInspectVMO(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+Counter::UnownedResultOf::UpdateInspectVmo Counter::SyncClient::UpdateInspectVmo(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::UpdateInspectVmo(zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Counter::UnownedResultOf::UpdateInspectVMO Counter::Call::UpdateInspectVMO(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::UpdateInspectVMO(std::move(_client_end), std::move(_response_buffer));
+Counter::UnownedResultOf::UpdateInspectVmo Counter::Call::UpdateInspectVmo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::UpdateInspectVmo(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Counter::UpdateInspectVMOResponse> Counter::InPlace::UpdateInspectVMO(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  constexpr uint32_t _write_num_bytes = sizeof(UpdateInspectVMORequest);
+::fidl::DecodeResult<Counter::UpdateInspectVmoResponse> Counter::InPlace::UpdateInspectVmo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(UpdateInspectVmoRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::DecodedMessage<UpdateInspectVMORequest> params(std::move(_request_buffer));
-  Counter::SetTransactionHeaderFor::UpdateInspectVMORequest(params);
+  ::fidl::DecodedMessage<UpdateInspectVmoRequest> params(std::move(_request_buffer));
+  Counter::SetTransactionHeaderFor::UpdateInspectVmoRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Counter::UpdateInspectVMOResponse>::FromFailure(
+    return ::fidl::DecodeResult<Counter::UpdateInspectVmoResponse>::FromFailure(
         std::move(_encode_request_result));
   }
-  auto _call_result = ::fidl::Call<UpdateInspectVMORequest, UpdateInspectVMOResponse>(
+  auto _call_result = ::fidl::Call<UpdateInspectVmoRequest, UpdateInspectVmoResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Counter::UpdateInspectVMOResponse>::FromFailure(
+    return ::fidl::DecodeResult<Counter::UpdateInspectVmoResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -697,28 +697,28 @@ bool Counter::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kCounter_GetInspectVMO_Ordinal:
-    case kCounter_GetInspectVMO_GenOrdinal:
+    case kCounter_GetInspectVmo_Ordinal:
+    case kCounter_GetInspectVmo_GenOrdinal:
     {
-      auto result = ::fidl::DecodeAs<GetInspectVMORequest>(msg);
+      auto result = ::fidl::DecodeAs<GetInspectVmoRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
         return true;
       }
-      impl->GetInspectVMO(
-        Interface::GetInspectVMOCompleter::Sync(txn));
+      impl->GetInspectVmo(
+        Interface::GetInspectVmoCompleter::Sync(txn));
       return true;
     }
-    case kCounter_UpdateInspectVMO_Ordinal:
-    case kCounter_UpdateInspectVMO_GenOrdinal:
+    case kCounter_UpdateInspectVmo_Ordinal:
+    case kCounter_UpdateInspectVmo_GenOrdinal:
     {
-      auto result = ::fidl::DecodeAs<UpdateInspectVMORequest>(msg);
+      auto result = ::fidl::DecodeAs<UpdateInspectVmoRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
         return true;
       }
-      impl->UpdateInspectVMO(
-        Interface::UpdateInspectVMOCompleter::Sync(txn));
+      impl->UpdateInspectVmo(
+        Interface::UpdateInspectVmoCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -737,97 +737,97 @@ bool Counter::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
 }
 
 
-void Counter::Interface::GetInspectVMOCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::mem::Buffer buffer) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInspectVMOResponse, ::fidl::MessageDirection::kSending>();
+void Counter::Interface::GetInspectVmoCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::mem::Buffer buffer) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInspectVmoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<GetInspectVMOResponse*>(_write_bytes);
-  Counter::SetTransactionHeaderFor::GetInspectVMOResponse(
-      ::fidl::DecodedMessage<GetInspectVMOResponse>(
+  auto& _response = *reinterpret_cast<GetInspectVmoResponse*>(_write_bytes);
+  Counter::SetTransactionHeaderFor::GetInspectVmoResponse(
+      ::fidl::DecodedMessage<GetInspectVmoResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              GetInspectVMOResponse::PrimarySize,
-              GetInspectVMOResponse::PrimarySize)));
+              GetInspectVmoResponse::PrimarySize,
+              GetInspectVmoResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.buffer = std::move(buffer);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetInspectVMOResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetInspectVMOResponse>(std::move(_response_bytes)));
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetInspectVmoResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetInspectVmoResponse>(std::move(_response_bytes)));
 }
 
-void Counter::Interface::GetInspectVMOCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::mem::Buffer buffer) {
-  if (_buffer.capacity() < GetInspectVMOResponse::PrimarySize) {
+void Counter::Interface::GetInspectVmoCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::mem::Buffer buffer) {
+  if (_buffer.capacity() < GetInspectVmoResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<GetInspectVMOResponse*>(_buffer.data());
-  Counter::SetTransactionHeaderFor::GetInspectVMOResponse(
-      ::fidl::DecodedMessage<GetInspectVMOResponse>(
+  auto& _response = *reinterpret_cast<GetInspectVmoResponse*>(_buffer.data());
+  Counter::SetTransactionHeaderFor::GetInspectVmoResponse(
+      ::fidl::DecodedMessage<GetInspectVmoResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              GetInspectVMOResponse::PrimarySize,
-              GetInspectVMOResponse::PrimarySize)));
+              GetInspectVmoResponse::PrimarySize,
+              GetInspectVmoResponse::PrimarySize)));
   _response.status = std::move(status);
   _response.buffer = std::move(buffer);
-  _buffer.set_actual(sizeof(GetInspectVMOResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetInspectVMOResponse>(std::move(_buffer)));
+  _buffer.set_actual(sizeof(GetInspectVmoResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetInspectVmoResponse>(std::move(_buffer)));
 }
 
-void Counter::Interface::GetInspectVMOCompleterBase::Reply(::fidl::DecodedMessage<GetInspectVMOResponse> params) {
-  Counter::SetTransactionHeaderFor::GetInspectVMOResponse(params);
+void Counter::Interface::GetInspectVmoCompleterBase::Reply(::fidl::DecodedMessage<GetInspectVmoResponse> params) {
+  Counter::SetTransactionHeaderFor::GetInspectVmoResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
 
-void Counter::Interface::UpdateInspectVMOCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UpdateInspectVMOResponse, ::fidl::MessageDirection::kSending>();
+void Counter::Interface::UpdateInspectVmoCompleterBase::Reply(int32_t status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UpdateInspectVmoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<UpdateInspectVMOResponse*>(_write_bytes);
-  Counter::SetTransactionHeaderFor::UpdateInspectVMOResponse(
-      ::fidl::DecodedMessage<UpdateInspectVMOResponse>(
+  auto& _response = *reinterpret_cast<UpdateInspectVmoResponse*>(_write_bytes);
+  Counter::SetTransactionHeaderFor::UpdateInspectVmoResponse(
+      ::fidl::DecodedMessage<UpdateInspectVmoResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              UpdateInspectVMOResponse::PrimarySize,
-              UpdateInspectVMOResponse::PrimarySize)));
+              UpdateInspectVmoResponse::PrimarySize,
+              UpdateInspectVmoResponse::PrimarySize)));
   _response.status = std::move(status);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(UpdateInspectVMOResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<UpdateInspectVMOResponse>(std::move(_response_bytes)));
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(UpdateInspectVmoResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<UpdateInspectVmoResponse>(std::move(_response_bytes)));
 }
 
-void Counter::Interface::UpdateInspectVMOCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
-  if (_buffer.capacity() < UpdateInspectVMOResponse::PrimarySize) {
+void Counter::Interface::UpdateInspectVmoCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+  if (_buffer.capacity() < UpdateInspectVmoResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<UpdateInspectVMOResponse*>(_buffer.data());
-  Counter::SetTransactionHeaderFor::UpdateInspectVMOResponse(
-      ::fidl::DecodedMessage<UpdateInspectVMOResponse>(
+  auto& _response = *reinterpret_cast<UpdateInspectVmoResponse*>(_buffer.data());
+  Counter::SetTransactionHeaderFor::UpdateInspectVmoResponse(
+      ::fidl::DecodedMessage<UpdateInspectVmoResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              UpdateInspectVMOResponse::PrimarySize,
-              UpdateInspectVMOResponse::PrimarySize)));
+              UpdateInspectVmoResponse::PrimarySize,
+              UpdateInspectVmoResponse::PrimarySize)));
   _response.status = std::move(status);
-  _buffer.set_actual(sizeof(UpdateInspectVMOResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<UpdateInspectVMOResponse>(std::move(_buffer)));
+  _buffer.set_actual(sizeof(UpdateInspectVmoResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<UpdateInspectVmoResponse>(std::move(_buffer)));
 }
 
-void Counter::Interface::UpdateInspectVMOCompleterBase::Reply(::fidl::DecodedMessage<UpdateInspectVMOResponse> params) {
-  Counter::SetTransactionHeaderFor::UpdateInspectVMOResponse(params);
+void Counter::Interface::UpdateInspectVmoCompleterBase::Reply(::fidl::DecodedMessage<UpdateInspectVmoResponse> params) {
+  Counter::SetTransactionHeaderFor::UpdateInspectVmoResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
 
 
-void Counter::SetTransactionHeaderFor::GetInspectVMORequest(const ::fidl::DecodedMessage<Counter::GetInspectVMORequest>& _msg) {
+void Counter::SetTransactionHeaderFor::GetInspectVmoRequest(const ::fidl::DecodedMessage<Counter::GetInspectVmoRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kCounter_GetInspectVMO_Ordinal;
+  _msg.message()->_hdr.ordinal = kCounter_GetInspectVmo_Ordinal;
 }
-void Counter::SetTransactionHeaderFor::GetInspectVMOResponse(const ::fidl::DecodedMessage<Counter::GetInspectVMOResponse>& _msg) {
+void Counter::SetTransactionHeaderFor::GetInspectVmoResponse(const ::fidl::DecodedMessage<Counter::GetInspectVmoResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kCounter_GetInspectVMO_Ordinal;
+  _msg.message()->_hdr.ordinal = kCounter_GetInspectVmo_Ordinal;
 }
 
-void Counter::SetTransactionHeaderFor::UpdateInspectVMORequest(const ::fidl::DecodedMessage<Counter::UpdateInspectVMORequest>& _msg) {
+void Counter::SetTransactionHeaderFor::UpdateInspectVmoRequest(const ::fidl::DecodedMessage<Counter::UpdateInspectVmoRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kCounter_UpdateInspectVMO_Ordinal;
+  _msg.message()->_hdr.ordinal = kCounter_UpdateInspectVmo_Ordinal;
 }
-void Counter::SetTransactionHeaderFor::UpdateInspectVMOResponse(const ::fidl::DecodedMessage<Counter::UpdateInspectVMOResponse>& _msg) {
+void Counter::SetTransactionHeaderFor::UpdateInspectVmoResponse(const ::fidl::DecodedMessage<Counter::UpdateInspectVmoResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kCounter_UpdateInspectVMO_Ordinal;
+  _msg.message()->_hdr.ordinal = kCounter_UpdateInspectVmo_Ordinal;
 }
 
 ::llcpp::fuchsia::kernel::MemoryStats::Builder MemoryStats::Build() {

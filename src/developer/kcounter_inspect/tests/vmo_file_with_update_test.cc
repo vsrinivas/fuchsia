@@ -19,14 +19,14 @@ class StubKcounter : public fuchsia::kernel::Counter {
  public:
   StubKcounter() { EXPECT_EQ(zx::vmo::create(kSize, 0, &vmo_), ZX_OK); }
 
-  void GetInspectVMO(GetInspectVMOCallback callback) override {
+  void GetInspectVmo(GetInspectVmoCallback callback) override {
     zx::vmo ret;
     EXPECT_EQ(vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &ret), ZX_OK);
     fuchsia::mem::Buffer buffer{.vmo = std::move(ret), .size = kSize};
     callback(ZX_OK, std::move(buffer));
   }
 
-  void UpdateInspectVMO(UpdateInspectVMOCallback callback) override {
+  void UpdateInspectVmo(UpdateInspectVmoCallback callback) override {
     ++update_count_;
     callback(ZX_OK);
   }
@@ -76,7 +76,7 @@ TEST_F(VmoFileWithUpdateTest, EnsureUpdateCalled) {
 
   zx_status_t status;
   fuchsia::mem::Buffer buffer;
-  EXPECT_EQ(kcounter->GetInspectVMO(&status, &buffer), ZX_OK);
+  EXPECT_EQ(kcounter->GetInspectVmo(&status, &buffer), ZX_OK);
 
   auto vmo_file =
       std::make_unique<VmoFileWithUpdate>(std::move(buffer.vmo), 0, buffer.size, &kcounter);

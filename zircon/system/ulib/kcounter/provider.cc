@@ -25,17 +25,17 @@ zx_status_t GetInspectVMO(void* ctx, fidl_txn_t* txn) {
       return size_status;
     }
   }
-  return fuchsia_kernel_CounterGetInspectVMO_reply(txn, status, &buffer);
+  return fuchsia_kernel_CounterGetInspectVmo_reply(txn, status, &buffer);
 }
 
 zx_status_t UpdateInspectVMO(void* ctx, fidl_txn_t* txn) {
   auto status = static_cast<kcounter::VmoToInspectMapper*>(ctx)->UpdateInspectVMO();
-  return fuchsia_kernel_CounterUpdateInspectVMO_reply(txn, status);
+  return fuchsia_kernel_CounterUpdateInspectVmo_reply(txn, status);
 }
 
 constexpr fuchsia_kernel_Counter_ops_t kFidlOps = {
-    .GetInspectVMO = GetInspectVMO,
-    .UpdateInspectVMO = UpdateInspectVMO,
+    .GetInspectVmo = GetInspectVMO,
+    .UpdateInspectVmo = UpdateInspectVMO,
 };
 
 zx_status_t Connect(void* ctx, async_dispatcher_t* dispatcher, const char* service_name,

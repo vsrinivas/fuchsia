@@ -31,7 +31,7 @@ TEST(KcounterInspectIntegrationTest, FidlConnection) {
 
   fuchsia::mem::Buffer buffer;
   zx_status_t status;
-  ASSERT_TRUE(kcounter->GetInspectVMO(&status, &buffer) == ZX_OK);
+  ASSERT_TRUE(kcounter->GetInspectVmo(&status, &buffer) == ZX_OK);
   ASSERT_TRUE(status == ZX_OK);
 }
 
@@ -65,7 +65,7 @@ TEST(KcounterInspectIntegrationTest, InspectReading) {
 
   fuchsia::mem::Buffer buffer;
   zx_status_t status;
-  ASSERT_TRUE(kcounter->GetInspectVMO(&status, &buffer) == ZX_OK);
+  ASSERT_TRUE(kcounter->GetInspectVmo(&status, &buffer) == ZX_OK);
   ASSERT_TRUE(status == ZX_OK);
 
   auto result = inspect_deprecated::ReadFromVmo(buffer.vmo);
@@ -80,7 +80,7 @@ TEST(KcounterInspectIntegrationTest, InspectReading) {
 
   // There's no particular guarantee on update frequency, but at least ensure we
   // can call the update function, and that the VMO is readable after doing so.
-  ASSERT_TRUE(kcounter->UpdateInspectVMO(&status) == ZX_OK);
+  ASSERT_TRUE(kcounter->UpdateInspectVmo(&status) == ZX_OK);
   ASSERT_TRUE(status == ZX_OK);
 
   result = inspect_deprecated::ReadFromVmo(buffer.vmo);
