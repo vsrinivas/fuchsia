@@ -1750,6 +1750,10 @@ TEST_F(JournalTest, MetadataOperationsAreOrderedGlobally) {
 }
 
 // Tests that data writes are not ordered at the time "WriteData" is invoked.
+//
+// TODO(37958): Re-enable this test. Currently, data writes *are* ordered
+// alongside metadata as a workaround.
+#if 0
 TEST_F(JournalTest, DataOperationsAreNotOrderedGlobally) {
   storage::VmoBuffer buffer = registry()->InitializeBuffer(5);
   const std::vector<storage::UnbufferedOperation> operations = {
@@ -1801,6 +1805,7 @@ TEST_F(JournalTest, DataOperationsAreNotOrderedGlobally) {
     journal.schedule_task(second_promise.and_then(std::move(first_promise)));
   }
 }
+#endif
 
 // Tests a pretty common operation from a client point-of-view: order data operations around
 // completion of a metadata update.

@@ -87,7 +87,11 @@ Journal::Promise Journal::WriteData(fbl::Vector<storage::UnbufferedOperation> op
       });
 
   // Track write ops to ensure that invocations of |sync| can flush all prior work.
-  return barrier_.wrap(std::move(promise));
+  //
+  // TODO(37958): This is more restrictive than it needs to be, to prevent
+  // reuse before on-disk free within the filesystem.
+  auto ordered_promise = metadata_sequencer_.wrap(std::move(promise));
+  return barrier_.wrap(std::move(ordered_promise));
 }
 
 Journal::Promise Journal::WriteMetadata(fbl::Vector<storage::UnbufferedOperation> operations) {
