@@ -625,9 +625,10 @@ func tcpipErrorToCode(err *tcpip.Error) int16 {
 
 var _ socket.Control = (*socketImpl)(nil)
 
+// TODO(fxb/37419): Remove TransitionalBase after methods landed.
 type socketImpl struct {
 	*endpoint
-
+	*io.NodeTransitionalBase
 	controlService *socket.ControlService
 	bindingKey     fidl.BindingKey
 }

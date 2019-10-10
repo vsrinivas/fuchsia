@@ -105,7 +105,9 @@ func (vfs *ThinVFS) addFile(file fs.File, node io.NodeInterfaceRequest) (fidl.Bi
 	return tok, nil
 }
 
+// TODO(fxb/37419): Remove TransitionalBase after methods landed.
 type directoryWrapper struct {
+	*io.DirectoryTransitionalBase
 	vfs     *ThinVFS
 	token   fidl.BindingKey
 	dir     fs.Directory
@@ -424,7 +426,9 @@ func (d *directoryWrapper) QueryFilesystem() (int32, *io.FilesystemInfo, error) 
 	return int32(zx.ErrOk), &info, nil
 }
 
+// TODO(fxb/37419): Remove TransitionalBase after methods landed.
 type fileWrapper struct {
+	*io.FileTransitionalBase
 	vfs   *ThinVFS
 	token fidl.BindingKey
 	file  fs.File

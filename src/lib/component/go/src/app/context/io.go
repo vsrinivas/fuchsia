@@ -47,7 +47,9 @@ type Node interface {
 
 type addFn func(fidl.Stub, zx.Channel) error
 
+// TODO(fxb/37419): Remove TransitionalBase after methods landed.
 type Service struct {
+	*fidlio.NodeTransitionalBase
 	Stub  fidl.Stub
 	AddFn addFn
 }
@@ -155,7 +157,9 @@ func (dir *DirectoryWrapper) addConnection(flags, mode uint32, req fidlio.NodeIn
 
 var _ fidlio.Directory = (*directoryState)(nil)
 
+// TODO(fxb/37419): Remove TransitionalBase after methods landed.
 type directoryState struct {
+	*fidlio.DirectoryTransitionalBase
 	*DirectoryWrapper
 
 	reading bool
@@ -344,7 +348,9 @@ func (file *FileWrapper) addConnection(flags, mode uint32, req fidlio.NodeInterf
 
 var _ fidlio.File = (*fileState)(nil)
 
+// TODO(fxb/37419): Remove TransitionalBase after methods landed.
 type fileState struct {
+	*fidlio.FileTransitionalBase
 	*FileWrapper
 	bytes.Reader
 }
