@@ -101,7 +101,7 @@ std::unique_ptr<disk_inspector::DiskObject> RootObject::GetInodeTable() const {
 std::unique_ptr<disk_inspector::DiskObject> RootObject::GetJournalInfo() const {
   char data[kMinfsBlockSize];
 
-  if (fs_->ReadBlock(fs_->Info().integrity_start_block, data) < 0) {
+  if (fs_->ReadBlock(static_cast<blk_t>(JournalStartBlock(fs_->Info())), data) < 0) {
     FS_TRACE_ERROR("minfsInspector: could not read journal block\n");
     return nullptr;
   }

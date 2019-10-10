@@ -6,6 +6,8 @@
 
 #include <minfs/inspector.h>
 
+
+#include <block-client/cpp/fake-device.h>
 #include <fbl/string_printf.h>
 #include <lib/disk-inspector/disk-inspector.h>
 #include <zxtest/zxtest.h>
@@ -19,6 +21,11 @@
 
 namespace minfs {
 namespace {
+
+using block_client::FakeBlockDevice;
+
+constexpr uint64_t kBlockCount = 1 << 15;
+constexpr uint32_t kBlockSize = 512;
 
 // Mock InodeManager class to be used in inspector tests.
 class MockInodeManager : public InspectableInodeManager {
@@ -145,23 +152,6 @@ TEST(InspectorTest, TestSuperblock) {
   ASSERT_EQ(kMinfsInodeSize, *(reinterpret_cast<const uint32_t*>(buffer)));
 }
 
-TEST(InspectorTest, TestJournal) {
-  fs::JournalInfo jinfo;
-  jinfo.magic = fs::kJournalMagic;
-  auto info = std::make_unique<fs::JournalInfo>(jinfo);
-
-  std::unique_ptr<JournalObject> journalObj(new JournalObject(std::move(info)));
-  ASSERT_STR_EQ(kJournalName, journalObj->GetName());
-  ASSERT_EQ(kJournalNumElements, journalObj->GetNumElements());
-
-  size_t size;
-  const void* buffer = nullptr;
-
-  std::unique_ptr<disk_inspector::DiskObject> obj0 = journalObj->GetElementAt(0);
-  obj0->GetValue(&buffer, &size);
-  ASSERT_EQ(fs::kJournalMagic, *(reinterpret_cast<const uint64_t*>(buffer)));
-}
-
 TEST(InspectorTest, TestInode) {
   Inode fileInode;
   fileInode.magic = kMinfsMagicFile;
@@ -192,6 +182,33 @@ TEST(InspectorTest, TestInode) {
   std::unique_ptr<disk_inspector::DiskObject> obj3 = finodeObj->GetElementAt(3);
   obj3->GetValue(&buffer, &size);
   ASSERT_EQ(1, *(reinterpret_cast<const uint32_t*>(buffer)));
+}
+
+TEST(InspectorTest, CorrectJournalLocation) {
+  auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
+
+  // Format the device.
+  std::unique_ptr<Bcache> bcache;
+  ASSERT_OK(Bcache::Create(std::move(device), kBlockCount, &bcache));
+  ASSERT_OK(Mkfs(bcache.get()));
+
+  std::unique_ptr<Minfs> fs;
+  MountOptions options = {};
+  ASSERT_OK(minfs::Minfs::Create(std::move(bcache), options, &fs));
+  std::unique_ptr<RootObject> root_obj(new RootObject(std::move(fs)));
+
+  // Journal info.
+  std::unique_ptr<disk_inspector::DiskObject> journalInfoObj = root_obj->GetElementAt(2);
+  ASSERT_STR_EQ(kJournalName, journalInfoObj->GetName());
+  ASSERT_EQ(kJournalNumElements, journalInfoObj->GetNumElements());
+
+  // Check if journal magic is correct.
+  size_t size;
+  const void* buffer = nullptr;
+  std::unique_ptr<disk_inspector::DiskObject> journalInfoMagic = journalInfoObj->GetElementAt(0);
+  journalInfoMagic->GetValue(&buffer, &size);
+
+  ASSERT_EQ(fs::kJournalMagic, *(reinterpret_cast<const uint64_t*>(buffer)));
 }
 
 }  // namespace
