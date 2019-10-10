@@ -114,4 +114,6 @@ std::vector<std::string> SplitString(const std::string& input, char delimiter, W
   return result;
 }
 
-int StringToInt(const std::string& str) { return strtol(str.c_str(), nullptr, 10); }
+int StringToInt(const std::string& str) {
+  return static_cast<int>(strtol(str.c_str(), nullptr, 10));
+}

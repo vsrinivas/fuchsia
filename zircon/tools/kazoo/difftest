@@ -6,7 +6,7 @@
 
 set -e
 
-pushd ../..
+pushd ../../..
 
 function compare() {
   echo "------ $1 ------"
@@ -16,15 +16,15 @@ function compare() {
   diff /tmp/before /tmp/after
 }
 
-fx ninja -C out/default host_x64/kazoo host_x64/kazoo_host_tests
+fx ninja -C out/default.zircon host-x64-linux-clang/obj/tools/kazoo/kazoo.debug host-x64-linux-clang/obj/tools/kazoo/kazoo-test.debug
 
-out/default/host_x64/exe.unstripped/kazoo_host_tests
+out/default.zircon/host-x64-linux-clang/obj/tools/kazoo/kazoo-test.debug
 
 out/default.zircon/host-x64-linux-clang/obj/tools/fidl/fidlc \
       --json /tmp/syscalls.json \
       --files zircon/experimental/syscalls/*.fidl
 
-out/default/host_x64/exe.unstripped/kazoo \
+out/default.zircon/host-x64-linux-clang/obj/tools/kazoo/kazoo.debug \
   --arm-asm=/tmp/arm-asm.S \
   --category=/tmp/syscall-category.inc \
   --json=/tmp/definitions.json \
