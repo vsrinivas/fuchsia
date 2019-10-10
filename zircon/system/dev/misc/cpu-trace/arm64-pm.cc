@@ -63,31 +63,10 @@ static zx_status_t InitializeEventMaps() {
 // Each arch provides its own |InitOnce()| method.
 
 zx_status_t PerfmonDevice::InitOnce() {
-  zx_status_t status = GetHwProperties();
+  zx_status_t status = InitializeEventMaps();
   if (status != ZX_OK) {
     return status;
   }
-
-  // KISS and begin with pmu v3.
-  // Note: This should agree with the kernel driver's check.
-  if (pmu_hw_properties_.pm_version < 3) {
-    zxlogf(INFO, "%s: PM version 3 or above is required\n", __func__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  status = InitializeEventMaps();
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  zxlogf(TRACE, "ARM64 Performance Monitor configuration for this chipset:\n");
-  zxlogf(TRACE, "PMU: version: %u\n", pmu_hw_properties_.pm_version);
-  zxlogf(TRACE, "PMU: num_programmable_events: %u\n",
-         pmu_hw_properties_.max_num_programmable_events);
-  zxlogf(TRACE, "PMU: num_fixed_events: %u\n", pmu_hw_properties_.max_num_fixed_events);
-  zxlogf(TRACE, "PMU: programmable_counter_width: %u\n",
-         pmu_hw_properties_.max_programmable_counter_width);
-  zxlogf(TRACE, "PMU: fixed_counter_width: %u\n", pmu_hw_properties_.max_fixed_counter_width);
 
   return ZX_OK;
 }

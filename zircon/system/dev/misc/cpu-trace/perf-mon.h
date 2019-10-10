@@ -27,6 +27,8 @@
 #error "unsupported architecture"
 #endif
 
+#include "cpu-trace-private.h"
+
 namespace perfmon {
 
 // Shorten some long FIDL names.
@@ -52,6 +54,19 @@ struct EventDetails {
 #endif
   uint32_t flags;
 };
+
+// The minimum value of |PmuCommonProperties.pm_version| we support.
+// The chosen value is conservative. Yes, we can support preceding PMU versions with effort,
+// but that effort has yet to be warranted.
+#if defined(__x86_64__)
+// Skylake supports version 4. KISS and begin with that.
+// Note: This should agree with the kernel driver's check.
+constexpr uint16_t kMinPmVersion = 4;
+#elif defined(__aarch64__)
+// KISS and begin with pmu v3.
+// Note: This should agree with the kernel driver's check.
+constexpr uint16_t kMinPmVersion = 3;
+#endif
 
 // Compare function to qsort, bsearch.
 int ComparePerfmonEventId(const void* ap, const void* bp);
@@ -107,17 +122,19 @@ class PerfmonDevice : public DeviceType {
   // maximum space, in pages, for trace buffers (per cpu)
   static constexpr uint32_t kMaxPerTraceSpaceInPages = (256 * 1024 * 1024) / kPageSize;
 
-  // Initialize |pmu_properties_|.
-  static zx_status_t GetHwProperties();
+  // Fetch the pmu hw properties from the kernel.
+  static zx_status_t GetHwProperties(mtrace_control_func_t* mtrace_control,
+                                     PmuHwProperties* out_props);
 
   // Architecture-provided routine to initialize static state.
+  // TODO(dje): Move static state to the device object for better testability.
   static zx_status_t InitOnce();
 
-  explicit PerfmonDevice(zx_device_t* parent, zx::bti bti)
-      : DeviceType(parent), bti_(std::move(bti)) {}
+  explicit PerfmonDevice(zx_device_t* parent, zx::bti bti, perfmon::PmuHwProperties props,
+                         mtrace_control_func_t* mtrace_control);
   ~PerfmonDevice() = default;
 
-  static const PmuHwProperties& pmu_hw_properties() { return pmu_hw_properties_; }
+  const PmuHwProperties& pmu_hw_properties() const { return pmu_hw_properties_; }
 
   void DdkRelease();
 
@@ -157,8 +174,14 @@ class PerfmonDevice : public DeviceType {
   zx_status_t VerifyStaging(StagingState* ss, PmuConfig* ocfg);
   // End of architecture-provided helpers.
 
-  // Static properties of the PMU computed when the device driver is loaded.
-  static PmuHwProperties pmu_hw_properties_;
+  zx::bti bti_;
+
+  // Properties of the PMU computed when the device driver is loaded.
+  const PmuHwProperties pmu_hw_properties_;
+
+  // The zx_mtrace_control() syscall to use. In the real device this is the syscall itself.
+  // In tests it is replaced with something suitable for the test.
+  mtrace_control_func_t* const mtrace_control_;
 
   mtx_t lock_{};
 
@@ -172,8 +195,6 @@ class PerfmonDevice : public DeviceType {
   // TODO(dje): At the moment we only support one trace at a time.
   // "trace" == "data collection run"
   std::unique_ptr<PmuPerTraceState> per_trace_state_;
-
-  zx::bti bti_;
 };
 
 }  // namespace perfmon

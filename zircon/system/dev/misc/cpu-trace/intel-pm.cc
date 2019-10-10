@@ -134,40 +134,19 @@ static zx_status_t InitializeEventMaps() {
 // Each arch provides its own |InitOnce()| method.
 
 zx_status_t PerfmonDevice::InitOnce() {
-  zx_status_t status = GetHwProperties();
+  zx_status_t status = InitializeEventMaps();
   if (status != ZX_OK) {
     return status;
   }
-
-  // Skylake supports version 4. KISS and begin with that.
-  // Note: This should agree with the kernel driver's check.
-  if (pmu_hw_properties_.pm_version < 4) {
-    zxlogf(INFO, "%s: PM version 4 or above is required\n", __func__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  status = InitializeEventMaps();
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  zxlogf(TRACE, "Intel Performance Monitor configuration for this chipset:\n");
-  zxlogf(TRACE, "IPM: version: %u\n", pmu_hw_properties_.pm_version);
-  zxlogf(TRACE, "IPM: num_programmable_events: %u\n",
-         pmu_hw_properties_.max_num_programmable_events);
-  zxlogf(TRACE, "IPM: num_fixed_events: %u\n", pmu_hw_properties_.max_num_fixed_events);
-  zxlogf(TRACE, "IPM: num_misc_events: %u\n", pmu_hw_properties_.max_num_misc_events);
-  zxlogf(TRACE, "IPM: programmable_counter_width: %u\n",
-         pmu_hw_properties_.max_programmable_counter_width);
-  zxlogf(TRACE, "IPM: fixed_counter_width: %u\n", pmu_hw_properties_.max_fixed_counter_width);
-  zxlogf(TRACE, "IPM: perf_capabilities: 0x%lx\n", pmu_hw_properties_.perf_capabilities);
 
   return ZX_OK;
 }
 
 // Architecture-provided helpers for |PmuStageConfig()|.
 
-static bool LbrSupported() { return PerfmonDevice::pmu_hw_properties().lbr_stack_size > 0; }
+static bool LbrSupported(const perfmon::PmuHwProperties& props) {
+  return props.lbr_stack_size > 0;
+}
 
 void PerfmonDevice::InitializeStagingState(StagingState* ss) {
   ss->max_num_fixed = pmu_hw_properties_.max_num_fixed_events;
@@ -234,7 +213,7 @@ zx_status_t PerfmonDevice::StageFixedConfig(const FidlPerfmonConfig* icfg, Stagi
     ocfg->fixed_flags[ss->num_fixed] |= kPmuConfigFlagPc;
   }
   if (flags & fuchsia_perfmon_cpu_EventConfigFlags_COLLECT_LAST_BRANCH) {
-    if (!LbrSupported()) {
+    if (!LbrSupported(pmu_hw_properties())) {
       zxlogf(ERROR, "%s: Last branch not supported, event [%u]\n", __func__, ii);
       return ZX_ERR_INVALID_ARGS;
     }
@@ -334,7 +313,7 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const FidlPerfmonConfig* icfg
     ocfg->programmable_flags[ss->num_programmable] |= kPmuConfigFlagPc;
   }
   if (flags & fuchsia_perfmon_cpu_EventConfigFlags_COLLECT_LAST_BRANCH) {
-    if (!LbrSupported()) {
+    if (!LbrSupported(pmu_hw_properties())) {
       zxlogf(ERROR, "%s: Last branch not supported, event [%u]\n", __func__, ii);
       return ZX_ERR_INVALID_ARGS;
     }

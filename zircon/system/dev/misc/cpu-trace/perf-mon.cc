@@ -26,8 +26,6 @@
 
 namespace perfmon {
 
-PmuHwProperties PerfmonDevice::pmu_hw_properties_;
-
 int ComparePerfmonEventId(const void* ap, const void* bp) {
   auto a = reinterpret_cast<const EventId*>(ap);
   auto b = reinterpret_cast<const EventId*>(bp);
@@ -69,8 +67,8 @@ zx_status_t BuildEventMap(const EventDetails* events, size_t count, const uint16
 
   fbl::AllocChecker ac;
   size_t event_map_size = largest_event_id + 1;
-  zxlogf(INFO, "PMU: %zu arch events\n", count);
-  zxlogf(INFO, "PMU: arch event id range: 1-%zu\n", event_map_size);
+  zxlogf(TRACE, "PMU: %zu arch events\n", count);
+  zxlogf(TRACE, "PMU: arch event id range: 1-%zu\n", event_map_size);
   auto event_map = std::unique_ptr<uint16_t[]>(new (&ac) uint16_t[event_map_size]{});
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
@@ -88,12 +86,33 @@ zx_status_t BuildEventMap(const EventDetails* events, size_t count, const uint16
   return ZX_OK;
 }
 
-zx_status_t PerfmonDevice::GetHwProperties() {
-  PmuHwProperties props;
+static void DumpHwProperties(const PmuHwProperties& props) {
+  zxlogf(INFO, "Performance Monitor Unit configuration for this chipset:\n");
+  zxlogf(INFO, "PMU: version %u\n", props.pm_version);
+  zxlogf(INFO, "PMU: %u fixed events, width %u\n", props.max_num_fixed_events,
+         props.max_fixed_counter_width);
+  zxlogf(INFO, "PMU: %u programmable events, width %u\n", props.max_num_programmable_events,
+         props.max_programmable_counter_width);
+  zxlogf(INFO, "PMU: %u misc events, width %u\n", props.max_num_misc_events,
+         props.max_misc_counter_width);
+#ifdef __x86_64__
+  zxlogf(INFO, "PMU: perf_capabilities: 0x%lx\n", props.perf_capabilities);
+  zxlogf(INFO, "PMU: lbr_stack_size: %u\n", props.lbr_stack_size);
+#endif
+}
+
+PerfmonDevice::PerfmonDevice(zx_device_t* parent, zx::bti bti, perfmon::PmuHwProperties props,
+                             mtrace_control_func_t* mtrace_control)
+    : DeviceType(parent), bti_(std::move(bti)), pmu_hw_properties_(props),
+      mtrace_control_(mtrace_control) {
+}
+
+zx_status_t PerfmonDevice::GetHwProperties(mtrace_control_func_t* mtrace_control,
+                                           PmuHwProperties* out_props) {
   // Please do not use get_root_resource() in new code. See ZX-1467.
   zx_handle_t resource = get_root_resource();
-  zx_status_t status = zx_mtrace_control(resource, MTRACE_KIND_PERFMON,
-                                         MTRACE_PERFMON_GET_PROPERTIES, 0, &props, sizeof(props));
+  zx_status_t status = mtrace_control(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_GET_PROPERTIES,
+                                      0, out_props, sizeof(*out_props));
   if (status != ZX_OK) {
     if (status == ZX_ERR_NOT_SUPPORTED) {
       zxlogf(INFO, "%s: No PM support\n", __func__);
@@ -103,7 +122,6 @@ zx_status_t PerfmonDevice::GetHwProperties() {
     return status;
   }
 
-  pmu_hw_properties_ = props;
   return ZX_OK;
 }
 
@@ -331,7 +349,7 @@ zx_status_t PerfmonDevice::PmuStageConfig(const FidlPerfmonConfig* fidl_config) 
 
   zx_status_t status = VerifyAndCheckTimebase(icfg, ocfg);
   if (status != ZX_OK) {
-    return ZX_OK;
+    return status;
   }
 
   unsigned ii;  // ii: input index
@@ -422,7 +440,7 @@ zx_status_t PerfmonDevice::PmuStart() {
   zx_handle_t resource = get_root_resource();
 
   zx_status_t status =
-      zx_mtrace_control(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_INIT, 0, nullptr, 0);
+      mtrace_control_(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_INIT, 0, nullptr, 0);
   if (status != ZX_OK) {
     return status;
   }
@@ -432,22 +450,22 @@ zx_status_t PerfmonDevice::PmuStart() {
     zx_pmu_buffer_t buffer;
     io_buffer_t* io_buffer = &per_trace->buffers[cpu];
     buffer.vmo = io_buffer->vmo_handle;
-    status = zx_mtrace_control(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_ASSIGN_BUFFER, cpu,
-                               &buffer, sizeof(buffer));
+    status = mtrace_control_(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_ASSIGN_BUFFER, cpu,
+                             &buffer, sizeof(buffer));
     if (status != ZX_OK) {
       goto fail;
     }
   }
 
-  status = zx_mtrace_control(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_STAGE_CONFIG, 0,
-                             &per_trace->config, sizeof(per_trace->config));
+  status = mtrace_control_(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_STAGE_CONFIG, 0,
+                           &per_trace->config, sizeof(per_trace->config));
   if (status != ZX_OK) {
     goto fail;
   }
 
   // Step 2: Start data collection.
 
-  status = zx_mtrace_control(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_START, 0, nullptr, 0);
+  status = mtrace_control_(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_START, 0, nullptr, 0);
   if (status != ZX_OK) {
     goto fail;
   }
@@ -457,7 +475,7 @@ zx_status_t PerfmonDevice::PmuStart() {
 
 fail : {
   [[maybe_unused]] zx_status_t status2 =
-      zx_mtrace_control(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_FINI, 0, nullptr, 0);
+      mtrace_control_(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_FINI, 0, nullptr, 0);
   assert(status2 == ZX_OK);
   return status;
 }
@@ -474,10 +492,10 @@ void PerfmonDevice::PmuStop() {
   // Please do not use get_root_resource() in new code. See ZX-1467.
   zx_handle_t resource = get_root_resource();
   [[maybe_unused]] zx_status_t status =
-      zx_mtrace_control(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_STOP, 0, nullptr, 0);
+      mtrace_control_(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_STOP, 0, nullptr, 0);
   assert(status == ZX_OK);
   active_ = false;
-  status = zx_mtrace_control(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_FINI, 0, nullptr, 0);
+  status = mtrace_control_(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_FINI, 0, nullptr, 0);
   assert(status == ZX_OK);
 }
 
@@ -623,6 +641,18 @@ zx_status_t perfmon_bind(void* ctx, zx_device_t* parent) {
     return status;
   }
 
+  perfmon::PmuHwProperties props;
+  status = perfmon::PerfmonDevice::GetHwProperties(zx_mtrace_control, &props);
+  if (status != ZX_OK) {
+    return status;
+  }
+  DumpHwProperties(props);
+
+  if (props.pm_version < perfmon::kMinPmVersion) {
+    zxlogf(INFO, "%s: PM version %u or above is required\n", __func__, perfmon::kMinPmVersion);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   pdev_protocol_t pdev;
   status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev);
   if (status != ZX_OK) {
@@ -637,7 +667,7 @@ zx_status_t perfmon_bind(void* ctx, zx_device_t* parent) {
 
   fbl::AllocChecker ac;
   auto dev = std::unique_ptr<perfmon::PerfmonDevice>(
-      new (&ac) perfmon::PerfmonDevice(parent, std::move(bti)));
+      new (&ac) perfmon::PerfmonDevice(parent, std::move(bti), props, zx_mtrace_control));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

@@ -20,3 +20,9 @@ zx_status_t insntrace_bind(void* ctx, zx_device_t* parent);
 // h/w and s/w provided counters.
 
 zx_status_t perfmon_bind(void* ctx, zx_device_t* parent);
+
+// The zx_mtrace_control syscall.
+// A pointer to the syscall is provided during driver construction so that a fake version can
+// be provided in the tests.
+using mtrace_control_func_t = zx_status_t (zx_handle_t handle, uint32_t kind, uint32_t action,
+                                           uint32_t options, void* buf, size_t buf_size);
