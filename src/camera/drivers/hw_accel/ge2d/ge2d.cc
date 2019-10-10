@@ -113,9 +113,6 @@ void Ge2dDevice::Ge2dReleaseFrame(uint32_t task_index, uint32_t buffer_index) {
   auto task_entry = task_map_.find(task_index);
   ZX_ASSERT(task_entry != task_map_.end());
 
-  // Validate |input_buffer_index|.
-  ZX_ASSERT(task_entry->second->IsInputBufferIndexValid(buffer_index));
-
   auto task = task_entry->second.get();
   ZX_ASSERT(ZX_OK == task->ReleaseOutputBuffer(buffer_index));
 }
