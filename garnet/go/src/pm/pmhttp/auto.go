@@ -23,13 +23,18 @@ func NewAutoServer() *AutoServer {
 }
 
 func (a *AutoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Grab the lock first before starting the SSE server so we block
+	// broadcasting events until we've finished adding the client to our
+	// client set. Otherwise, a client could miss an event that came in
+	// during the registration process.
+	a.mu.Lock()
 	err := sse.Start(w, r)
 	if err != nil {
+		a.mu.Unlock()
 		log.Printf("SSE request failure: %s", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	a.mu.Lock()
 	a.clients[w] = struct{}{}
 	defer func() {
 		a.mu.Lock()

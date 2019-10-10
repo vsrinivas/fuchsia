@@ -25,9 +25,7 @@ test_packages = [
   "build",
   "cmd/pm/genkey",
   "cmd/pm/publish",
-
-  # FIXME(37107): Disabling test due to flakiness.
-  #"cmd/pm/serve",
+  "cmd/pm/serve",
   "repo",
 ]
 
