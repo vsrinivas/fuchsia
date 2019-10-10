@@ -66,8 +66,10 @@ compiler for `*-fuchsia` targets.  To disable it for a specific compilation,
 use the `-fno-sanitize=shadow-call-stack` option.
 
 Zircon supports shadow-call-stack both in the kernel and for user-mode code.
-**TODO(3370)**: Currently, shadow-call-stack is not enabled in the Fuchsia
-build (except for the kernel and some special test cases).
+For AArch64 (ARM64) shadow-call-stack is now on by default for all C and C++
+user code in the Fuchsia build (including Zircon).  **TODO(27339)**: Code built
+outside the Fuchsia/Zircon GN build system still requires explicitly adding the
+`-fsanitize=shadow-call-stack` switch.
 
 As with [safe-stack], there is no separate facility for specifying the size of
 the shadow call stack.  Instead, the size specified for "the stack" in legacy
