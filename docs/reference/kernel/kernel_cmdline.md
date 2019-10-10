@@ -23,6 +23,12 @@ lines starting with # are ignored.  Whitespace is not allowed in names.
 If this option is set, the system will not use Address Space Layout
 Randomization.
 
+## aslr.entropy_bits=\<num\>
+
+For address spaces that use ASLR this controls the number of bits of entropy in
+the randomization. Higher entropy results in a sparser address space and uses
+more memory for page tables. Valid values range from 0-36, with default being 36.
+
 ## bootsvc.next=\<bootfs path\>
 
 Controls what program is executed by bootsvc to continue the boot process.

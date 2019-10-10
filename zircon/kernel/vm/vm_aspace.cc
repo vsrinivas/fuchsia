@@ -633,6 +633,11 @@ size_t VmAspace::AllocatedPages() const {
 void VmAspace::InitializeAslr() {
   aslr_enabled_ = is_user() && !gCmdline.GetBool("aslr.disable", false);
 
+  if (aslr_enabled_) {
+    aslr_entropy_bits_ =
+        fbl::min(static_cast<uint8_t>(gCmdline.GetUInt32("aslr.entropy_bits", 36)), (uint8_t)36);
+  }
+
   crypto::GlobalPRNG::GetInstance()->Draw(aslr_seed_, sizeof(aslr_seed_));
   aslr_prng_.AddEntropy(aslr_seed_, sizeof(aslr_seed_));
 }

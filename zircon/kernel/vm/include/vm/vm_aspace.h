@@ -173,6 +173,8 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
     return aslr_prng_;
   }
 
+  uint8_t AslrEntropyBits() const { return aslr_entropy_bits_; }
+
  private:
   // can only be constructed via factory
   VmAspace(vaddr_t base, size_t size, uint32_t flags, const char* name);
@@ -203,6 +205,7 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   char name_[32];
   bool aspace_destroyed_ = false;
   bool aslr_enabled_ = false;
+  uint8_t aslr_entropy_bits_ = 0;
 
   mutable DECLARE_MUTEX(VmAspace) lock_;
 

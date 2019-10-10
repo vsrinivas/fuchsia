@@ -901,9 +901,10 @@ constexpr size_t AllocationSpotsInRange(size_t range_size, size_t alloc_size, ui
 
 }  // namespace
 
-// Perform allocations for VMARs that aren't using the COMPACT policy.  This
-// allocator works by choosing uniformly at random from the set of positions
-// that could satisfy the allocation.
+// Perform allocations for VMARs that aren't using the COMPACT policy. This allocator works by
+// choosing uniformly at random from a set of positions that could satisfy the allocation. The set
+// of positions are the 'left' most positions of the address space and are capped by the address
+// spaces entropy limit.
 zx_status_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size,
                                                                        uint8_t align_pow2,
                                                                        uint arch_mmu_flags,
@@ -914,13 +915,22 @@ zx_status_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t si
   align_pow2 = fbl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
   const vaddr_t align = 1UL << align_pow2;
 
+  // Ensure our candidate calculation shift will not overflow.
+  DEBUG_ASSERT(aspace_->AslrEntropyBits() < sizeof(size_t) * 8);
   // Calculate the number of spaces that we can fit this allocation in.
   size_t candidate_spaces = 0;
+  // This is the maximum number of spaces we need to consider based on our desired entropy.
+  const size_t max_candidate_spaces = 1ul << aspace_->AslrEntropyBits();
   ForEachGap(
-      [align, align_pow2, size, &candidate_spaces](vaddr_t gap_base, size_t gap_len) -> bool {
+      [align, align_pow2, size, &candidate_spaces, &max_candidate_spaces](vaddr_t gap_base,
+                                                                          size_t gap_len) -> bool {
         DEBUG_ASSERT(IS_ALIGNED(gap_base, align));
         if (gap_len >= size) {
           candidate_spaces += AllocationSpotsInRange(gap_len, size, align_pow2);
+        }
+        // Return early if we've already found more spaces than we will be considering.
+        if (candidate_spaces >= max_candidate_spaces) {
+          return false;
         }
         return true;
       },
@@ -928,6 +938,11 @@ zx_status_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t si
 
   if (candidate_spaces == 0) {
     return ZX_ERR_NO_MEMORY;
+  }
+
+  // Cap our candidate spaces to our entropy limit.
+  if (candidate_spaces > max_candidate_spaces) {
+    candidate_spaces = max_candidate_spaces;
   }
 
   // Choose the index of the allocation to use.
