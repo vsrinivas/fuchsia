@@ -29,20 +29,6 @@ struct NetErr {
     string message;
 };
 
-struct NetTrafficStats {
-    uint64 pkts_total;
-    uint64 bytes_total;
-};
-
-struct NetInterfaceStats {
-    /// Placeholder for all statistics regarding the network interface,
-    /// including, but not limited to traffic itself.
-    int64 up_since; // Unix epoch.
-
-    NetTrafficStats rx;
-    NetTrafficStats tx;
-};
-
 struct InterfaceConfig {
     string name;
 
@@ -142,9 +128,6 @@ protocol Netstack {
     /// Returns current route table.
     GetRouteTable() -> (vector<RouteTableEntry> rt);
     GetRouteTable2() -> (vector<RouteTableEntry2> rt);
-
-    // TODO (porce): Separate interfaces.
-    GetStats(uint32 nicid) -> (NetInterfaceStats stats);
 
     /// Sets the status (up or down) for the interface with the given nicid.
     SetInterfaceStatus(uint32 nicid, bool enabled);

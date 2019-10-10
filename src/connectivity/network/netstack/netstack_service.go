@@ -383,28 +383,6 @@ func (ni *netstackImpl) BridgeInterfaces(nicids []uint32) (netstack.NetErr, uint
 	return netstack.NetErr{Status: netstack.StatusOk}, uint32(ifs.nicid), nil
 }
 
-func (ni *netstackImpl) GetStats(nicid uint32) (stats netstack.NetInterfaceStats, err error) {
-	ni.ns.mu.Lock()
-	nicInfo := ni.ns.mu.stack.NICInfo()
-	ni.ns.mu.Unlock()
-
-	if info, ok := nicInfo[tcpip.NICID(nicid)]; ok {
-		return netstack.NetInterfaceStats{
-			Tx: netstack.NetTrafficStats{
-				PktsTotal:  info.Stats.Tx.Packets.Value(),
-				BytesTotal: info.Stats.Tx.Bytes.Value(),
-			},
-			Rx: netstack.NetTrafficStats{
-				PktsTotal:  info.Stats.Rx.Packets.Value(),
-				BytesTotal: info.Stats.Rx.Bytes.Value(),
-			},
-		}, nil
-	}
-
-	// TODO(stijlist): refactor to return NetErr and use StatusUnknownInterface
-	return netstack.NetInterfaceStats{}, fmt.Errorf("no such interface id: %d", nicid)
-}
-
 func (ni *netstackImpl) SetInterfaceStatus(nicid uint32, enabled bool) error {
 	ni.ns.mu.Lock()
 	ifState, ok := ni.ns.mu.ifStates[tcpip.NICID(nicid)]

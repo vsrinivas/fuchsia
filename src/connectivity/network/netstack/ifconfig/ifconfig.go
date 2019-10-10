@@ -66,13 +66,6 @@ func getIfaceByIdFromIfaces(id uint32, ifaces []netstack.NetInterface2) *netstac
 }
 
 func (a *netstackClientApp) printIface(iface netstack.NetInterface2) {
-	stats, err := a.netstack.GetStats(iface.Id)
-
-	if err != nil {
-		fmt.Printf("ifconfig: failed to fetch stats for '%v'\n\n", iface.Name)
-		return
-	}
-
 	fmt.Printf("%s\tHWaddr %s Id:%d\n", iface.Name, hwAddrToString(iface.Hwaddr), iface.Id)
 	fmt.Printf("\tinet addr:%s  Bcast:%s  Mask:%s\n", netAddrToString(iface.Addr), netAddrToString(iface.Broadaddr), netAddrToString(iface.Netmask))
 	for _, addr := range iface.Ipv6addrs {
@@ -85,13 +78,6 @@ func (a *netstackClientApp) printIface(iface netstack.NetInterface2) {
 	if isWLAN(iface.Features) {
 		fmt.Printf("\tWLAN Status: %s\n", a.wlanStatus())
 	}
-
-	fmt.Printf("\tRX packets:%d\n", stats.Rx.PktsTotal)
-	fmt.Printf("\tTX packets:%d\n", stats.Tx.PktsTotal)
-	fmt.Printf("\tRX bytes:%s  TX bytes:%s\n",
-		bytesToString(stats.Rx.BytesTotal), bytesToString(stats.Tx.BytesTotal))
-	fmt.Printf("\n")
-	// TODO: more stats. MTU, RX/TX errors
 }
 
 func (a *netstackClientApp) setStatus(iface netstack.NetInterface2, up bool) {
