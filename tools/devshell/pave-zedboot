@@ -18,4 +18,4 @@ if [[ -n "$name" ]]; then
   name_args+=("-n" "${name}")
 fi
 
-exec "${FUCHSIA_BUILD_DIR}/pave-zedboot.sh" "${name_args[@]}" --allow-zedboot-version-mismatch "$@"
+exec "${FUCHSIA_BUILD_DIR}/pave-zedboot.sh" "${name_args[@]}" "$@"

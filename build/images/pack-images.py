@@ -243,7 +243,7 @@ def main():
                         help='Archive format (default: from FILE suffix)')
     parser.add_argument('--board_name',
                         help='Board name images were built for')
-    parser.add_argument('--additional_bootserver_arguments',
+    parser.add_argument('--additional_bootserver_arguments', action='append', default=[],
                         help='additional arguments to pass to bootserver in generated scripts')
     args = parser.parse_args()
 
@@ -266,7 +266,7 @@ def main():
                                0o777),
                        'w') as script_file:
             script_file.write(generate_script(images, args.board_name, mode,
-                                              args.additional_bootserver_arguments))
+                                              ' '.join(args.additional_bootserver_arguments)))
 
     # First write the local scripts that work relative to the build directory.
     if args.pave:
@@ -288,7 +288,7 @@ def main():
                               'bootserver_netboot' in image)]
         files_read |= set(image['path'] for image in archive_images)
         write_archive(outfile, archive_format(args, outfile), archive_images,
-                      args.board_name, args.additional_bootserver_arguments)
+                      args.board_name, ' '.join(args.additional_bootserver_arguments))
 
     if args.symbol_archive:
         outfile = args.symbol_archive

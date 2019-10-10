@@ -1544,6 +1544,7 @@ paver_targets = [
       "$root_build_dir/netboot.sh",
     ]
     switch = "--netboot="
+    extra_bootserver_arguments = ""
     metadata = {
       name = "netboot"
       path = "netboot.sh"
@@ -1560,6 +1561,7 @@ paver_targets = [
     } else {
       switch = "--pave_zedboot="
     }
+    extra_bootserver_arguments = "--allow-zedboot-version-mismatch"
     metadata = {
       name = "pave-zedboot"
       path = "pave-zedboot.sh"
@@ -1576,6 +1578,7 @@ paver_targets = [
     } else {
       switch = "--pave="
     }
+    extra_bootserver_arguments = ""
     metadata = {
       name = "pave"
       path = "pave.sh"
@@ -1597,6 +1600,7 @@ foreach(format,
         "$root_build_dir/build-archive.$format",
       ]
       switch = "--archive="
+      extra_bootserver_arguments = ""
       metadata = {
         name = "archive"
         path = "build-archive.$format"
@@ -1609,6 +1613,7 @@ foreach(format,
         "$root_build_dir/symbol-archive.$format",
       ]
       switch = "--symbol-archive="
+      extra_bootserver_arguments = ""
       metadata = {
         name = "symbol-archive"
         path = "symbol-archive.$format"
@@ -1642,6 +1647,9 @@ foreach(target, paver_targets) {
       args += [
         "--additional_bootserver_arguments=${additional_bootserver_arguments}",
       ]
+    }
+    if (target.extra_bootserver_arguments != "") {
+      args += [ "--additional_bootserver_arguments=${target.extra_bootserver_arguments}" ]
     }
 
     args += [ "images.json" ]
