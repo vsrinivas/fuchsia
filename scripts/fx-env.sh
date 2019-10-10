@@ -92,17 +92,19 @@ function __fx_env_main() {
   ### fx-prompt-info: prints the current configuration for display in a prompt
 
   function fx-prompt-info {
-    # Run in a subshell to avoid polluting this shell's environment with data
-    # from the config file, which can change without updating this shell's
-    # environment.
-    (
-      source "${FUCHSIA_DIR}/tools/devshell/lib/vars.sh"
-      if fx-build-dir-if-present; then
-        echo "${FUCHSIA_BUILD_DIR##*/}"
-      else
-        echo "???"
-      fi
-    )
+    if [[ ${PWD}/ = ${FUCHSIA_DIR}/* ]]; then
+      # Run in a subshell to avoid polluting this shell's environment with data
+      # from the config file, which can change without updating this shell's
+      # environment.
+      (
+        source "${FUCHSIA_DIR}/tools/devshell/lib/vars.sh"
+        if fx-build-dir-if-present; then
+          echo "${FUCHSIA_BUILD_DIR##*/}"
+        else
+          echo "???"
+        fi
+      )
+    fi
   }
 
   ### fx-set-prompt: displays the current configuration in the prompt
