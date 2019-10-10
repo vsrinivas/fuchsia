@@ -31,7 +31,7 @@ static constexpr int USB_ENDPOINT_INVALID = -1;
 
 class UsbVideoStream;
 using UsbVideoStreamBase = ddk::Device<UsbVideoStream, ddk::Messageable,
-                                       ddk::UnbindableDeprecated>;
+                                       ddk::UnbindableNew>;
 
 class UsbVideoStream : public UsbVideoStreamBase, public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA> {
  public:
@@ -43,7 +43,7 @@ class UsbVideoStream : public UsbVideoStreamBase, public ddk::EmptyProtocol<ZX_P
                             UsbDeviceInfo device_info, size_t parent_req_size);
 
   // DDK device implementation
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     return fuchsia_hardware_camera_Device_dispatch(this, txn, msg, &CAMERA_FIDL_THUNKS);

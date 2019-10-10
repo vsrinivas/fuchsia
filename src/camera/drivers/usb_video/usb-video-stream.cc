@@ -720,9 +720,9 @@ void UsbVideoStream::DeactivateVideoBuffer() {
   }
 }
 
-void UsbVideoStream::DdkUnbindDeprecated() {
+void UsbVideoStream::DdkUnbindNew(ddk::UnbindTxn txn) {
   // Unpublish our device node.
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void UsbVideoStream::DdkRelease() { delete this; }

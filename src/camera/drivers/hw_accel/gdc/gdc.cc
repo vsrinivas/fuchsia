@@ -416,9 +416,9 @@ zx_status_t GdcDevice::Setup(void* /*ctx*/, zx_device_t* parent, std::unique_ptr
   return status;
 }
 
-void GdcDevice::DdkUnbindDeprecated() {
+void GdcDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   ShutDown();
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void GdcDevice::DdkRelease() {

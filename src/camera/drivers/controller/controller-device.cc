@@ -24,9 +24,9 @@ enum {
 };
 } // namespace
 
-void ControllerDevice::DdkUnbindDeprecated() {
+void ControllerDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   ShutDown();
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void ControllerDevice::DdkRelease() { delete this; }

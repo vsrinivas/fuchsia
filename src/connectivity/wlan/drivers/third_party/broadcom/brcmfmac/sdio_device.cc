@@ -41,7 +41,7 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
   return ZX_OK;
 }
 
-void SdioDevice::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+void SdioDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void SdioDevice::DdkRelease() { delete this; }
 
@@ -58,7 +58,7 @@ zx_status_t SdioDevice::BusRegister(brcmf_pub* drvr) {
 }
 
 SdioDevice::SdioDevice(zx_device_t* parent)
-    : ::ddk::Device<SdioDevice, ::ddk::UnbindableDeprecated>(parent) {}
+    : ::ddk::Device<SdioDevice, ::ddk::UnbindableNew>(parent) {}
 
 SdioDevice::~SdioDevice() {
   DisableDispatcher();

@@ -75,7 +75,7 @@ class ControllerDeviceTest : public gtest::TestLoopFixture {
 TEST_F(ControllerDeviceTest, DdkLifecycle) {
   EXPECT_EQ(controller_device_->DdkAdd("test-camera-controller"), ZX_OK);
   EXPECT_EQ(controller_device_->StartThread(), ZX_OK);
-  controller_device_->DdkUnbindDeprecated();
+  controller_device_->DdkAsyncRemove();
   EXPECT_TRUE(ddk_->Ok());
 }
 

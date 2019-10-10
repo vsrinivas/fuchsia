@@ -793,14 +793,14 @@ ArmIspDevice::~ArmIspDevice() {
   isp_irq_.destroy();
 }
 
-void ArmIspDevice::DdkUnbindDeprecated() {
+void ArmIspDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   // Make sure we don't unbind while the ArmIspTester is being constructed:
   fbl::AutoLock guard(&unbind_lock_);
   if (on_isp_unbind_) {
     on_isp_unbind_();
   }
   ShutDown();
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void ArmIspDevice::DdkRelease() { delete this; }

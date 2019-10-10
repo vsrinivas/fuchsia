@@ -36,7 +36,7 @@ struct ArmIspRegisterDump {
 class ArmIspDevice;
 
 class ArmIspDeviceTester;
-using IspDeviceTesterType = ddk::Device<ArmIspDeviceTester, ddk::UnbindableDeprecated,
+using IspDeviceTesterType = ddk::Device<ArmIspDeviceTester, ddk::UnbindableNew,
                                         ddk::Messageable>;
 
 class ArmIspDeviceTester : public IspDeviceTesterType,
@@ -57,7 +57,7 @@ class ArmIspDeviceTester : public IspDeviceTesterType,
 
   // Methods required by the ddk.
   void DdkRelease();
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
  private:
@@ -95,7 +95,7 @@ class ArmIspDeviceTester : public IspDeviceTesterType,
   void TestCallbacks(fuchsia_camera_test_TestReport* report);
 
   // The ArmIspDevice is a parent of the ArmIspDeviceTester.  It will call
-  // Disconnect() during its DdkUnbindDeprecated() call, so that isp_ never references an
+  // Disconnect() during its DdkUnbindNew() call, so that isp_ never references an
   // invalid instance. The isp_lock_ ensures that isp_ won't be removed while we
   // are using it.
   fbl::Mutex isp_lock_;

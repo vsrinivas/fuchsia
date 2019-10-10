@@ -374,7 +374,7 @@ zx_status_t Imx227Device::Setup(void* ctx, zx_device_t* parent,
 
 void Imx227Device::ShutDown() {}
 
-void Imx227Device::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+void Imx227Device::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void Imx227Device::DdkRelease() {
   ShutDown();
