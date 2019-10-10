@@ -5,11 +5,12 @@
 #ifndef FBL_FUNCTION_H_
 #define FBL_FUNCTION_H_
 
-#include <new>
 #include <stddef.h>
+#include <zircon/assert.h>
+
+#include <new>
 #include <utility>
 
-#include <zircon/assert.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
@@ -411,32 +412,6 @@ using SizedFunction = fbl::internal::Function<inline_callable_size, false, T>;
 template <typename T, size_t inline_callable_size>
 using InlineFunction = fbl::internal::Function<inline_callable_size, true, T>;
 
-// Comparing functions with nullptr.
-template <size_t inline_callable_size, bool require_inline, typename Result, typename... Args>
-bool operator==(
-    const fbl::internal::Function<inline_callable_size, require_inline, Result, Args...>& f,
-    decltype(nullptr)) {
-  return !f;
-}
-template <size_t inline_callable_size, bool require_inline, typename Result, typename... Args>
-bool operator!=(
-    const fbl::internal::Function<inline_callable_size, require_inline, Result, Args...>& f,
-    decltype(nullptr)) {
-  return !!f;
-}
-template <size_t inline_callable_size, bool require_inline, typename Result, typename... Args>
-bool operator==(
-    decltype(nullptr),
-    const fbl::internal::Function<inline_callable_size, require_inline, Result, Args...>& f) {
-  return !f;
-}
-template <size_t inline_callable_size, bool require_inline, typename Result, typename... Args>
-bool operator!=(
-    decltype(nullptr),
-    const fbl::internal::Function<inline_callable_size, require_inline, Result, Args...>& f) {
-  return !!f;
-}
-
 // A function which takes no arguments and produces no result.
 using Closure = fbl::Function<void()>;
 
@@ -470,5 +445,34 @@ auto BindMember(T* instance, R (T::*fn)(Args...)) {
 }
 
 }  // namespace fbl
+
+// Comparing functions with nullptr.  Note, these operators need exist outside
+// of the fbl namespace, otherwise they are quite difficult to invoke/use.  Make
+// sure that we use absolute namespaces for all of the types we reference when
+// defining operators in the global namespace.
+template <size_t inline_callable_size, bool require_inline, typename Result, typename... Args>
+bool operator==(
+    const ::fbl::internal::Function<inline_callable_size, require_inline, Result, Args...>& f,
+    decltype(nullptr)) {
+  return !f;
+}
+template <size_t inline_callable_size, bool require_inline, typename Result, typename... Args>
+bool operator!=(
+    const ::fbl::internal::Function<inline_callable_size, require_inline, Result, Args...>& f,
+    decltype(nullptr)) {
+  return !!f;
+}
+template <size_t inline_callable_size, bool require_inline, typename Result, typename... Args>
+bool operator==(
+    decltype(nullptr),
+    const ::fbl::internal::Function<inline_callable_size, require_inline, Result, Args...>& f) {
+  return !f;
+}
+template <size_t inline_callable_size, bool require_inline, typename Result, typename... Args>
+bool operator!=(
+    decltype(nullptr),
+    const ::fbl::internal::Function<inline_callable_size, require_inline, Result, Args...>& f) {
+  return !!f;
+}
 
 #endif  // FBL_FUNCTION_H_

@@ -4,10 +4,8 @@
 
 #include <fbl/function.h>
 #include <fbl/vector.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
-namespace fbl {
-namespace tests {
 namespace {
 
 using Closure = void();
@@ -33,9 +31,7 @@ struct EmptyFunction<R(Args...)> {
 constexpr size_t HugeCallableSize = sizeof(Big) + sizeof(void*) * 4;
 
 template <typename ClosureFunction>
-bool closure() {
-  BEGIN_TEST;
-
+void closure() {
   // default initialization
   ClosureFunction fdefault;
   EXPECT_FALSE(!!fdefault);
@@ -201,7 +197,7 @@ bool closure() {
   EXPECT_FALSE(!!fmutinline);
 
   // alloc checking constructor, inline
-  AllocChecker ac1;
+  fbl::AllocChecker ac1;
   int fcheck_value = 0;
   ClosureFunction fcheckinline([&fcheck_value] { fcheck_value++; }, &ac1);
   EXPECT_TRUE(!!fcheckinline);
@@ -210,7 +206,7 @@ bool closure() {
   EXPECT_EQ(1, fcheck_value);
 
   // alloc checking set target, inline
-  AllocChecker ac2;
+  fbl::AllocChecker ac2;
   fcheckinline.SetTarget([&fcheck_value] { fcheck_value *= 3; }, &ac2);
   EXPECT_TRUE(!!fcheckinline);
   EXPECT_TRUE(ac2.check());
@@ -218,7 +214,7 @@ bool closure() {
   EXPECT_EQ(3, fcheck_value);
 
   // alloc checking constructor, heap allocated
-  AllocChecker ac3;
+  fbl::AllocChecker ac3;
   ClosureFunction fcheckheap([&fcheck_value, big = Big()] { fcheck_value++; }, &ac3);
   EXPECT_TRUE(!!fcheckheap);
   EXPECT_TRUE(ac3.check());
@@ -226,20 +222,16 @@ bool closure() {
   EXPECT_EQ(4, fcheck_value);
 
   // alloc checking set target, heap allocated
-  AllocChecker ac4;
+  fbl::AllocChecker ac4;
   fcheckheap.SetTarget([&fcheck_value, big = Big()] { fcheck_value *= 3; }, &ac4);
   EXPECT_TRUE(!!fcheckheap);
   EXPECT_TRUE(ac4.check());
   fcheckheap();
   EXPECT_EQ(12, fcheck_value);
-
-  END_TEST;
 }
 
 template <typename BinaryOpFunction>
-bool binary_op() {
-  BEGIN_TEST;
-
+void binary_op() {
   // default initialization
   BinaryOpFunction fdefault;
   EXPECT_FALSE(!!fdefault);
@@ -419,7 +411,7 @@ bool binary_op() {
   EXPECT_FALSE(!!fmutinline);
 
   // alloc checking constructor, inline
-  AllocChecker ac1;
+  fbl::AllocChecker ac1;
   int fcheck_value = 0;
   BinaryOpFunction fcheckinline(
       [&fcheck_value](int a, int b) {
@@ -433,7 +425,7 @@ bool binary_op() {
   EXPECT_EQ(1, fcheck_value);
 
   // alloc checking set target, inline
-  AllocChecker ac2;
+  fbl::AllocChecker ac2;
   fcheckinline.SetTarget(
       [&fcheck_value](int a, int b) {
         fcheck_value *= 3;
@@ -446,7 +438,7 @@ bool binary_op() {
   EXPECT_EQ(3, fcheck_value);
 
   // alloc checking constructor, heap allocated
-  AllocChecker ac3;
+  fbl::AllocChecker ac3;
   BinaryOpFunction fcheckheap(
       [&fcheck_value, big = Big()](int a, int b) {
         fcheck_value++;
@@ -459,7 +451,7 @@ bool binary_op() {
   EXPECT_EQ(4, fcheck_value);
 
   // alloc checking set target, heap allocated
-  AllocChecker ac4;
+  fbl::AllocChecker ac4;
   fcheckheap.SetTarget(
       [&fcheck_value, big = Big()](int a, int b) {
         fcheck_value *= 3;
@@ -470,13 +462,49 @@ bool binary_op() {
   EXPECT_TRUE(ac4.check());
   EXPECT_EQ(10, fcheckheap(3, 7));
   EXPECT_EQ(12, fcheck_value);
-
-  END_TEST;
 }
 
-bool sized_function_size_bounds() {
-  BEGIN_TEST;
+TEST(FunctionTest, ClosureFunction) {
+  auto do_test = closure<fbl::Function<Closure>>;
+  ASSERT_NO_FAILURES(do_test());
+}
 
+TEST(FunctionTest, BinaryOpFunction) {
+  auto do_test = binary_op<fbl::Function<BinaryOp>>;
+  ASSERT_NO_FAILURES(do_test());
+}
+
+TEST(FunctionTest, ClosureZeroSizedFunction) {
+  auto do_test = closure<fbl::SizedFunction<Closure, 0u>>;
+  ASSERT_NO_FAILURES(do_test());
+}
+
+TEST(FunctionTest, BinaryOpZeroSizedFunction) {
+  auto do_test = binary_op<fbl::SizedFunction<BinaryOp, 0u>>;
+  ASSERT_NO_FAILURES(do_test());
+}
+
+TEST(FunctionTest, ClosureHugeSizedFunction) {
+  auto do_test = closure<fbl::SizedFunction<Closure, HugeCallableSize>>;
+  ASSERT_NO_FAILURES(do_test());
+}
+
+TEST(FunctionTest, BinaryOpHugeSizedFunction) {
+  auto do_test = binary_op<fbl::SizedFunction<BinaryOp, HugeCallableSize>>;
+  ASSERT_NO_FAILURES(do_test());
+}
+
+TEST(FunctionTest, ClosureHugeInlineFunction) {
+  auto do_test = closure<fbl::InlineFunction<Closure, HugeCallableSize>>;
+  ASSERT_NO_FAILURES(do_test());
+}
+
+TEST(FunctionTest, BinaryOpHugeInlineFunction) {
+  auto do_test = binary_op<fbl::InlineFunction<BinaryOp, HugeCallableSize>>;
+  ASSERT_NO_FAILURES(do_test());
+}
+
+TEST(FunctionTest, SizedFunctionSizeBounds) {
   auto empty = [] {};
   fbl::SizedFunction<Closure, sizeof(empty)> fempty(std::move(empty));
   static_assert(sizeof(fempty) >= sizeof(empty), "size bounds");
@@ -509,13 +537,9 @@ bool sized_function_size_bounds() {
     (void)x;
     (void)y;
   };
-
-  END_TEST;
 }
 
-bool inline_function_size_bounds() {
-  BEGIN_TEST;
-
+TEST(FunctionTest, InlineFunctionSizeBounds) {
   auto empty = [] {};
   fbl::InlineFunction<Closure, sizeof(empty)> fempty(std::move(empty));
   static_assert(sizeof(fempty) >= sizeof(empty), "size bounds");
@@ -538,24 +562,20 @@ bool inline_function_size_bounds() {
   fbig = [] {};
 
 // These statements do not compile because the lambdas are too big to fit.
-#if 0
-    fempty = [ x = 1, y = 2 ] {
-        (void)x;
-        (void)y;
-    };
-    fsmall = [ big = Big(), x = 1 ] { (void)x; };
-    fbig = [ big = Big(), x = 1, y = 2 ] {
-        (void)x;
-        (void)y;
-    };
+#if TEST_WILL_NOT_COMPILE || 0
+  fempty = [x = 1, y = 2] {
+    (void)x;
+    (void)y;
+  };
+  fsmall = [big = Big(), x = 1] { (void)x; };
+  fbig = [big = Big(), x = 1, y = 2] {
+    (void)x;
+    (void)y;
+  };
 #endif
-
-  END_TEST;
 }
 
-bool move_only_argument_and_result() {
-  BEGIN_TEST;
-
+TEST(FunctionTest, MoveOnlyArgumentAndResult) {
   fbl::unique_ptr<int> arg(new int());
   fbl::Function<MoveOp> f([](fbl::unique_ptr<int> value) {
     *value += 1;
@@ -565,22 +585,16 @@ bool move_only_argument_and_result() {
   EXPECT_EQ(1, *arg);
   arg = f(std::move(arg));
   EXPECT_EQ(2, *arg);
-
-  END_TEST;
 }
 
 void implicit_construction_helper(fbl::Closure closure) {}
 
-bool implicit_construction() {
-  BEGIN_TEST;
-
+TEST(FunctionTest, ImplicitConstruction) {
   // ensure we can implicitly construct from nullptr
   implicit_construction_helper(nullptr);
 
   // ensure we can implicitly construct from a lambda
   implicit_construction_helper([] {});
-
-  END_TEST;
 }
 
 struct Obj {
@@ -604,20 +618,16 @@ struct Obj {
   uint32_t calls = 0;
 };
 
-bool bind_member() {
-  BEGIN_TEST;
-
+TEST(FunctionTest, BindMember) {
   Obj obj;
   auto move_only_value = std::make_unique<int>(4);
 
-  BindMember(&obj, &Obj::Call)();
-  EXPECT_EQ(23, BindMember(&obj, &Obj::AddOne)(22));
-  EXPECT_EQ(6, BindMember(&obj, &Obj::Sum)(1, 2, 3));
-  move_only_value = BindMember(&obj, &Obj::AddAndReturn)(std::move(move_only_value));
+  fbl::BindMember(&obj, &Obj::Call)();
+  EXPECT_EQ(23, fbl::BindMember(&obj, &Obj::AddOne)(22));
+  EXPECT_EQ(6, fbl::BindMember(&obj, &Obj::Sum)(1, 2, 3));
+  move_only_value = fbl::BindMember(&obj, &Obj::AddAndReturn)(std::move(move_only_value));
   EXPECT_EQ(5, *move_only_value);
   EXPECT_EQ(3, obj.calls);
-
-  END_TEST;
 }
 
 // Test the internal IsNull mechanism.
@@ -632,9 +642,7 @@ struct NonBoolNull {
   void operator==(decltype(nullptr)) const {}
 };
 
-bool null_check() {
-  BEGIN_TEST;
-
+TEST(FunctionTest, NullCheck) {
   EXPECT_TRUE(fbl::internal::IsNull(nullptr));
 
   Nullable nf = {false};
@@ -648,8 +656,6 @@ bool null_check() {
 
   NonBoolNull nbn;
   EXPECT_FALSE(fbl::internal::IsNull(nbn));
-
-  END_TEST;
 }
 
 // This is the code which is included in <function.h>.
@@ -703,9 +709,7 @@ int SumToTen() {
 
 }  // namespace example
 
-bool example_code() {
-  BEGIN_TEST;
-
+TEST(FunctionTest, ExampleCode) {
   fbl::Vector<int> in;
   for (int i = 0; i < 10; i++) {
     fbl::AllocChecker ac;
@@ -716,29 +720,6 @@ bool example_code() {
   EXPECT_EQ(45, example::Sum(in));
   EXPECT_EQ(-5, example::AlternatingSum(in));
   EXPECT_EQ(55, example::SumToTen());
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(function_tests)
-RUN_TEST((closure<fbl::Function<Closure>>))
-RUN_TEST((binary_op<fbl::Function<BinaryOp>>))
-RUN_TEST((closure<fbl::SizedFunction<Closure, 0u>>))
-RUN_TEST((binary_op<fbl::SizedFunction<BinaryOp, 0u>>))
-RUN_TEST((closure<fbl::SizedFunction<Closure, HugeCallableSize>>))
-RUN_TEST((binary_op<fbl::SizedFunction<BinaryOp, HugeCallableSize>>))
-RUN_TEST((closure<fbl::InlineFunction<Closure, HugeCallableSize>>))
-RUN_TEST((binary_op<fbl::InlineFunction<BinaryOp, HugeCallableSize>>))
-RUN_TEST(sized_function_size_bounds);
-RUN_TEST(inline_function_size_bounds);
-RUN_TEST(move_only_argument_and_result);
-RUN_TEST(implicit_construction);
-RUN_TEST(bind_member);
-RUN_TEST(null_check);
-RUN_TEST(example_code);
-END_TEST_CASE(function_tests)
-
-}  // namespace tests
-}  // namespace fbl
