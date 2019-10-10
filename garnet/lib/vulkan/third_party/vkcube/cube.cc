@@ -2924,8 +2924,6 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv) {
 
   demo->fuchsia_state->t0 = std::chrono::high_resolution_clock::now();
 
-  trace::TraceProviderWithFdio trace_provider(demo->fuchsia_state->loop.dispatcher());
-
   demo->fuchsia_state->context = sys::ComponentContext::Create();
 
   ImagePipeViewProviderService::CreateViewCallback create_view_callback =
