@@ -52,7 +52,7 @@ class Printer {
     return kUnitStrings[unit_index];
   }
 
-  void PrintAxis(::llcpp::fuchsia::input::report::Axis axis) const {
+  void PrintAxis(::llcpp::fuchsia::input::report::Axis axis) {
     this->Print("Unit: %8s\n", UnitToString(axis.unit));
     this->Print("Min:  %8ld\n", axis.range.min);
     this->Print("Max:  %8ld\n", axis.range.max);
@@ -66,13 +66,13 @@ class Printer {
     DecreaseIndent();
   }
 
-  void Print(const char* format, ...) const {
-    std::string spaces(indent_, ' ');
-    printf("%s", spaces.c_str());
+  void Print(const char* format, ...) {
+    std::string str_format(indent_, ' ');
+    str_format += format;
 
     va_list argptr;
     va_start(argptr, format);
-    vprintf(format, argptr);
+    RealPrint(str_format.c_str(), argptr);
     va_end(argptr);
   }
 
@@ -82,7 +82,8 @@ class Printer {
 
   void DecreaseIndent() { indent_ -= 2; }
 
- private:
+ protected:
+  virtual void RealPrint(const char* format, va_list argptr) { vprintf(format, argptr); }
   size_t indent_ = 0;
 };
 

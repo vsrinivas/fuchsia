@@ -7,3 +7,11 @@ group("tools") {
     "print-input-report",
   ]
 }
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    "print-input-report:print-input-report-test",
+  ]
+}

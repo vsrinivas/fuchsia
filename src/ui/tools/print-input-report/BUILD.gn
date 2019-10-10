@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
 
 executable("bin") {
   output_name = "print-input-report"
@@ -32,11 +34,40 @@ package("print-input-report") {
       shell = true
     },
   ]
+}
 
-  meta = [
+test("print-input-report-test-bin") {
+  output_name = "print-input-report-test-bin"
+  testonly = true
+
+  sources = [
+    "devices.cc",
+    "test/print-test.cc",
+  ]
+
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/hid-input-report",
+    "//zircon/public/lib/hid-parser",
+    "//zircon/public/lib/sync",
+    "//zircon/system/fidl/fuchsia-input-report:fuchsia-input-report_llcpp",
+  ]
+}
+
+test_package("print-input-report-test") {
+  deps = [
+    ":print-input-report-test-bin",
+  ]
+  tests = [
     {
-      path = rebase_path("print-input-report.cmx")
-      dest = "print-input-report.cmx"
+      name = "print-input-report-test-bin"
+      dest = "print-input-report-test"
+      environments = basic_envs
     },
   ]
 }

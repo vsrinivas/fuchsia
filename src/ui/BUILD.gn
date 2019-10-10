@@ -20,5 +20,6 @@ group("tests") {
     "bin:tests",
     "scenic:tests",
     "tests",
+    "tools:tests",
   ]
 }

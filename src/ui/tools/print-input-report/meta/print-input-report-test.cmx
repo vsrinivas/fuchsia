@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/print-input-report-test"
+    }
+}
