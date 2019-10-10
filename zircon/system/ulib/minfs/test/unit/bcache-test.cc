@@ -4,10 +4,10 @@
 
 #include <minfs/bcache.h>
 
+#include <block-client/cpp/fake-device.h>
 #include <minfs/format.h>
 #include <minfs/minfs.h>
-#include <block-client/cpp/fake-device.h>
-#include <fs/buffer/vmo-buffer.h>
+#include <storage/buffer/vmo-buffer.h>
 #include <zxtest/zxtest.h>
 
 namespace minfs {
@@ -45,7 +45,6 @@ class MockBlockDevice : public FakeBlockDevice {
   bool called_ = false;
 };
 
-
 class BcacheTest : public zxtest::Test {
  public:
   void SetUp() final {
@@ -61,24 +60,22 @@ class BcacheTest : public zxtest::Test {
   std::unique_ptr<Bcache> bcache_;
 };
 
-TEST_F(BcacheTest, GetDevice) {
-  ASSERT_EQ(device_, bcache_->GetDevice());
-}
+TEST_F(BcacheTest, GetDevice) { ASSERT_EQ(device_, bcache_->GetDevice()); }
 
 TEST_F(BcacheTest, BlockNumberToDevice) {
   ASSERT_EQ(42 * kMinfsBlockSize / kBlockSize, bcache_->BlockNumberToDevice(42));
 }
 
 TEST_F(BcacheTest, RunOperation) {
-  fs::VmoBuffer buffer;
+  storage::VmoBuffer buffer;
   ASSERT_OK(buffer.Initialize(bcache_.get(), 1, kMinfsBlockSize, "source"));
 
   const uint64_t kVmoOffset = 1234;
   const uint64_t kDeviceOffset = 42;
   const uint64_t kLength = 5678;
 
-  fs::Operation operation = {};
-  operation.type = fs::OperationType::kWrite;
+  storage::Operation operation = {};
+  operation.type = storage::OperationType::kWrite;
   operation.vmo_offset = kVmoOffset;
   operation.dev_offset = kDeviceOffset;
   operation.length = kLength;
@@ -92,7 +89,7 @@ TEST_F(BcacheTest, RunOperation) {
   ASSERT_EQ(bcache_->BlockNumberToDevice(kDeviceOffset), request.dev_offset);
   ASSERT_EQ(bcache_->BlockNumberToDevice(kLength), request.length);
 
-  operation.type = fs::OperationType::kRead;
+  operation.type = storage::OperationType::kRead;
   device_->Reset();
 
   ASSERT_OK(bcache_->RunOperation(operation, &buffer));

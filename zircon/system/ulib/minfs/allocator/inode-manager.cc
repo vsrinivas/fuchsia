@@ -54,11 +54,11 @@ void InodeManager::Update(PendingWork* transaction, ino_t ino, const Inode* inod
   char* inodata = reinterpret_cast<char*>(inode_table_.start()) + inoblock_rel * kMinfsBlockSize;
   memcpy(inodata + off_of_ino, inode, kMinfsInodeSize);
 
-  fs::Operation op = {
-    .type = fs::OperationType::kWrite,
-    .vmo_offset = inoblock_rel,
-    .dev_offset = inoblock_abs,
-    .length = 1,
+  storage::Operation op = {
+      .type = storage::OperationType::kWrite,
+      .vmo_offset = inoblock_rel,
+      .dev_offset = inoblock_abs,
+      .length = 1,
   };
   transaction->EnqueueMetadata(inode_table_.vmo().get(), std::move(op));
 }

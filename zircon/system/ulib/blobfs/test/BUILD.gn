@@ -36,8 +36,8 @@ test("blobfs-unit") {
     "$zx/system/ulib/blobfs",
     "$zx/system/ulib/block-client:fake-device",
     "$zx/system/ulib/fidl-utils",
-    "$zx/system/ulib/fs/buffer",
-    "$zx/system/ulib/fs/operation",
+    "$zx/system/ulib/storage/buffer",
+    "$zx/system/ulib/storage/operation",
     "$zx/system/ulib/zxtest",
     "$zx/third_party/ulib/cksum",
     "$zx/third_party/ulib/safemath",
@@ -59,12 +59,12 @@ test("blobfs-host") {
 test("blobfs-integration") {
   test_group = "fs"
   sources = [
-    "integration/blobfs_integration_test.cc",
-    "integration/large_integration_test.cc",
     "integration/blobfs_fixtures.cc",
+    "integration/blobfs_integration_test.cc",
     "integration/environment.cc",
     "integration/fixtures.cc",
     "integration/integration_main.cc",
+    "integration/large_integration_test.cc",
     "integration/superblock-test.cc",
     "integration/test_support.cc",
   ]

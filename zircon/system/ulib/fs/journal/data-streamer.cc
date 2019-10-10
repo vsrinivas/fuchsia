@@ -7,12 +7,12 @@
 #include <vector>
 
 #include <fs/journal/data-streamer.h>
-#include <fs/operation/buffered-operation.h>
+#include <storage/operation/buffered-operation.h>
 
 namespace fs {
 
-void DataStreamer::StreamData(fs::UnbufferedOperation operation) {
-  ZX_DEBUG_ASSERT(operation.op.type == fs::OperationType::kWrite);
+void DataStreamer::StreamData(storage::UnbufferedOperation operation) {
+  ZX_DEBUG_ASSERT(operation.op.type == storage::OperationType::kWrite);
   const size_t max_chunk_blocks = (3 * writeback_capacity_) / 4;
   uint64_t delta_blocks = std::min(operation.op.length, max_chunk_blocks);
   while (operation.op.length > 0) {
@@ -23,13 +23,13 @@ void DataStreamer::StreamData(fs::UnbufferedOperation operation) {
       IssueOperations();
     }
 
-    fs::UnbufferedOperation partial_operation = {.vmo = zx::unowned_vmo(operation.vmo->get()),
-                                                 {
-                                                     .type = fs::OperationType::kWrite,
-                                                     .vmo_offset = operation.op.vmo_offset,
-                                                     .dev_offset = operation.op.dev_offset,
-                                                     .length = delta_blocks,
-                                                 }};
+    storage::UnbufferedOperation partial_operation = {.vmo = zx::unowned_vmo(operation.vmo->get()),
+                                                      {
+                                                          .type = storage::OperationType::kWrite,
+                                                          .vmo_offset = operation.op.vmo_offset,
+                                                          .dev_offset = operation.op.dev_offset,
+                                                          .length = delta_blocks,
+                                                      }};
     operations_.Add(std::move(partial_operation));
     operation.op.vmo_offset += delta_blocks;
     operation.op.dev_offset += delta_blocks;

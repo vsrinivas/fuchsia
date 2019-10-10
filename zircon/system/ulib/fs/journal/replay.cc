@@ -10,8 +10,8 @@
 #include <fs/journal/format.h>
 #include <fs/journal/replay.h>
 #include <fs/journal/superblock.h>
-#include <fs/operation/buffered-operation.h>
 #include <fs/transaction/writeback.h>
+#include <storage/operation/buffered-operation.h>
 
 #include "entry-view.h"
 
@@ -21,7 +21,8 @@ namespace {
 // Reads and validates the length of the entry from a header.
 // Ensures the payload length is not zero, and that the entry length does not overflow
 // the journal buffer.
-uint64_t ParseEntryLength(const fs::VmoBuffer* journal_buffer, const JournalHeaderBlock* header) {
+uint64_t ParseEntryLength(const storage::VmoBuffer* journal_buffer,
+                          const JournalHeaderBlock* header) {
   uint64_t entry_length = 0;
   if (unlikely(add_overflow(header->payload_blocks, kEntryMetadataBlocks, &entry_length))) {
     return 0;
@@ -54,10 +55,10 @@ bool IsHeader(const JournalHeaderBlock* header, uint64_t sequence_number) {
   return true;
 }
 
-std::optional<const JournalEntryView> ParseEntry(fs::VmoBuffer* journal_buffer, uint64_t start,
+std::optional<const JournalEntryView> ParseEntry(storage::VmoBuffer* journal_buffer, uint64_t start,
                                                  uint64_t sequence_number) {
   // To know how much of the journal we need to parse, first observe only one block.
-  fs::BlockBufferView small_view(journal_buffer, start, 1);
+  storage::BlockBufferView small_view(journal_buffer, start, 1);
   const JournalEntryView header_entry_view(std::move(small_view));
 
   // Before trying to access the commit block, check the header.
@@ -70,7 +71,7 @@ std::optional<const JournalEntryView> ParseEntry(fs::VmoBuffer* journal_buffer, 
   }
 
   // Looks good enough. Create a JournalEntryView that now includes the footer.
-  fs::BlockBufferView view(journal_buffer, start, entry_length);
+  storage::BlockBufferView view(journal_buffer, start, entry_length);
   JournalEntryView entry_view(std::move(view));
   auto& const_entry_view = const_cast<const JournalEntryView&>(entry_view);
 
@@ -96,11 +97,11 @@ std::optional<const JournalEntryView> ParseEntry(fs::VmoBuffer* journal_buffer, 
   return entry_view;
 }
 
-bool IsSubsequentEntryValid(fs::VmoBuffer* journal_buffer, uint64_t start,
+bool IsSubsequentEntryValid(storage::VmoBuffer* journal_buffer, uint64_t start,
                             uint64_t sequence_number) {
   // Access the current entry, but ignore everything except the "length" field.
   // WARNING: This (intentionally) does not validate the current entry.
-  fs::BlockBufferView small_view(journal_buffer, start, kJournalEntryHeaderBlocks);
+  storage::BlockBufferView small_view(journal_buffer, start, kJournalEntryHeaderBlocks);
   const JournalEntryView header_entry_view(std::move(small_view));
   if (!IsHeader(header_entry_view.header(), sequence_number)) {
     // If this isn't a header, we can't find the subsequent entry.
@@ -115,17 +116,17 @@ bool IsSubsequentEntryValid(fs::VmoBuffer* journal_buffer, uint64_t start,
     return false;
   }
   start = (start + entry_length) % journal_buffer->capacity();
-  const auto entry_view = JournalEntryView(fs::BlockBufferView(journal_buffer, start, 1));
+  const auto entry_view = JournalEntryView(storage::BlockBufferView(journal_buffer, start, 1));
   return IsJournalMetadata(entry_view.header(), sequence_number + 1);
 }
 
-void ParseBlocks(const fs::VmoBuffer& journal_buffer, const JournalEntryView& entry,
-                 uint64_t entry_start, fbl::Vector<fs::BufferedOperation>* operations) {
+void ParseBlocks(const storage::VmoBuffer& journal_buffer, const JournalEntryView& entry,
+                 uint64_t entry_start, fbl::Vector<storage::BufferedOperation>* operations) {
   // Collect all the operations to be replayed from this entry into |operations|.
-  fs::BufferedOperation operation;
+  storage::BufferedOperation operation;
   for (size_t i = 0; i < entry.header()->payload_blocks; i++) {
     operation.vmoid = journal_buffer.vmoid();
-    operation.op.type = fs::OperationType::kWrite;
+    operation.op.type = storage::OperationType::kWrite;
     operation.op.vmo_offset =
         (entry_start + kJournalEntryHeaderBlocks + i) % journal_buffer.capacity();
     operation.op.dev_offset = entry.header()->target_blocks[i];
@@ -147,8 +148,8 @@ void ParseBlocks(const fs::VmoBuffer& journal_buffer, const JournalEntryView& en
 
 }  // namespace
 
-zx_status_t ParseJournalEntries(const JournalSuperblock* info, fs::VmoBuffer* journal_buffer,
-                                fbl::Vector<fs::BufferedOperation>* operations,
+zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffer* journal_buffer,
+                                fbl::Vector<storage::BufferedOperation>* operations,
                                 uint64_t* out_sequence_number, uint64_t* out_start) {
   // Validate |info| before using it.
   zx_status_t status = info->Validate();
@@ -211,15 +212,15 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, fs::VmoBuffer* jo
   return ZX_OK;
 }
 
-zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler, fs::VmoidRegistry* registry,
-                          uint64_t journal_start, uint64_t journal_length,
-                          JournalSuperblock* out_journal_superblock) {
+zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
+                          storage::VmoidRegistry* registry, uint64_t journal_start,
+                          uint64_t journal_length, JournalSuperblock* out_journal_superblock) {
   const uint64_t journal_entry_start = journal_start + kJournalMetadataBlocks;
   const uint64_t journal_entry_blocks = journal_length - kJournalMetadataBlocks;
   FS_TRACE_DEBUG("replay: Initializing journal superblock\n");
 
   // Initialize and read the journal superblock and journal buffer.
-  auto journal_superblock_buffer = std::make_unique<fs::VmoBuffer>();
+  auto journal_superblock_buffer = std::make_unique<storage::VmoBuffer>();
   zx_status_t status = journal_superblock_buffer->Initialize(
       registry, kJournalMetadataBlocks, transaction_handler->FsBlockSize(), "journal-superblock");
   if (status != ZX_OK) {
@@ -228,7 +229,7 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler, fs::Vmoid
   }
   // Initialize and read the journal itself.
   FS_TRACE_INFO("replay: Initializing journal buffer (%zu blocks)\n", journal_entry_blocks);
-  VmoBuffer journal_buffer;
+  storage::VmoBuffer journal_buffer;
   status = journal_buffer.Initialize(registry, journal_entry_blocks,
                                      transaction_handler->FsBlockSize(), "journal-buffer");
   if (status != ZX_OK) {
@@ -254,13 +255,13 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler, fs::Vmoid
   // are tightly coupled, so although we will replay a multi-entry journal, it is unlikely the
   // disk will end up in that state. However, this use case is supported by this replay code
   // regardless.
-  fbl::Vector<fs::BufferedOperation> operations;
+  fbl::Vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   FS_TRACE_DEBUG("replay: Parsing journal entries\n");
   JournalSuperblock journal_superblock(std::move(journal_superblock_buffer));
-  status = ParseJournalEntries(&journal_superblock, &journal_buffer, &operations,
-                               &sequence_number, &next_entry_start);
+  status = ParseJournalEntries(&journal_superblock, &journal_buffer, &operations, &sequence_number,
+                               &next_entry_start);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Cannot parse journal entries: %d\n", status);
     return status;
@@ -280,9 +281,9 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler, fs::Vmoid
     operations.reset();
     FS_TRACE_INFO("replay: New start: %zu, sequence_number: %zu\n", next_entry_start,
                   sequence_number);
-    fs::BufferedOperation operation;
+    storage::BufferedOperation operation;
     operation.vmoid = journal_superblock.buffer().vmoid();
-    operation.op.type = fs::OperationType::kWrite;
+    operation.op.type = storage::OperationType::kWrite;
     operation.op.vmo_offset = 0;
     operation.op.dev_offset = journal_start;
     operation.op.length = kJournalMetadataBlocks;

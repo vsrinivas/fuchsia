@@ -42,11 +42,11 @@ void SuperblockManager::Write(PendingWork* transaction, UpdateBackupSuperblock w
   UpdateChecksum(MutableInfo());
   auto data = &info_blk_[0];
 
-  fs::Operation op = {
-    .type = fs::OperationType::kWrite,
-    .vmo_offset = 0,
-    .dev_offset = kSuperblockStart,
-    .length = 1,
+  storage::Operation op = {
+      .type = storage::OperationType::kWrite,
+      .vmo_offset = 0,
+      .dev_offset = kSuperblockStart,
+      .length = 1,
   };
   transaction->EnqueueMetadata(data, std::move(op));
 
@@ -57,11 +57,11 @@ void SuperblockManager::Write(PendingWork* transaction, UpdateBackupSuperblock w
       superblock_dev_offset = kFvmSuperblockBackup;
     }
 
-    fs::Operation op = {
-      .type = fs::OperationType::kWrite,
-      .vmo_offset = 0,
-      .dev_offset = superblock_dev_offset,
-      .length = 1,
+    storage::Operation op = {
+        .type = storage::OperationType::kWrite,
+        .vmo_offset = 0,
+        .dev_offset = superblock_dev_offset,
+        .length = 1,
     };
     transaction->EnqueueMetadata(data, std::move(op));
   }

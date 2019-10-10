@@ -27,9 +27,7 @@ constexpr size_t integrity_block = 8;
 // Mock TransactionHandler class to be used in superblock tests.
 class MockTransactionHandler : public fs::TransactionHandler {
  public:
-  MockTransactionHandler(block_client::BlockDevice* device) {
-    device_ = device;
-  }
+  MockTransactionHandler(block_client::BlockDevice* device) { device_ = device; }
 
   MockTransactionHandler(const MockTransactionHandler&) = delete;
   MockTransactionHandler(MockTransactionHandler&&) = delete;
@@ -41,7 +39,8 @@ class MockTransactionHandler : public fs::TransactionHandler {
 
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
 
-  zx_status_t RunOperation(const fs::Operation& operation, fs::BlockBuffer* buffer) final {
+  zx_status_t RunOperation(const storage::Operation& operation,
+                           storage::BlockBuffer* buffer) final {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -215,7 +214,7 @@ TEST(SuperblockTest, TestCorruptSuperblockWithoutCorrection) {
   ASSERT_OK(vmo.write(&backup, kMinfsBlockSize, kMinfsBlockSize));
 
   FillWriteRequest(transaction_handler.get(), kSuperblockStart, kNonFvmSuperblockBackup, vmoid.id,
-      request);
+                   request);
   ASSERT_OK(device.FifoTransaction(request, 2));
 
   // Try to correct the corrupted superblock.
@@ -258,7 +257,7 @@ TEST(SuperblockTest, TestCorruptSuperblockWithCorrection) {
   ASSERT_OK(vmo.write(&info, 0, kMinfsBlockSize));
   ASSERT_OK(vmo.write(&backup, kMinfsBlockSize, kMinfsBlockSize));
   FillWriteRequest(transaction_handler.get(), kSuperblockStart, kNonFvmSuperblockBackup, vmoid.id,
-      request);
+                   request);
   ASSERT_OK(device.FifoTransaction(request, 2));
   // Try to correct the corrupted superblock.
   zx_status_t status = RepairSuperblock(transaction_handler.get(), &device,
@@ -294,7 +293,7 @@ TEST(SuperblockTest, TestRepairSuperblockWithBitmapReconstruction) {
   ASSERT_OK(vmo.write(&info, 0, kMinfsBlockSize));
   ASSERT_OK(vmo.write(&backup, kMinfsBlockSize, kMinfsBlockSize));
   FillWriteRequest(transaction_handler.get(), kSuperblockStart, kNonFvmSuperblockBackup, vmoid.id,
-      request);
+                   request);
   ASSERT_OK(device.FifoTransaction(request, 2));
 
   uint8_t block[minfs::kMinfsBlockSize];

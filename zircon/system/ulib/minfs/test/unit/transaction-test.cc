@@ -26,7 +26,8 @@ class MockTransactionHandler : public fs::TransactionHandler {
 
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
 
-  zx_status_t RunOperation(const fs::Operation& operation, fs::BlockBuffer* buffer) final {
+  zx_status_t RunOperation(const storage::Operation& operation,
+                           storage::BlockBuffer* buffer) final {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -267,11 +268,12 @@ TEST_F(TransactionTest, VerifyNoWorkExistsBeforeEnqueue) {
   Transaction transaction(&minfs_);
 
   // Metadata operations should be empty.
-  fbl::Vector<fs::UnbufferedOperation> meta_operations = transaction.RemoveMetadataOperations();
+  fbl::Vector<storage::UnbufferedOperation> meta_operations =
+      transaction.RemoveMetadataOperations();
   ASSERT_TRUE(meta_operations.is_empty());
 
   // Data work should be empty.
-  fbl::Vector<fs::UnbufferedOperation> data_operations = transaction.RemoveDataOperations();
+  fbl::Vector<storage::UnbufferedOperation> data_operations = transaction.RemoveDataOperations();
   ASSERT_TRUE(data_operations.is_empty());
 }
 
@@ -279,42 +281,43 @@ TEST_F(TransactionTest, VerifyNoWorkExistsBeforeEnqueue) {
 TEST_F(TransactionTest, EnqueueAndVerifyMetadataWork) {
   Transaction transaction(&minfs_);
 
-  fs::Operation op = {
-      .type = fs::OperationType::kWrite,
+  storage::Operation op = {
+      .type = storage::OperationType::kWrite,
       .vmo_offset = 2,
       .dev_offset = 3,
       .length = 4,
   };
   transaction.EnqueueMetadata(1, std::move(op));
 
-  fbl::Vector<fs::UnbufferedOperation> meta_operations = transaction.RemoveMetadataOperations();
+  fbl::Vector<storage::UnbufferedOperation> meta_operations =
+      transaction.RemoveMetadataOperations();
   ASSERT_EQ(1, meta_operations.size());
   ASSERT_EQ(1, meta_operations[0].vmo);
   ASSERT_EQ(2, meta_operations[0].op.vmo_offset);
   ASSERT_EQ(3, meta_operations[0].op.dev_offset);
   ASSERT_EQ(4, meta_operations[0].op.length);
-  ASSERT_EQ(fs::OperationType::kWrite, meta_operations[0].op.type);
+  ASSERT_EQ(storage::OperationType::kWrite, meta_operations[0].op.type);
 }
 
 // Checks that the Transaction's data work is populated after enqueueing data writes.
 TEST_F(TransactionTest, EnqueueAndVerifyDataWork) {
   Transaction transaction(&minfs_);
 
-  fs::Operation op = {
-      .type = fs::OperationType::kWrite,
+  storage::Operation op = {
+      .type = storage::OperationType::kWrite,
       .vmo_offset = 2,
       .dev_offset = 3,
       .length = 4,
   };
   transaction.EnqueueData(1, std::move(op));
 
-  fbl::Vector<fs::UnbufferedOperation> data_operations = transaction.RemoveDataOperations();
+  fbl::Vector<storage::UnbufferedOperation> data_operations = transaction.RemoveDataOperations();
   ASSERT_EQ(1, data_operations.size());
   ASSERT_EQ(1, data_operations[0].vmo);
   ASSERT_EQ(2, data_operations[0].op.vmo_offset);
   ASSERT_EQ(3, data_operations[0].op.dev_offset);
   ASSERT_EQ(4, data_operations[0].op.length);
-  ASSERT_EQ(fs::OperationType::kWrite, data_operations[0].op.type);
+  ASSERT_EQ(storage::OperationType::kWrite, data_operations[0].op.type);
 }
 
 class MockVnodeMinfs : public VnodeMinfs, public fbl::Recyclable<MockVnodeMinfs> {

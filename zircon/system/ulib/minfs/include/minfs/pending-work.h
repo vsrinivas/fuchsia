@@ -5,7 +5,7 @@
 #ifndef MINFS_PENDING_WORK_H_
 #define MINFS_PENDING_WORK_H_
 
-#include <fs/operation/operation.h>
+#include <storage/operation/operation.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
@@ -29,12 +29,12 @@ class PendingWork {
 
   // Identifies that an extent of metadata blocks should be written to disk at a later point in
   // time.
-  virtual void EnqueueMetadata(WriteData source, fs::Operation operation) = 0;
+  virtual void EnqueueMetadata(WriteData source, storage::Operation operation) = 0;
 
   // Identifies that an extent of data blocks should be written to disk at a later point in time.
   // Write to data blocks must be done in a separate transaction from metadata updates to ensure
   // that all user data goes out to disk before associated metadata.
-  virtual void EnqueueData(WriteData source, fs::Operation operation) = 0;
+  virtual void EnqueueData(WriteData source, storage::Operation operation) = 0;
 };
 }  // namespace minfs
 

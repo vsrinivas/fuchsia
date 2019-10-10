@@ -10,7 +10,7 @@
 namespace fs {
 
 zx_status_t FlushWriteRequests(fs::TransactionHandler* transaction_handler,
-                               const fbl::Vector<BufferedOperation>& operations) {
+                               const fbl::Vector<storage::BufferedOperation>& operations) {
   if (operations.is_empty()) {
     return ZX_OK;
   }

@@ -5,7 +5,8 @@
 // This file describes the in-memory structures which construct
 // a MinFS filesystem.
 
-#pragma once
+#ifndef MINFS_BCACHE_H_
+#define MINFS_BCACHE_H_
 
 #include <errno.h>
 #include <inttypes.h>
@@ -27,14 +28,13 @@
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/block-group-registry.h>
 #include <block-client/cpp/client.h>
-#include <fs/buffer/vmoid-registry.h>
-#include <fs/buffer/vmo-buffer.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <fs/buffer/vmoid-registry.h>
 #include <fvm/client.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/vmo.h>
+#include <storage/buffer/vmo-buffer.h>
+#include <storage/buffer/vmoid-registry.h>
 #else
 #include <fbl/vector.h>
 #endif
@@ -44,10 +44,9 @@ namespace minfs {
 #ifdef __Fuchsia__
 
 // A helper function for converting "fd" to "BlockDevice".
-zx_status_t FdToBlockDevice(fbl::unique_fd& fd,
-                            std::unique_ptr<block_client::BlockDevice>* out);
+zx_status_t FdToBlockDevice(fbl::unique_fd& fd, std::unique_ptr<block_client::BlockDevice>* out);
 
-class Bcache : public fs::TransactionHandler, public fs::VmoidRegistry {
+class Bcache : public fs::TransactionHandler, public storage::VmoidRegistry {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Bcache);
   friend class BlockNode;
@@ -55,8 +54,7 @@ class Bcache : public fs::TransactionHandler, public fs::VmoidRegistry {
   ~Bcache() = default;
 
   // Destroys a "bcache" object, but take back ownership of the underlying block device.
-  static std::unique_ptr<block_client::BlockDevice>
-      Destroy(std::unique_ptr<Bcache> bcache);
+  static std::unique_ptr<block_client::BlockDevice> Destroy(std::unique_ptr<Bcache> bcache);
 
   ////////////////
   // fs::TransactionHandler interface.
@@ -67,7 +65,7 @@ class Bcache : public fs::TransactionHandler, public fs::VmoidRegistry {
     return block_num * kMinfsBlockSize / DeviceBlockSize();
   }
 
-  zx_status_t RunOperation(const fs::Operation& operation, fs::BlockBuffer* buffer) final;
+  zx_status_t RunOperation(const storage::Operation& operation, storage::BlockBuffer* buffer) final;
 
   groupid_t BlockGroupID() final;
 
@@ -95,8 +93,8 @@ class Bcache : public fs::TransactionHandler, public fs::VmoidRegistry {
   // Other methods.
 
   // This factory allows building this object from a BlockDevice.
-  static zx_status_t Create(std::unique_ptr<block_client::BlockDevice> device,
-                            uint32_t max_blocks, std::unique_ptr<Bcache>* out);
+  static zx_status_t Create(std::unique_ptr<block_client::BlockDevice> device, uint32_t max_blocks,
+                            std::unique_ptr<Bcache>* out);
 
   // Returns the maximum number of available blocks,
   // assuming the filesystem is non-resizable.
@@ -118,7 +116,7 @@ class Bcache : public fs::TransactionHandler, public fs::VmoidRegistry {
   block_client::BlockGroupRegistry group_registry_;
   std::unique_ptr<block_client::BlockDevice> device_;
   // This buffer is used as internal scratch space for the "Readblk/Writeblk" methods.
-  fs::VmoBuffer buffer_;
+  storage::VmoBuffer buffer_;
 };
 
 #else  // __Fuchsia__
@@ -135,11 +133,9 @@ class Bcache : public fs::TransactionHandler {
 
   uint32_t FsBlockSize() const final { return kMinfsBlockSize; }
 
-  uint64_t BlockNumberToDevice(uint64_t block_num) const final {
-    return block_num;
-  }
+  uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
 
-  zx_status_t RunOperation(const fs::Operation& operation, fs::BlockBuffer* buffer) final;
+  zx_status_t RunOperation(const storage::Operation& operation, storage::BlockBuffer* buffer) final;
 
   // Raw block read functions.
   // These do not track blocks (or attempt to access the block cache)
@@ -179,3 +175,5 @@ class Bcache : public fs::TransactionHandler {
 #endif
 
 }  // namespace minfs
+
+#endif  // MINFS_BCACHE_H_

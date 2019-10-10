@@ -97,8 +97,8 @@ void Directory::DeleteBlock(PendingWork* transaction, blk_t local_bno, blk_t old
 #ifdef __Fuchsia__
 void Directory::IssueWriteback(Transaction* transaction, blk_t vmo_offset, blk_t dev_offset,
                                blk_t count) {
-  fs::Operation op = {
-      .type = fs::OperationType::kWrite,
+  storage::Operation op = {
+      .type = storage::OperationType::kWrite,
       .vmo_offset = vmo_offset,
       .dev_offset = dev_offset,
       .length = count,

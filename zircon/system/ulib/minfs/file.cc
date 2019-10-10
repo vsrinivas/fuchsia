@@ -95,8 +95,8 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
 
     // Enqueue each data block one at a time, as they may not be contiguous on disk.
     for (blk_t i = 0; i < bno_count; i++) {
-      fs::Operation op = {
-          .type = fs::OperationType::kWrite,
+      storage::Operation op = {
+          .type = storage::OperationType::kWrite,
           .vmo_offset = bno_start + i,
           .dev_offset = allocated_blocks[i] + fs_->Info().dat_block,
           .length = 1,

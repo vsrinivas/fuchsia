@@ -1,0 +1,59 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx_build/public/gn/library_shim.gni")
+import("$zx_build/public/gn/test_shim.gni")
+
+library("buffer") {
+  host = true
+  sources = []
+  static = true
+
+  if (is_fuchsia) {
+    sources += [
+      "blocking-ring-buffer.cc",
+      "ring-buffer.cc",
+      "vmo-buffer.cc",
+    ]
+    public_deps = [
+      "$zx/system/ulib/fbl:headers",
+      "$zx/system/ulib/fzl:headers",
+      "$zx/system/ulib/storage/operation:headers",
+      "$zx/system/ulib/zx:headers",
+    ]
+    deps = [
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/fdio",
+
+      # TODO(38240): Clean up any remaining 'fs' dependencies. Only for fs/trace
+      "$zx/system/ulib/fs:headers",
+      "$zx/system/ulib/fzl",
+      "$zx/system/ulib/storage/operation",
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zx",
+    ]
+  }
+}
+
+group("test") {
+  testonly = true
+  deps = [
+    ":storage-buffer",
+  ]
+}
+
+test("storage-buffer") {
+  test_group = "storage"
+  sources = [
+    "test/block-buffer-view-test.cc",
+    "test/blocking-ring-buffer-test.cc",
+    "test/ring-buffer-test.cc",
+    "test/vmo-buffer-test.cc",
+  ]
+  deps = [
+    ":buffer",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zxtest",
+  ]
+}

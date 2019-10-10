@@ -73,19 +73,15 @@ Transaction::~Transaction() {
 }
 
 #ifdef __Fuchsia__
-void Transaction::EnqueueMetadata(WriteData source, fs::Operation operation) {
-  fs::UnbufferedOperation unbuffered_operation = {
-    .vmo = zx::unowned_vmo(source),
-    .op = operation
-  };
+void Transaction::EnqueueMetadata(WriteData source, storage::Operation operation) {
+  storage::UnbufferedOperation unbuffered_operation = {.vmo = zx::unowned_vmo(source),
+                                                       .op = operation};
   metadata_operations_.Add(std::move(unbuffered_operation));
 }
 
-void Transaction::EnqueueData(WriteData source, fs::Operation operation) {
-  fs::UnbufferedOperation unbuffered_operation = {
-    .vmo = zx::unowned_vmo(source),
-    .op = operation
-  };
+void Transaction::EnqueueData(WriteData source, storage::Operation operation) {
+  storage::UnbufferedOperation unbuffered_operation = {.vmo = zx::unowned_vmo(source),
+                                                       .op = operation};
   data_operations_.Add(std::move(unbuffered_operation));
 }
 
@@ -104,11 +100,11 @@ std::vector<fbl::RefPtr<VnodeMinfs>> Transaction::RemovePinnedVnodes() {
   return std::move(pinned_vnodes_);
 }
 #else
-void Transaction::EnqueueMetadata(WriteData source, fs::Operation operation) {
+void Transaction::EnqueueMetadata(WriteData source, storage::Operation operation) {
   transaction_.Enqueue(source, operation.vmo_offset, operation.dev_offset, operation.length);
 }
 
-void Transaction::EnqueueData(WriteData source, fs::Operation operation) {
+void Transaction::EnqueueData(WriteData source, storage::Operation operation) {
   transaction_.Enqueue(source, operation.vmo_offset, operation.dev_offset, operation.length);
 }
 

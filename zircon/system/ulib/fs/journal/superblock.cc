@@ -14,7 +14,7 @@ namespace fs {
 
 JournalSuperblock::JournalSuperblock() = default;
 
-JournalSuperblock::JournalSuperblock(std::unique_ptr<fs::BlockBuffer> buffer)
+JournalSuperblock::JournalSuperblock(std::unique_ptr<storage::BlockBuffer> buffer)
     : buffer_(std::move(buffer)) {
   ZX_DEBUG_ASSERT_MSG(buffer_->capacity() > 0, "Buffer is too small for journal superblock");
 }

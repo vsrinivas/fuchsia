@@ -9,20 +9,20 @@
 
 #include <fbl/vector.h>
 #include <fs/journal/format.h>
-#include <fs/operation/buffered-operation.h>
+#include <storage/operation/buffered-operation.h>
 
 namespace fs {
 
-JournalEntryView::JournalEntryView(fs::BlockBufferView view) : view_(std::move(view)) {}
+JournalEntryView::JournalEntryView(storage::BlockBufferView view) : view_(std::move(view)) {}
 
-JournalEntryView::JournalEntryView(fs::BlockBufferView view,
-                                   const fbl::Vector<fs::BufferedOperation>& operations,
+JournalEntryView::JournalEntryView(storage::BlockBufferView view,
+                                   const fbl::Vector<storage::BufferedOperation>& operations,
                                    uint64_t sequence_number)
     : view_(std::move(view)) {
   Encode(operations, sequence_number);
 }
 
-void JournalEntryView::Encode(const fbl::Vector<fs::BufferedOperation>& operations,
+void JournalEntryView::Encode(const fbl::Vector<storage::BufferedOperation>& operations,
                               uint64_t sequence_number) {
   memset(header(), 0, kJournalBlockSize);
   header()->prefix.magic = kJournalEntryMagic;

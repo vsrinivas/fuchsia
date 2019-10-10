@@ -334,20 +334,18 @@ TEST(AllocatorTest, AllocateSwap) {
 
 class FakeTransaction : public PendingWork {
  public:
-  void EnqueueMetadata(WriteData source, fs::Operation operation) final {
-    fs::UnbufferedOperation unbuffered_operation = {
-      .vmo = zx::unowned_vmo(source),
-      .op = std::move(operation)
-    };
+  void EnqueueMetadata(WriteData source, storage::Operation operation) final {
+    storage::UnbufferedOperation unbuffered_operation = {.vmo = zx::unowned_vmo(source),
+                                                         .op = std::move(operation)};
     metadata_operations_.Add(std::move(unbuffered_operation));
   }
 
-  void EnqueueData(WriteData source, fs::Operation operation) final {}
+  void EnqueueData(WriteData source, storage::Operation operation) final {}
 
   size_t BlockCount() { return metadata_operations_.BlockCount(); }
 
  private:
-  fs::UnbufferedOperationsBuilder metadata_operations_;
+  storage::UnbufferedOperationsBuilder metadata_operations_;
 };
 
 TEST(AllocatorTest, PersistRange) {

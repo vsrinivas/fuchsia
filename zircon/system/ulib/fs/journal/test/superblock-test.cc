@@ -10,7 +10,7 @@ namespace {
 
 const uint32_t kBlockSize = 8192;
 
-class Buffer : public fs::BlockBuffer {
+class Buffer : public storage::BlockBuffer {
  public:
   Buffer() : buffer_(std::make_unique<uint8_t[]>(kBlockSize)) {}
 
@@ -33,7 +33,7 @@ class JournalSuperblockFixture : public zxtest::Test {
     buffer_ptr_ = static_cast<uint8_t*>(buffer_->Data(0));
   }
 
-  std::unique_ptr<fs::BlockBuffer> take_buffer() { return std::move(buffer_); }
+  std::unique_ptr<storage::BlockBuffer> take_buffer() { return std::move(buffer_); }
 
   JournalInfo* info() { return reinterpret_cast<JournalInfo*>(&buffer_ptr_[0]); }
 

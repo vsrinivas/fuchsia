@@ -31,14 +31,14 @@ TEST(FormatFilesystemTest, FilesystemFormatClearsJournal) {
   ASSERT_OK(LoadSuperblock(bcache.get(), &superblock));
   std::unique_ptr<uint8_t[]> sentinel(new uint8_t[kMinfsBlockSize]);
   memset(sentinel.get(), 'a', kMinfsBlockSize);
-  fs::VmoBuffer buffer;
+  storage::VmoBuffer buffer;
   ASSERT_OK(buffer.Initialize(bcache.get(), JournalBlocks(superblock), kMinfsBlockSize,
                               "journal-buffer"));
   for (size_t i = 0; i < JournalBlocks(superblock); i++) {
     memcpy(buffer.Data(i), sentinel.get(), kMinfsBlockSize);
   }
-  fs::Operation operation = {};
-  operation.type = fs::OperationType::kWrite;
+  storage::Operation operation = {};
+  operation.type = storage::OperationType::kWrite;
   operation.vmo_offset = 0;
   operation.dev_offset = JournalStartBlock(superblock);
   operation.length = JournalBlocks(superblock);
@@ -49,7 +49,7 @@ TEST(FormatFilesystemTest, FilesystemFormatClearsJournal) {
 
   // Verify that the device has written zeros to the expected location, overwriting
   // the sentinel pages.
-  operation.type = fs::OperationType::kRead;
+  operation.type = storage::OperationType::kRead;
   operation.vmo_offset = 0;
   operation.dev_offset = JournalStartBlock(superblock);
   operation.length = JournalBlocks(superblock);

@@ -17,12 +17,12 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <fs/buffer/block-buffer.h>
-#include <fs/buffer/vmo-buffer.h>
-#include <fs/operation/operation.h>
 #include <fs/trace.h>
 #include <minfs/bcache.h>
 #include <minfs/format.h>
+#include <storage/buffer/block-buffer.h>
+#include <storage/buffer/vmo-buffer.h>
+#include <storage/operation/operation.h>
 
 #include "minfs-private.h"
 
@@ -39,8 +39,8 @@ std::unique_ptr<block_client::BlockDevice> Bcache::Destroy(std::unique_ptr<Bcach
 }
 
 zx_status_t Bcache::Readblk(blk_t bno, void* data) {
-  fs::Operation operation = {};
-  operation.type = fs::OperationType::kRead;
+  storage::Operation operation = {};
+  operation.type = storage::OperationType::kRead;
   operation.vmo_offset = 0;
   operation.dev_offset = bno;
   operation.length = 1;
@@ -53,8 +53,8 @@ zx_status_t Bcache::Readblk(blk_t bno, void* data) {
 }
 
 zx_status_t Bcache::Writeblk(blk_t bno, const void* data) {
-  fs::Operation operation = {};
-  operation.type = fs::OperationType::kWrite;
+  storage::Operation operation = {};
+  operation.type = storage::OperationType::kWrite;
   operation.vmo_offset = 0;
   operation.dev_offset = bno;
   operation.length = 1;
@@ -130,15 +130,17 @@ groupid_t Bcache::BlockGroupID() { return group_registry_.GroupID(); }
 
 uint32_t Bcache::DeviceBlockSize() const { return info_.block_size; }
 
-zx_status_t Bcache::RunOperation(const fs::Operation& operation, fs::BlockBuffer* buffer) {
-  if (operation.type != fs::OperationType::kWrite && operation.type != fs::OperationType::kRead) {
+zx_status_t Bcache::RunOperation(const storage::Operation& operation,
+                                 storage::BlockBuffer* buffer) {
+  if (operation.type != storage::OperationType::kWrite &&
+      operation.type != storage::OperationType::kRead) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   block_fifo_request_t request;
   request.group = BlockGroupID();
   request.vmoid = buffer->vmoid();
-  request.opcode = operation.type == fs::OperationType::kWrite ? BLOCKIO_WRITE : BLOCKIO_READ;
+  request.opcode = operation.type == storage::OperationType::kWrite ? BLOCKIO_WRITE : BLOCKIO_READ;
   request.vmo_offset = BlockNumberToDevice(operation.vmo_offset);
   request.dev_offset = BlockNumberToDevice(operation.dev_offset);
   uint64_t length = BlockNumberToDevice(operation.length);

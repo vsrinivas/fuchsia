@@ -37,11 +37,10 @@ class MockTransactionHandler : public TransactionHandler {
 
   uint32_t DeviceBlockSize() const final { return 8192; }
 
-  uint64_t BlockNumberToDevice(uint64_t block_num) const final {
-    return block_num;
-  }
+  uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
 
-  zx_status_t RunOperation(const Operation& operation, BlockBuffer* buffer) final {
+  zx_status_t RunOperation(const storage::Operation& operation,
+                           storage::BlockBuffer* buffer) final {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -64,7 +63,7 @@ TEST(FlushRequestsTest, FlushNoRequests) {
       ZX_ASSERT_MSG(false, "Zero requests should not invoke the Transaction operation");
     }
   } handler;
-  fbl::Vector<BufferedOperation> operations;
+  fbl::Vector<storage::BufferedOperation> operations;
   EXPECT_OK(FlushWriteRequests(&handler, operations));
 }
 
@@ -80,8 +79,9 @@ TEST(FlushRequestsTest, FlushOneRequest) {
       return ZX_OK;
     }
   } handler;
-  fbl::Vector<BufferedOperation> operations;
-  operations.push_back(BufferedOperation{kVmoid, Operation{OperationType::kWrite, 1, 2, 3}});
+  fbl::Vector<storage::BufferedOperation> operations;
+  operations.push_back(storage::BufferedOperation{
+      kVmoid, storage::Operation{storage::OperationType::kWrite, 1, 2, 3}});
   EXPECT_OK(FlushWriteRequests(&handler, operations));
 }
 
@@ -102,9 +102,11 @@ TEST(FlushRequestsTest, FlushManyRequests) {
       return ZX_OK;
     }
   } handler;
-  fbl::Vector<BufferedOperation> operations;
-  operations.push_back(BufferedOperation{kVmoidA, Operation{OperationType::kWrite, 1, 2, 3}});
-  operations.push_back(BufferedOperation{kVmoidB, Operation{OperationType::kWrite, 4, 5, 6}});
+  fbl::Vector<storage::BufferedOperation> operations;
+  operations.push_back(storage::BufferedOperation{
+      kVmoidA, storage::Operation{storage::OperationType::kWrite, 1, 2, 3}});
+  operations.push_back(storage::BufferedOperation{
+      kVmoidB, storage::Operation{storage::OperationType::kWrite, 4, 5, 6}});
   EXPECT_OK(FlushWriteRequests(&handler, operations));
 }
 
@@ -128,10 +130,10 @@ TEST(FlushRequestsTest, FlushAVeryLargeNumberOfRequests) {
     }
   } handler;
 
-  fbl::Vector<BufferedOperation> operations;
+  fbl::Vector<storage::BufferedOperation> operations;
   for (size_t i = 0; i < kOperationCount; i++) {
-    operations.push_back(
-        BufferedOperation{kVmoid, Operation{OperationType::kWrite, i * 2, i * 2, 1}});
+    operations.push_back(storage::BufferedOperation{
+        kVmoid, storage::Operation{storage::OperationType::kWrite, i * 2, i * 2, 1}});
   }
   EXPECT_OK(FlushWriteRequests(&handler, operations));
 }
@@ -142,8 +144,9 @@ TEST(FlushRequestsTest, BadFlush) {
       return ZX_ERR_NOT_SUPPORTED;
     }
   } handler;
-  fbl::Vector<BufferedOperation> operations;
-  operations.push_back(BufferedOperation{1, Operation{OperationType::kWrite, 1, 2, 3}});
+  fbl::Vector<storage::BufferedOperation> operations;
+  operations.push_back(
+      storage::BufferedOperation{1, storage::Operation{storage::OperationType::kWrite, 1, 2, 3}});
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, FlushWriteRequests(&handler, operations));
 }
 

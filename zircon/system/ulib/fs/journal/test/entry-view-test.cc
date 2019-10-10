@@ -14,7 +14,7 @@ const size_t kCapacity = 5;
 const uint32_t kBlockSize = 8192;
 
 // Create a new class which can be used to customize the JournalEntryView object.
-class Buffer : public fs::BlockBuffer {
+class Buffer : public storage::BlockBuffer {
  public:
   size_t capacity() const final { return kCapacity; }
   uint32_t BlockSize() const final { return kBlockSize; }
@@ -28,7 +28,9 @@ class Buffer : public fs::BlockBuffer {
 
 class EntryViewFixture : public zxtest::Test {
  public:
-  fs::BlockBufferView make_view(size_t length) { return fs::BlockBufferView(&buffer_, 0, length); }
+  storage::BlockBufferView make_view(size_t length) {
+    return storage::BlockBufferView(&buffer_, 0, length);
+  }
 
  private:
   Buffer buffer_;
@@ -39,11 +41,11 @@ using EntryViewTest = EntryViewFixture;
 TEST_F(EntryViewTest, CreateJournalEntryView) { JournalEntryView view(make_view(3)); }
 
 TEST_F(EntryViewTest, SetHeaderFromOperation) {
-  fbl::Vector<fs::BufferedOperation> operations = {
+  fbl::Vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
           {
-              .type = fs::OperationType::kWrite,
+              .type = storage::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 1234,
               .length = 1,
@@ -59,11 +61,11 @@ TEST_F(EntryViewTest, SetHeaderFromOperation) {
 }
 
 TEST_F(EntryViewTest, SetHeaderFromMultipleOperations) {
-  fbl::Vector<fs::BufferedOperation> operations = {
+  fbl::Vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
           {
-              .type = fs::OperationType::kWrite,
+              .type = storage::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 1234,
               .length = 1,
@@ -72,7 +74,7 @@ TEST_F(EntryViewTest, SetHeaderFromMultipleOperations) {
       {
           .vmoid = 0,
           {
-              .type = fs::OperationType::kWrite,
+              .type = storage::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 5678,
               .length = 1,
@@ -89,11 +91,11 @@ TEST_F(EntryViewTest, SetHeaderFromMultipleOperations) {
 }
 
 TEST_F(EntryViewTest, SameJournalEntryGeneratesSameChecksum) {
-  fbl::Vector<fs::BufferedOperation> operations = {
+  fbl::Vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
           {
-              .type = fs::OperationType::kWrite,
+              .type = storage::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 0,
               .length = 1,
@@ -109,11 +111,11 @@ TEST_F(EntryViewTest, SameJournalEntryGeneratesSameChecksum) {
 }
 
 TEST_F(EntryViewTest, DifferentTargetBlockGeneratesDifferentChecksum) {
-  fbl::Vector<fs::BufferedOperation> operations = {
+  fbl::Vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
           {
-              .type = fs::OperationType::kWrite,
+              .type = storage::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 0,
               .length = 1,
@@ -132,11 +134,11 @@ TEST_F(EntryViewTest, DifferentTargetBlockGeneratesDifferentChecksum) {
 }
 
 TEST_F(EntryViewTest, DifferentSequenceNumberGeneratesDifferentChecksum) {
-  fbl::Vector<fs::BufferedOperation> operations = {
+  fbl::Vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
           {
-              .type = fs::OperationType::kWrite,
+              .type = storage::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 0,
               .length = 1,
@@ -153,11 +155,11 @@ TEST_F(EntryViewTest, DifferentSequenceNumberGeneratesDifferentChecksum) {
 }
 
 TEST_F(EntryViewTest, ChecksumDoesNotIncludeCommit) {
-  fbl::Vector<fs::BufferedOperation> operations = {
+  fbl::Vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
           {
-              .type = fs::OperationType::kWrite,
+              .type = storage::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 0,
               .length = 1,
@@ -183,12 +185,12 @@ class EscapedEntryFixture : public EntryViewFixture {
  public:
   const uint64_t kTarget = 1234;
 
-  fbl::Vector<fs::BufferedOperation> operations() const {
-    fbl::Vector<fs::BufferedOperation> operations = {
+  fbl::Vector<storage::BufferedOperation> operations() const {
+    fbl::Vector<storage::BufferedOperation> operations = {
         {
             .vmoid = 0,
             {
-                .type = fs::OperationType::kWrite,
+                .type = storage::OperationType::kWrite,
                 .vmo_offset = 0,
                 .dev_offset = kTarget,
                 .length = 1,

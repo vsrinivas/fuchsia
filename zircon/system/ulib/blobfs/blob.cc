@@ -406,7 +406,7 @@ fit::promise<void, zx_status_t> Blob::WriteMetadata() {
 
   atomic_store(&syncing_, true);
 
-  fs::UnbufferedOperationsBuilder operations;
+  storage::UnbufferedOperationsBuilder operations;
   if (inode_.block_count) {
     // We utilize the NodePopulator class to take our reserved blocks and nodes and fill the
     // persistent map with an allocated inode / container.
@@ -540,10 +540,10 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
 
       status = StreamBlocks(&block_iter, merkle_blocks,
                             [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                              fs::UnbufferedOperation op = {
+                              storage::UnbufferedOperation op = {
                                   .vmo = zx::unowned_vmo(mapping_.vmo().get()),
                                   {
-                                      .type = fs::OperationType::kWrite,
+                                      .type = storage::OperationType::kWrite,
                                       .vmo_offset = vmo_offset,
                                       .dev_offset = dev_offset + blobfs_->DataStart(),
                                       .length = length,
@@ -572,10 +572,10 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
       ZX_DEBUG_ASSERT(block_iter.BlockIndex() + vmo_bias == 0);
       status = StreamBlocks(&block_iter, blocks,
                             [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                              fs::UnbufferedOperation op = {
+                              storage::UnbufferedOperation op = {
                                   .vmo = zx::unowned_vmo(write_info_->compressor->Vmo().get()),
                                   {
-                                      .type = fs::OperationType::kWrite,
+                                      .type = storage::OperationType::kWrite,
                                       .vmo_offset = vmo_offset - merkle_blocks,
                                       .dev_offset = dev_offset + blobfs_->DataStart(),
                                       .length = length,
@@ -599,13 +599,13 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
       uint32_t blocks = static_cast<uint32_t>(blocks64);
       status = StreamBlocks(
           &block_iter, blocks, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-            fs::UnbufferedOperation op = {.vmo = zx::unowned_vmo(mapping_.vmo().get()),
-                                          {
-                                              .type = fs::OperationType::kWrite,
-                                              .vmo_offset = vmo_offset,
-                                              .dev_offset = dev_offset + blobfs_->DataStart(),
-                                              .length = length,
-                                          }};
+            storage::UnbufferedOperation op = {.vmo = zx::unowned_vmo(mapping_.vmo().get()),
+                                               {
+                                                   .type = storage::OperationType::kWrite,
+                                                   .vmo_offset = vmo_offset,
+                                                   .dev_offset = dev_offset + blobfs_->DataStart(),
+                                                   .length = length,
+                                               }};
             streamer.StreamData(std::move(op));
             return ZX_OK;
           });
@@ -974,7 +974,7 @@ zx_status_t Blob::Purge() {
   if (GetState() == kBlobStateReadable) {
     // A readable blob should only be purged if it has been unlinked.
     ZX_ASSERT(DeletionQueued());
-    fs::UnbufferedOperationsBuilder operations;
+    storage::UnbufferedOperationsBuilder operations;
     blobfs_->FreeInode(GetMapIndex(), &operations);
 
     auto task = fs::wrap_reference(blobfs_->journal()->WriteMetadata(operations.TakeOperations()),

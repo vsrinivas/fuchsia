@@ -425,8 +425,8 @@ zx_status_t VnodeMinfs::BlockOpIndirect(BlockOpArgs* op_args, IndirectArgs* para
       // Only update the indirect block if an entry was deleted, and the indirect block
       // itself was not deleted.
 #ifdef __Fuchsia__
-      fs::Operation op = {
-          .type = fs::OperationType::kWrite,
+      storage::Operation op = {
+          .type = storage::OperationType::kWrite,
           .vmo_offset = params->GetOffset() + i,
           .dev_offset = params->GetBno(i) + fs_->Info().dat_block,
           .length = 1,
@@ -498,8 +498,8 @@ zx_status_t VnodeMinfs::BlockOpDindirect(BlockOpArgs* op_args, DindirectArgs* pa
       // Only update the indirect block if an entry was deleted, and the indirect block
       // itself was not deleted.
 #ifdef __Fuchsia__
-      fs::Operation op = {
-          .type = fs::OperationType::kWrite,
+      storage::Operation op = {
+          .type = storage::OperationType::kWrite,
           .vmo_offset = params->GetOffset() + i,
           .dev_offset = params->GetBno(i) + fs_->Info().dat_block,
           .length = 1,

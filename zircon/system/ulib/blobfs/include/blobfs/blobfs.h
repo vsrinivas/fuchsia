@@ -57,19 +57,19 @@
 #include <fs/journal/journal.h>
 #include <fs/managed-vfs.h>
 #include <fs/metrics/cobalt-metrics.h>
-#include <fs/operation/unbuffered-operations-builder.h>
 #include <fs/trace.h>
 #include <fs/transaction/block-transaction.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
+#include <storage/operation/unbuffered-operations-builder.h>
 #include <trace/event.h>
 
 namespace blobfs {
 
 using block_client::BlockDevice;
 using digest::Digest;
-using fs::OperationType;
-using fs::UnbufferedOperationsBuilder;
+using storage::OperationType;
+using storage::UnbufferedOperationsBuilder;
 
 enum class Writability {
   // Do not write to persistent storage under any circumstances whatsoever.
@@ -111,7 +111,7 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
     return block_num * kBlobfsBlockSize / block_info_.block_size;
   }
 
-  zx_status_t RunOperation(const fs::Operation& operation, fs::BlockBuffer* buffer) final;
+  zx_status_t RunOperation(const storage::Operation& operation, storage::BlockBuffer* buffer) final;
 
   groupid_t BlockGroupID() final;
 
@@ -201,7 +201,7 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   // Frees an inode, from both the reserved map and the inode table. If the
   // inode was allocated in the inode table, write the deleted inode out to
   // disk.
-  void FreeInode(uint32_t node_index, fs::UnbufferedOperationsBuilder* operations);
+  void FreeInode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations);
 
   // Does a single pass of all blobs, creating uninitialized Vnode
   // objects for them all.
@@ -212,16 +212,16 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   zx_status_t InitializeVnodes();
 
   // Writes node data to the inode table and updates disk.
-  void PersistNode(uint32_t node_index, fs::UnbufferedOperationsBuilder* operations);
+  void PersistNode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations);
 
   // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
-  void PersistBlocks(const ReservedExtent& extent, fs::UnbufferedOperationsBuilder* ops);
+  void PersistBlocks(const ReservedExtent& extent, storage::UnbufferedOperationsBuilder* ops);
 
   // Record the location and size of all non-free block regions.
   fbl::Vector<BlockRegion> GetAllocatedRegions() const { return allocator_->GetAllocatedRegions(); }
 
   // Updates the flags field in superblock.
-  void UpdateFlags(fs::UnbufferedOperationsBuilder* operations, uint32_t flags, bool set);
+  void UpdateFlags(storage::UnbufferedOperationsBuilder* operations, uint32_t flags, bool set);
 
  private:
   friend class BlobfsChecker;
@@ -233,24 +233,24 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   zx_status_t Reload();
 
   // Frees blocks from the allocated map (if allocated) and updates disk if necessary.
-  void FreeExtent(const Extent& extent, fs::UnbufferedOperationsBuilder* operations);
+  void FreeExtent(const Extent& extent, storage::UnbufferedOperationsBuilder* operations);
 
   // Free a single node. Doesn't attempt to parse the type / traverse nodes;
   // this function just deletes a single node.
-  void FreeNode(uint32_t node_index, fs::UnbufferedOperationsBuilder* operations);
+  void FreeNode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations);
 
   // Given a contiguous number of blocks after a starting block,
   // write out the bitmap to disk for the corresponding blocks.
   // Should only be called by PersistBlocks and FreeExtent.
   void WriteBitmap(uint64_t nblocks, uint64_t start_block,
-                   fs::UnbufferedOperationsBuilder* operations);
+                   storage::UnbufferedOperationsBuilder* operations);
 
   // Given a node within the node map at an index, write it to disk.
   // Should only be called by AllocateNode and FreeNode.
-  void WriteNode(uint32_t map_index, fs::UnbufferedOperationsBuilder* operations);
+  void WriteNode(uint32_t map_index, storage::UnbufferedOperationsBuilder* operations);
 
   // Enqueues an update for allocated inode/block counts.
-  void WriteInfo(fs::UnbufferedOperationsBuilder* operations);
+  void WriteInfo(storage::UnbufferedOperationsBuilder* operations);
 
   // When will flush the metrics in the calling thread and will schedule itself
   // to flush again in the future.

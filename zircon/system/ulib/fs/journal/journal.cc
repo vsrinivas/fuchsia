@@ -14,9 +14,9 @@
 namespace fs {
 namespace {
 
-zx_status_t CheckAllWriteOperations(const fbl::Vector<UnbufferedOperation>& operations) {
+zx_status_t CheckAllWriteOperations(const fbl::Vector<storage::UnbufferedOperation>& operations) {
   for (const auto& operation : operations) {
-    if (operation.op.type != OperationType::kWrite) {
+    if (operation.op.type != storage::OperationType::kWrite) {
       FS_TRACE_ERROR("journal: Transmitted non-write operation to writeback\n");
       return ZX_ERR_WRONG_TYPE;
     }
@@ -33,15 +33,16 @@ fit::result<void, zx_status_t> SignalSyncComplete(sync_completion_t* completion)
 }  // namespace
 
 Journal::Journal(TransactionHandler* transaction_handler, JournalSuperblock journal_superblock,
-                 std::unique_ptr<BlockingRingBuffer> journal_buffer,
-                 std::unique_ptr<BlockingRingBuffer> writeback_buffer, uint64_t journal_start_block)
+                 std::unique_ptr<storage::BlockingRingBuffer> journal_buffer,
+                 std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer,
+                 uint64_t journal_start_block)
     : journal_buffer_(std::move(journal_buffer)),
       writeback_buffer_(std::move(writeback_buffer)),
       writer_(transaction_handler, std::move(journal_superblock), journal_start_block,
               journal_buffer_->capacity()) {}
 
 Journal::Journal(TransactionHandler* transaction_handler,
-                 std::unique_ptr<BlockingRingBuffer> writeback_buffer)
+                 std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer)
     : writeback_buffer_(std::move(writeback_buffer)), writer_(transaction_handler) {}
 
 Journal::~Journal() {
@@ -52,7 +53,7 @@ Journal::~Journal() {
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
 }
 
-Journal::Promise Journal::WriteData(fbl::Vector<UnbufferedOperation> operations) {
+Journal::Promise Journal::WriteData(fbl::Vector<storage::UnbufferedOperation> operations) {
   zx_status_t status = CheckAllWriteOperations(operations);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Not all operations to WriteData are writes\n");
@@ -61,7 +62,7 @@ Journal::Promise Journal::WriteData(fbl::Vector<UnbufferedOperation> operations)
 
   // Ensure there is enough space in the writeback buffer.
   uint64_t block_count = BlockCount(operations);
-  BlockingRingBufferReservation reservation;
+  storage::BlockingRingBufferReservation reservation;
   status = writeback_buffer_->Reserve(block_count, &reservation);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Failed to reserve space in writeback buffer: %s\n",
@@ -70,7 +71,7 @@ Journal::Promise Journal::WriteData(fbl::Vector<UnbufferedOperation> operations)
   }
 
   // Once we have that space, copy the operations into the buffer.
-  fbl::Vector<BufferedOperation> buffered_operations;
+  fbl::Vector<storage::BufferedOperation> buffered_operations;
   status = reservation.CopyRequests(operations, 0, &buffered_operations);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Failed to copy operations into writeback buffer: %s\n",
@@ -89,7 +90,7 @@ Journal::Promise Journal::WriteData(fbl::Vector<UnbufferedOperation> operations)
   return barrier_.wrap(std::move(promise));
 }
 
-Journal::Promise Journal::WriteMetadata(fbl::Vector<UnbufferedOperation> operations) {
+Journal::Promise Journal::WriteMetadata(fbl::Vector<storage::UnbufferedOperation> operations) {
   if (!journal_buffer_) {
     ZX_DEBUG_ASSERT(!writer_.IsJournalingEnabled());
     return WriteData(std::move(operations));
@@ -105,7 +106,7 @@ Journal::Promise Journal::WriteMetadata(fbl::Vector<UnbufferedOperation> operati
   // Note that in addition to the operation's blocks, we also reserve space for the journal
   // entry's metadata (header, footer, etc).
   uint64_t block_count = BlockCount(operations) + kEntryMetadataBlocks;
-  BlockingRingBufferReservation reservation;
+  storage::BlockingRingBufferReservation reservation;
   status = journal_buffer_->Reserve(block_count, &reservation);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Failed to reserve space in journal buffer: %s\n",
@@ -114,7 +115,7 @@ Journal::Promise Journal::WriteMetadata(fbl::Vector<UnbufferedOperation> operati
   }
 
   // Once we have that space, copy the operations into the journal buffer.
-  fbl::Vector<BufferedOperation> buffered_operations;
+  fbl::Vector<storage::BufferedOperation> buffered_operations;
   status = reservation.CopyRequests(operations, kJournalEntryHeaderBlocks, &buffered_operations);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Failed to copy operations into journal buffer: %s\n",

@@ -14,14 +14,14 @@
 #include <algorithm>
 
 #include <fbl/vector.h>
-#include <fs/buffer/blocking-ring-buffer.h>
-#include <fs/buffer/ring-buffer.h>
 #include <fs/journal/background-executor.h>
 #include <fs/journal/format.h>
 #include <fs/journal/internal/journal-writer.h>
 #include <fs/journal/superblock.h>
-#include <fs/operation/buffered-operation.h>
 #include <fs/transaction/block-transaction.h>
+#include <storage/buffer/blocking-ring-buffer.h>
+#include <storage/buffer/ring-buffer.h>
+#include <storage/operation/buffered-operation.h>
 
 namespace fs {
 
@@ -60,13 +60,14 @@ class Journal final : public fit::executor {
   // |journal_buffer| must be the size of the entries (not including the info block).
   // |journal_start_block| must point to the start of the journal info block.
   Journal(fs::TransactionHandler* transaction_handler, JournalSuperblock journal_superblock,
-          std::unique_ptr<fs::BlockingRingBuffer> journal_buffer,
-          std::unique_ptr<fs::BlockingRingBuffer> writeback_buffer, uint64_t journal_start_block);
+          std::unique_ptr<storage::BlockingRingBuffer> journal_buffer,
+          std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer,
+          uint64_t journal_start_block);
 
   // Constructs a journal where metadata and data are both treated as data, effectively
   // disabling the journal.
   Journal(fs::TransactionHandler* transaction_handler,
-          std::unique_ptr<fs::BlockingRingBuffer> writeback_buffer);
+          std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer);
 
   ~Journal() final;
 
@@ -76,14 +77,14 @@ class Journal final : public fit::executor {
   // Multiple requests to WriteData are not ordered. If ordering is desired, it should
   // be added using a |fit::sequencer| object, or by chaining the data writeback promise
   // along an object which is ordered.
-  Promise WriteData(fbl::Vector<fs::UnbufferedOperation> operations);
+  Promise WriteData(fbl::Vector<storage::UnbufferedOperation> operations);
 
   // Transmits operations contains metadata, which must be updated atomically with respect
   // to power failures if journaling is enabled.
   //
   // Multiple requests to WriteMetadata are ordered. They are ordered by the invocation
   // of the |WriteMetadata| method, not by the completion of the returned promise.
-  Promise WriteMetadata(fbl::Vector<fs::UnbufferedOperation> operations);
+  Promise WriteMetadata(fbl::Vector<storage::UnbufferedOperation> operations);
 
   // Returns a promise which identifies that all previous promises returned from the journal
   // have completed (succeeded, failed, or abandoned).
@@ -101,8 +102,8 @@ class Journal final : public fit::executor {
   void schedule_task(fit::pending_task task) final { executor_.schedule_task(std::move(task)); }
 
  private:
-  std::unique_ptr<fs::BlockingRingBuffer> journal_buffer_;
-  std::unique_ptr<fs::BlockingRingBuffer> writeback_buffer_;
+  std::unique_ptr<storage::BlockingRingBuffer> journal_buffer_;
+  std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer_;
 
   // To implement |Sync()|, the journal must track all pending work, with the ability
   // to react once all prior work (up to a point) has finished execution.

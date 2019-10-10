@@ -15,24 +15,26 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <fs/buffer/block-buffer.h>
-#include <fs/operation/operation.h>
 #include <fs/trace.h>
 #include <minfs/format.h>
+#include <storage/buffer/block-buffer.h>
+#include <storage/operation/operation.h>
 
 #include "minfs-private.h"
 
 namespace minfs {
 
-zx_status_t Bcache::RunOperation(const fs::Operation& operation, fs::BlockBuffer* buffer) {
-  if (operation.type != fs::OperationType::kWrite && operation.type != fs::OperationType::kRead) {
+zx_status_t Bcache::RunOperation(const storage::Operation& operation,
+                                 storage::BlockBuffer* buffer) {
+  if (operation.type != storage::OperationType::kWrite &&
+      operation.type != storage::OperationType::kRead) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   blk_t block_num = static_cast<blk_t>(operation.dev_offset);
   void* data = buffer->Data(operation.vmo_offset);
 
-  if (operation.type == fs::OperationType::kRead) {
+  if (operation.type == storage::OperationType::kRead) {
     return Readblk(block_num, data);
   }
 

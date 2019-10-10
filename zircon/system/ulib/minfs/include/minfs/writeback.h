@@ -59,9 +59,9 @@ class Transaction final : public PendingWork {
   ////////////////
   // PendingWork interface.
 
-  void EnqueueMetadata(WriteData source, fs::Operation operation) final;
+  void EnqueueMetadata(WriteData source, storage::Operation operation) final;
 
-  void EnqueueData(WriteData source, fs::Operation operation) final;
+  void EnqueueData(WriteData source, storage::Operation operation) final;
 
   ////////////////
   // Other methods.
@@ -79,12 +79,12 @@ class Transaction final : public PendingWork {
 
 #ifdef __Fuchsia__
   // Returns a vector of all enqueued metadata write operations.
-  fbl::Vector<fs::UnbufferedOperation> RemoveMetadataOperations() {
+  fbl::Vector<storage::UnbufferedOperation> RemoveMetadataOperations() {
     return metadata_operations_.TakeOperations();
   }
 
   // Returns a vector of all enqueued data write operations.
-  fbl::Vector<fs::UnbufferedOperation> RemoveDataOperations() {
+  fbl::Vector<storage::UnbufferedOperation> RemoveDataOperations() {
     return data_operations_.TakeOperations();
   }
 
@@ -117,8 +117,8 @@ class Transaction final : public PendingWork {
  private:
 #ifdef __Fuchsia__
   fbl::AutoLock<fbl::Mutex> lock_;
-  fs::UnbufferedOperationsBuilder metadata_operations_;
-  fs::UnbufferedOperationsBuilder data_operations_;
+  storage::UnbufferedOperationsBuilder metadata_operations_;
+  storage::UnbufferedOperationsBuilder data_operations_;
   std::vector<fbl::RefPtr<VnodeMinfs>> pinned_vnodes_;
 #else
   fs::WriteTxn transaction_;

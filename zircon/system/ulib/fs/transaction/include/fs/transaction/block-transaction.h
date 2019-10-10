@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_TRANSACTION_BLOCK_TRANSACTION_H_
+#define FS_TRANSACTION_BLOCK_TRANSACTION_H_
 
 #include <zircon/assert.h>
 #include <zircon/device/block.h>
@@ -10,8 +11,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 #include <fbl/vector.h>
-#include <fs/buffer/block-buffer.h>
-#include <fs/operation/operation.h>
+#include <storage/buffer/block-buffer.h>
+#include <storage/operation/operation.h>
 
 #ifdef __Fuchsia__
 #include <block-client/cpp/block-device.h>
@@ -59,7 +60,8 @@ class TransactionHandler {
   // This method blocks until the operation completes, so it is suitable for host-based reads and
   // writes and for simple Fuchsia-based reads. Regular Fuchsia IO is expected to be issued against
   // the FIFO exposed through GetDevice().
-  virtual zx_status_t RunOperation(const Operation& operation, BlockBuffer* buffer) = 0;
+  virtual zx_status_t RunOperation(const storage::Operation& operation,
+                                   storage::BlockBuffer* buffer) = 0;
 
 #ifdef __Fuchsia__
   // Acquires the block group on which the transaction should be issued.
@@ -135,14 +137,14 @@ class BlockTxn {
 // Provides a type-safe, low-cost abstraction over the |BlockTxn| class,
 // allowing clients to avoid intermingling distinct operation types
 // unless explicitly requested.
-template <typename IdType, uint32_t Operation>
+template <typename IdType, uint32_t operation>
 class TypedTxn {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(TypedTxn);
   explicit TypedTxn(TransactionHandler* handler) : txn_(handler) {}
 
   inline void Enqueue(IdType id, uint64_t vmo_offset, uint64_t dev_offset, uint64_t nblocks) {
-    txn_.EnqueueOperation(Operation, id, vmo_offset, dev_offset, nblocks);
+    txn_.EnqueueOperation(operation, id, vmo_offset, dev_offset, nblocks);
   }
 
   inline void EnqueueFlush() {
@@ -172,3 +174,5 @@ using ReadTxn = TypedTxn<const void*, BLOCKIO_READ>;
 #endif
 
 }  // namespace fs
+
+#endif  // FS_TRANSACTION_BLOCK_TRANSACTION_H_

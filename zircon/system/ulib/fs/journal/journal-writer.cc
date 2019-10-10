@@ -15,7 +15,7 @@ namespace fs {
 namespace {
 
 using fs::FlushWriteRequests;
-using fs::OperationType;
+using storage::OperationType;
 
 }  // namespace
 
@@ -104,14 +104,14 @@ fit::result<void, zx_status_t> JournalWriter::WriteMetadata(JournalWorkItem work
   return fit::ok();
 }
 
-zx_status_t JournalWriter::WriteOperationToJournal(const BlockBufferView& view) {
+zx_status_t JournalWriter::WriteOperationToJournal(const storage::BlockBufferView& view) {
   const uint64_t total_block_count = view.length();
   const uint64_t max_reservation_size = EntriesLength();
   uint64_t written_block_count = 0;
-  fbl::Vector<BufferedOperation> journal_operations;
-  BufferedOperation operation;
+  fbl::Vector<storage::BufferedOperation> journal_operations;
+  storage::BufferedOperation operation;
   operation.vmoid = view.vmoid();
-  operation.op.type = OperationType::kWrite;
+  operation.op.type = storage::OperationType::kWrite;
 
   // Both the reservation and the on-disk location may wraparound.
   while (written_block_count != total_block_count) {
@@ -245,10 +245,10 @@ zx_status_t JournalWriter::WriteInfoBlock() {
 
   ZX_DEBUG_ASSERT(next_entry_start_block_ < EntriesLength());
   journal_superblock_.Update(next_entry_start_block_, next_sequence_number_);
-  fbl::Vector<BufferedOperation> journal_operations;
-  BufferedOperation operation;
+  fbl::Vector<storage::BufferedOperation> journal_operations;
+  storage::BufferedOperation operation;
   operation.vmoid = journal_superblock_.buffer().vmoid();
-  operation.op.type = OperationType::kWrite;
+  operation.op.type = storage::OperationType::kWrite;
   operation.op.vmo_offset = 0;
   operation.op.dev_offset = InfoStartBlock();
   operation.op.length = InfoLength();
@@ -264,7 +264,8 @@ zx_status_t JournalWriter::WriteInfoBlock() {
   return ZX_OK;
 }
 
-zx_status_t JournalWriter::WriteOperations(const fbl::Vector<BufferedOperation>& operations) {
+zx_status_t JournalWriter::WriteOperations(
+    const fbl::Vector<storage::BufferedOperation>& operations) {
   if (!IsWritebackEnabled()) {
     FS_TRACE_ERROR("WriteOperations: Not issuing writeback because writeback is disabled\n");
     return ZX_ERR_IO_REFUSED;

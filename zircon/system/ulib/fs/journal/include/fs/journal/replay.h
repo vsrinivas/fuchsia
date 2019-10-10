@@ -8,10 +8,10 @@
 #include <zircon/types.h>
 
 #include <fbl/vector.h>
-#include <fs/buffer/vmo-buffer.h>
 #include <fs/journal/superblock.h>
-#include <fs/operation/buffered-operation.h>
 #include <fs/transaction/block-transaction.h>
+#include <storage/buffer/vmo-buffer.h>
+#include <storage/operation/buffered-operation.h>
 
 namespace fs {
 
@@ -21,8 +21,8 @@ namespace fs {
 //
 // This function is invoked by |ReplayJournal|. Refer to that function for the common case
 // of replaying a journal on boot.
-zx_status_t ParseJournalEntries(const JournalSuperblock* info, fs::VmoBuffer* journal_buffer,
-                                fbl::Vector<fs::BufferedOperation>* operations,
+zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffer* journal_buffer,
+                                fbl::Vector<storage::BufferedOperation>* operations,
                                 uint64_t* out_sequence_number, uint64_t* out_start);
 
 // Replays the entries in the journal, first parsing them, and later writing them
@@ -32,9 +32,9 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, fs::VmoBuffer* jo
 //
 // Returns the new |JournalSuperblock|, with an updated sequence number which should
 // be used on journal initialization.
-zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler, fs::VmoidRegistry* registry,
-                          uint64_t journal_start, uint64_t journal_length,
-                          JournalSuperblock* out_journal_superblock);
+zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
+                          storage::VmoidRegistry* registry, uint64_t journal_start,
+                          uint64_t journal_length, JournalSuperblock* out_journal_superblock);
 
 }  // namespace fs
 

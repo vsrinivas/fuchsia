@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_TEST_UTILS_H_
-#define ZIRCON_SYSTEM_ULIB_BLOBFS_TEST_UTILS_H_
+#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_TEST_UNIT_UTILS_H_
+#define ZIRCON_SYSTEM_ULIB_BLOBFS_TEST_UNIT_UTILS_H_
 
 #include <optional>
 
@@ -50,13 +50,12 @@ class MockTransactionManager : public TransactionManager {
 
   uint32_t DeviceBlockSize() const final { return kBlockSize; }
 
-  uint64_t BlockNumberToDevice(uint64_t block_num) const final {
-    return block_num;
-  }
+  uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
 
   block_client::BlockDevice* GetDevice() final { return nullptr; }
 
-  zx_status_t RunOperation(const fs::Operation& operation, fs::BlockBuffer* buffer) final {
+  zx_status_t RunOperation(const storage::Operation& operation,
+                           storage::BlockBuffer* buffer) final {
     return ZX_OK;
   }
 
@@ -131,4 +130,4 @@ void DeviceBlockWrite(BlockDevice* device, const void* buf, size_t size, uint64_
 
 }  // namespace blobfs
 
-#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_TEST_UTILS_H_
+#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_TEST_UNIT_UTILS_H_

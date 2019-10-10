@@ -34,11 +34,11 @@ void PersistentStorage::PersistRange(PendingWork* transaction, WriteData data, s
   blk_t block_count = last_rel_block - first_rel_block + 1;
   blk_t abs_block = metadata_.MetadataStartBlock() + first_rel_block;
 
-  fs::Operation op = {
-    .type = fs::OperationType::kWrite,
-    .vmo_offset = first_rel_block,
-    .dev_offset = abs_block,
-    .length = block_count,
+  storage::Operation op = {
+      .type = storage::OperationType::kWrite,
+      .vmo_offset = first_rel_block,
+      .dev_offset = abs_block,
+      .length = block_count,
   };
 
   transaction->EnqueueMetadata(data, std::move(op));

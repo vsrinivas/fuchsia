@@ -1210,18 +1210,19 @@ zx_status_t Minfs::InitializeJournal(fs::JournalSuperblock journal_superblock) {
     return ZX_ERR_ALREADY_EXISTS;
   }
 
-  std::unique_ptr<fs::BlockingRingBuffer> journal_buffer;
+  std::unique_ptr<storage::BlockingRingBuffer> journal_buffer;
   const uint64_t journal_entry_blocks = JournalBlocks(sb_->Info()) - fs::kJournalMetadataBlocks;
   zx_status_t status =
-      fs::BlockingRingBuffer::Create(GetMutableBcache(), journal_entry_blocks, kMinfsBlockSize,
-                                     "minfs-journal-buffer", &journal_buffer);
+      storage::BlockingRingBuffer::Create(GetMutableBcache(), journal_entry_blocks, kMinfsBlockSize,
+                                          "minfs-journal-buffer", &journal_buffer);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("minfs: Cannot create journal buffer\n");
     return status;
   }
 
-  std::unique_ptr<fs::BlockingRingBuffer> writeback_buffer;
-  status = fs::BlockingRingBuffer::Create(GetMutableBcache(), WritebackCapacity(), kMinfsBlockSize,
+  std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer;
+  status =
+      storage::BlockingRingBuffer::Create(GetMutableBcache(), WritebackCapacity(), kMinfsBlockSize,
                                           "minfs-writeback-buffer", &writeback_buffer);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("minfs: Cannot create writeback buffer\n");
@@ -1239,8 +1240,8 @@ zx_status_t Minfs::InitializeUnjournalledWriteback() {
     FS_TRACE_ERROR("minfs: Writeback was already initialized.\n");
     return ZX_ERR_ALREADY_EXISTS;
   }
-  std::unique_ptr<fs::BlockingRingBuffer> writeback_buffer;
-  zx_status_t status = fs::BlockingRingBuffer::Create(
+  std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer;
+  zx_status_t status = storage::BlockingRingBuffer::Create(
       bc_.get(), WritebackCapacity(), kMinfsBlockSize, "minfs-writeback-buffer", &writeback_buffer);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("minfs: Cannot create data writeback buffer\n");

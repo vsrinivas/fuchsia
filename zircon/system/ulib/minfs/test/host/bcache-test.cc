@@ -10,7 +10,7 @@
 #include <vector>
 
 #include <minfs/format.h>
-#include <fs/buffer/block-buffer.h>
+#include <storage/buffer/block-buffer.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -18,7 +18,7 @@ namespace {
 constexpr uint32_t kNumBlocks = 20;
 using minfs::kMinfsBlockSize;
 
-class DataBuffer final : public fs::BlockBuffer {
+class DataBuffer final : public storage::BlockBuffer {
  public:
   explicit DataBuffer(size_t blocks) : data_(blocks * kMinfsBlockSize) {}
 
@@ -51,9 +51,7 @@ class BcacheTest : public zxtest::Test {
   std::unique_ptr<minfs::Bcache> bcache_;
 };
 
-TEST_F(BcacheTest, BlockNumberToDevice) {
-  ASSERT_EQ(42, bcache_->BlockNumberToDevice(42));
-}
+TEST_F(BcacheTest, BlockNumberToDevice) { ASSERT_EQ(42, bcache_->BlockNumberToDevice(42)); }
 
 TEST_F(BcacheTest, RunOperation) {
   DataBuffer buffer(2);
@@ -61,8 +59,8 @@ TEST_F(BcacheTest, RunOperation) {
   // Prepare to write '2' from the second block.
   memset(buffer.Data(1), '2', buffer.BlockSize());
 
-  fs::Operation operation = {};
-  operation.type = fs::OperationType::kWrite;
+  storage::Operation operation = {};
+  operation.type = storage::OperationType::kWrite;
   operation.vmo_offset = 1;
   operation.dev_offset = 2;
   operation.length = 1;
@@ -70,7 +68,7 @@ TEST_F(BcacheTest, RunOperation) {
   ASSERT_OK(bcache_->RunOperation(operation, &buffer));
 
   // Now read back at the start of the buffer.
-  operation.type = fs::OperationType::kRead;
+  operation.type = storage::OperationType::kRead;
   operation.vmo_offset = 0;
 
   ASSERT_OK(bcache_->RunOperation(operation, &buffer));

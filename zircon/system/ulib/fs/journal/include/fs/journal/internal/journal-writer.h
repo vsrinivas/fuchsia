@@ -12,12 +12,12 @@
 #include <algorithm>
 
 #include <fbl/vector.h>
-#include <fs/buffer/blocking-ring-buffer.h>
 #include <fs/journal/format.h>
 #include <fs/journal/internal/operation-tracker.h>
 #include <fs/journal/superblock.h>
-#include <fs/operation/buffered-operation.h>
 #include <fs/transaction/block-transaction.h>
+#include <storage/buffer/blocking-ring-buffer.h>
+#include <storage/operation/buffered-operation.h>
 
 namespace fs {
 namespace internal {
@@ -28,12 +28,12 @@ namespace internal {
 //
 // This struct is used for both journaled metadata and unjournaled data.
 struct JournalWorkItem {
-  JournalWorkItem(fs::BlockingRingBufferReservation reservation,
-                  fbl::Vector<fs::BufferedOperation> operations)
+  JournalWorkItem(storage::BlockingRingBufferReservation reservation,
+                  fbl::Vector<storage::BufferedOperation> operations)
       : reservation(std::move(reservation)), operations(std::move(operations)) {}
 
-  fs::BlockingRingBufferReservation reservation;
-  fbl::Vector<fs::BufferedOperation> operations;
+  storage::BlockingRingBufferReservation reservation;
+  fbl::Vector<storage::BufferedOperation> operations;
 };
 
 // The back-end of the journal. This class implements all the blocking operations which transmit
@@ -121,14 +121,14 @@ class JournalWriter {
   // which deal with wraparound of the in-memory |reservation| buffer and the on-disk
   // journal. Additionally, issues these operations to the underlying device and
   // returns the result (see |WriteOperations|).
-  zx_status_t WriteOperationToJournal(const fs::BlockBufferView& view);
+  zx_status_t WriteOperationToJournal(const storage::BlockBufferView& view);
 
   // Writes operations directly through to disk.
   //
   // If any operations fail, this method will return the resulting error from the underlying
   // block device. Afterwards, however, this function will exclusively return |ZX_ERR_IO_REFUSED|
   // to prevent "partial operations" from being written to the underlying device.
-  zx_status_t WriteOperations(const fbl::Vector<fs::BufferedOperation>& operations);
+  zx_status_t WriteOperations(const fbl::Vector<storage::BufferedOperation>& operations);
 
   fs::TransactionHandler* transaction_handler_ = nullptr;
   JournalSuperblock journal_superblock_;
