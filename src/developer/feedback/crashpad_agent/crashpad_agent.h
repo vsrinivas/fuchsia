@@ -18,10 +18,10 @@
 
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
+#include "src/developer/feedback/crashpad_agent/database.h"
 #include "src/developer/feedback/crashpad_agent/inspect_manager.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/lib/fxl/macros.h"
-#include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/util/misc/uuid.h"
 
 namespace feedback {
@@ -49,34 +49,18 @@ class CrashpadAgent : public fuchsia::feedback::CrashReporter {
 
  private:
   CrashpadAgent(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                Config config, std::unique_ptr<crashpad::CrashReportDatabase> database,
+                Config config, std::unique_ptr<Database> database,
                 std::unique_ptr<CrashServer> crash_server, InspectManager* inspect_manager);
 
-  // Uploads local crash report of ID |local_report_id|, attaching the passed |annotations|.
-  bool UploadReport(const crashpad::UUID& local_report_id,
-                    const std::map<std::string, std::string>& annotations, bool has_minidump);
-
-  // Deletes oldest crash reports to keep |database_| under a maximum size read from |config_|,
-  // returning the number of pruned reports.
-  //
-  // Report age is defined by their crashpad::CrashReportDatabase::Report::creation_time.
-  size_t PruneDatabase();
-
-  // Removes expired lockfiles, metadata without report files, report files without
-  // metadata from the database, and orphaned attachments.
-  //
-  // An expired lockfile is defined as having been alive longer than |lockfile_ttl|
-  // seconds.
-  //
-  // Returns the number of reports cleaned.
-  size_t CleanDatabase();
+  // Uploads local crash report of ID |local_report_id|.
+  bool UploadReport(const crashpad::UUID& local_report_id);
 
   async_dispatcher_t* dispatcher_;
   async::Executor executor_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   const Config config_;
   Settings settings_;
-  const std::unique_ptr<crashpad::CrashReportDatabase> database_;
+  const std::unique_ptr<Database> database_;
   const std::unique_ptr<CrashServer> crash_server_;
   InspectManager* inspect_manager_;
 

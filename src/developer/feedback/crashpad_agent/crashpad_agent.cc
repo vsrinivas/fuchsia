@@ -27,10 +27,6 @@
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
-#include "third_party/crashpad/client/crash_report_database.h"
-#include "third_party/crashpad/client/prune_crash_reports.h"
-#include "third_party/crashpad/util/misc/metrics.h"
-#include "third_party/crashpad/util/misc/uuid.h"
 
 namespace feedback {
 namespace {
@@ -101,12 +97,11 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     files::CreateDirectory(config.crashpad_database.path);
   }
 
-  std::unique_ptr<crashpad::CrashReportDatabase> database(
-      crashpad::CrashReportDatabase::Initialize(base::FilePath(config.crashpad_database.path)));
+  auto database = Database::TryCreate(config.crashpad_database);
   if (!database) {
-    FX_LOGS(ERROR) << "error initializing local crash report database at "
+    FX_LOGS(ERROR) << "Error initializing local crash report database at "
                    << config.crashpad_database.path;
-    FX_LOGS(FATAL) << "failed to set up crash analyzer";
+    FX_LOGS(FATAL) << "Failed to set up crash analyzer";
     return nullptr;
   }
 
@@ -117,7 +112,7 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
 
 CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
                              std::shared_ptr<sys::ServiceDirectory> services, Config config,
-                             std::unique_ptr<crashpad::CrashReportDatabase> database,
+                             std::unique_ptr<Database> database,
                              std::unique_ptr<CrashServer> crash_server,
                              InspectManager* inspect_manager)
     : dispatcher_(dispatcher),
@@ -142,59 +137,18 @@ CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
   inspect_manager_->ExposeSettings(&settings_);
 }
 
-namespace {
-
-// TODO(fxb/6442): turn this helper into one of the public methods of the Database wrapper.
-bool MakeNewReport(crashpad::CrashReportDatabase* database,
-                   const std::map<std::string, fuchsia::mem::Buffer>& attachments,
-                   const std::optional<fuchsia::mem::Buffer>& minidump,
-                   crashpad::UUID* local_report_id) {
-  // Create local Crashpad report.
-  std::unique_ptr<crashpad::CrashReportDatabase::NewReport> report;
-  if (const auto status = database->PrepareNewCrashReport(&report);
-      status != crashpad::CrashReportDatabase::kNoError) {
-    FX_LOGS(ERROR) << "Error creating local Crashpad report (" << status << ")";
-    return false;
-  }
-
-  // Write attachments.
-  for (const auto& [filename, content] : attachments) {
-    AddAttachment(filename, content, report.get());
-  }
-
-  // Optionally write minidump.
-  if (minidump.has_value()) {
-    if (!WriteVMO(minidump.value(), report->Writer())) {
-      FX_LOGS(WARNING) << "error attaching minidump to Crashpad report";
-    }
-  }
-
-  // Finish new local Crashpad report.
-  if (const auto status = database->FinishedWritingCrashReport(std::move(report), local_report_id);
-      status != crashpad::CrashReportDatabase::kNoError) {
-    FX_LOGS(ERROR) << "error writing local Crashpad report (" << status << ")";
-    return false;
-  }
-
-  return true;
-}
-
-}  // namespace
-
 void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
   if (!report.has_program_name()) {
     FX_LOGS(ERROR) << "Invalid crash report. No program name. Won't file.";
     callback(fit::error(ZX_ERR_INVALID_ARGS));
     return;
   }
-  FX_LOGS(INFO) << "generating crash report for " << report.program_name();
-
-  using UploadArgs = std::tuple<crashpad::UUID, std::map<std::string, std::string>, bool>;
+  FX_LOGS(INFO) << "Generating crash report for " << report.program_name();
 
   auto promise =
       GetFeedbackData(dispatcher_, services_, kFeedbackDataCollectionTimeout)
           .then([this, report = std::move(report)](
-                    fit::result<Data>& result) mutable -> fit::result<UploadArgs> {
+                    fit::result<Data>& result) mutable -> fit::result<crashpad::UUID> {
             Data feedback_data;
             if (result.is_ok()) {
               feedback_data = result.take_value();
@@ -209,43 +163,38 @@ void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback cal
                                            &annotations, &attachments, &minidump);
 
             crashpad::UUID local_report_id;
-            if (!MakeNewReport(database_.get(), attachments, minidump, &local_report_id)) {
+            if (!database_->MakeNewReport(attachments, minidump, annotations, &local_report_id)) {
+              FX_LOGS(ERROR) << "Error making new report";
               return fit::error();
             }
 
             inspect_manager_->AddReport(program_name, local_report_id.ToString());
 
-            return fit::ok(std::make_tuple(std::move(local_report_id), std::move(annotations),
-                                           minidump.has_value()));
+            return fit::ok(std::move(local_report_id));
           })
-          .then([callback = std::move(callback), this](fit::result<UploadArgs>& result) {
+          .then([callback = std::move(callback), this](fit::result<crashpad::UUID>& result) {
             if (result.is_error()) {
               FX_LOGS(ERROR) << "Failed to file crash report. Won't retry.";
               callback(fit::error(ZX_ERR_INTERNAL));
             } else {
               callback(fit::ok());
-              const auto& args = result.value();
-              UploadReport(std::get<0>(args), std::get<1>(args), std::get<2>(args));
+              const auto& local_report_id = result.value();
+              UploadReport(local_report_id);
             }
 
-            PruneDatabase();
-            CleanDatabase();
+            database_->GarbageCollect();
           });
 
   executor_.schedule_task(std::move(promise));
 }
 
-bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,
-                                 const std::map<std::string, std::string>& annotations,
-                                 const bool has_minidump) {
+bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id) {
   if (settings_.upload_policy() == Settings::UploadPolicy::DISABLED) {
-    FX_LOGS(INFO) << "upload to remote crash server disabled. Local crash report, ID "
+    FX_LOGS(INFO) << "Upload to remote crash server disabled. Local crash report, ID "
                   << local_report_id.ToString() << ", available under "
                   << config_.crashpad_database.path;
-    if (const auto status = database_->SkipReportUpload(
-            local_report_id, crashpad::Metrics::CrashSkippedReason::kUploadsDisabled);
-        status != crashpad::CrashReportDatabase::kNoError) {
-      FX_LOGS(WARNING) << "error skipping local crash report upload (" << status << ")";
+    if (!database_->Archive(local_report_id)) {
+      FX_LOGS(ERROR) << "Error archiving local report " << local_report_id.ToString();
     }
     return true;
   } else if (settings_.upload_policy() == Settings::UploadPolicy::LIMBO) {
@@ -254,64 +203,33 @@ bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,
   }
 
   // Read local crash report as an "upload" report.
-  std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report;
-  if (const auto status = database_->GetReportForUploading(local_report_id, &report);
-      status != crashpad::CrashReportDatabase::kNoError) {
-    FX_LOGS(ERROR) << "error loading local crash report, ID " << local_report_id.ToString() << " ("
-                   << status << ")";
+  auto upload_report = database_->GetUploadReport(local_report_id);
+  if (!upload_report) {
+    FX_LOGS(ERROR) << "Error getting upload report for local report id "
+                   << local_report_id.ToString();
     return false;
-  }
-
-  std::map<std::string, crashpad::FileReader*> attachments = report->GetAttachments();
-  if (has_minidump) {
-    attachments["uploadFileMinidump"] = report->Reader();
   }
 
   std::string server_report_id;
-  if (!crash_server_->MakeRequest(annotations, attachments, &server_report_id)) {
-    FX_LOGS(ERROR) << "error uploading local crash report, ID " << local_report_id.ToString();
-    // Destruct the report to release the lockfile.
-    report.reset();
-    if (const auto status = database_->SkipReportUpload(
-            local_report_id, crashpad::Metrics::CrashSkippedReason::kUploadFailed);
-        status != crashpad::CrashReportDatabase::kNoError) {
-      FX_LOGS(WARNING) << "error skipping local crash report upload (" << status << ")";
+  if (!crash_server_->MakeRequest(upload_report->GetAnnotations(), upload_report->GetAttachments(),
+                                  &server_report_id)) {
+    FX_LOGS(ERROR) << "Error uploading local crash report, ID " << local_report_id.ToString();
+    if (!database_->MarkAsTooManyUploadAttempts(std::move(upload_report))) {
+      FX_LOGS(ERROR) << fxl::StringPrintf(
+          "Error marking local report %s as having too many upload attempts",
+          local_report_id.ToString().c_str());
     }
     return false;
   }
-  FX_LOGS(INFO) << "successfully uploaded crash report at https://crash.corp.google.com/"
+  FX_LOGS(INFO) << "Successfully uploaded crash report at https://crash.corp.google.com/"
                 << server_report_id;
-  if (const auto status = database_->RecordUploadComplete(std::move(report), server_report_id);
-      status != crashpad::CrashReportDatabase::kNoError) {
-    FX_LOGS(WARNING) << "error marking local crash report as uploaded (" << status << ")";
+  if (!database_->MarkAsUploaded(std::move(upload_report), server_report_id)) {
+    FX_LOGS(ERROR) << fxl::StringPrintf("Error marking local report %s as uploaded",
+                                        local_report_id.ToString().c_str());
   }
   inspect_manager_->MarkReportAsUploaded(local_report_id.ToString(), server_report_id);
 
   return true;
-}
-
-size_t CrashpadAgent::PruneDatabase() {
-  // We need to create a new condition every time we prune as it internally maintains a cumulated
-  // total size as it iterates over the reports in the database and we want to reset that cumulated
-  // total size every time we prune.
-  crashpad::DatabaseSizePruneCondition pruning_condition(config_.crashpad_database.max_size_in_kb);
-  const size_t num_pruned = crashpad::PruneCrashReportDatabase(database_.get(), &pruning_condition);
-  if (num_pruned > 0) {
-    FX_LOGS(INFO) << fxl::StringPrintf("Pruned %lu crash report(s)", num_pruned);
-  }
-  return num_pruned;
-}
-
-size_t CrashpadAgent::CleanDatabase() {
-  // We set the |lockfile_ttl| to one day to ensure that reports in new aren't removed until
-  // a period of time has passed in which it is certain they are orphaned.
-  const size_t num_removed =
-      static_cast<size_t>(database_->CleanDatabase(/*lockfile_ttl=*/60 * 60 * 24));
-  if (num_removed > 0) {
-    FX_LOGS(INFO) << fxl::StringPrintf("Removed %lu orphan file(s) from Crashpad database",
-                                       num_removed);
-  }
-  return num_removed;
 }
 
 }  // namespace feedback
