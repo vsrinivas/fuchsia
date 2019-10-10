@@ -45,7 +45,7 @@ VK_TEST_F(ProtectedMemoryTest, CreateProtectedEnabledEscher) {
 VK_TEST_F(ProtectedMemoryTest, CreateProtectedEnabledCommandBuffer) {
   auto escher = GetEscherWithProtectedMemoryEnabled();
   if (!escher) {
-    return;
+    GTEST_SKIP();
   }
 
   auto cb = CommandBuffer::NewForType(escher.get(), CommandBuffer::Type::kGraphics,
@@ -57,7 +57,7 @@ VK_TEST_F(ProtectedMemoryTest, CreateProtectedEnabledCommandBuffer) {
 VK_TEST_F(ProtectedMemoryTest, CreateProtectedEnabledFrame) {
   auto escher = GetEscherWithProtectedMemoryEnabled();
   if (!escher) {
-    return;
+    GTEST_SKIP();
   }
 
   {
@@ -71,7 +71,7 @@ VK_TEST_F(ProtectedMemoryTest, CreateProtectedEnabledFrame) {
 VK_TEST_F(ProtectedMemoryTest, CreateProtectedEnabledPaperRenderer) {
   auto escher = GetEscherWithProtectedMemoryEnabled();
   if (!escher) {
-    return;
+    GTEST_SKIP();
   }
 
   auto renderer = PaperRenderer::New(escher->GetWeakPtr());
@@ -81,18 +81,67 @@ VK_TEST_F(ProtectedMemoryTest, CreateProtectedEnabledPaperRenderer) {
   const escher::ViewingVolume& volume = ViewingVolume(scene->bounding_box);
   escher::Camera cam = escher::Camera::NewOrtho(volume);
   auto cameras = {cam};
-  auto frame = escher->NewFrame("test_frame", 0, false, escher::CommandBuffer::Type::kGraphics,
-                                /*use_protected_memory=*/true);
-  ImagePtr color_attachment = image_utils::NewImage(
+
+  auto protected_image = image_utils::NewImage(
       escher->image_cache(), vk::Format::eB8G8R8A8Unorm, 32, 32,
       vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc |
           vk::ImageUsageFlagBits::eTransferDst,
       vk::MemoryPropertyFlagBits::eProtected);
+  auto protected_frame =
+      escher->NewFrame("test_frame", 0, false, escher::CommandBuffer::Type::kGraphics,
+                       /*use_protected_memory=*/true);
+  protected_image->set_swapchain_layout(vk::ImageLayout::eColorAttachmentOptimal);
+  renderer->BeginFrame(protected_frame, scene, cameras, protected_image);
+  renderer->DrawVLine(escher::DebugRects::kRed, 0, 0, 30, 1);
+  renderer->EndFrame();
+  protected_frame->EndFrame(SemaphorePtr(), [] {});
 
-  renderer->BeginFrame(frame, scene, cameras, color_attachment);
+  escher->vk_device().waitIdle();
+  ASSERT_TRUE(escher->Cleanup());
+}
+
+// Tests that we can send draw text via paper renderer using a protected frame after a regular draw
+// call.
+VK_TEST_F(ProtectedMemoryTest, PaperRendererSwitchToProtected) {
+  auto escher = GetEscherWithProtectedMemoryEnabled();
+  if (!escher) {
+    GTEST_SKIP();
+  }
+
+  auto renderer = PaperRenderer::New(escher->GetWeakPtr());
+  auto scene = fxl::MakeRefCounted<PaperScene>();
+  scene->point_lights.resize(1);
+  scene->bounding_box = BoundingBox(vec3(0), vec3(32));
+  const escher::ViewingVolume& volume = ViewingVolume(scene->bounding_box);
+  escher::Camera cam = escher::Camera::NewOrtho(volume);
+  auto cameras = {cam};
+
+  // Send a non-protected frame first.
+  auto image = image_utils::NewImage(escher->image_cache(), vk::Format::eB8G8R8A8Unorm, 32, 32,
+                                     vk::ImageUsageFlagBits::eColorAttachment |
+                                         vk::ImageUsageFlagBits::eTransferSrc |
+                                         vk::ImageUsageFlagBits::eTransferDst);
+  image->set_swapchain_layout(vk::ImageLayout::eColorAttachmentOptimal);
+  auto frame = escher->NewFrame("test_frame", 0, false, escher::CommandBuffer::Type::kGraphics);
+  renderer->BeginFrame(frame, scene, cameras, image);
   renderer->DrawVLine(escher::DebugRects::kRed, 0, 0, 30, 1);
   renderer->EndFrame();
   frame->EndFrame(SemaphorePtr(), [] {});
+
+  // Send a protected frame after.
+  auto protected_image = image_utils::NewImage(
+      escher->image_cache(), vk::Format::eB8G8R8A8Unorm, 32, 32,
+      vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc |
+          vk::ImageUsageFlagBits::eTransferDst,
+      vk::MemoryPropertyFlagBits::eProtected);
+  protected_image->set_swapchain_layout(vk::ImageLayout::eColorAttachmentOptimal);
+  auto protected_frame =
+      escher->NewFrame("test_frame", 0, false, escher::CommandBuffer::Type::kGraphics,
+                       /*use_protected_memory=*/true);
+  renderer->BeginFrame(protected_frame, scene, cameras, protected_image);
+  renderer->DrawVLine(escher::DebugRects::kRed, 0, 0, 30, 1);
+  renderer->EndFrame();
+  protected_frame->EndFrame(SemaphorePtr(), [] {});
 
   escher->vk_device().waitIdle();
   ASSERT_TRUE(escher->Cleanup());

@@ -795,10 +795,10 @@ std::pair<TexturePtr, TexturePtr> PaperRenderer::ObtainDepthAndMsaaTextures(cons
   TexturePtr& msaa_texture = msaa_buffers_[index];
 
   const bool realloc_textures =
-      last_frame_uses_protected_memory_ != frame->use_protected_memory() || !depth_texture ||
+      !depth_texture ||
+      (depth_texture->image()->use_protected_memory() != frame->use_protected_memory()) ||
       info.width != depth_texture->width() || info.height != depth_texture->height() ||
       config_.msaa_sample_count != depth_texture->image()->info().sample_count;
-  last_frame_uses_protected_memory_ = frame->use_protected_memory();
 
   if (realloc_textures) {
     // Need to generate a new depth buffer.

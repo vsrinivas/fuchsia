@@ -254,8 +254,6 @@ class PaperRenderer final : public Renderer {
   // blit the current frame number to the output image.
   void RenderFrameCounter();
 
-  bool last_frame_uses_protected_memory_ = false;
-
   PaperRendererConfig config_;
 
   PaperDrawCallFactory draw_call_factory_;
