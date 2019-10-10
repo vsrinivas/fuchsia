@@ -25,7 +25,6 @@ namespace echo = ::fidl::examples::echo;
 namespace sys::testing::test {
 
 constexpr char kHelperProc[] = "fuchsia-pkg://fuchsia.com/component_cpp_tests#meta/helper_proc.cmx";
-constexpr int kNumberOfTries = 3;
 
 // helper class that creates and listens on
 // a socket while appending to a std::stringstream
@@ -70,42 +69,7 @@ class SocketReader {
   async::WaitMethod<SocketReader, &SocketReader::OnData> wait_;
 };
 
-class EnclosingEnvTest : public TestWithEnvironment {
- public:
-  // Tries to connect and communicate with echo service
-  bool TryEchoService(const std::unique_ptr<EnclosingEnvironment>& env) {
-    // We give this part of the test 3 shots to complete
-    // this is the safest way to do this and prevent flakiness.
-    // Because EnvironmentServices is listening on a ComponentController channel
-    // to restart the service, we can't control that it'll actually recreate the
-    // service in 100% deterministic order.
-    echo::EchoPtr echo;
-    for (int tries = 0; tries < kNumberOfTries; tries++) {
-      // reset flag again and communicate with the service,
-      // it must be spun back up
-      bool req_done = false;
-      // dismiss old channel
-
-      // connect again
-      env->ConnectToService(echo.NewRequest());
-
-      bool channel_closed = false;
-      echo.set_error_handler([&](zx_status_t status) { channel_closed = true; });
-      // talk with the service once and assert it's ok
-      echo->EchoString("hello", [&req_done](::fidl::StringPtr rsp) {
-        EXPECT_EQ(rsp, "hello");
-        req_done = true;
-      });
-      RunLoopUntil([&]() { return req_done || channel_closed; });
-      if (req_done) {
-        return true;
-      } else {
-        std::cerr << "Didn't receive echo response in attempt number " << (tries + 1) << std::endl;
-      }
-    }
-    return false;
-  }
-};
+class EnclosingEnvTest : public TestWithEnvironment {};
 
 TEST_F(EnclosingEnvTest, RespawnService) {
   auto svc = CreateServices();
@@ -113,6 +77,16 @@ TEST_F(EnclosingEnvTest, RespawnService) {
   linfo.url = kHelperProc;
   linfo.arguments.emplace({"--echo", "--kill=die"});
   svc->AddServiceWithLaunchInfo(std::move(linfo), echo::Echo::Name_);
+
+  // observe service termination.
+  bool service_exited = false;
+  svc->SetServiceTerminatedCallback(
+      [&service_exited](const std::string& name, int64_t exit, TerminationReason reason) {
+        if (name == kHelperProc) {
+          service_exited = true;
+        }
+      });
+
   auto env = CreateNewEnclosingEnvironment("test-env", std::move(svc));
   WaitForEnclosingEnvToStart(env.get());
   // attempt to connect to service:
@@ -127,7 +101,9 @@ TEST_F(EnclosingEnvTest, RespawnService) {
     ASSERT_EQ(rsp, "hello");
     req_done = true;
   });
-  RunLoopUntil([&req_done]() { return req_done; });
+  RunLoopUntil([&req_done, &got_error]() { return req_done || got_error; });
+  ASSERT_TRUE(req_done);
+  ASSERT_FALSE(got_error);
 
   // reset flag, and send the kill string
   req_done = false;
@@ -137,12 +113,24 @@ TEST_F(EnclosingEnvTest, RespawnService) {
     req_done = true;
   });
 
-  // wait until we see the response AND the channel closing
-  RunLoopUntil([&req_done, &got_error]() { return req_done && got_error; });
+  // wait until we see the response AND the channel closing AND we're notified that the service
+  // exited.
+  RunLoopUntil([&req_done, &got_error, &service_exited]() {
+    return req_done && got_error && service_exited;
+  });
 
   // Try to communicate with server again, we expect
   // it to be spun up once more
-  ASSERT_TRUE(TryEchoService(env));
+  env->ConnectToService(echo.NewRequest());
+  req_done = false;
+  got_error = false;
+  echo->EchoString("hello", [&req_done](::fidl::StringPtr rsp) {
+    ASSERT_EQ(rsp, "hello");
+    req_done = true;
+  });
+  RunLoopUntil([&req_done, &got_error]() { return req_done || got_error; });
+  ASSERT_TRUE(req_done);
+  ASSERT_FALSE(got_error);
 }
 
 TEST_F(EnclosingEnvTest, EnclosingEnvOnASeperateThread) {
@@ -181,6 +169,16 @@ TEST_F(EnclosingEnvTest, RespawnServiceWithHandler) {
         return linfo;
       },
       echo::Echo::Name_);
+
+  // observe service termination.
+  bool service_exited = false;
+  svc->SetServiceTerminatedCallback(
+      [&service_exited](const std::string& name, int64_t exit, TerminationReason reason) {
+        if (name == kHelperProc) {
+          service_exited = true;
+        }
+      });
+
   auto env = CreateNewEnclosingEnvironment("test-env", std::move(svc));
   WaitForEnclosingEnvToStart(env.get());
   // attempt to connect to service:
@@ -195,7 +193,9 @@ TEST_F(EnclosingEnvTest, RespawnServiceWithHandler) {
     ASSERT_EQ(rsp, "hello");
     req_done = true;
   });
-  RunLoopUntil([&req_done]() { return req_done; });
+  RunLoopUntil([&req_done, &got_error]() { return req_done || got_error; });
+  ASSERT_TRUE(req_done);
+  ASSERT_FALSE(got_error);
   // check that the launch info factory function was called only once
   EXPECT_EQ(call_counter, 1);
 
@@ -207,12 +207,23 @@ TEST_F(EnclosingEnvTest, RespawnServiceWithHandler) {
     req_done = true;
   });
 
-  // wait until we see the response AND the channel closing
-  RunLoopUntil([&req_done, &got_error]() { return req_done && got_error; });
+  // wait until we see the response AND the channel closing AND that the service exited.
+  RunLoopUntil([&req_done, &got_error, &service_exited]() {
+    return req_done && got_error && service_exited;
+  });
 
   // Try to communicate with server again, we expect
   // it to be spun up once more
-  ASSERT_TRUE(TryEchoService(env));
+  env->ConnectToService(echo.NewRequest());
+  req_done = false;
+  got_error = false;
+  echo->EchoString("hello", [&req_done](::fidl::StringPtr rsp) {
+    ASSERT_EQ(rsp, "hello");
+    req_done = true;
+  });
+  RunLoopUntil([&req_done, &got_error]() { return req_done || got_error; });
+  ASSERT_TRUE(req_done);
+  ASSERT_FALSE(got_error);
 
   // check that the launch info factory function was called only TWICE
   EXPECT_EQ(call_counter, 2);
