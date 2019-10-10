@@ -31,6 +31,8 @@ source_set("mixer") {
     "point_sampler.h",
     "position_manager.cc",
     "position_manager.h",
+    "sinc_sampler.cc",
+    "sinc_sampler.h",
   ]
 
   public_deps = [
@@ -79,6 +81,7 @@ executable("unittest_bin") {
     "gain_unittest.cc",
     "output_producer_unittest.cc",
     "position_manager_unittest.cc",
+    "sinc_sampler_unittest.cc",
   ]
 
   deps = [

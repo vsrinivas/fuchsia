@@ -95,6 +95,40 @@ TEST(DataFormats, LinearSampler_Float) {
                                  Resampler::LinearInterpolation));
 }
 
+// TODO(mpuryear): use value-parameterized tests for these and other test cases throughout this file
+//
+// Create WindowedSinc objects for incoming buffers of type uint8
+TEST(DataFormats, SincSampler_8) {
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 22050, 2, 44100,
+                                 Resampler::WindowedSinc));
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 2, 44100, 1, 48000,
+                                 Resampler::WindowedSinc));
+}
+
+// Create SincSampler objects for incoming buffers of type int16
+TEST(DataFormats, SincSampler_16) {
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 44100, 1, 48000,
+                                 Resampler::WindowedSinc));
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 4, 48000, 2, 44100,
+                                 Resampler::WindowedSinc));
+}
+
+// Create SincSampler objects for incoming buffers of type int24-in-32
+TEST(DataFormats, SincSampler_24) {
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 2, 16000, 2,
+                                 48000, Resampler::WindowedSinc));
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1, 16000, 4,
+                                 48000, Resampler::WindowedSinc));
+}
+
+// Create SincSampler objects for incoming buffers of type float
+TEST(DataFormats, SincSampler_Float) {
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2, 48000, 2, 44100,
+                                 Resampler::WindowedSinc));
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2, 48000, 4, 44100,
+                                 Resampler::WindowedSinc));
+}
+
 //
 // PassThru tests - can audio data flow through the different stages in our
 // system without being altered, using numerous possible configurations?

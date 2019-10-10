@@ -12,6 +12,10 @@
 
 namespace media::audio::test {
 
+float to_frac_usecs(zx::duration duration) {
+  return static_cast<double>(duration.to_nsecs()) / 1000.0;
+}
+
 // Convenience abbreviation within this source file to shorten names
 using Resampler = ::media::audio::Mixer::Resampler;
 
@@ -31,6 +35,7 @@ void AudioPerformance::ProfileMixers() {
 
   ProfileSampler(Resampler::SampleAndHold);
   ProfileSampler(Resampler::LinearInterpolation);
+  ProfileSampler(Resampler::WindowedSinc);
 
   DisplayMixerColumnHeader();
   DisplayMixerConfigLegend();
@@ -40,14 +45,14 @@ void AudioPerformance::ProfileMixers() {
 }
 
 void AudioPerformance::DisplayMixerColumnHeader() {
-  printf("Configuration\t\t    Mean\t   First\t    Best\t   Worst\n");
+  printf("Configuration\t\t     Mean\t    First\t     Best\t    Worst\n");
 }
 
 void AudioPerformance::DisplayMixerConfigLegend() {
   printf("\n   Elapsed time in microsec for Mix() to produce %u frames\n", kFreqTestBufSize);
   printf(
       "\n   For mixer configuration R-fff.IOGAnnnnn, where:\n"
-      "\t     R: Resampler type - [P]oint, [L]inear\n"
+      "\t     R: Resampler type - [P]oint, [L]inear, [W]indowed Sinc\n"
       "\t   fff: Format - un8, i16, i24, f32,\n"
       "\t     I: Input channels (one-digit number),\n"
       "\t     O: Output channels (one-digit number),\n"
@@ -60,16 +65,14 @@ void AudioPerformance::DisplayMixerConfigLegend() {
 void AudioPerformance::ProfileSampler(Resampler sampler_type) {
   ProfileSamplerIn(1, sampler_type);
   ProfileSamplerIn(2, sampler_type);
-  ProfileSamplerIn(3, sampler_type);
   ProfileSamplerIn(4, sampler_type);
 }
 
 // Based on our lack of support for arbitrary channelization, only profile the following channel
-// configurations: 1-1, 1-2, 2-1, 2-2, 3-3, 4-4
+// configurations: 1-1, 1-2, 2-1, 2-2, 4-4
 void AudioPerformance::ProfileSamplerIn(uint32_t num_input_chans, Resampler sampler_type) {
   if (num_input_chans > 2) {
     ProfileSamplerChans(num_input_chans, num_input_chans, sampler_type);
-
   } else {
     ProfileSamplerChans(num_input_chans, 1, sampler_type);
     ProfileSamplerChans(num_input_chans, 2, sampler_type);
@@ -105,8 +108,11 @@ void AudioPerformance::ProfileSamplerChansRateScale(uint32_t num_input_chans,
                                                     uint32_t num_output_chans,
                                                     Resampler sampler_type, uint32_t source_rate,
                                                     GainType gain_type) {
+  // Overwrite any previous results
   ProfileSamplerChansRateScaleMix(num_input_chans, num_output_chans, sampler_type, source_rate,
                                   gain_type, false);
+
+  // Accumulate with previous results
   ProfileSamplerChansRateScaleMix(num_input_chans, num_output_chans, sampler_type, source_rate,
                                   gain_type, true);
 }
@@ -173,8 +179,6 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
   OverwriteCosine(source.get(), source_buffer_size * num_input_chans,
                   FrequencySet::kReferenceFreqs[FrequencySet::kRefFreqIdx], amplitude);
 
-  zx_duration_t first, worst, best, total_elapsed = 0;
-
   Bookkeeping info;
   info.step_size = (source_rate * Mixer::FRAC_ONE) / dest_rate;
   info.denominator = dest_rate;
@@ -211,8 +215,10 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
   info.gain.SetDestGain(Gain::kUnityGainDb);
   auto width = mixer->pos_filter_width();
 
+  zx::duration first, worst, best, total_elapsed{0};
+
   for (uint32_t i = 0; i < kNumMixerProfilerRuns; ++i) {
-    info.gain.SetSourceGain(source_mute ? gain_db : fuchsia::media::audio::MUTED_GAIN_DB);
+    info.gain.SetSourceGain(source_mute ? fuchsia::media::audio::MUTED_GAIN_DB : gain_db);
 
     if (gain_type == GainType::Ramped) {
       // Ramp within the "greater than Mute but less than Unity" range. Ramp duration assumes a mix
@@ -238,7 +244,7 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
       }
     }
 
-    auto elapsed = (zx::clock::get_monotonic() - start_time).get();
+    auto elapsed = zx::clock::get_monotonic() - start_time;
 
     if (i > 0) {
       worst = std::max(worst, elapsed);
@@ -251,8 +257,6 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
     total_elapsed += elapsed;
   }
 
-  auto mean = static_cast<double>(total_elapsed) / kNumMixerProfilerRuns;
-
   char sampler_ch;
   switch (sampler_type) {
     case Resampler::SampleAndHold:
@@ -260,6 +264,9 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
       break;
     case Resampler::LinearInterpolation:
       sampler_ch = 'L';
+      break;
+    case Resampler::WindowedSinc:
+      sampler_ch = 'W';
       break;
     case Resampler::Default:
       FXL_LOG(ERROR) << "Test should specify the Resampler exactly";
@@ -269,8 +276,9 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
   printf("%c-%s.%u%u%c%c%u:", sampler_ch, format.c_str(), num_input_chans, num_output_chans,
          gain_char, (accumulate ? '+' : '-'), source_rate);
 
-  printf("\t%9.3lf\t%9.3lf\t%9.3lf\t%9.3lf\n", mean / 1000.0, first / 1000.0, best / 1000.0,
-         worst / 1000.0);
+  auto mean = total_elapsed / kNumMixerProfilerRuns;
+  printf("\t%10.3lf\t%10.3lf\t%10.3lf\t%10.3lf\n", to_frac_usecs(mean), to_frac_usecs(first),
+         to_frac_usecs(best), to_frac_usecs(worst));
 }
 
 void AudioPerformance::DisplayOutputColumnHeader() {
@@ -295,7 +303,6 @@ void AudioPerformance::ProfileOutputProducers() {
   ProfileOutputChans(1);
   ProfileOutputChans(2);
   ProfileOutputChans(4);
-  ProfileOutputChans(6);
   ProfileOutputChans(8);
 
   DisplayOutputColumnHeader();
@@ -368,14 +375,14 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans, OutputDataRange dat
       return;
   }
 
-  zx_duration_t first, worst, best, total_elapsed = 0;
+  zx::duration first, worst, best, total_elapsed{0};
 
   if (data_range == OutputDataRange::Silence) {
     for (uint32_t i = 0; i < kNumOutputProfilerRuns; ++i) {
       auto start_time = zx::clock::get_monotonic();
 
       output_producer->FillWithSilence(dest.get(), kFreqTestBufSize);
-      auto elapsed = (zx::clock::get_monotonic() - start_time).get();
+      auto elapsed = zx::clock::get_monotonic() - start_time;
 
       if (i > 0) {
         worst = std::max(worst, elapsed);
@@ -392,7 +399,7 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans, OutputDataRange dat
       auto start_time = zx::clock::get_monotonic();
 
       output_producer->ProduceOutput(accum.get(), dest.get(), kFreqTestBufSize);
-      auto elapsed = (zx::clock::get_monotonic() - start_time).get();
+      auto elapsed = zx::clock::get_monotonic() - start_time;
 
       if (i > 0) {
         worst = std::max(worst, elapsed);
@@ -406,9 +413,9 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans, OutputDataRange dat
     }
   }
 
-  auto mean = static_cast<double>(total_elapsed) / kNumOutputProfilerRuns;
+  auto mean = total_elapsed / kNumOutputProfilerRuns;
   printf("%s-%c%u:\t%9.3lf\t%9.3lf\t%9.3lf\t%9.3lf\n", format.c_str(), range, num_chans,
-         mean / 1000.0, first / 1000.0, best / 1000.0, worst / 1000.0);
+         to_frac_usecs(mean), to_frac_usecs(first), to_frac_usecs(best), to_frac_usecs(worst));
 }
 
 }  // namespace media::audio::test

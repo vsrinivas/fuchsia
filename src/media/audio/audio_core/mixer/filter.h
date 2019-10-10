@@ -17,8 +17,8 @@ static constexpr uint32_t kSincFilterSideLength = (kSincFilterSideTaps + 1) << k
 
 // This class represents a convolution-based filter, to be applied to an audio stream. Subclasses
 // represent specific filters for nearest-neighbor interpolation, linear interpolation, and
-// sinc-based band-pass. Note that each child class owns the creatoin and population of its own
-// filter_coefficients vector.  More on these details below.
+// sinc-based band-pass. Note that each child class owns creating and populating its own
+// filter_coefficients vector. More on these details below.
 class Filter {
  public:
   Filter(uint32_t source_rate, uint32_t dest_rate, uint32_t side_width = kSincFilterSideLength,
@@ -90,7 +90,6 @@ class PointFilter : public Filter {
   }
   PointFilter() : PointFilter(48000, 48000){};
 
-  void SetUpFilterCoefficients();
   float ComputeSample(uint32_t frac_offset, float* center) override {
     return ComputeSampleFromTable(filter_coefficients_, frac_offset, center);
   }
@@ -100,6 +99,8 @@ class PointFilter : public Filter {
   float& operator[](size_t index) { return filter_coefficients_[index]; }
 
  private:
+  void SetUpFilterCoefficients();
+
   std::vector<float> filter_coefficients_;
 };
 
@@ -122,7 +123,6 @@ class LinearFilter : public Filter {
   }
   LinearFilter() : LinearFilter(48000, 48000){};
 
-  void SetUpFilterCoefficients();
   float ComputeSample(uint32_t frac_offset, float* center) override {
     return ComputeSampleFromTable(filter_coefficients_, frac_offset, center);
   }
@@ -132,6 +132,8 @@ class LinearFilter : public Filter {
   float& operator[](size_t index) { return filter_coefficients_[index]; }
 
  private:
+  void SetUpFilterCoefficients();
+
   std::vector<float> filter_coefficients_;
 };
 
@@ -153,7 +155,6 @@ class SincFilter : public Filter {
            1u;
   }
 
-  void SetUpFilterCoefficients();
   float ComputeSample(uint32_t frac_offset, float* center) override {
     return ComputeSampleFromTable(filter_coefficients_, frac_offset, center);
   }
@@ -163,6 +164,8 @@ class SincFilter : public Filter {
   float& operator[](size_t index) { return filter_coefficients_[index]; }
 
  private:
+  void SetUpFilterCoefficients();
+
   std::vector<float> filter_coefficients_;
 };
 

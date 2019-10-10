@@ -34,6 +34,7 @@ class Mixer {
     Default = 0,
     SampleAndHold,
     LinearInterpolation,
+    WindowedSinc,
   };
 
   //

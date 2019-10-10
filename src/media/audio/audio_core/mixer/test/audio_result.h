@@ -148,25 +148,26 @@ class AudioResult {
   // certain tests, only one rate is used. For out-of-band rejection tests, a set of frequencies
   // beyond the Nyquist limit is used (currently 8).
 
-  // Worst-case measured tolerance, across potentially more than one test case. Compared to 1:1
-  // accuracy (kLevelToleranceSourceFloat), LinearSampler boosts low-frequencies during any
-  // significant up-sampling (e.g. 1:2). In effect, this const represents how far above 0 dBFS we
-  // allow for those (any) freqs.
+  // Worst-case measured tolerance, across all test cases. Compared to performance on 1:1 ratios
+  // (kLevelToleranceSourceFloat), linearSampler and sinc samplers boost low-frequencies during any
+  // up-sampling (e.g. 1:2), the WindowedSinc sampler significantly so (as much as 0.05 dB). In
+  // effect, this const represents how far above 0 dBFS we allow for resampler frequency response.
   static double LevelToleranceInterpolation;
   // Previously-cached tolerance. If difference between input magnitude and result magnitude EXCEEDS
   // this tolerance, then the test case fails.
-  static constexpr double kPrevLevelToleranceInterpolation = 6.5187815e-05;
+  static constexpr double kPrevLevelToleranceInterpolation = 5.4428201e-02;
 
   // Frequency Response
   //
   // What is our received level (in dBFS), when sending sinusoids through our mixer at certain
-  // resampling ratios. PointSampler and LinearSampler are specifically targeted with resampling
-  // ratios that represent how the current system uses them. A more exhaustive set is available for
+  // resampling ratios. Each resampler is specifically targeted with precise resampling ratios that
+  // represent various ways that the system uses them. A more exhaustive set is available for
   // in-depth testing outside of CQ (if the "--full" switch is specified). Otherwise (in standard
-  // mode), we test PointSampler at 1:1 (no SRC) and 2:1 (96k-to-48k), and LinearSampler at 294:160
-  // and 147:160 (e.g. 88.2k-to-48k and 44.1k-to-48k). Our entire set of ratios is represented in
-  // the arrays listed below, referred to by these labels: Unity (1:1), Down0 (191999:48000), Down1
-  // (2:1), Down2 (294:160), Up1 (147:160), Up2 (1:2), Up3 (12001:48000) and Micro (47999:48000).
+  // mode), we test PointSampler at 1:1 (no SRC), 2:1 (96k-to-48k) and 1:2 (24k-to-48k), and
+  // both LinearSampler and SincSampler at 294:160 (88.2k-to-48k), 147:160 (44.1k-to-48k) and
+  // 47999:48000 ("micro-SRC"). Our entire set of ratios is represented in the arrays listed below,
+  // referred to by these labels: Unity (1:1), Down0 (191999:48000), Down1 (2:1), Down2 (294:160),
+  // Up1 (147:160), Up2 (1:2), Up3 (12001:48000) and Micro (47999:48000).
 
   // For the specified resampler, and for specified rate conversion, these are currently-measured
   // results (in dBFS) for level response at a set of reference frequencies. The input sinusoid is
@@ -189,6 +190,16 @@ class AudioResult {
   static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespLinearUp2;
   static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespLinearUp3;
   static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespLinearMicro;
+
+  // Same as the above section, but for Windowed Sinc
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespSincUnity;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespSincDown0;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespSincDown1;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespSincDown2;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespSincUp1;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespSincUp2;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespSincUp3;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespSincMicro;
 
   //
   // Val-being-checked (in dBFS) must equal or exceed this value. It also must not exceed 0.0dB by
@@ -218,6 +229,16 @@ class AudioResult {
   static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespLinearUp2;
   static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespLinearUp3;
   static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespLinearMicro;
+
+  // Same as the above section, but for Windows Sinc
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespSincUnity;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespSincDown0;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespSincDown1;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespSincDown2;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespSincUp1;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespSincUp2;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespSincUp3;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespSincMicro;
 
   // Frequency Response results measured for a few frequencies during the NxN tests.
   static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespPointNxN;
@@ -257,6 +278,16 @@ class AudioResult {
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearUp3;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearMicro;
 
+  // Same as the above section, but for Windowed Sinc
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincUnity;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincDown0;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincDown1;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincDown2;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincUp1;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincUp2;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincUp3;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincMicro;
+
   // Previous-cached SINAD results for this sampler and rate conversion ratio, in dBr. If current
   // result is LESS than this value, the test case fails.
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadPointUnity;
@@ -277,6 +308,16 @@ class AudioResult {
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearUp2;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearUp3;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearMicro;
+
+  // Same as the above section, but for Windowed Sinc
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincUnity;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincDown0;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincDown1;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincDown2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincUp1;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincUp2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincUp3;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincMicro;
 
   // SINAD results measured for a few frequencies during the NxN tests.
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointNxN;
@@ -313,6 +354,15 @@ class AudioResult {
   static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearUp3;
   static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearMicro;
 
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseSincUnity;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseSincDown0;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseSincDown1;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseSincDown2;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseSincUp1;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseSincUp2;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseSincUp3;
+  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseSincMicro;
+
   // For Phase, measured value must exceed or equal the below cached value.
   static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhasePointUnity;
   static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhasePointDown0;
@@ -331,6 +381,15 @@ class AudioResult {
   static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseLinearUp2;
   static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseLinearUp3;
   static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseLinearMicro;
+
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseSincUnity;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseSincDown0;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseSincDown1;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseSincDown2;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseSincUp1;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseSincUp2;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseSincUp3;
+  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseSincMicro;
 
   // Phase results measured for a few frequencies during the NxN tests.
   static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhasePointNxN;
