@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/auto_call.h>
-#include <unittest/unittest.h>
-
 #include <utility>
 
-static volatile int test_func_count;
+#include <fbl/auto_call.h>
+#include <zxtest/zxtest.h>
 
-__NO_INLINE static void test_func() { test_func_count++; }
+namespace {
 
-static bool auto_call_test() {
+volatile int test_func_count;
+
+__NO_INLINE void test_func() { test_func_count++; }
+
+TEST(AutoCallTest, MainTest) {
   //    extern int foo();
   //    int a;
   //
@@ -24,8 +26,6 @@ static bool auto_call_test() {
   //
   //    // abort the call
   //    ac2.cancel();
-
-  BEGIN_TEST;
 
   // mark as volatile to make sure it generates code
   volatile int a;
@@ -91,9 +91,6 @@ static bool auto_call_test() {
     EXPECT_EQ(test_func_count, 1, "autocall has run once");
   }
   EXPECT_EQ(test_func_count, 2, "autocall has run twice");
-  END_TEST;
 }
 
-BEGIN_TEST_CASE(auto_call_tests)
-RUN_NAMED_TEST("Auto call test", auto_call_test)
-END_TEST_CASE(auto_call_tests)
+}  // namespace
