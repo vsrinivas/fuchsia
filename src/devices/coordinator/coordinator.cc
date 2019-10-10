@@ -1251,23 +1251,22 @@ void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> c
   auto task = SuspendTask::Create(sys_device(), ctx.sflags(), std::move(completion));
   suspend_context().set_task(std::move(task));
 
-  auto status = async::PostDelayedTask(
-      dispatcher(),
-      [this, callback] {
-        if (!InSuspend()) {
-          return;  // Suspend failed to complete.
-        }
-        auto& ctx = suspend_context();
-        log(ERROR, "devcoordinator: DEVICE SUSPEND TIMED OUT\n");
-        log(ERROR, "  sflags: 0x%08x\n", ctx.sflags());
-        dump_suspend_task_dependencies(ctx.task());
-        if (suspend_fallback()) {
-          ::suspend_fallback(root_resource(), ctx.sflags());
-          // Unless in test env, we should not reach here.
-          callback(ZX_ERR_TIMED_OUT);
-        }
-      },
-      zx::sec(30));
+  auto status = async::PostDelayedTask(dispatcher(),
+                                       [this, callback] {
+                                         if (!InSuspend()) {
+                                           return;  // Suspend failed to complete.
+                                         }
+                                         auto& ctx = suspend_context();
+                                         log(ERROR, "devcoordinator: DEVICE SUSPEND TIMED OUT\n");
+                                         log(ERROR, "  sflags: 0x%08x\n", ctx.sflags());
+                                         dump_suspend_task_dependencies(ctx.task());
+                                         if (suspend_fallback()) {
+                                           ::suspend_fallback(root_resource(), ctx.sflags());
+                                           // Unless in test env, we should not reach here.
+                                           callback(ZX_ERR_TIMED_OUT);
+                                         }
+                                       },
+                                       zx::sec(30));
   if (status != ZX_OK) {
     log(ERROR, "devcoordinator: Failed to create suspend timeout watchdog\n");
   }

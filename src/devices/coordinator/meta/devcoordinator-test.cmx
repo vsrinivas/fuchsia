@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/devcoordinator-system-instance-test"
+        "binary": "test/devcoordinator-test"
     },
     "sandbox": {
         "features": [

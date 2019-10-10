@@ -6,6 +6,7 @@
 
 #include <zxtest/zxtest.h>
 
+namespace {
 void CreateBootArgs(const char* config, size_t size, devmgr::BootArgs* boot_args) {
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(size, 0, &vmo);
@@ -57,3 +58,4 @@ TEST(BootArgsTestCase, Collect) {
   ASSERT_STR_EQ("key2=value2", out[1]);
   ASSERT_STR_EQ("key3=value3", out[2]);
 }
+}  // namespace

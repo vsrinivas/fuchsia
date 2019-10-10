@@ -97,68 +97,23 @@ generate_manifest("coordinator.bootfs") {
            rebase_path("$root_build_dir/coordinator", root_build_dir) ]
 }
 
-executable("devcoordinator-binding-test") {
-  output_name = "devcoordinator-binding-test"
+executable("devcoordinator-test") {
+  output_name = "devcoordinator-test"
   testonly = true
 
   sources = [
+    "coordinator-test-utils.cc",
+    "multiple-device-test-utils.cc",
     "binding-test.cc",
-  ]
-
-  deps = [
-    ":lib",
-    "//zircon/public/lib/zxtest",
-  ]
-}
-
-executable("devcoordinator-boot-args-test") {
-  output_name = "devcoordinator-boot-args-test"
-  testonly = true
-
-  sources = [
+    "misc-tests.cc",
     "boot-args-test.cc",
-  ]
-
-  deps = [
-    ":lib",
-    "//zircon/public/lib/zxtest",
-  ]
-}
-
-executable("devcoordinator-coordinator-test") {
-  output_name = "devcoordinator-coordinator-test"
-  testonly = true
-
-  sources = [
-    "coordinator-test.cc",
-  ]
-
-  deps = [
-    ":lib",
-    "//zircon/public/lib/zxtest",
-  ]
-}
-
-executable("devcoordinator-task-test") {
-  output_name = "devcoordinator-task-test"
-  testonly = true
-
-  sources = [
     "task-test.cc",
-  ]
-
-  deps = [
-    ":lib",
-    "//zircon/public/lib/zxtest",
-  ]
-}
-
-executable("devcoordinator-system-instance-test") {
-  output_name = "devcoordinator-system-instance-test"
-  testonly = true
-
-  sources = [
     "system-instance-test.cc",
+    "multiple-device-test.cc",
+    "suspend-tests.cc",
+    "unbind-tests.cc",
+    "composite-device-tests.cc",
+    "resume-tests.cc"
   ]
 
   deps = [
@@ -171,50 +126,18 @@ test_package("coordinator_tests") {
   deprecated_shell = "//build"
 
   deps = [
-    ":devcoordinator-binding-test",
-    ":devcoordinator-boot-args-test",
-    ":devcoordinator-coordinator-test",
-    ":devcoordinator-system-instance-test",
-    ":devcoordinator-task-test",
+    ":devcoordinator-test",
   ]
 
   binaries = [
     {
-      name = "devcoordinator-binding-test"
-    },
-    {
-      name = "devcoordinator-boot-args-test"
-    },
-    {
-      name = "devcoordinator-coordinator-test"
-    },
-    {
-      name = "devcoordinator-task-test"
-    },
-    {
-      name = "devcoordinator-system-instance-test"
+      name = "devcoordinator-test"
     },
   ]
 
   tests = [
     {
-      name = "devcoordinator-binding-test"
-      environments = basic_envs
-    },
-    {
-      name = "devcoordinator-boot-args-test"
-      environments = basic_envs
-    },
-    {
-      name = "devcoordinator-coordinator-test"
-      environments = basic_envs
-    },
-    {
-      name = "devcoordinator-task-test"
-      environments = basic_envs
-    },
-    {
-      name = "devcoordinator-system-instance-test"
+      name = "devcoordinator-test"
       environments = basic_envs
     },
   ]
