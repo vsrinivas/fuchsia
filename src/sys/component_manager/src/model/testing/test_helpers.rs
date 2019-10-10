@@ -149,7 +149,7 @@ pub struct DestroyHook {
 
 impl DestroyHook {
     /// Returns `DestroyHook` and channels on which to signal on `on_stop_instance` and
-    /// be signalled for `on_destroy_instance`.
+    /// be signalled for `on_post_destroy_instance`.
     pub fn new(moniker: AbsoluteMoniker) -> (Arc<Self>, mpsc::Sender<()>, mpsc::Receiver<()>) {
         let (stop_send, stop_recv) = mpsc::channel(0);
         let (destroy_send, destroy_recv) = mpsc::channel(0);
@@ -172,7 +172,7 @@ impl DestroyHook {
         Ok(())
     }
 
-    async fn on_destroy_instance_async(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
+    async fn on_post_destroy_instance_async(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
         if realm.abs_moniker == self.moniker {
             let mut send = self.destroy_send.lock().await;
             send.send(()).await.expect("failed to send destroy signal");
@@ -185,8 +185,8 @@ impl Hook for DestroyHook {
     fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         Box::pin(async move {
             match event {
-                Event::DestroyInstance { realm } => {
-                    self.on_destroy_instance_async(realm.clone()).await?;
+                Event::PostDestroyInstance { realm } => {
+                    self.on_post_destroy_instance_async(realm.clone()).await?;
                 }
                 Event::StopInstance { realm } => {
                     self.on_stop_instance_async(realm.clone()).await?;

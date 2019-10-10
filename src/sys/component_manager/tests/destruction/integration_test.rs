@@ -42,7 +42,7 @@ async fn destruction() -> Result<(), Error> {
         .root_realm
         .hooks
         .install(vec![HookRegistration {
-            event_type: EventType::DestroyInstance,
+            event_type: EventType::PostDestroyInstance,
             callback: destroy_hook.clone(),
         }])
         .await;

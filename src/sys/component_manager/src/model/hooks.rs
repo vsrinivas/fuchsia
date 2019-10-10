@@ -22,11 +22,9 @@ pub trait Hook {
 pub enum EventType {
     AddDynamicChild,
     BindInstance,
-    // TODO(xbhatnag): Rename DestroyInstance to PostDestroyInstance
-    DestroyInstance,
-    // TODO(xbhatnag): Unify PreDestroyInstance and RemoveDynamicChild
+    PostDestroyInstance,
     PreDestroyInstance,
-    RemoveDynamicChild,
+    DestroyChild,
     RouteFrameworkCapability,
     StopInstance,
 }
@@ -48,14 +46,10 @@ pub enum Event {
         live_child_realms: Vec<Arc<Realm>>,
         routing_facade: RoutingFacade,
     },
-    DestroyInstance {
+    PostDestroyInstance {
         realm: Arc<Realm>,
     },
     PreDestroyInstance {
-        parent_realm: Arc<Realm>,
-        child_moniker: ChildMoniker,
-    },
-    RemoveDynamicChild {
         realm: Arc<Realm>,
     },
     RouteFrameworkCapability {
@@ -76,9 +70,8 @@ impl Event {
         match self {
             Event::AddDynamicChild { .. } => EventType::AddDynamicChild,
             Event::BindInstance { .. } => EventType::BindInstance,
-            Event::DestroyInstance { .. } => EventType::DestroyInstance,
+            Event::PostDestroyInstance { .. } => EventType::PostDestroyInstance,
             Event::PreDestroyInstance { .. } => EventType::PreDestroyInstance,
-            Event::RemoveDynamicChild { .. } => EventType::RemoveDynamicChild,
             Event::RouteFrameworkCapability { .. } => EventType::RouteFrameworkCapability,
             Event::StopInstance { .. } => EventType::StopInstance,
         }

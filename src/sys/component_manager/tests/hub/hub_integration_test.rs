@@ -97,11 +97,9 @@ impl TestRunner {
         let expected_moniker = AbsoluteMoniker::from(components);
         assert_eq!(breakpoint.event.type_(), expected_event);
         let moniker = match &breakpoint.event {
-            Event::PreDestroyInstance { parent_realm, child_moniker } => {
-                parent_realm.abs_moniker.child(child_moniker.clone())
-            }
+            Event::PreDestroyInstance { realm } => realm.abs_moniker.clone(),
             Event::StopInstance { realm } => realm.abs_moniker.clone(),
-            Event::DestroyInstance { realm } => realm.abs_moniker.clone(),
+            Event::PostDestroyInstance { realm } => realm.abs_moniker.clone(),
             _ => AbsoluteMoniker::root(),
         };
         assert_eq!(moniker, expected_moniker);
@@ -275,7 +273,11 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/hub_collection_realm.cm";
     let test_runner = TestRunner::new_with_breakpoints(
         root_component_url,
-        vec![EventType::PreDestroyInstance, EventType::StopInstance, EventType::DestroyInstance],
+        vec![
+            EventType::PreDestroyInstance,
+            EventType::StopInstance,
+            EventType::PostDestroyInstance,
+        ],
     )
     .await?;
 
@@ -368,7 +370,10 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
 
     // Wait for the dynamic child's static child to be destroyed
     let breakpoint = test_runner
-        .expect_breakpoint(EventType::DestroyInstance, vec!["coll:simple_instance:1", "child:0"])
+        .expect_breakpoint(
+            EventType::PostDestroyInstance,
+            vec!["coll:simple_instance:1", "child:0"],
+        )
         .await;
 
     // The dynamic child's static child should not be visible in the hub anymore
@@ -381,7 +386,7 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
 
     // Wait for the dynamic child to be destroyed
     let breakpoint = test_runner
-        .expect_breakpoint(EventType::DestroyInstance, vec!["coll:simple_instance:1"])
+        .expect_breakpoint(EventType::PostDestroyInstance, vec!["coll:simple_instance:1"])
         .await;
 
     // After deletion, verify that parent can no longer see the dynamic child in the Hub

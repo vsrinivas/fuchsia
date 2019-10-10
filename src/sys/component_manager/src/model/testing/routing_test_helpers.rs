@@ -243,7 +243,7 @@ impl RoutingTest {
             .root_realm
             .hooks
             .install(vec![HookRegistration {
-                event_type: EventType::DestroyInstance,
+                event_type: EventType::PostDestroyInstance,
                 callback: destroy_hook.clone(),
             }])
             .await;
@@ -977,11 +977,8 @@ impl OutDir {
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .unwrap();
-        let fut = hippo_proxy
-            .write(&mut b"hippo".to_vec().drain(..));
-        let (s, _) = fut
-            .await
-            .expect("failed to write to file");
+        let fut = hippo_proxy.write(&mut b"hippo".to_vec().drain(..));
+        let (s, _) = fut.await.expect("failed to write to file");
         assert_eq!(zx::Status::OK, zx::Status::from_raw(s));
     }
 

@@ -237,39 +237,30 @@ async fn do_delete_child(
     realm: Arc<Realm>,
     moniker: ChildMoniker,
 ) -> Result<(), ModelError> {
-    enum Result {
-        // Child was found, return notification for the Destroy action on child.
-        Found(Notification, Arc<Realm>),
-        // Child was not found.
-        NotFound,
-    }
-    let event =
-        Event::PreDestroyInstance { parent_realm: realm.clone(), child_moniker: moniker.clone() };
-    realm.hooks.dispatch(&event).await?;
-
-    let result = {
+    let child_realm = {
         let state = realm.lock_state().await;
         let state = state.as_ref().expect("do_delete_child: not resolved");
-        if let Some(child_realm) = state.all_child_realms().get(&moniker).map(|r| r.clone()) {
-            let nf =
-                Realm::register_action(child_realm.clone(), model.clone(), Action::Destroy).await?;
-            Result::Found(nf, child_realm)
-        } else {
-            Result::NotFound
-        }
+        state.all_child_realms().get(&moniker).map(|r| r.clone())
     };
-    match result {
-        Result::Found(nf, child_realm) => {
-            nf.await?;
-            {
-                let mut state = realm.lock_state().await;
-                state.as_mut().expect("do_delete_child: not resolved").remove_child_realm(&moniker);
-            }
-            let event = Event::DestroyInstance { realm: child_realm.clone() };
-            child_realm.hooks.dispatch(&event).await?;
+
+    // The child may not exist or may already be deleted by a previous DeleteChild action.
+    if let Some(child_realm) = child_realm {
+        let event = Event::PreDestroyInstance { realm: child_realm.clone() };
+        child_realm.hooks.dispatch(&event).await?;
+
+        let nf =
+            Realm::register_action(child_realm.clone(), model.clone(), Action::Destroy).await?;
+        nf.await?;
+
+        {
+            let mut state = realm.lock_state().await;
+            state.as_mut().expect("do_delete_child: not resolved").remove_child_realm(&moniker);
         }
-        Result::NotFound => {}
+
+        let event = Event::PostDestroyInstance { realm: child_realm.clone() };
+        child_realm.hooks.dispatch(&event).await?;
     }
+
     Ok(())
 }
 
@@ -562,9 +553,14 @@ mod tests {
         let realm_a = test.look_up(vec!["container:0", "coll:a:1"].into()).await;
         let realm_b = test.look_up(vec!["container:0", "coll:b:2"].into()).await;
         let realm_c = test.look_up(vec!["container:0", "c:0"].into()).await;
+        test.model
+            .bind_instance(realm_container.clone())
+            .await
+            .expect("could not bind to container");
         test.model.bind_instance(realm_a.clone()).await.expect("could not bind to coll:a");
         test.model.bind_instance(realm_b.clone()).await.expect("could not bind to coll:b");
         test.model.bind_instance(realm_c.clone()).await.expect("could not bind to coll:b");
+        assert!(is_executing(&realm_container).await);
         assert!(is_executing(&realm_a).await);
         assert!(is_executing(&realm_b).await);
         assert!(is_executing(&realm_c).await);
@@ -1213,10 +1209,16 @@ mod tests {
 
         // Bind to the components, causing them to start. This should cause them to have an
         // `Execution`.
+        let realm_container = test.look_up(vec!["container:0"].into()).await;
         let realm_a = test.look_up(vec!["container:0", "coll:a:1"].into()).await;
         let realm_b = test.look_up(vec!["container:0", "coll:b:2"].into()).await;
+        test.model
+            .bind_instance(realm_container.clone())
+            .await
+            .expect("could not bind to container");
         test.model.bind_instance(realm_a.clone()).await.expect("could not bind to coll:a");
         test.model.bind_instance(realm_b.clone()).await.expect("could not bind to coll:b");
+        assert!(is_executing(&realm_container).await);
         assert!(is_executing(&realm_a).await);
         assert!(is_executing(&realm_b).await);
 
@@ -1654,7 +1656,7 @@ mod tests {
 
             fn hooks(hook: Arc<DestroyErrorHook>) -> Vec<HookRegistration> {
                 vec![HookRegistration {
-                    event_type: EventType::DestroyInstance,
+                    event_type: EventType::PostDestroyInstance,
                     callback: hook.clone(),
                 }]
             }
@@ -1663,7 +1665,7 @@ mod tests {
         impl Hook for DestroyErrorHook {
             fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
                 Box::pin(async move {
-                    if let Event::DestroyInstance { realm } = event {
+                    if let Event::PostDestroyInstance { realm } = event {
                         self.on_destroy_instance_async(realm.clone()).await?;
                     }
                     Ok(())

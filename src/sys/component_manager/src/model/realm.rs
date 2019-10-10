@@ -209,33 +209,26 @@ impl Realm {
         partial_moniker: &'a PartialMoniker,
     ) -> Result<(), ModelError> {
         realm.resolve_decl().await?;
-        let child_realm = {
-            let mut state = realm.lock_state().await;
-            let state = state.as_mut().expect("remove_dynamic_child: not resolved");
-            if let Some(tup) = state.live_child_realms.get(&partial_moniker).map(|t| t.clone()) {
-                let (instance, child_realm) = tup;
+        let mut state = realm.lock_state().await;
+        let state = state.as_mut().expect("remove_dynamic_child: not resolved");
+        if let Some(tup) = state.live_child_realms.get(&partial_moniker).map(|t| t.clone()) {
+            let (instance, _) = tup;
 
-                state.mark_child_realm_deleting(&partial_moniker);
-                let child_moniker = ChildMoniker::from_partial(partial_moniker, instance);
-                let _ = Self::register_action(
-                    realm.clone(),
-                    model,
-                    Action::DeleteChild(child_moniker.clone()),
-                )
-                .await?;
-                child_realm
-            } else {
-                return Err(ModelError::instance_not_found_in_realm(
-                    realm.abs_moniker.clone(),
-                    partial_moniker.clone(),
-                ));
-            }
-        };
-
-        // Call hooks outside of lock
-        let event = Event::RemoveDynamicChild { realm: child_realm.clone() };
-        realm.hooks.dispatch(&event).await?;
-        Ok(())
+            state.mark_child_realm_deleting(&partial_moniker);
+            let child_moniker = ChildMoniker::from_partial(partial_moniker, instance);
+            let _ = Self::register_action(
+                realm.clone(),
+                model,
+                Action::DeleteChild(child_moniker.clone()),
+            )
+            .await?;
+            Ok(())
+        } else {
+            return Err(ModelError::instance_not_found_in_realm(
+                realm.abs_moniker.clone(),
+                partial_moniker.clone(),
+            ));
+        }
     }
 
     /// Performs the shutdown protocol for this component instance.

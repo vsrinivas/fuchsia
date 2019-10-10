@@ -629,7 +629,7 @@ mod tests {
                 callback: destroy_hook.clone(),
             },
             HookRegistration {
-                event_type: EventType::DestroyInstance,
+                event_type: EventType::PostDestroyInstance,
                 callback: destroy_hook.clone(),
             },
         ]);

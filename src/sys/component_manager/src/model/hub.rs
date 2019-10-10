@@ -11,7 +11,6 @@ use {
             addable_directory::{AddableDirectory, AddableDirectoryWithResult},
             error::ModelError,
             hooks::*,
-            ChildMoniker,
         },
     },
     cm_rust::{ComponentDecl, FrameworkCapabilityDecl},
@@ -124,7 +123,7 @@ impl Hub {
             },
             HookRegistration { event_type: EventType::StopInstance, callback: self.inner.clone() },
             HookRegistration {
-                event_type: EventType::DestroyInstance,
+                event_type: EventType::PostDestroyInstance,
                 callback: self.inner.clone(),
             },
         ]
@@ -430,7 +429,10 @@ impl HubInner {
         Ok(())
     }
 
-    async fn on_destroy_instance_async(&self, realm: Arc<model::Realm>) -> Result<(), ModelError> {
+    async fn on_post_destroy_instance_async(
+        &self,
+        realm: Arc<model::Realm>,
+    ) -> Result<(), ModelError> {
         let mut instance_map = self.instances.lock().await;
 
         // TODO(xbhatnag): Investigate error handling scenarios here.
@@ -456,15 +458,13 @@ impl HubInner {
 
     async fn on_pre_destroy_instance_async(
         &self,
-        parent_realm: Arc<model::Realm>,
-        child_moniker: ChildMoniker,
+        realm: Arc<model::Realm>,
     ) -> Result<(), ModelError> {
         let instance_map = self.instances.lock().await;
 
-        let moniker = parent_realm.abs_moniker.child(child_moniker);
-
-        let parent_moniker = moniker.parent().expect("A root component cannot be destroyed");
-        let leaf = moniker.leaf().expect("A root component cannot be destroyed");
+        let parent_moniker =
+            realm.abs_moniker.parent().expect("A root component cannot be destroyed");
+        let leaf = realm.abs_moniker.leaf().expect("A root component cannot be destroyed");
 
         let directory = instance_map[&parent_moniker]
             .children_directory
@@ -474,7 +474,7 @@ impl HubInner {
 
         instance_map[&parent_moniker]
             .deleting_directory
-            .add_node(leaf.as_str(), directory, &moniker)
+            .add_node(leaf.as_str(), directory, &realm.abs_moniker)
             .await?;
 
         Ok(())
@@ -533,15 +533,14 @@ impl model::Hook for HubInner {
                 Event::AddDynamicChild { realm } => {
                     self.on_add_dynamic_child_async(realm.clone()).await?;
                 }
-                Event::PreDestroyInstance { parent_realm, child_moniker } => {
-                    self.on_pre_destroy_instance_async(parent_realm.clone(), child_moniker.clone())
-                        .await?;
+                Event::PreDestroyInstance { realm } => {
+                    self.on_pre_destroy_instance_async(realm.clone()).await?;
                 }
                 Event::StopInstance { realm } => {
                     self.on_stop_instance_async(realm.clone()).await?;
                 }
-                Event::DestroyInstance { realm } => {
-                    self.on_destroy_instance_async(realm.clone()).await?;
+                Event::PostDestroyInstance { realm } => {
+                    self.on_post_destroy_instance_async(realm.clone()).await?;
                 }
                 Event::RouteFrameworkCapability { realm, capability_decl, capability } => {
                     let mut capability = capability.lock().await;
@@ -553,7 +552,6 @@ impl model::Hook for HubInner {
                         )
                         .await?;
                 }
-                _ => {}
             };
             Ok(())
         })

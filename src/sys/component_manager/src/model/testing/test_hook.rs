@@ -125,13 +125,13 @@ impl TestHook {
                 callback: self.inner.clone(),
             },
             HookRegistration {
-                event_type: EventType::RemoveDynamicChild,
+                event_type: EventType::PreDestroyInstance,
                 callback: self.inner.clone(),
             },
             HookRegistration { event_type: EventType::BindInstance, callback: self.inner.clone() },
             HookRegistration { event_type: EventType::StopInstance, callback: self.inner.clone() },
             HookRegistration {
-                event_type: EventType::DestroyInstance,
+                event_type: EventType::PostDestroyInstance,
                 callback: self.inner.clone(),
             },
         ]
@@ -266,13 +266,18 @@ impl Hook for TestHookInner {
                 Event::AddDynamicChild { realm } => {
                     self.create_instance_if_necessary(realm.abs_moniker.clone()).await?;
                 }
-                Event::RemoveDynamicChild { realm } => {
-                    self.remove_instance(realm.abs_moniker.clone()).await?;
+                Event::PreDestroyInstance { realm } => {
+                    // This action only applies to dynamic children
+                    if let Some(child_moniker) = realm.abs_moniker.leaf() {
+                        if child_moniker.collection().is_some() {
+                            self.remove_instance(realm.abs_moniker.clone()).await?;
+                        }
+                    }
                 }
                 Event::StopInstance { realm } => {
                     self.on_stop_instance_async(realm.clone()).await?;
                 }
-                Event::DestroyInstance { realm } => {
+                Event::PostDestroyInstance { realm } => {
                     self.on_destroy_instance_async(realm.clone()).await?;
                 }
                 _ => (),
