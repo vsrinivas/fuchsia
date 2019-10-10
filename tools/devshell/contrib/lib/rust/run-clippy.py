@@ -8,14 +8,14 @@
 import argparse
 import json
 import os
-import platform
 import subprocess
 import sys
 
 from contextlib import contextmanager
 
 import rust
-from rust import ROOT_PATH, FUCHSIA_BUILD_DIR, BUILDTOOLS_DIR, get_rust_target_from_file
+from rust import FUCHSIA_BUILD_DIR, HOST_PLATFORM, PREBUILT_THIRD_PARTY_DIR, \
+    get_rust_target_from_file
 
 PATH = os.environ["PATH"]
 THIRD_PARTY_DEPS_DATA = os.path.join(
@@ -23,6 +23,8 @@ THIRD_PARTY_DEPS_DATA = os.path.join(
 HOST_THIRD_PARTY_DEPS_DATA = os.path.join(
     FUCHSIA_BUILD_DIR, 'host_x64', 'rust_third_party_crates', 'deps_data.json')
 
+# Cargo args to ignore from the deps_data.json files.
+CARGO_IGNORE_ARGS = ['--frozen', '--locked']
 
 @contextmanager
 def cwd(dir):
@@ -84,14 +86,7 @@ def main():
             print "Cargo.toml file not found for %s, try running fx build." % target
             return 1
 
-    host_platform = "%s-%s" % (
-        platform.system().lower().replace("darwin", "mac"),
-        {
-            "x86_64": "x64",
-            "aarch64": "arm64",
-        }[platform.machine()],
-    )
-    rust_prebuilts = os.path.join(BUILDTOOLS_DIR, host_platform, "rust", "bin")
+    rust_prebuilts = os.path.join(PREBUILT_THIRD_PARTY_DIR, "rust", HOST_PLATFORM, "bin")
 
     # The third_party build records the arguments it used to invoke cargo. Use the same ones for
     # the clippy invocation.
@@ -114,6 +109,7 @@ def main():
             cargo_args = host_third_party_deps_data['cargo_args']
         else:
             cargo_args = third_party_deps_data['cargo_args']
+        cargo_args = filter(lambda arg: arg not in CARGO_IGNORE_ARGS, cargo_args)
         # Some crates use #![deny(warnings)], which will cause clippy to fail entirely if it finds
         # issues in those crates. Cap all lints at `warn` to avoid this.
         cargo_args += ['--', '--cap-lints', 'warn']

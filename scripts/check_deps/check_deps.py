@@ -6,9 +6,18 @@
 
 import argparse
 import json
+import platform
 import os.path
 import subprocess
 import sys
+
+HOST_PLATFORM = "%s-%s" % (
+    platform.system().lower().replace("darwin", "mac"),
+    {
+        "x86_64": "x64",
+        "aarch64": "arm64",
+    }[platform.machine()],
+)
 
 fuchsia_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 sys.path.append(os.path.join(fuchsia_root, 'src'))
@@ -19,7 +28,7 @@ allowed_deps = [
     # These dependencies are always allowed:
     # https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/development/source_code/layout.md#dependency-structure
     '//build',
-    '//buildtools',
+    '//prebuilt',
     '//sdk',
     '//third_party',
 
@@ -149,7 +158,7 @@ def main():
         'Set to see all dependency issues')
     args = parser.parse_args()
 
-    gn_binary = os.path.join(fuchsia_root, 'buildtools', 'gn')
+    gn_binary = os.path.join(fuchsia_root, 'prebuilt', 'third_party', 'gn', HOST_PLATFORM, 'gn')
     targets = extract_build_graph(
         gn_binary, os.path.join(fuchsia_root, args.out))
 

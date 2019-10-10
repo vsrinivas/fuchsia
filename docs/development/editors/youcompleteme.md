@@ -16,8 +16,9 @@ You'll also need to setup
 settings path in your editor, in order to disable the internal `use_clangd`
 flag. If you want to use clangd, you can additionally edit that file to set
 `use_clangd` to 1, and `clang_binary_path` to
-`${FUCHSIA_BUILDTOOLS_DIR}/clang/bin/clangd`. Remember that in that case, you'll
-need to build a compilation database with `fx compdb`.
+`${FUCHSIA_DIR}/prebuilt/third_party/clang/${HOST_PLATFORM}/bin/clangd`.
+Remember that in that case, you'll need to build a compilation database with
+`fx compdb`.
 
 {% dynamic else %}
 

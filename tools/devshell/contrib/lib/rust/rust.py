@@ -3,13 +3,22 @@
 # found in the LICENSE file.
 
 import os
+import platform
 import sys
 import subprocess
 
 ROOT_PATH = os.environ["FUCHSIA_DIR"]
 FX_PATH = os.path.join(ROOT_PATH, "scripts", "fx")
 FUCHSIA_BUILD_DIR = os.environ["FUCHSIA_BUILD_DIR"]
-BUILDTOOLS_DIR = os.path.join(ROOT_PATH, "buildtools")
+PREBUILT_DIR = os.path.join(ROOT_PATH, "prebuilt")
+PREBUILT_THIRD_PARTY_DIR = os.path.join(PREBUILT_DIR, "third_party")
+HOST_PLATFORM = "%s-%s" % (
+    platform.system().lower().replace("darwin", "mac"),
+    {
+        "x86_64": "x64",
+        "aarch64": "arm64",
+    }[platform.machine()],
+)
 
 def _walk_up_path(path):
     res = set([path])
@@ -98,7 +107,7 @@ def get_rust_target_from_file(file):
         return None, "Not a Rust file."
     # Query ninja to find the output file.
     ninja_query_args = [
-        os.path.join(BUILDTOOLS_DIR, "ninja"),
+        os.path.join(PREBUILT_THIRD_PARTY_DIR, "ninja", HOST_PLATFORM, "ninja"),
         "-C",
         FUCHSIA_BUILD_DIR,
         "-t",
@@ -131,7 +140,7 @@ def get_rust_target_from_file(file):
     for output_file in output_files:
         # Query GN to get the target that produced that output.
         gn_refs_args = [
-            os.path.join(BUILDTOOLS_DIR, "gn"),
+            os.path.join(PREBUILT_THIRD_PARTY_DIR, "gn", HOST_PLATFORM, "gn"),
             "refs",
             FUCHSIA_BUILD_DIR,
             output_file,
