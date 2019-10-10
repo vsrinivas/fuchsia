@@ -26,7 +26,8 @@ macro_rules! write_ie {
     ( $buf:expr, $id:expr, $( $part:expr ),* ) => {
         {
             let body_len = 0 $( + ::std::mem::size_of_val($part) )*;
-            validate!(body_len <= 255, "Element body length {} exceeds max of 255", body_len);
+            validate!(body_len <= crate::ie::IE_MAX_LEN,
+                "Element body length {} exceeds max of 255", body_len);
             if !$buf.can_append(2 + body_len) {
                 return Err(FrameWriteError::BufferTooSmall);
             }

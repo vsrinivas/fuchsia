@@ -8,3 +8,4 @@ pub const SUPPORTED_RATES_MAX_LEN: usize = 8;
 pub const PREQ_MAX_TARGETS: usize = 20;
 pub const PERR_MAX_DESTINATIONS: usize = 19;
 pub const PERR_MAX_DESTINATION_SIZE: usize = 19;
+pub const IE_MAX_LEN: usize = 255;

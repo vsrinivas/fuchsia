@@ -11,3 +11,6 @@ pub mod client;
 pub mod device;
 pub mod error;
 pub mod timer;
+
+mod rates_writer;
+pub use rates_writer::*;
