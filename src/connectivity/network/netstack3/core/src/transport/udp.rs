@@ -85,18 +85,32 @@ impl From<UdpConnId> for usize {
     }
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+enum ListenerType {
+    Specified,
+    Wildcard,
+}
+
 /// The ID identifying a UDP listener.
 ///
 /// When a new UDP listener is added, it is given a unique `UdpListenerId`.
 /// These are opaque `usize`s which are intentionally allocated as densely as
 /// possible around 0, making it possible to store any associated data in a
-/// `Vec` indexed by the ID. `UdpListenerId` implements `Into<usize>`.
+/// `Vec` indexed by the ID. The `listener_type` field is used to look at the
+/// correct backing `Vec`: `listeners` or `wildcard_listeners`.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct UdpListenerId(usize);
+pub struct UdpListenerId {
+    id: usize,
+    listener_type: ListenerType,
+}
 
-impl From<UdpListenerId> for usize {
-    fn from(id: UdpListenerId) -> usize {
-        id.0
+impl UdpListenerId {
+    fn new_specified(id: usize) -> Self {
+        UdpListenerId { id, listener_type: ListenerType::Specified }
+    }
+
+    fn new_wildcard(id: usize) -> Self {
+        UdpListenerId { id, listener_type: ListenerType::Wildcard }
     }
 }
 
@@ -230,10 +244,16 @@ pub(crate) fn receive_ip_packet<A: IpAddress, B: BufferMut, C: BufferUdpContext<
     } else if let Some(listener) = state
         .listeners
         .get_by_addr(&Listener::from_packet(dst_ip, &packet))
-        .or_else(|| state.wildcard_listeners.get_by_addr(&packet.dst_port()))
+        .map(UdpListenerId::new_specified)
+        .or_else(|| {
+            state
+                .wildcard_listeners
+                .get_by_addr(&packet.dst_port())
+                .map(UdpListenerId::new_wildcard)
+        })
     {
         ctx.receive_udp_from_listen(
-            UdpListenerId(listener),
+            listener,
             src_ip,
             dst_ip.get(),
             packet.src_port(),
@@ -317,34 +337,24 @@ pub(crate) fn send_udp_listener<A: IpAddress, B: BufferMut, C: BufferUdpContext<
 
     let state = ctx.get_state(());
 
-    let local_port: Result<_, ()> = state
-        .listeners
-        .get_by_listener(listener.0)
-        .map(|addrs| {
-            // We found the listener. Make sure at least one of the addresses
-            // associated with it is the local_addr the caller passed. Return a
-            // result with Ok if one of the addresses matched, and Err
-            // otherwise.
-            addrs
-                .iter()
-                .find_map(|addr| if addr.addr == local_addr { Some(addr.port) } else { None })
-                .ok_or_else(|| unimplemented!())
-        })
-        .or_else(|| {
-            // We didn't find the listener in state.listeners. Maybe it's a
-            // wildcard listener. Wildcard listeners are only associated with
-            // ports, so if we find it, we can return Ok immediately to match
-            // the result that we produce if we find the listener in
-            // state.listeners. This is OK since we already check that
-            // local_addr is a local address in the if block above (we would do
-            // it here, but it results in conflicting lifetimes).
-            state.wildcard_listeners.get_by_listener(listener.0).map(|ports| Ok(ports[0]))
-            // We didn't find the listener in either map, so we panic.
-        })
-        .expect("transport::udp::send_udp_listener: no such listener");
-
-    // TODO(joshlf): Return an error rather than panicking.
-    let local_port = local_port.unwrap();
+    let local_port = match listener.listener_type {
+        ListenerType::Specified => {
+            state.listeners.get_by_listener(listener.id).and_then(|addrs| {
+                // We found the listener. Make sure at least one of the addresses
+                // associated with it is the local_addr the caller passed.
+                addrs
+                    .iter()
+                    .find_map(|addr| if addr.addr == local_addr { Some(addr.port) } else { None })
+            })
+        }
+        ListenerType::Wildcard => {
+            state.wildcard_listeners.get_by_listener(listener.id).map(|ports| ports[0])
+        }
+    }
+    .unwrap_or_else(|| {
+        // TODO(brunodalbo) return an error rather than panicking
+        panic!("Listener not found");
+    });
 
     ctx.send_frame(
         IpPacketFromArgs::new(local_addr, remote_addr, IpProto::Udp),
@@ -434,7 +444,7 @@ pub(crate) fn listen_udp<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Vers
             panic!("UDP listener address in use");
         }
         // TODO(joshlf): Check for connections bound to this IP:port.
-        UdpListenerId(state.wildcard_listeners.insert(vec![port]))
+        UdpListenerId::new_wildcard(state.wildcard_listeners.insert(vec![port]))
     } else {
         for addr in &addrs {
             let listener = Listener { addr: *addr, port };
@@ -443,7 +453,7 @@ pub(crate) fn listen_udp<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Vers
                 panic!("UDP listener address in use");
             }
         }
-        UdpListenerId(
+        UdpListenerId::new_specified(
             state.listeners.insert(addrs.into_iter().map(|addr| Listener { addr, port }).collect()),
         )
     }
@@ -575,6 +585,7 @@ mod tests {
             vec![local_ip],
             NonZeroU16::new(100).unwrap(),
         );
+        assert_eq!(listener.listener_type, ListenerType::Specified);
 
         // Inject a packet and check that the context receives it:
         let body = [1, 2, 3, 4, 5];
@@ -833,6 +844,7 @@ mod tests {
         let listener_port = NonZeroU16::new(100).unwrap();
         let remote_port = NonZeroU16::new(200).unwrap();
         let listener = listen_udp::<I::Addr, Buf<&mut [u8]>, _>(&mut ctx, vec![], listener_port);
+        assert_eq!(listener.listener_type, ListenerType::Wildcard);
 
         let body = [1, 2, 3, 4, 5];
         receive_udp_packet(
