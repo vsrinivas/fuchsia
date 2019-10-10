@@ -182,7 +182,7 @@ impl DestroyHook {
 }
 
 impl Hook for DestroyHook {
-    fn on<'a>(self: Arc<Self>, event: &'a Event<'_>) -> BoxFuture<'a, Result<(), ModelError>> {
+    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         Box::pin(async move {
             match event {
                 Event::DestroyInstance { realm } => {

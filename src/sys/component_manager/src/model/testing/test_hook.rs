@@ -178,11 +178,10 @@ impl TestHookInner {
     pub async fn on_bind_instance_async<'a>(
         &'a self,
         realm: Arc<Realm>,
-        realm_state: &'a RealmState,
-        _routing_facade: RoutingFacade,
+        live_child_realms: &'a Vec<Arc<Realm>>,
     ) -> Result<(), ModelError> {
         self.create_instance_if_necessary(realm.abs_moniker.clone()).await?;
-        for child_realm in realm_state.live_child_realms().map(|(_, r)| r) {
+        for child_realm in live_child_realms {
             self.create_instance_if_necessary(child_realm.abs_moniker.clone()).await?;
         }
         let mut events = self.lifecycle_events.lock().await;
@@ -254,14 +253,13 @@ impl TestHookInner {
 }
 
 impl Hook for TestHookInner {
-    fn on<'a>(self: Arc<Self>, event: &'a Event<'_>) -> BoxFuture<'a, Result<(), ModelError>> {
+    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         Box::pin(async move {
             match event {
-                Event::BindInstance { realm, realm_state, routing_facade } => {
+                Event::BindInstance { realm, component_decl: _, live_child_realms, routing_facade: _ } => {
                     self.on_bind_instance_async(
                         realm.clone(),
-                        *realm_state,
-                        routing_facade.clone(),
+                        live_child_realms,
                     )
                     .await?;
                 }
@@ -317,7 +315,7 @@ impl HubInjectionTestHook {
 }
 
 impl Hook for HubInjectionTestHook {
-    fn on<'a>(self: Arc<Self>, event: &'a Event<'_>) -> BoxFuture<'a, Result<(), ModelError>> {
+    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         Box::pin(async move {
             if let Event::RouteFrameworkCapability { realm, capability_decl, capability } = event {
                 let mut capability = capability.lock().await;

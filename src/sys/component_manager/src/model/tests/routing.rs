@@ -81,7 +81,7 @@ async fn use_framework_service() {
     }
 
     impl Hook for MockRealmServiceHost {
-        fn on<'a>(self: Arc<Self>, event: &'a Event<'_>) -> BoxFuture<'a, Result<(), ModelError>> {
+        fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
             Box::pin(async move {
                 if let Event::RouteFrameworkCapability { realm, capability_decl, capability } =
                     event

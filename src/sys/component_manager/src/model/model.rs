@@ -228,20 +228,20 @@ impl Model {
         &'a self,
         realm: Arc<Realm>,
     ) -> Result<Vec<Arc<Realm>>, ModelError> {
-        let eager_children = {
-            let eager_children = self.bind_inner(realm.clone()).await?;
+        let eager_children = self.bind_inner(realm.clone()).await?;
+        let event = {
             let routing_facade = RoutingFacade::new(self.clone());
-            // TODO: Don't hold the lock while calling the hooks.
             let mut state = realm.lock_state().await;
-            let mut state = state.as_mut().expect("bind_single_instance: not resolved");
-            let event = Event::BindInstance {
+            let state = state.as_mut().expect("bind_single_instance: not resolved");
+            let live_child_realms = state.live_child_realms().map(|(_, r)| r.clone()).collect();
+            Event::BindInstance {
                 realm: realm.clone(),
-                realm_state: &mut state,
-                routing_facade: routing_facade.clone(),
-            };
-            realm.hooks.dispatch(&event).await?;
-            eager_children
+                component_decl: state.decl().clone(),
+                live_child_realms,
+                routing_facade,
+            }
         };
+        realm.hooks.dispatch(&event).await?;
         Ok(eager_children)
     }
 

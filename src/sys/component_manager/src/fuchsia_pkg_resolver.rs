@@ -47,17 +47,14 @@ impl FuchsiaPkgResolver {
             .map_err(|e| ResolverError::component_not_available(component_url, e))?;
         let selectors: [&str; 0] = [];
         let mut update_policy = UpdatePolicy { fetch_if_absent: true, allow_old_versions: false };
-        let fut = self
-            .pkg_resolver
-            .resolve(
-                &package_url,
-                &mut selectors.iter().map(|s| *s),
-                &mut update_policy,
-                ServerEnd::new(package_dir_s),
-            );
-        let status = fut
-            .await
-            .map_err(|e| ResolverError::component_not_available(component_url, e))?;
+        let fut = self.pkg_resolver.resolve(
+            &package_url,
+            &mut selectors.iter().map(|s| *s),
+            &mut update_policy,
+            ServerEnd::new(package_dir_s),
+        );
+        let status =
+            fut.await.map_err(|e| ResolverError::component_not_available(component_url, e))?;
         let status = zx::Status::from_raw(status);
         if status != zx::Status::OK {
             return Err(ResolverError::component_not_available(

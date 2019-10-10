@@ -4,7 +4,7 @@
 
 use {
     component_manager_lib::{
-        model::{self, hooks::*, testing::test_helpers, Hub, Model, AbsoluteMoniker},
+        model::{self, hooks::*, testing::test_helpers, AbsoluteMoniker, Hub, Model},
         startup,
     },
     failure::{self, Error},
@@ -88,11 +88,23 @@ impl TestRunner {
         Ok(Self { model, hub, hub_proxy, hub_test_hook })
     }
 
-    async fn expect_breakpoint(&self, expected_event: EventType, components: Vec<&str>) -> Breakpoint {
+    async fn expect_breakpoint(
+        &self,
+        expected_event: EventType,
+        components: Vec<&str>,
+    ) -> Breakpoint {
         let breakpoint = self.hub_test_hook.wait_for_breakpoint().await;
         let expected_moniker = AbsoluteMoniker::from(components);
-        assert_eq!(breakpoint.event, expected_event);
-        assert_eq!(breakpoint.moniker, expected_moniker);
+        assert_eq!(breakpoint.event.type_(), expected_event);
+        let moniker = match &breakpoint.event {
+            Event::PreDestroyInstance { parent_realm, child_moniker } => {
+                parent_realm.abs_moniker.child(child_moniker.clone())
+            }
+            Event::StopInstance { realm } => realm.abs_moniker.clone(),
+            Event::DestroyInstance { realm } => realm.abs_moniker.clone(),
+            _ => AbsoluteMoniker::root(),
+        };
+        assert_eq!(moniker, expected_moniker);
         breakpoint
     }
 
@@ -297,10 +309,7 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
 
     // Wait for the dynamic child to begin deletion
     let breakpoint = test_runner
-        .expect_breakpoint(
-            EventType::PreDestroyInstance,
-            vec!["coll:simple_instance:1"]
-        )
+        .expect_breakpoint(EventType::PreDestroyInstance, vec!["coll:simple_instance:1"])
         .await;
 
     // When deletion begins, the dynamic child should be moved to the deleting directory
@@ -318,10 +327,7 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
 
     // Wait for the dynamic child to stop
     let breakpoint = test_runner
-        .expect_breakpoint(
-            EventType::StopInstance,
-            vec!["coll:simple_instance:1"],
-        )
+        .expect_breakpoint(EventType::StopInstance, vec!["coll:simple_instance:1"])
         .await;
 
     // After stopping, the dynamic child should not have an exec directory
@@ -337,10 +343,7 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
 
     // Wait for the dynamic child's static child to begin deletion
     let breakpoint = test_runner
-        .expect_breakpoint(
-            EventType::PreDestroyInstance,
-            vec!["coll:simple_instance:1", "child:0"],
-        )
+        .expect_breakpoint(EventType::PreDestroyInstance, vec!["coll:simple_instance:1", "child:0"])
         .await;
 
     // When deletion begins, the dynamic child's static child should be moved to the deleting directory
@@ -365,10 +368,7 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
 
     // Wait for the dynamic child's static child to be destroyed
     let breakpoint = test_runner
-        .expect_breakpoint(
-            EventType::DestroyInstance,
-            vec!["coll:simple_instance:1", "child:0"],
-        )
+        .expect_breakpoint(EventType::DestroyInstance, vec!["coll:simple_instance:1", "child:0"])
         .await;
 
     // The dynamic child's static child should not be visible in the hub anymore
@@ -381,10 +381,7 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
 
     // Wait for the dynamic child to be destroyed
     let breakpoint = test_runner
-        .expect_breakpoint(
-            EventType::DestroyInstance,
-            vec!["coll:simple_instance:1"],
-        )
+        .expect_breakpoint(EventType::DestroyInstance, vec!["coll:simple_instance:1"])
         .await;
 
     // After deletion, verify that parent can no longer see the dynamic child in the Hub

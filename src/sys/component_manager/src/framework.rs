@@ -330,7 +330,7 @@ impl RealmServiceHostInner {
 }
 
 impl Hook for RealmServiceHostInner {
-    fn on<'a>(self: Arc<Self>, event: &'a Event<'_>) -> BoxFuture<'a, Result<(), ModelError>> {
+    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         Box::pin(async move {
             if let Event::RouteFrameworkCapability { realm, capability_decl, capability } = event {
                 let mut capability = capability.lock().await;

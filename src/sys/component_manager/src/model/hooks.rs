@@ -5,7 +5,7 @@
 use {
     crate::{framework::FrameworkCapability, model::*},
     by_addr::ByAddr,
-    cm_rust::FrameworkCapabilityDecl,
+    cm_rust::{ComponentDecl, FrameworkCapabilityDecl},
     futures::{future::BoxFuture, lock::Mutex},
     std::{
         collections::HashMap,
@@ -14,7 +14,7 @@ use {
 };
 
 pub trait Hook {
-    fn on<'a>(self: Arc<Self>, event: &'a Event<'_>) -> BoxFuture<'a, Result<(), ModelError>>;
+    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>>;
 }
 
 // Keep the event types listed below in alphabetical order!
@@ -37,13 +37,15 @@ pub struct HookRegistration {
 }
 
 // Keep the events listed below in alphabetical order!
-pub enum Event<'a> {
+#[derive(Clone)]
+pub enum Event {
     AddDynamicChild {
         realm: Arc<Realm>,
     },
     BindInstance {
         realm: Arc<Realm>,
-        realm_state: &'a RealmState,
+        component_decl: ComponentDecl,
+        live_child_realms: Vec<Arc<Realm>>,
         routing_facade: RoutingFacade,
     },
     DestroyInstance {
@@ -58,18 +60,18 @@ pub enum Event<'a> {
     },
     RouteFrameworkCapability {
         realm: Arc<Realm>,
-        capability_decl: &'a FrameworkCapabilityDecl,
+        capability_decl: FrameworkCapabilityDecl,
         // Events are passed to hooks as immutable borrows. In order to mutate,
         // a field within an Event, interior mutability is employed here with
         // a Mutex.
-        capability: Mutex<Option<Box<dyn FrameworkCapability>>>,
+        capability: Arc<Mutex<Option<Box<dyn FrameworkCapability>>>>,
     },
     StopInstance {
         realm: Arc<Realm>,
     },
 }
 
-impl Event<'_> {
+impl Event {
     pub fn type_(&self) -> EventType {
         match self {
             Event::AddDynamicChild { .. } => EventType::AddDynamicChild,
@@ -109,7 +111,7 @@ impl Hooks {
         }
     }
 
-    pub fn dispatch<'a>(&'a self, event: &'a Event<'a>) -> BoxFuture<Result<(), ModelError>> {
+    pub fn dispatch<'a>(&'a self, event: &'a Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             let hooks = {
                 // We must upgrade our weak references to hooks to strong ones before we can
@@ -209,7 +211,7 @@ mod tests {
     }
 
     impl Hook for CallCounter {
-        fn on<'a>(self: Arc<Self>, event: &'a Event<'_>) -> BoxFuture<'a, Result<(), ModelError>> {
+        fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
             Box::pin(async move {
                 if let Event::AddDynamicChild { .. } = event {
                     self.on_add_dynamic_child_async().await?;

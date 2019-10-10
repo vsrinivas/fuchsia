@@ -32,8 +32,7 @@ fn get_or_insert_channel<'a>(
 // about the Breakpoint (what event occurred and what realm it applies to) along with
 // a means to resume/unblock the ComponentManager.
 pub struct Breakpoint {
-    pub event: EventType,
-    pub moniker: AbsoluteMoniker,
+    pub event: Event,
 
     // This Sender is used by the integration test
     // to unblock the ComponentManager.
@@ -59,11 +58,11 @@ impl Breakpoints {
         Self { tx: Arc::new(Mutex::new(tx)), rx: Arc::new(Mutex::new(rx)) }
     }
 
-    pub async fn send(&self, event: EventType, moniker: AbsoluteMoniker) -> Result<(), ModelError> {
+    pub async fn send(&self, event: Event) -> Result<(), ModelError> {
         let (responder_tx, responder_rx) = oneshot::channel();
         {
             let mut tx = self.tx.lock().await;
-            tx.send(Breakpoint { event, moniker, responder: responder_tx }).await.unwrap();
+            tx.send(Breakpoint { event, responder: responder_tx }).await.unwrap();
         }
         responder_rx.await.unwrap();
         Ok(())
@@ -134,7 +133,7 @@ impl HubTestHook {
 }
 
 impl Hook for HubTestHook {
-    fn on<'a>(self: Arc<Self>, event: &'a Event<'_>) -> BoxFuture<'a, Result<(), ModelError>> {
+    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         Box::pin(async move {
             match event {
                 Event::RouteFrameworkCapability { realm: _, capability_decl, capability } => {
@@ -143,16 +142,9 @@ impl Hook for HubTestHook {
                         .on_route_framework_capability_async(capability_decl, capability.take())
                         .await?;
                 }
-                Event::PreDestroyInstance { parent_realm, child_moniker } => {
-                    self.breakpoints.send(event.type_(), parent_realm.abs_moniker.child(child_moniker.clone())).await?;
+                _ => {
+                    self.breakpoints.send(event.clone()).await?;
                 }
-                Event::StopInstance { realm } => {
-                    self.breakpoints.send(event.type_(), realm.abs_moniker.clone()).await?;
-                }
-                Event::DestroyInstance { realm } => {
-                    self.breakpoints.send(event.type_(), realm.abs_moniker.clone()).await?;
-                }
-                _ => (),
             };
             Ok(())
         })

@@ -14,7 +14,7 @@ use {
             ChildMoniker,
         },
     },
-    cm_rust::FrameworkCapabilityDecl,
+    cm_rust::{ComponentDecl, FrameworkCapabilityDecl},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
     fuchsia_async as fasync,
@@ -275,16 +275,15 @@ impl HubInner {
 
     fn add_in_directory(
         execution_directory: &mut directory::controlled::Controlled<'static>,
-        realm_state: &model::RealmState,
+        component_decl: ComponentDecl,
         runtime: &model::Runtime,
         routing_facade: &model::RoutingFacade,
         abs_moniker: &model::AbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        let decl = realm_state.decl();
         let tree = model::DirTree::build_from_uses(
             routing_facade.route_use_fn_factory(),
             &abs_moniker,
-            decl.clone(),
+            component_decl,
         )?;
         let mut in_dir = directory::simple::empty();
         tree.install(&abs_moniker, &mut in_dir)?;
@@ -302,15 +301,14 @@ impl HubInner {
 
     fn add_expose_directory(
         execution_directory: &mut directory::controlled::Controlled<'static>,
-        realm_state: &model::RealmState,
+        component_decl: ComponentDecl,
         routing_facade: &model::RoutingFacade,
         abs_moniker: &model::AbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        let decl = realm_state.decl();
         let tree = model::DirTree::build_from_exposes(
             routing_facade.route_expose_fn_factory(),
             &abs_moniker,
-            decl.clone(),
+            component_decl,
         );
         let mut expose_dir = directory::simple::empty();
         tree.install(&abs_moniker, &mut expose_dir)?;
@@ -351,7 +349,8 @@ impl HubInner {
     async fn on_bind_instance_async<'a>(
         &'a self,
         realm: Arc<model::Realm>,
-        realm_state: &'a model::RealmState,
+        component_decl: &'a ComponentDecl,
+        live_child_realms: &'a Vec<Arc<model::Realm>>,
         routing_facade: model::RoutingFacade,
     ) -> Result<(), ModelError> {
         let component_url = realm.component_url.clone();
@@ -386,7 +385,7 @@ impl HubInner {
 
                 Self::add_in_directory(
                     &mut execution_controlled,
-                    realm_state,
+                    component_decl.clone(),
                     &runtime,
                     &routing_facade,
                     &abs_moniker,
@@ -394,7 +393,7 @@ impl HubInner {
 
                 Self::add_expose_directory(
                     &mut execution_controlled,
-                    realm_state,
+                    component_decl.clone(),
                     &routing_facade,
                     &abs_moniker,
                 )?;
@@ -408,7 +407,7 @@ impl HubInner {
         }
 
         // TODO: Loop over deleting realms also?
-        for child_realm in realm_state.live_child_realms().map(|(_, r)| r) {
+        for child_realm in live_child_realms {
             Self::add_instance_to_parent_if_necessary(
                 &child_realm.abs_moniker,
                 child_realm.component_url.clone(),
@@ -514,13 +513,19 @@ impl HubInner {
 }
 
 impl model::Hook for HubInner {
-    fn on<'a>(self: Arc<Self>, event: &'a Event<'_>) -> BoxFuture<'a, Result<(), ModelError>> {
+    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         Box::pin(async move {
             match event {
-                Event::BindInstance { realm, realm_state, routing_facade } => {
+                Event::BindInstance {
+                    realm,
+                    component_decl,
+                    live_child_realms,
+                    routing_facade,
+                } => {
                     self.on_bind_instance_async(
                         realm.clone(),
-                        *realm_state,
+                        component_decl,
+                        live_child_realms,
                         routing_facade.clone(),
                     )
                     .await?;

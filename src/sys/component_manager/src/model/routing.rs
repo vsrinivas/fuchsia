@@ -151,20 +151,18 @@ async fn open_framework_capability<'a>(
     capability_decl: &'a FrameworkCapabilityDecl,
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
+    let capability = Arc::new(Mutex::new(None));
+
     let event = Event::RouteFrameworkCapability {
         realm: realm.clone(),
-        capability_decl: &capability_decl,
-        capability: Mutex::new(None),
+        capability_decl: capability_decl.clone(),
+        capability: capability.clone(),
     };
     realm.hooks.dispatch(&event).await?;
 
-    if let Event::RouteFrameworkCapability { realm: _, capability_decl: _, capability } = event {
-        let capability = capability.lock().await.take();
-        if let Some(capability) = capability {
-            capability.open(flags, open_mode, relative_path, server_chan).await?;
-        }
-    } else {
-        panic!("Unexpected event type.");
+    let capability = capability.lock().await.take();
+    if let Some(capability) = capability {
+        capability.open(flags, open_mode, relative_path, server_chan).await?;
     }
 
     Ok(())

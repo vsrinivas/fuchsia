@@ -979,10 +979,7 @@ mod tests {
         }
 
         impl Hook for StopErrorHook {
-            fn on<'a>(
-                self: Arc<Self>,
-                event: &'a Event<'_>,
-            ) -> BoxFuture<'a, Result<(), ModelError>> {
+            fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
                 Box::pin(async move {
                     if let Event::StopInstance { realm } = event {
                         self.on_shutdown_instance_async(realm.clone()).await?;
@@ -1664,10 +1661,7 @@ mod tests {
         }
 
         impl Hook for DestroyErrorHook {
-            fn on<'a>(
-                self: Arc<Self>,
-                event: &'a Event<'_>,
-            ) -> BoxFuture<'a, Result<(), ModelError>> {
+            fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
                 Box::pin(async move {
                     if let Event::DestroyInstance { realm } = event {
                         self.on_destroy_instance_async(realm.clone()).await?;

@@ -503,6 +503,7 @@ impl TryFrom<&str> for CapabilityPath {
 }
 
 // Describes the type of framework capability and its source path.
+#[derive(Clone)]
 pub enum FrameworkCapabilityDecl {
     Service(CapabilityPath),
     LegacyService(CapabilityPath),
