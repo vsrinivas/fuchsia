@@ -76,16 +76,16 @@ void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration) 
 
 zx::duration FakeAudioRenderer::FindMinLeadTime() {
   TRACE_DURATION("audio", "AudioRendererImpl::RecomputeMinClockLeadTime");
-  int64_t cur_lead_time = 0;
+  zx::duration cur_lead_time;
 
   ForEachDestLink([&cur_lead_time](auto& link) {
     if (link.GetDest()->is_output()) {
       const auto output = fbl::RefPtr<AudioOutput>::Downcast(link.GetDest());
-      cur_lead_time = std::max(cur_lead_time, output->min_clock_lead_time_nsec());
+      cur_lead_time = std::max(cur_lead_time, output->min_clock_lead_time());
     }
   });
 
-  return zx::nsec(cur_lead_time);
+  return cur_lead_time;
 }
 
 }  // namespace media::audio::testing

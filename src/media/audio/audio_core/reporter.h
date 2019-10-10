@@ -92,7 +92,7 @@ class Reporter {
                                    fuchsia::media::audio::RampType ramp_type);
   void SettingRendererMute(const fuchsia::media::AudioRenderer& renderer, bool muted);
   void SettingRendererMinClockLeadTime(const fuchsia::media::AudioRenderer& renderer,
-                                       int64_t min_clock_lead_time_ns);
+                                       zx::duration min_clock_lead_time);
   void SettingRendererPtsContinuityThreshold(const fuchsia::media::AudioRenderer& renderer,
                                              float threshold_seconds);
 

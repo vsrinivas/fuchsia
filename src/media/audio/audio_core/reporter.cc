@@ -223,14 +223,14 @@ void Reporter::SettingRendererMute(const fuchsia::media::AudioRenderer& renderer
 }
 
 void Reporter::SettingRendererMinClockLeadTime(const fuchsia::media::AudioRenderer& renderer,
-                                               int64_t min_clock_lead_time_ns) {
+                                               zx::duration min_clock_lead_time) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
     FXL_DLOG(FATAL);
     return;
   }
 
-  r->min_clock_lead_time_ns_.Set(static_cast<uint64_t>(min_clock_lead_time_ns));
+  r->min_clock_lead_time_ns_.Set(static_cast<uint64_t>(min_clock_lead_time.to_nsecs()));
 }
 
 void Reporter::SettingRendererPtsContinuityThreshold(const fuchsia::media::AudioRenderer& renderer,

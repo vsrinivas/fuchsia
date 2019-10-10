@@ -98,7 +98,7 @@ class AudioRendererImpl : public AudioObject,
   fbl::RefPtr<AudioLinkPacketSource> throttle_output_link_;
 
   // Minimum Clock Lead Time state
-  int64_t min_clock_lead_nsec_ = 0;
+  zx::duration min_clock_lead_time_;
 
  private:
   class GainControlBinding : public fuchsia::media::audio::GainControl {

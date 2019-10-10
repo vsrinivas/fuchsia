@@ -14,15 +14,15 @@
 namespace media::audio {
 
 // If client does not specify a ref_time for Play, pad it by this amount
-constexpr int64_t kPaddingForUnspecifiedRefTime = ZX_MSEC(20);
+constexpr zx::duration kPaddingForUnspecifiedRefTime = zx::msec(20);
 
 // Short-term workaround (until clients who timestamp are updated): if a client
 // specifies ref_time but uses PlayNoReply (thus doesn't want the callback
 // telling them what actual ref_time was), secretly pad by this amount.
-constexpr int64_t kPaddingForPlayNoReplyWithRefTime = ZX_MSEC(10);
+constexpr zx::duration kPaddingForPlayNoReplyWithRefTime = zx::msec(10);
 
 // Short-term workaround: pad our reported min_lead_time duration by this.
-constexpr int64_t kPaddingForMinLeadTimeReporting = ZX_MSEC(4);
+constexpr zx::duration kPaddingForMinLeadTimeReporting = zx::msec(4);
 
 // To what extent should client-side underflows be logged? (A "client-side underflow" refers to when
 // all or part of a packet's data is discarded because its start timestamp has already passed.)
@@ -153,19 +153,19 @@ void AudioRendererImpl::SetThrottleOutput(fbl::RefPtr<AudioLinkPacketSource> thr
 
 void AudioRendererImpl::RecomputeMinClockLeadTime() {
   TRACE_DURATION("audio", "AudioRendererImpl::RecomputeMinClockLeadTime");
-  int64_t cur_lead_time = 0;
+  zx::duration cur_lead_time;
 
   ForEachDestLink([throttle_ptr = throttle_output_link_.get(), &cur_lead_time](auto& link) {
     if (link.GetDest()->is_output() && &link != throttle_ptr) {
       const auto output = fbl::RefPtr<AudioOutput>::Downcast(link.GetDest());
 
-      cur_lead_time = std::max(cur_lead_time, output->min_clock_lead_time_nsec());
+      cur_lead_time = std::max(cur_lead_time, output->min_clock_lead_time());
     }
   });
 
-  if (min_clock_lead_nsec_ != cur_lead_time) {
+  if (min_clock_lead_time_ != cur_lead_time) {
     REP(SettingRendererMinClockLeadTime(*this, cur_lead_time));
-    min_clock_lead_nsec_ = cur_lead_time;
+    min_clock_lead_time_ = cur_lead_time;
     ReportNewMinClockLeadTime();
   }
 }
@@ -720,10 +720,10 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   pts_to_frac_frames_valid_ = false;
   // TODO(mpuryear): query the actual reference clock, don't assume CLOCK_MONO
   auto ref_time_for_reset =
-      zx::clock::get_monotonic().get() + min_clock_lead_nsec_ + kPaddingForUnspecifiedRefTime;
+      zx::clock::get_monotonic() + min_clock_lead_time_ + kPaddingForUnspecifiedRefTime;
   {
     std::lock_guard<std::mutex> lock(ref_to_ff_lock_);
-    next_frac_frame_pts_ = ref_clock_to_frac_frames_.Apply(ref_time_for_reset);
+    next_frac_frame_pts_ = ref_clock_to_frac_frames_.Apply(ref_time_for_reset.get());
   }
   ComputePtsToFracFrames(0);
 
@@ -740,11 +740,12 @@ void AudioRendererImpl::DiscardAllPacketsNoReply() {
   DiscardAllPackets(nullptr);
 }
 
-void AudioRendererImpl::Play(int64_t reference_time, int64_t media_time, PlayCallback callback) {
+void AudioRendererImpl::Play(int64_t _reference_time, int64_t media_time, PlayCallback callback) {
   TRACE_DURATION("audio", "AudioRendererImpl::Play");
   AUD_VLOG_OBJ(TRACE, this)
-      << " (ref: " << (reference_time == fuchsia::media::NO_TIMESTAMP ? -1 : reference_time)
+      << " (ref: " << (_reference_time == fuchsia::media::NO_TIMESTAMP ? -1 : _reference_time)
       << ", media: " << (media_time == fuchsia::media::NO_TIMESTAMP ? -1 : media_time) << ")";
+  zx::time reference_time(_reference_time);
 
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
@@ -759,7 +760,7 @@ void AudioRendererImpl::Play(int64_t reference_time, int64_t media_time, PlayCal
   // outputs we are currently linked to.
   //
   // TODO(mpuryear): query the actual reference clock, don't assume CLOCK_MONO
-  if (reference_time == fuchsia::media::NO_TIMESTAMP) {
+  if (reference_time.get() == fuchsia::media::NO_TIMESTAMP) {
     // TODO(mpuryear): How much more than the minimum clock lead time do we want to pad this by?
     // Also, if/when lead time requirements change, do we want to introduce a discontinuity?
     //
@@ -769,7 +770,7 @@ void AudioRendererImpl::Play(int64_t reference_time, int64_t media_time, PlayCal
     // in internal interconnect requirements, but impact should be small since internal lead time
     // factors tend to be small, while external factors can be huge.
     reference_time =
-        zx::clock::get_monotonic().get() + min_clock_lead_nsec_ + kPaddingForUnspecifiedRefTime;
+        zx::clock::get_monotonic() + min_clock_lead_time_ + kPaddingForUnspecifiedRefTime;
   }
 
   // If no media time was specified, use the first pending packet's media time.
@@ -811,17 +812,18 @@ void AudioRendererImpl::Play(int64_t reference_time, int64_t media_time, PlayCal
   {
     std::lock_guard<std::mutex> lock(ref_to_ff_lock_);
     ref_clock_to_frac_frames_ =
-        TimelineFunction(frac_frame_media_time, reference_time, frac_frames_per_ref_tick_);
+        TimelineFunction(frac_frame_media_time, reference_time.get(), frac_frames_per_ref_tick_);
     ref_clock_to_frac_frames_gen_.Next();
   }
 
   AUD_VLOG_OBJ(TRACE, this)
-      << " Actual (ref: " << (reference_time == fuchsia::media::NO_TIMESTAMP ? -1 : reference_time)
+      << " Actual (ref: "
+      << (reference_time.get() == fuchsia::media::NO_TIMESTAMP ? -1 : reference_time.get())
       << ", media: " << (media_time == fuchsia::media::NO_TIMESTAMP ? -1 : media_time) << ")";
 
   // If the user requested a callback, invoke it now.
   if (callback != nullptr) {
-    callback(reference_time, media_time);
+    callback(reference_time.get(), media_time);
   }
 
   ReportStart();
@@ -836,7 +838,7 @@ void AudioRendererImpl::PlayNoReply(int64_t reference_time, int64_t media_time) 
       << ", media: " << (media_time == fuchsia::media::NO_TIMESTAMP ? -1 : media_time) << ")";
 
   if (reference_time != fuchsia::media::NO_TIMESTAMP) {
-    reference_time += kPaddingForPlayNoReplyWithRefTime;
+    reference_time += kPaddingForPlayNoReplyWithRefTime.to_nsecs();
   }
 
   Play(reference_time, media_time, nullptr);
@@ -1012,8 +1014,11 @@ void AudioRendererImpl::GetMinLeadTime(GetMinLeadTimeCallback callback) {
   TRACE_DURATION("audio", "AudioRendererImpl::GetMinLeadTime");
   AUD_VLOG_OBJ(TRACE, this);
 
-  callback((min_clock_lead_nsec_ > 0) ? (min_clock_lead_nsec_ + kPaddingForMinLeadTimeReporting)
-                                      : 0);
+  zx::duration lead_time = min_clock_lead_time_;
+  if (lead_time.get() > 0) {
+    lead_time += kPaddingForMinLeadTimeReporting;
+  }
+  callback(lead_time.to_nsecs());
 }
 
 // For now, we pad what we report for min lead time. We don't simply increase the minleadtime by
@@ -1025,8 +1030,11 @@ void AudioRendererImpl::ReportNewMinClockLeadTime() {
 
     auto& lead_time_event = audio_renderer_binding_.events();
 
-    lead_time_event.OnMinLeadTimeChanged(
-        (min_clock_lead_nsec_ > 0) ? (min_clock_lead_nsec_ + kPaddingForMinLeadTimeReporting) : 0);
+    zx::duration lead_time = min_clock_lead_time_;
+    if (lead_time.get() > 0) {
+      lead_time += kPaddingForMinLeadTimeReporting;
+    }
+    lead_time_event.OnMinLeadTimeChanged(lead_time.to_nsecs());
   }
 }
 

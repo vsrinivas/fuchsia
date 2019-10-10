@@ -385,7 +385,7 @@ TEST_F(ReporterTest, RendererMetrics) {
   under_test_.SettingRendererGainWithRamp(renderer, -1.0, ZX_SEC(1),
                                           fuchsia::media::audio::RampType::SCALE_LINEAR);
   under_test_.SettingRendererMute(renderer, true);
-  under_test_.SettingRendererMinClockLeadTime(renderer, 1000000);
+  under_test_.SettingRendererMinClockLeadTime(renderer, zx::nsec(1000000));
   under_test_.SettingRendererPtsContinuityThreshold(renderer, 5.0);
 
   EXPECT_THAT(

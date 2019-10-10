@@ -384,10 +384,9 @@ void DriverOutput::OnDriverConfigComplete() {
 
   // Now that our driver is completely configured, we have all the info needed
   // to compute the minimum clock lead time requrirement for this output.
-  int64_t fifo_depth_nsec =
-      TimelineRate::Scale(driver()->fifo_depth_frames(), ZX_SEC(1), driver()->frames_per_sec());
-  min_clock_lead_time_nsec_ =
-      driver()->external_delay_nsec() + fifo_depth_nsec + kDefaultHighWaterNsec.get();
+  zx::duration fifo_depth_duration = zx::nsec(
+      TimelineRate::Scale(driver()->fifo_depth_frames(), ZX_SEC(1), driver()->frames_per_sec()));
+  min_clock_lead_time_ = driver()->external_delay() + fifo_depth_duration + kDefaultHighWaterNsec;
 
   // Fill our brand new ring buffer with silence
   FXL_CHECK(driver_ring_buffer() != nullptr);

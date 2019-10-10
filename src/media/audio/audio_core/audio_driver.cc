@@ -740,7 +740,7 @@ zx_status_t AudioDriver::ProcessSetFormatResponse(const audio_stream_cmd_set_for
   }
 
   // TODO(MTWN-61): Update AudioCapturers and outputs to incorporate external delay when resampling.
-  external_delay_nsec_ = resp.external_delay_nsec;
+  external_delay_ = zx::nsec(resp.external_delay_nsec);
 
   // Setup async wait on channel.
   ring_buffer_channel_wait_.set_object(rb_channel.get());

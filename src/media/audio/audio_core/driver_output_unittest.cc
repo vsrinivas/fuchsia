@@ -152,7 +152,7 @@ TEST_F(DriverOutputTest, RendererOutput) {
   const uint32_t kNonSilentFrame = 0x7fff7fff;
   const uint32_t kMixWindowFrames = 480;
   size_t first_non_silent_frame =
-      (kSupportedSampleRate * output_->min_clock_lead_time_nsec()) / 1'000'000'000;
+      (kSupportedSampleRate * output_->min_clock_lead_time().to_nsecs()) / 1'000'000'000;
   size_t first_silent_frame = first_non_silent_frame + kMixWindowFrames;
 
   EXPECT_THAT(RingBufferSlice<uint32_t>(0, first_non_silent_frame), Each(Eq(kSilentFrame)));
@@ -194,7 +194,7 @@ TEST_F(DriverOutputTest, MixAtExpectedInterval) {
   const uint32_t kNegativeOneSamples = 0x80008000;
   const uint32_t kMixWindowFrames = 480;
   size_t first_positive_one_frame =
-      (kSupportedSampleRate * output_->min_clock_lead_time_nsec()) / 1'000'000'000;
+      (kSupportedSampleRate * output_->min_clock_lead_time().to_nsecs()) / 1'000'000'000;
   size_t first_negative_one_frame = first_positive_one_frame + kMixWindowFrames;
   size_t first_silent_frame = first_negative_one_frame + kMixWindowFrames;
 
