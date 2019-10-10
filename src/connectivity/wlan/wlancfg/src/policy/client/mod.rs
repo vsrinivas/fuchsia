@@ -13,8 +13,9 @@
 use {
     crate::{fuse_pending::FusePending, known_ess_store::KnownEssStore},
     failure::{format_err, Error},
+    fidl::epitaph::ChannelEpitaphExt,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
-    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
+    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
         prelude::*,
@@ -149,6 +150,10 @@ async fn serve_provider_requests(
                         req
                     );
                     controller_reqs.push(fut);
+                } else {
+                    if let Err(e) = reject_provider_request(req) {
+                        error!("error sending rejection epitaph");
+                    }
                 }
             },
             // Progress internal messages.
@@ -347,6 +352,18 @@ fn credential_from_bytes(bytes: Vec<u8>) -> fidl_sme::Credential {
     }
 }
 
+/// Rejects a ClientProvider request by sending a corresponding Epitaph via the |requests| and
+/// |updates| channels.
+fn reject_provider_request(req: fidl_policy::ClientProviderRequest) -> Result<(), fidl::Error> {
+    match req {
+        fidl_policy::ClientProviderRequest::GetController { requests, updates, .. } => {
+            requests.into_channel().close_with_epitaph(zx::Status::ALREADY_BOUND)?;
+            updates.into_channel().close_with_epitaph(zx::Status::ALREADY_BOUND)?;
+            Ok(())
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -356,7 +373,6 @@ mod tests {
             endpoints::{create_proxy, create_request_stream},
             Error,
         },
-        fuchsia_zircon as zx,
         futures::{channel::mpsc, task::Poll},
         pin_utils::pin_mut,
         std::path::Path,
@@ -712,7 +728,7 @@ mod tests {
     }
 
     #[test]
-    fn multiple_controllers() {
+    fn multiple_controllers_write_attempt() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
@@ -786,6 +802,48 @@ mod tests {
             exec.run_until_stalled(&mut connect_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
         );
+    }
+
+    #[test]
+    fn multiple_controllers_epitaph() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
+        let ess_store = create_ess_store(temp_dir.path());
+
+        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
+            .expect("failed to create ClientProvider proxy");
+        let requests = requests.into_stream().expect("failed to create stream");
+
+        let (client, _sme_stream) = create_client();
+        let (update_sender, _listener_updates) = mpsc::unbounded();
+        let serve_fut = serve_provider_requests(client, update_sender, ess_store, requests);
+        pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a controller.
+        let (_controller1, _) = request_controller(&provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request another controller.
+        let (controller2, _) = request_controller(&provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        let chan = controller2.into_channel().expect("error turning proxy into channel");
+        let mut buffer = zx::MessageBuf::new();
+        let epitaph_fut = chan.recv_msg(&mut buffer);
+        pin_mut!(epitaph_fut);
+        assert_variant!(exec.run_until_stalled(&mut epitaph_fut), Poll::Ready(Ok(_)));
+
+        // Verify Epitaph was received.
+        use fidl::encoding::{decode_transaction_header, Decodable, Decoder, EpitaphBody};
+        let (_, tail): (_, &[u8]) =
+            decode_transaction_header(buffer.bytes()).expect("failed decoding header");
+        let mut msg = Decodable::new_empty();
+        Decoder::decode_into::<EpitaphBody>(tail, &mut [], &mut msg).expect("failed decoding body");
+        assert_eq!(msg.error, zx::Status::ALREADY_BOUND);
+        assert!(chan.is_closed());
     }
 
     #[test]
