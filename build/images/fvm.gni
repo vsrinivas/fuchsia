@@ -11,6 +11,19 @@ declare_args() {
   # that is too small will result in build failure.
   fvm_image_size = ""
 
+  # The max size of the disk where the FVM is written. This is used for
+  # preallocating metadata to determine how much the FVM can expand on disk.
+  # Only applies to sparse FVM images. At sparse image construction time, the
+  # build fails if the inputs are larger than `fvm_max_disk_size`. At paving
+  # time, the FVM will be sized to the target's disk size up to
+  # `fvm_max_disk_size`. If the size of the disk increases after initial paving,
+  # the FVM will resize up to `fvm_max_disk_size`. During paving, if the target
+  # FVM has declared a smaller size than `fvm_max_disk_size`, the FVM is
+  # reinitialized to the larger size.
+  # The default value is "" which sets the max disk size to the size of the disk
+  # at pave/format time.
+  fvm_max_disk_size = ""
+
   # The size of the FVM partition images "slice size". The FVM slice size is a
   # minimum size of a particular chunk of a partition that is stored within
   # FVM. A very small slice size may lead to decreased throughput. A very large
@@ -140,3 +153,10 @@ fvm_sparse_args = [
                     "--compress",
                     "lz4",
                   ] + fvm_slice_args
+
+if (fvm_max_disk_size != "") {
+  fvm_sparse_args += [
+    "--max-disk-size",
+    fvm_max_disk_size,
+  ]
+}
