@@ -98,7 +98,6 @@ group("deprecated_shell_allowlist") {
     "//src/connectivity/network/testing/netemul/runner:netemul_devmgr",
     "//src/devices/coordinator:coordinator_tests",
     "//src/developer/memory/monitor/tests:memory_monitor_inspect_integration_tests",
-    "//src/diagnostics/archivist:archivist",
     "//src/recovery/factory_reset:factory_reset_tests",
   ]
 }

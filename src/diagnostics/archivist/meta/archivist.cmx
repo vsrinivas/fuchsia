@@ -5,8 +5,8 @@
     "sandbox": {
         "features": [
             "config-data",
-            "isolated-persistent-storage",
-            "deprecated-shell"
+            "hub",
+            "isolated-persistent-storage"
         ]
     }
 }
