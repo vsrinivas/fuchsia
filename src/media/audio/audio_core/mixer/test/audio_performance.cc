@@ -223,7 +223,7 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
     if (gain_type == GainType::Ramped) {
       // Ramp within the "greater than Mute but less than Unity" range. Ramp duration assumes a mix
       // duration of less than two secs.
-      info.gain.SetSourceGainWithRamp(Gain::kMinGainDb + 1.0f, ZX_SEC(2));
+      info.gain.SetSourceGainWithRamp(Gain::kMinGainDb + 1.0f, zx::sec(2));
     }
 
     auto start_time = zx::clock::get_monotonic();

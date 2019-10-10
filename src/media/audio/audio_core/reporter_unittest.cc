@@ -380,9 +380,9 @@ TEST_F(ReporterTest, RendererMetrics) {
                                                   .payload_buffer_id = 10,
                                               });
   under_test_.SettingRendererGain(renderer, -1.0);
-  under_test_.SettingRendererGainWithRamp(renderer, -1.0, ZX_SEC(1),
+  under_test_.SettingRendererGainWithRamp(renderer, -1.0, zx::sec(1),
                                           fuchsia::media::audio::RampType::SCALE_LINEAR);
-  under_test_.SettingRendererGainWithRamp(renderer, -1.0, ZX_SEC(1),
+  under_test_.SettingRendererGainWithRamp(renderer, -1.0, zx::sec(1),
                                           fuchsia::media::audio::RampType::SCALE_LINEAR);
   under_test_.SettingRendererMute(renderer, true);
   under_test_.SettingRendererMinClockLeadTime(renderer, zx::nsec(1000000));
@@ -444,9 +444,9 @@ TEST_F(ReporterTest, CapturerMetrics) {
                                                   .payload_buffer_id = 10,
                                               });
   under_test_.SettingCapturerGain(capturer, -1.0);
-  under_test_.SettingCapturerGainWithRamp(capturer, -1.0, ZX_SEC(1),
+  under_test_.SettingCapturerGainWithRamp(capturer, -1.0, zx::sec(1),
                                           fuchsia::media::audio::RampType::SCALE_LINEAR);
-  under_test_.SettingCapturerGainWithRamp(capturer, -1.0, ZX_SEC(1),
+  under_test_.SettingCapturerGainWithRamp(capturer, -1.0, zx::sec(1),
                                           fuchsia::media::audio::RampType::SCALE_LINEAR);
   under_test_.SettingCapturerMute(capturer, true);
 

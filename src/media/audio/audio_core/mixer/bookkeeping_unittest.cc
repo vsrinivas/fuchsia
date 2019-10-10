@@ -66,7 +66,8 @@ TEST(BookkeepingTest, Reset) {
 
   info.src_pos_modulo = 4321u;
 
-  info.gain.SetSourceGainWithRamp(-42.0f, ZX_SEC(1), fuchsia::media::audio::RampType::SCALE_LINEAR);
+  info.gain.SetSourceGainWithRamp(-42.0f, zx::sec(1),
+                                  fuchsia::media::audio::RampType::SCALE_LINEAR);
   EXPECT_TRUE(info.gain.IsRamping());
 
   info.mixer = std::make_unique<mixer::ObservableMixer>();

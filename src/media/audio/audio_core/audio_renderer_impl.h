@@ -75,9 +75,9 @@ class AudioRendererImpl : public AudioObject,
   void SetUsage(fuchsia::media::AudioRenderUsage usage) override;
   fuchsia::media::AudioRenderUsage GetUsage() { return usage_; };
 
-  // |media::audio::GainControl|
+  // |fuchsia::media::audio::GainControl|
   void SetGain(float gain_db) final;
-  void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
+  void SetGainWithRamp(float gain_db, int64_t duration_ns,
                        fuchsia::media::audio::RampType ramp_type) final;
   void SetMute(bool muted) final;
   void NotifyGainMuteChanged();
@@ -107,9 +107,9 @@ class AudioRendererImpl : public AudioObject,
       return std::unique_ptr<GainControlBinding>(new GainControlBinding(owner));
     }
 
-    // GainControl interface.
+    // |fuchsia::media::audio::GainControl|
     void SetGain(float gain_db) final;
-    void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
+    void SetGainWithRamp(float gain_db, int64_t duration_ns,
                          fuchsia::media::audio::RampType ramp_type) final;
     void SetMute(bool muted) final;
 

@@ -18,7 +18,7 @@
 namespace media::audio {
 
 struct Ramp {
-  zx_duration_t duration_ns;
+  zx::duration duration;
   fuchsia::media::audio::RampType ramp_type;
 };
 

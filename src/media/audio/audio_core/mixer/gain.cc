@@ -12,17 +12,17 @@ namespace media::audio {
 
 // TODO(mpuryear): When we add ramping of another gain stage (dest, or a new
 // stage), refactor to accept a stage index or a pointer to a ramp-struct.
-void Gain::SetSourceGainWithRamp(float source_gain_db, zx_duration_t duration_ns,
+void Gain::SetSourceGainWithRamp(float source_gain_db, zx::duration duration,
                                  __UNUSED fuchsia::media::audio::RampType ramp_type) {
   TRACE_DURATION("audio", "Gain::SetSourceGainWithRamp");
   FXL_DCHECK(source_gain_db <= kMaxGainDb);
-  FXL_DCHECK(duration_ns >= 0) << "Ramp duration cannot be negative";
+  FXL_DCHECK(duration.get() >= 0) << "Ramp duration cannot be negative";
 
-  source_ramp_duration_ns_ = duration_ns;
+  source_ramp_duration_ = duration;
 
   float current_src_gain_db = target_src_gain_db_.load();
   if (source_gain_db != current_src_gain_db) {
-    if (duration_ns > 0) {
+    if (duration.get() > 0) {
       start_src_gain_db_ = current_src_gain_db;
       start_src_scale_ = DbToScale(current_src_gain_db);
 
@@ -37,7 +37,7 @@ void Gain::SetSourceGainWithRamp(float source_gain_db, zx_duration_t duration_ns
   }
   if constexpr (kVerboseRampDebug) {
     FXL_LOG(INFO) << "Gain(" << this << "): SetSourceGainWithRamp(" << source_gain_db << " dB, "
-                  << duration_ns << " nsec)";
+                  << duration.to_nsecs() << " nsec)";
   }
 }
 
@@ -52,13 +52,13 @@ void Gain::Advance(uint32_t num_frames, const TimelineRate& local_to_output) {
   FXL_CHECK(local_to_output.invertible()) << "Output clock must be running!";
 
   frames_ramped_ += num_frames;
-  zx_duration_t advance_ns = local_to_output.Inverse().Scale(frames_ramped_);
+  zx::duration advance_duration = zx::nsec(local_to_output.Inverse().Scale(frames_ramped_));
   float src_gain_db;
 
-  if (source_ramp_duration_ns_ > advance_ns) {
-    AScale src_scale =
-        start_src_scale_ + (static_cast<double>(end_src_scale_ - start_src_scale_) * advance_ns) /
-                               source_ramp_duration_ns_;
+  if (source_ramp_duration_ > advance_duration) {
+    AScale src_scale = start_src_scale_ + (static_cast<double>(end_src_scale_ - start_src_scale_) *
+                                           advance_duration.to_nsecs()) /
+                                              source_ramp_duration_.to_nsecs();
     src_gain_db = ScaleToDb(src_scale);
 
   } else {
@@ -70,10 +70,11 @@ void Gain::Advance(uint32_t num_frames, const TimelineRate& local_to_output) {
   target_src_gain_db_.store(src_gain_db);
 
   if constexpr (kVerboseRampDebug) {
-    FXL_LOG(INFO) << "Advanced " << advance_ns << " nsec for " << num_frames
+    FXL_LOG(INFO) << "Advanced " << advance_duration.to_nsecs() << " nsec for " << num_frames
                   << " frames. Total frames ramped: " << frames_ramped_ << ".";
     FXL_LOG(INFO) << "Src_gain is now " << src_gain_db << " dB for this "
-                  << source_ramp_duration_ns_ << "-nsec ramp to " << end_src_gain_db_ << " dB.";
+                  << source_ramp_duration_.to_nsecs() << "-nsec ramp to " << end_src_gain_db_
+                  << " dB.";
   }
 }
 
@@ -106,12 +107,13 @@ void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
     AScale end_scale = end_src_scale_ * dest_scale;
 
     for (uint32_t idx = 0; idx < num_frames; ++idx) {
-      zx_duration_t frame_time = output_to_local.Scale(frames_ramped_ + idx);
-      if (frame_time >= source_ramp_duration_ns_) {
+      zx::duration frame_time = zx::nsec(output_to_local.Scale(frames_ramped_ + idx));
+      if (frame_time >= source_ramp_duration_) {
         scale_arr[idx] = end_scale;
       } else {
-        scale_arr[idx] = start_scale + (static_cast<double>(end_scale - start_scale) * frame_time) /
-                                           source_ramp_duration_ns_;
+        scale_arr[idx] =
+            start_scale + (static_cast<double>(end_scale - start_scale) * frame_time.to_nsecs()) /
+                              source_ramp_duration_.to_nsecs();
       }
     }
   }

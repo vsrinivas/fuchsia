@@ -200,7 +200,7 @@ void Reporter::SettingRendererGain(const fuchsia::media::AudioRenderer& renderer
 }
 
 void Reporter::SettingRendererGainWithRamp(const fuchsia::media::AudioRenderer& renderer,
-                                           float gain_db, zx_duration_t duration_ns,
+                                           float gain_db, zx::duration duration,
                                            fuchsia::media::audio::RampType ramp_type) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
@@ -304,7 +304,7 @@ void Reporter::SettingCapturerGain(const fuchsia::media::AudioCapturer& capturer
 }
 
 void Reporter::SettingCapturerGainWithRamp(const fuchsia::media::AudioCapturer& capturer,
-                                           float gain_db, zx_duration_t duration_ns,
+                                           float gain_db, zx::duration duration,
                                            fuchsia::media::audio::RampType ramp_type) {
   Capturer* c = FindCapturer(capturer);
   if (c == nullptr) {

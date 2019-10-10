@@ -38,10 +38,7 @@ class Gain {
 
   // constructor
   Gain()
-      : target_src_gain_db_(kUnityGainDb),
-        target_dest_gain_db_(kUnityGainDb),
-        source_ramp_duration_ns_(0),
-        frames_ramped_(0) {}
+      : target_src_gain_db_(kUnityGainDb), target_dest_gain_db_(kUnityGainDb), frames_ramped_(0) {}
 
   // Amplitude scale factors are expressed as 32-bit IEEE-754 floating point.
   using AScale = float;
@@ -109,10 +106,10 @@ class Gain {
 
   // Smoothly change the source gain over the specified period of playback time.
   void SetSourceGainWithRamp(
-      float gain_db, zx_duration_t duration_ns,
+      float gain_db, zx::duration duration,
       fuchsia::media::audio::RampType ramp_type = fuchsia::media::audio::RampType::SCALE_LINEAR);
 
-  void ClearSourceRamp() { source_ramp_duration_ns_ = 0; }
+  void ClearSourceRamp() { source_ramp_duration_ = zx::nsec(0); }
 
   // The atomics for target_src_gain_db and target_dest_gain_db are meant to
   // defend a Mix thread's gain READs, against gain WRITEs by another thread in
@@ -160,7 +157,7 @@ class Gain {
   }
 
   // TODO(perley/mpuryear): Handle usage ramping.
-  bool IsRamping() { return (source_ramp_duration_ns_ > 0); }
+  bool IsRamping() { return (source_ramp_duration_.get() > 0); }
 
  private:
   // Called by the above GetGainScale variants. For performance reasons, this
@@ -187,7 +184,7 @@ class Gain {
   float start_src_gain_db_ = kUnityGainDb;
   float end_src_scale_ = kUnityScale;
   float end_src_gain_db_ = kUnityGainDb;
-  zx_duration_t source_ramp_duration_ns_;
+  zx::duration source_ramp_duration_;
   uint32_t frames_ramped_;
 };
 

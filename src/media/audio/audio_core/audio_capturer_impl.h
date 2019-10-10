@@ -169,9 +169,9 @@ class AudioCapturerImpl : public AudioObject,
   void StopAsyncCaptureNoReply() final;
   void BindGainControl(fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) final;
 
-  // GainControl interface.
+  // |fuchsia::media::audio::GainControl|
   void SetGain(float gain_db) final;
-  void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
+  void SetGainWithRamp(float gain_db, int64_t duration_ns,
                        fuchsia::media::audio::RampType ramp_type) final {
     FXL_NOTIMPLEMENTED();
   }

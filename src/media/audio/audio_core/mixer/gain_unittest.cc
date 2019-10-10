@@ -195,7 +195,7 @@ TEST_F(RampTest, SetRampWithNoDurationChangesGain) {
   gain_.SetSourceGain(-11.0f);
   gain_.SetDestGain(-1.0f);
 
-  gain_.SetSourceGainWithRamp(+1.0f, 0);
+  gain_.SetSourceGainWithRamp(+1.0f, zx::nsec(0));
   EXPECT_TRUE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsSilent());
@@ -206,7 +206,7 @@ TEST_F(RampTest, SetRampWithDurationDoesntChangeGain) {
   gain_.SetSourceGain(24.0f);
   gain_.SetDestGain(-24.0f);
 
-  gain_.SetSourceGainWithRamp(Gain::kMinGainDb, 1);
+  gain_.SetSourceGainWithRamp(Gain::kMinGainDb, zx::nsec(1));
 
   // Expect pre-ramp conditions
   EXPECT_TRUE(gain_.GetGainScale() == Gain::kUnityScale);
@@ -220,7 +220,7 @@ TEST_F(RampTest, RampingUpIsNeverSilent) {
   gain_.SetSourceGain(-150.0f);
   gain_.SetDestGain(-22.0f);
 
-  gain_.SetSourceGainWithRamp(+22.0f, ZX_SEC(1));
+  gain_.SetSourceGainWithRamp(+22.0f, zx::sec(1));
 
   // Expect pre-ramp conditions
   EXPECT_FALSE(gain_.IsSilent());
@@ -231,7 +231,7 @@ TEST_F(RampTest, RampingUpIsNeverSilent) {
 // If we are ramping-down and already silent, IsSilent should remain true.
 TEST_F(RampTest, SilentAndRampingDownIsSilent) {
   gain_.SetDestGain(-160.0f);
-  gain_.SetSourceGainWithRamp(-1.0f, ZX_SEC(1));
+  gain_.SetSourceGainWithRamp(-1.0f, zx::sec(1));
 
   // Expect pre-ramp conditions
   EXPECT_TRUE(gain_.IsSilent());
@@ -245,7 +245,7 @@ TEST_F(RampTest, RampingIsNeverUnity) {
   gain_.SetDestGain(Gain::kUnityGainDb);
   EXPECT_TRUE(gain_.IsUnity());
 
-  gain_.SetSourceGainWithRamp(-1.0f, ZX_SEC(1));
+  gain_.SetSourceGainWithRamp(-1.0f, zx::sec(1));
 
   // Expect pre-ramp conditions
   EXPECT_FALSE(gain_.IsSilent());
@@ -258,7 +258,7 @@ TEST_F(RampTest, FlatIsntRamping) {
   gain_.SetSourceGain(Gain::kUnityGainDb);
   gain_.SetDestGain(-20.0f);
 
-  gain_.SetSourceGainWithRamp(0.0f, ZX_SEC(1));
+  gain_.SetSourceGainWithRamp(0.0f, zx::sec(1));
 
   // Expect pre-ramp conditions
   EXPECT_FALSE(gain_.IsSilent());
@@ -271,7 +271,7 @@ TEST_F(RampTest, AdvanceChangesGain) {
   gain_.SetSourceGain(-150.0f);
   gain_.SetDestGain(-13.0f);
 
-  gain_.SetSourceGainWithRamp(+13.0f, 1);
+  gain_.SetSourceGainWithRamp(+13.0f, zx::nsec(1));
 
   // Advance far beyond end of ramp -- 10 msec (10 frames@1kHz) vs. 1 nsec.
   gain_.Advance(10, rate_1khz_output_);
@@ -305,7 +305,7 @@ TEST_F(ScaleArrayTest, GetScaleArrayRamp) {
   Gain::AScale scale_arr[6];
   Gain::AScale expect_arr[6] = {1.0, 0.82, 0.64, 0.46, 0.28, 0.1};
 
-  gain_.SetSourceGainWithRamp(-20, ZX_MSEC(5));
+  gain_.SetSourceGainWithRamp(-20, zx::msec(5));
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
   EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
@@ -320,7 +320,7 @@ TEST_F(ScaleArrayTest, GetScaleArrayLongRamp) {
   Gain::AScale scale_arr[4];  // At 1kHz this is less than the ramp duration.
   Gain::AScale expect_arr[4] = {1.0, 0.901, 0.802, 0.703};
 
-  gain_.SetSourceGainWithRamp(-40, ZX_MSEC(10));
+  gain_.SetSourceGainWithRamp(-40, zx::msec(10));
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
   EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
@@ -335,7 +335,7 @@ TEST_F(ScaleArrayTest, GetScaleArrayShortRamp) {
   Gain::AScale scale_arr[9];  // At 1kHz this is longer than the ramp duration.
   Gain::AScale expect_arr[9] = {1.0, 0.82, 0.64, 0.46, 0.28, 0.1, 0.1, 0.1, 0.1};
 
-  gain_.SetSourceGainWithRamp(-20, ZX_MSEC(5));
+  gain_.SetSourceGainWithRamp(-20, zx::msec(5));
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
   EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
@@ -347,7 +347,7 @@ TEST_F(ScaleArrayTest, GetScaleArrayShortRamp) {
 
 // Successive GetScaleArray calls without Advance should return same results.
 TEST_F(ScaleArrayTest, GetScaleArrayWithoutAdvance) {
-  gain_.SetSourceGainWithRamp(-123.45678, ZX_MSEC(9));
+  gain_.SetSourceGainWithRamp(-123.45678, zx::msec(9));
 
   Gain::AScale scale_arr[10];
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
@@ -363,7 +363,7 @@ TEST_F(ScaleArrayTest, GetScaleArrayBigAdvance) {
   Gain::AScale scale_arr[6];
   Gain::AScale expect = Gain::kUnityScale * 2;
 
-  gain_.SetSourceGainWithRamp(6.0205999, ZX_MSEC(5));
+  gain_.SetSourceGainWithRamp(6.0205999, zx::msec(5));
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
   EXPECT_THAT(scale_arr, Not(Each(FloatEq(expect))));
@@ -385,7 +385,7 @@ TEST_F(ScaleArrayTest, ClearSourceRamp) {
   Gain::AScale scale_arr[6];
   Gain::AScale scale_arr2[6];
 
-  gain_.SetSourceGainWithRamp(-30.1029995, ZX_MSEC(5));
+  gain_.SetSourceGainWithRamp(-30.1029995, zx::msec(5));
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
   EXPECT_THAT(scale_arr, Not(Each(FloatEq(Gain::kUnityScale))));
@@ -417,7 +417,7 @@ TEST_F(ScaleArrayTest, AdvanceHalfwayThroughRamp) {
   Gain::AScale scale_arr[4];  // At 1kHz this is less than the ramp duration.
   Gain::AScale expect_arr[4];
 
-  gain_.SetSourceGainWithRamp(-20.0f, ZX_MSEC(9));
+  gain_.SetSourceGainWithRamp(-20.0f, zx::msec(9));
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
   Gain::AScale expect_scale = Gain::kUnityScale;

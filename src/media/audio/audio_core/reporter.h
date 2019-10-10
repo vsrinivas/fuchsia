@@ -88,7 +88,7 @@ class Reporter {
                              const fuchsia::media::StreamPacket& packet);
   void SettingRendererGain(const fuchsia::media::AudioRenderer& renderer, float gain_db);
   void SettingRendererGainWithRamp(const fuchsia::media::AudioRenderer& renderer, float gain_db,
-                                   zx_duration_t duration_ns,
+                                   zx::duration duration,
                                    fuchsia::media::audio::RampType ramp_type);
   void SettingRendererMute(const fuchsia::media::AudioRenderer& renderer, bool muted);
   void SettingRendererMinClockLeadTime(const fuchsia::media::AudioRenderer& renderer,
@@ -107,7 +107,7 @@ class Reporter {
                              const fuchsia::media::StreamPacket& packet);
   void SettingCapturerGain(const fuchsia::media::AudioCapturer& capturer, float gain_db);
   void SettingCapturerGainWithRamp(const fuchsia::media::AudioCapturer& capturer, float gain_db,
-                                   zx_duration_t duration_ns,
+                                   zx::duration duration,
                                    fuchsia::media::audio::RampType ramp_type);
   void SettingCapturerMute(const fuchsia::media::AudioCapturer& capturer, bool muted);
 

@@ -85,9 +85,10 @@ TEST_F(StreamVolumeManagerTest, StreamsCanBeRemoved) {
 TEST_F(StreamVolumeManagerTest, StreamsCanRamp) {
   mock_.usage_ = UsageFrom(fuchsia::media::AudioRenderUsage::INTERRUPTION);
 
-  manager_.NotifyStreamChanged(&mock_, Ramp{100, fuchsia::media::audio::RampType::SCALE_LINEAR});
+  manager_.NotifyStreamChanged(&mock_,
+                               Ramp{zx::nsec(100), fuchsia::media::audio::RampType::SCALE_LINEAR});
 
-  EXPECT_EQ(mock_.volume_command_.ramp->duration_ns, 100);
+  EXPECT_EQ(mock_.volume_command_.ramp->duration, zx::nsec(100));
   EXPECT_EQ(mock_.volume_command_.ramp->ramp_type, fuchsia::media::audio::RampType::SCALE_LINEAR);
 }
 
