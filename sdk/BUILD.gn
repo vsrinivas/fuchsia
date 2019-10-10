@@ -252,7 +252,6 @@ sdk("fuchsia_dart2") {
     "//topaz/public/dart/fuchsia:fuchsia_sdk($dart_toolchain)",
     "//topaz/public/dart/fuchsia_inspect:fuchsia_inspect_sdk($dart_toolchain)",
     "//topaz/public/dart/fuchsia_logger:fuchsia_logger_sdk($dart_toolchain)",
-    "//topaz/public/dart/fuchsia_media:fuchsia_media_sdk($dart_toolchain)",
     "//topaz/public/dart/fuchsia_modular:fuchsia_modular_sdk($dart_toolchain)",
     "//topaz/public/dart/fuchsia_modular_testing:fuchsia_modular_testing_sdk($dart_toolchain)",
     "//topaz/public/dart/fuchsia_scenic:fuchsia_scenic_sdk($dart_toolchain)",
