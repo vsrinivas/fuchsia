@@ -1405,6 +1405,10 @@ template("executable") {
 # $variants matching, and it always sets $testonly so that dependents must
 # also set $testonly.
 #
+# A test() target aggregates metadata with a data key of "test_runtime_deps",
+# which is in turn recorded in the "test_specs" metadata in a "runtime_deps"
+# field. See //:tests for more information on that schema.
+#
 # Parameters
 #
 #   install_path
@@ -1435,6 +1439,27 @@ template("test") {
     not_needed(invoker, "*")
     not_needed([ "target_name" ])
   } else {
+    additional_deps = []
+    if (is_host) {
+      runtime_deps_target_name = "_test.$target_name.runtime_deps"
+      runtime_deps_file = "$target_gen_dir/$target_name.deps.json"
+      generated_file(runtime_deps_target_name) {
+        testonly = true
+        data_keys = [ "test_runtime_deps" ]
+        output_conversion = "json"
+        rebase = root_build_dir
+        outputs = [
+          runtime_deps_file,
+        ]
+        forward_variables_from(invoker,
+                               [
+                                 "deps",
+                                 "data_deps",
+                               ])
+      }
+      additional_deps += [ ":$runtime_deps_target_name" ]
+    }
+
     _basic_executable(target_name) {
       target_type = "test"
       testonly = true
@@ -1474,6 +1499,11 @@ template("test") {
         }
       }
 
+      if (!defined(data_deps)) {
+        data_deps = []
+      }
+      data_deps += additional_deps
+
       metadata = {
         if (defined(invoker.metadata)) {
           forward_variables_from(invoker.metadata, "*")
@@ -1493,6 +1523,9 @@ template("test") {
                 path = install_path
               }
               forward_variables_from(invoker, [ "disabled" ])
+              if (defined(runtime_deps_file)) {
+                runtime_deps = rebase_path(runtime_deps_file, root_build_dir)
+              }
             }
           },
         ]

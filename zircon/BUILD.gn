@@ -280,7 +280,16 @@ build_api_module("packages") {
 #     - Type: string
 #
 #   * disabled
-#     - Optional: a string indicating a reason for the test being disabled.
+#     - Optional: a free-form string indicating a reason for the test being
+#       disabled.
+#     - Type: string
+#
+#   * runtime_deps
+#     - Optional: a JSON file containing a list of root_build_dir-relative
+#       paths defining ascribed runtime dependencies of the test. These
+#       dependencies are aggregated via the metadata graph of the associated
+#       test target under a data key of "test_runtime_deps.
+#     - Type: path relative to root_build_dir
 #
 build_api_module("tests") {
   testonly = true

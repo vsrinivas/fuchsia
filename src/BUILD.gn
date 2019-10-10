@@ -86,6 +86,31 @@ foreach(entry, zircon_test_specs) {
     # bad.
     copy_target_name =
         string_replace("_zircon_host_tests.${zircon_test.path}", "/", "_")
+    copy_deps = []
+
+    if (defined(zircon_test.runtime_deps)) {
+      entries = read_file("$zircon_root_build_dir/${zircon_test.runtime_deps}",
+                          "json")
+      foreach(entry, entries) {
+        # Same as above.
+        copy_dep_target_name =
+            string_replace("_zircon_host_tests.$entry", "/", "_")
+
+        copy(copy_dep_target_name) {
+          sources = [
+            "$zircon_root_build_dir/$entry",
+          ]
+          outputs = [
+            "$root_build_dir/$entry",
+          ]
+        }
+        copy_deps += [ ":$copy_dep_target_name" ]
+      }
+
+      runtime_deps_file = "$target_gen_dir/$copy_target_name.deps.json"
+      write_file(runtime_deps_file, entries, "json")
+    }
+
     copy(copy_target_name) {
       testonly = true
       sources = [
@@ -94,6 +119,8 @@ foreach(entry, zircon_test_specs) {
       outputs = [
         "$root_build_dir/${zircon_test.path}",
       ]
+      deps = copy_deps
+
       metadata = {
         test_spec = [
           {
@@ -104,13 +131,18 @@ foreach(entry, zircon_test_specs) {
                                        "disabled",
                                        "name",
                                        "path",
+                                       "runtime_deps",
                                      ])
               label = string_replace(label, "//", "//zircon/")
 
-              # TODO(36436): deprecate name in favour of label, and install_path
-              # in favour of path.
+              # TODO(fxbug.dev/36436): deprecate name in favour of label,
+              # install_path in favour of path, and deps_file for
+              # runtime_deps.
               name = get_label_info(label, "label_no_toolchain")
               install_path = zircon_test.path
+              if (defined(runtime_deps_file)) {
+                deps_file = rebase_path(runtime_deps_file, root_build_dir)
+              }
             }
 
             # We only run host tests from x64 builds to avoid duplication.
