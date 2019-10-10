@@ -1144,7 +1144,7 @@ TEST_P(SendSocketTest, sendMethod) {
   EXPECT_EQ(close(client_fd), 0) << strerror(errno);
 }
 
-INSTANTIATE_TEST_SUITE_P(NetStreamTest, SendSocketTest,
+INSTANTIATE_TEST_SUITE_P(DISABLED_NetStreamTest, SendSocketTest,
                          ::testing::Values(sendMethod::WRITE, sendMethod::WRITEV, sendMethod::SEND,
                                            sendMethod::SENDTO, sendMethod::SENDMSG));
 
