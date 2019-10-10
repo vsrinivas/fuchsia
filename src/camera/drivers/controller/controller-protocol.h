@@ -10,6 +10,8 @@
 #include <lib/fidl-utils/bind.h>
 #include <lib/fidl/cpp/binding.h>
 
+#include "configs/sherlock/internal-config.h"
+
 namespace camera {
 
 namespace {
@@ -23,9 +25,11 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   ControllerImpl(fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control,
                  async_dispatcher_t* dispatcher, fit::closure on_connection_closed);
 
-  // Sent by the driver to the client when a frame is available for processing,
-  // or an error occurred.
-  void OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo frame);
+ protected:
+  // For tests.
+  zx_status_t GetInternalConfiguration(uint32_t config_index, InternalConfigInfo** internal_config);
+
+  void PopulateConfigurations() { configs_ = SherlockConfigs(); }
 
  private:
   // Device FIDL implementation
@@ -35,7 +39,7 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
 
   // Set a particular configuration and create the requested stream.
   // |config_index| : Configuration index from the vector which needs to be applied.
-  // |stream_type| : Stream types (one of more of |CameraStreamTypes|)
+  // |stream_index| : Stream index
   // |buffer_collection| : Buffer collections for the stream.
   // |stream| : Stream channel for the stream requested
   // |image_format_index| : Image format index which needs to be set up upon creation.
@@ -44,22 +48,20 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   // and honor this new setup call.
   // If the new stream requested is already part of the existing running configuration
   // the HAL will just be creating this new stream while the other stream still exists as is.
-  void CreateStream(uint32_t config_index, uint32_t stream_type, uint32_t image_format_index,
+  void CreateStream(uint32_t config_index, uint32_t stream_index, uint32_t image_format_index,
                     ::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
                     ::fidl::InterfaceRequest<::fuchsia::camera2::Stream> stream) override{};
 
   // Enable/Disable Streaming
   void EnableStreaming() override {}
-
   void DisableStreaming() override {}
-
   void GetDeviceInfo(GetDeviceInfoCallback callback) override;
 
-  // Helper APIs
-  static std::vector<fuchsia::camera2::hal::Config> SherlockConfigs();
+  std::vector<fuchsia::camera2::hal::Config> SherlockConfigs();
 
   fidl::Binding<fuchsia::camera2::hal::Controller> binding_;
   std::vector<fuchsia::camera2::hal::Config> configs_;
+  InternalConfigs internal_configs_;
 };
 
 }  // namespace camera

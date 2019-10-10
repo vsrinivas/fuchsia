@@ -23,6 +23,7 @@ source_set("controller-source") {
     "controller-protocol.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.ge2d",
     "//sdk/banjo/ddk.protocol.isp",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",

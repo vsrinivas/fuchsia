@@ -6,52 +6,57 @@
 #define SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_ISP_DEBUG_CONFIG_H_
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
 
 #include <vector>
 
-#include "fuchsia/sysmem/cpp/fidl.h"
+#include "common-util.h"
+#include "src/camera/drivers/controller/configs/sherlock/internal-config.h"
 
-// This file lists down all the configurations Sherlock
-// camera stack will be supporting.
+// This file contains static information for the ISP Debug Configuration
+// There are three streams in one configuration
+// FR --> OutputStreamML (Directly from ISP)
 
 namespace camera {
 
 namespace {
 
-// ISP Debug Stream Parameters
+// IspDebugStream Parameters
 constexpr uint32_t kIspStreamMinBufferForCamping = 5;
-constexpr uint32_t kIspStreamMinWidth = 1920;
-constexpr uint32_t kIspStreamMaxWidth = 2048;
-constexpr uint32_t kIspStreamMinHeight = 1080;
-constexpr uint32_t kIspStreamMaxHeight = 1280;
-constexpr uint32_t kIspStreamMinBytesPerRow = 1920;
+constexpr uint32_t kIspStreamWidth = 1920;
+constexpr uint32_t kIspStreamHeight = 1080;
 constexpr uint32_t kIspStreamMaxBytesPerRow = 0xfffffff;
 constexpr uint32_t kIspStreamLayers = 1;
 constexpr uint32_t kIspStreamBytesPerRowDivisor = 128;
 constexpr uint32_t kIspStreamColorSpaceCount = 1;
-constexpr uint32_t kIspStreamWidth = 1920;
-constexpr uint32_t kIspStreamHeight = 1080;
-constexpr uint32_t kIspStreamStride = 1920;
 constexpr uint32_t kIspStreamFrameRate = 30;
 constexpr ::fuchsia::sysmem::PixelFormatType kIspStreamPixelFormat =
     fuchsia::sysmem::PixelFormatType::NV12;
 constexpr ::fuchsia::sysmem::ColorSpaceType kIspStreamColorSpaceType =
     fuchsia::sysmem::ColorSpaceType::REC601_PAL;
+
 }  // namespace
 
-static constexpr fuchsia::sysmem::BufferCollectionConstraints IspStreamConstraints() {
+/*****************************
+ * Output Stream ML paramters*
+ *****************************
+ */
+
+static constexpr fuchsia::sysmem::BufferCollectionConstraints IspDebugStreamConstraints() {
   fuchsia::sysmem::BufferCollectionConstraints constraints;
   constraints.min_buffer_count_for_camping = kIspStreamMinBufferForCamping;
   constraints.has_buffer_memory_constraints = true;
   constraints.buffer_memory_constraints.physically_contiguous_required = true;
   constraints.image_format_constraints_count = 1;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.physically_contiguous_required = true;
   auto& image_constraints = constraints.image_format_constraints[0];
   image_constraints.pixel_format.type = kIspStreamPixelFormat;
-  image_constraints.min_coded_width = kIspStreamMinWidth;
-  image_constraints.max_coded_width = kIspStreamMaxWidth;
-  image_constraints.min_coded_height = kIspStreamMinHeight;
-  image_constraints.max_coded_height = kIspStreamMaxHeight;
-  image_constraints.min_bytes_per_row = kIspStreamMinBytesPerRow;
+  image_constraints.min_coded_width = kIspStreamWidth;
+  image_constraints.max_coded_width = kIspStreamWidth;
+  image_constraints.min_coded_height = kIspStreamHeight;
+  image_constraints.max_coded_height = kIspStreamHeight;
+  image_constraints.min_bytes_per_row = kIspStreamWidth;
   image_constraints.max_bytes_per_row = kIspStreamMaxBytesPerRow;
   image_constraints.layers = kIspStreamLayers;
   image_constraints.bytes_per_row_divisor = kIspStreamBytesPerRowDivisor;
@@ -61,40 +66,69 @@ static constexpr fuchsia::sysmem::BufferCollectionConstraints IspStreamConstrain
   return constraints;
 }
 
-static std::vector<fuchsia::sysmem::ImageFormat_2> IspImageFormats() {
-  fuchsia::sysmem::ImageFormat_2 ret;
-  ret.coded_width = kIspStreamWidth;
-  ret.coded_height = kIspStreamHeight;
-  ret.bytes_per_row = kIspStreamStride;
-  ret.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
+static std::vector<fuchsia::sysmem::ImageFormat_2> IspDebugStreamImageFormats() {
+  fuchsia::sysmem::ImageFormat_2 format{
+      .pixel_format = {fuchsia::sysmem::PixelFormatType::NV12},
+      .coded_width = kIspStreamWidth,
+      .coded_height = kIspStreamHeight,
+      .bytes_per_row = kIspStreamWidth,
+  };
   std::vector<fuchsia::sysmem::ImageFormat_2> ret_vec;
-  ret_vec.push_back(ret);
+  ret_vec.push_back(format);
   return ret_vec;
 }
 
-static fuchsia::camera2::StreamProperties StreamProperties(
-    fuchsia::camera2::CameraStreamType type) {
-  fuchsia::camera2::StreamProperties ret{};
-  ret.set_stream_type(type);
-  return ret;
-}
-
-static fuchsia::camera2::hal::StreamConfig IspStreamConfig() {
+static fuchsia::camera2::hal::StreamConfig IspDebugStreamConfig() {
   fuchsia::camera2::hal::StreamConfig stream_config;
   stream_config.frame_rate = {
       .frames_per_sec_numerator = kIspStreamFrameRate,
       .frames_per_sec_denominator = 1,
   };
-  stream_config.constraints = IspStreamConstraints();
-  stream_config.properties = StreamProperties(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
-  stream_config.image_formats = IspImageFormats();
+  stream_config.constraints = IspDebugStreamConstraints();
+  stream_config.properties =
+      GetStreamProperties(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+  stream_config.image_formats = IspDebugStreamImageFormats();
   return stream_config;
 };
 
+/*****************************
+ *  EXTERNAL CONFIGURATIONS  *
+ *****************************
+ */
+
 fuchsia::camera2::hal::Config DebugConfig() {
   fuchsia::camera2::hal::Config config;
-  config.stream_configs.push_back(IspStreamConfig());
+  config.stream_configs.push_back(std::move(IspDebugStreamConfig()));
   return config;
+}
+
+/*****************************
+ *  INTERNAL CONFIGURATIONS  *
+ *****************************
+ */
+
+// FR --> OutputStream
+
+static InternalConfigNode OutputStream() {
+  InternalConfigNode node;
+  node.type = kOutputStream;
+  node.output_frame_rate.frames_per_sec_numerator = kIspStreamFrameRate;
+  node.output_frame_rate.frames_per_sec_denominator = 1;
+  node.output_stream_type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION;
+  return node;
+}
+
+InternalConfigNode DebugConfigFullRes() {
+  InternalConfigNode node;
+  node.type = kInputStream;
+  // For node type |kInputStream| we will be ignoring the
+  // frame rate divisor.
+  node.output_frame_rate.frames_per_sec_numerator = kIspStreamFrameRate;
+  node.output_frame_rate.frames_per_sec_denominator = 1;
+  node.input_stream_type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION;
+  node.supported_streams.push_back(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+  node.child_nodes.push_back(std::move(OutputStream()));
+  return node;
 }
 
 }  // namespace camera

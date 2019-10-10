@@ -13,11 +13,21 @@ ControllerImpl::ControllerImpl(fidl::InterfaceRequest<fuchsia::camera2::hal::Con
     : binding_(this) {
   binding_.set_error_handler(
       [occ = std::move(on_connection_closed)](zx_status_t /*status*/) { occ(); });
-  configs_ = SherlockConfigs();
   binding_.Bind(std::move(control), dispatcher);
 }
 
+zx_status_t ControllerImpl::GetInternalConfiguration(uint32_t config_index,
+                                                     InternalConfigInfo** internal_config) {
+  if (config_index >= internal_configs_.configs_info.size() || internal_config == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  *internal_config = &internal_configs_.configs_info[config_index];
+  return ZX_OK;
+}
+
 void ControllerImpl::GetConfigs(GetConfigsCallback callback) {
+  PopulateConfigurations();
   callback(fidl::Clone(configs_), ZX_OK);
 }
 

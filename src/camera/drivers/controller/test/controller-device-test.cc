@@ -116,6 +116,19 @@ TEST_F(ControllerDeviceTest, GetConfigs) {
         ASSERT_EQ(status, ZX_OK);
         EXPECT_TRUE(configs.has_value());
         EXPECT_GT(configs->size(), 0u);
+        // Config 0 (debug)
+        EXPECT_EQ(configs->at(0).stream_configs.at(0).properties.stream_type(),
+                  fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+
+        // Config 1 (monitoring)
+        EXPECT_EQ(configs->at(1).stream_configs.at(0).properties.stream_type(),
+                  fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                      fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+        EXPECT_EQ(configs->at(1).stream_configs.at(1).properties.stream_type(),
+                  fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                      fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+        EXPECT_EQ(configs->at(1).stream_configs.at(2).properties.stream_type(),
+                  fuchsia::camera2::CameraStreamType::MONITORING);
       });
   RunLoopUntilIdle();
 }

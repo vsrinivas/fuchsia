@@ -34,6 +34,7 @@ test_package("camera_full_test") {
     "//src/camera/calibration/blc/test:blc_test",
     "//src/camera/calibration/image_writer/test:image_writer_test",
     "//src/camera/camera_manager2/test:camera-manager-test",
+    "//src/camera/drivers/controller/test:controller-protocol-test",
     "//src/camera/drivers/controller/test:controller-test",
     "//src/camera/drivers/hw_accel/gdc/test:gdc-task",
     "//src/camera/drivers/hw_accel/ge2d/test:ge2d-task",
@@ -67,6 +68,11 @@ test_package("camera_full_test") {
     #   manifest = "drivers/controller/test/meta/controller-test.cmx"
     #   environments = basic_envs
     # },
+    {
+      name = "controller-protocol-test"
+      manifest = "drivers/controller/test/meta/controller-protocol-test.cmx"
+      environments = basic_envs
+    },
     {
       name = "test_utils_test"
       manifest = "drivers/test_utils/test/meta/test_utils_test.cmx"
