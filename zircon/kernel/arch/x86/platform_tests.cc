@@ -668,4 +668,5 @@ UNITTEST("test mitigation of x64 SSB vulnerability", test_x64_ssb_disable)
 UNITTEST("test Intel x86 microcode patch loader match and load logic", test_x64_intel_ucode_loader)
 UNITTEST("test Intel x86 microcode patch loader mechanism", test_x64_intel_ucode_patch_loader)
 UNITTEST("test pkg power limit change", test_x64_power_limits)
+UNITTEST("test amd_platform_init", test_amd_platform_init)
 UNITTEST_END_TESTCASE(x64_platform_tests, "x64_platform_tests", "");
