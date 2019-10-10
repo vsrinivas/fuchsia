@@ -10,25 +10,13 @@ use fidl_fuchsia_power as fpower;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info};
-use fuchsia_vfs_watcher as vfs_watcher;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use parking_lot::Mutex;
 use std::convert::{From, Into};
-use std::fs::File;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 mod power;
-
-// TODO (ZX-3385): still required for FIDL service binding (via fd)
-// once componentization of drivers is complete and they are
-// capable of publishing their FIDL services, should be able
-// to remove this.
-static POWER_DEVICE: &str = "/dev/class/power";
-
-// Time to sleep between status update in seconds.
-static SLEEP_TIME: i64 = 180;
 
 #[derive(Debug, PartialEq)]
 struct TimeRemainingWrapper(fpower::TimeRemaining);
@@ -117,7 +105,7 @@ enum StatusUpdateResult {
 // TODO (DNO-686): refactoring will include fixing this, as it
 // does not lend itself to scaling across all the facets of battery
 // API currently under design.
-struct BatteryInfoHelper {
+pub struct BatteryInfoHelper {
     battery_info: BatteryInfoWrapper,
     watchers: Arc<Mutex<Vec<fpower::BatteryInfoWatcherProxy>>>,
 }
@@ -126,13 +114,6 @@ struct BatteryInfoHelper {
 fn get_current_time() -> i64 {
     let t = zx::Time::get(zx::ClockId::UTC);
     (t.into_nanos() / 1000) as i64
-}
-
-#[derive(Debug)]
-enum WatchSuccess {
-    Completed,
-    BatteryAlreadyFound,
-    AdapterAlreadyFound,
 }
 
 impl BatteryInfoHelper {
@@ -149,12 +130,16 @@ impl BatteryInfoHelper {
     }
 
     // Updates the status
-    fn update_status(&mut self, file: &File) -> Result<(), failure::Error> {
-        let power_info = power::get_power_info(file)?;
-        let mut battery_info: Option<hpower::BatteryInfo> = None;
-        if power_info.type_ == hpower::PowerType::Battery {
-            battery_info = Some(power::get_battery_info(file)?);
-        }
+    fn update_status(
+        &mut self,
+        power_info: hpower::SourceInfo,
+        battery_info: Option<hpower::BatteryInfo>,
+    ) -> Result<(), failure::Error> {
+        fx_log_info!(
+            "update status with power info: {:#?} and battery info: {:#?}",
+            &power_info,
+            &battery_info
+        );
 
         match self.update_battery_info(power_info, battery_info) {
             Ok(StatusUpdateResult::Notify) => {
@@ -300,85 +285,6 @@ struct PowerManagerServer {
     battery_info_helper: Arc<Mutex<BatteryInfoHelper>>,
 }
 
-fn process_watch_event(
-    filepath: &PathBuf,
-    bsh: Arc<Mutex<BatteryInfoHelper>>,
-    battery_device_found: &mut bool,
-    adapter_device_found: &mut bool,
-) -> Result<WatchSuccess, failure::Error> {
-    let file = File::open(&filepath)?;
-    let power_info = power::get_power_info(&file)?;
-
-    if power_info.type_ == hpower::PowerType::Battery && *battery_device_found {
-        return Ok(WatchSuccess::BatteryAlreadyFound);
-    } else if power_info.type_ == hpower::PowerType::Ac && *adapter_device_found {
-        return Ok(WatchSuccess::AdapterAlreadyFound);
-    }
-    let bsh2 = bsh.clone();
-    power::add_listener(&file, move |file: &File| {
-        let mut bsh2 = bsh2.lock();
-        if let Err(e) = bsh2.update_status(&file) {
-            fx_log_err!("{}", e);
-        }
-    })
-    .context("adding listener")?;
-    {
-        let mut bsh = bsh.lock();
-        bsh.update_status(&file).context("adding watch events")?;
-    }
-
-    if power_info.type_ == hpower::PowerType::Battery {
-        *battery_device_found = true;
-        let bsh = bsh.clone();
-        let mut timer = fasync::Interval::new(zx::Duration::from_seconds(SLEEP_TIME));
-        fasync::spawn(async move {
-            while let Some(()) = (timer.next()).await {
-                let mut bsh = bsh.lock();
-                if let Err(e) = bsh.update_status(&file) {
-                    fx_log_err!("{}", e);
-                }
-            }
-        });
-    } else {
-        *adapter_device_found = true;
-    }
-    Ok(WatchSuccess::Completed)
-}
-
-async fn watch_power_device(bsh: Arc<Mutex<BatteryInfoHelper>>) -> Result<(), Error> {
-    let file = File::open(POWER_DEVICE).context("cannot find power device")?;
-    let mut watcher = vfs_watcher::Watcher::new(&file).await?;
-    let mut adapter_device_found = false;
-    let mut battery_device_found = false;
-    while let Some(msg) = (watcher.try_next()).await? {
-        if battery_device_found && adapter_device_found {
-            continue;
-        }
-        let mut filepath = PathBuf::from(POWER_DEVICE);
-        filepath.push(msg.filename);
-        match process_watch_event(
-            &filepath,
-            bsh.clone(),
-            &mut battery_device_found,
-            &mut adapter_device_found,
-        ) {
-            Ok(WatchSuccess::Completed) => {}
-            Ok(early_return) => {
-                let device_type = match early_return {
-                    WatchSuccess::Completed => unreachable!(),
-                    WatchSuccess::BatteryAlreadyFound => "battery",
-                    WatchSuccess::AdapterAlreadyFound => "adapter",
-                };
-                fx_log_info!("Skip '{:?}' as {} device already found", filepath, device_type);
-            }
-            Err(err) => {
-                fx_log_err!("error for file while adding watch event '{:?}': {}", filepath, err);
-            }
-        }
-    }
-    Ok(())
-}
-
 fn spawn_power_manager(pm: PowerManagerServer, mut stream: fpower::BatteryManagerRequestStream) {
     fasync::spawn(
         async move {
@@ -426,7 +332,7 @@ fn main_pm() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("unable to create executor")?;
     let bsh = Arc::new(Mutex::new(BatteryInfoHelper::new()));
     let bsh2 = bsh.clone();
-    let f = watch_power_device(bsh2);
+    let f = power::watch_power_device(bsh2);
 
     fasync::spawn(f.unwrap_or_else(|e| {
         fx_log_err!("watch_power_device failed {:?}", e);
