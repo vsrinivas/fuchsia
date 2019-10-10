@@ -4,14 +4,11 @@
 
 #include <gtest/gtest.h>
 #include <lib/zx/job.h>
-#include <lib/zx/process.h>
 #include <src/lib/fxl/logging.h>
 #include <trace-reader/file_reader.h>
 
 #include "garnet/bin/trace/tests/integration_test_utils.h"
 #include "garnet/bin/trace/tests/run_test.h"
-
-const char kTracePath[] = "/bin/trace";
 
 const char kAppUrl[] = "fuchsia-pkg://fuchsia.com/trace_tests#meta/shared_provider_app.cmx";
 
@@ -29,17 +26,13 @@ const char kCategoriesArg[] = "--categories=" CATEGORY_NAME;
 namespace {
 
 TEST(SharedProvider, IntegrationTest) {
-  zx::job job;
-  ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0, &job), ZX_OK);
-
-  zx::process child;
-  std::vector<std::string> argv{kTracePath, "record", kCategoriesArg,
-                                std::string("--output-file=") + kOutputFile, kAppUrl};
-  ASSERT_EQ(SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
-
-  int64_t return_code;
-  ASSERT_TRUE(WaitAndGetReturnCode(argv[0], child, &return_code));
-  EXPECT_EQ(return_code, 0);
+  zx::job job{};  // -> default job
+  std::vector<std::string> args{
+    "record",
+    kCategoriesArg,
+    std::string("--output-file=") + kOutputFile,
+    kAppUrl};
+  ASSERT_TRUE(RunTraceAndWait(job, args));
 
   size_t num_events;
   EXPECT_TRUE(VerifyTestEvents(kOutputFile, &num_events));

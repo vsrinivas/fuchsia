@@ -11,8 +11,6 @@
 #include "garnet/bin/trace/tests/integration_test_utils.h"
 #include "garnet/bin/trace/tests/run_test.h"
 
-const char kTracePath[] = "/bin/trace";
-
 const char kAppUrl[] = "fuchsia-pkg://fuchsia.com/trace_tests#meta/provider_destruction_app.cmx";
 
 // Note: /data is no longer large enough in qemu sessions
@@ -33,18 +31,14 @@ namespace {
 constexpr size_t kNumIterations = 50;
 
 TEST(ProviderDestruction, StressTest) {
-  zx::job job;
-  ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0, &job), ZX_OK);
-
+  zx::job job{};  // -> default job
   for (size_t i = 0; i < kNumIterations; ++i) {
-    zx::process child;
-    std::vector<std::string> argv{kTracePath, "record", kCategoriesArg,
-                                  std::string("--output-file=") + kOutputFile, kAppUrl};
-    ASSERT_EQ(SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
-
-    int64_t return_code;
-    ASSERT_TRUE(WaitAndGetReturnCode(argv[0], child, &return_code));
-    EXPECT_EQ(return_code, 0);
+    std::vector<std::string> args{
+      "record",
+      kCategoriesArg,
+      std::string("--output-file=") + kOutputFile,
+      kAppUrl};
+    ASSERT_TRUE(RunTraceAndWait(job, args));
 
     size_t num_events;
     EXPECT_TRUE(VerifyTestEvents(kOutputFile, &num_events));

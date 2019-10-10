@@ -14,6 +14,7 @@
 
 #include <iostream>
 
+#include "garnet/bin/trace/tests/component_context.h"
 #include "garnet/bin/trace/tests/run_test.h"
 
 // Note: /data is no longer large enough in qemu sessions
@@ -51,19 +52,13 @@ int main(int argc, char *argv[]) {
   }
   auto relative_tspec_path = args[0];
 
-  // |Create()| needs a loop, it uses the default dispatcher.
-  std::unique_ptr<sys::ComponentContext> context;
-  {
-    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-    context = sys::ComponentContext::Create();
-    FXL_DCHECK(context);
-  }
+  tracing::test::InitComponentContext();
 
-  if (!RunTspec(context.get(), relative_tspec_path, kOutputFilePath)) {
+  if (!RunTspec(relative_tspec_path, kOutputFilePath)) {
     return EXIT_FAILURE;
   }
 
-  if (!VerifyTspec(context.get(), relative_tspec_path, kOutputFilePath)) {
+  if (!VerifyTspec(relative_tspec_path, kOutputFilePath)) {
     return EXIT_FAILURE;
   }
 

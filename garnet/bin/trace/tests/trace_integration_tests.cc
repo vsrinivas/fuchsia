@@ -23,8 +23,8 @@ static std::unique_ptr<sys::ComponentContext> g_context;
 
 // |relative_tspec_path| is a relative path, from /pkg.
 static void RunAndVerify(const char* relative_tspec_path) {
-  ASSERT_TRUE(RunTspec(g_context.get(), relative_tspec_path, kOutputFilePath));
-  ASSERT_TRUE(VerifyTspec(g_context.get(), relative_tspec_path, kOutputFilePath));
+  ASSERT_TRUE(RunTspec(relative_tspec_path, kOutputFilePath));
+  ASSERT_TRUE(VerifyTspec(relative_tspec_path, kOutputFilePath));
 }
 
 TEST(Oneshot, FillBuffer) { RunAndVerify("data/oneshot.tspec"); }
@@ -34,7 +34,7 @@ TEST(Circular, FillBuffer) { RunAndVerify("data/circular.tspec"); }
 TEST(Streaming, FillBuffer) { RunAndVerify("data/streaming.tspec"); }
 
 TEST(NestedTestEnvironment, Test) {
-  ASSERT_TRUE(RunTspec(g_context.get(), "data/nested_environment_test.tspec", kOutputFilePath));
+  ASSERT_TRUE(RunTspec("data/nested_environment_test.tspec", kOutputFilePath));
 }
 
 // A class for adding an extra provider to the test.
@@ -126,25 +126,4 @@ TEST_F(TwoProvidersOneEngine, ErrorHandling) {
 
 TEST(TwoProvidersTwoEngines, DISABLED_Test) {
   RunAndVerify("data/two_providers_two_engines.tspec");
-}
-
-// Provide our own main so that --verbose,etc. are recognized.
-// This is useful because our verbosity is passed on to each test.
-int main(int argc, char** argv) {
-  auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (!fxl::SetTestSettings(cl))
-    return EXIT_FAILURE;
-
-  testing::InitGoogleTest(&argc, argv);
-
-  // |Create()| needs a loop, it uses the default dispatcher.
-  // TODO(PT-176): use a separate test loop for each test to avoid something
-  // pushed on the loop in a test being run in the next one.
-  {
-    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-    g_context = sys::ComponentContext::Create();
-    FXL_DCHECK(g_context);
-  }
-
-  return RUN_ALL_TESTS();
 }

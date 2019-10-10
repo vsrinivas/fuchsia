@@ -12,7 +12,6 @@
 
 #include "garnet/bin/trace/tests/run_test.h"
 
-const char kTracePath[] = "/bin/trace";
 const char kChildPath[] = "/bin/trace";
 
 // Note: /data is no longer large enough in qemu sessions
@@ -30,19 +29,16 @@ const char kCategoriesArg[] = "--categories=kernel:syscall,kernel:sched,kernel:i
 const char kChildArg[] = "--help";
 
 TEST(Ktrace, IntegrationTest) {
-  zx::job job;
-  ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0, &job), ZX_OK);
-
-  zx::process child;
-  std::vector<std::string> argv{kTracePath,     "record",
-                                "--spawn",      "--binary",
-                                kCategoriesArg, std::string("--output-file=") + kOutputFile,
-                                kChildPath,     kChildArg};
-  ASSERT_EQ(SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
-
-  int64_t return_code;
-  ASSERT_TRUE(WaitAndGetReturnCode(argv[0], child, &return_code));
-  EXPECT_EQ(return_code, 0);
+  zx::job job{};  // -> default job
+  std::vector<std::string> args{
+    "record",
+    "--spawn",
+    "--binary",
+    kCategoriesArg,
+    std::string("--output-file=") + kOutputFile,
+    kChildPath,
+    kChildArg};
+  ASSERT_TRUE(RunTraceAndWait(job, args));
 
   size_t record_count = 0;
   size_t syscall_count = 0;
@@ -75,15 +71,4 @@ TEST(Ktrace, IntegrationTest) {
   FXL_LOG(INFO) << "Got " << record_count << " records, " << syscall_count << " syscalls";
 
   ASSERT_GT(syscall_count, 0u);
-}
-
-// Provide our own main so that --verbose,etc. are recognized.
-int main(int argc, char** argv) {
-  fxl::CommandLine cl = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (!fxl::SetLogSettingsFromCommandLine(cl))
-    return EXIT_FAILURE;
-
-  testing::InitGoogleTest(&argc, argv);
-
-  return RUN_ALL_TESTS();
 }

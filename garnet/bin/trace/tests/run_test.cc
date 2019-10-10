@@ -24,10 +24,13 @@
 #include <string>
 #include <vector>
 
+#include "garnet/bin/trace/tests/component_context.h"
 #include "garnet/bin/trace/spec.h"
 
 // The "path" of the trace program from outside the trace package.
 const char kTraceProgramUrl[] = "fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx";
+// The path of the trace program as a shell command.
+const char kTraceProgramPath[] = "/bin/trace";
 // The path of the trace program from within the trace package.
 // const char kTracePackageProgramPath[] = "/pkg/bin/trace";
 
@@ -166,8 +169,7 @@ bool WaitAndGetReturnCode(const std::string& program_name, const zx::process& pr
   return true;
 }
 
-static bool LaunchTool(const std::vector<std::string>& argv) {
-  zx::job job{};  // -> default job
+static bool RunProgramAndWait(const zx::job& job, const std::vector<std::string>& argv) {
   zx::process subprocess;
 
   auto status = SpawnProgram(job, argv, ZX_HANDLE_INVALID, &subprocess);
@@ -187,61 +189,99 @@ static bool LaunchTool(const std::vector<std::string>& argv) {
   return true;
 }
 
-static bool LaunchApp(sys::ComponentContext* context, const std::string& app,
-                      const std::vector<std::string>& args) {
+bool RunTrace(const zx::job& job, const std::vector<std::string>& args, zx::process* out_child) {
+  std::vector<std::string> argv{kTraceProgramPath};
+  for (const auto& arg : args) {
+    argv.push_back(arg);
+  }
+  return SpawnProgram(job, argv, ZX_HANDLE_INVALID, out_child) == ZX_OK;
+}
+
+bool RunTraceAndWait(const zx::job& job, const std::vector<std::string>& args) {
+  std::vector<std::string> argv{kTraceProgramPath};
+  for (const auto& arg : args) {
+    argv.push_back(arg);
+  }
+  return RunProgramAndWait(job, argv);
+}
+
+static bool RunComponent(sys::ComponentContext* context, const std::string& app,
+                         const std::vector<std::string>& args,
+                         fuchsia::sys::ComponentControllerPtr* component_controller) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = std::string(app);
   launch_info.arguments = fidl::To<fidl::VectorPtr<std::string>>(args);
 
   FXL_LOG(INFO) << "Launching: " << launch_info.url << " " << fxl::JoinStrings(args, " ");
 
-  fuchsia::sys::ComponentControllerPtr component_controller;
+  fuchsia::sys::LauncherPtr launcher;
+  zx_status_t status = context->svc()->Connect(launcher.NewRequest());
+  if (status != ZX_OK) {
+    FXL_PLOG(ERROR, status) << "context->svc()->Connect() failed for " << app;
+    return false;
+  }
+
+  launcher->CreateComponent(std::move(launch_info), component_controller->NewRequest());
+  return true;
+}
+
+static bool WaitAndGetReturnCode(const std::string& program_name, async::Loop* loop,
+                                 fuchsia::sys::ComponentControllerPtr* component_controller,
+                                 int64_t* out_return_code) {
+  fuchsia::sys::TerminationReason termination_reason = fuchsia::sys::TerminationReason::INTERNAL_ERROR;
+  // This value is not valid unless |termination_reason==EXITED|.
   int64_t return_code = INT64_MIN;
 
-  // Attach to the current thread so that it's using the default async
-  // dispatcher, which is what the component controller machinery is using.
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-
-  fuchsia::sys::LauncherPtr launcher;
-  context->svc()->Connect(launcher.NewRequest());
-  launcher->CreateComponent(std::move(launch_info), component_controller.NewRequest());
-  component_controller.set_error_handler([&loop, &return_code](zx_status_t error) {
-    // This can get run even after the app has exited, in the destructor.
-    if (return_code == INT64_MIN) {
-      FXL_LOG(INFO) << "Application terminated, status " << error;
-      return_code = error;
-      loop.Quit();
-    }
+  component_controller->set_error_handler([&loop, &program_name, &termination_reason](zx_status_t error) {
+    FXL_PLOG(ERROR, error) << "Unexpected error waiting for " << program_name << " to exit";
+    termination_reason = fuchsia::sys::TerminationReason::UNKNOWN;
+    loop->Quit();
   });
-  component_controller.events().OnTerminated =
-      [&loop, &return_code](int64_t rc, fuchsia::sys::TerminationReason termination_reason) {
-        FXL_LOG(INFO) << "Application exited with return reason/code "
+  component_controller->events().OnTerminated =
+      [&loop, &program_name, &component_controller, &termination_reason, &return_code](
+          int64_t rc, fuchsia::sys::TerminationReason reason) {
+        FXL_LOG(INFO) << "Component " << program_name << " exited with return reason/code "
                       << static_cast<int>(termination_reason) << "/" << rc;
-        switch (termination_reason) {
-          case fuchsia::sys::TerminationReason::UNKNOWN:
-            // Some non-zero value.
-            return_code = 1;
-            break;
-          case fuchsia::sys::TerminationReason::EXITED:
-            return_code = rc;
-            break;
-          default:
-            return_code = static_cast<int64_t>(termination_reason);
-            break;
+        // Disable the error handler. It can get called after we're done, e.g., during the
+        // destructor.
+        component_controller->set_error_handler([](zx_status_t error) {});
+        termination_reason = reason;
+        if (termination_reason == fuchsia::sys::TerminationReason::EXITED) {
+          return_code = rc;
         }
-        loop.Quit();
+        loop->Quit();
       };
 
-  // We could add a timeout here but the general rule is to leave it to the
-  // watchdog timer.
+  // We could add a timeout here but the general rule is to leave it to the watchdog timer.
+  loop->Run();
 
-  loop.Run();
+  if (termination_reason == fuchsia::sys::TerminationReason::EXITED) {
+    FXL_LOG(INFO) << program_name << ": return code " << return_code;
+    *out_return_code = return_code;
+    return true;
+  } else {
+    FXL_LOG(ERROR) << program_name << ": termination reason "
+                   << static_cast<int>(termination_reason);
+    return false;
+  }
+}
 
-  FXL_LOG(INFO) << "return_code " << return_code;
+static bool RunComponentAndWait(async::Loop* loop, sys::ComponentContext* context,
+                                const std::string& app, const std::vector<std::string>& args) {
+  fuchsia::sys::ComponentControllerPtr component_controller;
+  if (!RunComponent(context, app, args, &component_controller)) {
+    return false;
+  }
+
+  int64_t return_code;
+  if (!WaitAndGetReturnCode(app, loop, &component_controller, &return_code)) {
+    return false;
+  }
+
   return return_code == 0;
 }
 
-bool RunTspec(sys::ComponentContext* context, const std::string& relative_tspec_path,
+bool RunTspec(const std::string& relative_tspec_path,
               const std::string& output_file_path) {
   std::vector<std::string> args;
   if (!BuildTraceProgramArgs(relative_tspec_path, output_file_path, &args)) {
@@ -250,10 +290,12 @@ bool RunTspec(sys::ComponentContext* context, const std::string& relative_tspec_
 
   FXL_LOG(INFO) << "Running tspec " << relative_tspec_path << ", output file " << output_file_path;
 
-  return LaunchApp(context, kTraceProgramUrl, args);
+  async::Loop loop{&kAsyncLoopConfigAttachToCurrentThread};
+  sys::ComponentContext* context = tracing::test::GetComponentContext();
+  return RunComponentAndWait(&loop, context, kTraceProgramUrl, args);
 }
 
-bool VerifyTspec(sys::ComponentContext* context, const std::string& relative_tspec_path,
+bool VerifyTspec(const std::string& relative_tspec_path,
                  const std::string& output_file_path) {
   tracing::Spec spec;
   if (!ReadTspec(kPackageTestPrefix + relative_tspec_path, &spec)) {
@@ -272,14 +314,16 @@ bool VerifyTspec(sys::ComponentContext* context, const std::string& relative_tsp
                 << output_file_path;
 
   // For consistency we do the exact same thing that the trace program does.
-  // We also use the same function names for easier comparison.
   if (spec.spawn) {
+    zx::job job{};  // -> default job
     std::vector<std::string> argv{program_path};
     for (const auto& arg : args) {
       argv.push_back(arg);
     }
-    return LaunchTool(argv);
+    return RunProgramAndWait(job, argv);
   } else {
-    return LaunchApp(context, program_path, args);
+    async::Loop loop{&kAsyncLoopConfigAttachToCurrentThread};
+    sys::ComponentContext* context = tracing::test::GetComponentContext();
+    return RunComponentAndWait(&loop, context, program_path, args);
   }
 }
