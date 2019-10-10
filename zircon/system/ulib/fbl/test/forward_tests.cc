@@ -3,33 +3,35 @@
 // found in the LICENSE file.
 
 #include <stdio.h>
-#include <unittest/unittest.h>
 
 #include <utility>
 
+#include <zxtest/zxtest.h>
+
+namespace {
 enum Category { CAT_LVALUE, CAT_RVALUE };
 
-static int category(const int& arg) { return CAT_LVALUE; }
+int category(const int& arg) { return CAT_LVALUE; }
 
-static int category(int&& arg) { return CAT_RVALUE; }
+int category(int&& arg) { return CAT_RVALUE; }
 
 template <typename T>
-static int passing(T&& t) {
+int passing(T&& t) {
   return category(t);
 }
 
 template <typename T>
-static int moving(T&& t) {
+int moving(T&& t) {
   return category(std::move(t));
 }
 
 template <typename T>
-static int forwarding(T&& t) {
+int forwarding(T&& t) {
   return category(std::forward<T>(t));
 }
 
 template <typename T>
-static int forward_copy(T&& t) {
+int forward_copy(T&& t) {
   return category(std::forward<T&>(t));
 }
 
@@ -40,12 +42,11 @@ struct A {
 };
 
 template <typename T, typename U>
-static T make_object(U&& u) {
+T make_object(U&& u) {
   return T(std::forward<U>(u));
 }
 
-static bool forward_test() {
-  BEGIN_TEST;
+TEST(ForwardTest, MainTest) {
   int val = 42;
   int& ref = val;
   const int& cref = val;
@@ -79,10 +80,5 @@ static bool forward_test() {
 
   EXPECT_EQ(CAT_RVALUE, a1.category);
   EXPECT_EQ(CAT_LVALUE, a2.category);
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(forward_tests)
-RUN_NAMED_TEST("Forward test", forward_test)
-END_TEST_CASE(forward_tests)
+}  // namespace
