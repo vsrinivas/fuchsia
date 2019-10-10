@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, ResultExt};
-use fidl_fuchsia_location_namedplace::RegulatoryRegionConfiguratorMarker;
-use fuchsia_async;
-use fuchsia_component::client::connect_to_service;
+use {
+    failure::{Error, ResultExt},
+    fidl_fuchsia_location_namedplace::RegulatoryRegionConfiguratorMarker,
+    fuchsia_async,
+    fuchsia_component::client::connect_to_service,
+};
 
 const REGION: &'static str = "WW";
 

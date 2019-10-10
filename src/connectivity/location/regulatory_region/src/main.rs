@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, ResultExt};
-use fidl_fuchsia_location_namedplace::{
-    RegulatoryRegionConfiguratorRequest, RegulatoryRegionConfiguratorRequestStream,
+use {
+    failure::{Error, ResultExt},
+    fidl_fuchsia_location_namedplace::{
+        RegulatoryRegionConfiguratorRequest, RegulatoryRegionConfiguratorRequestStream,
+    },
+    fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    fuchsia_syslog::{self as syslog, fx_log_info},
+    futures::{StreamExt, TryFutureExt, TryStreamExt},
 };
-use fuchsia_async as fasync;
-use fuchsia_component::server::ServiceFs;
-use fuchsia_syslog::{self as syslog, fx_log_info};
-use futures::{StreamExt, TryFutureExt, TryStreamExt};
 
 const CONCURRENCY_LIMIT: Option<usize> = None;
 
