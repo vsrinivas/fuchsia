@@ -5,7 +5,7 @@
 #![cfg(not(target_os = "fuchsia"))]
 
 use {
-    failure::Error,
+    failure::{Error, ResultExt},
     fidl::endpoints::ClientEnd,
     fidl::Handle,
     fidl_fuchsia_overnet::{Peer, ServiceProviderMarker},
@@ -18,6 +18,7 @@ use {
     parking_lot::Mutex,
     std::cell::RefCell,
     std::rc::Rc,
+    std::time::Duration,
     tokio::{io::AsyncRead, runtime::current_thread},
 };
 
@@ -171,7 +172,7 @@ async fn finish_writes(
             let bytes = writer.borrow_mut().framer.take_sends();
             start_writes(writer, tx, bytes);
         }
-        Err(e) => eprintln!("Write failed: {}", e),
+        Err(e) => log::warn!("Write failed: {}", e),
     }
 }
 
@@ -224,7 +225,7 @@ async fn read_incoming(
     chan: futures::channel::mpsc::Sender<Vec<u8>>,
 ) {
     if let Err(e) = read_incoming_inner(stream, chan).await {
-        eprintln!("Error reading: {}", e);
+        log::warn!("Error reading: {}", e);
     }
 }
 
@@ -234,7 +235,7 @@ async fn process_incoming_inner(
     link_id: LinkId,
 ) -> Result<(), Error> {
     while let Some(mut frame) = rx_frames.next().await {
-        node.queue_recv(link_id, frame.as_mut())?;
+        node.queue_recv(link_id, frame.as_mut());
     }
     Ok(())
 }
@@ -245,8 +246,31 @@ async fn process_incoming(
     link_id: LinkId,
 ) {
     if let Err(e) = process_incoming_inner(node, rx_frames, link_id).await {
-        eprintln!("Error processing incoming frames: {}", e);
+        log::warn!("Error processing incoming frames: {}", e);
     }
+}
+
+async fn retry_with_backoff<T, E, F>(
+    mut backoff: Duration,
+    mut remaining_retries: u8,
+    f: impl Fn() -> F,
+) -> Result<T, E>
+where
+    F: Future<Output = Result<T, E>>,
+    E: std::fmt::Debug,
+{
+    while remaining_retries > 1 {
+        match f().await {
+            Ok(r) => return Ok(r),
+            Err(e) => {
+                log::warn!("Operation failed: {:?} -- retrying in {:?}", e, backoff);
+                std::thread::sleep(backoff);
+                backoff *= 2;
+                remaining_retries -= 1;
+            }
+        }
+    }
+    f().await
 }
 
 async fn run_overnet_prelude() -> Result<Node<OvernetRuntime>, Error> {
@@ -258,9 +282,10 @@ async fn run_overnet_prelude() -> Result<Node<OvernetRuntime>, Error> {
 
     log::trace!("Ascendd path: {}", ascendd_path);
     log::trace!("Overnet connection label: {:?}", connection_label);
-    let uds = tokio::net::UnixStream::connect(ascendd_path);
+    let uds = tokio::net::UnixStream::connect(ascendd_path.clone());
     let uds = futures::compat::Compat01As03::new(uds);
-    let (rx_bytes, tx_bytes) = uds.await?.split();
+    let uds = uds.await.context(format!("Opening uds path: {}", ascendd_path))?;
+    let (rx_bytes, tx_bytes) = uds.split();
     let (tx_frames, mut rx_frames) = futures::channel::mpsc::channel(8);
 
     spawn_local(read_incoming(rx_bytes, tx_frames));
@@ -333,12 +358,13 @@ async fn run_overnet_prelude() -> Result<Node<OvernetRuntime>, Error> {
 async fn run_overnet_inner(
     mut rx: futures::channel::mpsc::UnboundedReceiver<OvernetCommand>,
 ) -> Result<(), Error> {
-    let node = run_overnet_prelude().await?;
+    let node =
+        retry_with_backoff(std::time::Duration::from_millis(100), 5, run_overnet_prelude).await?;
 
     // Run application loop
     loop {
         let cmd = rx.next().await;
-        log::trace!("cmd = {:?}", cmd);
+        let desc = format!("{:?}", cmd);
         let r = match cmd {
             None => return Ok(()),
             Some(OvernetCommand::ListPeers(last_seen_version, sender)) => {
@@ -356,7 +382,7 @@ async fn run_overnet_inner(
             }
         };
         if let Err(e) = r {
-            log::warn!("cmd failed: {:?}", e);
+            log::warn!("cmd {} failed: {:?}", desc, e);
         }
     }
 }
@@ -367,7 +393,7 @@ fn run_overnet(rx: futures::channel::mpsc::UnboundedReceiver<OvernetCommand>) {
         .block_on(
             async move {
                 if let Err(e) = run_overnet_inner(rx).await {
-                    eprintln!("Main loop failed: {}", e);
+                    log::warn!("Main loop failed: {}", e);
                 }
             }
                 .unit_error()

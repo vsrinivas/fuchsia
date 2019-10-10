@@ -124,6 +124,10 @@ impl<'a, Runtime: NodeRuntime + 'static> MessageReceiver for Receiver<'a, Runtim
         trace!("Schedule routing update");
         self.update_routing = true;
     }
+
+    fn established_connection(&mut self, node_id: NodeId) {
+        self.node_table.mark_established(node_id);
+    }
 }
 
 type ListPeersResponderChannel = futures::channel::oneshot::Sender<Result<(u64, Vec<Peer>), Error>>;
@@ -144,6 +148,7 @@ impl NodeStateCallback for ListPeersResponse {
     fn trigger(&mut self, new_version: u64, node_table: &NodeTable) -> Result<(), Error> {
         let mut peers: Vec<_> = node_table
             .nodes()
+            .filter(|node_id| node_table.is_established(*node_id))
             .map(|node_id| Peer {
                 id: fidl_fuchsia_overnet_protocol::NodeId { id: node_id.0 },
                 is_self: node_id == self.own_node_id,
@@ -298,8 +303,8 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
                 .ok_or_else(|| format_err!("Unknown service {}", service_name))?
                 .connect_to_service(chan)?;
         } else {
-            let stream_id = this.router.new_stream(node_id, service_name)?;
             let chan = Rc::new(AsyncChannel::from_channel(chan)?);
+            let stream_id = this.router.new_stream(node_id, service_name)?;
             this.streams.init(stream_id, StreamBinding::Channel(chan.clone()));
             this.runtime.spawn_local(self.clone().channel_reader(chan, stream_id));
             self.clone().need_flush(this);
@@ -423,7 +428,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         let mut buf = [0u8; 1024];
         loop {
             while let Some(mut frame) = deframer.next_incoming_frame() {
-                self.queue_recv(rtr_id, frame.as_mut())?;
+                self.queue_recv(rtr_id, frame.as_mut());
             }
             let n = rx.read(&mut buf).await?;
             if n == 0 {
@@ -434,11 +439,10 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
     }
 
     /// Queue an incoming receive of `packet` from some link `link`
-    pub fn queue_recv(&self, link_id: LinkId, packet: &mut [u8]) -> Result<(), Error> {
+    pub fn queue_recv(&self, link_id: LinkId, packet: &mut [u8]) {
         let this = &mut *self.inner.borrow_mut();
-        let r = this.router.queue_recv(link_id, packet);
+        this.router.queue_recv(link_id, packet);
         self.clone().need_flush(this);
-        r
     }
 
     fn new_link_inner(

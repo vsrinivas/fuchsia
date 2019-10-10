@@ -5,6 +5,9 @@
 #[macro_use]
 extern crate failure;
 
+#[macro_use]
+extern crate log;
+
 use failure::Error;
 use fidl::Handle;
 use fidl_fuchsia_overnet_protocol::StreamSocketGreeting;
@@ -191,7 +194,7 @@ async fn finish_writes(
             });
             start_writes(id, tx, bytes);
         }
-        Err(e) => eprintln!("Write failed: {}", e),
+        Err(e) => warn!("Write failed: {}", e),
     }
 }
 
@@ -223,7 +226,7 @@ async fn read_incoming(
     chan: futures::channel::mpsc::Sender<Vec<u8>>,
 ) {
     if let Err(e) = read_incoming_inner(stream, chan).await {
-        eprintln!("Error reading: {}", e);
+        warn!("Error reading: {}", e);
     }
 }
 
@@ -296,10 +299,7 @@ async fn process_incoming_inner(
 
     // Supply node with incoming frames
     while let Some(mut frame) = rx_frames.next().await {
-        with_app_mut(|app| -> Result<(), Error> {
-            app.node.queue_recv(router_id, frame.as_mut())?;
-            Ok(())
-        })?;
+        with_app_mut(|app| app.node.queue_recv(router_id, frame.as_mut()));
     }
 
     with_app_mut(|app| {
@@ -314,7 +314,7 @@ async fn process_incoming(
     tx_bytes: tokio::io::WriteHalf<tokio::net::UnixStream>,
 ) {
     if let Err(e) = process_incoming_inner(rx, tx_bytes).await {
-        eprintln!("Error processing incoming frame: {}", e);
+        warn!("Error processing incoming frame: {}", e);
     }
 }
 
@@ -344,7 +344,7 @@ fn main() {
     current_thread::run(
         (async move {
             if let Err(e) = async_main().await {
-                eprintln!("Error: {}", e);
+                warn!("Error: {}", e);
             }
         })
             .unit_error()

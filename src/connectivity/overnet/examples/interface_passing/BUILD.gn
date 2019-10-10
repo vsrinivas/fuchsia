@@ -9,6 +9,7 @@ group("interface_passing") {
   testonly = true
   deps = [
     ":bin",
+    ":bin($host_toolchain)",
     ":overnet-interface-passing",
     "service",
   ]
@@ -21,16 +22,14 @@ rustc_binary("bin") {
   deps = [
     "//garnet/examples/fidl/services:echo-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
     "//src/connectivity/overnet/examples/interface_passing/service:interface_passing-rustc",
+    "//src/connectivity/overnet/lib/hoist",
     "//third_party/rust_crates:clap",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
   ]
+  non_rust_deps = [ "//third_party/boringssl" ]
 }
 
 package("overnet-interface-passing") {

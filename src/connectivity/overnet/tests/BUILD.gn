@@ -2,23 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("overnet") {
-  testonly = true
-  deps = [
-    "examples",
-    "lib",
-    "overnetstack",
-    "tools",
-  ]
-}
-
 group("tests") {
   testonly = true
   public_deps = [
-    "examples:tests",
-    "lib:tests",
-    "overnetstack:tests",
-    "tests",
-    "tools:tests",
+    "host_examples:tests",
   ]
 }

@@ -48,6 +48,11 @@
                         ]
                     }
                 ],
+                "logger_options": {
+                    "filters": {
+                        "verbosity": 2
+                    }
+                },
                 "name": "client",
                 "services": {
                     "fuchsia.device.NameProvider": {

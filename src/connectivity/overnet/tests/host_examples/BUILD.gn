@@ -1,0 +1,64 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/testing/environments.gni")
+
+copy("copy_test_commands") {
+  sources = [
+    get_label_info(
+            "//src/connectivity/overnet/examples/echo:bin($host_toolchain)",
+            "root_out_dir") + "/exe.unstripped/overnet_echo",
+    get_label_info(
+            "//src/connectivity/overnet/examples/interface_passing:bin($host_toolchain)",
+            "root_out_dir") + "/exe.unstripped/overnet_interface_passing",
+    get_label_info(
+            "//src/connectivity/overnet/tools/ascendd:bin($host_toolchain)",
+            "root_out_dir") + "/exe.unstripped/ascendd",
+    get_label_info("//src/connectivity/overnet/tools/onet:bin($host_toolchain)",
+                   "root_out_dir") + "/exe.unstripped/onet",
+  ]
+
+  outputs = [
+    "$root_out_dir/overnet_host_examples_test_commands/{{source_file_part}}",
+  ]
+
+  metadata = {
+    test_runtime_deps = [
+      "$root_out_dir/overnet_host_examples_test_commands/overnet_echo",
+      "$root_out_dir/overnet_host_examples_test_commands/overnet_interface_passing",
+      "$root_out_dir/overnet_host_examples_test_commands/ascendd",
+      "$root_out_dir/overnet_host_examples_test_commands/onet",
+    ]
+  }
+
+  deps = [
+    "//src/connectivity/overnet/examples/echo:bin($host_toolchain)",
+    "//src/connectivity/overnet/examples/interface_passing:bin($host_toolchain)",
+    "//src/connectivity/overnet/tools/ascendd:bin($host_toolchain)",
+    "//src/connectivity/overnet/tools/onet:bin($host_toolchain)",
+  ]
+}
+
+rustc_library("lib") {
+  name = "overnet_host_examples_test"
+  with_unit_tests = true
+  edition = "2018"
+  deps = [
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:timebomb",
+  ]
+  non_rust_deps = [ ":copy_test_commands" ]
+  test_environments = [
+    linux_env,
+    mac_env,
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":lib_test_strip($host_toolchain)",
+  ]
+}

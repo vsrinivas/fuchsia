@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[macro_use]
+extern crate log;
+
 use {
     clap::{App, SubCommand},
     failure::Error,
@@ -45,7 +48,7 @@ async fn copy_stdin_to_socket(
             let n = match stdin.read(&mut buf) {
                 Ok(x) => x,
                 Err(e) => {
-                    eprintln!("Error reading: {}", e);
+                    warn!("Error reading: {}", e);
                     panic!();
                 }
             };
@@ -108,7 +111,7 @@ async fn async_main() -> Result<(), Error> {
         Some("host-pipe") => host_pipe(svc).await,
         _ => {
             let _ = app().write_help(&mut std::io::stderr());
-            eprintln!("");
+            warn!("");
             Ok(())
         }
     }
@@ -117,7 +120,7 @@ async fn async_main() -> Result<(), Error> {
 fn main() {
     hoist::run(async move {
         if let Err(e) = async_main().await {
-            eprintln!("Error: {}", e)
+            warn!("Error: {}", e)
         }
     });
 }

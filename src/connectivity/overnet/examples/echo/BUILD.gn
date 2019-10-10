@@ -4,11 +4,13 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/testing/test_spec.gni")
 
 group("echo") {
   testonly = true
   deps = [
     ":bin",
+    ":bin($host_toolchain)",
     ":overnet-echo",
   ]
 }
@@ -20,15 +22,14 @@ rustc_binary("bin") {
   deps = [
     "//garnet/examples/fidl/services:echo-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
+    "//src/connectivity/overnet/lib/hoist",
     "//third_party/rust_crates:clap",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:log",
   ]
+  non_rust_deps = [ "//third_party/boringssl" ]
 }
 
 package("overnet-echo") {

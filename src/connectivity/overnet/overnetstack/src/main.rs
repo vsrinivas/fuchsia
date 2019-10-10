@@ -203,10 +203,7 @@ async fn read_udp_inner() -> Result<(), Error> {
         let sender = normalize_addr(sender);
         with_app_mut(|app| -> Result<(), Error> {
             if let Some(link_id) = app.udp_link_ids.get(&sender) {
-                if let Err(e) = app.node.queue_recv(*link_id, &mut buf[..length]) {
-                    warn!("Failed receiving packet from {:?}: {:?}", sender, e);
-                    app.udp_link_ids.remove(&sender);
-                }
+                app.node.queue_recv(*link_id, &mut buf[..length]);
             } else {
                 warn!("No link for received packet {:?}", sender);
             }

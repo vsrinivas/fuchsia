@@ -25,6 +25,7 @@ impl Default for NodeDescription {
 struct Node {
     links: BTreeMap<NodeLinkId, Link>,
     desc: NodeDescription,
+    established: bool,
 }
 
 /// During pathfinding, collects the shortest path so far to a node
@@ -150,7 +151,7 @@ impl NodeTable {
         let node = self.nodes.entry(node_id).or_insert_with(|| {
             version_tracker.incr_version();
             was_new = true;
-            Node { links: BTreeMap::new(), desc: NodeDescription::default() }
+            Node { links: BTreeMap::new(), desc: NodeDescription::default(), established: false }
         });
         node
     }
@@ -179,6 +180,22 @@ impl NodeTable {
         node.desc = desc;
         self.version_tracker.incr_version();
         trace!("{}", self.digraph_string());
+    }
+
+    /// Is a connection established to some node?
+    pub fn is_established(&self, node_id: NodeId) -> bool {
+        self.nodes.get(&node_id).map_or(false, |node| node.established)
+    }
+
+    /// Mark a node as being established
+    pub fn mark_established(&mut self, node_id: NodeId) {
+        trace!("{:?} mark node established: {:?}", self.root_node, node_id);
+        let node = self.get_or_create_node_mut(node_id);
+        if node.established {
+            return;
+        }
+        node.established = true;
+        self.version_tracker.incr_version();
     }
 
     /// Mention that a node exists

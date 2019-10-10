@@ -8,10 +8,9 @@ use {
     fidl::endpoints::{ClientEnd, RequestStream, ServerEnd, ServiceMarker},
     fidl_fidl_examples_echo as echo,
     fidl_fuchsia_overnet::{
-        OvernetMarker, OvernetProxy, ServiceProviderRequest, ServiceProviderRequestStream,
+        OvernetProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
     },
-    fidl_fuchsia_overnet_examples_interfacepassing as interfacepassing, fuchsia_async as fasync,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_overnet_examples_interfacepassing as interfacepassing,
     futures::prelude::*,
 };
 
@@ -29,25 +28,40 @@ fn app<'a, 'b>() -> App<'a, 'b> {
 ////////////////////////////////////////////////////////////////////////////////
 // Client implementation
 
-async fn exec_client(svc: OvernetProxy, text: Option<&str>) -> Result<(), Error> {
+async fn exec_client(svc: impl OvernetProxyInterface, text: Option<&str>) -> Result<(), Error> {
     let mut last_version: u64 = 0;
     loop {
         let (version, peers) = svc.list_peers(last_version).await?;
+        println!("Got peers: {:?}", peers);
         last_version = version;
         for mut peer in peers {
-            let (s, p) = zx::Channel::create().context("failed to create zx channel")?;
+            if peer.description.services.is_none() {
+                continue;
+            }
+            if peer
+                .description
+                .services
+                .unwrap()
+                .iter()
+                .find(|name| *name == interfacepassing::ExampleMarker::NAME)
+                .is_none()
+            {
+                continue;
+            }
+            let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
             if let Err(e) =
                 svc.connect_to_service(&mut peer.id, interfacepassing::ExampleMarker::NAME, s)
             {
                 println!("{:?}", e);
                 continue;
             }
-            let proxy = fasync::Channel::from_channel(p).context("failed to make async channel")?;
+            let proxy =
+                fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?;
             let cli = interfacepassing::ExampleProxy::new(proxy);
 
-            let (s1, p1) = zx::Channel::create().context("failed to create zx channel")?;
+            let (s1, p1) = fidl::Channel::create().context("failed to create zx channel")?;
             let proxy_echo =
-                fasync::Channel::from_channel(p1).context("failed to make async channel")?;
+                fidl::AsyncChannel::from_channel(p1).context("failed to make async channel")?;
             let cli_echo = echo::EchoProxy::new(proxy_echo);
             println!("Sending {:?} to {:?}", text, peer.id);
             if let Err(e) = cli.request(ServerEnd::new(s1)) {
@@ -64,7 +78,7 @@ async fn exec_client(svc: OvernetProxy, text: Option<&str>) -> Result<(), Error>
 // Server implementation
 
 fn spawn_echo_server(chan: ServerEnd<echo::EchoMarker>, quiet: bool) {
-    fasync::spawn(
+    hoist::spawn(
         async move {
             let mut stream = chan.into_stream()?;
             while let Some(echo::EchoRequest::EchoString { value, responder }) =
@@ -84,8 +98,8 @@ fn spawn_echo_server(chan: ServerEnd<echo::EchoMarker>, quiet: bool) {
     );
 }
 
-fn spawn_example_server(chan: fasync::Channel, quiet: bool) {
-    fasync::spawn(
+fn spawn_example_server(chan: fidl::AsyncChannel, quiet: bool) {
+    hoist::spawn(
         async move {
             let mut stream = interfacepassing::ExampleRequestStream::from_channel(chan);
             while let Some(request) =
@@ -113,9 +127,9 @@ async fn next_request(
     Ok(stream.try_next().await.context("error running service provider server")?)
 }
 
-async fn exec_server(svc: OvernetProxy, quiet: bool) -> Result<(), Error> {
-    let (s, p) = zx::Channel::create().context("failed to create zx channel")?;
-    let chan = fasync::Channel::from_channel(s).context("failed to make async channel")?;
+async fn exec_server(svc: impl OvernetProxyInterface, quiet: bool) -> Result<(), Error> {
+    let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
+    let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
     let mut stream = ServiceProviderRequestStream::from_channel(chan);
     svc.register_service(interfacepassing::ExampleMarker::NAME, ClientEnd::new(p))?;
     while let Some(ServiceProviderRequest::ConnectToService {
@@ -126,7 +140,8 @@ async fn exec_server(svc: OvernetProxy, quiet: bool) -> Result<(), Error> {
         if !quiet {
             println!("Received service request for service");
         }
-        let chan = fasync::Channel::from_channel(chan).context("failed to make async channel")?;
+        let chan =
+            fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
         spawn_example_server(chan, quiet);
     }
     Ok(())
@@ -135,21 +150,26 @@ async fn exec_server(svc: OvernetProxy, quiet: bool) -> Result<(), Error> {
 ////////////////////////////////////////////////////////////////////////////////
 // main
 
-fn main() -> Result<(), Error> {
+async fn async_main() -> Result<(), Error> {
     let args = app().get_matches();
 
-    let mut executor = fasync::Executor::new().context("error creating event loop")?;
-    let svc = fuchsia_component::client::connect_to_service::<OvernetMarker>()
-        .context("Failed to connect to overnet service")?;
+    let svc = hoist::connect()?;
 
     match args.subcommand() {
-        ("server", Some(_)) => {
-            executor.run_singlethreaded(exec_server(svc, args.is_present("quiet")))
-        }
+        ("server", Some(_)) => exec_server(svc, args.is_present("quiet")).await,
         ("client", Some(cmd)) => {
-            executor.run_singlethreaded(exec_client(svc, cmd.value_of("text")))
+            let r = exec_client(svc, cmd.value_of("text")).await;
+            println!("finished client");
+            r
         }
         (_, _) => unimplemented!(),
     }
-    .map_err(Into::into)
+}
+
+fn main() {
+    hoist::run(async move {
+        if let Err(e) = async_main().await {
+            eprintln!("Error: {}", e)
+        }
+    })
 }

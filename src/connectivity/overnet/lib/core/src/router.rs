@@ -64,10 +64,37 @@ impl RouterTime for Instant {
     }
 }
 
+#[derive(Debug)]
 enum PeerLinkStatusUpdateState {
     Unscheduled,
     Sent,
     SentOutdated,
+}
+
+struct PeerConn(Box<quiche::Connection>);
+
+#[derive(Debug)]
+struct PeerConnDebug<'a> {
+    trace_id: &'a str,
+    application_proto: &'a [u8],
+    is_established: bool,
+    is_resumed: bool,
+    is_closed: bool,
+    stats: quiche::Stats,
+}
+
+impl std::fmt::Debug for PeerConn {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        PeerConnDebug {
+            trace_id: self.0.trace_id(),
+            application_proto: self.0.application_proto(),
+            is_established: self.0.is_established(),
+            is_resumed: self.0.is_resumed(),
+            is_closed: self.0.is_closed(),
+            stats: self.0.stats(),
+        }
+        .fmt(fmt)
+    }
 }
 
 /// Describes a peer to this router.
@@ -76,9 +103,10 @@ enum PeerLinkStatusUpdateState {
 /// quic's notion of client/server).
 /// ConnectToService requests travel from the client -> server, and all subsequent streams are
 /// created on that connection.
+#[derive(Debug)]
 struct Peer {
     /// The quic connection between ourselves and this peer.
-    conn: Box<quiche::Connection>,
+    conn: PeerConn,
     /// The stream id of the connection stream for this peer.
     connection_stream_id: StreamId,
     /// The next stream index to create for an outgoing stream.
@@ -114,6 +142,7 @@ fn is_local_quic_stream_index(stream_index: u64, is_client: bool) -> bool {
 }
 
 /// Describes a stream from this node to some peer.
+#[derive(Debug)]
 struct Stream {
     /// The peer that terminates this stream.
     peer_id: PeerId,
@@ -328,6 +357,8 @@ pub trait MessageReceiver {
     ) -> Result<(), Error>;
     /// A node `node_id` has updated its description to `desc`.
     fn update_node(&mut self, node_id: NodeId, desc: NodeDescription);
+    /// A control channel has been established to node `node_id`
+    fn established_connection(&mut self, node_id: NodeId);
     /// Gossip about a link from `from` to `to` with id `link_id` has been received.
     /// This gossip is about version `version`, and updates the links description to
     /// `desc`.
@@ -420,8 +451,10 @@ struct Endpoints<Time: RouterTime> {
     /// Peers that need their timeouts checked (having check_timeout==true).
     check_timeouts: BinaryHeap<PeerId>,
     /// Client oriented peer connections that have become established.
-    newly_established_clients: BinaryHeap<PeerId>,
-    /// Peers that we've heard about recently
+    newly_established_clients: BinaryHeap<NodeId>,
+    /// Client oriented peer connections that need to send initial node descriptions to.
+    need_to_send_node_description_clients: BinaryHeap<StreamId>,
+    /// Peers that we've heard about recently.
     recently_mentioned_peers: Vec<(NodeId, Option<LinkId>)>,
     /// Timeouts to get to at some point.
     queued_timeouts: BinaryHeap<Timeout<Time, PeerId>>,
@@ -467,7 +500,7 @@ impl<Time: RouterTime> Endpoints<Time> {
     fn connected_to(&self, dest: NodeId) -> bool {
         if let Some(peer_id) = self.node_to_client_peer.get(&dest) {
             let peer = self.peers.get(*peer_id).unwrap();
-            peer.conn.is_established()
+            peer.conn.0.is_established()
         } else {
             false
         }
@@ -519,7 +552,7 @@ impl<Time: RouterTime> Endpoints<Time> {
             .peers
             .iter_mut()
             .map(|(_peer_id, peer)| peer)
-            .filter(|peer| peer.is_client && peer.conn.is_established())
+            .filter(|peer| peer.is_client && peer.conn.0.is_established())
             .map(|peer| peer.connection_stream_id)
             .collect();
         for stream_id in stream_ids {
@@ -614,10 +647,19 @@ impl<Time: RouterTime> Endpoints<Time> {
                 ((frame_len >> 16) & 0xff) as u8,
                 ((frame_len >> 24) & 0xff) as u8,
             ];
-            peer.conn.stream_send(stream.id, &header, false)?;
-            peer.conn.stream_send(stream.id, frame, fin)?;
+            peer.conn
+                .0
+                .stream_send(stream.id, &header, false)
+                .with_context(|_| format!("Sending to stream {:?} peer {:?}", stream, peer))?;
+            peer.conn
+                .0
+                .stream_send(stream.id, frame, fin)
+                .with_context(|_| format!("Sending to stream {:?} peer {:?}", stream, peer))?;
         } else {
-            peer.conn.stream_send(stream.id, &mut [], fin)?;
+            peer.conn
+                .0
+                .stream_send(stream.id, &mut [], fin)
+                .with_context(|_| format!("Sending to stream {:?} peer {:?}", stream, peer))?;
         }
         if !peer.pending_writes {
             trace!("Mark writable: {:?}", stream.peer_id);
@@ -710,8 +752,10 @@ impl<Time: RouterTime> Endpoints<Time> {
                         .sample_iter(&rand::distributions::Standard)
                         .take(quiche::MAX_CONN_ID_LEN)
                         .collect();
-                    let conn = quiche::accept(&scid, None, &mut config)
-                        .context("Creating quic server connection")?;
+                    let conn = PeerConn(
+                        quiche::accept(&scid, None, &mut config)
+                            .context("Creating quic server connection")?,
+                    );
                     let connection_stream_id = self.streams.insert(Stream {
                         peer_id: PeerId::invalid(),
                         id: 0,
@@ -765,16 +809,17 @@ impl<Time: RouterTime> Endpoints<Time> {
             trace!("FORWARD: {:?}", routing_label);
             peer.forward.push((routing_label, packet.to_vec()));
         } else {
-            peer.conn.recv(packet).context("Receiving packet on quic connection")?;
+            peer.conn.0.recv(packet).context("Receiving packet on quic connection")?;
             if !peer.pending_reads {
                 trace!("{:?} Mark readable: {:?}", self.node_id, peer_id);
                 peer.pending_reads = true;
                 self.read_peers.push(peer_id);
             }
-            if peer.establishing && peer.conn.is_established() {
+            if peer.establishing && peer.conn.0.is_established() {
                 peer.establishing = false;
                 if peer.is_client {
-                    self.newly_established_clients.push(peer.connection_stream_id);
+                    self.newly_established_clients.push(peer.node_id);
+                    self.need_to_send_node_description_clients.push(peer.connection_stream_id);
                 }
             }
         }
@@ -804,6 +849,10 @@ impl<Time: RouterTime> Endpoints<Time> {
                 unimplemented!();
             }
         }
+
+        while let Some(node_id) = self.newly_established_clients.pop() {
+            got.established_connection(node_id);
+        }
     }
 
     /// Helper for flush_recvs to process incoming packets from one peer.
@@ -825,7 +874,7 @@ impl<Time: RouterTime> Endpoints<Time> {
         peer.pending_reads = false;
         // TODO(ctiller): We currently copy out the readable streams here just to satisfy the
         // bounds checker. Find a way to avoid this wasteful allocation.
-        let readable: Vec<u64> = peer.conn.readable().collect();
+        let readable: Vec<u64> = peer.conn.0.readable().collect();
         for stream_index in readable {
             trace!("{:?}   stream {} is readable", self.node_id, stream_index);
             let mut stream_id = peer.streams.get(&stream_index).copied();
@@ -851,7 +900,7 @@ impl<Time: RouterTime> Endpoints<Time> {
                 .read_state
                 .take();
             let remove = loop {
-                match peer.conn.stream_recv(stream_index, buf) {
+                match peer.conn.0.stream_recv(stream_index, buf) {
                     Ok((n, fin)) => {
                         let mut recv_message_context = RecvMessageContext {
                             node_id: self.node_id,
@@ -924,8 +973,9 @@ impl<Time: RouterTime> Endpoints<Time> {
             .sample_iter(&rand::distributions::Standard)
             .take(quiche::MAX_CONN_ID_LEN)
             .collect();
-        let conn =
-            quiche::connect(None, &scid, &mut config).context("creating quic client connection")?;
+        let conn = PeerConn(
+            quiche::connect(None, &scid, &mut config).context("creating quic client connection")?,
+        );
         let connection_stream_id = self.streams.insert(Stream {
             peer_id: PeerId::invalid(),
             id: 0,
@@ -978,7 +1028,7 @@ impl<Time: RouterTime> Endpoints<Time> {
                     peer_id,
                     timeout_generation
                 );
-                peer.conn.on_timeout();
+                peer.conn.0.on_timeout();
                 if !peer.check_timeout {
                     peer.check_timeout = true;
                     self.check_timeouts.push(peer_id);
@@ -987,10 +1037,11 @@ impl<Time: RouterTime> Endpoints<Time> {
                     peer.pending_writes = true;
                     self.write_peers.push(peer_id);
                 }
-                if peer.establishing && peer.conn.is_established() {
+                if peer.establishing && peer.conn.0.is_established() {
                     peer.establishing = false;
                     if peer.is_client {
-                        self.newly_established_clients.push(peer.connection_stream_id);
+                        self.newly_established_clients.push(peer.node_id);
+                        self.need_to_send_node_description_clients.push(peer.connection_stream_id);
                     }
                 }
             }
@@ -1004,7 +1055,7 @@ impl<Time: RouterTime> Endpoints<Time> {
                 assert!(peer.check_timeout);
                 peer.check_timeout = false;
                 peer.timeout_generation += 1;
-                if let Some(duration) = peer.conn.timeout() {
+                if let Some(duration) = peer.conn.0.timeout() {
                     let when = Time::after(self.now, duration.into());
                     trace!(
                         "{:?} queue timeout in {:?} in {:?} [gen={}]",
@@ -1464,6 +1515,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                 check_timeouts: BinaryHeap::new(),
                 queued_timeouts: BinaryHeap::new(),
                 newly_established_clients: BinaryHeap::new(),
+                need_to_send_node_description_clients: BinaryHeap::new(),
                 recently_mentioned_peers: Vec::new(),
                 node_desc_packet: make_desc_packet(vec![]).unwrap(),
                 now: Time::now(),
@@ -1604,16 +1656,23 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
     }
 
     /// Receive a packet from some link.
-    pub fn queue_recv(&mut self, link_id: LinkId, packet: &mut [u8]) -> Result<(), Error> {
+    pub fn queue_recv(&mut self, link_id: LinkId, packet: &mut [u8]) {
         if packet.len() < 1 {
-            return Ok(());
+            return;
         }
 
-        let (routing_label, packet) = self.links.recv_packet(link_id, packet)?;
-        if packet.len() > 0 {
-            self.endpoints.queue_recv(link_id, routing_label, packet)?;
+        match self.links.recv_packet(link_id, packet) {
+            Ok((routing_label, packet)) => {
+                if packet.len() > 0 {
+                    if let Err(e) = self.endpoints.queue_recv(link_id, routing_label, packet) {
+                        warn!("Error receiving packet from link {:?}: {:?}", link_id, e);
+                    }
+                }
+            }
+            Err(e) => {
+                warn!("Error routing packet from link {:?}: {:?}", link_id, e);
+            }
         }
-        Ok(())
     }
 
     /// Flush outstanding packets destined to one peer to links, via `send_to`
@@ -1656,7 +1715,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
             send_to(&link.link_data, packet.as_mut_slice())?;
         }
         loop {
-            match peer.conn.send(&mut buf[..buf_len - MAX_ROUTING_LABEL_LENGTH]) {
+            match peer.conn.0.send(&mut buf[..buf_len - MAX_ROUTING_LABEL_LENGTH]) {
                 Ok(n) => {
                     let (ping, r) = link.ping_tracker.maybe_send_ping(Instant::now(), false);
                     self.links.queues.handle_ping_tracker_result(current_link, link, r);
@@ -1674,11 +1733,12 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                         peer.check_timeout = true;
                         self.endpoints.check_timeouts.push(peer_id);
                     }
-                    if peer.establishing && peer.conn.is_established() {
+                    if peer.establishing && peer.conn.0.is_established() {
                         peer.establishing = false;
                         if peer.is_client {
+                            self.endpoints.newly_established_clients.push(peer.node_id);
                             self.endpoints
-                                .newly_established_clients
+                                .need_to_send_node_description_clients
                                 .push(peer.connection_stream_id);
                         }
                     }
@@ -1692,11 +1752,12 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                     send_to(&link.link_data, &mut buf[..n + suffix_len])?;
                 }
                 Err(quiche::Error::Done) => {
-                    if peer.establishing && peer.conn.is_established() {
+                    if peer.establishing && peer.conn.0.is_established() {
                         peer.establishing = false;
                         if peer.is_client {
+                            self.endpoints.newly_established_clients.push(peer.node_id);
                             self.endpoints
-                                .newly_established_clients
+                                .need_to_send_node_description_clients
                                 .push(peer.connection_stream_id);
                         }
                     }
@@ -1760,7 +1821,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
             }
         }
 
-        while let Some(stream_id) = self.endpoints.newly_established_clients.pop() {
+        while let Some(stream_id) = self.endpoints.need_to_send_node_description_clients.pop() {
             if let Err(e) = self.queue_send_raw_datagram(
                 stream_id,
                 Some(&mut self.endpoints.node_desc_packet.clone()),
@@ -2004,17 +2065,18 @@ mod tests {
                 fn close(&mut self, stream_id: StreamId) {
                     (self.1)(IncomingMessage::Close(self.0, stream_id)).unwrap();
                 }
+                fn established_connection(&mut self, _node_id: NodeId) {}
             }
             router1.flush_recvs(&mut R(1, &mut on_incoming));
             router2.flush_recvs(&mut R(2, &mut on_incoming));
             router1.flush_sends(|link, data| {
                 assert_eq!(*link, 1);
-                router2.queue_recv(link2, data).unwrap();
+                router2.queue_recv(link2, data);
                 Ok(())
             });
             router2.flush_sends(|link, data| {
                 assert_eq!(*link, 2);
-                router1.queue_recv(link1, data).unwrap();
+                router1.queue_recv(link1, data);
                 Ok(())
             });
             router1.next_timeout();
