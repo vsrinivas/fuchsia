@@ -92,22 +92,24 @@ class FakeArchProvider : public arch::ArchProvider {
 class FakeProcess : public DebuggedProcess {
  public:
   FakeProcess(zx_koid_t koid, std::shared_ptr<FakeArchProvider> arch_provider)
-      : DebuggedProcess(nullptr, {koid, zx::process()}, ObjectProvider::Get()),
-        arch_provider_(std::move(arch_provider)) {}
+      : DebuggedProcess(nullptr, {koid, "", zx::process(), std::move(arch_provider),
+                                  std::make_unique<ObjectProvider>()}) {}
   ~FakeProcess() = default;
 
   DebuggedThread* CreateThread(zx_koid_t tid) {
     if (!thread_) {
-      thread_ = std::make_unique<DebuggedThread>(this, zx::thread(), tid, zx::exception(),
-                                                 ThreadCreationOption::kSuspendedKeepSuspended,
-                                                 ObjectProvider::Get(), arch_provider_);
+      DebuggedThread::CreateInfo create_info = {};
+      create_info.koid = tid;
+      create_info.creation_option = ThreadCreationOption::kSuspendedKeepSuspended;
+      create_info.arch_provider = arch_provider_;
+      create_info.object_provider = std::make_unique<ObjectProvider>();
+      thread_ = std::make_unique<DebuggedThread>(nullptr, std::move(create_info));
     }
     return thread_.get();
   }
 
  private:
   std::unique_ptr<DebuggedThread> thread_;
-  std::shared_ptr<FakeArchProvider> arch_provider_;
 };
 
 TEST(DebuggedThread, ReadRegisters) {
@@ -213,6 +215,7 @@ TEST(DebuggedThread, WriteRegisters) {
 
 TEST(DebuggedThread, FillThreadRecord) {
   auto arch_provider = std::make_shared<FakeArchProvider>();
+  auto object_provider = std::make_shared<ObjectProvider>();
 
   constexpr zx_koid_t kProcessKoid = 0x8723456;
   FakeProcess fake_process(kProcessKoid, arch_provider);
@@ -220,19 +223,22 @@ TEST(DebuggedThread, FillThreadRecord) {
   zx::thread current_thread;
   zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &current_thread);
 
-  std::shared_ptr<ObjectProvider> provider = ObjectProvider::Get();
 
-  zx_koid_t current_thread_koid = provider->KoidForObject(current_thread);
+  zx_koid_t current_thread_koid = object_provider->KoidForObject(current_thread);
 
   // Set the name of the current thread so we can find it.
   const std::string thread_name("ProcessInfo test thread name");
-  std::string old_name = provider->NameForObject(current_thread);
+  std::string old_name = object_provider->NameForObject(current_thread);
   current_thread.set_property(ZX_PROP_NAME, thread_name.c_str(), thread_name.size());
-  EXPECT_EQ(thread_name, provider->NameForObject(current_thread));
+  EXPECT_EQ(thread_name, object_provider->NameForObject(current_thread));
 
-  auto thread = std::make_unique<DebuggedThread>(
-      &fake_process, std::move(current_thread), current_thread_koid, zx::exception(),
-      ThreadCreationOption::kRunningKeepRunning, provider, arch_provider);
+  DebuggedThread::CreateInfo create_info = {};
+  create_info.process = &fake_process;
+  create_info.koid = current_thread_koid;
+  create_info.handle = std::move(current_thread);
+  create_info.arch_provider = arch_provider;
+  create_info.object_provider = object_provider;
+  auto thread = std::make_unique<DebuggedThread>(nullptr, std::move(create_info));
 
   // Request no stack since this thread should be running.
   debug_ipc::ThreadRecord record;
@@ -254,10 +260,10 @@ TEST(DebuggedThread, FillThreadRecord) {
 
 TEST(DebuggedThread, NormalSuspension) {
   auto arch_provider = std::make_shared<FakeArchProvider>();
+  auto object_provider = std::make_shared<ObjectProvider>();
 
   constexpr zx_koid_t kProcessKoid = 0x8723456;
   FakeProcess fake_process(kProcessKoid, arch_provider);
-  std::shared_ptr<ObjectProvider> provider = ObjectProvider::Get();
 
   // Create the event for coordination.
   zx::event event;
@@ -269,11 +275,15 @@ TEST(DebuggedThread, NormalSuspension) {
     // Create a debugged thread for this other thread.
     zx::thread current_thread;
     zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &current_thread);
-    zx_koid_t current_thread_koid = provider->KoidForObject(current_thread);
+    zx_koid_t current_thread_koid = object_provider->KoidForObject(current_thread);
 
-    debugged_thread = std::make_unique<DebuggedThread>(
-        &fake_process, std::move(current_thread), current_thread_koid, zx::exception(),
-        ThreadCreationOption::kRunningKeepRunning, provider, arch_provider);
+    DebuggedThread::CreateInfo create_info = {};
+    create_info.process = &fake_process;
+    create_info.koid = current_thread_koid;
+    create_info.handle = std::move(current_thread);
+    create_info.arch_provider = arch_provider;
+    create_info.object_provider = object_provider;
+    debugged_thread = std::make_unique<DebuggedThread>(nullptr, std::move(create_info));
 
     // Let the test know it can continue.
     ASSERT_EQ(event.signal(0, ZX_USER_SIGNAL_0), ZX_OK);
@@ -318,7 +328,7 @@ TEST(DebuggedThread, NormalSuspension) {
 
 TEST(DebuggedThread, RefCountedSuspension) {
   auto arch_provider = std::make_shared<FakeArchProvider>();
-  std::shared_ptr<ObjectProvider> provider = ObjectProvider::Get();
+  auto object_provider = std::make_shared<ObjectProvider>();
 
   constexpr zx_koid_t kProcessKoid = 0x8723456;
   FakeProcess fake_process(kProcessKoid, arch_provider);
@@ -333,11 +343,15 @@ TEST(DebuggedThread, RefCountedSuspension) {
     // Create a debugged thread for this other thread.
     zx::thread current_thread;
     zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &current_thread);
-    zx_koid_t current_thread_koid = provider->KoidForObject(current_thread);
+    zx_koid_t current_thread_koid = object_provider->KoidForObject(current_thread);
 
-    debugged_thread = std::make_unique<DebuggedThread>(
-        &fake_process, std::move(current_thread), current_thread_koid, zx::exception(),
-        ThreadCreationOption::kRunningKeepRunning, provider, arch_provider);
+    DebuggedThread::CreateInfo create_info = {};
+    create_info.process = &fake_process;
+    create_info.koid = current_thread_koid;
+    create_info.handle = std::move(current_thread);
+    create_info.arch_provider = arch_provider;
+    create_info.object_provider = object_provider;
+    debugged_thread = std::make_unique<DebuggedThread>(nullptr, std::move(create_info));
 
     // Let the test know it can continue.
     ASSERT_EQ(event.signal(0, ZX_USER_SIGNAL_0), ZX_OK);

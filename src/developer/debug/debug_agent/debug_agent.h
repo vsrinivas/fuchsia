@@ -41,6 +41,7 @@ class DebugAgent : public RemoteAPI,
   // |object_provider| provides a view into the Zircon process tree.
   // Can be overriden for test purposes.
   explicit DebugAgent(std::shared_ptr<sys::ServiceDirectory> services,
+                      std::shared_ptr<arch::ArchProvider> arch_provider,
                       std::shared_ptr<ObjectProvider> object_provider);
   ~DebugAgent();
 
@@ -156,8 +157,6 @@ class DebugAgent : public RemoteAPI,
 
   std::shared_ptr<sys::ServiceDirectory> services_;
 
-  // Shared pointer permits to share the same provider instance over to the process tree.
-  std::shared_ptr<ObjectProvider> object_provider_ = nullptr;
 
   std::map<zx_koid_t, std::unique_ptr<DebuggedJob>> jobs_;
   std::map<zx_koid_t, std::unique_ptr<DebuggedProcess>> procs_;
@@ -189,6 +188,9 @@ class DebugAgent : public RemoteAPI,
   std::map<uint64_t, fuchsia::sys::ComponentControllerPtr> running_components_;
 
   AgentConfiguration configuration_;
+
+  std::shared_ptr<arch::ArchProvider> arch_provider_;
+  std::shared_ptr<ObjectProvider> object_provider_;
 
   fxl::WeakPtrFactory<DebugAgent> weak_factory_;
 

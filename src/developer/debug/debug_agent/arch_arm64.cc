@@ -104,7 +104,7 @@ class ExceptionInfo : public debug_ipc::Arm64ExceptionInfo {
 
   std::optional<uint32_t> FetchESR() override {
     zx_thread_state_debug_regs_t debug_regs;
-    zx_status_t status = thread_.thread().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
+    zx_status_t status = thread_.handle().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
                                                      sizeof(zx_thread_state_debug_regs_t));
     if (status != ZX_OK)
       return std::nullopt;

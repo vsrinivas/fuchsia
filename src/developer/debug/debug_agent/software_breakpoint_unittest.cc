@@ -168,15 +168,17 @@ void CheckVectorContainsElements(const debug_ipc::FileLineFunction& location,
 }  // namespace
 
 TEST(ProcessBreakpoint, InstallAndFixup) {
-  TestProcessDelegate process_delegate;
   auto arch_provider = std::make_shared<arch::ArchProvider>();
+  auto object_provider = std::make_shared<ObjectProvider>();
+
+  TestProcessDelegate process_delegate;
 
   Breakpoint main_breakpoint(&process_delegate);
   main_breakpoint.set_type(debug_ipc::BreakpointType::kSoftware);
 
   zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
-  MockProcess process(process_koid, process_name, ObjectProvider::Get(), std::move(arch_provider));
+  MockProcess process(process_koid, process_name, arch_provider, object_provider);
 
   SoftwareBreakpoint bp(&main_breakpoint, &process, process_delegate.mem().memory(),
                        BreakpointFakeMemory::kAddress);
@@ -206,15 +208,17 @@ TEST(ProcessBreakpoint, InstallAndFixup) {
 
 // clang-format off
 TEST(ProcessBreakpoint, StepSingle) {
-  TestProcessDelegate process_delegate;
   auto arch_provider = std::make_shared<arch::ArchProvider>();
+  auto object_provider = std::make_shared<ObjectProvider>();
+
+  TestProcessDelegate process_delegate;
 
   Breakpoint main_breakpoint(&process_delegate);
   main_breakpoint.set_type(debug_ipc::BreakpointType::kSoftware);
 
   constexpr zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
-  MockProcess process(process_koid, process_name, ObjectProvider::Get(), std::move(arch_provider));
+  MockProcess process(process_koid, process_name, arch_provider, object_provider);
 
   // The step over strategy is as follows:
   // Thread 1, 2, 3 will hit the breakpoint and attempt a step over.
@@ -429,6 +433,7 @@ TEST(ProcessBreakpoint, StepSingle) {
 // clang-format off
 TEST(ProcessBreakpoint, MultipleBreakpoints) {
   auto arch_provider = std::make_shared<arch::ArchProvider>();
+  auto object_provider = std::make_shared<ObjectProvider>();
 
   TestProcessDelegate process_delegate1;
   TestProcessDelegate process_delegate2;
@@ -444,7 +449,7 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
 
   constexpr zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
-  MockProcess process(process_koid, process_name, ObjectProvider::Get(), std::move(arch_provider));
+  MockProcess process(process_koid, process_name, arch_provider, object_provider);
 
   // The step over strategy is as follows:
   // 1. Thread 1 hits breakpoint 1.

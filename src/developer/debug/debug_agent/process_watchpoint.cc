@@ -126,14 +126,14 @@ zx_status_t ProcessWatchpoint::UpdateWatchpoints(
   process()->SuspendAll(true, &suspended_koids);
 
   for (DebuggedThread* thread : threads_to_remove) {
-    auto res = arch_provider_->UninstallWatchpoint(&thread->thread(), range());
+    auto res = arch_provider_->UninstallWatchpoint(&thread->handle(), range());
     if (res != ZX_OK)
       return res;
     installed_threads_.erase(thread->koid());
   }
 
   for (DebuggedThread* thread : threads_to_install) {
-    auto res = arch_provider_->InstallWatchpoint(&thread->thread(), range());
+    auto res = arch_provider_->InstallWatchpoint(&thread->handle(), range());
     if (res != ZX_OK)
       return res;
     installed_threads_.insert(thread->koid());

@@ -77,7 +77,7 @@ class DebugAgentMockProcess : public MockProcess {
   DebugAgentMockProcess(DebugAgent* debug_agent, zx_koid_t koid, std::string name,
                         std::shared_ptr<ObjectProvider> object_provider,
                         std::shared_ptr<arch::ArchProvider> arch_provider)
-      : MockProcess(koid, std::move(name), std::move(object_provider), std::move(arch_provider)),
+      : MockProcess(koid, std::move(name), std::move(arch_provider), std::move(object_provider)),
         debug_agent_(debug_agent) {}
 
   ~DebugAgentMockProcess() = default;
@@ -154,7 +154,7 @@ std::unique_ptr<TestContext> CreateTestContext() {
 
 TEST(DebugAgent, OnGlobalStatus) {
   auto test_context = CreateTestContext();
-  DebugAgent debug_agent(nullptr, test_context->object_provider);
+  DebugAgent debug_agent(nullptr, test_context->arch_provider, test_context->object_provider);
   debug_agent.Connect(&test_context->stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 
@@ -170,7 +170,7 @@ TEST(DebugAgent, OnGlobalStatus) {
   constexpr uint64_t kProcess1ThreadKoid1 = 0x1;
 
   auto process1 = std::make_unique<MockProcess>(
-      kProcessKoid1, kProcessName1, test_context->object_provider, test_context->arch_provider);
+      kProcessKoid1, kProcessName1, test_context->arch_provider, test_context->object_provider);
   process1->AddThread(kProcess1ThreadKoid1);
   debug_agent.InjectProcessForTest(std::move(process1));
 
@@ -190,7 +190,7 @@ TEST(DebugAgent, OnGlobalStatus) {
   constexpr uint64_t kProcess2ThreadKoid2 = 0x2;
 
   auto process2 = std::make_unique<MockProcess>(
-      kProcessKoid2, kProcessName2, test_context->object_provider, test_context->arch_provider);
+      kProcessKoid2, kProcessName2, test_context->arch_provider, test_context->object_provider);
   process2->AddThread(kProcess2ThreadKoid1);
   process2->AddThread(kProcess2ThreadKoid2);
   debug_agent.InjectProcessForTest(std::move(process2));
@@ -258,7 +258,7 @@ TEST(DebugAgent, OnGlobalStatus) {
 TEST(DebugAgent, OnProcessStatus) {
   auto test_context = CreateTestContext();
 
-  DebugAgent debug_agent(nullptr, test_context->object_provider);
+  DebugAgent debug_agent(nullptr, test_context->arch_provider, test_context->object_provider);
   debug_agent.Connect(&test_context->stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 
@@ -320,7 +320,7 @@ TEST(DebugAgent, OnAttach) {
   uint32_t transaction_id = 1u;
 
   auto test_context = CreateTestContext();
-  DebugAgent debug_agent(nullptr, test_context->object_provider);
+  DebugAgent debug_agent(nullptr, test_context->arch_provider, test_context->object_provider);
   debug_agent.Connect(&test_context->stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 

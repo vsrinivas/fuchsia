@@ -107,10 +107,12 @@ TEST(Watchpoint, DISABLED_DefaultCase) {
     WatchpointStreamBackend backend(loop);
 
     auto services = sys::ServiceDirectory::CreateFromNamespace();
-    DebugAgent agent(std::move(services), ObjectProvider::Get());
+    auto arch_provider = std::make_unique<arch::ArchProvider>();
+    auto object_provider = std::make_unique<ObjectProvider>();
+    DebugAgent agent(std::move(services), std::move(arch_provider), std::move(object_provider));
     RemoteAPI* remote_api = &agent;
-    agent.Connect(&backend.stream());
 
+    agent.Connect(&backend.stream());
     backend.set_remote_api(remote_api);
 
     static constexpr const char kExecutable[] = "/pkg/bin/watchpoint_test_exe";

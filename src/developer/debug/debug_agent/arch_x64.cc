@@ -120,7 +120,7 @@ class ExceptionInfo : public debug_ipc::X64ExceptionInfo {
   std::optional<debug_ipc::X64ExceptionInfo::DebugRegs> FetchDebugRegs() override {
     zx_thread_state_debug_regs_t debug_regs;
     zx_status_t status =
-        thread_.thread().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
+        thread_.handle().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
 
     if (status != ZX_OK) {
       return std::nullopt;
@@ -196,7 +196,7 @@ void ArchProvider::SaveGeneralRegs(const zx_thread_state_general_regs& input,
 
 uint64_t ArchProvider::InstructionForWatchpointHit(const DebuggedThread& thread) {
   zx_thread_state_debug_regs_t debug_regs;
-  thread.thread().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
+  thread.handle().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
   uint64_t exception_address = 0;
   // HW breakpoints have priority over single-step.
   if (X86_FLAG_VALUE(debug_regs.dr6, DR6B0)) {

@@ -64,8 +64,12 @@ std::string LogResumeRequest(const debug_ipc::ResumeRequest& request) {
 }  // namespace
 
 DebugAgent::DebugAgent(std::shared_ptr<sys::ServiceDirectory> services,
+                       std::shared_ptr<arch::ArchProvider> arch_provider,
                        std::shared_ptr<ObjectProvider> object_provider)
-    : services_(services), object_provider_(std::move(object_provider)), weak_factory_(this) {}
+    : services_(services),
+      arch_provider_(std::move(arch_provider)),
+      object_provider_(std::move(object_provider)),
+      weak_factory_(this) {}
 
 DebugAgent::~DebugAgent() = default;
 
@@ -575,9 +579,8 @@ zx_status_t DebugAgent::AddDebuggedProcess(DebuggedProcessCreateInfo&& create_in
   *new_process = nullptr;
 
   zx_koid_t process_koid = create_info.koid;
-  auto proc = std::make_unique<DebuggedProcess>(this, std::move(create_info), object_provider_);
-  zx_status_t status = proc->Init();
-  if (status != ZX_OK)
+  auto proc = std::make_unique<DebuggedProcess>(this, std::move(create_info));
+  if (zx_status_t status = proc->Init(); status != ZX_OK)
     return status;
 
   *new_process = proc.get();
@@ -627,6 +630,8 @@ void DebugAgent::AttachToProcess(uint32_t transaction_id, zx_koid_t process_koid
     create_info.name = reply.name;
     create_info.koid = process_koid;
     create_info.handle = std::move(process);
+    create_info.arch_provider = arch_provider_;
+    create_info.object_provider = object_provider_;
     reply.status = AddDebuggedProcess(std::move(create_info), &new_process);
     return;
   }
@@ -654,6 +659,8 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
   create_info.handle = std::move(process);
   create_info.out = launcher.ReleaseStdout();
   create_info.err = launcher.ReleaseStderr();
+  create_info.arch_provider = arch_provider_;
+  create_info.object_provider = object_provider_;
 
   DebuggedProcess* new_process = nullptr;
   zx_status_t status = AddDebuggedProcess(std::move(create_info), &new_process);
@@ -791,6 +798,8 @@ void DebugAgent::OnProcessStart(const std::string& filter, zx::process process_h
   create_info.name = description.process_name;
   create_info.out = std::move(handles.out);
   create_info.err = std::move(handles.err);
+  create_info.arch_provider = arch_provider_;
+  create_info.object_provider = object_provider_;
 
   DebuggedProcess* new_process = nullptr;
   AddDebuggedProcess(std::move(create_info), &new_process);

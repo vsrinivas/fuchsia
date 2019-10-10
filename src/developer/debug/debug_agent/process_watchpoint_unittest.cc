@@ -92,18 +92,19 @@ constexpr debug_ipc::AddressRange kAddressRange2 = {0x4000, 0x8000};
 
 TEST(ProcessWatchpoint, InstallAndRemove) {
   auto arch_provider = std::make_shared<MockArchProvider>();
+  auto object_provider = std::make_shared<ObjectProvider>();
 
   TestProcessDelegate process_delegate(arch_provider);
 
-  auto process1 = std::make_unique<MockProcess>(kProcessId1, kProcessName1, ObjectProvider::Get(),
-                                                arch_provider);
+  auto process1 =
+      std::make_unique<MockProcess>(kProcessId1, kProcessName1, arch_provider, object_provider);
   process1->AddThread(kThreadId11);
   process1->AddThread(kThreadId12);
   process1->AddThread(kThreadId13);
   process_delegate.InjectMockProcess(std::move(process1));
 
-  auto process2 = std::make_unique<MockProcess>(kProcessId2, kProcessName2, ObjectProvider::Get(),
-                                                arch_provider);
+  auto process2 =
+      std::make_unique<MockProcess>(kProcessId2, kProcessName2, arch_provider, object_provider);
   process2->AddThread(kThreadId21);
   process2->AddThread(kThreadId22);
   process2->AddThread(kThreadId23);

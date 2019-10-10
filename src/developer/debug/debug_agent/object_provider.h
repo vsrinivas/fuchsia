@@ -22,8 +22,6 @@ class ObjectProvider {
   ObjectProvider();
   virtual ~ObjectProvider();
 
-  static std::unique_ptr<ObjectProvider> Get();
-
   virtual zx::thread ThreadForKoid(zx_handle_t process, zx_koid_t thread_koid) const;
 
   virtual zx_koid_t KoidForObject(zx_handle_t object) const;

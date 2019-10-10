@@ -34,9 +34,11 @@ class Watchpoint;
 
 struct DebuggedProcessCreateInfo {
   DebuggedProcessCreateInfo();
+
   // Constructor with only the required fields.
-  DebuggedProcessCreateInfo(zx_koid_t process_koid, zx::process);
-  DebuggedProcessCreateInfo(zx_koid_t process_koid, std::string process_name, zx::process);
+  DebuggedProcessCreateInfo(zx_koid_t koid, std::string name, zx::process);
+  DebuggedProcessCreateInfo(zx_koid_t koid, std::string name, zx::process,
+                            std::shared_ptr<arch::ArchProvider>, std::shared_ptr<ObjectProvider>);
 
   // Required.
   zx_koid_t koid = 0;
@@ -46,6 +48,9 @@ struct DebuggedProcessCreateInfo {
   std::string name;
   zx::socket out;  // stdout.
   zx::socket err;  // stderr.
+
+  std::shared_ptr<arch::ArchProvider> arch_provider;
+  std::shared_ptr<ObjectProvider> object_provider;
 };
 
 // Creates a CreateInfo struct from only the required fields.
@@ -54,8 +59,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
  public:
   // Caller must call Init immediately after construction and delete the
   // object if that fails.
-  DebuggedProcess(DebugAgent*, DebuggedProcessCreateInfo&&,
-                  std::shared_ptr<ObjectProvider> object_provider);
+  DebuggedProcess(DebugAgent*, DebuggedProcessCreateInfo&&);
   virtual ~DebuggedProcess();
 
   zx_koid_t koid() const { return koid_; }
@@ -167,7 +171,8 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
   const std::deque<StepOverTicket>& step_over_queue() const { return step_over_queue_; }
 
  protected:
-  std::shared_ptr<ObjectProvider> object_provider_ = nullptr;
+  std::shared_ptr<arch::ArchProvider> arch_provider_;
+  std::shared_ptr<ObjectProvider> object_provider_;
 
  private:
   // ZirconExceptionWatcher implementation.

@@ -74,10 +74,6 @@ bool FindJob(const ObjectProvider& provider, zx::job root_job, zx_koid_t search_
 ObjectProvider::ObjectProvider() = default;
 ObjectProvider::~ObjectProvider() = default;
 
-std::unique_ptr<ObjectProvider> ObjectProvider::Get() {
-  return std::make_unique<ObjectProvider>();
-}
-
 zx::thread ObjectProvider::ThreadForKoid(zx_handle_t process, zx_koid_t thread_koid) const {
   zx_handle_t thread_handle = ZX_HANDLE_INVALID;
   if (zx_object_get_child(process, thread_koid, ZX_RIGHT_SAME_RIGHTS, &thread_handle) != ZX_OK)

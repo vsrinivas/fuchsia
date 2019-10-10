@@ -122,22 +122,19 @@ DebuggedThread::SuspendToken::~SuspendToken() {
 
 // DebuggedThread ----------------------------------------------------------------------------------
 
-DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread, zx_koid_t koid,
-                               zx::exception exception, ThreadCreationOption option,
-                               std::shared_ptr<ObjectProvider> object_provider,
-                               std::shared_ptr<arch::ArchProvider> arch_provider)
-    : debug_agent_(process->debug_agent()),
-      process_(process),
-      thread_(std::move(thread)),
-      koid_(koid),
-      exception_token_(std::move(exception)),
-      object_provider_(std::move(object_provider)),
-      arch_provider_(std::move(arch_provider)),
+DebuggedThread::DebuggedThread(DebugAgent* debug_agent, CreateInfo&& create_info)
+    : debug_agent_(debug_agent),
+      process_(create_info.process),
+      koid_(create_info.koid),
+      handle_(std::move(create_info.handle)),
+      exception_token_(std::move(create_info.exception)),
+      arch_provider_(std::move(create_info.arch_provider)),
+      object_provider_(std::move(create_info.object_provider)),
       weak_factory_(this) {
   FXL_DCHECK(object_provider_);
   FXL_DCHECK(arch_provider_);
 
-  switch (option) {
+  switch (create_info.creation_option) {
     case ThreadCreationOption::kRunningKeepRunning:
       // do nothing
       break;
@@ -165,7 +162,7 @@ void DebuggedThread::OnException(zx::exception exception_token,
                     << debug_ipc::ExceptionTypeToString(exception.type);
 
   zx_thread_state_general_regs regs;
-  thread_.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
+  handle_.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
 
   switch (exception.type) {
     case debug_ipc::ExceptionType::kSingleStep:
@@ -378,11 +375,11 @@ bool DebuggedThread::WaitForSuspension(zx::time deadline) {
   do {
     // Always check the thread state from the kernel because of queue described
     // above.
-    if (IsBlockedOnException(thread_))
+    if (IsBlockedOnException(handle_))
       return true;
 
     zx_signals_t observed;
-    status = thread_.wait_one(ZX_THREAD_SUSPENDED, zx::deadline_after(poll_time), &observed);
+    status = handle_.wait_one(ZX_THREAD_SUSPENDED, zx::deadline_after(poll_time), &observed);
     if (status == ZX_OK && (observed & ZX_THREAD_SUSPENDED))
       return true;
 
@@ -395,11 +392,11 @@ void DebuggedThread::FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack
                                       debug_ipc::ThreadRecord* record) const {
   record->process_koid = process_->koid();
   record->thread_koid = koid();
-  record->name = object_provider_->NameForObject(thread_);
+  record->name = object_provider_->NameForObject(handle_);
 
   // State (running, blocked, etc.).
   zx_info_thread info;
-  if (thread_.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr) == ZX_OK) {
+  if (handle_.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr) == ZX_OK) {
     record->state = ThreadStateToEnums(info.state, &record->blocked_reason);
   } else {
     FXL_NOTREACHED();
@@ -417,7 +414,7 @@ void DebuggedThread::FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack
     zx_thread_state_general_regs queried_regs;  // Storage for fetched regs.
     zx_thread_state_general_regs* regs = nullptr;
     if (!optional_regs) {
-      if (thread_.read_state(ZX_THREAD_STATE_GENERAL_REGS, &queried_regs, sizeof(queried_regs)) ==
+      if (handle_.read_state(ZX_THREAD_STATE_GENERAL_REGS, &queried_regs, sizeof(queried_regs)) ==
           ZX_OK)
         regs = &queried_regs;
     } else {
@@ -432,7 +429,7 @@ void DebuggedThread::FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack
       uint32_t max_stack_depth =
           stack_amount == debug_ipc::ThreadRecord::StackAmount::kMinimal ? 2 : 256;
 
-      UnwindStack(process_->process(), process_->dl_debug_addr(), thread_, *regs, max_stack_depth,
+      UnwindStack(process_->process(), process_->dl_debug_addr(), handle_, *regs, max_stack_depth,
                   &record->frames);
     }
   } else {
@@ -449,7 +446,7 @@ void DebuggedThread::ReadRegisters(
   for (const auto& cat_type : cats_to_get) {
     auto& cat = out->emplace_back();
     cat.type = cat_type;
-    zx_status_t status = arch_provider_->ReadRegisters(cat_type, thread_, &cat.registers);
+    zx_status_t status = arch_provider_->ReadRegisters(cat_type, handle_, &cat.registers);
     if (status != ZX_OK) {
       out->pop_back();
       FXL_LOG(ERROR) << "Could not get register state for category: "
@@ -487,7 +484,7 @@ zx_status_t DebuggedThread::WriteRegisters(const std::vector<debug_ipc::Register
 
   for (const auto& [cat_type, cat] : categories) {
     FXL_DCHECK(cat_type != debug_ipc::RegisterCategory::Type::kNone);
-    zx_status_t res = arch_provider_->WriteRegisters(cat, &thread_);
+    zx_status_t res = arch_provider_->WriteRegisters(cat, &handle_);
     if (res != ZX_OK) {
       FXL_LOG(WARNING) << "Could not write category "
                        << debug_ipc::RegisterCategory::TypeToString(cat_type) << ": "
@@ -556,7 +553,7 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
       // the breakpoint instruction will never go away.
       *arch_provider_->IPInRegs(regs) = arch_provider_->NextInstructionForSoftwareExceptionAddress(
           *arch_provider_->IPInRegs(regs));
-      zx_status_t status = thread_.write_state(ZX_THREAD_STATE_GENERAL_REGS, regs,
+      zx_status_t status = handle_.write_state(ZX_THREAD_STATE_GENERAL_REGS, regs,
                                                sizeof(zx_thread_state_general_regs));
       if (status != ZX_OK) {
         fprintf(stderr, "Warning: could not update IP on thread, error = %d.",
@@ -649,7 +646,7 @@ void DebuggedThread::FixSoftwareBreakpointAddress(ProcessBreakpoint* process_bre
   // display to the user.
   *arch_provider_->IPInRegs(regs) = process_breakpoint->address();
   zx_status_t status =
-      thread_.write_state(ZX_THREAD_STATE_GENERAL_REGS, regs, sizeof(zx_thread_state_general_regs));
+      handle_.write_state(ZX_THREAD_STATE_GENERAL_REGS, regs, sizeof(zx_thread_state_general_regs));
   if (status != ZX_OK) {
     fprintf(stderr, "Warning: could not update IP on thread, error = %d.",
             static_cast<int>(status));
@@ -726,7 +723,7 @@ void DebuggedThread::SetSingleStep(bool single_step) {
   zx_thread_state_single_step_t value = single_step ? 1 : 0;
   // This could fail for legitimate reasons, like the process could have just
   // closed the thread.
-  thread_.write_state(ZX_THREAD_STATE_SINGLE_STEP, &value, sizeof(value));
+  handle_.write_state(ZX_THREAD_STATE_SINGLE_STEP, &value, sizeof(value));
 }
 
 const char* DebuggedThread::ClientStateToString(ClientState client_state) {
@@ -748,7 +745,7 @@ void DebuggedThread::IncreaseSuspend() {
   if (ref_counted_suspend_token_.is_valid())
     return;
 
-  zx_status_t status = thread_.suspend(&ref_counted_suspend_token_);
+  zx_status_t status = handle_.suspend(&ref_counted_suspend_token_);
   if (status != ZX_OK) {
     FXL_LOG(WARNING) << ThreadPreamble(this)
                      << "Could not suspend: " << zx_status_get_string(status);

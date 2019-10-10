@@ -63,18 +63,26 @@ class DebuggedThread {
   };
   const char* ClientStateToString(ClientState);
 
-  // TODO(donosoc): The thread constructor is getting too unwieldly. We should create an object that
-  //                has all the options and pass it in in order to have this interface be cleaner.
-  DebuggedThread(DebuggedProcess* process, zx::thread thread, zx_koid_t thread_koid,
-                 zx::exception exception, ThreadCreationOption option,
-                 std::shared_ptr<ObjectProvider> object_provider,
-                 std::shared_ptr<arch::ArchProvider> arch_provider);
+  struct CreateInfo {
+    DebuggedProcess* process = nullptr;
+    zx_koid_t koid = 0;
+    zx::thread handle;
+    ThreadCreationOption creation_option = ThreadCreationOption::kRunningKeepRunning;
+
+    zx::exception exception;    // Optional.
+
+    std::shared_ptr<arch::ArchProvider> arch_provider;
+    std::shared_ptr<ObjectProvider> object_provider;
+  };
+  DebuggedThread(DebugAgent*, CreateInfo&&);
   virtual ~DebuggedThread();
 
   const DebuggedProcess* process() const { return process_; }
-  zx::thread& thread() { return thread_; }
-  const zx::thread& thread() const { return thread_; }
+
   zx_koid_t koid() const { return koid_; }
+
+  zx::thread& handle() { return handle_; }
+  const zx::thread& handle() const { return handle_; }
 
   fxl::WeakPtr<DebuggedThread> GetWeakPtr();
 
@@ -216,8 +224,9 @@ class DebuggedThread {
 
   DebugAgent* debug_agent_;   // Non-owning.
   DebuggedProcess* process_;  // Non-owning.
-  zx::thread thread_;
+
   zx_koid_t koid_;
+  zx::thread handle_;
 
   // The main thing we're doing. When automatically resuming, this will be
   // what happens.
@@ -250,8 +259,8 @@ class DebuggedThread {
   //   being stepped over.
   ProcessBreakpoint* current_breakpoint_ = nullptr;
 
-  std::shared_ptr<ObjectProvider> object_provider_ = nullptr;
   std::shared_ptr<arch::ArchProvider> arch_provider_ = nullptr;
+  std::shared_ptr<ObjectProvider> object_provider_ = nullptr;
 
   fxl::WeakPtrFactory<DebuggedThread> weak_factory_;
 
