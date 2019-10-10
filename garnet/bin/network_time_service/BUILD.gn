@@ -12,11 +12,11 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/bin/network_time:lib",
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.deprecatedtimezone",
     "//sdk/fidl/fuchsia.timezone",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
@@ -31,8 +31,8 @@ executable("bin") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/fsl",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",

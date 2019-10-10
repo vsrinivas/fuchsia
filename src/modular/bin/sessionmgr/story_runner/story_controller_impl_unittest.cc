@@ -14,9 +14,9 @@
 #include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include "gtest/gtest.h"
+#include "src/lib/fsl/vmo/strings.h"
 
 using fuchsia::modular::Intent;
 

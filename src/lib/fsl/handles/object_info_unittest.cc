@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fsl/handles/object_info.h"
+#include "src/lib/fsl/handles/object_info.h"
 
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>

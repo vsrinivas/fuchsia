@@ -10,7 +10,7 @@
 
 #include <src/camera/simple_camera/simple_camera_lib/video_display.h>
 
-#include "lib/component/cpp/startup_context.h"
+#include "src/lib/component/cpp/startup_context.h"
 
 namespace simple_camera {
 

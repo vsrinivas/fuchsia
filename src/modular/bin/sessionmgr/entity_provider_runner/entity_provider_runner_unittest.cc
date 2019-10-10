@@ -6,10 +6,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/component/cpp/connect.h>
-#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
 
 #include <memory>
@@ -21,7 +18,9 @@
 
 #include "gtest/gtest.h"
 #include "peridot/lib/ledger_client/page_id.h"
+#include "src/lib/component/cpp/connect.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
 #include "src/modular/lib/fidl/array_to_string.h"

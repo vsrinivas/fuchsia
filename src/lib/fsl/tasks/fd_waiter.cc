@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fsl/tasks/fd_waiter.h"
+#include "src/lib/fsl/tasks/fd_waiter.h"
 
 #include <lib/async/default.h>
 #include <zircon/errors.h>

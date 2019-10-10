@@ -22,17 +22,17 @@
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
-#include "lib/fsl/vmo/file.h"
 #include "lib/sys/cpp/component_context.h"
-#include "lib/syslog/cpp/logger.h"
 #include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
 #include "src/cobalt/bin/testapp/prober_metrics_registry.cb.h"
 #include "src/cobalt/bin/testapp/testapp_metrics_registry.cb.h"
 #include "src/cobalt/bin/testapp/tests.h"
+#include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace cobalt {
 namespace testapp {

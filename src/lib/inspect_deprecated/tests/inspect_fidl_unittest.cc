@@ -4,12 +4,12 @@
 
 #include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <lib/fit/defer.h>
-#include <lib/inspect_deprecated/inspect.h>
-#include <lib/inspect_deprecated/reader.h>
-#include <lib/inspect_deprecated/testing/inspect.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/lib/inspect_deprecated/inspect.h"
+#include "src/lib/inspect_deprecated/reader.h"
+#include "src/lib/inspect_deprecated/testing/inspect.h"
 
 namespace {
 

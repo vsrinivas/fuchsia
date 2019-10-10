@@ -4,7 +4,7 @@
 
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/get_types_from_entity_call.h"
 
-#include <lib/fsl/types/type_converters.h>
+#include "src/lib/fsl/types/type_converters.h"
 
 namespace modular {
 

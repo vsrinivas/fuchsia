@@ -4,7 +4,7 @@
 
 #include "src/cobalt/bin/utils/clock.h"
 
-#include "lib/syslog/cpp/logger.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace cobalt {
 

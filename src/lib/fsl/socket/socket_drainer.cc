@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fsl/socket/socket_drainer.h"
+#include "src/lib/fsl/socket/socket_drainer.h"
 
 #include <lib/zx/socket.h>
 

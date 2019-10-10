@@ -7,10 +7,10 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
+#include "src/lib/component/cpp/startup_context.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 

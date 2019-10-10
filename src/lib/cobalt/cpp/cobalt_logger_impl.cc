@@ -8,17 +8,16 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/backoff/exponential_backoff.h>
-#include <lib/callback/waiter.h>
-#include <lib/component/cpp/connect.h>
-#include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
 
 #include <set>
 
 #include <src/lib/fxl/macros.h>
 
+#include "src/lib/backoff/exponential_backoff.h"
+#include "src/lib/callback/waiter.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 using fuchsia::cobalt::LoggerFactory;
 using fuchsia::cobalt::ProjectProfile;

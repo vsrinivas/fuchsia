@@ -6,9 +6,6 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
-#include <lib/inspect_deprecated/query/discover.h>
-#include <lib/inspect_deprecated/query/read.h>
-#include <lib/inspect_deprecated/testing/inspect.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
@@ -19,10 +16,13 @@
 #include "garnet/bin/sysmgr/config.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/inspect_deprecated/query/location.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
+#include "src/lib/inspect_deprecated/query/discover.h"
+#include "src/lib/inspect_deprecated/query/location.h"
+#include "src/lib/inspect_deprecated/query/read.h"
+#include "src/lib/inspect_deprecated/testing/inspect.h"
 
 using namespace inspect_deprecated::testing;
 

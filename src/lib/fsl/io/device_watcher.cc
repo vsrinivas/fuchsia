@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fsl/io/device_watcher.h"
+#include "src/lib/fsl/io/device_watcher.h"
 
 #include <dirent.h>
 #include <fcntl.h>

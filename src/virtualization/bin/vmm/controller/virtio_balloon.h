@@ -7,11 +7,12 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
+
 #include <virtio/balloon.h>
 #include <virtio/virtio_ids.h>
 
+#include "src/lib/component/cpp/startup_context.h"
 #include "src/virtualization/bin/vmm/virtio_device.h"
 
 static constexpr uint16_t kVirtioBalloonNumQueues = 3;

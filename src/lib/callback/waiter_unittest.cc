@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/callback/waiter.h"
+#include "src/lib/callback/waiter.h"
 
 #include <lib/fit/defer.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/callback/capture.h"
-#include "lib/callback/set_when_called.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 
 namespace callback {
 namespace {

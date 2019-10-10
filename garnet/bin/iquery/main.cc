@@ -14,7 +14,7 @@
 #include <src/lib/fxl/log_settings_command_line.h>
 
 #include "garnet/bin/iquery/modes.h"
-#include "lib/inspect_deprecated/query/discover.h"
+#include "src/lib/inspect_deprecated/query/discover.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

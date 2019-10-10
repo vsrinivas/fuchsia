@@ -7,11 +7,12 @@
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <math.h>
 
 #include <src/lib/fxl/macros.h>
+
+#include "src/lib/component/cpp/startup_context.h"
 
 namespace root_presenter {
 namespace testing {

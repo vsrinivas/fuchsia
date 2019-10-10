@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include <src/lib/fxl/logging.h>
 
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_module.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 

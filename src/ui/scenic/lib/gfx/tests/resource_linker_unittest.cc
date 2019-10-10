@@ -7,8 +7,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/zx/eventpair.h>
 
-#include "lib/fsl/handles/object_info.h"
 #include "lib/ui/scenic/cpp/commands.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/entity_node.h"
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
 #include "src/ui/scenic/lib/gfx/tests/util.h"

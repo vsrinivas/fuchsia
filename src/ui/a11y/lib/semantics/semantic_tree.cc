@@ -5,13 +5,13 @@
 #include "src/ui/a11y/lib/semantics/semantic_tree.h"
 
 #include <lib/async/default.h>
-#include <lib/fsl/handles/object_info.h>
-#include <lib/syslog/cpp/logger.h>
 #include <zircon/types.h>
 
 #include "fuchsia/accessibility/semantics/cpp/fidl.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "zircon/third_party/uapp/dash/src/output.h"
 
 namespace a11y {

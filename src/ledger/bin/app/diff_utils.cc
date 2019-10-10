@@ -6,18 +6,18 @@
 
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include <limits>
 #include <memory>
 #include <vector>
 
-#include "lib/fsl/vmo/sized_vmo.h"
 #include "peridot/lib/util/ptr.h"
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/lib/callback/waiter.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {

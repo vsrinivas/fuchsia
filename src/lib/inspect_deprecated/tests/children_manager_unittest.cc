@@ -7,15 +7,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/task.h>
-#include <lib/callback/auto_cleanable.h>
-#include <lib/callback/capture.h>
-#include <lib/callback/ensure_called.h>
-#include <lib/callback/set_when_called.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/inspect_deprecated/hierarchy.h>
-#include <lib/inspect_deprecated/inspect.h>
-#include <lib/inspect_deprecated/reader.h>
-#include <lib/inspect_deprecated/testing/inspect.h>
 
 #include <map>
 #include <random>
@@ -27,7 +19,15 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/rng/test_random.h"
+#include "src/lib/callback/auto_cleanable.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/ensure_called.h"
+#include "src/lib/callback/set_when_called.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/inspect_deprecated/hierarchy.h"
+#include "src/lib/inspect_deprecated/inspect.h"
+#include "src/lib/inspect_deprecated/reader.h"
+#include "src/lib/inspect_deprecated/testing/inspect.h"
 
 namespace {
 

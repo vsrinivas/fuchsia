@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "lib/fidl/cpp/binding.h"
-#include "lib/syslog/cpp/logger.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 class ProfilerLogListener : public fuchsia::logger::LogListener {
  public:

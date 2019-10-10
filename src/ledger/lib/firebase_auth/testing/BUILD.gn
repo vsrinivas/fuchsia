@@ -27,8 +27,8 @@ source_set("testing") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//peridot/lib/convert",
+    "//src/lib/fsl",
     "//src/lib/fxl",
   ]
 
@@ -50,14 +50,15 @@ source_set("service_account_provider") {
     "//garnet/public/lib/network_wrapper",
     "//sdk/fidl/fuchsia.auth",
     "//src/lib/callback",
+    "//src/lib/fsl",
     "//src/lib/fxl",
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/rapidjson_utils",
     "//peridot/lib/base64url",
     "//peridot/lib/convert",
+    "//src/lib/fsl",
     "//third_party/boringssl",
     "//third_party/rapidjson",
   ]
@@ -112,6 +113,7 @@ source_set("unittests") {
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/network_wrapper:fake",
     "//garnet/public/lib/rapidjson_utils",
+    "//src/lib/fsl",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
   ]

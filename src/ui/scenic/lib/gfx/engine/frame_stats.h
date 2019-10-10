@@ -5,11 +5,11 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_ENGINE_FRAME_STATS_H_
 #define SRC_UI_SCENIC_LIB_GFX_ENGINE_FRAME_STATS_H_
 
-#include <lib/inspect_deprecated/inspect.h>
 #include <lib/zx/time.h>
 
 #include <deque>
 
+#include "src/lib/inspect_deprecated/inspect.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_timings.h"
 
 namespace scenic_impl {

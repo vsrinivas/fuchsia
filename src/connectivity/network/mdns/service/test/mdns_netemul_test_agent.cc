@@ -15,7 +15,7 @@
 #include "garnet/public/lib/fostr/fidl/fuchsia/net/formatting.h"
 #include "garnet/public/lib/fostr/fidl/fuchsia/net/mdns/formatting.h"
 #include "lib/fidl/cpp/type_converter.h"
-#include "lib/fsl/types/type_converters.h"
+#include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fxl/logging.h"
 
 const std::string kLocalArgument = "--local";

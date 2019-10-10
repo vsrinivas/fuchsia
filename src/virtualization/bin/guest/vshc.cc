@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/pty/c/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <google/protobuf/message_lite.h>
 #include <poll.h>
 #include <unistd.h>
 #include <zircon/status.h>
@@ -15,8 +14,10 @@
 #include <algorithm>
 #include <iostream>
 
-#include "lib/fsl/socket/socket_drainer.h"
-#include "lib/fsl/tasks/fd_waiter.h"
+#include <google/protobuf/message_lite.h>
+
+#include "src/lib/fsl/socket/socket_drainer.h"
+#include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/fxl/logging.h"
 #include "src/virtualization/lib/vsh/util.h"
 #include "src/virtualization/packages/biscotti_guest/third_party/protos/vsh.pb.h"

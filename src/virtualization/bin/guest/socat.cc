@@ -11,7 +11,7 @@
 #include <iostream>
 
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fsl/handles/object_info.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/guest/serial.h"
 

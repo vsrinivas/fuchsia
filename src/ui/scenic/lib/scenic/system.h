@@ -8,10 +8,10 @@
 // TODO(SCN-453): Don't support GetDisplayInfo in scenic fidl API.
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <lib/inspect_deprecated/inspect.h>
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 #include "src/ui/scenic/lib/scenic/command_dispatcher.h"
 
 namespace sys {

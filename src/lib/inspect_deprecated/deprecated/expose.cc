@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/inspect_deprecated/deprecated/expose.h"
+
 #include <lib/fit/defer.h>
-#include <lib/inspect_deprecated/deprecated/expose.h>
-#include <lib/syslog/cpp/logger.h>
 
 #include <fs/service.h>
+
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace component {
 

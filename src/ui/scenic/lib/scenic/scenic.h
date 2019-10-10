@@ -10,11 +10,11 @@
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
-#include <lib/inspect_deprecated/inspect.h>
 
 #include <set>
 
 #include "src/lib/fxl/macros.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 #include "src/ui/scenic/lib/scenic/session.h"
 #include "src/ui/scenic/lib/scenic/system.h"
 

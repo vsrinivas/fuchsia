@@ -15,10 +15,10 @@
 
 #include <trace-provider/provider.h>
 
-#include "lib/fsl/vmo/vector.h"
 #include "rapidjson/document.h"
 #include "rapidjson/prettywriter.h"
 #include "rapidjson/stringbuffer.h"
+#include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"

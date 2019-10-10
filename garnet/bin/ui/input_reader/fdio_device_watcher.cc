@@ -7,7 +7,7 @@
 #include <fcntl.h>
 
 #include "garnet/bin/ui/input_reader/fdio_hid_decoder.h"
-#include "lib/fsl/io/device_watcher.h"
+#include "src/lib/fsl/io/device_watcher.h"
 
 namespace ui_input {
 

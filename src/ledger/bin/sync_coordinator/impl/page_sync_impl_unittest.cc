@@ -5,7 +5,6 @@
 #include "src/ledger/bin/cloud_sync/impl/page_sync_impl.h"
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <lib/backoff/testing/test_backoff.h>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_cloud.h"
@@ -15,6 +14,7 @@
 #include "src/ledger/bin/sync_coordinator/impl/page_sync_impl.h"
 #include "src/ledger/bin/sync_coordinator/public/sync_state_watcher.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/backoff/testing/test_backoff.h"
 
 namespace sync_coordinator {
 

@@ -12,9 +12,9 @@
 #include <unistd.h>
 
 #include "lib/fidl/cpp/type_converter.h"
-#include "lib/fsl/types/type_converters.h"
 #include "src/connectivity/network/mdns/service/mdns_fidl_util.h"
 #include "src/connectivity/network/mdns/service/mdns_names.h"
+#include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fxl/logging.h"
 
 namespace mdns {
@@ -234,12 +234,11 @@ void MdnsServiceImpl::Subscriber::InstanceDiscovered(const std::string& service,
                                                      const std::vector<std::string>& text,
                                                      uint16_t srv_priority, uint16_t srv_weight) {
   Entry entry{.type = EntryType::kInstanceDiscovered,
-              .service_instance =
-                  fuchsia::net::mdns::ServiceInstance{.service = service,
-                                                      .instance = instance,
-                                                      .text = text,
-                                                      .srv_priority = srv_priority,
-                                                      .srv_weight = srv_weight}};
+              .service_instance = fuchsia::net::mdns::ServiceInstance{.service = service,
+                                                                      .instance = instance,
+                                                                      .text = text,
+                                                                      .srv_priority = srv_priority,
+                                                                      .srv_weight = srv_weight}};
   if (v4_address) {
     entry.service_instance.endpoints.push_back(MdnsFidlUtil::CreateEndpointV4(v4_address));
   }
@@ -259,12 +258,11 @@ void MdnsServiceImpl::Subscriber::InstanceChanged(const std::string& service,
                                                   const std::vector<std::string>& text,
                                                   uint16_t srv_priority, uint16_t srv_weight) {
   Entry entry{.type = EntryType::kInstanceChanged,
-              .service_instance =
-                  fuchsia::net::mdns::ServiceInstance{.service = service,
-                                                      .instance = instance,
-                                                      .text = text,
-                                                      .srv_priority = srv_priority,
-                                                      .srv_weight = srv_weight}};
+              .service_instance = fuchsia::net::mdns::ServiceInstance{.service = service,
+                                                                      .instance = instance,
+                                                                      .text = text,
+                                                                      .srv_priority = srv_priority,
+                                                                      .srv_weight = srv_weight}};
   if (v4_address) {
     entry.service_instance.endpoints.push_back(MdnsFidlUtil::CreateEndpointV4(v4_address));
   }

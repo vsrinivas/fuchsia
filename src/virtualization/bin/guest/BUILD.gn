@@ -24,11 +24,11 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
     "//src/virtualization/lib/vsh:util",
     "//src/virtualization/packages/biscotti_guest/third_party/protos:vsh_cc_proto",
     "//third_party/protobuf:protobuf_lite",

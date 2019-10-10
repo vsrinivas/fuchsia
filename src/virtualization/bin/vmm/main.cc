@@ -10,18 +10,15 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
 #include <limits.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <trace-provider/provider.h>
 #include <unistd.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
@@ -32,6 +29,10 @@
 #include <unordered_map>
 #include <vector>
 
+#include <src/lib/fxl/strings/string_printf.h>
+#include <trace-provider/provider.h>
+
+#include "src/lib/component/cpp/startup_context.h"
 #include "src/lib/files/file.h"
 #include "src/virtualization/bin/vmm/controller/virtio_balloon.h"
 #include "src/virtualization/bin/vmm/controller/virtio_block.h"

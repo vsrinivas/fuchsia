@@ -6,10 +6,10 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/optional.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/bin/sessionmgr/testing/annotations_matchers.h"
 #include "src/modular/lib/testing/test_story_command_executor.h"
 #include "src/modular/lib/testing/test_with_session_storage.h"

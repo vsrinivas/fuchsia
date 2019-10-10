@@ -5,16 +5,16 @@
 #include "garnet/lib/loader/package_loader.h"
 
 #include <fcntl.h>
+#include <zircon/status.h>
 
 #include <utility>
 
 #include <trace/event.h>
-#include <zircon/status.h>
 
 #include "lib/fdio/fd.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/io/fd.h"
-#include "lib/fsl/vmo/file.h"
+#include "src/lib/fsl/io/fd.h"
+#include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/pkg_url/url_resolver.h"

@@ -8,9 +8,9 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/maxwell/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/component/cpp/connect.h>
 #include <lib/svc/cpp/service_namespace.h>
 
+#include "src/lib/component/cpp/connect.h"
 #include "src/lib/files/file.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 

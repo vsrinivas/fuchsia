@@ -4,19 +4,19 @@
 
 #include "garnet/bin/network_time/time_server_config.h"
 
-#include <string>
-#include <vector>
+#include <protocol.h>
 
 #include <fstream>
 #include <sstream>
+#include <string>
+#include <vector>
 
-#include <protocol.h>
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
 
-#include "lib/syslog/cpp/logger.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 #define MULTILINE(...) #__VA_ARGS__
 

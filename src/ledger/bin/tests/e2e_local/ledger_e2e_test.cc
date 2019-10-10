@@ -7,8 +7,6 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/io/fd.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/component_context.h>
@@ -31,6 +29,8 @@
 #include "src/lib/callback/capture.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fsl/io/fd.h"
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace test {
 namespace e2e_local {

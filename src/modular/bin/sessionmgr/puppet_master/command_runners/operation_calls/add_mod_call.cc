@@ -4,11 +4,11 @@
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
 
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/find_modules_call.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/get_types_from_entity_call.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/initialize_chain_call.h"

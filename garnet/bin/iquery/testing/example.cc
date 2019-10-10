@@ -4,7 +4,6 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/inspect_deprecated/component.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <variant>
@@ -14,7 +13,8 @@
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
-#include "lib/inspect_deprecated/inspect.h"
+#include "src/lib/inspect_deprecated/component.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 
 size_t current_suffix = 0;
 void ResetUniqueNames() { current_suffix = 0; }

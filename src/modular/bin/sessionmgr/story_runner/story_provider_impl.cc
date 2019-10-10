@@ -10,8 +10,6 @@
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/handles/object_info.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/zx/time.h>
 
 #include <memory>
@@ -19,6 +17,8 @@
 #include <vector>
 
 #include "peridot/lib/rapidjson/rapidjson.h"
+#include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/bin/sessionmgr/annotations.h"

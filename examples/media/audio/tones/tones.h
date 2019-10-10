@@ -14,7 +14,7 @@
 #include <map>
 
 #include "examples/media/audio/tones/tone_generator.h"
-#include "lib/fsl/tasks/fd_waiter.h"
+#include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/fxl/macros.h"
 
 namespace examples {

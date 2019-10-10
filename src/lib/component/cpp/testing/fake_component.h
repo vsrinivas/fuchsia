@@ -13,7 +13,7 @@
 #include <fs/pseudo-dir.h>
 #include <fs/synchronous-vfs.h>
 
-#include "lib/component/cpp/testing/fake_launcher.h"
+#include "src/lib/component/cpp/testing/fake_launcher.h"
 
 namespace component {
 namespace testing {

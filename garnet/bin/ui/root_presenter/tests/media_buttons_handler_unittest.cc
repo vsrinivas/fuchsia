@@ -6,16 +6,15 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <lib/component/cpp/testing/test_with_context.h>
 #include <lib/ui/input/input_device_impl.h>
 #include <lib/ui/tests/mocks/mock_input_device.h>
-
 #include <stdlib.h>
 
 #include <src/lib/fxl/macros.h>
 
 #include "gtest/gtest.h"
 #include "lib/async/dispatcher.h"
+#include "src/lib/component/cpp/testing/test_with_context.h"
 
 namespace root_presenter {
 namespace {
@@ -75,8 +74,8 @@ class MediaButtonsHandlerTest : public component::testing::TestWithContext,
         std::make_unique<fuchsia::ui::input::MediaButtonsDescriptor>();
 
     int id = rand();
-    device = std::make_unique<ui_input::InputDeviceImpl>(
-        id, std::move(device_descriptor), input_device.NewRequest(), this);
+    device = std::make_unique<ui_input::InputDeviceImpl>(id, std::move(device_descriptor),
+                                                         input_device.NewRequest(), this);
     device_added = false;
   }
 

@@ -5,10 +5,9 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_ENGINE_SESSION_MANAGER_H_
 #define SRC_UI_SCENIC_LIB_GFX_ENGINE_SESSION_MANAGER_H_
 
-#include <lib/inspect_deprecated/inspect.h>
-
 #include <unordered_map>
 
+#include "src/lib/inspect_deprecated/inspect.h"
 #include "src/ui/scenic/lib/gfx/engine/session_context.h"
 #include "src/ui/scenic/lib/scenic/command_dispatcher.h"
 

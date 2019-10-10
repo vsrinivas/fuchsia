@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fsl/vmo/shared_vmo.h"
+#include "src/lib/fsl/vmo/shared_vmo.h"
 
 #include <string.h>
 
 #include "gtest/gtest.h"
-#include "lib/fsl/vmo/sized_vmo.h"
-#include "lib/fsl/vmo/strings.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace fsl {
 namespace {

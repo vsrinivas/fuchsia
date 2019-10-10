@@ -5,13 +5,13 @@
 #include "src/ledger/bin/testing/ledger_app_instance_factory.h"
 
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fsl/io/fd.h>
-#include <lib/inspect_deprecated/inspect.h>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/testing/inspect.h"
 #include "src/lib/callback/capture.h"
+#include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 

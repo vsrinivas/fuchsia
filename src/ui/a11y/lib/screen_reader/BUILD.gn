@@ -21,9 +21,9 @@ source_set("screen_reader") {
   ]
 
   deps = [
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/syslog/cpp",
     "//src/ui/a11y/lib/gesture_manager",
     "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/tts",

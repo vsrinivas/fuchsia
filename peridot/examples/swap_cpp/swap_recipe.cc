@@ -9,7 +9,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -18,6 +17,7 @@
 #include <array>
 #include <memory>
 
+#include "src/lib/component/cpp/startup_context.h"
 #include "src/lib/fxl/logging.h"
 #include "src/modular/lib/app_driver/cpp/app_driver.h"
 #include "src/modular/lib/fidl/single_service_app.h"

@@ -6,11 +6,8 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/backoff/exponential_backoff.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
-#include <lib/inspect_deprecated/deprecated/object_dir.h>
-#include <lib/inspect_deprecated/inspect.h>
 #include <lib/sys/cpp/component_context.h>
 #include <unistd.h>
 #include <zircon/device/vfs.h>
@@ -30,11 +27,14 @@
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_factory_impl.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/inspect_deprecated/deprecated/object_dir.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 namespace {

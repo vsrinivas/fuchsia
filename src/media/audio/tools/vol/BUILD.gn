@@ -24,10 +24,10 @@ executable("vol_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/media/audio/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

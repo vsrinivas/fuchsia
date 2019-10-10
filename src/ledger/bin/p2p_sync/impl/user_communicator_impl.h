@@ -5,8 +5,6 @@
 #ifndef SRC_LEDGER_BIN_P2P_SYNC_IMPL_USER_COMMUNICATOR_IMPL_H_
 #define SRC_LEDGER_BIN_P2P_SYNC_IMPL_USER_COMMUNICATOR_IMPL_H_
 
-#include <lib/component/cpp/service_provider_impl.h>
-
 #include <memory>
 #include <set>
 #include <string>

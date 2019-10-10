@@ -30,12 +30,12 @@ source_set("impl") {
 
   deps = [
     "//garnet/public/lib/backoff",
-    "//garnet/public/lib/component/cpp:deprecated_service_provider",
     "//peridot/lib/convert",
     "//sdk/fidl/fuchsia.modular.auth",
     "//src/ledger/bin/environment",
     "//src/ledger/lib/firebase_auth",
     "//src/lib/callback",
+    "//src/lib/component/cpp:deprecated_service_provider",
   ]
 }
 

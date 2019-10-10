@@ -5,17 +5,19 @@
 import("//third_party/cobalt/metrics_registry.gni")
 
 source_set("deprecated_cobalt_logger") {
+  public = [
+    "deprecated_cobalt_logger.h",
+  ]
+
   sources = [
     "deprecated_cobalt_logger.cc",
-    "deprecated_cobalt_logger.h",
     "deprecated_cobalt_logger_impl.cc",
     "deprecated_cobalt_logger_impl.h",
   ]
 
   public_deps = [
-    "//garnet/public/lib/component/cpp",
     "//src/lib/cobalt/cpp:cobalt_logger",
-    "//src/lib/fxl",
+    "//src/lib/component/cpp",
     "//zircon/public/lib/fit",
   ]
 
@@ -31,8 +33,10 @@ source_set("deprecated_cobalt_logger") {
   ]
 
   deps = [
-    "//garnet/public/lib/backoff",
-    "//garnet/public/lib/callback",
+    "//src/lib/backoff",
+    "//src/lib/callback",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
     "//zircon/system/fidl/fuchsia-cobalt",
   ]
 }

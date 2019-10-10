@@ -5,11 +5,11 @@
 #include "src/ledger/bin/cloud_sync/impl/ledger_sync_impl.h"
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <lib/backoff/exponential_backoff.h>
 #include <lib/fit/function.h>
 
 #include "src/ledger/bin/cloud_sync/impl/page_sync_impl.h"
 #include "src/ledger/bin/encryption/impl/encryption_service_impl.h"
+#include "src/lib/backoff/exponential_backoff.h"
 
 namespace cloud_sync {
 

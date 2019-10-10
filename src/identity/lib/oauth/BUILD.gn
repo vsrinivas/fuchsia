@@ -17,9 +17,9 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.net.oldhttp",
   ]
   deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/network_wrapper",
     "//peridot/lib/rapidjson",
+    "//src/lib/fsl",
     "//src/lib/fxl",
   ]
 }
@@ -43,8 +43,8 @@ source_set("unittests") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/fsl",
     "//peridot/lib/rapidjson",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl:printers",
     "//third_party/googletest:gtest",

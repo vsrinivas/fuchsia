@@ -8,8 +8,8 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
-#include <lib/inspect_deprecated/inspect.h>
 
+#include "src/lib/inspect_deprecated/inspect.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/scenic/command_dispatcher.h"

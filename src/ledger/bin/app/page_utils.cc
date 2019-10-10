@@ -5,8 +5,6 @@
 #include "src/ledger/bin/app/page_utils.h"
 
 #include <lib/fit/function.h>
-#include <lib/fsl/vmo/sized_vmo.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include <memory>
 
@@ -14,6 +12,8 @@
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace ledger {
 

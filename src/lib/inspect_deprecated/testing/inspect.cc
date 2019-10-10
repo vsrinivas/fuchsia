@@ -4,7 +4,7 @@
 
 #include "inspect.h"
 
-#include "lib/inspect_deprecated/hierarchy.h"
+#include "src/lib/inspect_deprecated/hierarchy.h"
 
 using inspect_deprecated::hierarchy::Metric;
 using inspect_deprecated::hierarchy::Node;

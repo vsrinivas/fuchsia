@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <lib/syslog/cpp/logger.h>
 
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/ui/input/gesture_detector.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 

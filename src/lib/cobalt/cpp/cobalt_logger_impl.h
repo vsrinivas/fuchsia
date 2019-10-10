@@ -6,14 +6,15 @@
 #define SRC_LIB_COBALT_CPP_COBALT_LOGGER_IMPL_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
-#include <lib/backoff/exponential_backoff.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
-#include <src/lib/fxl/logging.h>
 
 #include <set>
 
+#include <src/lib/fxl/logging.h>
+
+#include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 
 namespace cobalt {

@@ -33,7 +33,6 @@ source_set("impl") {
 
   public_deps = [
     ":entry_payload",
-    "//garnet/public/lib/backoff",
     "//sdk/fidl/fuchsia.ledger.cloud",
     "//src/ledger/bin/cloud_sync/public",
     "//src/ledger/bin/encryption/impl",
@@ -42,11 +41,12 @@ source_set("impl") {
     "//src/ledger/bin/fidl/include",
     "//src/ledger/bin/storage/public",
     "//src/ledger/lib/commit_pack",
+    "//src/lib/backoff",
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//src/ledger/bin/encryption/primitives",
+    "//src/lib/fsl",
     "//zircon/public/lib/trace",
   ]
 
@@ -70,8 +70,6 @@ source_set("unittests") {
 
   deps = [
     ":impl",
-    "//garnet/public/lib/backoff/testing",
-    "//garnet/public/lib/fsl",
     "//peridot/lib/scoped_tmpfs",
     "//src/ledger/bin/cloud_sync/impl/testing",
     "//src/ledger/bin/cloud_sync/testing",
@@ -80,6 +78,8 @@ source_set("unittests") {
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/storage/testing",
     "//src/ledger/bin/testing:lib",
+    "//src/lib/backoff/testing",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

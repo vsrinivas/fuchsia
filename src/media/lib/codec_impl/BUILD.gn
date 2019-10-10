@@ -52,9 +52,9 @@ source_set("codec_impl") {
   ]
   public_configs = [ ":codec_impl_include_config" ]
   deps = [
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/syslog/cpp",
   ]
 }
 

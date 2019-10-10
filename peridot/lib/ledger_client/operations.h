@@ -8,12 +8,12 @@
 #define PERIDOT_LIB_LEDGER_CLIENT_OPERATIONS_H_
 
 #include <fuchsia/ledger/cpp/fidl.h>
-#include <lib/fsl/vmo/strings.h>
 #include <zircon/status.h>
 
 #include <string>
 
 #include "peridot/lib/ledger_client/page_client.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/lib/async/cpp/operation.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/fidl/json_xdr.h"

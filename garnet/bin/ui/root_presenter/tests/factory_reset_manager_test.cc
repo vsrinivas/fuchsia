@@ -6,12 +6,12 @@
 
 #include <fuchsia/recovery/cpp/fidl_test_base.h>
 #include <lib/async/time.h>
-#include <lib/component/cpp/startup_context.h>
-#include <lib/component/cpp/testing/test_with_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <zircon/status.h>
 
 #include "gtest/gtest.h"
+#include "src/lib/component/cpp/startup_context.h"
+#include "src/lib/component/cpp/testing/test_with_context.h"
 
 namespace root_presenter {
 namespace testing {

@@ -9,10 +9,10 @@
 #include "garnet/bin/network_time_service/service.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fit/function.h"
-#include "lib/fsl/syslogger/init.h"
-#include "lib/syslog/cpp/logger.h"
+#include "src/lib/fsl/syslogger/init.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 constexpr char kServerConfigPath[] = "/pkg/data/roughtime-servers.json";
 

@@ -4,13 +4,12 @@
 
 #include "src/modular/bin/module_resolver/type_inference.h"
 
-#include <lib/fsl/types/type_converters.h>
-
 #include <string>
 #include <vector>
 
 #include <src/lib/fxl/macros.h>
 
+#include "src/lib/fsl/types/type_converters.h"
 #include "src/modular/lib/async/cpp/operation.h"
 #include "src/modular/lib/entity/cpp/json.h"
 

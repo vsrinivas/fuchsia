@@ -7,9 +7,6 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/vector.h>
-#include <lib/fsl/socket/strings.h>
-#include <lib/fsl/vmo/sized_vmo.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include <iterator>
@@ -25,6 +22,9 @@
 #include "src/ledger/lib/commit_pack/commit_pack.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
+#include "src/lib/fsl/socket/strings.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace cloud_provider_firestore {
 namespace {

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/component/cpp/environment_services_helper.h"
+#include "src/lib/component/cpp/environment_services_helper.h"
 
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 
-#include "lib/component/cpp/startup_context.h"
+#include "src/lib/component/cpp/startup_context.h"
 
 namespace component {
 

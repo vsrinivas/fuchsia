@@ -20,12 +20,12 @@ source_set("modular_config") {
 
   deps = [
     ":json_xdr",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.modular.session",
+    "//src/lib/fsl",
     "//src/modular/lib/fidl:json_xdr",
   ]
 }

@@ -7,10 +7,10 @@
 
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/io/device_watcher.h>
 
 #include <memory>
 
+#include "src/lib/fsl/io/device_watcher.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_scheduler.h"

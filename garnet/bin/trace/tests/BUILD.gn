@@ -91,8 +91,8 @@ source_set("run_test") {
 
   public_deps = [
     "//garnet/bin/trace:spec",
-    "//garnet/public/lib/fsl",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -408,7 +408,7 @@ executable("provider_destruction_tests") {
   testonly = true
 
   sources = [
-    "provider_destruction_tests.cc"
+    "provider_destruction_tests.cc",
   ]
 
   deps = [

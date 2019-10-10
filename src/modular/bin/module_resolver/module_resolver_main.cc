@@ -7,7 +7,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/default.h>
-#include <lib/component/cpp/connect.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/sys/cpp/component_context.h>

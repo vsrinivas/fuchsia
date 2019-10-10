@@ -7,13 +7,13 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/epitaph.h>
-#include <lib/fsl/vmo/strings.h>
 #include <zircon/status.h>
 
 #include <map>
 #include <set>
 #include <utility>
 
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_context_impl.h"
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 #include "src/modular/lib/fidl/array_to_string.h"

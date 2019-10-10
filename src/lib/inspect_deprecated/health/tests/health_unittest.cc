@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/inspect_deprecated/health/health.h>
-#include <lib/inspect_deprecated/testing/inspect.h>
+#include "src/lib/inspect_deprecated/health/health.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/inspect_deprecated/reader.h"
+#include "src/lib/inspect_deprecated/reader.h"
+#include "src/lib/inspect_deprecated/testing/inspect.h"
 
 using namespace inspect_deprecated::testing;
 using testing::ElementsAre;

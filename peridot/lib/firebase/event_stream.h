@@ -5,17 +5,18 @@
 #ifndef PERIDOT_LIB_FIREBASE_EVENT_STREAM_H_
 #define PERIDOT_LIB_FIREBASE_EVENT_STREAM_H_
 
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <memory>
 #include <string>
 
-#include <lib/callback/destruction_sentinel.h>
-#include <lib/fit/function.h>
-#include <lib/fsl/socket/socket_drainer.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/strings/string_view.h>
 
 #include "peridot/lib/firebase/status.h"
+#include "src/lib/callback/destruction_sentinel.h"
+#include "src/lib/fsl/socket/socket_drainer.h"
 
 namespace firebase {
 

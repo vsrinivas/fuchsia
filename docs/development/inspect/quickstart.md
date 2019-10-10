@@ -93,7 +93,7 @@ that you need one of these data types, you may use the deprecated API
 by replacing the setup code with the following:
 
 ```
-#include <lib/inspect_deprecated/inspect.h>
+#include "src/lib/inspect_deprecated/inspect.h"
 
 // Legacy work required to expose an inspect hierarchy over FIDL.
 auto root = component::ObjectDir::Make("root");

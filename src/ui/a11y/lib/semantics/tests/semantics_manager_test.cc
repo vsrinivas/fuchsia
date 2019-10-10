@@ -11,7 +11,6 @@
 #include <lib/fdio/fd.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
-#include <lib/syslog/cpp/logger.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/zx/event.h>
 
@@ -19,6 +18,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 #include "src/ui/a11y/lib/semantics/tests/semantic_tree_parser.h"
 #include "src/ui/a11y/lib/util/util.h"

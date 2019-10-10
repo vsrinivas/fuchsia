@@ -98,7 +98,7 @@ Here are the #include files used in the server implementation:
 #include <lib/async-loop/default.h>
 #include <lib/zx/channel.h>
 
-#include "lib/component/cpp/startup_context.h"
+#include "src/lib/component/cpp/startup_context.h"
 ```
 
 -   `fidl.h` contains the generated C++ definition of our `Echo` FIDL protocol.

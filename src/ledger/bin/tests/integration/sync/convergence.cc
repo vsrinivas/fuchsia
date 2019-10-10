@@ -7,7 +7,6 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/vmo/vector.h>
 #include <lib/zx/time.h>
 
 #include <trace/event.h>
@@ -22,6 +21,7 @@
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/waiter.h"
+#include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/strings/concatenate.h"
 

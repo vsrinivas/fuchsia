@@ -5,14 +5,14 @@
 #ifndef LIB_TEST_RUNNER_CPP_TEST_RUNNER_H_
 #define LIB_TEST_RUNNER_CPP_TEST_RUNNER_H_
 
-#include <memory>
-
 #include <fuchsia/testing/runner/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
-#include "lib/component/cpp/startup_context.h"
+#include <memory>
+
 #include "lib/test_runner/cpp/scope.h"
 #include "lib/test_runner/cpp/test_runner_store_impl.h"
+#include "src/lib/component/cpp/startup_context.h"
 
 using fuchsia::testing::runner::TestResult;
 using fuchsia::testing::runner::TestRunner;

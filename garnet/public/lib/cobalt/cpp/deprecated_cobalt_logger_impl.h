@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_PUBLIC_LIB_COBALT_CPP_DEPRECATED_COBALT_LOGGER_IMPL_H_
-#define GARNET_PUBLIC_LIB_COBALT_CPP_DEPRECATED_COBALT_LOGGER_IMPL_H_
+#ifndef LIB_COBALT_CPP_DEPRECATED_COBALT_LOGGER_IMPL_H_
+#define LIB_COBALT_CPP_DEPRECATED_COBALT_LOGGER_IMPL_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 
 #include "src/lib/cobalt/cpp/cobalt_logger_impl.h"
+#include "src/lib/component/cpp/startup_context.h"
 
 namespace cobalt {
 
@@ -28,4 +28,4 @@ class DeprecatedCobaltLoggerImpl : public BaseCobaltLoggerImpl {
 
 }  // namespace cobalt
 
-#endif  // GARNET_PUBLIC_LIB_COBALT_CPP_DEPRECATED_COBALT_LOGGER_IMPL_H_
+#endif  // LIB_COBALT_CPP_DEPRECATED_COBALT_LOGGER_IMPL_H_

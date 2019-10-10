@@ -6,11 +6,12 @@
 #define SRC_SYS_APPMGR_UTIL_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/backoff/exponential_backoff.h>
 
 #include <string>
 
 #include <fs/vfs.h>
+
+#include "src/lib/backoff/exponential_backoff.h"
 
 namespace component {
 

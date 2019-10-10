@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/initialize_chain_call.h"
 
-#include <lib/fsl/vmo/strings.h>
-
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/set_link_value_call.h"
 
 namespace modular {

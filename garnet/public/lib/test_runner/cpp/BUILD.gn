@@ -13,16 +13,16 @@ source_set("cpp") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
+    "//src/lib/fsl",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-default",
   ]
 
   public_deps = [
-    "//garnet/public/lib/component/cpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.testing.runner",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/component/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
   ]

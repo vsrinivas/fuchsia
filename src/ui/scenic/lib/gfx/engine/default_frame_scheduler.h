@@ -7,13 +7,13 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
-#include <lib/inspect_deprecated/inspect.h>
 #include <lib/zx/time.h>
 
 #include <queue>
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_predictor.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_scheduler.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_stats.h"

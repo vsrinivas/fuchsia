@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/callback/auto_cleanable.h"
+#include "src/lib/callback/auto_cleanable.h"
 
 #include <lib/async-testing/test_loop.h>
 #include <lib/fit/function.h>

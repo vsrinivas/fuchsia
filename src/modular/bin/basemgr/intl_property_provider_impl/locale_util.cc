@@ -7,7 +7,7 @@
 #include <ostream>
 #include <unordered_set>
 
-#include "lib/syslog/cpp/logger.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/icu/source/common/unicode/errorcode.h"
 #include "third_party/icu/source/common/unicode/localebuilder.h"
 #include "third_party/icu/source/common/unicode/locid.h"

@@ -4,9 +4,8 @@
 
 #include "src/modular/bin/sessionmgr/storage/annotation_xdr.h"
 
-#include <lib/fsl/vmo/strings.h>
-
 #include "peridot/lib/base64url/base64url.h"
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace modular {
 

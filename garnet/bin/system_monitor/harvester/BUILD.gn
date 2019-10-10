@@ -39,13 +39,13 @@ source_set("lib") {
   public_deps = [
     "//garnet/lib/system_monitor/dockyard:lib",
     "//garnet/lib/system_monitor/dockyard:proto",
-    "//garnet/public/lib/inspect_deprecated/query",
     "//src/lib/fxl",
-    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
+    "//src/lib/inspect_deprecated/query",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/task-utils",
+    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
   ]
 }
 

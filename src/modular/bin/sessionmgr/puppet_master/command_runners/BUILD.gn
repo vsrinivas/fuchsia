@@ -53,8 +53,8 @@ executable("no_op_command_runner_unittest") {
 
   deps = [
     ":no_op_command_runner",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
+    "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/testing:test_with_session_storage",
   ]
@@ -87,9 +87,9 @@ executable("add_mod_command_runner_unittest") {
 
   deps = [
     ":add_mod_command_runner",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/testing:entity_resolver_fake",

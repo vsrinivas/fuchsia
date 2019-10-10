@@ -7,13 +7,13 @@
 #include <fuchsia/hardware/mediacodec/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/fsl/io/device_watcher.h>
 #include <lib/svc/cpp/services.h>
 #include <zircon/status.h>
 
 #include <trace-provider/provider.h>
 
 #include "codec_factory_impl.h"
+#include "src/lib/fsl/io/device_watcher.h"
 
 namespace codec_factory {
 

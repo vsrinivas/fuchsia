@@ -7,13 +7,13 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/result.h>
-#include <lib/fsl/vmo/strings.h>
 #include <zircon/status.h>
 
 #include <src/lib/fxl/strings/string_view.h>
 
 #include "fuchsia/ledger/cpp/fidl.h"
 #include "peridot/lib/ledger_client/operations.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 #include "src/modular/bin/sessionmgr/storage/story_storage_xdr.h"
 #include "src/modular/lib/fidl/clone.h"

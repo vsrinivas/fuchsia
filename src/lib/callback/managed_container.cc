@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/callback/managed_container.h"
+#include "src/lib/callback/managed_container.h"
 
 #include <lib/fit/function.h>
 
 #include <algorithm>
 
-#include "lib/callback/scoped_callback.h"
+#include "src/lib/callback/scoped_callback.h"
 
 namespace callback {
 

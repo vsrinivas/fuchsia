@@ -6,9 +6,7 @@
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/component/cpp/connect.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/vmo/strings.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -16,6 +14,7 @@
 #include <algorithm>
 #include <iostream>
 
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/time/time_delta.h"

@@ -6,7 +6,6 @@
 
 #include <fcntl.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
-#include <lib/fsl/io/fd.h>
 
 #include <memory>
 #include <string>
@@ -14,6 +13,7 @@
 
 #include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fsl/io/fd.h"
 #include "src/modular/lib/common/async_holder.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/fidl/array_to_string.h"

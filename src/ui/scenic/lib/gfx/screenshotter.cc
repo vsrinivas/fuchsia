@@ -12,9 +12,9 @@
 
 #include <trace/event.h>
 
-#include "lib/fsl/vmo/sized_vmo.h"
-#include "lib/fsl/vmo/vector.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
+#include "src/lib/fsl/vmo/vector.h"
 #include "src/ui/lib/escher/impl/command_buffer.h"
 #include "src/ui/lib/escher/impl/command_buffer_pool.h"
 #include "src/ui/lib/escher/impl/image_cache.h"

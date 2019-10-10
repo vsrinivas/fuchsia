@@ -8,9 +8,9 @@
 
 #include <utility>
 
-#include "lib/callback/cancellable_helper.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/socket/strings.h"
+#include "src/lib/callback/cancellable_helper.h"
+#include "src/lib/fsl/socket/strings.h"
 
 namespace network_wrapper {
 

@@ -8,7 +8,7 @@
 #ifndef SRC_LIB_INSPECT_DEPRECATED_DEPRECATED_OBJECT_DIR_H_
 #define SRC_LIB_INSPECT_DEPRECATED_DEPRECATED_OBJECT_DIR_H_
 
-#include <lib/inspect_deprecated/deprecated/expose.h>
+#include "src/lib/inspect_deprecated/deprecated/expose.h"
 
 namespace component {
 

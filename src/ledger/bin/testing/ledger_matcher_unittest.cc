@@ -5,9 +5,9 @@
 #include "src/ledger/bin/testing/ledger_matcher.h"
 
 #include <lib/fidl/cpp/optional.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include "gtest/gtest.h"
+#include "src/lib/fsl/vmo/strings.h"
 
 using testing::HasSubstr;
 using testing::Not;

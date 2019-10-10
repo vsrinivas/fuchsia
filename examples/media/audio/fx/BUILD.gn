@@ -32,16 +32,16 @@ executable("fx_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/media/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
     "//src/media/audio/lib/wav_writer:wav_writer",
-    "//zircon/system/fidl/fuchsia-scheduler",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/audio-utils",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fzl",
+    "//zircon/system/fidl/fuchsia-scheduler",
   ]
 }

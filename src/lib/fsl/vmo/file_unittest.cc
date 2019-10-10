@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fsl/vmo/file.h"
+#include "src/lib/fsl/vmo/file.h"
 
 #include <fcntl.h>
 #include <lib/zx/vmo.h>
@@ -10,10 +10,10 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "lib/fsl/vmo/sized_vmo.h"
-#include "lib/fsl/vmo/strings.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace fsl {

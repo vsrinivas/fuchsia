@@ -11,13 +11,13 @@ source_set("environment") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/backoff",
     "//garnet/public/lib/timekeeper",
     "//garnet/public/lib/timekeeper:impl",
     "//peridot/lib/rng",
     "//sdk/lib/sys/cpp",
     "//src/ledger/bin/storage/public",
     "//src/ledger/lib/coroutine",
+    "//src/lib/backoff",
     "//src/lib/fxl",
   ]
 

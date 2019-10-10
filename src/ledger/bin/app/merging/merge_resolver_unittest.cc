@@ -5,7 +5,6 @@
 #include "src/ledger/bin/app/merging/merge_resolver.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/backoff/testing/test_backoff.h>
 #include <lib/fit/function.h>
 
 #include <string>
@@ -22,6 +21,7 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/backoff/testing/test_backoff.h"
 #include "src/lib/callback/cancellable_helper.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"

@@ -6,7 +6,6 @@
 #define SRC_UI_SCENIC_LIB_GFX_ENGINE_ENGINE_H_
 
 #include <lib/fit/function.h>
-#include <lib/inspect_deprecated/inspect.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <memory>
@@ -15,6 +14,7 @@
 
 #include <fbl/ref_ptr.h>
 
+#include "src/lib/inspect_deprecated/inspect.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/flib/release_fence_signaller.h"
 #include "src/ui/lib/escher/geometry/types.h"

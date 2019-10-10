@@ -14,9 +14,9 @@
 #include <memory>
 #include <mutex>
 
-#include "lib/component/cpp/outgoing.h"
-#include "lib/component/cpp/service_provider_impl.h"
 #include "lib/svc/cpp/services.h"
+#include "src/lib/component/cpp/outgoing.h"
+#include "src/lib/component/cpp/service_provider_impl.h"
 
 namespace component {
 

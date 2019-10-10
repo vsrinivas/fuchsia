@@ -12,11 +12,11 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//third_party/crashpad/minidump",
     "//third_party/crashpad/snapshot",
     "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",

@@ -5,8 +5,6 @@
 #include <dirent.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/socket/strings.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/timekeeper/test_clock.h>
 
 #include <algorithm>
@@ -47,6 +45,8 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/lib/fsl/socket/strings.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"

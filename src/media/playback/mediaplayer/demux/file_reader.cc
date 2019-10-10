@@ -9,8 +9,8 @@
 #include <lib/async/default.h>
 #include <unistd.h>
 
-#include "lib/fsl/io/fd.h"
 #include "src/lib/files/file_descriptor.h"
+#include "src/lib/fsl/io/fd.h"
 
 namespace media_player {
 

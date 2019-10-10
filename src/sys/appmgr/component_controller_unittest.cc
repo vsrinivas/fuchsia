@@ -12,8 +12,8 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/fsl/handles/object_info.h"
 #include "lib/gtest/real_loop_fixture.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"

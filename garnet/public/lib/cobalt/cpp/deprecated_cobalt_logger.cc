@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/public/lib/cobalt/cpp/deprecated_cobalt_logger_impl.h"
-
 #include "garnet/public/lib/cobalt/cpp/deprecated_cobalt_logger.h"
 
 #include <fuchsia/cobalt/cpp/fidl.h>
-#include <lib/fsl/vmo/file.h>
-#include <src/lib/fxl/logging.h>
+
+#include "garnet/public/lib/cobalt/cpp/deprecated_cobalt_logger_impl.h"
+#include "src/lib/fsl/vmo/file.h"
+#include "src/lib/fxl/logging.h"
 
 using fuchsia::cobalt::ProjectProfile;
 

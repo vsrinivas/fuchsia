@@ -5,7 +5,6 @@
 #include "src/ledger/bin/app/active_page_manager.h"
 
 #include <lib/fit/function.h>
-#include <lib/fsl/vmo/vector.h>
 #include <zircon/syscalls.h>
 
 #include <algorithm>
@@ -20,6 +19,7 @@
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/lib/callback/trace_callback.h"
+#include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {

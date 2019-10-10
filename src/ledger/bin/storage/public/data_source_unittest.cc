@@ -4,14 +4,14 @@
 
 #include "src/ledger/bin/storage/public/data_source.h"
 
-#include <lib/fsl/socket/strings.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/socket/socket_pair.h"
 #include "src/ledger/bin/testing/ledger_memory_usage.h"
+#include "src/lib/fsl/socket/strings.h"
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace storage {
 namespace {

@@ -4,11 +4,11 @@
 
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
 
-#include <lib/syslog/cpp/logger.h>
+#include "src/lib/syslog/cpp/logger.h"
 namespace a11y {
 
-ScreenReader::ScreenReader(a11y::SemanticsManager* semantics_manager,
-                           a11y::TtsManager* tts_manager, a11y::GestureManager* gesture_manager)
+ScreenReader::ScreenReader(a11y::SemanticsManager* semantics_manager, a11y::TtsManager* tts_manager,
+                           a11y::GestureManager* gesture_manager)
     : tts_manager_(tts_manager), gesture_manager_(gesture_manager) {
   action_context_ = std::make_unique<ScreenReaderAction::ActionContext>();
   action_context_->semantics_manager = semantics_manager;

@@ -6,7 +6,6 @@
 #define SRC_LEDGER_BIN_APP_HEADS_CHILDREN_MANAGER_H_
 
 #include <lib/fit/function.h>
-#include <lib/inspect_deprecated/inspect.h>
 
 #include <vector>
 
@@ -15,6 +14,7 @@
 #include "src/ledger/bin/app/token_manager.h"
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 

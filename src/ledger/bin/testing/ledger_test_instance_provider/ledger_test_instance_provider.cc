@@ -7,7 +7,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fsl/io/fd.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -16,6 +15,7 @@
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/flags.h"
+#include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace {

@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/inspect_deprecated/query/location.h"
+
 #include <fuchsia/inspect/deprecated/cpp/fidl.h>
-#include <lib/inspect_deprecated/query/location.h>
 
 #include <src/lib/files/path.h>
 #include <src/lib/fxl/strings/concatenate.h>

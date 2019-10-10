@@ -6,7 +6,6 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include <algorithm>
 
@@ -20,6 +19,7 @@
 #include "src/ledger/bin/encryption/primitives/hmac.h"
 #include "src/ledger/bin/encryption/primitives/kdf.h"
 #include "src/lib/callback/scoped_callback.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/fxl/strings/concatenate.h"

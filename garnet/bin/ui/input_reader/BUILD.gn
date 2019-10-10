@@ -43,7 +43,7 @@ source_set("fdio") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/hid-parser",

@@ -10,9 +10,9 @@
 #include <src/modular/lib/fidl/clone.h>
 
 #include "lib/fostr/fidl/fuchsia/intl/formatting.h"
-#include "lib/syslog/cpp/logger.h"
 #include "locale_util.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/icu/source/common/unicode/locid.h"
 #include "third_party/icu/source/common/unicode/unistr.h"
 #include "third_party/icu/source/i18n/unicode/calendar.h"

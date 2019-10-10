@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/component/cpp/startup_context.h"
+#include "src/lib/component/cpp/startup_context.h"
 
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
@@ -11,7 +11,7 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
-#include "lib/component/cpp/connect.h"
+#include "src/lib/component/cpp/connect.h"
 
 namespace component {
 

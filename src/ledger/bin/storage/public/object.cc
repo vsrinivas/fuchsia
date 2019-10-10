@@ -4,9 +4,9 @@
 
 #include "src/ledger/bin/storage/public/object.h"
 
-#include <lib/fsl/vmo/strings.h>
-
 #include <memory>
+
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace storage {
 Status Object::GetVmo(fsl::SizedVmo* vmo) const {

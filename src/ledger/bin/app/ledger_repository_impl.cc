@@ -5,8 +5,6 @@
 #include "src/ledger/bin/app/ledger_repository_impl.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/inspect_deprecated/deprecated/expose.h>
-#include <lib/inspect_deprecated/deprecated/object_dir.h>
 
 #include <set>
 
@@ -24,6 +22,8 @@
 #include "src/ledger/bin/storage/impl/ledger_storage_impl.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
 #include "src/lib/callback/scoped_callback.h"
+#include "src/lib/inspect_deprecated/deprecated/expose.h"
+#include "src/lib/inspect_deprecated/deprecated/object_dir.h"
 
 namespace ledger {
 namespace {

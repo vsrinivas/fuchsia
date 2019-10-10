@@ -9,7 +9,7 @@
 
 #include <set>
 
-#include "lib/callback/auto_cleanable.h"
+#include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"

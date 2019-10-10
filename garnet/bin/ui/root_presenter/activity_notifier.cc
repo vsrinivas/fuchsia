@@ -9,13 +9,14 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <lib/async/dispatcher.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 
 #include <optional>
 
 #include <src/lib/fxl/logging.h>
+
+#include "src/lib/component/cpp/startup_context.h"
 
 namespace root_presenter {
 
@@ -69,7 +70,8 @@ void ActivityNotifierImpl::NotifyForPendingActivity() {
   pending_activity_ = std::nullopt;
 }
 
-std::optional<DiscreteActivity> ActivityNotifierImpl::ActivityForInputEvent(const InputEvent& event) {
+std::optional<DiscreteActivity> ActivityNotifierImpl::ActivityForInputEvent(
+    const InputEvent& event) {
   switch (event.Which()) {
     case InputEvent::Tag::kKeyboard:
     case InputEvent::Tag::kPointer: {

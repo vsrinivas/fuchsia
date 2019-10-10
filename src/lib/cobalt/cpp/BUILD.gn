@@ -19,16 +19,17 @@ source_set("cobalt_logger") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/fit",
     "//zircon/system/fidl/fuchsia-cobalt",
   ]
 
   deps = [
-    "//garnet/public/lib/backoff",
+    "//src/lib/backoff",
     "//src/lib/callback",
+    "//src/lib/fsl",
   ]
 }
 
@@ -51,6 +52,7 @@ source_set("unittests") {
     ":project_profile",
     ":test_metrics_registry_cc",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fsl",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-testing",
   ]
@@ -66,7 +68,7 @@ source_set("project_profile") {
     "//zircon/system/fidl/fuchsia-cobalt",
   ]
   deps = [
-    "//garnet/public/lib/fsl",
+    "//src/lib/fsl",
     "//third_party/cobalt/src/lib/crypto_util",
   ]
 }

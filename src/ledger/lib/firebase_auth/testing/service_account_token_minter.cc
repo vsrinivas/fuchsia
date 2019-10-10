@@ -6,7 +6,6 @@
 
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/optional.h>
-#include <lib/fsl/vmo/strings.h>
 #include <time.h>
 
 #include <openssl/bio.h>
@@ -22,6 +21,7 @@
 #include "peridot/lib/base64url/base64url.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"

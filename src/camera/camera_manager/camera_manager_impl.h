@@ -7,13 +7,14 @@
 
 #include <fuchsia/camera/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fsl/io/device_watcher.h>
 
 #include <list>
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <src/camera/camera_manager/video_device_client.h>
+
+#include "src/lib/fsl/io/device_watcher.h"
 
 namespace camera {
 // Implements camera::Manager FIDL service.  Keeps track of the cameras and

@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include <tuple>
 
 #include <src/lib/fxl/logging.h>
 
 #include "gmock/gmock.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_component.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_session_shell.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_story_shell.h"

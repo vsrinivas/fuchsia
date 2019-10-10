@@ -14,7 +14,7 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/gtest/test_loop_fixture.h"
-#include "lib/syslog/cpp/logger.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace cobalt {
 
@@ -57,8 +57,7 @@ class FuchsiaSystemClockTest : public ::gtest::TestLoopFixture {
   sys::testing::ComponentContextProvider context_provider_;
 };
 
-TEST_F(FuchsiaSystemClockTest, AwaitExternalSourceInitiallyAccurate
-) {
+TEST_F(FuchsiaSystemClockTest, AwaitExternalSourceInitiallyAccurate) {
   fuchsia::time::UtcState utc_state;
   utc_state.set_source(fuchsia::time::UtcSource::EXTERNAL);
   utc_state.set_timestamp(1234);
@@ -94,9 +93,7 @@ TEST_F(FuchsiaSystemClockTest, AwaitExternalSourceNotInitiallyAccurate) {
   EXPECT_TRUE(called);
 }
 
-TEST_F(FuchsiaSystemClockTest, NowBeforeInitialized) {
-  EXPECT_EQ(clock_->now(), std::nullopt);
-}
+TEST_F(FuchsiaSystemClockTest, NowBeforeInitialized) { EXPECT_EQ(clock_->now(), std::nullopt); }
 
 TEST_F(FuchsiaSystemClockTest, NowAfterInitialized) {
   fuchsia::time::UtcState utc_state;

@@ -10,11 +10,11 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/limits.h>
-#include <lib/fsl/io/fd.h>
 #include <zircon/processargs.h>
 
 #include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fsl/io/fd.h"
 
 namespace modular {
 AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,

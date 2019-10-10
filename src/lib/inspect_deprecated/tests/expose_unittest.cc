@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/inspect_deprecated/deprecated/expose.h"
+
 #include <fuchsia/inspect/deprecated/cpp/fidl.h>
-#include <lib/inspect_deprecated/deprecated/expose.h>
-#include <lib/inspect_deprecated/testing/inspect.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/lib/inspect_deprecated/testing/inspect.h"
 
 namespace {
 

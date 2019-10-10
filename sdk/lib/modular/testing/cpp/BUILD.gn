@@ -45,13 +45,13 @@ executable("modular_testing_cpp_tests_bin") {
   ]
   deps = [
     ":fuchsia.modular.test.harness",
-    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/modular/testing/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
     "//third_party/googletest:gmock",

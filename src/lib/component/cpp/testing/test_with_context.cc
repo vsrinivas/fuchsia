@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/component/cpp/testing/test_with_context.h"
+#include "src/lib/component/cpp/testing/test_with_context.h"
 
 namespace component {
 namespace testing {

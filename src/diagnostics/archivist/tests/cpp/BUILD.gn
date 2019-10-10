@@ -18,12 +18,12 @@ executable("logger_integration_cpp_tests") {
     "logger_tests.cc",
   ]
   deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/syslog",

@@ -11,7 +11,6 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/io/fd.h>
 #include <lib/svc/cpp/services.h>
 
 #include <utility>
@@ -23,6 +22,7 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {

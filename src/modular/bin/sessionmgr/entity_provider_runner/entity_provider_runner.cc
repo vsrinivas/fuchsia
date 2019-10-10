@@ -6,15 +6,14 @@
 
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
 
-#include <lib/fsl/types/type_converters.h>
-#include <lib/fsl/vmo/strings.h>
-
 #include <utility>
 
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/strings/join_strings.h>
 
 #include "peridot/lib/util/string_escape.h"
+#include "src/lib/fsl/types/type_converters.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_controller.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
 #include "src/modular/lib/fidl/json_xdr.h"

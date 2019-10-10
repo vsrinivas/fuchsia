@@ -4,7 +4,6 @@
 
 #include "src/ledger/bin/app/merging/ledger_merge_manager.h"
 
-#include <lib/backoff/exponential_backoff.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fit/function.h>
@@ -16,6 +15,7 @@
 #include "src/ledger/bin/app/merging/custom_merge_strategy.h"
 #include "src/ledger/bin/app/merging/last_one_wins_merge_strategy.h"
 #include "src/ledger/bin/app/merging/merge_resolver.h"
+#include "src/lib/backoff/exponential_backoff.h"
 
 namespace ledger {
 

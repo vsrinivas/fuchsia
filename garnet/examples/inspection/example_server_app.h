@@ -6,10 +6,10 @@
 #define GARNET_EXAMPLES_INSPECTION_EXAMPLE_SERVER_APP_H_
 
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/inspect_deprecated/component.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include "echo_connection.h"
+#include "src/lib/inspect_deprecated/component.h"
 
 namespace example {
 

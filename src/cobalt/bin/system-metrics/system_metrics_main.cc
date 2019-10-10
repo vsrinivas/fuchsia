@@ -7,14 +7,15 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fsl/syslogger/init.h>
 #include <lib/sys/cpp/component_context.h>
-#include <trace-provider/provider.h>
 
 #include <memory>
 
-#include "lib/syslog/cpp/logger.h"
+#include <trace-provider/provider.h>
+
 #include "src/cobalt/bin/system-metrics/system_metrics_daemon.h"
+#include "src/lib/fsl/syslogger/init.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, const char** argv) {
   // Parse the flags.

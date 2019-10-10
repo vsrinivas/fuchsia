@@ -4,12 +4,12 @@
 
 #include "src/identity/bin/google_auth_provider/factory_impl.h"
 
-#include "lib/callback/capture.h"
-#include "lib/callback/set_when_called.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/network_wrapper/fake_network_wrapper.h"
 #include "src/identity/bin/google_auth_provider/settings.h"
+#include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 #include "src/lib/fxl/macros.h"
 
 namespace google_auth_provider {

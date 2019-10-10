@@ -12,7 +12,6 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/callback/scoped_callback.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -25,6 +24,7 @@
 #include <src/lib/fxl/memory/weak_ptr.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
 
+#include "src/lib/callback/scoped_callback.h"
 #include "src/modular/lib/app_driver/cpp/app_driver.h"
 #include "src/modular/lib/fidl/single_service_app.h"
 #include "src/modular/lib/integration_testing/cpp/reporting.h"

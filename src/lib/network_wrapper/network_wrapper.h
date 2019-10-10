@@ -8,7 +8,7 @@
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/fit/function.h>
 
-#include "lib/callback/cancellable.h"
+#include "src/lib/callback/cancellable.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 

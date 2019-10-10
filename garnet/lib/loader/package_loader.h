@@ -5,13 +5,13 @@
 #ifndef GARNET_LIB_LOADER_PACKAGE_LOADER_H_
 #define GARNET_LIB_LOADER_PACKAGE_LOADER_H_
 
-#include <string>
-
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/zx/vmo.h>
 
+#include <string>
+
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fsl/io/fd.h"
+#include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 

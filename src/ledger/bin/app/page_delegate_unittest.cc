@@ -5,13 +5,13 @@
 #include "src/ledger/bin/app/page_delegate.h"
 
 #include <fuchsia/ledger/cpp/fidl.h>
-#include <lib/backoff/exponential_backoff.h>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/merging/merge_resolver.h"
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 

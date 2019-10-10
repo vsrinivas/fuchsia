@@ -14,12 +14,12 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "lib/backoff/testing/test_backoff.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fit/defer.h"
-#include "lib/fsl/socket/strings.h"
 #include "lib/gtest/test_loop_fixture.h"
+#include "src/lib/backoff/testing/test_backoff.h"
+#include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fxl/macros.h"
 
 namespace network_wrapper {

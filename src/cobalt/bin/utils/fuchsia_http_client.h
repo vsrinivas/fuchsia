@@ -2,11 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_COBALT_UTILS_FUCHSIA_HTTP_CLIENT_H_
-#define GARNET_BIN_COBALT_UTILS_FUCHSIA_HTTP_CLIENT_H_
+#ifndef SRC_COBALT_BIN_UTILS_FUCHSIA_HTTP_CLIENT_H_
+#define SRC_COBALT_BIN_UTILS_FUCHSIA_HTTP_CLIENT_H_
+
+#include <lib/async/cpp/task.h>
+#include <lib/async/dispatcher.h>
 
 #include "garnet/public/lib/network_wrapper/network_wrapper.h"
-#include "lib/fsl/socket/socket_drainer.h"
+#include "src/lib/fsl/socket/socket_drainer.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 #include "third_party/cobalt/third_party/clearcut/http_client.h"
 #include "third_party/cobalt/third_party/statusor/statusor.h"
 
@@ -106,4 +110,4 @@ class NetworkRequest : public fxl::RefCountedThreadSafe<NetworkRequest>,
 }  // namespace utils
 }  // namespace cobalt
 
-#endif  // GARNET_BIN_COBALT_UTILS_FUCHSIA_HTTP_CLIENT_H_
+#endif  // SRC_COBALT_BIN_UTILS_FUCHSIA_HTTP_CLIENT_H_

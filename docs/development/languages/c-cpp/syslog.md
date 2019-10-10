@@ -78,7 +78,7 @@ Logger can only be initialized once.
 #### Basic initialization
 
 ```C++
-#include "lib/syslog/cpp/logger.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, char** argv) {
     syslog::InitLogger();
@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
 #### Initialization with tags
 
 ```C++
-#include "lib/syslog/cpp/logger.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, char** argv) {
      syslog::InitLogger({"tag1", "tag2"});
@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
 #### Initialization using command line
 
 ```C++
-#include "lib/fsl/syslogger/init.h"
+#include "src/lib/fsl/syslogger/init.h"
 #include "src/lib/fxl/command_line.h"
 
 int main(int argc, char** argv) {

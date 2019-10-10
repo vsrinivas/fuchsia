@@ -9,7 +9,7 @@
 
 #include <vector>
 
-#include "lib/fsl/vmo/sized_vmo.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fxl/fxl_export.h"
 
 namespace fsl {

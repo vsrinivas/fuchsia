@@ -7,7 +7,6 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/vmo/sized_vmo.h>
 
 #include <vector>
 
@@ -26,6 +25,7 @@
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/lib/callback/managed_container.h"
 #include "src/lib/callback/operation_serializer.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/fxl/observer_list.h"

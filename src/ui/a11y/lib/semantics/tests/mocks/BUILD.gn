@@ -24,7 +24,7 @@ source_set("mocks") {
   ]
 
   deps = [
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/syslog/cpp",
   ]
 }

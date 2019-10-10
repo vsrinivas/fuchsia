@@ -9,7 +9,7 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <zircon/device/audio.h>
 
-#include "lib/fsl/io/device_watcher.h"
+#include "src/lib/fsl/io/device_watcher.h"
 #include "src/media/audio/lib/test/message_transceiver.h"
 #include "src/media/audio/lib/test/test_fixture.h"
 

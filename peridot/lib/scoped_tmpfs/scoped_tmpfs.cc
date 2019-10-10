@@ -7,10 +7,12 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fsl/io/fd.h>
 #include <lib/sync/completion.h>
-#include <src/lib/fxl/logging.h>
 #include <zircon/processargs.h>
+
+#include <src/lib/fxl/logging.h>
+
+#include "src/lib/fsl/io/fd.h"
 
 namespace scoped_tmpfs {
 

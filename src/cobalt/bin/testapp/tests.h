@@ -11,12 +11,12 @@
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
-#include "lib/syslog/cpp/logger.h"
 #include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/cobalt/src/lib/util/clock.h"
 
 namespace cobalt {
@@ -63,8 +63,7 @@ bool TestDebugMetric(CobaltTestAppLogger* logger, bool should_succeed,
 //
 // In addition, TestLogEventWithAggregation attempts to log an event with an
 // invalid event code and checks for failure.
-bool TestLogEventWithAggregation(CobaltTestAppLogger* logger,
-                                 util::SystemClockInterface* clock,
+bool TestLogEventWithAggregation(CobaltTestAppLogger* logger, util::SystemClockInterface* clock,
                                  fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                                  const size_t backfill_days);
 

@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/ref_ptr.h>
-#include <fbl/string_printf.h>
-#include <lib/inspect_deprecated/deprecated/exposed_object.h>
-#include <perftest/perftest.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <zircon/syscalls.h>
 
 #include <iostream>
 #include <random>
 #include <sstream>
 #include <vector>
+
+#include <fbl/ref_ptr.h>
+#include <fbl/string_printf.h>
+#include <perftest/perftest.h>
+#include <src/lib/fxl/strings/string_printf.h>
+
+#include "src/lib/inspect_deprecated/deprecated/exposed_object.h"
 
 namespace {
 

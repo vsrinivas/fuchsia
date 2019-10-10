@@ -1,13 +1,12 @@
 #include "src/developer/memory/monitor/metrics.h"
 
-#include <lib/syslog/cpp/logger.h>
-
 #include <array>
 
 #include <src/lib/cobalt/cpp/cobalt_event_builder.h>
 #include <trace/event.h>
 
 #include "src/developer/memory/metrics/digest.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace monitor {
 

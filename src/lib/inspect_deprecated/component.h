@@ -5,11 +5,12 @@
 #ifndef SRC_LIB_INSPECT_DEPRECATED_COMPONENT_H_
 #define SRC_LIB_INSPECT_DEPRECATED_COMPONENT_H_
 
-#include <lib/inspect_deprecated/health/health.h>
-#include <lib/inspect_deprecated/inspect.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <string>
+
+#include "src/lib/inspect_deprecated/health/health.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace inspect_deprecated {
 

@@ -20,7 +20,7 @@
 #include <fs/service.h>
 #include <trace/event.h>
 
-#include "lib/fsl/handles/object_info.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
 #include "src/sys/appmgr/component_container.h"
 #include "src/sys/appmgr/namespace.h"

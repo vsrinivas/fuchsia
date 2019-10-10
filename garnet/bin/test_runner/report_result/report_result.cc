@@ -2,20 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unistd.h>
-
-#include <iostream>
-#include <sstream>
-
 #include <fuchsia/testing/runner/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
+#include <unistd.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls/object.h>
 
-#include "lib/component/cpp/startup_context.h"
+#include <iostream>
+#include <sstream>
+
+#include "src/lib/component/cpp/startup_context.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/time/stopwatch.h"
 

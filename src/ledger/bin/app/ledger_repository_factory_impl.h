@@ -8,8 +8,6 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
-#include <lib/inspect_deprecated/deprecated/expose.h>
-#include <lib/inspect_deprecated/inspect.h>
 
 #include <memory>
 #include <string>
@@ -28,6 +26,8 @@
 #include "src/lib/callback/managed_container.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/inspect_deprecated/deprecated/expose.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 

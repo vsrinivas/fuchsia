@@ -4,11 +4,11 @@
 
 #include "src/ui/a11y/lib/semantics/semantics_manager.h"
 
-#include <lib/syslog/cpp/logger.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
 #include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace a11y {
 

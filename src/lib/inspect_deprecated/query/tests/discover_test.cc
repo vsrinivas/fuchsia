@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/inspect_deprecated/query/discover.h"
+
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/namespace.h>
-#include <lib/inspect_deprecated/query/discover.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 
 #include "fixture.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/inspect_deprecated/query/location.h"
 #include "src/lib/files/glob.h"
+#include "src/lib/inspect_deprecated/query/location.h"
 
 using inspect_deprecated::Location;
 using ::testing::UnorderedElementsAre;

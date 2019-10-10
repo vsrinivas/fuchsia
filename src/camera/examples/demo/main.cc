@@ -9,7 +9,6 @@ fx shell tiles_ctl add fuchsia-pkg://fuchsia.com/camera_demo#meta/camera_demo.cm
 #include <dirent.h>
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fdio/fdio.h>
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/base_view/cpp/view_provider_component.h>
@@ -28,6 +27,7 @@ fx shell tiles_ctl add fuchsia-pkg://fuchsia.com/camera_demo#meta/camera_demo.cm
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
 
+#include "src/lib/component/cpp/startup_context.h"
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 
 #include <glm/gtc/type_ptr.hpp>

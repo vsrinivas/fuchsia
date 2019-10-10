@@ -7,8 +7,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/socket/strings.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/zx/time.h>
 
 #include <string>
@@ -22,6 +20,8 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
+#include "src/lib/fsl/socket/strings.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
 

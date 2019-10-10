@@ -5,13 +5,13 @@
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 
 #include <lib/fidl/cpp/optional.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include <memory>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/ledger_client/page_id.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/bin/sessionmgr/testing/annotations_matchers.h"
 #include "src/modular/lib/async/cpp/future.h"
 #include "src/modular/lib/fidl/array_to_string.h"

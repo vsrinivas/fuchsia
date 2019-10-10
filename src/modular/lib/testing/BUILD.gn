@@ -35,6 +35,7 @@ source_set("component_base") {
   public_deps = [
     ":component_main",
     "//sdk/lib/sys/cpp",
+    "//src/lib/component/cpp",
     "//src/lib/fxl",
     "//src/modular/lib/fidl:single_service_app",
     "//src/modular/lib/integration_testing/cpp",
@@ -84,7 +85,7 @@ source_set("entity_resolver_fake") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
+    "//src/lib/fsl",
   ]
 }
 
@@ -139,11 +140,11 @@ source_set("session_shell_impl") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/modular/lib/integration_testing/cpp",
     "//zircon/public/lib/async-loop-cpp",
@@ -216,10 +217,10 @@ source_set("test_with_ledger") {
 
   public_deps = [
     ":ledger_repository_for_testing",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//peridot/lib/ledger_client:page_client",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
@@ -249,12 +250,12 @@ source_set("ledger_repository_for_testing") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//peridot/lib/ledger_client:constants",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//src/ledger/bin/fidl",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/modular/lib/common:teardown",
     "//src/modular/lib/fidl:app_client",
@@ -293,7 +294,7 @@ source_set("wait_until_idle") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
+    "//src/lib/fsl",
     "//third_party/googletest:gtest",
   ]
 }

@@ -9,8 +9,6 @@
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fit/function.h>
-#include <lib/inspect_deprecated/deprecated/expose.h>
-#include <lib/inspect_deprecated/inspect.h>
 
 #include <set>
 
@@ -34,6 +32,8 @@
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/inspect_deprecated/deprecated/expose.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 

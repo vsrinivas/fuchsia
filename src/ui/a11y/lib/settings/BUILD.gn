@@ -20,12 +20,12 @@ source_set("settings") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//src/ui/scenic/lib/gfx",
   ]
 }

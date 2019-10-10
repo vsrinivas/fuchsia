@@ -6,9 +6,6 @@
 #define SRC_LEDGER_BIN_TESTING_INSPECT_H_
 
 #include <lib/async-testing/test_loop.h>
-#include <lib/inspect_deprecated/deprecated/expose.h>
-#include <lib/inspect_deprecated/hierarchy.h>
-#include <lib/inspect_deprecated/inspect.h>
 
 #include <map>
 #include <optional>
@@ -23,6 +20,9 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/loop_controller.h"
 #include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/inspect_deprecated/deprecated/expose.h"
+#include "src/lib/inspect_deprecated/hierarchy.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 

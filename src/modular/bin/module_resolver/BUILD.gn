@@ -65,8 +65,8 @@ executable("local_module_resolver_unittest") {
 
   deps = [
     ":local_module_resolver",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/entity/cpp:json",

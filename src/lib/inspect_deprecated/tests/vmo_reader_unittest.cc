@@ -4,11 +4,12 @@
 
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
-#include <lib/inspect_deprecated/reader.h>
-#include <lib/inspect_deprecated/testing/inspect.h>
 #include <zircon/types.h>
 
 #include <gtest/gtest.h>
+
+#include "src/lib/inspect_deprecated/reader.h"
+#include "src/lib/inspect_deprecated/testing/inspect.h"
 
 using inspect::Inspector;
 using testing::UnorderedElementsAre;

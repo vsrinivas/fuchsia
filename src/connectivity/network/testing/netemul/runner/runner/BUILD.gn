@@ -23,9 +23,9 @@ executable("bin") {
 
   deps = [
     "//garnet/lib/cmx:cmx",
-    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",

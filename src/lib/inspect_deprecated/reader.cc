@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/inspect_deprecated/reader.h"
+#include "src/lib/inspect_deprecated/reader.h"
 
 #include <lib/inspect/cpp/reader.h>
 
@@ -13,7 +13,7 @@
 #include "fuchsia/inspect/deprecated/cpp/fidl.h"
 #include "lib/fit/bridge.h"
 #include "lib/fit/result.h"
-#include "lib/inspect_deprecated/hierarchy.h"
+#include "src/lib/inspect_deprecated/hierarchy.h"
 
 namespace inspect_deprecated {
 

@@ -5,16 +5,17 @@
 #include "managed_launcher.h"
 
 #include <lib/fdio/io.h>
-#include <lib/fsl/io/fd.h>
+#include <zircon/status.h>
+
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/concatenate.h>
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
-#include <zircon/status.h>
 
 #include "garnet/lib/cmx/cmx.h"
 #include "garnet/lib/process/process_builder.h"
 #include "managed_environment.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fsl/io/fd.h"
 
 namespace netemul {
 

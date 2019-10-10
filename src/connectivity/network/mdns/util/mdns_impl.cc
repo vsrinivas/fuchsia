@@ -14,9 +14,9 @@
 #include <unordered_set>
 
 #include "lib/fidl/cpp/type_converter.h"
-#include "lib/fsl/types/type_converters.h"
 #include "src/connectivity/network/mdns/util/formatting.h"
 #include "src/connectivity/network/mdns/util/mdns_params.h"
+#include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fxl/logging.h"
 
 namespace mdns {

@@ -13,6 +13,6 @@ source_set("gesture_util") {
   ]
 
   deps = [
-    "//garnet/public/lib/syslog/cpp",
+    "//src/lib/syslog/cpp",
   ]
 }

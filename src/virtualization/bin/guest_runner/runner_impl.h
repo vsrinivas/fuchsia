@@ -7,8 +7,8 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 
-#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
+#include "src/lib/component/cpp/startup_context.h"
 
 namespace guest_runner {
 

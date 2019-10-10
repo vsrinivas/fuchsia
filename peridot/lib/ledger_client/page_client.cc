@@ -4,13 +4,13 @@
 
 #include "peridot/lib/ledger_client/page_client.h"
 
-#include <lib/fsl/vmo/strings.h>
 #include <zircon/status.h>
 
 #include <memory>
 #include <utility>
 
 #include "peridot/lib/ledger_client/ledger_client.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 
 namespace modular {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 //
-#include <lib/inspect_deprecated/deprecated/exposed_object.h>
+#include "src/lib/inspect_deprecated/deprecated/exposed_object.h"
 
 #include <optional>
 #include <sstream>

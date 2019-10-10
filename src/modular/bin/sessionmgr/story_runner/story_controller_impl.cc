@@ -11,14 +11,11 @@
 #include <fuchsia/modular/storymodel/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
-#include <lib/component/cpp/connect.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/optional.h>
-#include <lib/fsl/types/type_converters.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
@@ -34,6 +31,9 @@
 
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/util/string_escape.h"
+#include "src/lib/component/cpp/connect.h"
+#include "src/lib/fsl/types/type_converters.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"

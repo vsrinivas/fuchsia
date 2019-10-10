@@ -7,13 +7,13 @@
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/inspect_deprecated/inspect.h>
 
 #include <optional>
 #include <unordered_map>
 #include <vector>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 #include "src/ui/lib/escher/flib/fence_set_listener.h"
 #include "src/ui/scenic/lib/gfx/engine/gfx_command_applier.h"
 #include "src/ui/scenic/lib/gfx/engine/image_pipe_updater.h"

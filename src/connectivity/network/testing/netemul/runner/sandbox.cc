@@ -16,7 +16,6 @@
 #include <lib/fdio/watcher.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/sequencer.h>
-#include <lib/fsl/io/fd.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <zircon/status.h>
@@ -27,6 +26,7 @@
 #include <src/virtualization/tests/guest_console.h>
 
 #include "garnet/lib/cmx/cmx.h"
+#include "src/lib/fsl/io/fd.h"
 
 using namespace fuchsia::netemul;
 

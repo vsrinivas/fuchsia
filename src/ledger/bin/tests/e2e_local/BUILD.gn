@@ -15,7 +15,6 @@ executable("e2e_local") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/svc/cpp",
     "//peridot/lib/base64url:base64url",
@@ -30,6 +29,7 @@ executable("e2e_local") {
     "//src/ledger/bin/testing:get_ledger",
     "//src/ledger/bin/testing:lib",
     "//src/ledger/cloud_provider_in_memory/lib",
+    "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]

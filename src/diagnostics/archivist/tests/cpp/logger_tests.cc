@@ -4,11 +4,9 @@
 
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fsl/handles/object_info.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
-#include <lib/syslog/cpp/logger.h>
 #include <lib/syslog/wire_format.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/types.h>
@@ -16,6 +14,8 @@
 #include <memory>
 #include <vector>
 
+#include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 

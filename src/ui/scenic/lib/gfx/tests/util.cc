@@ -4,10 +4,10 @@
 
 #include "src/ui/scenic/lib/gfx/tests/util.h"
 
-#include <lib/fsl/handles/object_info.h>
 #include <lib/zx/vmo.h>
 
 #include "gtest/gtest.h"
+#include "src/lib/fsl/handles/object_info.h"
 
 namespace scenic_impl::gfx::test {
 
@@ -107,7 +107,7 @@ SessionWrapper::SessionWrapper(scenic_impl::Scenic* scenic) {
 
 SessionWrapper::~SessionWrapper() {
   session_anchor_.reset();  // Let go of the resource; enqueue the release cmd.
-  session_->Flush();   // Ensure Scenic receives the release cmd.
+  session_->Flush();        // Ensure Scenic receives the release cmd.
 }
 
 void SessionWrapper::RunNow(

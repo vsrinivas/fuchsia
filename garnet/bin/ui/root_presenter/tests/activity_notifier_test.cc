@@ -8,12 +8,12 @@
 #include <fuchsia/ui/activity/cpp/fidl_test_base.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/time.h>
-#include <lib/component/cpp/startup_context.h>
-#include <lib/component/cpp/testing/test_with_context.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include "gtest/gtest.h"
+#include "src/lib/component/cpp/startup_context.h"
+#include "src/lib/component/cpp/testing/test_with_context.h"
 
 namespace root_presenter {
 namespace {

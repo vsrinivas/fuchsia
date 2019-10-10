@@ -13,7 +13,7 @@
 
 #include "fuchsia/time/cpp/fidl.h"
 #include "fuchsia/time/cpp/fidl_test_base.h"
-#include "lib/syslog/cpp/logger.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace cobalt::testapp {
 

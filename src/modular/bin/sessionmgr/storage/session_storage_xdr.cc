@@ -5,11 +5,11 @@
 #include "src/modular/bin/sessionmgr/storage/session_storage_xdr.h"
 
 #include <lib/fidl/cpp/optional.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include <src/modular/bin/sessionmgr/storage/annotation_xdr.h>
 
 #include "peridot/lib/base64url/base64url.h"
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace modular {
 

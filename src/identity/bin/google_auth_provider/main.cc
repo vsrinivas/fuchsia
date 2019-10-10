@@ -6,18 +6,19 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
-#include <trace-provider/provider.h>
 
 #include <memory>
 
-#include "lib/backoff/exponential_backoff.h"
+#include <trace-provider/provider.h>
+
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
-#include "lib/fsl/syslogger/init.h"
-#include "lib/fsl/vmo/strings.h"
 #include "lib/network_wrapper/network_wrapper_impl.h"
 #include "src/identity/bin/google_auth_provider/factory_impl.h"
 #include "src/identity/bin/google_auth_provider/settings.h"
+#include "src/lib/backoff/exponential_backoff.h"
+#include "src/lib/fsl/syslogger/init.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/command_line.h"
 
 namespace {

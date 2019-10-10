@@ -8,12 +8,7 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/inspect_deprecated/deprecated/expose.h>
-#include <lib/inspect_deprecated/hierarchy.h>
-#include <lib/inspect_deprecated/inspect.h>
-#include <lib/inspect_deprecated/testing/inspect.h>
 
 #include <vector>
 
@@ -33,8 +28,13 @@
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/inspect_deprecated/deprecated/expose.h"
+#include "src/lib/inspect_deprecated/hierarchy.h"
+#include "src/lib/inspect_deprecated/inspect.h"
+#include "src/lib/inspect_deprecated/testing/inspect.h"
 
 namespace ledger {
 namespace {

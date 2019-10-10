@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_PUBLIC_LIB_COBALT_CPP_COBALT_LOGGER_H_
-#define GARNET_PUBLIC_LIB_COBALT_CPP_COBALT_LOGGER_H_
+#ifndef LIB_COBALT_CPP_DEPRECATED_COBALT_LOGGER_H_
+#define LIB_COBALT_CPP_DEPRECATED_COBALT_LOGGER_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/zx/time.h>
 
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
+#include "src/lib/component/cpp/startup_context.h"
 
 namespace cobalt {
 
@@ -53,4 +53,4 @@ std::unique_ptr<CobaltLogger> DeprecatedNewCobaltLogger(async_dispatcher_t* disp
 
 }  // namespace cobalt
 
-#endif  // GARNET_PUBLIC_LIB_COBALT_CPP_COBALT_LOGGER_H_
+#endif  // LIB_COBALT_CPP_DEPRECATED_COBALT_LOGGER_H_

@@ -4,11 +4,11 @@
 
 #include "src/ledger/bin/testing/ledger_matcher.h"
 
-#include <lib/fsl/vmo/strings.h>
 #include <zircon/errors.h>
 
 #include "lib/fit/result.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/lib/fsl/vmo/strings.h"
 
 using testing::AllOf;
 using testing::Field;

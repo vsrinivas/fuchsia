@@ -7,14 +7,14 @@
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
-#include <lib/component/cpp/startup_context.h>
-#include <lib/component/cpp/testing/test_with_context.h>
 #include <lib/ui/scenic/cpp/session.h>
 
 #include <gtest/gtest.h>
 
 #include "garnet/bin/ui/root_presenter/tests/fakes/fake_scenic.h"
 #include "garnet/bin/ui/root_presenter/tests/fakes/fake_settings_service.h"
+#include "src/lib/component/cpp/startup_context.h"
+#include "src/lib/component/cpp/testing/test_with_context.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/a11y/lib/settings/settings_manager.h"
 #include "src/ui/a11y/lib/settings/settings_provider.h"

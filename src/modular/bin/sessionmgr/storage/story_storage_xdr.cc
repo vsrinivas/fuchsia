@@ -4,9 +4,9 @@
 
 #include "src/modular/bin/sessionmgr/storage/story_storage_xdr.h"
 
-#include <lib/fsl/vmo/strings.h>
-
 #include <src/modular/bin/sessionmgr/storage/annotation_xdr.h>
+
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace modular {
 

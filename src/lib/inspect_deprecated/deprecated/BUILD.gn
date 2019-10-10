@@ -13,7 +13,7 @@ source_set("deprecated") {
   ]
 
   deps = [
-    "//garnet/public/lib/syslog/cpp",
+    "//src/lib/syslog/cpp",
   ]
 
   public_deps = [

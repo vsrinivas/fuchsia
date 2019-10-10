@@ -4,7 +4,7 @@
 
 #include "src/modular/lib/testing/entity_resolver_fake.h"
 
-#include <lib/fsl/vmo/strings.h>
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace modular {
 

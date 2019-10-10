@@ -6,11 +6,12 @@
 #define SRC_UI_SCENIC_LIB_GFX_DISPLAYS_DISPLAY_CONTROLLER_WATCHER_H_
 
 #include <lib/fit/function.h>
-#include <lib/fsl/io/device_watcher.h>
 
 #include <memory>
 
 #include <src/lib/fxl/macros.h>
+
+#include "src/lib/fsl/io/device_watcher.h"
 
 namespace scenic_impl {
 namespace gfx {

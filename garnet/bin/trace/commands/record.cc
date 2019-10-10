@@ -9,9 +9,16 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fdio/spawn.h>
-#include <lib/fsl/types/type_converters.h>
 #include <lib/zx/time.h>
 #include <netdb.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <zircon/status.h>
+
+#include <fstream>
+#include <string>
+#include <unordered_set>
+
 #include <src/lib/files/file.h>
 #include <src/lib/files/path.h>
 #include <src/lib/files/unique_fd.h>
@@ -21,17 +28,11 @@
 #include <src/lib/fxl/strings/string_number_conversions.h>
 #include <src/lib/fxl/strings/string_view.h>
 #include <src/lib/fxl/strings/trim.h>
-#include <string.h>
-#include <sys/socket.h>
 #include <third_party/zlib/contrib/iostream3/zfstream.h>
-#include <zircon/status.h>
-
-#include <fstream>
-#include <string>
-#include <unordered_set>
 
 #include "garnet/bin/trace/results_export.h"
 #include "garnet/bin/trace/results_output.h"
+#include "src/lib/fsl/types/type_converters.h"
 
 namespace tracing {
 

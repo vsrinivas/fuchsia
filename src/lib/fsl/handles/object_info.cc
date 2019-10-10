@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fsl/handles/object_info.h"
+#include "src/lib/fsl/handles/object_info.h"
 
 #include <zircon/process.h>
 #include <zircon/syscalls.h>

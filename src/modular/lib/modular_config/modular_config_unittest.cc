@@ -4,7 +4,6 @@
 
 #include "src/modular/lib/modular_config/modular_config.h"
 
-#include <lib/fsl/io/fd.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
@@ -19,6 +18,8 @@
 #include <src/lib/fxl/strings/split_string.h>
 #include <src/lib/fxl/strings/substitute.h>
 #include <src/modular/lib/modular_config/modular_config_constants.h>
+
+#include "src/lib/fsl/io/fd.h"
 
 class ModularConfigReaderTest : public gtest::RealLoopFixture {};
 

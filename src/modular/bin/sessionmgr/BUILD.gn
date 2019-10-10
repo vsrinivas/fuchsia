@@ -41,7 +41,6 @@ source_set("sessionmgr_lib") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/component/cpp",
     "//peridot/lib/rapidjson",
     "//peridot/lib/scoped_tmpfs",
     "//sdk/fidl/fuchsia.app.discover",
@@ -58,6 +57,7 @@ source_set("sessionmgr_lib") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//src/ledger/cloud_provider_firestore/bin/fidl",
+    "//src/lib/component/cpp",
     "//src/modular/bin/sessionmgr/agent_runner",
   ]
 
@@ -67,7 +67,6 @@ source_set("sessionmgr_lib") {
     ":presentation_provider",
     ":session_ctl",
     ":user_intelligence_provider",
-    "//garnet/public/lib/fsl",
     "//peridot/lib/ledger_client:constants",
     "//peridot/lib/ledger_client:operations",
     "//peridot/lib/ledger_client:types",
@@ -76,6 +75,7 @@ source_set("sessionmgr_lib") {
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/ledger/bin/fidl",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/bin/module_resolver:local_module_resolver",
@@ -138,8 +138,8 @@ source_set("session_ctl") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//sdk/lib/vfs/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/modular/bin/sessionmgr/puppet_master:puppet_master_impl",
     "//zircon/public/lib/fs",
@@ -153,13 +153,13 @@ source_set("component_context") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//peridot/lib/ledger_client:operations",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:types",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
     "//src/ledger/bin/fidl",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/modular/bin/sessionmgr/agent_runner:public",
     "//src/modular/bin/sessionmgr/entity_provider_runner",
@@ -177,7 +177,6 @@ source_set("focus") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//peridot/lib/ledger_client:operations",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:types",
@@ -187,6 +186,7 @@ source_set("focus") {
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/modular/bin/sessionmgr/storage:constants_and_utils",
     "//src/modular/lib/async/cpp:operation",
@@ -227,6 +227,7 @@ source_set("user_intelligence_provider") {
     "//sdk/fidl/fuchsia.bluetooth.le",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.net.oldhttp",
+    "//src/lib/component/cpp",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/lib:maxwell_internal",
     "//zircon/system/fidl/fuchsia-cobalt",
@@ -288,14 +289,14 @@ executable("sessionmgr_impl_unittest") {
 
   deps = [
     ":sessionmgr_lib",
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/gtest",
     "//peridot/lib/ledger_client:constants",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/component/cpp",
+    "//src/lib/component/cpp/testing",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/fidl:clone",
     "//third_party/googletest:gmock",

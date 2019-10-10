@@ -32,11 +32,11 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/fidl/fuchsia.virtualization.vmm",
+    "//src/lib/component/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -81,6 +81,7 @@ executable("guest_manager_unittests") {
   deps = [
     ":lib",
     "//garnet/public/lib/gtest",
+    "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

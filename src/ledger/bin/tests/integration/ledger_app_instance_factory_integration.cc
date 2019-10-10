@@ -5,11 +5,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/backoff/exponential_backoff.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/handles/object_info.h>
-#include <lib/fsl/socket/strings.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/timekeeper/test_loop_test_clock.h>
 
@@ -34,8 +31,11 @@
 #include "src/ledger/bin/testing/overnet/overnet_factory.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/ledger/cloud_provider_memory_diff/cpp/cloud_controller_factory.h"
+#include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
 namespace ledger {

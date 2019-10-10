@@ -4,14 +4,14 @@
 
 #include "src/ledger/lib/firebase_auth/firebase_auth_impl.h"
 
-#include <lib/backoff/exponential_backoff.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/vmo/file.h>
 
 #include <utility>
 
 #include "src/ledger/bin/cobalt/ledger_metrics_registry.cb.h"
+#include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/cancellable_helper.h"
+#include "src/lib/fsl/vmo/file.h"
 
 namespace firebase_auth {
 namespace {

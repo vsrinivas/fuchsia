@@ -11,9 +11,6 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/component/cpp/connect.h>
-#include <lib/fsl/io/fd.h>
-#include <lib/fsl/types/type_converters.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
 #include <zircon/status.h>
@@ -24,8 +21,11 @@
 #include "peridot/lib/ledger_client/constants.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
+#include "src/lib/component/cpp/connect.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fsl/io/fd.h"
+#include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"

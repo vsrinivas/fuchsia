@@ -11,7 +11,7 @@ source_set("util") {
   public_deps = []
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.ui.views",
+    "//src/lib/fsl",
   ]
 }

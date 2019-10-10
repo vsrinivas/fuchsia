@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/network_wrapper/fake_network_wrapper.h>
+
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
 #include "src/lib/files/file.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 
 namespace service_account {

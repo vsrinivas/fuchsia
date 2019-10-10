@@ -8,7 +8,6 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
-#include <lib/inspect_deprecated/inspect.h>
 
 #include <functional>
 #include <map>
@@ -34,6 +33,7 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 

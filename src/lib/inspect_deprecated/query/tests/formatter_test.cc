@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/inspect_deprecated/query/formatter.h"
+#include "src/lib/inspect_deprecated/query/formatter.h"
 
-#include <lib/inspect_deprecated/query/json_formatter.h>
-#include <lib/inspect_deprecated/query/text_formatter.h>
-
-#include "lib/inspect_deprecated/health/health.h"
-#include "lib/inspect_deprecated/hierarchy.h"
-#include "lib/inspect_deprecated/query/source.h"
-#include "lib/inspect_deprecated/testing/inspect.h"
+#include "src/lib/inspect_deprecated/health/health.h"
+#include "src/lib/inspect_deprecated/hierarchy.h"
+#include "src/lib/inspect_deprecated/query/json_formatter.h"
+#include "src/lib/inspect_deprecated/query/source.h"
+#include "src/lib/inspect_deprecated/query/text_formatter.h"
+#include "src/lib/inspect_deprecated/testing/inspect.h"
 
 using namespace inspect_deprecated::testing;
 using namespace inspect_deprecated::hierarchy;

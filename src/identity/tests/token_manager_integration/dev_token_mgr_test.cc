@@ -15,9 +15,9 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "lib/callback/capture.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
+#include "src/lib/callback/capture.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"

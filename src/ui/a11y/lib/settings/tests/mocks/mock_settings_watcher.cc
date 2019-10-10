@@ -5,12 +5,13 @@
 #include "src/ui/a11y/lib/settings/tests/mocks/mock_settings_watcher.h"
 
 #include <lib/sys/cpp/testing/component_context_provider.h>
-#include <lib/syslog/cpp/logger.h>
 #include <zircon/status.h>
 
 #include <cmath>
 
 #include <src/lib/fxl/logging.h>
+
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace accessibility_test {
 

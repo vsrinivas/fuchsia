@@ -8,7 +8,7 @@
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include "lib/fsl/tasks/fd_waiter.h"
+#include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/lib/wav_writer/wav_writer.h"

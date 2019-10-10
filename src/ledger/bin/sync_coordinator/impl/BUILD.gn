@@ -39,6 +39,7 @@ source_set("unittests") {
     "//src/ledger/bin/storage/testing",
     "//src/ledger/bin/sync_coordinator/public",
     "//src/ledger/bin/testing:lib",
+    "//src/lib/backoff/testing",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]

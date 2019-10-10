@@ -35,8 +35,8 @@ source_set("app_client") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/svc/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/modular/lib/common:async_holder",
   ]
@@ -177,10 +177,10 @@ source_set("app_client_unittest") {
   deps = [
     ":app_client",
     ":app_client_unittest_fidl",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]

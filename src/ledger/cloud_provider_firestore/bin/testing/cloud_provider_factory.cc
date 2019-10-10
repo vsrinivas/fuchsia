@@ -6,7 +6,6 @@
 
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/backoff/exponential_backoff.h>
 #include <lib/fit/function.h>
 #include <lib/svc/cpp/services.h>
 #include <zircon/status.h>
@@ -14,6 +13,7 @@
 #include <utility>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/lib/backoff/exponential_backoff.h"
 
 namespace cloud_provider_firestore {
 namespace {

@@ -6,11 +6,11 @@
 #define SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_MANAGER_IMPL_H_
 
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 
 #include <unordered_map>
 
+#include "src/lib/component/cpp/startup_context.h"
 #include "src/virtualization/bin/guest_manager/realm_impl.h"
 
 class ManagerImpl : public fuchsia::virtualization::Manager {

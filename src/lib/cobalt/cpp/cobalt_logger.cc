@@ -5,10 +5,10 @@
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 
 #include <fuchsia/cobalt/cpp/fidl.h>
-#include <lib/fsl/vmo/file.h>
-#include <lib/syslog/cpp/logger.h>
 
 #include "src/lib/cobalt/cpp/cobalt_logger_impl.h"
+#include "src/lib/fsl/vmo/file.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 using fuchsia::cobalt::ProjectProfile;
 

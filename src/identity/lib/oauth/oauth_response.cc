@@ -4,8 +4,8 @@
 
 #include "src/identity/lib/oauth/oauth_response.h"
 
-#include "lib/fsl/socket/strings.h"
 #include "rapidjson/error/en.h"
+#include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 

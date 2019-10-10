@@ -6,7 +6,8 @@
 #define GARNET_EXAMPLES_INSPECTION_ECHO_CONNECTION_H_
 
 #include <fidl/examples/echo/cpp/fidl.h>
-#include <lib/inspect_deprecated/inspect.h>
+
+#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace example {
 

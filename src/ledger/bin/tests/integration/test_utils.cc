@@ -6,7 +6,6 @@
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/zx/time.h>
 
 #include <string>
@@ -18,6 +17,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/time/time_delta.h"
 

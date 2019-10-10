@@ -5,15 +5,16 @@
 #ifndef PERIDOT_LIB_SOCKET_SOCKET_DRAINER_CLIENT_H_
 #define PERIDOT_LIB_SOCKET_SOCKET_DRAINER_CLIENT_H_
 
-#include <lib/callback/destruction_sentinel.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/socket/socket_drainer.h>
 
 #include <functional>
 #include <memory>
 #include <string>
 
 #include <src/lib/fxl/macros.h>
+
+#include "src/lib/callback/destruction_sentinel.h"
+#include "src/lib/fsl/socket/socket_drainer.h"
 
 namespace socket {
 

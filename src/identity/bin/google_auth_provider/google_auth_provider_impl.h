@@ -15,7 +15,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <fuchsia/web/cpp/fidl.h>
-#include <lib/callback/cancellable.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
@@ -23,6 +22,7 @@
 #include <lib/sys/cpp/component_context.h>
 
 #include "src/identity/bin/google_auth_provider/settings.h"
+#include "src/lib/callback/cancellable.h"
 #include "src/lib/fxl/macros.h"
 
 namespace google_auth_provider {

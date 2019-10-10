@@ -5,7 +5,6 @@
 #include "src/ledger/bin/app/inspected_commit.h"
 
 #include <lib/fit/function.h>
-#include <lib/inspect_deprecated/inspect.h>
 
 #include <memory>
 #include <set>
@@ -19,6 +18,7 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/callback/ensure_called.h"
 #include "src/lib/callback/scoped_callback.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 

@@ -10,9 +10,9 @@ executable("screencap") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//src/lib/component/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

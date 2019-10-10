@@ -5,8 +5,9 @@
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_settings_provider.h"
 
 #include <lib/sys/cpp/testing/component_context_provider.h>
-#include <lib/syslog/cpp/logger.h>
 #include <zircon/status.h>
+
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace accessibility_test {
 

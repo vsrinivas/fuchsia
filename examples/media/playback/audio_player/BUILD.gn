@@ -36,11 +36,11 @@ executable("audio_player_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.media.playback",
     "//sdk/lib/media/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
     "//src/lib/url",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

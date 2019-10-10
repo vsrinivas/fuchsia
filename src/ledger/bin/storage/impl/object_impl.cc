@@ -4,8 +4,6 @@
 
 #include "src/ledger/bin/storage/impl/object_impl.h"
 
-#include <lib/fsl/vmo/strings.h>
-
 #include <utility>
 
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
@@ -15,6 +13,7 @@
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 
 namespace storage {

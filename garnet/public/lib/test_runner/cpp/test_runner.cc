@@ -31,6 +31,7 @@
 #include "lib/test_runner/cpp/test_runner.h"
 
 #include <arpa/inet.h>
+#include <lib/async/default.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -39,16 +40,14 @@
 #include <string>
 #include <vector>
 
-#include <lib/async/default.h>
-
 #include "lib/fidl/cpp/type_converter.h"
-#include "lib/fsl/types/type_converters.h"
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/split_string.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
+#include "src/lib/fsl/types/type_converters.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace test_runner {
 

@@ -11,8 +11,8 @@
 
 #include <vector>
 
-#include "lib/inspect_deprecated/hierarchy.h"
-#include "lib/inspect_deprecated/inspect.h"
+#include "src/lib/inspect_deprecated/hierarchy.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace inspect_deprecated {
 

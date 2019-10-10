@@ -6,11 +6,11 @@
 
 #include <memory>
 
-#include "lib/backoff/exponential_backoff.h"
 #include "lib/sys/cpp/component_context.h"
 #include "src/cobalt/bin/app/logger_impl.h"
 #include "src/cobalt/bin/app/utils.h"
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
+#include "src/lib/backoff/exponential_backoff.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
 #include "third_party/cobalt/src/logger/internal_metrics_config.cb.h"
 #include "third_party/cobalt/src/observation_store/file_observation_store.h"

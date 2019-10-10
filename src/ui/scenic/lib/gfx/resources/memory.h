@@ -7,7 +7,7 @@
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 
-#include "lib/fsl/vmo/shared_vmo.h"
+#include "src/lib/fsl/vmo/shared_vmo.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 #include "src/ui/scenic/lib/gfx/resources/resource.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"

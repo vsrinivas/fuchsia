@@ -51,7 +51,6 @@ source_set("src") {
   deps = [
     "//garnet/lib/cmx:cmx",
     "//garnet/lib/process",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/json",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.netstack",
@@ -66,6 +65,7 @@ source_set("src") {
     "//src/connectivity/network/testing/netemul/lib/fidl:sync",
     "//src/connectivity/network/testing/netemul/lib/network:netdump",
     "//src/connectivity/network/testing/netemul/lib/sync:sync_service",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//src/virtualization/lib/guest_interaction:fuchsia.netemul.guest",
@@ -127,12 +127,12 @@ executable("sandbox_unittest") {
 
   deps = [
     ":src",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/pkg_url",

@@ -6,10 +6,10 @@
 #define SRC_MODULAR_BIN_SESSIONMGR_TESTING_ANNOTATIONS_MATCHERS_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include "gmock/gmock.h"
 #include "lib/fostr/fidl/fuchsia/modular/formatting.h"
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace modular::annotations {
 
@@ -52,4 +52,4 @@ MATCHER_P(AnnotationEq, expected, "annotation equals") {
 
 }  // namespace modular::annotations
 
-#endif
+#endif  // SRC_MODULAR_BIN_SESSIONMGR_TESTING_ANNOTATIONS_MATCHERS_H_

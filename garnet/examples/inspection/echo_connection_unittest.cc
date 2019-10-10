@@ -5,11 +5,11 @@
 #include "echo_connection.h"
 
 #include <lib/gtest/real_loop_fixture.h>
-#include <lib/inspect_deprecated/reader.h>
-#include <lib/inspect_deprecated/testing/inspect.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include "lib/fidl/cpp/binding.h"
+#include "src/lib/inspect_deprecated/reader.h"
+#include "src/lib/inspect_deprecated/testing/inspect.h"
 
 namespace example {
 namespace testing {

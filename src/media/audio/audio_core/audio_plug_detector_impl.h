@@ -5,11 +5,10 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_PLUG_DETECTOR_IMPL_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_PLUG_DETECTOR_IMPL_H_
 
-#include <lib/fsl/io/device_watcher.h>
-
 #include <memory>
 #include <vector>
 
+#include "src/lib/fsl/io/device_watcher.h"
 #include "src/media/audio/audio_core/audio_plug_detector.h"
 
 namespace media::audio {

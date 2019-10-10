@@ -5,13 +5,14 @@
 #ifndef SRC_SYS_APPMGR_SYSTEM_OBJECTS_DIRECTORY_H_
 #define SRC_SYS_APPMGR_SYSTEM_OBJECTS_DIRECTORY_H_
 
-#include <lib/inspect_deprecated/deprecated/exposed_object.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 
 #include <fbl/string.h>
 #include <fs/lazy-dir.h>
 #include <src/lib/fxl/strings/string_view.h>
+
+#include "src/lib/inspect_deprecated/deprecated/exposed_object.h"
 
 namespace component {
 

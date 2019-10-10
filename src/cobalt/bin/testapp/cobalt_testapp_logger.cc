@@ -7,7 +7,7 @@
 #include <map>
 #include <string>
 
-#include "lib/syslog/cpp/logger.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace cobalt {
 namespace testapp {

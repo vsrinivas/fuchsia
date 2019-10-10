@@ -94,7 +94,7 @@ source_set("wait_for_minfs") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fsl",
+    "//src/lib/fsl",
     "//src/lib/fxl",
   ]
 }
@@ -113,7 +113,6 @@ source_set("lib") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.gfx",
@@ -121,6 +120,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/common:async_holder",
@@ -256,10 +256,10 @@ executable("session_context_impl_unittest") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/fidl:clone",

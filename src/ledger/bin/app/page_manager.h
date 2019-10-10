@@ -7,7 +7,6 @@
 
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
-#include <lib/inspect_deprecated/inspect.h>
 
 #include <optional>
 #include <string>
@@ -28,6 +27,7 @@
 #include "src/ledger/bin/storage/public/ledger_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 // Manages a ledger page.

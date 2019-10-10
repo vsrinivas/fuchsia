@@ -7,8 +7,8 @@
 #include <lib/fit/function.h>
 #include <lib/zx/vmo.h>
 
-#include "lib/fsl/vmo/sized_vmo.h"
-#include "lib/fsl/vmo/vector.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
+#include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/util/trace_macros.h"

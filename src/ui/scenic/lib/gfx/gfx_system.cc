@@ -7,7 +7,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/syslog/cpp/logger.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <zircon/assert.h>
 
@@ -15,6 +14,7 @@
 
 #include <trace/event.h>
 
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/lib/escher/escher_process_init.h"
 #include "src/ui/lib/escher/fs/hack_filesystem.h"
 #include "src/ui/lib/escher/util/check_vulkan_support.h"

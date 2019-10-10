@@ -15,6 +15,6 @@ source_set("gesture_recognizers") {
   ]
 
   deps = [
-    "//garnet/public/lib/syslog/cpp",
+    "//src/lib/syslog/cpp",
   ]
 }

@@ -4,16 +4,16 @@
 
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 
-#include <memory>
-
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/optional.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+#include <memory>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -187,8 +187,7 @@ TEST_F(SerializationSizeTest, GetEntriesInline) {
   auto client_callback = [](std::vector<InlinedEntry> /*entries*/,
                             std::unique_ptr<Token> /*next_token*/) {};
   // FakeSnapshot saves the callback instead of running it.
-  snapshot_proxy->GetEntriesInline({}, nullptr,
-                                   std::move(client_callback));
+  snapshot_proxy->GetEntriesInline({}, nullptr, std::move(client_callback));
   RunLoopUntilIdle();
 
   fidl::InterfaceHandle<PageSnapshot> handle = snapshot_proxy.Unbind();

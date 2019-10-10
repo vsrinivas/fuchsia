@@ -5,12 +5,11 @@
 #ifndef SRC_LIB_INSPECT_DEPRECATED_TESTING_INSPECT_H_
 #define SRC_LIB_INSPECT_DEPRECATED_TESTING_INSPECT_H_
 
-#include <lib/inspect_deprecated/inspect.h>
-#include <lib/inspect_deprecated/reader.h>
-
 #include "fuchsia/inspect/deprecated/cpp/fidl.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/lib/inspect_deprecated/inspect.h"
+#include "src/lib/inspect_deprecated/reader.h"
 
 namespace inspect_deprecated {
 

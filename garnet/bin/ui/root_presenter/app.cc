@@ -6,7 +6,6 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/component/cpp/connect.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/ui/input/cpp/formatting.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -20,6 +19,7 @@
 #include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 
+#include "src/lib/component/cpp/connect.h"
 #include "src/lib/files/file.h"
 
 namespace root_presenter {
@@ -69,7 +69,8 @@ void App::PresentView(
   auto presentation = std::make_unique<Presentation>(
       scenic_.get(), session_.get(), compositor_->id(), std::move(view_holder_token),
       std::move(presentation_request), shortcut_manager, ime_service_.get(), &activity_notifier_,
-      renderer_params_, display_startup_rotation_adjustment, [this](bool yield_to_next) {
+      renderer_params_, display_startup_rotation_adjustment,
+      [this](bool yield_to_next) {
         if (yield_to_next) {
           SwitchToNextPresentation();
         } else {
@@ -322,9 +323,13 @@ void App::HandleScenicEvent(const fuchsia::ui::scenic::Event& event) {
           ShutdownPresentation(idx);
           break;
         }
-        default: { break; }
+        default: {
+          break;
+        }
       }
-    default: { break; }
+    default: {
+      break;
+    }
   }
 }
 

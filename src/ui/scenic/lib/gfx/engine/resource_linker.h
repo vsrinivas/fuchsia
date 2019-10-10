@@ -12,7 +12,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "lib/fsl/handles/object_info.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/scenic/lib/gfx/engine/unresolved_imports.h"
 #include "src/ui/scenic/lib/gfx/resources/resource.h"
 

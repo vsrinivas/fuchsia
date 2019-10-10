@@ -21,7 +21,7 @@ source_set("gesture") {
   ]
 
   deps = [
-    "//garnet/public/lib/syslog/cpp",
+    "//src/lib/syslog/cpp",
   ]
 }
 
@@ -55,7 +55,7 @@ executable("gesture_tests") {
 
   deps = [
     ":gesture",
-    "//garnet/public/lib/syslog/cpp",
+    "//src/lib/syslog/cpp",
     "//third_party/googletest:gtest",
     "//third_party/googletest:gtest_main",
   ]

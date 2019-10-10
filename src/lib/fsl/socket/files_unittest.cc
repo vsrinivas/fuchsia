@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fsl/socket/files.h"
+#include "src/lib/fsl/socket/files.h"
 
 #include <fcntl.h>
 #include <lib/zx/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "lib/fsl/socket/strings.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fsl/socket/strings.h"
 
 namespace fsl {
 namespace {

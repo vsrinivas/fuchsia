@@ -12,9 +12,9 @@
 
 #include <fs/pseudo-dir.h>
 
-#include "lib/component/cpp/startup_context.h"
-#include "lib/component/cpp/testing/fake_launcher.h"
 #include "lib/svc/cpp/services.h"
+#include "src/lib/component/cpp/startup_context.h"
+#include "src/lib/component/cpp/testing/fake_launcher.h"
 
 namespace component {
 namespace testing {

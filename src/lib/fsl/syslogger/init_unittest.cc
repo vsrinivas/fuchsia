@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fsl/syslogger/init.h"
+#include "src/lib/fsl/syslogger/init.h"
 
 #include <lib/syslog/logger.h>
 
 #include "gtest/gtest.h"
-#include "lib/syslog/cpp/logger.h"
 #include "src/lib/fxl/command_line.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 __BEGIN_CDECLS
 

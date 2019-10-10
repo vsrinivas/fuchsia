@@ -4,7 +4,6 @@
 
 #include "src/ledger/lib/firebase_auth/testing/service_account_token_minter.h"
 
-#include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/network_wrapper/fake_network_wrapper.h>
 
@@ -16,6 +15,7 @@
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 

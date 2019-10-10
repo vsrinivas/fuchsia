@@ -6,18 +6,18 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fsl/io/fd.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
 #include <lib/zx/time.h>
-#include <src/lib/fxl/strings/string_printf.h>
-#include <src/lib/fxl/strings/substitute.h>
 #include <stdio.h>
 #include <time.h>
 
 #include <thread>
+
+#include <src/lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/substitute.h>
 
 #include "fake_rtc_device.h"
 #include "fuchsia/hardware/rtc/cpp/fidl.h"
@@ -26,6 +26,7 @@
 #include "local_roughtime_server.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fsl/io/fd.h"
 #include "third_party/roughtime/protocol.h"
 
 namespace time_server {

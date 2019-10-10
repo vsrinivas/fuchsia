@@ -48,8 +48,8 @@ source_set("puppet_master_impl") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fsl",
     "//src/modular/bin/sessionmgr:annotations",
     "//src/modular/bin/sessionmgr/storage",
     "//src/modular/lib/async/cpp:operation",
@@ -66,8 +66,8 @@ executable("puppet_master_impl_unittest") {
   deps = [
     ":puppet_master_impl",
     ":story_command_executor",
-    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/bin/sessionmgr/testing:annotations_matchers",
     "//src/modular/lib/testing:test_story_command_executor",

@@ -18,7 +18,6 @@
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/sys/inspect/cpp/component.h>
 
 #include <map>
@@ -33,6 +32,7 @@
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 #include "src/modular/bin/sessionmgr/story/model/story_mutator.h"

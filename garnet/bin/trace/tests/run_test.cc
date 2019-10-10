@@ -8,15 +8,9 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/spawn.h>
-#include <lib/fsl/types/type_converters.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
-#include <src/lib/files/file.h>
-#include <src/lib/fxl/log_settings.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/join_strings.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -24,8 +18,14 @@
 #include <string>
 #include <vector>
 
-#include "garnet/bin/trace/tests/component_context.h"
 #include "garnet/bin/trace/spec.h"
+#include "garnet/bin/trace/tests/component_context.h"
+#include "src/lib/files/file.h"
+#include "src/lib/fsl/types/type_converters.h"
+#include "src/lib/fxl/log_settings.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 // The "path" of the trace program from outside the trace package.
 const char kTraceProgramUrl[] = "fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx";
@@ -228,15 +228,17 @@ static bool RunComponent(sys::ComponentContext* context, const std::string& app,
 static bool WaitAndGetReturnCode(const std::string& program_name, async::Loop* loop,
                                  fuchsia::sys::ComponentControllerPtr* component_controller,
                                  int64_t* out_return_code) {
-  fuchsia::sys::TerminationReason termination_reason = fuchsia::sys::TerminationReason::INTERNAL_ERROR;
+  fuchsia::sys::TerminationReason termination_reason =
+      fuchsia::sys::TerminationReason::INTERNAL_ERROR;
   // This value is not valid unless |termination_reason==EXITED|.
   int64_t return_code = INT64_MIN;
 
-  component_controller->set_error_handler([&loop, &program_name, &termination_reason](zx_status_t error) {
-    FXL_PLOG(ERROR, error) << "Unexpected error waiting for " << program_name << " to exit";
-    termination_reason = fuchsia::sys::TerminationReason::UNKNOWN;
-    loop->Quit();
-  });
+  component_controller->set_error_handler(
+      [&loop, &program_name, &termination_reason](zx_status_t error) {
+        FXL_PLOG(ERROR, error) << "Unexpected error waiting for " << program_name << " to exit";
+        termination_reason = fuchsia::sys::TerminationReason::UNKNOWN;
+        loop->Quit();
+      });
   component_controller->events().OnTerminated =
       [&loop, &program_name, &component_controller, &termination_reason, &return_code](
           int64_t rc, fuchsia::sys::TerminationReason reason) {
@@ -281,8 +283,7 @@ static bool RunComponentAndWait(async::Loop* loop, sys::ComponentContext* contex
   return return_code == 0;
 }
 
-bool RunTspec(const std::string& relative_tspec_path,
-              const std::string& output_file_path) {
+bool RunTspec(const std::string& relative_tspec_path, const std::string& output_file_path) {
   std::vector<std::string> args;
   if (!BuildTraceProgramArgs(relative_tspec_path, output_file_path, &args)) {
     return false;
@@ -295,8 +296,7 @@ bool RunTspec(const std::string& relative_tspec_path,
   return RunComponentAndWait(&loop, context, kTraceProgramUrl, args);
 }
 
-bool VerifyTspec(const std::string& relative_tspec_path,
-                 const std::string& output_file_path) {
+bool VerifyTspec(const std::string& relative_tspec_path, const std::string& output_file_path) {
   tracing::Spec spec;
   if (!ReadTspec(kPackageTestPrefix + relative_tspec_path, &spec)) {
     return false;

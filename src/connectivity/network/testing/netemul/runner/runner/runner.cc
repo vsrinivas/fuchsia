@@ -5,12 +5,13 @@
 #include "runner.h"
 
 #include <lib/async/default.h>
-#include <lib/fsl/io/fd.h>
+
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/concatenate.h>
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
 
 #include "garnet/lib/cmx/cmx.h"
+#include "src/lib/fsl/io/fd.h"
 
 namespace netemul {
 static const char* kSandbox = "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/netemul_sandbox.cmx";

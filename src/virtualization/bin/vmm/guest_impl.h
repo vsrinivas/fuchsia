@@ -6,8 +6,9 @@
 #define SRC_VIRTUALIZATION_BIN_VMM_GUEST_IMPL_H_
 
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
+
+#include "src/lib/component/cpp/startup_context.h"
 
 // Provides an implementation of the |fuchsia::virtualization::Guest|
 // interface. This exposes some guest services over FIDL.

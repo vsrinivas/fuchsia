@@ -35,9 +35,9 @@ source_set("codec_runner_sw") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
   ]
 }
 

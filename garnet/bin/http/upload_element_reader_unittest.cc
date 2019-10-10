@@ -6,10 +6,10 @@
 
 #include <sstream>
 
-#include "garnet/public/lib/fsl/vmo/strings.h"
-#include "lib/fsl/vmo/sized_vmo.h"
-
 #include <gtest/gtest.h>
+
+#include "garnet/public/lib/fsl/vmo/strings.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
 
 namespace http {
 

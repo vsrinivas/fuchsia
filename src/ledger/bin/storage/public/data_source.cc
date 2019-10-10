@@ -5,10 +5,10 @@
 #include "src/ledger/bin/storage/public/data_source.h"
 
 #include <lib/fit/function.h>
-#include <lib/fsl/socket/socket_drainer.h>
 #include <lib/zx/vmar.h>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/lib/fsl/socket/socket_drainer.h"
 
 namespace storage {
 

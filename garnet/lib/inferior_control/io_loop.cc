@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unistd.h>
+#include "io_loop.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/handles/object_info.h>
+#include <unistd.h>
+
 #include <src/lib/fxl/logging.h>
 
 #include "garnet/lib/debugger_utils/util.h"
-
-#include "io_loop.h"
+#include "src/lib/fsl/handles/object_info.h"
 
 namespace inferior_control {
 

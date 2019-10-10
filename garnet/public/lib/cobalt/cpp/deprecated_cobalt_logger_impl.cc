@@ -4,6 +4,8 @@
 
 #include "garnet/public/lib/cobalt/cpp/deprecated_cobalt_logger_impl.h"
 
+#include "src/lib/fxl/logging.h"
+
 namespace cobalt {
 
 using fuchsia::cobalt::LoggerFactory;

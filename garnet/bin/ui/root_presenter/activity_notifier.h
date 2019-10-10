@@ -9,12 +9,13 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/zx/time.h>
 
 #include <optional>
 
 #include <src/lib/fxl/macros.h>
+
+#include "src/lib/component/cpp/startup_context.h"
 
 namespace root_presenter {
 
@@ -50,6 +51,7 @@ class ActivityNotifierImpl : public ActivityNotifier {
   // If |pending_activity_| is already set, these methods have no effect.
   void ReceiveInputEvent(const fuchsia::ui::input::InputEvent& event) override;
   void ReceiveMediaButtonsEvent(const fuchsia::ui::input::MediaButtonsEvent& event) override;
+
  private:
   // If there is no |pending_activity_|, sets the pending activity to |activity|
   // and dispatches |notify_task_| to send the activity (unless |notify_task_| was already

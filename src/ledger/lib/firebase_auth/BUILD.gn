@@ -20,12 +20,13 @@ source_set("firebase_auth") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/backoff",
     "//peridot/lib/rng",
     "//sdk/fidl/fuchsia.auth",
     "//sdk/fidl/fuchsia.modular.auth",
+    "//src/lib/backoff",
     "//src/lib/callback",
     "//src/lib/cobalt/cpp:cobalt_logger",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]
@@ -40,8 +41,9 @@ source_set("unittests") {
 
   deps = [
     ":firebase_auth",
-    "//garnet/public/lib/backoff/testing",
     "//garnet/public/lib/gtest",
     "//src/ledger/lib/firebase_auth/testing",
+    "//src/lib/backoff/testing",
+    "//src/lib/fsl",
   ]
 }

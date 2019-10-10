@@ -6,7 +6,8 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/syslog/cpp/logger.h>
+
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace a11y {
 

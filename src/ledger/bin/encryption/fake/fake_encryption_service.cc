@@ -6,11 +6,11 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include <string>
 
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
 namespace encryption {

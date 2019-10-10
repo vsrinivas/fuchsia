@@ -8,10 +8,10 @@
 #include <fuchsia/auth/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
-#include "lib/callback/auto_cleanable.h"
 #include "lib/network_wrapper/network_wrapper.h"
 #include "src/identity/bin/google_auth_provider/google_auth_provider_impl.h"
 #include "src/identity/bin/google_auth_provider/settings.h"
+#include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/fxl/macros.h"
 
 namespace google_auth_provider {

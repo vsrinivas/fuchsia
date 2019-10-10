@@ -8,12 +8,12 @@
 #include <lib/fit/defer.h>
 #include <lib/fit/variant.h>
 #include <lib/inspect/cpp/inspect.h>
-#include <lib/inspect_deprecated/deprecated/exposed_object.h>
 #include <zircon/types.h>
 
 #include <string>
 
 #include "lib/inspect/cpp/vmo/block.h"
+#include "src/lib/inspect_deprecated/deprecated/exposed_object.h"
 
 namespace inspect_deprecated {
 

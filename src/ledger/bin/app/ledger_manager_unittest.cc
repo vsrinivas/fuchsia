@@ -7,8 +7,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
-#include <lib/inspect_deprecated/inspect.h>
-#include <lib/inspect_deprecated/testing/inspect.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
@@ -45,6 +43,8 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/inspect_deprecated/inspect.h"
+#include "src/lib/inspect_deprecated/testing/inspect.h"
 
 namespace ledger {
 namespace {

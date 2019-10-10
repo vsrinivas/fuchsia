@@ -4,12 +4,11 @@
 
 #include "src/cobalt/bin/app/configuration_data.h"
 
-#include <lib/fsl/syslogger/init.h>
-
 #include <third_party/protobuf/src/google/protobuf/stubs/map_util.h>
 
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/lib/fsl/syslogger/init.h"
 #include "src/lib/fxl/strings/trim.h"
 
 namespace cobalt {

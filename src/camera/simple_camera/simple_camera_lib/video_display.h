@@ -7,7 +7,6 @@
 
 #include <fuchsia/camera/cpp/fidl.h>
 #include <fuchsia/images/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/zx/eventpair.h>
 
 #include <deque>
@@ -15,6 +14,8 @@
 
 #include <src/camera/simple_camera/simple_camera_lib/buffer_fence.h>
 #include <src/camera/simple_camera/simple_camera_lib/frame_scheduler.h>
+
+#include "src/lib/component/cpp/startup_context.h"
 
 namespace simple_camera {
 

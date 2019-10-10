@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <vector>
-#include <string>
+#ifndef GARNET_BIN_SSHD_HOST_SERVICE_H_
+#define GARNET_BIN_SSHD_HOST_SERVICE_H_
 
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 
-#include "lib/fsl/tasks/fd_waiter.h"
+#include <string>
+#include <vector>
+
+#include "src/lib/fsl/tasks/fd_waiter.h"
 
 namespace sshd_host {
 
@@ -37,3 +40,5 @@ class Service {
 };
 
 }  // namespace sshd_host
+
+#endif  // GARNET_BIN_SSHD_HOST_SERVICE_H_

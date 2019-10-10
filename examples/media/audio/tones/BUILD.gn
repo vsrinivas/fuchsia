@@ -36,16 +36,16 @@ executable("tones_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/media/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
-    "//zircon/system/fidl/fuchsia-hardware-midi:fuchsia-hardware-midi_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fzl",
+    "//zircon/system/fidl/fuchsia-hardware-midi:fuchsia-hardware-midi_c",
   ]
 }

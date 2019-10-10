@@ -8,12 +8,13 @@
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/ui/scenic/cpp/id.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 #include <memory>
+
+#include "src/lib/component/cpp/startup_context.h"
 
 namespace root_presenter {
 

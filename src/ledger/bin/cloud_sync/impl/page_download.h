@@ -6,7 +6,6 @@
 #define SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_PAGE_DOWNLOAD_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <lib/backoff/backoff.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 
@@ -15,6 +14,7 @@
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
 #include "src/ledger/lib/commit_pack/commit_pack.h"
+#include "src/lib/backoff/backoff.h"
 #include "src/lib/callback/managed_container.h"
 #include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/macros.h"

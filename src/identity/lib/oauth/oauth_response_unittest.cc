@@ -9,8 +9,8 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "lib/fsl/socket/strings.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
+#include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 
 namespace auth_providers {

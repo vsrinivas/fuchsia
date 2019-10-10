@@ -66,13 +66,13 @@ executable("hub_tests") {
 
   deps = [
     "//garnet/bin/sysmgr:lib",
-    "//garnet/public/lib/inspect_deprecated/query",
-    "//garnet/public/lib/inspect_deprecated/testing",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/inspect_deprecated/query",
+    "//src/lib/inspect_deprecated/testing",
     "//third_party/googletest:gmock",
     "//zircon/public/lib/async-cpp",
   ]

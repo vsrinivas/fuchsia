@@ -4,17 +4,17 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fsl/syslogger/init.h>
-#include <lib/inspect_deprecated/inspect.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <memory>
 
 #include <trace-provider/provider.h>
 
+#include "src/lib/fsl/syslogger/init.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 #include "src/ui/scenic/bin/app.h"
 
 int main(int argc, const char** argv) {

@@ -25,14 +25,14 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//src/camera/simple_camera/simple_camera_lib",
-    "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
-    "//zircon/system/fidl/fuchsia-hardware-display",
-    "//zircon/system/fidl/fuchsia-hardware-display:fuchsia-hardware-display_c",
+    "//src/lib/fsl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fzl",
+    "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
+    "//zircon/system/fidl/fuchsia-hardware-display",
+    "//zircon/system/fidl/fuchsia-hardware-display:fuchsia-hardware-display_c",
   ]
 }
 

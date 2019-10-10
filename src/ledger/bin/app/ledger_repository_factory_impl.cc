@@ -6,15 +6,10 @@
 
 #include <fcntl.h>
 #include <lib/async/wait.h>
-#include <lib/backoff/exponential_backoff.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/io/fd.h>
-#include <lib/inspect_deprecated/deprecated/expose.h>
-#include <lib/inspect_deprecated/deprecated/object_dir.h>
-#include <lib/inspect_deprecated/inspect.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <zircon/processargs.h>
@@ -33,6 +28,7 @@
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
 #include "src/ledger/bin/storage/impl/leveldb_factory.h"
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
+#include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/files/directory.h"
@@ -40,8 +36,12 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/inspect_deprecated/deprecated/expose.h"
+#include "src/lib/inspect_deprecated/deprecated/object_dir.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 

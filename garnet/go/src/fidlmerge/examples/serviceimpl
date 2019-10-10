@@ -288,7 +288,7 @@ fidlmerge -template serviceimpl \
         {{- end }}
     {{- end }}
 
-#include "lib/component/cpp/startup_context.h"
+#include "src/lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 {{/* keep the newline */}}
     {{- range .Name.Parts }}

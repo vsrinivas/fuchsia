@@ -215,7 +215,6 @@ source_set("gfx") {
     ":snapshot_fbs",
     ":util",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/geometry/cpp",
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.ui.focus",
@@ -224,6 +223,7 @@ source_set("gfx") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/graphics/lib/vulkan",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/ui/scenic/lib/gfx:validate_eventpair",
     "//src/ui/scenic/lib/scenic",
@@ -233,8 +233,8 @@ source_set("gfx") {
 
   deps = [
     ":object_linker",
-    "//garnet/public/lib/inspect_deprecated",
     "//garnet/public/lib/ui/scenic/cpp",
+    "//src/lib/inspect_deprecated",
     "//src/ui/lib/escher/util:check_vulkan_support",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
@@ -250,7 +250,7 @@ source_set("object_linker") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fsl",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/ui/scenic/lib/scenic/util",
     "//zircon/public/lib/fit",
@@ -270,7 +270,7 @@ source_set("display") {
     "displays/display_manager.h",
   ]
   public_deps = [
-    "//garnet/public/lib/fsl",
+    "//src/lib/fsl",
     "//zircon/system/fidl/fuchsia-hardware-display",
     "//zircon/system/fidl/fuchsia-hardware-display:fuchsia-hardware-display_c",
   ]
@@ -309,10 +309,10 @@ source_set("frame_scheduler") {
   deps = [
     ":display",
     ":util",
-    "//garnet/public/lib/inspect_deprecated",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.scenic.scheduling",
     "//src/lib/fxl",
+    "//src/lib/inspect_deprecated",
 
     # TODO(SCN-1398): FrameTimings inherits from escher::Reffable.
     "//src/ui/lib/escher",

@@ -30,8 +30,8 @@ source_set("views") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/gfx/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
   ]
 }

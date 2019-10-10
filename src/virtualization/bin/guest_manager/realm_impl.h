@@ -7,12 +7,12 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 
 #include <unordered_map>
 
+#include "src/lib/component/cpp/startup_context.h"
 #include "src/virtualization/bin/guest_manager/guest_component.h"
 #include "src/virtualization/bin/guest_manager/host_vsock_endpoint.h"
 

@@ -13,7 +13,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/syslog/cpp/logger.h>
 #include <lib/zx/resource.h>
 #include <zircon/status.h>
 
@@ -25,7 +24,6 @@
 
 #include <trace/event.h>
 
-#include "lib/syslog/cpp/logger.h"
 #include "src/cobalt/bin/system-metrics/cpu_stats_fetcher_impl.h"
 #include "src/cobalt/bin/system-metrics/memory_stats_fetcher_impl.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
@@ -33,6 +31,7 @@
 #include "src/cobalt/bin/utils/clock.h"
 #include "src/cobalt/bin/utils/status_utils.h"
 #include "src/lib/cobalt/cpp/cobalt_event_builder.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 using cobalt::CobaltEventBuilder;
 using cobalt::IntegerBuckets;

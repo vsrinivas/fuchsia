@@ -7,14 +7,15 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/async/time.h>
-#include <lib/component/cpp/startup_context.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
+
+#include "src/lib/component/cpp/startup_context.h"
 
 namespace root_presenter {
 
 FactoryResetManager::WatchHandler::WatchHandler(
-    const fuchsia::recovery::ui::FactoryResetCountdownState& state){
+    const fuchsia::recovery::ui::FactoryResetCountdownState& state) {
   state.Clone(&current_state_);
 }
 

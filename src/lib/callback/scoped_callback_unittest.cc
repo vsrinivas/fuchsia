@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/callback/scoped_callback.h"
+#include "src/lib/callback/scoped_callback.h"
 
 #include "gtest/gtest.h"
 #include "src/lib/fxl/macros.h"

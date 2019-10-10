@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_LIB_COBALT_CPP_PROJECT_PROFILE_H_
+#define SRC_LIB_COBALT_CPP_PROJECT_PROFILE_H_
+
 #include <fuchsia/cobalt/cpp/fidl.h>
 
-#include "lib/fsl/vmo/sized_vmo.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
 
 namespace cobalt {
 
@@ -17,3 +20,5 @@ fuchsia::cobalt::ProjectProfile ProjectProfileFromFile(const std::string &filena
 fuchsia::cobalt::ProjectProfile ProjectProfileFromVmo(fsl::SizedVmo vmo);
 
 }  // namespace cobalt
+
+#endif  // SRC_LIB_COBALT_CPP_PROJECT_PROFILE_H_

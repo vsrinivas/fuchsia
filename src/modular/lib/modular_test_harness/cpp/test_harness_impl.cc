@@ -6,8 +6,6 @@
 
 #include <dirent.h>
 #include <lib/fdio/directory.h>
-#include <lib/fsl/io/fd.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <zircon/status.h>
@@ -22,6 +20,9 @@
 #include <src/modular/lib/modular_config/modular_config.h>
 #include <src/modular/lib/modular_config/modular_config_constants.h>
 #include <src/modular/lib/modular_config/modular_config_xdr.h>
+
+#include "src/lib/fsl/io/fd.h"
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace modular_testing {
 namespace {

@@ -7,12 +7,12 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fit/promise.h>
-#include <lib/inspect_deprecated/reader.h>
 
 #include <vector>
 
 #include "garnet/bin/iquery/options.h"
 #include "garnet/public/lib/inspect_deprecated/query/source.h"
+#include "src/lib/inspect_deprecated/reader.h"
 
 namespace iquery {
 

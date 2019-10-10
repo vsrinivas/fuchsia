@@ -7,12 +7,12 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/socket/strings.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include <functional>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/lib/fsl/socket/strings.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "third_party/murmurhash/murmurhash.h"
 
 namespace ledger {

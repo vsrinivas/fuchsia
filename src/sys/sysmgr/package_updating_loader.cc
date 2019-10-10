@@ -17,10 +17,10 @@
 
 #include "lib/fdio/fd.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/io/fd.h"
-#include "lib/fsl/vmo/file.h"
 #include "lib/zx/handle.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fsl/io/fd.h"
+#include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/pkg_url/url_resolver.h"

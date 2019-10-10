@@ -5,12 +5,12 @@
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/add_mod_command_runner.h"
 
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fsl/types/type_converters.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/ledger_client/page_id.h"
+#include "src/lib/fsl/types/type_converters.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/lib/testing/entity_resolver_fake.h"
 #include "src/modular/lib/testing/module_resolver_fake.h"
 #include "src/modular/lib/testing/test_with_session_storage.h"

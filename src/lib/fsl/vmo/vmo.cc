@@ -6,8 +6,8 @@
 
 #include <vector>
 
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fsl/vmo/vector.h"
+#include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/logging.h"
 
 namespace fsl {

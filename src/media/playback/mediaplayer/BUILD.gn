@@ -80,11 +80,11 @@ executable("mediaplayer_test_util_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/base_view/cpp",
     "//sdk/fidl/fuchsia.media.playback",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fsl",
     "//src/lib/url",
     "//src/media/playback/mediaplayer/graph",
     "//zircon/public/lib/async-loop-cpp",

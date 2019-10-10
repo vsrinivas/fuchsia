@@ -6,17 +6,17 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/thermal/c/fidl.h>
+#include <lib/fdio/fdio.h>
 #include <stdio.h>
+#include <zircon/status.h>
 
 #include <cmath>
 
 #include <fbl/unique_fd.h>
-#include <fuchsia/hardware/thermal/c/fidl.h>
-#include <lib/fdio/fdio.h>
 #include <trace/event.h>
-#include <zircon/status.h>
 
-#include "lib/syslog/cpp/logger.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace cobalt {
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/component/cpp/testing/fake_component.h"
+#include "src/lib/component/cpp/testing/fake_component.h"
 
 namespace component {
 namespace testing {

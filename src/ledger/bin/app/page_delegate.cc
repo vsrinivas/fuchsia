@@ -6,7 +6,6 @@
 
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/socket/strings.h>
 #include <zircon/errors.h>
 
 #include <string>
@@ -23,6 +22,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/waiter.h"
+#include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {

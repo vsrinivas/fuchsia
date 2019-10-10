@@ -13,7 +13,7 @@
 
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fidl/cpp/type_converter.h"
-#include "lib/fsl/types/type_converters.h"
+#include "src/lib/fsl/types/type_converters.h"
 #include "src/media/playback/mediaplayer/graph/metadata.h"
 #include "src/media/playback/mediaplayer/graph/result.h"
 #include "src/media/playback/mediaplayer/graph/types/audio_stream_type.h"

@@ -13,7 +13,6 @@
 #include <fuchsia/ui/shortcut/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/ui/input/input_device_impl.h>
 #include <lib/ui/scenic/cpp/resources.h>
@@ -33,6 +32,7 @@
 #include "garnet/bin/ui/root_presenter/factory_reset_manager.h"
 #include "garnet/bin/ui/root_presenter/media_buttons_handler.h"
 #include "garnet/bin/ui/root_presenter/presentation.h"
+#include "src/lib/component/cpp/startup_context.h"
 
 namespace root_presenter {
 

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/callback/managed_container.h"
+#include "src/lib/callback/managed_container.h"
 
 #include "gtest/gtest.h"
-#include "lib/callback/set_when_called.h"
+#include "src/lib/callback/set_when_called.h"
 
 namespace callback {
 namespace {

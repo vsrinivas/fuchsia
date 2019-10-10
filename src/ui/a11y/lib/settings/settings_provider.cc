@@ -4,10 +4,9 @@
 
 #include "src/ui/a11y/lib/settings/settings_provider.h"
 
-#include <lib/syslog/cpp/logger.h>
-
 #include <ios>
 
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/util/util.h"
 
 namespace a11y {

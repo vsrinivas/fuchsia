@@ -5,12 +5,12 @@
 #include "src/ledger/bin/app/inspected_entry.h"
 
 #include <lib/fit/function.h>
-#include <lib/inspect_deprecated/inspect.h>
 
 #include <vector>
 
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 

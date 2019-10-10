@@ -4,14 +4,13 @@
 
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_tap_recognizer.h"
 
-#include <lib/syslog/cpp/logger.h>
-
 #include <valarray>
 
 #include <src/lib/fxl/logging.h>
 
 #include "lib/async/cpp/task.h"
 #include "lib/async/default.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
 
 namespace a11y {

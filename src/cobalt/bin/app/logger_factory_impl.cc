@@ -4,9 +4,9 @@
 
 #include "src/cobalt/bin/app/logger_factory_impl.h"
 
-#include "lib/fsl/vmo/file.h"
-#include "lib/fsl/vmo/strings.h"
 #include "src/cobalt/bin/app/utils.h"
+#include "src/lib/fsl/vmo/file.h"
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace cobalt {
 

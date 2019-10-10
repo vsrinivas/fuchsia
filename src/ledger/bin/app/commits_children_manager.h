@@ -6,7 +6,6 @@
 #define SRC_LEDGER_BIN_APP_COMMITS_CHILDREN_MANAGER_H_
 
 #include <lib/fit/function.h>
-#include <lib/inspect_deprecated/inspect.h>
 
 #include <set>
 #include <string>
@@ -18,6 +17,7 @@
 #include "src/ledger/bin/app/inspected_container.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/callback/auto_cleanable.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 

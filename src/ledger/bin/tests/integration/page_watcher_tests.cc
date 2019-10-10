@@ -7,7 +7,6 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include <utility>
 #include <vector>
@@ -22,6 +21,7 @@
 #include "src/ledger/bin/tests/integration/test_page_watcher.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/lib/callback/capture.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

@@ -11,10 +11,6 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
-#include <lib/fsl/handles/object_info.h>
-#include <lib/fsl/io/fd.h>
-#include <lib/fsl/vmo/file.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/json/json_parser.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/process.h>
@@ -39,6 +35,10 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/fsl/io/fd.h"
+#include "src/lib/fsl/vmo/file.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/pkg_url/url_resolver.h"
 #include "src/sys/appmgr/dynamic_library_loader.h"

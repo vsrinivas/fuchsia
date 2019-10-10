@@ -8,10 +8,10 @@
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/fit/promise.h>
-#include <lib/inspect_deprecated/reader.h>
 
-#include "lib/inspect_deprecated/hierarchy.h"
 #include "location.h"
+#include "src/lib/inspect_deprecated/hierarchy.h"
+#include "src/lib/inspect_deprecated/reader.h"
 
 namespace inspect_deprecated {
 

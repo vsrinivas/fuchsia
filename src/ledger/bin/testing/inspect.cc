@@ -8,11 +8,6 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
-#include <lib/inspect_deprecated/deprecated/expose.h>
-#include <lib/inspect_deprecated/hierarchy.h>
-#include <lib/inspect_deprecated/inspect.h>
-#include <lib/inspect_deprecated/reader.h>
-#include <lib/inspect_deprecated/testing/inspect.h>
 
 #include <functional>
 #include <map>
@@ -33,6 +28,11 @@
 #include "src/ledger/bin/testing/loop_controller_test_loop.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
+#include "src/lib/inspect_deprecated/deprecated/expose.h"
+#include "src/lib/inspect_deprecated/hierarchy.h"
+#include "src/lib/inspect_deprecated/inspect.h"
+#include "src/lib/inspect_deprecated/reader.h"
+#include "src/lib/inspect_deprecated/testing/inspect.h"
 
 namespace ledger {
 namespace {

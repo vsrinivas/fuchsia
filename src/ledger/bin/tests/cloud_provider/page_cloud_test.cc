@@ -3,9 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <lib/fsl/socket/strings.h>
-#include <lib/fsl/vmo/sized_vmo.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -15,6 +12,9 @@
 #include "src/ledger/bin/tests/cloud_provider/types.h"
 #include "src/ledger/bin/tests/cloud_provider/validation_test.h"
 #include "src/ledger/lib/commit_pack/commit_pack.h"
+#include "src/lib/fsl/socket/strings.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/uuid/uuid.h"
 
 using ::testing::AllOf;

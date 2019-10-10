@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include "lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fsl/tasks/fd_waiter.h"
 
 namespace examples {
 

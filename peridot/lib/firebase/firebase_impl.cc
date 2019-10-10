@@ -5,7 +5,6 @@
 #include "peridot/lib/firebase/firebase_impl.h"
 
 #include <lib/fit/function.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include <memory>
 #include <sstream>
@@ -16,6 +15,7 @@
 #include <src/lib/fxl/strings/join_strings.h>
 
 #include "peridot/lib/socket/socket_drainer_client.h"
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace firebase {
 

@@ -7,12 +7,12 @@
 #include <lib/fidl/cpp/object_coding.h>  // for EncodeObject()/DecodeObject()
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
-#include <lib/fsl/vmo/vector.h>
 
 #include <string>
 #include <vector>
 
 #include "peridot/lib/ledger_client/promise.h"  // for fit::promise<> wrappers
+#include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/logging.h"
 #include "src/modular/bin/sessionmgr/story/model/apply_mutations.h"
 

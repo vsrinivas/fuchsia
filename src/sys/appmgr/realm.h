@@ -8,7 +8,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/vmo/file.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/channel.h>
 #include <zircon/syscalls/policy.h>
@@ -25,6 +24,7 @@
 
 #include "garnet/lib/cmx/runtime.h"
 #include "garnet/lib/loader/package_loader.h"
+#include "src/lib/fsl/vmo/file.h"
 #include "src/sys/appmgr/cache_control.h"
 #include "src/sys/appmgr/component_container.h"
 #include "src/sys/appmgr/component_controller_impl.h"

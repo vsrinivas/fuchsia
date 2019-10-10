@@ -5,11 +5,12 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fsl/handles/object_info.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/status.h>
 
 #include <src/lib/fxl/logging.h>
+
+#include "src/lib/fsl/handles/object_info.h"
 
 // Simple application that obtains the Process Limbo services and obtains the exceptions from it.
 // Meant to be called manually for testing purposes.

@@ -4,8 +4,9 @@
 
 #include "garnet/bin/ui/root_presenter/tests/fakes/fake_settings_service.h"
 
-#include <lib/syslog/cpp/logger.h>
 #include <zircon/status.h>
+
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace root_presenter {
 namespace testing {

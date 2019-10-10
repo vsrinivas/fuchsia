@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_CODEC_CODEC_FACTORY_CODEC_FACTORY_APP_H_
-#define SRC_MEDIA_CODEC_CODEC_FACTORY_CODEC_FACTORY_APP_H_
+#ifndef SRC_MEDIA_CODEC_FACTORY_CODEC_FACTORY_APP_H_
+#define SRC_MEDIA_CODEC_FACTORY_CODEC_FACTORY_APP_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fsl/io/device_watcher.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <list>
 #include <memory>
 
 #include <src/lib/fxl/logging.h>
+
+#include "src/lib/fsl/io/device_watcher.h"
 
 namespace codec_factory {
 
@@ -126,4 +127,4 @@ class CodecFactoryApp {
 
 }  // namespace codec_factory
 
-#endif  // SRC_MEDIA_CODEC_CODEC_FACTORY_CODEC_FACTORY_APP_H_
+#endif  // SRC_MEDIA_CODEC_FACTORY_CODEC_FACTORY_APP_H_

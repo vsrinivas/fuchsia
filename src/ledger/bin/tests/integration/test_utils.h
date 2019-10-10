@@ -5,14 +5,13 @@
 #ifndef SRC_LEDGER_BIN_TESTS_INTEGRATION_TEST_UTILS_H_
 #define SRC_LEDGER_BIN_TESTS_INTEGRATION_TEST_UTILS_H_
 
-#include <lib/fsl/vmo/sized_vmo.h>
-
 #include <string>
 #include <vector>
 
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/testing/ledger_app_instance_factory.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
 
 namespace ledger {
 
@@ -30,9 +29,8 @@ std::vector<uint8_t> ToArray(const fuchsia::mem::BufferPtr& vmo);
 // Retrieves all entries from the snapshot with a key greater of equals to
 // |start|. If |num_queries| is not null, returns the number of calls to
 // |GetEntries|. If any call fails, this function will fail the current test.
-std::vector<Entry> SnapshotGetEntries(
-    LoopController* loop_controller, PageSnapshotPtr* snapshot,
-    std::vector<uint8_t> start = {}, int* num_queries = nullptr);
+std::vector<Entry> SnapshotGetEntries(LoopController* loop_controller, PageSnapshotPtr* snapshot,
+                                      std::vector<uint8_t> start = {}, int* num_queries = nullptr);
 
 }  // namespace ledger
 

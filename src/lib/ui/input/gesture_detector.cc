@@ -4,9 +4,8 @@
 
 #include "src/lib/ui/input/gesture_detector.h"
 
-#include <lib/syslog/cpp/logger.h>
-
 #include "garnet/public/lib/ui/gfx/cpp/math.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace input {
 

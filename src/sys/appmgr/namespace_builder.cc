@@ -15,10 +15,10 @@
 
 #include <src/lib/fxl/strings/concatenate.h>
 
-#include "lib/fsl/io/fd.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fsl/io/fd.h"
 #include "src/sys/appmgr/allowlist.h"
 
 namespace component {
@@ -144,8 +144,7 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
     } else if (feature == "deprecated-shell") {
       Allowlist deprecated_shell_allowlist(kDeprecatedShellAllowlist);
       if (!deprecated_shell_allowlist.IsAllowed(ns_id)) {
-        FXL_LOG(INFO) << "Component " << ns_id
-                      << " is not allowed to use deprecated-shell. "
+        FXL_LOG(INFO) << "Component " << ns_id << " is not allowed to use deprecated-shell. "
                       << "This will be blocked in the near future. "
                       << "go/ambient-computing-not-ambient-capabilities";
       }

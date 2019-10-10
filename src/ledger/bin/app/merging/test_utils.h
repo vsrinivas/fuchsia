@@ -5,7 +5,6 @@
 #ifndef SRC_LEDGER_BIN_APP_MERGING_TEST_UTILS_H_
 #define SRC_LEDGER_BIN_APP_MERGING_TEST_UTILS_H_
 
-#include <lib/backoff/backoff.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/test_loop_fixture.h>
 
@@ -19,6 +18,7 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/backoff/backoff.h"
 
 namespace ledger {
 

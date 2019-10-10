@@ -8,7 +8,8 @@
 #include <fuchsia/hardware/display/cpp/fidl.h>
 #include <fuchsia/hardware/display/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fsl/handles/object_info.h>
+
+#include "src/lib/fsl/handles/object_info.h"
 
 namespace scenic_impl {
 namespace gfx {

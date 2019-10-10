@@ -9,7 +9,6 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_ptr.h>
-#include <lib/inspect_deprecated/hierarchy.h>
 
 #include <functional>
 #include <memory>
@@ -20,6 +19,7 @@
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/testing/loop_controller.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/inspect_deprecated/hierarchy.h"
 
 namespace ledger {
 

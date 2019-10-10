@@ -17,7 +17,7 @@
 
 #include "examples/media/playback/audio_player/audio_player_params.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/io/fd.h"
+#include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/url/gurl.h"
 

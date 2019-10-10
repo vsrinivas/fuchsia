@@ -12,7 +12,7 @@
 #include <lib/media/codec_impl/codec_impl.h>
 #include <threads.h>
 
-#include "lib/syslog/cpp/logger.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 // Marker type to specify these is no adapter to serve a request.
 class NoAdapter {};

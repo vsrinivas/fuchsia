@@ -8,7 +8,6 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/inspect_deprecated/inspect.h>
 
 #include <set>
 #include <string>
@@ -30,6 +29,7 @@
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 

@@ -8,7 +8,7 @@
 
 #include <fstream>
 
-#include "lib/syslog/cpp/logger.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace network_time_service {
 

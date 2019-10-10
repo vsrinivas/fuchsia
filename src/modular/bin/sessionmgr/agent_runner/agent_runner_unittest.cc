@@ -6,7 +6,6 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/svc/cpp/service_namespace.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>

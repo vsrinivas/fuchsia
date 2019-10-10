@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/inspect_deprecated/query/read.h"
+#include "src/lib/inspect_deprecated/query/read.h"
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/namespace.h>
@@ -10,8 +10,6 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/defer.h>
-#include <lib/inspect_deprecated/inspect.h>
-#include <lib/inspect_deprecated/query/source.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
 #include <lib/vfs/cpp/vmo_file.h>
@@ -22,10 +20,12 @@
 
 #include "fixture.h"
 #include "fuchsia/inspect/deprecated/cpp/fidl.h"
-#include "lib/inspect_deprecated/hierarchy.h"
-#include "lib/inspect_deprecated/query/location.h"
-#include "lib/inspect_deprecated/reader.h"
-#include "lib/inspect_deprecated/testing/inspect.h"
+#include "src/lib/inspect_deprecated/hierarchy.h"
+#include "src/lib/inspect_deprecated/inspect.h"
+#include "src/lib/inspect_deprecated/query/location.h"
+#include "src/lib/inspect_deprecated/query/source.h"
+#include "src/lib/inspect_deprecated/reader.h"
+#include "src/lib/inspect_deprecated/testing/inspect.h"
 
 using namespace inspect_deprecated::testing;
 

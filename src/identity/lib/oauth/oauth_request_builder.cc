@@ -7,8 +7,8 @@
 #include <iomanip>
 #include <iostream>
 
-#include "lib/fsl/socket/strings.h"
-#include "lib/fsl/vmo/strings.h"
+#include "src/lib/fsl/socket/strings.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/join_strings.h"

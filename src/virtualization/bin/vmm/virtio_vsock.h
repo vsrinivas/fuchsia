@@ -6,16 +6,17 @@
 #define SRC_VIRTUALIZATION_BIN_VMM_VIRTIO_VSOCK_H_
 
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
-#include <virtio/virtio_ids.h>
-#include <virtio/vsock.h>
 
 #include <unordered_map>
 #include <unordered_set>
 
+#include <virtio/virtio_ids.h>
+#include <virtio/vsock.h>
+
+#include "src/lib/component/cpp/startup_context.h"
 #include "src/virtualization/bin/vmm/virtio_device.h"
 #include "src/virtualization/bin/vmm/virtio_queue_waiter.h"
 

@@ -15,9 +15,9 @@ source_set("commit_pack") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.ledger.cloud",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
   ]
 }

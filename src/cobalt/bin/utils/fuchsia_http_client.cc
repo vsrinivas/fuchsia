@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/cobalt/bin/utils/fuchsia_http_client.h"
+
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
-#include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <lib/async/default.h>
 
-#include "lib/fsl/socket/strings.h"
-#include "lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/memory/ref_counted.h"
-#include "src/cobalt/bin/utils/fuchsia_http_client.h"
+#include "src/lib/fsl/socket/strings.h"
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace cobalt {
 namespace utils {

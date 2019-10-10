@@ -5,11 +5,12 @@
 #include "src/lib/icu_data/cpp/icu_data.h"
 
 #include <lib/zx/vmar.h>
-#include <src/lib/files/directory.h>
 #include <zircon/errors.h>
 
-#include "lib/fsl/vmo/file.h"
-#include "lib/fsl/vmo/sized_vmo.h"
+#include <src/lib/files/directory.h>
+
+#include "src/lib/fsl/vmo/file.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
 #include "third_party/icu/source/common/unicode/udata.h"
 
 namespace icu_data {

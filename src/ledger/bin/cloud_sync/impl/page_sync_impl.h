@@ -7,13 +7,11 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/backoff/backoff.h>
 #include <lib/fit/function.h>
 
 #include <functional>
 #include <queue>
 
-#include "lib/callback/destruction_sentinel.h"
 #include "src/ledger/bin/cloud_sync/impl/batch_download.h"
 #include "src/ledger/bin/cloud_sync/impl/batch_upload.h"
 #include "src/ledger/bin/cloud_sync/impl/page_download.h"
@@ -23,6 +21,8 @@
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/storage/public/commit_watcher.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/lib/backoff/backoff.h"
+#include "src/lib/callback/destruction_sentinel.h"
 #include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/time/time_delta.h"

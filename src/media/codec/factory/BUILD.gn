@@ -14,10 +14,10 @@ executable("factory") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.mediacodec",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/trace-provider-with-fdio",

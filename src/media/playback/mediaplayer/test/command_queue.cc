@@ -10,8 +10,8 @@
 #include <iostream>
 
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/io/fd.h"
 #include "lib/media/cpp/type_converters.h"
+#include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/url/gurl.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"

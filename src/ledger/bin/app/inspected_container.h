@@ -6,10 +6,11 @@
 #define SRC_LEDGER_BIN_APP_INSPECTED_CONTAINER_H_
 
 #include <lib/fit/function.h>
-#include <lib/inspect_deprecated/inspect.h>
 
 #include <variant>
 #include <vector>
+
+#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 

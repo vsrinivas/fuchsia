@@ -6,7 +6,6 @@
 #define SRC_LEDGER_BIN_APP_INSPECTED_COMMIT_H_
 
 #include <lib/fit/function.h>
-#include <lib/inspect_deprecated/inspect.h>
 
 #include <memory>
 #include <set>
@@ -20,6 +19,7 @@
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 

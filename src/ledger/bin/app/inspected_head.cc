@@ -5,9 +5,9 @@
 #include "src/ledger/bin/app/inspected_head.h"
 
 #include <lib/fit/function.h>
-#include <lib/inspect_deprecated/inspect.h>
 
 #include "src/lib/fxl/logging.h"
+#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 

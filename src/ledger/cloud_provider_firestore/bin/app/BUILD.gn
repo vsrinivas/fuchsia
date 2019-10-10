@@ -55,11 +55,11 @@ source_set("lib") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//peridot/lib/convert",
     "//src/ledger/bin/app:serialization_version",
     "//src/ledger/lib/commit_pack",
     "//src/lib/callback",
+    "//src/lib/fsl",
   ]
 }
 

@@ -11,8 +11,8 @@ source_set("syslogger") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/syslog/cpp",
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
   ]
 
   public_configs = [ "//garnet/public:config" ]

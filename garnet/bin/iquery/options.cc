@@ -4,17 +4,17 @@
 
 #include "garnet/bin/iquery/options.h"
 
-#include <lib/inspect_deprecated/query/json_formatter.h>
-#include <lib/inspect_deprecated/query/text_formatter.h>
-#include <src/lib/files/path.h>
-#include <src/lib/fxl/strings/concatenate.h>
-#include <src/lib/fxl/strings/substitute.h>
-
 #include <iostream>
 #include <set>
 #include <string>
 
-#include "lib/inspect_deprecated/query/formatter.h"
+#include <src/lib/files/path.h>
+#include <src/lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/substitute.h>
+
+#include "src/lib/inspect_deprecated/query/formatter.h"
+#include "src/lib/inspect_deprecated/query/json_formatter.h"
+#include "src/lib/inspect_deprecated/query/text_formatter.h"
 
 namespace iquery {
 

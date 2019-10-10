@@ -8,8 +8,8 @@
 #include <lib/zx/channel.h>
 
 #include "garnet/bin/ui/root_presenter/renderer_params.h"
-#include "lib/component/cpp/startup_context.h"
 #include "lib/svc/cpp/services.h"
+#include "src/lib/component/cpp/startup_context.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"

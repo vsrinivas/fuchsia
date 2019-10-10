@@ -9,13 +9,12 @@
 #include <vector>
 
 #include "garnet/lib/inferior_control/process.h"
-#include "lib/fsl/handles/object_info.h"
+#include "server.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
-
-#include "server.h"
 
 namespace {
 

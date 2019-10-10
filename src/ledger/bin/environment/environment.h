@@ -6,7 +6,6 @@
 #define SRC_LEDGER_BIN_ENVIRONMENT_ENVIRONMENT_H_
 
 #include <lib/async/dispatcher.h>
-#include <lib/backoff/backoff.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/timekeeper/clock.h>
@@ -16,6 +15,7 @@
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/lib/backoff/backoff.h"
 
 namespace ledger {
 

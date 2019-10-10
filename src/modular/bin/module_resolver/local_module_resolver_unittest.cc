@@ -4,10 +4,10 @@
 
 #include "src/modular/bin/module_resolver/local_module_resolver.h"
 
-#include <lib/fsl/types/type_converters.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "src/lib/files/file.h"
+#include "src/lib/fsl/types/type_converters.h"
 #include "src/modular/lib/entity/cpp/json.h"
 #include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/testing/entity_resolver_fake.h"

@@ -7,11 +7,11 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/fidl/cpp/encoder.h>
-#include <lib/fsl/vmo/vector.h>
 
 #include <string>
 #include <vector>
 
+#include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/logging.h"
 
 namespace cloud_provider {

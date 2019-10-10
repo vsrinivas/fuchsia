@@ -16,16 +16,15 @@
 #include <sstream>
 #include <string>
 
-#include <lib/fsl/syslogger/init.h>
-
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
-#include "lib/syslog/cpp/logger.h"
 #include "src/cobalt/bin/testapp/cobalt_testapp.h"
+#include "src/lib/fsl/syslogger/init.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 // Command-line flags
 

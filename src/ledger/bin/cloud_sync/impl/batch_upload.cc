@@ -5,7 +5,6 @@
 #include "src/ledger/bin/cloud_sync/impl/batch_upload.h"
 
 #include <lib/fit/function.h>
-#include <lib/fsl/vmo/strings.h>
 
 #include <algorithm>
 #include <set>
@@ -20,6 +19,7 @@
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/trace_callback.h"
 #include "src/lib/callback/waiter.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 

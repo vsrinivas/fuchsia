@@ -5,8 +5,6 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_STORAGE_TEST_UTILS_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_STORAGE_TEST_UTILS_H_
 
-#include <lib/fsl/socket/strings.h>
-
 #include <string>
 
 #include "peridot/lib/rng/random.h"
@@ -14,6 +12,7 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/fsl/socket/strings.h"
 
 namespace storage {
 

@@ -5,8 +5,6 @@
 #ifndef PERIDOT_LIB_FIREBASE_FIREBASE_IMPL_H_
 #define PERIDOT_LIB_FIREBASE_FIREBASE_IMPL_H_
 
-#include <lib/callback/auto_cleanable.h>
-#include <lib/callback/cancellable.h>
 #include <lib/fit/function.h>
 #include <lib/network_wrapper/network_wrapper.h>
 
@@ -23,6 +21,8 @@
 #include "peridot/lib/firebase/status.h"
 #include "peridot/lib/firebase/watch_client.h"
 #include "peridot/lib/socket/socket_drainer_client.h"
+#include "src/lib/callback/auto_cleanable.h"
+#include "src/lib/callback/cancellable.h"
 
 namespace firebase {
 

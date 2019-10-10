@@ -6,9 +6,9 @@
 
 #include <utility>
 
-#include "lib/callback/cancellable_helper.h"
-#include "lib/callback/destruction_sentinel.h"
-#include "lib/callback/trace_callback.h"
+#include "src/lib/callback/cancellable_helper.h"
+#include "src/lib/callback/destruction_sentinel.h"
+#include "src/lib/callback/trace_callback.h"
 #include "src/lib/fxl/strings/ascii.h"
 
 namespace network_wrapper {

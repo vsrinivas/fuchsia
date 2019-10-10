@@ -5,10 +5,9 @@
 #ifndef SRC_MODULAR_LIB_TESTING_COMPONENT_BASE_H_
 #define SRC_MODULAR_LIB_TESTING_COMPONENT_BASE_H_
 
-#include <lib/component/cpp/connect.h>
-
 #include <src/lib/fxl/memory/weak_ptr.h>
 
+#include "src/lib/component/cpp/connect.h"
 #include "src/modular/lib/fidl/single_service_app.h"
 #include "src/modular/lib/testing/component_main.h"
 #include "src/modular/public/src/modular/lib/integration_testing/cpp/reporting.h"

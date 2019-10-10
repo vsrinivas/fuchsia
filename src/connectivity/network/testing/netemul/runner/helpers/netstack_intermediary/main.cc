@@ -4,13 +4,14 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/syslog/cpp/logger.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/logging.h>
 
 #include <iostream>
 
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/logging.h>
+
 #include "netstack_intermediary.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 static void usage() {
   std::cerr << "Usage: netstack_intermediary --network=<virtual_network_name>";

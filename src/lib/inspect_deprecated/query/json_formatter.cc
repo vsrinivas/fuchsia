@@ -9,10 +9,10 @@
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
 
-#include "lib/inspect_deprecated/health/health.h"
-#include "lib/inspect_deprecated/hierarchy.h"
 #include "rapidjson/stringbuffer.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/inspect_deprecated/health/health.h"
+#include "src/lib/inspect_deprecated/hierarchy.h"
 #include "third_party/cobalt/src/lib/crypto_util/base64.h"
 
 using cobalt::crypto::Base64Encode;

@@ -8,7 +8,6 @@
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 
@@ -19,6 +18,7 @@
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
 #include "src/modular/lib/async/cpp/operation.h"
 #include "src/modular/lib/fidl/app_client.h"
+#include "src/lib/component/cpp/service_provider_impl.h"
 
 namespace modular {
 

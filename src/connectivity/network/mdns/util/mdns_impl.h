@@ -10,8 +10,8 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
 
-#include "lib/fsl/tasks/fd_waiter.h"
 #include "src/connectivity/network/mdns/util/mdns_params.h"
+#include "src/lib/fsl/tasks/fd_waiter.h"
 
 namespace mdns {
 

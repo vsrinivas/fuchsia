@@ -4,10 +4,10 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/inspect_deprecated/deprecated/exposed_object.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include "lib/inspect_deprecated/deprecated/object_dir.h"
+#include "src/lib/inspect_deprecated/deprecated/exposed_object.h"
+#include "src/lib/inspect_deprecated/deprecated/object_dir.h"
 
 const char* VALUE = "value";
 

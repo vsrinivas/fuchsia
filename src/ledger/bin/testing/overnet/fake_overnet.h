@@ -6,7 +6,6 @@
 #define SRC_LEDGER_BIN_TESTING_OVERNET_FAKE_OVERNET_H_
 
 #include <fuchsia/overnet/cpp/fidl.h>
-#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fit/function.h>
 
 #include "src/lib/callback/auto_cleanable.h"

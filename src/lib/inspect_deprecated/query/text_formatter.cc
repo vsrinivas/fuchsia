@@ -8,8 +8,8 @@
 
 #include <sstream>
 
-#include "lib/inspect_deprecated/health/health.h"
-#include "lib/inspect_deprecated/hierarchy.h"
+#include "src/lib/inspect_deprecated/health/health.h"
+#include "src/lib/inspect_deprecated/hierarchy.h"
 
 namespace inspect_deprecated {
 namespace {

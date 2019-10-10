@@ -4,11 +4,11 @@
 
 #include "gather_inspectable.h"
 
-#include <lib/inspect_deprecated/query/discover.h>
 #include <zircon/status.h>
 
 #include "harvester.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/inspect_deprecated/query/discover.h"
 
 namespace harvester {
 

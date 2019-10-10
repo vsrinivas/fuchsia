@@ -8,14 +8,15 @@
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
+
 #include <src/lib/fxl/macros.h>
 
 #include "src/lib/cobalt/cpp/cobalt_logger_impl.h"
+#include "src/lib/fsl/vmo/strings.h"
 
 using fuchsia::cobalt::ReleaseStage;
 

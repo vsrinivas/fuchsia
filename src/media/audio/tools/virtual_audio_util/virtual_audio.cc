@@ -7,7 +7,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fsl/tasks/fd_waiter.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/clock.h>
@@ -18,6 +17,8 @@
 #include <fbl/algorithm.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
+
+#include "src/lib/fsl/tasks/fd_waiter.h"
 
 namespace virtual_audio {
 

@@ -1,7 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include <lib/syslog/cpp/logger.h>
 #include <zircon/status.h>
 
 #include <gtest/gtest.h>
@@ -9,6 +8,7 @@
 #include "src/developer/exception_broker/exception_broker.h"
 #include "src/developer/exception_broker/tests/crasher_wrapper.h"
 #include "src/lib/fxl/test/test_settings.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace fuchsia {
 namespace exception {

@@ -6,9 +6,10 @@
 
 #include <lib/async/task.h>
 #include <lib/fit/defer.h>
-#include <lib/fsl/handles/object_info.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
+
+#include "src/lib/fsl/handles/object_info.h"
 
 template <VirtioVsock::StreamFunc F>
 VirtioVsock::Stream<F>::Stream(async_dispatcher_t* dispatcher, VirtioQueue* queue,

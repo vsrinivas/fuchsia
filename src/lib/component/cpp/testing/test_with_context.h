@@ -8,8 +8,8 @@
 #ifndef SRC_LIB_COMPONENT_CPP_TESTING_TEST_WITH_CONTEXT_H_
 #define SRC_LIB_COMPONENT_CPP_TESTING_TEST_WITH_CONTEXT_H_
 
-#include "lib/component/cpp/testing/startup_context_for_test.h"
 #include "lib/gtest/test_loop_fixture.h"
+#include "src/lib/component/cpp/testing/startup_context_for_test.h"
 
 namespace component {
 namespace testing {

@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
-#include <lib/component/cpp/connect.h>
 #include <lib/modular/testing/cpp/test_harness_builder.h>
 
+#include "src/lib/component/cpp/connect.h"
 #include "src/modular/bin/agents/clipboard/clipboard_impl.h"
 #include "src/modular/bin/basemgr/noop_clipboard_impl.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"

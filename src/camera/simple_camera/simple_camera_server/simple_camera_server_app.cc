@@ -4,7 +4,7 @@
 
 #include "simple_camera_server_app.h"
 
-#include "lib/component/cpp/startup_context.h"
+#include "src/lib/component/cpp/startup_context.h"
 
 namespace simple_camera {
 

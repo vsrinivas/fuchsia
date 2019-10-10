@@ -15,12 +15,12 @@
 #include <sstream>
 #include <string>
 
-#include "lib/syslog/cpp/logger.h"
 #include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/cobalt/src/lib/util/clock.h"
 
 namespace cobalt {

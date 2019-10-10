@@ -5,7 +5,8 @@
 #include "src/modular/bin/agents/clipboard/clipboard_storage.h"
 
 #include <lib/fit/function.h>
-#include <lib/fsl/vmo/strings.h>
+
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace modular {
 namespace {

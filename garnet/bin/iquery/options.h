@@ -5,10 +5,11 @@
 #ifndef GARNET_BIN_IQUERY_OPTIONS_H_
 #define GARNET_BIN_IQUERY_OPTIONS_H_
 
-#include <lib/inspect_deprecated/query/formatter.h>
+#include <memory>
+
 #include <src/lib/fxl/command_line.h>
 
-#include <memory>
+#include "src/lib/inspect_deprecated/query/formatter.h"
 
 namespace iquery {
 

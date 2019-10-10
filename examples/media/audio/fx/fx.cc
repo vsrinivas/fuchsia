@@ -11,7 +11,6 @@
 #include <lib/async/default.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/tasks/fd_waiter.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/media/cpp/timeline_function.h>
 #include <lib/sys/cpp/component_context.h>
@@ -33,6 +32,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
 
+#include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/media/audio/lib/wav_writer/wav_writer.h"
 
 constexpr bool kWavWriterEnabled = false;

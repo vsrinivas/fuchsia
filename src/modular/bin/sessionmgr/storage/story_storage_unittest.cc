@@ -4,12 +4,11 @@
 
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
 
-#include <lib/fsl/vmo/strings.h>
-
 #include <memory>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/ledger_client/page_id.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/lib/async/cpp/future.h"
 #include "src/modular/lib/entity/entity_watcher_impl.h"
 #include "src/modular/lib/testing/test_with_ledger.h"

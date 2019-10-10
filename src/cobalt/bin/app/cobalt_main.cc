@@ -12,7 +12,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fsl/syslogger/init.h>
 #include <lib/zx/channel.h>
 #include <stdlib.h>
 #include <zircon/boot/image.h>
@@ -27,12 +26,13 @@
 
 #include <trace-provider/provider.h>
 
-#include "lib/syslog/cpp/logger.h"
 #include "src/cobalt/bin/app/cobalt_app.h"
+#include "src/lib/fsl/syslogger/init.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
 #include "third_party/cobalt/src/observation_store/file_observation_store.h"
 #include "third_party/cobalt/src/observation_store/memory_observation_store.h"

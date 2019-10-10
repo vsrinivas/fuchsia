@@ -8,7 +8,6 @@
 #include <fcntl.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
@@ -27,7 +26,6 @@
 #include <trace/event.h>
 
 #include "lib/async/cpp/task.h"
-#include "lib/fsl/vmo/sized_vmo.h"
 #include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/storage/impl/btree/diff.h"
@@ -55,6 +53,8 @@
 #include "src/lib/files/file_descriptor.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"

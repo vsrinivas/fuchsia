@@ -11,8 +11,8 @@
 #include <lib/sys/cpp/component_context.h>
 
 #include "examples/media/playback/audio_player/audio_player_params.h"
-#include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/media/cpp/timeline_function.h"
+#include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/fxl/macros.h"
 
 namespace examples {

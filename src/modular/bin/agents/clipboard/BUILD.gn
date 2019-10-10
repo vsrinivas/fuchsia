@@ -46,10 +46,10 @@ source_set("clipboard_sources") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//peridot/lib/ledger_client:page_client",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fsl",
     "//src/modular/lib/async/cpp:operation",
     "//src/modular/lib/fidl:array_to_string",
   ]

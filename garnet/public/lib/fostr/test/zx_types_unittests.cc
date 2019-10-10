@@ -26,7 +26,7 @@
 
 #include "gtest/gtest.h"
 #include "lib/fostr/zx_types.h"
-#include "lib/fsl/handles/object_info.h"
+#include "src/lib/fsl/handles/object_info.h"
 
 namespace fostr {
 namespace {

@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/optional.h>
-#include <lib/fsl/io/fd.h>
 #include <lib/media/cpp/type_converters.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
@@ -16,6 +15,7 @@
 
 #include <hid/usages.h>
 
+#include "src/lib/fsl/io/fd.h"
 #include "src/lib/url/gurl.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 #include "src/media/playback/mediaplayer/test/mediaplayer_test_util_params.h"

@@ -4,13 +4,14 @@
 
 #include "src/modular/bin/sessionmgr/sessionmgr_impl.h"
 
-#include <lib/component/cpp/connect.h>
-#include <lib/component/cpp/testing/fake_launcher.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/outgoing_directory.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/sys/cpp/testing/fake_component.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+
+#include "src/lib/component/cpp/connect.h"
+#include "src/lib/component/cpp/testing/fake_launcher.h"
 
 // GMock is only used for its testing matchers.
 #include "fuchsia/ledger/internal/cpp/fidl.h"

@@ -1,7 +1,7 @@
 #include "src/lib/cobalt/cpp/project_profile.h"
 
-#include "lib/fsl/vmo/file.h"
-#include "lib/fsl/vmo/strings.h"
+#include "src/lib/fsl/vmo/file.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "third_party/cobalt/src/lib/crypto_util/base64.h"
 
 namespace cobalt {

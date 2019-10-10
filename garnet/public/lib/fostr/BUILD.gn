@@ -64,7 +64,7 @@ test("tests") {
   deps = [
     ":fostr",
     "//garnet/public/lib/fostr/fidl/fuchsia.example.fostr",
-    "//garnet/public/lib/fsl",
+    "//src/lib/fsl",
 
     # TODO(FIDL-623): Remove dependency on fuchsia.sys. We should instead be
     # using the fuchsia.example.fostr library to avoid changes in unrelated code

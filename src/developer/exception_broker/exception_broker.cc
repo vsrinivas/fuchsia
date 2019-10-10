@@ -4,12 +4,12 @@
 #include "src/developer/exception_broker/exception_broker.h"
 
 #include <lib/fit/defer.h>
-#include <lib/syslog/cpp/logger.h>
 #include <zircon/status.h>
 
 #include <third_party/crashpad/util/file/string_file.h>
 
 #include "src/developer/exception_broker/crash_report_generation.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace fuchsia {
 namespace exception {
@@ -71,7 +71,6 @@ void ExceptionBroker::OnException(zx::exception exception, ExceptionInfo info,
     FX_PLOGS(WARNING, status) << "Could not obtain process handle for exception.";
   } else {
     process_exception.set_process(std::move(process));
-
   }
 
   zx::thread thread;
@@ -94,8 +93,8 @@ void ExceptionBroker::OnException(zx::exception exception, ExceptionInfo info,
 void ExceptionBroker::ListProcessesWaitingOnException(ListProcessesWaitingOnExceptionCallback cb) {
   std::vector<ProcessExceptionMetadata> exceptions;
 
-  size_t max_size = limbo_.size() <= MAX_EXCEPTIONS_PER_CALL ? limbo_.size() :
-                                                               MAX_EXCEPTIONS_PER_CALL;
+  size_t max_size =
+      limbo_.size() <= MAX_EXCEPTIONS_PER_CALL ? limbo_.size() : MAX_EXCEPTIONS_PER_CALL;
   exceptions.reserve(max_size);
 
   // The new rights of the handles we're going to duplicate.

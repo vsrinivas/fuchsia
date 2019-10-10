@@ -48,7 +48,7 @@ executable("constants_and_utils_unittest") {
 
   deps = [
     ":constants_and_utils",
-    "//garnet/public/lib/fsl",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
@@ -87,10 +87,10 @@ source_set("session_storage_xdr") {
 
   deps = [
     ":annotation_xdr",
-    "//garnet/public/lib/fsl",
     "//peridot/lib/base64url",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
+    "//src/lib/fsl",
     "//src/modular/lib/fidl:json_xdr",
   ]
 }
@@ -144,9 +144,9 @@ source_set("story_storage_xdr") {
 
   deps = [
     ":annotation_xdr",
-    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
+    "//src/lib/fsl",
     "//src/modular/lib/fidl:json_xdr",
     "//src/modular/lib/module_manifest:json_xdr",
   ]
@@ -176,9 +176,9 @@ source_set("annotation_xdr") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//peridot/lib/base64url",
     "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fsl",
     "//src/modular/lib/fidl:json_xdr",
   ]
 }

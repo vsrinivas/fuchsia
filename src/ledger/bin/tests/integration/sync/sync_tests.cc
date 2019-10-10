@@ -4,8 +4,6 @@
 
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
-#include <lib/fsl/vmo/strings.h>
-#include <lib/fsl/vmo/vector.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/fidl/include/types.h"
@@ -15,6 +13,8 @@
 #include "src/ledger/bin/tests/integration/sync/test_sync_state_watcher.h"
 #include "src/ledger/bin/tests/integration/test_page_watcher.h"
 #include "src/lib/callback/capture.h"
+#include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/fsl/vmo/vector.h"
 
 namespace ledger {
 namespace {

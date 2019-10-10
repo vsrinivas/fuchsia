@@ -6,8 +6,9 @@
 #define SRC_UI_A11Y_LIB_UTIL_UTIL_H_
 
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/fsl/handles/object_info.h>
 #include <lib/zx/event.h>
+
+#include "src/lib/fsl/handles/object_info.h"
 
 namespace a11y {
 

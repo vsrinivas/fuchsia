@@ -5,10 +5,6 @@
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
 
 #include <fuchsia/inspect/deprecated/cpp/fidl.h>
-#include <lib/fsl/io/fd.h>
-#include <lib/inspect_deprecated/inspect.h>
-#include <lib/inspect_deprecated/reader.h>
-#include <lib/inspect_deprecated/testing/inspect.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -20,7 +16,11 @@
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/inspect_deprecated/inspect.h"
+#include "src/lib/inspect_deprecated/reader.h"
+#include "src/lib/inspect_deprecated/testing/inspect.h"
 
 namespace ledger {
 namespace {

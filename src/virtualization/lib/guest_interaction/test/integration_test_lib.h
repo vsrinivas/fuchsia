@@ -8,13 +8,14 @@
 #include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <lib/component/cpp/environment_services_helper.h>
-#include <lib/component/cpp/testing/test_util.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
 #include <src/virtualization/tests/guest_console.h>
 #include <src/virtualization/tests/mock_netstack.h>
+
+#include "src/lib/component/cpp/environment_services_helper.h"
+#include "src/lib/component/cpp/testing/test_util.h"
 
 static constexpr char kGuestLabel[] = "debian_guest";
 static constexpr char kGuestManagerUrl[] =

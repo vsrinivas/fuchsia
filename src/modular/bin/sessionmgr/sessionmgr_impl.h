@@ -16,7 +16,6 @@
 #include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fit/function.h>
@@ -28,6 +27,7 @@
 
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/lib/component/cpp/service_provider_impl.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/module_resolver/local_module_resolver.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_service_index.h"

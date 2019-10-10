@@ -6,7 +6,6 @@
 #define SRC_LEDGER_BIN_STORAGE_PUBLIC_DATA_SOURCE_H_
 
 #include <lib/fit/function.h>
-#include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/zx/socket.h>
 #include <stdint.h>
 
@@ -14,6 +13,7 @@
 #include <functional>
 #include <memory>
 
+#include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 #include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"

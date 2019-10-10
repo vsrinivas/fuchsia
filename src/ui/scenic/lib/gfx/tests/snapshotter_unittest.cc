@@ -5,8 +5,8 @@
 #include "src/ui/scenic/lib/gfx/snapshot/snapshotter.h"
 
 #include "gtest/gtest.h"
-#include "lib/fsl/vmo/vector.h"
 #include "lib/ui/scenic/cpp/commands.h"
+#include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/resources/resource_manager.h"
@@ -77,7 +77,7 @@ VK_TEST_F(SnapshotterTest, Creation) {
     EXPECT_TRUE(fsl::VectorFromVmo(buffer, &data));
 
     // De-serialize the snapshot from flatbuffer.
-    auto snapshot = (const SnapshotData *)data.data();
+    auto snapshot = (const SnapshotData*)data.data();
 
     // This test assumes flatbuffer snapshot format, version 1.
     EXPECT_EQ(SnapshotData::SnapshotType::kFlatBuffer, snapshot->type);
@@ -90,11 +90,11 @@ VK_TEST_F(SnapshotterTest, Creation) {
     auto child = node->children()->Get(0);
 
     EXPECT_EQ(snapshot::Shape_Circle, child->shape_type());
-    auto shape = static_cast<const snapshot::Circle *>(child->shape());
+    auto shape = static_cast<const snapshot::Circle*>(child->shape());
     EXPECT_EQ(50.f, shape->radius());
 
     EXPECT_EQ(snapshot::Material_Color, child->material_type());
-    auto color = static_cast<const snapshot::Color *>(child->material());
+    auto color = static_cast<const snapshot::Color*>(child->material());
     EXPECT_EQ(1.0f, color->red());
   });
 

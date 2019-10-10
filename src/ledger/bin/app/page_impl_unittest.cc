@@ -5,11 +5,8 @@
 #include "src/ledger/bin/app/page_impl.h"
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <lib/backoff/exponential_backoff.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fsl/socket/strings.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <zircon/errors.h>
 
@@ -32,8 +29,11 @@
 #include "src/ledger/bin/storage/testing/storage_matcher.h"
 #include "src/ledger/bin/testing/ledger_matcher.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
+#include "src/lib/fsl/socket/strings.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

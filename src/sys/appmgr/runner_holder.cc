@@ -11,8 +11,8 @@
 
 #include <utility>
 
-#include "lib/fsl/vmo/file.h"
 #include "lib/sys/cpp/termination_reason.h"
+#include "src/lib/fsl/vmo/file.h"
 #include "src/sys/appmgr/component_controller_impl.h"
 #include "src/sys/appmgr/realm.h"
 #include "src/sys/appmgr/util.h"

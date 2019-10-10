@@ -4,7 +4,7 @@
 
 #include "garnet/bin/ui/snapshot/view.h"
 
-#include "lib/fsl/vmo/vector.h"
+#include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/ui/scenic/cpp/host_memory.h"
 #include "src/ui/scenic/lib/gfx/snapshot/version.h"
 

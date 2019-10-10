@@ -4,16 +4,17 @@
 
 #include "peridot/lib/firebase/event_stream.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/gtest/test_loop_fixture.h>
+
 #include <memory>
 #include <string>
 #include <utility>
 
-#include <lib/async/cpp/task.h>
-#include <lib/fsl/socket/strings.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/socket/socket_pair.h"
+#include "src/lib/fsl/socket/strings.h"
 
 namespace firebase {
 

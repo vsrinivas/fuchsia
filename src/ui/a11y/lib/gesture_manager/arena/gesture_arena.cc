@@ -4,7 +4,7 @@
 
 #include "src/ui/a11y/lib/gesture_manager/arena/gesture_arena.h"
 
-#include <lib/syslog/cpp/logger.h>
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace a11y {
 

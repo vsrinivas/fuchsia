@@ -4,7 +4,6 @@
 
 #include "src/ledger/bin/storage/impl/object_impl.h"
 
-#include <lib/fsl/vmo/strings.h>
 #include <zircon/syscalls.h>
 
 #include <memory>
@@ -21,6 +20,7 @@
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/leveldb/include/leveldb/db.h"
 #include "util/env_fuchsia.h"
