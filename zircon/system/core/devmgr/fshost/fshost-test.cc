@@ -22,7 +22,7 @@
 #include "fshost-fs-provider.h"
 #include "metrics.h"
 #include "registry.h"
-#include "vnode.h"
+#include "registry_vnode.h"
 
 namespace {
 
@@ -37,8 +37,8 @@ TEST(VnodeTestCase, NoFilesystems) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   auto dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
-  auto fshost_vn =
-      fbl::AdoptRef<devmgr::fshost::Vnode>(new devmgr::fshost::Vnode(loop.dispatcher(), dir));
+  auto fshost_vn = fbl::AdoptRef<devmgr::fshost::RegistryVnode>(
+      new devmgr::fshost::RegistryVnode(loop.dispatcher(), dir));
 
   fbl::RefPtr<fs::Vnode> node;
   EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->Lookup(&node, "0"));
@@ -50,8 +50,8 @@ TEST(VnodeTestCase, AddFilesystem) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   auto dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
-  auto fshost_vn =
-      fbl::AdoptRef<devmgr::fshost::Vnode>(new devmgr::fshost::Vnode(loop.dispatcher(), dir));
+  auto fshost_vn = fbl::AdoptRef<devmgr::fshost::RegistryVnode>(
+      new devmgr::fshost::RegistryVnode(loop.dispatcher(), dir));
 
   // Adds a new filesystem to the fshost service node.
   // This filesystem should appear as a new entry within |dir|.

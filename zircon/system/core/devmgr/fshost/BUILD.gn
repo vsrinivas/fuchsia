@@ -6,11 +6,11 @@ source_set("fshost-registry") {
   sources = [
     "fs-manager.cc",
     "registry.cc",
-    "vnode.cc",
+    "registry_vnode.cc",
   ]
   public_deps = [
     ":metrics",
-    "$zx/system/fidl/fuchsia-fshost:c",
+    "$zx/system/fidl/fuchsia-fshost:llcpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/fit",
@@ -23,7 +23,7 @@ source_set("fshost-registry") {
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/memfs:memfs-cpp",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
@@ -57,7 +57,7 @@ source_set("block-watcher") {
   ]
   public_deps = [
     ":metrics",
-    "$zx/system/fidl/fuchsia-fshost:c",
+    "$zx/system/fidl/fuchsia-fshost:llcpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/fit",
