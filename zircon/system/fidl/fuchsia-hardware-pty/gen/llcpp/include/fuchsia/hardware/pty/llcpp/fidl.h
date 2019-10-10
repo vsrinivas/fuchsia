@@ -12,7 +12,6 @@
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/handle.h>
 #include <zircon/fidl.h>
 
 #include <fuchsia/io/llcpp/fidl.h>
@@ -49,8 +48,6 @@ extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSyncResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetAttrResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceIoctlRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceIoctlResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceReadResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceReadAtResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceWriteRequestTable;
@@ -193,39 +190,6 @@ class Device final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = SetAttrResponse;
-  };
-
-  struct IoctlResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t s;
-    ::fidl::VectorView<::zx::handle> handles;
-    ::fidl::VectorView<uint8_t> out;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_pty_DeviceIoctlResponseTable;
-    static constexpr uint32_t MaxNumHandles = 2;
-    static constexpr uint32_t PrimarySize = 56;
-    static constexpr uint32_t MaxOutOfLine = 8200;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct IoctlRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    uint32_t opcode;
-    uint64_t max_out;
-    ::fidl::VectorView<::zx::handle> handles;
-    ::fidl::VectorView<uint8_t> in;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_pty_DeviceIoctlRequestTable;
-    static constexpr uint32_t MaxNumHandles = 2;
-    static constexpr uint32_t PrimarySize = 64;
-    static constexpr uint32_t MaxOutOfLine = 8200;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = IoctlResponse;
   };
 
   struct ReadResponse final {
@@ -734,22 +698,6 @@ class Device final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class Ioctl_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      Ioctl_Impl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
-      ~Ioctl_Impl() = default;
-      Ioctl_Impl(Ioctl_Impl&& other) = default;
-      Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
     class Read_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -997,7 +945,6 @@ class Device final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
-    using Ioctl = Ioctl_Impl<IoctlResponse>;
     using Read = Read_Impl<ReadResponse>;
     using ReadAt = ReadAt_Impl<ReadAtResponse>;
     using Write = Write_Impl<WriteResponse>;
@@ -1103,22 +1050,6 @@ class Device final {
       ~SetAttr_Impl() = default;
       SetAttr_Impl(SetAttr_Impl&& other) = default;
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class Ioctl_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      Ioctl_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
-      ~Ioctl_Impl() = default;
-      Ioctl_Impl(Ioctl_Impl&& other) = default;
-      Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -1375,7 +1306,6 @@ class Device final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
-    using Ioctl = Ioctl_Impl<IoctlResponse>;
     using Read = Read_Impl<ReadResponse>;
     using ReadAt = ReadAt_Impl<ReadAtResponse>;
     using Write = Write_Impl<WriteResponse>;
@@ -1509,14 +1439,6 @@ class Device final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Request is heap-allocated. Response is heap-allocated.
-    ResultOf::Ioctl Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::Ioctl Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
 
     // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
@@ -1850,14 +1772,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
-    // Deprecated. Only for use with compatibility with devhost.
-    // Request is heap-allocated. Response is heap-allocated.
-    static ResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
-
     // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
@@ -2130,9 +2044,6 @@ class Device final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
 
-    // Deprecated. Only for use with compatibility with devhost.
-    static ::fidl::DecodeResult<IoctlResponse> Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
-
     // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
@@ -2307,20 +2218,6 @@ class Device final {
     using SetAttrCompleter = ::fidl::Completer<SetAttrCompleterBase>;
 
     virtual void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, SetAttrCompleter::Sync _completer) = 0;
-
-    class IoctlCompleterBase : public _Base {
-     public:
-      void Reply(int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out);
-      void Reply(::fidl::BytePart _buffer, int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out);
-      void Reply(::fidl::DecodedMessage<IoctlResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using IoctlCompleter = ::fidl::Completer<IoctlCompleterBase>;
-
-    virtual void Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, IoctlCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
     class ReadCompleterBase : public _Base {
      public:
@@ -2592,8 +2489,6 @@ class Device final {
     static void GetAttrResponse(const ::fidl::DecodedMessage<Device::GetAttrResponse>& _msg);
     static void SetAttrRequest(const ::fidl::DecodedMessage<Device::SetAttrRequest>& _msg);
     static void SetAttrResponse(const ::fidl::DecodedMessage<Device::SetAttrResponse>& _msg);
-    static void IoctlRequest(const ::fidl::DecodedMessage<Device::IoctlRequest>& _msg);
-    static void IoctlResponse(const ::fidl::DecodedMessage<Device::IoctlResponse>& _msg);
     static void ReadRequest(const ::fidl::DecodedMessage<Device::ReadRequest>& _msg);
     static void ReadResponse(const ::fidl::DecodedMessage<Device::ReadResponse>& _msg);
     static void ReadAtRequest(const ::fidl::DecodedMessage<Device::ReadAtRequest>& _msg);
@@ -2727,27 +2622,6 @@ struct IsFidlMessage<::llcpp::fuchsia::hardware::pty::Device::SetAttrResponse> :
 static_assert(sizeof(::llcpp::fuchsia::hardware::pty::Device::SetAttrResponse)
     == ::llcpp::fuchsia::hardware::pty::Device::SetAttrResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::hardware::pty::Device::SetAttrResponse, s) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::pty::Device::IoctlRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::hardware::pty::Device::IoctlRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::hardware::pty::Device::IoctlRequest)
-    == ::llcpp::fuchsia::hardware::pty::Device::IoctlRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::pty::Device::IoctlRequest, opcode) == 16);
-static_assert(offsetof(::llcpp::fuchsia::hardware::pty::Device::IoctlRequest, max_out) == 24);
-static_assert(offsetof(::llcpp::fuchsia::hardware::pty::Device::IoctlRequest, handles) == 32);
-static_assert(offsetof(::llcpp::fuchsia::hardware::pty::Device::IoctlRequest, in) == 48);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::pty::Device::IoctlResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::hardware::pty::Device::IoctlResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::hardware::pty::Device::IoctlResponse)
-    == ::llcpp::fuchsia::hardware::pty::Device::IoctlResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::pty::Device::IoctlResponse, s) == 16);
-static_assert(offsetof(::llcpp::fuchsia::hardware::pty::Device::IoctlResponse, handles) == 24);
-static_assert(offsetof(::llcpp::fuchsia::hardware::pty::Device::IoctlResponse, out) == 40);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::pty::Device::ReadRequest> : public std::true_type {};

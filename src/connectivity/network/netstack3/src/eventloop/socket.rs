@@ -103,7 +103,6 @@ impl SocketControlWorkerInner {
             psocket::ControlRequest::Sync { .. } => {}
             psocket::ControlRequest::GetAttr { .. } => {}
             psocket::ControlRequest::SetAttr { .. } => {}
-            psocket::ControlRequest::Ioctl { .. } => {}
             psocket::ControlRequest::Bind { .. } => {}
             psocket::ControlRequest::Connect { .. } => {}
             psocket::ControlRequest::Listen { .. } => {}

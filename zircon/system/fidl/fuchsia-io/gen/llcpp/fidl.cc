@@ -325,12 +325,6 @@ constexpr uint64_t kNode_SetAttr_Ordinal = 0xbd5559a00000000lu;
 constexpr uint64_t kNode_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
 extern "C" const fidl_type_t fuchsia_io_NodeSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeSetAttrResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kNode_Ioctl_Ordinal = 0x35f3aca700000000lu;
-[[maybe_unused]]
-constexpr uint64_t kNode_Ioctl_GenOrdinal = 0x45afae358dcb5b88lu;
-extern "C" const fidl_type_t fuchsia_io_NodeIoctlRequestTable;
-extern "C" const fidl_type_t fuchsia_io_NodeIoctlResponseTable;
 
 }  // namespace
 
@@ -706,79 +700,6 @@ Node::UnownedResultOf::SetAttr Node::Call::SetAttr(zx::unowned_channel _client_e
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
-template <>
-Node::ResultOf::Ioctl_Impl<Node::IoctlResponse>::Ioctl_Impl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<IoctlRequest, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
-  IoctlRequest _request = {};
-  _request.opcode = std::move(opcode);
-  _request.max_out = std::move(max_out);
-  _request.handles = std::move(handles);
-  _request.in = std::move(in);
-  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<IoctlRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      Node::InPlace::Ioctl(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
-}
-
-Node::ResultOf::Ioctl Node::SyncClient::Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in) {
-  return ResultOf::Ioctl(zx::unowned_channel(this->channel_), std::move(opcode), std::move(max_out), std::move(handles), std::move(in));
-}
-
-Node::ResultOf::Ioctl Node::Call::Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in) {
-  return ResultOf::Ioctl(std::move(_client_end), std::move(opcode), std::move(max_out), std::move(handles), std::move(in));
-}
-
-template <>
-Node::UnownedResultOf::Ioctl_Impl<Node::IoctlResponse>::Ioctl_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < IoctlRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<IoctlResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
-  IoctlRequest _request = {};
-  _request.opcode = std::move(opcode);
-  _request.max_out = std::move(max_out);
-  _request.handles = std::move(handles);
-  _request.in = std::move(in);
-  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<IoctlRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      Node::InPlace::Ioctl(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
-}
-
-Node::UnownedResultOf::Ioctl Node::SyncClient::Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Ioctl(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(opcode), std::move(max_out), std::move(handles), std::move(in), std::move(_response_buffer));
-}
-
-Node::UnownedResultOf::Ioctl Node::Call::Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Ioctl(std::move(_client_end), std::move(_request_buffer), std::move(opcode), std::move(max_out), std::move(handles), std::move(in), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<Node::IoctlResponse> Node::InPlace::Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer) {
-  Node::SetTransactionHeaderFor::IoctlRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Node::IoctlResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<IoctlRequest, IoctlResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Node::IoctlResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
 zx_status_t Node::SyncClient::HandleEvents(Node::EventHandlers handlers) {
   return Node::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
 }
@@ -933,19 +854,6 @@ bool Node::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
       auto message = result.message.message();
       impl->SetAttr(std::move(message->flags), std::move(message->attributes),
         Interface::SetAttrCompleter::Sync(txn));
-      return true;
-    }
-    case kNode_Ioctl_Ordinal:
-    case kNode_Ioctl_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<IoctlRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->Ioctl(std::move(message->opcode), std::move(message->max_out), std::move(message->handles), std::move(message->in),
-        Interface::IoctlCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -1190,56 +1098,6 @@ void Node::Interface::SetAttrCompleterBase::Reply(::fidl::DecodedMessage<SetAttr
 }
 
 
-void Node::Interface::IoctlCompleterBase::Reply(int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<IoctlResponse, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
-  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
-  IoctlResponse _response = {};
-  Node::SetTransactionHeaderFor::IoctlResponse(
-      ::fidl::DecodedMessage<IoctlResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              IoctlResponse::PrimarySize,
-              IoctlResponse::PrimarySize)));
-  _response.s = std::move(s);
-  _response.handles = std::move(handles);
-  _response.out = std::move(out);
-  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
-                                                                          _kWriteAllocSize));
-  if (_linearize_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  CompleterBase::SendReply(std::move(_linearize_result.message));
-}
-
-void Node::Interface::IoctlCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out) {
-  if (_buffer.capacity() < IoctlResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  IoctlResponse _response = {};
-  Node::SetTransactionHeaderFor::IoctlResponse(
-      ::fidl::DecodedMessage<IoctlResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              IoctlResponse::PrimarySize,
-              IoctlResponse::PrimarySize)));
-  _response.s = std::move(s);
-  _response.handles = std::move(handles);
-  _response.out = std::move(out);
-  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  CompleterBase::SendReply(std::move(_linearize_result.message));
-}
-
-void Node::Interface::IoctlCompleterBase::Reply(::fidl::DecodedMessage<IoctlResponse> params) {
-  Node::SetTransactionHeaderFor::IoctlResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
 
 void Node::SetTransactionHeaderFor::CloneRequest(const ::fidl::DecodedMessage<Node::CloneRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
@@ -1296,15 +1154,6 @@ void Node::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMessage
   _msg.message()->_hdr.ordinal = kNode_SetAttr_Ordinal;
 }
 
-void Node::SetTransactionHeaderFor::IoctlRequest(const ::fidl::DecodedMessage<Node::IoctlRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNode_Ioctl_Ordinal;
-}
-void Node::SetTransactionHeaderFor::IoctlResponse(const ::fidl::DecodedMessage<Node::IoctlResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNode_Ioctl_Ordinal;
-}
-
 namespace {
 
 [[maybe_unused]]
@@ -1343,12 +1192,6 @@ constexpr uint64_t kFile_SetAttr_Ordinal = 0xbd5559a00000000lu;
 constexpr uint64_t kFile_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
 extern "C" const fidl_type_t fuchsia_io_FileSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetAttrResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kFile_Ioctl_Ordinal = 0x35f3aca700000000lu;
-[[maybe_unused]]
-constexpr uint64_t kFile_Ioctl_GenOrdinal = 0x45afae358dcb5b88lu;
-extern "C" const fidl_type_t fuchsia_io_FileIoctlRequestTable;
-extern "C" const fidl_type_t fuchsia_io_FileIoctlResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_Read_Ordinal = 0x25f7418400000000lu;
 [[maybe_unused]]
@@ -1768,79 +1611,6 @@ File::UnownedResultOf::SetAttr File::Call::SetAttr(zx::unowned_channel _client_e
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<File::SetAttrResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
-template <>
-File::ResultOf::Ioctl_Impl<File::IoctlResponse>::Ioctl_Impl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<IoctlRequest, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
-  IoctlRequest _request = {};
-  _request.opcode = std::move(opcode);
-  _request.max_out = std::move(max_out);
-  _request.handles = std::move(handles);
-  _request.in = std::move(in);
-  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<IoctlRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      File::InPlace::Ioctl(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
-}
-
-File::ResultOf::Ioctl File::SyncClient::Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in) {
-  return ResultOf::Ioctl(zx::unowned_channel(this->channel_), std::move(opcode), std::move(max_out), std::move(handles), std::move(in));
-}
-
-File::ResultOf::Ioctl File::Call::Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in) {
-  return ResultOf::Ioctl(std::move(_client_end), std::move(opcode), std::move(max_out), std::move(handles), std::move(in));
-}
-
-template <>
-File::UnownedResultOf::Ioctl_Impl<File::IoctlResponse>::Ioctl_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < IoctlRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<IoctlResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
-  IoctlRequest _request = {};
-  _request.opcode = std::move(opcode);
-  _request.max_out = std::move(max_out);
-  _request.handles = std::move(handles);
-  _request.in = std::move(in);
-  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<IoctlRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      File::InPlace::Ioctl(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
-}
-
-File::UnownedResultOf::Ioctl File::SyncClient::Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Ioctl(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(opcode), std::move(max_out), std::move(handles), std::move(in), std::move(_response_buffer));
-}
-
-File::UnownedResultOf::Ioctl File::Call::Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Ioctl(std::move(_client_end), std::move(_request_buffer), std::move(opcode), std::move(max_out), std::move(handles), std::move(in), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<File::IoctlResponse> File::InPlace::Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer) {
-  File::SetTransactionHeaderFor::IoctlRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<File::IoctlResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<IoctlRequest, IoctlResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<File::IoctlResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -2575,19 +2345,6 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::SetAttrCompleter::Sync(txn));
       return true;
     }
-    case kFile_Ioctl_Ordinal:
-    case kFile_Ioctl_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<IoctlRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->Ioctl(std::move(message->opcode), std::move(message->max_out), std::move(message->handles), std::move(message->in),
-        Interface::IoctlCompleter::Sync(txn));
-      return true;
-    }
     case kFile_Read_Ordinal:
     case kFile_Read_GenOrdinal:
     {
@@ -2942,56 +2699,6 @@ void File::Interface::SetAttrCompleterBase::Reply(::fidl::BytePart _buffer, int3
 
 void File::Interface::SetAttrCompleterBase::Reply(::fidl::DecodedMessage<SetAttrResponse> params) {
   File::SetTransactionHeaderFor::SetAttrResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
-void File::Interface::IoctlCompleterBase::Reply(int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<IoctlResponse, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
-  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
-  IoctlResponse _response = {};
-  File::SetTransactionHeaderFor::IoctlResponse(
-      ::fidl::DecodedMessage<IoctlResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              IoctlResponse::PrimarySize,
-              IoctlResponse::PrimarySize)));
-  _response.s = std::move(s);
-  _response.handles = std::move(handles);
-  _response.out = std::move(out);
-  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
-                                                                          _kWriteAllocSize));
-  if (_linearize_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  CompleterBase::SendReply(std::move(_linearize_result.message));
-}
-
-void File::Interface::IoctlCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out) {
-  if (_buffer.capacity() < IoctlResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  IoctlResponse _response = {};
-  File::SetTransactionHeaderFor::IoctlResponse(
-      ::fidl::DecodedMessage<IoctlResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              IoctlResponse::PrimarySize,
-              IoctlResponse::PrimarySize)));
-  _response.s = std::move(s);
-  _response.handles = std::move(handles);
-  _response.out = std::move(out);
-  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  CompleterBase::SendReply(std::move(_linearize_result.message));
-}
-
-void File::Interface::IoctlCompleterBase::Reply(::fidl::DecodedMessage<IoctlResponse> params) {
-  File::SetTransactionHeaderFor::IoctlResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -3419,15 +3126,6 @@ void File::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMessage
   _msg.message()->_hdr.ordinal = kFile_SetAttr_Ordinal;
 }
 
-void File::SetTransactionHeaderFor::IoctlRequest(const ::fidl::DecodedMessage<File::IoctlRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_Ioctl_Ordinal;
-}
-void File::SetTransactionHeaderFor::IoctlResponse(const ::fidl::DecodedMessage<File::IoctlResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFile_Ioctl_Ordinal;
-}
-
 void File::SetTransactionHeaderFor::ReadRequest(const ::fidl::DecodedMessage<File::ReadRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
   _msg.message()->_hdr.ordinal = kFile_Read_Ordinal;
@@ -3547,12 +3245,6 @@ constexpr uint64_t kDirectory_SetAttr_Ordinal = 0xbd5559a00000000lu;
 constexpr uint64_t kDirectory_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
 extern "C" const fidl_type_t fuchsia_io_DirectorySetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectorySetAttrResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kDirectory_Ioctl_Ordinal = 0x35f3aca700000000lu;
-[[maybe_unused]]
-constexpr uint64_t kDirectory_Ioctl_GenOrdinal = 0x45afae358dcb5b88lu;
-extern "C" const fidl_type_t fuchsia_io_DirectoryIoctlRequestTable;
-extern "C" const fidl_type_t fuchsia_io_DirectoryIoctlResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Open_Ordinal = 0x77e4cceb00000000lu;
 [[maybe_unused]]
@@ -3967,79 +3659,6 @@ Directory::UnownedResultOf::SetAttr Directory::Call::SetAttr(zx::unowned_channel
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Directory::SetAttrResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
-template <>
-Directory::ResultOf::Ioctl_Impl<Directory::IoctlResponse>::Ioctl_Impl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<IoctlRequest, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
-  IoctlRequest _request = {};
-  _request.opcode = std::move(opcode);
-  _request.max_out = std::move(max_out);
-  _request.handles = std::move(handles);
-  _request.in = std::move(in);
-  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<IoctlRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      Directory::InPlace::Ioctl(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
-}
-
-Directory::ResultOf::Ioctl Directory::SyncClient::Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in) {
-  return ResultOf::Ioctl(zx::unowned_channel(this->channel_), std::move(opcode), std::move(max_out), std::move(handles), std::move(in));
-}
-
-Directory::ResultOf::Ioctl Directory::Call::Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in) {
-  return ResultOf::Ioctl(std::move(_client_end), std::move(opcode), std::move(max_out), std::move(handles), std::move(in));
-}
-
-template <>
-Directory::UnownedResultOf::Ioctl_Impl<Directory::IoctlResponse>::Ioctl_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < IoctlRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<IoctlResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
-  IoctlRequest _request = {};
-  _request.opcode = std::move(opcode);
-  _request.max_out = std::move(max_out);
-  _request.handles = std::move(handles);
-  _request.in = std::move(in);
-  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<IoctlRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      Directory::InPlace::Ioctl(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
-}
-
-Directory::UnownedResultOf::Ioctl Directory::SyncClient::Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Ioctl(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(opcode), std::move(max_out), std::move(handles), std::move(in), std::move(_response_buffer));
-}
-
-Directory::UnownedResultOf::Ioctl Directory::Call::Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Ioctl(std::move(_client_end), std::move(_request_buffer), std::move(opcode), std::move(max_out), std::move(handles), std::move(in), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<Directory::IoctlResponse> Directory::InPlace::Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer) {
-  Directory::SetTransactionHeaderFor::IoctlRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Directory::IoctlResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<IoctlRequest, IoctlResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Directory::IoctlResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -4734,19 +4353,6 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::SetAttrCompleter::Sync(txn));
       return true;
     }
-    case kDirectory_Ioctl_Ordinal:
-    case kDirectory_Ioctl_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<IoctlRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->Ioctl(std::move(message->opcode), std::move(message->max_out), std::move(message->handles), std::move(message->in),
-        Interface::IoctlCompleter::Sync(txn));
-      return true;
-    }
     case kDirectory_Open_Ordinal:
     case kDirectory_Open_GenOrdinal:
     {
@@ -5091,56 +4697,6 @@ void Directory::Interface::SetAttrCompleterBase::Reply(::fidl::DecodedMessage<Se
 }
 
 
-void Directory::Interface::IoctlCompleterBase::Reply(int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<IoctlResponse, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
-  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
-  IoctlResponse _response = {};
-  Directory::SetTransactionHeaderFor::IoctlResponse(
-      ::fidl::DecodedMessage<IoctlResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              IoctlResponse::PrimarySize,
-              IoctlResponse::PrimarySize)));
-  _response.s = std::move(s);
-  _response.handles = std::move(handles);
-  _response.out = std::move(out);
-  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
-                                                                          _kWriteAllocSize));
-  if (_linearize_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  CompleterBase::SendReply(std::move(_linearize_result.message));
-}
-
-void Directory::Interface::IoctlCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out) {
-  if (_buffer.capacity() < IoctlResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  IoctlResponse _response = {};
-  Directory::SetTransactionHeaderFor::IoctlResponse(
-      ::fidl::DecodedMessage<IoctlResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              IoctlResponse::PrimarySize,
-              IoctlResponse::PrimarySize)));
-  _response.s = std::move(s);
-  _response.handles = std::move(handles);
-  _response.out = std::move(out);
-  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  CompleterBase::SendReply(std::move(_linearize_result.message));
-}
-
-void Directory::Interface::IoctlCompleterBase::Reply(::fidl::DecodedMessage<IoctlResponse> params) {
-  Directory::SetTransactionHeaderFor::IoctlResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
 void Directory::Interface::UnlinkCompleterBase::Reply(int32_t s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnlinkResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
@@ -5463,15 +5019,6 @@ void Directory::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMe
   _msg.message()->_hdr.ordinal = kDirectory_SetAttr_Ordinal;
 }
 
-void Directory::SetTransactionHeaderFor::IoctlRequest(const ::fidl::DecodedMessage<Directory::IoctlRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Ioctl_Ordinal;
-}
-void Directory::SetTransactionHeaderFor::IoctlResponse(const ::fidl::DecodedMessage<Directory::IoctlResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectory_Ioctl_Ordinal;
-}
-
 void Directory::SetTransactionHeaderFor::OpenRequest(const ::fidl::DecodedMessage<Directory::OpenRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
   _msg.message()->_hdr.ordinal = kDirectory_Open_Ordinal;
@@ -5578,12 +5125,6 @@ constexpr uint64_t kDirectoryAdmin_SetAttr_Ordinal = 0xbd5559a00000000lu;
 constexpr uint64_t kDirectoryAdmin_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSetAttrResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_Ioctl_Ordinal = 0x35f3aca700000000lu;
-[[maybe_unused]]
-constexpr uint64_t kDirectoryAdmin_Ioctl_GenOrdinal = 0x45afae358dcb5b88lu;
-extern "C" const fidl_type_t fuchsia_io_DirectoryAdminIoctlRequestTable;
-extern "C" const fidl_type_t fuchsia_io_DirectoryAdminIoctlResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Open_Ordinal = 0x77e4cceb00000000lu;
 [[maybe_unused]]
@@ -6030,79 +5571,6 @@ DirectoryAdmin::UnownedResultOf::SetAttr DirectoryAdmin::Call::SetAttr(zx::unown
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<DirectoryAdmin::SetAttrResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
-template <>
-DirectoryAdmin::ResultOf::Ioctl_Impl<DirectoryAdmin::IoctlResponse>::Ioctl_Impl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<IoctlRequest, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
-  IoctlRequest _request = {};
-  _request.opcode = std::move(opcode);
-  _request.max_out = std::move(max_out);
-  _request.handles = std::move(handles);
-  _request.in = std::move(in);
-  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<IoctlRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      DirectoryAdmin::InPlace::Ioctl(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
-}
-
-DirectoryAdmin::ResultOf::Ioctl DirectoryAdmin::SyncClient::Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in) {
-  return ResultOf::Ioctl(zx::unowned_channel(this->channel_), std::move(opcode), std::move(max_out), std::move(handles), std::move(in));
-}
-
-DirectoryAdmin::ResultOf::Ioctl DirectoryAdmin::Call::Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in) {
-  return ResultOf::Ioctl(std::move(_client_end), std::move(opcode), std::move(max_out), std::move(handles), std::move(in));
-}
-
-template <>
-DirectoryAdmin::UnownedResultOf::Ioctl_Impl<DirectoryAdmin::IoctlResponse>::Ioctl_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < IoctlRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<IoctlResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
-  IoctlRequest _request = {};
-  _request.opcode = std::move(opcode);
-  _request.max_out = std::move(max_out);
-  _request.handles = std::move(handles);
-  _request.in = std::move(in);
-  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<IoctlRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      DirectoryAdmin::InPlace::Ioctl(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
-}
-
-DirectoryAdmin::UnownedResultOf::Ioctl DirectoryAdmin::SyncClient::Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Ioctl(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(opcode), std::move(max_out), std::move(handles), std::move(in), std::move(_response_buffer));
-}
-
-DirectoryAdmin::UnownedResultOf::Ioctl DirectoryAdmin::Call::Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Ioctl(std::move(_client_end), std::move(_request_buffer), std::move(opcode), std::move(max_out), std::move(handles), std::move(in), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<DirectoryAdmin::IoctlResponse> DirectoryAdmin::InPlace::Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer) {
-  DirectoryAdmin::SetTransactionHeaderFor::IoctlRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<DirectoryAdmin::IoctlResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<IoctlRequest, IoctlResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<DirectoryAdmin::IoctlResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -7174,19 +6642,6 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::SetAttrCompleter::Sync(txn));
       return true;
     }
-    case kDirectoryAdmin_Ioctl_Ordinal:
-    case kDirectoryAdmin_Ioctl_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<IoctlRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->Ioctl(std::move(message->opcode), std::move(message->max_out), std::move(message->handles), std::move(message->in),
-        Interface::IoctlCompleter::Sync(txn));
-      return true;
-    }
     case kDirectoryAdmin_Open_Ordinal:
     case kDirectoryAdmin_Open_GenOrdinal:
     {
@@ -7601,56 +7056,6 @@ void DirectoryAdmin::Interface::SetAttrCompleterBase::Reply(::fidl::BytePart _bu
 
 void DirectoryAdmin::Interface::SetAttrCompleterBase::Reply(::fidl::DecodedMessage<SetAttrResponse> params) {
   DirectoryAdmin::SetTransactionHeaderFor::SetAttrResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
-void DirectoryAdmin::Interface::IoctlCompleterBase::Reply(int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<IoctlResponse, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
-  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
-  IoctlResponse _response = {};
-  DirectoryAdmin::SetTransactionHeaderFor::IoctlResponse(
-      ::fidl::DecodedMessage<IoctlResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              IoctlResponse::PrimarySize,
-              IoctlResponse::PrimarySize)));
-  _response.s = std::move(s);
-  _response.handles = std::move(handles);
-  _response.out = std::move(out);
-  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
-                                                                          _kWriteAllocSize));
-  if (_linearize_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  CompleterBase::SendReply(std::move(_linearize_result.message));
-}
-
-void DirectoryAdmin::Interface::IoctlCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out) {
-  if (_buffer.capacity() < IoctlResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  IoctlResponse _response = {};
-  DirectoryAdmin::SetTransactionHeaderFor::IoctlResponse(
-      ::fidl::DecodedMessage<IoctlResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              IoctlResponse::PrimarySize,
-              IoctlResponse::PrimarySize)));
-  _response.s = std::move(s);
-  _response.handles = std::move(handles);
-  _response.out = std::move(out);
-  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  CompleterBase::SendReply(std::move(_linearize_result.message));
-}
-
-void DirectoryAdmin::Interface::IoctlCompleterBase::Reply(::fidl::DecodedMessage<IoctlResponse> params) {
-  DirectoryAdmin::SetTransactionHeaderFor::IoctlResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -8216,15 +7621,6 @@ void DirectoryAdmin::SetTransactionHeaderFor::SetAttrRequest(const ::fidl::Decod
 void DirectoryAdmin::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMessage<DirectoryAdmin::SetAttrResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
   _msg.message()->_hdr.ordinal = kDirectoryAdmin_SetAttr_Ordinal;
-}
-
-void DirectoryAdmin::SetTransactionHeaderFor::IoctlRequest(const ::fidl::DecodedMessage<DirectoryAdmin::IoctlRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Ioctl_Ordinal;
-}
-void DirectoryAdmin::SetTransactionHeaderFor::IoctlResponse(const ::fidl::DecodedMessage<DirectoryAdmin::IoctlResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirectoryAdmin_Ioctl_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::OpenRequest(const ::fidl::DecodedMessage<DirectoryAdmin::OpenRequest>& _msg) {

@@ -275,7 +275,6 @@ ZXFIDL_OPERATION(NodeDescribe)
 ZXFIDL_OPERATION(NodeSync)
 ZXFIDL_OPERATION(NodeGetAttr)
 ZXFIDL_OPERATION(NodeSetAttr)
-ZXFIDL_OPERATION(NodeIoctl)
 
 const fuchsia_io_Node_ops kNodeOps = {
     .Clone = NodeCloneOp,
@@ -284,7 +283,6 @@ const fuchsia_io_Node_ops kNodeOps = {
     .Sync = NodeSyncOp,
     .GetAttr = NodeGetAttrOp,
     .SetAttr = NodeSetAttrOp,
-    .Ioctl = NodeIoctlOp,
 };
 
 ZXFIDL_OPERATION(FileRead)
@@ -304,7 +302,6 @@ const fuchsia_io_File_ops kFileOps = {
     .Sync = NodeSyncOp,
     .GetAttr = NodeGetAttrOp,
     .SetAttr = NodeSetAttrOp,
-    .Ioctl = NodeIoctlOp,
     .Read = FileReadOp,
     .ReadAt = FileReadAtOp,
     .Write = FileWriteOp,
@@ -332,7 +329,6 @@ const fuchsia_io_Directory_ops kDirectoryOps{
     .Sync = NodeSyncOp,
     .GetAttr = NodeGetAttrOp,
     .SetAttr = NodeSetAttrOp,
-    .Ioctl = NodeIoctlOp,
     .Open = DirectoryOpenOp,
     .Unlink = DirectoryUnlinkOp,
     .ReadDirents = DirectoryReadDirentsOp,
@@ -357,7 +353,6 @@ const fuchsia_io_DirectoryAdmin_ops kDirectoryAdminOps{
     .Sync = NodeSyncOp,
     .GetAttr = NodeGetAttrOp,
     .SetAttr = NodeSetAttrOp,
-    .Ioctl = NodeIoctlOp,
     .Open = DirectoryOpenOp,
     .Unlink = DirectoryUnlinkOp,
     .ReadDirents = DirectoryReadDirentsOp,
@@ -636,13 +631,6 @@ zx_status_t Connection::NodeSetAttr(uint32_t flags, const fuchsia_io_NodeAttribu
                                      ? std::make_optional(attributes->modification_time)
                                      : std::nullopt));
   return fuchsia_io_NodeSetAttr_reply(txn, status);
-}
-
-zx_status_t Connection::NodeIoctl(uint32_t opcode, uint64_t max_out, const zx_handle_t* handles,
-                                  size_t handles_count, const uint8_t* in_data, size_t in_count,
-                                  fidl_txn_t* txn) {
-  zx_handle_close_many(handles, handles_count);
-  return fuchsia_io_NodeIoctl_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr, 0, nullptr, 0);
 }
 
 zx_status_t Connection::FileRead(uint64_t count, fidl_txn_t* txn) {

@@ -106,10 +106,6 @@ func (s *Service) SetAttr(flags uint32, attributes fidlio.NodeAttributes) (int32
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (s *Service) Ioctl(opcode uint32, maxOut uint64, handles []zx.Handle, in []uint8) (int32, []zx.Handle, []uint8, error) {
-	return int32(zx.ErrNotSupported), nil, nil, nil
-}
-
 type Directory interface {
 	Get(string) (Node, bool)
 	ForEach(func(string, Node))
@@ -194,10 +190,6 @@ func (dirState *directoryState) GetAttr() (int32, fidlio.NodeAttributes, error) 
 
 func (dirState *directoryState) SetAttr(flags uint32, attributes fidlio.NodeAttributes) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
-}
-
-func (dirState *directoryState) Ioctl(opcode uint32, maxOut uint64, handles []zx.Handle, in []uint8) (int32, []zx.Handle, []uint8, error) {
-	return int32(zx.ErrNotSupported), nil, nil, nil
 }
 
 const dot = "."
@@ -386,10 +378,6 @@ func (fState *fileState) GetAttr() (int32, fidlio.NodeAttributes, error) {
 
 func (fState *fileState) SetAttr(flags uint32, attributes fidlio.NodeAttributes) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
-}
-
-func (fState *fileState) Ioctl(opcode uint32, maxOut uint64, handles []zx.Handle, in []uint8) (int32, []zx.Handle, []uint8, error) {
-	return int32(zx.ErrNotSupported), nil, nil, nil
 }
 
 func (fState *fileState) Read(count uint64) (int32, []uint8, error) {

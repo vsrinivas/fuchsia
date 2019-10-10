@@ -270,9 +270,6 @@ impl FileConnection {
                 // PseudoFile.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            FileRequest::Ioctl { opcode: _, max_out: _, handles: _, in_: _, responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED, &mut iter::empty(), &mut iter::empty())?;
-            }
             FileRequest::Read { count, responder } => {
                 self.handle_read(count, |status, content| {
                     responder.send(status.into_raw(), content)

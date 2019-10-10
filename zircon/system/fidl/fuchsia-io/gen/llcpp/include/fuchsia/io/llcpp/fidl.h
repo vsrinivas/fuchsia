@@ -858,8 +858,6 @@ extern "C" const fidl_type_t fuchsia_io_NodeSyncResponseTable;
 extern "C" const fidl_type_t fuchsia_io_NodeGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_NodeSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeSetAttrResponseTable;
-extern "C" const fidl_type_t fuchsia_io_NodeIoctlRequestTable;
-extern "C" const fidl_type_t fuchsia_io_NodeIoctlResponseTable;
 
 // Node defines the minimal interface for entities which can be accessed in a filesystem.
 class Node final {
@@ -985,39 +983,6 @@ class Node final {
     using ResponseType = SetAttrResponse;
   };
 
-  struct IoctlResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t s;
-    ::fidl::VectorView<::zx::handle> handles;
-    ::fidl::VectorView<uint8_t> out;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_io_NodeIoctlResponseTable;
-    static constexpr uint32_t MaxNumHandles = 2;
-    static constexpr uint32_t PrimarySize = 56;
-    static constexpr uint32_t MaxOutOfLine = 8200;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct IoctlRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    uint32_t opcode;
-    uint64_t max_out;
-    ::fidl::VectorView<::zx::handle> handles;
-    ::fidl::VectorView<uint8_t> in;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_io_NodeIoctlRequestTable;
-    static constexpr uint32_t MaxNumHandles = 2;
-    static constexpr uint32_t PrimarySize = 64;
-    static constexpr uint32_t MaxOutOfLine = 8200;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = IoctlResponse;
-  };
-
 
   struct EventHandlers {
     // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
@@ -1127,22 +1092,6 @@ class Node final {
       using Super::operator->;
       using Super::operator*;
     };
-    template <typename ResponseType>
-    class Ioctl_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      Ioctl_Impl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
-      ~Ioctl_Impl() = default;
-      Ioctl_Impl(Ioctl_Impl&& other) = default;
-      Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
 
    public:
     using Clone = Clone_Impl;
@@ -1151,7 +1100,6 @@ class Node final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
-    using Ioctl = Ioctl_Impl<IoctlResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -1250,22 +1198,6 @@ class Node final {
       using Super::operator->;
       using Super::operator*;
     };
-    template <typename ResponseType>
-    class Ioctl_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      Ioctl_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
-      ~Ioctl_Impl() = default;
-      Ioctl_Impl(Ioctl_Impl&& other) = default;
-      Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
 
    public:
     using Clone = Clone_Impl;
@@ -1274,7 +1206,6 @@ class Node final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
-    using Ioctl = Ioctl_Impl<IoctlResponse>;
   };
 
   class SyncClient final {
@@ -1393,14 +1324,6 @@ class Node final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Request is heap-allocated. Response is heap-allocated.
-    ResultOf::Ioctl Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::Ioctl Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -1522,14 +1445,6 @@ class Node final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
-    // Deprecated. Only for use with compatibility with devhost.
-    // Request is heap-allocated. Response is heap-allocated.
-    static ResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
-
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
@@ -1589,9 +1504,6 @@ class Node final {
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    static ::fidl::DecodeResult<IoctlResponse> Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1677,20 +1589,6 @@ class Node final {
 
     virtual void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, SetAttrCompleter::Sync _completer) = 0;
 
-    class IoctlCompleterBase : public _Base {
-     public:
-      void Reply(int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out);
-      void Reply(::fidl::BytePart _buffer, int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out);
-      void Reply(::fidl::DecodedMessage<IoctlResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using IoctlCompleter = ::fidl::Completer<IoctlCompleterBase>;
-
-    virtual void Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, IoctlCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
-
   };
 
   // Attempts to dispatch the incoming message to a handler function in the server implementation.
@@ -1751,8 +1649,6 @@ class Node final {
     static void GetAttrResponse(const ::fidl::DecodedMessage<Node::GetAttrResponse>& _msg);
     static void SetAttrRequest(const ::fidl::DecodedMessage<Node::SetAttrRequest>& _msg);
     static void SetAttrResponse(const ::fidl::DecodedMessage<Node::SetAttrResponse>& _msg);
-    static void IoctlRequest(const ::fidl::DecodedMessage<Node::IoctlRequest>& _msg);
-    static void IoctlResponse(const ::fidl::DecodedMessage<Node::IoctlResponse>& _msg);
   };
 };
 
@@ -1764,8 +1660,6 @@ extern "C" const fidl_type_t fuchsia_io_FileSyncResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetAttrResponseTable;
-extern "C" const fidl_type_t fuchsia_io_FileIoctlRequestTable;
-extern "C" const fidl_type_t fuchsia_io_FileIoctlResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileReadResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileReadAtResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileWriteRequestTable;
@@ -1902,39 +1796,6 @@ class File final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = SetAttrResponse;
-  };
-
-  struct IoctlResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t s;
-    ::fidl::VectorView<::zx::handle> handles;
-    ::fidl::VectorView<uint8_t> out;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileIoctlResponseTable;
-    static constexpr uint32_t MaxNumHandles = 2;
-    static constexpr uint32_t PrimarySize = 56;
-    static constexpr uint32_t MaxOutOfLine = 8200;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct IoctlRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    uint32_t opcode;
-    uint64_t max_out;
-    ::fidl::VectorView<::zx::handle> handles;
-    ::fidl::VectorView<uint8_t> in;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileIoctlRequestTable;
-    static constexpr uint32_t MaxNumHandles = 2;
-    static constexpr uint32_t PrimarySize = 64;
-    static constexpr uint32_t MaxOutOfLine = 8200;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = IoctlResponse;
   };
 
   struct ReadResponse final {
@@ -2296,22 +2157,6 @@ class File final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class Ioctl_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      Ioctl_Impl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
-      ~Ioctl_Impl() = default;
-      Ioctl_Impl(Ioctl_Impl&& other) = default;
-      Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
     class Read_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -2463,7 +2308,6 @@ class File final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
-    using Ioctl = Ioctl_Impl<IoctlResponse>;
     using Read = Read_Impl<ReadResponse>;
     using ReadAt = ReadAt_Impl<ReadAtResponse>;
     using Write = Write_Impl<WriteResponse>;
@@ -2563,22 +2407,6 @@ class File final {
       ~SetAttr_Impl() = default;
       SetAttr_Impl(SetAttr_Impl&& other) = default;
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class Ioctl_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      Ioctl_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
-      ~Ioctl_Impl() = default;
-      Ioctl_Impl(Ioctl_Impl&& other) = default;
-      Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -2739,7 +2567,6 @@ class File final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
-    using Ioctl = Ioctl_Impl<IoctlResponse>;
     using Read = Read_Impl<ReadResponse>;
     using ReadAt = ReadAt_Impl<ReadAtResponse>;
     using Write = Write_Impl<WriteResponse>;
@@ -2867,14 +2694,6 @@ class File final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Request is heap-allocated. Response is heap-allocated.
-    ResultOf::Ioctl Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::Ioctl Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
 
     // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
@@ -3130,14 +2949,6 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
-    // Deprecated. Only for use with compatibility with devhost.
-    // Request is heap-allocated. Response is heap-allocated.
-    static ResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
-
     // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
@@ -3332,9 +3143,6 @@ class File final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
 
-    // Deprecated. Only for use with compatibility with devhost.
-    static ::fidl::DecodeResult<IoctlResponse> Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
-
     // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
@@ -3476,20 +3284,6 @@ class File final {
     using SetAttrCompleter = ::fidl::Completer<SetAttrCompleterBase>;
 
     virtual void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, SetAttrCompleter::Sync _completer) = 0;
-
-    class IoctlCompleterBase : public _Base {
-     public:
-      void Reply(int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out);
-      void Reply(::fidl::BytePart _buffer, int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out);
-      void Reply(::fidl::DecodedMessage<IoctlResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using IoctlCompleter = ::fidl::Completer<IoctlCompleterBase>;
-
-    virtual void Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, IoctlCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
     class ReadCompleterBase : public _Base {
      public:
@@ -3677,8 +3471,6 @@ class File final {
     static void GetAttrResponse(const ::fidl::DecodedMessage<File::GetAttrResponse>& _msg);
     static void SetAttrRequest(const ::fidl::DecodedMessage<File::SetAttrRequest>& _msg);
     static void SetAttrResponse(const ::fidl::DecodedMessage<File::SetAttrResponse>& _msg);
-    static void IoctlRequest(const ::fidl::DecodedMessage<File::IoctlRequest>& _msg);
-    static void IoctlResponse(const ::fidl::DecodedMessage<File::IoctlResponse>& _msg);
     static void ReadRequest(const ::fidl::DecodedMessage<File::ReadRequest>& _msg);
     static void ReadResponse(const ::fidl::DecodedMessage<File::ReadResponse>& _msg);
     static void ReadAtRequest(const ::fidl::DecodedMessage<File::ReadAtRequest>& _msg);
@@ -3708,8 +3500,6 @@ extern "C" const fidl_type_t fuchsia_io_DirectorySyncResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectorySetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectorySetAttrResponseTable;
-extern "C" const fidl_type_t fuchsia_io_DirectoryIoctlRequestTable;
-extern "C" const fidl_type_t fuchsia_io_DirectoryIoctlResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryUnlinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryUnlinkResponseTable;
@@ -3845,39 +3635,6 @@ class Directory final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = SetAttrResponse;
-  };
-
-  struct IoctlResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t s;
-    ::fidl::VectorView<::zx::handle> handles;
-    ::fidl::VectorView<uint8_t> out;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryIoctlResponseTable;
-    static constexpr uint32_t MaxNumHandles = 2;
-    static constexpr uint32_t PrimarySize = 56;
-    static constexpr uint32_t MaxOutOfLine = 8200;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct IoctlRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    uint32_t opcode;
-    uint64_t max_out;
-    ::fidl::VectorView<::zx::handle> handles;
-    ::fidl::VectorView<uint8_t> in;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryIoctlRequestTable;
-    static constexpr uint32_t MaxNumHandles = 2;
-    static constexpr uint32_t PrimarySize = 64;
-    static constexpr uint32_t MaxOutOfLine = 8200;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = IoctlResponse;
   };
 
   struct OpenRequest final {
@@ -4184,22 +3941,6 @@ class Directory final {
       using Super::operator->;
       using Super::operator*;
     };
-    template <typename ResponseType>
-    class Ioctl_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      Ioctl_Impl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
-      ~Ioctl_Impl() = default;
-      Ioctl_Impl(Ioctl_Impl&& other) = default;
-      Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
     class Open_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
@@ -4331,7 +4072,6 @@ class Directory final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
-    using Ioctl = Ioctl_Impl<IoctlResponse>;
     using Open = Open_Impl;
     using Unlink = Unlink_Impl<UnlinkResponse>;
     using ReadDirents = ReadDirents_Impl<ReadDirentsResponse>;
@@ -4430,22 +4170,6 @@ class Directory final {
       ~SetAttr_Impl() = default;
       SetAttr_Impl(SetAttr_Impl&& other) = default;
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class Ioctl_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      Ioctl_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
-      ~Ioctl_Impl() = default;
-      Ioctl_Impl(Ioctl_Impl&& other) = default;
-      Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -4585,7 +4309,6 @@ class Directory final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
-    using Ioctl = Ioctl_Impl<IoctlResponse>;
     using Open = Open_Impl;
     using Unlink = Unlink_Impl<UnlinkResponse>;
     using ReadDirents = ReadDirents_Impl<ReadDirentsResponse>;
@@ -4712,14 +4435,6 @@ class Directory final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Request is heap-allocated. Response is heap-allocated.
-    ResultOf::Ioctl Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::Ioctl Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
 
     // Opens a new object relative to this directory object.
     //
@@ -5119,14 +4834,6 @@ class Directory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
-    // Deprecated. Only for use with compatibility with devhost.
-    // Request is heap-allocated. Response is heap-allocated.
-    static ResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
-
     // Opens a new object relative to this directory object.
     //
     // `path` may contain multiple segments, separated by "/" characters,
@@ -5465,9 +5172,6 @@ class Directory final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
 
-    // Deprecated. Only for use with compatibility with devhost.
-    static ::fidl::DecodeResult<IoctlResponse> Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
-
     // Opens a new object relative to this directory object.
     //
     // `path` may contain multiple segments, separated by "/" characters,
@@ -5683,20 +5387,6 @@ class Directory final {
 
     virtual void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, SetAttrCompleter::Sync _completer) = 0;
 
-    class IoctlCompleterBase : public _Base {
-     public:
-      void Reply(int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out);
-      void Reply(::fidl::BytePart _buffer, int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out);
-      void Reply(::fidl::DecodedMessage<IoctlResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using IoctlCompleter = ::fidl::Completer<IoctlCompleterBase>;
-
-    virtual void Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, IoctlCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
-
     using OpenCompleter = ::fidl::Completer<>;
 
     virtual void Open(uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object, OpenCompleter::Sync _completer) = 0;
@@ -5859,8 +5549,6 @@ class Directory final {
     static void GetAttrResponse(const ::fidl::DecodedMessage<Directory::GetAttrResponse>& _msg);
     static void SetAttrRequest(const ::fidl::DecodedMessage<Directory::SetAttrRequest>& _msg);
     static void SetAttrResponse(const ::fidl::DecodedMessage<Directory::SetAttrResponse>& _msg);
-    static void IoctlRequest(const ::fidl::DecodedMessage<Directory::IoctlRequest>& _msg);
-    static void IoctlResponse(const ::fidl::DecodedMessage<Directory::IoctlResponse>& _msg);
     static void OpenRequest(const ::fidl::DecodedMessage<Directory::OpenRequest>& _msg);
     static void UnlinkRequest(const ::fidl::DecodedMessage<Directory::UnlinkRequest>& _msg);
     static void UnlinkResponse(const ::fidl::DecodedMessage<Directory::UnlinkResponse>& _msg);
@@ -5887,8 +5575,6 @@ extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSyncResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSetAttrResponseTable;
-extern "C" const fidl_type_t fuchsia_io_DirectoryAdminIoctlRequestTable;
-extern "C" const fidl_type_t fuchsia_io_DirectoryAdminIoctlResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnlinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnlinkResponseTable;
@@ -6033,39 +5719,6 @@ class DirectoryAdmin final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = SetAttrResponse;
-  };
-
-  struct IoctlResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t s;
-    ::fidl::VectorView<::zx::handle> handles;
-    ::fidl::VectorView<uint8_t> out;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminIoctlResponseTable;
-    static constexpr uint32_t MaxNumHandles = 2;
-    static constexpr uint32_t PrimarySize = 56;
-    static constexpr uint32_t MaxOutOfLine = 8200;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct IoctlRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    uint32_t opcode;
-    uint64_t max_out;
-    ::fidl::VectorView<::zx::handle> handles;
-    ::fidl::VectorView<uint8_t> in;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminIoctlRequestTable;
-    static constexpr uint32_t MaxNumHandles = 2;
-    static constexpr uint32_t PrimarySize = 64;
-    static constexpr uint32_t MaxOutOfLine = 8200;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = IoctlResponse;
   };
 
   struct OpenRequest final {
@@ -6493,22 +6146,6 @@ class DirectoryAdmin final {
       using Super::operator->;
       using Super::operator*;
     };
-    template <typename ResponseType>
-    class Ioctl_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      Ioctl_Impl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
-      ~Ioctl_Impl() = default;
-      Ioctl_Impl(Ioctl_Impl&& other) = default;
-      Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
     class Open_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
@@ -6736,7 +6373,6 @@ class DirectoryAdmin final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
-    using Ioctl = Ioctl_Impl<IoctlResponse>;
     using Open = Open_Impl;
     using Unlink = Unlink_Impl<UnlinkResponse>;
     using ReadDirents = ReadDirents_Impl<ReadDirentsResponse>;
@@ -6841,22 +6477,6 @@ class DirectoryAdmin final {
       ~SetAttr_Impl() = default;
       SetAttr_Impl(SetAttr_Impl&& other) = default;
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class Ioctl_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      Ioctl_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
-      ~Ioctl_Impl() = default;
-      Ioctl_Impl(Ioctl_Impl&& other) = default;
-      Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -7092,7 +6712,6 @@ class DirectoryAdmin final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
-    using Ioctl = Ioctl_Impl<IoctlResponse>;
     using Open = Open_Impl;
     using Unlink = Unlink_Impl<UnlinkResponse>;
     using ReadDirents = ReadDirents_Impl<ReadDirentsResponse>;
@@ -7225,14 +6844,6 @@ class DirectoryAdmin final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Request is heap-allocated. Response is heap-allocated.
-    ResultOf::Ioctl Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::Ioctl Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
 
     // Opens a new object relative to this directory object.
     //
@@ -7692,14 +7303,6 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
-    // Deprecated. Only for use with compatibility with devhost.
-    // Request is heap-allocated. Response is heap-allocated.
-    static ResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
-
     // Opens a new object relative to this directory object.
     //
     // `path` may contain multiple segments, separated by "/" characters,
@@ -8098,9 +7701,6 @@ class DirectoryAdmin final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
 
-    // Deprecated. Only for use with compatibility with devhost.
-    static ::fidl::DecodeResult<IoctlResponse> Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
-
     // Opens a new object relative to this directory object.
     //
     // `path` may contain multiple segments, separated by "/" characters,
@@ -8339,20 +7939,6 @@ class DirectoryAdmin final {
     using SetAttrCompleter = ::fidl::Completer<SetAttrCompleterBase>;
 
     virtual void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, SetAttrCompleter::Sync _completer) = 0;
-
-    class IoctlCompleterBase : public _Base {
-     public:
-      void Reply(int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out);
-      void Reply(::fidl::BytePart _buffer, int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out);
-      void Reply(::fidl::DecodedMessage<IoctlResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using IoctlCompleter = ::fidl::Completer<IoctlCompleterBase>;
-
-    virtual void Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, IoctlCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
     using OpenCompleter = ::fidl::Completer<>;
 
@@ -8600,8 +8186,6 @@ class DirectoryAdmin final {
     static void GetAttrResponse(const ::fidl::DecodedMessage<DirectoryAdmin::GetAttrResponse>& _msg);
     static void SetAttrRequest(const ::fidl::DecodedMessage<DirectoryAdmin::SetAttrRequest>& _msg);
     static void SetAttrResponse(const ::fidl::DecodedMessage<DirectoryAdmin::SetAttrResponse>& _msg);
-    static void IoctlRequest(const ::fidl::DecodedMessage<DirectoryAdmin::IoctlRequest>& _msg);
-    static void IoctlResponse(const ::fidl::DecodedMessage<DirectoryAdmin::IoctlResponse>& _msg);
     static void OpenRequest(const ::fidl::DecodedMessage<DirectoryAdmin::OpenRequest>& _msg);
     static void UnlinkRequest(const ::fidl::DecodedMessage<DirectoryAdmin::UnlinkRequest>& _msg);
     static void UnlinkResponse(const ::fidl::DecodedMessage<DirectoryAdmin::UnlinkResponse>& _msg);
@@ -8843,27 +8427,6 @@ static_assert(sizeof(::llcpp::fuchsia::io::Node::SetAttrResponse)
 static_assert(offsetof(::llcpp::fuchsia::io::Node::SetAttrResponse, s) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::io::Node::IoctlRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::io::Node::IoctlRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::io::Node::IoctlRequest)
-    == ::llcpp::fuchsia::io::Node::IoctlRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::io::Node::IoctlRequest, opcode) == 16);
-static_assert(offsetof(::llcpp::fuchsia::io::Node::IoctlRequest, max_out) == 24);
-static_assert(offsetof(::llcpp::fuchsia::io::Node::IoctlRequest, handles) == 32);
-static_assert(offsetof(::llcpp::fuchsia::io::Node::IoctlRequest, in) == 48);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::io::Node::IoctlResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::io::Node::IoctlResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::io::Node::IoctlResponse)
-    == ::llcpp::fuchsia::io::Node::IoctlResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::io::Node::IoctlResponse, s) == 16);
-static_assert(offsetof(::llcpp::fuchsia::io::Node::IoctlResponse, handles) == 24);
-static_assert(offsetof(::llcpp::fuchsia::io::Node::IoctlResponse, out) == 40);
-
-template <>
 struct IsFidlType<::llcpp::fuchsia::io::File::CloneRequest> : public std::true_type {};
 template <>
 struct IsFidlMessage<::llcpp::fuchsia::io::File::CloneRequest> : public std::true_type {};
@@ -8930,27 +8493,6 @@ struct IsFidlMessage<::llcpp::fuchsia::io::File::SetAttrResponse> : public std::
 static_assert(sizeof(::llcpp::fuchsia::io::File::SetAttrResponse)
     == ::llcpp::fuchsia::io::File::SetAttrResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::io::File::SetAttrResponse, s) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::io::File::IoctlRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::io::File::IoctlRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::io::File::IoctlRequest)
-    == ::llcpp::fuchsia::io::File::IoctlRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::io::File::IoctlRequest, opcode) == 16);
-static_assert(offsetof(::llcpp::fuchsia::io::File::IoctlRequest, max_out) == 24);
-static_assert(offsetof(::llcpp::fuchsia::io::File::IoctlRequest, handles) == 32);
-static_assert(offsetof(::llcpp::fuchsia::io::File::IoctlRequest, in) == 48);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::io::File::IoctlResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::io::File::IoctlResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::io::File::IoctlResponse)
-    == ::llcpp::fuchsia::io::File::IoctlResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::io::File::IoctlResponse, s) == 16);
-static_assert(offsetof(::llcpp::fuchsia::io::File::IoctlResponse, handles) == 24);
-static_assert(offsetof(::llcpp::fuchsia::io::File::IoctlResponse, out) == 40);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::io::File::ReadRequest> : public std::true_type {};
@@ -9167,27 +8709,6 @@ static_assert(sizeof(::llcpp::fuchsia::io::Directory::SetAttrResponse)
 static_assert(offsetof(::llcpp::fuchsia::io::Directory::SetAttrResponse, s) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::io::Directory::IoctlRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::io::Directory::IoctlRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::io::Directory::IoctlRequest)
-    == ::llcpp::fuchsia::io::Directory::IoctlRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::io::Directory::IoctlRequest, opcode) == 16);
-static_assert(offsetof(::llcpp::fuchsia::io::Directory::IoctlRequest, max_out) == 24);
-static_assert(offsetof(::llcpp::fuchsia::io::Directory::IoctlRequest, handles) == 32);
-static_assert(offsetof(::llcpp::fuchsia::io::Directory::IoctlRequest, in) == 48);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::io::Directory::IoctlResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::io::Directory::IoctlResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::io::Directory::IoctlResponse)
-    == ::llcpp::fuchsia::io::Directory::IoctlResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::io::Directory::IoctlResponse, s) == 16);
-static_assert(offsetof(::llcpp::fuchsia::io::Directory::IoctlResponse, handles) == 24);
-static_assert(offsetof(::llcpp::fuchsia::io::Directory::IoctlResponse, out) == 40);
-
-template <>
 struct IsFidlType<::llcpp::fuchsia::io::Directory::OpenRequest> : public std::true_type {};
 template <>
 struct IsFidlMessage<::llcpp::fuchsia::io::Directory::OpenRequest> : public std::true_type {};
@@ -9369,27 +8890,6 @@ struct IsFidlMessage<::llcpp::fuchsia::io::DirectoryAdmin::SetAttrResponse> : pu
 static_assert(sizeof(::llcpp::fuchsia::io::DirectoryAdmin::SetAttrResponse)
     == ::llcpp::fuchsia::io::DirectoryAdmin::SetAttrResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::io::DirectoryAdmin::SetAttrResponse, s) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::io::DirectoryAdmin::IoctlRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::io::DirectoryAdmin::IoctlRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::io::DirectoryAdmin::IoctlRequest)
-    == ::llcpp::fuchsia::io::DirectoryAdmin::IoctlRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::io::DirectoryAdmin::IoctlRequest, opcode) == 16);
-static_assert(offsetof(::llcpp::fuchsia::io::DirectoryAdmin::IoctlRequest, max_out) == 24);
-static_assert(offsetof(::llcpp::fuchsia::io::DirectoryAdmin::IoctlRequest, handles) == 32);
-static_assert(offsetof(::llcpp::fuchsia::io::DirectoryAdmin::IoctlRequest, in) == 48);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::io::DirectoryAdmin::IoctlResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::io::DirectoryAdmin::IoctlResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::io::DirectoryAdmin::IoctlResponse)
-    == ::llcpp::fuchsia::io::DirectoryAdmin::IoctlResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::io::DirectoryAdmin::IoctlResponse, s) == 16);
-static_assert(offsetof(::llcpp::fuchsia::io::DirectoryAdmin::IoctlResponse, handles) == 24);
-static_assert(offsetof(::llcpp::fuchsia::io::DirectoryAdmin::IoctlResponse, out) == 40);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::io::DirectoryAdmin::OpenRequest> : public std::true_type {};

@@ -12,7 +12,6 @@
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/handle.h>
 #include <zircon/fidl.h>
 
 #include <fuchsia/io/llcpp/fidl.h>
@@ -227,8 +226,6 @@ extern "C" const fidl_type_t fuchsia_posix_socket_ControlSyncResponseTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetAttrResponseTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlIoctlRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlIoctlResponseTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlBindRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlBindResponseTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlConnectRequestTable;
@@ -374,39 +371,6 @@ class Control final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = SetAttrResponse;
-  };
-
-  struct IoctlResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t s;
-    ::fidl::VectorView<::zx::handle> handles;
-    ::fidl::VectorView<uint8_t> out;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlIoctlResponseTable;
-    static constexpr uint32_t MaxNumHandles = 2;
-    static constexpr uint32_t PrimarySize = 56;
-    static constexpr uint32_t MaxOutOfLine = 8200;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct IoctlRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    uint32_t opcode;
-    uint64_t max_out;
-    ::fidl::VectorView<::zx::handle> handles;
-    ::fidl::VectorView<uint8_t> in;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlIoctlRequestTable;
-    static constexpr uint32_t MaxNumHandles = 2;
-    static constexpr uint32_t PrimarySize = 64;
-    static constexpr uint32_t MaxOutOfLine = 8200;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = IoctlResponse;
   };
 
   struct BindResponse final {
@@ -724,22 +688,6 @@ class Control final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class Ioctl_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      Ioctl_Impl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
-      ~Ioctl_Impl() = default;
-      Ioctl_Impl(Ioctl_Impl&& other) = default;
-      Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
     class Bind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -875,7 +823,6 @@ class Control final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
-    using Ioctl = Ioctl_Impl<IoctlResponse>;
     using Bind = Bind_Impl<BindResponse>;
     using Connect = Connect_Impl<ConnectResponse>;
     using Listen = Listen_Impl<ListenResponse>;
@@ -974,22 +921,6 @@ class Control final {
       ~SetAttr_Impl() = default;
       SetAttr_Impl(SetAttr_Impl&& other) = default;
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class Ioctl_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      Ioctl_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
-      ~Ioctl_Impl() = default;
-      Ioctl_Impl(Ioctl_Impl&& other) = default;
-      Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -1134,7 +1065,6 @@ class Control final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
-    using Ioctl = Ioctl_Impl<IoctlResponse>;
     using Bind = Bind_Impl<BindResponse>;
     using Connect = Connect_Impl<ConnectResponse>;
     using Listen = Listen_Impl<ListenResponse>;
@@ -1261,14 +1191,6 @@ class Control final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Request is heap-allocated. Response is heap-allocated.
-    ResultOf::Ioctl Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::Ioctl Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
 
     // Sets the local address used for the socket.
     // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
@@ -1456,14 +1378,6 @@ class Control final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
-    // Deprecated. Only for use with compatibility with devhost.
-    // Request is heap-allocated. Response is heap-allocated.
-    static ResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
-
-    // Deprecated. Only for use with compatibility with devhost.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
-
     // Sets the local address used for the socket.
     // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Bind Bind(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> addr);
@@ -1590,9 +1504,6 @@ class Control final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
 
-    // Deprecated. Only for use with compatibility with devhost.
-    static ::fidl::DecodeResult<IoctlResponse> Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
-
     // Sets the local address used for the socket.
     static ::fidl::DecodeResult<BindResponse> Bind(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer);
 
@@ -1701,20 +1612,6 @@ class Control final {
     using SetAttrCompleter = ::fidl::Completer<SetAttrCompleterBase>;
 
     virtual void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, SetAttrCompleter::Sync _completer) = 0;
-
-    class IoctlCompleterBase : public _Base {
-     public:
-      void Reply(int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out);
-      void Reply(::fidl::BytePart _buffer, int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out);
-      void Reply(::fidl::DecodedMessage<IoctlResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using IoctlCompleter = ::fidl::Completer<IoctlCompleterBase>;
-
-    virtual void Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, IoctlCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
     class BindCompleterBase : public _Base {
      public:
@@ -1888,8 +1785,6 @@ class Control final {
     static void GetAttrResponse(const ::fidl::DecodedMessage<Control::GetAttrResponse>& _msg);
     static void SetAttrRequest(const ::fidl::DecodedMessage<Control::SetAttrRequest>& _msg);
     static void SetAttrResponse(const ::fidl::DecodedMessage<Control::SetAttrResponse>& _msg);
-    static void IoctlRequest(const ::fidl::DecodedMessage<Control::IoctlRequest>& _msg);
-    static void IoctlResponse(const ::fidl::DecodedMessage<Control::IoctlResponse>& _msg);
     static void BindRequest(const ::fidl::DecodedMessage<Control::BindRequest>& _msg);
     static void BindResponse(const ::fidl::DecodedMessage<Control::BindResponse>& _msg);
     static void ConnectRequest(const ::fidl::DecodedMessage<Control::ConnectRequest>& _msg);
@@ -2002,27 +1897,6 @@ struct IsFidlMessage<::llcpp::fuchsia::posix::socket::Control::SetAttrResponse> 
 static_assert(sizeof(::llcpp::fuchsia::posix::socket::Control::SetAttrResponse)
     == ::llcpp::fuchsia::posix::socket::Control::SetAttrResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::posix::socket::Control::SetAttrResponse, s) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::posix::socket::Control::IoctlRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::posix::socket::Control::IoctlRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::posix::socket::Control::IoctlRequest)
-    == ::llcpp::fuchsia::posix::socket::Control::IoctlRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::posix::socket::Control::IoctlRequest, opcode) == 16);
-static_assert(offsetof(::llcpp::fuchsia::posix::socket::Control::IoctlRequest, max_out) == 24);
-static_assert(offsetof(::llcpp::fuchsia::posix::socket::Control::IoctlRequest, handles) == 32);
-static_assert(offsetof(::llcpp::fuchsia::posix::socket::Control::IoctlRequest, in) == 48);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::posix::socket::Control::IoctlResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::posix::socket::Control::IoctlResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::posix::socket::Control::IoctlResponse)
-    == ::llcpp::fuchsia::posix::socket::Control::IoctlResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::posix::socket::Control::IoctlResponse, s) == 16);
-static_assert(offsetof(::llcpp::fuchsia::posix::socket::Control::IoctlResponse, handles) == 24);
-static_assert(offsetof(::llcpp::fuchsia::posix::socket::Control::IoctlResponse, out) == 40);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::posix::socket::Control::BindRequest> : public std::true_type {};

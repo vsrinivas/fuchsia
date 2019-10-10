@@ -224,9 +224,6 @@ where
                 // Simple directory.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            DirectoryRequest::Ioctl { opcode: _, max_out: _, handles: _, in_: _, responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED, &mut iter::empty(), &mut iter::empty())?;
-            }
             DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
                 self.handle_open(flags, mode, path, object);
             }

@@ -693,12 +693,6 @@ func (s *socketImpl) SetAttr(flags uint32, attributes io.NodeAttributes) (int32,
 
 	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: "fuchsia.posix.socket.Control"}
 }
-func (s *socketImpl) Ioctl(opcode uint32, maxOut uint64, handles []zx.Handle, in []uint8) (int32, []zx.Handle, []uint8, error) {
-	syslog.VLogTf(syslog.DebugVerbosity, "Ioctl", "%p", s.endpoint)
-
-	return 0, nil, nil, &zx.Error{Status: zx.ErrNotSupported, Text: "fuchsia.posix.socket.Control"}
-}
-
 func (s *socketImpl) Accept(flags int16) (int16, socket.ControlInterface, error) {
 	ep, wq, err := s.endpoint.ep.Accept()
 	// NB: we need to do this before checking the error, or the incoming signal

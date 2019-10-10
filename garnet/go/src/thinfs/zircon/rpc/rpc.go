@@ -204,10 +204,6 @@ func (d *directoryWrapper) SetAttr(flags uint32, attr io.NodeAttributes) (int32,
 	return int32(errorToZx(d.dir.Touch(t, t))), nil
 }
 
-func (d *directoryWrapper) Ioctl(opcode uint32, maxOut uint64, handles []zx.Handle, in []uint8) (int32, []zx.Handle, []uint8, error) {
-	return int32(zx.ErrNotSupported), nil, nil, nil
-}
-
 func (d *directoryWrapper) Open(inFlags, inMode uint32, path string, node io.NodeInterfaceRequest) error {
 	flags := openFlagsFromFIDL(inFlags, inMode)
 	if flags.Path() {
@@ -504,10 +500,6 @@ func (f *fileWrapper) SetAttr(flags uint32, attr io.NodeAttributes) (int32, erro
 	}
 	t := time.Unix(0, int64(attr.ModificationTime))
 	return int32(errorToZx(f.file.Touch(t, t))), nil
-}
-
-func (f *fileWrapper) Ioctl(opcode uint32, maxOut uint64, handles []zx.Handle, in []uint8) (int32, []zx.Handle, []uint8, error) {
-	return int32(zx.ErrNotSupported), nil, nil, nil
 }
 
 func (f *fileWrapper) Read(count uint64) (int32, []uint8, error) {

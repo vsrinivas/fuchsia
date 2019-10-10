@@ -1005,9 +1005,6 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 responder.send(zx::sys::ZX_OK, &mut attrs)?
             }
             DirectoryRequest::SetAttr { responder, .. } => unsupported!(responder)?,
-            DirectoryRequest::Ioctl { responder, .. } => {
-                unsupported!(responder, &mut std::iter::empty(), &mut std::iter::empty())?
-            }
             DirectoryRequest::Sync { responder } => unsupported!(responder)?,
             DirectoryRequest::Unlink { responder, .. } => unsupported!(responder)?,
             DirectoryRequest::ReadDirents { max_bytes, responder } => {
@@ -1066,9 +1063,6 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 responder.send(zx::sys::ZX_OK, &mut attrs)?
             }
             FileRequest::SetAttr { responder, .. } => unsupported!(responder)?,
-            FileRequest::Ioctl { responder, .. } => {
-                unsupported!(responder, &mut std::iter::empty(), &mut std::iter::empty())?
-            }
             // FIXME(cramertj) enforce READ rights
             FileRequest::Read { count, responder } => match &self.nodes[connection.position] {
                 ServiceFsNode::Directory { .. } | ServiceFsNode::Service(_) => {
@@ -1168,9 +1162,6 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 responder.send(zx::sys::ZX_OK, &mut attrs)?
             }
             NodeRequest::SetAttr { responder, .. } => unsupported!(responder)?,
-            NodeRequest::Ioctl { responder, .. } => {
-                unsupported!(responder, &mut std::iter::empty(), &mut std::iter::empty())?
-            }
         }
         Ok(ConnectionState::Open)
     }

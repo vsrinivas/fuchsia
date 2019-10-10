@@ -493,12 +493,6 @@ static zx_status_t fidl_node_setattr(void* ctx, uint32_t flags,
   return fuchsia_io_NodeSetAttr_reply(txn, ZX_ERR_NOT_SUPPORTED);
 }
 
-static zx_status_t fidl_node_ioctl(void* ctx, uint32_t opcode, uint64_t max_out,
-                                   const zx_handle_t* handles_data, size_t handles_count,
-                                   const uint8_t* in_data, size_t in_count, fidl_txn_t* txn) {
-  return fuchsia_io_NodeIoctl_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr, 0, nullptr, 0);
-}
-
 static const fuchsia_io_Node_ops_t kNodeOps = {
     .Clone = fidl_node_clone,
     .Close = fidl_node_close,
@@ -506,7 +500,6 @@ static const fuchsia_io_Node_ops_t kNodeOps = {
     .Sync = fidl_node_sync,
     .GetAttr = fidl_node_getattr,
     .SetAttr = fidl_node_setattr,
-    .Ioctl = fidl_node_ioctl,
 };
 
 static zx_status_t fidl_DeviceControllerBind(void* ctx, const char* driver_data,

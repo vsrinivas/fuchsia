@@ -215,12 +215,6 @@ protocol Node {
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     SetAttr(uint32 flags, NodeAttributes attributes) -> (zx.status s);
-
-    /// Deprecated. Only for use with compatibility with devhost.
-    [Transitional = "Being removed"]
-    Ioctl(uint32 opcode, uint64 max_out, vector<handle>:2 handles,
-          vector<uint8>:MAX_BUF in)
-        -> (zx.status s, vector<handle>:2 handles, vector<uint8>:MAX_BUF out);
 };
 
 /// Bits reserved for posix protections. Native fuchsia filesystems

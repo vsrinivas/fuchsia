@@ -82,7 +82,6 @@ class MockBlockDevice {
         .Sync = nullptr,
         .GetAttr = nullptr,
         .SetAttr = nullptr,
-        .Ioctl = nullptr,
     };
     return &kOps;
   }

@@ -48,12 +48,6 @@ constexpr uint64_t kDevice_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetAttrResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_Ioctl_Ordinal = 0x35f3aca700000000lu;
-[[maybe_unused]]
-constexpr uint64_t kDevice_Ioctl_GenOrdinal = 0x45afae358dcb5b88lu;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceIoctlRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceIoctlResponseTable;
-[[maybe_unused]]
 constexpr uint64_t kDevice_Read_Ordinal = 0x25f7418400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Read_GenOrdinal = 0x29b2b7074c95208clu;
@@ -502,79 +496,6 @@ Device::UnownedResultOf::SetAttr Device::Call::SetAttr(zx::unowned_channel _clie
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::SetAttrResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
-template <>
-Device::ResultOf::Ioctl_Impl<Device::IoctlResponse>::Ioctl_Impl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<IoctlRequest, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
-  IoctlRequest _request = {};
-  _request.opcode = std::move(opcode);
-  _request.max_out = std::move(max_out);
-  _request.handles = std::move(handles);
-  _request.in = std::move(in);
-  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<IoctlRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      Device::InPlace::Ioctl(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
-}
-
-Device::ResultOf::Ioctl Device::SyncClient::Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in) {
-  return ResultOf::Ioctl(zx::unowned_channel(this->channel_), std::move(opcode), std::move(max_out), std::move(handles), std::move(in));
-}
-
-Device::ResultOf::Ioctl Device::Call::Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in) {
-  return ResultOf::Ioctl(std::move(_client_end), std::move(opcode), std::move(max_out), std::move(handles), std::move(in));
-}
-
-template <>
-Device::UnownedResultOf::Ioctl_Impl<Device::IoctlResponse>::Ioctl_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < IoctlRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<IoctlResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
-  IoctlRequest _request = {};
-  _request.opcode = std::move(opcode);
-  _request.max_out = std::move(max_out);
-  _request.handles = std::move(handles);
-  _request.in = std::move(in);
-  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<IoctlRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      Device::InPlace::Ioctl(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
-}
-
-Device::UnownedResultOf::Ioctl Device::SyncClient::Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Ioctl(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(opcode), std::move(max_out), std::move(handles), std::move(in), std::move(_response_buffer));
-}
-
-Device::UnownedResultOf::Ioctl Device::Call::Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Ioctl(std::move(_client_end), std::move(_request_buffer), std::move(opcode), std::move(max_out), std::move(handles), std::move(in), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<Device::IoctlResponse> Device::InPlace::Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer) {
-  Device::SetTransactionHeaderFor::IoctlRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Device::IoctlResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<IoctlRequest, IoctlResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Device::IoctlResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -1683,19 +1604,6 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::SetAttrCompleter::Sync(txn));
       return true;
     }
-    case kDevice_Ioctl_Ordinal:
-    case kDevice_Ioctl_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<IoctlRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->Ioctl(std::move(message->opcode), std::move(message->max_out), std::move(message->handles), std::move(message->in),
-        Interface::IoctlCompleter::Sync(txn));
-      return true;
-    }
     case kDevice_Read_Ordinal:
     case kDevice_Read_GenOrdinal:
     {
@@ -2126,56 +2034,6 @@ void Device::Interface::SetAttrCompleterBase::Reply(::fidl::BytePart _buffer, in
 
 void Device::Interface::SetAttrCompleterBase::Reply(::fidl::DecodedMessage<SetAttrResponse> params) {
   Device::SetTransactionHeaderFor::SetAttrResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
-void Device::Interface::IoctlCompleterBase::Reply(int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<IoctlResponse, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
-  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
-  IoctlResponse _response = {};
-  Device::SetTransactionHeaderFor::IoctlResponse(
-      ::fidl::DecodedMessage<IoctlResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              IoctlResponse::PrimarySize,
-              IoctlResponse::PrimarySize)));
-  _response.s = std::move(s);
-  _response.handles = std::move(handles);
-  _response.out = std::move(out);
-  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
-                                                                          _kWriteAllocSize));
-  if (_linearize_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  CompleterBase::SendReply(std::move(_linearize_result.message));
-}
-
-void Device::Interface::IoctlCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> out) {
-  if (_buffer.capacity() < IoctlResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  IoctlResponse _response = {};
-  Device::SetTransactionHeaderFor::IoctlResponse(
-      ::fidl::DecodedMessage<IoctlResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              IoctlResponse::PrimarySize,
-              IoctlResponse::PrimarySize)));
-  _response.s = std::move(s);
-  _response.handles = std::move(handles);
-  _response.out = std::move(out);
-  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  CompleterBase::SendReply(std::move(_linearize_result.message));
-}
-
-void Device::Interface::IoctlCompleterBase::Reply(::fidl::DecodedMessage<IoctlResponse> params) {
-  Device::SetTransactionHeaderFor::IoctlResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -2823,15 +2681,6 @@ void Device::SetTransactionHeaderFor::SetAttrRequest(const ::fidl::DecodedMessag
 void Device::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMessage<Device::SetAttrResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
   _msg.message()->_hdr.ordinal = kDevice_SetAttr_Ordinal;
-}
-
-void Device::SetTransactionHeaderFor::IoctlRequest(const ::fidl::DecodedMessage<Device::IoctlRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_Ioctl_Ordinal;
-}
-void Device::SetTransactionHeaderFor::IoctlResponse(const ::fidl::DecodedMessage<Device::IoctlResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_Ioctl_Ordinal;
 }
 
 void Device::SetTransactionHeaderFor::ReadRequest(const ::fidl::DecodedMessage<Device::ReadRequest>& _msg) {
