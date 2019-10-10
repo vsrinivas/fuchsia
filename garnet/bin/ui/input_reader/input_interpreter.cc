@@ -197,6 +197,9 @@ Protocol InputInterpreter::ExtractProtocol(hid::Usage input) {
       {{static_cast<uint16_t>(Page::kGenericDesktop),
         static_cast<uint32_t>(GenericDesktop::kPointer)},
        Protocol::Pointer},
+      {{static_cast<uint16_t>(Page::kGenericDesktop),
+        static_cast<uint32_t>(GenericDesktop::kKeyboard)},
+       Protocol::Keyboard},
       // Add more sensors here
   };
 
@@ -323,6 +326,13 @@ bool InputInterpreter::ParseHidInputReportDescriptor(const hid::ReportDescriptor
         input_device.report->mouse = fuchsia::ui::input::MouseReport::New();
         break;
       }
+      case Protocol::Keyboard: {
+        FXL_VLOG(2) << "Device " << name() << " has HID keyboard";
+
+        input_device.device = std::make_unique<Keyboard>();
+        input_device.report->keyboard = fuchsia::ui::input::KeyboardReport::New();
+        break;
+      }
       case Protocol::Stylus: {
         FXL_VLOG(2) << "Device " << name() << " has HID stylus";
 
@@ -371,10 +381,6 @@ bool InputInterpreter::ParseProtocol() {
   // Check the boot mode. For most keyboards and mouses Zircon requests the boot protocol
   // which has a fixed layout. This covers the following two cases:
   HidDecoder::BootMode boot_mode = hid_decoder_->ReadBootMode();
-  if (boot_mode == HidDecoder::BootMode::KEYBOARD) {
-    protocol_ = Protocol::Keyboard;
-    return true;
-  }
   if (boot_mode == HidDecoder::BootMode::MOUSE) {
     protocol_ = Protocol::BootMouse;
     return true;

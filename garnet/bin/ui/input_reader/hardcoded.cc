@@ -166,28 +166,6 @@ bool Hardcoded::ParseAmbientLightDescriptor(const hid::ReportField* fields, size
   return false;
 }
 
-bool Hardcoded::ParseKeyboardReport(const uint8_t* report, size_t len,
-                                    fuchsia::ui::input::InputReport* keyboard_report) {
-  hid_keys_t key_state;
-  uint8_t keycode;
-  hid_kbd_parse_report(report, &key_state);
-  keyboard_report->event_time = InputEventTimestampNow();
-  keyboard_report->trace_id = TRACE_NONCE();
-
-  std::vector<uint32_t> pressed_keys;
-  hid_for_every_key(&key_state, keycode) {
-    if (keycode == HID_USAGE_KEY_ERROR_ROLLOVER) {
-      FXL_VLOG(2) << name() << " rollover error";
-      return false;
-    }
-    pressed_keys.push_back(keycode);
-  }
-  pressed_keys.swap(keyboard_report->keyboard->pressed_keys);
-  FXL_VLOG(2) << name() << " parsed: " << *keyboard_report;
-
-  return true;
-}
-
 void Hardcoded::ParseMouseReport(const uint8_t* r, size_t len,
                                  fuchsia::ui::input::InputReport* mouse_report) {
   auto report = reinterpret_cast<const hid_boot_mouse_report_t*>(r);
@@ -323,18 +301,8 @@ Protocol Hardcoded::MatchProtocol(const std::vector<uint8_t> desc, HidDecoder* h
 
 void Hardcoded::Initialize(Protocol protocol) {
   protocol_ = protocol;
-  if (protocol == Protocol::Keyboard) {
-    FXL_VLOG(2) << "Device " << name() << " has keyboard";
-    has_keyboard_ = true;
-    keyboard_descriptor_ = fuchsia::ui::input::KeyboardDescriptor::New();
-    keyboard_descriptor_->keys.resize(HID_USAGE_KEY_RIGHT_GUI - HID_USAGE_KEY_A + 1);
-    for (size_t index = HID_USAGE_KEY_A; index <= HID_USAGE_KEY_RIGHT_GUI; ++index) {
-      keyboard_descriptor_->keys.at(index - HID_USAGE_KEY_A) = index;
-    }
 
-    keyboard_report_ = fuchsia::ui::input::InputReport::New();
-    keyboard_report_->keyboard = fuchsia::ui::input::KeyboardReport::New();
-  } else if (protocol == Protocol::BootMouse || protocol == Protocol::Gamepad) {
+  if (protocol == Protocol::BootMouse || protocol == Protocol::Gamepad) {
     FXL_VLOG(2) << "Device " << name() << " has mouse";
     has_mouse_ = true;
     mouse_device_type_ =
@@ -406,9 +374,6 @@ void Hardcoded::NotifyRegistry(fuchsia::ui::input::InputDeviceRegistry* registry
   // Register the hardcoded device's descriptors.
   {
     fuchsia::ui::input::DeviceDescriptor descriptor;
-    if (has_keyboard_) {
-      fidl::Clone(keyboard_descriptor_, &descriptor.keyboard);
-    }
     if (has_mouse_) {
       fidl::Clone(mouse_descriptor_, &descriptor.mouse);
     }
@@ -423,14 +388,6 @@ void Hardcoded::NotifyRegistry(fuchsia::ui::input::InputDeviceRegistry* registry
 }
 
 void Hardcoded::Read(const uint8_t* report, int report_len, bool discard) {
-  if (has_keyboard_) {
-    bool parsed = ParseKeyboardReport(report, report_len, keyboard_report_.get());
-    if (!discard && parsed) {
-      TRACE_FLOW_BEGIN("input", "hid_read_to_listener", keyboard_report_->trace_id);
-      input_device_->DispatchReport(CloneReport(*keyboard_report_));
-    }
-  }
-
   switch (mouse_device_type_) {
     case MouseDeviceType::BOOT:
       ParseMouseReport(report, report_len, mouse_report_.get());
