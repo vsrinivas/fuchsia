@@ -3,8 +3,5 @@
 // found in the LICENSE file.
 
 //! Rust bindings to common Fuchsia device libraries
-//! Currently pty only implemented, others to follow
-
-#![allow(dead_code)]
 
 pub mod pty;

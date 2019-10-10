@@ -736,18 +736,6 @@ zx_status_t fdio_ns_get_installed(fdio_ns_t** ns) {
   return status;
 }
 
-__EXPORT
-ssize_t fdio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf,
-                   size_t out_len) {
-  fdio_t* io;
-  if ((io = fd_to_io(fd)) == NULL) {
-    return ZX_ERR_BAD_HANDLE;
-  }
-  ssize_t r = fdio_get_ops(io)->ioctl(io, op, in_buf, in_len, out_buf, out_len);
-  fdio_release(io);
-  return r;
-}
-
 static zx_status_t fdio_wait_signals(fdio_t* io, uint32_t events, zx_time_t deadline,
                                      uint32_t* out_events, zx_signals_t* out_signals) {
   zx_handle_t h = ZX_HANDLE_INVALID;

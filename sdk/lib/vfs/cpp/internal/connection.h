@@ -95,8 +95,6 @@ class Connection {
   void GetAttr(Node* vn, fuchsia::io::Node::GetAttrCallback callback);
   void SetAttr(Node* vn, uint32_t flags, fuchsia::io::NodeAttributes attributes,
                fuchsia::io::Node::SetAttrCallback callback);
-  void Ioctl(Node* vn, uint32_t opcode, uint64_t max_out, std::vector<zx::handle> handles,
-             std::vector<uint8_t> in, fuchsia::io::Node::IoctlCallback callback);
 
   // returns |fuchsia.io.NodeInfo| if status is |ZX_OK|, else returns null
   // inside unique_ptr.

@@ -62,11 +62,6 @@ zx_status_t fdio_default_unwrap(fdio_t* io, zx_handle_t* out_handle) {
 
 zx_status_t fdio_default_shutdown(fdio_t* io, int how) { return ZX_ERR_WRONG_TYPE; }
 
-ssize_t fdio_default_ioctl(fdio_t* io, uint32_t op, const void* in_buf, size_t in_len,
-                           void* out_buf, size_t out_len) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 void fdio_default_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle,
                              zx_signals_t* _signals) {
   *handle = ZX_HANDLE_INVALID;

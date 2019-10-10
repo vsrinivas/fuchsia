@@ -6,7 +6,6 @@
 
 #[allow(bad_style)]
 pub mod fdio_sys;
-pub use self::fdio_sys::fdio_ioctl as ioctl_raw;
 
 use {
     ::bitflags::bitflags,
@@ -31,20 +30,6 @@ use {
         ptr,
     },
 };
-
-pub unsafe fn ioctl(
-    dev: &File,
-    op: raw::c_int,
-    in_buf: *const raw::c_void,
-    in_len: usize,
-    out_buf: *mut raw::c_void,
-    out_len: usize,
-) -> Result<i32, zx::Status> {
-    match ioctl_raw(dev.as_raw_fd(), op, in_buf, in_len, out_buf, out_len) as i32 {
-        e if e < 0 => Err(zx::Status::from_raw(e)),
-        e => Ok(e),
-    }
-}
 
 /// Connects a channel to a named service.
 pub fn service_connect(service_path: &str, channel: zx::Channel) -> Result<(), zx::Status> {
@@ -140,10 +125,7 @@ pub fn open_at(
 /// `flags` is a bit field of |fuchsia.io.OPEN_*| options.
 ///
 /// Wraps fdio_open_fd.
-pub fn open_fd(
-    path: &str,
-    flags: u32,
-) -> Result<File, zx::Status> {
+pub fn open_fd(path: &str, flags: u32) -> Result<File, zx::Status> {
     let c_path = CString::new(path).map_err(|_| zx::Status::INVALID_ARGS)?;
 
     // fdio_open_fd takes a *const c_char service path, flags, and on success returns the opened
@@ -163,11 +145,7 @@ pub fn open_fd(
 /// protocol channel (even though it is wrapped in a std::fs::File).
 ///
 /// Wraps fdio_open_fd_at.
-pub fn open_fd_at(
-    dir: &File,
-    path: &str,
-    flags: u32,
-) -> Result<File, zx::Status> {
+pub fn open_fd_at(dir: &File, path: &str, flags: u32) -> Result<File, zx::Status> {
     let c_path = CString::new(path).map_err(|_| zx::Status::INVALID_ARGS)?;
 
     // fdio_open_fd_at takes a directory file descriptor, a *const c_char service path,
@@ -647,11 +625,6 @@ where
     }
 }
 
-/// Calculates an IOCTL value from kind, family and number.
-pub const fn make_ioctl(kind: raw::c_int, family: raw::c_int, number: raw::c_int) -> raw::c_int {
-    ((kind & 0xF) << 20) | ((family & 0xFF) << 8) | (number & 0xFF)
-}
-
 /// Gets a read-only VMO containing the whole contents of the file. This function
 /// creates a clone of the underlying VMO when possible, falling back to eagerly
 /// reading the contents into a freshly-created VMO.
@@ -884,7 +857,7 @@ mod tests {
     fn fdio_open_fd_and_open_fd_at() {
         // fdio_open_fd requires paths to be absolute
         match open_fd("pkg", fio::OPEN_RIGHT_READABLE) {
-            Err(zx::Status::NOT_FOUND) => {},
+            Err(zx::Status::NOT_FOUND) => {}
             Ok(_) => panic!("fdio_open_fd with relative path unexpectedly succeeded"),
             Err(err) => panic!("Unexpected error from fdio_open_fd: {}", err),
         }
@@ -894,7 +867,7 @@ mod tests {
 
         // Trying to open a non-existent directory should fail.
         match open_fd_at(&pkg_fd, "blahblah", fio::OPEN_RIGHT_READABLE) {
-            Err(zx::Status::NOT_FOUND) => {},
+            Err(zx::Status::NOT_FOUND) => {}
             Ok(_) => panic!("fdio_open_fd_at with greater rights unexpectedly succeeded"),
             Err(err) => panic!("Unexpected error from fdio_open_fd_at: {}", err),
         }

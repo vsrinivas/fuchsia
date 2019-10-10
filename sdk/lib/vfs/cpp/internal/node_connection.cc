@@ -49,11 +49,6 @@ void NodeConnection::SetAttr(uint32_t flags, fuchsia::io::NodeAttributes attribu
   Connection::SetAttr(vn_, flags, attributes, std::move(callback));
 }
 
-void NodeConnection::Ioctl(uint32_t opcode, uint64_t max_out, std::vector<zx::handle> handles,
-                           std::vector<uint8_t> in, IoctlCallback callback) {
-  Connection::Ioctl(vn_, opcode, max_out, std::move(handles), std::move(in), std::move(callback));
-}
-
 void NodeConnection::SendOnOpenEvent(zx_status_t status) {
   binding_.events().OnOpen(status, NodeInfoIfStatusOk(vn_, status));
 }

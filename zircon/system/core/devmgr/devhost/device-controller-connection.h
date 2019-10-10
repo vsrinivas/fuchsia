@@ -5,11 +5,12 @@
 #ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_DEVICE_CONTROLLER_CONNECTION_H_
 #define ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_DEVICE_CONTROLLER_CONNECTION_H_
 
-#include <fbl/ref_ptr.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zx/channel.h>
+
+#include <fbl/ref_ptr.h>
 
 #include "../shared/async-loop-owned-rpc-handler.h"
 
@@ -63,8 +64,6 @@ class DeviceControllerConnection
                SetAttrCompleter::Sync _completer) override {}
   void Sync(SyncCompleter::Sync _completer) override {}
   void GetAttr(GetAttrCompleter::Sync _completer) override {}
-  void Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles,
-             ::fidl::VectorView<uint8_t> in, IoctlCompleter::Sync _completer) override {}
   void Rename(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst,
               RenameCompleter::Sync _completer) override {}
   void Link(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst,

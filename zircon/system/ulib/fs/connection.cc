@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/connection.h>
-
 #include <fcntl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/io.h>
@@ -22,6 +20,7 @@
 #include <utility>
 
 #include <fbl/string_buffer.h>
+#include <fs/connection.h>
 #include <fs/debug.h>
 #include <fs/handler.h>
 #include <fs/trace.h>

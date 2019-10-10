@@ -51,11 +51,6 @@ class Server final : public llcpp::fuchsia::posix::socket::Control::Interface {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Ioctl(uint32_t opcode, uint64_t max_out, fidl::VectorView<::zx::handle> handles,
-             fidl::VectorView<uint8_t> in, IoctlCompleter::Sync completer) override {
-    return completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
   void Bind(fidl::VectorView<uint8_t> addr, BindCompleter::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }

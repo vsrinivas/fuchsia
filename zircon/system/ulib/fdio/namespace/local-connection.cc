@@ -100,7 +100,6 @@ constexpr fdio_ops_t kLocalConnectionOps = []() {
   ops.close = zxio_dir_close;
   ops.open = zxio_dir_open;
   ops.clone = fdio_default_clone;
-  ops.ioctl = fdio_default_ioctl;
   ops.wait_begin = fdio_default_wait_begin;
   ops.wait_end = fdio_default_wait_end;
   ops.unwrap = fdio_default_unwrap;

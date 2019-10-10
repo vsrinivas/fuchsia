@@ -39,7 +39,7 @@ class HidDecoder {
 
   virtual const std::string& name() const = 0;
 
-  // Inits the internal state. Returns false if any underlying ioctl
+  // Inits the internal state. Returns false if any underlying call
   // fails. If so the decoder is not usable.
   virtual bool Init() = 0;
 

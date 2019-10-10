@@ -166,10 +166,4 @@ void TtyConnectionImpl::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttrib
   ZX_ASSERT(false);
 }
 
-void TtyConnectionImpl::Ioctl(uint32_t opcode, uint64_t max_out,
-                              fidl::VectorView<zx::handle> handles, fidl::VectorView<uint8_t> in,
-                              IoctlCompleter::Sync completer) {
-  ZX_ASSERT(false);
-}
-
 }  // namespace fs_pty::internal

@@ -217,9 +217,10 @@ protocol Node {
     SetAttr(uint32 flags, NodeAttributes attributes) -> (zx.status s);
 
     /// Deprecated. Only for use with compatibility with devhost.
-    Ioctl(uint32 opcode, uint64 max_out, vector<handle>:MAX_IOCTL_HANDLES handles,
+    [Transitional = "Being removed"]
+    Ioctl(uint32 opcode, uint64 max_out, vector<handle>:2 handles,
           vector<uint8>:MAX_BUF in)
-        -> (zx.status s, vector<handle>:MAX_IOCTL_HANDLES handles, vector<uint8>:MAX_BUF out);
+        -> (zx.status s, vector<handle>:2 handles, vector<uint8>:MAX_BUF out);
 };
 
 /// Bits reserved for posix protections. Native fuchsia filesystems
@@ -254,8 +255,6 @@ struct NodeAttributes {
     /// Time of last modification in ns since Unix epoch, UTC.
     uint64 modification_time;
 };
-
-const uint64 MAX_IOCTL_HANDLES = 2;
 
 /// The maximal buffer size which can be transmitted for buffered operations.
 /// This capacity is currently set somewhat arbitrarily.

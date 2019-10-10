@@ -53,11 +53,6 @@ void DirectoryConnection::SetAttr(uint32_t flags, fuchsia::io::NodeAttributes at
   Connection::SetAttr(vn_, flags, attributes, std::move(callback));
 }
 
-void DirectoryConnection::Ioctl(uint32_t opcode, uint64_t max_out, std::vector<zx::handle> handles,
-                                std::vector<uint8_t> in, IoctlCallback callback) {
-  Connection::Ioctl(vn_, opcode, max_out, std::move(handles), std::move(in), std::move(callback));
-}
-
 void DirectoryConnection::Open(uint32_t flags, uint32_t mode, std::string path,
                                fidl::InterfaceRequest<fuchsia::io::Node> object) {
   vn_->Open(flags, this->flags(), mode, path.data(), path.length(), object.TakeChannel(),

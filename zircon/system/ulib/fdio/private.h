@@ -40,8 +40,6 @@ typedef struct fdio_ops {
   zx_status_t (*unwrap)(fdio_t* io, zx_handle_t* out_handle);
   void (*wait_begin)(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* signals);
   void (*wait_end)(fdio_t* io, zx_signals_t signals, uint32_t* events);
-  ssize_t (*ioctl)(fdio_t* io, uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                   size_t out_len);
   zx_status_t (*posix_ioctl)(fdio_t* io, int req, va_list va);
   zx_status_t (*get_vmo)(fdio_t* io, int flags, zx::vmo* out);
   zx_status_t (*get_token)(fdio_t* io, zx_handle_t* out);
@@ -238,8 +236,6 @@ zx_status_t fdio_default_get_attr(fdio_t* io, llcpp::fuchsia::io::NodeAttributes
 zx_status_t fdio_default_open(fdio_t* io, const char* path, uint32_t flags, uint32_t mode,
                               fdio_t** out);
 zx_status_t fdio_default_clone(fdio_t* io, zx_handle_t* out_handle);
-ssize_t fdio_default_ioctl(fdio_t* io, uint32_t op, const void* in_buf, size_t in_len,
-                           void* out_buf, size_t out_len);
 void fdio_default_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle,
                              zx_signals_t* _signals);
 void fdio_default_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* _events);

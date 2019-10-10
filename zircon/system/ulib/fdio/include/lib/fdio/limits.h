@@ -16,9 +16,6 @@
 // at least this size.
 #define FDIO_CHUNK_SIZE 8192
 
-// Maximum size for an ioctl input.
-#define FDIO_IOCTL_MAX_INPUT 1024
-
 // Maximum length of a filename.
 #define FDIO_MAX_FILENAME NAME_MAX
 

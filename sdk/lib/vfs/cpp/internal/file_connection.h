@@ -33,8 +33,6 @@ class FileConnection final : public Connection, public fuchsia::io::File {
   void GetAttr(GetAttrCallback callback) override;
   void SetAttr(uint32_t flags, fuchsia::io::NodeAttributes attributes,
                SetAttrCallback callback) override;
-  void Ioctl(uint32_t opcode, uint64_t max_out, std::vector<zx::handle> handles,
-             std::vector<uint8_t> in, IoctlCallback callback) override;
   void Read(uint64_t count, ReadCallback callback) override;
   void ReadAt(uint64_t count, uint64_t offset, ReadAtCallback callback) override;
   void Write(std::vector<uint8_t> data, WriteCallback callback) override;

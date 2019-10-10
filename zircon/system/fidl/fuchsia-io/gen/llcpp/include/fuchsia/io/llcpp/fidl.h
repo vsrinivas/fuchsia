@@ -485,8 +485,6 @@ constexpr uint32_t MODE_PROTECTION_MASK = 4095u;
 // The maximum length, in bytes, of a filesystem string.
 constexpr uint64_t MAX_PATH = 4096u;
 
-constexpr uint64_t MAX_IOCTL_HANDLES = 2u;
-
 constexpr uint64_t MAX_FS_NAME_BUFFER = 32u;
 
 // The maximum length, in bytes, of a single filesystem component.
@@ -1691,7 +1689,7 @@ class Node final {
 
     using IoctlCompleter = ::fidl::Completer<IoctlCompleterBase>;
 
-    virtual void Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, IoctlCompleter::Sync _completer) = 0;
+    virtual void Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, IoctlCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
   };
 
@@ -3491,7 +3489,7 @@ class File final {
 
     using IoctlCompleter = ::fidl::Completer<IoctlCompleterBase>;
 
-    virtual void Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, IoctlCompleter::Sync _completer) = 0;
+    virtual void Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, IoctlCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
     class ReadCompleterBase : public _Base {
      public:
@@ -5697,7 +5695,7 @@ class Directory final {
 
     using IoctlCompleter = ::fidl::Completer<IoctlCompleterBase>;
 
-    virtual void Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, IoctlCompleter::Sync _completer) = 0;
+    virtual void Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, IoctlCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
     using OpenCompleter = ::fidl::Completer<>;
 
@@ -8354,7 +8352,7 @@ class DirectoryAdmin final {
 
     using IoctlCompleter = ::fidl::Completer<IoctlCompleterBase>;
 
-    virtual void Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, IoctlCompleter::Sync _completer) = 0;
+    virtual void Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, IoctlCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
     using OpenCompleter = ::fidl::Completer<>;
 

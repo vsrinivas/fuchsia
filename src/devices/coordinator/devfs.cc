@@ -750,10 +750,6 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* 
     memset(&info, 0, sizeof(info));
     strlcpy((char*)info.name, "devfs", fuchsia_io_MAX_FS_NAME_BUFFER);
     return fuchsia_io_DirectoryAdminQueryFilesystem_reply(txn, ZX_OK, &info);
-  } else if (ordinal == fuchsia_io_NodeIoctlOrdinal || ordinal == fuchsia_io_NodeIoctlGenOrdinal) {
-    DECODE_REQUEST(msg, NodeIoctl);
-    zx_handle_close_many(msg->handles, msg->num_handles);
-    return fuchsia_io_NodeIoctl_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr, 0, nullptr, 0);
   }
 
   // close inbound handles so they do not leak

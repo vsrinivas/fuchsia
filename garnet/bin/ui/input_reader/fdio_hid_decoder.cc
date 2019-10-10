@@ -44,7 +44,7 @@ bool FdioHidDecoder::Init() {
   fuchsia_hardware_input_BootProtocol boot_protocol;
   status = fuchsia_hardware_input_DeviceGetBootProtocol(svc, &boot_protocol);
   if (status != ZX_OK) {
-    return log_err(status, "ioctl protocol", name_);
+    return log_err(status, "boot protocol", name_);
   }
 
   if (boot_protocol == fuchsia_hardware_input_BootProtocol_KBD) {

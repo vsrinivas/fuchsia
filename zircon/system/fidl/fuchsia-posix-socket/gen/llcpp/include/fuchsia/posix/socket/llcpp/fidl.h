@@ -1714,7 +1714,7 @@ class Control final {
 
     using IoctlCompleter = ::fidl::Completer<IoctlCompleterBase>;
 
-    virtual void Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, IoctlCompleter::Sync _completer) = 0;
+    virtual void Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, IoctlCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
     class BindCompleterBase : public _Base {
      public:

@@ -88,12 +88,6 @@ zx_status_t FileSetAttr(void* ctx, uint32_t flags, const fuchsia_io_NodeAttribut
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t FileIoctl(void* ctx, uint32_t opcode, uint64_t max_out, const zx_handle_t* handles_data,
-                      size_t handles_count, const uint8_t* in_data, size_t in_count,
-                      fidl_txn_t* txn) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t FileRead(void* ctx, uint64_t count, fidl_txn_t* txn) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t FileReadAt(void* ctx, uint64_t count, uint64_t offset, fidl_txn_t* txn) {
@@ -194,7 +188,6 @@ constexpr fuchsia_io_File_ops_t kFileOps = [] {
   ops.Sync = FileSync;
   ops.GetAttr = FileGetAttr;
   ops.SetAttr = FileSetAttr;
-  ops.Ioctl = FileIoctl;
   ops.Read = FileRead;
   ops.ReadAt = FileReadAt;
   ops.Write = FileWrite;

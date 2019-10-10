@@ -61,11 +61,6 @@ void Connection::SetAttr(Node* vn, uint32_t flags, fuchsia::io::NodeAttributes a
   callback(vn->SetAttr(flags, attributes));
 }
 
-void Connection::Ioctl(Node* vn, uint32_t opcode, uint64_t max_out, std::vector<zx::handle> handles,
-                       std::vector<uint8_t> in, fuchsia::io::Node::IoctlCallback callback) {
-  callback(ZX_ERR_NOT_SUPPORTED, std::vector<zx::handle>(), std::vector<uint8_t>());
-}
-
 std::unique_ptr<fuchsia::io::NodeInfo> Connection::NodeInfoIfStatusOk(Node* vn,
                                                                       zx_status_t status) {
   std::unique_ptr<fuchsia::io::NodeInfo> node_info;

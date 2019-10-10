@@ -108,7 +108,6 @@ static fdio_ops_t fdio_zxio_ops = {
     .unwrap = fdio_zxio_unwrap,
     .wait_begin = fdio_zxio_wait_begin,
     .wait_end = fdio_zxio_wait_end,
-    .ioctl = fdio_default_ioctl,
     .posix_ioctl = fdio_default_posix_ioctl,
     .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,
@@ -160,52 +159,6 @@ static zx_status_t fdio_zxio_remote_open(fdio_t* io, const char* path, uint32_t 
                                          uint32_t mode, fdio_t** out) {
   zxio_remote_t* rio = fdio_get_zxio_remote(io);
   return fdio_remote_open_at(rio->control, path, flags, mode, out);
-}
-
-static zx_status_t fidl_ioctl(zx_handle_t h, uint32_t op, const void* in_buf, size_t in_len,
-                              void* out_buf, size_t out_len, size_t* out_actual) {
-  // Explicitly allocating message buffers to avoid heap allocation.
-  fidl::Buffer<fio::Node::IoctlRequest> request_buffer;
-  fidl::Buffer<fio::Node::IoctlResponse> response_buffer;
-  auto result = fio::Node::Call::Ioctl(
-      zx::unowned_channel(h), request_buffer.view(), op, out_len, fidl::VectorView<zx::handle>(),
-      fidl::VectorView(const_cast<uint8_t*>(static_cast<const uint8_t*>(in_buf)), in_len),
-      response_buffer.view());
-  zx_status_t status = result.status();
-  if (status != ZX_OK) {
-    return status;
-  }
-  fio::Node::IoctlResponse* response = result.Unwrap();
-  status = response->s;
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (response->handles.count() != 0) {
-    return ZX_ERR_IO;
-  }
-  auto out = response->out;
-  if (out.count() != out_len) {
-    return ZX_ERR_IO;
-  }
-
-  memcpy(out_buf, out.data(), out.count());
-  *out_actual = out.count();
-
-  return ZX_OK;
-}
-
-static ssize_t fdio_zxio_remote_ioctl(fdio_t* io, uint32_t op, const void* in_buf, size_t in_len,
-                                      void* out_buf, size_t out_len) {
-  zxio_remote_t* rio = fdio_get_zxio_remote(io);
-  if (in_len > FDIO_IOCTL_MAX_INPUT || out_len > FDIO_CHUNK_SIZE) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  size_t actual = 0u;
-  zx_status_t status = fidl_ioctl(rio->control, op, in_buf, in_len, out_buf, out_len, &actual);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return actual;
 }
 
 static void fdio_zxio_remote_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle,
@@ -333,7 +286,6 @@ static fdio_ops_t fdio_zxio_remote_ops = {
     .unwrap = fdio_zxio_unwrap,
     .wait_begin = fdio_zxio_remote_wait_begin,
     .wait_end = fdio_zxio_remote_wait_end,
-    .ioctl = fdio_zxio_remote_ioctl,
     .posix_ioctl = fdio_default_posix_ioctl,
     .get_vmo = fdio_zxio_remote_get_vmo,
     .get_token = fdio_zxio_remote_get_token,
@@ -522,7 +474,6 @@ static fdio_ops_t fdio_zxio_vmofile_ops = {
     .unwrap = fdio_zxio_unwrap,
     .wait_begin = fdio_default_wait_begin,
     .wait_end = fdio_default_wait_end,
-    .ioctl = fdio_default_ioctl,
     .posix_ioctl = fdio_default_posix_ioctl,
     .get_vmo = fdio_zxio_vmofile_get_vmo,
     .get_token = fdio_default_get_token,
@@ -650,7 +601,6 @@ static fdio_ops_t fdio_zxio_pipe_ops = {
     .unwrap = fdio_zxio_unwrap,
     .wait_begin = fdio_zxio_wait_begin,
     .wait_end = fdio_zxio_wait_end,
-    .ioctl = fdio_default_ioctl,
     .posix_ioctl = fdio_zxio_pipe_posix_ioctl,
     .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,

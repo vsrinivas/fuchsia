@@ -57,8 +57,6 @@ class TtyConnectionImpl : public ::llcpp::fuchsia::hardware::pty::Device::Interf
   void GetAttr(GetAttrCompleter::Sync completer) final;
   void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes,
                SetAttrCompleter::Sync completer) final;
-  void Ioctl(uint32_t opcode, uint64_t max_out, fidl::VectorView<zx::handle> handles,
-             fidl::VectorView<uint8_t> in, IoctlCompleter::Sync completer) final;
 };
 
 template <typename Console>

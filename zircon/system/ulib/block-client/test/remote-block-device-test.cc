@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <block-client/cpp/remote-block-device.h>
-
-#include <thread>
-
-#include <fuchsia/io/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/fifo.h>
 #include <lib/zx/vmo.h>
+
+#include <thread>
+
+#include <block-client/cpp/remote-block-device.h>
 #include <zxtest/zxtest.h>
 
 namespace block_client {

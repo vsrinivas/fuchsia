@@ -49,11 +49,6 @@ void FileConnection::SetAttr(uint32_t flags, fuchsia::io::NodeAttributes attribu
   Connection::SetAttr(vn_, flags, attributes, std::move(callback));
 }
 
-void FileConnection::Ioctl(uint32_t opcode, uint64_t max_out, std::vector<zx::handle> handles,
-                           std::vector<uint8_t> in, IoctlCallback callback) {
-  Connection::Ioctl(vn_, opcode, max_out, std::move(handles), std::move(in), std::move(callback));
-}
-
 void FileConnection::Read(uint64_t count, ReadCallback callback) {
   std::vector<uint8_t> data;
   if (!Flags::IsReadable(flags())) {

@@ -53,7 +53,6 @@ pub const ZX_FS_FLAG_DESCRIBE: raw::c_uint = 0x00800000;
 
 pub const FDIO_MAX_FD: raw::c_uint = 1024;
 pub const FDIO_CHUNK_SIZE: raw::c_uint = 8192;
-pub const FDIO_IOCTL_MAX_INPUT: raw::c_uint = 1024;
 pub const FDIO_MAX_FILENAME: raw::c_uint = 255;
 pub const FDIO_SPAWN_ACTION_CLONE_FD: u32 = 1;
 pub const FDIO_SPAWN_ACTION_TRANSFER_FD: u32 = 2;
@@ -78,49 +77,6 @@ pub const FDIO_EVT_WRITABLE: raw::c_uint = 4;
 pub const FDIO_EVT_ERROR: raw::c_uint = 8;
 pub const FDIO_EVT_PEER_CLOSED: raw::c_uint = 8192;
 pub const FDIO_EVT_ALL: raw::c_uint = 8205;
-pub const IOCTL_KIND_DEFAULT: raw::c_int = 0;
-pub const IOCTL_KIND_GET_HANDLE: raw::c_int = 1;
-pub const IOCTL_KIND_GET_TWO_HANDLES: raw::c_int = 2;
-pub const IOCTL_KIND_GET_THREE_HANDLES: raw::c_int = 4;
-pub const IOCTL_KIND_SET_HANDLE: raw::c_int = 3;
-pub const IOCTL_KIND_SET_TWO_HANDLES: raw::c_int = 5;
-pub const IOCTL_FAMILY_RESERVED: raw::c_int = 0;
-pub const IOCTL_FAMILY_DEVICE: raw::c_int = 1;
-pub const IOCTL_FAMILY_DMCTL: raw::c_int = 3;
-pub const IOCTL_FAMILY_TEST: raw::c_int = 4;
-pub const IOCTL_FAMILY_CONSOLE: raw::c_int = 16;
-pub const IOCTL_FAMILY_INPUT: raw::c_int = 17;
-pub const IOCTL_FAMILY_DISPLAY: raw::c_int = 18;
-pub const IOCTL_FAMILY_BLOCK: raw::c_int = 19;
-pub const IOCTL_FAMILY_I2C: raw::c_int = 20;
-pub const IOCTL_FAMILY_TPM: raw::c_int = 21;
-pub const IOCTL_FAMILY_USB: raw::c_int = 22;
-pub const IOCTL_FAMILY_HID: raw::c_int = 23;
-pub const IOCTL_FAMILY_AUDIO: raw::c_int = 25;
-pub const IOCTL_FAMILY_MIDI: raw::c_int = 26;
-pub const IOCTL_FAMILY_KTRACE: raw::c_int = 27;
-pub const IOCTL_FAMILY_BT_HCI: raw::c_int = 28;
-pub const IOCTL_FAMILY_SYSINFO: raw::c_int = 29;
-pub const IOCTL_FAMILY_GPU: raw::c_int = 30;
-pub const IOCTL_FAMILY_RTC: raw::c_int = 31;
-pub const IOCTL_FAMILY_ETH: raw::c_int = 32;
-pub const IOCTL_FAMILY_IPT: raw::c_int = 33;
-pub const IOCTL_FAMILY_RAMDISK: raw::c_int = 34;
-pub const IOCTL_FAMILY_SDMMC: raw::c_int = 35;
-pub const IOCTL_FAMILY_WLAN: raw::c_int = 36;
-pub const IOCTL_FAMILY_PTY: raw::c_int = 37;
-pub const IOCTL_FAMILY_NETCONFIG: raw::c_int = 38;
-pub const IOCTL_FAMILY_ETHERTAP: raw::c_int = 39;
-pub const IOCTL_FAMILY_USB_DEVICE: raw::c_int = 40;
-pub const IOCTL_FAMILY_USB_VIRT_BUS: raw::c_int = 41;
-pub const IOCTL_FAMILY_POWER: raw::c_int = 48;
-pub const IOCTL_FAMILY_THERMAL: raw::c_int = 49;
-pub const IOCTL_FAMILY_CAMERA: raw::c_int = 50;
-pub const IOCTL_FAMILY_BT_HOST: raw::c_int = 51;
-pub const IOCTL_FAMILY_WLANPHY: raw::c_int = 52;
-pub const IOCTL_FAMILY_WLANTAP: raw::c_int = 0x36;
-pub const IOCTL_FAMILY_DISPLAY_CONTROLLER: raw::c_int = 0x37;
-pub const IOCTL_FAMILY_QMI: raw::c_int = 0x41;
 pub const VNATTR_BLKSIZE: raw::c_uint = 512;
 pub const ATTR_CTIME: raw::c_uint = 1;
 pub const ATTR_MTIME: raw::c_uint = 2;
@@ -581,14 +537,6 @@ extern "C" {
         signals_out: zx_signals_t,
         shared_handle: bool,
     ) -> raw::c_int;
-    pub fn fdio_ioctl(
-        fd: raw::c_int,
-        op: raw::c_int,
-        in_buf: *const raw::c_void,
-        in_len: usize,
-        out_buf: *mut raw::c_void,
-        out_len: usize,
-    ) -> isize;
     pub fn fdio_pipe_half(fd: *mut i32, handle: *mut zx_handle_t) -> zx_status_t;
     pub fn fdio_get_vmo_copy(fd: raw::c_int, out_vmo: *mut zx_handle_t) -> zx_status_t;
     pub fn fdio_get_vmo_clone(fd: raw::c_int, out_vmo: *mut zx_handle_t) -> zx_status_t;

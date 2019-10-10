@@ -136,9 +136,3 @@ void PtyClientConnection::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttr
                                   SetAttrCompleter::Sync completer) {
   ZX_ASSERT(false);
 }
-
-void PtyClientConnection::Ioctl(uint32_t opcode, uint64_t max_out,
-                                fidl::VectorView<zx::handle> handles, fidl::VectorView<uint8_t> in,
-                                IoctlCompleter::Sync completer) {
-  ZX_ASSERT(false);
-}

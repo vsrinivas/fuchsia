@@ -5,11 +5,12 @@
 #ifndef SYSROOT_ZIRCON_DEVICE_AUDIO_H_
 #define SYSROOT_ZIRCON_DEVICE_AUDIO_H_
 
-#include <assert.h>
+#include <sys/types.h>
 #include <zircon/compiler.h>
-#include <zircon/device/ioctl-wrapper.h>
-#include <zircon/device/ioctl.h>
 #include <zircon/types.h>
+
+#include <cassert>
+#include <cstdio>
 
 // When communicating with an Audio driver using zx_channel_call, do not use
 // the AUDIO_INVALID_TRANSACTION_ID as your message's transaction ID.  It is

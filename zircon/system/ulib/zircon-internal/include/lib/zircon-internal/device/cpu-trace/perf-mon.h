@@ -2,17 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ZIRCON_INTERNAL_DEVICE_CPU_TRACE_PERF_MON_H_
+#define LIB_ZIRCON_INTERNAL_DEVICE_CPU_TRACE_PERF_MON_H_
 
-#include <assert.h>
-#include <stddef.h>
-#include <stdint.h>
-
+#include <sys/types.h>
 #include <zircon/types.h>
 
 #ifdef __Fuchsia__
-#include <zircon/device/ioctl.h>
-#include <zircon/device/ioctl-wrapper.h>
+#include <zircon/compiler.h>
 #endif
 
 namespace perfmon {
@@ -268,3 +265,5 @@ static inline constexpr size_t LastBranchRecordSize(const LastBranchRecord* lbr)
 }
 
 }  // namespace perfmon
+
+#endif  // LIB_ZIRCON_INTERNAL_DEVICE_CPU_TRACE_PERF_MON_H_

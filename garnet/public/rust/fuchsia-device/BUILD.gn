@@ -9,8 +9,6 @@ rustc_library("fuchsia-device") {
   edition = "2018"
   version = "0.1.0"
   deps = [
-    "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:failure",
   ]
 }
