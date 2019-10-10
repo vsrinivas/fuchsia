@@ -79,23 +79,6 @@ class VirtioQueue {
     return ring_.size;
   }
 
-  // If the device negotiates |VIRTIO_F_EVENT_IDX|, this is the number of
-  // descriptors to allow the driver to queue into the avail ring before
-  // signaling the device that the queue has descriptors.
-  //
-  // The default value is 1 so that every update to the avail ring causes a
-  // notification that descriptors are available.
-  //
-  // If the device does not negotiate |VIRTIO_F_EVENT_IDX|, this attribute has
-  // no effect.
-  uint16_t avail_event_num() {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return avail_event_num_;
-  }
-  void set_avail_event_num(uint16_t num) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    avail_event_num_ = num;
-  }
   void set_use_event_index(bool use) {
     std::lock_guard<std::mutex> lock(mutex_);
     use_event_index_ = use;
@@ -162,7 +145,6 @@ class VirtioQueue {
   InterruptFn interrupt_;
   VirtioRing ring_ __TA_GUARDED(mutex_) = {};
   zx::event event_;
-  uint16_t avail_event_num_ __TA_GUARDED(mutex_) = 1;
   bool use_event_index_ __TA_GUARDED(mutex_) = false;
 
   friend class VirtioQueueFake;

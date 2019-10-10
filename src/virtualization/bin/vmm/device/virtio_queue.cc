@@ -63,7 +63,7 @@ zx_status_t VirtioQueue::NextAvailLocked(uint16_t* index) {
   // If we have event indices enabled, update the avail-event to notify us
   // when we have sufficient descriptors available.
   if (use_event_index_ && ring_.avail_event) {
-    *ring_.avail_event = ring_.index + avail_event_num_ - 1;
+    *ring_.avail_event = ring_.index;
   }
 
   if (!HasAvailLocked()) {
