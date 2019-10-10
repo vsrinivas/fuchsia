@@ -17,7 +17,6 @@ group("interactive_minimal") {
     "//garnet/packages/prod:vboot_reference",
     "//garnet/packages/products:graphical",
     "//src/fonts",
-    "//src/media/audio/bundles:audio",
     "//src/ui/a11y",
   ]
 }
