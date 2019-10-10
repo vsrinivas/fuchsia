@@ -1996,3 +1996,173 @@ fn reconfigure_error_response() {
     let complete = exec.run_until_stalled(&mut response_fut);
     assert_eq!(Poll::Ready(Err(Error::RemoteConfigRejected(0x00, 0x13))), complete);
 }
+
+/// This test covers the valid decoding of all valid ServiceCapabilities.
+#[test]
+fn get_capabilities_command_with_all_service_capabilities_works() {
+    let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    let seid = &StreamEndpointId::try_from(1).unwrap();
+    let mut response_fut = Box::pin(peer.get_capabilities(&seid));
+    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+    let received = recv_remote(&remote).unwrap();
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(0x02, received[1]); // 0x02 = GetCapabilities
+    assert_eq!(0x01 << 2, received[2]); // SEID (0x01) , RFA
+
+    let txlabel_raw = received[0] & 0xF0;
+
+    // This capabilities response should cover all the identifiers in ServiceCategory.
+    #[rustfmt::skip]
+    let response: &[u8] = &[
+        txlabel_raw << 4 | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
+        0x02,                              // Get Capabilities
+        // MediaTransport (Length of Service Capability = 0)
+        0x01, 0x00,
+        // Recovery (LOSC = 3), Type (0x01), Window size (2), Number Media Packets (5)
+        0x03, 0x03, 0x01, 0x02, 0x05,
+        // Media Codec (LOSC = 2 + 2), Video (0x1), Codec type (0x20), Codec specific (0xB0DE)
+        0x07, 0x04, 0x10, 0x20, 0xB0, 0xDE,
+        // Content Protection (LOSC = 2 + 1), SCMS (0x02, 0x00), CP Specific (0x7A)
+        0x04, 0x03, 0x02, 0x00, 0x7A,
+        // HeaderCompression (LOSC = 1), BackCh, Media, Recovery (0xE0)
+        0x05, 0x01, 0xE0,
+        // Multiplexing (LOSC = 7), Frag (0x10), TSID (), TCID () ... TCID ()
+        0x06, 0x07, 0x10, 0x00, 0x00, 0x08, 0x08, 0x10, 0x10,
+    ];
+    assert!(remote.write(response).is_ok());
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+
+    let capabilities = match complete {
+        Poll::Ready(Ok(response)) => response,
+        x => panic!("Should have a ready Ok response: {:?}", x),
+    };
+
+    assert_eq!(6, capabilities.len());
+    let c1 = ServiceCapability::MediaTransport;
+    assert_eq!(c1, capabilities[0]);
+    let c2 = ServiceCapability::Recovery {
+        recovery_type: 1,
+        max_recovery_window_size: 2,
+        max_number_media_packets: 5,
+    };
+    assert_eq!(c2, capabilities[1]);
+    let c3 = ServiceCapability::MediaCodec {
+        media_type: MediaType::Video,
+        codec_type: MediaCodecType::new(0x20),
+        codec_extra: vec![0xb0, 0xde],
+    };
+    assert_eq!(c3, capabilities[2]);
+    let c4 = ServiceCapability::ContentProtection {
+        protection_type: ContentProtectionType::SerialCopyManagementSystem,
+        extra: vec![0x7a],
+    };
+    assert_eq!(c4, capabilities[3]);
+    let c5 = ServiceCapability::HeaderCompression { payload_len: 0x01 };
+    assert_eq!(c5, capabilities[4]);
+    let c6 = ServiceCapability::Multiplexing { payload_len: 0x07 };
+    assert_eq!(c6, capabilities[5]);
+}
+
+/// This test covers ServiceCapabilities that are both valid and invalid.
+/// Decoding these invalid capabilities should be handled gracefully, and they should be ignored.
+#[test]
+fn get_capabilities_command_with_invalid_service_capabilities_works() {
+    let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    let seid = &StreamEndpointId::try_from(1).unwrap();
+    let mut response_fut = Box::pin(peer.get_capabilities(&seid));
+    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+    let received = recv_remote(&remote).unwrap();
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(0x02, received[1]); // 0x02 = GetCapabilities
+    assert_eq!(0x01 << 2, received[2]); // SEID (0x01) , RFA
+
+    let txlabel_raw = received[0] & 0xF0;
+
+    // This capabilities response includes invalid ones. The implementation should filter
+    // out any invalid/not supported capabilities and only report the valid ones.
+    #[rustfmt::skip]
+    let response: &[u8] = &[
+        txlabel_raw << 4 | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
+        0x02,                              // Get Capabilities
+        // MediaTransport (Length of Service Capability = 0)
+        0x01, 0x00,
+        // Recovery (LOSC = 3), Type (0x01), Window size (2), Number Media Packets (5)
+        0x03, 0x03, 0x01, 0x02, 0x05,
+        // Invalid Capability that contains payload. Should skip over it.
+        0xDD, 0x05, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        // Media Codec (LOSC = 2 + 2), Video (0x1), Codec type (0x20), Codec specific (0xB0DE)
+        0x07, 0x04, 0x10, 0x20, 0xB0, 0xDE,
+        // Invalid Capability that contains no payload. Should skip over it.
+        0xFF, 0x00,
+    ];
+    assert!(remote.write(response).is_ok());
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+
+    let capabilities = match complete {
+        Poll::Ready(Ok(response)) => response,
+        x => panic!("Should have a ready Ok response: {:?}", x),
+    };
+
+    assert_eq!(3, capabilities.len());
+    let c1 = ServiceCapability::MediaTransport;
+    assert_eq!(c1, capabilities[0]);
+    let c2 = ServiceCapability::Recovery {
+        recovery_type: 1,
+        max_recovery_window_size: 2,
+        max_number_media_packets: 5,
+    };
+    assert_eq!(c2, capabilities[1]);
+    let c3 = ServiceCapability::MediaCodec {
+        media_type: MediaType::Video,
+        codec_type: MediaCodecType::new(0x20),
+        codec_extra: vec![0xb0, 0xde],
+    };
+    assert_eq!(c3, capabilities[2]);
+}
+
+/// This test covers ServiceCapabilities that are only invalid.
+#[test]
+fn get_capabilities_command_with_only_invalid_service_capabilities_works() {
+    let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    let seid = &StreamEndpointId::try_from(1).unwrap();
+    let mut response_fut = Box::pin(peer.get_capabilities(&seid));
+    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+    let received = recv_remote(&remote).unwrap();
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(0x02, received[1]); // 0x02 = GetCapabilities
+    assert_eq!(0x01 << 2, received[2]); // SEID (0x01) , RFA
+
+    let txlabel_raw = received[0] & 0xF0;
+
+    // Response only includes invalid ServiceCapabilities.
+    #[rustfmt::skip]
+    let response: &[u8] = &[
+        txlabel_raw << 4 | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
+        0x02,                              // Get Capabilities
+        // Invalid Capability that contains payload. Should skip over it.
+        0x4F, 0x05, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        // Invalid Capability that contains no payload. Should skip over it.
+        0xAA, 0x00,
+    ];
+    assert!(remote.write(response).is_ok());
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+
+    let capabilities = match complete {
+        Poll::Ready(Ok(response)) => response,
+        x => panic!("Should have a ready Ok response: {:?}", x),
+    };
+
+    assert_eq!(0, capabilities.len());
+}

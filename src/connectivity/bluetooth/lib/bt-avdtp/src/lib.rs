@@ -630,9 +630,24 @@ impl Decodable for GetCapabilitiesResponse {
         let mut capabilities = Vec::<ServiceCapability>::new();
         let mut idx = 0;
         while idx < from.len() {
-            let capability = ServiceCapability::decode(&from[idx..])?;
-            idx = idx + capability.encoded_len();
-            capabilities.push(capability);
+            match ServiceCapability::decode(&from[idx..]) {
+                Ok(capability) => {
+                    idx = idx + capability.encoded_len();
+                    capabilities.push(capability);
+                }
+                Err(_) => {
+                    // The capability length of the invalid capability can be nonzero.
+                    // Advance `idx` by the payload amount, but don't push the invalid capability.
+                    // Increment by 1 byte for ServiceCategory, 1 byte for payload length,
+                    // `length_of_capability` bytes for capability length.
+                    fx_log_info!(
+                        "GetCapabilitiesResponse decode: Capability {:?} not supported.",
+                        from[idx]
+                    );
+                    let length_of_capability = from[idx + 1] as usize;
+                    idx = idx + 2 + length_of_capability;
+                }
+            }
         }
         Ok(GetCapabilitiesResponse { capabilities })
     }

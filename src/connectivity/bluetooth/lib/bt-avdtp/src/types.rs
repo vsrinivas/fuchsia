@@ -562,6 +562,14 @@ pub enum ServiceCapability {
         protection_type: ContentProtectionType,
         extra: Vec<u8>, // Protection specific parameters
     },
+    /// Indicates that header compression capabilities is offered  by this end point.
+    /// Defined in section 8.21.7
+    /// TODO(38280): Implement header compression specific fields to use the payload.
+    HeaderCompression { payload_len: u8 },
+    /// Indicates that multiplexing service is offered by this end point.
+    /// Defined in section 8.21.8
+    /// TODO(38282): Implement multiplexing specific fields to use the payload.
+    Multiplexing { payload_len: u8 },
     /// Indicates that delay reporting is offered by this end point.
     /// Defined in section 8.21.9
     DelayReporting,
@@ -576,6 +584,8 @@ impl ServiceCapability {
             ServiceCapability::ContentProtection { .. } => &ServiceCategory::ContentProtection,
             ServiceCapability::MediaCodec { .. } => &ServiceCategory::MediaCodec,
             ServiceCapability::DelayReporting => &ServiceCategory::DelayReporting,
+            ServiceCapability::HeaderCompression { .. } => &ServiceCategory::HeaderCompression,
+            ServiceCapability::Multiplexing { .. } => &ServiceCategory::Multiplexing,
         }
         .into()
     }
@@ -588,6 +598,8 @@ impl ServiceCapability {
             ServiceCapability::MediaCodec { codec_extra, .. } => 2 + codec_extra.len() as u8,
             ServiceCapability::ContentProtection { extra, .. } => 2 + extra.len() as u8,
             ServiceCapability::DelayReporting => 0,
+            ServiceCapability::HeaderCompression { payload_len } => *payload_len,
+            ServiceCapability::Multiplexing { payload_len } => *payload_len,
         }
     }
 
@@ -693,6 +705,12 @@ impl Decodable for ServiceCapability {
                 0 => ServiceCapability::DelayReporting,
                 _ => return Err(Error::RequestInvalid(ErrorCode::BadPayloadFormat)),
             },
+            Ok(ServiceCategory::Multiplexing) => {
+                ServiceCapability::Multiplexing { payload_len: length_of_capability as u8 }
+            }
+            Ok(ServiceCategory::HeaderCompression) => {
+                ServiceCapability::HeaderCompression { payload_len: length_of_capability as u8 }
+            }
             _ => {
                 return Err(Error::RequestInvalid(ErrorCode::BadServiceCategory));
             }
