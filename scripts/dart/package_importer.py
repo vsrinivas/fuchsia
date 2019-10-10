@@ -33,6 +33,10 @@ LOCAL_PACKAGES = {
 
 FORBIDDEN_PACKAGES = ['mojo', 'mojo_services']
 
+# This is to account for https://github.com/flutter/devtools/issues/1148
+PACKAGES_WITH_NO_LIB = ['devtools']
+
+
 def parse_packages_file(dot_packages_path):
     """ parse the list of packages and paths in .packages file """
     packages = []
@@ -131,6 +135,13 @@ def generate_package_diff(old_packages, new_packages, changelog):
             changelog_file.write('%s %s --> %s\n' % (key.rjust(max_key_width),
                                                      old.rjust(10),
                                                      new.ljust(10)))
+
+def valid_package_path(package_name, source_dir):
+    if package_name in PACKAGES_WITH_NO_LIB:
+        parent_dir = os.path.normpath(os.path.join(source_dir, os.pardir))
+        return os.path.exists(parent_dir)
+    else:
+        return os.path.exists(source_dir)
 
 
 def main():
@@ -236,12 +247,12 @@ def main():
             if not package[1].startswith('file://'):
                 continue
             source_dir = package[1][len('file://'):]
-            if not os.path.exists(source_dir):
+            package_name = package[0]
+            if not valid_package_path(package_name, source_dir):
                 continue
             if source_dir.find('pub.dartlang.org') == -1:
                 print 'Package %s not from dartlang (%s), ignoring' % (package[0], source_dir)
                 continue
-            package_name = package[0]
             # Don't import packages that live canonically in the tree.
             if package_name in LOCAL_PACKAGES:
                 continue
