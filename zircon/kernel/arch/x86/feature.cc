@@ -48,6 +48,7 @@ bool g_has_ssbd;
 bool g_ssb_mitigated;
 bool g_has_md_clear;
 bool g_md_clear_on_user_return;
+bool g_has_ibpb;
 // True if we should disable all speculative execution mitigations.
 bool g_disable_spec_mitigations;
 
@@ -172,9 +173,11 @@ void x86_feature_init(void) {
     g_has_swapgs_bug = x86_intel_cpu_has_swapgs_bug(&cpuid);
     g_has_ssb = x86_intel_cpu_has_ssb(&cpuid, &msr);
     g_has_ssbd = x86_intel_cpu_has_ssbd(&cpuid, &msr);
+    g_has_ibpb = cpuid.ReadFeatures().HasFeature(cpu_id::Features::SPEC_CTRL);
   } else if (x86_vendor == X86_VENDOR_AMD) {
     g_has_ssb = x86_amd_cpu_has_ssb(&cpuid, &msr);
     g_has_ssbd = x86_amd_cpu_has_ssbd(&cpuid, &msr);
+    g_has_ibpb = cpuid.ReadFeatures().HasFeature(cpu_id::Features::AMD_IBPB);
   }
   g_ssb_mitigated = (x86_get_disable_spec_mitigations() == false) && g_has_ssb && g_has_ssbd &&
                     gCmdline.GetBool("kernel.x86.spec_store_bypass_disable",
@@ -397,6 +400,8 @@ void x86_feature_debug(void) {
     printf("ssbd ");
   if (g_ssb_mitigated)
     printf("ssb_mitigated ");
+  if (g_has_ibpb)
+    printf("ibpb ");
   printf("\n");
 }
 
@@ -893,6 +898,10 @@ const x86_microarch_config_t* get_microarch_config(const cpu_id::CpuId* cpuid) {
 }
 
 extern "C" {
+
+void x86_cpu_ibpb(MsrAccess* msr) {
+  msr->write_msr(/*msr_index=*/X86_MSR_IA32_PRED_CMD, /*value=*/1);
+}
 
 CODE_TEMPLATE(kLfence, "lfence")
 void swapgs_bug_postfence(const CodePatchInfo* patch) {
