@@ -65,10 +65,6 @@ class ProcessBreakpoint {
   zx_status_t RegisterBreakpoint(Breakpoint* breakpoint);
   bool UnregisterBreakpoint(Breakpoint* breakpoint);
 
-  // virtual picture of memory is needed, this function will replace the replacement from this
-  // breakpoint if it appears in the given block. Otherwise does nothing.
-  virtual void FixupMemoryBlock(debug_ipc::MemoryBlock* block);
-
   // When a thread receives a breakpoint exception installed by a process
   // breakpoint, it must check if the breakpoint was indeed intended to apply
   // to it (we can have thread-specific breakpoints).
@@ -145,10 +141,8 @@ class ProcessBreakpoint {
  private:
   virtual zx_status_t Update() = 0;
 
-  // TODO(donosoc): These are private to each breakpoint implementation, move them over once the
-  //                transition from process breakpoint -> each individual breakpoint is done.
-  virtual zx_status_t Install() = 0;
-  virtual void Uninstall() = 0;
+  virtual zx_status_t Uninstall(DebuggedThread* thread) = 0;
+  virtual zx_status_t Uninstall() = 0;                    // Uninstall for all the threads.
 
   // As stepping over are queued, only one thread should be left running at a time. This makes the
   // breakpoint get a suspend token for each other thread within the system.

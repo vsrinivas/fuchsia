@@ -523,7 +523,7 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
   uint64_t breakpoint_address = arch_provider_->BreakpointInstructionForSoftwareExceptionAddress(
       *arch_provider_->IPInRegs(regs));
 
-  ProcessBreakpoint* found_bp = process_->FindProcessBreakpointForAddr(breakpoint_address);
+  ProcessBreakpoint* found_bp = process_->FindSoftwareBreakpoint(breakpoint_address);
   if (found_bp) {
     LogHitBreakpoint(FROM_HERE, this, found_bp, breakpoint_address);
 
@@ -592,10 +592,15 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
 
 DebuggedThread::OnStop DebuggedThread::UpdateForHardwareBreakpoint(
     zx_thread_state_general_regs* regs, std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
+
+  // TODO(donosoc): Reactivate when HW breakpoints are active again.
+  return OnStop::kIgnore;
+
+#ifdef BREAKPOINT_REFACTORING
   uint64_t breakpoint_address =
       arch_provider_->BreakpointInstructionForHardwareExceptionAddress(
           *arch_provider_->IPInRegs(regs));
-  ProcessBreakpoint* found_bp = process_->FindProcessBreakpointForAddr(breakpoint_address);
+  ProcessBreakpoint* found_bp = nullptr;
   if (!found_bp) {
     // Hit a hw debug exception that doesn't belong to any ProcessBreakpoint.
     // This is probably a race between the removal and the exception handler.
@@ -613,6 +618,7 @@ DebuggedThread::OnStop DebuggedThread::UpdateForHardwareBreakpoint(
   // not be derefereced below this.
   found_bp = nullptr;
   return OnStop::kNotify;
+#endif
 }
 
 DebuggedThread::OnStop DebuggedThread::UpdateForWatchpoint(

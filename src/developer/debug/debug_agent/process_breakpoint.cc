@@ -80,14 +80,6 @@ bool ProcessBreakpoint::UnregisterBreakpoint(Breakpoint* breakpoint) {
   return !breakpoints_.empty();
 }
 
-// SW breakpoints modify memory, so there is need to be able to restore the state of a memory block
-// modified by a breakpoint. That is not the case for all breakpoints. HW breakpoints and
-// watchpoints rely on CPU registers, so they do not modify memory. In such cases, this function
-// will do nothing.
-void ProcessBreakpoint::FixupMemoryBlock(debug_ipc::MemoryBlock*) {
-  // By default do nothing. The breakpoint specialization will take care of other cases.
-}
-
 bool ProcessBreakpoint::ShouldHitThread(zx_koid_t thread_koid) const {
   for (const Breakpoint* bp : breakpoints_) {
     if (bp->AppliesToThread(process_->koid(), thread_koid))
@@ -121,7 +113,7 @@ void ProcessBreakpoint::ExecuteStepOver(DebuggedThread* thread) {
 
   SuspendAllOtherThreads(thread->koid());
 
-  Uninstall();
+  Uninstall(thread);
 
   // This thread now has to continue running.
   thread->ResumeException();

@@ -30,6 +30,7 @@ class DebugAgent;
 class ObjectProvider;
 class ProcessBreakpoint;
 class ProcessWatchpoint;
+class SoftwareBreakpoint;
 class Watchpoint;
 
 struct DebuggedProcessCreateInfo {
@@ -123,7 +124,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
 
   // Looks for breakpoints at the given address. Null if no breakpoints are
   // at that address.
-  ProcessBreakpoint* FindProcessBreakpointForAddr(uint64_t address);
+  ProcessBreakpoint* FindSoftwareBreakpoint(uint64_t address) const;
 
   // Find a process watchpoint whose range starts at |address|.
   // Returns nullptr if no watchpoint is at that address.
@@ -133,9 +134,6 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
   // process.
   zx_status_t RegisterBreakpoint(Breakpoint* bp, uint64_t address);
   void UnregisterBreakpoint(Breakpoint* bp, uint64_t address);
-  const std::map<uint64_t, std::unique_ptr<ProcessBreakpoint>>& breakpoints() const {
-    return breakpoints_;
-  }
 
   zx_status_t RegisterWatchpoint(Watchpoint*, const debug_ipc::AddressRange&);
   void UnregisterWatchpoint(Watchpoint*, const debug_ipc::AddressRange&);
@@ -211,6 +209,9 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
   zx_status_t WriteProcessMemory(uintptr_t address, const void* buffer, size_t len,
                                  size_t* actual) override;
 
+  zx_status_t RegisterSoftwareBreakpoint(Breakpoint* bp, uint64_t address);
+  void UnregisterSoftwareBreakpoint(Breakpoint* bp, uint64_t address);
+
   DebugAgent* debug_agent_ = nullptr;  // Non-owning.
 
   zx_koid_t koid_;
@@ -226,9 +227,8 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
 
   std::map<zx_koid_t, std::unique_ptr<DebuggedThread>> threads_;
 
-  // Maps addresses to the ProcessBreakpoint at a location. The
-  // ProcessBreakpoint can hold multiple Breakpoint objects.
-  std::map<uint64_t, std::unique_ptr<ProcessBreakpoint>> breakpoints_;
+  // Maps addresses to the ProcessBreakpoint at a location.
+  std::map<uint64_t, std::unique_ptr<SoftwareBreakpoint>> software_breakpoints_;
 
   // Each watchpoint holds the information about what range of addresses
   // it spans. They're keyed by the first address of their range.

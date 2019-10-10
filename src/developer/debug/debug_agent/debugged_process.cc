@@ -112,15 +112,19 @@ DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, DebuggedProcessCreateI
 DebuggedProcess::~DebuggedProcess() { DetachFromProcess(); }
 
 void DebuggedProcess::DetachFromProcess() {
-  // 1. Remove installed breakpoints.
+  // 1. Remove installed software breakpoints.
   //    We need to tell each thread that this will happen.
-  for (auto& [address, breakpoint] : breakpoints_) {
+  for (auto& [address, breakpoint] : software_breakpoints_) {
     for (auto& [thread_koid, thread] : threads_) {
       thread->WillDeleteProcessBreakpoint(breakpoint.get());
     }
   }
+  software_breakpoints_.clear();
 
-  breakpoints_.clear();
+  // TODO(donosoc): Remove HW breakpoints.
+  // TODO(donosoc): Remove Watchpoints.
+
+
 
   // 2. Resume threads.
   // Technically a 0'ed request would work, but being explicit is future-proof.
@@ -237,15 +241,15 @@ void DebuggedProcess::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
 
   // Remove any breakpoint instructions we've inserted.
   //
-  // If there are a lot of ProcessBreakpoints this will get slow. If we find
-  // we have 100's of breakpoints an auxiliary data structure could be added
-  // to find overlapping breakpoints faster.
-  for (const auto& [addr, bp] : breakpoints_) {
-    // Generally there will be only one block. If we start reading many
-    // megabytes that cross mapped memory boundaries, a top-level range check
-    // would be a good idea to avoid unnecessary iteration.
-    for (auto& block : reply->blocks)
+  // If there are a lot of ProcessBreakpoints this will get slow. If we find we have 100's of
+  // breakpoints an auxiliary data structure could be added to find overlapping breakpoints faster.
+  for (const auto& [addr, bp] : software_breakpoints_) {
+    // Generally there will be only one block. If we start reading many megabytes that cross
+    // mapped memory boundaries, a top-level range check would be a good idea to avoid unnecessary
+    // iteration.
+    for (auto& block : reply->blocks) {
       bp->FixupMemoryBlock(&block);
+    }
   }
 }
 
@@ -376,9 +380,9 @@ void DebuggedProcess::SendModuleNotification(std::vector<uint64_t> paused_thread
   debug_agent_->stream()->Write(writer.MessageComplete());
 }
 
-ProcessBreakpoint* DebuggedProcess::FindProcessBreakpointForAddr(uint64_t address) {
-  auto found = breakpoints_.find(address);
-  if (found == breakpoints_.end())
+ProcessBreakpoint* DebuggedProcess::FindSoftwareBreakpoint(uint64_t address) const {
+  auto found = software_breakpoints_.find(address);
+  if (found == software_breakpoints_.end())
     return nullptr;
   return found->second.get();
 }
@@ -394,51 +398,38 @@ ProcessWatchpoint* DebuggedProcess::FindWatchpointByAddress(uint64_t address) {
 zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp, uint64_t address) {
   LogRegisterBreakpoint(FROM_HERE, this, bp, address);
 
-  auto found = breakpoints_.find(address);
-  if (found == breakpoints_.end()) {
-    std::unique_ptr<ProcessBreakpoint> process_breakpoint;
-    switch (bp->type()) {
-      case debug_ipc::BreakpointType::kSoftware:
-        process_breakpoint = std::make_unique<SoftwareBreakpoint>(bp, this, this, address);
-        break;
-      case debug_ipc::BreakpointType::kHardware:
-      case debug_ipc::BreakpointType::kWatchpoint:
-        // TODO(donosoc): Reactivate once the transition is complete.
-        return ZX_ERR_NOT_SUPPORTED;
-      case debug_ipc::BreakpointType::kLast:
-        FXL_NOTREACHED();
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    FXL_DCHECK(process_breakpoint);
-    if (zx_status_t status = process_breakpoint->Init(); status != ZX_OK)
-      return status;
-
-    breakpoints_[address] = std::move(process_breakpoint);
-  } else {
-    found->second->RegisterBreakpoint(bp);
+  switch (bp->type()) {
+    case debug_ipc::BreakpointType::kSoftware:
+      return RegisterSoftwareBreakpoint(bp, address);
+    case debug_ipc::BreakpointType::kHardware:
+    case debug_ipc::BreakpointType::kWatchpoint:
+      // TODO(donosoc): Reactivate once the transition is complete.
+      return ZX_ERR_NOT_SUPPORTED;
+    case debug_ipc::BreakpointType::kLast:
+      FXL_NOTREACHED();
+      return ZX_ERR_INVALID_ARGS;
   }
-  return ZX_OK;
+
+  FXL_NOTREACHED();
 }
 
 void DebuggedProcess::UnregisterBreakpoint(Breakpoint* bp, uint64_t address) {
   DEBUG_LOG(Process) << LogPreamble(this) << "Unregistering breakpoint " << bp->settings().id
                      << " (" << bp->settings().name << ").";
 
-  auto found = breakpoints_.find(address);
-  if (found == breakpoints_.end()) {
-    // This can happen if there was an error setting up the breakpoint.
-    // This normally happens with hardware breakpoints, which have a common way
-    // of failing (no more HW breakpoints).
-    return;
+  switch (bp->type()) {
+    case debug_ipc::BreakpointType::kSoftware:
+      UnregisterSoftwareBreakpoint(bp, address);
+    case debug_ipc::BreakpointType::kHardware:
+    case debug_ipc::BreakpointType::kWatchpoint:
+      // TODO(donosoc): Reactivate once the transition is complete.
+      return;
+    case debug_ipc::BreakpointType::kLast:
+      FXL_NOTREACHED();
+      return;
   }
 
-  bool still_used = found->second->UnregisterBreakpoint(bp);
-  if (!still_used) {
-    for (auto& pair : threads_)
-      pair.second->WillDeleteProcessBreakpoint(found->second.get());
-    breakpoints_.erase(found);
-  }
+  FXL_NOTREACHED();
 }
 
 zx_status_t DebuggedProcess::RegisterWatchpoint(Watchpoint* wp,
@@ -730,6 +721,34 @@ void DebuggedProcess::PruneStepOverQueue() {
   }
 
   step_over_queue_ = std::move(pruned_tickets);
+}
+
+zx_status_t DebuggedProcess::RegisterSoftwareBreakpoint(Breakpoint* bp, uint64_t address) {
+  auto found = software_breakpoints_.find(address);
+  if (found == software_breakpoints_.end()) {
+    auto process_breakpoint = std::make_unique<SoftwareBreakpoint>(bp, this, this, address);
+    if (zx_status_t status = process_breakpoint->Init(); status != ZX_OK)
+      return status;
+
+    software_breakpoints_[address] = std::move(process_breakpoint);
+    return ZX_OK;
+  } else {
+    return found->second->RegisterBreakpoint(bp);
+  }
+}
+
+void DebuggedProcess::UnregisterSoftwareBreakpoint(Breakpoint* bp, uint64_t address) {
+  auto found = software_breakpoints_.find(address);
+  if (found == software_breakpoints_.end()) {
+    return;
+  }
+
+  bool still_used = found->second->UnregisterBreakpoint(bp);
+  if (!still_used) {
+    for (auto& pair : threads_)
+      pair.second->WillDeleteProcessBreakpoint(found->second.get());
+    software_breakpoints_.erase(found);
+  }
 }
 
 }  // namespace debug_agent

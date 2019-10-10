@@ -61,9 +61,9 @@ zx_status_t SoftwareBreakpoint::Install() {
   return ZX_OK;
 }
 
-void SoftwareBreakpoint::Uninstall() {
+zx_status_t SoftwareBreakpoint::Uninstall() {
   if (!installed_)
-    return;  // Not installed.
+    return ZX_OK;  // Not installed.
 
   // If the breakpoint was previously installed it means the memory address was valid and writable,
   // so we generally expect to be able to do the same write to uninstall it. But it could have been
@@ -74,12 +74,12 @@ void SoftwareBreakpoint::Uninstall() {
   zx_status_t status = memory_accessor_->ReadProcessMemory(
       address(), &current_contents, sizeof(arch::BreakInstructionType), &actual);
   if (status != ZX_OK || actual != sizeof(arch::BreakInstructionType))
-    return;  // Probably unmapped, safe to ignore.
+    return ZX_OK;  // Probably unmapped, safe to ignore.
 
   if (current_contents != arch::kBreakInstruction) {
     FXL_LOG(WARNING) << "Debug break instruction unexpectedly replaced at 0x" << std::hex
                      << address();
-    return;  // Replaced with something else, ignore.
+    return ZX_OK;  // Replaced with something else, ignore.
   }
 
   status = memory_accessor_->WriteProcessMemory(address(), &previous_data_,
@@ -90,6 +90,7 @@ void SoftwareBreakpoint::Uninstall() {
   }
 
   installed_ = false;
+  return ZX_OK;
 }
 
 void SoftwareBreakpoint::FixupMemoryBlock(debug_ipc::MemoryBlock* block) {

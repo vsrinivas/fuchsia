@@ -27,13 +27,19 @@ class SoftwareBreakpoint : public ProcessBreakpoint {
 
   bool Installed() const override { return installed_; }
 
-  void FixupMemoryBlock(debug_ipc::MemoryBlock* block) override;
+  // virtual picture of memory is needed, this function will replace the replacement from this
+  // breakpoint if it appears in the given block. Otherwise does nothing.
+  void FixupMemoryBlock(debug_ipc::MemoryBlock* block);
 
  private:
   // ProcessBreakpoint overrides.
   zx_status_t Update() override;
-  zx_status_t Install() override;
-  void Uninstall() override;
+
+  // A software breakpoint gets uninstalled for all the threads.
+  zx_status_t Uninstall(DebuggedThread* thread) override { return Uninstall(); }
+  zx_status_t Uninstall() override;
+
+  zx_status_t Install();
 
   ProcessMemoryAccessor* memory_accessor_;  // Not-owning.
 
