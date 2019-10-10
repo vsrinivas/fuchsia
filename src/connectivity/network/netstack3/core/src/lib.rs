@@ -29,6 +29,7 @@ extern crate packet_new as packet;
 #[macro_use]
 mod macros;
 
+mod algorithm;
 #[cfg(test)]
 mod benchmarks;
 mod context;

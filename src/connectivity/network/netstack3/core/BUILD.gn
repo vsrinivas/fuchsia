@@ -13,6 +13,7 @@ rustc_library("netstack3-core") {
 
   deps = [
     "//garnet/lib/rust/never",
+    "//garnet/public/rust/mundane",
     "//garnet/public/rust/zerocopy",
     "//garnet/public/rust/zerocopy/zerocopy-derive",
     "//src/connectivity/lib/internet-checksum",

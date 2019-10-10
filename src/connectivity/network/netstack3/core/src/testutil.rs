@@ -108,6 +108,14 @@ impl<R: RngCore> RngCore for FakeCryptoRng<R> {
 
 impl<R: RngCore> CryptoRng for FakeCryptoRng<R> {}
 
+impl<R: RngCore> crate::context::RngContext for FakeCryptoRng<R> {
+    type Rng = Self;
+
+    fn rng(&mut self) -> &mut Self::Rng {
+        self
+    }
+}
+
 /// Create a new deterministic RNG from a seed.
 pub(crate) fn new_rng(mut seed: u64) -> XorShiftRng {
     if seed == 0 {
@@ -120,6 +128,24 @@ pub(crate) fn new_rng(mut seed: u64) -> XorShiftRng {
     NativeEndian::write_u32(&mut bytes[8..12], seed as u32);
     NativeEndian::write_u32(&mut bytes[12..16], (seed >> 32) as u32);
     XorShiftRng::from_seed(bytes)
+}
+
+/// Creates a new deterministic [`FakeCryptoRng`] from a seed.
+pub(crate) fn new_fake_crypto_rng(seed: u64) -> FakeCryptoRng<XorShiftRng> {
+    FakeCryptoRng(new_rng(seed))
+}
+
+/// Creates `iterations` fake RNGs.
+///
+/// `with_fake_rngs` will create `iterations` different [`FakeCryptoRng`]s and
+/// call the function `f` for each one of them.
+///
+/// This function can be used for tests that weed out weirdnesses that can
+/// happen with certain random number sequences.
+pub(crate) fn with_fake_rngs<F: Fn(FakeCryptoRng<XorShiftRng>)>(iterations: u64, f: F) {
+    for seed in 0..iterations {
+        f(new_fake_crypto_rng(seed))
+    }
 }
 
 #[derive(Default, Debug)]

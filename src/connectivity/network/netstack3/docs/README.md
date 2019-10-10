@@ -6,6 +6,7 @@ This directory contains documentation of various aspects of the netstack. Briefl
   our codebase into two separate "core" and "bindings" components
 - [`DETAILS.md`](./DETAILS.md) describes various implementation details that are
   confusing enough to be worth calling out explicitly
+- [`DEVELOPMENT.md`](./DEVELOPMENT.md) describes local environment set up for development.
 - [`HACKING.md`](./HACKING.md) contains instructions for hacking on the netstack
 - [`IMPROVEMENTS.md`](./IMPROVEMENTS.md) contains ideas for possible future improvements
 - [`IP_TYPES.md`](./IP_TYPES.md) describes our use of types and traits to represent IP versions and addresses
