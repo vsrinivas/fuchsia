@@ -9,10 +9,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"log"
-	"net"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -85,7 +83,7 @@ var transferOrder = map[string]int{
 // Boot prepares and boots a device at the given IP address. Depending on bootMode, the
 // device will either be paved or netbooted with the provided images, command-line
 // arguments and a public SSH user key.
-func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []build.Image, cmdlineArgs []string, signers []ssh.Signer) error {
+func Boot(ctx context.Context, t *tftp.Client, bootMode int, imgs []build.Image, cmdlineArgs []string, signers []ssh.Signer) error {
 	var bootArgs func(build.Image) []string
 	switch bootMode {
 	case ModePave:
@@ -119,7 +117,6 @@ func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []build.Ima
 			if err != nil {
 				return err
 			}
-			defer imgFile.close()
 			files = append(files, imgFile)
 		}
 	}
@@ -144,7 +141,7 @@ func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []build.Ima
 	if len(files) == 0 {
 		return errors.New("no files to transfer")
 	}
-	if err := transfer(ctx, addr, files); err != nil {
+	if err := transfer(ctx, t, files); err != nil {
 		return err
 	}
 
@@ -157,40 +154,35 @@ func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []build.Ima
 		// Try to send the boot command a few times, as there's no ack, so it's
 		// not possible to tell if it's successfully booted or not.
 		for i := 0; i < 5; i++ {
-			n.Boot(addr)
+			n.Boot(t.RemoteAddr)
 		}
 	}
-	return n.Reboot(addr)
+	return n.Reboot(t.RemoteAddr)
 }
 
 // BootZedbootShim extracts the Zircon-R image that is intended to be paved to the device
 // and mexec()'s it, it is intended to be executed before calling Boot().
 // This function serves to emulate zero-state, and will eventually be superseded by an
 // infra implementation.
-func BootZedbootShim(ctx context.Context, addr *net.UDPAddr, imgs []build.Image) error {
+func BootZedbootShim(ctx context.Context, t *tftp.Client, imgs []build.Image) error {
 	files, err := filterZedbootShimImages(imgs)
 	if err != nil {
 		return err
 	}
-	defer func(files []*netsvcFile) {
-		for _, file := range files {
-			defer file.close()
-		}
-	}(files)
 
 	sort.Slice(files, func(i, j int) bool {
 		return files[i].index < files[j].index
 	})
 
-	if err := transfer(ctx, addr, files); err != nil {
+	if err := transfer(ctx, t, files); err != nil {
 		return err
 	}
 	hasRAMKernel := files[len(files)-1].name == kernelNetsvcName
 	n := netboot.NewClient(time.Second)
 	if hasRAMKernel {
-		return n.Boot(addr)
+		return n.Boot(t.RemoteAddr)
 	}
-	return n.Reboot(addr)
+	return n.Reboot(t.RemoteAddr)
 }
 
 func filterZedbootShimImages(imgs []build.Image) ([]*netsvcFile, error) {
@@ -231,7 +223,6 @@ func filterZedbootShimImages(imgs []build.Image) ([]*netsvcFile, error) {
 		if bootloaderImg.Path != "" {
 			bootloaderFile, err := openNetsvcFile(bootloaderNetsvcName, bootloaderImg.Path)
 			if err != nil {
-				zedbootFile.close()
 				return nil, err
 			}
 			files = append(files, bootloaderFile)
@@ -245,35 +236,16 @@ func filterZedbootShimImages(imgs []build.Image) ([]*netsvcFile, error) {
 // A file to send to netsvc.
 type netsvcFile struct {
 	name   string
-	reader io.Reader
-	size   int64
+	buffer []byte
 	index  int
 }
 
-func (f netsvcFile) close() error {
-	closer, ok := (f.reader).(io.Closer)
-	if ok {
-		return closer.Close()
-	}
-	return nil
-}
-
 func openNetsvcFile(name, path string) (*netsvcFile, error) {
-	idx, ok := transferOrder[name]
-	if !ok {
-		return nil, fmt.Errorf("unrecognized name: %s", name)
-	}
-	fd, err := os.Open(path)
+	buf, err := ioutil.ReadFile(path)
 	if err != nil {
-		fd.Close()
 		return nil, err
 	}
-	fi, err := fd.Stat()
-	if err != nil {
-		fd.Close()
-		return nil, err
-	}
-	return &netsvcFile{name: name, reader: fd, size: fi.Size(), index: idx}, nil
+	return newNetsvcFile(name, buf)
 }
 
 func newNetsvcFile(name string, buf []byte) (*netsvcFile, error) {
@@ -282,22 +254,14 @@ func newNetsvcFile(name string, buf []byte) (*netsvcFile, error) {
 		return nil, fmt.Errorf("unrecognized name: %s", name)
 	}
 	return &netsvcFile{
-		reader: bytes.NewReader(buf),
-		size:   int64(len(buf)),
+		buffer: buf,
 		name:   name,
 		index:  idx,
 	}, nil
 }
 
 // Transfers files over TFTP to a node at a given address.
-func transfer(ctx context.Context, addr *net.UDPAddr, files []*netsvcFile) error {
-	t := tftp.NewClient()
-	tftpAddr := &net.UDPAddr{
-		IP:   addr.IP,
-		Port: tftp.ClientPort,
-		Zone: addr.Zone,
-	}
-
+func transfer(ctx context.Context, t *tftp.Client, files []*netsvcFile) error {
 	// Attempt the whole process of sending every file over and retry on failure of any file.
 	// This behavior more closely aligns with that of the bootserver.
 	return retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 20), func() error {
@@ -305,30 +269,23 @@ func transfer(ctx context.Context, addr *net.UDPAddr, files []*netsvcFile) error
 			// Attempt to send a file. If the server tells us we need to wait, then try
 			// again as long as it keeps telling us this. ErrShouldWait implies the server
 			// is still responding and will eventually be able to handle our request.
+			log.Printf("attempting to send %s...\n", f.name)
 			for {
-				select {
-				case <-ctx.Done():
+				if ctx.Err() != nil {
 					return nil
-				default:
 				}
-				log.Printf("attempting to send %s...\n", f.name)
-				reader, err := t.Send(tftpAddr, f.name, f.size)
-				switch {
-				case err == tftp.ErrShouldWait:
+				err := t.Write(ctx, f.name, f.buffer)
+				switch err {
+				case nil:
+				case tftp.ErrShouldWait:
 					// The target is busy, so let's sleep for a bit before
 					// trying again, otherwise we'll be wasting cycles and
 					// printing too often.
 					log.Printf("target is busy, retrying in one second\n")
-					select {
-					case <-time.After(time.Second):
-						continue
-					}
-				case err != nil:
+					time.Sleep(time.Second)
+					continue
+				default:
 					log.Printf("failed to send %s; starting from the top: %v\n", f.name, err)
-					return err
-				}
-				if _, err := reader.ReadFrom(f.reader); err != nil {
-					log.Printf("unable to read from %s; retrying: %v\n", f.name, err)
 					return err
 				}
 				break

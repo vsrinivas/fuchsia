@@ -10,10 +10,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
@@ -25,18 +25,12 @@ import (
 
 // PollForSummary polls a node waiting for a summary.json to be written; this relies on
 // runtests having been run on target.
-func PollForSummary(ctx context.Context, addr *net.UDPAddr, summaryFilename, testResultsDir, outputArchive string, filePollInterval time.Duration) error {
-	t := tftp.NewClient()
-	tftpAddr := &net.UDPAddr{
-		IP:   addr.IP,
-		Port: tftp.ClientPort,
-		Zone: addr.Zone,
-	}
+func PollForSummary(ctx context.Context, t *tftp.Client, summaryFilename, testResultsDir, outputArchive string, filePollInterval time.Duration) error {
 	var buffer bytes.Buffer
 	var writer io.WriterTo
 	var err error
 	err = retry.Retry(ctx, retry.NewConstantBackoff(filePollInterval), func() error {
-		writer, err = t.Receive(tftpAddr, path.Join(testResultsDir, summaryFilename))
+		writer, err = t.Read(ctx, path.Join(testResultsDir, summaryFilename))
 		return err
 	}, nil)
 	if err != nil {
@@ -72,44 +66,50 @@ func PollForSummary(ctx context.Context, addr *net.UDPAddr, summaryFilename, tes
 	// Tar in a subroutine while busy-printing so that we do not hit an i/o timeout when
 	// dealing with large files.
 	c := make(chan error)
-	go func() {
-		// Copy test output from the node.
-		for _, output := range result.Outputs {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	numTasks := len(result.Outputs) + len(result.Tests)
+	var tarLock sync.Mutex
+	// Copy test output from the node.
+	for _, output := range result.Outputs {
+		go func(output string) {
 			remote := filepath.Join(testResultsDir, output)
-			if err = botanist.FetchAndArchiveFile(t, tftpAddr, tw, remote, output); err != nil {
-				c <- err
-				return
-			}
-		}
-		for _, test := range result.Tests {
+			err := botanist.FetchAndArchiveFile(ctx, t, tw, remote, output, &tarLock)
+			c <- err
+		}(output)
+	}
+	for _, test := range result.Tests {
+		go func(test TestDetails) {
 			remote := filepath.Join(testResultsDir, test.OutputFile)
-			if err = botanist.FetchAndArchiveFile(t, tftpAddr, tw, remote, test.OutputFile); err != nil {
-				c <- err
-				return
-			}
-			// Copy data sinks if any are present.
-			for _, sinks := range test.DataSinks {
-				for _, sink := range sinks {
+			err := botanist.FetchAndArchiveFile(ctx, t, tw, remote, test.OutputFile, &tarLock)
+			c <- err
+		}(test)
+		// Copy data sinks if any are present.
+		for _, sinks := range test.DataSinks {
+			numTasks += len(sinks)
+			for _, sink := range sinks {
+				go func(sink DataSink) {
 					remote := filepath.Join(testResultsDir, sink.File)
-					if err = botanist.FetchAndArchiveFile(t, tftpAddr, tw, remote, sink.File); err != nil {
-						c <- err
-						return
-					}
-				}
+					err := botanist.FetchAndArchiveFile(ctx, t, tw, remote, sink.File, &tarLock)
+					c <- err
+				}(sink)
 			}
-		}
-		c <- nil
-	}()
-
-	logger.Debugf(ctx, "tarring test output...\n")
-	ticker := time.NewTicker(5 * time.Second)
-	for {
-		select {
-		case err := <-c:
-			ticker.Stop()
-			return err
-		case <-ticker.C:
-			logger.Debugf(ctx, "tarring test output...\n")
 		}
 	}
+
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	go func() {
+		for range ticker.C {
+			logger.Debugf(ctx, "tarring test output...\n")
+		}
+	}()
+
+	for i := 0; i < numTasks; i++ {
+		if err := <-c; err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

@@ -21,6 +21,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/net/serial"
+	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -75,6 +76,7 @@ type DeviceTarget struct {
 	opts    Options
 	signers []ssh.Signer
 	serial  io.ReadWriteCloser
+	tftp    *tftp.Client
 }
 
 // NewDeviceTarget returns a new device target with a given configuration.
@@ -98,12 +100,29 @@ func NewDeviceTarget(ctx context.Context, config DeviceConfig, opts Options) (*D
 			logger.Errorf(ctx, "unable to open %s: %v", config.Serial, err)
 		}
 	}
+	addr, err := netutil.GetNodeAddress(ctx, config.Network.Nodename, false)
+	if err != nil {
+		return nil, err
+	}
+	t, err := tftp.NewClient(&net.UDPAddr{
+		IP:   addr.IP,
+		Port: tftp.ClientPort,
+		Zone: addr.Zone,
+	})
+	if err != nil {
+		return nil, err
+	}
 	return &DeviceTarget{
 		config:  config,
 		opts:    opts,
 		signers: signers,
 		serial:  s,
+		tftp:    t,
 	}, nil
+}
+
+func (t *DeviceTarget) Tftp() *tftp.Client {
+	return t.tftp
 }
 
 // Nodename returns the name of the node.
@@ -145,21 +164,14 @@ func (t *DeviceTarget) Start(ctx context.Context, images build.Images, args []st
 				continue
 			}
 			fmt.Print(data)
-			select {
-			case <-ctx.Done():
+			if ctx.Err() != nil {
 				return
-			default:
 			}
 		}
 	}()
 
-	addr, err := netutil.GetNodeAddress(ctx, t.Nodename(), false)
-	if err != nil {
-		return err
-	}
-
 	// Mexec Zedboot
-	err = botanist.BootZedbootShim(ctx, addr, images)
+	err = botanist.BootZedbootShim(ctx, t.Tftp(), images)
 	if err != nil {
 		return err
 	}
@@ -171,7 +183,7 @@ func (t *DeviceTarget) Start(ctx context.Context, images build.Images, args []st
 	} else {
 		bootMode = botanist.ModePave
 	}
-	return botanist.Boot(ctx, addr, bootMode, images, args, t.signers)
+	return botanist.Boot(ctx, t.Tftp(), bootMode, images, args, t.signers)
 }
 
 // Restart restarts the target.

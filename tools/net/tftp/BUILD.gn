@@ -3,7 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
 
 go_library("tftp") {
   name = "go.fuchsia.dev/fuchsia/tools/net/tftp"
+}
+
+go_test("tftp_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/net/tftp" ]
+  deps = [
+    ":tftp",
+  ]
 }

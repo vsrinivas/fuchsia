@@ -6,27 +6,42 @@ package botanist
 
 import (
 	"archive/tar"
+	"bytes"
+	"context"
 	"fmt"
-	"net"
+	"sync"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 )
 
 // FetchAndArchiveFile fetches a remote file via TFTP from a given node, and
 // writes it an archive.
-func FetchAndArchiveFile(t *tftp.Client, addr *net.UDPAddr, tw *tar.Writer, path, name string) error {
-	receiver, err := t.Receive(addr, path)
-	if err != nil {
-		return fmt.Errorf("failed to receive file %s: %v\n", path, err)
+func FetchAndArchiveFile(ctx context.Context, t *tftp.Client, tw *tar.Writer, path, name string, lock *sync.Mutex) error {
+	var err error
+	var reader *bytes.Reader
+	for {
+		reader, err = t.Read(ctx, path)
+		switch err {
+		case nil:
+		case tftp.ErrShouldWait:
+			time.Sleep(time.Second)
+			continue
+		default:
+			return fmt.Errorf("failed to receive file %s: %s", path, err)
+		}
+		break
 	}
+	lock.Lock()
+	defer lock.Unlock()
 	hdr := &tar.Header{
 		Name: name,
-		Size: receiver.(tftp.Session).Size(),
+		Size: int64(reader.Len()),
 		Mode: 0666,
 	}
 	if err := tw.WriteHeader(hdr); err != nil {
 		return err
 	}
-	_, err = receiver.WriteTo(tw)
+	_, err = reader.WriteTo(tw)
 	return err
 }

@@ -19,5 +19,6 @@ group("tests") {
     "//tools/net/digest:digest_tests",
     "//tools/net/mdns:mdns_tests",
     "//tools/net/sshutil:sshutil_tests",
+    "//tools/net/tftp:tftp_tests",
   ]
 }

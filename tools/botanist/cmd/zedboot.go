@@ -8,14 +8,13 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"strings"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
 	"go.fuchsia.dev/fuchsia/tools/build/api"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
-	"go.fuchsia.dev/fuchsia/tools/net/netutil"
+	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 
 	"github.com/google/subcommands"
@@ -75,9 +74,9 @@ func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.cmdlineFile, "cmdline-file", "", "path to a file containing additional kernel command-line arguments")
 }
 
-func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, addr *net.UDPAddr, cmdlineArgs []string) error {
+func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, t *tftp.Client, cmdlineArgs []string) error {
 	logger.Debugf(ctx, "waiting for %q\n", cmd.summaryFilename)
-	return runtests.PollForSummary(ctx, addr, cmd.summaryFilename, cmd.testResultsDir, cmd.outputArchive, cmd.filePollInterval)
+	return runtests.PollForSummary(ctx, t, cmd.summaryFilename, cmd.testResultsDir, cmd.outputArchive, cmd.filePollInterval)
 }
 
 func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) error {
@@ -120,12 +119,10 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 		}(device)
 	}
 	go func() {
-		addr, err := netutil.GetNodeAddress(ctx, devices[0].Nodename(), false)
-		if err != nil {
-			errs <- err
-			return
-		}
-		errs <- cmd.runTests(ctx, imgs, addr, cmdlineArgs)
+		// We execute tests here against the 0th device, there may be N devices
+		// in the test bed but all other devices are driven by the tests not
+		// the test runner.
+		errs <- cmd.runTests(ctx, imgs, devices[0].Tftp(), cmdlineArgs)
 	}()
 
 	select {
