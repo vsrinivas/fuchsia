@@ -6,7 +6,7 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
-rustc_library("lib") {
+rustc_binary("bin") {
   name = "cs"
   edition = "2018"
 
@@ -14,18 +14,6 @@ rustc_library("lib") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-zircon",
-    "//third_party/rust_crates:failure",
-    "//zircon/system/fidl/fuchsia-inspect-deprecated:fuchsia-inspect-deprecated-rustc",
-  ]
-}
-
-rustc_binary("bin") {
-  name = "cs"
-  edition = "2018"
-
-  deps = [
-    ":lib",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:structopt",
     "//zircon/system/fidl/fuchsia-inspect-deprecated:fuchsia-inspect-deprecated-rustc",

@@ -53,6 +53,8 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack {
   void GetRouteTable(GetRouteTableCallback callback) override {}
   void GetRouteTable2(GetRouteTable2Callback callback) override {}
 
+  void GetStats(uint32_t nicid, GetStatsCallback callback) override {}
+
   void RemoveInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
                               RemoveInterfaceAddressCallback callback) override {}
 

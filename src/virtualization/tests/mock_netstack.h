@@ -23,6 +23,8 @@ class MockNetstack : public fuchsia::netstack::Netstack {
   void GetRouteTable(GetRouteTableCallback callback) override {}
   void GetRouteTable2(GetRouteTable2Callback callback) override {}
 
+  void GetStats(uint32_t nicid, GetStatsCallback callback) override {}
+
   void SetInterfaceStatus(uint32_t nicid, bool enabled) override {}
 
   void SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
