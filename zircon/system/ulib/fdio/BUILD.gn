@@ -2,59 +2,106 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/library_shim.gni")
+import("$zx/public/gn/resource.gni")
+import("$zx/public/gn/toolchain/environment_redirect.gni")
 
-library("fdio") {
-  sdk = "shared"
-  sdk_publishable = true
-  sdk_headers = [
-    "lib/fdio/directory.h",
-    "lib/fdio/fd.h",
-    "lib/fdio/fdio.h",
-    "lib/fdio/io.h",
-    "lib/fdio/limits.h",
-    "lib/fdio/namespace.h",
-    "lib/fdio/private.h",
-    "lib/fdio/spawn.h",
-    "lib/fdio/unsafe.h",
-    "lib/fdio/vfs.h",
-    "lib/fdio/watcher.h",
-  ]
-  shared = true
-  sources = [
-    "bsdsocket.cc",
-    "fd.cc",
-    "fdio.cc",
-    "get-vmo.cc",
-    "namespace/local-connection.cc",
-    "namespace/local-filesystem.cc",
-    "namespace/local-vnode.cc",
-    "namespace/namespace.cc",
-    "null.cc",
-    "remoteio.cc",
-    "socket.cc",
-    "spawn.cc",
-    "stubs.cc",
-    "uname.cc",
-    "unistd.cc",
-    "waitable.cc",
-    "watcher.cc",
-    "zxio.cc",
-  ]
-  deps = [
-    "$zx/system/fidl/fuchsia-device:llcpp",
-    "$zx/system/fidl/fuchsia-io:llcpp",
-    "$zx/system/fidl/fuchsia-ldsvc:c",
-    "$zx/system/fidl/fuchsia-net:llcpp",
-    "$zx/system/fidl/fuchsia-posix-socket:llcpp",
-    "$zx/system/fidl/fuchsia-process:c",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxio",
-    "$zx/system/ulib/zxs",
-  ]
-  configs += [ "$zx_build/public/gn/config:static-libc++" ]
+# TODO(38226): This is a kludge to make fuzzer.foosan builds actually just use
+# the plain foosan build of libfdio.  This works around the problem that
+# libfuzzer itself calls into libfdio and so its own calls pollute the data
+# it's collecting about the code under test.  By redirecting from the fuzzer
+# environment to the base environment (i.e. "user.fuzzer" -> "user"), we get
+# the build that has the same foosan instrumentation to catch bugs but doesn't
+# have the fuzzer (i.e. coverage tracking) instrumentation that influences
+# libfuzzer's choices.
+if (get_path_info(toolchain.environment, "extension") == "fuzzer") {
+  foreach(target,
+          [
+            "fdio",
+            "headers",
+          ]) {
+    environment_redirect(target) {
+      environment_label =
+          "$zx/public/gn/toolchain:${toolchain.base_environment}"
+      shlib = true
+      variant = toolchain.variant
+      deps = [
+        ":$target",
+      ]
+      if (target == "fdio") {
+        deps += [ ":fuzzer-redirect-manifest" ]
+      }
+    }
+  }
+} else {
+  library("fdio") {
+    sdk = "shared"
+    sdk_publishable = true
+    sdk_headers = [
+      "lib/fdio/directory.h",
+      "lib/fdio/fd.h",
+      "lib/fdio/fdio.h",
+      "lib/fdio/io.h",
+      "lib/fdio/limits.h",
+      "lib/fdio/namespace.h",
+      "lib/fdio/private.h",
+      "lib/fdio/spawn.h",
+      "lib/fdio/unsafe.h",
+      "lib/fdio/vfs.h",
+      "lib/fdio/watcher.h",
+    ]
+    shared = true
+    sources = [
+      "bsdsocket.cc",
+      "fd.cc",
+      "fdio.cc",
+      "get-vmo.cc",
+      "namespace/local-connection.cc",
+      "namespace/local-filesystem.cc",
+      "namespace/local-vnode.cc",
+      "namespace/namespace.cc",
+      "null.cc",
+      "remoteio.cc",
+      "socket.cc",
+      "spawn.cc",
+      "stubs.cc",
+      "uname.cc",
+      "unistd.cc",
+      "waitable.cc",
+      "watcher.cc",
+      "zxio.cc",
+    ]
+    deps = [
+      "$zx/system/fidl/fuchsia-device:llcpp",
+      "$zx/system/fidl/fuchsia-io:llcpp",
+      "$zx/system/fidl/fuchsia-ldsvc:c",
+      "$zx/system/fidl/fuchsia-net:llcpp",
+      "$zx/system/fidl/fuchsia-posix-socket:llcpp",
+      "$zx/system/fidl/fuchsia-process:c",
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/fidl",
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zircon-internal",
+      "$zx/system/ulib/zx",
+      "$zx/system/ulib/zxio",
+      "$zx/system/ulib/zxs",
+    ]
+    configs += [ "$zx_build/public/gn/config:static-libc++" ]
+  }
+
+  # TODO(38226): Binaries built in the fuzzer environment look for libraries
+  # in that environment.variant's libprefix.  But the redirect above sent it
+  # to the base environment (with the same variant), which has a different
+  # libprefix.  So add metadata that places the runtime shlib binary
+  # underneath the fuzzer libprefix so it will be found where it's expected.
+  # Note that the manifest will also mention the base environment variant
+  # location for the same library, which is superfluous but harmless.
+  resource("fuzzer-redirect-manifest") {
+    visibility = [ ":*" ]
+    sources = [
+      "$target_out_dir/libfdio.so",
+    ]
+    outputs = [
+      "lib/fuzzer.${toolchain.variant}/{{source_file_part}}",
+    ]
+  }
 }
