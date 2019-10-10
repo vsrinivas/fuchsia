@@ -43,10 +43,10 @@ source_set("mlme") {
     "include/wlan/mlme/frame_validation.h",
     "include/wlan/mlme/mac_frame.h",
     "include/wlan/mlme/macaddr_map.h",
-    "include/wlan/mlme/mcs.h",
     "include/wlan/mlme/mesh/mesh_mlme.h",
     "include/wlan/mlme/mlme.h",
     "include/wlan/mlme/packet.h",
+    "include/wlan/mlme/parse_beacon.h",
     "include/wlan/mlme/rust_utils.h",
     "include/wlan/mlme/service.h",
     "include/wlan/mlme/timer.h",
@@ -78,7 +78,6 @@ source_set("mlme") {
     "key.cc",
     "mac_frame.cc",
     "mac_header_writer.cc",
-    "mcs.cc",
     "mesh/deduplicator.cc",
     "mesh/hwmp.cc",
     "mesh/mesh_mlme.cc",
@@ -103,17 +102,18 @@ source_set("mlme") {
     "//sdk/fidl/fuchsia.wlan.stats",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/connectivity/wlan/lib/mlme/rust/c-binding:wlan-mlme-c",
-    "//zircon/system/banjo/ddk.hw.wlan.ieee80211",
-    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
-    "//zircon/public/lib/operation",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
+    "//zircon/public/lib/operation",
+
     # Needed in order to link rust wlan-mlme, which depends on fuchsia-syslog, which has
     # non_rust_deps = ["//zircon/public/lib/syslog"]
     # Noting that non_rust_deps do not propagate.
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.hw.wlan.ieee80211",
+    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
   ]
 
   public_configs = [ ":wlan_mlme_config" ]

@@ -6,6 +6,7 @@ pub mod rsn;
 pub mod wpa;
 
 mod constants;
+mod fake_ies;
 mod fields;
 mod id;
 mod parse;
@@ -14,7 +15,7 @@ mod write;
 
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
-pub use {constants::*, fields::*, id::*, parse::*, reader::Reader, write::*};
+pub use {constants::*, fake_ies::*, fields::*, id::*, parse::*, reader::Reader, write::*};
 
 #[repr(C, packed)]
 #[derive(AsBytes, FromBytes, Unaligned)]

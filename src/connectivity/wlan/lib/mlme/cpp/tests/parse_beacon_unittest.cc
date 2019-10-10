@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 #include <wlan/common/channel.h>
+#include <wlan/common/parse_element.h>
 #include <wlan/mlme/parse_beacon.h>
 #include <wlan/mlme/wlan.h>
 
@@ -11,8 +12,8 @@ namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
-wlan_mlme::VhtOperation make_vht_op(wlan_mlme::VhtCbw cbw, uint8_t seg0, uint8_t seg1) {
-  wlan_mlme::VhtOperation vht_op;
+VhtOperation make_vht_op(VhtOperation::VhtChannelBandwidth cbw, uint8_t seg0, uint8_t seg1) {
+  VhtOperation vht_op;
   vht_op.vht_cbw = to_enum_type(cbw);
   vht_op.center_freq_seg0 = seg0;
   vht_op.center_freq_seg1 = seg1;
@@ -20,17 +21,17 @@ wlan_mlme::VhtOperation make_vht_op(wlan_mlme::VhtCbw cbw, uint8_t seg0, uint8_t
 }
 
 TEST(ParseBeaconTest, GetVhtCbw) {
-  EXPECT_EQ(GetVhtCbw(make_vht_op(wlan_mlme::VhtCbw::CBW_80_160_80P80, 0, 5)),
+  EXPECT_EQ(GetVhtCbw(make_vht_op(VhtOperation::VhtChannelBandwidth::VHT_CBW_80_160_80P80, 0, 5)),
             std::optional<wlan_channel_bandwidth_t>{});
-  EXPECT_EQ(GetVhtCbw(make_vht_op(wlan_mlme::VhtCbw::CBW_80_160_80P80, 0, 10)),
+  EXPECT_EQ(GetVhtCbw(make_vht_op(VhtOperation::VhtChannelBandwidth::VHT_CBW_80_160_80P80, 0, 10)),
             std::optional<wlan_channel_bandwidth_t>{});
-  EXPECT_EQ(GetVhtCbw(make_vht_op(wlan_mlme::VhtCbw::CBW_80_160_80P80, 8, 0)),
+  EXPECT_EQ(GetVhtCbw(make_vht_op(VhtOperation::VhtChannelBandwidth::VHT_CBW_80_160_80P80, 8, 0)),
             std::optional{WLAN_CHANNEL_BANDWIDTH__80});
-  EXPECT_EQ(GetVhtCbw(make_vht_op(wlan_mlme::VhtCbw::CBW_80_160_80P80, 0, 8)),
+  EXPECT_EQ(GetVhtCbw(make_vht_op(VhtOperation::VhtChannelBandwidth::VHT_CBW_80_160_80P80, 0, 8)),
             std::optional{WLAN_CHANNEL_BANDWIDTH__160});
-  EXPECT_EQ(GetVhtCbw(make_vht_op(wlan_mlme::VhtCbw::CBW_80_160_80P80, 0, 20)),
+  EXPECT_EQ(GetVhtCbw(make_vht_op(VhtOperation::VhtChannelBandwidth::VHT_CBW_80_160_80P80, 0, 20)),
             std::optional{WLAN_CHANNEL_BANDWIDTH__80P80});
-  EXPECT_EQ(GetVhtCbw(make_vht_op(wlan_mlme::VhtCbw::CBW_20_40, 0, 8)),
+  EXPECT_EQ(GetVhtCbw(make_vht_op(VhtOperation::VhtChannelBandwidth::VHT_CBW_20_40, 0, 8)),
             std::optional<wlan_channel_bandwidth_t>{});
 }
 
@@ -45,32 +46,32 @@ TEST(ParseBeaconTest, DeriveChannel) {
 
   // HT wins over DSSS
   {
-    wlan_mlme::HtOperation ht_op;
+    HtOperation ht_op;
     ht_op.primary_chan = 36;
-    ht_op.ht_op_info.secondary_chan_offset =
-        to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_BELOW);
-    ht_op.ht_op_info.sta_chan_width = to_enum_type(wlan_mlme::StaChanWidth::ANY);
+    ht_op.head.set_secondary_chan_offset(
+        to_enum_type(HtOpInfoHead::SecChanOffset::SECONDARY_BELOW));
+    ht_op.head.set_sta_chan_width(to_enum_type(HtOpInfoHead::StaChanWidth::ANY));
     EXPECT_EQ(DeriveChannel(3, 4, &ht_op, {}),
               (wlan_channel_t{36, WLAN_CHANNEL_BANDWIDTH__40BELOW, 0}));
   }
 
   // sta_chan_width set to TWENTY overrides bandwidth
   {
-    wlan_mlme::HtOperation ht_op;
+    HtOperation ht_op;
     ht_op.primary_chan = 36;
-    ht_op.ht_op_info.secondary_chan_offset =
-        to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_BELOW);
-    ht_op.ht_op_info.sta_chan_width = to_enum_type(wlan_mlme::StaChanWidth::TWENTY);
+    ht_op.head.set_secondary_chan_offset(
+        to_enum_type(HtOpInfoHead::SecChanOffset::SECONDARY_BELOW));
+    ht_op.head.set_sta_chan_width(to_enum_type(HtOpInfoHead::StaChanWidth::TWENTY));
     EXPECT_EQ(DeriveChannel(3, 4, &ht_op, {}), (wlan_channel_t{36, WLAN_CHANNEL_BANDWIDTH__20, 0}));
   }
 
   // VHT overrides CBW if HT is present
   {
-    wlan_mlme::HtOperation ht_op;
+    HtOperation ht_op;
     ht_op.primary_chan = 36;
-    ht_op.ht_op_info.secondary_chan_offset =
-        to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_BELOW);
-    ht_op.ht_op_info.sta_chan_width = to_enum_type(wlan_mlme::StaChanWidth::ANY);
+    ht_op.head.set_secondary_chan_offset(
+        to_enum_type(HtOpInfoHead::SecChanOffset::SECONDARY_BELOW));
+    ht_op.head.set_sta_chan_width(to_enum_type(HtOpInfoHead::StaChanWidth::ANY));
     EXPECT_EQ(DeriveChannel(3, 4, &ht_op, {WLAN_CHANNEL_BANDWIDTH__160}),
               (wlan_channel_t{36, WLAN_CHANNEL_BANDWIDTH__160, 0}));
   }
@@ -144,9 +145,9 @@ TEST(ParseBeaconTest, ParseBeaconElements) {
   EXPECT_EQ(*bss_desc.country, std::vector<uint8_t>({'A', 'B', 'C'}));
   EXPECT_EQ(*bss_desc.rsn, std::vector<uint8_t>({48, 2, 0xaa, 0xbb}));
   ASSERT_NE(bss_desc.ht_cap, nullptr);
-  EXPECT_EQ(bss_desc.ht_cap->ampdu_params.exponent, 3);
+  EXPECT_EQ(common::ParseHtCapabilities(bss_desc.ht_cap->bytes)->ampdu_params.exponent(), 3);
   ASSERT_NE(bss_desc.ht_op, nullptr);
-  EXPECT_EQ(bss_desc.ht_op->primary_chan, 36);
+  EXPECT_EQ(common::ParseHtOperation(bss_desc.ht_op->bytes)->primary_chan, 36);
   ASSERT_NE(bss_desc.vht_cap, nullptr);
   ASSERT_NE(bss_desc.vht_op, nullptr);
 }

@@ -77,10 +77,10 @@ wlan_mlme::BSSDescription CreateBssDescription(bool rsn, wlan_channel_t chan) {
   bss_desc.basic_rate_set.resize(0);
   bss_desc.op_rate_set.resize(0);
 
-  wlan_mlme::CapabilityInfo cap;
-  cap.ess = true;
-  cap.short_preamble = true;
-  bss_desc.cap = cap;
+  CapabilityInfo cap{};
+  cap.set_ess(true);
+  cap.set_short_preamble(true);
+  bss_desc.cap = cap.val();
 
   if (rsn) {
     bss_desc.rsn.emplace(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));

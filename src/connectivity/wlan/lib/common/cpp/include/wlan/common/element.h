@@ -5,6 +5,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ELEMENT_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ELEMENT_H_
 
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
 #include <cstdint>
 #include <unordered_map>
 #include <utility>
@@ -12,14 +17,10 @@
 
 #include <ddk/hw/wlan/ieee80211.h>
 #include <ddk/protocol/wlan/info.h>
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/common/bitfield.h>
 #include <wlan/common/element_id.h>
 #include <wlan/common/logging.h>
 #include <wlan/common/macaddr.h>
-#include <zircon/assert.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 namespace wlan {
 
@@ -499,46 +500,6 @@ class HtCapabilityInfo : public common::BitField<uint16_t> {
     OCTETS_3839 = 0,
     OCTETS_7935 = 1,
   };
-
-  static HtCapabilityInfo FromFidl(const ::fuchsia::wlan::mlme::HtCapabilityInfo& fidl) {
-    HtCapabilityInfo dst;
-
-    dst.set_ldpc_coding_cap(fidl.ldpc_coding_cap ? 1 : 0);
-    dst.set_chan_width_set(static_cast<ChanWidthSet>(fidl.chan_width_set));
-    dst.set_sm_power_save(static_cast<SmPowerSave>(fidl.sm_power_save));
-    dst.set_greenfield(fidl.greenfield ? 1 : 0);
-    dst.set_short_gi_20(fidl.short_gi_20 ? 1 : 0);
-    dst.set_short_gi_40(fidl.short_gi_40 ? 1 : 0);
-    dst.set_tx_stbc(fidl.tx_stbc ? 1 : 0);
-    dst.set_rx_stbc(fidl.rx_stbc);
-    dst.set_delayed_block_ack(fidl.delayed_block_ack ? 1 : 0);
-    dst.set_max_amsdu_len(static_cast<MaxAmsduLen>(fidl.max_amsdu_len));
-    dst.set_dsss_in_40(fidl.dsss_in_40 ? 1 : 0);
-    dst.set_intolerant_40(fidl.intolerant_40 ? 1 : 0);
-    dst.set_lsig_txop_protect(fidl.lsig_txop_protect ? 1 : 0);
-
-    return dst;
-  }
-
-  ::fuchsia::wlan::mlme::HtCapabilityInfo ToFidl() const {
-    ::fuchsia::wlan::mlme::HtCapabilityInfo fidl;
-
-    fidl.ldpc_coding_cap = (ldpc_coding_cap() == 1);
-    fidl.chan_width_set = chan_width_set();
-    fidl.sm_power_save = sm_power_save();
-    fidl.greenfield = (greenfield() == 1);
-    fidl.short_gi_20 = (short_gi_20() == 1);
-    fidl.short_gi_40 = (short_gi_40() == 1);
-    fidl.tx_stbc = (tx_stbc() == 1);
-    fidl.rx_stbc = rx_stbc();
-    fidl.delayed_block_ack = (delayed_block_ack() == 1);
-    fidl.max_amsdu_len = max_amsdu_len();
-    fidl.dsss_in_40 = (dsss_in_40() == 1);
-    fidl.intolerant_40 = (intolerant_40() == 1);
-    fidl.lsig_txop_protect = (lsig_txop_protect() == 1);
-
-    return fidl;
-  }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56.3
@@ -563,24 +524,6 @@ class AmpduParams : public common::BitField<uint8_t> {
     EIGHT_USEC = 6,
     SIXTEEN_USEC = 7,
   };
-
-  static AmpduParams FromFidl(const ::fuchsia::wlan::mlme::AmpduParams& fidl) {
-    AmpduParams dst;
-
-    dst.set_exponent(fidl.exponent);
-    dst.set_min_start_spacing(static_cast<MinMPDUStartSpacing>(fidl.min_start_spacing));
-
-    return dst;
-  }
-
-  ::fuchsia::wlan::mlme::AmpduParams ToFidl() const {
-    fuchsia::wlan::mlme::AmpduParams fidl;
-
-    fidl.exponent = exponent();
-    fidl.min_start_spacing = min_start_spacing();
-
-    return fidl;
-  }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56.4
@@ -638,32 +581,6 @@ struct SupportedMcsSet {
   SupportedMcsRxMcsTail rx_mcs_tail;
   SupportedMcsTxMcs tx_mcs;
 
-  static SupportedMcsSet FromFidl(const ::fuchsia::wlan::mlme::SupportedMcsSet& fidl) {
-    SupportedMcsSet dst;
-
-    dst.rx_mcs_head.set_bitmask(fidl.rx_mcs_set);
-    dst.rx_mcs_tail.set_highest_rate(fidl.rx_highest_rate);
-    dst.tx_mcs.set_set_defined(fidl.tx_mcs_set_defined ? 1 : 0);
-    dst.tx_mcs.set_rx_diff(fidl.tx_rx_diff ? 1 : 0);
-    dst.tx_mcs.set_max_ss_human(fidl.tx_max_ss);
-    dst.tx_mcs.set_ueqm(fidl.tx_ueqm ? 1 : 0);
-
-    return dst;
-  }
-
-  ::fuchsia::wlan::mlme::SupportedMcsSet ToFidl() const {
-    ::fuchsia::wlan::mlme::SupportedMcsSet fidl;
-
-    fidl.rx_mcs_set = rx_mcs_head.bitmask();
-    fidl.rx_highest_rate = rx_mcs_tail.highest_rate();
-    fidl.tx_mcs_set_defined = (tx_mcs.set_defined() == 1);
-    fidl.tx_rx_diff = (tx_mcs.rx_diff() == 1);
-    fidl.tx_max_ss = tx_mcs.max_ss_human();  // Converting to human readable
-    fidl.tx_ueqm = (tx_mcs.ueqm() == 1);
-
-    return fidl;
-  }
-
   // TODO(porce): Implement accessors
 } __PACKED;
 
@@ -696,29 +613,6 @@ class HtExtCapabilities : public common::BitField<uint16_t> {
     MCS_BOTH = 3,
   };
 
-  static HtExtCapabilities FromFidl(const ::fuchsia::wlan::mlme::HtExtCapabilities& fidl) {
-    HtExtCapabilities dst;
-
-    dst.set_pco(fidl.pco);
-    dst.set_pco_transition(static_cast<PcoTransitionTime>(fidl.pco_transition));
-    dst.set_mcs_feedback(static_cast<McsFeedback>(fidl.mcs_feedback));
-    dst.set_htc_ht_support(fidl.htc_ht_support ? 1 : 0);
-    dst.set_rd_responder(fidl.rd_responder ? 1 : 0);
-
-    return dst;
-  }
-
-  ::fuchsia::wlan::mlme::HtExtCapabilities ToFidl() const {
-    ::fuchsia::wlan::mlme::HtExtCapabilities fidl;
-
-    fidl.pco = (pco() == 1);
-    fidl.pco_transition = pco_transition();
-    fidl.mcs_feedback = mcs_feedback();
-    fidl.htc_ht_support = (htc_ht_support() == 1);
-    fidl.rd_responder = (rd_responder() == 1);
-
-    return fidl;
-  }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56.6
@@ -827,57 +721,6 @@ class TxBfCapability : public common::BitField<uint32_t> {
     set_chan_estimation(num - 1);
   }
 
-  static TxBfCapability FromFidl(const ::fuchsia::wlan::mlme::TxBfCapability& fidl) {
-    TxBfCapability dst;
-
-    dst.set_implicit_rx(fidl.implicit_rx ? 1 : 0);
-    dst.set_rx_stag_sounding(fidl.rx_stag_sounding ? 1 : 0);
-    dst.set_tx_stag_sounding(fidl.tx_stag_sounding ? 1 : 0);
-    dst.set_rx_ndp(fidl.rx_ndp ? 1 : 0);
-    dst.set_tx_ndp(fidl.tx_ndp ? 1 : 0);
-    dst.set_implicit(fidl.implicit ? 1 : 0);
-    dst.set_calibration(static_cast<Calibration>(fidl.calibration));
-    dst.set_csi(fidl.csi ? 1 : 0);
-    dst.set_noncomp_steering(fidl.noncomp_steering ? 1 : 0);
-    dst.set_comp_steering(fidl.comp_steering ? 1 : 0);
-    dst.set_csi_feedback(static_cast<Feedback>(fidl.csi_feedback));
-    dst.set_noncomp_feedback(static_cast<Feedback>(fidl.noncomp_feedback));
-    dst.set_comp_feedback(static_cast<Feedback>(fidl.comp_feedback));
-    dst.set_min_grouping(static_cast<MinGroup>(fidl.min_grouping));
-    dst.set_csi_antennas_human(fidl.csi_antennas);
-    dst.set_noncomp_steering_ants_human(fidl.noncomp_steering_ants);
-    dst.set_comp_steering_ants_human(fidl.comp_steering_ants);
-    dst.set_csi_rows_human(fidl.csi_rows);
-    dst.set_chan_estimation_human(fidl.chan_estimation);
-
-    return dst;
-  }
-
-  ::fuchsia::wlan::mlme::TxBfCapability ToFidl() const {
-    ::fuchsia::wlan::mlme::TxBfCapability fidl;
-
-    fidl.implicit_rx = (implicit_rx() == 1);
-    fidl.rx_stag_sounding = (rx_stag_sounding() == 1);
-    fidl.tx_stag_sounding = (tx_stag_sounding() == 1);
-    fidl.rx_ndp = (rx_ndp() == 1);
-    fidl.tx_ndp = (tx_ndp() == 1);
-    fidl.implicit = (implicit() == 1);
-    fidl.calibration = calibration();
-    fidl.csi = (csi() == 1);
-    fidl.noncomp_steering = (noncomp_steering() == 1);
-    fidl.comp_steering = (comp_steering() == 1);
-    fidl.csi_feedback = csi_feedback();
-    fidl.noncomp_feedback = noncomp_feedback();
-    fidl.comp_feedback = comp_feedback();
-    fidl.min_grouping = min_grouping();
-    fidl.csi_antennas = csi_antennas_human();                    // Converting to human readable
-    fidl.noncomp_steering_ants = noncomp_steering_ants_human();  // Converting to human readable
-    fidl.comp_steering_ants = comp_steering_ants_human();        // Converting to human readable
-    fidl.csi_rows = csi_rows_human();                            // Converting to human readable
-    fidl.chan_estimation = chan_estimation_human();              // Converting to human readable
-
-    return fidl;
-  }
 } __PACKED;
 
 class AselCapability : public common::BitField<uint8_t> {
@@ -895,33 +738,6 @@ class AselCapability : public common::BitField<uint8_t> {
   WLAN_BIT_FIELD(tx_sounding_ppdu, 6, 1)
   WLAN_BIT_FIELD(reserved, 7, 1)
 
-  static AselCapability FromFidl(const ::fuchsia::wlan::mlme::AselCapability& fidl) {
-    AselCapability dst;
-
-    dst.set_asel(fidl.asel ? 1 : 0);
-    dst.set_csi_feedback_tx_asel(fidl.csi_feedback_tx_asel ? 1 : 0);
-    dst.set_ant_idx_feedback_tx_asel(fidl.ant_idx_feedback_tx_asel ? 1 : 0);
-    dst.set_explicit_csi_feedback(fidl.explicit_csi_feedback ? 1 : 0);
-    dst.set_antenna_idx_feedback(fidl.antenna_idx_feedback ? 1 : 0);
-    dst.set_rx_asel(fidl.rx_asel ? 1 : 0);
-    dst.set_tx_sounding_ppdu(fidl.tx_sounding_ppdu ? 1 : 0);
-
-    return dst;
-  }
-
-  ::fuchsia::wlan::mlme::AselCapability ToFidl() const {
-    ::fuchsia::wlan::mlme::AselCapability fidl;
-
-    fidl.asel = (asel() == 1);
-    fidl.csi_feedback_tx_asel = (csi_feedback_tx_asel() == 1);
-    fidl.ant_idx_feedback_tx_asel = (ant_idx_feedback_tx_asel() == 1);
-    fidl.explicit_csi_feedback = (explicit_csi_feedback() == 1);
-    fidl.antenna_idx_feedback = (antenna_idx_feedback() == 1);
-    fidl.rx_asel = (rx_asel() == 1);
-    fidl.tx_sounding_ppdu = (tx_sounding_ppdu() == 1);
-
-    return fidl;
-  }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56
@@ -959,27 +775,6 @@ struct HtCapabilities {
     return ddk;
   }
 
-  static HtCapabilities FromFidl(const ::fuchsia::wlan::mlme::HtCapabilities& fidl) {
-    HtCapabilities dst;
-    dst.ht_cap_info = HtCapabilityInfo::FromFidl(fidl.ht_cap_info);
-    dst.ampdu_params = AmpduParams::FromFidl(fidl.ampdu_params);
-    dst.mcs_set = SupportedMcsSet::FromFidl(fidl.mcs_set);
-    dst.ht_ext_cap = HtExtCapabilities::FromFidl(fidl.ht_ext_cap);
-    dst.txbf_cap = TxBfCapability::FromFidl(fidl.txbf_cap);
-    dst.asel_cap = AselCapability::FromFidl(fidl.asel_cap);
-    return dst;
-  }
-
-  ::fuchsia::wlan::mlme::HtCapabilities ToFidl() const {
-    ::fuchsia::wlan::mlme::HtCapabilities fidl;
-    fidl.ht_cap_info = ht_cap_info.ToFidl();
-    fidl.ampdu_params = ampdu_params.ToFidl();
-    fidl.mcs_set = mcs_set.ToFidl();
-    fidl.ht_ext_cap = ht_ext_cap.ToFidl();
-    fidl.txbf_cap = txbf_cap.ToFidl();
-    fidl.asel_cap = asel_cap.ToFidl();
-    return fidl;
-  }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.57
@@ -1075,57 +870,6 @@ struct HtOperation {
     return ddk;
   }
 
-  static HtOperation FromFidl(const ::fuchsia::wlan::mlme::HtOperation& fidl) {
-    HtOperation dst;
-
-    dst.primary_chan = fidl.primary_chan;
-    dst.basic_mcs_set = SupportedMcsSet::FromFidl(fidl.basic_mcs_set);
-
-    const auto& hoi = fidl.ht_op_info;
-
-    dst.head.set_secondary_chan_offset(
-        static_cast<HtOpInfoHead::SecChanOffset>(hoi.secondary_chan_offset));
-    dst.head.set_sta_chan_width(static_cast<HtOpInfoHead::StaChanWidth>(hoi.sta_chan_width));
-    dst.head.set_rifs_mode(hoi.rifs_mode ? 1 : 0);
-    dst.head.set_ht_protect(static_cast<HtOpInfoHead::HtProtect>(hoi.ht_protect));
-    dst.head.set_nongreenfield_present(hoi.nongreenfield_present ? 1 : 0);
-    dst.head.set_obss_non_ht(hoi.obss_non_ht ? 1 : 0);
-    dst.head.set_center_freq_seg2(hoi.center_freq_seg2);
-    dst.head.set_dual_beacon(hoi.dual_beacon ? 1 : 0);
-    dst.head.set_dual_cts_protect(hoi.dual_cts_protect ? 1 : 0);
-
-    dst.tail.set_stbc_beacon(hoi.stbc_beacon ? 1 : 0);
-    dst.tail.set_lsig_txop_protect(hoi.lsig_txop_protect ? 1 : 0);
-    dst.tail.set_pco_active(hoi.pco_active ? 1 : 0);
-    dst.tail.set_pco_phase(hoi.pco_phase ? 1 : 0);
-
-    return dst;
-  }
-
-  ::fuchsia::wlan::mlme::HtOperation ToFidl() const {
-    ::fuchsia::wlan::mlme::HtOperation fidl;
-
-    fidl.primary_chan = primary_chan;
-    fidl.basic_mcs_set = basic_mcs_set.ToFidl();
-
-    auto* ht_op_info = &fidl.ht_op_info;
-    ht_op_info->secondary_chan_offset = head.secondary_chan_offset();
-    ht_op_info->sta_chan_width = head.sta_chan_width();
-    ht_op_info->rifs_mode = (head.rifs_mode() == 1);
-    ht_op_info->ht_protect = head.ht_protect();
-    ht_op_info->nongreenfield_present = (head.nongreenfield_present() == 1);
-    ht_op_info->obss_non_ht = (head.obss_non_ht() == 1);
-    ht_op_info->center_freq_seg2 = head.center_freq_seg2();
-    ht_op_info->dual_beacon = (head.dual_beacon() == 1);
-    ht_op_info->dual_cts_protect = (head.dual_cts_protect() == 1);
-
-    ht_op_info->stbc_beacon = (tail.stbc_beacon() == 1);
-    ht_op_info->lsig_txop_protect = (tail.lsig_txop_protect() == 1);
-    ht_op_info->pco_active = (tail.pco_active() == 1);
-    ht_op_info->pco_phase = (tail.pco_phase() == 1);
-
-    return fidl;
-  }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.158.2
@@ -1177,59 +921,6 @@ struct VhtCapabilitiesInfo : public common::BitField<uint32_t> {
     LINK_ADAPT_BOTH = 3,
   };
 
-  static VhtCapabilitiesInfo FromFidl(const ::fuchsia::wlan::mlme::VhtCapabilitiesInfo& fidl) {
-    VhtCapabilitiesInfo dst;
-
-    dst.set_max_mpdu_len(static_cast<MaxMpduLen>(fidl.max_mpdu_len));
-    dst.set_supported_cbw_set(fidl.supported_cbw_set);
-    dst.set_rx_ldpc(fidl.rx_ldpc ? 1 : 0);
-    dst.set_sgi_cbw80(fidl.sgi_cbw80 ? 1 : 0);
-    dst.set_sgi_cbw160(fidl.sgi_cbw160 ? 1 : 0);
-    dst.set_tx_stbc(fidl.tx_stbc ? 1 : 0);
-    dst.set_rx_stbc(fidl.rx_stbc ? 1 : 0);
-    dst.set_su_bfer(fidl.su_bfer ? 1 : 0);
-    dst.set_su_bfee(fidl.su_bfee ? 1 : 0);
-    dst.set_bfee_sts(fidl.bfee_sts);
-    dst.set_num_sounding(fidl.num_sounding);
-    dst.set_mu_bfer(fidl.mu_bfer ? 1 : 0);
-    dst.set_mu_bfee(fidl.mu_bfee ? 1 : 0);
-    dst.set_txop_ps(fidl.txop_ps ? 1 : 0);
-    dst.set_htc_vht(fidl.htc_vht ? 1 : 0);
-    dst.set_max_ampdu_exp(fidl.max_ampdu_exp);
-    dst.set_link_adapt(static_cast<VhtLinkAdaptation>(fidl.link_adapt));
-    dst.set_rx_ant_pattern(fidl.rx_ant_pattern ? 1 : 0);
-    dst.set_tx_ant_pattern(fidl.tx_ant_pattern ? 1 : 0);
-    dst.set_ext_nss_bw(fidl.ext_nss_bw);
-
-    return dst;
-  }
-
-  ::fuchsia::wlan::mlme::VhtCapabilitiesInfo ToFidl() const {
-    ::fuchsia::wlan::mlme::VhtCapabilitiesInfo fidl;
-
-    fidl.max_mpdu_len = max_mpdu_len();
-    fidl.supported_cbw_set = supported_cbw_set();
-    fidl.rx_ldpc = (rx_ldpc() == 1);
-    fidl.sgi_cbw80 = (sgi_cbw80() == 1);
-    fidl.sgi_cbw160 = (sgi_cbw160() == 1);
-    fidl.tx_stbc = (tx_stbc() == 1);
-    fidl.rx_stbc = (rx_stbc() == 1);
-    fidl.su_bfer = (su_bfer() == 1);
-    fidl.su_bfee = (su_bfee() == 1);
-    fidl.bfee_sts = bfee_sts();
-    fidl.num_sounding = num_sounding();
-    fidl.mu_bfer = (mu_bfer() == 1);
-    fidl.mu_bfee = (mu_bfee() == 1);
-    fidl.txop_ps = (txop_ps() == 1);
-    fidl.htc_vht = (htc_vht() == 1);
-    fidl.max_ampdu_exp = max_ampdu_exp();
-    fidl.link_adapt = link_adapt();
-    fidl.rx_ant_pattern = (rx_ant_pattern() == 1);
-    fidl.tx_ant_pattern = (tx_ant_pattern() == 1);
-    fidl.ext_nss_bw = ext_nss_bw();
-
-    return fidl;
-  }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.158.3
@@ -1308,41 +999,6 @@ struct VhtMcsNss : public common::BitField<uint64_t> {
     set_val(val() | mcs_val);
   }
 
-  static VhtMcsNss FromFidl(const ::fuchsia::wlan::mlme::VhtMcsNss& fidl) {
-    VhtMcsNss dst;
-
-    for (uint8_t ss_num = 1; ss_num <= 8; ss_num++) {
-      dst.set_rx_max_mcs_ss(ss_num, fidl.rx_max_mcs[ss_num - 1]);
-    }
-    dst.set_rx_max_data_rate(fidl.rx_max_data_rate);
-    dst.set_tx_max_data_rate(fidl.tx_max_data_rate);
-
-    for (uint8_t ss_num = 1; ss_num <= 8; ss_num++) {
-      dst.set_tx_max_mcs_ss(ss_num, fidl.tx_max_mcs[ss_num - 1]);
-    }
-    dst.set_max_nsts(fidl.max_nsts);
-    dst.set_ext_nss_bw(fidl.ext_nss_bw);
-
-    return dst;
-  }
-
-  ::fuchsia::wlan::mlme::VhtMcsNss ToFidl() const {
-    ::fuchsia::wlan::mlme::VhtMcsNss fidl;
-
-    for (uint8_t ss_num = 1; ss_num <= 8; ss_num++) {
-      fidl.rx_max_mcs[ss_num - 1] = get_rx_max_mcs_ss(ss_num);
-    }
-    fidl.rx_max_data_rate = rx_max_data_rate();
-    fidl.max_nsts = max_nsts();
-
-    for (uint8_t ss_num = 1; ss_num <= 8; ss_num++) {
-      fidl.tx_max_mcs[ss_num - 1] = get_tx_max_mcs_ss(ss_num);
-    }
-    fidl.tx_max_data_rate = tx_max_data_rate();
-    fidl.ext_nss_bw = (ext_nss_bw() == 1);
-
-    return fidl;
-  }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.158
@@ -1364,19 +1020,6 @@ struct VhtCapabilities {
     return ddk;
   }
 
-  static VhtCapabilities FromFidl(const ::fuchsia::wlan::mlme::VhtCapabilities& fidl) {
-    VhtCapabilities dst;
-    dst.vht_cap_info = VhtCapabilitiesInfo::FromFidl(fidl.vht_cap_info);
-    dst.vht_mcs_nss = VhtMcsNss::FromFidl(fidl.vht_mcs_nss);
-    return dst;
-  }
-
-  ::fuchsia::wlan::mlme::VhtCapabilities ToFidl() const {
-    ::fuchsia::wlan::mlme::VhtCapabilities fidl;
-    fidl.vht_cap_info = vht_cap_info.ToFidl();
-    fidl.vht_mcs_nss = vht_mcs_nss.ToFidl();
-    return fidl;
-  }
 } __PACKED;
 
 // IEEE Std 802.11-2016, Figure 9-562
@@ -1418,25 +1061,6 @@ struct BasicVhtMcsNss : public common::BitField<uint16_t> {
     uint64_t mcs_val = static_cast<uint64_t>(mcs) << offset;
     set_val(val() | mcs_val);
   }
-
-  static BasicVhtMcsNss FromFidl(const ::fuchsia::wlan::mlme::BasicVhtMcsNss& fidl) {
-    BasicVhtMcsNss dst;
-
-    for (uint8_t ss_num = 1; ss_num <= 8; ++ss_num) {
-      dst.set_max_mcs_ss(ss_num, fidl.max_mcs[ss_num - 1]);
-    }
-
-    return dst;
-  }
-
-  ::fuchsia::wlan::mlme::BasicVhtMcsNss ToFidl() const {
-    ::fuchsia::wlan::mlme::BasicVhtMcsNss fidl;
-
-    for (uint8_t ss_num = 1; ss_num <= 8; ss_num++) {
-      fidl.max_mcs[ss_num - 1] = get_max_mcs_ss(ss_num);
-    }
-    return fidl;
-  }
 };
 
 // IEEE Std 802.11-2016, 9.4.2.159
@@ -1474,27 +1098,6 @@ struct VhtOperation {
     return dst;
   }
 
-  static VhtOperation FromFidl(const ::fuchsia::wlan::mlme::VhtOperation& fidl) {
-    VhtOperation dst;
-
-    dst.vht_cbw = static_cast<VhtChannelBandwidth>(fidl.vht_cbw);
-    dst.center_freq_seg0 = fidl.center_freq_seg0;
-    dst.center_freq_seg1 = fidl.center_freq_seg1;
-    dst.basic_mcs = BasicVhtMcsNss::FromFidl(fidl.basic_mcs);
-
-    return dst;
-  }
-
-  ::fuchsia::wlan::mlme::VhtOperation ToFidl() const {
-    ::fuchsia::wlan::mlme::VhtOperation fidl;
-
-    fidl.vht_cbw = vht_cbw;
-    fidl.center_freq_seg0 = center_freq_seg0;
-    fidl.center_freq_seg1 = center_freq_seg1;
-    fidl.basic_mcs = basic_mcs.ToFidl();
-
-    return fidl;
-  }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.102

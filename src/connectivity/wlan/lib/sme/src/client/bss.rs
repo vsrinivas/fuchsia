@@ -46,6 +46,7 @@ impl ClientConfig {
 
     /// Determines whether a given BSS is compatible with this client SME configuration.
     pub fn is_bss_compatible(&self, bss: &BssDescription) -> bool {
+        let privacy = wlan_common::mac::CapabilityInfo(bss.cap).privacy();
         match bss.get_protection() {
             Protection::Open => true,
             Protection::Wep => self.0.wep_supported,
@@ -53,7 +54,7 @@ impl ClientConfig {
             Protection::Wpa1Wpa2Personal
             | Protection::Wpa2Personal
             | Protection::Wpa2Wpa3Personal => match bss.rsn.as_ref() {
-                Some(rsn) if bss.cap.privacy => match rsne::from_bytes(&rsn[..]) {
+                Some(rsn) if privacy => match rsne::from_bytes(&rsn[..]) {
                     Ok((_, a_rsne)) => is_rsn_compatible(&a_rsne),
                     _ => false,
                 },
@@ -310,24 +311,12 @@ mod tests {
             timestamp: 0,
             local_time: 0,
 
-            cap: fidl_mlme::CapabilityInfo {
-                ess: false,
-                ibss: false,
-                cf_pollable: false,
-                cf_poll_req: false,
-                privacy: match protection {
+            cap: wlan_common::mac::CapabilityInfo(0)
+                .with_privacy(match protection {
                     ProtectionCfg::Open | ProtectionCfg::Wpa2NoPrivacy => false,
                     _ => true,
-                },
-                short_preamble: false,
-                spectrum_mgmt: false,
-                qos: false,
-                short_slot_time: false,
-                apsd: false,
-                radio_msmt: false,
-                delayed_block_ack: false,
-                immediate_block_ack: false,
-            },
+                })
+                .0,
             basic_rate_set: vec![],
             op_rate_set: vec![],
             country: None,

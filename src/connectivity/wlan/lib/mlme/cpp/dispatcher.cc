@@ -261,15 +261,19 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
       }
     }
 
-    band.cap = CapabilityInfo::FromDdk(wlanmac_info.caps).ToFidl();
+    band.cap = CapabilityInfo::FromDdk(wlanmac_info.caps).val();
 
     if (band_info.ht_supported) {
       auto ht_cap = HtCapabilities::FromDdk(band_info.ht_caps);
-      band.ht_cap = std::make_unique<wlan_mlme::HtCapabilities>(ht_cap.ToFidl());
+      band.ht_cap = wlan_mlme::HtCapabilities::New();
+      static_assert(sizeof(band.ht_cap->bytes) == sizeof(ht_cap));
+      memcpy(band.ht_cap->bytes.data(), &ht_cap, sizeof(ht_cap));
     }
     if (band_info.vht_supported) {
       auto vht_cap = VhtCapabilities::FromDdk(band_info.vht_caps);
-      band.vht_cap = std::make_unique<wlan_mlme::VhtCapabilities>(vht_cap.ToFidl());
+      band.vht_cap = wlan_mlme::VhtCapabilities::New();
+      static_assert(sizeof(band.vht_cap->bytes) == sizeof(vht_cap));
+      memcpy(band.vht_cap->bytes.data(), &vht_cap, sizeof(vht_cap));
     }
 
     resp.bands.push_back(std::move(band));

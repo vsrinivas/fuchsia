@@ -52,304 +52,35 @@ struct ScanRequest {
 // MLME-SCAN.confirm (IEEE Std 802.11-2016 6.3.3.3)
 
 // IEEE Std 802.11-2016, 9.4.1.4
-struct CapabilityInfo {
-    bool ess;
-    bool ibss;
-    bool cf_pollable;
-    bool cf_poll_req;
-    bool privacy;
-    bool short_preamble;
-    bool spectrum_mgmt;
-    bool qos;
-    bool short_slot_time;
-    bool apsd;
-    bool radio_msmt;
-    bool delayed_block_ack;
-    bool immediate_block_ack;
-};
+using CapabilityInfo = uint16;
 
-// IEEE Std 802.11-2016, 9.4.2.56
+// IEEE Std 802.11-2016 9.4.2.56
+const uint8 HT_CAP_LEN = 26;
+// IEEE Std 802.11-2016 9.4.2.57
+const uint8 HT_OP_LEN = 22;
+// IEEE Std 802.11-2016 9.5.2.158
+const uint8 VHT_CAP_LEN = 12;
+// IEEE Std 802.11-2016 9.5.2.159
+const uint8 VHT_OP_LEN = 5;
 
-enum ChanWidthSet : uint8 {
-    TWENTY_ONLY = 0;
-    TWENTY_FORTY = 1;
-};
-
-enum SmPowerSave : uint8 {
-    STATIC = 0;
-    DYNAMIC = 1;
-    RESERVED = 2;
-    DISABLED = 3;
-};
-
-enum MaxAmsduLen : uint8 {
-    OCTETS_3839 = 0;
-    OCTETS_7935 = 1;
-};
-
-struct HtCapabilityInfo {
-    bool ldpc_coding_cap;
-    uint8 chan_width_set; // see enum ChanWidthSet
-    uint8 sm_power_save; // see enum SmPowerSave
-    bool greenfield;
-    bool short_gi_20;
-    bool short_gi_40;
-    bool tx_stbc;
-    uint8 rx_stbc;
-    bool delayed_block_ack;
-    uint8 max_amsdu_len; // see enum MaxAmsduLen
-    bool dsss_in_40;
-    bool intolerant_40;
-    bool lsig_txop_protect;
-};
-
-enum MinMpduStartSpacing : uint8 {
-    NO_RESTRICT = 0;
-    QUARTER_USEC = 1;
-    HALF_USEC = 2;
-    ONE_USEC = 3;
-    TWO_USEC = 4;
-    FOUR_USEC = 5;
-    EIGHT_USEC = 6;
-    SIXTEEN_USEC = 7;
-};
-
-struct AmpduParams {
-    uint8 exponent;
-    uint8 min_start_spacing; // see enum MinMpduStartSpacing
-};
-
-// SupportedMcsSet
-// IEEE Std 802.11-2016, 9.4.2.56.4 Table 9-164
-struct SupportedMcsSet {
-    // Names are deviated from:
-    // //src/connectivity/wlan/lib/common/cpp/include/wlan/common/element.h's class SupportedMcsSet
-    uint64 rx_mcs_set; // bitmask indicating MCS 0-63 support
-    // MCS 64-76 not supported
-    uint16 rx_highest_rate; // Mbps
-    bool tx_mcs_set_defined;
-    bool tx_rx_diff;
-    uint8 tx_max_ss; // Actual count, different from IEEE spec
-    bool tx_ueqm; // Transmit Unequal Modulation
-};
-
-// HtExtCapabilities
-// IEEE Std 802.11-2016, 9.4.2.56.5 Table 9-165
-enum PcoTransitionTime : uint8 {
-    PCO_RESERVED = 0; // Often translated as "No transition".
-    PCO_400_USEC = 1;
-    PCO_1500_USEC = 2;
-    PCO_5000_USEC = 3;
-};
-
-enum McsFeedback : uint8 {
-    MCS_NOFEEDBACK = 0;
-    MCS_RESERVED = 1;
-    MCS_UNSOLICIED = 2;
-    MCS_BOTH = 3;
-};
-
-struct HtExtCapabilities {
-    bool pco;
-    uint8 pco_transition; // see enum PcoTransitionTime
-    uint8 mcs_feedback; // see enum McsFeedback
-    bool htc_ht_support;
-    bool rd_responder;
-};
-
-// TxBfCapability
-// IEEE Std 802.11-2016, 9.4.2.56.6 Table 9-166
-enum Calibration : uint8 {
-    CALIBRATION_NONE = 0;
-    CALIBRATION_RESPOND_NOINITIATE = 1;
-    CALIBRATION_RESERVED = 2;
-    CALIBRATION_RESPOND_INITIATE = 3;
-};
-
-enum Feedback : uint8 {
-    // Shared for csi_feedback, noncomp_feedback, comp_feedback
-    FEEDBACK_NONE = 0;
-    FEEDBACK_DELAYED = 1;
-    FEEDBACK_IMMEDIATE = 2;
-    FEEDBACK_DELAYED_IMMEDIATE = 3;
-};
-
-enum MinGroup : uint8 {
-    MIN_GROUP_ONE = 0; // Meaning no grouping
-    MIN_GROUP_ONE_TWO = 1;
-    MIN_GROUP_ONE_FOUR = 2;
-    MIN_GROUP_ONE_TWO_FOUR = 3;
-};
-
-struct TxBfCapability {
-    bool implicit_rx;
-    bool rx_stag_sounding;
-    bool tx_stag_sounding;
-    bool rx_ndp;
-    bool tx_ndp;
-    bool implicit;
-    uint8 calibration; // see enum Calibration
-    bool csi; // Explicit CsI Transmit Beamforming
-    bool noncomp_steering; // Explicit Noncompressed Steering
-    bool comp_steering; // Explicit Compressed Steering
-    uint8 csi_feedback; // see enum Feedback
-    uint8 noncomp_feedback; // see enum Feedback
-    uint8 comp_feedback; // see enum Feedback
-    uint8 min_grouping; // see enum MinGroup
-    uint8 csi_antennas; // Actual count, different from IEEE spec
-    uint8 noncomp_steering_ants; // Actual count, different from IEEE spec
-    uint8 comp_steering_ants; // Actual count, different from IEEE spec
-    uint8 csi_rows; // Actual count, different from IEEE spec
-    uint8 chan_estimation; // Actual count, different from IEEE spec
-};
-
-// IEEE Std 802.11-2016, 9.4.2.56.7 Table 9-167
-struct AselCapability {
-    bool asel;
-    bool csi_feedback_tx_asel; // Explicit CSI Feedback Based Transmit ASEL
-    bool ant_idx_feedback_tx_asel;
-    bool explicit_csi_feedback;
-    bool antenna_idx_feedback;
-    bool rx_asel;
-    bool tx_sounding_ppdu;
-};
-
+// IEEE Std 802.11-2016 9.4.2.56
 struct HtCapabilities {
-    // Note, a minimum granuality of adding fields selectively is
-    // a group of BitField structure, as defined in element.h
-    HtCapabilityInfo ht_cap_info;
-    AmpduParams ampdu_params;
-    SupportedMcsSet mcs_set;
-    HtExtCapabilities ht_ext_cap;
-    TxBfCapability txbf_cap;
-    AselCapability asel_cap;
+    array<uint8>:HT_CAP_LEN bytes;
 };
 
-// HT Operation Element
-// IEEE Std 802.11-2016 9.4.2.57 Table 9-168
-
-// HTOperationInfo
-enum SecChanOffset : uint8 {
-    SECONDARY_NONE = 0; // No secondary channel
-    SECONDARY_ABOVE = 1; // Secondary channel is above the primary channel
-    RESERVED = 2;
-    SECONDARY_BELOW = 3; // Secondary channel is below the primary channel
-};
-
-enum StaChanWidth : uint8 {
-    TWENTY = 0; // 20 MHz
-    ANY = 1; // Any in the Supported Channel Width set
-};
-
-enum HtProtect : uint8 {
-    NONE = 0;
-    NONMEMBER = 1;
-    TWENTY_MHZ = 2;
-    NON_HT_MIXED = 3;
-};
-
-struct HTOperationInfo {
-    uint8 secondary_chan_offset; // see enum SecChanOffset
-    uint8 sta_chan_width; // see enum StaChanWidth
-    bool rifs_mode;
-    uint8 ht_protect; // see enum HtProtect
-    bool nongreenfield_present; // Nongreenfield HT STAs present
-    bool obss_non_ht; // OBSS Non-HT STAs present
-    uint8 center_freq_seg2; // VHT
-    bool dual_beacon;
-    bool dual_cts_protect;
-    bool stbc_beacon;
-    bool lsig_txop_protect;
-    bool pco_active;
-    bool pco_phase;
-};
-
+// IEEE Std 802.11-2016 9.4.2.57
 struct HtOperation {
-    uint8 primary_chan; // Primary 20 MHz channel.
-    HTOperationInfo ht_op_info;
-    SupportedMcsSet basic_mcs_set;
-};
-
-enum MaxMpduLen : uint8 {
-    OCTETS_3895 = 0;
-    OCTETS_7991 = 1;
-    OCTETS_11454 = 2;
-};
-
-enum VhtLinkAdaptation : uint8 {
-    NO_FEEDBACK = 0;
-    // 1 reserved
-    UNSOLICITED = 2;
-    BOTH = 3;
-};
-
-// IEEE Std 802.11-2016, 9.4.2.158.2
-struct VhtCapabilitiesInfo {
-    uint8 max_mpdu_len; // see enum MaxMpduLen
-    uint8 supported_cbw_set;
-    bool rx_ldpc;
-    bool sgi_cbw80;
-    bool sgi_cbw160;
-    bool tx_stbc;
-    uint8 rx_stbc; // number of spatial streams supported. [0, 4] are valid. [5, 7] are reserved.
-    bool su_bfer;
-    bool su_bfee;
-    uint8 bfee_sts; // Maximum number of STS - 1, if su_bfee is true. Reserved otherwise.
-    uint8 num_sounding;
-    bool mu_bfer;
-    bool mu_bfee;
-    bool txop_ps;
-    bool htc_vht;
-    uint8 max_ampdu_exp;
-    uint8 link_adapt; // see enum VhtLinkAdaptation
-    bool rx_ant_pattern;
-    bool tx_ant_pattern;
-    uint8 ext_nss_bw;
-};
-
-enum VhtMcs : uint8 {
-    SET_0_TO_7 = 0;
-    SET_0_TO_8 = 1;
-    SET_0_TO_9 = 2;
-    SET_NONE = 3;
-};
-
-// IEEE Std 802.11-2016 9.4.2.158.3
-struct VhtMcsNss {
-    array<uint8>:8 rx_max_mcs; // idx 0 for ss1, .. idx 7 for ss8. See enum VhtMcs
-    uint16 rx_max_data_rate; // Mbps
-    uint8 max_nsts;
-
-    array<uint8>:8 tx_max_mcs; // idx 0 for ss1, .. idx 7 for ss8. See enum VhtMcs
-    uint16 tx_max_data_rate; // Mbps
-    bool ext_nss_bw;
-};
-
-// IEEE Std 802.11-2016, Figure 9-562
-struct BasicVhtMcsNss {
-    array<uint8>:8 max_mcs; // idx 0 for ss1, .. idx 7 for ss8. See enum VhtMcs
+    array<uint8>:HT_OP_LEN bytes;
 };
 
 // IEEE Std 802.11-2016 9.5.2.158
 struct VhtCapabilities {
-    VhtCapabilitiesInfo vht_cap_info;
-    VhtMcsNss vht_mcs_nss;
-};
-
-// IEEE Std 802.11-2016 deprecates the use of CBW_160, CBW_80P80
-enum VhtCbw : uint8 {
-    CBW_20_40 = 0;
-    CBW_80_160_80P80 = 1;
-    CBW_160 = 2;
-    CBW_80P80 = 3;
+    array<uint8>:VHT_CAP_LEN bytes;
 };
 
 // IEEE Std 802.11-2016 9.5.2.159
 struct VhtOperation {
-    uint8 vht_cbw; // see enum VhtCbw
-    uint8 center_freq_seg0; // channel number
-    uint8 center_freq_seg1; // channel number
-    BasicVhtMcsNss basic_mcs;
+    array<uint8>:VHT_OP_LEN bytes;
 };
 
 // IEEE Std 802.11-2016 6.3.3.3.2

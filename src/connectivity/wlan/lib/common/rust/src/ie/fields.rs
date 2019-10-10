@@ -125,7 +125,7 @@ impl MaxAmsduLen {
 pub struct AmpduParams(pub u8);
 
 #[derive(Debug, PartialOrd, PartialEq, Clone, Copy)]
-pub struct MaxAmpduExponent(u8);
+pub struct MaxAmpduExponent(pub u8);
 impl MaxAmpduExponent {
     pub fn to_len(&self) -> usize {
         (1 << (13 + self.0)) - 1 as usize

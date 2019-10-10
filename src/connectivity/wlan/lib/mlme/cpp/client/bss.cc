@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <lib/zx/clock.h>
+
 #include <memory>
 #include <string>
 
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
-#include <lib/zx/clock.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/element_splitter.h>
 #include <wlan/common/parse_element.h>
@@ -54,13 +55,13 @@ zx_status_t Bss::ProcessBeacon(const Beacon& beacon, fbl::Span<const uint8_t> ie
 std::string Bss::ToString() const {
   // TODO(porce): Convert to finspect Describe()
   char buf[1024];
-  snprintf(buf, sizeof(buf), "BSSID %s Infra %s  RSSI %3d  Country %3s Channel %4s SSID [%s]",
-           bssid_.ToString().c_str(),
-           bss_desc_.bss_type == wlan_mlme::BSSTypes::INFRASTRUCTURE ? "Y" : "N",
-           bss_desc_.rssi_dbm,
-           !bss_desc_.country.has_value() ? "---"
-                                       : reinterpret_cast<const char*>(bss_desc_.country->data()),
-           common::ChanStr(bcn_rx_chan_).c_str(), debug::ToAsciiOrHexStr(bss_desc_.ssid).c_str());
+  snprintf(
+      buf, sizeof(buf), "BSSID %s Infra %s  RSSI %3d  Country %3s Channel %4s SSID [%s]",
+      bssid_.ToString().c_str(),
+      bss_desc_.bss_type == wlan_mlme::BSSTypes::INFRASTRUCTURE ? "Y" : "N", bss_desc_.rssi_dbm,
+      !bss_desc_.country.has_value() ? "---"
+                                     : reinterpret_cast<const char*>(bss_desc_.country->data()),
+      common::ChanStr(bcn_rx_chan_).c_str(), debug::ToAsciiOrHexStr(bss_desc_.ssid).c_str());
   return std::string(buf);
 }
 
@@ -121,7 +122,7 @@ zx_status_t Bss::Update(const Beacon& beacon, fbl::Span<const uint8_t> ie_chain)
   bssid_.CopyTo(bss_desc_.bssid.data());
 
   bss_desc_.beacon_period = beacon.beacon_interval;  // name mismatch is spec-compliant.
-  bss_desc_.cap = beacon.cap.ToFidl();
+  bss_desc_.cap = beacon.cap.val();
   bss_desc_.bss_type = GetBssType(beacon.cap);
 
   ParseBeaconElements(ie_chain, bcn_rx_chan_.primary, &bss_desc_);

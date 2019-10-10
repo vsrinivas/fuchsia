@@ -4,12 +4,14 @@
 
 #include "utils.h"
 
+#include <fuchsia/wlan/device/cpp/fidl.h>
+
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/wlan/info.h>
-#include <fuchsia/wlan/device/cpp/fidl.h>
 #include <wlan/common/band.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/element.h>
+#include <wlan/common/parse_element.h>
 
 namespace wlan {
 
@@ -125,14 +127,14 @@ void ConvertBandInfo(const wlan_device::BandInfo& in, wlan_info_band_info_t* out
 
   if (in.ht_caps != nullptr) {
     out->ht_supported = true;
-    out->ht_caps = ::wlan::HtCapabilities::FromFidl(*in.ht_caps).ToDdk();
+    out->ht_caps = ::wlan::common::ParseHtCapabilities(in.ht_caps->bytes)->ToDdk();
   } else {
     out->ht_supported = false;
   }
 
   if (in.vht_caps != nullptr) {
     out->vht_supported = true;
-    out->vht_caps = ::wlan::VhtCapabilities::FromFidl(*in.vht_caps).ToDdk();
+    out->vht_caps = ::wlan::common::ParseVhtCapabilities(in.vht_caps->bytes)->ToDdk();
   } else {
     out->vht_supported = false;
   }

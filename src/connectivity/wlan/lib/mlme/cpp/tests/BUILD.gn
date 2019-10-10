@@ -101,7 +101,6 @@ executable("mac_tests") {
   sources = [
     "assoc_ctx_unittest.cc",
     "channel_unittest.cc",
-    "element_fidl_unittest.cc",
     "element_splitter_unittest.cc",
     "element_unittest.cc",
     "energy_unittest.cc",

@@ -880,7 +880,8 @@ mod tests {
         let credential = fidl_sme::Credential::Password(b"password".to_vec());
         let mut connect_fut = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
         let mut bss_desc = fake_protected_bss_description(b"foo".to_vec());
-        bss_desc.cap.privacy = false; // this makes our check flag this BSS as incompatible
+        // Make our check flag this BSS as incompatible
+        bss_desc.cap = wlan_common::mac::CapabilityInfo(bss_desc.cap).with_privacy(false).0;
         report_fake_scan_result(&mut sme, bss_desc);
 
         assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {

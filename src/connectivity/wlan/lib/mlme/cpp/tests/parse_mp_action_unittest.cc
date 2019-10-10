@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <gtest/gtest.h>
+#include <wlan/common/parse_element.h>
 #include <wlan/mlme/mesh/parse_mp_action.h>
 
 #include "test_utils.h"
@@ -59,16 +60,21 @@ TEST(ParseMpOpen, Full) {
   EXPECT_EQ(action.common.protocol_id, 0xb2b1u);
 
   ASSERT_NE(action.common.ht_cap, nullptr);
-  EXPECT_EQ(action.common.ht_cap->mcs_set.rx_mcs_set, 0x0706050403020100ul);
+  EXPECT_EQ(common::ParseHtCapabilities(action.common.ht_cap->bytes)->mcs_set.rx_mcs_head.bitmask(),
+            0x0706050403020100ul);
 
   ASSERT_NE(action.common.ht_op, nullptr);
-  EXPECT_EQ(action.common.ht_op->basic_mcs_set.rx_mcs_set, 0xc7c6c5c4c3c2c1c0ul);
+  EXPECT_EQ(
+      common::ParseHtOperation(action.common.ht_op->bytes)->basic_mcs_set.rx_mcs_head.bitmask(),
+      0xc7c6c5c4c3c2c1c0ul);
 
   ASSERT_NE(action.common.vht_cap, nullptr);
-  EXPECT_EQ(action.common.vht_cap->vht_mcs_nss.rx_max_data_rate, 0x0433);
+  EXPECT_EQ(
+      common::ParseVhtCapabilities(action.common.vht_cap->bytes)->vht_mcs_nss.rx_max_data_rate(),
+      0x0433);
 
   ASSERT_NE(action.common.vht_op, nullptr);
-  ASSERT_EQ(action.common.vht_op->vht_cbw, 0xd0);
+  ASSERT_EQ(common::ParseVhtOperation(action.common.vht_op->bytes)->vht_cbw, 0xd0);
 }
 
 TEST(ParseMpOpen, Minimal) {
@@ -240,16 +246,21 @@ TEST(ParseMpConfirm, Full) {
   EXPECT_EQ(action.common.local_link_id, 0xb4b3);
 
   ASSERT_NE(action.common.ht_cap, nullptr);
-  EXPECT_EQ(action.common.ht_cap->mcs_set.rx_mcs_set, 0x0706050403020100ul);
+  EXPECT_EQ(common::ParseHtCapabilities(action.common.ht_cap->bytes)->mcs_set.rx_mcs_head.bitmask(),
+            0x0706050403020100ul);
 
   ASSERT_NE(action.common.ht_op, nullptr);
-  EXPECT_EQ(action.common.ht_op->basic_mcs_set.rx_mcs_set, 0xc7c6c5c4c3c2c1c0ul);
+  EXPECT_EQ(
+      common::ParseHtOperation(action.common.ht_op->bytes)->basic_mcs_set.rx_mcs_head.bitmask(),
+      0xc7c6c5c4c3c2c1c0ul);
 
   ASSERT_NE(action.common.vht_cap, nullptr);
-  EXPECT_EQ(action.common.vht_cap->vht_mcs_nss.rx_max_data_rate, 0x0433);
+  EXPECT_EQ(
+      common::ParseVhtCapabilities(action.common.vht_cap->bytes)->vht_mcs_nss.rx_max_data_rate(),
+      0x0433);
 
   ASSERT_NE(action.common.vht_op, nullptr);
-  ASSERT_EQ(action.common.vht_op->vht_cbw, 0xd0);
+  ASSERT_EQ(common::ParseVhtOperation(action.common.vht_op->bytes)->vht_cbw, 0xd0);
 }
 
 TEST(ParseMpConfirm, Minimal) {

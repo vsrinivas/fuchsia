@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::ie::{self, rsn::suite_filter},
+    crate::{
+        ie::{self, rsn::suite_filter},
+        mac::CapabilityInfo,
+    },
     failure::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme,
     std::{collections::HashMap, fmt, hash::Hash},
@@ -113,7 +116,7 @@ impl BssDescriptionExt for fidl_mlme::BssDescription {
                 Ok((_, rsne)) => rsne,
                 Err(_e) => return Protection::Unknown,
             },
-            None if !self.cap.privacy => return Protection::Open,
+            None if !CapabilityInfo(self.cap).privacy() => return Protection::Open,
             None if self.find_wpa_ie().is_some() => {
                 if supports_wpa_1 {
                     return Protection::Wpa1;
@@ -227,10 +230,7 @@ mod tests {
                 fake_wpa3_enterprise_192_bit_rsne, fake_wpa3_rsne, invalid_wpa2_wpa3_rsne,
                 invalid_wpa3_enterprise_192_bit_rsne, invalid_wpa3_rsne,
             },
-            fake_stas::{
-                fake_ht_capabilities, fake_ht_operation, fake_unprotected_bss_description,
-                fake_vht_capabilities, fake_vht_operation,
-            },
+            fake_stas::fake_unprotected_bss_description,
         },
     };
 
@@ -306,16 +306,16 @@ mod tests {
     #[test]
     fn test_get_latest_standard_ac() {
         let mut bss = bss(ProtectionCfg::Open);
-        bss.vht_cap = Some(Box::new(fake_vht_capabilities()));
-        bss.vht_op = Some(Box::new(fake_vht_operation()));
+        bss.vht_cap = Some(Box::new(fidl_mlme::VhtCapabilities { bytes: Default::default() }));
+        bss.vht_op = Some(Box::new(fidl_mlme::VhtOperation { bytes: Default::default() }));
         assert_eq!(Standard::Dot11Ac, bss.get_latest_standard());
     }
 
     #[test]
     fn test_get_latest_standard_n() {
         let mut bss = bss(ProtectionCfg::Open);
-        bss.ht_cap = Some(Box::new(fake_ht_capabilities()));
-        bss.ht_op = Some(Box::new(fake_ht_operation()));
+        bss.ht_cap = Some(Box::new(fidl_mlme::HtCapabilities { bytes: Default::default() }));
+        bss.ht_op = Some(Box::new(fidl_mlme::HtOperation { bytes: Default::default() }));
         assert_eq!(Standard::Dot11N, bss.get_latest_standard());
     }
 
@@ -345,13 +345,12 @@ mod tests {
     fn bss(protection: ProtectionCfg) -> fidl_mlme::BssDescription {
         let bss = fake_unprotected_bss_description(b"foo".to_vec());
         fidl_mlme::BssDescription {
-            cap: fidl_mlme::CapabilityInfo {
-                privacy: match protection {
+            cap: CapabilityInfo(0)
+                .with_privacy(match protection {
                     ProtectionCfg::Open => false,
                     _ => true,
-                },
-                ..bss.cap
-            },
+                })
+                .0,
             rsn: match protection {
                 ProtectionCfg::Wpa3Enterprise => Some(fake_wpa3_enterprise_192_bit_rsne()),
                 ProtectionCfg::Wpa2Enterprise => Some(fake_wpa2_enterprise_rsne()),

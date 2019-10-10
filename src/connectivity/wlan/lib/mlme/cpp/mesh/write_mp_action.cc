@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <wlan/common/parse_element.h>
 #include <wlan/common/write_element.h>
 #include <wlan/mlme/mesh/write_mp_action.h>
 #include <wlan/mlme/rates_elements.h>
@@ -39,16 +40,24 @@ static void WriteCommonElementsHead(BufferWriter* w, const wlan_mlme::MeshPeerin
 
 static void WriteCommonElementsTail(BufferWriter* w, const wlan_mlme::MeshPeeringCommon& c) {
   if (c.ht_cap != nullptr) {
-    common::WriteHtCapabilities(w, HtCapabilities::FromFidl(*c.ht_cap));
+    static_assert(sizeof(c.ht_cap->bytes) == sizeof(HtCapabilities));
+    const auto& ht_cap = *common::ParseHtCapabilities(c.ht_cap->bytes);
+    common::WriteHtCapabilities(w, ht_cap);
   }
   if (c.ht_op != nullptr) {
-    common::WriteHtOperation(w, HtOperation::FromFidl(*c.ht_op));
+    static_assert(sizeof(c.ht_op->bytes) == sizeof(HtOperation));
+    const auto& ht_op = *common::ParseHtOperation(c.ht_op->bytes);
+    common::WriteHtOperation(w, ht_op);
   }
   if (c.vht_cap != nullptr) {
-    common::WriteVhtCapabilities(w, VhtCapabilities::FromFidl(*c.vht_cap));
+    static_assert(sizeof(c.vht_cap->bytes) == sizeof(VhtCapabilities));
+    const auto& vht_cap = *common::ParseVhtCapabilities(c.vht_cap->bytes);
+    common::WriteVhtCapabilities(w, vht_cap);
   }
   if (c.vht_op != nullptr) {
-    common::WriteVhtOperation(w, VhtOperation::FromFidl(*c.vht_op));
+    static_assert(sizeof(c.vht_op->bytes) == sizeof(VhtOperation));
+    const auto& vht_op = *common::ParseVhtOperation(c.vht_op->bytes);
+    common::WriteVhtOperation(w, vht_op);
   }
 }
 

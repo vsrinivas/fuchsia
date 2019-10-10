@@ -4,19 +4,19 @@
 
 #include "phy-device.h"
 
-#include "driver.h"
-#include "iface-device.h"
+#include <fuchsia/wlan/device/c/fidl.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <stdio.h>
+
+#include <algorithm>
 
 #include <ddk/debug.h>
 #include <ddk/protocol/wlanphy.h>
 #include <wlan/common/element.h>
 #include <wlan/common/phy.h>
 
-#include <fuchsia/wlan/device/c/fidl.h>
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
-
-#include <stdio.h>
-#include <algorithm>
+#include "driver.h"
+#include "iface-device.h"
 
 namespace wlan {
 namespace testing {
@@ -122,7 +122,10 @@ wlan_device::PhyInfo get_info() {
   ht_caps.mcs_set.rx_mcs_head.set_val(0x01000000ff);
   ht_caps.mcs_set.rx_mcs_tail.set_val(0);
   ht_caps.mcs_set.tx_mcs.set_val(0x10);
-  band24.ht_caps = std::make_unique<wlan_mlme::HtCapabilities>(ht_caps.ToFidl());
+
+  band24.ht_caps = wlan_mlme::HtCapabilities::New();
+  static_assert(sizeof(band24.ht_caps->bytes) == sizeof(ht_caps));
+  memcpy(band24.ht_caps->bytes.data(), &ht_caps, sizeof(ht_caps));
 
   band24.basic_rates = {2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108};
   band24.supported_channels.base_freq = 2417;
@@ -138,7 +141,10 @@ wlan_device::PhyInfo get_info() {
   ht_caps.mcs_set.rx_mcs_head.set_val(0x010000ffff);
   ht_caps.mcs_set.rx_mcs_tail.set_val(0);
   ht_caps.mcs_set.tx_mcs.set_val(0x10);
-  band5.ht_caps = std::make_unique<wlan_mlme::HtCapabilities>(ht_caps.ToFidl());
+
+  band5.ht_caps = wlan_mlme::HtCapabilities::New();
+  static_assert(sizeof(band5.ht_caps->bytes) == sizeof(ht_caps));
+  memcpy(band5.ht_caps->bytes.data(), &ht_caps, sizeof(ht_caps));
 
   band5.basic_rates = {12, 18, 24, 36, 48, 72, 96, 108};
   band5.supported_channels.base_freq = 5000;

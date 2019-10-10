@@ -13,8 +13,10 @@
 #include <wlan/common/band.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/channel.h>
+#include <wlan/common/element.h>
 #include <wlan/common/energy.h>
 #include <wlan/common/logging.h>
+#include <wlan/common/parse_element.h>
 #include <wlan/common/stats.h>
 #include <wlan/common/tim_element.h>
 #include <wlan/common/write_element.h>
@@ -954,17 +956,21 @@ bool Station::IsCbw40Rx() const {
   auto ifc_info = device_->GetWlanInfo().ifc_info;
   auto client_assoc = MakeClientAssocCtx(ifc_info, join_chan);
 
+  const HtCapabilities* ht_cap = nullptr;
+  if (join_ctx_->bss()->ht_cap != nullptr) {
+    static_assert(sizeof(join_ctx_->bss()->ht_cap->bytes) == sizeof(HtCapabilities));
+    ht_cap = common::ParseHtCapabilities(join_ctx_->bss()->ht_cap->bytes);
+  }
   debugf(
       "IsCbw40Rx: join_chan.cbw:%u, bss.ht_cap:%s, bss.chan_width_set:%s "
       "client_assoc.has_ht_cap:%s "
       "client_assoc.chan_width_set:%u\n",
       join_chan.cbw, (join_ctx_->bss()->ht_cap != nullptr) ? "yes" : "no",
-      (join_ctx_->bss()->ht_cap == nullptr)
-          ? "invalid"
-          : (join_ctx_->bss()->ht_cap->ht_cap_info.chan_width_set ==
-             to_enum_type(wlan_mlme::ChanWidthSet::TWENTY_ONLY))
-                ? "20"
-                : "40",
+      (ht_cap == nullptr) ? "invalid"
+                          : (ht_cap->ht_cap_info.chan_width_set() ==
+                             to_enum_type(HtCapabilityInfo::ChanWidthSet::TWENTY_ONLY))
+                                ? "20"
+                                : "40",
       client_assoc.ht_cap.has_value() ? "yes" : "no",
       static_cast<uint8_t>(client_assoc.ht_cap->ht_cap_info.chan_width_set()));
 
@@ -972,12 +978,12 @@ bool Station::IsCbw40Rx() const {
     debugjoin("Disable CBW40: configured to use less CBW than capability\n");
     return false;
   }
-  if (join_ctx_->bss()->ht_cap == nullptr) {
+  if (ht_cap == nullptr) {
     debugjoin("Disable CBW40: no HT support in target BSS\n");
     return false;
   }
-  if (join_ctx_->bss()->ht_cap->ht_cap_info.chan_width_set ==
-      to_enum_type(wlan_mlme::ChanWidthSet::TWENTY_ONLY)) {
+  if (ht_cap->ht_cap_info.chan_width_set() ==
+      to_enum_type(HtCapabilityInfo::ChanWidthSet::TWENTY_ONLY)) {
     debugjoin("Disable CBW40: no CBW40 support in target BSS\n");
     return false;
   }

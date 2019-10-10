@@ -2,25 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{bail, format_err};
-use fidl_fuchsia_wlan_common as fidl_common;
-use fidl_fuchsia_wlan_mlme as fidl_mlme;
-use futures::channel::mpsc;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc, Mutex,
-};
-use wlan_common::{
-    assert_variant,
-    bss::Protection,
-    ie::{rsn::rsne::RsnCapabilities, write_wpa1_ie},
-};
-use wlan_rsn::rsna::UpdateSink;
-
-use crate::{
-    client::{bss::BssInfo, rsn::Supplicant},
-    test_utils::{self, *},
-    InfoEvent, InfoStream, Ssid,
+use {
+    crate::{
+        client::{bss::BssInfo, rsn::Supplicant},
+        test_utils::{self, *},
+        InfoEvent, InfoStream, Ssid,
+    },
+    failure::{bail, format_err},
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    futures::channel::mpsc,
+    std::{
+        convert::TryInto,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc, Mutex,
+        },
+    },
+    wlan_common::{
+        assert_variant,
+        bss::Protection,
+        ie::{rsn::rsne::RsnCapabilities, write_wpa1_ie, *},
+        mac,
+    },
+    wlan_rsn::rsna::UpdateSink,
+    zerocopy::AsBytes,
 };
 
 fn fake_bss_description(ssid: Ssid, rsn: Option<Vec<u8>>) -> fidl_mlme::BssDescription {
@@ -32,21 +37,7 @@ fn fake_bss_description(ssid: Ssid, rsn: Option<Vec<u8>>) -> fidl_mlme::BssDescr
         dtim_period: 100,
         timestamp: 0,
         local_time: 0,
-        cap: fidl_mlme::CapabilityInfo {
-            ess: false,
-            ibss: false,
-            cf_pollable: false,
-            cf_poll_req: false,
-            privacy: rsn.is_some(),
-            short_preamble: false,
-            spectrum_mgmt: false,
-            qos: false,
-            short_slot_time: false,
-            apsd: false,
-            radio_msmt: false,
-            delayed_block_ack: false,
-            immediate_block_ack: false,
-        },
+        cap: mac::CapabilityInfo(0).with_privacy(rsn.is_some()).0,
         basic_rate_set: vec![],
         op_rate_set: vec![],
         country: None,
@@ -79,13 +70,13 @@ pub fn fake_unprotected_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription
 
 pub fn fake_wep_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
     let mut bss = fake_bss_description(ssid, None);
-    bss.cap.privacy = true;
+    bss.cap = mac::CapabilityInfo(bss.cap).with_privacy(true).0;
     bss
 }
 
 pub fn fake_wpa1_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
     let mut bss = fake_bss_description(ssid, None);
-    bss.cap.privacy = true;
+    bss.cap = mac::CapabilityInfo(bss.cap).with_privacy(true).0;
     let mut vendor_ies = vec![];
     write_wpa1_ie(&mut vendor_ies, &make_wpa1_ie()).expect("failed to create wpa1 bss description");
     bss.vendor_ies = Some(vendor_ies);
@@ -101,10 +92,18 @@ pub fn fake_vht_bss_description() -> fidl_mlme::BssDescription {
     let bss = fake_bss_description(vec![], None);
     fidl_mlme::BssDescription {
         chan: fake_chan(36),
-        ht_cap: Some(Box::new(fake_ht_capabilities())),
-        ht_op: Some(Box::new(fake_ht_operation())),
-        vht_cap: Some(Box::new(fake_vht_capabilities())),
-        vht_op: Some(Box::new(fake_vht_operation())),
+        ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+            bytes: fake_ht_capabilities().as_bytes().try_into().unwrap(),
+        })),
+        ht_op: Some(Box::new(fidl_mlme::HtOperation {
+            bytes: fake_ht_operation().as_bytes().try_into().unwrap(),
+        })),
+        vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+            bytes: fake_vht_capabilities().as_bytes().try_into().unwrap(),
+        })),
+        vht_op: Some(Box::new(fidl_mlme::VhtOperation {
+            bytes: fake_vht_operation().as_bytes().try_into().unwrap(),
+        })),
         ..bss
     }
 }

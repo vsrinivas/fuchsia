@@ -103,15 +103,19 @@ fn id_from_path(path: &PathBuf) -> Result<u16, failure::Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fidl_fuchsia_wlan_common as fidl_common;
-    use fidl_fuchsia_wlan_device::{self as fidl_wlan_dev, SupportedPhy};
-    use fidl_fuchsia_wlan_tap as fidl_wlantap;
-    use fuchsia_async::{self as fasync};
-    use fuchsia_zircon::prelude::*;
-    use pin_utils::pin_mut;
-    use wlan_common::test_utils::ExpectWithin;
-    use wlantap_client;
+    use {
+        super::*,
+        fidl_fuchsia_wlan_common as fidl_common,
+        fidl_fuchsia_wlan_device::{self as fidl_wlan_dev, SupportedPhy},
+        fidl_fuchsia_wlan_tap as fidl_wlantap,
+        fuchsia_async::{self as fasync},
+        fuchsia_zircon::prelude::*,
+        pin_utils::pin_mut,
+        std::convert::TryInto,
+        wlan_common::{ie::*, test_utils::ExpectWithin},
+        wlantap_client,
+        zerocopy::AsBytes,
+    };
 
     #[test]
     fn watch_phys() {
@@ -164,70 +168,7 @@ mod tests {
         fidl_wlan_dev::BandInfo {
             band_id: fidl_common::Band::WlanBand2Ghz,
             ht_caps: Some(Box::new(fidl_mlme::HtCapabilities {
-                ht_cap_info: fidl_mlme::HtCapabilityInfo {
-                    ldpc_coding_cap: false,
-                    chan_width_set: fidl_mlme::ChanWidthSet::TwentyForty as u8,
-                    sm_power_save: fidl_mlme::SmPowerSave::Disabled as u8,
-                    greenfield: true,
-                    short_gi_20: true,
-                    short_gi_40: true,
-                    tx_stbc: true,
-                    rx_stbc: 1,
-                    delayed_block_ack: false,
-                    max_amsdu_len: fidl_mlme::MaxAmsduLen::Octets3839 as u8,
-                    dsss_in_40: false,
-                    intolerant_40: false,
-                    lsig_txop_protect: false,
-                },
-                ampdu_params: fidl_mlme::AmpduParams {
-                    exponent: 0,
-                    min_start_spacing: fidl_mlme::MinMpduStartSpacing::NoRestrict as u8,
-                },
-                mcs_set: fidl_mlme::SupportedMcsSet {
-                    rx_mcs_set: 0x01000000ff,
-                    rx_highest_rate: 0,
-                    tx_mcs_set_defined: true,
-                    tx_rx_diff: false,
-                    tx_max_ss: 1,
-                    tx_ueqm: false,
-                },
-                ht_ext_cap: fidl_mlme::HtExtCapabilities {
-                    pco: false,
-                    pco_transition: fidl_mlme::PcoTransitionTime::PcoReserved as u8,
-                    mcs_feedback: fidl_mlme::McsFeedback::McsNofeedback as u8,
-                    htc_ht_support: false,
-                    rd_responder: false,
-                },
-                txbf_cap: fidl_mlme::TxBfCapability {
-                    implicit_rx: false,
-                    rx_stag_sounding: false,
-                    tx_stag_sounding: false,
-                    rx_ndp: false,
-                    tx_ndp: false,
-                    implicit: false,
-                    calibration: fidl_mlme::Calibration::CalibrationNone as u8,
-                    csi: false,
-                    noncomp_steering: false,
-                    comp_steering: false,
-                    csi_feedback: fidl_mlme::Feedback::FeedbackNone as u8,
-                    noncomp_feedback: fidl_mlme::Feedback::FeedbackNone as u8,
-                    comp_feedback: fidl_mlme::Feedback::FeedbackNone as u8,
-                    min_grouping: fidl_mlme::MinGroup::MinGroupOne as u8,
-                    csi_antennas: 1,
-                    noncomp_steering_ants: 1,
-                    comp_steering_ants: 1,
-                    csi_rows: 1,
-                    chan_estimation: 1,
-                },
-                asel_cap: fidl_mlme::AselCapability {
-                    asel: false,
-                    csi_feedback_tx_asel: false,
-                    ant_idx_feedback_tx_asel: false,
-                    explicit_csi_feedback: false,
-                    antenna_idx_feedback: false,
-                    rx_asel: false,
-                    tx_sounding_ppdu: false,
-                },
+                bytes: fake_ht_capabilities().as_bytes().try_into().unwrap(),
             })),
             vht_caps: None,
             basic_rates: vec![2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108],

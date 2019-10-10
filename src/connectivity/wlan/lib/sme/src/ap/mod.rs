@@ -521,15 +521,17 @@ fn create_start_request(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fidl_fuchsia_wlan_mlme as fidl_mlme;
-    use wlan_common::{
-        assert_variant,
-        channel::{Cbw, Phy},
-        RadioConfig,
+    use {
+        super::*,
+        crate::{test_utils::*, MlmeStream, Station},
+        fidl_fuchsia_wlan_mlme as fidl_mlme,
+        wlan_common::{
+            assert_variant,
+            channel::{Cbw, Phy},
+            ie::*,
+            RadioConfig,
+        },
     };
-
-    use crate::{test_utils::*, MlmeStream, Station};
 
     const AP_ADDR: [u8; 6] = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66];
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
@@ -795,13 +797,13 @@ mod tests {
     fn test_adapt_operation() {
         // Invalid input
         {
-            let dinf = fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig { phy: None, cbw: Some(Cbw::Cbw20), primary_chan: Some(1) };
             let got = adapt_operation(&dinf, &ucfg);
             assert!(got.is_err());
         }
         {
-            let dinf = fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw40, 48);
             let got = adapt_operation(&dinf, &ucfg);
             assert!(got.is_err());
@@ -809,21 +811,21 @@ mod tests {
 
         // VHT device, VHT config
         {
-            let dinf = fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw80, 48);
             let want = OpRadioConfig { phy: Phy::Vht, chan: Channel::new(48, Cbw::Cbw80) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
         {
-            let dinf = fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw40Below, 48);
             let want = OpRadioConfig { phy: Phy::Vht, chan: Channel::new(48, Cbw::Cbw40Below) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
         {
-            let dinf = fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw20, 48);
             let want = OpRadioConfig { phy: Phy::Vht, chan: Channel::new(48, Cbw::Cbw20) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
@@ -832,21 +834,21 @@ mod tests {
 
         // VHT device, HT config
         {
-            let dinf = fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw40Below, 48);
             let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw40Below) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
         {
-            let dinf = fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 48);
             let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw20) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
         {
-            let dinf = fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyOnly);
+            let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_ONLY);
             let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw40Below, 48);
             let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw20) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
@@ -855,21 +857,21 @@ mod tests {
 
         // HT device, VHT config
         {
-            let dinf = fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let dinf = fake_device_info_ht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw80, 48);
             let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw40Below) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
         {
-            let dinf = fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let dinf = fake_device_info_ht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw40Below, 48);
             let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw40Below) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
         {
-            let dinf = fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let dinf = fake_device_info_ht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw20, 48);
             let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw20) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
@@ -878,21 +880,21 @@ mod tests {
 
         // HT device, HT config
         {
-            let dinf = fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let dinf = fake_device_info_ht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw40Below, 48);
             let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw40Below) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
         {
-            let dinf = fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let dinf = fake_device_info_ht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 48);
             let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw20) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
         {
-            let dinf = fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyOnly);
+            let dinf = fake_device_info_ht(ChanWidthSet::TWENTY_ONLY);
             let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw40Below, 48);
             let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw20) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();

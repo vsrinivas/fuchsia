@@ -6,6 +6,9 @@
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_MAC_FRAME_H_
 
 #include <endian.h>
+#include <lib/zx/time.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include <cstdint>
 #include <type_traits>
@@ -13,15 +16,12 @@
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <fbl/algorithm.h>
 #include <fbl/span.h>
-#include <lib/zx/time.h>
 #include <wlan/common/action_frame.h>
 #include <wlan/common/bitfield.h>
 #include <wlan/common/element.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/common/reason_code.h>
 #include <wlan/common/status_code.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 namespace wlan {
 
@@ -199,24 +199,6 @@ class CapabilityInfo : public common::BitField<uint16_t> {
     cap.set_radio_msmt(BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_RADIO_MSMT));
 #undef BITFLAG_TO_BIT
     return cap;
-  }
-
-  ::fuchsia::wlan::mlme::CapabilityInfo ToFidl() const {
-    ::fuchsia::wlan::mlme::CapabilityInfo c;
-    c.ess = (ess() == 1);
-    c.ibss = (ibss() == 1);
-    c.cf_pollable = (cf_pollable() == 1);
-    c.cf_poll_req = (cf_poll_req() == 1);
-    c.privacy = (privacy() == 1);
-    c.short_preamble = (short_preamble() == 1);
-    c.spectrum_mgmt = (spectrum_mgmt() == 1);
-    c.qos = (qos() == 1);
-    c.short_slot_time = (short_slot_time() == 1);
-    c.apsd = (apsd() == 1);
-    c.radio_msmt = (radio_msmt() == 1);
-    c.delayed_block_ack = (delayed_block_ack() == 1);
-    c.immediate_block_ack = (immediate_block_ack() == 1);
-    return c;
   }
 };
 

@@ -4,20 +4,20 @@
 
 #include "device.h"
 
-#include <net/ethernet.h>
-
-#include <ddk/device.h>
-#include <ddk/hw/wlan/wlaninfo.h>
 #include <fuchsia/wlan/device/c/fidl.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <net/ethernet.h>
+#include <zircon/status.h>
+
+#include <ddk/device.h>
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <wlan/common/arraysize.h>
 #include <wlan/common/band.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/element.h>
 #include <wlan/common/logging.h>
 #include <wlan/common/phy.h>
-#include <zircon/status.h>
 
 #include "driver.h"
 
@@ -188,33 +188,36 @@ static void ConvertPhyBandInfo(::std::vector<wlan_device::BandInfo>* BandInfo, u
                                const wlan_info_band_info_t* phy_bands) {
   BandInfo->resize(0);
   for (uint8_t band_num = 0; band_num < bands_count; band_num++) {
-    wlan_device::BandInfo Band;
+    wlan_device::BandInfo band;
     const wlan_info_band_info_t* phy_band = &phy_bands[band_num];
-    Band.band_id = wlan::common::BandToFidl(phy_band->band);
+    band.band_id = wlan::common::BandToFidl(phy_band->band);
 
     // ht_caps
-    Band.ht_caps = std::make_unique<wlan_mlme::HtCapabilities>(
-        ::wlan::HtCapabilities::FromDdk(phy_bands->ht_caps).ToFidl());
+    band.ht_caps = wlan_mlme::HtCapabilities::New();
+    auto ht_cap = ::wlan::HtCapabilities::FromDdk(phy_bands->ht_caps);
+    static_assert(sizeof(band.ht_caps->bytes) == sizeof(ht_cap));
+    memcpy(band.ht_caps->bytes.data(), &ht_cap, sizeof(ht_cap));
 
     // vht_caps
     if (phy_bands->vht_supported) {
-      Band.vht_caps = std::make_unique<wlan_mlme::VhtCapabilities>(
-          ::wlan::VhtCapabilities::FromDdk(phy_bands->vht_caps).ToFidl());
+      auto vht_cap = ::wlan::VhtCapabilities::FromDdk(phy_bands->vht_caps);
+      static_assert(sizeof(band.vht_caps->bytes) == sizeof(vht_cap));
+      memcpy(band.vht_caps->bytes.data(), &vht_cap, sizeof(vht_cap));
     }
 
     // basic_rates
-    Band.basic_rates.resize(0);
+    band.basic_rates.resize(0);
     size_t rate_ndx = 0;
     while ((rate_ndx < arraysize(phy_bands->basic_rates)) &&
            (phy_bands->basic_rates[rate_ndx] > 0)) {
-      Band.basic_rates.push_back(phy_bands->basic_rates[rate_ndx]);
+      band.basic_rates.push_back(phy_bands->basic_rates[rate_ndx]);
       rate_ndx++;
     }
 
     // supported_channels
-    ConvertPhyChannels(&Band.supported_channels, &phy_bands->supported_channels);
+    ConvertPhyChannels(&band.supported_channels, &phy_bands->supported_channels);
 
-    BandInfo->push_back(std::move(Band));
+    BandInfo->push_back(std::move(band));
   }
 }
 

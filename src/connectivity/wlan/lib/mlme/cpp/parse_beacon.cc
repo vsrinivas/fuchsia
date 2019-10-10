@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <src/connectivity/wlan/lib/common/cpp/include/wlan/common/element.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/element_splitter.h>
 #include <wlan/common/parse_element.h>
@@ -12,9 +13,9 @@ namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
-std::optional<wlan_channel_bandwidth_t> GetVhtCbw(const wlan_mlme::VhtOperation& vht_op) {
+std::optional<wlan_channel_bandwidth_t> GetVhtCbw(const VhtOperation& vht_op) {
   switch (vht_op.vht_cbw) {
-    case to_enum_type(wlan_mlme::VhtCbw::CBW_80_160_80P80): {
+    case to_enum_type(VhtOperation::VhtChannelBandwidth::VHT_CBW_80_160_80P80): {
       // See IEEE Std 802.11-2016, Table 9-253
       auto seg0 = vht_op.center_freq_seg0;
       auto seg1 = vht_op.center_freq_seg1;
@@ -39,7 +40,7 @@ std::optional<wlan_channel_bandwidth_t> GetVhtCbw(const wlan_mlme::VhtOperation&
 }
 
 wlan_channel_t DeriveChannel(uint8_t rx_channel, std::optional<uint8_t> dsss_chan,
-                             const wlan_mlme::HtOperation* ht_op,
+                             const HtOperation* ht_op,
                              std::optional<wlan_channel_bandwidth_t> vht_cbw) {
   wlan_channel_t chan = {
       .primary = dsss_chan.value_or(rx_channel),
@@ -57,11 +58,11 @@ wlan_channel_t DeriveChannel(uint8_t rx_channel, std::optional<uint8_t> dsss_cha
 
   chan.primary = ht_op->primary_chan;
 
-  switch (ht_op->ht_op_info.secondary_chan_offset) {
-    case to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_ABOVE):
+  switch (ht_op->head.secondary_chan_offset()) {
+    case to_enum_type(HtOpInfoHead::SecChanOffset::SECONDARY_ABOVE):
       chan.cbw = WLAN_CHANNEL_BANDWIDTH__40ABOVE;
       break;
-    case to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_BELOW):
+    case to_enum_type(HtOpInfoHead::SecChanOffset::SECONDARY_BELOW):
       chan.cbw = WLAN_CHANNEL_BANDWIDTH__40BELOW;
       break;
     default:  // SECONDARY_NONE or RESERVED
@@ -71,7 +72,7 @@ wlan_channel_t DeriveChannel(uint8_t rx_channel, std::optional<uint8_t> dsss_cha
 
   // This overrides Secondary Channel Offset.
   // TODO(NET-677): Conditionally apply
-  if (ht_op->ht_op_info.sta_chan_width == to_enum_type(wlan_mlme::StaChanWidth::TWENTY)) {
+  if (ht_op->head.sta_chan_width() == to_enum_type(HtOpInfoHead::StaChanWidth::TWENTY)) {
     chan.cbw = WLAN_CHANNEL_BANDWIDTH__20;
     return chan;
   }
@@ -139,22 +140,30 @@ static void DoParseBeaconElements(fbl::Span<const uint8_t> ies, uint8_t rx_chann
       }
       case element_id::kHtCapabilities:
         if (auto ht_cap = common::ParseHtCapabilities(raw_body)) {
-          bss_desc->ht_cap = std::make_unique<wlan_mlme::HtCapabilities>(ht_cap->ToFidl());
+          bss_desc->ht_cap = wlan_mlme::HtCapabilities::New();
+          static_assert(sizeof(bss_desc->ht_cap->bytes) == sizeof(*ht_cap));
+          memcpy(bss_desc->ht_cap->bytes.data(), ht_cap, sizeof(*ht_cap));
         }
         break;
       case element_id::kHtOperation:
         if (auto ht_op = common::ParseHtOperation(raw_body)) {
-          bss_desc->ht_op = std::make_unique<wlan_mlme::HtOperation>(ht_op->ToFidl());
+          bss_desc->ht_op = wlan_mlme::HtOperation::New();
+          static_assert(sizeof(bss_desc->ht_op->bytes) == sizeof(*ht_op));
+          memcpy(bss_desc->ht_op->bytes.data(), ht_op, sizeof(*ht_op));
         }
         break;
       case element_id::kVhtCapabilities:
         if (auto vht_cap = common::ParseVhtCapabilities(raw_body)) {
-          bss_desc->vht_cap = std::make_unique<wlan_mlme::VhtCapabilities>(vht_cap->ToFidl());
+          bss_desc->vht_cap = wlan_mlme::VhtCapabilities::New();
+          static_assert(sizeof(bss_desc->vht_cap->bytes) == sizeof(*vht_cap));
+          memcpy(bss_desc->vht_cap->bytes.data(), vht_cap, sizeof(*vht_cap));
         }
         break;
       case element_id::kVhtOperation:
         if (auto vht_op = common::ParseVhtOperation(raw_body)) {
-          bss_desc->vht_op = std::make_unique<wlan_mlme::VhtOperation>(vht_op->ToFidl());
+          bss_desc->vht_op = wlan_mlme::VhtOperation::New();
+          static_assert(sizeof(bss_desc->vht_op->bytes) == sizeof(*vht_op));
+          memcpy(bss_desc->vht_op->bytes.data(), vht_op, sizeof(*vht_op));
         }
         break;
       default:
@@ -193,9 +202,12 @@ void ParseBeaconElements(fbl::Span<const uint8_t> ies, uint8_t rx_channel,
 
   std::optional<uint8_t> vht_cbw{};
   if (bss_desc->vht_op) {
-    vht_cbw = GetVhtCbw(*bss_desc->vht_op);
+    static_assert(sizeof(bss_desc->vht_op->bytes) == sizeof(VhtOperation));
+    const auto& vht_op = *common::ParseVhtOperation(bss_desc->vht_op->bytes);
+    vht_cbw = GetVhtCbw(vht_op);
   }
-  auto chan = DeriveChannel(rx_channel, dsss_chan, bss_desc->ht_op.get(), vht_cbw);
+  auto chan = DeriveChannel(rx_channel, dsss_chan, common::ParseHtOperation(bss_desc->ht_op->bytes),
+                            vht_cbw);
   bss_desc->chan = common::ToFidl(chan);
 }
 
