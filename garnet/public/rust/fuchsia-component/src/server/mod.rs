@@ -930,6 +930,8 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         }
     }
 
+    // TODO(fxb/37419): Remove default handling after methods landed.
+    #[allow(unreachable_patterns)]
     fn handle_dir_request(
         &mut self,
         request: DirectoryRequest,
@@ -1033,10 +1035,13 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             DirectoryRequest::Rename { responder, .. } => unsupported!(responder)?,
             DirectoryRequest::Link { responder, .. } => unsupported!(responder)?,
             DirectoryRequest::Watch { responder, .. } => unsupported!(responder)?,
+            _ => {}
         }
         Ok((None, ConnectionState::Open))
     }
 
+    // TODO(fxb/37419): Remove default handling after methods landed.
+    #[allow(unreachable_patterns)]
     fn handle_file_request(
         &mut self,
         request: FileRequest,
@@ -1127,10 +1132,13 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             FileRequest::GetFlags { responder, .. } => unsupported!(responder, 0)?,
             FileRequest::SetFlags { responder, .. } => unsupported!(responder)?,
             FileRequest::GetBuffer { responder, .. } => unsupported!(responder, None)?,
+            _ => {}
         }
         Ok(ConnectionState::Open)
     }
 
+    // TODO(fxb/37419): Remove default handling after methods landed.
+    #[allow(unreachable_patterns)]
     fn handle_node_request(
         &mut self,
         request: NodeRequest,
@@ -1162,6 +1170,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 responder.send(zx::sys::ZX_OK, &mut attrs)?
             }
             NodeRequest::SetAttr { responder, .. } => unsupported!(responder)?,
+            _ => {}
         }
         Ok(ConnectionState::Open)
     }

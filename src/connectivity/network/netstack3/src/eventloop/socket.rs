@@ -86,6 +86,8 @@ impl SocketControlWorker {
 }
 
 impl SocketControlWorkerInner {
+    // TODO(fxb/37419): Remove default handling after methods landed.
+    #[allow(unreachable_patterns)]
     pub fn handle_request(&mut self, _event_loop: &mut EventLoop, req: psocket::ControlRequest) {
         match req {
             psocket::ControlRequest::Clone { .. } => {}
@@ -111,6 +113,7 @@ impl SocketControlWorkerInner {
             psocket::ControlRequest::GetPeerName { .. } => {}
             psocket::ControlRequest::SetSockOpt { .. } => {}
             psocket::ControlRequest::GetSockOpt { .. } => {}
+            _ => {}
         }
     }
 }

@@ -236,6 +236,8 @@ impl FileConnection {
     /// implementations of pseudo files implement their own wrapping handle_request function that
     /// implements [`FileRequest::Clone`] and [`FileRequest::Close`], as these can't be implemented
     /// by the connection.
+    // TODO(fxb/37419): Remove default handling after methods landed.
+    #[allow(unreachable_patterns)]
     pub fn handle_request(&mut self, req: FileRequest) -> Result<(), Error> {
         match req {
             // these two should be handled by the file-specific handle_request functions
@@ -314,6 +316,7 @@ impl FileConnection {
                     responder.send(status.into_raw(), buffer.as_mut().map(OutOfLine))
                 })?;
             }
+            _ => {}
         }
         Ok(())
     }

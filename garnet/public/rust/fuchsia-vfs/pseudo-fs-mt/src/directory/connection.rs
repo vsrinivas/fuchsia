@@ -190,6 +190,8 @@ where
 
     /// Handle a [`DirectoryRequest`].  This function is responsible for handing all the basic
     /// direcotry operations.
+    // TODO(fxb/37419): Remove default handling after methods landed.
+    #[allow(unreachable_patterns)]
     async fn handle_request(&mut self, req: DirectoryRequest) -> Result<ConnectionState, Error> {
         match req {
             DirectoryRequest::Clone { flags, object, control_handle: _ } => {
@@ -258,6 +260,7 @@ where
                         .await?;
                 }
             }
+            _ => {}
         }
         Ok(ConnectionState::Alive)
     }

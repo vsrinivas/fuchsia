@@ -376,6 +376,8 @@ where
         }
     }
 
+    // TODO(fxb/37419): Remove default handling after methods landed.
+    #[allow(unreachable_patterns)]
     fn handle_request(
         &mut self,
         req: DirectoryRequest,
@@ -459,6 +461,7 @@ where
                     }
                 }
             }
+            _ => {}
         }
         Ok(HandleRequestResult { connection_state: ConnectionState::Alive, may_affect_children })
     }

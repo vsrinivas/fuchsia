@@ -280,6 +280,8 @@ impl FileConnection {
 
     /// Handle a [`FileRequest`]. This function is responsible for handing all the file operations
     /// that operate on the connection-specific buffer.
+    // TODO(fxb/37419): Remove default handling after methods landed.
+    #[allow(unreachable_patterns)]
     async fn handle_request(&mut self, req: FileRequest) -> Result<ConnectionState, Error> {
         match req {
             FileRequest::Clone { flags, object, control_handle: _ } => {
@@ -359,6 +361,7 @@ impl FileConnection {
                 // There is no backing VMO.
                 responder.send(ZX_OK, None)?;
             }
+            _ => {}
         }
         Ok(ConnectionState::Alive)
     }
