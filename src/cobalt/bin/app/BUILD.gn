@@ -11,8 +11,9 @@ declare_args() {
   # Selects the Cobalt environment to send data to. Choices:
   #   "DEVEL" - the non-prod environment for use in testing
   #   "PROD" - the production environment
+  #   "DEVEL_AND_PROD" - both the non-prod and production environment
   # TODO(camrdale): change the default to PROD once its pipeline is working.
-  cobalt_environment = "DEVEL"
+  cobalt_environment = "DEVEL_AND_PROD"
 }
 
 # Generates the global_metrics_registry.pb file. This may be selectively
@@ -104,6 +105,8 @@ package("cobalt") {
       # Cobalt 1.0 analyzer public key for devel environment.
       if (cobalt_environment == "PROD") {
         path = "configs/prod_environment"
+      } else if (cobalt_environment == "DEVEL_AND_PROD") {
+        path = "configs/devel_and_prod_environment"
       } else if (cobalt_environment == "DEVEL") {
         path = "configs/devel_environment"
       } else {
