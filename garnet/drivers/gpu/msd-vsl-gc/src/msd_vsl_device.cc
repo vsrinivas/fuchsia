@@ -255,14 +255,35 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* val
   return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
 }
 
+static magma_status_t DataToBuffer(const char* name, void* data, uint64_t size,
+                                   uint32_t* buffer_out) {
+  std::unique_ptr<magma::PlatformBuffer> buffer = magma::PlatformBuffer::Create(size, name);
+  if (!buffer) {
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to allocate buffer");
+  }
+  if (!buffer->Write(data, 0, size)) {
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to write result to buffer");
+  }
+  if (!buffer->duplicate_handle(buffer_out)) {
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to duplicate handle");
+  }
+  return MAGMA_STATUS_OK;
+}
+
 magma_status_t msd_device_query_returns_buffer(msd_device_t* device, uint64_t id,
                                                uint32_t* buffer_out) {
   switch (id) {
-    case kMsdVslVendorQueryChipIdentity:
-      return MsdVslDevice::cast(device)->ChipIdentity(
-          reinterpret_cast<magma_vsl_gc_chip_identity*>(buffer_out));
+    case kMsdVslVendorQueryChipIdentity: {
+      magma_vsl_gc_chip_identity result;
+      magma_status_t status = MsdVslDevice::cast(device)->ChipIdentity(&result);
+      if (status != MAGMA_STATUS_OK) {
+        return status;
+      }
+      return DataToBuffer("chip_identity", &result, sizeof(result), buffer_out);
+    }
+    default:
+      return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "unhandled id %" PRIu64, id);
   }
-  return DRET(MAGMA_STATUS_UNIMPLEMENTED);
 }
 
 void msd_device_dump_status(msd_device_t* device, uint32_t dump_type) {}

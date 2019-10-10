@@ -9,6 +9,7 @@
 #include "garnet/drivers/gpu/msd-vsl-gc/src/msd_vsl_device.h"
 #include "gtest/gtest.h"
 #include "helper/platform_device_helper.h"
+#include "magma_vendor_queries.h"
 
 // These tests are unit testing the functionality of MsdVslDevice.
 // All of these tests instantiate the device in test mode, that is without the device thread active.
@@ -35,6 +36,23 @@ TEST_F(MsdVslDeviceTest, ChipIdentity) {
   EXPECT_GT(identity.chip_revision, 0u);
   EXPECT_GT(identity.chip_date, 0u);
   EXPECT_GT(identity.product_id, 0u);
+
+  // Now try to get it as a buffer.
+  uint32_t identity_buffer;
+  EXPECT_EQ(MAGMA_STATUS_OK, msd_device_query_returns_buffer(device_.get(),
+                                                             kMsdVslVendorQueryChipIdentity,
+                                                             &identity_buffer));
+  magma_vsl_gc_chip_identity identity_from_buf;
+  auto buffer = magma::PlatformBuffer::Import(identity_buffer);
+  EXPECT_TRUE(buffer);
+  EXPECT_TRUE(buffer->Read(&identity_from_buf, 0, sizeof(identity_from_buf)));
+
+  EXPECT_EQ(0, memcmp(&identity, &identity_from_buf, sizeof(identity_from_buf)));
+}
+
+TEST_F(MsdVslDeviceTest, QueryReturnsBufferBadId) {
+  uint32_t buffer;
+  EXPECT_NE(MAGMA_STATUS_OK, msd_device_query_returns_buffer(device_.get(), 0 /* id */, &buffer));
 }
 
 TEST_F(MsdVslDeviceTest, FetchEngineDma) {
