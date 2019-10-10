@@ -34,6 +34,7 @@ struct Devnode;
 class RemoveTask;
 class SuspendContext;
 class SuspendTask;
+class ResumeTask;
 class UnbindTask;
 struct UnbindTaskOpts;
 
@@ -305,6 +306,11 @@ class Device : public fbl::RefCounted<Device>,
   // given completion will be invoked.
   zx_status_t SendSuspend(uint32_t flags, SuspendCompletion completion);
 
+  using ResumeCompletion = fit::callback<void(zx_status_t)>;
+  // Issue a Resume request to this device.  When the response comes in, the
+  // given completion will be invoked.
+  zx_status_t SendResume(uint32_t target_system_state, ResumeCompletion completion);
+
   using UnbindCompletion = fit::callback<void(zx_status_t)>;
   using RemoveCompletion = fit::callback<void(zx_status_t)>;
   // Issue an Unbind request to this device, which will run the unbind hook.
@@ -377,10 +383,19 @@ class Device : public fbl::RefCounted<Device>,
   // Creates a new suspend task if necessary and returns a reference to it.
   // If one is already in-progress, a reference to it is returned instead
   fbl::RefPtr<SuspendTask> RequestSuspendTask(uint32_t suspend_flags);
+
+  fbl::RefPtr<ResumeTask> GetActiveResume() { return active_resume_; }
+
+  // Request Resume task
+  fbl::RefPtr<ResumeTask> RequestResumeTask(uint32_t system_resume_state);
+
   // Run the completion for the outstanding suspend, if any.  This method is
   // only exposed currently because RemoveDevice is on Coordinator instead of
   // Device.
   void CompleteSuspend(zx_status_t status);
+
+  // Run the completion for the outstanding resume, if any.
+  void CompleteResume(zx_status_t status);
 
   // Creates the unbind and remove tasks for the device if they do not already exist.
   // |opts| is used to configure the unbind task.
@@ -426,6 +441,8 @@ class Device : public fbl::RefCounted<Device>,
     kActive,
     kSuspending,  // The devhost is in the process of suspending the device.
     kSuspended,
+    kResuming,   // The devhost is in the process of resuming the device.
+    kResumed,    // Resume is complete. Will be marked active, after all children resume.
     kUnbinding,  // The devhost is in the process of unbinding and removing the device.
     kDead,       // The device has been remove()'d
   };
@@ -457,6 +474,8 @@ class Device : public fbl::RefCounted<Device>,
     fbl::AutoLock<fbl::Mutex> lock(&test_state_lock_);
     test_state_ = new_state;
   }
+
+  void clear_active_resume() { active_resume_ = nullptr; }
   void set_test_time(zx::duration& test_time) { test_time_ = test_time; }
   void set_test_reply_required(bool required) { test_reply_required_ = required; }
   zx::duration& test_time() { return test_time_; }
@@ -533,6 +552,12 @@ class Device : public fbl::RefCounted<Device>,
   // completed.  It will likely mark |active_suspend_| as completed and clear
   // it.
   SuspendCompletion suspend_completion_;
+
+  // If a resume is in-progress, this task represents it.
+  fbl::RefPtr<ResumeTask> active_resume_;
+  // If a Resume is in-progress, this completion will be invoked when it is
+  // completed.
+  ResumeCompletion resume_completion_;
 
   // If an unbind is in-progress, this task represents it.
   fbl::RefPtr<UnbindTask> active_unbind_;

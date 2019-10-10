@@ -43,6 +43,7 @@ class DeviceControllerConnection
                   BindDriverCompleter::Sync _completer) override;
   void ConnectProxy(::zx::channel shadow, ConnectProxyCompleter::Sync _completer) override;
   void Suspend(uint32_t flags, SuspendCompleter::Sync _completer) override;
+  void Resume(uint32_t target_system_state, ResumeCompleter::Sync _completer) override;
   void Unbind(UnbindCompleter::Sync _completer) override;
   void CompleteRemoval(CompleteRemovalCompleter::Sync _completer) override;
   void CompleteCompatibilityTests(llcpp::fuchsia::device::manager::CompatibilityTestStatus status,

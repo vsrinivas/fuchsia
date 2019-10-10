@@ -33,6 +33,8 @@ void SuspendTask::Run() {
       case Device::State::kUnbinding:
       case Device::State::kSuspending:
       case Device::State::kActive:
+      case Device::State::kResuming:
+      case Device::State::kResumed:
         break;
     }
 
@@ -49,6 +51,8 @@ void SuspendTask::Run() {
     switch (device_->proxy()->state()) {
       case Device::State::kDead:
       case Device::State::kSuspended:
+      case Device::State::kResuming:
+      case Device::State::kResumed:
         break;
       case Device::State::kUnbinding:
       case Device::State::kSuspending:
@@ -68,10 +72,18 @@ void SuspendTask::Run() {
     return;
   }
 
+  // The device is about to be resumed, wait for it to complete.
+  if (device_->state() == Device::State::kResuming) {
+    auto resume_task = device_->GetActiveResume();
+    AddDependency(resume_task);
+    return;
+  }
+
   // Check if this device is not in a devhost.  This happens for the
   // top-level devices like /sys provided by devcoordinator,
   // or the device is already dead.
   if (device_->host() == nullptr) {
+    device_->set_state(Device::State::kSuspended);
     return Complete(ZX_OK);
   }
 

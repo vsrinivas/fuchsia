@@ -1856,6 +1856,12 @@ constexpr uint64_t kDeviceController_Suspend_GenOrdinal = 0x77bf98a1d5d4adbblu;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerSuspendRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerSuspendResponseTable;
 [[maybe_unused]]
+constexpr uint64_t kDeviceController_Resume_Ordinal = 0x4d69ba3300000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDeviceController_Resume_GenOrdinal = 0x4f111286b7bd9caflu;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerResumeRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerResumeResponseTable;
+[[maybe_unused]]
 constexpr uint64_t kDeviceController_CompleteCompatibilityTests_Ordinal = 0x475e367c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDeviceController_CompleteCompatibilityTests_GenOrdinal = 0x3883342451945549lu;
@@ -2140,6 +2146,68 @@ DeviceController::UnownedResultOf::Suspend DeviceController::Call::Suspend(zx::u
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+DeviceController::ResultOf::Resume_Impl<DeviceController::ResumeResponse>::Resume_Impl(zx::unowned_channel _client_end, uint32_t target_system_state) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ResumeRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, ResumeRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<ResumeRequest*>(_write_bytes);
+  _request.target_system_state = std::move(target_system_state);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ResumeRequest));
+  ::fidl::DecodedMessage<ResumeRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      DeviceController::InPlace::Resume(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+DeviceController::ResultOf::Resume DeviceController::SyncClient::Resume(uint32_t target_system_state) {
+  return ResultOf::Resume(zx::unowned_channel(this->channel_), std::move(target_system_state));
+}
+
+DeviceController::ResultOf::Resume DeviceController::Call::Resume(zx::unowned_channel _client_end, uint32_t target_system_state) {
+  return ResultOf::Resume(std::move(_client_end), std::move(target_system_state));
+}
+
+template <>
+DeviceController::UnownedResultOf::Resume_Impl<DeviceController::ResumeResponse>::Resume_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t target_system_state, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < ResumeRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<ResumeResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, ResumeRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<ResumeRequest*>(_request_buffer.data());
+  _request.target_system_state = std::move(target_system_state);
+  _request_buffer.set_actual(sizeof(ResumeRequest));
+  ::fidl::DecodedMessage<ResumeRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      DeviceController::InPlace::Resume(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+DeviceController::UnownedResultOf::Resume DeviceController::SyncClient::Resume(::fidl::BytePart _request_buffer, uint32_t target_system_state, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::Resume(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(target_system_state), std::move(_response_buffer));
+}
+
+DeviceController::UnownedResultOf::Resume DeviceController::Call::Resume(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t target_system_state, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::Resume(std::move(_client_end), std::move(_request_buffer), std::move(target_system_state), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<DeviceController::ResumeResponse> DeviceController::InPlace::Resume(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ResumeRequest> params, ::fidl::BytePart response_buffer) {
+  DeviceController::SetTransactionHeaderFor::ResumeRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DeviceController::ResumeResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<ResumeRequest, ResumeResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DeviceController::ResumeResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
 
 DeviceController::ResultOf::CompleteCompatibilityTests_Impl::CompleteCompatibilityTests_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::manager::CompatibilityTestStatus status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CompleteCompatibilityTestsRequest, ::fidl::MessageDirection::kSending>();
@@ -2275,6 +2343,19 @@ bool DeviceController::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::SuspendCompleter::Sync(txn));
       return true;
     }
+    case kDeviceController_Resume_Ordinal:
+    case kDeviceController_Resume_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<ResumeRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->Resume(std::move(message->target_system_state),
+        Interface::ResumeCompleter::Sync(txn));
+      return true;
+    }
     case kDeviceController_CompleteCompatibilityTests_Ordinal:
     case kDeviceController_CompleteCompatibilityTests_GenOrdinal:
     {
@@ -2378,6 +2459,42 @@ void DeviceController::Interface::SuspendCompleterBase::Reply(::fidl::DecodedMes
 }
 
 
+void DeviceController::Interface::ResumeCompleterBase::Reply(int32_t status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ResumeResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<ResumeResponse*>(_write_bytes);
+  DeviceController::SetTransactionHeaderFor::ResumeResponse(
+      ::fidl::DecodedMessage<ResumeResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ResumeResponse::PrimarySize,
+              ResumeResponse::PrimarySize)));
+  _response.status = std::move(status);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ResumeResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ResumeResponse>(std::move(_response_bytes)));
+}
+
+void DeviceController::Interface::ResumeCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+  if (_buffer.capacity() < ResumeResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<ResumeResponse*>(_buffer.data());
+  DeviceController::SetTransactionHeaderFor::ResumeResponse(
+      ::fidl::DecodedMessage<ResumeResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ResumeResponse::PrimarySize,
+              ResumeResponse::PrimarySize)));
+  _response.status = std::move(status);
+  _buffer.set_actual(sizeof(ResumeResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ResumeResponse>(std::move(_buffer)));
+}
+
+void DeviceController::Interface::ResumeCompleterBase::Reply(::fidl::DecodedMessage<ResumeResponse> params) {
+  DeviceController::SetTransactionHeaderFor::ResumeResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
 
 void DeviceController::SetTransactionHeaderFor::BindDriverRequest(const ::fidl::DecodedMessage<DeviceController::BindDriverRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
@@ -2410,6 +2527,15 @@ void DeviceController::SetTransactionHeaderFor::SuspendRequest(const ::fidl::Dec
 void DeviceController::SetTransactionHeaderFor::SuspendResponse(const ::fidl::DecodedMessage<DeviceController::SuspendResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
   _msg.message()->_hdr.ordinal = kDeviceController_Suspend_Ordinal;
+}
+
+void DeviceController::SetTransactionHeaderFor::ResumeRequest(const ::fidl::DecodedMessage<DeviceController::ResumeRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDeviceController_Resume_Ordinal;
+}
+void DeviceController::SetTransactionHeaderFor::ResumeResponse(const ::fidl::DecodedMessage<DeviceController::ResumeResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDeviceController_Resume_Ordinal;
 }
 
 void DeviceController::SetTransactionHeaderFor::CompleteCompatibilityTestsRequest(const ::fidl::DecodedMessage<DeviceController::CompleteCompatibilityTestsRequest>& _msg) {

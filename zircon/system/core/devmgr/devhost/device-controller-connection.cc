@@ -4,11 +4,12 @@
 
 #include "device-controller-connection.h"
 
-#include <fbl/auto_lock.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>
+
+#include <fbl/auto_lock.h>
 
 #include "../shared/env.h"
 #include "../shared/fidl_txn.h"
@@ -57,6 +58,16 @@ void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync 
   {
     ApiAutoLock lock;
     r = devhost_device_suspend(this->dev(), flags);
+  }
+  completer.Reply(r);
+}
+
+void DeviceControllerConnection::Resume(uint32_t target_system_state,
+                                        ResumeCompleter::Sync completer) {
+  zx_status_t r;
+  {
+    ApiAutoLock lock;
+    r = devhost_device_resume(this->dev(), target_system_state);
   }
   completer.Reply(r);
 }

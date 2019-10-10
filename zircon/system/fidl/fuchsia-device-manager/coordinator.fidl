@@ -113,6 +113,10 @@ protocol DeviceController {
     /// Ask devhost to suspend this device, using the target state indicated by `flags`.
     Suspend(uint32 flags) -> (zx.status status);
 
+    /// Ask devhost to resume this device, using the target system state indicated by
+    /// 'target_system_state'.
+    Resume(uint32 target_system_state) -> (zx.status status);
+
     /// Inform devhost about the compatibility test status when compatibility tests
     /// fail or complete successfully.
     // TODO(ravoorir) : This should be an asynchronous call from devhost to

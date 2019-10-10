@@ -17,6 +17,7 @@
 #include "fidl.h"
 #include "fidl_txn.h"
 #include "log.h"
+#include "resume-task.h"
 #include "suspend-task.h"
 
 namespace devmgr {
@@ -221,6 +222,17 @@ fbl::RefPtr<SuspendTask> Device::RequestSuspendTask(uint32_t suspend_flags) {
   return active_suspend_;
 }
 
+fbl::RefPtr<ResumeTask> Device::RequestResumeTask(uint32_t target_system_state) {
+  if (active_resume_) {
+    // We don't support different types of resumes concurrently, and
+    // shouldn't be able to reach this state.
+    ZX_ASSERT(target_system_state == active_resume_->target_system_state());
+  } else {
+    active_resume_ = ResumeTask::Create(fbl::RefPtr(this), target_system_state);
+  }
+  return active_resume_;
+}
+
 zx_status_t Device::SendSuspend(uint32_t flags, SuspendCompletion completion) {
   if (suspend_completion_) {
     // We already have a pending suspend
@@ -233,6 +245,21 @@ zx_status_t Device::SendSuspend(uint32_t flags, SuspendCompletion completion) {
   }
   state_ = Device::State::kSuspending;
   suspend_completion_ = std::move(completion);
+  return ZX_OK;
+}
+
+zx_status_t Device::SendResume(uint32_t target_system_state, ResumeCompletion completion) {
+  if (resume_completion_) {
+    // We already have a pending resume
+    return ZX_ERR_UNAVAILABLE;
+  }
+  log(DEVLC, "devcoordinator: resume dev %p name='%s'\n", this, name_.data());
+  zx_status_t status = dh_send_resume(this, target_system_state);
+  if (status != ZX_OK) {
+    return status;
+  }
+  state_ = Device::State::kResuming;
+  resume_completion_ = std::move(completion);
   return ZX_OK;
 }
 
@@ -250,6 +277,17 @@ void Device::CompleteSuspend(zx_status_t status) {
   active_suspend_ = nullptr;
   if (suspend_completion_) {
     suspend_completion_(status);
+  }
+}
+
+void Device::CompleteResume(zx_status_t status) {
+  if (status != ZX_OK) {
+    state_ = Device::State::kSuspended;
+  } else {
+    state_ = Device::State::kResumed;
+  }
+  if (resume_completion_) {
+    resume_completion_(status);
   }
 }
 
@@ -287,10 +325,10 @@ void Device::CreateUnbindRemoveTasks(UnbindTaskOpts opts) {
       }
     }
   } else {
-     // |do_unbind| may not match the stored field in the existing unbind task due to
-     // the current device_remove / unbind model.
-     // For closest compatibility with the current model, we should prioritize
-     // devhost calls to |ScheduleRemove| over our own scheduled unbind tasks for the children.
+    // |do_unbind| may not match the stored field in the existing unbind task due to
+    // the current device_remove / unbind model.
+    // For closest compatibility with the current model, we should prioritize
+    // devhost calls to |ScheduleRemove| over our own scheduled unbind tasks for the children.
     active_unbind_->set_do_unbind(opts.do_unbind);
   }
 }
@@ -595,6 +633,29 @@ zx_status_t Device::HandleRead() {
     }
     log(DEVLC, "devcoordinator: suspended dev %p name='%s'\n", this, name_.data());
     CompleteSuspend(resp->status);
+  } else if (ordinal == fuchsia_device_manager_DeviceControllerResumeOrdinal ||
+             ordinal == fuchsia_device_manager_DeviceControllerResumeGenOrdinal) {
+    const char* err_msg = nullptr;
+    r = fidl_decode_msg(&fuchsia_device_manager_DeviceControllerResumeResponseTable, &fidl_msg,
+                        &err_msg);
+    if (r != ZX_OK) {
+      log(ERROR, "devcoordinator: rpc: suspend '%s' received malformed reply: %s\n", name_.data(),
+          err_msg);
+      return ZX_ERR_IO;
+    }
+    auto resp =
+        reinterpret_cast<fuchsia_device_manager_DeviceControllerResumeResponse*>(fidl_msg.bytes);
+    if (resp->status != ZX_OK) {
+      log(ERROR, "devcoordinator: rpc: resume '%s' status %d\n", name_.data(), resp->status);
+    }
+
+    if (!resume_completion_) {
+      log(ERROR, "devcoordinator: rpc: unexpected resume reply for '%s' status %d\n", name_.data(),
+          resp->status);
+      return ZX_ERR_IO;
+    }
+    log(INFO, "devcoordinator: resumed dev %p name='%s'\n", this, name_.data());
+    CompleteResume(resp->status);
   } else {
     log(ERROR, "devcoordinator: rpc: dev '%s' received wrong unexpected reply %16lx\n",
         name_.data(), hdr->ordinal);

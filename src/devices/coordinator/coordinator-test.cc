@@ -609,6 +609,60 @@ void CheckSuspendReceived(const zx::channel& remote, uint32_t expected_flags,
   SendSuspendReply(remote, return_status);
 }
 
+// Reads a Resume request from remote and checks that it is for the expected
+// target state, without sending a response. |SendResumeReply| can be used to send the desired
+// response.
+void CheckResumeReceived(const zx::channel& remote, SystemPowerState target_state) {
+  // Read the Resume request.
+  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  uint32_t actual_bytes;
+  uint32_t actual_handles;
+  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
+                                   &actual_bytes, &actual_handles);
+  ASSERT_OK(status);
+  ASSERT_LT(0, actual_bytes);
+  ASSERT_EQ(0, actual_handles);
+
+  // Validate the Resume request.
+  auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
+  ASSERT_EQ(fuchsia_device_manager_DeviceControllerResumeOrdinal, hdr->ordinal);
+  status = fidl_decode(&fuchsia_device_manager_DeviceControllerResumeRequestTable, bytes,
+                       actual_bytes, handles, actual_handles, nullptr);
+  ASSERT_OK(status);
+  auto req = reinterpret_cast<fuchsia_device_manager_DeviceControllerResumeRequest*>(bytes);
+  ASSERT_EQ(static_cast<SystemPowerState>(req->target_system_state), target_state);
+}
+
+// Sends a response with the given return_status. This can be used to reply to a
+// request received by |CheckResumeReceived|.
+void SendResumeReply(const zx::channel& remote, zx_status_t return_status) {
+  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  uint32_t actual_handles;
+
+  // Write the Resume response.
+  memset(bytes, 0, sizeof(bytes));
+  auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerResumeResponse*>(bytes);
+  resp->hdr.ordinal = fuchsia_device_manager_DeviceControllerResumeOrdinal;
+  resp->status = return_status;
+  zx_status_t status =
+      fidl_encode(&fuchsia_device_manager_DeviceControllerResumeResponseTable, bytes, sizeof(*resp),
+                  handles, fbl::count_of(handles), &actual_handles, nullptr);
+  ASSERT_OK(status);
+  ASSERT_EQ(0, actual_handles);
+  status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
+  ASSERT_OK(status);
+}
+
+// Reads a Resume request from remote, checks that it is for the expected
+// target state, and then sends the given response.
+void CheckResumeReceived(const zx::channel& remote, SystemPowerState target_state,
+                         zx_status_t return_status) {
+  CheckResumeReceived(remote, target_state);
+  SendResumeReply(remote, return_status);
+}
+
 // Reads a CreateCompositeDevice from remote, checks expectations, and sends
 // a ZX_OK response.
 void CheckCreateCompositeDeviceReceived(const zx::channel& remote, const char* expected_name,
@@ -707,9 +761,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
 
   async::Loop* coordinator_loop() { return &coordinator_loop_; }
   bool coordinator_loop_thread_running() { return coordinator_loop_thread_running_; }
-  void set_coordinator_loop_thread_running(bool value) {
-    coordinator_loop_thread_running_ = value;
-  }
+  void set_coordinator_loop_thread_running(bool value) { coordinator_loop_thread_running_ = value; }
   devmgr::Coordinator* coordinator() { return &coordinator_; }
 
   devmgr::Devhost* devhost() { return &devhost_; }
@@ -728,6 +780,9 @@ class MultipleDeviceTestCase : public zxtest::Test {
 
   void DoSuspend(uint32_t flags);
   void DoSuspend(uint32_t flags, fit::function<void(uint32_t)> suspend_cb);
+
+  void DoResume(SystemPowerState target_state);
+  void DoResume(SystemPowerState target_state, fit::function<void(SystemPowerState)> resume_cb);
 
   void CheckUnbindReceived(const zx::channel& remote);
   void SendUnbindReply(const zx::channel& remote);
@@ -897,6 +952,19 @@ void MultipleDeviceTestCase::DoSuspend(uint32_t flags) {
   DoSuspend(flags, [this](uint32_t flags) { coordinator()->Suspend(flags); });
 }
 
+void MultipleDeviceTestCase::DoResume(
+    SystemPowerState target_state, fit::function<void(SystemPowerState target_state)> resume_cb) {
+  resume_cb(target_state);
+  if (!coordinator_loop_thread_running()) {
+    coordinator_loop()->RunUntilIdle();
+  }
+}
+
+void MultipleDeviceTestCase::DoResume(SystemPowerState target_state) {
+  DoResume(target_state,
+           [this](SystemPowerState target_state) { coordinator()->Resume(target_state); });
+}
+
 TEST_F(MultipleDeviceTestCase, RemoveDeadDevice) {
   size_t index;
   ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "", &index));
@@ -954,8 +1022,8 @@ void MultipleDeviceTestCase::SendUnbindReply(const zx::channel& remote) {
 
   // Verify the UnbindDone response.
   uint32_t actual_bytes;
-  status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
-                       &actual_bytes, &actual_handles);
+  status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles), &actual_bytes,
+                       &actual_handles);
   ASSERT_OK(status);
   ASSERT_LT(0, actual_bytes);
   ASSERT_EQ(0, actual_handles);
@@ -1021,8 +1089,8 @@ void MultipleDeviceTestCase::SendRemoveReply(const zx::channel& remote) {
 
   // Verify the RemoveDone response.
   uint32_t actual_bytes;
-  status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
-                       &actual_bytes, &actual_handles);
+  status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles), &actual_bytes,
+                       &actual_handles);
   ASSERT_OK(status);
   ASSERT_LT(0, actual_bytes);
   ASSERT_EQ(0, actual_handles);
@@ -1536,13 +1604,13 @@ TEST_F(UnbindTestCase, RemoveParentAndChildSimultaneously) {
 
   auto* child_device = device(child_index);
 
-  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleDevhostRequestedRemove(parent_device->device,
-                                                                       false /* do_unbind */));
+  ASSERT_NO_FATAL_FAILURES(
+      coordinator_.ScheduleDevhostRequestedRemove(parent_device->device, false /* do_unbind */));
   coordinator_loop()->RunUntilIdle();
 
   // At the same time, have the child try to remove itself.
-  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleDevhostRequestedRemove(child_device->device,
-                                                                       false /* do_unbind */));
+  ASSERT_NO_FATAL_FAILURES(
+      coordinator_.ScheduleDevhostRequestedRemove(child_device->device, false /* do_unbind */));
   coordinator_loop()->RunUntilIdle();
 
   // The child device will not reply, as it already called device_remove previously.
@@ -1561,7 +1629,6 @@ class SuspendTestCase : public MultipleDeviceTestCase {
   void SuspendTest(uint32_t flags);
   void StateTest(zx_status_t suspend_status, devmgr::Device::State want_device_state);
 };
-
 TEST_F(SuspendTestCase, Poweroff) {
   ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_POWEROFF));
 }
@@ -1678,6 +1745,144 @@ void SuspendTestCase::StateTest(zx_status_t suspend_status,
   ASSERT_EQ(device(index)->device->state(), want_device_state);
 }
 
+class ResumeTestCase : public MultipleDeviceTestCase {
+ public:
+  void ResumeTest(SystemPowerState target_state);
+  void StateTest(zx_status_t resume_status, devmgr::Device::State want_device_state);
+};
+
+// Verify the device transitions in and out of the resuming state.
+void ResumeTestCase::StateTest(zx_status_t resume_status, devmgr::Device::State want_device_state) {
+  size_t index;
+  ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "", &index));
+
+  // Mark all devices suspened.
+  coordinator_.sys_device()->set_state(devmgr::Device::State::kSuspended);
+  coordinator_.sys_device()->proxy()->set_state(devmgr::Device::State::kSuspended);
+  platform_bus()->set_state(devmgr::Device::State::kSuspended);
+  device(index)->device->set_state(devmgr::Device::State::kSuspended);
+  ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON));
+
+  ASSERT_NO_FATAL_FAILURES(
+      CheckResumeReceived(sys_proxy_remote_, SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(
+      platform_bus_remote(), SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+  // Check for the resume message without replying.
+  ASSERT_NO_FATAL_FAILURES(
+      CheckResumeReceived(device(index)->remote, SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON));
+
+  ASSERT_EQ(device(index)->device->state(), devmgr::Device::State::kResuming);
+
+  ASSERT_NO_FATAL_FAILURES(SendResumeReply(device(index)->remote, resume_status));
+  coordinator_loop()->RunUntilIdle();
+
+  ASSERT_EQ(device(index)->device->state(), want_device_state);
+}
+
+// Verify the resume order is correct
+void ResumeTestCase::ResumeTest(SystemPowerState target_state) {
+  struct DeviceDesc {
+    // Index into the device desc array below.  UINT32_MAX = platform_bus()
+    const size_t parent_desc_index;
+    const char* const name;
+    // index for use with device()
+    size_t index = 0;
+    bool suspended = false;
+    bool resumed = false;
+  };
+  DeviceDesc devices[] = {
+      {UINT32_MAX, "root_child1"}, {UINT32_MAX, "root_child2"}, {0, "root_child1_1"},
+      {0, "root_child1_2"},        {2, "root_child1_1_1"},      {1, "root_child2_1"},
+  };
+  for (auto& desc : devices) {
+    fbl::RefPtr<devmgr::Device> parent;
+    if (desc.parent_desc_index == UINT32_MAX) {
+      parent = platform_bus();
+    } else {
+      size_t index = devices[desc.parent_desc_index].index;
+      parent = device(index)->device;
+    }
+    ASSERT_NO_FATAL_FAILURES(AddDevice(parent, desc.name, 0 /* protocol id */, "", &desc.index));
+  }
+
+  // Mark all devices suspened. Otherwise resume will fail
+  coordinator_.sys_device()->set_state(devmgr::Device::State::kSuspended);
+  coordinator_.sys_device()->proxy()->set_state(devmgr::Device::State::kSuspended);
+  platform_bus()->set_state(devmgr::Device::State::kSuspended);
+  for (auto& desc : devices) {
+    fbl::RefPtr<devmgr::Device> dev;
+    size_t index = desc.index;
+    if (index == UINT32_MAX) {
+      continue;
+    }
+    dev = device(index)->device;
+    if (dev->state() != devmgr::Device::State::kSuspended) {
+      dev->set_state(devmgr::Device::State::kSuspended);
+    }
+  }
+
+  ASSERT_NO_FATAL_FAILURES(DoResume(target_state));
+
+  ASSERT_TRUE(DeviceHasPendingMessages(sys_proxy_remote_));
+  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(sys_proxy_remote_, target_state, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+  ASSERT_EQ(coordinator_.sys_device()->state(), devmgr::Device::State::kResumed);
+
+  ASSERT_TRUE(DeviceHasPendingMessages(platform_bus_remote()));
+  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(platform_bus_remote(), target_state, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+  ASSERT_EQ(platform_bus()->state(), devmgr::Device::State::kResumed);
+
+  size_t num_to_resume = fbl::count_of(devices);
+  while (num_to_resume > 0) {
+    bool made_progress = false;
+    for (size_t i = 0; i < fbl::count_of(devices); ++i) {
+      auto& desc = devices[i];
+      if (desc.resumed) {
+        continue;
+      }
+
+      if (!DeviceHasPendingMessages(desc.index)) {
+        continue;
+      }
+      ASSERT_NO_FATAL_FAILURES(
+          CheckResumeReceived(device(desc.index)->remote, target_state, ZX_OK));
+      coordinator_loop()->RunUntilIdle();
+      // Make sure all descendants of this device are not resumed yet.
+      // We just need to check immediate children since this will
+      // recursively enforce that property.
+      for (auto& other_desc : devices) {
+        if (other_desc.parent_desc_index == i) {
+          // if it has children, its state should be Resumed but not Active.
+          ASSERT_EQ(device(desc.index)->device->state(), devmgr::Device::State::kResumed);
+          ASSERT_FALSE(other_desc.resumed);
+        }
+      }
+
+      desc.resumed = true;
+      --num_to_resume;
+      made_progress = true;
+    }
+    // Make sure we're not stuck waiting
+    ASSERT_TRUE(made_progress);
+    coordinator_loop()->RunUntilIdle();
+  }
+}
+
+TEST_F(ResumeTestCase, FullyOnCheckOrder) {
+  ASSERT_NO_FATAL_FAILURES(ResumeTest(SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON));
+}
+
+TEST_F(ResumeTestCase, ResumeSuccess) {
+  ASSERT_NO_FATAL_FAILURES(StateTest(ZX_OK, devmgr::Device::State::kActive));
+}
+
+TEST_F(ResumeTestCase, ResumeFail) {
+  ASSERT_NO_FATAL_FAILURES(StateTest(ZX_ERR_BAD_STATE, devmgr::Device::State::kSuspended));
+}
+
 class CompositeTestCase : public MultipleDeviceTestCase {
  public:
   ~CompositeTestCase() override = default;
@@ -1767,6 +1972,181 @@ TEST_F(MultipleDeviceTestCase, SuspendThenUnbind) {
   // The parent should now be removed.
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device(parent_index)->remote));
   coordinator_loop()->RunUntilIdle();
+}
+
+TEST_F(MultipleDeviceTestCase, UnbindThenResume) {
+  size_t parent_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus(), "parent-device", 0 /* protocol id */, "", &parent_index));
+
+  size_t child_index;
+  ASSERT_NO_FATAL_FAILURES(AddDevice(device(parent_index)->device, "child-device",
+                                     0 /* protocol id */, "", &child_index));
+
+  coordinator_.sys_device()->set_state(devmgr::Device::State::kSuspended);
+  coordinator_.sys_device()->proxy()->set_state(devmgr::Device::State::kSuspended);
+  platform_bus()->set_state(devmgr::Device::State::kSuspended);
+  device(parent_index)->device->set_state(devmgr::Device::State::kSuspended);
+  device(child_index)->device->set_state(devmgr::Device::State::kSuspended);
+
+  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(device(parent_index)->device));
+  coordinator_loop()->RunUntilIdle();
+  // The child should be unbound first.
+  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceived(device(child_index)->remote));
+
+  ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON));
+
+  ASSERT_NO_FATAL_FAILURES(
+      CheckResumeReceived(sys_proxy_remote_, SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(
+      platform_bus_remote(), SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(
+      device(parent_index)->remote, SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(SendUnbindReply(device(child_index)->remote));
+  coordinator_loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device(child_index)->remote));
+  coordinator_loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device(parent_index)->remote));
+  coordinator_loop()->RunUntilIdle();
+
+  // The resume task should complete but not send a resume message.
+  ASSERT_FALSE(DeviceHasPendingMessages(device(parent_index)->remote));
+  ASSERT_FALSE(DeviceHasPendingMessages(device(child_index)->remote));
+}
+
+TEST_F(MultipleDeviceTestCase, ResumeThenUnbind) {
+  size_t parent_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus(), "parent-device", 0 /* protocol id */, "", &parent_index));
+
+  size_t child_index;
+  ASSERT_NO_FATAL_FAILURES(AddDevice(device(parent_index)->device, "child-device",
+                                     0 /* protocol id */, "", &child_index));
+
+  coordinator_.sys_device()->set_state(devmgr::Device::State::kSuspended);
+  coordinator_.sys_device()->proxy()->set_state(devmgr::Device::State::kSuspended);
+  platform_bus()->set_state(devmgr::Device::State::kSuspended);
+  device(parent_index)->device->set_state(devmgr::Device::State::kSuspended);
+  device(child_index)->device->set_state(devmgr::Device::State::kSuspended);
+
+  ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON));
+
+  ASSERT_NO_FATAL_FAILURES(
+      CheckResumeReceived(sys_proxy_remote_, SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(
+      platform_bus_remote(), SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+  // Don't reply to the resume yet.
+  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(device(parent_index)->remote,
+                                               SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON));
+  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(device(parent_index)->device));
+  coordinator_loop()->RunUntilIdle();
+
+  // Check that the child device has not yet started unbinding.
+  ASSERT_FALSE(DeviceHasPendingMessages(device(child_index)->remote));
+
+  ASSERT_NO_FATAL_FAILURES(SendResumeReply(device(parent_index)->remote, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+
+  // The Child should have started resuming now. Complete resume of child.
+  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(
+      device(child_index)->remote, SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+  // Since the resume is complete, unbinding the child should start now.
+  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(device(child_index)->remote));
+  coordinator_loop()->RunUntilIdle();
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device(child_index)->remote));
+  coordinator_loop()->RunUntilIdle();
+
+  // The parent should now be removed.
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device(parent_index)->remote));
+  coordinator_loop()->RunUntilIdle();
+}
+
+TEST_F(MultipleDeviceTestCase, SuspendThenResume) {
+  size_t parent_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus(), "parent-device", 0 /* protocol id */, "", &parent_index));
+
+  size_t child_index;
+  ASSERT_NO_FATAL_FAILURES(AddDevice(device(parent_index)->device, "child-device",
+                                     0 /* protocol id */, "", &child_index));
+
+  const uint32_t flags = DEVICE_SUSPEND_FLAG_POWEROFF;
+  ASSERT_NO_FATAL_FAILURES(DoSuspend(flags));
+
+  // Don't reply to the suspend yet.
+  ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(device(child_index)->remote, flags));
+
+  // This should return without scheduling resume tasks since suspend is in
+  // progress.
+  ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON));
+  coordinator_loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(SendSuspendReply(device(child_index)->remote, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+
+  // The parent should have started suspending.
+  ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(device(parent_index)->remote, flags, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(platform_bus_remote(), flags, ZX_OK));
+  ASSERT_FALSE(DeviceHasPendingMessages(device(parent_index)->remote));
+  ASSERT_FALSE(DeviceHasPendingMessages(device(child_index)->remote));
+  ASSERT_EQ(device(parent_index)->device->state(), devmgr::Device::State::kSuspended);
+  ASSERT_EQ(device(child_index)->device->state(), devmgr::Device::State::kSuspended);
+}
+
+TEST_F(MultipleDeviceTestCase, ResumeThenSuspend) {
+  size_t parent_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus(), "parent-device", 0 /* protocol id */, "", &parent_index));
+
+  size_t child_index;
+  ASSERT_NO_FATAL_FAILURES(AddDevice(device(parent_index)->device, "child-device",
+                                     0 /* protocol id */, "", &child_index));
+
+  coordinator_.sys_device()->set_state(devmgr::Device::State::kSuspended);
+  coordinator_.sys_device()->proxy()->set_state(devmgr::Device::State::kSuspended);
+  platform_bus()->set_state(devmgr::Device::State::kSuspended);
+  device(parent_index)->device->set_state(devmgr::Device::State::kSuspended);
+  device(child_index)->device->set_state(devmgr::Device::State::kSuspended);
+
+  ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON));
+  coordinator_loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(
+      CheckResumeReceived(sys_proxy_remote_, SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(
+      platform_bus_remote(), SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+  // Dont reply yet for the resume
+  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(device(parent_index)->remote,
+                                               SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON));
+  coordinator_loop()->RunUntilIdle();
+
+  const uint32_t flags = DEVICE_SUSPEND_FLAG_SUSPEND_RAM;
+  // Should be a no-op because resume is in progress.
+  ASSERT_NO_FATAL_FAILURES(DoSuspend(flags));
+
+  ASSERT_NO_FATAL_FAILURES(SendResumeReply(device(parent_index)->remote, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(
+      device(child_index)->remote, SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+  ASSERT_FALSE(DeviceHasPendingMessages(device(parent_index)->remote));
+  ASSERT_FALSE(DeviceHasPendingMessages(device(child_index)->remote));
+  ASSERT_EQ(device(parent_index)->device->state(), devmgr::Device::State::kActive);
+  ASSERT_EQ(device(child_index)->device->state(), devmgr::Device::State::kActive);
 }
 
 void CompositeTestCase::CheckCompositeCreation(const char* composite_name,
@@ -1912,6 +2292,7 @@ void CompositeAddOrderTestCase::ExecuteTest(AddLocation add) {
                                                   fbl::count_of(device_indexes),
                                                   component_device_indexes, &composite_remote));
 }
+
 TEST_F(CompositeAddOrderTestCase, DefineBeforeDevices) {
   ASSERT_NO_FATAL_FAILURES(ExecuteTest(AddLocation::BEFORE));
 }

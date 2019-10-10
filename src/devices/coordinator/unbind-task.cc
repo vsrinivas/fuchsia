@@ -44,6 +44,8 @@ void UnbindTask::ScheduleUnbindChildren() {
       case Device::State::kSuspended:
       // The created unbind task will wait for the suspend to complete.
       case Device::State::kSuspending:
+      case Device::State::kResuming:
+      case Device::State::kResumed:
       case Device::State::kActive: {
         device_->proxy()->CreateUnbindRemoveTasks(UnbindTaskOpts{
             .do_unbind = false, .post_on_create = false, .devhost_requested = false});
@@ -83,6 +85,8 @@ void UnbindTask::ScheduleUnbindChildren() {
         continue;
       case Device::State::kSuspended:
       case Device::State::kSuspending:
+      case Device::State::kResuming:
+      case Device::State::kResumed:
       case Device::State::kActive:
         break;
     }
@@ -117,6 +121,13 @@ void UnbindTask::Run() {
     auto suspend_task = device_->GetActiveSuspend();
     ZX_ASSERT(suspend_task != nullptr);
     AddDependency(suspend_task);
+    return;
+  }
+
+  if (device_->state() == Device::State::kResuming) {
+    auto resume_task = device_->GetActiveResume();
+    ZX_ASSERT(resume_task != nullptr);
+    AddDependency(resume_task);
     return;
   }
 

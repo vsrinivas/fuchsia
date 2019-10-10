@@ -3,11 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <errno.h>
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,10 +16,15 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <array>
 #include <atomic>
 #include <new>
 #include <utility>
-#include <array>
+
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
 
 #include "composite-device.h"
 #include "devhost.h"
@@ -81,7 +82,9 @@ static zx_off_t default_get_size(void* ctx) { return 0; }
 
 static zx_status_t default_suspend(void* ctx, uint32_t flags) { return ZX_ERR_NOT_SUPPORTED; }
 
-static zx_status_t default_resume(void* ctx, uint32_t flags) { return ZX_ERR_NOT_SUPPORTED; }
+static zx_status_t default_resume(void* ctx, uint32_t target_system_state) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
 
 static zx_status_t default_rxrpc(void* ctx, zx_handle_t channel) { return ZX_ERR_NOT_SUPPORTED; }
 
@@ -453,7 +456,6 @@ zx_status_t devhost_device_remove(const fbl::RefPtr<zx_device_t>& dev,
   // Ask the devcoordinator to schedule the removal of this device and its children.
   devhost_schedule_remove(dev, unbind_self);
   return ZX_OK;
-
 }
 
 void devhost_device_unbind_reply(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
@@ -567,8 +569,8 @@ zx_status_t devhost_device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) R
   return dev->CloseOp(flags);
 }
 
-zx_status_t devhost_device_get_dev_power_state_from_mapping(const fbl::RefPtr<zx_device>& dev,
-                                    uint32_t flags, fuchsia_device_SystemPowerStateInfo* info) {
+zx_status_t devhost_device_get_dev_power_state_from_mapping(
+    const fbl::RefPtr<zx_device>& dev, uint32_t flags, fuchsia_device_SystemPowerStateInfo* info) {
   // TODO(ravoorir) : When the usage of suspend flags is replaced with
   // system power states, this function will not need the switch case.
   // Some suspend flags might be translated to system power states with
@@ -595,8 +597,8 @@ zx_status_t devhost_device_get_dev_power_state_from_mapping(const fbl::RefPtr<zx
       return ZX_ERR_INVALID_ARGS;
   }
   const std::array<fuchsia_device_SystemPowerStateInfo,
-    fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>& sys_power_states =
-                                        dev->GetSystemPowerStateMapping();
+                   fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>& sys_power_states =
+      dev->GetSystemPowerStateMapping();
   *info = sys_power_states[sys_state];
   return ZX_OK;
 }
@@ -631,13 +633,42 @@ zx_status_t devhost_device_suspend(const fbl::RefPtr<zx_device>& dev, uint32_t f
   return ZX_OK;
 }
 
+zx_status_t devhost_device_resume(const fbl::RefPtr<zx_device>& dev,
+                                  uint32_t target_system_state) REQ_DM_LOCK {
+  enum_lock_acquire();
+
+  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+  // If new suspend hook is implemented, prefer that.
+  if (dev->ops->resume_new) {
+    fuchsia_device_DevicePowerState out_state;
+    ApiAutoRelock relock;
+    const std::array<fuchsia_device_SystemPowerStateInfo,
+                     fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>& sys_power_states =
+        dev->GetSystemPowerStateMapping();
+    status =
+        dev->ops->resume_new(dev->ctx, sys_power_states[target_system_state].dev_state, &out_state);
+  } else if (dev->ops->resume) {
+    // Invoke resume hook otherwise.
+    ApiAutoRelock relock;
+    status = dev->ops->resume(dev->ctx, target_system_state);
+  }
+
+  enum_lock_release();
+
+  // default_resume() returns ZX_ERR_NOT_SUPPORTED
+  if ((status != ZX_OK) && (status != ZX_ERR_NOT_SUPPORTED)) {
+    return status;
+  }
+  return ZX_OK;
+}
+
 zx_status_t devhost_device_suspend_new(const fbl::RefPtr<zx_device>& dev,
                                        fuchsia_device_DevicePowerState requested_state,
                                        fuchsia_device_DevicePowerState* out_state) {
   zx_status_t status = ZX_OK;
   if (dev->ops->suspend_new) {
-    status = dev->ops->suspend_new(dev->ctx, requested_state, false /* wake_configured */,
-                                   out_state);
+    status =
+        dev->ops->suspend_new(dev->ctx, requested_state, false /* wake_configured */, out_state);
   }
   return status;
 }

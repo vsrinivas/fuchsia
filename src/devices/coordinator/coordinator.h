@@ -27,10 +27,14 @@
 #include "devhost.h"
 #include "device.h"
 #include "driver.h"
+#include "fuchsia/device/manager/llcpp/fidl.h"
 #include "metadata.h"
+#include "resume-task.h"
 #include "suspend-task.h"
 #include "unbind-task.h"
 #include "vmo-writer.h"
+
+using llcpp::fuchsia::device::manager::SystemPowerState;
 
 namespace devmgr {
 
@@ -68,6 +72,37 @@ class SuspendContext {
 
   // suspend flags
   uint32_t sflags_ = 0u;
+};
+
+// Tracks the global resume state that is currently in progress.
+class ResumeContext {
+ public:
+  enum class Flags : uint32_t {
+    kResume = 0u,
+    kSuspended = 1u,
+  };
+  ResumeContext() = default;
+
+  ResumeContext(Flags flags, SystemPowerState resume_state)
+      : target_state_(resume_state), flags_(flags) {}
+
+  ~ResumeContext() {}
+
+  ResumeContext(ResumeContext&&) = default;
+  ResumeContext& operator=(ResumeContext&&) = default;
+
+  Flags flags() const { return flags_; }
+  void set_flags(Flags flags) { flags_ = flags; }
+  void set_task(fbl::RefPtr<ResumeTask> task) { task_ = std::move(task); }
+
+  const ResumeTask& task() const { return *task_; }
+
+  SystemPowerState target_state() const { return target_state_; }
+
+ private:
+  fbl::RefPtr<ResumeTask> task_;
+  SystemPowerState target_state_;
+  Flags flags_ = Flags::kSuspended;
 };
 
 // Values parsed out of argv.  All paths described below are absolute paths.
@@ -131,6 +166,7 @@ class Coordinator {
 
   zx_status_t InitializeCoreDevices(const char* sys_device_driver);
   bool InSuspend() const;
+  bool InResume() const;
 
   zx_status_t ScanSystemDrivers();
   void BindDrivers();
@@ -232,9 +268,13 @@ class Coordinator {
   const fbl::RefPtr<Device>& test_device() { return test_device_; }
 
   void Suspend(uint32_t flags);
+  void Resume(SystemPowerState target_state);
 
   SuspendContext& suspend_context() { return suspend_context_; }
   const SuspendContext& suspend_context() const { return suspend_context_; }
+
+  ResumeContext& resume_context() { return resume_context_; }
+  const ResumeContext& resume_context() const { return resume_context_; }
 
   zx_status_t BindFidlServiceProxy(zx::channel listen_on);
 
@@ -282,6 +322,7 @@ class Coordinator {
   fbl::RefPtr<Device> test_device_;
 
   SuspendContext suspend_context_;
+  ResumeContext resume_context_;
 
   void OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                   const zx_packet_signal_t* signal);
@@ -300,6 +341,7 @@ class Coordinator {
 
   void BuildSuspendList();
   void Suspend(SuspendContext ctx, std::function<void(zx_status_t)> callback);
+  void Resume(ResumeContext ctx, std::function<void(zx_status_t)> callback);
 
   fbl::unique_ptr<Driver> ValidateDriver(fbl::unique_ptr<Driver> drv);
 

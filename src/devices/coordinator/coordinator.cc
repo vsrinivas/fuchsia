@@ -36,14 +36,15 @@
 #include <zircon/syscalls/policy.h>
 #include <zircon/syscalls/system.h>
 
+#include <cstdint>
 #include <utility>
 
 #include <ddk/driver.h>
 #include <driver-info/driver-info.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
-#include <libzbi/zbi-cpp.h>
 #include <inspector/inspector.h>
+#include <libzbi/zbi-cpp.h>
 
 #include "composite-device.h"
 #include "devfs.h"
@@ -116,6 +117,10 @@ Coordinator::~Coordinator() { drivers_.clear(); }
 
 bool Coordinator::InSuspend() const {
   return suspend_context().flags() == SuspendContext::Flags::kSuspend;
+}
+
+bool Coordinator::InResume() const {
+  return (resume_context().flags() == ResumeContext::Flags::kResume);
 }
 
 zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
@@ -500,6 +505,12 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
 
   if (InSuspend()) {
     log(ERROR, "devcoordinator: rpc: add-device '%.*s' forbidden in suspend\n",
+        static_cast<int>(name.size()), name.data());
+    return ZX_ERR_BAD_STATE;
+  }
+
+  if (InResume()) {
+    log(ERROR, "devcoordinator: rpc: add-device '%.*s' forbidden in resume\n",
         static_cast<int>(name.size()), name.data());
     return ZX_ERR_BAD_STATE;
   }
@@ -1175,8 +1186,7 @@ static void dump_suspend_task_dependencies(const SuspendTask& task, int depth = 
     }
     zx::unowned_process process = task.device().host()->proc();
     char process_name[ZX_MAX_NAME_LEN];
-    zx_status_t status = process->get_property(ZX_PROP_NAME, process_name,
-                                                sizeof(process_name));
+    zx_status_t status = process->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
     if (status != ZX_OK) {
       strlcpy(process_name, "unknown", sizeof(process_name));
     }
@@ -1190,6 +1200,14 @@ static void dump_suspend_task_dependencies(const SuspendTask& task, int depth = 
 }
 
 void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> callback) {
+  // TODO(ravoorir) : Change later to queue the suspend when resume is in progress.
+  // Similarly, when Suspend is in progress, resume should be queued. When a resume is
+  // in queue, and another suspend request comes in, we should nullify the resume that
+  // is in queue.
+  if (InResume()) {
+    return;
+  }
+
   if ((ctx.sflags() & DEVICE_SUSPEND_REASON_MASK) != DEVICE_SUSPEND_FLAG_SUSPEND_RAM) {
     vfs_exit(fshost_event());
   }
@@ -1255,8 +1273,42 @@ void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> c
   }
 }
 
+void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> callback) {
+  if (!sys_device_->proxy()) {
+    return;
+  }
+  if (InSuspend()) {
+    return;
+  }
+
+  resume_context() = std::move(ctx);
+
+  auto completion = [this, callback](zx_status_t status) {
+    auto& ctx = resume_context();
+    if (status != ZX_OK) {
+      // do not continue to resume as this indicates a driver resume
+      // problem and should show as a bug.
+      log(ERROR, "devcoordinator: failed to resume: %s\n", zx_status_get_string(status));
+      ctx.set_flags(devmgr::ResumeContext::Flags::kSuspended);
+      callback(status);
+      return;
+    }
+    callback(status);
+  };
+
+  // We don't need to resume anything except sys_device and it's children,
+  // since we do not run suspend hooks for children of test or misc
+  auto task = ResumeTask::Create(sys_device(), static_cast<uint32_t>(ctx.target_state()),
+                                 std::move(completion));
+  resume_context().set_task(std::move(task));
+}
+
 void Coordinator::Suspend(uint32_t flags) {
   Suspend(SuspendContext(SuspendContext::Flags::kSuspend, flags), [](zx_status_t) {});
+}
+
+void Coordinator::Resume(SystemPowerState target_state) {
+  Resume(ResumeContext(ResumeContext::Flags::kResume, target_state), [](zx_status_t) {});
 }
 
 fbl::unique_ptr<Driver> Coordinator::ValidateDriver(fbl::unique_ptr<Driver> drv) {
@@ -1554,7 +1606,7 @@ void Coordinator::InitOutgoingServices() {
       printf("Failed to bind to client channel: %d \n", status);
     }
     return status;
-  };
+  };  // namespace devmgr
   svc_dir->AddEntry(fuchsia_device_manager_Administrator_Name,
                     fbl::MakeRefCounted<fs::Service>(admin));
 
@@ -1594,7 +1646,7 @@ void Coordinator::InitOutgoingServices() {
   };
   svc_dir->AddEntry(fuchsia_device_manager_DebugDumper_Name,
                     fbl::MakeRefCounted<fs::Service>(debug));
-}
+}  // namespace devmgr
 
 void Coordinator::OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                              zx_status_t status, const zx_packet_signal_t* signal) {

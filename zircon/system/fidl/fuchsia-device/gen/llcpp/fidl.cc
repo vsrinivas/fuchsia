@@ -1311,7 +1311,7 @@ Controller::UnownedResultOf::GetDevicePowerCaps Controller::Call::GetDevicePower
 }
 
 template <>
-Controller::ResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowerStateMappingResponse>::UpdatePowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping) {
+Controller::ResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowerStateMappingResponse>::UpdatePowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UpdatePowerStateMappingRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1325,16 +1325,16 @@ Controller::ResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowerStateM
       Controller::InPlace::UpdatePowerStateMapping(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Controller::ResultOf::UpdatePowerStateMapping Controller::SyncClient::UpdatePowerStateMapping(::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping) {
+Controller::ResultOf::UpdatePowerStateMapping Controller::SyncClient::UpdatePowerStateMapping(::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping) {
   return ResultOf::UpdatePowerStateMapping(zx::unowned_channel(this->channel_), std::move(mapping));
 }
 
-Controller::ResultOf::UpdatePowerStateMapping Controller::Call::UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping) {
+Controller::ResultOf::UpdatePowerStateMapping Controller::Call::UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping) {
   return ResultOf::UpdatePowerStateMapping(std::move(_client_end), std::move(mapping));
 }
 
 template <>
-Controller::UnownedResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowerStateMappingResponse>::UpdatePowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowerStateMappingResponse>::UpdatePowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < UpdatePowerStateMappingRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<UpdatePowerStateMappingResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1348,11 +1348,11 @@ Controller::UnownedResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowe
       Controller::InPlace::UpdatePowerStateMapping(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Controller::UnownedResultOf::UpdatePowerStateMapping Controller::SyncClient::UpdatePowerStateMapping(::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::UpdatePowerStateMapping Controller::SyncClient::UpdatePowerStateMapping(::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::UpdatePowerStateMapping(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(mapping), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::UpdatePowerStateMapping Controller::Call::UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::UpdatePowerStateMapping Controller::Call::UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::UpdatePowerStateMapping(std::move(_client_end), std::move(_request_buffer), std::move(mapping), std::move(_response_buffer));
 }
 
@@ -2325,7 +2325,7 @@ void Controller::Interface::GetPowerStateMappingCompleterBase::Reply(::llcpp::fu
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetPowerStateMappingResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetPowerStateMappingResponse>(std::move(_response_bytes)));
 }
-void Controller::Interface::GetPowerStateMappingCompleterBase::ReplySuccess(::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping) {
+void Controller::Interface::GetPowerStateMappingCompleterBase::ReplySuccess(::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping) {
   Controller_GetPowerStateMapping_Response response;
   response.mapping = std::move(mapping);
 
@@ -2350,7 +2350,7 @@ void Controller::Interface::GetPowerStateMappingCompleterBase::Reply(::fidl::Byt
   _buffer.set_actual(sizeof(GetPowerStateMappingResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetPowerStateMappingResponse>(std::move(_buffer)));
 }
-void Controller::Interface::GetPowerStateMappingCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 6> mapping) {
+void Controller::Interface::GetPowerStateMappingCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping) {
   Controller_GetPowerStateMapping_Response response;
   response.mapping = std::move(mapping);
 

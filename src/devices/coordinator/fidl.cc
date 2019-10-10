@@ -137,6 +137,21 @@ zx_status_t dh_send_suspend(const Device* dev, uint32_t flags) {
   return msg.Write(dev->channel()->get(), 0);
 }
 
+zx_status_t dh_send_resume(const Device* dev, uint32_t target_system_state) {
+  FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_device_manager_DeviceControllerResumeRequest)];
+  fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
+
+  auto req = builder.New<fuchsia_device_manager_DeviceControllerResumeRequest>();
+  ZX_ASSERT(req != nullptr);
+  req->hdr.ordinal = fuchsia_device_manager_DeviceControllerResumeOrdinal;
+  // TODO(teisenbe): Allocate and track txids
+  req->hdr.txid = 1;
+  req->target_system_state = target_system_state;
+
+  fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
+  return msg.Write(dev->channel()->get(), 0);
+}
+
 zx_status_t dh_send_complete_compatibility_tests(const Device* dev, zx_status_t status) {
   FIDL_ALIGNDECL char
       wr_bytes[sizeof(fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsRequest)];

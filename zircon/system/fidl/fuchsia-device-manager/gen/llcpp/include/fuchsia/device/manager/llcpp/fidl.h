@@ -23,12 +23,13 @@ namespace device {
 namespace manager {
 
 enum class SystemPowerState : uint8_t {
-  SYSTEM_POWER_STATE_REBOOT = 0u,
-  SYSTEM_POWER_STATE_REBOOT_BOOTLOADER = 1u,
-  SYSTEM_POWER_STATE_REBOOT_RECOVERY = 2u,
-  SYSTEM_POWER_STATE_POWEROFF = 3u,
-  SYSTEM_POWER_STATE_MEXEC = 4u,
-  SYSTEM_POWER_STATE_SUSPEND_RAM = 5u,
+  SYSTEM_POWER_STATE_FULLY_ON = 1u,
+  SYSTEM_POWER_STATE_REBOOT = 2u,
+  SYSTEM_POWER_STATE_REBOOT_BOOTLOADER = 3u,
+  SYSTEM_POWER_STATE_REBOOT_RECOVERY = 4u,
+  SYSTEM_POWER_STATE_POWEROFF = 5u,
+  SYSTEM_POWER_STATE_MEXEC = 6u,
+  SYSTEM_POWER_STATE_SUSPEND_RAM = 7u,
 };
 
 
@@ -756,7 +757,7 @@ constexpr uint32_t PROPERTIES_MAX = 256u;
 // Maximum number of bytes in a metadata payload
 constexpr uint32_t METADATA_MAX = 8192u;
 
-constexpr uint32_t MAX_SYSTEM_POWER_STATES = 6u;
+constexpr uint32_t MAX_SYSTEM_POWER_STATES = 7u;
 
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceStubRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceRequestTable;
@@ -2820,6 +2821,8 @@ extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerBindDriverRe
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerConnectProxyRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerSuspendRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerSuspendResponseTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerResumeRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerResumeResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsRequestTable;
 
 // Protocol for controlling devices in a devhost process from the devcoordinator
@@ -2901,6 +2904,34 @@ class DeviceController final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = SuspendResponse;
+  };
+
+  struct ResumeResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerResumeResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct ResumeRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    uint32_t target_system_state;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerResumeRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = ResumeResponse;
   };
 
   struct CompleteCompatibilityTestsRequest final {
@@ -2987,6 +3018,22 @@ class DeviceController final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class Resume_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Resume_Impl(zx::unowned_channel _client_end, uint32_t target_system_state);
+      ~Resume_Impl() = default;
+      Resume_Impl(Resume_Impl&& other) = default;
+      Resume_Impl& operator=(Resume_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
     class CompleteCompatibilityTests_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
@@ -3005,6 +3052,7 @@ class DeviceController final {
     using Unbind = Unbind_Impl;
     using CompleteRemoval = CompleteRemoval_Impl;
     using Suspend = Suspend_Impl<SuspendResponse>;
+    using Resume = Resume_Impl<ResumeResponse>;
     using CompleteCompatibilityTests = CompleteCompatibilityTests_Impl;
   };
 
@@ -3078,6 +3126,22 @@ class DeviceController final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class Resume_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Resume_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t target_system_state, ::fidl::BytePart _response_buffer);
+      ~Resume_Impl() = default;
+      Resume_Impl(Resume_Impl&& other) = default;
+      Resume_Impl& operator=(Resume_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
     class CompleteCompatibilityTests_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
@@ -3096,6 +3160,7 @@ class DeviceController final {
     using Unbind = Unbind_Impl;
     using CompleteRemoval = CompleteRemoval_Impl;
     using Suspend = Suspend_Impl<SuspendResponse>;
+    using Resume = Resume_Impl<ResumeResponse>;
     using CompleteCompatibilityTests = CompleteCompatibilityTests_Impl;
   };
 
@@ -3156,6 +3221,16 @@ class DeviceController final {
     // Ask devhost to suspend this device, using the target state indicated by `flags`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Suspend Suspend(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
+
+    // Ask devhost to resume this device, using the target system state indicated by
+    // 'target_system_state'.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::Resume Resume(uint32_t target_system_state);
+
+    // Ask devhost to resume this device, using the target system state indicated by
+    // 'target_system_state'.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Resume Resume(::fidl::BytePart _request_buffer, uint32_t target_system_state, ::fidl::BytePart _response_buffer);
 
     // Inform devhost about the compatibility test status when compatibility tests
     // fail or complete successfully.
@@ -3223,6 +3298,16 @@ class DeviceController final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Suspend Suspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
 
+    // Ask devhost to resume this device, using the target system state indicated by
+    // 'target_system_state'.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::Resume Resume(zx::unowned_channel _client_end, uint32_t target_system_state);
+
+    // Ask devhost to resume this device, using the target system state indicated by
+    // 'target_system_state'.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Resume Resume(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t target_system_state, ::fidl::BytePart _response_buffer);
+
     // Inform devhost about the compatibility test status when compatibility tests
     // fail or complete successfully.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
@@ -3263,6 +3348,10 @@ class DeviceController final {
 
     // Ask devhost to suspend this device, using the target state indicated by `flags`.
     static ::fidl::DecodeResult<SuspendResponse> Suspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
+
+    // Ask devhost to resume this device, using the target system state indicated by
+    // 'target_system_state'.
+    static ::fidl::DecodeResult<ResumeResponse> Resume(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ResumeRequest> params, ::fidl::BytePart response_buffer);
 
     // Inform devhost about the compatibility test status when compatibility tests
     // fail or complete successfully.
@@ -3318,6 +3407,20 @@ class DeviceController final {
 
     virtual void Suspend(uint32_t flags, SuspendCompleter::Sync _completer) = 0;
 
+    class ResumeCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::fidl::DecodedMessage<ResumeResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using ResumeCompleter = ::fidl::Completer<ResumeCompleterBase>;
+
+    virtual void Resume(uint32_t target_system_state, ResumeCompleter::Sync _completer) = 0;
+
     using CompleteCompatibilityTestsCompleter = ::fidl::Completer<>;
 
     virtual void CompleteCompatibilityTests(::llcpp::fuchsia::device::manager::CompatibilityTestStatus status, CompleteCompatibilityTestsCompleter::Sync _completer) = 0;
@@ -3354,6 +3457,8 @@ class DeviceController final {
     static void CompleteRemovalRequest(const ::fidl::DecodedMessage<DeviceController::CompleteRemovalRequest>& _msg);
     static void SuspendRequest(const ::fidl::DecodedMessage<DeviceController::SuspendRequest>& _msg);
     static void SuspendResponse(const ::fidl::DecodedMessage<DeviceController::SuspendResponse>& _msg);
+    static void ResumeRequest(const ::fidl::DecodedMessage<DeviceController::ResumeRequest>& _msg);
+    static void ResumeResponse(const ::fidl::DecodedMessage<DeviceController::ResumeResponse>& _msg);
     static void CompleteCompatibilityTestsRequest(const ::fidl::DecodedMessage<DeviceController::CompleteCompatibilityTestsRequest>& _msg);
   };
 };
@@ -5524,6 +5629,22 @@ struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::Suspen
 static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::SuspendResponse)
     == ::llcpp::fuchsia::device::manager::DeviceController::SuspendResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::SuspendResponse, status) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::ResumeRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::ResumeRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::ResumeRequest)
+    == ::llcpp::fuchsia::device::manager::DeviceController::ResumeRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::ResumeRequest, target_system_state) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::ResumeResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::ResumeResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::ResumeResponse)
+    == ::llcpp::fuchsia::device::manager::DeviceController::ResumeResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::ResumeResponse, status) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::CompleteCompatibilityTestsRequest> : public std::true_type {};
