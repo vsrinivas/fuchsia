@@ -10,7 +10,10 @@
 #include <lib/fidl-utils/bind.h>
 #include <lib/fidl/cpp/binding.h>
 
+#include <ddktl/protocol/isp.h>
+
 #include "configs/sherlock/internal-config.h"
+#include "stream_protocol.h"
 
 namespace camera {
 
@@ -23,7 +26,8 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ControllerImpl);
   ControllerImpl(fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control,
-                 async_dispatcher_t* dispatcher, fit::closure on_connection_closed);
+                 async_dispatcher_t* dispatcher, ddk::IspProtocolClient& isp,
+                 fit::closure on_connection_closed);
 
  protected:
   // For tests.
@@ -49,19 +53,25 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   // If the new stream requested is already part of the existing running configuration
   // the HAL will just be creating this new stream while the other stream still exists as is.
   void CreateStream(uint32_t config_index, uint32_t stream_index, uint32_t image_format_index,
-                    ::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
-                    ::fidl::InterfaceRequest<::fuchsia::camera2::Stream> stream) override{};
+                    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
+                    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) override;
 
   // Enable/Disable Streaming
-  void EnableStreaming() override {}
-  void DisableStreaming() override {}
+  void EnableStreaming() override;
+
+  void DisableStreaming() override;
+
   void GetDeviceInfo(GetDeviceInfoCallback callback) override;
 
   std::vector<fuchsia::camera2::hal::Config> SherlockConfigs();
 
+  async_dispatcher_t* dispatcher_;
+
   fidl::Binding<fuchsia::camera2::hal::Controller> binding_;
   std::vector<fuchsia::camera2::hal::Config> configs_;
   InternalConfigs internal_configs_;
+  std::unique_ptr<camera::StreamImpl> stream_;
+  ddk::IspProtocolClient& isp_;
 };
 
 }  // namespace camera

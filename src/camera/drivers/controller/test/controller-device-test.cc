@@ -12,6 +12,7 @@
 #include <fbl/auto_call.h>
 
 #include "../controller-protocol.h"
+
 namespace camera {
 namespace {
 
@@ -35,6 +36,23 @@ class ControllerDeviceTest : public gtest::TestLoopFixture {
 
   static void WaitForChannelClosure(const zx::channel& channel) {
     ASSERT_EQ(channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr), ZX_OK);
+  }
+
+  template <class T>
+  void WaitForInterfaceClosure(fidl::InterfacePtr<T>& ptr, zx_status_t expected_epitaph) {
+    bool epitaph_received = false;
+    zx_status_t epitaph_status = ZX_OK;
+    ptr.set_error_handler([&](zx_status_t status) {
+      ASSERT_FALSE(epitaph_received) << "We should only get one epitaph!";
+      epitaph_received = true;
+      epitaph_status = status;
+    });
+    ASSERT_EQ(ptr.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr), ZX_OK);
+    RunLoopUntilIdle();
+    EXPECT_TRUE(epitaph_received);
+    if (epitaph_received) {
+      EXPECT_EQ(epitaph_status, expected_epitaph);
+    }
   }
 
   void BindControllerProtocol() {
@@ -111,8 +129,9 @@ TEST_F(ControllerDeviceTest, GetDeviceInfo) {
 // Verifies sanity of returned configs.
 TEST_F(ControllerDeviceTest, GetConfigs) {
   ASSERT_NO_FATAL_FAILURE(BindControllerProtocol());
+  bool configs_populated = false;
   controller_protocol_->GetConfigs(
-      [](fidl::VectorPtr<fuchsia::camera2::hal::Config> configs, zx_status_t status) {
+      [&](fidl::VectorPtr<fuchsia::camera2::hal::Config> configs, zx_status_t status) {
         ASSERT_EQ(status, ZX_OK);
         EXPECT_TRUE(configs.has_value());
         EXPECT_GT(configs->size(), 0u);
@@ -129,10 +148,55 @@ TEST_F(ControllerDeviceTest, GetConfigs) {
                       fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
         EXPECT_EQ(configs->at(1).stream_configs.at(2).properties.stream_type(),
                   fuchsia::camera2::CameraStreamType::MONITORING);
+        configs_populated = true;
       });
-  RunLoopUntilIdle();
+  while (!configs_populated) {
+    RunLoopUntilIdle();
+  }
+}
+
+TEST_F(ControllerDeviceTest, CreateStreamInvalidArgs) {
+  ASSERT_NO_FATAL_FAILURE(BindControllerProtocol());
+  fuchsia::camera2::StreamPtr stream;
+
+  std::vector<fuchsia::camera2::hal::Config> configs;
+  bool configs_populated = false;
+  controller_protocol_->GetConfigs(
+      [&](fidl::VectorPtr<fuchsia::camera2::hal::Config> configs_ptr, zx_status_t status) {
+        ASSERT_EQ(status, ZX_OK);
+        ASSERT_TRUE(configs_ptr.has_value());
+        configs = std::move(configs_ptr).value();
+        configs_populated = true;
+      });
+  while (!configs_populated) {
+    RunLoopUntilIdle();
+  }
+  ASSERT_GT(configs.size(), 0u);
+  ASSERT_GT(configs[0].stream_configs.size(), 0u);
+  ASSERT_GT(configs[0].stream_configs[0].image_formats.size(), 0u);
+
+  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+  buffer_collection.buffer_count = 0;
+
+  // Invalid config index.
+  controller_protocol_->CreateStream(configs.size(), 0, 0, std::move(buffer_collection),
+                                     stream.NewRequest());
+  WaitForInterfaceClosure(stream, ZX_ERR_INVALID_ARGS);
+
+  // Invalid stream index.
+  controller_protocol_->CreateStream(0, configs[0].stream_configs.size(), 0,
+                                     std::move(buffer_collection), stream.NewRequest());
+  WaitForInterfaceClosure(stream, ZX_ERR_INVALID_ARGS);
+
+  // Invalid format index.
+  controller_protocol_->CreateStream(0, 0, configs[0].stream_configs[0].image_formats.size(),
+                                     std::move(buffer_collection), stream.NewRequest());
+  WaitForInterfaceClosure(stream, ZX_ERR_INVALID_ARGS);
+
+  // Not enough buffers.
+  controller_protocol_->CreateStream(0, 0, 0, std::move(buffer_collection), stream.NewRequest());
+  WaitForInterfaceClosure(stream, ZX_ERR_INVALID_ARGS);
 }
 
 }  // namespace
-
 }  // namespace camera

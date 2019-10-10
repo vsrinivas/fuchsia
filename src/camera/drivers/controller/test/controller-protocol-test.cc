@@ -25,7 +25,7 @@ class ControllerProtocolTest : public camera::ControllerImpl {
  public:
   explicit ControllerProtocolTest(async::Loop* loop,
                                   fuchsia::camera2::hal::ControllerSyncPtr* camera_client)
-      : ControllerImpl(camera_client->NewRequest(), loop->dispatcher(), [] {}) {
+      : ControllerImpl(camera_client->NewRequest(), loop->dispatcher(), isp_, [] {}) {
     zx_status_t status = loop->StartThread("camera-controller-loop");
     EXPECT_EQ(status, ZX_OK);
   }
@@ -79,6 +79,7 @@ class ControllerProtocolTest : public camera::ControllerImpl {
 
  private:
   std::vector<fuchsia::camera2::hal::Config> configs_;
+  ddk::IspProtocolClient isp_;
 };
 
 TEST(ControllerProtocolTest, GetConfigs) {

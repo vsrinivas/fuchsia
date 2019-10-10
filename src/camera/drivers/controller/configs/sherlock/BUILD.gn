@@ -13,6 +13,7 @@ source_set("controller-configs") {
   deps = [
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fidl-utils",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
