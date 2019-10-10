@@ -6,44 +6,8 @@
 
 #include <algorithm>
 
-#include <src/lib/fxl/logging.h>
-#include <trace/event.h>
-
 namespace scenic_impl {
 namespace gfx {
-
-FramePredictor::FramePredictor(zx::duration initial_render_duration_prediction,
-                               zx::duration initial_update_duration_prediction)
-    : render_duration_predictor_(kRenderPredictionWindowSize, initial_render_duration_prediction),
-      update_duration_predictor_(kUpdatePredictionWindowSize, initial_update_duration_prediction) {}
-
-void FramePredictor::ReportRenderDuration(zx::duration time_to_render) {
-  FXL_DCHECK(time_to_render >= zx::duration(0));
-  render_duration_predictor_.InsertNewMeasurement(time_to_render);
-}
-
-void FramePredictor::ReportUpdateDuration(zx::duration time_to_update) {
-  FXL_DCHECK(time_to_update >= zx::duration(0));
-  update_duration_predictor_.InsertNewMeasurement(time_to_update);
-}
-
-zx::duration FramePredictor::PredictTotalRequiredDuration() const {
-  TRACE_DURATION("gfx", "FramePredictor::PredictTotalRequiredDuration");
-  const zx::duration predicted_time_to_update = update_duration_predictor_.GetPrediction();
-  const zx::duration predicted_time_to_render = render_duration_predictor_.GetPrediction();
-
-  const zx::duration predicted_frame_duration = std::min(
-      kMaxFrameTime, predicted_time_to_update + predicted_time_to_render + kHardcodedMargin);
-
-  // Pretty print the times in milliseconds.
-  TRACE_INSTANT("gfx", "FramePredictor::PredictRequiredFrameRenderTime", TRACE_SCOPE_PROCESS,
-                "Predicted frame duration(ms)",
-                static_cast<double>(predicted_frame_duration.to_usecs()) / 1000, "Render time(ms)",
-                static_cast<double>(predicted_time_to_render.to_usecs()) / 1000, "Update time(ms)",
-                static_cast<double>(predicted_time_to_update.to_usecs()) / 1000);
-
-  return predicted_frame_duration;
-}
 
 // static
 zx::time FramePredictor::ComputeNextSyncTime(zx::time last_sync_time, zx::duration sync_interval,
@@ -60,14 +24,9 @@ zx::time FramePredictor::ComputeNextSyncTime(zx::time last_sync_time, zx::durati
   return last_sync_time + (sync_interval * (num_intervals + 1));
 }
 
-PredictedTimes FramePredictor::GetPrediction(PredictionRequest request) const {
-#if SCENIC_IGNORE_VSYNC
-  // Predict that the frame should be rendered immediately.
-  return {.presentation_time = request.now, .latch_point_time = request.now};
-#endif
-
-  const zx::duration required_frame_duration = PredictTotalRequiredDuration();
-
+// static
+PredictedTimes FramePredictor::ComputePredictionFromDuration(PredictionRequest request,
+                                                             zx::duration required_frame_duration) {
   // Calculate minimum time this would sync to. It is last vsync time plus half
   // a vsync-interval (to allow for jitter for the VSYNC signal), or the current
   // time plus the expected render time, whichever is larger, so we know we have

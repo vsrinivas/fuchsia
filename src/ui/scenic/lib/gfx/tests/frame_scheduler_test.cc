@@ -7,7 +7,7 @@
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
-#include "src/ui/scenic/lib/gfx/engine/frame_predictor.h"
+#include "src/ui/scenic/lib/gfx/engine/windowed_frame_predictor.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -33,8 +33,8 @@ void FrameSchedulerTest::TearDown() {
 std::unique_ptr<DefaultFrameScheduler> FrameSchedulerTest::CreateDefaultFrameScheduler() {
   auto scheduler = std::make_unique<DefaultFrameScheduler>(
       fake_display_.get(),
-      std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
-                                       DefaultFrameScheduler::kInitialUpdateDuration));
+      std::make_unique<WindowedFramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
+                                               DefaultFrameScheduler::kInitialUpdateDuration));
   scheduler->SetFrameRenderer(mock_renderer_->GetWeakPtr());
   scheduler->AddSessionUpdater(mock_updater_->GetWeakPtr());
 

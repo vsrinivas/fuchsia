@@ -6,19 +6,29 @@
 
 #include <lib/gtest/test_loop_fixture.h>
 
+#include "src/ui/scenic/lib/gfx/engine/constant_frame_predictor.h"
+#include "src/ui/scenic/lib/gfx/engine/windowed_frame_predictor.h"
 #include "src/ui/scenic/lib/gfx/tests/error_reporting_test.h"
 
 namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-class FramePredictorTest : public ErrorReportingTest {
+namespace {
+// Convenience helper to to convert zx::msec(duration) to a zx::time value.
+zx::time ms_to_time(uint64_t ms) { return zx::time(0) + zx::msec(ms); }
+}  // anonymous namespace
+
+// ---------------------------------------------------------------------------
+// WindowedFramePredictor tests
+// ---------------------------------------------------------------------------
+class WindowedFramePredictorTest : public ErrorReportingTest {
  protected:
   // | ::testing::Test |
   void SetUp() override {
     ErrorReportingTest::SetUp();
-    predictor_ = std::make_unique<FramePredictor>(kInitialRenderTimePrediction,
-                                                  kInitialUpdateTimePrediction);
+    predictor_ = std::make_unique<WindowedFramePredictor>(kInitialRenderTimePrediction,
+                                                          kInitialUpdateTimePrediction);
   }
   // | ::testing::Test |
   void TearDown() override {
@@ -26,15 +36,13 @@ class FramePredictorTest : public ErrorReportingTest {
     ErrorReportingTest::TearDown();
   }
 
-  zx::time ms_to_time(uint64_t ms) { return zx::time(0) + zx::msec(ms); }
-
   static constexpr zx::duration kInitialRenderTimePrediction = zx::msec(4);
   static constexpr zx::duration kInitialUpdateTimePrediction = zx::msec(2);
 
   std::unique_ptr<FramePredictor> predictor_;
 };
 
-TEST_F(FramePredictorTest, BasicPredictions_ShouldBeReasonable) {
+TEST_F(WindowedFramePredictorTest, BasicPredictions_ShouldBeReasonable) {
   PredictionRequest request = {.now = ms_to_time(5),
                                .requested_presentation_time = ms_to_time(10),
                                .last_vsync_time = ms_to_time(0),
@@ -47,7 +55,7 @@ TEST_F(FramePredictorTest, BasicPredictions_ShouldBeReasonable) {
   EXPECT_LT(prediction.latch_point_time, prediction.presentation_time);
 }
 
-TEST_F(FramePredictorTest, PredictionsAfterUpdating_ShouldBeMoreReasonable) {
+TEST_F(WindowedFramePredictorTest, PredictionsAfterUpdating_ShouldBeMoreReasonable) {
   const zx::duration update_duration = zx::msec(2);
   const zx::duration render_duration = zx::msec(5);
 
@@ -71,7 +79,7 @@ TEST_F(FramePredictorTest, PredictionsAfterUpdating_ShouldBeMoreReasonable) {
             update_duration + render_duration);
 }
 
-TEST_F(FramePredictorTest, OneExpensiveTime_ShouldNotPredictForFutureVsyncIntervals) {
+TEST_F(WindowedFramePredictorTest, OneExpensiveTime_ShouldNotPredictForFutureVsyncIntervals) {
   const zx::duration update_duration = zx::msec(4);
   const zx::duration render_duration = zx::msec(30);
 
@@ -93,7 +101,7 @@ TEST_F(FramePredictorTest, OneExpensiveTime_ShouldNotPredictForFutureVsyncInterv
             request.last_vsync_time.get() + vsync_interval.get());
 }
 
-TEST_F(FramePredictorTest, ManyExpensiveTimes_ShouldPredictForFutureVsyncIntervals) {
+TEST_F(WindowedFramePredictorTest, ManyExpensiveTimes_ShouldPredictForFutureVsyncIntervals) {
   const zx::duration update_duration = zx::msec(4);
   const zx::duration render_duration = zx::msec(10);
   const zx::duration vsync_interval = zx::msec(10);
@@ -116,7 +124,7 @@ TEST_F(FramePredictorTest, ManyExpensiveTimes_ShouldPredictForFutureVsyncInterva
             prediction.presentation_time.get() - request.vsync_interval.get());
 }
 
-TEST_F(FramePredictorTest, ManyFramesOfPredictions_ShouldBeReasonable) {
+TEST_F(WindowedFramePredictorTest, ManyFramesOfPredictions_ShouldBeReasonable) {
   const zx::duration vsync_interval = zx::msec(10);
 
   zx::time now = ms_to_time(0);
@@ -147,7 +155,7 @@ TEST_F(FramePredictorTest, ManyFramesOfPredictions_ShouldBeReasonable) {
   }
 }
 
-TEST_F(FramePredictorTest, MissedLastVsync_ShouldPredictWithInterval) {
+TEST_F(WindowedFramePredictorTest, MissedLastVsync_ShouldPredictWithInterval) {
   const zx::duration update_duration = zx::msec(4);
   const zx::duration render_duration = zx::msec(5);
   predictor_->ReportRenderDuration(render_duration);
@@ -171,7 +179,7 @@ TEST_F(FramePredictorTest, MissedLastVsync_ShouldPredictWithInterval) {
   EXPECT_LE(prediction.presentation_time - prediction.latch_point_time, vsync_interval);
 }
 
-TEST_F(FramePredictorTest, MissedPresentRequest_ShouldTargetNextVsync) {
+TEST_F(WindowedFramePredictorTest, MissedPresentRequest_ShouldTargetNextVsync) {
   const zx::duration update_duration = zx::msec(2);
   const zx::duration render_duration = zx::msec(4);
   predictor_->ReportRenderDuration(render_duration);
@@ -196,7 +204,7 @@ TEST_F(FramePredictorTest, MissedPresentRequest_ShouldTargetNextVsync) {
 // The following two tests test the behavior of kHardcodedMargin. We want to be able to
 // schedule close to it, but not too aggressively. If the constant changes these tests
 // will likely need to change as well.
-TEST_F(FramePredictorTest, AttemptsToBeLowLatency_ShouldBePossible) {
+TEST_F(WindowedFramePredictorTest, AttemptsToBeLowLatency_ShouldBePossible) {
   const zx::duration update_duration = zx::msec(2);
   const zx::duration render_duration = zx::msec(5);
 
@@ -223,7 +231,7 @@ TEST_F(FramePredictorTest, AttemptsToBeLowLatency_ShouldBePossible) {
   EXPECT_GE(prediction.latch_point_time.get(), now.get());
 }
 
-TEST_F(FramePredictorTest, AttemptsToBeTooAggressive_ShouldNotBePossible) {
+TEST_F(WindowedFramePredictorTest, AttemptsToBeTooAggressive_ShouldNotBePossible) {
   const zx::duration update_duration = zx::msec(1);
   const zx::duration render_duration = zx::msec(2);
 
@@ -251,6 +259,73 @@ TEST_F(FramePredictorTest, AttemptsToBeTooAggressive_ShouldNotBePossible) {
 
   // We should not have been able to schedule the frame for this vsync.
   EXPECT_LE(prediction.latch_point_time.get(), now.get() + vsync_interval.get());
+}
+
+// ---------------------------------------------------------------------------
+// ConstantFramePredictor tests
+// ---------------------------------------------------------------------------
+TEST(ConstantFramePredictor, PredictionsAreConstant) {
+  const zx::duration offset = zx::msec(4);
+  ConstantFramePredictor predictor(offset);
+
+  // Report durations less than the offset.
+  const zx::duration update_duration = zx::msec(1);
+  const zx::duration render_duration = zx::msec(2);
+  EXPECT_GT(offset, update_duration + render_duration);
+  for (int i = 0; i < 10; ++i) {
+    predictor.ReportRenderDuration(render_duration);
+    predictor.ReportUpdateDuration(update_duration);
+  }
+
+  // Prediction should always be the offset
+  PredictionRequest request = {.now = ms_to_time(5),
+                               .requested_presentation_time = ms_to_time(10),
+                               .last_vsync_time = ms_to_time(0),
+                               .vsync_interval = zx::msec(10)};
+  auto prediction = predictor.GetPrediction(request);
+
+  EXPECT_GT(prediction.presentation_time, request.now);
+  EXPECT_GE(prediction.latch_point_time, request.now);
+  EXPECT_EQ(prediction.latch_point_time + offset, prediction.presentation_time);
+}
+
+TEST(ConstantFramePredictor, PredictionsWithOverBudgetDurationsAreConstant) {
+  const zx::duration offset = zx::msec(4);
+  ConstantFramePredictor predictor(offset);
+  // Report durations less than the offset.
+  const zx::duration update_duration = zx::msec(5);
+  const zx::duration render_duration = zx::msec(2);
+  EXPECT_LT(offset, update_duration + render_duration);
+  for (int i = 0; i < 10; ++i) {
+    predictor.ReportRenderDuration(render_duration);
+    predictor.ReportUpdateDuration(update_duration);
+  }
+
+  PredictionRequest request = {.now = ms_to_time(5),
+                               .requested_presentation_time = ms_to_time(10),
+                               .last_vsync_time = ms_to_time(0),
+                               .vsync_interval = zx::msec(10)};
+  auto prediction = predictor.GetPrediction(request);
+
+  EXPECT_GT(prediction.presentation_time, request.now);
+  EXPECT_GE(prediction.latch_point_time, request.now);
+  EXPECT_EQ(prediction.latch_point_time + offset, prediction.presentation_time);
+}
+
+TEST(ConstantFramePredictor, OffsetsGreaterThanVsyncIntervalAreRespected) {
+  const zx::duration offset = zx::msec(26);
+  ConstantFramePredictor predictor(offset);
+
+  // Offset does not fit within requested_presentation_time.
+  PredictionRequest request = {.now = ms_to_time(17),
+                               .requested_presentation_time = ms_to_time(32),
+                               .last_vsync_time = ms_to_time(16),
+                               .vsync_interval = zx::msec(16)};
+  auto prediction = predictor.GetPrediction(request);
+
+  EXPECT_GT(prediction.presentation_time, request.now);
+  EXPECT_EQ(prediction.latch_point_time + offset, prediction.presentation_time);
+  EXPECT_EQ(ms_to_time(48), prediction.presentation_time);
 }
 
 }  // namespace test

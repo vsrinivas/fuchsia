@@ -289,6 +289,8 @@ source_set("display") {
 source_set("frame_scheduler") {
   sources = [
     # TODO(SCN-1398): Move files out of engine/.
+    "engine/constant_frame_predictor.cc",
+    "engine/constant_frame_predictor.h",
     "engine/default_frame_scheduler.cc",
     "engine/default_frame_scheduler.h",
     "engine/duration_predictor.cc",
@@ -300,6 +302,8 @@ source_set("frame_scheduler") {
     "engine/frame_stats.h",
     "engine/frame_timings.cc",
     "engine/frame_timings.h",
+    "engine/windowed_frame_predictor.cc",
+    "engine/windowed_frame_predictor.h",
 
     # TODO(SCN-1398): IDs don't belong here, but this will work until we factor
     # out another source_set that needs IDs but not frame_scheduler.

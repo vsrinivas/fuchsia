@@ -7,6 +7,7 @@
 #include <lib/async-testing/test_loop.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include "src/ui/scenic/lib/gfx/engine/constant_frame_predictor.h"
 #include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks.h"
 
@@ -24,9 +25,7 @@ void ScenicGfxTest::InitializeScenic(Scenic* scenic) {
   // When this bug is fixed, that test will no longer depend on a GfxSystem, at which point, this
   // frame scheduler can be removed.
   frame_scheduler_ = std::make_shared<gfx::DefaultFrameScheduler>(
-      display_.get(),
-      std::make_unique<gfx::FramePredictor>(gfx::DefaultFrameScheduler::kInitialRenderDuration,
-                                            gfx::DefaultFrameScheduler::kInitialUpdateDuration),
+      display_.get(), std::make_unique<gfx::ConstantFramePredictor>(zx::msec(5)),
       scenic_->inspect_node()->CreateChild("FrameScheduler"));
 
   auto context = sys::ComponentContext::Create();

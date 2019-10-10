@@ -5,6 +5,7 @@
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
 
 #include "src/lib/fxl/logging.h"
+#include "src/ui/scenic/lib/gfx/engine/constant_frame_predictor.h"
 #include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks.h"
 
@@ -19,8 +20,7 @@ void SessionTest::SetUp() {
       /*id*/ 0, /* width */ 0, /* height */ 0);
   frame_scheduler_ = std::make_shared<DefaultFrameScheduler>(
       display_.get(),
-      std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
-                                       DefaultFrameScheduler::kInitialUpdateDuration));
+      std::make_unique<ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
 
   session_context_ = CreateSessionContext();
   session_ = CreateSession();

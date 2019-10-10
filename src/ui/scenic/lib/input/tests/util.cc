@@ -12,6 +12,7 @@
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/scenic/lib/gfx/engine/constant_frame_predictor.h"
 #include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/gfx/id.h"
 
@@ -35,10 +36,10 @@ using fuchsia::ui::scenic::SessionListener;
 using scenic_impl::GlobalId;
 using scenic_impl::ResourceId;
 using scenic_impl::Scenic;
+using scenic_impl::gfx::ConstantFramePredictor;
 using scenic_impl::gfx::DefaultFrameScheduler;
 using scenic_impl::gfx::Display;
 using scenic_impl::gfx::Engine;
-using scenic_impl::gfx::FramePredictor;
 using scenic_impl::gfx::GfxSystem;
 using scenic_impl::gfx::test::ReleaseFenceSignallerForTest;
 using scenic_impl::input::InputSystem;
@@ -82,8 +83,7 @@ void InputSystemTest::InitializeScenic(Scenic* scenic) {
       /*id*/ 0, test_display_width_px(), test_display_height_px());
   auto frame_scheduler = std::make_shared<DefaultFrameScheduler>(
       display_.get(),
-      std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
-                                       DefaultFrameScheduler::kInitialUpdateDuration));
+      std::make_unique<ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
 
   engine_ = std::make_unique<Engine>(context_provider_.context(), frame_scheduler,
                                      std::move(signaller), escher::EscherWeakPtr());

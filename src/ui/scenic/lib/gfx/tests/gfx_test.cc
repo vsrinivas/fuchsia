@@ -5,6 +5,7 @@
 #include "src/ui/scenic/lib/gfx/tests/gfx_test.h"
 
 #include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
+#include "src/ui/scenic/lib/gfx/engine/windowed_frame_predictor.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -27,8 +28,8 @@ void GfxSystemTest::InitializeScenic(Scenic* scenic) {
       /*id*/ 0, /* width */ 0, /* height */ 0);
   frame_scheduler_ = std::make_shared<DefaultFrameScheduler>(
       display_.get(),
-      std::make_unique<FramePredictor>(gfx::DefaultFrameScheduler::kInitialRenderDuration,
-                                       gfx::DefaultFrameScheduler::kInitialUpdateDuration));
+      std::make_unique<WindowedFramePredictor>(gfx::DefaultFrameScheduler::kInitialRenderDuration,
+                                               gfx::DefaultFrameScheduler::kInitialUpdateDuration));
   engine_ = std::make_unique<Engine>(context_provider_.context(), frame_scheduler_,
                                      std::move(signaller), escher::EscherWeakPtr());
   frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());

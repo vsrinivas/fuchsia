@@ -18,7 +18,7 @@
 
 #include "src/ui/scenic/lib/gfx/api/internal_snapshot_impl.h"
 #include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
-#include "src/ui/scenic/lib/gfx/engine/frame_predictor.h"
+#include "src/ui/scenic/lib/gfx/engine/windowed_frame_predictor.h"
 
 namespace {
 
@@ -97,8 +97,9 @@ void App::InitializeServices(escher::EscherUniquePtr escher, gfx::Display* displ
 
   frame_scheduler_ = std::make_shared<gfx::DefaultFrameScheduler>(
       display,
-      std::make_unique<gfx::FramePredictor>(gfx::DefaultFrameScheduler::kInitialRenderDuration,
-                                            gfx::DefaultFrameScheduler::kInitialUpdateDuration),
+      std::make_unique<gfx::WindowedFramePredictor>(
+          gfx::DefaultFrameScheduler::kInitialRenderDuration,
+          gfx::DefaultFrameScheduler::kInitialUpdateDuration),
       scenic_.inspect_node()->CreateChild("FrameScheduler"));
 
   engine_.emplace(app_context_.get(), frame_scheduler_, escher_->GetWeakPtr(),

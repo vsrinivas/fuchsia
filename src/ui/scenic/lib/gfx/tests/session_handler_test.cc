@@ -6,6 +6,7 @@
 
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
+#include "src/ui/scenic/lib/gfx/engine/constant_frame_predictor.h"
 #include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
 
 namespace scenic_impl {
@@ -69,8 +70,7 @@ void SessionHandlerTest::InitializeEngine() {
 
   frame_scheduler_ = std::make_shared<DefaultFrameScheduler>(
       display_manager_->default_display(),
-      std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
-                                       DefaultFrameScheduler::kInitialUpdateDuration));
+      std::make_unique<ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
   engine_ =
       std::make_unique<Engine>(app_context_.context(), frame_scheduler_,
                                std::move(mock_release_fence_signaller), escher::EscherWeakPtr());
