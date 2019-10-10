@@ -48,6 +48,7 @@ declare_args() {
   active_partition = ""
   signed_image = false
   fastboot_product = ""
+  pre_erase_flash = false
 
   # Whether to include images necessary to run Fuchsia in QEMU in build
   # archives.
@@ -1534,6 +1535,7 @@ action("flash_script") {
     "--active=${active_partition}",
     "--signed=${signed_image}",
     "--product=${fastboot_product}",
+    "--pre-erase-flash=${pre_erase_flash}",
   ]
 }
 

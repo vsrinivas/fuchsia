@@ -7,3 +7,4 @@ custom_signing_script =
 
 zircon_a_partition = "boot"
 signed_image = true
+pre_erase_flash = true

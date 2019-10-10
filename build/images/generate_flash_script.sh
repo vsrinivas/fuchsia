@@ -14,6 +14,15 @@ VBMETA_R_PARTITION=
 ACTIVE_PARTITION=
 SIGNED_IMAGE=
 PRODUCT=
+PRE_ERASE_FLASH=
+
+erase_raw_flash ()
+{
+  local partition=$1
+  if [[ ${PRE_ERASE_FLASH} = "true" ]]; then
+    echo fastboot "\${FASTBOOT_ARGS}" erase "${partition}" >> "${OUTPUT}"
+  fi
+}
 
 for i in "$@"
 do
@@ -62,6 +71,10 @@ case $i in
     PRODUCT="${i#*=}"
     shift
     ;;
+    --pre-erase-flash=*)
+    PRE_ERASE_FLASH="${i#*=}"
+    shift
+    ;;
 esac
 done
 
@@ -90,21 +103,27 @@ EOF
 fi
 
 if [[ ! -z "${ZIRCON_A_PARTITION}" ]]; then
+  erase_raw_flash ${ZIRCON_A_PARTITION}
   echo fastboot "\${FASTBOOT_ARGS}" flash "${ZIRCON_A_PARTITION}" \"\${DIR}/${ZIRCON_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
 fi
 if [[ ! -z "${ZIRCON_B_PARTITION}" ]]; then
+  erase_raw_flash ${ZIRCON_B_PARTITION}
   echo fastboot "\${FASTBOOT_ARGS}" flash "${ZIRCON_B_PARTITION}" \"\${DIR}/${ZIRCON_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
 fi
 if [[ ! -z "${ZIRCON_R_PARTITION}" ]]; then
+  erase_raw_flash ${ZIRCON_R_PARTITION}
   echo fastboot "\${FASTBOOT_ARGS}" flash "${ZIRCON_R_PARTITION}" \"\${DIR}/${ZIRCON_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
 fi
 if [[ ! -z "${VBMETA_A_PARTITION}" ]]; then
+  erase_raw_flash ${VBMETA_A_PARTITION}
   echo fastboot "\${FASTBOOT_ARGS}" flash "${VBMETA_A_PARTITION}" \"\${DIR}/${VBMETA_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
 fi
 if [[ ! -z "${VBMETA_B_PARTITION}" ]]; then
+  erase_raw_flash ${VBMETA_B_PARTITION}
   echo fastboot "\${FASTBOOT_ARGS}" flash "${VBMETA_B_PARTITION}" \"\${DIR}/${VBMETA_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
 fi
 if [[ ! -z "${VBMETA_R_PARTITION}" ]]; then
+  erase_raw_flash ${VBMETA_R_PARTITION}
   echo fastboot "\${FASTBOOT_ARGS}" flash "${VBMETA_R_PARTITION}" \"\${DIR}/${VBMETA_IMAGE}\" "${extra_args[@]}" >> "${OUTPUT}"
 fi
 if [[ ! -z "${ACTIVE_PARTITION}" ]]; then
