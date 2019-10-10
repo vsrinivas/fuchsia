@@ -5,8 +5,9 @@
 group("tools") {
   testonly = true
   deps = [
-    "ascendd",
+    "ascendd:bin($host_toolchain)",
     "onet",
+    "onet:bin($host_toolchain)",
   ]
 }
 

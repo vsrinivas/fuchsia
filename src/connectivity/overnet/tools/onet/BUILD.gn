@@ -10,15 +10,18 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-zircon",
+    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
+    "//src/connectivity/overnet/lib/hoist",
     "//third_party/rust_crates:clap",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
   ]
+
+  non_rust_deps = []
+  if (!is_fuchsia) {
+    non_rust_deps += [ "//third_party/boringssl" ]
+  }
 }
 
 package("onet") {

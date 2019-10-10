@@ -15,7 +15,6 @@ fidl("fuchsia.overnet.protocol") {
   sources = [
     "labels.fidl",
     "peer_protocol.fidl",
-    "routing.fidl",
     "stream_socket.fidl",
     "zircon_proxy.fidl",
   ]

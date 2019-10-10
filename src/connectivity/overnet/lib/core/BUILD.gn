@@ -17,12 +17,18 @@ rustc_library("core") {
     "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
     "//src/connectivity/overnet/lib/salt_slab",
     "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:crc",
     "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:timebomb",
     "//third_party/rust_crates/transitional/quiche",
   ]
+  if (!is_fuchsia) {
+    deps += [ "//third_party/rust_crates:tempfile" ]
+  }
+  non_rust_deps = [ "//third_party/boringssl" ]
 }
 
 unittest_package("overnet-core-tests") {
@@ -53,6 +59,7 @@ unittest_package("overnet-core-tests") {
 group("tests") {
   testonly = true
   deps = [
+    ":core_test($host_toolchain)",
     ":overnet-core-tests",
   ]
 }

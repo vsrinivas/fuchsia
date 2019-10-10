@@ -16,12 +16,22 @@ extern crate salt_slab;
 
 mod coding;
 mod labels;
+mod node;
 mod node_table;
+mod ping_tracker;
 mod router;
+mod stream_framer;
 
 // Export selected types from modules.
-pub use labels::{NodeId, NodeLinkId, VersionCounter, FIRST_VERSION, TOMBSTONE_VERSION};
+pub use labels::{NodeId, NodeLinkId};
+pub use node::{Node, NodeRuntime};
 pub use node_table::{LinkDescription, NodeDescription, NodeStateCallback, NodeTable};
 pub use router::{
-    LinkId, MessageReceiver, Router, RouterOptions, RouterTime, SendHandle, StreamId,
+    generate_node_id, LinkId, MessageReceiver, Router, RouterOptions, RouterTime, SendHandle,
+    StreamId,
 };
+pub use stream_framer::{StreamDeframer, StreamFramer};
+
+#[cfg(all(test, not(target_os = "fuchsia")))]
+#[no_mangle]
+pub extern "C" fn fidlhdl_close(_hdl: u32) {}

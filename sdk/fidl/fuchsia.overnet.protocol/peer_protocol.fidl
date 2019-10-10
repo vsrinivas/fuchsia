@@ -16,7 +16,25 @@ xunion PeerMessage {
     PeerDescription update_node_description;
     /// Update information about a link that this peer knows about on the
     /// remote peer.
-    LinkStatus update_link_status;
+    UpdateLinkStatus update_link_status;
+};
+
+/// Reply messages for PeerMessage, where appropriate
+xunion PeerReply {
+    /// Acknowledge an UpdateLinkStatus message
+    Empty update_link_status_ack;
+};
+
+struct Empty {
+};
+
+/// Update status of all links starting from a given node
+/// By bundling all link updates together, we guarantee:
+///  - a simple protocol that can deal with updates, additions, and deletions to the link set
+///  - no routing decisions based on partial information from any one node
+struct UpdateLinkStatus {
+    /// Status of all active links originating at the sending node
+    vector<LinkStatus> link_status;
 };
 
 /// Create a new stream, labelled `stream_id`, to communicate with the
@@ -32,4 +50,31 @@ struct ConnectToService {
 
 /// Options for service connection formation.
 table ConnectToServiceOptions {
+};
+
+/// Description of a single node.
+table PeerDescription {
+    /// The set of services published by this node.
+    1: vector<string> services;
+};
+
+/// Metrics associated with a link.
+/// Note that a link is a uni-directional connection between two nodes.
+table LinkMetrics {
+    /// Current round trip time for requests across this link in microseconds.
+    1: uint64 round_trip_time;
+};
+
+/// Status packet for a single link. A link is a unidirectional connection between two peers,
+/// and is owned by the first peer. The target node is identified by `to`.
+struct LinkStatus {
+    /// Link target node.
+    NodeId to;
+    /// An identifier (chosen by the link owner) to label this link.
+    /// The link owner must guarantee that the tuple (to, local_id) is unique for each of it's held
+    /// links.
+    LinkId local_id;
+
+    /// Metrics associated with this link.
+    LinkMetrics metrics;
 };

@@ -2,17 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#![feature(async_await, await_macro)]
+
 import("//build/rust/rustc_binary.gni")
 
-group("ascendd") {
-  deps = [
-    ":bin($host_toolchain)",
-  ]
-}
-
 rustc_binary("bin") {
+  assert(!is_fuchsia)
+
   name = "ascendd"
   edition = "2018"
 
-  deps = []
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
+    "//src/connectivity/overnet/lib/core",
+    "//src/connectivity/overnet/lib/hoist",
+    "//src/connectivity/overnet/lib/salt_slab",
+    "//third_party/rust_crates:clap",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tokio",
+  ]
+
+  non_rust_deps = [ "//third_party/boringssl" ]
 }

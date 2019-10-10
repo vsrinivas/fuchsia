@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 //! fidlhdl_xxx implementation to provide handles for non-Fuchsia platforms
+//! Declarations for this interface are found in //garnet/public/lib/fidl/rust/fidl/src/handle.rs
 
 #![cfg(not(target_os = "fuchsia"))]
 
@@ -69,6 +70,7 @@ fn with_handle<R>(hdl: u32, f: impl FnOnce(&mut FidlHandle) -> R) -> R {
     f(&mut HANDLES.lock()[hdl as usize])
 }
 
+/// Close the handle: no action if hdl==INVALID_HANDLE
 #[no_mangle]
 pub extern "C" fn fidlhdl_close(hdl: u32) {
     if hdl == INVALID_HANDLE {
@@ -133,6 +135,7 @@ pub extern "C" fn fidlhdl_close(hdl: u32) {
     }
 }
 
+/// Create a channel pair
 #[no_mangle]
 pub extern "C" fn fidlhdl_channel_create() -> FidlHdlPairCreateResult {
     let cs =
@@ -178,6 +181,7 @@ unsafe fn complete_channel_read(
     }
 }
 
+/// Read from a channel - takes ownership of all handles
 #[no_mangle]
 pub unsafe extern "C" fn fidlhdl_channel_read(
     hdl: u32,
@@ -288,6 +292,7 @@ unsafe fn complete_socket_read(
     FidlHdlReadResult::Ok
 }
 
+/// Read from a socket
 #[no_mangle]
 pub unsafe extern "C" fn fidlhdl_socket_read(
     hdl: u32,
@@ -328,6 +333,7 @@ unsafe fn complete_socket_write(
     }
 }
 
+/// Write to a socket
 #[no_mangle]
 pub unsafe extern "C" fn fidlhdl_socket_write(
     hdl: u32,
@@ -351,6 +357,7 @@ pub unsafe extern "C" fn fidlhdl_socket_write(
     result
 }
 
+/// Create a socket pair
 #[no_mangle]
 pub unsafe extern "C" fn fidlhdl_socket_create(sock_opts: SocketOpts) -> FidlHdlPairCreateResult {
     // TODO: This method currently only works for stream type sockets... rectify this at some point
@@ -371,6 +378,7 @@ pub unsafe extern "C" fn fidlhdl_socket_create(sock_opts: SocketOpts) -> FidlHdl
     FidlHdlPairCreateResult { left, right }
 }
 
+/// Signal that a read is required
 #[no_mangle]
 pub extern "C" fn fidlhdl_need_read(hdl: u32) {
     let wakeup = with_handle(hdl, |obj| match obj {

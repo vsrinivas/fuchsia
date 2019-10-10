@@ -19,16 +19,19 @@
 // on our behalf).
 
 use crate::coding::decode_fidl;
-use crate::labels::{NodeId, NodeLinkId, RoutingLabel, VersionCounter, MAX_ROUTING_LABEL_LENGTH};
+use crate::labels::{NodeId, NodeLinkId, RoutingLabel, MAX_ROUTING_LABEL_LENGTH};
 use crate::node_table::{LinkDescription, NodeDescription};
+use crate::ping_tracker::{PingTracker, PingTrackerResult, PongTracker};
 use failure::{Error, ResultExt};
 use fidl_fuchsia_overnet_protocol::{
-    ChannelHandle, ConnectToService, ConnectToServiceOptions, LinkStatus, PeerDescription,
-    PeerMessage, ZirconChannelMessage, ZirconHandle,
+    ChannelHandle, ConnectToService, ConnectToServiceOptions, LinkMetrics, LinkStatus,
+    PeerDescription, PeerMessage, PeerReply, UpdateLinkStatus, ZirconChannelMessage, ZirconHandle,
 };
 use rand::Rng;
 use salt_slab::{SaltSlab, SaltedID};
-use std::collections::{btree_map, BTreeMap, BinaryHeap};
+use std::collections::{btree_map, BTreeMap, BTreeSet, BinaryHeap};
+use std::fmt::Debug;
+use std::path::Path;
 use std::time::Instant;
 
 /// Designates one peer in the router
@@ -59,6 +62,12 @@ impl RouterTime for Instant {
     fn after(time: Self, duration: Self::Duration) -> Self {
         time + duration
     }
+}
+
+enum PeerLinkStatusUpdateState {
+    Unscheduled,
+    Sent,
+    SentOutdated,
 }
 
 /// Describes a peer to this router.
@@ -95,6 +104,8 @@ struct Peer {
     streams: BTreeMap<u64, StreamId>,
     /// If known, a link that will likely be able to forward packets to this peers node_id.
     current_link: Option<LinkId>,
+    /// State of link status updates for this peer (only for client)
+    link_status_update_state: Option<PeerLinkStatusUpdateState>,
 }
 
 /// Was a given stream index initiated by this end of a quic connection?
@@ -121,7 +132,8 @@ fn zircon_stream_id(id: u64) -> fidl_fuchsia_overnet_protocol::StreamId {
 /// when a datagram completes!)
 #[derive(Clone, Copy, Debug)]
 enum StreamType {
-    Peer,
+    PeerClientEnd,
+    PeerServerEnd,
     Channel,
     // TODO(ctiller): Socket,
 }
@@ -204,7 +216,7 @@ impl ReadState {
                         Ok(_) => ReadState::Initial { incoming: vec![], stream_type }
                             .recv(&mut incoming[len..], got),
                         Err(e) => {
-                            warn!("Error reading stream: {:?}", e);
+                            trace!("Error reading stream: {:?}", e);
                             got(stream_type, None).unwrap();
                             ReadState::FinishedWithError
                         }
@@ -262,8 +274,8 @@ impl ReadState {
 /// Configuration object for creating a router.
 pub struct RouterOptions {
     node_id: Option<NodeId>,
-    quic_server_key_file: Option<String>,
-    quic_server_cert_file: Option<String>,
+    quic_server_key_file: Option<Box<dyn AsRef<Path>>>,
+    quic_server_cert_file: Option<Box<dyn AsRef<Path>>>,
 }
 
 impl RouterOptions {
@@ -279,14 +291,14 @@ impl RouterOptions {
     }
 
     /// Set which file to load the server private key from.
-    pub fn set_quic_server_key_file(mut self, key_file: &str) -> Self {
-        self.quic_server_key_file = Some(key_file.to_string());
+    pub fn set_quic_server_key_file(mut self, key_file: Box<dyn AsRef<Path>>) -> Self {
+        self.quic_server_key_file = Some(key_file);
         self
     }
 
     /// Set which file to load the server cert from.
-    pub fn set_quic_server_cert_file(mut self, pem_file: &str) -> Self {
-        self.quic_server_cert_file = Some(pem_file.to_string());
+    pub fn set_quic_server_cert_file(mut self, pem_file: Box<dyn AsRef<Path>>) -> Self {
+        self.quic_server_cert_file = Some(pem_file);
         self
     }
 }
@@ -319,14 +331,7 @@ pub trait MessageReceiver {
     /// Gossip about a link from `from` to `to` with id `link_id` has been received.
     /// This gossip is about version `version`, and updates the links description to
     /// `desc`.
-    fn update_link(
-        &mut self,
-        from: NodeId,
-        to: NodeId,
-        link_id: NodeLinkId,
-        version: VersionCounter,
-        desc: LinkDescription,
-    );
+    fn update_link(&mut self, from: NodeId, to: NodeId, link_id: NodeLinkId, desc: LinkDescription);
     /// A stream `stream_id` has been closed.
     fn close(&mut self, stream_id: StreamId);
 }
@@ -341,24 +346,54 @@ pub enum SendHandle {
 /// Router-relevant state of a link.
 /// This type is parameterized by `LinkData` which is an application defined type that
 /// lets it look up the link implementation quickly.
-struct Link<LinkData> {
+#[derive(Debug)]
+struct Link<LinkData: Copy + Debug> {
     /// The node on the other end of this link.
     peer: NodeId,
-    /// The client oriented peer associated with said node.
-    client_peer: PeerId,
-    /// The server oriented peer associated with said node (if it exists).
-    server_peer: Option<PeerId>,
+    /// The externally visible id for this link
+    id: NodeLinkId,
+    /// Track pings for this link
+    ping_tracker: PingTracker,
+    /// Track pongs for this link
+    pong_tracker: PongTracker,
     /// The application data required to lookup this link.
     link_data: LinkData,
+    /// Timeout generation for ping_tracker
+    timeout_generation: u64,
 }
 
-/// Records a timeout request at some time for a peer.
+impl<LinkData: Copy + Debug> Link<LinkData> {
+    fn make_desc(&self) -> Option<LinkDescription> {
+        self.ping_tracker
+            .round_trip_time()
+            .map(|round_trip_time| LinkDescription { round_trip_time })
+    }
+
+    fn make_status(&self) -> Option<LinkStatus> {
+        self.make_desc().map(|desc| {
+            let round_trip_time = desc.round_trip_time.as_micros();
+            LinkStatus {
+                local_id: self.id.0,
+                to: fidl_fuchsia_overnet_protocol::NodeId { id: self.peer.0 },
+                metrics: LinkMetrics {
+                    round_trip_time: Some(if round_trip_time > std::u64::MAX as u128 {
+                        std::u64::MAX
+                    } else {
+                        round_trip_time as u64
+                    }),
+                },
+            }
+        })
+    }
+}
+
+/// Records a timeout request at some time for some object.
 /// The last tuple element is a generation counter so we can detect expired timeouts.
 #[derive(Clone, Copy, PartialEq, Eq, Ord)]
-struct PeerTimeout<Time: RouterTime>(Time, PeerId, u64);
+struct Timeout<Time: RouterTime, T>(Time, T, u64);
 
 /// Sort time ascending.
-impl<Time: RouterTime> PartialOrd for PeerTimeout<Time> {
+impl<Time: RouterTime, T: Ord> PartialOrd for Timeout<Time, T> {
     fn partial_cmp(&self, rhs: &Self) -> Option<std::cmp::Ordering> {
         Some(self.0.cmp(&rhs.0).reverse().then(self.1.cmp(&rhs.1)))
     }
@@ -386,29 +421,44 @@ struct Endpoints<Time: RouterTime> {
     check_timeouts: BinaryHeap<PeerId>,
     /// Client oriented peer connections that have become established.
     newly_established_clients: BinaryHeap<PeerId>,
+    /// Peers that we've heard about recently
+    recently_mentioned_peers: Vec<(NodeId, Option<LinkId>)>,
     /// Timeouts to get to at some point.
-    queued_timeouts: BinaryHeap<PeerTimeout<Time>>,
+    queued_timeouts: BinaryHeap<Timeout<Time, PeerId>>,
+    /// Link status updates waiting to be sent
+    link_status_updates: BinaryHeap<StreamId>,
+    /// Link status updates waiting to be acked
+    ack_link_status_updates: BinaryHeap<StreamId>,
     /// The last timestamp we saw.
     now: Time,
     /// The current description of our node id, formatted into a serialized description packet
     /// so we can quickly send it at need.
     node_desc_packet: Vec<u8>,
     /// The servers private key file for this node.
-    server_key_file: Option<String>,
+    server_key_file: Option<Box<dyn AsRef<Path>>>,
     /// The servers private cert file for this node.
-    server_cert_file: Option<String>,
+    server_cert_file: Option<Box<dyn AsRef<Path>>>,
 }
 
 impl<Time: RouterTime> Endpoints<Time> {
     /// Update the routing table for `dest` to use `link_id`.
     fn adjust_route(&mut self, dest: NodeId, link_id: LinkId) -> Result<(), Error> {
+        trace!("ADJUST_ROUTE: {:?} via {:?}", dest, link_id);
+
         let server_peer_id = self.server_peer_id(dest);
+        trace!("  server_peer_id = {:?}", server_peer_id);
         if let Some(peer_id) = server_peer_id {
             let peer = self.peers.get_mut(peer_id).unwrap();
+            if peer.current_link.is_none() && !peer.pending_writes {
+                trace!("Mark writable: {:?}", peer_id);
+                peer.pending_writes = true;
+                self.write_peers.push(peer_id);
+            }
             peer.current_link = Some(link_id);
         }
-        let peer_id = self.client_peer_id(dest)?;
+        let peer_id = self.client_peer_id(dest, Some(link_id))?;
         let peer = self.peers.get_mut(peer_id).unwrap();
+        trace!("  client_peer_id = {:?}", peer_id);
         peer.current_link = Some(link_id);
         Ok(())
     }
@@ -426,7 +476,7 @@ impl<Time: RouterTime> Endpoints<Time> {
     /// Create a new stream to advertised service `service` on remote node id `node`.
     fn new_stream(&mut self, node: NodeId, service: &str) -> Result<StreamId, Error> {
         assert_ne!(node, self.node_id);
-        let peer_id = self.client_peer_id(node)?;
+        let peer_id = self.client_peer_id(node, None)?;
         let peer = self.peers.get_mut(peer_id).unwrap();
         let id = peer.next_stream.checked_shl(2).ok_or_else(|| format_err!("Too many streams"))?;
         peer.next_stream += 1;
@@ -437,7 +487,7 @@ impl<Time: RouterTime> Endpoints<Time> {
             read_state: ReadState::new_bound(StreamType::Channel),
         });
         peer.streams.insert(id, stream_id);
-        fidl::encoding::with_tls_encoded(
+        let err = fidl::encoding::with_tls_encoded(
             &mut PeerMessage::ConnectToService(ConnectToService {
                 service_name: service.to_string(),
                 stream_id: id,
@@ -449,8 +499,17 @@ impl<Time: RouterTime> Endpoints<Time> {
                 }
                 self.queue_send_raw_datagram(connection_stream_id, Some(&mut bytes), false)
             },
-        )?;
-        Ok(stream_id)
+        );
+        match err {
+            Ok(()) => Ok(stream_id),
+            Err(e) => {
+                if let Some(peer) = self.peers.get_mut(peer_id) {
+                    peer.streams.remove(&id);
+                }
+                self.streams.remove(stream_id);
+                Err(e)
+            }
+        }
     }
 
     /// Regenerate our description packet and send it to all peers.
@@ -459,6 +518,7 @@ impl<Time: RouterTime> Endpoints<Time> {
         let stream_ids: Vec<StreamId> = self
             .peers
             .iter_mut()
+            .map(|(_peer_id, peer)| peer)
             .filter(|peer| peer.is_client && peer.conn.is_established())
             .map(|peer| peer.connection_stream_id)
             .collect();
@@ -504,6 +564,7 @@ impl<Time: RouterTime> Endpoints<Time> {
                     id,
                     read_state: ReadState::new_bound(stream_type),
                 });
+                peer.streams.insert(id, stream_id);
                 (send, stream_id)
             })
             .unzip();
@@ -543,6 +604,7 @@ impl<Time: RouterTime> Endpoints<Time> {
             .peers
             .get_mut(peer_id)
             .ok_or_else(|| format_err!("Peer not found {:?}", peer_id))?;
+        trace!("  node_id={:?}", peer.node_id);
         if let Some(frame) = frame {
             let frame_len = frame.len();
             assert!(frame_len <= 0xffff_ffff);
@@ -572,10 +634,22 @@ impl<Time: RouterTime> Endpoints<Time> {
     fn server_config(&self) -> Result<quiche::Config, Error> {
         let mut config = quiche::Config::new(quiche::PROTOCOL_VERSION)
             .context("Creating quic configuration for server connection")?;
-        let cert_file =
-            self.server_cert_file.as_ref().ok_or_else(|| format_err!("No cert file for server"))?;
-        let key_file =
-            self.server_key_file.as_ref().ok_or_else(|| format_err!("No key file for server"))?;
+        let cert_file = self
+            .server_cert_file
+            .as_ref()
+            .ok_or_else(|| format_err!("No cert file for server"))?
+            .as_ref()
+            .as_ref()
+            .to_str()
+            .ok_or_else(|| format_err!("Cannot convert path to string"))?;
+        let key_file = self
+            .server_key_file
+            .as_ref()
+            .ok_or_else(|| format_err!("No key file for server"))?
+            .as_ref()
+            .as_ref()
+            .to_str()
+            .ok_or_else(|| format_err!("Cannot convert path to string"))?;
         config
             .load_cert_chain_from_pem_file(cert_file)
             .context(format!("Loading server certificate '{}'", cert_file))?;
@@ -609,21 +683,12 @@ impl<Time: RouterTime> Endpoints<Time> {
     }
 
     /// Receive a packet from some link.
-    fn queue_recv<LinkData>(
+    fn queue_recv(
         &mut self,
         link_id: LinkId,
-        link: &mut Link<LinkData>,
+        routing_label: RoutingLabel,
         packet: &mut [u8],
     ) -> Result<(), Error> {
-        let (routing_label, packet_length) = RoutingLabel::decode(link.peer, self.node_id, packet)?;
-        println!(
-            "routing_label={:?} packet_length={} src_len={}",
-            routing_label,
-            packet_length,
-            packet.len()
-        );
-        let packet = &mut packet[..packet_length];
-
         let (peer_id, forward) = match (routing_label.to_client, routing_label.dst == self.node_id)
         {
             (false, true) => {
@@ -634,7 +699,10 @@ impl<Time: RouterTime> Endpoints<Time> {
                     bail!("Version negotiation invalid on the server");
                 }
 
-                if let Some(server_peer_id) = link.server_peer {
+                // If we're asked for a server connection, we should create a client connection
+                self.ensure_client_peer_id(routing_label.src, Some(link_id))?;
+
+                if let Some(server_peer_id) = self.server_peer_id(routing_label.src) {
                     (server_peer_id, false)
                 } else if hdr.ty == quiche::Type::Initial {
                     let mut config = self.server_config()?;
@@ -647,15 +715,15 @@ impl<Time: RouterTime> Endpoints<Time> {
                     let connection_stream_id = self.streams.insert(Stream {
                         peer_id: PeerId::invalid(),
                         id: 0,
-                        read_state: ReadState::new_bound(StreamType::Peer),
+                        read_state: ReadState::new_bound(StreamType::PeerServerEnd),
                     });
                     let mut streams = BTreeMap::new();
                     streams.insert(0, connection_stream_id);
                     let peer_id = self.peers.insert(Peer {
                         conn,
                         next_stream: 1,
-                        node_id: link.peer,
-                        current_link: None,
+                        node_id: routing_label.src,
+                        current_link: Some(link_id),
                         is_client: false,
                         pending_reads: false,
                         pending_writes: true,
@@ -665,35 +733,36 @@ impl<Time: RouterTime> Endpoints<Time> {
                         forward: Vec::new(),
                         streams,
                         connection_stream_id,
+                        link_status_update_state: None,
                     });
                     self.streams.get_mut(connection_stream_id).unwrap().peer_id = peer_id;
-                    link.server_peer = Some(peer_id);
-                    self.node_to_server_peer.insert(link.peer, peer_id);
+                    self.node_to_server_peer.insert(routing_label.src, peer_id);
                     self.write_peers.push(peer_id);
                     (peer_id, false)
                 } else {
                     bail!("No server for link {:?}, and not an Initial packet", link_id);
                 }
             }
-            (true, true) => (link.client_peer, false),
+            (true, true) => (self.client_peer_id(routing_label.src, Some(link_id))?, false),
             (false, false) => {
+                // If we're asked to forward a packet, we should have client connections to each end
+                self.ensure_client_peer_id(routing_label.src, Some(link_id))?;
+                self.ensure_client_peer_id(routing_label.dst, None)?;
                 let peer_id = self.server_peer_id(routing_label.dst).ok_or_else(|| {
                     format_err!("Node server peer not found for {:?}", routing_label.dst)
                 })?;
                 (peer_id, true)
             }
             (true, false) => {
-                let peer_id = self.client_peer_id(routing_label.dst)?;
+                let peer_id = self.client_peer_id(routing_label.dst, Some(link_id))?;
                 (peer_id, true)
             }
         };
 
         // Guaranteed correct ID by peer_index above.
         let peer = self.peers.get_mut(peer_id).unwrap();
-        if peer.current_link.is_none() {
-            peer.current_link = Some(link_id);
-        }
         if forward {
+            trace!("FORWARD: {:?}", routing_label);
             peer.forward.push((routing_label, packet.to_vec()));
         } else {
             peer.conn.recv(packet).context("Receiving packet on quic connection")?;
@@ -760,17 +829,20 @@ impl<Time: RouterTime> Endpoints<Time> {
         for stream_index in readable {
             trace!("{:?}   stream {} is readable", self.node_id, stream_index);
             let mut stream_id = peer.streams.get(&stream_index).copied();
-            if stream_id.is_none() && !is_local_quic_stream_index(stream_index, peer.is_client) {
-                stream_id = Some(self.streams.insert(Stream {
-                    peer_id,
-                    id: stream_index,
-                    read_state: ReadState::new_unbound(),
-                }));
-                peer.streams.insert(stream_index, stream_id.unwrap());
-            }
             if stream_id.is_none() {
-                trace!("Stream {} not found", stream_index);
-                unimplemented!();
+                if !is_local_quic_stream_index(stream_index, peer.is_client) {
+                    stream_id = Some(self.streams.insert(Stream {
+                        peer_id,
+                        id: stream_index,
+                        read_state: ReadState::new_unbound(),
+                    }));
+                    peer.streams.insert(stream_index, stream_id.unwrap());
+                } else {
+                    // Getting here means a stream originating from this Overnet node was created
+                    // without the creation of a peer stream: this is a bug, and this branch should
+                    // never be reached.
+                    unreachable!();
+                }
             }
             let mut rs = self
                 .streams
@@ -782,12 +854,16 @@ impl<Time: RouterTime> Endpoints<Time> {
                 match peer.conn.stream_recv(stream_index, buf) {
                     Ok((n, fin)) => {
                         let mut recv_message_context = RecvMessageContext {
+                            node_id: self.node_id,
                             got,
                             peer_id,
                             peer: &mut peer,
                             stream_id: stream_id.unwrap(),
                             stream_index,
                             streams: &mut self.streams,
+                            recently_mentioned_peers: &mut self.recently_mentioned_peers,
+                            link_status_updates: &mut self.link_status_updates,
+                            ack_link_status_updates: &mut self.ack_link_status_updates,
                         };
                         rs = rs.recv(
                             &mut buf[..n],
@@ -816,12 +892,32 @@ impl<Time: RouterTime> Endpoints<Time> {
         Ok(())
     }
 
+    /// Ensure that a client peer id exists for a given `node_id`
+    /// If the client peer needs to be created, `link_id_hint` will be used as an interim hint
+    /// as to the best route *to* this node, until a full routing update can be performed.
+    fn ensure_client_peer_id(
+        &mut self,
+        node_id: NodeId,
+        link_id_hint: Option<LinkId>,
+    ) -> Result<(), Error> {
+        self.client_peer_id(node_id, link_id_hint).map(|_| ())
+    }
+
     /// Map a node id to the client peer id. Since we can always create a client peer, this will
     /// attempt to initiate a connection if there is no current connection.
-    fn client_peer_id(&mut self, node_id: NodeId) -> Result<PeerId, Error> {
+    /// If the client peer needs to be created, `link_id_hint` will be used as an interim hint
+    /// as to the best route *to* this node, until a full routing update can be performed.
+    fn client_peer_id(
+        &mut self,
+        node_id: NodeId,
+        link_id_hint: Option<LinkId>,
+    ) -> Result<PeerId, Error> {
         if let Some(peer_id) = self.node_to_client_peer.get(&node_id) {
+            trace!("Existing client: {:?}", node_id);
             return Ok(*peer_id);
         }
+
+        trace!("New client: {:?}", node_id);
 
         let mut config = self.client_config()?;
         let scid: Vec<u8> = rand::thread_rng()
@@ -833,7 +929,7 @@ impl<Time: RouterTime> Endpoints<Time> {
         let connection_stream_id = self.streams.insert(Stream {
             peer_id: PeerId::invalid(),
             id: 0,
-            read_state: ReadState::new_bound(StreamType::Peer),
+            read_state: ReadState::new_bound(StreamType::PeerClientEnd),
         });
         let mut streams = BTreeMap::new();
         streams.insert(0, connection_stream_id);
@@ -841,7 +937,7 @@ impl<Time: RouterTime> Endpoints<Time> {
             conn,
             next_stream: 1,
             node_id,
-            current_link: None,
+            current_link: link_id_hint,
             is_client: true,
             pending_reads: false,
             pending_writes: true,
@@ -851,6 +947,7 @@ impl<Time: RouterTime> Endpoints<Time> {
             forward: Vec::new(),
             streams,
             connection_stream_id,
+            link_status_update_state: Some(PeerLinkStatusUpdateState::Sent),
         });
         self.streams.get_mut(connection_stream_id).unwrap().peer_id = peer_id;
         self.node_to_client_peer.insert(node_id, peer_id);
@@ -866,30 +963,29 @@ impl<Time: RouterTime> Endpoints<Time> {
     /// Update timers.
     fn update_time(&mut self, tm: Time) {
         self.now = tm;
-        while let Some(PeerTimeout(when, peer_id, timeout_generation)) = self.queued_timeouts.peek()
-        {
-            if tm < *when {
+        while let Some(Timeout(when, peer_id, timeout_generation)) = self.queued_timeouts.pop() {
+            if tm < when {
+                self.queued_timeouts.push(Timeout(when, peer_id, timeout_generation));
                 break;
             }
-            if let Some(peer) = self.peers.get_mut(*peer_id) {
-                if peer.timeout_generation != *timeout_generation {
-                    self.queued_timeouts.pop();
+            if let Some(peer) = self.peers.get_mut(peer_id) {
+                if peer.timeout_generation != timeout_generation {
                     continue;
                 }
                 trace!(
-                    "{:?} expire timeout {:?} gen={}",
+                    "{:?} expire peer timeout {:?} gen={}",
                     self.node_id,
                     peer_id,
-                    peer.timeout_generation
+                    timeout_generation
                 );
                 peer.conn.on_timeout();
                 if !peer.check_timeout {
                     peer.check_timeout = true;
-                    self.check_timeouts.push(*peer_id);
+                    self.check_timeouts.push(peer_id);
                 }
                 if !peer.pending_writes {
                     peer.pending_writes = true;
-                    self.write_peers.push(*peer_id);
+                    self.write_peers.push(peer_id);
                 }
                 if peer.establishing && peer.conn.is_established() {
                     peer.establishing = false;
@@ -898,7 +994,6 @@ impl<Time: RouterTime> Endpoints<Time> {
                     }
                 }
             }
-            self.queued_timeouts.pop();
         }
     }
 
@@ -918,24 +1013,11 @@ impl<Time: RouterTime> Endpoints<Time> {
                         duration,
                         peer.timeout_generation
                     );
-                    self.queued_timeouts.push(PeerTimeout(when, peer_id, peer.timeout_generation));
+                    self.queued_timeouts.push(Timeout(when, peer_id, peer.timeout_generation));
                 }
             }
         }
-        self.queued_timeouts.peek().map(|PeerTimeout(when, _, _)| *when)
-    }
-
-    /// Write out any sends that have been queued by us (avoids some borrow checker problems).
-    fn flush_internal_sends(&mut self) {
-        while let Some(stream_id) = self.newly_established_clients.pop() {
-            if let Err(e) = self.queue_send_raw_datagram(
-                stream_id,
-                Some(&mut self.node_desc_packet.clone()),
-                false,
-            ) {
-                warn!("Failed to send initial update to {:?}: {:?}", stream_id, e);
-            }
-        }
+        self.queued_timeouts.peek().map(|Timeout(when, _, _)| *when)
     }
 }
 
@@ -945,12 +1027,16 @@ const MAX_RECV_LEN: usize = 1500;
 /// Helper to receive one message.
 /// Borrows of all relevant data structures from Endpoints (but only them).
 struct RecvMessageContext<'a, Got> {
+    node_id: NodeId,
     got: &'a mut Got,
     peer_id: PeerId,
     peer: &'a mut Peer,
     stream_index: u64,
     stream_id: StreamId,
     streams: &'a mut SaltSlab<Stream>,
+    recently_mentioned_peers: &'a mut Vec<(NodeId, Option<LinkId>)>,
+    link_status_updates: &'a mut BinaryHeap<StreamId>,
+    ack_link_status_updates: &'a mut BinaryHeap<StreamId>,
 }
 
 impl<'a, Got> RecvMessageContext<'a, Got>
@@ -961,15 +1047,18 @@ where
     /// message==None => end of stream.
     fn recv(&mut self, stream_type: StreamType, message: Option<&mut [u8]>) -> Result<(), Error> {
         trace!(
-            "Peer {:?} stream {:?} index {} gets {:?}",
+            "{:?} Peer {:?} {:?} stream {:?} index {} gets {:?}",
+            self.node_id,
             self.peer_id,
+            self.peer.node_id,
             self.stream_id,
             self.stream_index,
             message
         );
 
         match (stream_type, message) {
-            (StreamType::Peer, None) => unimplemented!(),
+            (StreamType::PeerClientEnd, None) => bail!("Peer control stream closed on client"),
+            (StreamType::PeerServerEnd, None) => bail!("Peer control stream closed on server"),
             (_, None) => {
                 self.got.close(self.stream_id);
                 Ok(())
@@ -993,8 +1082,10 @@ where
                 }
                 self.got.channel_recv(self.stream_id, &mut msg.bytes, &mut handles)
             }
-            (StreamType::Peer, Some(bytes)) => {
-                match decode_fidl::<PeerMessage>(bytes).context("Decoding PeerMessage")? {
+            (StreamType::PeerServerEnd, Some(bytes)) => {
+                let msg = decode_fidl::<PeerMessage>(bytes).context("Decoding PeerMessage")?;
+                trace!("{:?} Got peer message: {:?}", self.node_id, msg);
+                match msg {
                     PeerMessage::ConnectToService(ConnectToService {
                         service_name: service,
                         stream_id: new_stream_index,
@@ -1017,24 +1108,48 @@ where
                         );
                         Ok(())
                     }
-                    PeerMessage::UpdateLinkStatus(LinkStatus {
-                        from,
-                        to,
-                        local_id,
-                        version,
-                        metrics,
-                    }) => {
-                        self.got.update_link(
-                            from.id.into(),
-                            to.id.into(),
-                            local_id.into(),
-                            version.into(),
-                            LinkDescription {
-                                round_trip_time: std::time::Duration::from_micros(
-                                    metrics.rtt.unwrap_or(std::u64::MAX),
-                                ),
-                            },
-                        );
+                    PeerMessage::UpdateLinkStatus(UpdateLinkStatus { link_status }) => {
+                        self.ack_link_status_updates.push(self.stream_id);
+                        for LinkStatus { to, local_id, metrics, .. } in link_status {
+                            let to: NodeId = to.id.into();
+                            self.recently_mentioned_peers.push((to, self.peer.current_link));
+                            self.got.update_link(
+                                self.peer.node_id,
+                                to,
+                                local_id.into(),
+                                LinkDescription {
+                                    round_trip_time: std::time::Duration::from_micros(
+                                        metrics.round_trip_time.unwrap_or(std::u64::MAX),
+                                    ),
+                                },
+                            );
+                        }
+                        Ok(())
+                    }
+                    x => {
+                        bail!("Unknown variant: {:?}", x);
+                    }
+                }
+            }
+            (StreamType::PeerClientEnd, Some(bytes)) => {
+                let msg = decode_fidl::<PeerReply>(bytes).context("Decoding PeerReply")?;
+                trace!("{:?} Got peer reply: {:?}", self.node_id, msg);
+                match msg {
+                    PeerReply::UpdateLinkStatusAck { .. } => {
+                        let new_status = match self.peer.link_status_update_state {
+                            Some(PeerLinkStatusUpdateState::Unscheduled) => {
+                                bail!("Unexpected unscheduled status")
+                            }
+                            Some(PeerLinkStatusUpdateState::Sent) => {
+                                Some(PeerLinkStatusUpdateState::Unscheduled)
+                            }
+                            Some(PeerLinkStatusUpdateState::SentOutdated) => {
+                                self.link_status_updates.push(self.stream_id);
+                                Some(PeerLinkStatusUpdateState::Sent)
+                            }
+                            None => unreachable!(),
+                        };
+                        self.peer.link_status_update_state = new_status;
                         Ok(())
                     }
                     x => {
@@ -1077,12 +1192,16 @@ where
             .take();
         trace!("Bind stream stream_index={} read_state={:?}", stream_index, rs);
         let mut recv_message_context = RecvMessageContext {
+            node_id: self.node_id,
             got: self.got,
             peer_id: self.peer_id,
             peer: self.peer,
             stream_id: bind_stream_id,
             stream_index,
             streams: self.streams,
+            recently_mentioned_peers: self.recently_mentioned_peers,
+            link_status_updates: self.link_status_updates,
+            ack_link_status_updates: self.ack_link_status_updates,
         };
         rs = rs.bind(stream_type, |stream_type: StreamType, message: Option<&mut [u8]>| {
             recv_message_context.recv(stream_type, message)
@@ -1095,11 +1214,213 @@ where
     }
 }
 
-/// Router maintains global state for one node_id.
-pub struct Router<LinkData, Time: RouterTime> {
+struct Links<LinkData: Copy + Debug, Time: RouterTime> {
+    /// Node id of the router
     node_id: NodeId,
+    /// All known links
     links: SaltSlab<Link<LinkData>>,
+    /// Queues of things that need to happen to links
+    queues: LinkQueues<Time>,
+}
+
+struct LinkQueues<Time: RouterTime> {
+    /// Links that need pings
+    ping_links: BinaryHeap<LinkId>,
+    /// Links that need pongs
+    pong_links: BinaryHeap<LinkId>,
+    /// Timeouts that are pending
+    queued_timeouts: BinaryHeap<Timeout<Time, LinkId>>,
+    /// Are there link updates to send out?
+    send_link_updates: bool,
+    /// Which links were updated locally?
+    link_updates: BTreeSet<LinkId>,
+}
+
+impl<Time: RouterTime> LinkQueues<Time> {
+    /// Handle a PingTrackerResult
+    fn handle_ping_tracker_result<LinkData: Copy + Debug>(
+        &mut self,
+        link_id: LinkId,
+        link: &mut Link<LinkData>,
+        ptres: PingTrackerResult,
+    ) {
+        trace!("HANDLE_PTRES: link_id:{:?} ptres:{:?}", link_id, ptres);
+        if ptres.sched_send {
+            self.ping_links.push(link_id);
+        }
+        if let Some(dt) = ptres.sched_timeout {
+            link.timeout_generation += 1;
+            self.queued_timeouts.push(Timeout(
+                Time::after(Time::now(), dt.into()),
+                link_id,
+                link.timeout_generation,
+            ));
+        }
+        if ptres.new_round_trip_time {
+            self.link_updates.insert(link_id);
+            self.send_link_updates = true;
+        }
+    }
+}
+
+impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
+    fn recv_packet<'a>(
+        &mut self,
+        link_id: LinkId,
+        packet: &'a mut [u8],
+    ) -> Result<(RoutingLabel, &'a mut [u8]), Error> {
+        let link = self.links.get_mut(link_id).ok_or_else(|| format_err!("Link not found"))?;
+        trace!(
+            "Decode routing label from id={:?}[peer={:?}, id={:?}, up={:?}]",
+            link_id,
+            link.peer,
+            link.id,
+            link.link_data
+        );
+        let (routing_label, packet_length) = RoutingLabel::decode(link.peer, self.node_id, packet)?;
+        trace!(
+            "{:?} routing_label={:?} packet_length={} src_len={}",
+            self.node_id,
+            routing_label,
+            packet_length,
+            packet.len()
+        );
+        let packet = &mut packet[..packet_length];
+
+        if let Some(ping) = routing_label.ping {
+            if link.pong_tracker.got_ping(ping) {
+                self.queues.pong_links.push(link_id);
+            }
+        }
+
+        if let Some(pong) = routing_label.pong {
+            let r = link.ping_tracker.got_pong(Instant::now(), pong);
+            self.queues.handle_ping_tracker_result(link_id, link, r);
+        }
+
+        Ok((routing_label, packet))
+    }
+
+    /// Flush outstanding packets to links, via `send_to`
+    fn flush_sends<SendTo>(&mut self, mut send_to: SendTo, buf: &mut [u8])
+    where
+        SendTo: FnMut(&LinkData, &mut [u8]) -> Result<(), Error>,
+    {
+        while let Some(link_id) = self.queues.pong_links.pop() {
+            if let Err(e) = self.pong_link(&mut send_to, link_id, buf) {
+                warn!("Pong link failed: {:?}", e);
+            }
+        }
+
+        while let Some(link_id) = self.queues.ping_links.pop() {
+            if let Err(e) = self.ping_link(&mut send_to, link_id, buf) {
+                warn!("Ping link failed: {:?}", e);
+            }
+        }
+    }
+
+    /// Flush pongs that haven't yet been sent by flush_sends_to_peer
+    fn pong_link<SendTo>(
+        &mut self,
+        send_to: &mut SendTo,
+        link_id: LinkId,
+        buf: &mut [u8],
+    ) -> Result<(), Error>
+    where
+        SendTo: FnMut(&LinkData, &mut [u8]) -> Result<(), Error>,
+    {
+        let link = self
+            .links
+            .get_mut(link_id)
+            .ok_or_else(|| format_err!("Link {:?} expired before pong", link_id))?;
+        let src = self.node_id;
+        let dst = link.peer;
+        if let Some(id) = link.pong_tracker.maybe_send_pong() {
+            let (ping, r) = link.ping_tracker.maybe_send_ping(Instant::now(), false);
+            self.queues.handle_ping_tracker_result(link_id, link, r);
+            let len = RoutingLabel {
+                src,
+                dst,
+                ping,
+                pong: Some(id),
+                to_client: false,
+                debug_token: crate::labels::new_debug_token(),
+            }
+            .encode_for_link(src, dst, &mut buf[..])?;
+            send_to(&link.link_data, &mut buf[..len])?;
+        }
+        Ok(())
+    }
+
+    /// Flush pings that haven't yet been sent by flush_sends_to_peer NOR ping_link
+    fn ping_link<SendTo>(
+        &mut self,
+        send_to: &mut SendTo,
+        link_id: LinkId,
+        buf: &mut [u8],
+    ) -> Result<(), Error>
+    where
+        SendTo: FnMut(&LinkData, &mut [u8]) -> Result<(), Error>,
+    {
+        let link = self
+            .links
+            .get_mut(link_id)
+            .ok_or_else(|| format_err!("Link {:?} expired before pong", link_id))?;
+        let src = self.node_id;
+        let dst = link.peer;
+        let (ping, r) = link.ping_tracker.maybe_send_ping(Instant::now(), true);
+        self.queues.handle_ping_tracker_result(link_id, link, r);
+        if ping.is_some() {
+            let len = RoutingLabel {
+                src,
+                dst,
+                ping,
+                pong: link.pong_tracker.maybe_send_pong(),
+                to_client: false,
+                debug_token: crate::labels::new_debug_token(),
+            }
+            .encode_for_link(src, dst, &mut buf[..])?;
+            send_to(&link.link_data, &mut buf[..len])?;
+        }
+        Ok(())
+    }
+
+    /// Update timers.
+    fn update_time(&mut self, tm: Time) {
+        while let Some(Timeout(when, link_id, timeout_generation)) =
+            self.queues.queued_timeouts.pop()
+        {
+            if tm < when {
+                self.queues.queued_timeouts.push(Timeout(when, link_id, timeout_generation));
+                break;
+            }
+            if let Some(link) = self.links.get_mut(link_id) {
+                if link.timeout_generation != timeout_generation {
+                    continue;
+                }
+                trace!(
+                    "{:?} expire link timeout {:?} gen={}",
+                    self.node_id,
+                    link_id,
+                    timeout_generation
+                );
+                let r = link.ping_tracker.on_timeout(Instant::now());
+                self.queues.handle_ping_tracker_result(link_id, link, r);
+            }
+        }
+    }
+}
+
+/// Router maintains global state for one node_id.
+pub struct Router<LinkData: Copy + Debug, Time: RouterTime> {
+    /// Our node id
+    node_id: NodeId,
+    /// Endpoint data-structure
     endpoints: Endpoints<Time>,
+    /// Links data-structure
+    links: Links<LinkData, Time>,
+    /// Ack link status frame
+    ack_link_status_frame: Vec<u8>,
 }
 
 fn make_desc_packet(services: Vec<String>) -> Result<Vec<u8>, Error> {
@@ -1114,10 +1435,22 @@ fn make_desc_packet(services: Vec<String>) -> Result<Vec<u8>, Error> {
     )
 }
 
-impl<LinkData, Time: RouterTime> Router<LinkData, Time> {
+/// Generate a new random node id
+pub fn generate_node_id() -> NodeId {
+    rand::thread_rng().gen::<u64>().into()
+}
+
+impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
     /// New with some set of options
     pub fn new_with_options(options: RouterOptions) -> Self {
-        let node_id = options.node_id.unwrap_or_else(|| rand::thread_rng().gen::<u64>().into());
+        let node_id = options.node_id.unwrap_or_else(generate_node_id);
+        let mut ack_link_status_frame = Vec::new();
+        fidl::encoding::Encoder::encode(
+            &mut ack_link_status_frame,
+            &mut Vec::new(),
+            &mut PeerReply::UpdateLinkStatusAck(fidl_fuchsia_overnet_protocol::Empty {}),
+        )
+        .unwrap();
         Router {
             node_id,
             endpoints: Endpoints {
@@ -1131,12 +1464,26 @@ impl<LinkData, Time: RouterTime> Router<LinkData, Time> {
                 check_timeouts: BinaryHeap::new(),
                 queued_timeouts: BinaryHeap::new(),
                 newly_established_clients: BinaryHeap::new(),
+                recently_mentioned_peers: Vec::new(),
                 node_desc_packet: make_desc_packet(vec![]).unwrap(),
                 now: Time::now(),
                 server_cert_file: options.quic_server_cert_file,
                 server_key_file: options.quic_server_key_file,
+                link_status_updates: BinaryHeap::new(),
+                ack_link_status_updates: BinaryHeap::new(),
             },
-            links: SaltSlab::new(),
+            links: Links {
+                node_id,
+                links: SaltSlab::new(),
+                queues: LinkQueues {
+                    ping_links: BinaryHeap::new(),
+                    pong_links: BinaryHeap::new(),
+                    queued_timeouts: BinaryHeap::new(),
+                    send_link_updates: false,
+                    link_updates: BTreeSet::new(),
+                },
+            },
+            ack_link_status_frame,
         }
     }
 
@@ -1145,23 +1492,64 @@ impl<LinkData, Time: RouterTime> Router<LinkData, Time> {
         Self::new_with_options(RouterOptions::new())
     }
 
+    /// Return the key for the SaltSlab representing streams
+    pub fn streams_key(&self) -> u32 {
+        self.endpoints.streams.key()
+    }
+
     /// Create a new link to some node, returning a `LinkId` describing it.
-    pub fn new_link(&mut self, peer: NodeId, link_data: LinkData) -> Result<LinkId, Error> {
-        let client_peer = self.endpoints.client_peer_id(peer)?;
+    pub fn new_link(
+        &mut self,
+        peer: NodeId,
+        node_link_id: NodeLinkId,
+        link_data: LinkData,
+    ) -> Result<LinkId, Error> {
+        let (ping_tracker, ptres) = PingTracker::new();
+        let link_id = self.links.links.insert(Link {
+            peer,
+            id: node_link_id,
+            link_data,
+            ping_tracker,
+            pong_tracker: PongTracker::new(),
+            timeout_generation: 1,
+        });
+        trace!(
+            "new_link: id={:?} peer={:?} node_link_id={:?} link_data={:?}",
+            link_id,
+            peer,
+            node_link_id,
+            link_data
+        );
+        let client_peer = self.endpoints.client_peer_id(peer, Some(link_id))?;
         let server_peer = self.endpoints.server_peer_id(peer);
-        let link_id = self.links.insert(Link { peer, client_peer, server_peer, link_data });
+        self.links.queues.handle_ping_tracker_result(
+            link_id,
+            self.links.links.get_mut(link_id).unwrap(),
+            ptres,
+        );
         if let Some(peer) = self.endpoints.peers.get_mut(client_peer) {
             if peer.current_link.is_none() {
                 peer.current_link = Some(link_id);
+                if !peer.pending_writes {
+                    trace!("{:?} Mark writable: {:?}", self.node_id, client_peer);
+                    peer.pending_writes = true;
+                    self.endpoints.write_peers.push(client_peer);
+                }
             }
         }
         if let Some(server_peer) = server_peer {
             if let Some(peer) = self.endpoints.peers.get_mut(server_peer) {
                 if peer.current_link.is_none() {
                     peer.current_link = Some(link_id);
+                    if !peer.pending_writes {
+                        trace!("{:?} Mark writable: {:?}", self.node_id, server_peer);
+                        peer.pending_writes = true;
+                        self.endpoints.write_peers.push(server_peer);
+                    }
                 }
             }
         }
+        trace!("LINK TABLE: {:?}", self.links.links);
         Ok(link_id)
     }
 
@@ -1172,7 +1560,7 @@ impl<LinkData, Time: RouterTime> Router<LinkData, Time> {
 
     /// Drop a link that is no longer needed.
     pub fn drop_link(&mut self, link_id: LinkId) {
-        self.links.remove(link_id);
+        self.links.links.remove(link_id);
     }
 
     /// Create a new stream to advertised service `service` on remote node id `node`.
@@ -1221,11 +1609,11 @@ impl<LinkData, Time: RouterTime> Router<LinkData, Time> {
             return Ok(());
         }
 
-        if let Some(link) = self.links.get_mut(link_id) {
-            self.endpoints.queue_recv(link_id, link, packet)
-        } else {
-            bail!("No link {:?}", link_id)
+        let (routing_label, packet) = self.links.recv_packet(link_id, packet)?;
+        if packet.len() > 0 {
+            self.endpoints.queue_recv(link_id, routing_label, packet)?;
         }
+        Ok(())
     }
 
     /// Flush outstanding packets destined to one peer to links, via `send_to`
@@ -1247,10 +1635,15 @@ impl<LinkData, Time: RouterTime> Router<LinkData, Time> {
             .ok_or_else(|| format_err!("Peer {:?} not found for sending", peer_id))?;
         assert!(peer.pending_writes);
         peer.pending_writes = false;
-        let current_link = peer
-            .current_link
-            .ok_or_else(|| format_err!("No current link for peer {:?}", peer_id))?;
-        let link = self.links.get(current_link).ok_or_else(|| {
+        let current_link = peer.current_link.ok_or_else(|| {
+            format_err!(
+                "No current link for peer {:?}; node={:?} client={}",
+                peer_id,
+                peer.node_id,
+                peer.is_client
+            )
+        })?;
+        let link = self.links.links.get_mut(current_link).ok_or_else(|| {
             format_err!("Current link {:?} for peer {:?} not found", current_link, peer_id)
         })?;
         let peer_node_id = peer.node_id;
@@ -1260,26 +1653,23 @@ impl<LinkData, Time: RouterTime> Router<LinkData, Time> {
         for forward in peer.forward.drain(..) {
             let mut packet = forward.1;
             forward.0.encode_for_link(src_node_id, link_dst_id, &mut packet)?;
-            if let Err(e) = send_to(&link.link_data, packet.as_mut_slice()) {
-                warn!("Error sending: {:?}", e);
-            }
+            send_to(&link.link_data, packet.as_mut_slice())?;
         }
         loop {
             match peer.conn.send(&mut buf[..buf_len - MAX_ROUTING_LABEL_LENGTH]) {
                 Ok(n) => {
-                    let suffix_len = RoutingLabel {
+                    let (ping, r) = link.ping_tracker.maybe_send_ping(Instant::now(), false);
+                    self.links.queues.handle_ping_tracker_result(current_link, link, r);
+                    let rl = RoutingLabel {
                         src: src_node_id,
                         dst: peer_node_id,
+                        ping,
+                        pong: link.pong_tracker.maybe_send_pong(),
                         to_client: !is_peer_client,
-                    }
-                    .encode_for_link(
-                        src_node_id,
-                        link_dst_id,
-                        &mut buf[n..],
-                    )?;
-                    if let Err(e) = send_to(&link.link_data, &mut buf[..n + suffix_len]) {
-                        warn!("Error sending: {:?}", e);
-                    }
+                        debug_token: crate::labels::new_debug_token(),
+                    };
+                    trace!("outgoing routing label {:?}", rl);
+                    let suffix_len = rl.encode_for_link(src_node_id, link_dst_id, &mut buf[n..])?;
                     if !peer.check_timeout {
                         peer.check_timeout = true;
                         self.endpoints.check_timeouts.push(peer_id);
@@ -1292,6 +1682,14 @@ impl<LinkData, Time: RouterTime> Router<LinkData, Time> {
                                 .push(peer.connection_stream_id);
                         }
                     }
+                    trace!(
+                        "send on link: {:?}[peer={:?}, id={:?}, up={:?}]",
+                        current_link,
+                        link.peer,
+                        link.id,
+                        link.link_data
+                    );
+                    send_to(&link.link_data, &mut buf[..n + suffix_len])?;
                 }
                 Err(quiche::Error::Done) => {
                     if peer.establishing && peer.conn.is_established() {
@@ -1315,7 +1713,7 @@ impl<LinkData, Time: RouterTime> Router<LinkData, Time> {
     where
         SendTo: FnMut(&LinkData, &mut [u8]) -> Result<(), Error>,
     {
-        self.endpoints.flush_internal_sends();
+        self.flush_internal_sends();
 
         const MAX_LEN: usize = 1500;
         let mut buf = [0_u8; MAX_LEN];
@@ -1323,7 +1721,88 @@ impl<LinkData, Time: RouterTime> Router<LinkData, Time> {
         while let Some(peer_id) = self.endpoints.write_peers.pop() {
             if let Err(e) = self.flush_sends_to_peer(&mut send_to, peer_id, &mut buf) {
                 warn!("Send to peer failed: {:?}", e);
+                if let Some(peer) = self.endpoints.peers.get_mut(peer_id) {
+                    if let Some(link_id) = peer.current_link.take() {
+                        self.drop_link(link_id);
+                    }
+                }
             }
+        }
+
+        self.links.flush_sends(&mut send_to, &mut buf);
+    }
+
+    /// Write out any sends that have been queued by us (avoids some borrow checker problems).
+    fn flush_internal_sends(&mut self) {
+        while let Some((peer, link_id_hint)) = self.endpoints.recently_mentioned_peers.pop() {
+            if let Err(e) = self.endpoints.ensure_client_peer_id(peer, link_id_hint) {
+                warn!("Failed ensuring recently seen peer id has a client endpoint: {}", e);
+            }
+        }
+
+        if self.links.queues.send_link_updates {
+            self.links.queues.send_link_updates = false;
+            for (peer_id, peer) in self.endpoints.peers.iter_mut() {
+                let new_status = match peer.link_status_update_state {
+                    Some(PeerLinkStatusUpdateState::Unscheduled) => {
+                        self.endpoints.link_status_updates.push(peer_id);
+                        Some(PeerLinkStatusUpdateState::Sent)
+                    }
+                    Some(PeerLinkStatusUpdateState::Sent) => {
+                        Some(PeerLinkStatusUpdateState::SentOutdated)
+                    }
+                    Some(PeerLinkStatusUpdateState::SentOutdated) => {
+                        Some(PeerLinkStatusUpdateState::SentOutdated)
+                    }
+                    None => None,
+                };
+                peer.link_status_update_state = new_status;
+            }
+        }
+
+        while let Some(stream_id) = self.endpoints.newly_established_clients.pop() {
+            if let Err(e) = self.queue_send_raw_datagram(
+                stream_id,
+                Some(&mut self.endpoints.node_desc_packet.clone()),
+                false,
+            ) {
+                warn!("Failed to send initial update to {:?}: {:?}", stream_id, e);
+            }
+            self.endpoints.link_status_updates.push(stream_id);
+        }
+
+        while let Some(stream_id) = self.endpoints.ack_link_status_updates.pop() {
+            if let Err(e) = self.queue_send_raw_datagram(
+                stream_id,
+                Some(&mut self.ack_link_status_frame.clone()),
+                false,
+            ) {
+                warn!("Failed to ack link state update from {:?}: {:?}", stream_id, e);
+            }
+        }
+
+        if !self.endpoints.link_status_updates.is_empty() {
+            let mut status = PeerMessage::UpdateLinkStatus(UpdateLinkStatus {
+                link_status: self
+                    .links
+                    .links
+                    .iter()
+                    .filter_map(|(_, link)| link.make_status())
+                    .collect(),
+            });
+            fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+                if let Err(e) = fidl::encoding::Encoder::encode(bytes, handles, &mut status) {
+                    warn!("{}", e);
+                    return;
+                }
+                while let Some(stream_id) = self.endpoints.link_status_updates.pop() {
+                    if let Err(e) =
+                        self.queue_send_raw_datagram(stream_id, Some(&mut bytes.clone()), false)
+                    {
+                        warn!("Failed to send link status update to {:?}: {:?}", stream_id, e);
+                    }
+                }
+            });
         }
     }
 
@@ -1333,10 +1812,20 @@ impl<LinkData, Time: RouterTime> Router<LinkData, Time> {
         Got: MessageReceiver,
     {
         self.endpoints.flush_recvs(got);
+
+        // Will be drained in flush_internal_sends
+        for link_id in self.links.queues.link_updates.iter() {
+            if let Some(link) = self.links.links.get(*link_id) {
+                if let Some(desc) = link.make_desc() {
+                    got.update_link(self.node_id, link.peer, link.id, desc);
+                }
+            }
+        }
     }
 
     /// Update timers.
     pub fn update_time(&mut self, tm: Time) {
+        self.links.update_time(tm);
         self.endpoints.update_time(tm)
     }
 
@@ -1353,8 +1842,8 @@ mod tests {
 
     const TEST_TIMEOUT_MS: u32 = 60_000;
 
-    const LOG_LEVEL: log::Level = log::Level::Trace;
-    const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Trace;
+    const LOG_LEVEL: log::Level = log::Level::Info;
+    const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
 
     struct Logger;
 
@@ -1428,21 +1917,37 @@ mod tests {
         link2: LinkId,
     }
 
+    #[cfg(not(target_os = "fuchsia"))]
+    fn temp_file_containing(bytes: &[u8]) -> Box<dyn AsRef<std::path::Path>> {
+        let mut path = tempfile::NamedTempFile::new().unwrap();
+        use std::io::Write;
+        path.write_all(bytes).unwrap();
+        Box::new(path)
+    }
+
     impl TwoNode {
         fn options() -> RouterOptions {
             let options = RouterOptions::new();
             #[cfg(target_os = "fuchsia")]
             let options = options
-                .set_quic_server_cert_file("/pkg/data/cert.crt")
-                .set_quic_server_key_file("/pkg/data/cert.key");
+                .set_quic_server_cert_file(Box::new("/pkg/data/cert.crt".to_string()))
+                .set_quic_server_key_file(Box::new("/pkg/data/cert.key".to_string()));
+            #[cfg(not(target_os = "fuchsia"))]
+            let options = options
+                .set_quic_server_cert_file(temp_file_containing(include_bytes!(
+                    "../../../../../../third_party/rust-mirrors/quiche/examples/cert.crt"
+                )))
+                .set_quic_server_key_file(temp_file_containing(include_bytes!(
+                    "../../../../../../third_party/rust-mirrors/quiche/examples/cert.key"
+                )));
             options
         }
 
         fn new() -> Self {
             let mut router1 = Router::new_with_options(TwoNode::options());
             let mut router2 = Router::new_with_options(TwoNode::options());
-            let link1 = router1.new_link(router2.node_id, 1).unwrap();
-            let link2 = router2.new_link(router1.node_id, 2).unwrap();
+            let link1 = router1.new_link(router2.node_id, 123.into(), 1).unwrap();
+            let link2 = router2.new_link(router1.node_id, 456.into(), 2).unwrap();
             router1.adjust_route(router2.node_id, link1).unwrap();
             router2.adjust_route(router1.node_id, link2).unwrap();
 
@@ -1493,10 +1998,8 @@ mod tests {
                     _from: NodeId,
                     _to: NodeId,
                     _link_id: NodeLinkId,
-                    _version: VersionCounter,
                     _desc: LinkDescription,
                 ) {
-                    unimplemented!();
                 }
                 fn close(&mut self, stream_id: StreamId) {
                     (self.1)(IncomingMessage::Close(self.0, stream_id)).unwrap();
@@ -1682,5 +2185,4 @@ mod tests {
             TEST_TIMEOUT_MS,
         );
     }
-
 }

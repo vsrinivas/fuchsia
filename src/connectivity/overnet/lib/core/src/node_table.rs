@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::labels::{NodeId, NodeLinkId, VersionCounter, TOMBSTONE_VERSION};
+use crate::labels::{NodeId, NodeLinkId};
 use failure::Error;
-use std::collections::{btree_map, BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BinaryHeap};
 use std::time::Duration;
 
 /// Describes a node in the overnet mesh
@@ -28,7 +28,7 @@ struct Node {
 }
 
 /// During pathfinding, collects the shortest path so far to a node
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 struct NodeProgress {
     round_trip_time: Duration,
     outgoing_link: NodeLinkId,
@@ -42,11 +42,14 @@ pub struct LinkDescription {
 }
 
 /// Collects all information about one link on one node
+/// Links that are owned by NodeTable should remain owned (mutable references should not be given
+/// out)
 #[derive(Debug)]
-struct Link {
-    to: NodeId,
-    version: VersionCounter,
-    desc: LinkDescription,
+pub struct Link {
+    /// Destination node for this link
+    pub to: NodeId,
+    /// Description of this link
+    pub desc: LinkDescription,
 }
 
 /// Notification of a new version of the node table being available.
@@ -109,6 +112,22 @@ impl NodeTable {
         table
     }
 
+    /// Convert the node table to a string representing a directed graph for graphviz visualization
+    pub fn digraph_string(&self) -> String {
+        let mut s = "digraph G {\n".to_string();
+        s += &format!("  {} [shape=diamond];\n", self.root_node.0);
+        for (id, node) in self.nodes.iter() {
+            for (link_id, link) in node.links.iter() {
+                s += &format!(
+                    "  {} -> {} [label=\"[{}] rtt={:?}\"];\n",
+                    id.0, link.to.0, link_id.0, link.desc.round_trip_time
+                );
+            }
+        }
+        s += "}\n";
+        s
+    }
+
     /// Query for a new version (given the last version seen).
     /// Trigger on the next flush if `last_version` == the current version.
     pub fn post_query(&mut self, last_version: u64, cb: Box<dyn NodeStateCallback>) {
@@ -127,10 +146,13 @@ impl NodeTable {
 
     fn get_or_create_node_mut(&mut self, node_id: NodeId) -> &mut Node {
         let version_tracker = &mut self.version_tracker;
-        self.nodes.entry(node_id).or_insert_with(|| {
+        let mut was_new = false;
+        let node = self.nodes.entry(node_id).or_insert_with(|| {
             version_tracker.incr_version();
+            was_new = true;
             Node { links: BTreeMap::new(), desc: NodeDescription::default() }
-        })
+        });
+        node
     }
 
     /// Collates and returns all services available
@@ -143,10 +165,20 @@ impl NodeTable {
         self.nodes.get(&node_id).map(|node| node.desc.services.as_slice()).unwrap_or(&[])
     }
 
+    /// Returns all links from a single node
+    pub fn node_links(
+        &self,
+        node_id: NodeId,
+    ) -> Option<impl Iterator<Item = (&NodeLinkId, &Link)> + '_> {
+        self.nodes.get(&node_id).map(|node| node.links.iter())
+    }
+
     /// Update a single node
     pub fn update_node(&mut self, node_id: NodeId, desc: NodeDescription) {
-        self.get_or_create_node_mut(node_id).desc = desc;
+        let node = self.get_or_create_node_mut(node_id);
+        node.desc = desc;
         self.version_tracker.incr_version();
+        trace!("{}", self.digraph_string());
     }
 
     /// Mention that a node exists
@@ -154,58 +186,49 @@ impl NodeTable {
         self.get_or_create_node_mut(node_id);
     }
 
-    /// Update a single link on a node
+    /// Update a single link on a node.
     pub fn update_link(
         &mut self,
         from: NodeId,
         to: NodeId,
         link_id: NodeLinkId,
-        version: VersionCounter,
         desc: LinkDescription,
     ) {
-        if from == to {
-            return;
-        }
+        trace!("update_link: from:{:?} to:{:?} link_id:{:?} desc:{:?}", from, to, link_id, desc);
+        assert_ne!(from, to);
         self.get_or_create_node_mut(to);
-        let node = self.get_or_create_node_mut(from);
-        match node.links.entry(link_id) {
-            btree_map::Entry::Occupied(mut o) => {
-                let l = o.get_mut();
-                if l.version < version {
-                    l.version = version;
-                    l.desc = desc;
-                    l.to = to;
-                }
-            }
-            btree_map::Entry::Vacant(v) => {
-                if version != TOMBSTONE_VERSION {
-                    v.insert(Link { to, version, desc });
-                }
-            }
-        }
+        self.get_or_create_node_mut(from).links.insert(link_id, Link { to, desc });
+        trace!("{}", self.digraph_string());
     }
 
     /// Build a routing table for our node based on current link data
     pub fn build_routes(&self) -> impl Iterator<Item = (NodeId, NodeLinkId)> {
-        let mut todo = BTreeSet::new();
+        let mut todo = BinaryHeap::new();
 
-        let mut progress = BTreeMap::new();
+        let mut progress = BTreeMap::<NodeId, NodeProgress>::new();
         for (link_id, link) in self.nodes.get(&self.root_node).unwrap().links.iter() {
             if link.to == self.root_node {
                 continue;
             }
-            todo.insert(link.to);
-            progress.insert(
-                link.to,
-                NodeProgress {
-                    round_trip_time: link.desc.round_trip_time,
-                    outgoing_link: *link_id,
-                },
-            );
+            todo.push(link.to);
+            let new_progress = NodeProgress {
+                round_trip_time: link.desc.round_trip_time,
+                outgoing_link: *link_id,
+            };
+            progress
+                .entry(link.to)
+                .and_modify(|p| {
+                    if p.round_trip_time > new_progress.round_trip_time {
+                        *p = new_progress;
+                    }
+                })
+                .or_insert_with(|| new_progress);
         }
 
-        while let Some(from) = todo.iter().next().copied() {
-            todo.remove(&from);
+        trace!("BUILD START: progress={:?} todo={:?}", progress, todo);
+
+        while let Some(from) = todo.pop() {
+            trace!("STEP {:?}: progress={:?} todo={:?}", from, progress, todo);
             let progress_from = progress.get(&from).unwrap().clone();
             for (_, link) in self.nodes.get(&from).unwrap().links.iter() {
                 if link.to == self.root_node {
@@ -220,16 +243,17 @@ impl NodeTable {
                     .and_modify(|p| {
                         if p.round_trip_time > new_progress.round_trip_time {
                             *p = new_progress;
-                            todo.insert(link.to);
+                            todo.push(link.to);
                         }
                     })
                     .or_insert_with(|| {
-                        todo.insert(link.to);
+                        todo.push(link.to);
                         new_progress
                     });
             }
         }
 
+        trace!("DONE: progress={:?} todo={:?}", progress, todo);
         progress
             .into_iter()
             .map(|(node_id, NodeProgress { outgoing_link: link_id, .. })| (node_id, link_id))
@@ -240,7 +264,6 @@ impl NodeTable {
 mod test {
 
     use super::*;
-    use crate::labels::FIRST_VERSION;
 
     fn remove_item<T: Eq>(value: &T, from: &mut Vec<T>) -> bool {
         let len = from.len();
@@ -261,7 +284,6 @@ mod test {
                 (*from).into(),
                 (*to).into(),
                 (*link_id).into(),
-                FIRST_VERSION,
                 LinkDescription { round_trip_time: Duration::from_millis(*rtt) },
             );
         }
@@ -273,25 +295,25 @@ mod test {
         let mut result = true;
         for (node_id, link_id) in outcome {
             if !remove_item(&((*node_id).into(), (*link_id).into()), &mut got) {
-                println!("Expected outcome not found: {}#{}", node_id, link_id);
+                trace!("Expected outcome not found: {}#{}", node_id, link_id);
                 result = false;
             }
         }
         for (node_id, link_id) in got {
-            println!("Unexpected outcome: {}#{}", node_id.0, link_id.0);
+            trace!("Unexpected outcome: {}#{}", node_id.0, link_id.0);
             result = false;
         }
         result
     }
 
     fn builds_route_ok(links: &[(u64, u64, u64, u64)], outcome: &[(u64, u64)]) -> bool {
-        println!("TEST: {:?} --> {:?}", links, outcome);
+        trace!("TEST: {:?} --> {:?}", links, outcome);
         let node_table = construct_node_table_from_links(links);
         let built: Vec<(NodeId, NodeLinkId)> = node_table.build_routes().collect();
         let r = is_outcome(built.clone(), outcome);
         if !r {
-            println!("NODE_TABLE: {:?}", node_table.nodes);
-            println!("BUILT: {:?}", built);
+            trace!("NODE_TABLE: {:?}", node_table.nodes);
+            trace!("BUILT: {:?}", built);
         }
         r
     }
@@ -334,5 +356,4 @@ mod test {
         assert_eq!(node_table.node_services(2.into()), ["hello".to_string()]);
         assert_eq!(node_table.node_services(3.into()), Vec::<String>::new().as_slice());
     }
-
 }
