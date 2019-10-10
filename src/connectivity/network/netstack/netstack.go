@@ -85,10 +85,6 @@ type Netstack struct {
 	filter *filter.Filter
 
 	OnInterfacesChanged func([]netstack.NetInterface2)
-	stats               struct {
-		tcpip.Stats
-		SocketCount *bindingSetCounterStat
-	}
 }
 
 // Each ifState tracks the state of a network interface.

@@ -5,24 +5,85 @@
 package netstack
 
 import (
-	"encoding/binary"
 	"fmt"
 	"reflect"
+	"sort"
+	"strconv"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
 	"app/context"
+	"syslog"
 
 	inspect "fidl/fuchsia/inspect/deprecated"
 	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/header"
+	"github.com/google/netstack/tcpip/stack"
 )
 
-var _ inspect.Inspect = (*statCounterInspectImpl)(nil)
+// An infallible version of fuchsia.inspect.Inspect with FIDL details omitted.
+type inspectInner interface {
+	ReadData() inspect.Object
+	ListChildren() []string
+	GetChild(string) inspectInner
+}
 
-type statCounterInspectImpl struct {
-	svc  *inspect.InspectService
-	name string
-	reflect.Value
+// An adapter that implements fuchsia.inspect.Inspect using the above.
+
+var _ inspect.Inspect = (*inspectImpl)(nil)
+
+type inspectImpl struct {
+	inner inspectInner
+
+	service *inspect.InspectService
+}
+
+func (impl *inspectImpl) ReadData() (inspect.Object, error) {
+	return impl.inner.ReadData(), nil
+}
+
+func (impl *inspectImpl) ListChildren() ([]string, error) {
+	return impl.inner.ListChildren(), nil
+}
+
+func (impl *inspectImpl) OpenChild(childName string, childChannel inspect.InspectInterfaceRequest) (bool, error) {
+	if child := impl.inner.GetChild(childName); child != nil {
+		svc := (&inspectImpl{
+			inner:   child,
+			service: impl.service,
+		}).asService()
+		return true, svc.AddFn(svc.Stub, childChannel.Channel)
+	}
+	return false, nil
+}
+
+func (impl *inspectImpl) asService() *context.Service {
+	return &context.Service{
+		Stub: &inspect.InspectStub{Impl: impl},
+		AddFn: func(s fidl.Stub, c zx.Channel) error {
+			_, err := impl.service.BindingSet.Add(s, c, nil)
+			return err
+		},
+	}
+}
+
+// Inspect implementations are exposed as directories containing a node called "inspect".
+
+var _ context.Directory = (*inspectDirectory)(nil)
+
+type inspectDirectory struct {
+	asService func() *context.Service
+}
+
+func (dir *inspectDirectory) Get(name string) (context.Node, bool) {
+	if name == inspect.InspectName {
+		return dir.asService(), true
+	}
+	return nil, false
+}
+
+func (dir *inspectDirectory) ForEach(fn func(string, context.Node)) {
+	fn(inspect.InspectName, dir.asService())
 }
 
 // statCounter enables *tcpip.StatCounters and other types in this
@@ -33,163 +94,173 @@ type statCounter interface {
 
 var _ statCounter = (*tcpip.StatCounter)(nil)
 
-func (v *statCounterInspectImpl) ReadData() (inspect.Object, error) {
-	object := inspect.Object{
-		Name: v.name,
-	}
-	typ := v.Type()
-	for i := 0; i < v.NumField(); i++ {
-		switch field := typ.Field(i); field.Type.Kind() {
-		case reflect.Struct:
-			if field.Anonymous {
-				obj, err := (&statCounterInspectImpl{Value: v.Field(i)}).ReadData()
-				if err != nil {
-					return inspect.Object{}, err
-				}
-				object.Properties = append(object.Properties, obj.Properties...)
-				object.Metrics = append(object.Metrics, obj.Metrics...)
-			}
-		case reflect.Ptr:
-			var value inspect.MetricValue
-			value.SetUintValue(v.Field(i).Interface().(statCounter).Value())
-			object.Metrics = append(object.Metrics, inspect.Metric{
-				Key:   field.Name,
-				Value: value,
-			})
-		default:
-			panic(fmt.Sprintf("unexpected field %+v", field))
-		}
-	}
-	return object, nil
+// Recursive reflection-based implementation for structs containing only other
+// structs and stat counters.
+
+var _ inspectInner = (*statCounterInspectImpl)(nil)
+
+type statCounterInspectImpl struct {
+	name  string
+	value reflect.Value
 }
 
-func (v *statCounterInspectImpl) ListChildren() ([]string, error) {
-	var childNames []string
-	typ := v.Type()
-	for i := 0; i < v.NumField(); i++ {
-		switch field := typ.Field(i); field.Type.Kind() {
-		case reflect.Ptr:
-		case reflect.Struct:
-			if field.Anonymous {
-				names, err := (&statCounterInspectImpl{Value: v.Field(i)}).ListChildren()
-				if err != nil {
-					return nil, err
+func (impl *statCounterInspectImpl) ReadData() inspect.Object {
+	return inspect.Object{
+		Name:    impl.name,
+		Metrics: impl.asMetrics(),
+	}
+}
+
+func (impl *statCounterInspectImpl) asMetrics() []inspect.Metric {
+	var metrics []inspect.Metric
+	typ := impl.value.Type()
+	for i := 0; i < impl.value.NumField(); i++ {
+		// PkgPath is empty for exported field names.
+		if field := typ.Field(i); len(field.PkgPath) == 0 {
+			v := impl.value.Field(i)
+			switch t := v.Interface().(type) {
+			case statCounter:
+				metrics = append(metrics, inspect.Metric{
+					Key:   field.Name,
+					Value: inspect.MetricValueWithUintValue(t.Value()),
+				})
+			default:
+				if field.Anonymous && v.Kind() == reflect.Struct {
+					metrics = append(metrics, (&statCounterInspectImpl{value: v}).asMetrics()...)
 				}
-				childNames = append(childNames, names...)
+			}
+		}
+	}
+	return metrics
+}
+
+func (impl *statCounterInspectImpl) ListChildren() []string {
+	var children []string
+	typ := impl.value.Type()
+	for i := 0; i < impl.value.NumField(); i++ {
+		// PkgPath is empty for exported field names.
+		if field := typ.Field(i); len(field.PkgPath) == 0 && field.Type.Kind() == reflect.Struct {
+			v := impl.value.Field(i)
+			if field.Anonymous {
+				children = append(children, (&statCounterInspectImpl{value: v}).ListChildren()...)
 			} else {
-				childNames = append(childNames, field.Name)
+				children = append(children, field.Name)
 			}
-		default:
-			panic(fmt.Sprintf("unexpected field %+v", field))
 		}
 	}
-	return childNames, nil
+	return children
 }
 
-func (v *statCounterInspectImpl) OpenChild(childName string, childChannel inspect.InspectInterfaceRequest) (bool, error) {
-	if v.Kind() != reflect.Struct {
-		return false, nil
+func (impl *statCounterInspectImpl) GetChild(childName string) inspectInner {
+	if typ, ok := impl.value.Type().FieldByName(childName); ok {
+		if len(typ.PkgPath) == 0 && typ.Type.Kind() == reflect.Struct {
+			// PkgPath is empty for exported field names.
+			if child := impl.value.FieldByName(childName); child.IsValid() {
+				return &statCounterInspectImpl{
+					name:  childName,
+					value: child,
+				}
+			}
+		}
 	}
-	svc := v.svc
-	if v := v.FieldByName(childName); v.IsValid() {
-		svc := (&statCounterInspectImpl{
-			svc:   svc,
+	return nil
+}
+
+var _ inspectInner = (*nicInfoMapInspectImpl)(nil)
+
+type nicInfoMapInspectImpl struct {
+	value map[tcpip.NICID]stack.NICInfo
+}
+
+func (impl *nicInfoMapInspectImpl) ReadData() inspect.Object {
+	return inspect.Object{
+		Name: "NICs",
+	}
+}
+
+func (impl *nicInfoMapInspectImpl) ListChildren() []string {
+	var children []string
+	for key := range impl.value {
+		children = append(children, strconv.FormatUint(uint64(key), 10))
+	}
+	sort.Strings(children)
+	return children
+}
+
+func (impl *nicInfoMapInspectImpl) GetChild(childName string) inspectInner {
+	id, err := strconv.ParseInt(childName, 10, 32)
+	if err != nil {
+		syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "OpenChild: %s", err)
+		return nil
+	}
+	if child, ok := impl.value[tcpip.NICID(id)]; ok {
+		return &nicInfoInspectImpl{
 			name:  childName,
-			Value: v,
-		}).asService()
-		return true, svc.AddFn(svc.Stub, childChannel.Channel)
+			value: child,
+		}
 	}
-	return false, nil
+	return nil
 }
 
-var _ context.Directory = (*statCounterInspectImpl)(nil)
+var _ inspectInner = (*nicInfoInspectImpl)(nil)
 
-func (v *statCounterInspectImpl) asService() *context.Service {
-	return &context.Service{
-		Stub: &inspect.InspectStub{Impl: v},
-		AddFn: func(s fidl.Stub, c zx.Channel) error {
-			_, err := v.svc.BindingSet.Add(s, c, nil)
-			return err
+type nicInfoInspectImpl struct {
+	name  string
+	value stack.NICInfo
+}
+
+func (impl *nicInfoInspectImpl) ReadData() inspect.Object {
+	object := inspect.Object{
+		Name: impl.name,
+		Properties: []inspect.Property{
+			{Key: "Name", Value: inspect.PropertyValueWithStr(impl.value.Name)},
+			{Key: "Up", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.Flags.Up))},
+			{Key: "Running", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.Flags.Running))},
+			{Key: "Loopback", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.Flags.Loopback))},
+			{Key: "Promiscuous", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.Flags.Promiscuous))},
+		},
+		Metrics: []inspect.Metric{
+			{Key: "MTU", Value: inspect.MetricValueWithUintValue(uint64(impl.value.MTU))},
 		},
 	}
-}
-
-func (v *statCounterInspectImpl) Get(name string) (context.Node, bool) {
-	if name == inspect.InspectName {
-		return v.asService(), true
+	if linkAddress := impl.value.LinkAddress; len(linkAddress) != 0 {
+		object.Properties = append(object.Properties, inspect.Property{
+			Key:   "LinkAddress",
+			Value: inspect.PropertyValueWithStr(linkAddress.String()),
+		})
 	}
-	return nil, false
-}
-
-func (v *statCounterInspectImpl) ForEach(fn func(string, context.Node)) {
-	fn(inspect.InspectName, v.asService())
-}
-
-var _ context.File = (*statCounterFile)(nil)
-
-type statCounterFile struct {
-	statCounter
-}
-
-func (s *statCounterFile) GetBytes() []byte {
-	var b [8]byte
-	binary.LittleEndian.PutUint64(b[:], s.Value())
-	return b[:]
-}
-
-type reflectNode struct {
-	reflect.Value
-}
-
-var _ context.Directory = (*reflectNode)(nil)
-
-func (v *reflectNode) Get(name string) (context.Node, bool) {
-	if v.Kind() != reflect.Struct {
-		return nil, false
-	}
-	if v := v.FieldByName(name); v.IsValid() {
-		switch typ := v.Type(); typ.Kind() {
-		case reflect.Struct:
-			return &context.DirectoryWrapper{
-				Directory: &reflectNode{
-					Value: v,
-				},
-			}, true
-		case reflect.Ptr:
-			return &context.FileWrapper{
-				File: &context.FileWrapper{
-					File: &statCounterFile{v.Interface().(statCounter)},
-				},
-			}, true
-		default:
-			panic(fmt.Sprintf("unexpected type %s", typ))
+	for _, protocolAddress := range impl.value.ProtocolAddresses {
+		protocol := "unknown"
+		switch protocolAddress.Protocol {
+		case header.IPv4ProtocolNumber:
+			protocol = "ipv4"
+		case header.IPv6ProtocolNumber:
+			protocol = "ipv6"
+		case header.ARPProtocolNumber:
+			protocol = "arp"
 		}
+		object.Properties = append(object.Properties, inspect.Property{
+			Key:   "ProtocolAddress",
+			Value: inspect.PropertyValueWithStr(fmt.Sprintf("[%s] %s", protocol, protocolAddress.AddressWithPrefix)),
+		})
 	}
-	return nil, false
+	return object
 }
 
-func (v *reflectNode) ForEach(fn func(string, context.Node)) {
-	typ := v.Type()
-	for i := 0; i < v.NumField(); i++ {
-		v := v.Field(i)
-		switch field := typ.Field(i); field.Type.Kind() {
-		case reflect.Struct:
-			n := reflectNode{
-				Value: v,
-			}
-			if field.Anonymous {
-				n.ForEach(fn)
-			} else {
-				fn(field.Name, &context.DirectoryWrapper{
-					Directory: &n,
-				})
-			}
-		case reflect.Ptr:
-			fn(field.Name, &context.FileWrapper{
-				File: &statCounterFile{v.Interface().(statCounter)},
-			})
-		default:
-			panic(fmt.Sprintf("unexpected field %+v", field))
+func (impl *nicInfoInspectImpl) ListChildren() []string {
+	return []string{
+		"Stats",
+	}
+}
+
+func (impl *nicInfoInspectImpl) GetChild(childName string) inspectInner {
+	switch childName {
+	case "Stats":
+		return &statCounterInspectImpl{
+			name:  childName,
+			value: reflect.ValueOf(impl.value.Stats),
 		}
+	default:
+		return nil
 	}
 }

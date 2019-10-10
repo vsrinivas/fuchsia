@@ -148,32 +148,8 @@ where
     async_fn(netstack_proxy, device).await
 }
 
-async fn read_stat_counter(
-    file_proxy: fidl_fuchsia_io::FileProxy,
-) -> std::result::Result<u64, failure::Error> {
-    let expected_len = std::mem::size_of::<u64>(); // 8 bytes
-
-    // Ask for one byte more than expected to ensure the content is exactly the right size.
-    let (status, content) = file_proxy
-        .read(expected_len as u64 + 1)
-        .await
-        .context("failed to call fuchsia.io.File.Read")?;
-    let () = fuchsia_zircon::Status::ok(status).context("failed to read file")?;
-
-    // try_into() will fail if content.len() != expected_len;
-    let content: [u8; 8] =
-        content[..].try_into().with_context(|std::array::TryFromSliceError { .. }| {
-            format!(
-                "expected {}-byte counter value, observed {} bytes",
-                expected_len,
-                content.len()
-            )
-        })?;
-    Ok(u64::from_le_bytes(content))
-}
-
 #[fuchsia_async::run_singlethreaded(test)]
-async fn read_stats_from_debug() -> Result {
+async fn inspect_objects() -> Result {
     let launcher = fuchsia_component::client::launcher().context("failed to create launcher")?;
 
     let netstack = fuchsia_component::client::launch(
@@ -183,51 +159,24 @@ async fn read_stats_from_debug() -> Result {
     )
     .context("failed to start netstack")?;
 
-    let (client, server) = fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()
-        .context("failed to create node proxy")?;
-
     // TODO(fxbug.dev/4629): the launcher API lies and claims it connects you to "the" directory
     // request, but it doesn't. It connects you to the "svc" directory under the directory request.
     // That means that reading anything other than FIDL services isn't possible, and THAT means
     // that this test is impossible.
     if false {
-        let () = netstack
-            .pass_to_named_service("debug/counters", server.into_channel())
-            .context("failed to connect to counters")?;
+        for path in ["counters", "interfaces"].iter() {
+            let (client, server) =
+                fidl::endpoints::create_proxy::<fidl_fuchsia_inspect_deprecated::InspectMarker>()
+                    .context("failed to create proxy")?;
 
-        verify_stats(&client).await
-    } else {
-        Ok(())
+            let path = format!("objects/{}/inspect", path);
+            let () = netstack
+                .pass_to_named_service(&path, server.into_channel())
+                .with_context(|_| format!("failed to connect to {}", path))?;
+
+            let _object = client.read_data().await.context("failed to call ReadData")?;
+        }
     }
-}
-
-async fn verify_stats(client: &fidl_fuchsia_io::DirectoryProxy) -> Result {
-    let dir_entries = files_async::readdir_recursive(client).await.context("failed to readdir")?;
-    let path_segments: std::collections::hash_set::HashSet<usize> = dir_entries
-        .iter()
-        .map(|dir_entry| 1 + dir_entry.name.matches(std::path::MAIN_SEPARATOR).count())
-        .collect();
-    // TODO(tamird): use into_iter after
-    // https://github.com/rust-lang/rust/issues/25725.
-    assert_eq!(path_segments, [1, 2, 3].iter().cloned().collect());
-
-    // Aggregate stats' initial values should be zero, before any packet can be exchanged.
-    for entry in &dir_entries {
-        let file_proxy = io_util::open_file(
-            client,
-            &std::path::Path::new(&entry.name),
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-        )
-        .with_context(|_| format!("failed to open {}", entry.name))?;
-        assert_eq!(0, read_stat_counter(file_proxy).await.context("failed to read stats")?);
-    }
-
-    // Make sure interesting stats exist.
-    assert!(dir_entries.iter().any(|e| e.name == "IP/PacketsReceived"));
-    assert!(dir_entries.iter().any(|e| e.name == "IP/PacketsSent"));
-    assert!(dir_entries.iter().any(|e| e.name == "ICMP/V4PacketsReceived/Echo"));
-    assert!(dir_entries.iter().any(|e| e.name == "ICMP/V4PacketsSent/Echo"));
-
     Ok(())
 }
 

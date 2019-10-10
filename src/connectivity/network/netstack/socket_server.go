@@ -632,14 +632,6 @@ type socketImpl struct {
 	bindingKey     fidl.BindingKey
 }
 
-type bindingSetCounterStat struct {
-	bindingSet *fidl.BindingSet
-}
-
-func (s *bindingSetCounterStat) Value() uint64 {
-	return uint64(s.bindingSet.Size())
-}
-
 func (s *socketImpl) Clone(flags uint32, object io.NodeInterfaceRequest) error {
 	clones := atomic.AddInt64(&s.endpoint.clones, 1)
 	{

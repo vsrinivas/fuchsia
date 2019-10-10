@@ -2,16 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use cs::inspect::{generate_inspect_object_tree, InspectObject};
 use failure::{err_msg, Error};
 use fidl_fuchsia_inspect_deprecated::{InspectMarker, MetricValue, PropertyValue};
-use inspect::{generate_inspect_object_tree, InspectObject};
 use std::{
     fmt, fs,
     path::{Path, PathBuf},
 };
 use structopt::StructOpt;
-
-mod inspect;
 
 type ComponentsResult = Result<Vec<Component>, Error>;
 type RealmsResult = Result<Vec<Realm>, Error>;
@@ -29,17 +27,16 @@ impl Realm {
     fn create(realm_path: impl AsRef<Path>) -> Result<Realm, Error> {
         let job_id = fs::read_to_string(&realm_path.as_ref().join("job-id"))?;
         let name = fs::read_to_string(&realm_path.as_ref().join("name"))?;
-        let realm = Realm {
+        Ok(Realm {
             job_id: job_id.parse::<u32>()?,
-            name: name,
+            name,
             child_realms: visit_child_realms(&realm_path.as_ref())?,
             child_components: visit_child_components(&realm_path.as_ref())?,
-        };
-        Ok(realm)
+        })
     }
 
     fn write_indented(&self, f: &mut fmt::Formatter, indent: usize) -> fmt::Result {
-        writeln!(f, "{}Realm[{}]: {}", " ".repeat(indent), self.job_id, self.name,)?;
+        writeln!(f, "{}Realm[{}]: {}", " ".repeat(indent), self.job_id, self.name)?;
 
         for comp in &self.child_components {
             comp.write_indented(f, indent + 2)?;
@@ -68,22 +65,16 @@ struct Component {
 }
 
 impl Component {
-    fn create(component_path: &Path) -> Result<Component, Error> {
-        let job_id = fs::read_to_string(&component_path.join("job-id"))?;
-        let url = fs::read_to_string(&component_path.join("url"))?;
-        let name = fs::read_to_string(&component_path.join("name"))?;
-        let component = Component {
-            job_id: job_id.parse::<u32>()?,
-            name: name,
-            path: component_path.to_path_buf(),
-            url: url,
-            child_components: visit_child_components(&component_path)?,
-        };
-        Ok(component)
+    fn create(path: PathBuf) -> Result<Component, Error> {
+        let job_id = fs::read_to_string(&path.join("job-id"))?;
+        let url = fs::read_to_string(&path.join("url"))?;
+        let name = fs::read_to_string(&path.join("name"))?;
+        let child_components = visit_child_components(&path)?;
+        Ok(Component { job_id: job_id.parse::<u32>()?, name, path, url, child_components })
     }
 
     fn write_indented(&self, f: &mut fmt::Formatter, indent: usize) -> fmt::Result {
-        writeln!(f, "{}{}[{}]: {}", " ".repeat(indent), self.name, self.job_id, self.url,)?;
+        writeln!(f, "{}{}[{}]: {}", " ".repeat(indent), self.name, self.job_id, self.url)?;
 
         for child in &self.child_components {
             child.write_indented(f, indent + 2)?;
@@ -142,10 +133,9 @@ fn find_id_directories(dir: &Path) -> DirEntryResult {
 }
 
 fn visit_system_objects(component_path: &Path, exclude_objects: &Vec<String>) -> TraversalResult {
-    let channel_path = component_path.join(format!(
-        "system_objects/{}",
-        <InspectMarker as fidl::endpoints::ServiceMarker>::NAME
-    ));
+    let channel_path = component_path
+        .join("system_objects")
+        .join(<InspectMarker as fidl::endpoints::ServiceMarker>::NAME);
     let inspect_object = generate_inspect_object_tree(&channel_path, &exclude_objects)?;
     visit_inspect_object(1, &inspect_object);
     Ok(())
@@ -198,7 +188,7 @@ fn visit_child_components(parent_path: &Path) -> ComponentsResult {
         let component_instance_id_dir_entries = find_id_directories(&entry.path())?;
         for component_instance_id_dir_entry in component_instance_id_dir_entries {
             let path = component_instance_id_dir_entry.path();
-            child_components.push(Component::create(&path)?);
+            child_components.push(Component::create(path)?);
         }
     }
     Ok(child_components)
