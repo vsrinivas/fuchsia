@@ -55,9 +55,7 @@ void InputReportInstance::GetDescriptor(GetDescriptorCompleter::Sync _completer)
 
   zx_status_t status;
   for (size_t i = 0; i < size; i++) {
-    if (std::holds_alternative<hid_input_report::MouseDescriptor>(descriptors[i].descriptor)) {
-      status = hid_input_report::SetMouseDescriptor(descriptors[i], &descriptor_data);
-    }
+    status = hid_input_report::SetFidlDescriptor(descriptors[i], &descriptor_data);
     if (status != ZX_OK) {
       break;
     }
@@ -81,13 +79,11 @@ void InputReportInstance::GetReports(GetReportsCompleter::Sync _completer) {
   while (!reports_data_.empty()) {
     reports_data[index] = std::move(reports_data_.front());
     reports_data_.pop();
-    if (std::holds_alternative<hid_input_report::MouseReport>(reports_data[index].report)) {
-      status = hid_input_report::SetMouseReport(&reports_data[index], &reports_fidl_data[index]);
-    }
+    status = hid_input_report::SetFidlReport(reports_data[index], &reports_fidl_data[index]);
     if (status != ZX_OK) {
       break;
     }
-    reports[index] = reports_fidl_data[index].report.view();
+    reports[index] = reports_fidl_data[index].report_builder.view();
     index++;
   }
 

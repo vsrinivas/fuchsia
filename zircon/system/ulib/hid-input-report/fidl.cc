@@ -47,9 +47,8 @@ static llcpp_report::Axis HidAxisToLlcppAxis(Axis axis) {
   return new_axis;
 }
 
-zx_status_t SetMouseDescriptor(const ReportDescriptor& hid_desc, FidlDescriptor* descriptor) {
-  const auto& hid_mouse_desc = std::get<MouseDescriptor>(hid_desc.descriptor);
-  FidlMouseDesc& mouse_desc = descriptor->mouse_desc;
+zx_status_t SetMouseDescriptor(const MouseDescriptor& hid_mouse_desc, FidlDescriptor* descriptor) {
+  FidlMouseDescriptor& mouse_desc = descriptor->mouse_descriptor;
   auto& mouse_builder = mouse_desc.mouse_builder;
   mouse_builder = llcpp_report::MouseDescriptor::Build();
 
@@ -69,35 +68,51 @@ zx_status_t SetMouseDescriptor(const ReportDescriptor& hid_desc, FidlDescriptor*
       fidl::VectorView<uint8_t>(mouse_desc.buttons, hid_mouse_desc.num_buttons);
   mouse_builder.set_buttons(&mouse_desc.buttons_view);
 
-  descriptor->mouse_desc.mouse_descriptor = mouse_builder.view();
-  descriptor->descriptor = llcpp_report::DeviceDescriptor::Build();
-  descriptor->descriptor.set_mouse(&descriptor->mouse_desc.mouse_descriptor);
+  descriptor->mouse_descriptor.mouse_descriptor = mouse_builder.view();
+  descriptor->descriptor.set_mouse(&descriptor->mouse_descriptor.mouse_descriptor);
 
   return ZX_OK;
 }
 
-zx_status_t SetMouseReport(Report* hid_report, FidlReport* report) {
-  FidlMouseReport& mouse_report = report->mouse_report;
-  auto& hid_mouse_report = std::get<MouseReport>(hid_report->report);
-  auto& mouse_builder = report->mouse_report.mouse_builder;
+zx_status_t SetMouseReport(const MouseReport& hid_mouse_report, FidlReport* report) {
+  FidlMouseReport& mouse_report = std::get<FidlMouseReport>(report->report);
+  auto& mouse_builder = mouse_report.mouse_builder;
   mouse_builder = llcpp_report::MouseReport::Build();
 
+  mouse_report.report_data = hid_mouse_report;
+  MouseReport& report_data = mouse_report.report_data;
+
   if (hid_mouse_report.has_movement_x) {
-    mouse_builder.set_movement_x(&hid_mouse_report.movement_x);
+    mouse_builder.set_movement_x(&report_data.movement_x);
   }
   if (hid_mouse_report.has_movement_y) {
-    mouse_builder.set_movement_y(&hid_mouse_report.movement_y);
+    mouse_builder.set_movement_y(&report_data.movement_y);
   }
-  mouse_report.buttons_view = fidl::VectorView<uint8_t>(hid_mouse_report.buttons_pressed,
-                                                        hid_mouse_report.num_buttons_pressed);
+  mouse_report.buttons_view =
+      fidl::VectorView<uint8_t>(report_data.buttons_pressed, report_data.num_buttons_pressed);
 
   mouse_builder.set_pressed_buttons(&mouse_report.buttons_view);
 
   mouse_report.mouse_report = mouse_builder.view();
-  report->report = llcpp_report::InputReport::Build();
-  report->report.set_mouse(&report->mouse_report.mouse_report);
+  report->report_builder.set_mouse(&mouse_report.mouse_report);
 
   return ZX_OK;
+}
+
+zx_status_t SetFidlDescriptor(const hid_input_report::ReportDescriptor& hid_desc,
+                              FidlDescriptor* descriptor) {
+  if (std::holds_alternative<MouseDescriptor>(hid_desc.descriptor)) {
+    return SetMouseDescriptor(std::get<MouseDescriptor>(hid_desc.descriptor), descriptor);
+  }
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t SetFidlReport(const hid_input_report::Report& hid_report, FidlReport* report) {
+  if (std::holds_alternative<MouseReport>(hid_report.report)) {
+    report->report = FidlMouseReport();
+    return SetMouseReport(std::get<MouseReport>(hid_report.report), report);
+  }
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 }  // namespace hid_input_report

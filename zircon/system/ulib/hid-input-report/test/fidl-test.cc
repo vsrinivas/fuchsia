@@ -38,7 +38,7 @@ TEST(FidlTest, MouseDescriptor) {
   desc.descriptor = mouse_desc;
 
   hid_input_report::FidlDescriptor fidl_desc = {};
-  ASSERT_OK(SetMouseDescriptor(desc, &fidl_desc));
+  ASSERT_OK(SetFidlDescriptor(desc, &fidl_desc));
 
   llcpp_report::DeviceDescriptor fidl = fidl_desc.descriptor.view();
   ASSERT_TRUE(fidl.has_mouse());
@@ -75,9 +75,9 @@ TEST(FidlTest, MouseReport) {
   report.report = mouse;
 
   hid_input_report::FidlReport fidl_report = {};
-  ASSERT_OK(SetMouseReport(&report, &fidl_report));
+  ASSERT_OK(SetFidlReport(report, &fidl_report));
 
-  llcpp_report::InputReport fidl = fidl_report.report.view();
+  llcpp_report::InputReport fidl = fidl_report.report_builder.view();
   ASSERT_TRUE(fidl.has_mouse());
   auto& fidl_mouse = fidl.mouse();
 
