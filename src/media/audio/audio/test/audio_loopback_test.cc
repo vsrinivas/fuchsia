@@ -4,8 +4,8 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/clock.h>
+#include <zircon/device/audio.h>
 
 #include <fbl/algorithm.h>
 
@@ -28,8 +28,6 @@ class AudioLoopbackTest : public media::audio::test::HermeticAudioTest {
   static constexpr int16_t kPlaybackData[] = {0x1000, 0xfff,   -0x2345, -0x0123, 0x100,   0xff,
                                               -0x234, -0x04b7, 0x0310,  0x0def,  -0x0101, -0x2020,
                                               0x1357, 0x1324,  0x0135,  0x0132};
-
-  static std::shared_ptr<sys::ServiceDirectory> service_directory_;
 
   static void SetUpTestSuite();
   static void TearDownTestSuite();
@@ -65,9 +63,6 @@ class AudioLoopbackTest : public media::audio::test::HermeticAudioTest {
 };
 
 // static
-std::shared_ptr<sys::ServiceDirectory> AudioLoopbackTest::service_directory_ = nullptr;
-
-// static
 void AudioLoopbackTest::SetUpTestSuite() {
   HermeticAudioTest::SetUpTestSuite();
 
@@ -79,8 +74,6 @@ void AudioLoopbackTest::SetUpTestSuite() {
 
 // static
 void AudioLoopbackTest::TearDownTestSuite() {
-  ASSERT_NE(service_directory_, nullptr);
-
   // Ensure that virtualaudio is disabled, by the time we leave.
   fuchsia::virtualaudio::ControlSyncPtr control_sync;
   environment()->ConnectToService(control_sync.NewRequest());
@@ -192,6 +185,17 @@ void AudioLoopbackTest::SetUpVirtualAudioOutput() {
   // Create an output device using default settings, save it while tests run.
   auto status = virtual_audio_output_sync_->SetUniqueId(dev_uuid);
   ASSERT_EQ(status, ZX_OK) << "Failed to set virtual audio output uuid";
+
+  // We want to set the virtual audio output to exactly the same format as we are sending and
+  // receiving, to minimize any potential change in data. Each virtual audio device has one format
+  // range by default, so we must first remove that, before then adding the format range we need.
+  status = virtual_audio_output_sync_->ClearFormatRanges();
+  ASSERT_EQ(status, ZX_OK) << "Failed to clear preexisting virtual audio output format ranges";
+
+  status = virtual_audio_output_sync_->AddFormatRange(AUDIO_SAMPLE_FORMAT_16BIT, kSampleRate,
+                                                      kSampleRate, kChannelCount, kChannelCount,
+                                                      ASF_RANGE_FLAG_FPS_CONTINUOUS);
+  ASSERT_EQ(status, ZX_OK) << "Failed to add virtual audio output format range";
 
   status = virtual_audio_output_sync_->Add();
   ASSERT_EQ(status, ZX_OK) << "Failed to add virtual audio output";

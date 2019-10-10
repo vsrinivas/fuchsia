@@ -6,6 +6,7 @@
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/clock.h>
+#include <zircon/device/audio.h>
 
 #include <fbl/algorithm.h>
 
@@ -29,8 +30,9 @@ class AudioAdminTest : public HermeticAudioTest {
   static const int kSampleDelayAddition = 5;
 
   static constexpr int16_t kInitialCaptureData = 0x7fff;
-  static constexpr int16_t kPlaybackData1 = 0x1000;
-  static constexpr int16_t kPlaybackData2 = 0xfff;
+  static constexpr int16_t kPlaybackData1 = 0x1111;
+  static constexpr int16_t kDuckedPlaybackData1 = 0x0368;  // reduced by 14dB
+  static constexpr int16_t kPlaybackData2 = 0x2222;
 
   static void SetUpTestSuite();
   static void TearDownTestSuite();
@@ -188,6 +190,17 @@ void AudioAdminTest::SetUpVirtualAudioOutput() {
   // Create an output device using default settings, save it while tests run.
   auto status = virtual_audio_output_sync_->SetUniqueId(dev_uuid);
   ASSERT_EQ(status, ZX_OK) << "Failed to set virtual audio output uuid";
+
+  // We want to set the virtual audio output to exactly the same format as we are sending and
+  // receiving, to minimize any potential change in data. Each virtual audio device has one format
+  // range by default, so we must first remove that, before then adding the format range we need.
+  status = virtual_audio_output_sync_->ClearFormatRanges();
+  ASSERT_EQ(status, ZX_OK) << "Failed to clear preexisting virtual audio output format ranges";
+
+  status = virtual_audio_output_sync_->AddFormatRange(AUDIO_SAMPLE_FORMAT_16BIT, kSampleRate,
+                                                      kSampleRate, kChannelCount, kChannelCount,
+                                                      ASF_RANGE_FLAG_FPS_CONTINUOUS);
+  ASSERT_EQ(status, ZX_OK) << "Failed to add virtual audio output format range";
 
   status = virtual_audio_output_sync_->Add();
   ASSERT_EQ(status, ZX_OK) << "Failed to add virtual audio output";
@@ -761,9 +774,7 @@ TEST_F(AudioAdminTest, DualRenderStreamDucking) {
   // Check that all of the samples contain the expected data.
   for (size_t i = 0; i < (captured.payload_size / capture_sample_size_[0]); i++) {
     size_t index = (captured.payload_offset + i) % 8000;
-    // 0x1330 is 0x1000 reduced by 14db, then 0xfff added
-    // TODO: Is there a better way to represent this?
-    EXPECT_EQ(capture[index], 0x1330);
+    EXPECT_EQ(capture[index], kDuckedPlaybackData1 + kPlaybackData2);
   }
 
   CleanUpRenderer(1);
