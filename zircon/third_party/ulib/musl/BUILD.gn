@@ -72,7 +72,14 @@ config("musl_internal.config") {
     cflags += [ "-fno-stack-protector" ]
   }
 
-  configs = [ "$zx/public/gn/config:freestanding" ]
+  configs = [
+    "$zx/public/gn/config:freestanding",
+
+    # libfuzzer also uses libc internally, by removing the fuzzing
+    # instrumentation we avoid it adding noise to the fuzzing coverage.
+    # TODO(25073): Once a cleaner solution is found, remove this.
+    "$zx/public/gn/config:no_fuzzer",
+  ]
 }
 
 if (toolchain.base_environment == "user") {

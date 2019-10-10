@@ -10,7 +10,7 @@ library("zx-panic-libc") {
   host = true
   static = true
 
-  sdk_headers = [ ]
+  sdk_headers = []
 
   sources = [
     "zx_panic_libc.cc",
@@ -22,4 +22,9 @@ source_set("as_source") {
   sources = [
     "zx_panic_libc.cc",
   ]
+
+  # This library is linked into libc, which is used by libfuzzer.
+  # Don't instrument it to avoid getting noise in code coverage.
+  # TODO(25073): Once a cleaner solution is found, remove this.
+  configs += [ "$zx_build/public/gn/config:no_fuzzer" ]
 }

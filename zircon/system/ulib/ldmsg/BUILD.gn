@@ -28,5 +28,10 @@ library("ldmsg") {
   configs += [
     "$zx_build/public/gn/config:no_safestack",
     "$zx_build/public/gn/config:no-shadow-call-stack",
+
+    # This library is linked into libc, which is used by libfuzzer.
+    # Don't instrument it to avoid getting noise in code coverage.
+    # TODO(25073): Once a cleaner solution is found, remove this.
+    "$zx_build/public/gn/config:no_fuzzer",
   ]
 }

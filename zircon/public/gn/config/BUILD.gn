@@ -563,6 +563,12 @@ config("no_sanitizers") {
   configs = [ ":no_stack_protector" ]
 }
 
+config("no_fuzzer") {
+  if (!is_gcc) {
+    cflags = [ "-fno-sanitize=fuzzer" ]
+  }
+}
+
 # TODO(TC-539) Remove this once the warning with fit::variant/fit::optional is addressed.
 config("no_maybe_uninitialized") {
   if (is_gcc) {

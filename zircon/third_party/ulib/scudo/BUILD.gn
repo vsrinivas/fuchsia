@@ -21,4 +21,9 @@ source_set("scudo") {
     "string_utils.cc",
     "wrappers_c.cc",
   ]
+
+  # This library is linked into libc, which is used by libfuzzer.
+  # Don't instrument it to avoid getting noise in code coverage.
+  # TODO(25073): Once a cleaner solution is found, remove this.
+  configs += [ "$zx_build/public/gn/config:no_fuzzer" ]
 }
