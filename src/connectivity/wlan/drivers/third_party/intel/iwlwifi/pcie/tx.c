@@ -543,6 +543,7 @@ zx_status_t iwl_pcie_txq_alloc(struct iwl_trans* trans, struct iwl_txq* txq, int
   if (status != ZX_OK) {
     goto error;
   }
+  txq->dma_addr = io_buffer_phys(&txq->tfds);
 
   BUILD_BUG_ON(IWL_FIRST_TB_SIZE_ALIGN != sizeof(struct iwl_pcie_first_tb_buf));
 
