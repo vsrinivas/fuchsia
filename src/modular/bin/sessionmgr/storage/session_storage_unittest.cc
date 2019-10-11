@@ -224,6 +224,62 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
   // MI4-1002
 }
 
+TEST_F(SessionStorageTest, CreateSameStoryOnlyOnce) {
+  // Call CreateStory twice with the same story name, but with annotations only in the first call.
+  // Both calls should succeed, and the second call should be a no-op:
+  //
+  //   * The story should only be created once.
+  //   * The second call should return the same story name and page ID as the first.
+  //   * The final StoryData should contain annotations from the first call.
+  auto storage = CreateStorage("page");
+
+  // Only the first CreateStory call has annotations.
+  std::vector<fuchsia::modular::Annotation> annotations{};
+  fuchsia::modular::AnnotationValue annotation_value;
+  annotation_value.set_text("test_annotation_value");
+  auto annotation = fuchsia::modular::Annotation{
+      .key = "test_annotation_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+  annotations.push_back(fidl::Clone(annotation));
+
+  auto future_story_first = storage->CreateStory("story", std::move(annotations));
+  auto future_story_second = storage->CreateStory("story", /*annotations=*/{});
+
+  fidl::StringPtr story_first_name;
+  fuchsia::ledger::PageId story_first_pageid;
+  fidl::StringPtr story_second_name;
+  fuchsia::ledger::PageId story_second_pageid;
+  bool done = false;
+  Wait("SessionStorageTest.CreateSameStoryOnlyOnce.wait", {future_story_first, future_story_second})
+      ->Then([&](auto results) {
+        story_first_name = std::move(std::get<0>(results[0]));
+        story_first_pageid = std::move(std::get<1>(results[0]));
+        story_second_name = std::move(std::get<0>(results[1]));
+        story_second_pageid = std::move(std::get<1>(results[1]));
+        done = true;
+      });
+  RunLoopUntil([&] { return done; });
+
+  // Both calls should return the same name and page ID because they refer to the same story.
+  EXPECT_EQ(story_first_name, story_second_name);
+  EXPECT_TRUE(fidl::Equals(story_first_pageid, story_second_pageid));
+
+  // Only one story should have been created.
+  auto future_all_data = storage->GetAllStoryData();
+  fidl::VectorPtr<fuchsia::modular::internal::StoryData> all_data;
+  future_all_data->Then([&](std::vector<fuchsia::modular::internal::StoryData> data) {
+    all_data.emplace(std::move(data));
+  });
+  RunLoopUntil([&] { return all_data.has_value(); });
+
+  EXPECT_EQ(1u, all_data->size());
+
+  // The story should have the annotation from the first call to CreateStory.
+  const auto& story_info = all_data->at(0).story_info();
+  EXPECT_TRUE(story_info.has_annotations());
+  EXPECT_EQ(1u, story_info.annotations().size());
+  EXPECT_THAT(story_info.annotations().at(0), annotations::AnnotationEq(ByRef(annotation)));
+}
+
 // TODO(MF-420): This test is racy: the |story_page| acquired here is different
 // from the one used internally to delete page data. The call to GetSnapshot()
 // may happen before, after, or during, the process of deleting the page

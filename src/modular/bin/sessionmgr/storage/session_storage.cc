@@ -59,22 +59,35 @@ std::unique_ptr<OperationBase> MakeWriteStoryDataCall(
 
 class CreateStoryCall : public LedgerOperation<fidl::StringPtr, fuchsia::ledger::PageId> {
  public:
-  CreateStoryCall(fuchsia::ledger::Ledger* const ledger, fuchsia::ledger::Page* const root_page,
+  CreateStoryCall(fuchsia::ledger::Ledger* const ledger, fuchsia::ledger::Page* const session_page,
                   fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations,
                   ResultCall result_call)
-      : LedgerOperation("SessionStorage::CreateStoryCall", ledger, root_page,
+      : LedgerOperation("SessionStorage::CreateStoryCall", ledger, session_page,
                         std::move(result_call)),
+        session_page_(std::move(session_page)),
         story_name_(std::move(story_name)),
         annotations_(std::move(annotations)) {}
 
  private:
   void Run() override {
     FlowToken flow{this, &story_name_, &story_page_id_};
-    ledger()->GetPage(nullptr, story_page_.NewRequest());
-    story_page_->GetId([this, flow](fuchsia::ledger::PageId id) {
-      story_page_id_ = std::move(id);
-      Cont(flow);
-    });
+
+    // Try to get any existing StoryData for the story with the given [story_name_] first.
+    // If the StoryData exists, the story has already been created and should not be recreated.
+    operation_queue_.Add(
+        MakeGetStoryDataCall(session_page_, story_name_, [this, flow](auto story_data) {
+          if (story_data) {
+            // A story with the same name already exists, don't create it again.
+            story_page_id_ = story_data->story_page_id();
+            return;
+          }
+
+          ledger()->GetPage(nullptr, story_page_.NewRequest());
+          story_page_->GetId([this, flow](fuchsia::ledger::PageId id) {
+            story_page_id_ = std::move(id);
+            Cont(flow);
+          });
+        }));
   }
 
   void Cont(FlowToken flow) {
@@ -98,6 +111,7 @@ class CreateStoryCall : public LedgerOperation<fidl::StringPtr, fuchsia::ledger:
     operation_queue_.Add(MakeWriteStoryDataCall(page(), std::move(story_data_), [flow] {}));
   }
 
+  fuchsia::ledger::Page* const session_page_;  // not owned
   fidl::StringPtr story_name_;
   std::vector<fuchsia::modular::Annotation> annotations_;
 
