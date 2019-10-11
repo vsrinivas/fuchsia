@@ -62,5 +62,6 @@ group("tests") {
 
   deps = [
     ":iquery_rs_tests",
+    "test:iquery_rs_golden_tests",
   ]
 }
