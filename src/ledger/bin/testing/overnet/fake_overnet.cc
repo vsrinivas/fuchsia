@@ -30,7 +30,10 @@ fuchsia::overnet::ServiceProvider& FakeOvernet::ServiceProviderHolder::operator*
 }
 
 FakeOvernet::FakeOvernet(async_dispatcher_t* dispatcher, uint64_t self_id, Delegate* delegate)
-    : self_id_(self_id), delegate_(delegate), service_providers_(dispatcher) {}
+    : self_id_(self_id),
+      delegate_(delegate),
+      service_providers_(dispatcher),
+      last_seen_peers_version_(std::make_shared<uint64_t>(0)) {}
 
 void FakeOvernet::GetService(std::string service_name, zx::channel chan) {
   auto it = service_providers_.find(service_name);
@@ -59,9 +62,10 @@ void FakeOvernet::RegisterService(
   delegate_->ServiceWasRegistered();
 }
 
-void FakeOvernet::ListPeers(uint64_t version_last_seen, ListPeersCallback callback) {
-  delegate_->ListPeers(version_last_seen,
-                       [callback = std::move(callback), self_id = self_id_](
+void FakeOvernet::ListPeers(ListPeersCallback callback) {
+  delegate_->ListPeers(*last_seen_peers_version_,
+                       [callback = std::move(callback), self_id = self_id_,
+                        last_seen_peers_version = last_seen_peers_version_](
                            uint64_t version, std::vector<Delegate::FakePeer> fake_peers) {
                          std::vector<fuchsia::overnet::Peer> overnet_peers;
                          for (auto& fake_peer : fake_peers) {
@@ -80,7 +84,8 @@ void FakeOvernet::ListPeers(uint64_t version_last_seen, ListPeersCallback callba
                            description.set_services(fake_peer.services);
                            overnet_peer.description = std::move(description);
                          }
-                         callback(version, std::move(overnet_peers));
+                         *last_seen_peers_version = std::max(version, *last_seen_peers_version);
+                         callback(std::move(overnet_peers));
                        });
 }
 

@@ -17,6 +17,12 @@ impl From<u64> for NodeId {
     }
 }
 
+impl From<NodeId> for fidl_fuchsia_overnet_protocol::NodeId {
+    fn from(id: NodeId) -> Self {
+        Self { id: id.0 }
+    }
+}
+
 /// Labels a link with a node-unique identifier
 #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
 pub struct NodeLinkId(pub u64);

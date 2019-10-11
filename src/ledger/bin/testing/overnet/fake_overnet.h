@@ -71,12 +71,13 @@ class FakeOvernet : public fuchsia::overnet::Overnet {
       fidl::InterfaceHandle<fuchsia::overnet::ServiceProvider> service_provider) override;
   void ConnectToService(fuchsia::overnet::protocol::NodeId node, std::string service_name,
                         zx::channel channel) override;
-  void ListPeers(uint64_t version_last_seen, ListPeersCallback callback) override;
+  void ListPeers(ListPeersCallback callback) override;
   void AttachSocketLink(zx::socket socket, fuchsia::overnet::SocketLinkOptions options) override;
 
   uint64_t const self_id_;
   Delegate* const delegate_;
   callback::AutoCleanableMap<std::string, ServiceProviderHolder> service_providers_;
+  std::shared_ptr<uint64_t> last_seen_peers_version_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeOvernet);
 };

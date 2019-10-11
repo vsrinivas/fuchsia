@@ -1897,25 +1897,14 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
 }
 
 #[cfg(test)]
-mod tests {
-
+pub mod test_util {
+    use super::*;
     use std::sync::Once;
-
-    const TEST_TIMEOUT_MS: u32 = 60_000;
 
     const LOG_LEVEL: log::Level = log::Level::Info;
     const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
 
     struct Logger;
-
-    #[derive(Debug)]
-    enum IncomingMessage<'a> {
-        ConnectService(u8, StreamId, &'a str),
-        BindChannel(u8, StreamId),
-        ChannelRecv(u8, StreamId, &'a [u8]),
-        UpdateNode(u8, NodeId, NodeDescription),
-        Close(u8, StreamId),
-    }
 
     fn short_log_level(level: &log::Level) -> &'static str {
         match *level {
@@ -1949,15 +1938,56 @@ mod tests {
     static LOGGER: Logger = Logger;
     static START: Once = Once::new();
 
-    fn init() {
+    pub fn init() {
         START.call_once(|| {
             log::set_logger(&LOGGER).unwrap();
             log::set_max_level(MAX_LOG_LEVEL);
         })
     }
 
+    #[cfg(not(target_os = "fuchsia"))]
+    fn temp_file_containing(bytes: &[u8]) -> Box<dyn AsRef<std::path::Path>> {
+        let mut path = tempfile::NamedTempFile::new().unwrap();
+        use std::io::Write;
+        path.write_all(bytes).unwrap();
+        Box::new(path)
+    }
+
+    pub fn test_router_options() -> RouterOptions {
+        let options = RouterOptions::new();
+        #[cfg(target_os = "fuchsia")]
+        let options = options
+            .set_quic_server_cert_file(Box::new("/pkg/data/cert.crt".to_string()))
+            .set_quic_server_key_file(Box::new("/pkg/data/cert.key".to_string()));
+        #[cfg(not(target_os = "fuchsia"))]
+        let options = options
+            .set_quic_server_cert_file(temp_file_containing(include_bytes!(
+                "../../../../../../third_party/rust-mirrors/quiche/examples/cert.crt"
+            )))
+            .set_quic_server_key_file(temp_file_containing(include_bytes!(
+                "../../../../../../third_party/rust-mirrors/quiche/examples/cert.key"
+            )));
+        options
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    const TEST_TIMEOUT_MS: u32 = 60_000;
+
+    use super::test_util::*;
     use super::*;
     use timebomb::timeout_ms;
+
+    #[derive(Debug)]
+    enum IncomingMessage<'a> {
+        ConnectService(u8, StreamId, &'a str),
+        BindChannel(u8, StreamId),
+        ChannelRecv(u8, StreamId, &'a [u8]),
+        UpdateNode(u8, NodeId, NodeDescription),
+        Close(u8, StreamId),
+    }
 
     #[test]
     fn no_op() {
@@ -1978,35 +2008,10 @@ mod tests {
         link2: LinkId,
     }
 
-    #[cfg(not(target_os = "fuchsia"))]
-    fn temp_file_containing(bytes: &[u8]) -> Box<dyn AsRef<std::path::Path>> {
-        let mut path = tempfile::NamedTempFile::new().unwrap();
-        use std::io::Write;
-        path.write_all(bytes).unwrap();
-        Box::new(path)
-    }
-
     impl TwoNode {
-        fn options() -> RouterOptions {
-            let options = RouterOptions::new();
-            #[cfg(target_os = "fuchsia")]
-            let options = options
-                .set_quic_server_cert_file(Box::new("/pkg/data/cert.crt".to_string()))
-                .set_quic_server_key_file(Box::new("/pkg/data/cert.key".to_string()));
-            #[cfg(not(target_os = "fuchsia"))]
-            let options = options
-                .set_quic_server_cert_file(temp_file_containing(include_bytes!(
-                    "../../../../../../third_party/rust-mirrors/quiche/examples/cert.crt"
-                )))
-                .set_quic_server_key_file(temp_file_containing(include_bytes!(
-                    "../../../../../../third_party/rust-mirrors/quiche/examples/cert.key"
-                )));
-            options
-        }
-
         fn new() -> Self {
-            let mut router1 = Router::new_with_options(TwoNode::options());
-            let mut router2 = Router::new_with_options(TwoNode::options());
+            let mut router1 = Router::new_with_options(test_router_options());
+            let mut router2 = Router::new_with_options(test_router_options());
             let link1 = router1.new_link(router2.node_id, 123.into(), 1).unwrap();
             let link2 = router2.new_link(router1.node_id, 456.into(), 2).unwrap();
             router1.adjust_route(router2.node_id, link1).unwrap();

@@ -20,8 +20,6 @@ constexpr char kRespondingServiceName[] = "ledger-p2p";
 constexpr char kRespondingServiceNameSeparator[] = "/";
 // Current Ledger protocol version. Devices on different versions are unable to talk to each other.
 const uint16_t kCurrentVersion = 1;
-// Initial version of the list of peers, when starting Overnet.
-const uint64_t kInitialOvernetVersion = 0;
 
 }  // namespace
 
@@ -64,7 +62,7 @@ void P2PProviderImpl::StartService() {
   fidl::InterfaceHandle<fuchsia::overnet::ServiceProvider> handle;
   service_binding_.Bind(handle.NewRequest());
   overnet_->RegisterService(OvernetServiceName(), std::move(handle));
-  ListenForNewDevices(kInitialOvernetVersion);
+  ListenForNewDevices();
 }
 
 void P2PProviderImpl::ConnectToService(zx::channel chan) {
@@ -97,59 +95,58 @@ void P2PProviderImpl::AddConnectionFromChannel(
   OnDeviceChange(id, DeviceChangeType::NEW);
 }
 
-void P2PProviderImpl::ListenForNewDevices(uint64_t version) {
-  overnet_->ListPeers(
-      version, [this](uint64_t new_version, std::vector<fuchsia::overnet::Peer> peers) {
-        if (!self_client_id_) {
-          // We are starting and we don't know who we are yet. Let's find out
-          // first so we can connect to peers correctly.
-          for (auto& peer : peers) {
-            if (!peer.is_self) {
-              continue;
-            }
-            self_client_id_ = peer.id;
-            break;
-          }
+void P2PProviderImpl::ListenForNewDevices() {
+  overnet_->ListPeers([this](std::vector<fuchsia::overnet::Peer> peers) {
+    if (!self_client_id_) {
+      // We are starting and we don't know who we are yet. Let's find out
+      // first so we can connect to peers correctly.
+      for (auto& peer : peers) {
+        if (!peer.is_self) {
+          continue;
         }
-        if (!self_client_id_) {
-          ListenForNewDevices(new_version);
-          return;
-        }
-        for (auto& peer : peers) {
-          if (peer.is_self) {
-            continue;
-          }
-          if (peer.id.id < self_client_id_->id) {
-            // The other side will connect to us, no need to duplicate
-            // connections.
-            continue;
-          }
+        self_client_id_ = peer.id;
+        break;
+      }
+    }
+    if (!self_client_id_) {
+      ListenForNewDevices();
+      return;
+    }
+    for (auto& peer : peers) {
+      if (peer.is_self) {
+        continue;
+      }
+      if (peer.id.id < self_client_id_->id) {
+        // The other side will connect to us, no need to duplicate
+        // connections.
+        continue;
+      }
 
-          if (contacted_peers_.find(peer.id) != contacted_peers_.end()) {
-            // Already connected to the peer.
-            continue;
-          }
+      if (contacted_peers_.find(peer.id) != contacted_peers_.end()) {
+        // Already connected to the peer.
+        continue;
+      }
 
-          const fuchsia::overnet::protocol::PeerDescription& description = peer.description;
-          if (!description.has_services()) {
-            continue;
-          }
-          const std::vector<std::string>& services = description.services();
-          bool ledger_service_is_present_on_other_side =
-              std::find(services.begin(), services.end(), OvernetServiceName()) != services.end();
-          if (!ledger_service_is_present_on_other_side) {
-            continue;
-          }
+      const fuchsia::overnet::protocol::PeerDescription& description = peer.description;
+      if (!description.has_services()) {
+        continue;
+      }
+      const std::vector<std::string>& services = description.services();
+      bool ledger_service_is_present_on_other_side =
+          std::find(services.begin(), services.end(), OvernetServiceName()) != services.end();
+      if (!ledger_service_is_present_on_other_side) {
+        continue;
+      }
 
-          zx::channel local;
-          zx::channel remote;
-          zx_status_t status = zx::channel::create(0u, &local, &remote);
-          FXL_CHECK(status == ZX_OK) << "zx::channel::create failed, status " << status;
-          overnet_->ConnectToService(peer.id, OvernetServiceName(), std::move(remote));
-          AddConnectionFromChannel(std::move(local), peer.id);
-        }
-        ListenForNewDevices(new_version);
-      });
+      zx::channel local;
+      zx::channel remote;
+      zx_status_t status = zx::channel::create(0u, &local, &remote);
+      FXL_CHECK(status == ZX_OK) << "zx::channel::create failed, status " << status;
+      overnet_->ConnectToService(peer.id, OvernetServiceName(), std::move(remote));
+      AddConnectionFromChannel(std::move(local), peer.id);
+    }
+    ListenForNewDevices();
+  });
 }
 
 void P2PProviderImpl::Dispatch(P2PClientId source, std::vector<uint8_t> data) {

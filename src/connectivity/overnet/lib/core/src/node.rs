@@ -130,17 +130,27 @@ impl<'a, Runtime: NodeRuntime + 'static> MessageReceiver for Receiver<'a, Runtim
     }
 }
 
-type ListPeersResponderChannel = futures::channel::oneshot::Sender<Result<(u64, Vec<Peer>), Error>>;
+struct ListPeersState {
+    last_seen_version: u64,
+    in_query: bool,
+}
+
+type ListPeersResponderChannel = futures::channel::oneshot::Sender<Result<Vec<Peer>, Error>>;
 
 /// NodeStateCallback implementation for a list_peers request from the main app.
 struct ListPeersResponse {
     own_node_id: NodeId,
     responder: Option<ListPeersResponderChannel>,
+    list_peers_state: Rc<RefCell<ListPeersState>>,
 }
 
 impl ListPeersResponse {
-    fn new(own_node_id: NodeId, responder: ListPeersResponderChannel) -> Box<ListPeersResponse> {
-        Box::new(ListPeersResponse { own_node_id, responder: Some(responder) })
+    fn new(
+        own_node_id: NodeId,
+        responder: ListPeersResponderChannel,
+        list_peers_state: Rc<RefCell<ListPeersState>>,
+    ) -> Box<ListPeersResponse> {
+        Box::new(ListPeersResponse { own_node_id, responder: Some(responder), list_peers_state })
     }
 }
 
@@ -150,7 +160,7 @@ impl NodeStateCallback for ListPeersResponse {
             .nodes()
             .filter(|node_id| node_table.is_established(*node_id))
             .map(|node_id| Peer {
-                id: fidl_fuchsia_overnet_protocol::NodeId { id: node_id.0 },
+                id: node_id.into(),
                 is_self: node_id == self.own_node_id,
                 description: PeerDescription {
                     services: Some(node_table.node_services(node_id).to_vec()),
@@ -159,11 +169,18 @@ impl NodeStateCallback for ListPeersResponse {
             .collect();
         peers.shuffle(&mut rand::thread_rng());
         info!("Respond to list_peers: {:?}", peers);
+        {
+            let list_peers_state = &mut *self.list_peers_state.borrow_mut();
+            assert!(list_peers_state.in_query);
+            assert!(list_peers_state.last_seen_version < new_version);
+            list_peers_state.in_query = false;
+            list_peers_state.last_seen_version = new_version;
+        }
         match self
             .responder
             .take()
             .ok_or_else(|| format_err!("State callback called twice"))?
-            .send(Ok((new_version, peers)))
+            .send(Ok(peers))
         {
             Ok(_) => Ok(()),
             // Listener gone: response send ignored, but it already was.
@@ -206,6 +223,8 @@ struct NodeInner<Runtime: NodeRuntime> {
     socket_links: SaltSlab<SocketLink>,
     /// Local node link ids
     next_node_link_id: u64,
+    /// State for list_peers call
+    list_peers_state: Rc<RefCell<ListPeersState>>,
     /// Our runtime
     runtime: Runtime,
 }
@@ -232,6 +251,10 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
                 routing_update_queued: false,
                 node_to_app_link_ids: BTreeMap::new(),
                 socket_links: SaltSlab::new(),
+                list_peers_state: Rc::new(RefCell::new(ListPeersState {
+                    in_query: false,
+                    last_seen_version: 0,
+                })),
                 runtime,
             })),
         }
@@ -253,13 +276,22 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
     }
 
     /// Implementation of ListPeers fidl method.
-    pub async fn list_peers(self, last_seen_version: u64) -> Result<(u64, Vec<Peer>), Error> {
+    pub async fn list_peers(self) -> Result<Vec<Peer>, Error> {
         let rx = {
             let this = &mut *self.inner.borrow_mut();
+            if this.list_peers_state.borrow().in_query {
+                bail!("Already querying peers");
+            }
+            this.list_peers_state.borrow_mut().in_query = true;
             let (tx, rx) = futures::channel::oneshot::channel();
-            info!("Request list_peers last_seen_version={}", last_seen_version);
-            this.node_table
-                .post_query(last_seen_version, ListPeersResponse::new(this.router.node_id(), tx));
+            trace!(
+                "Request list_peers last_seen_version={}",
+                this.list_peers_state.borrow().last_seen_version
+            );
+            this.node_table.post_query(
+                this.list_peers_state.borrow().last_seen_version,
+                ListPeersResponse::new(this.router.node_id(), tx, this.list_peers_state.clone()),
+            );
             self.clone().need_flush(this);
             rx
         };
@@ -352,7 +384,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         let mut framer = StreamFramer::new();
         let mut greeting = StreamSocketGreeting {
             magic_string: Some(GREETING_STRING.to_string()),
-            node_id: Some(fidl_fuchsia_overnet_protocol::NodeId { id: self.id().0 }),
+            node_id: Some(self.id().into()),
             connection_label,
         };
         let mut bytes = Vec::new();
@@ -662,5 +694,90 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         if let Err(e) = self.channel_reader_inner(chan, stream_id).await {
             warn!("Channel reader failed: {:?}", e);
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+    use crate::router::test_util::*;
+    use futures::future::try_join;
+    use futures::task::LocalSpawnExt;
+
+    struct TestRuntime(futures::executor::LocalSpawner);
+
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
+    struct Time(std::time::Instant);
+
+    impl RouterTime for Time {
+        type Duration = std::time::Duration;
+
+        fn now() -> Self {
+            Time(std::time::Instant::now())
+        }
+
+        fn after(t: Self, dt: Self::Duration) -> Self {
+            Time(t.0 + dt)
+        }
+    }
+
+    impl NodeRuntime for TestRuntime {
+        type Time = Time;
+        type LinkId = ();
+
+        fn handle_type(_hdl: &Handle) -> Result<SendHandle, Error> {
+            unimplemented!();
+        }
+
+        fn spawn_local<F>(&mut self, _future: F)
+        where
+            F: Future<Output = ()> + 'static,
+        {
+            unimplemented!();
+        }
+
+        fn at(&mut self, t: Time, f: impl FnOnce() + 'static) {
+            let (tx, rx) = futures::channel::oneshot::channel();
+            std::thread::spawn(move || {
+                let now = std::time::Instant::now();
+                if now > t.0 {
+                    std::thread::sleep(now - t.0);
+                }
+                let _ = tx.send(());
+            });
+            self.0
+                .spawn_local(async move {
+                    rx.await.unwrap();
+                    f();
+                })
+                .unwrap();
+        }
+
+        fn router_link_id(&self, _id: Self::LinkId) -> LinkId {
+            unimplemented!();
+        }
+
+        fn send_on_link(&mut self, _id: Self::LinkId, _packet: &mut [u8]) -> Result<(), Error> {
+            unimplemented!();
+        }
+    }
+
+    #[test]
+    fn construct_node() {
+        init();
+        Node::new(
+            TestRuntime(futures::executor::LocalPool::new().spawner()),
+            test_router_options(),
+        );
+    }
+
+    #[test]
+    fn concurrent_list_peer_calls_will_error() {
+        init();
+        let mut pool = futures::executor::LocalPool::new();
+        let n = Node::new(TestRuntime(pool.spawner()), test_router_options());
+        pool.run_until(try_join(n.clone().list_peers(), n.clone().list_peers()))
+            .expect_err("Concurrent list peers should fail");
     }
 }

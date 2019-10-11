@@ -41,20 +41,16 @@ TEST_F(OvernetFactoryTest, HostList_OneHost_Workaround) {
   factory.AddBinding(1u, overnet1.NewRequest());
 
   bool called = false;
-  uint64_t version = 0;
   std::vector<fuchsia::overnet::Peer> host_list;
-  overnet1->ListPeers(0u,
-                      callback::Capture(callback::SetWhenCalled(&called), &version, &host_list));
+  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
-  EXPECT_NE(0u, version);
   EXPECT_THAT(host_list, IsEmpty());
 
   called = false;
-  overnet1->ListPeers(version,
-                      callback::Capture(callback::SetWhenCalled(&called), &version, &host_list));
+  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
@@ -66,21 +62,17 @@ TEST_F(OvernetFactoryTest, HostList_OneHost) {
   factory_.AddBinding(1u, overnet1.NewRequest());
 
   bool called = false;
-  uint64_t version = 0;
   std::vector<fuchsia::overnet::Peer> host_list;
-  overnet1->ListPeers(0u,
-                      callback::Capture(callback::SetWhenCalled(&called), &version, &host_list));
+  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
-  EXPECT_NE(0u, version);
   ASSERT_EQ(host_list.size(), 1u);
   EXPECT_EQ(host_list.at(0).id.id, 1u);
 
   called = false;
-  overnet1->ListPeers(version,
-                      callback::Capture(callback::SetWhenCalled(&called), &version, &host_list));
+  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
@@ -92,18 +84,14 @@ TEST_F(OvernetFactoryTest, HostList_TwoHosts_Sequence) {
   factory_.AddBinding(1u, overnet1.NewRequest());
 
   bool called = false;
-  uint64_t version = 0;
   std::vector<fuchsia::overnet::Peer> host_list;
-  overnet1->ListPeers(0u,
-                      callback::Capture(callback::SetWhenCalled(&called), &version, &host_list));
+  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
 
   called = false;
-  uint64_t new_version = version;
-  overnet1->ListPeers(
-      version, callback::Capture(callback::SetWhenCalled(&called), &new_version, &host_list));
+  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
@@ -113,14 +101,12 @@ TEST_F(OvernetFactoryTest, HostList_TwoHosts_Sequence) {
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_NE(new_version, version);
   ASSERT_EQ(host_list.size(), 2u);
   EXPECT_EQ(host_list.at(0).id.id, 1u);
   EXPECT_EQ(host_list.at(1).id.id, 2u);
 
   called = false;
-  overnet2->ListPeers(
-      0u, callback::Capture(callback::SetWhenCalled(&called), &new_version, &host_list));
+  overnet2->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
@@ -131,8 +117,7 @@ TEST_F(OvernetFactoryTest, HostList_TwoHosts_Sequence) {
   overnet2.Unbind();
   RunLoopUntilIdle();
 
-  overnet1->ListPeers(
-      new_version, callback::Capture(callback::SetWhenCalled(&called), &new_version, &host_list));
+  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   ASSERT_EQ(host_list.size(), 1u);
@@ -147,18 +132,14 @@ TEST_F(OvernetFactoryTest, HostList_TwoHosts_Chained) {
   factory_.AddBinding(1u, overnet1.NewRequest());
 
   bool called = false;
-  uint64_t version = 0;
   std::vector<fuchsia::overnet::Peer> host_list;
-  overnet1->ListPeers(0u,
-                      callback::Capture(callback::SetWhenCalled(&called), &version, &host_list));
+  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
 
   called = false;
-  uint64_t new_version = version;
-  overnet1->ListPeers(
-      version, callback::Capture(callback::SetWhenCalled(&called), &new_version, &host_list));
+  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
@@ -168,13 +149,11 @@ TEST_F(OvernetFactoryTest, HostList_TwoHosts_Chained) {
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_NE(new_version, version);
   ASSERT_EQ(host_list.size(), 2u);
   EXPECT_EQ(host_list.at(0).id.id, 1u);
   EXPECT_EQ(host_list.at(1).id.id, 2u);
 
-  overnet1->ListPeers(
-      new_version, callback::Capture(callback::SetWhenCalled(&called), &new_version, &host_list));
+  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
@@ -182,56 +161,6 @@ TEST_F(OvernetFactoryTest, HostList_TwoHosts_Chained) {
   overnet2.Unbind();
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-
-  ASSERT_EQ(host_list.size(), 1u);
-  EXPECT_EQ(host_list.at(0).id.id, 1u);
-}
-
-TEST_F(OvernetFactoryTest, HostList_TwoHosts_Callback) {
-  fuchsia::overnet::OvernetPtr overnet1;
-  factory_.AddBinding(1u, overnet1.NewRequest());
-
-  bool called = false;
-  uint64_t version = 0;
-  std::vector<fuchsia::overnet::Peer> host_list;
-  overnet1->ListPeers(0u,
-                      callback::Capture(callback::SetWhenCalled(&called), &version, &host_list));
-
-  RunLoopUntilIdle();
-  EXPECT_TRUE(called);
-
-  called = false;
-  uint64_t new_version;
-  overnet1->ListPeers(
-      version, callback::Capture(callback::SetWhenCalled(&called), &new_version, &host_list));
-
-  RunLoopUntilIdle();
-  EXPECT_FALSE(called);
-
-  fuchsia::overnet::OvernetPtr overnet2;
-  factory_.AddBinding(2u, overnet2.NewRequest());
-
-  RunLoopUntilIdle();
-  EXPECT_TRUE(called);
-  EXPECT_NE(new_version, version);
-  ASSERT_EQ(host_list.size(), 2u);
-  EXPECT_EQ(host_list.at(0).id.id, 1u);
-  EXPECT_EQ(host_list.at(1).id.id, 2u);
-
-  bool called2;
-  overnet1->ListPeers(
-      new_version, callback::Capture(callback::SetWhenCalled(&called), &new_version, &host_list));
-  overnet2->ListPeers(
-      new_version, callback::Capture(callback::SetWhenCalled(&called2), &new_version, &host_list));
-
-  RunLoopUntilIdle();
-  EXPECT_FALSE(called);
-  EXPECT_FALSE(called2);
-
-  overnet2.Unbind();
-  RunLoopUntilIdle();
-  EXPECT_TRUE(called);
-  EXPECT_FALSE(called2);
 
   ASSERT_EQ(host_list.size(), 1u);
   EXPECT_EQ(host_list.at(0).id.id, 1u);

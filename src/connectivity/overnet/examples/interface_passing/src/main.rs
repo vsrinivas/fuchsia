@@ -29,11 +29,9 @@ fn app<'a, 'b>() -> App<'a, 'b> {
 // Client implementation
 
 async fn exec_client(svc: impl OvernetProxyInterface, text: Option<&str>) -> Result<(), Error> {
-    let mut last_version: u64 = 0;
     loop {
-        let (version, peers) = svc.list_peers(last_version).await?;
+        let peers = svc.list_peers().await?;
         println!("Got peers: {:?}", peers);
-        last_version = version;
         for mut peer in peers {
             if peer.description.services.is_none() {
                 continue;

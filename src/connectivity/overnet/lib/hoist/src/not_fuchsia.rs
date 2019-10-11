@@ -33,7 +33,7 @@ pub const DEFAULT_ASCENDD_PATH: &str = "/tmp/ascendd";
 
 #[derive(Debug)]
 enum OvernetCommand {
-    ListPeers(u64, futures::channel::oneshot::Sender<(u64, Vec<Peer>)>),
+    ListPeers(futures::channel::oneshot::Sender<Vec<Peer>>),
     RegisterService(String, ClientEnd<ServiceProviderMarker>),
     ConnectToService(NodeId, String, fidl::Channel),
     AttachSocketLink(fidl::Socket, fidl_fuchsia_overnet::SocketLinkOptions),
@@ -178,10 +178,10 @@ async fn finish_writes(
 
 async fn run_list_peers_inner(
     node: Node<OvernetRuntime>,
-    last_seen_version: u64,
-    responder: futures::channel::oneshot::Sender<(u64, Vec<Peer>)>,
+    responder: futures::channel::oneshot::Sender<Vec<Peer>>,
 ) -> Result<(), Error> {
-    if let Err(_) = responder.send(node.list_peers(last_seen_version).await?) {
+    let peers = node.list_peers().await?;
+    if let Err(_) = responder.send(peers) {
         println!("List peers stopped listening");
     }
     Ok(())
@@ -189,10 +189,9 @@ async fn run_list_peers_inner(
 
 async fn run_list_peers(
     node: Node<OvernetRuntime>,
-    last_seen_version: u64,
-    responder: futures::channel::oneshot::Sender<(u64, Vec<Peer>)>,
+    responder: futures::channel::oneshot::Sender<Vec<Peer>>,
 ) {
-    if let Err(e) = run_list_peers_inner(node, last_seen_version, responder).await {
+    if let Err(e) = run_list_peers_inner(node, responder).await {
         println!("List peers gets error: {:?}", e);
     }
 }
@@ -367,8 +366,8 @@ async fn run_overnet_inner(
         let desc = format!("{:?}", cmd);
         let r = match cmd {
             None => return Ok(()),
-            Some(OvernetCommand::ListPeers(last_seen_version, sender)) => {
-                spawn_local(run_list_peers(node.clone(), last_seen_version, sender));
+            Some(OvernetCommand::ListPeers(sender)) => {
+                spawn_local(run_list_peers(node.clone(), sender));
                 Ok(())
             }
             Some(OvernetCommand::RegisterService(service_name, provider)) => {
@@ -408,13 +407,13 @@ fn run_overnet(rx: futures::channel::mpsc::UnboundedReceiver<OvernetCommand>) {
 
 impl OvernetProxyInterface for Overnet {
     type ListPeersResponseFut = futures::future::MapErr<
-        futures::channel::oneshot::Receiver<(u64, Vec<Peer>)>,
+        futures::channel::oneshot::Receiver<Vec<Peer>>,
         fn(futures::channel::oneshot::Canceled) -> fidl::Error,
     >;
 
-    fn list_peers(&self, last_seen_version: u64) -> Self::ListPeersResponseFut {
+    fn list_peers(&self) -> Self::ListPeersResponseFut {
         let (sender, receiver) = futures::channel::oneshot::channel();
-        self.send(OvernetCommand::ListPeers(last_seen_version, sender));
+        self.send(OvernetCommand::ListPeers(sender));
         // Returning an error from the receiver means that the sender disappeared without
         // sending a response, a condition we explicitly disallow.
         receiver.map_err(|_| unreachable!())

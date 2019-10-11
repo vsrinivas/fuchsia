@@ -233,18 +233,14 @@ fn register_udp(addr: SocketAddr, node_id: NodeId) -> Result<(), Error> {
     })
 }
 
-async fn run_list_peers_inner(
-    last_seen_version: u64,
-    responder: OvernetListPeersResponder,
-) -> Result<(), Error> {
-    let (version, mut peers) =
-        with_app_mut(|app| app.node.clone().list_peers(last_seen_version)).await?;
-    responder.send(version, &mut peers.iter_mut())?;
+async fn run_list_peers_inner(responder: OvernetListPeersResponder) -> Result<(), Error> {
+    let mut peers = with_app_mut(|app| app.node.clone().list_peers()).await?;
+    responder.send(&mut peers.iter_mut())?;
     Ok(())
 }
 
-async fn run_list_peers(last_seen_version: u64, responder: OvernetListPeersResponder) {
-    if let Err(e) = run_list_peers_inner(last_seen_version, responder).await {
+async fn run_list_peers(responder: OvernetListPeersResponder) {
+    if let Err(e) = run_list_peers_inner(responder).await {
         warn!("List peers gets error: {:?}", e);
     }
 }
@@ -253,8 +249,8 @@ async fn run_list_peers(last_seen_version: u64, responder: OvernetListPeersRespo
 async fn run_overnet_server(mut stream: OvernetRequestStream) -> Result<(), Error> {
     while let Some(request) = stream.try_next().await.context("error running echo server")? {
         let result = with_app_mut(|app| match request {
-            OvernetRequest::ListPeers { last_seen_version, responder, .. } => {
-                fasync::spawn_local(run_list_peers(last_seen_version, responder));
+            OvernetRequest::ListPeers { responder, .. } => {
+                fasync::spawn_local(run_list_peers(responder));
                 Ok(())
             }
             OvernetRequest::RegisterService { service_name, provider, .. } => {

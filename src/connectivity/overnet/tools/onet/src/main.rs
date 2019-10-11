@@ -26,15 +26,10 @@ fn app<'a, 'b>() -> App<'a, 'b> {
 }
 
 async fn ls_peers(svc: impl OvernetProxyInterface) -> Result<(), Error> {
-    match svc.list_peers(0).await {
-        Ok((_, peers)) => {
-            for peer in peers {
-                println!("PEER: {:?}", peer);
-            }
-            Ok(())
-        }
-        Err(e) => Err(e.into()),
+    for peer in svc.list_peers().await? {
+        println!("PEER: {:?}", peer);
     }
+    Ok(())
 }
 
 async fn copy_stdin_to_socket(

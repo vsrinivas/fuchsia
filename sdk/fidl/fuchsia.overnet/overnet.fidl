@@ -11,9 +11,10 @@ using fuchsia.overnet.protocol;
 [Discoverable]
 protocol Overnet {
     /// Returns a list of all peers that are connected to this Overnet.
-    /// If this list has not been updated since `last_seen_version`, then wait for the list to be
-    /// updated.
-    ListPeers(uint64 last_seen_version) -> (uint64 version, vector<Peer> peers);
+    /// If this list has not been updated since the last call to this method, it waits until
+    /// new data is available.
+    /// Concurrent calls to ListPeers will result in channel closure.
+    ListPeers() -> (vector<Peer> peers);
     /// Register a new service to be exported by Overnet.
     /// If an existing service has the same `service_name`, it's replaced by this service.
     RegisterService(string:fuchsia.overnet.protocol.MAX_SERVICE_NAME_LENGTH service_name,

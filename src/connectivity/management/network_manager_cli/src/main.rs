@@ -52,12 +52,9 @@ fn supports_network_manager(peer: &Peer) -> bool {
 
 async fn connect_overnet() -> Result<(RouterAdminProxy, RouterStateProxy), Error> {
     let svc = connect_to_service::<OvernetMarker>()?;
-    let mut version: u64 = 0;
     syslog::fx_log_info!("looking for overnet peers...");
     loop {
-        syslog::fx_log_info!("try #{:?}...", version);
-        let (v, peers) = svc.list_peers(version).await?;
-        version = v;
+        let peers = svc.list_peers().await?;
         for mut peer in peers {
             if !supports_network_manager(&peer) {
                 continue;

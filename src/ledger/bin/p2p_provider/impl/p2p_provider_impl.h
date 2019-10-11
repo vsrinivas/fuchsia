@@ -63,7 +63,7 @@ class P2PProviderImpl : public P2PProvider, public fuchsia::overnet::ServiceProv
   // Starts the listening mDNS service.
   void StartService();
   // Retrieves and processes the current devices list
-  void ListenForNewDevices(uint64_t version);
+  void ListenForNewDevices();
   // Creates a RemoteConnection from |chan| and associated with |id|.
   void AddConnectionFromChannel(zx::channel chan,
                                 std::optional<fuchsia::overnet::protocol::NodeId> overnet_id);

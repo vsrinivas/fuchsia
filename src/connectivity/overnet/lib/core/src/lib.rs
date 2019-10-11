@@ -33,5 +33,25 @@ pub use router::{
 pub use stream_framer::{StreamDeframer, StreamFramer};
 
 #[cfg(all(test, not(target_os = "fuchsia")))]
-#[no_mangle]
-pub extern "C" fn fidlhdl_close(_hdl: u32) {}
+mod test_fakes_for_fidlhdl {
+    use fidl::{FidlHdlPairCreateResult, FidlHdlWriteResult, Handle, INVALID_HANDLE};
+
+    #[no_mangle]
+    pub extern "C" fn fidlhdl_close(_hdl: u32) {}
+
+    #[no_mangle]
+    pub extern "C" fn fidlhdl_channel_create() -> FidlHdlPairCreateResult {
+        FidlHdlPairCreateResult { left: INVALID_HANDLE, right: INVALID_HANDLE }
+    }
+
+    #[no_mangle]
+    pub extern "C" fn fidlhdl_channel_write(
+        _hdl: u32,
+        _bytes: *const u8,
+        _handles: *mut Handle,
+        _num_bytes: usize,
+        _num_handles: usize,
+    ) -> FidlHdlWriteResult {
+        FidlHdlWriteResult::PeerClosed
+    }
+}
