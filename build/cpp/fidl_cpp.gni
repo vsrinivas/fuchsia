@@ -49,13 +49,13 @@ template("fidl_cpp_codegen") {
           defined(fuzzer.protocol),
           "FIDL protocol fuzzers must set protocol: the fully-qualified name of the protocol to be fuzzed.")
 
-      protocol_suffix = string_replace(fuzzer.protocol, ".", "_")
+      protocol_suffix = "_" + string_replace(fuzzer.protocol, ".", "_")
       if (defined(fuzzer.methods)) {
         foreach(method, fuzzer.methods) {
           protocol_suffix = "${protocol_suffix}_${method}"
         }
       }
-      generation_visibility += [ ":${main_target_name}_${protocol_suffix}" ]
+      generation_visibility += [ ":${main_target_name}${protocol_suffix}" ]
     }
   }
 
@@ -187,10 +187,20 @@ template("fidl_cpp_library") {
                              "visibility",
                            ])
 
-    sources = [
-      "$file_stem.cc",
-      "$file_stem.h",
-    ]
+    if (defined(invoker.header_only) && invoker.header_only) {
+      sources = [
+        "$file_stem.h",
+      ]
+    } else if (defined(invoker.source_only) && invoker.source_only) {
+      sources = [
+        "$file_stem.cc",
+      ]
+    } else {
+      sources = [
+        "$file_stem.cc",
+        "$file_stem.h",
+      ]
+    }
 
     # Let dependencies use `#include "$file_stem.h"`.
     public_configs = [ ":$config_target_name" ]
@@ -245,19 +255,6 @@ template("fidl_cpp") {
       }
     }
 
-    if (defined(invoker.fuzzers)) {
-      lib_name = "${target_name}_libfuzzer"
-
-      fidl_cpp_codegen(lib_name) {
-        forward_variables_from(invoker, "*")
-        name = library_name
-        fidlgen_tool = "//garnet/go/src/fidl:fidlgen"
-        generator = "libfuzzer"
-        generated_source_base = "cpp/libfuzzer"
-        root_target = target_name
-      }
-    }
-
     foreach(generator_settings, invoker.llcpp_generators) {
       if (defined(generator_settings.target_suffix)) {
         lib_name = "${target_name}_${generator_settings.target_suffix}"
@@ -293,6 +290,12 @@ template("fidl_cpp") {
         library_public_deps += invoker.public_deps
       }
 
+      if (defined(generator_settings.header_only)) {
+        header_only = generator_settings.header_only
+      } else {
+        header_only = false
+      }
+
       if (defined(generator_settings.target_suffix)) {
         target_suffix = "_${generator_settings.target_suffix}"
       } else {
@@ -311,24 +314,13 @@ template("fidl_cpp") {
     }
 
     if (defined(invoker.fuzzers)) {
-      lib_public_deps = [
-        "//zircon/public/lib/async-default",
-        "//zircon/public/lib/async-loop-cpp",
-        "//zircon/public/lib/async-loop-default",
-      ]
-      if (is_fuchsia) {
-        lib_public_deps += [ "//sdk/lib/fidl/cpp" ]
-      } else {
-        lib_public_deps += [ "//sdk/lib/fidl/cpp:cpp_base" ]
-      }
-
       foreach(fuzzer, invoker.fuzzers) {
         assert(
             defined(fuzzer.protocol),
             "FIDL protocol fuzzers must set protocol: the fully-qualified name of the protocol to be fuzzed.")
 
-        protocol_suffix = string_replace(fuzzer.protocol, ".", "_")
-        library_defines = [ "PROTOCOL_${protocol_suffix}" ]
+        protocol_suffix = "_" + string_replace(fuzzer.protocol, ".", "_")
+        library_defines = [ "PROTOCOL${protocol_suffix}" ]
         if (defined(invoker.defines)) {
           library_defines += invoker.defines
         }
@@ -345,16 +337,17 @@ template("fidl_cpp") {
           library_public_deps += invoker.public_deps
         }
 
-        target_suffix = "_libfuzzer_${protocol_suffix}"
-        lib_name = "${target_name}${target_suffix}"
+        target_suffix = "_libfuzzer"
+        lib_name = "${target_name}${target_suffix}${protocol_suffix}"
 
         fidl_cpp_library(lib_name) {
           forward_variables_from(invoker, "*")
+          source_only = true
           name = library_name
           generator = "libfuzzer"
           generated_source_base = "cpp/libfuzzer"
           root_target = target_name
-          additional_public_deps = lib_public_deps
+          additional_public_deps = [ ":${target_name}_libfuzzer" ]
           defines = library_defines
         }
       }
