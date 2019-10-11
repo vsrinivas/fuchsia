@@ -126,7 +126,8 @@ zx_status_t UsbPeripheral::Init() {
   if (!ac.check()) {
     return ZX_OK;
   }
-  fbl::AutoCall call([=]() { delete[] reinterpret_cast<char*>(config); });
+  fbl::AutoCall call(
+      [=]() { operator delete[](reinterpret_cast<char*>(config), std::align_val_t(alignment)); });
   const uint32_t key = DEVICE_METADATA_USB_CONFIG;
   status = device_get_metadata(parent(), key, config, metasize, &metasize);
   if (status != ZX_OK) {
