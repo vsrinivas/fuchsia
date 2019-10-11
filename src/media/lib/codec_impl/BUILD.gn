@@ -27,6 +27,7 @@ source_set("codec_impl") {
     "codec_input_item.cc",
     "codec_packet.cc",
     "decryptor_adapter.cc",
+    "fake_map_range.cc",
   ]
   include_dirs = [ "include" ]
   public = [
@@ -49,6 +50,7 @@ source_set("codec_impl") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/closure-queue",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
   ]
   public_configs = [ ":codec_impl_include_config" ]
   deps = [

@@ -44,6 +44,7 @@ source_set("codec_impl_tests") {
 
   sources = [
     "test_failures.cc",
+    "test_fake_map_range.cc",
     "test_lifetime.cc",
   ]
 
