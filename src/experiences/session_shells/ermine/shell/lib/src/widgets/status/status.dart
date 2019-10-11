@@ -59,6 +59,7 @@ class _StatusEntry extends StatelessWidget {
   Widget build(BuildContext context) {
     return StreamBuilder<Spec>(
       stream: uiStream.stream,
+      initialData: uiStream.spec,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return Offstage();
@@ -145,21 +146,7 @@ class _StatusEntry extends StatelessWidget {
 
   Widget _buildFromValue(Value value, void Function(Value) update) {
     if (value.$tag == ValueTag.button) {
-      return GestureDetector(
-        onTap: () => update(value),
-        child: Container(
-          height: kItemHeight,
-          color: Colors.white,
-          padding: EdgeInsets.symmetric(vertical: 0, horizontal: 2),
-          child: Text(
-            value.button.label.toUpperCase(),
-            style: TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-        ),
-      );
+      return _buildButton(value.button.label, () => update(value));
     }
     if (value.$tag == ValueTag.text) {
       return Text(value.text.text.toUpperCase());
@@ -228,22 +215,22 @@ class _ManualStatusEntry extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildButton(String label, void Function() onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: kItemHeight,
-        color: Colors.white,
-        padding: EdgeInsets.symmetric(vertical: 0, horizontal: 2),
-        child: Text(
-          label.toUpperCase(),
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w400,
-          ),
+Widget _buildButton(String label, void Function() onTap) {
+  return GestureDetector(
+    onTap: onTap,
+    child: Container(
+      height: kItemHeight,
+      color: Colors.white,
+      padding: EdgeInsets.symmetric(vertical: 0, horizontal: 2),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          color: Colors.black,
+          fontWeight: FontWeight.w400,
         ),
       ),
-    );
-  }
+    ),
+  );
 }

@@ -44,10 +44,10 @@ abstract class UiSpec extends QuickUi {
       update(value);
     }
 
-    final status = _completer.future;
+    final future = _completer.future;
     if (_completer.isCompleted) {
       _completer = Completer<Spec>();
     }
-    return status;
+    return future;
   }
 }

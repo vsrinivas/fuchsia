@@ -17,8 +17,6 @@ class Battery extends UiSpec {
   // Localized strings.
   static String get _title => Strings.battery;
 
-  static const _checkBatteryDuration = Duration(seconds: 1);
-
   BatteryModel model;
 
   Battery({BatteryManagerProxy monitor, BatteryInfoWatcherBinding binding}) {
@@ -27,7 +25,6 @@ class Battery extends UiSpec {
       binding: binding,
       onChange: _onChange,
     );
-    Timer.periodic(_checkBatteryDuration, (Timer t) => {_onChange()});
   }
 
   factory Battery.fromStartupContext(StartupContext startupContext) {
