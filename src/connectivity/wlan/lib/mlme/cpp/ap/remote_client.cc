@@ -782,31 +782,7 @@ zx_status_t RemoteClient::SendAuthentication(wlan_status_code result) {
   debugfn();
   debugbss("[client] [%s] sending Authentication response\n", addr_.ToString().c_str());
 
-  size_t max_frame_size = MgmtFrameHeader::max_len() + Authentication::max_len();
-  auto packet = GetWlanPacket(max_frame_size);
-  if (packet == nullptr) {
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  BufferWriter w(*packet);
-  auto mgmt_hdr = w.Write<MgmtFrameHeader>();
-  mgmt_hdr->fc.set_type(FrameType::kManagement);
-  mgmt_hdr->fc.set_subtype(ManagementSubtype::kAuthentication);
-  mgmt_hdr->addr1 = addr_;
-  mgmt_hdr->addr2 = bss_->bssid();
-  mgmt_hdr->addr3 = bss_->bssid();
-  mgmt_hdr->sc.set_seq(bss_->NextSns1(mgmt_hdr->addr1));
-
-  auto auth = w.Write<Authentication>();
-  auth->status_code = result;
-  auth->auth_algorithm_number = AuthAlgorithm::kOpenSystem;
-  // TODO(hahnr): Evolve this to support other authentication algorithms and
-  // track seq number.
-  auth->auth_txn_seq_number = 2;
-
-  packet->set_len(w.WrittenBytes());
-
-  auto status = bss_->SendMgmtFrame(MgmtFrame<>(std::move(packet)));
+  auto status = bss_->SendOpenAuthFrame(addr_, result);
   if (status != ZX_OK) {
     errorf("[client] [%s] could not send auth response packet: %d\n", addr_.ToString().c_str(),
            status);

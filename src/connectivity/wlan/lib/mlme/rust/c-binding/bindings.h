@@ -129,6 +129,9 @@ extern "C" wlan_ap_sta_t *ap_sta_new(mlme_device_ops_t device,
                                      mlme_buffer_provider_ops_t buf_provider,
                                      const uint8_t (*bssid)[6]);
 
+extern "C" int32_t ap_sta_send_open_auth_frame(wlan_ap_sta_t *sta, const uint8_t (*client_addr)[6],
+                                               uint16_t status_code);
+
 extern "C" void client_sta_delete(wlan_client_sta_t *sta);
 
 extern "C" int32_t client_sta_handle_data_frame(wlan_client_sta_t *sta, const uint8_t *data_frame,

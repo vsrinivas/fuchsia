@@ -49,6 +49,9 @@ struct MockBss : public BssInterface {
   zx_status_t SendDataFrame(DataFrame<>&& data_frame, uint32_t flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
+  zx_status_t SendOpenAuthFrame(const common::MacAddr& addr, wlan_status_code result) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   zx_status_t DeliverEthernet(fbl::Span<const uint8_t> frame) { return ZX_ERR_NOT_SUPPORTED; }
 
   void OnPreTbtt() {}

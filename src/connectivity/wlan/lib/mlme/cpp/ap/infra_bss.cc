@@ -439,6 +439,10 @@ zx_status_t InfraBss::SendMgmtFrame(MgmtFrame<>&& mgmt_frame) {
   return device_->SendWlan(mgmt_frame.Take());
 }
 
+zx_status_t InfraBss::SendOpenAuthFrame(const common::MacAddr& addr, wlan_status_code result) {
+  return ap_sta_send_open_auth_frame(rust_ap_.get(), &addr.byte, result);
+}
+
 zx_status_t InfraBss::DeliverEthernet(fbl::Span<const uint8_t> frame) {
   return device_->DeliverEthernet(frame);
 }

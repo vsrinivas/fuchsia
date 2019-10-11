@@ -5,18 +5,19 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_AP_BSS_INTERFACE_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_AP_BSS_INTERFACE_H_
 
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <zircon/types.h>
+
 #include <chrono>
 #include <optional>
 
 #include <fbl/unique_ptr.h>
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/mlme/ap/tim.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/ht.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/ps_cfg.h>
 #include <wlan/mlme/timer_manager.h>
-#include <zircon/types.h>
 
 namespace wlan {
 
@@ -45,6 +46,9 @@ class BssInterface {
   virtual zx_status_t SendMgmtFrame(MgmtFrame<>&& mgmt_frame) = 0;
   virtual zx_status_t SendDataFrame(DataFrame<>&& data_frame, uint32_t flags = 0) = 0;
   virtual zx_status_t DeliverEthernet(fbl::Span<const uint8_t> frame) = 0;
+
+  virtual zx_status_t SendOpenAuthFrame(const common::MacAddr& addr,
+                                        wlan_status_code status_code) = 0;
 
   // Indications reported from lower MAC layer.
   virtual void OnPreTbtt() = 0;

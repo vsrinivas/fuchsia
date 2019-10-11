@@ -60,6 +60,8 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
   zx_status_t SendDataFrame(DataFrame<>&& data_frame, uint32_t flags = 0) override;
   zx_status_t DeliverEthernet(fbl::Span<const uint8_t> frame) override;
 
+  zx_status_t SendOpenAuthFrame(const common::MacAddr& addr, wlan_status_code status_code) override;
+
   uint32_t NextSns1(const common::MacAddr& addr) override;
 
   std::optional<DataFrame<LlcHeader>> EthToDataFrame(const EthFrame& eth_frame,
