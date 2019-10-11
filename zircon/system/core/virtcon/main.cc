@@ -461,6 +461,10 @@ int main(int argc, char** argv) {
 
   setup_dir_watcher("/dev/class/input", input_cb, &input_ph, &input_dir_fd);
 
+  if (!vc_sysmem_connect()) {
+    return -1;
+  }
+
   if (!vc_display_init()) {
     return -1;
   }
