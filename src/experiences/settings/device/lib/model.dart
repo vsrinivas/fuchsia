@@ -4,10 +4,9 @@
 
 import 'dart:async';
 
-import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_update/fidl_async.dart' as update;
-import 'package:fidl_fuchsia_pkg/fidl_async.dart' as pkg;
-import 'package:fidl_fuchsia_pkg_rewrite/fidl_async.dart' as pkg_rewrite;
+import 'package:fidl_fuchsia_update_channelcontrol/fidl_async.dart'
+    as channelcontrol;
 import 'package:fidl_fuchsia_recovery/fidl_async.dart' as recovery;
 import 'package:flutter/foundation.dart';
 import 'package:fuchsia_logger/logger.dart';
@@ -27,14 +26,11 @@ abstract class SystemInterface {
 
   Future<bool> checkForSystemUpdate();
 
-  Stream<pkg.RepositoryConfig> listRepositories();
+  Future<String> getCurrentChannel();
 
-  Stream<pkg_rewrite.Rule> listRules();
+  Future<void> setTargetChannel(String channel);
 
-  Stream<pkg_rewrite.Rule> listStaticRules();
-
-  Future<int> updateRules(
-      Iterable<pkg_rewrite.Rule> Function(List<pkg_rewrite.Rule>) action);
+  Future<List<String>> getChannelList();
 
   Future<void> factoryReset();
 
@@ -45,20 +41,16 @@ class DefaultSystemInterfaceImpl implements SystemInterface {
   /// Controller for the update manager service.
   final update.ManagerProxy _updateManager = update.ManagerProxy();
 
-  /// Controller for package repo manager and rewrite engine (our update service).
-  final pkg.RepositoryManagerProxy _repositoryManager =
-      pkg.RepositoryManagerProxy();
-  final pkg_rewrite.EngineProxy _rewriteManager = pkg_rewrite.EngineProxy();
+  /// Controller for the update channel control service.
+  final channelcontrol.ChannelControlProxy _channelControl =
+      channelcontrol.ChannelControlProxy();
 
   /// Controller for the factory reset service.
   final recovery.FactoryResetProxy _factoryReset = recovery.FactoryResetProxy();
 
   DefaultSystemInterfaceImpl() {
     StartupContext.fromStartupInfo().incoming.connectToService(_updateManager);
-    StartupContext.fromStartupInfo()
-        .incoming
-        .connectToService(_repositoryManager);
-    StartupContext.fromStartupInfo().incoming.connectToService(_rewriteManager);
+    StartupContext.fromStartupInfo().incoming.connectToService(_channelControl);
   }
 
   @override
@@ -74,65 +66,14 @@ class DefaultSystemInterfaceImpl implements SystemInterface {
   }
 
   @override
-  Stream<pkg.RepositoryConfig> listRepositories() async* {
-    final iter = pkg.RepositoryIteratorProxy();
-    await _repositoryManager.list(iter.ctrl.request());
-
-    List<pkg.RepositoryConfig> repos;
-    do {
-      repos = await iter.next();
-      for (var repo in repos) {
-        yield repo;
-      }
-    } while (repos.isNotEmpty);
-  }
+  Future<String> getCurrentChannel() => _channelControl.getCurrent();
 
   @override
-  Stream<pkg_rewrite.Rule> listRules() {
-    return _listRules(_rewriteManager.list);
-  }
+  Future<void> setTargetChannel(String channel) =>
+      _channelControl.setTarget(channel);
 
   @override
-  Stream<pkg_rewrite.Rule> listStaticRules() {
-    return _listRules(_rewriteManager.listStatic);
-  }
-
-  Future<int> editRuleTransaction(
-      Future<void> Function(pkg_rewrite.EditTransaction) action) async {
-    // In most cases this loop will only run once, but to be safe against
-    // other writers we loop a few times.
-    for (var i = 0; i < 10; i++) {
-      final transaction = pkg_rewrite.EditTransactionProxy();
-      await _rewriteManager.startEditTransaction(transaction.ctrl.request());
-      await action(transaction);
-      final status = await transaction.commit();
-      switch (status) {
-        case ZX.OK:
-          return ZX.OK;
-        case ZX.ERR_UNAVAILABLE:
-          continue;
-        default:
-          return status;
-      }
-    }
-    return ZX.ERR_UNAVAILABLE;
-  }
-
-  @override
-  Future<int> updateRules(
-      Iterable<pkg_rewrite.Rule> Function(List<pkg_rewrite.Rule>)
-          action) async {
-    return editRuleTransaction((tx) async {
-      final rules = <pkg_rewrite.Rule>[];
-      await _listRules(tx.listDynamic).forEach(rules.add);
-
-      await tx.resetAll();
-
-      for (var rule in action(rules).toList().reversed) {
-        await tx.add(rule);
-      }
-    });
-  }
+  Future<List<String>> getChannelList() => _channelControl.getTargetList();
 
   @override
   Future<void> factoryReset() async {
@@ -146,8 +87,7 @@ class DefaultSystemInterfaceImpl implements SystemInterface {
   @override
   void dispose() {
     _updateManager.ctrl.close();
-    _repositoryManager.ctrl.close();
-    _rewriteManager.ctrl.close();
+    _channelControl.ctrl.close();
     _factoryReset.ctrl.close();
   }
 }
@@ -179,10 +119,6 @@ class DeviceSettingsModel extends Model {
 
   ValueNotifier<bool> channelPopupShowing = ValueNotifier<bool>(false);
 
-  final List<pkg.RepositoryConfig> _repos = [];
-  final List<pkg_rewrite.Rule> _rules = [];
-  final List<pkg_rewrite.Rule> _staticRules = [];
-
   bool _isChannelUpdating = false;
 
   SystemInterface _sysInterface;
@@ -194,23 +130,13 @@ class DeviceSettingsModel extends Model {
 
   DateTime get lastUpdate => _lastUpdate;
 
-  List<pkg.RepositoryConfig> get repos => _repos;
+  String _currentChannel;
 
-  List<pkg_rewrite.Rule> get rules => _rules;
+  String get currentChannel => _currentChannel;
 
-  String get currentChannel {
-    final rule =
-        rules.firstWhere(_ruleIsFuchsiaReplacement, orElse: () => null);
+  List<String> _channels;
 
-    return rule?.literal?.hostReplacement;
-  }
-
-  String get defaultChannel {
-    final rule =
-        _staticRules.firstWhere(_ruleIsFuchsiaReplacement, orElse: () => null);
-
-    return rule?.literal?.hostReplacement;
-  }
+  List<String> get channels => _channels;
 
   /// Determines whether the confirmation dialog for factory reset should
   /// be displayed.
@@ -235,54 +161,12 @@ class DeviceSettingsModel extends Model {
     _lastUpdate = DateTime.now();
   }
 
-  Future<void> selectChannel(pkg.RepositoryConfig selectedConfig) async {
-    log.info('selecting channel ${selectedConfig.repoUrl}');
+  Future<void> selectChannel(String selectedChannel) async {
+    log.info('selecting channel $selectedChannel');
     channelPopupShowing.value = false;
     _setChannelState(updating: true);
 
-    final repoUrl = Uri.parse(selectedConfig.repoUrl);
-    final pkg_rewrite.Rule selectedRule = pkg_rewrite.Rule.withLiteral(
-        pkg_rewrite.LiteralRule(
-            hostMatch: 'fuchsia.com',
-            hostReplacement: repoUrl.host,
-            pathPrefixMatch: '/',
-            pathPrefixReplacement: '/'));
-
-    final status = await _sysInterface.updateRules((rules) sync* {
-      // Find the first fuchsia.com rule. If it doesn't exist, add it to the
-      // front of the rule set. Otherwise replace it, and filter out any
-      // duplicates.
-      final index = rules.indexWhere(_ruleIsFuchsiaReplacement);
-      if (index == -1) {
-        yield selectedRule;
-        yield* rules;
-      } else {
-        yield* rules.getRange(0, index);
-        yield selectedRule;
-        yield* rules
-            .getRange(index + 1, rules.length)
-            .where((rule) => !_ruleIsFuchsiaReplacement(rule));
-      }
-    });
-
-    if (status != ZX.OK) {
-      log.severe('error while modifying rewrite rules: $status');
-    }
-
-    await _update();
-  }
-
-  Future<void> clearChannel() async {
-    log.info('clearing channel');
-    channelPopupShowing.value = false;
-    _setChannelState(updating: true);
-
-    final status = await _sysInterface.updateRules(
-        (rules) => rules.where((rule) => !_ruleIsFuchsiaReplacement(rule)));
-
-    if (status != ZX.OK) {
-      log.severe('error while modifying rewrite rules: $status');
-    }
+    await _sysInterface.setTargetChannel(selectedChannel);
 
     await _update();
   }
@@ -290,14 +174,9 @@ class DeviceSettingsModel extends Model {
   Future<void> _update() async {
     _setChannelState(updating: true);
 
-    _repos.clear();
-    await _sysInterface.listRepositories().forEach(_repos.add);
+    _currentChannel = await _sysInterface.getCurrentChannel();
 
-    _rules.clear();
-    await _sysInterface.listRules().forEach(_rules.add);
-
-    _staticRules.clear();
-    await _sysInterface.listStaticRules().forEach(_staticRules.add);
+    _channels = await _sysInterface.getChannelList();
 
     _setChannelState(updating: false);
   }
@@ -354,25 +233,4 @@ class DeviceSettingsModel extends Model {
     _showResetConfirmation = false;
     notifyListeners();
   }
-}
-
-Stream<pkg_rewrite.Rule> _listRules(
-    Future<void> Function(InterfaceRequest<pkg_rewrite.RuleIterator>)
-        action) async* {
-  final iter = pkg_rewrite.RuleIteratorProxy();
-  await action(iter.ctrl.request());
-
-  List<pkg_rewrite.Rule> rules;
-  do {
-    rules = await iter.next();
-    for (var rule in rules) {
-      yield rule;
-    }
-  } while (rules.isNotEmpty);
-}
-
-bool _ruleIsFuchsiaReplacement(pkg_rewrite.Rule rule) {
-  return rule.literal != null &&
-      rule.literal.hostMatch == 'fuchsia.com' &&
-      rule.literal.pathPrefixMatch == '/';
 }
