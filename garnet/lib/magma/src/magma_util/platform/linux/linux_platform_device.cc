@@ -167,7 +167,8 @@ Status LinuxPlatformDevice::LoadFirmware(const char* filename,
                                          uint64_t* size_out) const {
   int fd = open(filename, O_RDONLY);
   if (fd < 0)
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Open firmware failed: %s", strerror(errno));
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Open firmware (%s) failed: %s", filename,
+                    strerror(errno));
 
   LinuxPlatformHandle firmware(fd);
 

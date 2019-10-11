@@ -221,6 +221,20 @@ class A6xxCpProtect : public A6xxCpProtectBase {
   }
 };
 
+class A6xxCpSqeInstructionBase : public magma::RegisterPairBase {
+ public:
+  static auto CreateFrom(uint64_t value) {
+    return magma::RegisterAddr<A6xxCpSqeInstructionBase>(0x00000830 << 2).FromValue(value);
+  }
+};
+
+class A6xxCpSqeControl : public magma::RegisterBase {
+ public:
+  static auto CreateFrom(uint32_t value) {
+    return magma::RegisterAddr<A6xxCpSqeControl>(0x00000808 << 2).FromValue(value);
+  }
+};
+
 class A6xxCpRingbufferControl : public magma::RegisterBase {
  public:
   static constexpr uint64_t kBufferSizeShift = 0;

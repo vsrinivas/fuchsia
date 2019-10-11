@@ -31,9 +31,13 @@ class TestQcomDevice : public ::testing::Test {
     DLOG("Got chip id: 0x%x", device->GetChipId());
     DLOG("Got gmem size: 0x%x", device->GetGmemSize());
 
-    uint64_t gpu_addr;
-    EXPECT_TRUE(device->ringbuffer()->GetGpuAddress(&gpu_addr));
-    DLOG("Got ringbuffer addr: 0x%lx", gpu_addr);
+    uint64_t firmware_addr = device->firmware()->gpu_addr();
+    EXPECT_EQ(firmware_addr, MsdQcomDevice::kClientGpuAddrBase);
+    DLOG("Got firmware addr: 0x%lx", firmware_addr);
+
+    uint64_t ringbuffer_addr;
+    EXPECT_TRUE(device->ringbuffer()->GetGpuAddress(&ringbuffer_addr));
+    DLOG("Got ringbuffer addr: 0x%lx", ringbuffer_addr);
   }
 
   // Contains the expected set of register writes from hardware init,
@@ -73,7 +77,8 @@ TEST_F(TestQcomDevice, HardwareInit) { TestQcomDevice::HardwareInit(); }
 std::vector<std::pair<uint32_t, uint32_t>> TestQcomDevice::sparse_register_dump = {
     // { offset, value }
     {0x00000040, 0x00000003}, {0x0000007c, 0x401fffff}, {0x00001400, 0x00000001},
-    {0x00002000, 0x01000000}, {0x00002004, 0x00000000}, {0x00002008, 0x0800020c},
+    {0x00002000, 0x01008000}, {0x00002004, 0x00000000}, {0x00002008, 0x0800020c},
+    {0x00002020, 0x00000001}, {0x000020c0, 0x01000000}, {0x000020c4, 0x00000000},
     {0x0000213c, 0x00000003}, {0x00002140, 0x01440600}, {0x00002144, 0x8008ae50},
     {0x00002148, 0x804c9624}, {0x0000214c, 0x80208630}, {0x00002150, 0x80049e70},
     {0x00002154, 0x861c9e78}, {0x00002158, 0xa040f000}, {0x0000215c, 0x000cfc00},

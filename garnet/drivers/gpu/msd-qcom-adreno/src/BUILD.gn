@@ -10,6 +10,8 @@ source_set("src") {
   sources = [
     "address_space.h",
     "allocating_address_space.h",
+    "firmware.cc",
+    "firmware.h",
     "gpu_mapping.h",
     "msd_qcom_device.cc",
     "msd_qcom_device.h",

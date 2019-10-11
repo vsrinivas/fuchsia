@@ -51,6 +51,13 @@ bool MsdQcomDevice::Init(void* device_handle, std::unique_ptr<magma::RegisterIo:
       return DRETF(false, "Failed to initialize address space");
   }
 
+  firmware_ = Firmware::Create(qcom_platform_device_.get());
+  if (!firmware_)
+    return DRETF(false, "Couldn't create firmware");
+
+  if (!firmware_->Map(address_space_))
+    return DRETF(false, "Failed to map firmware");
+
   if (!HardwareInit())
     return DRETF(false, "HardwareInit failed");
 
@@ -204,6 +211,12 @@ bool MsdQcomDevice::HardwareInit() {
       .WriteTo(register_io_.get());
   registers::A6xxCpProtect<25>::CreateFrom(registers::A6xxCpProtectBase::protect(0xa630, 0x0))
       .WriteTo(register_io_.get());
+
+  DASSERT(firmware_);
+  registers::A6xxCpSqeInstructionBase::CreateFrom(firmware_->gpu_addr())
+      .WriteTo(register_io_.get());
+
+  registers::A6xxCpSqeControl::CreateFrom(1).WriteTo(register_io_.get());
 
   return true;
 }

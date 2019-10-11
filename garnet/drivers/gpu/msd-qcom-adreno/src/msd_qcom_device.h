@@ -10,6 +10,7 @@
 #include <magma_util/register_io.h>
 
 #include "allocating_address_space.h"
+#include "firmware.h"
 #include "msd_qcom_platform_device.h"
 #include "ringbuffer.h"
 
@@ -24,6 +25,7 @@ class MsdQcomDevice : public magma::AddressSpaceOwner {
  private:
   magma::RegisterIo* register_io() { return register_io_.get(); }
   magma::Ringbuffer<GpuMapping>* ringbuffer() { return ringbuffer_.get(); }
+  Firmware* firmware() { return firmware_.get(); }
 
   // magma::AddressSpaceOwner
   magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
@@ -41,6 +43,7 @@ class MsdQcomDevice : public magma::AddressSpaceOwner {
   std::unique_ptr<magma::PlatformBusMapper> bus_mapper_;
   std::shared_ptr<AllocatingAddressSpace> address_space_;
   std::unique_ptr<Ringbuffer> ringbuffer_;
+  std::unique_ptr<Firmware> firmware_;
 
   friend class TestQcomDevice;
 };
