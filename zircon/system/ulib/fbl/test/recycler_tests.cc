@@ -5,7 +5,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -95,9 +95,7 @@ struct FailCVBase3 : public fbl::Recyclable<const volatile FailCVBase3> {
 #endif
 
 template <typename T>
-static bool do_test() {
-  BEGIN_TEST;
-
+void DoTest() {
   fbl::AllocChecker ac;
   auto ptr = PtrTraits<T>::MakePointer(new (&ac) typename PtrTraits<T>::ObjType);
 
@@ -106,29 +104,50 @@ static bool do_test() {
 
   ptr = nullptr;
   EXPECT_TRUE(TestBase::recycle_was_called());
-
-  END_TEST;
 }
 
-}  // namespace
+TEST(RecycleTests, PublicRecycle) {
+  auto do_test = DoTest<fbl::RefPtr<RefedTestPublicRecycle>>;
+  ASSERT_NO_FAILURES(do_test());
+}
 
-BEGIN_TEST_CASE(fbl_recycle)
-RUN_NAMED_TEST("public RefPtr fbl_recycle()", do_test<fbl::RefPtr<RefedTestPublicRecycle>>)
-RUN_NAMED_TEST("private RefPtr fbl_recycle()", do_test<fbl::RefPtr<RefedTestPrivateRecycle>>)
-#if TEST_WILL_NOT_COMPILE || 0
+TEST(RecycleTests, PrivateRecycle) {
+  auto do_test = DoTest<fbl::RefPtr<RefedTestPrivateRecycle>>;
+  ASSERT_NO_FAILURES(do_test());
+}
+
 // TODO(johngro) : If we ever support RefPtr<>s to const/volatile objects,
 // instantiate tests for them here.
-RUN_NAMED_TEST("public const RefPtr fbl_recycle()",
-               do_test<fbl::RefPtr<const RefedTestPublicRecycle>>)
-RUN_NAMED_TEST("public volatile RefPtr fbl_recycle()",
-               do_test<fbl::RefPtr<volatile RefedTestPublicRecycle>>)
-RUN_NAMED_TEST("public const volatile RefPtr fbl_recycle()",
-               do_test<fbl::RefPtr<const volatile RefedTestPublicRecycle>>)
-RUN_NAMED_TEST("private const RefPtr fbl_recycle()",
-               do_test<fbl::RefPtr<const RefedTestPrivateRecycle>>)
-RUN_NAMED_TEST("private volatile RefPtr fbl_recycle()",
-               do_test<fbl::RefPtr<volatile RefedTestPrivateRecycle>>)
-RUN_NAMED_TEST("private const volatile RefPtr fbl_recycle()",
-               do_test<fbl::RefPtr<const volatile RefedTestPrivateRecycle>>)
+#if TEST_WILL_NOT_COMPILE || 0
+TEST(RecycleTests, ConstPublicRecycle) {
+  auto do_test = DoTest<fbl::RefPtr<const RefedTestPublicRecycle>>;
+  ASSERT_NO_FAILURES(do_test());
+}
+
+TEST(RecycleTests, VolatilePublicRecycle) {
+  auto do_test = DoTest<fbl::RefPtr<volatile RefedTestPublicRecycle>>;
+  ASSERT_NO_FAILURES(do_test());
+}
+
+TEST(RecycleTests, ConstVolatilePublicRecycle) {
+  auto do_test = DoTest<fbl::RefPtr<const volatile RefedTestPublicRecycle>>;
+  ASSERT_NO_FAILURES(do_test());
+}
+
+TEST(RecycleTests, ConstPrivateRecycle) {
+  auto do_test = DoTest<fbl::RefPtr<const RefedTestPrivateRecycle>>;
+  ASSERT_NO_FAILURES(do_test());
+}
+
+TEST(RecycleTests, VolatilePrivateRecycle) {
+  auto do_test = DoTest<fbl::RefPtr<volatile RefedTestPrivateRecycle>>;
+  ASSERT_NO_FAILURES(do_test());
+}
+
+TEST(RecycleTests, ConstVolatilePrivateRecycle) {
+  auto do_test = DoTest<fbl::RefPtr<const volatile RefedTestPrivateRecycle>>;
+  ASSERT_NO_FAILURES(do_test());
+}
 #endif
-END_TEST_CASE(fbl_recycle)
+
+}  // namespace
