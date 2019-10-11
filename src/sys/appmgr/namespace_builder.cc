@@ -146,7 +146,7 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
       if (!deprecated_shell_allowlist.IsAllowed(ns_id)) {
         FXL_LOG(INFO) << "Component " << ns_id << " is not allowed to use deprecated-shell. "
                       << "This will be blocked in the near future. "
-                      << "go/ambient-computing-not-ambient-capabilities";
+                      << "go/fx-hermetic-sandboxes";
       }
       PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data", "/config/ssl");
       PushDirectoryFromPathAs("/pkgfs/packages/shell-commands/0/bin", "/bin");
