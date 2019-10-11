@@ -16,7 +16,6 @@ base_package_labels += [
   "//src/experiences/story_shells/mondrian",
   "//src/flutter",
   "//src/fonts",
-  "//src/media/audio/bundles:audio_config",
   "//src/modular/bundles:framework_experimental",
   "//src/ui/bin/brightness_manager",
   "//src/ui/bin/shortcut",
