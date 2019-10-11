@@ -136,6 +136,8 @@ async fn process_watch_event(
         return Ok(WatchSuccess::AdapterAlreadyFound);
     }
 
+    // add the listener to wait on the signal/notification from
+    // state event change interface provided by the hardware FIDL
     let bsh2 = bsh.clone();
     add_listener(&file, move |p_info, b_info| {
         let mut bsh2 = bsh2.lock();
@@ -145,17 +147,33 @@ async fn process_watch_event(
     })
     .await?;
 
+    if power_info.type_ == hpower::PowerType::Battery {
+        *battery_device_found = true;
+        // poll and update battery status to catch changes that might not
+        // otherwise be notified (i.e. gradual charge/discharge)
+        let bsh = bsh.clone();
+        let mut timer = fasync::Interval::new(zx::Duration::from_seconds(60));
+        fasync::spawn(async move {
+            while let Some(()) = (timer.next()).await {
+                fx_log_info!("Getting periodic battery info update...");
+                battery_info = Some(get_battery_info(&file).await.unwrap());
+                let mut bsh = bsh.lock();
+                if let Err(e) = bsh.update_status(power_info.clone(), battery_info.clone()) {
+                    fx_log_err!("{}", e);
+                }
+            }
+        });
+    } else {
+        *adapter_device_found = true;
+    }
+
+    // update the status with the current state info from the watch event
     {
         let mut bsh = bsh.lock();
         bsh.update_status(power_info.clone(), battery_info.clone())
             .context("adding watch events")?;
     }
 
-    if power_info.type_ == hpower::PowerType::Battery {
-        *battery_device_found = true;
-    } else {
-        *adapter_device_found = true;
-    }
     Ok(WatchSuccess::Completed)
 }
 
