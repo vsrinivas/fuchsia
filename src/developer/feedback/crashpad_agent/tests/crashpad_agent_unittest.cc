@@ -76,7 +76,6 @@ constexpr bool kUploadFailed = false;
 // "attachments" should be kept in sync with the value defined in
 // //crashpad/client/crash_report_database_generic.cc
 constexpr char kCrashpadAttachmentsDir[] = "attachments";
-constexpr char kCrashpadUUIDString[] = "00000000-0000-0000-0000-000000000001";
 constexpr char kProgramName[] = "crashing_program";
 
 constexpr char kSingleAttachmentKey[] = "attachment.key";
@@ -226,17 +225,6 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
     }
   }
 
-  // Returns all the attachment subdirectories under the over-arching attachment directory in the
-  // database.
-  //
-  // Each subdirectory corresponds to one local crash report.
-  std::vector<std::string> GetAttachmentSubdirsInDatabase() {
-    std::vector<std::string> subdirs;
-    FXL_CHECK(files::ReadDirContents(attachments_dir_, &subdirs));
-    RemoveCurrentDirectory(&subdirs);
-    return subdirs;
-  }
-
   // Files one crash report.
   fit::result<void, zx_status_t> FileOneCrashReport(CrashReport report) {
     FXL_CHECK(agent_ != nullptr) << "agent_ is nullptr. Call SetUpAgent() or one of its variants "
@@ -358,6 +346,17 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   }
 
  private:
+  // Returns all the attachment subdirectories under the over-arching attachment directory in the
+  // database.
+  //
+  // Each subdirectory corresponds to one local crash report.
+  std::vector<std::string> GetAttachmentSubdirsInDatabase() {
+    std::vector<std::string> subdirs;
+    FXL_CHECK(files::ReadDirContents(attachments_dir_, &subdirs));
+    RemoveCurrentDirectory(&subdirs);
+    return subdirs;
+  }
+
   void RemoveCurrentDirectory(std::vector<std::string>* dirs) {
     dirs->erase(std::remove(dirs->begin(), dirs->end(), "."), dirs->end());
   }
@@ -510,90 +509,6 @@ TEST_F(CrashpadAgentTest, Fail_OnInvalidInputCrashReport) {
     out_result = std::move(result);
   });
   ASSERT_TRUE(out_result.is_error());
-}
-
-TEST_F(CrashpadAgentTest, Check_DatabaseIsEmpty_OnPruneDatabaseWithZeroSize) {
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  // We reset the agent with a max database size of 0, meaning reports will get cleaned up before
-  // the end of the |agent_| call.
-  SetUpAgent(Config{/*crashpad_database=*/
-                    {
-                        /*path=*/database_path_.path(),
-                        /*max_size_in_kb=*/0u,
-                    },
-                    /*crash_server=*/
-                    {
-                        /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
-                        /*url=*/nullptr,
-                    }});
-
-  // We generate a crash report.
-  EXPECT_TRUE(FileOneCrashReport().is_ok());
-
-  // We check that all the attachments have been cleaned up.
-  EXPECT_TRUE(GetAttachmentSubdirsInDatabase().empty());
-}
-
-std::string GenerateString(const uint64_t string_size_in_kb) {
-  std::string str;
-  for (size_t i = 0; i < string_size_in_kb * 1024; ++i) {
-    str.push_back(static_cast<char>(i % 128));
-  }
-  return str;
-}
-
-TEST_F(CrashpadAgentTest, Check_DatabaseHasOnlyOneReport_OnPruneDatabaseWithSizeForOnlyOneReport) {
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  // We reset the agent with a max database size equivalent to the expected size of a report plus
-  // the value of an especially large attachment.
-  const uint64_t crash_log_size_in_kb = 2u * kMaxTotalReportSizeInKb;
-  const std::string large_string = GenerateString(crash_log_size_in_kb);
-  SetUpAgent(Config{/*crashpad_database=*/
-                    {
-                        /*path=*/database_path_.path(),
-                        /*max_size_in_kb=*/kMaxTotalReportSizeInKb + crash_log_size_in_kb,
-                    },
-                    /*crash_server=*/
-                    {
-                        /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
-                        /*url=*/nullptr,
-                    }});
-
-  // We generate a first crash report.
-  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment(large_string).is_ok());
-
-  // We check that only one set of attachments is there.
-  const std::vector<std::string> attachment_subdirs = GetAttachmentSubdirsInDatabase();
-  ASSERT_EQ(attachment_subdirs.size(), 1u);
-
-  // We generate a new crash report.
-  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment(large_string).is_ok());
-
-  // We check that only one set of attachments is there.
-  const std::vector<std::string> new_attachment_subdirs = GetAttachmentSubdirsInDatabase();
-  EXPECT_EQ(new_attachment_subdirs.size(), 1u);
-  // We cannot expect the set of attachments to be different than the first set as the real-time
-  // clock could go back in time between the generation of the two reports and then the second
-  // report would actually be older than the first report and be the one that was pruned, cf.
-  // fxb/37067.
-}
-
-TEST_F(CrashpadAgentTest, Check_DatabaseHasNoOrphanedAttachments) {
-  SetUpAgentDefaultConfig({kUploadSuccessful});
-  // We generate an orphan attachment and check it is there.
-  const std::string kOrphanedAttachmentDir = files::JoinPath(
-      database_path_.path(), files::JoinPath(kCrashpadAttachmentsDir, kCrashpadUUIDString));
-  files::CreateDirectory(kOrphanedAttachmentDir);
-  const std::vector<std::string> attachment_subdirs = GetAttachmentSubdirsInDatabase();
-  EXPECT_THAT(attachment_subdirs, ElementsAre(kCrashpadUUIDString));
-
-  // We generate a crash report with its own attachment.
-  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment("an attachment").is_ok());
-
-  // We check that only one set of attachments is present and different than the
-  // prior set (the name of the directory is the local crash report ID).
-  const std::vector<std::string> new_attachment_subdirs = GetAttachmentSubdirsInDatabase();
-  EXPECT_THAT(new_attachment_subdirs, Not(UnorderedElementsAreArray(attachment_subdirs)));
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnConcurrentReports) {

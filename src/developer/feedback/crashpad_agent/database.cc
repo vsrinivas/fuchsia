@@ -136,7 +136,7 @@ size_t Database::GarbageCollect() {
   crashpad::DatabaseSizePruneCondition pruning_condition(config_.max_size_in_kb);
   const size_t num_pruned = crashpad::PruneCrashReportDatabase(database_.get(), &pruning_condition);
   if (num_pruned > 0) {
-    FX_LOGS(INFO) << fxl::StringPrintf("Pruned %lu crash report(s) from Crahpad database",
+    FX_LOGS(INFO) << fxl::StringPrintf("Pruned %lu crash report(s) from Crashpad database",
                                        num_pruned);
   }
 
@@ -144,7 +144,7 @@ size_t Database::GarbageCollect() {
   // a period of time has passed in which it is certain they are orphaned.
   const size_t num_cleaned = database_->CleanDatabase(/*lockfile_ttl=*/60 * 60 * 24);
   if (num_cleaned > 0) {
-    FX_LOGS(INFO) << fxl::StringPrintf("Cleaned %lu orphan file(s) from Crashpad database",
+    FX_LOGS(INFO) << fxl::StringPrintf("Cleaned %lu crash report(s) from Crashpad database",
                                        num_cleaned);
   }
 
@@ -163,6 +163,7 @@ size_t Database::GarbageCollect() {
       CleanUp(uuid);
     }
   }
+
   return num_pruned + num_cleaned;
 }
 

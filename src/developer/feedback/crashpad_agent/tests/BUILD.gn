@@ -57,6 +57,13 @@ test_package("crashpad_agent_tests") {
     },
     {
       # Binary name on the host. We prefix it with "crashpad_agent" to reduce collisions.
+      name = "crashpad_agent_database_unittest"
+
+      # Component and binary name on the target. Confined to the package so no risk of collisions.
+      dest = "database_unittest"
+    },
+    {
+      # Binary name on the host. We prefix it with "crashpad_agent" to reduce collisions.
       name = "crashpad_agent_inspect_manager_unittest"
 
       # Component and binary name on the target. Confined to the package so no risk of collisions.
@@ -130,6 +137,7 @@ test_package("crashpad_agent_tests") {
     ":config_unittest",
     ":crashpad_agent_integration_test",
     ":crashpad_agent_unittest",
+    ":database_unittest",
     ":inspect_manager_unittest",
     ":privacy_settings_ptr_unittest",
     ":queue_unittest",
@@ -200,6 +208,25 @@ executable("crashpad_agent_integration_test") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-mem",
+  ]
+}
+
+executable("database_unittest") {
+  testonly = true
+
+  output_name = "crashpad_agent_database_unittest"
+
+  sources = [
+    "database_unittest.cc",
+  ]
+
+  deps = [
+    "//src/developer/feedback/crashpad_agent:src",
+    "//src/lib/fsl:fsl",
+    "//src/lib/fxl/test:test_settings",
+    "//src/lib/syslog/cpp",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 }
 
