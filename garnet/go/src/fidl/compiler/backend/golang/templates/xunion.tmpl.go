@@ -21,7 +21,9 @@ const (
 {{- end}}
 type {{ .Name }} struct {
 	{{ .TagName }} ` + "`" + `fidl:"x{{ if .IsStrict }}!{{end}},{{ .Size }},{{ .Alignment }}" fidl2:"x{{ if .IsStrict }}!{{end}},{{ .Size }},{{ .Alignment }}"` + "`" + `
+	{{- if .IsFlexible }}
 	I_unknownData []byte
+	{{- end }}
 	{{- range .Members }}
 	{{- range .DocComments}}
 	//{{ . }}

@@ -163,7 +163,6 @@ const (
 
 type StrictSimpleXUnion struct {
 	I_strictSimpleXUnionTag `fidl:"x!,24,8" fidl2:"x!,24,8"`
-	I_unknownData []byte
 	I int32 `fidl:"1851697276" fidl2:"1851697276"`
 	F float32 `fidl:"855207063" fidl2:"855207063"`
 	S string `fidl:"850602487," fidl2:"850602487,"`
@@ -257,7 +256,6 @@ const (
 
 type StrictBoundedXUnion struct {
 	I_strictBoundedXUnionTag `fidl:"x!,24,8" fidl2:"x!,24,8"`
-	I_unknownData []byte
 	V []uint8 `fidl:"2024555624,10" fidl2:"2024555624,10"`
 }
 
