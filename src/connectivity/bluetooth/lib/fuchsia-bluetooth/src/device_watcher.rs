@@ -203,6 +203,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    #[ignore] // TODO(35077) Re-enable once test flake is resolved
     async fn test_watch_new() {
         let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, timeout())
             .await
@@ -229,6 +230,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    #[ignore] // TODO(35077) Re-enable once test flake is resolved
     async fn test_watch_existing() {
         let dev = create_test_dev("test-watch-existing").expect("Failed to create test device");
         let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, timeout())
@@ -243,6 +245,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    #[ignore] // TODO(35077) Re-enable once test flake is resolved
     async fn test_watch_removed() {
         let dev = create_test_dev("test-watch-removed").expect("Failed to create test device");
         let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, timeout())
@@ -257,6 +260,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    #[ignore] // TODO(35077) Re-enable once test flake is resolved
     async fn test_watch_timeout() {
         let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, zx::Duration::from_nanos(0))
             .await

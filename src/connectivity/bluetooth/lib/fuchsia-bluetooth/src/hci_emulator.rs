@@ -11,9 +11,7 @@ use {
     failure::{bail, format_err, Error},
     fidl_fuchsia_bluetooth_test::{EmulatorSettings, HciEmulatorProxy},
     fidl_fuchsia_device::ControllerProxy,
-    fidl_fuchsia_device_test::{
-        DeviceProxy, RootDeviceProxy, CONTROL_DEVICE, MAX_DEVICE_NAME_LEN,
-    },
+    fidl_fuchsia_device_test::{DeviceProxy, RootDeviceProxy, CONTROL_DEVICE, MAX_DEVICE_NAME_LEN},
     fidl_fuchsia_hardware_bluetooth::EmulatorProxy,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_syslog::fx_log_err,
@@ -211,6 +209,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    #[ignore] // TODO(35077) Re-enable once test flake is resolved
     async fn test_publish_lifecycle() {
         // We use these watchers to verify the addition and removal of these devices as tied to the
         // lifetime of the Emulator instance we create below.
