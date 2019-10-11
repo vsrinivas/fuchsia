@@ -65,7 +65,7 @@ TEST(Index, IndexDump) {
         DoStructCall: {[0x1100, 0x114c)}
         GetStruct: {[0x10a0, 0x10c5)}
         GetStructMemberPtr: {[0x10d0, 0x10e1)}
-        InlinedFunction: {[0x1150, 0x115f)}
+        InlinedFunction: {[0x1150, 0x115f)}, {[0x12a0, 0x12a6)}
         NamespaceFunction: {[0x1380, 0x138b)}
         PassRValueRef: {[0x10f0, 0x10fa)}
       Variables:
@@ -80,6 +80,7 @@ TEST(Index, IndexDump) {
     ForInline: 0x4d4
       Functions:
         ForInline: {[0x1350, 0x1364)}
+        InlinedFunction: {[0x124f, 0x125d)}
     MyTemplate<my_ns::Struct, 42>: 0x465
       Functions:
         MyTemplate: {[0x1330, 0x1345)}
@@ -242,7 +243,7 @@ TEST(Index, DumpIndex) {
   std::cout << index.main_functions().size() << " main function(s) found.\n\n";
 
   std::cout << "Symbol index dump:\n";
-  index.root().Dump(std::cout, 1);
+  index.root().Dump(std::cout, module->symbol_factory(), 1);
 
   std::cout << "File index dump:\n";
   index.DumpFileIndex(std::cout);

@@ -28,8 +28,12 @@ class NamedDieRef : public IndexNode::DieRef {
 
   // Creates a DieRef we should index. The pointed-to string must outlive this class.
   NamedDieRef(bool is_decl, uint32_t offset, IndexNode::Kind k, const char* name,
-              uint32_t decl_offset)
-      : DieRef(is_decl, offset), kind_(k), name_(name), decl_offset_(decl_offset) {}
+              uint32_t decl_offset, bool has_abstract_origin)
+      : DieRef(is_decl, offset),
+        kind_(k),
+        name_(name),
+        decl_offset_(decl_offset),
+        has_abstract_origin_(has_abstract_origin) {}
 
   bool should_index() const { return kind_ != IndexNode::Kind::kNone; }
 
@@ -54,17 +58,53 @@ class NamedDieRef : public IndexNode::DieRef {
   IndexNode* index_node() const { return index_node_; }
   void set_index_node(IndexNode* n) { index_node_ = n; }
 
+  // Sometimes we need to know whether an abstract origin is present for parent computations.
+  //
+  // When walking the dependency path, the abstract origin (if any) encodes the lexical scope.
+  // As an example, DW_TAG_inlined_subroutine DIEs are inside of the function they're inlined into
+  // (the calling function will be die.getParent()). These will then have an abstract origin of a
+  // DIE outside of the function containing the common info for all inlined instances.
+  //
+  // When there's no separate declaration, this abstract origin will be the scope that the function
+  // was declared in where we index from. For:
+  //
+  //   namespace ns {
+  //     inline void InlinedFunction() { ... }
+  //   }
+  //   void CallingFunction() {
+  //     ns::InlinedFunction();
+  //   }
+  //
+  // The DWARF would look like:
+  //
+  //   1: DW_TAG_namespace (name = "ns")
+  //      2: DW_TAG_subprogram (name = "InlinedFunction")
+  //   2: DW_TAG_subprogram (name = "CallingFunction")
+  //      3: DW_TAG_inlined_subroutine (abstract_origin = 2)
+  //
+  // When there is a declaration, that declaration will encode the scope:
+  //
+  //   1: DW_TAG_namespace (name = "ns")
+  //      2: DW_TAG_subprogram (name = "InlinedFunction", is_declaration = true)
+  //   3: DW_TAG_subprogram (declaration = 2)
+  //   2: DW_TAG_subprogram (name = "CallingFunction")
+  //      3: DW_TAG_inlined_subroutine (abstract_origin = 3)
+  bool has_abstract_origin() const { return has_abstract_origin_; }
+  void set_has_abstract_origin(bool b) { has_abstract_origin_ = b; }
+
  private:
   IndexNode::Kind kind_ = IndexNode::Kind::kNone;
   const char* name_ = nullptr;
   uint32_t decl_offset_ = 0;
   IndexNode* index_node_ = nullptr;
+  bool has_abstract_origin_ = false;
 };
 
 // Returns true if the given abbreviation defines a PC range.
 bool AbbrevHasCode(const llvm::DWARFAbbreviationDeclaration* abbrev) {
   for (const auto spec : abbrev->attributes()) {
-    if (spec.Attr == llvm::dwarf::DW_AT_low_pc || spec.Attr == llvm::dwarf::DW_AT_high_pc)
+    if (spec.Attr == llvm::dwarf::DW_AT_low_pc || spec.Attr == llvm::dwarf::DW_AT_high_pc ||
+        spec.Attr == llvm::dwarf::DW_AT_ranges)
       return true;
   }
   return false;
@@ -159,6 +199,13 @@ class UnitIndexer {
   // conceptually simpler but requires a binary search at each step.
   void AddStandaloneEntryToIndex(uint32_t index_me, IndexNode* root);
 
+  // Given the index of a NamedDieRef known to have an abstract origin, fills in the index of the
+  // abstract origin to the given output variable if it exists in the same unit and returns true.
+  //
+  // If it doesn't exist or is in a different unit, returns false. Being in the same unit is
+  // required to stay in the index fast path.
+  bool GetAbstractOriginIndex(uint32_t source, uint32_t* abstract_origin_index) const;
+
   llvm::DWARFContext* context_;
   llvm::DWARFUnit* unit_;
 
@@ -197,6 +244,9 @@ void UnitIndexer::Scan(std::vector<IndexNode::DieRef>* main_functions) {
   llvm::Optional<const char*> name;
   decoder.AddCString(llvm::dwarf::DW_AT_name, &name);
 
+  bool has_abstract_origin = false;
+  decoder.AddPresenceCheck(llvm::dwarf::DW_AT_abstract_origin, &has_abstract_origin);
+
   // IF YOU ADD MORE ATTRIBUTES HERE don't forget to reset() them before Decode().
 
   for (; !scanner_.done(); scanner_.Advance()) {
@@ -213,6 +263,7 @@ void UnitIndexer::Scan(std::vector<IndexNode::DieRef>* main_functions) {
     decl_die = llvm::DWARFDie();
     is_main_subprogram.reset();
     name.reset();
+    has_abstract_origin = false;
     if (!decoder.Decode(llvm::DWARFDie(unit_, die)))
       continue;
 
@@ -242,7 +293,7 @@ void UnitIndexer::Scan(std::vector<IndexNode::DieRef>* main_functions) {
     FXL_DCHECK(scanner_.die_index() < indexable_.size());
     indexable_[scanner_.die_index()] =
         NamedDieRef(is_declaration && *is_declaration, die->getOffset(), kind,
-                    name ? *name : nullptr, decl_offset);
+                    name ? *name : nullptr, decl_offset, has_abstract_origin);
 
     // Check for "main" function annotation.
     if (kind == IndexNode::Kind::kFunction && is_main_subprogram && *is_main_subprogram)
@@ -258,7 +309,7 @@ void UnitIndexer::Index(IndexNode* root) {
         AddStandaloneEntryToIndex(i, root);
     }
   } else {
-    // Normal fast-path.
+    // Normal fast-path. This is about 6x faster than the slow path for large programs.
     for (uint32_t i = 0; i < indexable_.size(); i++) {
       if (indexable_[i].should_index())
         AddEntryToIndex(i, root);
@@ -273,6 +324,7 @@ IndexNode::Kind UnitIndexer::GetKindForDie(const llvm::DWARFDebugInfoEntry* die)
 
   switch (static_cast<DwarfTag>(abbrev->getTag())) {
     case DwarfTag::kSubprogram:
+    case DwarfTag::kInlinedSubroutine:
       if (AbbrevHasCode(abbrev))
         return IndexNode::Kind::kFunction;
       return IndexNode::Kind::kNone;  // Skip functions with no code.
@@ -357,8 +409,19 @@ void UnitIndexer::AddEntryToIndex(uint32_t index_me, IndexNode* root) {
 
   // If at this point we still don't have a name for the thing being indexed, give up trying to
   // index it.
-  if (!indexable_[index_me].name() || !indexable_[index_me].name()[0])
+  if (!indexable_[cur].name() || !indexable_[cur].name()[0])
     return;
+
+  // Move to the abstract origin if present to start walking the scopes. The abstract origin (if
+  // any) encodes the lexical scope (see has_abstract_origin() declaration above).
+  if (indexable_[cur].has_abstract_origin()) {
+    if (!GetAbstractOriginIndex(cur, &cur)) {
+      // Fall back to the slow path. This will be all error cases as well as when the abstract
+      // origin is in a different complication unit (I have not seen this in practice).
+      AddStandaloneEntryToIndex(index_me, root);
+      return;
+    }
+  }
 
   // Goes to the parent. The first item was added above, the loop below will add going up the
   // parent chain from there.
@@ -406,6 +469,8 @@ void UnitIndexer::AddStandaloneEntryToIndex(uint32_t index_me, IndexNode* index_
   // This function can not use the unit_, scanner_, or name_decoder_ (and hence GetDieName())
   // because those all reference the current compilation unit. This code path must be able to handle
   // cross-unit references.
+
+  // Thing to add to the index.
   const NamedDieRef& named_ref = indexable_[index_me];
 
   // Compute the name (avoiding GetDieName()) and the DIE to start indexing from.
@@ -429,6 +494,11 @@ void UnitIndexer::AddStandaloneEntryToIndex(uint32_t index_me, IndexNode* index_
 
   if (!name)
     return;  // This item has no name, can't index it.
+
+  // When walking the dependency path, the abstract origin (if any) encodes the lexical scope
+  // (see has_abstract_origin() declaration above).
+  if (llvm::DWARFDie ao = die.getAttributeValueAsReferencedDie(llvm::dwarf::DW_AT_abstract_origin))
+    die = ao;
 
   // Stores the reverse path to the node we're inserting. This includes all scopes like namespaces
   // and classes in reverse order, but does not include the thing we're inserting itself.
@@ -462,6 +532,21 @@ void UnitIndexer::AddStandaloneEntryToIndex(uint32_t index_me, IndexNode* index_
   cur_index->AddChild(named_ref.kind(), name, named_ref);
 }
 
+bool UnitIndexer::GetAbstractOriginIndex(uint32_t source, uint32_t* abstract_origin_index) const {
+  llvm::DWARFDie die = unit_->getDIEForOffset(indexable_[source].offset());
+  if (!die)
+    return false;  // Internal error, maybe symbols corrupt.
+
+  llvm::DWARFDie ao = die.getAttributeValueAsReferencedDie(llvm::dwarf::DW_AT_abstract_origin);
+  if (!ao)
+    return false;  // Symbols corrupt.
+  if (ao.getDwarfUnit() != unit_)
+    return false;  // Different compilation unit.
+
+  *abstract_origin_index = unit_->getDIEIndex(ao);
+  return true;
+}
+
 void RecursiveFindExact(const IndexNode* node, const Identifier& input, size_t input_index,
                         std::vector<IndexNode::DieRef>* result) {
   if (input_index == input.components().size()) {
@@ -493,15 +578,17 @@ void Index::CreateIndex(llvm::object::ObjectFile* object_file, bool force_slow_p
     compile_units.addUnitsForSection(*context, s, llvm::DW_SECT_INFO);
   });
 
-  for (unsigned i = 0; i < compile_units.size(); i++) {
+  for (unsigned i = 0; i < compile_units.size(); i++)
     IndexCompileUnit(context.get(), compile_units[i].get(), i, force_slow_path);
 
-    // Free compilation units as we process them. They will hold all of the parsed DIE data that we
-    // don't need any more which can be multiple GB's for large programs.
-    compile_units[i].reset();
-  }
-
   IndexFileNames();
+
+  // Free compilation units after we process them. They will hold all of the parsed DIE data that we
+  // don't need any more which can be multiple GB's for large programs.
+  //
+  // This must be done after indexing since some internal LLVM functions assume the units exist.
+  for (unsigned i = 0; i < compile_units.size(); i++)
+    compile_units[i].reset();
 }
 
 void Index::DumpFileIndex(std::ostream& out) const {
