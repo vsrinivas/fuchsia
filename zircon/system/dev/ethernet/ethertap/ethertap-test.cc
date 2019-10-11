@@ -7,9 +7,9 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/process.h>
 
+#include <string>
 #include <thread>
 #include <vector>
-#include <string>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -19,18 +19,39 @@ class FakeEthertapMiscParent : public ddk::Device<FakeEthertapMiscParent>, publi
  public:
   FakeEthertapMiscParent() : ddk::Device<FakeEthertapMiscParent>(fake_ddk::kFakeParent) {}
 
+  ~FakeEthertapMiscParent() {
+    for (auto& child : child_devices_) {
+      sync_completion_wait(&child.completion, ZX_TIME_INFINITE);
+    }
+    if (tap_ctl_) {
+      tap_ctl_->DdkRelease();
+    }
+    for (auto& child : child_devices_) {
+      child.device->DdkRelease();
+    }
+  }
+
   zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                         zx_device_t** out) override {
     if (parent == fake_ddk::kFakeParent) {
       tap_ctl_ = static_cast<eth::TapCtl*>(args->ctx);
     } else if (parent == tap_ctl_->zxdev()) {
-      auto & dev = child_devices_.emplace_back();
+      auto& dev = child_devices_.emplace_back();
       dev.name = args->name;
       dev.device = static_cast<eth::TapDevice*>(args->ctx);
     } else {
       ADD_FAILURE("Unrecognized parent");
     }
     *out = reinterpret_cast<zx_device_t*>(args->ctx);
+    return ZX_OK;
+  }
+
+  zx_status_t DeviceRemove(zx_device_t* device) override {
+    for (auto& x : child_devices_) {
+      if (reinterpret_cast<zx_device_t*>(x.device) == device) {
+        sync_completion_signal(&x.completion);
+      }
+    }
     return ZX_OK;
   }
 
@@ -41,23 +62,22 @@ class FakeEthertapMiscParent : public ddk::Device<FakeEthertapMiscParent>, publi
   void DdkRelease() {}
 
   const char* DeviceGetName(zx_device_t* device) override {
-    if(device == tap_ctl_->zxdev()) {
+    if (device == tap_ctl_->zxdev()) {
       return "tapctl";
     }
-    for(auto & x : child_devices_) {
-      if(x.device->zxdev() == device) {
+    for (auto& x : child_devices_) {
+      if (x.device->zxdev() == device) {
         return x.name.c_str();
       }
     }
     return "";
   }
 
-
  private:
-
   struct ChildDevice {
     std::string name;
     eth::TapDevice* device;
+    sync_completion_t completion;
   };
 
   eth::TapCtl* tap_ctl_;
@@ -108,8 +128,8 @@ TEST_F(EthertapTests, TestShortNameMatches) {
   zx::channel tap, req;
   ASSERT_OK(zx::channel::create(0, &tap, &req));
   zx_status_t status;
-  ASSERT_OK(fuchsia_hardware_ethertap_TapControlOpenDevice(messenger_.local().get(), short_name, len,
-                                                           &config, tap.release(), &status));
+  ASSERT_OK(fuchsia_hardware_ethertap_TapControlOpenDevice(messenger_.local().get(), short_name,
+                                                           len, &config, tap.release(), &status));
   ASSERT_OK(status);
   ASSERT_STR_EQ(short_name, ddk_.tap_device(0)->name());
 }
