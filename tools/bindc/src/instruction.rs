@@ -204,7 +204,7 @@ mod tests {
     #[test]
     fn test_encode() {
         let instruction = Instruction::Goto(Condition::LessThan(23, 1234), 42);
-        let mut buf : Vec<u8> = vec![];
+        let mut buf: Vec<u8> = vec![];
         instruction.encode(&mut buf).unwrap();
         assert_eq!(buf[0], 4 | (2 << 4));
         assert_eq!(buf[1], 42);
