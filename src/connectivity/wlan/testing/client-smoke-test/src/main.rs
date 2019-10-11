@@ -6,22 +6,20 @@ mod opts;
 
 use {
     crate::opts::Opt,
-    connectivity_testing::http_service_util,
-    connectivity_testing::net_stack_util::netstack_did_get_dhcp,
-    connectivity_testing::wlan_service_util,
+    connectivity_testing::{
+        http_service_util, net_stack_util::netstack_did_get_dhcp, wlan_service_util,
+    },
     failure::{bail, format_err, Error, ResultExt},
     fidl_fuchsia_net_oldhttp::{HttpServiceMarker, HttpServiceProxy},
     fidl_fuchsia_net_stack::StackMarker,
     fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy},
     fidl_fuchsia_wlan_sme as fidl_sme,
-    fuchsia_async::{DurationExt, Executor, TimeoutExt},
+    fuchsia_async::{DurationExt, Executor, Time, TimeoutExt, Timer},
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{self as syslog, fx_log_info, fx_log_warn},
     fuchsia_zircon::DurationNum,
     serde_derive::Serialize,
-    std::collections::HashMap,
-    std::process,
-    std::{thread, time},
+    std::{collections::HashMap, process},
     structopt::StructOpt,
 };
 
@@ -112,7 +110,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                         }
                     }
                 }
-                _ => fx_log_warn!("scan failed"),
+                Err(e) => fx_log_warn!("scan failed: {}", e),
             };
 
             let mut requires_disconnect = false;
@@ -139,11 +137,11 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                         wlan_iface.connection_success = true;
                         requires_disconnect = true;
                     }
+                    Ok(false) => continue,
                     Err(e) => {
                         fx_log_warn!("error connecting: {}", e);
                         continue;
                     }
-                    _ => continue,
                 };
             } else {
                 fx_log_info!("already connected. skipping connect");
@@ -161,7 +159,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
             };
 
             let mut dhcp_check_attempts = 0;
-            while dhcp_check_attempts < 3 && !wlan_iface.dhcp_success {
+            loop {
                 fx_log_info!("checking dhcp attemp #{}", dhcp_check_attempts);
                 wlan_iface.dhcp_success = match netstack_did_get_dhcp(&network_svc, &mac_addr).await
                 {
@@ -171,21 +169,25 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                         continue;
                     }
                 };
-                if !wlan_iface.dhcp_success {
-                    // dhcp takes some time...  loop again to give it a chance
-                    dhcp_check_attempts += 1;
-                    thread::sleep(time::Duration::from_millis(4000));
+                if dhcp_check_attempts >= 5 || wlan_iface.dhcp_success {
+                    break;
                 }
+                // dhcp takes some time...  loop again to give it a chance
+                dhcp_check_attempts += 1;
+                Timer::new(Time::after(4.seconds())).await;
             }
 
             // if we got an ip addr, go ahead and check a download
             if wlan_iface.dhcp_success {
                 // TODO(NET-1095): add ping check to verify connectivity
                 fx_log_info!("downloading file");
-                wlan_iface.data_transfer =
-                    can_download_data(&http_svc).await || wlan_iface.data_transfer;
+                wlan_iface.data_transfer = can_download_data(&http_svc).await;
+                fx_log_info!("finished download on iface {}", iface_id);
+            } else {
+                // Did not get DHCP, no data moved. Wait a little bit before disconnecting
+                // so that it does not seem suspicious to AP.
+                Timer::new(Time::after(1.seconds())).await;
             }
-            thread::sleep(time::Duration::from_secs(1));
 
             // after testing, check if we need to disconnect
             if requires_disconnect {
@@ -195,7 +197,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                         fx_log_warn!("error disconnecting: {}", e);
                         wlan_iface.disconnect_success = false
                     }
-                    _ => wlan_iface.disconnect_success = true,
+                    Ok(()) => wlan_iface.disconnect_success = true,
                 };
             } else {
                 fx_log_info!("skipping disconnect");
@@ -224,6 +226,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         // check based on the result of a reachability check after the wlan interfaces
         // are tested.
         test_results.base_data_transfer = can_download_data(&http_svc).await;
+        fx_log_info!("finished baseline download");
 
         Ok(())
     };
