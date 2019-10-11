@@ -6,6 +6,9 @@
 #include "lib/fidl/cpp/internal/header.h"
 
 #include <test/name/cpp/fidl.h>
+// For ::std::max_element().
+#include <algorithm>
+
 namespace fuzzing {
 
 
@@ -16,15 +19,30 @@ using Struct = ::test::name::Struct;
 
 template<>
 struct MinSize<Union> {
-  operator size_t() { return sizeof(Union); }
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<int32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 1 + 1);
+  }
 };
 template<>
 struct Allocate<Union> {
+  static_assert(1 > 0, "union must have at least one member");
+
   Union operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<Union>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
     Union out;
-    ZX_ASSERT(*size >= sizeof(Union));
-    ZX_ASSERT(src->CopyObject(&out));
-    *size = sizeof(Union);
+    switch (selector % 1) {
+      case 0: {
+        out.set_Field(Allocate<int32_t>{}(src, size));
+        break;
+      }
+    }
+
     return out;
   }
 };

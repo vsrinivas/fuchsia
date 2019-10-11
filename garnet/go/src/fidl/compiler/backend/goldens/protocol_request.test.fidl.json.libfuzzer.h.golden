@@ -6,6 +6,9 @@
 #include "lib/fidl/cpp/internal/header.h"
 
 #include <test/name/cpp/fidl.h>
+// For ::std::max_element().
+#include <algorithm>
+
 namespace fuzzing {
 
 

@@ -23,6 +23,9 @@ const Header = `
 {{ end -}}
 {{ end -}}
 
+// For ::std::max_element().
+#include <algorithm>
+
 namespace fuzzing {
 
 {{ range .Decls }}

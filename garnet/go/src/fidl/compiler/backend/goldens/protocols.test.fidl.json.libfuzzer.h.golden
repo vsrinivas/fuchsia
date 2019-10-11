@@ -6,6 +6,9 @@
 #include "lib/fidl/cpp/internal/header.h"
 
 #include <test/name/cpp/fidl.h>
+// For ::std::max_element().
+#include <algorithm>
+
 namespace fuzzing {
 
 
@@ -42,15 +45,34 @@ struct Allocate<WithErrorSyntax_ResponseAsStruct_Response> {
 };
 template<>
 struct MinSize<WithErrorSyntax_ResponseAsStruct_Result> {
-  operator size_t() { return sizeof(WithErrorSyntax_ResponseAsStruct_Result); }
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<WithErrorSyntax_ResponseAsStruct_Response>(), MinSize<uint32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
 };
 template<>
 struct Allocate<WithErrorSyntax_ResponseAsStruct_Result> {
+  static_assert(2 > 0, "union must have at least one member");
+
   WithErrorSyntax_ResponseAsStruct_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<WithErrorSyntax_ResponseAsStruct_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
     WithErrorSyntax_ResponseAsStruct_Result out;
-    ZX_ASSERT(*size >= sizeof(WithErrorSyntax_ResponseAsStruct_Result));
-    ZX_ASSERT(src->CopyObject(&out));
-    *size = sizeof(WithErrorSyntax_ResponseAsStruct_Result);
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(Allocate<WithErrorSyntax_ResponseAsStruct_Response>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<uint32_t>{}(src, size));
+        break;
+      }
+    }
+
     return out;
   }
 };
@@ -74,15 +96,34 @@ struct Allocate<WithErrorSyntax_ErrorAsPrimitive_Response> {
 };
 template<>
 struct MinSize<WithErrorSyntax_ErrorAsPrimitive_Result> {
-  operator size_t() { return sizeof(WithErrorSyntax_ErrorAsPrimitive_Result); }
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<WithErrorSyntax_ErrorAsPrimitive_Response>(), MinSize<uint32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
 };
 template<>
 struct Allocate<WithErrorSyntax_ErrorAsPrimitive_Result> {
+  static_assert(2 > 0, "union must have at least one member");
+
   WithErrorSyntax_ErrorAsPrimitive_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<WithErrorSyntax_ErrorAsPrimitive_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
     WithErrorSyntax_ErrorAsPrimitive_Result out;
-    ZX_ASSERT(*size >= sizeof(WithErrorSyntax_ErrorAsPrimitive_Result));
-    ZX_ASSERT(src->CopyObject(&out));
-    *size = sizeof(WithErrorSyntax_ErrorAsPrimitive_Result);
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(Allocate<WithErrorSyntax_ErrorAsPrimitive_Response>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<uint32_t>{}(src, size));
+        break;
+      }
+    }
+
     return out;
   }
 };
@@ -120,15 +161,34 @@ struct Allocate<ErrorEnun> {
 };
 template<>
 struct MinSize<WithErrorSyntax_ErrorAsEnum_Result> {
-  operator size_t() { return sizeof(WithErrorSyntax_ErrorAsEnum_Result); }
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<WithErrorSyntax_ErrorAsEnum_Response>(), MinSize<ErrorEnun>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
 };
 template<>
 struct Allocate<WithErrorSyntax_ErrorAsEnum_Result> {
+  static_assert(2 > 0, "union must have at least one member");
+
   WithErrorSyntax_ErrorAsEnum_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<WithErrorSyntax_ErrorAsEnum_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
     WithErrorSyntax_ErrorAsEnum_Result out;
-    ZX_ASSERT(*size >= sizeof(WithErrorSyntax_ErrorAsEnum_Result));
-    ZX_ASSERT(src->CopyObject(&out));
-    *size = sizeof(WithErrorSyntax_ErrorAsEnum_Result);
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(Allocate<WithErrorSyntax_ErrorAsEnum_Response>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<ErrorEnun>{}(src, size));
+        break;
+      }
+    }
+
     return out;
   }
 };
