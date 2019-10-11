@@ -21,6 +21,10 @@ Widget _buildDeviceSettings(
     widgets.add(_buildResetBox(model, scale));
   }
 
+  if (model.showRebootConfirmation) {
+    widgets.add(_buildChannelRebootBox(model, scale));
+  }
+
   if (model.channelPopupShowing.value) {
     widgets.add(_buildSelectPopup(model, scale));
   }
@@ -73,9 +77,18 @@ SettingsSection _update(DeviceSettingsModel model, double scale) {
   final currentChannelText = SettingsText(
       scale: scale, text: 'Current channel: ${model.currentChannel ?? 'None'}');
 
+  final targetChannelText = SettingsText(
+      scale: scale, text: 'Target channel: ${model.targetChannel ?? 'None'}');
+
   final changeChannelButton = SettingsButton(
-    text: model.channelUpdating ? 'Updating channel' : 'Change channel',
+    text: model.needsRebootToFinish
+        ? 'Reboot to finish changing channel'
+        : model.channelUpdating ? 'Updating channel' : 'Change channel',
     onTap: () {
+      if (model.needsRebootToFinish) {
+        model.reboot();
+        return;
+      }
       if (model.channelUpdating) {
         return;
       }
@@ -92,6 +105,7 @@ SettingsSection _update(DeviceSettingsModel model, double scale) {
           lastUpdatedText,
           updateButton,
           currentChannelText,
+          targetChannelText,
           changeChannelButton,
           factoryResetButton
         ],
@@ -149,6 +163,38 @@ Widget _buildResetBox(DeviceSettingsModel model, double scale) {
                     text: 'Cancel',
                     scale: scale,
                     onTap: model.cancelFactoryReset,
+                  ),
+                ]),
+              ),
+            ),
+          )));
+}
+
+Widget _buildChannelRebootBox(DeviceSettingsModel model, double scale) {
+  return SettingsPopup(
+      onDismiss: model.cancelReboot,
+      child: Material(
+          borderRadius: BorderRadius.all(Radius.circular(16.0 * scale)),
+          color: Colors.white,
+          child: FractionallySizedBox(
+            widthFactor: 0.8,
+            heightFactor: 0.8,
+            child: SingleChildScrollView(
+              physics: BouncingScrollPhysics(),
+              padding: EdgeInsets.all(16.0),
+              child: SettingsSection(
+                title: 'Reboot to finish changing channels',
+                scale: scale,
+                child: Column(children: [
+                  SettingsButton(
+                    text: 'Reboot Now',
+                    scale: scale,
+                    onTap: model.reboot,
+                  ),
+                  SettingsButton(
+                    text: 'Dismiss',
+                    scale: scale,
+                    onTap: model.cancelReboot,
                   ),
                 ]),
               ),

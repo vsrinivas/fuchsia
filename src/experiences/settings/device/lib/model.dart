@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:fidl_fuchsia_device_manager/fidl_async.dart';
 import 'package:fidl_fuchsia_update/fidl_async.dart' as update;
 import 'package:fidl_fuchsia_update_channelcontrol/fidl_async.dart'
     as channelcontrol;
@@ -28,11 +29,15 @@ abstract class SystemInterface {
 
   Future<String> getCurrentChannel();
 
+  Future<String> getTargetChannel();
+
   Future<void> setTargetChannel(String channel);
 
   Future<List<String>> getChannelList();
 
   Future<void> factoryReset();
+
+  void reboot();
 
   void dispose();
 }
@@ -48,9 +53,13 @@ class DefaultSystemInterfaceImpl implements SystemInterface {
   /// Controller for the factory reset service.
   final recovery.FactoryResetProxy _factoryReset = recovery.FactoryResetProxy();
 
+  /// Controller for the DeviceManager (for rebooting).
+  final AdministratorProxy _deviceManager = AdministratorProxy();
+
   DefaultSystemInterfaceImpl() {
     StartupContext.fromStartupInfo().incoming.connectToService(_updateManager);
     StartupContext.fromStartupInfo().incoming.connectToService(_channelControl);
+    StartupContext.fromStartupInfo().incoming.connectToService(_deviceManager);
   }
 
   @override
@@ -69,6 +78,9 @@ class DefaultSystemInterfaceImpl implements SystemInterface {
   Future<String> getCurrentChannel() => _channelControl.getCurrent();
 
   @override
+  Future<String> getTargetChannel() => _channelControl.getTarget();
+
+  @override
   Future<void> setTargetChannel(String channel) =>
       _channelControl.setTarget(channel);
 
@@ -82,6 +94,11 @@ class DefaultSystemInterfaceImpl implements SystemInterface {
     }
 
     await _factoryReset.reset();
+  }
+
+  @override
+  void reboot() {
+    _deviceManager.suspend(suspendFlagReboot);
   }
 
   @override
@@ -117,6 +134,10 @@ class DeviceSettingsModel extends Model {
 
   bool _showResetConfirmation = false;
 
+  bool _showRebootConfirmation = false;
+
+  bool _needsRebootToFinish = false;
+
   ValueNotifier<bool> channelPopupShowing = ValueNotifier<bool>(false);
 
   bool _isChannelUpdating = false;
@@ -134,6 +155,10 @@ class DeviceSettingsModel extends Model {
 
   String get currentChannel => _currentChannel;
 
+  String _targetChannel;
+
+  String get targetChannel => _targetChannel;
+
   List<String> _channels;
 
   List<String> get channels => _channels;
@@ -141,6 +166,14 @@ class DeviceSettingsModel extends Model {
   /// Determines whether the confirmation dialog for factory reset should
   /// be displayed.
   bool get showResetConfirmation => _showResetConfirmation;
+
+  /// Determines whether the confirmation dialog for rebooting should be
+  /// displayed.
+  bool get showRebootConfirmation => _showRebootConfirmation;
+
+  /// Determines whether the button to reboot (after a channel has been changed)
+  /// should be displayed.
+  bool get needsRebootToFinish => _needsRebootToFinish;
 
   /// Returns true if we are in the middle of updating the channel. Returns
   /// false otherwise.
@@ -168,14 +201,17 @@ class DeviceSettingsModel extends Model {
 
     await _sysInterface.setTargetChannel(selectedChannel);
 
-    await _update();
+    _showRebootConfirmation = true;
+    _needsRebootToFinish = true;
+
+    notifyListeners();
   }
 
-  Future<void> _update() async {
+  Future<void> _updateChannelValues() async {
     _setChannelState(updating: true);
 
     _currentChannel = await _sysInterface.getCurrentChannel();
-
+    _targetChannel = await _sysInterface.getTargetChannel();
     _channels = await _sysInterface.getChannelList();
 
     _setChannelState(updating: false);
@@ -208,7 +244,7 @@ class DeviceSettingsModel extends Model {
     _uptimeRefreshTimer =
         Timer.periodic(_uptimeRefreshInterval, (_) => updateUptime());
 
-    await _update();
+    await _updateChannelValues();
 
     channelPopupShowing.addListener(notifyListeners);
   }
@@ -231,6 +267,24 @@ class DeviceSettingsModel extends Model {
 
   void cancelFactoryReset() {
     _showResetConfirmation = false;
+    notifyListeners();
+  }
+
+  void reboot() {
+    if (showRebootConfirmation) {
+      log.warning('Triggering reboot');
+      _sysInterface.reboot();
+    } else {
+      _showRebootConfirmation = true;
+      notifyListeners();
+    }
+  }
+
+  Future<void> cancelReboot() async {
+    _showRebootConfirmation = false;
+
+    await _updateChannelValues();
+
     notifyListeners();
   }
 }

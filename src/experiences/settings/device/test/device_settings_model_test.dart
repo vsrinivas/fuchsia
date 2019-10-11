@@ -115,7 +115,15 @@ void main() {
     currentChannelCompleter.complete('');
     channelListCompleter.complete([]);
     await selectFuture;
-    expect(model.channelUpdating, false);
+
+    // Make sure we are also asking to reboot when selecting a channel.
+    expect(model.showRebootConfirmation, true);
+
+    // Make sure that a reboot is needed to finish the changing of the channel.
+    expect(model.needsRebootToFinish, true);
+
+    // and have not attempted to reboot.
+    verifyNever(sysInterface.reboot());
   });
 
   // Ensure the factory reset service gets called.
@@ -167,5 +175,64 @@ void main() {
     model.cancelFactoryReset();
     expect(model.showResetConfirmation, false);
     verifyNever(sysInterface.factoryReset());
+  });
+
+  test('test_ask_for_reboot_after_channel_change', () async {
+    final TestSystemInterface sysInterface = TestSystemInterface();
+
+    when(sysInterface.getCurrentChannel()).thenAnswer((_) => Future.value(''));
+
+    when(sysInterface.getChannelList()).thenAnswer((_) => Future.value([]));
+
+    final DeviceSettingsModel model = DeviceSettingsModel(sysInterface);
+    await model.start();
+
+    // Select a new channel.
+    await model.selectChannel('stable');
+
+    // When the channel is changed, it should show a reboot confirmation.
+    expect(model.showRebootConfirmation, true);
+    verifyNever(sysInterface.reboot());
+
+    // Requesting a reboot should do so.
+    model.reboot();
+    verify(sysInterface.reboot());
+  });
+
+  test('test_reboot_dismissal_does_not_reboot', () async {
+    final TestSystemInterface sysInterface = TestSystemInterface();
+
+    when(sysInterface.getCurrentChannel()).thenAnswer((_) => Future.value(''));
+
+    when(sysInterface.getChannelList()).thenAnswer((_) => Future.value([]));
+
+    final DeviceSettingsModel model = DeviceSettingsModel(sysInterface);
+    await model.start();
+
+    // Select a new channel.
+    await model.selectChannel('stable');
+
+    // When the channel is changed, it should show a reboot confirmation.
+    expect(model.showRebootConfirmation, true);
+    verifyNever(sysInterface.reboot());
+
+    // Dismissing the reboot should now cause a reboot.
+    await model.cancelReboot();
+    expect(model.showRebootConfirmation, false);
+    verifyNever(sysInterface.reboot());
+
+    // But a reboot should still be needed.
+    expect(model.needsRebootToFinish, true);
+
+    // And another request to reboot should bring up the confirmation dialog.
+    model.reboot();
+    expect(model.showRebootConfirmation, true);
+
+    // But not have triggered a reboot.
+    verifyNever(sysInterface.reboot());
+
+    // And a call to reboot should then trigger the reboot.
+    model.reboot();
+    verify(sysInterface.reboot());
   });
 }
