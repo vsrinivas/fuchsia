@@ -51,7 +51,7 @@ class AudioCapturerImpl : public AudioObject,
   void SetUsage(fuchsia::media::AudioCaptureUsage usage) override;
   fuchsia::media::AudioCaptureUsage GetUsage() { return usage_; };
 
-  void OverflowOccurred(int64_t source_start, int64_t mix_point, zx_duration_t overflow_duration);
+  void OverflowOccurred(int64_t source_start, int64_t mix_point, zx::duration overflow_duration);
   void PartialOverflowOccurred(int64_t source_offset, int64_t mix_offset);
 
  protected:

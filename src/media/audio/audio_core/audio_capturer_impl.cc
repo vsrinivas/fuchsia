@@ -989,12 +989,12 @@ void AudioCapturerImpl::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
 }
 
 void AudioCapturerImpl::OverflowOccurred(int64_t frac_source_start, int64_t frac_source_mix_point,
-                                         zx_duration_t overflow_duration) {
+                                         zx::duration overflow_duration) {
   TRACE_INSTANT("audio", "AudioCapturerImpl::OverflowOccurred", TRACE_SCOPE_PROCESS);
   uint16_t overflow_count = std::atomic_fetch_add<uint16_t>(&overflow_count_, 1u);
 
   if constexpr (kLogCaptureOverflow) {
-    auto overflow_msec = static_cast<double>(overflow_duration) / ZX_MSEC(1);
+    auto overflow_msec = static_cast<double>(overflow_duration.to_nsecs()) / ZX_MSEC(1);
 
     if ((kCaptureOverflowErrorInterval > 0) &&
         (overflow_count % kCaptureOverflowErrorInterval == 0)) {
@@ -1238,8 +1238,9 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       // We have overflowed; we could have started [job_start-region_start+negative_edge] sooner.
       if (region_last_frame_pts < (job_start - info.mixer->neg_filter_width())) {
         if (rb_last_frame_pts < (job_start - info.mixer->neg_filter_width())) {
-          auto clock_mono_late = info.clock_mono_to_frac_source_frames.rate().Inverse().Scale(
-              job_start - rb_last_frame_pts);
+          auto clock_mono_late =
+              zx::nsec(info.clock_mono_to_frac_source_frames.rate().Inverse().Scale(
+                  job_start - rb_last_frame_pts));
           OverflowOccurred(rb_last_frame_pts, job_start, clock_mono_late);
         }
         // Move on to the next region
