@@ -95,7 +95,7 @@ std::ostream& operator<<(std::ostream& os, const PacketPtr& value) {
 std::ostream& operator<<(std::ostream& os, const StreamType& value) {
   os << fostr::Indent;
   os << fostr::NewLine << "medium:                " << value.medium();
-  if (value.encoding_parameters()) {
+  if (value.encrypted()) {
     os << fostr::NewLine << "encryption parameters: " << *value.encryption_parameters();
   } else {
     os << fostr::NewLine << "encryption parameters: <null>";
