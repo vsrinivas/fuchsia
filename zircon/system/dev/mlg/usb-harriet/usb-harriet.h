@@ -11,7 +11,7 @@
 namespace usb_harriet {
 
 class Harriet;
-using HarrietBase = ddk::Device<Harriet, ddk::UnbindableDeprecated>;
+using HarrietBase = ddk::Device<Harriet, ddk::UnbindableNew>;
 
 class Harriet : public HarrietBase, public ddk::EmptyProtocol<ZX_PROTOCOL_MLG> {
  public:
@@ -21,7 +21,7 @@ class Harriet : public HarrietBase, public ddk::EmptyProtocol<ZX_PROTOCOL_MLG> {
   static zx_status_t Create(zx_device_t* parent);
 
   // Device protocol implementation.
-  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
  private:

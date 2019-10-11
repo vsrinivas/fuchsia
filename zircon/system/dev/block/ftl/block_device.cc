@@ -106,10 +106,10 @@ zx_status_t BlockDevice::Bind() {
   return DdkAdd(kDeviceName);
 }
 
-void BlockDevice::DdkUnbindDeprecated() {
+void BlockDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   Kill();
   sync_completion_signal(&wake_signal_);
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 zx_status_t BlockDevice::Init() {

@@ -40,7 +40,7 @@ struct AmlController {
 };
 
 class AmlRawNand;
-using DeviceType = ddk::Device<AmlRawNand, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<AmlRawNand, ddk::UnbindableNew>;
 
 class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, ddk::base_protocol> {
  public:
@@ -57,7 +57,7 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   ~AmlRawNand() = default;
 
   void DdkRelease();
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
 
   zx_status_t Bind();
   zx_status_t Init();

@@ -262,9 +262,9 @@ zx_status_t UsbTest::UsbFunctionInterfaceSetInterface(uint8_t interface, uint8_t
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void UsbTest::DdkUnbindDeprecated() {
+void UsbTest::DdkUnbindNew(ddk::UnbindTxn txn) {
   zxlogf(TRACE, "%s\n", __func__);
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void UsbTest::DdkRelease() {

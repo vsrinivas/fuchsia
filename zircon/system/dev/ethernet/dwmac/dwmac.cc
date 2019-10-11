@@ -373,7 +373,7 @@ zx_status_t DWMacDevice::EthMacRegisterCallbacks(const eth_mac_callbacks_t* cbs)
 
 DWMacDevice::DWMacDevice(zx_device_t* device, pdev_protocol_t* pdev,
                          eth_board_protocol_t* eth_board)
-    : ddk::Device<DWMacDevice, ddk::UnbindableDeprecated>(device),
+    : ddk::Device<DWMacDevice, ddk::UnbindableNew>(device),
       pdev_(pdev),
       eth_board_(eth_board) {}
 
@@ -392,10 +392,10 @@ void DWMacDevice::DdkRelease() {
   delete this;
 }
 
-void DWMacDevice::DdkUnbindDeprecated() {
+void DWMacDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   zxlogf(INFO, "Ethernet DdkUnbind\n");
   ShutDown();
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 zx_status_t DWMacDevice::ShutDown() {

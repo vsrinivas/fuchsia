@@ -156,9 +156,9 @@ void Mt8167I2c::ShutDown() {
   thrd_join(irq_thread_, NULL);
 }
 
-void Mt8167I2c::DdkUnbindDeprecated() {
+void Mt8167I2c::DdkUnbindNew(ddk::UnbindTxn txn) {
   ShutDown();
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void Mt8167I2c::DdkRelease() { delete this; }

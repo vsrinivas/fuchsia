@@ -264,9 +264,9 @@ zx_status_t AmlClock::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_clock_Device_dispatch(this, txn, msg, &fidl_ops_);
 }
 
-void AmlClock::DdkUnbindDeprecated() {
+void AmlClock::DdkUnbindNew(ddk::UnbindTxn txn) {
   ShutDown();
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void AmlClock::DdkRelease() { delete this; }

@@ -23,7 +23,7 @@ namespace nand {
 
 class NandPartDevice;
 using DeviceType =
-    ddk::Device<NandPartDevice, ddk::GetSizable, ddk::GetProtocolable, ddk::UnbindableDeprecated>;
+    ddk::Device<NandPartDevice, ddk::GetSizable, ddk::GetProtocolable, ddk::UnbindableNew>;
 
 class NandPartDevice : public DeviceType,
                        public ddk::NandProtocol<NandPartDevice, ddk::base_protocol>,
@@ -41,7 +41,7 @@ class NandPartDevice : public DeviceType,
     return device_get_size(parent());
   }
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* protocol);
-  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   // nand protocol implementation.

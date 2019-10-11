@@ -194,7 +194,7 @@ struct Write16CDB {
 static_assert(sizeof(Write16CDB) == 16, "Write 16 CDB must be 16 bytes");
 
 class Disk;
-using DeviceType = ddk::Device<Disk, ddk::GetSizable, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<Disk, ddk::GetSizable, ddk::UnbindableNew>;
 
 // |Disk| represents a single SCSI direct access block device.
 // |Disk| bridges between the Zircon block protocol and SCSI commands/responses.
@@ -214,7 +214,7 @@ class Disk : public DeviceType, public ddk::BlockImplProtocol<Disk, ddk::base_pr
   const char* tag() const { return tag_; }
 
   // DeviceType functions.
-  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   // ddk::GetSizable functions.

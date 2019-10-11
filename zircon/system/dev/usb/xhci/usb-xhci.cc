@@ -190,10 +190,10 @@ zx_status_t UsbXhci::DdkSuspend(uint32_t flags) {
   return ZX_OK;
 }
 
-void UsbXhci::DdkUnbindDeprecated() {
+void UsbXhci::DdkUnbindNew(ddk::UnbindTxn txn) {
   zxlogf(INFO, "UsbXhci::DdkUnbind\n");
   xhci_shutdown(xhci_.get());
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void UsbXhci::DdkRelease() {

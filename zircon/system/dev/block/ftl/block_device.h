@@ -43,7 +43,7 @@ struct FtlOp {
 };
 
 class BlockDevice;
-using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::UnbindableDeprecated,
+using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::UnbindableNew,
                                ddk::Messageable, ddk::Suspendable, ddk::Resumable,
                                ddk::GetProtocolable>;
 
@@ -58,7 +58,7 @@ class BlockDevice : public DeviceType,
 
   zx_status_t Bind();
   void DdkRelease() { delete this; }
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
 
   // Performs the object initialization.
   zx_status_t Init();

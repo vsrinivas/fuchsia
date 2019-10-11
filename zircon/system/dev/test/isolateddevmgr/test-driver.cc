@@ -14,13 +14,13 @@
 #include <fuchsia/device/manager/test/c/fidl.h>
 
 class IsolatedDevMgrTestDriver;
-using DeviceType = ddk::Device<IsolatedDevMgrTestDriver, ddk::UnbindableDeprecated,
+using DeviceType = ddk::Device<IsolatedDevMgrTestDriver, ddk::UnbindableNew,
                                ddk::Messageable>;
 class IsolatedDevMgrTestDriver : public DeviceType {
  public:
   IsolatedDevMgrTestDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();
-  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 

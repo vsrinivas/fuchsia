@@ -421,7 +421,7 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
   r = thrd_create_with_name(&edev->irq_thread, irq_thread, edev, "rtl-irq-thread");
   if (r < 0) {
     zxlogf(ERROR, "rtl8111: failed to create irq thread %d\n", r);
-    device_remove_deprecated(edev->zxdev);
+    device_async_remove(edev->zxdev);
     return ZX_OK;  // The cleanup will be done in release
   }
 

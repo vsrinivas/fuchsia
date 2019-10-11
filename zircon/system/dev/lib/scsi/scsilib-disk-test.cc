@@ -257,7 +257,7 @@ TEST_F(ScsilibDiskTest, TestCreateDestroy) {
             ZX_OK);
   EXPECT_EQ(bind.device()->DdkGetSize(), kFakeBlocks * kBlockSize);
 
-  bind.device()->DdkRemoveDeprecated();
+  bind.device()->DdkAsyncRemove();
   EXPECT_TRUE(bind.Ok());
 }
 
@@ -328,7 +328,7 @@ TEST_F(ScsilibDiskTest, TestCreateReadDestroy) {
     EXPECT_EQ(check_buffer[i], 0x01);
   }
   controller_.AsyncIoRelease();
-  bind.device()->DdkRemoveDeprecated();
+  bind.device()->DdkAsyncRemove();
   EXPECT_TRUE(bind.Ok());
 }
 

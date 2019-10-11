@@ -138,7 +138,7 @@ TEST_F(NandTest, DdkLifetime) {
 
   ASSERT_OK(device->Init());
   ASSERT_OK(device->Bind());
-  device->DdkUnbindDeprecated();
+  device->DdkAsyncRemove();
   EXPECT_TRUE(ddk().Ok());
 
   // This should delete the object, which means this test should not leak.

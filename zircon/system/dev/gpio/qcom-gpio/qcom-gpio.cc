@@ -195,9 +195,9 @@ void QcomGpioDevice::ShutDown() {
   thrd_join(thread_, NULL);
 }
 
-void QcomGpioDevice::DdkUnbindDeprecated() {
+void QcomGpioDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   ShutDown();
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void QcomGpioDevice::DdkRelease() { delete this; }

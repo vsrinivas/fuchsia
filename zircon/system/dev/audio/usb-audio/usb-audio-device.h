@@ -23,12 +23,12 @@ namespace usb {
 class UsbAudioStream;
 
 class UsbAudioDevice;
-using UsbAudioDeviceBase = ddk::Device<UsbAudioDevice, ddk::UnbindableDeprecated>;
+using UsbAudioDeviceBase = ddk::Device<UsbAudioDevice, ddk::UnbindableNew>;
 
 class UsbAudioDevice : public UsbAudioDeviceBase, public fbl::RefCounted<UsbAudioDevice> {
  public:
   static zx_status_t DriverBind(zx_device_t* parent);
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
   void RemoveAudioStream(const fbl::RefPtr<UsbAudioStream>& stream);

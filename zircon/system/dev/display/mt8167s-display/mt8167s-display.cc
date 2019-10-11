@@ -700,9 +700,9 @@ void Mt8167sDisplay::Shutdown() {
   thrd_join(vsync_thread_, nullptr);
 }
 
-void Mt8167sDisplay::DdkUnbindDeprecated() {
+void Mt8167sDisplay::DdkUnbindNew(ddk::UnbindTxn txn) {
   Shutdown();
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 void Mt8167sDisplay::DdkRelease() { delete this; }
 

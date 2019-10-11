@@ -275,9 +275,9 @@ zx_status_t PilDevice::Init() { return ZX_OK; }
 
 void PilDevice::ShutDown() {}
 
-void PilDevice::DdkUnbindDeprecated() {
+void PilDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   ShutDown();
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void PilDevice::DdkRelease() { delete this; }

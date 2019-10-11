@@ -68,7 +68,7 @@ class DisplayInfo : public IdMappable<fbl::RefPtr<DisplayInfo>>,
   bool switching_client = false;
 };
 
-using ControllerParent = ddk::Device<Controller, ddk::UnbindableDeprecated, ddk::Openable,
+using ControllerParent = ddk::Device<Controller, ddk::UnbindableNew, ddk::Openable,
                                      ddk::Messageable>;
 class Controller : public ControllerParent,
                    public ddk::DisplayControllerInterfaceProtocol<Controller>,
@@ -80,7 +80,7 @@ class Controller : public ControllerParent,
 
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t Bind(fbl::unique_ptr<display::Controller>* device_ptr);
 

@@ -14,7 +14,7 @@ namespace usb {
 
 class FlashProgrammer;
 using FlashProgrammerBase = ddk::Device<FlashProgrammer, ddk::Messageable,
-                                        ddk::UnbindableDeprecated>;
+                                        ddk::UnbindableNew>;
 
 class FlashProgrammer : public FlashProgrammerBase,
                         public ddk::EmptyProtocol<ZX_PROTOCOL_USB_FWLOADER> {
@@ -24,7 +24,7 @@ class FlashProgrammer : public FlashProgrammerBase,
 
   // Device protocol implementation.
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   // FIDL message implementation.

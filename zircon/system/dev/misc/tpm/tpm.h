@@ -54,7 +54,7 @@ class HardwareInterface {
 };
 
 class Device;
-using DeviceType = ddk::Device<Device, ddk::UnbindableDeprecated, ddk::Suspendable>;
+using DeviceType = ddk::Device<Device, ddk::UnbindableNew, ddk::Suspendable>;
 
 class Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TPM> {
  public:
@@ -75,7 +75,7 @@ class Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TPM> {
 
   // DDK methods
   void DdkRelease();
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   zx_status_t DdkSuspend(uint32_t flags);
 
   zx_status_t Init();

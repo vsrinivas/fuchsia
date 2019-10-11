@@ -33,7 +33,7 @@ TEST(CadenceHpnfcTest, DdkLifecycle) {
 
   EXPECT_OK(dut.StartInterruptThread());
   EXPECT_OK(dut.Bind());
-  dut.DdkUnbindDeprecated();
+  dut.DdkAsyncRemove();
 
   EXPECT_TRUE(ddk.Ok());
 }

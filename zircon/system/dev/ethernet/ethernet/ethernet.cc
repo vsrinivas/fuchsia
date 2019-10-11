@@ -908,12 +908,12 @@ void EthDev0::DestroyAllEthDev() TA_NO_THREAD_SAFETY_ANALYSIS {
   }
 }
 
-void EthDev0::DdkUnbindDeprecated() {
+void EthDev0::DdkUnbindNew(ddk::UnbindTxn txn) {
   // Tear down shared memory, fifos, and threads
   // to encourage any open instances to close.
   DestroyAllEthDev();
   // This will trigger DdkCLose() and DdkRelease() of all EthDev.
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void EthDev0::DdkRelease() {

@@ -401,9 +401,9 @@ void As370Gpio::Shutdown() {
   thrd_join(thread_, NULL);
 }
 
-void As370Gpio::DdkUnbindDeprecated() {
+void As370Gpio::DdkUnbindNew(ddk::UnbindTxn txn) {
   Shutdown();
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void As370Gpio::DdkRelease() { delete this; }

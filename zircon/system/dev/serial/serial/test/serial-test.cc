@@ -170,7 +170,7 @@ TEST(SerialTest, DdkLifetime) {
 
   ASSERT_EQ(ZX_OK, device->Init());
   ASSERT_EQ(ZX_OK, device->Bind());
-  device->DdkRemoveDeprecated();
+  device->DdkAsyncRemove();
   EXPECT_TRUE(tester.ddk().Ok());
 
   // Delete the object.

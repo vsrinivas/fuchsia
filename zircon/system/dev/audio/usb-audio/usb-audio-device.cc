@@ -473,9 +473,9 @@ void UsbAudioDevice::ParseMidiStreamingIfc(DescriptorListMemory::Iterator* iter,
   }
 }
 
-void UsbAudioDevice::DdkUnbindDeprecated() {
+void UsbAudioDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   // Unpublish our device node.
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void UsbAudioDevice::DdkRelease() {

@@ -55,7 +55,7 @@ struct ImageInfo : public fbl::DoublyLinkedListable<std::unique_ptr<ImageInfo>> 
 class Mt8167sDisplay;
 
 // Mt8167sDisplay will implement only a few subset of Device
-using DeviceType = ddk::Device<Mt8167sDisplay, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<Mt8167sDisplay, ddk::UnbindableNew>;
 
 class Mt8167sDisplay
     : public DeviceType,
@@ -91,7 +91,7 @@ class Mt8167sDisplay
   int VSyncThread();
 
   // Required functions for DeviceType
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
   void SetBtiForTesting(zx::bti bti) { bti_ = std::move(bti); }

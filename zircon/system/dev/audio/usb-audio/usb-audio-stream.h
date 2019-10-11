@@ -38,7 +38,7 @@ struct AudioStreamProtocol : public ddk::internal::base_protocol {
 };
 
 class UsbAudioStream;
-using UsbAudioStreamBase = ddk::Device<UsbAudioStream, ddk::Messageable, ddk::UnbindableDeprecated>;
+using UsbAudioStreamBase = ddk::Device<UsbAudioStream, ddk::Messageable, ddk::UnbindableNew>;
 
 class UsbAudioStream : public UsbAudioStreamBase,
                        public AudioStreamProtocol,
@@ -52,7 +52,7 @@ class UsbAudioStream : public UsbAudioStreamBase,
   const char* log_prefix() const { return log_prefix_; }
 
   // DDK device implementation
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     return fuchsia_hardware_audio_Device_dispatch(this, txn, msg, &AUDIO_FIDL_THUNKS);

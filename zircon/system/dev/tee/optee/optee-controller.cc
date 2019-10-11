@@ -296,9 +296,9 @@ zx_status_t OpteeController::DdkOpen(zx_device_t** out_dev, uint32_t flags) {
   return ZX_OK;
 }
 
-void OpteeController::DdkUnbindDeprecated() {
+void OpteeController::DdkUnbindNew(ddk::UnbindTxn txn) {
   // Initiate the removal of this device and all of its children.
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void OpteeController::DdkRelease() {

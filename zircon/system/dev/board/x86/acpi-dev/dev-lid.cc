@@ -203,9 +203,9 @@ zx_status_t AcpiLidDevice::HidbusGetProtocol(uint8_t* protocol) { return ZX_ERR_
 
 zx_status_t AcpiLidDevice::HidbusSetProtocol(uint8_t protocol) { return ZX_OK; }
 
-void AcpiLidDevice::DdkUnbindDeprecated() {
+void AcpiLidDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   zxlogf(INFO, "acpi-lid: unbind\n");
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void AcpiLidDevice::DdkRelease() {

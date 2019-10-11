@@ -22,7 +22,7 @@
 namespace audio {
 
 class Max98373;
-using DeviceType = ddk::Device<Max98373, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<Max98373, ddk::UnbindableNew>;
 
 class Max98373 : public DeviceType,  // Not final for unit tests.
                  public ddk::CodecProtocol<Max98373, ddk::base_protocol> {
@@ -35,9 +35,9 @@ class Max98373 : public DeviceType,  // Not final for unit tests.
   zx_status_t Bind();
 
   void DdkRelease() { delete this; }
-  void DdkUnbindDeprecated() {
+  void DdkUnbindNew(ddk::UnbindTxn txn) {
     Shutdown();
-    DdkRemoveDeprecated();
+    txn.Reply();
   }
   zx_status_t DdkSuspend(uint32_t flags) {
     Shutdown();

@@ -42,7 +42,7 @@ namespace fake_usb_cdc_acm_function {
 // echos it back on the next read, unless the write is exactly a single '0' byte, in which case
 // the next read will be an empty response.
 class FakeUsbCdcAcmFunction;
-using DeviceType = ddk::Device<FakeUsbCdcAcmFunction, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<FakeUsbCdcAcmFunction, ddk::UnbindableNew>;
 class FakeUsbCdcAcmFunction : public DeviceType,
                               public ddk::UsbFunctionInterfaceProtocol<FakeUsbCdcAcmFunction> {
  public:
@@ -50,7 +50,7 @@ class FakeUsbCdcAcmFunction : public DeviceType,
   zx_status_t Bind();
 
   // |ddk::Device| mix-in implementations.
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
   size_t UsbFunctionInterfaceGetDescriptorsSize();
@@ -304,7 +304,7 @@ zx_status_t FakeUsbCdcAcmFunction::Bind() {
   return ZX_OK;
 }
 
-void FakeUsbCdcAcmFunction::DdkUnbindDeprecated() {
+void FakeUsbCdcAcmFunction::DdkUnbindNew(ddk::UnbindTxn txn) {
   fbl::AutoLock lock(&mtx_);
   active_ = false;
   event_.Signal();
@@ -313,7 +313,7 @@ void FakeUsbCdcAcmFunction::DdkUnbindDeprecated() {
   int retval;
   thrd_join(thread_, &retval);
 
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void FakeUsbCdcAcmFunction::DdkRelease() { delete this; }

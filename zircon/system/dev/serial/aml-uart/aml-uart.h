@@ -23,7 +23,7 @@
 namespace serial {
 
 class AmlUart;
-using DeviceType = ddk::Device<AmlUart, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<AmlUart, ddk::UnbindableNew>;
 
 class AmlUart : public DeviceType, public ddk::SerialImplProtocol<AmlUart, ddk::base_protocol> {
  public:
@@ -31,7 +31,7 @@ class AmlUart : public DeviceType, public ddk::SerialImplProtocol<AmlUart, ddk::
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Device protocol implementation.
-  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() {
     SerialImplEnable(false);
     delete this;

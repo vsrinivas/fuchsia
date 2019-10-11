@@ -305,14 +305,14 @@ zx_status_t SynClk::ClockImplGetInput(uint32_t id, uint32_t* out) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void SynClk::DdkUnbindDeprecated() {
+void SynClk::DdkUnbindNew(ddk::UnbindTxn txn) {
   fbl::AutoLock lock(&lock_);
 
   global_mmio_.reset();
   avio_mmio_.reset();
   cpu_mmio_.reset();
 
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void SynClk::DdkRelease() { delete this; }

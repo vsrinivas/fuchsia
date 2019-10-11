@@ -134,7 +134,7 @@ static constexpr zx_smc_parameters_t CreatePilSmcParams(PilCmd cmd, uint64_t arg
 }
 
 class PilDevice;
-using DeviceType = ddk::Device<PilDevice, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<PilDevice, ddk::UnbindableNew>;
 
 class PilDevice : public DeviceType {
  public:
@@ -146,7 +146,7 @@ class PilDevice : public DeviceType {
   zx_status_t Init();
 
   // Methods required by the ddk mixins
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
  private:

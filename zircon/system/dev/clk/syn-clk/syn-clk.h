@@ -16,7 +16,7 @@
 namespace clk {
 
 class SynClk;
-using DeviceType = ddk::Device<SynClk, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<SynClk, ddk::UnbindableNew>;
 
 class SynClk : public DeviceType, public ddk::ClockImplProtocol<SynClk, ddk::base_protocol> {
  public:
@@ -36,7 +36,7 @@ class SynClk : public DeviceType, public ddk::ClockImplProtocol<SynClk, ddk::bas
   zx_status_t ClockImplGetInput(uint32_t id, uint32_t* out);
 
   // Device Protocol Implementation.
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // Protected for unit tests.

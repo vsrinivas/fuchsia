@@ -29,7 +29,7 @@ namespace hid_driver {
 
 class HidDevice;
 
-using HidDeviceType = ddk::Device<HidDevice, ddk::UnbindableDeprecated, ddk::Openable>;
+using HidDeviceType = ddk::Device<HidDevice, ddk::UnbindableNew, ddk::Openable>;
 
 class HidDevice : public HidDeviceType,
                   public ddk::HidDeviceProtocol<HidDevice, ddk::base_protocol> {
@@ -40,7 +40,7 @@ class HidDevice : public HidDeviceType,
   zx_status_t Bind(ddk::HidbusProtocolClient hidbus_proto);
   void DdkRelease();
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
 
   // |HidDeviceProtocol|
   zx_status_t HidDeviceRegisterListener(const hid_report_listener_protocol_t* listener);

@@ -14,21 +14,21 @@
 
 namespace gpio {
 
-class As370Gpio : public ddk::Device<As370Gpio, ddk::UnbindableDeprecated>,
+class As370Gpio : public ddk::Device<As370Gpio, ddk::UnbindableNew>,
                   public ddk::GpioImplProtocol<As370Gpio, ddk::base_protocol> {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   As370Gpio(zx_device_t* parent, ddk::MmioBuffer pinmux_mmio, ddk::MmioBuffer gpio1_mmio,
             ddk::MmioBuffer gpio2_mmio, zx::interrupt gpio1_irq)
-      : ddk::Device<As370Gpio, ddk::UnbindableDeprecated>(parent),
+      : ddk::Device<As370Gpio, ddk::UnbindableNew>(parent),
         pinmux_mmio_(std::move(pinmux_mmio)),
         gpio1_mmio_(std::move(gpio1_mmio)),
         gpio2_mmio_(std::move(gpio2_mmio)),
         gpio1_irq_(std::move(gpio1_irq)) {}
   virtual ~As370Gpio() = default;
 
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
   zx_status_t GpioImplConfigIn(uint32_t index, uint32_t flags);

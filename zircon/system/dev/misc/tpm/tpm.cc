@@ -155,12 +155,12 @@ zx_status_t Device::ExecuteCmdLocked(Locality loc, const uint8_t* cmd, size_t le
 
 void Device::DdkRelease() { delete this; }
 
-void Device::DdkUnbindDeprecated() {
+void Device::DdkUnbindNew(ddk::UnbindTxn txn) {
   {
     fbl::AutoLock guard(&lock_);
     ReleaseLocalityLocked(0);
   }
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 zx_status_t Device::DdkSuspend(uint32_t flags) {
