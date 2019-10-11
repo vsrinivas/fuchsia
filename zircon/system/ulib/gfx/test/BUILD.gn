@@ -3,15 +3,19 @@
 # found in the LICENSE file.
 
 import("$zx/public/gn/fuzzer.gni")
-import("$zx_build/public/gn/library_shim.gni")
 
-library("gfx") {
-  sdk = "source"
-  sdk_headers = [ "gfx/gfx.h" ]
+fuzzer("gfx-fuzzer") {
   sources = [
-    "gfx.c",
+    "gfx_fuzzer.cc",
   ]
   deps = [
-    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/gfx",
+  ]
+}
+
+group("test") {
+  testonly = true
+  deps = [
+    ":gfx-fuzzer",
   ]
 }
