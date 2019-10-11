@@ -2,26 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/device/llcpp/fidl.h>
+#include <fuchsia/wlan/tap/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async/dispatcher.h>
+#include <zircon/fidl.h>
+#include <zircon/status.h>
+
 #include <memory>
 #include <mutex>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <fuchsia/wlan/device/cpp/fidl.h>
-#include <fuchsia/wlan/tap/c/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/async/dispatcher.h>
-#include <wlan/common/channel.h>
-#include <zircon/fidl.h>
-#include <zircon/status.h>
+#include <ddktl/fidl.h>
 
 #include "wlantap-phy.h"
 
 namespace {
 
-namespace wlantap = ::fuchsia::wlan::tap;
+namespace wlantap = ::llcpp::fuchsia::wlan::tap;
 
 class WlantapDriver {
  public:
@@ -44,94 +45,45 @@ class WlantapDriver {
   std::unique_ptr<async::Loop> loop_;
 };
 
-zx_status_t SendCreatePhyResponse(zx_txid_t txid, zx_status_t status, fidl_txn_t* txn) {
-  fuchsia_wlan_tap_WlantapCtlCreatePhyResponse resp{
-      .hdr =
-          {
-              .ordinal = fuchsia_wlan_tap_WlantapCtlCreatePhyOrdinal,
-              .txid = txid,
-          },
-      .status = status,
-  };
-  fidl_msg_t resp_msg = {
-      .bytes = &resp, .num_bytes = sizeof(resp), .handles = nullptr, .num_handles = 0};
-  zx_status_t st = txn->reply(txn, &resp_msg);
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "error sending response: %s\n", zx_status_get_string(st));
-    return st;
-  }
-  return status;
-}
-
-zx_status_t DecodeCreatePhyRequest(fidl_msg_t* msg, fidl_txn_t* txn,
-                                   fidl::InterfaceRequest<wlantap::WlantapPhy>* out_req,
-                                   wlantap::WlantapPhyConfig* out_config, zx_txid_t* out_txid) {
-  zx_status_t status = ZX_OK;
-  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
-    zxlogf(ERROR, "wlantapctl: CreatePhyRequest too short for header\n");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  auto hdr = static_cast<fidl_message_header_t*>(msg->bytes);
-  *out_txid = hdr->txid;
-  // Depending on the state of the migration, GenOrdinal and Ordinal may be the
-  // same value.  See FIDL-524.
-  uint64_t ordinal = hdr->ordinal;
-  if (ordinal != fuchsia_wlan_tap_WlantapCtlCreatePhyOrdinal &&
-      ordinal != fuchsia_wlan_tap_WlantapCtlCreatePhyGenOrdinal) {
-    zxlogf(ERROR, "wlantapctl: ordinal not supported, expecting %lu, got %lu\n",
-           fuchsia_wlan_tap_WlantapCtlCreatePhyOrdinal, ordinal);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  const char* error_msg = nullptr;
-  status = fidl_decode_msg(&fuchsia_wlan_tap_WlantapCtlCreatePhyRequestTable, msg, &error_msg);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "wlantapctl: cannot decode CreatePhy request: %s - %s\n",
-           zx_status_get_string(status), error_msg);
-    return status;
-  }
-
-  fidl::Message fidl_msg(
-      fidl::BytePart(static_cast<uint8_t*>(msg->bytes), msg->num_bytes, msg->num_bytes),
-      fidl::HandlePart(msg->handles, msg->num_handles));
-  fidl::Decoder decoder(std::move(fidl_msg));
-  *out_config = fidl::DecodeAs<wlantap::WlantapPhyConfig>(&decoder, sizeof(fidl_message_header_t));
-  *out_req = fidl::DecodeAs<fidl::InterfaceRequest<wlantap::WlantapPhy>>(
-      &decoder, sizeof(fidl_message_header_t) + sizeof(fuchsia_wlan_tap_WlantapPhyConfig));
-  return ZX_OK;
-}
-
-struct WlantapCtl {
+struct WlantapCtl : wlantap::WlantapCtl::Interface {
   WlantapCtl(WlantapDriver* driver) : driver_(driver) {}
 
   static void DdkRelease(void* ctx) { delete static_cast<WlantapCtl*>(ctx); }
 
-  static zx_status_t DdkMessage(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-    fidl::InterfaceRequest<wlantap::WlantapPhy> request;
-    wlantap::WlantapPhyConfig config;
-    zx_txid_t txid;
-    zx_status_t status = DecodeCreatePhyRequest(msg, txn, &request, &config, &txid);
-    if (status != ZX_OK) {
-      return SendCreatePhyResponse(txid, status, txn);
-    }
+  void CreatePhy(wlantap::WlantapPhyConfig config, ::zx::channel proxy,
+                 CreatePhyCompleter::Sync completer) override {
+    zx_status_t status;
 
     async_dispatcher_t* loop;
-    auto& self = *static_cast<WlantapCtl*>(ctx);
-
-    status = self.driver_->GetOrStartLoop(&loop);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "wlantapctl: could not start wlantap event loop: %s\n",
-             zx_status_get_string(status));
-      return SendCreatePhyResponse(txid, status, txn);
+    if ((status = driver_->GetOrStartLoop(&loop)) != ZX_OK) {
+      return completer.Reply(status);
     }
 
-    auto phy_config = std::make_unique<wlantap::WlantapPhyConfig>(std::move(config));
-    auto channel = request.TakeChannel();
-    status = wlan::CreatePhy(self.device_, std::move(channel), std::move(phy_config), loop);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "wlantapctl: could not create phy: %s\n", zx_status_get_string(status));
+    // Convert to HLCPP by transiting through fidl::Message.
+    auto phy_config = ::fuchsia::wlan::tap::WlantapPhyConfig::New();
+    {
+      fidl::Buffer<wlantap::WlantapPhyConfig> buffer;
+      auto linearize_result = fidl::Linearize(&config, buffer.view());
+      if ((status = linearize_result.status) != ZX_OK) {
+        return completer.Reply(status);
+      }
+      fidl::Decoder dec(fidl::Message(linearize_result.message.Release(), fidl::HandlePart()));
+      ::fuchsia::wlan::tap::WlantapPhyConfig::Decode(&dec, phy_config.get(), /* offset = */ 0);
     }
-    return SendCreatePhyResponse(txid, status, txn);
+
+    if ((status = wlan::CreatePhy(device_, std::move(proxy), std::move(phy_config), loop)) !=
+        ZX_OK) {
+      return completer.Reply(status);
+    }
+    return completer.Reply(ZX_OK);
+  };
+
+  static zx_status_t DdkMessage(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    auto self = static_cast<WlantapCtl*>(ctx);
+
+    DdkTransaction transaction(txn);
+    wlantap::WlantapCtl::Dispatch(self, msg, &transaction);
+    return transaction.Status();
   }
 
   zx_device_t* device_ = nullptr;

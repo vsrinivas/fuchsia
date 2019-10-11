@@ -21,16 +21,17 @@ driver_module("wlantap_driver") {
 
   deps = [
     "//garnet/lib/wlan/fidl:wlantap",
+    "//garnet/lib/wlan/fidl:wlantap_llcpp",
     "//garnet/lib/wlan/protocol",
-    "//src/connectivity/wlan/lib/common/cpp:common",
-    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
