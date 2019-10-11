@@ -21,8 +21,26 @@
 
 namespace board_qemu_arm64 {
 
+static bool use_fake_display() {
+  const char* ufd = getenv("driver.qemu_bus.use_fake_display");
+  return (ufd != nullptr &&
+          (!strcmp(ufd, "1") || !strcmp(ufd, "true") || !strcmp(ufd, "on")));
+}
+
 int QemuArm64::Thread() {
   zx_status_t status;
+  zxlogf(INFO, "qemu-bus thread running");
+
+  if (use_fake_display()) {
+    status = DisplayInit();
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: DisplayInit() failed %d\n", __func__, status);
+      return thrd_error;
+    }
+    zxlogf(INFO, "qemu.use_fake_display=1, disabling goldfish-display");
+    setenv("driver.goldfish-display.disable", "true", 1);
+  }
+
   status = PciInit();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: PciInit() failed %d\n", __func__, status);
@@ -47,16 +65,6 @@ int QemuArm64::Thread() {
     return thrd_error;
   }
 
-  // [bug:35681] Disable starting up the fake display driver for now
-  // so that the virtio-gpu can take over.
-  // TODO(payamm): Look into loading the fake driver for testing purposes
-#if 0
-  status = DisplayInit();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DisplayInit() failed %d\n", __func__, status);
-    return thrd_error;
-  }
-#endif
   return 0;
 }
 

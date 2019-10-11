@@ -32,6 +32,12 @@
 #include "scsi.h"
 #include "socket.h"
 
+static bool gpu_disabled() {
+  const char* flag = getenv("driver.virtio-gpu.disable");
+  return (flag != nullptr &&
+          (!strcmp(flag, "1") || !strcmp(flag, "true") || !strcmp(flag, "on")));
+}
+
 static zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device) {
   zx_status_t status;
   pci_protocol_t pci;
@@ -93,6 +99,10 @@ static zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device) {
           new virtio::ConsoleDevice(bus_device, std::move(bti), std::move(backend)));
       break;
     case VIRTIO_DEV_TYPE_GPU:
+      if (gpu_disabled()) {
+        zxlogf(INFO, "driver.virtio-gpu.disabled=1, not binding to the GPU\n");
+        return ZX_ERR_NOT_FOUND;
+      }
       virtio_device.reset(new virtio::GpuDevice(bus_device, std::move(bti), std::move(backend)));
       break;
     case VIRTIO_DEV_TYPE_ENTROPY:
