@@ -21,8 +21,6 @@
 #include <utility>
 #include <vector>
 
-#include <fidl/examples/echo/cpp/fidl.h>
-
 namespace fidl {
 namespace fuzzing {
 
