@@ -9,6 +9,8 @@ group("lib") {
     "bt-a2dp:tests",
     "bt-avdtp",
     "bt-avdtp:tests",
+    "fidl",
+    "fidl:tests",
     "fuchsia-bluetooth",
     "fuchsia-bluetooth:tests",
   ]

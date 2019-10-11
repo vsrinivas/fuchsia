@@ -26,6 +26,7 @@
 
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_controller.h"
 #include "src/connectivity/bluetooth/hci/emulator/peer.h"
+#include "src/connectivity/bluetooth/lib/fidl/hanging_getter.h"
 
 namespace bt_hci_emulator {
 
@@ -73,7 +74,6 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
   void AddPeer(std::unique_ptr<Peer> peer);
 
   void OnLegacyAdvertisingStateChanged();
-  void NotifyLegacyAdvertisingStateWatchers();
 
   // Remove the bt-hci device.
   void UnpublishHci();
@@ -119,8 +119,8 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
   // List of active peers that have been registered with us.
   std::unordered_map<bt::DeviceAddress, std::unique_ptr<Peer>> peers_;
 
-  WatchLegacyAdvertisingStatesCallback legacy_adv_watcher_;
-  std::vector<fuchsia::bluetooth::test::LegacyAdvertisingState> legacy_adv_states_;
+  bt_lib_fidl::HangingVectorGetter<fuchsia::bluetooth::test::LegacyAdvertisingState>
+      legacy_adv_state_getter_;
 };
 
 }  // namespace bt_hci_emulator

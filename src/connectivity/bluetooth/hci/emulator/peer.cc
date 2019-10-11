@@ -141,29 +141,18 @@ void Peer::EmulateDisconnectionComplete() {
   fake_controller_->Disconnect(address_);
 }
 
-// TODO(armansito): The hanging-get pattern with batches and stashed callbacks always involves some
-// amount of juggling that is common to all cases. Define a generic utility class next time this
-// pattern is added.
 void Peer::WatchConnectionStates(WatchConnectionStatesCallback callback) {
   logf(TRACE, "Peer.WatchConnectionState\n");
-
-  if (connection_state_watcher_) {
+  if (!connection_state_getter_.Watch(std::move(callback))) {
     logf(TRACE, "Watcher already registered! Closing Peer channel");
     binding_.Unbind();
     NotifyChannelClosed();
-    return;
   }
-  connection_state_watcher_ = std::move(callback);
-  NotifyConnectionStateWatcher();
 }
 
 void Peer::UpdateConnectionState(bool connected) {
-  if (!connection_states_) {
-    connection_states_.emplace();
-  }
-  connection_states_->push_back(connected ? ftest::ConnectionState::CONNECTED
-                                          : ftest::ConnectionState::DISCONNECTED);
-  NotifyConnectionStateWatcher();
+  connection_state_getter_.Add(connected ? ftest::ConnectionState::CONNECTED
+                                         : ftest::ConnectionState::DISCONNECTED);
 }
 
 void Peer::OnChannelClosed(zx_status_t status) {
@@ -177,18 +166,6 @@ void Peer::NotifyChannelClosed() {
   if (closed_callback_) {
     closed_callback_();
   }
-}
-
-void Peer::NotifyConnectionStateWatcher() {
-  if (!connection_state_watcher_ || connection_states_->empty()) {
-    // No watcher; nothing to do.
-    return;
-  }
-
-  auto f = std::move(connection_state_watcher_);
-  auto states = std::move(*connection_states_);
-  connection_states_.reset();
-  f(std::move(states));
 }
 
 }  // namespace bt_hci_emulator

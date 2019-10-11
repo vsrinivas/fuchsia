@@ -17,6 +17,7 @@
 
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_controller.h"
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_peer.h"
+#include "src/connectivity/bluetooth/lib/fidl/hanging_getter.h"
 
 namespace bt_hci_emulator {
 
@@ -72,17 +73,14 @@ class Peer : public fuchsia::bluetooth::test::Peer {
   void OnChannelClosed(zx_status_t status);
   void CleanUp();
   void NotifyChannelClosed();
-  void NotifyConnectionStateWatcher();
 
   bt::DeviceAddress address_;
   fbl::RefPtr<bt::testing::FakeController> fake_controller_;
   fidl::Binding<fuchsia::bluetooth::test::Peer> binding_;
   fit::callback<void()> closed_callback_;
 
-  // Contains the delta between the last call to WatchConnectionState and the most recent connection
-  // state change. If valid, then there is a value to report.
-  std::optional<std::vector<fuchsia::bluetooth::test::ConnectionState>> connection_states_;
-  WatchConnectionStatesCallback connection_state_watcher_;
+  bt_lib_fidl::HangingVectorGetter<fuchsia::bluetooth::test::ConnectionState>
+      connection_state_getter_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Peer);
 };

@@ -321,17 +321,10 @@ void Device::WatchLeScanStates(WatchLeScanStatesCallback callback) {
 
 void Device::WatchLegacyAdvertisingStates(WatchLegacyAdvertisingStatesCallback callback) {
   logf(TRACE, "HciEmulator.WatchLegacyAdvertisingState\n");
-
-  // As documented in //sdk/fidl/fuchsia.bluetooth.test/hci_emulator.fidl, we don't allow multiple
-  // outstanding requests to watch for state changes. Close the emulator channel
-  if (legacy_adv_watcher_) {
+  if (!legacy_adv_state_getter_.Watch(std::move(callback))) {
     binding_.Unbind();
     UnpublishHci();
-    return;
   }
-
-  legacy_adv_watcher_ = std::move(callback);
-  NotifyLegacyAdvertisingStateWatchers();
 }
 
 void Device::AddPeer(std::unique_ptr<Peer> peer) {
@@ -372,24 +365,7 @@ void Device::OnLegacyAdvertisingStateChanged() {
     fidl_state.set_scan_response(std::move(output));
   }
 
-  legacy_adv_states_.push_back(std::move(fidl_state));
-
-  NotifyLegacyAdvertisingStateWatchers();
-}
-
-void Device::NotifyLegacyAdvertisingStateWatchers() {
-  WatchLegacyAdvertisingStatesCallback f;
-  std::vector<ftest::LegacyAdvertisingState> states;
-
-  if (!legacy_adv_watcher_ || legacy_adv_states_.empty()) {
-    // No watcher; nothing to do.
-    return;
-  }
-
-  f = std::move(legacy_adv_watcher_);
-  states = std::move(legacy_adv_states_);
-
-  f(std::move(states));
+  legacy_adv_state_getter_.Add(std::move(fidl_state));
 }
 
 void Device::UnpublishHci() {

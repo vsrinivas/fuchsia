@@ -12,6 +12,7 @@ test_package("tests") {
   deps = [
     "integration:bt-integration-tests",
     "//src/connectivity/bluetooth/core/bt-host:tests",
+    "//src/connectivity/bluetooth/lib/fidl:tests",
   ]
 
   tests = [
@@ -22,6 +23,10 @@ test_package("tests") {
     {
       name = "bt_integration_tests"
       dest = "bt-integration-tests"
+      environments = basic_envs
+    },
+    {
+      name = "bt-lib-fidl-unittests"
       environments = basic_envs
     },
   ]
