@@ -2131,16 +2131,15 @@ macro_rules! fidl_union {
         }
 
         impl $name {
+            #[allow(irrefutable_let_patterns)]
             fn member_index(&self) -> u32 {
                 #![allow(unused)]
                 let mut index = 0;
-                // TODO(cramertj): switch to `if let` when irrefutable `if let` patterns
-                // stabilize
                 $(
-                    match *self {
-                        $name::$member_name(_) => return index,
-                        _ => index += 1,
+                    if let $name::$member_name(_) = self {
+                        return index
                     }
+                    index += 1;
                 )*
                 panic!("unreachable union member")
             }
@@ -2248,6 +2247,8 @@ macro_rules! fidl_xunion {
                 ordinal: $member_ordinal:expr,
             },
         )*],
+        // Flexible xunions only: name of the unknown variant.
+        $( unknown_member: $unknown_name:ident, )?
     ) => {
         $( #[$attrs] )*
         pub enum $name {
@@ -2255,12 +2256,14 @@ macro_rules! fidl_xunion {
                 $(#[$member_docs])*
                 $member_name ( $member_ty ),
             )*
-            #[doc(hidden)]
-            __UnknownVariant {
-                ordinal: u32,
-                bytes: Vec<u8>,
-                handles: Vec<$crate::handle::Handle>,
-            },
+            $(
+                #[doc(hidden)]
+                $unknown_name {
+                    ordinal: u32,
+                    bytes: Vec<u8>,
+                    handles: Vec<$crate::handle::Handle>,
+                },
+            )?
         }
 
         impl $name {
@@ -2269,7 +2272,9 @@ macro_rules! fidl_xunion {
                     $(
                         $name::$member_name(_) => $member_ordinal,
                     )*
-                    $name::__UnknownVariant { ordinal, .. } => ordinal,
+                    $(
+                        $name::$unknown_name { ordinal, .. } => ordinal,
+                    )?
                 }
             }
         }
@@ -2289,19 +2294,21 @@ macro_rules! fidl_xunion {
                         $(
                             $name::$member_name ( val ) => $crate::encoding::encode_in_envelope(&mut Some(val), encoder),
                         )*
-                        $name::__UnknownVariant { ordinal: _, bytes, handles } => {
-                            // Throw the raw data from the unrecognized variant
-                            // back onto the wire. This will allow correct proxies even in
-                            // the event that they don't yet recognize this union variant.
-                            $crate::fidl_encode!(&mut (bytes.len() as u32), encoder)?;
-                            $crate::fidl_encode!(&mut (handles.len() as u32), encoder)?;
-                            $crate::fidl_encode!(
-                                &mut $crate::encoding::ALLOC_PRESENT_U64, encoder
-                            )?;
-                            encoder.append_bytes(bytes);
-                            encoder.append_handles(handles);
-                            Ok(())
-                        },
+                        $(
+                            $name::$unknown_name { ordinal: _, bytes, handles } => {
+                                // Throw the raw data from the unrecognized variant
+                                // back onto the wire. This will allow correct proxies even in
+                                // the event that they don't yet recognize this union variant.
+                                $crate::fidl_encode!(&mut (bytes.len() as u32), encoder)?;
+                                $crate::fidl_encode!(&mut (handles.len() as u32), encoder)?;
+                                $crate::fidl_encode!(
+                                    &mut $crate::encoding::ALLOC_PRESENT_U64, encoder
+                                )?;
+                                encoder.append_bytes(bytes);
+                                encoder.append_handles(handles);
+                                Ok(())
+                            },
+                        )?
                     }
                 })
             }
@@ -2316,9 +2323,12 @@ macro_rules! fidl_xunion {
                 $(
                     return $name::$member_name($crate::fidl_new_empty!($member_ty));
                 )*
-                $name::__UnknownVariant { ordinal: 0, bytes: vec![], handles: vec![] }
+                $(
+                    $name::$unknown_name { ordinal: 0, bytes: vec![], handles: vec![] }
+                )?
             }
 
+            #[allow(irrefutable_let_patterns)]
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
                 #![allow(unused)]
                 let mut ordinal: u32 = 0;
@@ -2343,9 +2353,18 @@ macro_rules! fidl_xunion {
                     $(
                         $member_ordinal => $crate::fidl_inline_size!($member_ty),
                     )*
-                    // Unknown payloads are considered a wholly-inline string
-                    // of bytes.
-                    _ => num_bytes as usize,
+                    $(
+                        _ => {
+                            // We need the expansion to refer to $unknown_name,
+                            // so just create and discard an unknown variant.
+                            $name::$unknown_name { ordinal: 0, bytes: vec![], handles: vec![] };
+                            // Flexible xunion: unknown payloads are considered
+                            // a wholly-inline string of bytes.
+                            num_bytes as usize
+                        }
+                    )?
+                    // Strict xunion: reject unknown ordinals.
+                    _ => return Err($crate::Error::UnknownUnionTag),
                 };
 
                 decoder.read_out_of_line(member_inline_size, |decoder| {
@@ -2368,14 +2387,20 @@ macro_rules! fidl_xunion {
                                     }
                                 }
                             )*
-                            ordinal => {
-                                let bytes = decoder.next_slice(num_bytes as usize)?.to_vec();
-                                let mut handles = Vec::with_capacity(num_handles as usize);
-                                for _ in 0..num_handles {
-                                    handles.push(decoder.take_handle()?);
+                            $(
+                                ordinal => {
+                                    let bytes = decoder.next_slice(num_bytes as usize)?.to_vec();
+                                    let mut handles = Vec::with_capacity(num_handles as usize);
+                                    for _ in 0..num_handles {
+                                        handles.push(decoder.take_handle()?);
+                                    }
+                                    *self = $name::$unknown_name { ordinal, bytes, handles };
                                 }
-                                *self = $name::__UnknownVariant { ordinal, bytes, handles };
-                            }
+                            )?
+                            // This should be unreachable, since we already
+                            // checked for unknown ordinals above and returned
+                            // an error in the strict case.
+                            ordinal => panic!("unexpected ordinal {:?}", ordinal)
                         }
                         Ok(())
                     })
@@ -3402,6 +3427,32 @@ mod test {
         align: 8,
     }
 
+    // Ensure single-variant union compiles (no irrefutable pattern errors).
+    fidl_union! {
+        #[derive(Debug, PartialEq)]
+        name: SingleVariantUnion,
+        members: [
+            B {
+                ty: bool,
+                offset: 0,
+            },
+        ],
+        size: 8,
+        align: 4,
+    }
+
+    // Ensure single-variant xunion compiles (no irrefutable pattern errors).
+    fidl_xunion! {
+        #[derive(Debug, PartialEq)]
+        name: SingleVariantXUnion,
+        members: [
+            B {
+                ty: bool,
+                ordinal: 1,
+            },
+        ],
+    }
+
     fidl_union! {
         #[derive(Debug, PartialEq)]
         name: SimpleUnion,
@@ -3448,6 +3499,26 @@ mod test {
                 ordinal: 3,
             },
         ],
+        unknown_member: __UnknownVariant,
+    }
+
+    fidl_xunion! {
+        #[derive(Debug, PartialEq)]
+        name: TestSampleXUnionStrict,
+        members: [
+            U {
+                ty: u32,
+                ordinal: 0x29df47a5,
+            },
+            Su {
+                ty: SimpleUnion,
+                ordinal: 0x6f317664,
+            },
+            St {
+                ty: SimpleTable,
+                ordinal: 3,
+            },
+        ],
     }
 
     fidl_xunion! {
@@ -3459,6 +3530,7 @@ mod test {
                 ordinal: 55,
             },
         ],
+        unknown_member: __UnknownVariant,
     }
 
     #[test]
@@ -3471,13 +3543,17 @@ mod test {
         ];
 
         encode_assert_bytes(TestSampleXUnion::U(0xdeadbeef), xunion_u_bytes);
-        // The nullable representation Option<Box<TestSampleXUnion>> has the same layout.
+        encode_assert_bytes(TestSampleXUnionStrict::U(0xdeadbeef), xunion_u_bytes);
+
+        // The nullable representation Option<Box<T>> has the same layout.
         encode_assert_bytes(Some(Box::new(TestSampleXUnion::U(0xdeadbeef))), xunion_u_bytes);
+        encode_assert_bytes(Some(Box::new(TestSampleXUnionStrict::U(0xdeadbeef))), xunion_u_bytes);
     }
 
     #[test]
     fn xunion_golden_null() {
         encode_assert_bytes(None::<Box<TestSampleXUnion>>, &[0; 24]);
+        encode_assert_bytes(None::<Box<TestSampleXUnionStrict>>, &[0; 24]);
     }
 
     #[test]
@@ -3549,6 +3625,7 @@ mod test {
                     ordinal: 1,
                 },
             ],
+            unknown_member: __UnknownVariant,
         }
 
         identities![
@@ -3556,6 +3633,34 @@ mod test {
             Some(Box::new(XUnion::Variant(vec![1, 2, 3]))),
             None::<Box<XUnion>>,
         ];
+    }
+
+    #[test]
+    fn strict_xunion_rejects_unknown_ordinal() {
+        fidl_xunion! {
+            #[derive(Debug, PartialEq)]
+            name: StrictBoolXUnion,
+            members: [
+                B {
+                    ty: bool,
+                    ordinal: 12345,
+                },
+            ],
+        }
+
+        let mut input = TestSampleXUnion::U(1);
+        let buf = &mut Vec::new();
+        let handle_buf = &mut Vec::new();
+        Encoder::encode(buf, handle_buf, &mut input)
+            .expect("Encoding TestSampleXUnionExpanded failed");
+
+        let mut strict_xunion = StrictBoolXUnion::new_empty();
+        let err = Decoder::decode_into(buf, handle_buf, &mut strict_xunion)
+            .expect_err("Decoding StrictBoolXUnion unexpectedly succeeded");
+        match err {
+            Error::UnknownUnionTag => (),
+            _ => panic!("Unexpected kind of error"),
+        }
     }
 
     #[test]
@@ -3637,7 +3742,7 @@ mod zx_test {
     }
 
     #[test]
-    fn xunion_unknown_variant_transparent_passthrough() {
+    fn flexible_xunion_unknown_variant_transparent_passthrough() {
         let handle = Handle::from(zx::Port::create().expect("Port creation failed"));
         let raw_handle = handle.raw_handle();
 

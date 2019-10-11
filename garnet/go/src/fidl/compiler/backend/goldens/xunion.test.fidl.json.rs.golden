@@ -37,6 +37,7 @@ fidl_xunion! {
 			ordinal: 1362546558,
 		},
 	],
+	unknown_member: __UnknownVariant,
 }
 
 fidl_xunion! {
@@ -56,10 +57,11 @@ fidl_xunion! {
 			ordinal: 1815655055,
 		},
 	],
+	unknown_member: __UnknownVariant,
 }
 
 fidl_xunion! {
-	#[derive(Debug, PartialEq)]
+	#[derive(Debug, Clone, PartialEq, PartialOrd)]
 	name: StrictSimpleXUnion,
 	members: [
 		I {
@@ -86,10 +88,11 @@ fidl_xunion! {
 			ordinal: 424858069,
 		},
 	],
+	unknown_member: __UnknownVariant,
 }
 
 fidl_xunion! {
-	#[derive(Debug, PartialEq)]
+	#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 	name: StrictBoundedXUnion,
 	members: [
 		V {

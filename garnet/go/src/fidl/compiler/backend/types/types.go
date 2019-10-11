@@ -294,7 +294,7 @@ type Attribute struct {
 }
 
 // Attributes represents a list of attributes. It conveniently implements the
-// `Annotated` interface, such that it can be embedded into other ndoe structs
+// `Annotated` interface, such that it can be embedded into other node structs
 // which are annotated.
 type Attributes struct {
 	Attributes []Attribute `json:"maybe_attributes,omitempty"`

@@ -1128,7 +1128,6 @@ where
                                 |stream_id, got| got.bind_channel(stream_id),
                             )?,
                         ZirconHandle::Socket(_) => unimplemented!(),
-                        _ => bail!("Bad handle type"),
                     };
                     handles.push(bound);
                 }

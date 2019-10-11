@@ -63,6 +63,7 @@ type XUnion struct {
 	ECI     EncodedCompoundIdentifier
 	Name    string
 	Members []XUnionMember
+	types.Strictness
 }
 
 type XUnionMember struct {
@@ -787,6 +788,7 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 		ECI:        val.Name,
 		Name:       c.compileCamelCompoundIdentifier(val.Name),
 		Members:    []XUnionMember{},
+		Strictness: val.Strictness,
 	}
 
 	for _, v := range val.Members {
@@ -1162,12 +1164,12 @@ typeSwitch:
 		for _, member := range xunion.Members {
 			derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
 		}
-		// FIXME(cramertj) this should only happen on non-`strict` xunions.
-		// Non-strict xunions can't be Copy because of storing extra bits and handles in vecs.
-		// When large arrays are no longer an issue and we stop tracking
-		// Debug and PartialEq, this should set all values to false for
-		// non-strict xunions.
-		derivesOut = derivesOut.remove(derivesCopy).andUnknown()
+		if !xunion.Strictness {
+			// FIXME(cramertj) When large arrays are no longer an issue and we
+			// stop tracking Debug and PartialEq, this should set all values to
+			// false for non-strict xunions.
+			derivesOut = derivesOut.remove(derivesCopy).andUnknown()
+		}
 		xunion.Derives = derivesOut
 	default:
 		log.Panic("Unknown declaration type filling derives: ", declType)

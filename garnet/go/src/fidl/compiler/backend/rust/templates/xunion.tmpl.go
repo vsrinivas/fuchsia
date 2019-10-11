@@ -23,6 +23,9 @@ fidl_xunion! {
 		},
 	{{- end }}
 	],
+	{{- if not .Strictness }}
+	unknown_member: __UnknownVariant,
+	{{- end }}
 }
 {{- end }}
 `
