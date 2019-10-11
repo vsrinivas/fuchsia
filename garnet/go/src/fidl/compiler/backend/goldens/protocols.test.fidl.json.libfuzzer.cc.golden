@@ -14,600 +14,601 @@
 #include <stdio.h>
 
 using namespace ::fuzzing;
+using namespace ::test::name;
 
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-  static ::async::Loop* loop = nullptr;
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
+  static ::async::Loop* loop_ = nullptr;
 
-  if (loop == nullptr) {
+  if (loop_ == nullptr) {
     printf("Starting client async loop\n");
-    loop = new ::async::Loop(&kAsyncLoopConfigAttachToCurrentThread);
+    loop_ = new ::async::Loop(&kAsyncLoopConfigAttachToCurrentThread);
   }
 
   // Must fuzz some interface; first two bytes used to select protocol and method.
-  if (size < 2) {
-    printf("Early exit: Input too small: %zu\n", size);
+  if (size_ < 2) {
+    printf("Early exit: Input too small: %zu\n", size_);
     return 0;
   }
-  size -= 2;
+  size_ -= 2;
 
-  uint8_t iface_selector = data[0];
-  uint8_t iface_selection = iface_selector % 3;
+  uint8_t iface_selector_ = data_[0];
+  uint8_t iface_selection_ = iface_selector_ % 3;
 
-  printf("Starting fuzzer with %zu bytes of data\n", size);
+  printf("Starting fuzzer with %zu bytes of data\n", size_);
 
   // Hardcode mutually-exclusive if blocks that selects exactly one interface.
-  zx_status_t status;
-  if (iface_selection == 0) {
+  zx_status_t status_;
+  if (iface_selection_ == 0) {
 #if !defined(PROTOCOL_test_name_ChannelProtocol)
     // Selected interface from FIDL file that is not part of this fuzzer.
     printf("Early exit: Chose disabled protocol: test_name_ChannelProtocol\n");
     return 0;
 #else
 
-    ::fidl::InterfacePtr<::test::name::ChannelProtocol> iface;
+    ::fidl::InterfacePtr<::test::name::ChannelProtocol> iface_;
 
     printf("Starting test_name_ChannelProtocol service\n");
-    ::fidl::fuzzing::Fuzzer<::test::name::ChannelProtocol> fuzzer(loop->dispatcher());
-    if ((status = fuzzer.Init()) != ZX_OK) {
-      printf("Early exit: fuzzer.Init returned bad status: %d\n", status);
+    ::fidl::fuzzing::Fuzzer<::test::name::ChannelProtocol> fuzzer_(loop_->dispatcher());
+    if ((status_ = fuzzer_.Init()) != ZX_OK) {
+      printf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
       return 0;
     }
 
-    if ((status = fuzzer.BindService()) != ZX_OK) {
-      printf("Early exit: fuzzer.BindService returned bad status: %d\n", status);
+    if ((status_ = fuzzer_.BindService()) != ZX_OK) {
+      printf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
       return 0;
     }
 
-    if ((status = fuzzer.BindClient(&iface, loop->dispatcher())) != ZX_OK) {
-      printf("Early exit: fuzzer.BindClient returned bad status: %d\n", status);
+    if ((status_ = fuzzer_.BindClient(&iface_, loop_->dispatcher())) != ZX_OK) {
+      printf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
       return 0;
     }
 
-    FuzzInput src(data, size);
+    FuzzInput src_(data_, size_);
 
-    uint8_t method_selector = data[1];
-    uint8_t method_selection = method_selector % 4;
-    if (method_selection == 0) {
+    uint8_t method_selector_ = data_[1];
+    uint8_t method_selection_ = method_selector_ % 4;
+    if (method_selection_ == 0) {
 #if !(ALL_METHODS || defined(METHOD_MethodA))
       // Selected method from interface that is not part of this fuzzer.
       printf("Early exit: Chose disabled method: MethodA\n");
       return 0;
 #else
-      const size_t min_size = MinSize<int64_t>() + MinSize<int64_t>();
+      const size_t min_size_ = MinSize<int64_t>() + MinSize<int64_t>();
 
       // Must have enough bytes for input.
-      if (size < min_size) {
-        printf("Early exit: Input size too small: %zu < %zu\n", size, min_size);
+      if (size_ < min_size_) {
+        printf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
-      const size_t slack_size = size - min_size;
-      const size_t slack_size_per_param = slack_size / 2;
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 2;
 
-      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size, slack_size_per_param);
+      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
-      size_t param_size;
-      param_size = MinSize<int64_t>() + slack_size_per_param;
-      printf("Allocating %zu bytes for int64_t a\n", param_size);
-      int64_t a = Allocate<int64_t>{}(&src, &param_size);
-      param_size = MinSize<int64_t>() + slack_size_per_param;
-      printf("Allocating %zu bytes for int64_t b\n", param_size);
-      int64_t b = Allocate<int64_t>{}(&src, &param_size);
+      size_t param_size_;
+      param_size_ = MinSize<int64_t>() + slack_size_per_param;
+      printf("Allocating %zu bytes for int64_t a\n", param_size_);
+      int64_t a = Allocate<int64_t>{}(&src_, &param_size_);
+      param_size_ = MinSize<int64_t>() + slack_size_per_param;
+      printf("Allocating %zu bytes for int64_t b\n", param_size_);
+      int64_t b = Allocate<int64_t>{}(&src_, &param_size_);
 
       printf("Invoking method test_name_ChannelProtocol.MethodA\n");
-      iface->MethodA(std::move(a), std::move(b));
+      iface_->MethodA(std::move(a), std::move(b));
 #endif
     }
-    if (method_selection == 1) {
+    if (method_selection_ == 1) {
 #if !(ALL_METHODS || defined(METHOD_EventA))
       // Selected method from interface that is not part of this fuzzer.
       printf("Early exit: Chose disabled method: EventA\n");
       return 0;
 #else
-      const size_t min_size = ;
+      const size_t min_size_ = ;
 
       // Must have enough bytes for input.
-      if (size < min_size) {
-        printf("Early exit: Input size too small: %zu < %zu\n", size, min_size);
+      if (size_ < min_size_) {
+        printf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
-      const size_t slack_size = size - min_size;
-      const size_t slack_size_per_param = slack_size / 0;
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 0;
 
-      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size, slack_size_per_param);
+      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
-      size_t param_size;
+      size_t param_size_;
 
       printf("Invoking method test_name_ChannelProtocol.EventA\n");
-      iface->EventA([signaller = fuzzer.NewCallbackSignaller()](int64_t a, int64_t b) {
+      iface_->EventA([signaller = fuzzer_.NewCallbackSignaller()](int64_t a, int64_t b) {
         printf("Invoked test_name_ChannelProtocol.EventA\n");
-        zx_status_t  status = signaller.SignalCallback();
-        if (status != ZX_OK) {
-          printf("signaller.SignalCallback returned bad status: %d\n", status);
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          printf("signaller.SignalCallback returned bad status: %d\n", status_);
         }
       });
 #endif
     }
-    if (method_selection == 2) {
+    if (method_selection_ == 2) {
 #if !(ALL_METHODS || defined(METHOD_MethodB))
       // Selected method from interface that is not part of this fuzzer.
       printf("Early exit: Chose disabled method: MethodB\n");
       return 0;
 #else
-      const size_t min_size = MinSize<int64_t>() + MinSize<int64_t>();
+      const size_t min_size_ = MinSize<int64_t>() + MinSize<int64_t>();
 
       // Must have enough bytes for input.
-      if (size < min_size) {
-        printf("Early exit: Input size too small: %zu < %zu\n", size, min_size);
+      if (size_ < min_size_) {
+        printf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
-      const size_t slack_size = size - min_size;
-      const size_t slack_size_per_param = slack_size / 2;
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 2;
 
-      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size, slack_size_per_param);
+      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
-      size_t param_size;
-      param_size = MinSize<int64_t>() + slack_size_per_param;
-      printf("Allocating %zu bytes for int64_t a\n", param_size);
-      int64_t a = Allocate<int64_t>{}(&src, &param_size);
-      param_size = MinSize<int64_t>() + slack_size_per_param;
-      printf("Allocating %zu bytes for int64_t b\n", param_size);
-      int64_t b = Allocate<int64_t>{}(&src, &param_size);
+      size_t param_size_;
+      param_size_ = MinSize<int64_t>() + slack_size_per_param;
+      printf("Allocating %zu bytes for int64_t a\n", param_size_);
+      int64_t a = Allocate<int64_t>{}(&src_, &param_size_);
+      param_size_ = MinSize<int64_t>() + slack_size_per_param;
+      printf("Allocating %zu bytes for int64_t b\n", param_size_);
+      int64_t b = Allocate<int64_t>{}(&src_, &param_size_);
 
       printf("Invoking method test_name_ChannelProtocol.MethodB\n");
-      iface->MethodB(std::move(a), std::move(b), [signaller = fuzzer.NewCallbackSignaller()](int64_t result) {
+      iface_->MethodB(std::move(a), std::move(b), [signaller = fuzzer_.NewCallbackSignaller()](int64_t result) {
         printf("Invoked test_name_ChannelProtocol.MethodB\n");
-        zx_status_t  status = signaller.SignalCallback();
-        if (status != ZX_OK) {
-          printf("signaller.SignalCallback returned bad status: %d\n", status);
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          printf("signaller.SignalCallback returned bad status: %d\n", status_);
         }
       });
 #endif
     }
-    if (method_selection == 3) {
+    if (method_selection_ == 3) {
 #if !(ALL_METHODS || defined(METHOD_MutateSocket))
       // Selected method from interface that is not part of this fuzzer.
       printf("Early exit: Chose disabled method: MutateSocket\n");
       return 0;
 #else
-      const size_t min_size = MinSize<::zx::socket>();
+      const size_t min_size_ = MinSize<::zx::socket>();
 
       // Must have enough bytes for input.
-      if (size < min_size) {
-        printf("Early exit: Input size too small: %zu < %zu\n", size, min_size);
+      if (size_ < min_size_) {
+        printf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
-      const size_t slack_size = size - min_size;
-      const size_t slack_size_per_param = slack_size / 1;
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 1;
 
-      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size, slack_size_per_param);
+      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
-      size_t param_size;
-      param_size = MinSize<::zx::socket>() + slack_size_per_param;
-      printf("Allocating %zu bytes for ::zx::socket a\n", param_size);
-      ::zx::socket a = Allocate<::zx::socket>{}(&src, &param_size);
+      size_t param_size_;
+      param_size_ = MinSize<::zx::socket>() + slack_size_per_param;
+      printf("Allocating %zu bytes for ::zx::socket a\n", param_size_);
+      ::zx::socket a = Allocate<::zx::socket>{}(&src_, &param_size_);
 
       printf("Invoking method test_name_ChannelProtocol.MutateSocket\n");
-      iface->MutateSocket(std::move(a), [signaller = fuzzer.NewCallbackSignaller()](::zx::socket b) {
+      iface_->MutateSocket(std::move(a), [signaller = fuzzer_.NewCallbackSignaller()](::zx::socket b) {
         printf("Invoked test_name_ChannelProtocol.MutateSocket\n");
-        zx_status_t  status = signaller.SignalCallback();
-        if (status != ZX_OK) {
-          printf("signaller.SignalCallback returned bad status: %d\n", status);
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          printf("signaller.SignalCallback returned bad status: %d\n", status_);
         }
       });
 #endif
     }
 
-    loop->RunUntilIdle();
+    loop_->RunUntilIdle();
 
-    if ((status = fuzzer.WaitForCallback()) != ZX_OK) {
-      printf("fuzzer.WaitForCallback returned bad status: %d\n", status);
+    if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
+      printf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
     }
 
-    iface.Unbind();
+    iface_.Unbind();
 #endif
   }
-  if (iface_selection == 1) {
+  if (iface_selection_ == 1) {
 #if !defined(PROTOCOL_test_name_WithAndWithoutRequestResponse)
     // Selected interface from FIDL file that is not part of this fuzzer.
     printf("Early exit: Chose disabled protocol: test_name_WithAndWithoutRequestResponse\n");
     return 0;
 #else
 
-    ::fidl::InterfacePtr<::test::name::WithAndWithoutRequestResponse> iface;
+    ::fidl::InterfacePtr<::test::name::WithAndWithoutRequestResponse> iface_;
 
     printf("Starting test_name_WithAndWithoutRequestResponse service\n");
-    ::fidl::fuzzing::Fuzzer<::test::name::WithAndWithoutRequestResponse> fuzzer(loop->dispatcher());
-    if ((status = fuzzer.Init()) != ZX_OK) {
-      printf("Early exit: fuzzer.Init returned bad status: %d\n", status);
+    ::fidl::fuzzing::Fuzzer<::test::name::WithAndWithoutRequestResponse> fuzzer_(loop_->dispatcher());
+    if ((status_ = fuzzer_.Init()) != ZX_OK) {
+      printf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
       return 0;
     }
 
-    if ((status = fuzzer.BindService()) != ZX_OK) {
-      printf("Early exit: fuzzer.BindService returned bad status: %d\n", status);
+    if ((status_ = fuzzer_.BindService()) != ZX_OK) {
+      printf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
       return 0;
     }
 
-    if ((status = fuzzer.BindClient(&iface, loop->dispatcher())) != ZX_OK) {
-      printf("Early exit: fuzzer.BindClient returned bad status: %d\n", status);
+    if ((status_ = fuzzer_.BindClient(&iface_, loop_->dispatcher())) != ZX_OK) {
+      printf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
       return 0;
     }
 
-    FuzzInput src(data, size);
+    FuzzInput src_(data_, size_);
 
-    uint8_t method_selector = data[1];
-    uint8_t method_selection = method_selector % 8;
-    if (method_selection == 0) {
+    uint8_t method_selector_ = data_[1];
+    uint8_t method_selection_ = method_selector_ % 8;
+    if (method_selection_ == 0) {
 #if !(ALL_METHODS || defined(METHOD_NoRequestNoResponse))
       // Selected method from interface that is not part of this fuzzer.
       printf("Early exit: Chose disabled method: NoRequestNoResponse\n");
       return 0;
 #else
-      const size_t min_size = ;
+      const size_t min_size_ = ;
 
       // Must have enough bytes for input.
-      if (size < min_size) {
-        printf("Early exit: Input size too small: %zu < %zu\n", size, min_size);
+      if (size_ < min_size_) {
+        printf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
-      const size_t slack_size = size - min_size;
-      const size_t slack_size_per_param = slack_size / 0;
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 0;
 
-      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size, slack_size_per_param);
+      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
-      size_t param_size;
+      size_t param_size_;
 
       printf("Invoking method test_name_WithAndWithoutRequestResponse.NoRequestNoResponse\n");
-      iface->NoRequestNoResponse();
+      iface_->NoRequestNoResponse();
 #endif
     }
-    if (method_selection == 1) {
+    if (method_selection_ == 1) {
 #if !(ALL_METHODS || defined(METHOD_NoRequestEmptyResponse))
       // Selected method from interface that is not part of this fuzzer.
       printf("Early exit: Chose disabled method: NoRequestEmptyResponse\n");
       return 0;
 #else
-      const size_t min_size = ;
+      const size_t min_size_ = ;
 
       // Must have enough bytes for input.
-      if (size < min_size) {
-        printf("Early exit: Input size too small: %zu < %zu\n", size, min_size);
+      if (size_ < min_size_) {
+        printf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
-      const size_t slack_size = size - min_size;
-      const size_t slack_size_per_param = slack_size / 0;
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 0;
 
-      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size, slack_size_per_param);
+      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
-      size_t param_size;
+      size_t param_size_;
 
       printf("Invoking method test_name_WithAndWithoutRequestResponse.NoRequestEmptyResponse\n");
-      iface->NoRequestEmptyResponse();
+      iface_->NoRequestEmptyResponse();
 #endif
     }
-    if (method_selection == 2) {
+    if (method_selection_ == 2) {
 #if !(ALL_METHODS || defined(METHOD_NoRequestWithResponse))
       // Selected method from interface that is not part of this fuzzer.
       printf("Early exit: Chose disabled method: NoRequestWithResponse\n");
       return 0;
 #else
-      const size_t min_size = ;
+      const size_t min_size_ = ;
 
       // Must have enough bytes for input.
-      if (size < min_size) {
-        printf("Early exit: Input size too small: %zu < %zu\n", size, min_size);
+      if (size_ < min_size_) {
+        printf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
-      const size_t slack_size = size - min_size;
-      const size_t slack_size_per_param = slack_size / 0;
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 0;
 
-      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size, slack_size_per_param);
+      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
-      size_t param_size;
+      size_t param_size_;
 
       printf("Invoking method test_name_WithAndWithoutRequestResponse.NoRequestWithResponse\n");
-      iface->NoRequestWithResponse([signaller = fuzzer.NewCallbackSignaller()](::std::string ret) {
+      iface_->NoRequestWithResponse([signaller = fuzzer_.NewCallbackSignaller()](::std::string ret) {
         printf("Invoked test_name_WithAndWithoutRequestResponse.NoRequestWithResponse\n");
-        zx_status_t  status = signaller.SignalCallback();
-        if (status != ZX_OK) {
-          printf("signaller.SignalCallback returned bad status: %d\n", status);
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          printf("signaller.SignalCallback returned bad status: %d\n", status_);
         }
       });
 #endif
     }
-    if (method_selection == 3) {
+    if (method_selection_ == 3) {
 #if !(ALL_METHODS || defined(METHOD_WithRequestNoResponse))
       // Selected method from interface that is not part of this fuzzer.
       printf("Early exit: Chose disabled method: WithRequestNoResponse\n");
       return 0;
 #else
-      const size_t min_size = MinSize<::std::string>();
+      const size_t min_size_ = MinSize<::std::string>();
 
       // Must have enough bytes for input.
-      if (size < min_size) {
-        printf("Early exit: Input size too small: %zu < %zu\n", size, min_size);
+      if (size_ < min_size_) {
+        printf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
-      const size_t slack_size = size - min_size;
-      const size_t slack_size_per_param = slack_size / 1;
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 1;
 
-      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size, slack_size_per_param);
+      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
-      size_t param_size;
-      param_size = MinSize<::std::string>() + slack_size_per_param;
-      printf("Allocating %zu bytes for ::std::string arg\n", param_size);
-      ::std::string arg = Allocate<::std::string>{}(&src, &param_size);
+      size_t param_size_;
+      param_size_ = MinSize<::std::string>() + slack_size_per_param;
+      printf("Allocating %zu bytes for ::std::string arg\n", param_size_);
+      ::std::string arg = Allocate<::std::string>{}(&src_, &param_size_);
 
       printf("Invoking method test_name_WithAndWithoutRequestResponse.WithRequestNoResponse\n");
-      iface->WithRequestNoResponse(std::move(arg));
+      iface_->WithRequestNoResponse(std::move(arg));
 #endif
     }
-    if (method_selection == 4) {
+    if (method_selection_ == 4) {
 #if !(ALL_METHODS || defined(METHOD_WithRequestEmptyResponse))
       // Selected method from interface that is not part of this fuzzer.
       printf("Early exit: Chose disabled method: WithRequestEmptyResponse\n");
       return 0;
 #else
-      const size_t min_size = MinSize<::std::string>();
+      const size_t min_size_ = MinSize<::std::string>();
 
       // Must have enough bytes for input.
-      if (size < min_size) {
-        printf("Early exit: Input size too small: %zu < %zu\n", size, min_size);
+      if (size_ < min_size_) {
+        printf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
-      const size_t slack_size = size - min_size;
-      const size_t slack_size_per_param = slack_size / 1;
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 1;
 
-      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size, slack_size_per_param);
+      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
-      size_t param_size;
-      param_size = MinSize<::std::string>() + slack_size_per_param;
-      printf("Allocating %zu bytes for ::std::string arg\n", param_size);
-      ::std::string arg = Allocate<::std::string>{}(&src, &param_size);
+      size_t param_size_;
+      param_size_ = MinSize<::std::string>() + slack_size_per_param;
+      printf("Allocating %zu bytes for ::std::string arg\n", param_size_);
+      ::std::string arg = Allocate<::std::string>{}(&src_, &param_size_);
 
       printf("Invoking method test_name_WithAndWithoutRequestResponse.WithRequestEmptyResponse\n");
-      iface->WithRequestEmptyResponse(std::move(arg));
+      iface_->WithRequestEmptyResponse(std::move(arg));
 #endif
     }
-    if (method_selection == 5) {
+    if (method_selection_ == 5) {
 #if !(ALL_METHODS || defined(METHOD_WithRequestWithResponse))
       // Selected method from interface that is not part of this fuzzer.
       printf("Early exit: Chose disabled method: WithRequestWithResponse\n");
       return 0;
 #else
-      const size_t min_size = MinSize<::std::string>();
+      const size_t min_size_ = MinSize<::std::string>();
 
       // Must have enough bytes for input.
-      if (size < min_size) {
-        printf("Early exit: Input size too small: %zu < %zu\n", size, min_size);
+      if (size_ < min_size_) {
+        printf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
-      const size_t slack_size = size - min_size;
-      const size_t slack_size_per_param = slack_size / 1;
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 1;
 
-      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size, slack_size_per_param);
+      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
-      size_t param_size;
-      param_size = MinSize<::std::string>() + slack_size_per_param;
-      printf("Allocating %zu bytes for ::std::string arg\n", param_size);
-      ::std::string arg = Allocate<::std::string>{}(&src, &param_size);
+      size_t param_size_;
+      param_size_ = MinSize<::std::string>() + slack_size_per_param;
+      printf("Allocating %zu bytes for ::std::string arg\n", param_size_);
+      ::std::string arg = Allocate<::std::string>{}(&src_, &param_size_);
 
       printf("Invoking method test_name_WithAndWithoutRequestResponse.WithRequestWithResponse\n");
-      iface->WithRequestWithResponse(std::move(arg), [signaller = fuzzer.NewCallbackSignaller()](::std::string ret) {
+      iface_->WithRequestWithResponse(std::move(arg), [signaller = fuzzer_.NewCallbackSignaller()](::std::string ret) {
         printf("Invoked test_name_WithAndWithoutRequestResponse.WithRequestWithResponse\n");
-        zx_status_t  status = signaller.SignalCallback();
-        if (status != ZX_OK) {
-          printf("signaller.SignalCallback returned bad status: %d\n", status);
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          printf("signaller.SignalCallback returned bad status: %d\n", status_);
         }
       });
 #endif
     }
-    if (method_selection == 6) {
+    if (method_selection_ == 6) {
 #if !(ALL_METHODS || defined(METHOD_OnEmptyResponse))
       // Selected method from interface that is not part of this fuzzer.
       printf("Early exit: Chose disabled method: OnEmptyResponse\n");
       return 0;
 #else
-      const size_t min_size = ;
+      const size_t min_size_ = ;
 
       // Must have enough bytes for input.
-      if (size < min_size) {
-        printf("Early exit: Input size too small: %zu < %zu\n", size, min_size);
+      if (size_ < min_size_) {
+        printf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
-      const size_t slack_size = size - min_size;
-      const size_t slack_size_per_param = slack_size / 0;
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 0;
 
-      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size, slack_size_per_param);
+      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
-      size_t param_size;
+      size_t param_size_;
 
       printf("Invoking method test_name_WithAndWithoutRequestResponse.OnEmptyResponse\n");
-      iface->OnEmptyResponse();
+      iface_->OnEmptyResponse();
 #endif
     }
-    if (method_selection == 7) {
+    if (method_selection_ == 7) {
 #if !(ALL_METHODS || defined(METHOD_OnWithResponse))
       // Selected method from interface that is not part of this fuzzer.
       printf("Early exit: Chose disabled method: OnWithResponse\n");
       return 0;
 #else
-      const size_t min_size = ;
+      const size_t min_size_ = ;
 
       // Must have enough bytes for input.
-      if (size < min_size) {
-        printf("Early exit: Input size too small: %zu < %zu\n", size, min_size);
+      if (size_ < min_size_) {
+        printf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
-      const size_t slack_size = size - min_size;
-      const size_t slack_size_per_param = slack_size / 0;
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 0;
 
-      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size, slack_size_per_param);
+      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
-      size_t param_size;
+      size_t param_size_;
 
       printf("Invoking method test_name_WithAndWithoutRequestResponse.OnWithResponse\n");
-      iface->OnWithResponse([signaller = fuzzer.NewCallbackSignaller()](::std::string ret) {
+      iface_->OnWithResponse([signaller = fuzzer_.NewCallbackSignaller()](::std::string ret) {
         printf("Invoked test_name_WithAndWithoutRequestResponse.OnWithResponse\n");
-        zx_status_t  status = signaller.SignalCallback();
-        if (status != ZX_OK) {
-          printf("signaller.SignalCallback returned bad status: %d\n", status);
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          printf("signaller.SignalCallback returned bad status: %d\n", status_);
         }
       });
 #endif
     }
 
-    loop->RunUntilIdle();
+    loop_->RunUntilIdle();
 
-    if ((status = fuzzer.WaitForCallback()) != ZX_OK) {
-      printf("fuzzer.WaitForCallback returned bad status: %d\n", status);
+    if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
+      printf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
     }
 
-    iface.Unbind();
+    iface_.Unbind();
 #endif
   }
-  if (iface_selection == 2) {
+  if (iface_selection_ == 2) {
 #if !defined(PROTOCOL_test_name_WithErrorSyntax)
     // Selected interface from FIDL file that is not part of this fuzzer.
     printf("Early exit: Chose disabled protocol: test_name_WithErrorSyntax\n");
     return 0;
 #else
 
-    ::fidl::InterfacePtr<::test::name::WithErrorSyntax> iface;
+    ::fidl::InterfacePtr<::test::name::WithErrorSyntax> iface_;
 
     printf("Starting test_name_WithErrorSyntax service\n");
-    ::fidl::fuzzing::Fuzzer<::test::name::WithErrorSyntax> fuzzer(loop->dispatcher());
-    if ((status = fuzzer.Init()) != ZX_OK) {
-      printf("Early exit: fuzzer.Init returned bad status: %d\n", status);
+    ::fidl::fuzzing::Fuzzer<::test::name::WithErrorSyntax> fuzzer_(loop_->dispatcher());
+    if ((status_ = fuzzer_.Init()) != ZX_OK) {
+      printf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
       return 0;
     }
 
-    if ((status = fuzzer.BindService()) != ZX_OK) {
-      printf("Early exit: fuzzer.BindService returned bad status: %d\n", status);
+    if ((status_ = fuzzer_.BindService()) != ZX_OK) {
+      printf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
       return 0;
     }
 
-    if ((status = fuzzer.BindClient(&iface, loop->dispatcher())) != ZX_OK) {
-      printf("Early exit: fuzzer.BindClient returned bad status: %d\n", status);
+    if ((status_ = fuzzer_.BindClient(&iface_, loop_->dispatcher())) != ZX_OK) {
+      printf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
       return 0;
     }
 
-    FuzzInput src(data, size);
+    FuzzInput src_(data_, size_);
 
-    uint8_t method_selector = data[1];
-    uint8_t method_selection = method_selector % 3;
-    if (method_selection == 0) {
+    uint8_t method_selector_ = data_[1];
+    uint8_t method_selection_ = method_selector_ % 3;
+    if (method_selection_ == 0) {
 #if !(ALL_METHODS || defined(METHOD_ResponseAsStruct))
       // Selected method from interface that is not part of this fuzzer.
       printf("Early exit: Chose disabled method: ResponseAsStruct\n");
       return 0;
 #else
-      const size_t min_size = ;
+      const size_t min_size_ = ;
 
       // Must have enough bytes for input.
-      if (size < min_size) {
-        printf("Early exit: Input size too small: %zu < %zu\n", size, min_size);
+      if (size_ < min_size_) {
+        printf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
-      const size_t slack_size = size - min_size;
-      const size_t slack_size_per_param = slack_size / 0;
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 0;
 
-      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size, slack_size_per_param);
+      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
-      size_t param_size;
+      size_t param_size_;
 
       printf("Invoking method test_name_WithErrorSyntax.ResponseAsStruct\n");
-      iface->ResponseAsStruct([signaller = fuzzer.NewCallbackSignaller()](WithErrorSyntax_ResponseAsStruct_Result result) {
+      iface_->ResponseAsStruct([signaller = fuzzer_.NewCallbackSignaller()](WithErrorSyntax_ResponseAsStruct_Result result) {
         printf("Invoked test_name_WithErrorSyntax.ResponseAsStruct\n");
-        zx_status_t  status = signaller.SignalCallback();
-        if (status != ZX_OK) {
-          printf("signaller.SignalCallback returned bad status: %d\n", status);
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          printf("signaller.SignalCallback returned bad status: %d\n", status_);
         }
       });
 #endif
     }
-    if (method_selection == 1) {
+    if (method_selection_ == 1) {
 #if !(ALL_METHODS || defined(METHOD_ErrorAsPrimitive))
       // Selected method from interface that is not part of this fuzzer.
       printf("Early exit: Chose disabled method: ErrorAsPrimitive\n");
       return 0;
 #else
-      const size_t min_size = ;
+      const size_t min_size_ = ;
 
       // Must have enough bytes for input.
-      if (size < min_size) {
-        printf("Early exit: Input size too small: %zu < %zu\n", size, min_size);
+      if (size_ < min_size_) {
+        printf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
-      const size_t slack_size = size - min_size;
-      const size_t slack_size_per_param = slack_size / 0;
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 0;
 
-      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size, slack_size_per_param);
+      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
-      size_t param_size;
+      size_t param_size_;
 
       printf("Invoking method test_name_WithErrorSyntax.ErrorAsPrimitive\n");
-      iface->ErrorAsPrimitive([signaller = fuzzer.NewCallbackSignaller()](WithErrorSyntax_ErrorAsPrimitive_Result result) {
+      iface_->ErrorAsPrimitive([signaller = fuzzer_.NewCallbackSignaller()](WithErrorSyntax_ErrorAsPrimitive_Result result) {
         printf("Invoked test_name_WithErrorSyntax.ErrorAsPrimitive\n");
-        zx_status_t  status = signaller.SignalCallback();
-        if (status != ZX_OK) {
-          printf("signaller.SignalCallback returned bad status: %d\n", status);
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          printf("signaller.SignalCallback returned bad status: %d\n", status_);
         }
       });
 #endif
     }
-    if (method_selection == 2) {
+    if (method_selection_ == 2) {
 #if !(ALL_METHODS || defined(METHOD_ErrorAsEnum))
       // Selected method from interface that is not part of this fuzzer.
       printf("Early exit: Chose disabled method: ErrorAsEnum\n");
       return 0;
 #else
-      const size_t min_size = ;
+      const size_t min_size_ = ;
 
       // Must have enough bytes for input.
-      if (size < min_size) {
-        printf("Early exit: Input size too small: %zu < %zu\n", size, min_size);
+      if (size_ < min_size_) {
+        printf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
-      const size_t slack_size = size - min_size;
-      const size_t slack_size_per_param = slack_size / 0;
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 0;
 
-      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size, slack_size_per_param);
+      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
-      size_t param_size;
+      size_t param_size_;
 
       printf("Invoking method test_name_WithErrorSyntax.ErrorAsEnum\n");
-      iface->ErrorAsEnum([signaller = fuzzer.NewCallbackSignaller()](WithErrorSyntax_ErrorAsEnum_Result result) {
+      iface_->ErrorAsEnum([signaller = fuzzer_.NewCallbackSignaller()](WithErrorSyntax_ErrorAsEnum_Result result) {
         printf("Invoked test_name_WithErrorSyntax.ErrorAsEnum\n");
-        zx_status_t  status = signaller.SignalCallback();
-        if (status != ZX_OK) {
-          printf("signaller.SignalCallback returned bad status: %d\n", status);
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          printf("signaller.SignalCallback returned bad status: %d\n", status_);
         }
       });
 #endif
     }
 
-    loop->RunUntilIdle();
+    loop_->RunUntilIdle();
 
-    if ((status = fuzzer.WaitForCallback()) != ZX_OK) {
-      printf("fuzzer.WaitForCallback returned bad status: %d\n", status);
+    if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
+      printf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
     }
 
-    iface.Unbind();
+    iface_.Unbind();
 #endif
   }
 
