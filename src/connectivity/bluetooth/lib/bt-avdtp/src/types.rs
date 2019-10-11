@@ -631,6 +631,20 @@ impl ServiceCapability {
             _ => false,
         }
     }
+
+    pub fn is_codec(&self) -> bool {
+        match self {
+            ServiceCapability::MediaCodec { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_codec_type(&self, codec: &MediaCodecType) -> bool {
+        match self {
+            ServiceCapability::MediaCodec { codec_type, .. } => codec_type == codec,
+            _ => false,
+        }
+    }
 }
 
 impl Decodable for ServiceCapability {
@@ -787,6 +801,14 @@ impl StreamInformation {
         &self.id
     }
 
+    pub fn media_type(&self) -> &MediaType {
+        &self.media_type
+    }
+
+    pub fn endpoint_type(&self) -> &EndpointType {
+        &self.endpoint_type
+    }
+
     pub fn in_use(&self) -> &bool {
         &self.in_use
     }
@@ -874,5 +896,26 @@ mod test {
     fn txlabel_to_usize() {
         let label = TxLabel::try_from(1).unwrap();
         assert_eq!(1, usize::from(&label));
+    }
+
+    #[test]
+    fn test_capability_inspection() {
+        let sbc_codec = ServiceCapability::MediaCodec {
+            media_type: MediaType::Audio,
+            codec_type: MediaCodecType::AUDIO_SBC.clone(),
+            codec_extra: vec![0x01],
+        };
+        let transport = ServiceCapability::MediaTransport;
+
+        assert!(sbc_codec.is_application());
+        assert!(!transport.is_application());
+
+        assert!(sbc_codec.is_codec());
+        assert!(!transport.is_codec());
+
+        assert!(sbc_codec.is_codec_type(&MediaCodecType::AUDIO_SBC));
+        assert!(!sbc_codec.is_codec_type(&MediaCodecType::AUDIO_AAC));
+        assert!(!transport.is_codec_type(&MediaCodecType::AUDIO_SBC));
+        assert!(!transport.is_codec_type(&MediaCodecType::AUDIO_AAC));
     }
 }
