@@ -23,6 +23,7 @@ if (host_toolchain == current_toolchain) {
           device_type = "Astro"
         }
         tags = [ "power-failure" ]
+        netboot = true
       },
     ]
   }
