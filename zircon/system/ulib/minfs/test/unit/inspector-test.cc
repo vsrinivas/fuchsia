@@ -4,16 +4,17 @@
 
 // Tests minfs inspector behavior.
 
-#include <minfs/inspector.h>
-
+#include <lib/disk-inspector/disk-inspector.h>
+#include <lib/sync/completion.h>
 
 #include <block-client/cpp/fake-device.h>
 #include <fbl/string_printf.h>
-#include <lib/disk-inspector/disk-inspector.h>
+#include <minfs/inspector.h>
 #include <zxtest/zxtest.h>
 
-#include "inspector-inode.h"
 #include "inspector-inode-table.h"
+#include "inspector-inode.h"
+#include "inspector-journal-entries.h"
 #include "inspector-journal.h"
 #include "inspector-private.h"
 #include "inspector-superblock.h"
@@ -65,6 +66,18 @@ class MockMinfs : public InspectableFilesystem {
 
   zx_status_t ReadBlock(blk_t start_block_num, void* out_data) const final { return ZX_OK; }
 };
+
+uint64_t GetUint64Value(const disk_inspector::DiskObject* object) {
+  size_t size;
+  const void* buffer = nullptr;
+  object->GetValue(&buffer, &size);
+
+  if (size != sizeof(uint64_t)) {
+    ADD_FAILURE("Unexpected value size");
+    return 0;
+  }
+  return *reinterpret_cast<const uint64_t*>(buffer);
+}
 
 TEST(InspectorTest, TestRoot) {
   auto fs = std::unique_ptr<MockMinfs>(new MockMinfs());
@@ -195,20 +208,65 @@ TEST(InspectorTest, CorrectJournalLocation) {
   std::unique_ptr<Minfs> fs;
   MountOptions options = {};
   ASSERT_OK(minfs::Minfs::Create(std::move(bcache), options, &fs));
+
+  // Ensure the dirty bit is propagated to the device.
+  sync_completion_t completion;
+  fs->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
+  ASSERT_OK(sync_completion_wait(&completion, zx::duration::infinite().get()));
+
+  uint64_t journal_length = JournalBlocks(fs->Info());
   std::unique_ptr<RootObject> root_obj(new RootObject(std::move(fs)));
 
   // Journal info.
-  std::unique_ptr<disk_inspector::DiskObject> journalInfoObj = root_obj->GetElementAt(2);
-  ASSERT_STR_EQ(kJournalName, journalInfoObj->GetName());
-  ASSERT_EQ(kJournalNumElements, journalInfoObj->GetNumElements());
+  auto journalObj = root_obj->GetElementAt(2);
+  EXPECT_STR_EQ(kJournalName, journalObj->GetName());
+  ASSERT_EQ(kJournalNumElements, journalObj->GetNumElements());
 
   // Check if journal magic is correct.
-  size_t size;
-  const void* buffer = nullptr;
-  std::unique_ptr<disk_inspector::DiskObject> journalInfoMagic = journalInfoObj->GetElementAt(0);
-  journalInfoMagic->GetValue(&buffer, &size);
+  auto journalMagic = journalObj->GetElementAt(0);
+  ASSERT_EQ(fs::kJournalMagic, GetUint64Value(journalMagic.get()));
 
-  ASSERT_EQ(fs::kJournalMagic, *(reinterpret_cast<const uint64_t*>(buffer)));
+  // Access journal entries.
+  auto entries = journalObj->GetElementAt(5);
+  EXPECT_STR_EQ(kJournalEntriesName, entries->GetName());
+  ASSERT_EQ(journal_length - fs::kJournalMetadataBlocks, entries->GetNumElements());
+
+  // Parse the header block.
+  //
+  // Warning: This has tight coupling with the dirty bit and backup superblock.
+  // To ensure this exists on the journal, we invoked sync earlier in the test.
+  auto block = entries->GetElementAt(0);
+  EXPECT_STR_EQ("Journal[0]: Header", block->GetName());
+  {
+    auto entryMagic = block->GetElementAt(0);
+    EXPECT_STR_EQ("magic", entryMagic->GetName());
+    ASSERT_EQ(fs::kJournalEntryMagic, GetUint64Value(entryMagic.get()));
+
+    auto payload_blocks = block->GetElementAt(4);
+    EXPECT_STR_EQ("payload blocks", payload_blocks->GetName());
+    ASSERT_EQ(2, GetUint64Value(payload_blocks.get()));
+
+    auto target_block = block->GetElementAt(5);
+    EXPECT_STR_EQ("target block", target_block->GetName());
+    EXPECT_EQ(kSuperblockStart, GetUint64Value(target_block.get()));
+
+    target_block = block->GetElementAt(6);
+    EXPECT_STR_EQ("target block", target_block->GetName());
+    EXPECT_EQ(kNonFvmSuperblockBackup, GetUint64Value(target_block.get()));
+
+    EXPECT_NULL(block->GetElementAt(7));
+  }
+
+  // Parse the journal entries.
+  block = entries->GetElementAt(1);
+  EXPECT_STR_EQ("Journal[1]: Block", block->GetName());
+
+  block = entries->GetElementAt(2);
+  EXPECT_STR_EQ("Journal[2]: Block", block->GetName());
+
+  // Parse the commit block.
+  block = entries->GetElementAt(3);
+  EXPECT_STR_EQ("Journal[3]: Commit", block->GetName());
 }
 
 }  // namespace

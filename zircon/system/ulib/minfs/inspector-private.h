@@ -52,7 +52,7 @@ class RootObject : public disk_inspector::DiskObject {
   std::unique_ptr<disk_inspector::DiskObject> GetInodeTable() const;
 
   // Gets the journal diskObject element at index 2.
-  std::unique_ptr<disk_inspector::DiskObject> GetJournalInfo() const;
+  std::unique_ptr<disk_inspector::DiskObject> GetJournal() const;
 
   // Pointer to the Minfs instance.
   std::unique_ptr<InspectableFilesystem> fs_;

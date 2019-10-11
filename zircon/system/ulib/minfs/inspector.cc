@@ -98,18 +98,19 @@ std::unique_ptr<disk_inspector::DiskObject> RootObject::GetInodeTable() const {
       new InodeTableObject(fs_->GetInodeManager(), fs_->Info().alloc_inode_count));
 }
 
-std::unique_ptr<disk_inspector::DiskObject> RootObject::GetJournalInfo() const {
+std::unique_ptr<disk_inspector::DiskObject> RootObject::GetJournal() const {
   char data[kMinfsBlockSize];
 
-  if (fs_->ReadBlock(static_cast<blk_t>(JournalStartBlock(fs_->Info())), data) < 0) {
+  const Superblock& superblock = fs_->Info();
+  uint64_t start_block = JournalStartBlock(superblock);
+  uint64_t length = JournalBlocks(superblock);
+  if (fs_->ReadBlock(static_cast<blk_t>(start_block), data) < 0) {
     FS_TRACE_ERROR("minfsInspector: could not read journal block\n");
     return nullptr;
   }
-
   fs::JournalInfo* info = reinterpret_cast<fs::JournalInfo*>(data);
-  std::unique_ptr<fs::JournalInfo> journal_info(new fs::JournalInfo);
-  memcpy(journal_info.get(), info, sizeof(*info));
-  return std::unique_ptr<disk_inspector::DiskObject>(new JournalObject(std::move(journal_info)));
+  return std::unique_ptr<disk_inspector::DiskObject>(
+      new JournalObject(*info, start_block, length, fs_.get()));
 }
 
 void RootObject::GetValue(const void** out_buffer, size_t* out_buffer_size) const {
@@ -128,7 +129,7 @@ std::unique_ptr<disk_inspector::DiskObject> RootObject::GetElementAt(uint32_t in
     }
     case 2: {
       // Journal
-      return GetJournalInfo();
+      return GetJournal();
     }
   };
   return nullptr;

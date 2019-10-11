@@ -11,10 +11,12 @@
 #include <fs/journal/format.h>
 #include <minfs/format.h>
 
+#include "minfs-private.h"
+
 namespace minfs {
 
 // Total number of fields in the on-disk journal structure.
-constexpr uint32_t kJournalNumElements = 5;
+constexpr uint32_t kJournalNumElements = 6;
 constexpr char kJournalName[] = "journal";
 
 class JournalObject : public disk_inspector::DiskObject {
@@ -25,7 +27,9 @@ class JournalObject : public disk_inspector::DiskObject {
   JournalObject& operator=(const JournalObject&) = delete;
   JournalObject& operator=(JournalObject&&) = delete;
 
-  explicit JournalObject(std::unique_ptr<fs::JournalInfo> info) : journal_info_(std::move(info)) {}
+  JournalObject(fs::JournalInfo info, uint64_t start_block, uint64_t length,
+                const InspectableFilesystem* fs)
+      : journal_info_(std::move(info)), start_block_(start_block), length_(length), fs_(fs) {}
 
   // DiskObject interface:
   const char* GetName() const override { return kJournalName; }
@@ -37,11 +41,10 @@ class JournalObject : public disk_inspector::DiskObject {
   std::unique_ptr<DiskObject> GetElementAt(uint32_t index) const override;
 
  private:
-  // Name of DiskObject journal.
-  fbl::String name_;
-
-  // Pointer to the minfs journal info.
-  std::unique_ptr<fs::JournalInfo> journal_info_;
+  fs::JournalInfo journal_info_;
+  uint64_t start_block_;
+  uint64_t length_;
+  const InspectableFilesystem* fs_;
 };
 
 }  // namespace minfs
