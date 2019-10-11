@@ -67,6 +67,7 @@ class TestStoryWatcher : fuchsia::modular::StoryWatcher {
  private:
   // |fuchsia::modular::StoryWatcher|
   void OnStateChange(fuchsia::modular::StoryState state) override {
+    FXL_LOG(INFO) << "OnStateChange() " << fidl::ToUnderlying(state);
     if (state != fuchsia::modular::StoryState::RUNNING) {
       return;
     }
