@@ -42,7 +42,7 @@ template("fidl_alias") {
       ]
     }
   } else if (current_toolchain == fidl_toolchain) {
-    copy("$target_name-libraries") {
+    copy("$library_name-libraries") {
       forward_variables_from(invoker, [ "testonly" ])
       deps = [
         "//sdk/fidl/$library_name:${library_name}",
@@ -54,7 +54,7 @@ template("fidl_alias") {
         "$target_gen_dir/$dash_library_name.libraries",
       ]
     }
-    copy("$target_name-json") {
+    copy("$library_name-json") {
       forward_variables_from(invoker, [ "testonly" ])
       deps = [
         "//sdk/fidl/$library_name:${library_name}",
