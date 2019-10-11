@@ -24,7 +24,8 @@ TimeServiceImpl::~TimeServiceImpl() = default;
 void TimeServiceImpl::Update(uint8_t num_retries, UpdateCallback callback) {
   bool succeeded = time_server_.UpdateSystemTime(num_retries);
   if (!succeeded) {
-    FX_LOGS(ERROR) << "Failed to update system time after " << num_retries << " attempts";
+    FX_LOGS(ERROR) << "Failed to update system time after " << static_cast<int>(num_retries)
+                   << " attempts";
   }
   callback(succeeded);
 }
