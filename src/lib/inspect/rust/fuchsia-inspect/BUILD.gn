@@ -20,6 +20,7 @@ rustc_library("fuchsia-inspect") {
     "//garnet/public/rust/shared-buffer",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:derivative",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:lazy_static",

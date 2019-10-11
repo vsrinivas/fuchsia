@@ -5,7 +5,7 @@
 use {
     crate::{
         format::{
-            block::{ArrayFormat, PropertyFormat},
+            block::{ArrayFormat, LinkNodeDisposition, PropertyFormat},
             constants,
         },
         heap::Heap,
@@ -20,6 +20,8 @@ use {
     paste,
     std::{cmp::max, sync::Arc},
 };
+
+pub use crate::state::{LazyNodeCompleter, LazyNodeContextFn};
 
 #[cfg(test)]
 use crate::format::block::Block;
@@ -352,9 +354,41 @@ macro_rules! create_exponential_histogram_property_fn {
     };
 }
 
+/// Utility for generating functions to create lazy nodes.
+///   `fn_suffix`: identifier for the fn name.
+///   `disposition`: identifier for the type of LinkNodeDisposition.
+macro_rules! create_lazy_property_fn {
+    ($fn_suffix:ident, $disposition:ident) => {
+        paste::item! {
+            #[must_use]
+            pub fn [<create_lazy_ $fn_suffix>](&self, name: impl AsRef<str>, callback: LazyNodeContextFn) -> LazyNode {
+                self.inner.as_ref().and_then(|inner| {
+                    inner
+                        .state
+                        .lock()
+                        .create_lazy_node(
+                            name.as_ref(),
+                            inner.block_index,
+                            LinkNodeDisposition::$disposition,
+                            callback,
+                        )
+                        .map(|block| LazyNode::new(inner.state.clone(), block.index()))
+                        .ok()
+                })
+                .unwrap_or(LazyNode::new_no_op())
+            }
+        }
+    }
+}
+
 inspect_type_impl!(
     /// Inspect API Node data type.
     struct Node
+);
+
+inspect_type_impl!(
+    /// Inspect API Lazy Node data type.
+    struct LazyNode
 );
 
 impl Node {
@@ -377,6 +411,15 @@ impl Node {
             })
             .unwrap_or(Node::new_no_op())
     }
+
+    /// Add a lazy node property to this node:
+    /// - create_lazy_node: adds a lazy child to this node. This node will be
+    ///   populated by the given callback on demand.
+    /// - create_lazy_values: adds a lazy child to this node. The lazy node
+    ///   children and properties are added to this node on demand. Name is only
+    ///   used in the event that a reader does not obtain the values.
+    create_lazy_property_fn!(child, Child);
+    create_lazy_property_fn!(values, Inline);
 
     /// Add a numeric property to this node: create_int, create_double,
     /// create_uint.
@@ -457,6 +500,18 @@ impl Drop for Node {
                 .lock()
                 .free_value(inner.block_index)
                 .expect(&format!("Failed to free node index={}", inner.block_index));
+        });
+    }
+}
+
+impl Drop for LazyNode {
+    fn drop(&mut self) {
+        self.inner.as_ref().map(|inner| {
+            inner
+                .state
+                .lock()
+                .free_lazy_node(inner.block_index)
+                .expect(&format!("failed to free lazy node index={}", inner.block_index));
         });
     }
 }
@@ -776,7 +831,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            format::{block_type::BlockType, constants},
+            format::{block::LinkNodeDisposition, block_type::BlockType, constants},
             heap::Heap,
         },
         fuchsia_component::server::ServiceObj,
@@ -1225,5 +1280,43 @@ mod tests {
         assert_eq!(block.array_get_int_slot(i + 3).unwrap(), 24);
         assert_eq!(block.array_get_int_slot(i + 4).unwrap(), 96);
         assert_eq!(block.array_get_int_slot(i + 5).unwrap(), 72);
+    }
+
+    #[test]
+    fn lazy_values() {
+        let inspector = Inspector::new();
+        let node = inspector.root().create_child("node");
+        let node_block = node.get_block().unwrap();
+        {
+            let lazy_node = node.create_lazy_values("lazy", Box::new(|_| {}));
+            let lazy_node_block = lazy_node.get_block().unwrap();
+            assert_eq!(lazy_node_block.block_type(), BlockType::LinkValue);
+            assert_eq!(
+                lazy_node_block.link_node_disposition().unwrap(),
+                LinkNodeDisposition::Inline
+            );
+            assert_eq!(lazy_node_block.link_content_index().unwrap(), 5);
+            assert_eq!(node_block.child_count().unwrap(), 1);
+        }
+        assert_eq!(node_block.child_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn lazy_node() {
+        let inspector = Inspector::new();
+        let node = inspector.root().create_child("node");
+        let node_block = node.get_block().unwrap();
+        {
+            let lazy_node = node.create_lazy_child("lazy", Box::new(|_| {}));
+            let lazy_node_block = lazy_node.get_block().unwrap();
+            assert_eq!(lazy_node_block.block_type(), BlockType::LinkValue);
+            assert_eq!(
+                lazy_node_block.link_node_disposition().unwrap(),
+                LinkNodeDisposition::Child
+            );
+            assert_eq!(lazy_node_block.link_content_index().unwrap(), 5);
+            assert_eq!(node_block.child_count().unwrap(), 1);
+        }
+        assert_eq!(node_block.child_count().unwrap(), 0);
     }
 }

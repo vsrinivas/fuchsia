@@ -5,28 +5,45 @@
 use {
     crate::{
         format::{
-            block::{ArrayFormat, Block, PropertyFormat},
+            block::{ArrayFormat, Block, LinkNodeDisposition, PropertyFormat},
             block_type::BlockType,
             constants,
         },
         heap::Heap,
-        utils,
+        utils, Inspector,
     },
+    derivative::Derivative,
     failure::{bail, Error},
     mapped_vmo::Mapping,
     num_traits::ToPrimitive,
-    std::sync::Arc,
+    std::{
+        collections::HashMap,
+        sync::{
+            atomic::{AtomicU64, Ordering},
+            Arc,
+        },
+    },
 };
 
-// TODO(fxb/38134): use this.
-#[cfg(test)]
-use crate::format::block::LinkNodeDisposition;
+/// Provided to lazy node callbacks so they provide their node.
+pub trait LazyNodeCompleter {
+    /// Called in the callback of lazy nodes with the inspector that was filled.
+    fn done(&self, inspector: &Inspector);
+}
+
+/// Callback used to fill inspector lazy nodes.
+pub type LazyNodeContextFn = Box<dyn Fn(Box<dyn LazyNodeCompleter>) -> () + 'static + Send>;
 
 /// Wraps a heap and implements the Inspect VMO API on top of it at a low level.
-#[derive(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct State {
     pub(in crate) heap: Heap,
     header: Block<Arc<Mapping>>,
+    next_unique_link_id: AtomicU64,
+
+    #[derivative(Debug = "ignore")]
+    callbacks: HashMap<String, LazyNodeContextFn>,
 }
 
 /// Locks the VMO Header blcok, executes the given codeblock and unblocks it.
@@ -197,7 +214,12 @@ impl State {
     pub fn create(mut heap: Heap) -> Result<State, Error> {
         let mut block = heap.allocate_block(16)?;
         block.become_header()?;
-        Ok(State { heap: heap, header: block })
+        Ok(State {
+            heap,
+            header: block,
+            next_unique_link_id: AtomicU64::new(0),
+            callbacks: HashMap::new(),
+        })
     }
 
     /// Allocate a NODE block with the given |name| and |parent_index|.
@@ -214,45 +236,65 @@ impl State {
         })
     }
 
-    // TODO(fxb/38134): use this.
-    #[cfg(test)]
-    pub fn create_link(
+    /// Allocate a LINK block with the given |name| and |parent_index| and keep track
+    /// of the callback that will fill it.
+    pub fn create_lazy_node(
+        &mut self,
+        name: &str,
+        parent_index: u32,
+        disposition: LinkNodeDisposition,
+        callback: LazyNodeContextFn,
+    ) -> Result<Block<Arc<Mapping>>, Error> {
+        with_header_lock!(self, {
+            let content = self.unique_link_name(name);
+            let link = self.allocate_link(name, &content, disposition, parent_index)?;
+            self.callbacks.insert(content, callback);
+            Ok(link)
+        })
+    }
+
+    /// Frees a LINK block at the given |index|.
+    pub fn free_lazy_node(&mut self, index: u32) -> Result<(), Error> {
+        with_header_lock!(self, {
+            let block = self.heap.get_block(index)?;
+            let content_block = self.heap.get_block(block.link_content_index()?)?;
+            let content = self.heap.get_block(content_block.index())?.name_contents()?;
+            self.delete_value(block)?;
+            self.heap.free_block(content_block)?;
+            self.callbacks.remove(&content);
+            Ok(())
+        })
+    }
+
+    fn unique_link_name(&mut self, prefix: &str) -> String {
+        let id = self.next_unique_link_id.fetch_add(1, Ordering::Relaxed);
+        format!("{}-{}", prefix, id)
+    }
+
+    fn allocate_link(
         &mut self,
         name: &str,
         content: &str,
         disposition: LinkNodeDisposition,
         parent_index: u32,
     ) -> Result<Block<Arc<Mapping>>, Error> {
-        with_header_lock!(self, {
-            let (value_block, name_block) =
-                self.allocate_reserved_value(name, parent_index, constants::MIN_ORDER_SIZE)?;
-            let result = self.allocate_name(content).and_then(|content_block| {
-                value_block.become_link(
-                    name_block.index(),
-                    parent_index,
-                    content_block.index(),
-                    disposition,
-                )
-            });
-            match result {
-                Ok(()) => Ok(value_block),
-                Err(e) => {
-                    self.delete_value(value_block)?;
-                    bail!("Failed to create link: {:?}", e);
-                }
+        let (value_block, name_block) =
+            self.allocate_reserved_value(name, parent_index, constants::MIN_ORDER_SIZE)?;
+        let result = self.allocate_name(content).and_then(|content_block| {
+            value_block.become_link(
+                name_block.index(),
+                parent_index,
+                content_block.index(),
+                disposition,
+            )
+        });
+        match result {
+            Ok(()) => Ok(value_block),
+            Err(e) => {
+                self.delete_value(value_block)?;
+                bail!("Failed to create link: {:?}", e);
             }
-        })
-    }
-
-    // TODO(fxb/38134): use this.
-    #[cfg(test)]
-    pub fn free_link(&mut self, index: u32) -> Result<(), Error> {
-        with_header_lock!(self, {
-            let block = self.heap.get_block(index)?;
-            let content_block = self.heap.get_block(block.link_content_index()?)?;
-            self.delete_value(block)?;
-            self.heap.free_block(content_block)
-        })
+        }
     }
 
     /// Free a *_VALUE block at the given |index|.
@@ -898,8 +940,12 @@ mod tests {
     fn test_link() {
         // Intialize state and create a link block.
         let mut state = get_state(4096);
-        let block =
-            state.create_link("link-name", "link-content", LinkNodeDisposition::Inline, 0).unwrap();
+        let block = state
+            .create_lazy_node("link-name", 0, LinkNodeDisposition::Inline, Box::new(|_| {}))
+            .unwrap();
+
+        // Verify the callback was saved.
+        assert!(state.callbacks.get("link-name-0").is_some());
 
         // Verify link block.
         assert_eq!(block.block_type(), BlockType::LinkValue);
@@ -918,8 +964,8 @@ mod tests {
         // Verify link's content block.
         let content_block = state.heap.get_block(4).unwrap();
         assert_eq!(content_block.block_type(), BlockType::Name);
-        assert_eq!(content_block.name_length().unwrap(), 12);
-        assert_eq!(content_block.name_contents().unwrap(), "link-content");
+        assert_eq!(content_block.name_length().unwrap(), 11);
+        assert_eq!(content_block.name_contents().unwrap(), "link-name-0");
 
         // Verfiy all the VMO blocks.
         let bytes = &state.heap.bytes()[..];
@@ -933,11 +979,21 @@ mod tests {
         assert!(blocks[4..].iter().all(|b| b.block_type() == BlockType::Free));
 
         // Free link
-        assert!(state.free_link(block.index()).is_ok());
+        assert!(state.free_lazy_node(block.index()).is_ok());
         let bytes = &state.heap.bytes()[..];
         let snapshot = Snapshot::try_from(bytes).unwrap();
         let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
+
+        // Verify the callback was cleared on free link.
+        assert!(state.callbacks.get("link-name-0").is_none());
+
+        // Verify adding another link generates a different ID regardless of the params.
+        state
+            .create_lazy_node("link-name", 0, LinkNodeDisposition::Inline, Box::new(|_| {}))
+            .unwrap();
+        let content_block = state.heap.get_block(4).unwrap();
+        assert_eq!(content_block.name_contents().unwrap(), "link-name-1");
     }
 
     fn get_state(size: usize) -> State {
