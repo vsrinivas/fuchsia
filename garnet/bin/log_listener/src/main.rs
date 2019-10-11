@@ -15,6 +15,7 @@ use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
+use std::process;
 use std::thread;
 use std::time;
 
@@ -688,7 +689,10 @@ where
             }
         }
 
-        writeln!(self.writer, "{}", self.decorator.decorate(line)).expect("log_listener: not able to write logs");
+        if let Err(e) = writeln!(self.writer, "{}", self.decorator.decorate(line)) {
+            println!("log_listener: not able to write logs: {:?}", e);
+            process::exit(1);
+        }
 
         if message.dropped_logs > 0
             && self
