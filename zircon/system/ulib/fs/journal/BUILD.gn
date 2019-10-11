@@ -18,6 +18,7 @@ library("journal") {
       "journal-writer.cc",
       "journal.cc",
       "operation-tracker.cc",
+      "replay-tree.cc",
       "replay.cc",
       "superblock.cc",
     ]
@@ -60,6 +61,7 @@ test("journal-unit") {
     "test/journal-test.cc",
     "test/operation-tracker-test.cc",
     "test/replay-test.cc",
+    "test/replay-tree-test.cc",
     "test/superblock-test.cc",
   ]
   deps = [

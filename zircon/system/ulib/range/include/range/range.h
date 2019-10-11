@@ -33,6 +33,7 @@ struct DefaultRangeTraits {
   // If |other| is nullptr, then |obj| is being updated independently (typically,
   // when the range is shrinking).
   // If |other| is not nullptr, then |obj| is being updated due to a merge with |other|.
+  // |obj| must not be nullptr.
   //
   // BEHAVIOR:
   //
@@ -40,7 +41,7 @@ struct DefaultRangeTraits {
   // new values, and ZX_OK should be returned.
   // - If the merge with |other| is invalid, an error status should be returned, and |Start()|
   // and |End()| must return unmodified values.
-  // - If |obj| is null, then ZX_OK must be returned.
+  // - If |other| is null, then ZX_OK must be returned.
   static zx_status_t Update(const RangeContainer* other, KeyType start, KeyType end,
                             RangeContainer* obj) {
     // The default implementation has no reason to reject any merges.

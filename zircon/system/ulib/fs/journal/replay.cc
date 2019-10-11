@@ -14,6 +14,7 @@
 #include <storage/operation/buffered-operation.h>
 
 #include "entry-view.h"
+#include "replay-tree.h"
 
 namespace fs {
 namespace {
@@ -121,8 +122,8 @@ bool IsSubsequentEntryValid(storage::VmoBuffer* journal_buffer, uint64_t start,
 }
 
 void ParseBlocks(const storage::VmoBuffer& journal_buffer, const JournalEntryView& entry,
-                 uint64_t entry_start, fbl::Vector<storage::BufferedOperation>* operations) {
-  // Collect all the operations to be replayed from this entry into |operations|.
+                 uint64_t entry_start, ReplayTree* operation_tree) {
+  // Collect all the operations to be replayed from this entry into |operation_tree|.
   storage::BufferedOperation operation;
   for (size_t i = 0; i < entry.header()->payload_blocks; i++) {
     operation.vmoid = journal_buffer.vmoid();
@@ -132,17 +133,7 @@ void ParseBlocks(const storage::VmoBuffer& journal_buffer, const JournalEntryVie
     operation.op.dev_offset = entry.header()->target_blocks[i];
     operation.op.length = 1;
 
-    // Small optimization for sequential operations. If elements are contiguous for N
-    // blocks, write back one operation, rather than N operations.
-    if (operations->size() > 0) {
-      auto& last = (*operations)[operations->size() - 1].op;
-      if ((last.vmo_offset + last.length == operation.op.vmo_offset) &&
-          (last.dev_offset + last.length == operation.op.dev_offset)) {
-        last.length++;
-        continue;
-      }
-    }
-    operations->push_back(std::move(operation));
+    operation_tree->insert(operation);
   }
 }
 
@@ -166,6 +157,7 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffe
   // Start parsing the journal, and replay as many entries as possible.
   uint64_t entry_start = info->start();
   uint64_t sequence_number = info->sequence_number();
+  ReplayTree operation_tree;
   while (true) {
     // Attempt to parse the next entry in the journal. Eventually, we expect this to fail.
     std::optional<const JournalEntryView> entry =
@@ -193,7 +185,7 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffe
       return ZX_ERR_NOT_SUPPORTED;
     } else {
       // Replay all operations within this entry.
-      ParseBlocks(*journal_buffer, *entry, entry_start, operations);
+      ParseBlocks(*journal_buffer, *entry, entry_start, &operation_tree);
     }
 
     // Move to the next entry.
@@ -209,6 +201,11 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffe
   // all prior operations have been replayed.
   *out_sequence_number = sequence_number;
   *out_start = entry_start;
+
+  for (const auto& [_, range] : operation_tree) {
+    operations->push_back(range.container().operation);
+  }
+
   return ZX_OK;
 }
 
@@ -271,6 +268,11 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
   if (operations.size() > 0) {
     // Update to the new sequence_number (in-memory).
     journal_superblock.Update(next_entry_start, sequence_number);
+
+    for (auto& op : operations) {
+      FS_TRACE_INFO("replay: writing operation @ dev_offset: %zu, vmo_offset: %zu, length: %zu\n",
+                    op.op.dev_offset, op.op.vmo_offset, op.op.length);
+    }
 
     status = fs::FlushWriteRequests(transaction_handler, operations);
     if (status != ZX_OK) {
