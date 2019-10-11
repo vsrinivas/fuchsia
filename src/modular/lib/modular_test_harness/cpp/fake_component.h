@@ -11,14 +11,22 @@
 
 namespace modular_testing {
 
-// Represents an instance of an intercepted component. Clients may use directly
-// or sub-class and override OnCreate() and/or OnDestroy().
+// FakeComponent is a utility class for intercepting modular components. This class is
+// designed to be used alongside the modular_testing::TestHarnessBuilder::Intercept*() methods.
+// Clients may instantiate this class directly, or sub-class and override OnCreate() and
+// OnDestroy().
 //
-// FakeComponent::BuildInterceptOptions() may be passed to TestHarnessBuilder::InterceptComponent()
-// to route the component's launch to this instance.
+// See |modular_testing::FakeAgent| for intercepting a modular Agent.
 //
-// EXAMPLE USAGE:
+// USAGE:
+// ======
+// * Pass BuildInterceptOptions() to TestHarnessBuilder::InterceptComponent() to route the
+//   component's launch to this instance.
+// * Use is_running() to determine if the component is running.
+// * Use component_context() to connect to incoming services, and add public services.
 //
+// EXAMPLE:
+// ========
 // ..
 // modular_testing::TestHarnessBuilder builder;
 // modular_testing::FakeComponent fake_component(
@@ -38,20 +46,27 @@ class FakeComponent : fuchsia::modular::Lifecycle {
     std::vector<std::string> sandbox_services;
   };
 
-  explicit FakeComponent(Args args);
   FakeComponent() = delete;
+  explicit FakeComponent(Args args);
+
+  FakeComponent(const FakeComponent&) = delete;
+  FakeComponent(FakeComponent&&) = delete;
+  void operator=(const FakeComponent&) = delete;
+  void operator=(FakeComponent&&) = delete;
 
   ~FakeComponent() override;
 
-  // Returns a binder function that initializes members, dispatches OnCreate()
-  // and wires OnDestroy() to the InterceptedComponent.OnKill event.
+  // Constructs an InterceptOptions struct using the FakeComponent::Args supplied to this instance.
+  //
+  // The constructed launch handler takes care of triggering OnCreate() on launch, OnDestroy() on
+  // destruction.
   //
   // |dispatcher| is used for serving the component's outgoing directory and dispatching
   // |OnDestroy()|. A value of |nullptr| will use the current thread's dispatcher.
   modular_testing::TestHarnessBuilder::InterceptOptions BuildInterceptOptions(
       async_dispatcher_t* dispatcher = nullptr);
 
-  // Returns the URL assigned to this component;  see |Args::url|.
+  // Returns the URL assigned to this component; see |Args::url|.
   std::string url() const;
 
   // Returns true if the component was launched by the component manager and

@@ -40,88 +40,6 @@ TEST_F(TestHarnessFixtureTest, CanLaunchModular) {
   RunLoopUntil([&] { return intercepted; });
 }
 
-class TestComponent : public modular_testing::FakeComponent {
- public:
-  TestComponent(fit::function<void()> on_created, fit::function<void()> on_destroyed)
-      : FakeComponent({.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
-                       .sandbox_services = {"fuchsia.modular.SessionShellContext"}}),
-        on_created_(std::move(on_created)),
-        on_destroyed_(std::move(on_destroyed)) {}
-
- protected:
-  void OnCreate(fuchsia::sys::StartupInfo startup_info) override { on_created_(); }
-
-  void OnDestroy() override { on_destroyed_(); }
-
-  fit::function<void()> on_created_;
-  fit::function<void()> on_destroyed_;
-};
-
-// Tests that FakeComponent receives lifecycle events when it is killed
-// by its parent.
-TEST_F(TestHarnessFixtureTest, FakeComponentLifecycle_KilledByParent) {
-  modular_testing::TestHarnessBuilder builder;
-
-  bool running = false;
-  TestComponent session_shell([&] { running = true; }, [&] { running = false; });
-  builder.InterceptSessionShell(session_shell.BuildInterceptOptions());
-  builder.BuildAndRun(test_harness());
-
-  RunLoopUntil([&] { return session_shell.is_running(); });
-  EXPECT_TRUE(running);
-
-  fuchsia::modular::SessionShellContextPtr session_shell_context;
-  session_shell.component_context()->svc()->Connect(session_shell_context.NewRequest());
-  session_shell_context->Logout();
-
-  RunLoopUntil([&] { return !session_shell.is_running(); });
-  EXPECT_FALSE(running);
-}
-
-// Tests that FakeComponent receives lifecycle events when it kills
-// itself.
-TEST_F(TestHarnessFixtureTest, FakeComponentLifecycle_KilledBySelf) {
-  modular_testing::TestHarnessBuilder builder;
-
-  bool running = false;
-  TestComponent base_shell([&] { running = true; }, [&] { running = false; });
-  builder.InterceptBaseShell(base_shell.BuildInterceptOptions());
-  builder.BuildAndRun(test_harness());
-
-  RunLoopUntil([&] { return base_shell.is_running(); });
-  EXPECT_TRUE(running);
-
-  base_shell.Exit(0);
-  RunLoopUntil([&] { return !base_shell.is_running(); });
-  EXPECT_FALSE(running);
-}
-
-// Tests that FakeComponent receives lifecycle events when it is killed
-// using fuchsia.modular.Lifecycle that is published in its outgoing directory.
-TEST_F(TestHarnessFixtureTest, FakeComponentLifecycle_KilledByLifecycleService) {
-  modular_testing::TestHarnessBuilder builder;
-
-  bool running = false;
-  TestComponent base_shell([&] { running = true; }, [&] { running = false; });
-  builder.InterceptBaseShell(base_shell.BuildInterceptOptions());
-  builder.BuildAndRun(test_harness());
-
-  RunLoopUntil([&] { return base_shell.is_running(); });
-  EXPECT_TRUE(running);
-
-  // Serve the outgoing() directory from FakeComponent.
-  zx::channel svc_request, svc_dir;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &svc_request, &svc_dir));
-  base_shell.component_context()->outgoing()->Serve(std::move(svc_request));
-  sys::ServiceDirectory svc(std::move(svc_dir));
-
-  fuchsia::modular::LifecyclePtr lifecycle;
-  ASSERT_EQ(ZX_OK, svc.Connect(lifecycle.NewRequest(), "svc/fuchsia.modular.Lifecycle"));
-  lifecycle->Terminate();
-  RunLoopUntil([&] { return !base_shell.is_running(); });
-  EXPECT_FALSE(running);
-}
-
 TEST_F(TestHarnessFixtureTest, AddModToStory) {
   modular_testing::TestHarnessBuilder builder;
 
@@ -142,12 +60,12 @@ class TestFixtureForTestingCleanup : public modular_testing::TestHarnessFixture 
   // running.
   void RunUntilBaseShell(fit::function<void()> on_running) {
     modular_testing::TestHarnessBuilder builder;
-    bool running = false;
-    TestComponent base_shell([&] { running = true; }, [&] { running = false; });
+    modular_testing::FakeComponent base_shell(
+        {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
     builder.InterceptBaseShell(base_shell.BuildInterceptOptions());
     builder.BuildAndRun(test_harness());
 
-    RunLoopUntil([&] { return running; });
+    RunLoopUntil([&] { return base_shell.is_running(); });
     on_running();
   };
 

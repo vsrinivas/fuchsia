@@ -13,12 +13,36 @@
 
 namespace modular_testing {
 
-// An Agent implementation which provides access to
-// |fuchsia::modular::AgentContext|, implements boilerplate for exposing
-// services, and exposes task running callback registration.
+// FakeAgent is a utility class for intercepting Agent components. This class is designed to be used
+// alongside modular_testing::TestHarnessBuilder::InterceptComponent(). Clients may instantiate this
+// class directly, or sub-class and override OnCreate() and OnDestroy().
+//
+// USAGE:
+// ======
+// * Pass BuildInterceptOptions() to TestHarnessBuilder::InterceptComponent() to route the
+//   component's launch to this instance.
+// * Use is_running() to determine if the agent is running.
+// * Use AddAgentService<>() to publish agent services.
+// * Use component_context() to connect to incoming services, and add public services.
+//
+// EXAMPLE:
+// ========
+// ..
+// modular_testing::TestHarnessBuilder builder;
+// auto fake_agent = modular_testing::FakeAgent::CreateWithDefaultOptions();
+// builder.InterceptComponent(fake_component.BuildInterceptOptions());
+// builder.BuildAndRun(test_harness());
+// ..
 class FakeAgent : public FakeComponent {
  public:
+  FakeAgent() = delete;
   explicit FakeAgent(FakeComponent::Args args);
+
+  FakeAgent(const FakeAgent&) = delete;
+  FakeAgent(FakeAgent&&) = delete;
+  void operator=(const FakeAgent&) = delete;
+  void operator=(FakeAgent&&) = delete;
+
   ~FakeAgent() override;
 
   // Instantiates a FakeAgent with a randomly generated URL, default sandbox services (see
@@ -45,15 +69,25 @@ class FakeAgent : public FakeComponent {
   // connecting to the agent.
   template <typename Interface>
   void AddAgentService(fidl::InterfaceRequestHandler<Interface> handler) {
-    agent_->AddService<Interface>(std::move(handler));
+    // Buffer the AddAgentService calls until the agent is actually launched.
+    buffered_add_agent_service_calls_.push_back([this, handler = std::move(handler)]() mutable {
+      agent_->AddService<Interface>(std::move(handler));
+    });
+
+    FlushAddAgentServiceIfRunning();
   }
 
  private:
   // |FakeComponent|
   void OnCreate(fuchsia::sys::StartupInfo startup_info) override;
 
+  // Process the pending AddAgentService() calls which were buffered until is_running() == true.
+  void FlushAddAgentServiceIfRunning();
+
   fuchsia::modular::ComponentContextPtr modular_component_context_;
   fuchsia::modular::AgentContextPtr agent_context_;
+
+  std::vector<fit::closure> buffered_add_agent_service_calls_;
 
   std::unique_ptr<modular::Agent> agent_;
 };

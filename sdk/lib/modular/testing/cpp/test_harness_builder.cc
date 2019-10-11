@@ -114,7 +114,8 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptBaseShell(InterceptOptions opti
   return *this;
 }
 
-TestHarnessBuilder& TestHarnessBuilder::InterceptBaseShell(LaunchHandler handler, InterceptOptions options) {
+TestHarnessBuilder& TestHarnessBuilder::InterceptBaseShell(LaunchHandler handler,
+                                                           InterceptOptions options) {
   options.launch_handler = std::move(handler);
   return InterceptBaseShell(std::move(options));
 }

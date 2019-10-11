@@ -54,6 +54,8 @@ executable("test_harness_fixture_test_bin") {
   testonly = true
 
   sources = [
+    "fake_agent_test.cc",
+    "fake_component_test.cc",
     "test_harness_fixture_test.cc",
   ]
 
@@ -61,6 +63,7 @@ executable("test_harness_fixture_test_bin") {
     ":test_harness_fixture",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/modular/testing/cpp:fuchsia.modular.test.harness",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/sys/cpp/testing:unit",
