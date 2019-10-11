@@ -5,9 +5,31 @@
 #ifndef LIB_FUZZING_CPP_TRAITS_H_
 #define LIB_FUZZING_CPP_TRAITS_H_
 
+#include <lib/fidl/cpp/interface_request.h>
 #include <lib/fuzzing/cpp/fuzz_input.h>
 #include <lib/zx/object.h>
 #include <zircon/assert.h>
+#include <zircon/system/ulib/zx/include/lib/zx/bti.h>
+#include <zircon/system/ulib/zx/include/lib/zx/channel.h>
+#include <zircon/system/ulib/zx/include/lib/zx/debuglog.h>
+#include <zircon/system/ulib/zx/include/lib/zx/event.h>
+#include <zircon/system/ulib/zx/include/lib/zx/eventpair.h>
+#include <zircon/system/ulib/zx/include/lib/zx/exception.h>
+#include <zircon/system/ulib/zx/include/lib/zx/fifo.h>
+#include <zircon/system/ulib/zx/include/lib/zx/guest.h>
+#include <zircon/system/ulib/zx/include/lib/zx/interrupt.h>
+#include <zircon/system/ulib/zx/include/lib/zx/iommu.h>
+#include <zircon/system/ulib/zx/include/lib/zx/pager.h>
+#include <zircon/system/ulib/zx/include/lib/zx/pmt.h>
+#include <zircon/system/ulib/zx/include/lib/zx/port.h>
+#include <zircon/system/ulib/zx/include/lib/zx/profile.h>
+#include <zircon/system/ulib/zx/include/lib/zx/resource.h>
+#include <zircon/system/ulib/zx/include/lib/zx/socket.h>
+#include <zircon/system/ulib/zx/include/lib/zx/suspend_token.h>
+#include <zircon/system/ulib/zx/include/lib/zx/timer.h>
+#include <zircon/system/ulib/zx/include/lib/zx/vcpu.h>
+#include <zircon/system/ulib/zx/include/lib/zx/vmar.h>
+#include <zircon/system/ulib/zx/include/lib/zx/vmo.h>
 #include <zircon/types.h>
 
 #include <array>
@@ -106,7 +128,54 @@ struct Allocate<::zx::object<T>> {
   }
 };
 
-// TODO(markdittmer): Implement handles to objects; e.g., ::zx::channel.
+// Statically sized zircon object traits delegate to ::zx::object<T> traits.
+#define FUZZING_ZX_OBJ(T)                                                    \
+  template <>                                                                \
+  struct MinSize<T> {                                                        \
+    constexpr operator size_t() const { return MinSize<::zx::object<T>>(); } \
+  };                                                                         \
+  template <>                                                                \
+  struct Allocate<T> {                                                       \
+    T operator()(FuzzInput* src, size_t* size) {                             \
+      return T(Allocate<zx::object<T>>{}(src, size).get());                  \
+    }                                                                        \
+  }
+
+FUZZING_ZX_OBJ(::zx::bti);
+FUZZING_ZX_OBJ(::zx::channel);
+FUZZING_ZX_OBJ(::zx::debuglog);
+FUZZING_ZX_OBJ(::zx::event);
+FUZZING_ZX_OBJ(::zx::eventpair);
+FUZZING_ZX_OBJ(::zx::exception);
+FUZZING_ZX_OBJ(::zx::fifo);
+FUZZING_ZX_OBJ(::zx::guest);
+FUZZING_ZX_OBJ(::zx::interrupt);
+FUZZING_ZX_OBJ(::zx::iommu);
+FUZZING_ZX_OBJ(::zx::pager);
+FUZZING_ZX_OBJ(::zx::pmt);
+FUZZING_ZX_OBJ(::zx::port);
+FUZZING_ZX_OBJ(::zx::profile);
+FUZZING_ZX_OBJ(::zx::resource);
+FUZZING_ZX_OBJ(::zx::socket);
+FUZZING_ZX_OBJ(::zx::suspend_token);
+FUZZING_ZX_OBJ(::zx::timer);
+FUZZING_ZX_OBJ(::zx::vcpu);
+FUZZING_ZX_OBJ(::zx::vmar);
+FUZZING_ZX_OBJ(::zx::vmo);
+
+#undef FUZZING_ZX_OBJ
+
+template <typename T>
+struct MinSize<::fidl::InterfaceRequest<T>> {
+  constexpr operator size_t() const { return MinSize<::zx::channel>(); }
+};
+
+template <typename T>
+struct Allocate<::fidl::InterfaceRequest<T>> {
+  ::fidl::InterfaceRequest<T> operator()(FuzzInput* src, size_t* size) {
+    return ::fidl::InterfaceRequest<T>(std::move(Allocate<zx::channel>{}(src, size)));
+  }
+};
 
 // String traits:
 // MinSize is 0; take bytes as |const char*| to back |size|-sized string.
@@ -148,9 +217,10 @@ struct Allocate<std::array<T, S>> {
     }
 
     const size_t requested_size = *size;
+    const size_t item_size = Allocate<std::array<T, S>>::item_size();
     size_t num;
     size_t slack_per_item;
-    if (kItemSize == 0) {
+    if (item_size == 0) {
       // Special case: Items are variable-sized objects that may be empty
       // (e.g., vectors).
       // Attempt to allocate S items.
@@ -158,16 +228,16 @@ struct Allocate<std::array<T, S>> {
       slack_per_item = requested_size / num;
     } else {
       // Items are of non-zero size.
-      const size_t size_num = requested_size / kItemSize;
+      const size_t size_num = requested_size / item_size;
       num = size_num <= S ? size_num : S;
-      const size_t slack = requested_size - (num * kItemSize);
+      const size_t slack = requested_size - (num * item_size);
       slack_per_item = num == 0 ? 0 : slack / num;
     }
 
     std::array<T, S> out;
     *size = 0;
     for (size_t i = 0; i < num; i++) {
-      size_t current_item_size = kItemSize + slack_per_item;
+      size_t current_item_size = item_size + slack_per_item;
       out[i] = Allocate<T>{}(src, &current_item_size);
       *size += current_item_size;
     }
@@ -176,7 +246,7 @@ struct Allocate<std::array<T, S>> {
   }
 
  private:
-  static constexpr size_t kItemSize = MinSize<T>();
+  static size_t item_size() { return MinSize<T>(); }
 };
 
 // Vector traits:
@@ -195,7 +265,8 @@ struct MinSize<std::vector<T>> {
 template <typename T>
 struct Allocate<std::vector<T>> {
   std::vector<T> operator()(FuzzInput* src, size_t* size) {
-    const size_t item_size = kItemSize == 0 ? 8 : kItemSize;
+    const size_t item_size =
+        Allocate<std::vector<T>>::item_size() == 0 ? 8 : Allocate<std::vector<T>>::item_size();
     if (*size == 0 || *size < item_size) {
       *size = 0;
       return std::vector<T>();
@@ -216,7 +287,7 @@ struct Allocate<std::vector<T>> {
   }
 
  private:
-  static constexpr size_t kItemSize = MinSize<T>();
+  static size_t item_size() { return MinSize<T>(); }
 };
 
 // Pointer traits:
