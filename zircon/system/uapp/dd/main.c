@@ -240,7 +240,6 @@ int main(int argc, const char** argv) {
     if (options.input_bs % partition_info.block_size_bytes) {
       fprintf(stderr, "BS must be a multiple of %lu\n", partition_info.block_size_bytes);
       return false;
-      goto done;
     }
 
     in_is_skip_block = true;
@@ -251,7 +250,6 @@ int main(int argc, const char** argv) {
     if (options.output_bs % partition_info.block_size_bytes) {
       fprintf(stderr, "BS must be a multiple of %lu\n", partition_info.block_size_bytes);
       return false;
-      goto done;
     }
 
     out_is_skip_block = true;
