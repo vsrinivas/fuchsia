@@ -457,7 +457,7 @@ pub(crate) fn send_udp_listener<A: IpAddress, B: BufferMut, C: BufferUdpContext<
 /// # Panics
 ///
 /// `connect_udp` panics if `conn` is already in use.
-pub(crate) fn connect_udp<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Version, B>>(
+pub fn connect_udp<A: IpAddress, C: UdpContext<A::Version>>(
     ctx: &mut C,
     local_addr: Option<SpecifiedAddr<A>>,
     local_port: Option<NonZeroU16>,
@@ -508,7 +508,7 @@ pub(crate) fn connect_udp<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Ver
 /// # Panics
 ///
 /// `listen_udp` panics if `listener` is already in use.
-pub(crate) fn listen_udp<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Version, B>>(
+pub(crate) fn listen_udp<A: IpAddress, C: UdpContext<A::Version>>(
     ctx: &mut C,
     addrs: Vec<SpecifiedAddr<A>>,
     port: NonZeroU16,
@@ -681,11 +681,8 @@ mod tests {
         let local_ip = local_addr::<I>();
         let remote_ip = remote_addr::<I>();
         // Create a listener on local port 100, bound to the local IP:
-        let listener = listen_udp::<I::Addr, Buf<&mut [u8]>, _>(
-            &mut ctx,
-            vec![local_ip],
-            NonZeroU16::new(100).unwrap(),
-        );
+        let listener =
+            listen_udp::<I::Addr, _>(&mut ctx, vec![local_ip], NonZeroU16::new(100).unwrap());
         assert_eq!(listener.listener_type, ListenerType::Specified);
 
         // Inject a packet and check that the context receives it:
@@ -771,7 +768,7 @@ mod tests {
         let local_ip = local_addr::<I>();
         let remote_ip = remote_addr::<I>();
         // create a UDP connection with a specified local port and local ip:
-        let conn = connect_udp::<I::Addr, Buf<&mut [u8]>, _>(
+        let conn = connect_udp::<I::Addr, _>(
             &mut ctx,
             Some(local_ip),
             Some(NonZeroU16::new(100).unwrap()),
@@ -830,7 +827,7 @@ mod tests {
         let local_port_d = NonZeroU16::new(103).unwrap();
         let remote_port_a = NonZeroU16::new(200).unwrap();
         // Create some UDP connections and listeners:
-        let conn1 = connect_udp::<I::Addr, Buf<&mut [u8]>, _>(
+        let conn1 = connect_udp::<I::Addr, _>(
             &mut ctx,
             Some(local_ip),
             Some(local_port_d),
@@ -838,19 +835,16 @@ mod tests {
             remote_port_a,
         );
         // conn2 has just a remote addr different than conn1
-        let conn2 = connect_udp::<I::Addr, Buf<&mut [u8]>, _>(
+        let conn2 = connect_udp::<I::Addr, _>(
             &mut ctx,
             Some(local_ip),
             Some(local_port_d),
             remote_ip_b,
             remote_port_a,
         );
-        let list1 =
-            listen_udp::<I::Addr, Buf<&mut [u8]>, _>(&mut ctx, vec![local_ip], local_port_a);
-        let list2 =
-            listen_udp::<I::Addr, Buf<&mut [u8]>, _>(&mut ctx, vec![local_ip], local_port_b);
-        let wildcard_list =
-            listen_udp::<I::Addr, Buf<&mut [u8]>, _>(&mut ctx, vec![], local_port_c);
+        let list1 = listen_udp::<I::Addr, _>(&mut ctx, vec![local_ip], local_port_a);
+        let list2 = listen_udp::<I::Addr, _>(&mut ctx, vec![local_ip], local_port_b);
+        let wildcard_list = listen_udp::<I::Addr, _>(&mut ctx, vec![], local_port_c);
 
         // now inject UDP packets that each of the created connections should
         // receive:
@@ -944,7 +938,7 @@ mod tests {
         let remote_ip_b = get_other_ip_address::<I::Addr>(72);
         let listener_port = NonZeroU16::new(100).unwrap();
         let remote_port = NonZeroU16::new(200).unwrap();
-        let listener = listen_udp::<I::Addr, Buf<&mut [u8]>, _>(&mut ctx, vec![], listener_port);
+        let listener = listen_udp::<I::Addr, _>(&mut ctx, vec![], listener_port);
         assert_eq!(listener.listener_type, ListenerType::Wildcard);
 
         let body = [1, 2, 3, 4, 5];
@@ -990,7 +984,7 @@ mod tests {
         let mut ctx = DummyContext::<I>::default();
         let local_port = NonZeroU16::new(100).unwrap();
         let remote_port = NonZeroU16::new(200).unwrap();
-        let conn = connect_udp::<I::Addr, Buf<&mut [u8]>, _>(
+        let conn = connect_udp::<I::Addr, _>(
             &mut ctx,
             None,
             Some(local_port),
@@ -1016,28 +1010,28 @@ mod tests {
         let ip_a = get_other_ip_address::<I::Addr>(100);
         let ip_b = get_other_ip_address::<I::Addr>(200);
 
-        let conn_a = connect_udp::<I::Addr, Buf<&mut [u8]>, _>(
+        let conn_a = connect_udp::<I::Addr, _>(
             &mut ctx,
             Some(local_ip),
             None,
             ip_a,
             NonZeroU16::new(1010).unwrap(),
         );
-        let conn_b = connect_udp::<I::Addr, Buf<&mut [u8]>, _>(
+        let conn_b = connect_udp::<I::Addr, _>(
             &mut ctx,
             Some(local_ip),
             None,
             ip_b,
             NonZeroU16::new(1010).unwrap(),
         );
-        let conn_c = connect_udp::<I::Addr, Buf<&mut [u8]>, _>(
+        let conn_c = connect_udp::<I::Addr, _>(
             &mut ctx,
             Some(local_ip),
             None,
             ip_a,
             NonZeroU16::new(2020).unwrap(),
         );
-        let conn_d = connect_udp::<I::Addr, Buf<&mut [u8]>, _>(
+        let conn_d = connect_udp::<I::Addr, _>(
             &mut ctx,
             Some(local_ip),
             None,

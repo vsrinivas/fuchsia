@@ -54,7 +54,7 @@ pub use crate::ip::{
     icmp, EntryDest, EntryDestEither, EntryEither, IpLayerEventDispatcher, Ipv4StateBuilder,
     Ipv6StateBuilder,
 };
-pub use crate::transport::udp::UdpEventDispatcher;
+pub use crate::transport::udp::{connect_udp, UdpEventDispatcher};
 pub use crate::transport::TransportLayerEventDispatcher;
 
 use std::fmt::Debug;
