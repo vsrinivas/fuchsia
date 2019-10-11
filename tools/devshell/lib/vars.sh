@@ -101,6 +101,11 @@ function fx-build-config-load {
   export ZIRCON_BUILDROOT="${FUCHSIA_BUILD_DIR%/}.zircon"
   export ZIRCON_TOOLS_DIR="${ZIRCON_BUILDROOT}/tools"
 
+  # TODO(mangini): revisit once fxb/38436 is fixed.
+  if [[ "${HOST_OUT_DIR:0:1}" != "/" ]]; then
+    HOST_OUT_DIR="${FUCHSIA_BUILD_DIR}/${HOST_OUT_DIR}"
+  fi
+
   return 0
 }
 
