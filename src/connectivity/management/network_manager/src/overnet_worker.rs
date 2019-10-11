@@ -58,6 +58,7 @@ impl OvernetWorker {
         fasync::spawn_local(async move {
             while let Some(ServiceProviderRequest::ConnectToService {
                 chan: ch_req,
+                info: _,
                 control_handle: _control_handle,
             }) = server.try_next().await.unwrap()
             {

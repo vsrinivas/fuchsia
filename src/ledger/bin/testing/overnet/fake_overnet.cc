@@ -40,7 +40,9 @@ void FakeOvernet::GetService(std::string service_name, zx::channel chan) {
   if (it == service_providers_.end()) {
     return;
   }
-  it->second->ConnectToService(std::move(chan));
+  fuchsia::overnet::ConnectionInfo connection_info;
+  connection_info.set_peer(fuchsia::overnet::protocol::NodeId{self_id_});
+  it->second->ConnectToService(std::move(chan), std::move(connection_info));
 }
 
 std::vector<std::string> FakeOvernet::GetAllServices() const {

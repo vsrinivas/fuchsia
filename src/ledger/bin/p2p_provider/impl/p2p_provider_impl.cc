@@ -65,7 +65,8 @@ void P2PProviderImpl::StartService() {
   ListenForNewDevices();
 }
 
-void P2PProviderImpl::ConnectToService(zx::channel chan) {
+void P2PProviderImpl::ConnectToService(zx::channel chan,
+                                       fuchsia::overnet::ConnectionInfo connection_info) {
   AddConnectionFromChannel(std::move(chan), std::nullopt);
 }
 

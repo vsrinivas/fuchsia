@@ -345,6 +345,7 @@ pub trait MessageReceiver {
         &mut self,
         stream_id: StreamId,
         service_name: &'a str,
+        connection_info: fidl_fuchsia_overnet::ConnectionInfo,
     ) -> Result<(), Error>;
     /// A new channel stream is created at `stream_id`.
     fn bind_channel(&mut self, stream_id: StreamId) -> Result<Self::Handle, Error>;
@@ -405,7 +406,7 @@ impl<LinkData: Copy + Debug> Link<LinkData> {
             let round_trip_time = desc.round_trip_time.as_micros();
             LinkStatus {
                 local_id: self.id.0,
-                to: fidl_fuchsia_overnet_protocol::NodeId { id: self.peer.0 },
+                to: self.peer.into(),
                 metrics: LinkMetrics {
                     round_trip_time: Some(if round_trip_time > std::u64::MAX as u128 {
                         std::u64::MAX
@@ -1148,8 +1149,15 @@ where
                             new_stream_index,
                             service
                         );
+                        let peer_node_id = self.peer.node_id;
                         self.bind_stream(StreamType::Channel, new_stream_index, |stream_id, got| {
-                            got.connect_channel(stream_id, &service)
+                            got.connect_channel(
+                                stream_id,
+                                &service,
+                                fidl_fuchsia_overnet::ConnectionInfo {
+                                    peer: Some(peer_node_id.into()),
+                                },
+                            )
                         })
                     }
                     PeerMessage::UpdateNodeDescription(PeerDescription { services }) => {
@@ -1982,7 +1990,7 @@ mod tests {
 
     #[derive(Debug)]
     enum IncomingMessage<'a> {
-        ConnectService(u8, StreamId, &'a str),
+        ConnectService(u8, StreamId, &'a str, fidl_fuchsia_overnet::ConnectionInfo),
         BindChannel(u8, StreamId),
         ChannelRecv(u8, StreamId, &'a [u8]),
         UpdateNode(u8, NodeId, NodeDescription),
@@ -2041,8 +2049,14 @@ mod tests {
                     &mut self,
                     stream_id: StreamId,
                     service_name: &str,
+                    connection_info: fidl_fuchsia_overnet::ConnectionInfo,
                 ) -> Result<(), Error> {
-                    (self.1)(IncomingMessage::ConnectService(self.0, stream_id, service_name))
+                    (self.1)(IncomingMessage::ConnectService(
+                        self.0,
+                        stream_id,
+                        service_name,
+                        connection_info,
+                    ))
                 }
                 fn bind_channel(&mut self, stream_id: StreamId) -> Result<(), Error> {
                     (self.1)(IncomingMessage::BindChannel(self.0, stream_id))
@@ -2120,14 +2134,26 @@ mod tests {
                 }
                 let _stream1 = env.router1.new_stream(env.router2.node_id, "hello world").unwrap();
                 let mut stream2: Option<StreamId> = None;
+                let router1_node_id = env.router1.node_id;
                 while stream2 == None {
                     env.step(|frame| {
                         Ok(match frame {
                             IncomingMessage::UpdateNode(_, _, _) => (),
-                            IncomingMessage::ConnectService(2, id, "hello world") => {
-                                stream2 = Some(id)
+                            IncomingMessage::ConnectService(
+                                2,
+                                id,
+                                "hello world",
+                                fidl_fuchsia_overnet::ConnectionInfo {
+                                    peer:
+                                        Some(fidl_fuchsia_overnet_protocol::NodeId { id: peer_id }),
+                                },
+                            ) => {
+                                assert_eq!(router1_node_id, peer_id.into());
+                                stream2 = Some(id);
                             }
-                            _ => unreachable!(),
+                            x => {
+                                panic!("{:?}", x);
+                            }
                         })
                     });
                 }
@@ -2154,6 +2180,7 @@ mod tests {
                     .unwrap();
                 let mut stream2 = None;
                 let mut got_packet = false;
+                let router1_node_id = env.router1.node_id;
                 while !got_packet {
                     env.step(|frame| {
                         Ok(match (stream2.is_none(), got_packet, frame) {
@@ -2161,8 +2188,18 @@ mod tests {
                             (
                                 true,
                                 false,
-                                IncomingMessage::ConnectService(2, id, "hello world"),
-                            ) => stream2 = Some(id),
+                                IncomingMessage::ConnectService(
+                                    2,
+                                    id,
+                                    "hello world",
+                                    fidl_fuchsia_overnet::ConnectionInfo {
+                                        peer: Some(fidl_fuchsia_overnet_protocol::NodeId { id: peer_id }),
+                                    },
+                                ),
+                            ) => {
+                                assert_eq!(router1_node_id, peer_id.into());
+                                stream2 = Some(id);
+                            }
                             (
                                 false,
                                 false,
@@ -2172,8 +2209,7 @@ mod tests {
                                 got_packet = true;
                             }
                             x => {
-                                trace!("{:?}", x);
-                                unreachable!()
+                                panic!("{:?}", x);
                             }
                         })
                     });
@@ -2203,6 +2239,7 @@ mod tests {
                 let mut got_ping = false;
                 let mut sent_pong = false;
                 let mut got_pong = false;
+                let router1_node_id = env.router1.node_id;
                 while !got_pong {
                     if got_ping && !sent_pong {
                         env.router2
@@ -2222,8 +2259,18 @@ mod tests {
                                 false,
                                 false,
                                 false,
-                                IncomingMessage::ConnectService(2, id, "hello world"),
-                            ) => stream2 = Some(id),
+                                IncomingMessage::ConnectService(
+                                    2,
+                                    id,
+                                    "hello world",
+                                    fidl_fuchsia_overnet::ConnectionInfo {
+                                        peer: Some(fidl_fuchsia_overnet_protocol::NodeId { id: peer_id }),
+                                    },
+                                ),
+                            ) => {
+                                assert_eq!(router1_node_id, peer_id.into());
+                                stream2 = Some(id);
+                            }
                             (
                                 false,
                                 false,

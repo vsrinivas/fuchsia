@@ -171,7 +171,8 @@ class OvernetServiceProvider : public fuchsia::overnet::ServiceProvider {
   explicit OvernetServiceProvider(std::vector<std::unique_ptr<fidl_helpers::MessageRelay>>* relays)
       : relays_(relays) {}
 
-  void ConnectToService(zx::channel channel) override {
+  void ConnectToService(zx::channel channel,
+                        fuchsia::overnet::ConnectionInfo connection_info) override {
     auto relay = std::make_unique<fidl_helpers::MessageRelay>();
     relay->SetChannel(std::move(channel));
     relays_->push_back(std::move(relay));

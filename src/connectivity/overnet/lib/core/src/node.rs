@@ -81,12 +81,17 @@ impl<'a, Runtime: NodeRuntime + 'static> Receiver<'a, Runtime> {
 impl<'a, Runtime: NodeRuntime + 'static> MessageReceiver for Receiver<'a, Runtime> {
     type Handle = Handle;
 
-    fn connect_channel(&mut self, stream_id: StreamId, service_name: &str) -> Result<(), Error> {
+    fn connect_channel(
+        &mut self,
+        stream_id: StreamId,
+        service_name: &str,
+        connection_info: fidl_fuchsia_overnet::ConnectionInfo,
+    ) -> Result<(), Error> {
         let app_channel = self.make_channel(stream_id)?;
         self.service_map
             .get(service_name)
             .ok_or_else(|| format_err!("Unknown service {}", service_name))?
-            .connect_to_service(app_channel)?;
+            .connect_to_service(app_channel, connection_info)?;
         Ok(())
     }
 
@@ -333,7 +338,10 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
             this.service_map
                 .get(service_name)
                 .ok_or_else(|| format_err!("Unknown service {}", service_name))?
-                .connect_to_service(chan)?;
+                .connect_to_service(
+                    chan,
+                    fidl_fuchsia_overnet::ConnectionInfo { peer: Some(node_id.into()) },
+                )?;
         } else {
             let chan = Rc::new(AsyncChannel::from_channel(chan)?);
             let stream_id = this.router.new_stream(node_id, service_name)?;

@@ -57,7 +57,8 @@ class P2PProviderImpl : public P2PProvider, public fuchsia::overnet::ServiceProv
   bool SendMessage(const P2PClientId& destination, convert::ExtendedStringView data) override;
 
   // Overnet.ServiceProvider
-  void ConnectToService(zx::channel chan) override;
+  void ConnectToService(zx::channel chan,
+                        fuchsia::overnet::ConnectionInfo connection_info) override;
 
  private:
   // Starts the listening mDNS service.

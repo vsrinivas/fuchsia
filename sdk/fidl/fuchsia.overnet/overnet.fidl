@@ -30,7 +30,8 @@ protocol Overnet {
 /// A ServiceProvider is a factory for one service.
 protocol ServiceProvider {
     /// Connect `chan` to the service (called in response to Overnet.ConnectToService).
-    ConnectToService(handle<channel> chan);
+    /// `info` provides additional data about the connection request.
+    ConnectToService(handle<channel> chan, ConnectionInfo info);
 };
 
 /// A `Peer` describes one device on the Overnet mesh.
@@ -47,4 +48,10 @@ struct Peer {
 table SocketLinkOptions {
     /// A label that might be used for debugging purposes.
     1: string:32 connection_label;
+};
+
+/// Information provided to a ServiceProvider about an incoming connection.
+table ConnectionInfo {
+    /// The peer address initiating this connection.
+    1: fuchsia.overnet.protocol.NodeId peer;
 };

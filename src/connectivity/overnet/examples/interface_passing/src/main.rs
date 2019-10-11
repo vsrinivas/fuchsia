@@ -132,6 +132,7 @@ async fn exec_server(svc: impl OvernetProxyInterface, quiet: bool) -> Result<(),
     svc.register_service(interfacepassing::ExampleMarker::NAME, ClientEnd::new(p))?;
     while let Some(ServiceProviderRequest::ConnectToService {
         chan,
+        info: _,
         control_handle: _control_handle,
     }) = next_request(&mut stream).await?
     {
