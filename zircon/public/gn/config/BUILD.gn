@@ -420,7 +420,6 @@ config("default_warnings") {
   ]
   cflags_c = [
     "-Werror=implicit-function-declaration",
-    "-Wno-absolute-value",
   ]
   cflags_cc = [
     "-Wno-sign-conversion",
