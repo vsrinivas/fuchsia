@@ -35,7 +35,7 @@ TEST(ConditionVariableTest, Wait) {
       &state);
 
   state.cvar.Wait(&state.mutex);
-  thrd_join(thread, NULL);
+  thrd_join(thread, nullptr);
 }
 
 }  // namespace
