@@ -1,19 +1,29 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use std::collections::HashMap;
+use {
+    core::marker::PhantomData,
+    std::collections::HashMap,
+    std::{cmp::Eq, hash::Hash},
+};
 
 /// Trie mapping a sequence of key fragments to nodes that
 /// are able to store a vector of multiple values which
 /// are all identifiable by the same key sequence.
-pub struct Trie<K, V> {
+pub struct Trie<K, V>
+where
+    K: Hash + Eq,
+{
     root: TrieNode<K, V>,
 }
 
-impl<K, V> Trie<K, V> {
+impl<K, V> Trie<K, V>
+where
+    K: Hash + Eq,
+{
     pub fn new() -> Self
     where
-        K: std::hash::Hash + std::cmp::Eq,
+        K: Hash + Eq,
     {
         Trie { root: TrieNode::new() }
     }
@@ -28,14 +38,17 @@ impl<K, V> Trie<K, V> {
     ///
     /// The iterator performs a stack based DFS through the trie to
     /// allow reconstruction of the key sequence defining each node.
-    pub fn iter(&self) -> TrieIterator<K, V> {
-        TrieIterator {
-            trie: self,
-            iterator_initialized: false,
-            work_stack: vec![],
-            curr_key: vec![],
-            curr_node: None,
-            curr_val_index: 0,
+    pub fn iter(&self) -> TrieIterableType<K, V, TrieIterator<K, V>> {
+        TrieIterableType {
+            iterator: TrieIterator {
+                trie: self,
+                iterator_initialized: false,
+                work_stack: vec![],
+                curr_key: vec![],
+                curr_node: None,
+                curr_val_index: 0,
+            },
+            _marker: PhantomData,
         }
     }
 
@@ -44,7 +57,7 @@ impl<K, V> Trie<K, V> {
     /// inserting the value into the vector of values defined by the provided sequence.
     pub fn insert(&mut self, key: Vec<K>, value: V)
     where
-        K: std::hash::Hash + std::cmp::Eq + std::fmt::Debug,
+        K: Hash + Eq + std::fmt::Debug,
     {
         let key_trie_node = key.into_iter().fold(&mut self.root, |curr_node, key_fragment| {
             curr_node.children.entry(key_fragment).or_insert_with(|| TrieNode::new())
@@ -58,113 +71,251 @@ impl<K, V> Trie<K, V> {
     }
 }
 
-pub struct TrieNode<K, V> {
+pub struct TrieNode<K, V>
+where
+    K: Hash + Eq,
+{
     values: Vec<V>,
     children: HashMap<K, TrieNode<K, V>>,
 }
 
-impl<K, V> TrieNode<K, V> {
+impl<K, V> TrieNode<K, V>
+where
+    K: Hash + Eq,
+{
     pub fn new() -> Self
     where
-        K: std::hash::Hash + std::cmp::Eq,
+        K: Hash + Eq,
     {
         TrieNode { values: Vec::new(), children: HashMap::new() }
     }
+}
 
-    pub fn get_values(&self) -> &Vec<V> {
+pub struct TrieIterableWorkEvent<'a, K, N> {
+    key_state: TrieIterableKeyState<'a, K>,
+    potential_child: Option<&'a N>,
+}
+
+/// Trait defining the properties a graph
+/// node must have in order to be used by
+/// the generic Trie Iterator.
+pub trait TrieIterableNode<K, V>
+where
+    K: Hash + Eq,
+{
+    /// Returns a map from a graph's node
+    /// to the children of that node, indexed
+    /// by their Trie-equivalent prefix.
+    fn get_children(&self) -> HashMap<&K, &Self>;
+
+    /// Returns the vector of values that a graph's
+    /// node is storing.
+    fn get_values(&self) -> &[V];
+}
+
+/// Trait defining the methods a graph's iterator must
+/// implement in order to be used by the TrieIterator.
+pub trait TrieIterable<'a, K, V>
+where
+    K: Hash + Eq,
+{
+    type Node: 'a + TrieIterableNode<K, V>;
+
+    /// Returns whether the iterator has been initialized.
+    fn is_initialized(&self) -> bool;
+
+    /// Initializes the iterator.
+    fn initialize(&mut self);
+
+    /// Pushes a Trie iteration work event onto
+    /// the iterators work stack. This method is only needed because traits
+    /// cannot currently have their own fields.
+    ///
+    /// To implement, take the work_event argument and push it onto your stack.
+    fn add_work_event(&mut self, work_event: TrieIterableWorkEvent<'a, K, Self::Node>);
+
+    /// Pops a Trie iteration work event off of
+    /// the iterators work stack. This method is only needed because traits
+    /// cannot currently have their own fields.
+    ///
+    /// To implement, pop the most recent work event off of your workstack and return it.
+    fn expect_work_event(&mut self) -> TrieIterableWorkEvent<'a, K, Self::Node>;
+
+    /// Returns the iterator's current-node being processed for iteration.
+    fn expect_curr_node(&self) -> &'a Self::Node;
+
+    /// Sets the iterator's current node being processed. Also responsible
+    /// for resetting any node-specific state, like an index into the values.
+    fn set_curr_node(&mut self, new_node: &'a Self::Node);
+
+    /// Returns whether the node either has no values or has processed all
+    /// of the values.
+    fn is_curr_node_fully_processed(&self) -> bool;
+
+    /// Returns whether there are any more work events to process.
+    fn is_work_stack_empty(&self) -> bool;
+
+    /// Removes the most recently added key_fragment from the
+    /// key fragment aggregator.
+    fn pop_curr_key_fragment(&mut self);
+
+    /// Pushes a new key fragment onto the key fragment aggregator.
+    fn extend_curr_key(&mut self, new_fragment: &'a K);
+
+    /// Processes the current node and returns the next value
+    /// at that node. Also responsible for updating any node-specific
+    /// state, like an index into the values.
+    fn expect_next_value(&mut self) -> (Vec<&'a K>, &'a V);
+}
+
+impl<K, V> TrieIterableNode<K, V> for TrieNode<K, V>
+where
+    K: Hash + Eq,
+{
+    fn get_children(&self) -> HashMap<&K, &Self> {
+        self.children.iter().collect::<HashMap<&K, &TrieNode<K, V>>>()
+    }
+
+    fn get_values(&self) -> &[V] {
         return &self.values;
     }
-
-    pub fn get_children(&self) -> &HashMap<K, TrieNode<K, V>> {
-        return &self.children;
-    }
 }
 
-enum TrieIteratorKeyState<'a, K> {
-    AddKeyFragment(&'a K),
-    PopKeyFragment,
-}
-
-struct TrieIteratorWorkEvent<'a, K, V> {
-    key_state: TrieIteratorKeyState<'a, K>,
-    potential_child: Option<&'a TrieNode<K, V>>,
-}
-
-pub struct TrieIterator<'a, K, V> {
+pub struct TrieIterator<'a, K, V>
+where
+    K: Hash + Eq,
+{
     trie: &'a Trie<K, V>,
     iterator_initialized: bool,
-    work_stack: Vec<TrieIteratorWorkEvent<'a, K, V>>,
+    work_stack: Vec<TrieIterableWorkEvent<'a, K, TrieNode<K, V>>>,
     curr_key: Vec<&'a K>,
     curr_node: Option<&'a TrieNode<K, V>>,
     curr_val_index: usize,
 }
 
-impl<'a, K, V> Iterator for TrieIterator<'a, K, V> {
+impl<'a, K, V> TrieIterable<'a, K, V> for TrieIterator<'a, K, V>
+where
+    K: Hash + Eq,
+{
+    type Node = TrieNode<K, V>;
+    fn is_initialized(&self) -> bool {
+        self.iterator_initialized
+    }
+
+    fn initialize(&mut self) {
+        self.iterator_initialized = true;
+        self.add_work_event(TrieIterableWorkEvent {
+            key_state: TrieIterableKeyState::PopKeyFragment,
+            potential_child: None,
+        });
+
+        self.curr_node = Some(self.trie.get_root());
+        for (key_fragment, child_node) in self.curr_node.unwrap().get_children().iter() {
+            self.add_work_event(TrieIterableWorkEvent {
+                key_state: TrieIterableKeyState::AddKeyFragment(key_fragment),
+                potential_child: Some(child_node),
+            });
+        }
+    }
+
+    fn add_work_event(&mut self, work_event: TrieIterableWorkEvent<'a, K, Self::Node>) {
+        self.work_stack.push(work_event);
+    }
+
+    fn expect_work_event(&mut self) -> TrieIterableWorkEvent<'a, K, Self::Node> {
+        self.work_stack
+            .pop()
+            .expect("Should never be attempting to retrieve work event from empty stack.")
+    }
+    fn expect_curr_node(&self) -> &'a Self::Node {
+        self.curr_node.expect("Should never be fetching working node when working node is none.")
+    }
+    fn set_curr_node(&mut self, new_node: &'a Self::Node) {
+        self.curr_val_index = 0;
+        self.curr_node = Some(new_node);
+    }
+    fn is_curr_node_fully_processed(&self) -> bool {
+        debug_assert!(
+            self.curr_node.is_some(),
+            "We should never be fetching an uninitialized curr_node."
+        );
+        let curr_node = self
+            .curr_node
+            .expect("Should never ask if curr_node is processed, when curr_node is none.");
+        curr_node.get_values().is_empty() || curr_node.get_values().len() <= self.curr_val_index
+    }
+    fn is_work_stack_empty(&self) -> bool {
+        self.work_stack.is_empty()
+    }
+    fn pop_curr_key_fragment(&mut self) {
+        self.curr_key.pop();
+    }
+    fn extend_curr_key(&mut self, new_fragment: &'a K) {
+        self.curr_key.push(new_fragment);
+    }
+    fn expect_next_value(&mut self) -> (Vec<&'a K>, &'a V) {
+        self.curr_val_index = self.curr_val_index + 1;
+        (
+            self.curr_key.clone(),
+            &self
+                .curr_node
+                .expect("Should never be retrieving a value when a working node is unset.")
+                .get_values()[self.curr_val_index - 1],
+        )
+    }
+}
+
+enum TrieIterableKeyState<'a, K> {
+    AddKeyFragment(&'a K),
+    PopKeyFragment,
+}
+
+pub struct TrieIterableType<'a, K, V, T: TrieIterable<'a, K, V>>
+where
+    K: Hash + Eq,
+{
+    iterator: T,
+    _marker: PhantomData<fn() -> (&'a K, &'a V)>,
+}
+
+impl<'a, K, V, T: TrieIterable<'a, K, V>> Iterator for TrieIterableType<'a, K, V, T>
+where
+    K: Hash + Eq,
+{
     type Item = (Vec<&'a K>, &'a V);
 
     fn next(&mut self) -> Option<(Vec<&'a K>, &'a V)> {
-        if !self.iterator_initialized {
-            debug_assert_eq!(self.work_stack.len(), 0);
-            debug_assert_eq!(self.curr_val_index, 0);
-            debug_assert_eq!(self.curr_key.len(), 0);
-
-            self.iterator_initialized = true;
-            self.work_stack.push(TrieIteratorWorkEvent {
-                key_state: TrieIteratorKeyState::PopKeyFragment,
-                potential_child: None,
-            });
-            for (key_fragment, child_node) in self.trie.get_root().get_children().iter() {
-                self.work_stack.push(TrieIteratorWorkEvent {
-                    key_state: TrieIteratorKeyState::AddKeyFragment(key_fragment),
-                    potential_child: Some(child_node),
-                });
-            }
-
-            self.curr_node = Some(self.trie.get_root());
+        if !self.iterator.is_initialized() {
+            self.iterator.initialize();
         }
 
-        match self.curr_node {
-            Some(_) => {}
-            None => {
-                assert_eq!(
-                    self.work_stack.len(),
-                    0,
-                    "This state is only reachable once all work is complete!"
-                );
-                return None;
-            }
-        };
-
-        while (self.curr_node?.get_values().is_empty()
-            || self.curr_node?.get_values().len() <= self.curr_val_index)
-            && !self.work_stack.is_empty()
-        {
-            let next_work_item = self.work_stack.pop()?;
-            match next_work_item.key_state {
-                TrieIteratorKeyState::PopKeyFragment => {
-                    self.curr_key.pop();
+        while self.iterator.is_curr_node_fully_processed() && !self.iterator.is_work_stack_empty() {
+            let next_work_event = self.iterator.expect_work_event();
+            match next_work_event.key_state {
+                TrieIterableKeyState::PopKeyFragment => {
+                    self.iterator.pop_curr_key_fragment();
                 }
-                TrieIteratorKeyState::AddKeyFragment(key_fragment) => {
-                    match next_work_item.potential_child {
+                TrieIterableKeyState::AddKeyFragment(key_fragment) => {
+                    match next_work_event.potential_child {
                         Some(child) => {
-                            self.curr_key.push(key_fragment);
-                            self.curr_node = Some(child);
-                            self.curr_val_index = 0;
+                            self.iterator.extend_curr_key(key_fragment);
+                            self.iterator.set_curr_node(child);
                         }
                         None => unreachable!(
                         "Work events that extend key fragments must have an associated child node."
                     ),
                     }
 
-                    self.work_stack.push(TrieIteratorWorkEvent {
-                        key_state: TrieIteratorKeyState::PopKeyFragment,
+                    self.iterator.add_work_event(TrieIterableWorkEvent {
+                        key_state: TrieIterableKeyState::PopKeyFragment,
                         potential_child: None,
                     });
 
-                    for (key_fragment, child_node) in self.curr_node.unwrap().get_children().iter()
+                    for (key_fragment, child_node) in
+                        self.iterator.expect_curr_node().get_children().iter()
                     {
-                        self.work_stack.push(TrieIteratorWorkEvent {
-                            key_state: TrieIteratorKeyState::AddKeyFragment(key_fragment),
+                        self.iterator.add_work_event(TrieIterableWorkEvent {
+                            key_state: TrieIterableKeyState::AddKeyFragment(key_fragment),
                             potential_child: Some(child_node),
                         });
                     }
@@ -172,16 +323,10 @@ impl<'a, K, V> Iterator for TrieIterator<'a, K, V> {
             }
         }
 
-        let refreshed_node_values: &Vec<V> = match self.curr_node {
-            Some(node) => node.get_values(),
-            None => unreachable!("We've definitely processed a new node, so this cannot be None."),
-        };
-
-        if refreshed_node_values.is_empty() || refreshed_node_values.len() <= self.curr_val_index {
+        if self.iterator.is_curr_node_fully_processed() {
             None
         } else {
-            self.curr_val_index = self.curr_val_index + 1;
-            Some((self.curr_key.clone(), &refreshed_node_values[self.curr_val_index - 1]))
+            Some(self.iterator.expect_next_value())
         }
     }
 }
@@ -217,15 +362,21 @@ mod tests {
         test_trie.insert("test".to_string().chars().collect(), "a".to_string());
         test_trie.insert("test".to_string().chars().collect(), "a2".to_string());
         test_trie.insert("test1".to_string().chars().collect(), "b".to_string());
+        test_trie.insert("test1".to_string().chars().collect(), "b2".to_string());
         let mut results_vec = vec![
+            (vec!['t', 'e', 's', 't', '1'], "b2".to_string()),
             (vec!['t', 'e', 's', 't', '1'], "b".to_string()),
             (vec!['t', 'e', 's', 't'], "a2".to_string()),
             (vec!['t', 'e', 's', 't'], "a".to_string()),
         ];
+        let mut num_iterations = 0;
         for (key, val) in test_trie.iter() {
+            num_iterations = num_iterations + 1;
             let (expected_key, expected_val) = results_vec.pop().unwrap();
             assert_eq!(*val, expected_val);
             assert_eq!(key.into_iter().collect::<String>(), expected_key.iter().collect::<String>())
         }
+
+        assert_eq!(num_iterations, 4);
     }
 }
