@@ -5,9 +5,9 @@
 use {
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_zircon::{DurationNum, Signals, Status},
-    futures::{stream::Stream, task::Context, Poll},
+    futures::{io, stream::Stream, task::Context, Poll},
     parking_lot::Mutex,
-    std::{convert::TryFrom, fmt, pin::Pin, sync::Arc, sync::Weak},
+    std::{convert::TryFrom, fmt, ops::Deref, pin::Pin, sync::Arc, sync::Weak},
 };
 
 use crate::{
@@ -318,32 +318,34 @@ impl StreamEndpoint {
     }
 
     /// Take the media stream, which transmits (or receives) any media for this StreamEndpoint.
-    /// Panics if the media stream is already taken, or if the stream is not open.
-    pub fn take_transport(&mut self) -> MediaStream {
-        let mut lock = self.stream_held.lock();
-        assert!(!*lock && self.transport.is_some(), "Media stream has already been taken.");
-
-        *lock = true;
-
-        MediaStream {
-            lock: self.stream_held.clone(),
-            stream: Arc::downgrade(self.transport.as_ref().unwrap()),
+    /// Returns a InvalidState error if the transport stream has already been taken, or if this
+    /// stream has not been successfully opened.
+    pub fn take_transport(&mut self) -> Result<MediaStream> {
+        let mut stream_held = self.stream_held.lock();
+        if *stream_held || self.transport.is_none() {
+            return Err(Error::InvalidState);
         }
+
+        *stream_held = true;
+
+        Ok(MediaStream {
+            in_use: self.stream_held.clone(),
+            stream: Arc::downgrade(self.transport.as_ref().unwrap()),
+        })
     }
 }
 
-/// Represents the stream of media.
-/// Currently just a weak pointer to the transport socket.
-/// TODO(jamuraa): parse transport sockets, make this into a real asynchronous socket that
-/// produces and/or takes media frames.
+/// Represents a media transport stream.
+/// If a sink, produces the bytes that have been delivered from the peer.
+/// If a source, can send bytes using `send`
 pub struct MediaStream {
-    lock: Arc<Mutex<bool>>,
+    in_use: Arc<Mutex<bool>>,
     stream: Weak<fasync::Socket>,
 }
 
 impl Drop for MediaStream {
     fn drop(&mut self) {
-        let mut l = self.lock.lock();
+        let mut l = self.in_use.lock();
         *l = false;
     }
 }
@@ -365,6 +367,47 @@ impl Stream for MediaStream {
     }
 }
 
+impl MediaStream {
+    fn try_upgrade(&self) -> std::result::Result<Arc<fasync::Socket>, io::Error> {
+        self.stream
+            .upgrade()
+            .ok_or(io::Error::new(io::ErrorKind::ConnectionAborted, "lost connection"))
+    }
+}
+
+impl io::AsyncWrite for MediaStream {
+    fn poll_write(
+        self: Pin<&mut Self>,
+        cx: &mut Context,
+        buf: &[u8],
+    ) -> Poll<std::result::Result<usize, io::Error>> {
+        match self.try_upgrade() {
+            Err(e) => return Poll::Ready(Err(e)),
+            Ok(s) => Pin::new(&mut s.deref()).as_mut().poll_write(cx, buf),
+        }
+    }
+
+    fn poll_flush(
+        self: Pin<&mut Self>,
+        cx: &mut Context,
+    ) -> Poll<std::result::Result<(), io::Error>> {
+        match self.try_upgrade() {
+            Err(e) => return Poll::Ready(Err(e)),
+            Ok(s) => Pin::new(&mut s.deref()).as_mut().poll_flush(cx),
+        }
+    }
+
+    fn poll_close(
+        self: Pin<&mut Self>,
+        cx: &mut Context,
+    ) -> Poll<std::result::Result<(), io::Error>> {
+        match self.try_upgrade() {
+            Err(e) => return Poll::Ready(Err(e)),
+            Ok(s) => Pin::new(&mut s.deref()).as_mut().poll_close(cx),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -375,7 +418,9 @@ mod tests {
     };
 
     use fuchsia_zircon as zx;
+    use futures::io::AsyncWriteExt;
     use futures::stream::StreamExt;
+    use matches::assert_matches;
 
     const REMOTE_ID_VAL: u8 = 1;
     const REMOTE_ID: StreamEndpointId = StreamEndpointId(REMOTE_ID_VAL);
@@ -566,6 +611,7 @@ mod tests {
         assert_eq!(Ok(()), s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]));
 
         let remote_transport = establish_stream(&mut s);
+
         let (peer, signaling, responder) = setup_peer_for_release(&mut exec);
 
         let mut release_fut = Box::pin(s.release(responder, &peer));
@@ -582,6 +628,67 @@ mod tests {
 
         // After the transport is closed the release future should be complete.
         assert_eq!(Poll::Ready(Ok(())), exec.run_until_stalled(&mut release_fut));
+    }
+
+    #[test]
+    fn test_mediastream() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut s = StreamEndpoint::new(
+            REMOTE_ID_VAL,
+            MediaType::Audio,
+            EndpointType::Sink,
+            vec![ServiceCapability::MediaTransport],
+        )
+        .unwrap();
+
+        assert_eq!(Ok(()), s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]));
+
+        // Before the stream is opened, we shouldn't be able to take the transport.
+        assert!(s.take_transport().is_err());
+
+        let remote_transport = establish_stream(&mut s);
+
+        // Should be able to get the transport from the stream now.
+        let temp_stream = s.take_transport();
+        assert!(temp_stream.is_ok());
+
+        // But only once
+        assert!(s.take_transport().is_err());
+
+        // Until you drop the stream
+        drop(temp_stream);
+
+        let media_stream = s.take_transport();
+        assert!(media_stream.is_ok());
+        let mut media_stream = media_stream.unwrap();
+
+        // Writing to the media stream should send it through the transport channel.
+        let hearts = &[0xF0, 0x9F, 0x92, 0x96, 0xF0, 0x9F, 0x92, 0x96];
+        let mut write_fut = media_stream.write(hearts);
+
+        assert_matches!(exec.run_until_stalled(&mut write_fut), Poll::Ready(Ok(8)));
+
+        expect_remote_recv(hearts, &remote_transport);
+
+        // Closing the media stream should close the socket.
+        let mut close_fut = media_stream.close();
+        assert_matches!(exec.run_until_stalled(&mut close_fut), Poll::Ready(Ok(())));
+        // Note: there's no effect on the other end of the socket when a close occurs,
+        // until the socket is dropped.
+
+        drop(s);
+
+        // Reading from the remote end should fail.
+        let mut result = vec![0];
+        assert_matches!(remote_transport.read(&mut result[..]), Err(zx::Status::PEER_CLOSED));
+
+        // After the stream is gone, any write should return an Err
+        let mut write_fut = media_stream.write(&[0xDE, 0xAD]);
+        assert_matches!(exec.run_until_stalled(&mut write_fut), Poll::Ready(Err(_)));
+
+        // After the stream is gone, the stream should be fused done.
+        let mut next_fut = media_stream.next();
+        assert_matches!(exec.run_until_stalled(&mut next_fut), Poll::Ready(None));
     }
 
     #[test]

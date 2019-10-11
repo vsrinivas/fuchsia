@@ -128,17 +128,17 @@ impl Stream {
     }
 
     /// Attempt to start the media decoding task.
-    fn start(&mut self, inspect: StreamingInspectData) -> Result<(), avdtp::ErrorCode> {
+    fn start(&mut self, inspect: StreamingInspectData) -> avdtp::Result<()> {
         let start_res = self.endpoint.start();
         if start_res.is_err() || self.suspend_sender.is_some() {
             fx_log_info!("Start when streaming: {:?} {:?}", start_res, self.suspend_sender);
-            return Err(avdtp::ErrorCode::BadState);
+            return Err(avdtp::Error::InvalidState);
         }
         let (send, receive) = mpsc::channel(1);
         self.suspend_sender = Some(send);
 
         fuchsia_async::spawn_local(decode_media_stream(
-            self.endpoint.take_transport(),
+            self.endpoint.take_transport()?,
             self.encoding.clone(),
             receive,
             inspect,
@@ -147,15 +147,10 @@ impl Stream {
     }
 
     /// Signals to the media decoding task to end.
-    fn stop(&mut self) -> Result<(), avdtp::ErrorCode> {
-        if let Err(e) = self.endpoint.suspend() {
-            fx_log_info!("Stop when not streaming: {}", e);
-            return Err(avdtp::ErrorCode::BadState);
-        }
-        match self.suspend_sender.take() {
-            None => Err(avdtp::ErrorCode::BadState),
-            Some(mut sender) => sender.try_send(()).or(Err(avdtp::ErrorCode::BadState)),
-        }
+    fn stop(&mut self) -> avdtp::Result<()> {
+        self.endpoint.suspend()?;
+        let mut sender = self.suspend_sender.take().ok_or(avdtp::Error::InvalidState)?;
+        sender.try_send(()).or(Err(avdtp::Error::InvalidState))
     }
 
     /// Pass update callback to StreamEndpoint that will be called anytime a `StreamEndpoint` is
@@ -347,7 +342,6 @@ struct RemotePeer {
     opening: Option<avdtp::StreamEndpointId>,
     /// The stream endpoint collection for this peer.
     streams: Streams,
-
     /// The inspect data for this peer.
     inspect: RemotePeerInspect,
 }
@@ -516,7 +510,7 @@ impl RemotePeer {
                     let inspect = &mut self.inspect;
                     let res = self.streams.get_mut(&seid).and_then(|stream| {
                         let inspect = inspect.create_streaming_inspect_data(&seid);
-                        stream.start(inspect)
+                        stream.start(inspect).or(Err(avdtp::ErrorCode::BadState))
                     });
                     if let Err(code) = res {
                         return responder.reject(&seid, code);
@@ -526,7 +520,11 @@ impl RemotePeer {
             }
             avdtp::Request::Suspend { responder, stream_ids } => {
                 for seid in stream_ids {
-                    if let Err(code) = self.streams.get_mut(&seid).and_then(|x| x.stop()) {
+                    let res = self
+                        .streams
+                        .get_mut(&seid)
+                        .and_then(|x| x.stop().or(Err(avdtp::ErrorCode::BadState)));
+                    if let Err(code) = res {
                         return responder.reject(&seid, code);
                     }
                 }
@@ -539,7 +537,10 @@ impl RemotePeer {
                 };
                 stream.abort(None).await?;
                 self.opening = self.opening.take().filter(|id| id != &stream_id);
-                let _ = self.streams.get_mut(&stream_id).and_then(|x| x.stop());
+                let _ = self
+                    .streams
+                    .get_mut(&stream_id)
+                    .and_then(|x| x.stop().or(Err(avdtp::ErrorCode::BadState)));
                 responder.send()
             }
         }
