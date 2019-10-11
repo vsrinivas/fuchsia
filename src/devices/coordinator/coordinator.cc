@@ -72,7 +72,9 @@ void vfs_exit(const zx::event& fshost_event) {
     printf("devcoordinator: Failed to signal VFS exit\n");
     return;
   }
-  if ((status = fshost_event.wait_one(FSHOST_SIGNAL_EXIT_DONE, zx::deadline_after(zx::sec(60)),
+  // We used to wait here with a 60 seconds timeout but the storage stack might
+  // need more time to flush all the writeback buffers. See bug 38103 for details.
+  if ((status = fshost_event.wait_one(FSHOST_SIGNAL_EXIT_DONE, zx::time::infinite(),
                                       nullptr)) != ZX_OK) {
     printf("devcoordinator: Failed to wait for VFS exit completion\n");
     return;
