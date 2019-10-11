@@ -997,10 +997,16 @@ template("executable") {
       _target_type = invoker._target_type
     }
 
-    # Explicitly forward visibility, implicitly forward everything else.
+    # Explicitly forward visibility, implicitly forward everything else
+    # (except metadata, handled below).
     # See comment in template("shared_library") above for details.
     forward_variables_from(invoker, [ "visibility" ])
-    forward_variables_from(invoker, "*", [ "visibility" ])
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "metadata",
+                             "visibility",
+                           ])
 
     if (!defined(output_dir)) {
       output_dir = root_out_dir
@@ -1062,10 +1068,17 @@ template("loadable_module") {
       _target_type = invoker._target_type
     }
 
-    # Explicitly forward visibility, implicitly forward everything else.
+
+    # Explicitly forward visibility, implicitly forward everything else
+    # (except metadata, handled below).
     # See comment in template("shared_library") above for details.
     forward_variables_from(invoker, [ "visibility" ])
-    forward_variables_from(invoker, "*", [ "visibility" ])
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "metadata",
+                             "visibility",
+                           ])
 
     if (!defined(output_dir)) {
       output_dir = root_out_dir
