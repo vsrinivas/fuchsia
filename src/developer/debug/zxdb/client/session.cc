@@ -788,6 +788,14 @@ void Session::AddObserver(SessionObserver* observer) { observers_.AddObserver(ob
 
 void Session::RemoveObserver(SessionObserver* observer) { observers_.RemoveObserver(observer); }
 
+void Session::AddBreakpointObserver(BreakpointObserver* observer) {
+  breakpoint_observers_.AddObserver(observer);
+}
+
+void Session::RemoveBreakpointObserver(BreakpointObserver* observer) {
+  breakpoint_observers_.RemoveObserver(observer);
+}
+
 void Session::AddFilterObserver(FilterObserver* observer) {
   filter_observers_.AddObserver(observer);
 }

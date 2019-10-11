@@ -12,6 +12,7 @@
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/breakpoint_location_impl.h"
+#include "src/developer/debug/zxdb/client/breakpoint_observer.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -77,8 +78,8 @@ struct BreakpointImpl::ProcessRecord {
     return false;
   }
 
-  // Helper to add a list of locations to the locs array. Returns true if
-  // anything was added (this makes the call site cleaner).
+  // Helper to add a list of locations to the locs array. Returns true if anything was added (this
+  // makes the call site cleaner).
   bool AddLocations(BreakpointImpl* bp, Process* process, const std::vector<Location>& locations) {
     for (const auto& loc : locations) {
       locs.emplace(std::piecewise_construct, std::forward_as_tuple(loc.address()),
@@ -131,16 +132,31 @@ void BreakpointImpl::SetSettings(const BreakpointSettings& settings,
 
   settings_ = settings;
 
+  bool changed = false;
   for (Target* target : session()->system().GetTargets()) {
     Process* process = target->GetProcess();
     if (process && CouldApplyToProcess(process))
-      RegisterProcess(process);
+      changed |= RegisterProcess(process);
   }
 
   SyncBackend(std::move(callback));
+
+  if (changed) {
+    for (auto& observer : session()->breakpoint_observers())
+      observer.OnBreakpointMatched(this, true);
+  }
 }
 
 bool BreakpointImpl::IsInternal() const { return is_internal_; }
+
+std::vector<const BreakpointLocation*> BreakpointImpl::GetLocations() const {
+  std::vector<const BreakpointLocation*> result;
+  for (auto& proc : procs_) {
+    for (auto& pair : proc.second.locs)
+      result.push_back(&pair.second);
+  }
+  return result;
+}
 
 std::vector<BreakpointLocation*> BreakpointImpl::GetLocations() {
   std::vector<BreakpointLocation*> result;
@@ -157,10 +173,9 @@ void BreakpointImpl::BackendBreakpointRemoved() { backend_installed_ = false; }
 
 void BreakpointImpl::WillDestroyThread(Process* process, Thread* thread) {
   if (settings_.scope_thread == thread) {
-    // When the thread is destroyed that the breakpoint is associated with,
-    // disable the breakpoint and convert to a target-scoped breakpoint. This
-    // will preserve its state without us having to maintain some "defunct
-    // thread" association. The user can associate it with a new thread and
+    // When the thread is destroyed that the breakpoint is associated with, disable the breakpoint
+    // and convert to a target-scoped breakpoint. This will preserve its state without us having to
+    // maintain some "defunct thread" association. The user can associate it with a new thread and
     // re-enable as desired.
     settings_.scope = BreakpointSettings::Scope::kTarget;
     settings_.scope_target = process->GetTarget();
@@ -182,19 +197,23 @@ void BreakpointImpl::DidLoadModuleSymbols(Process* process, LoadedModuleSymbols*
         procs_[process].AddLocations(this, process, module->ResolveInputLocation(loc, options));
   }
 
-  if (needs_sync)
+  if (needs_sync) {
     SyncBackend();
+
+    for (auto& observer : session()->breakpoint_observers())
+      observer.OnBreakpointMatched(this, false);
+  }
 }
 
 void BreakpointImpl::WillUnloadModuleSymbols(Process* process, LoadedModuleSymbols* module) {
-  // TODO(brettw) need to get the address range of this module and then
-  // remove all breakpoints in that range.
+  // TODO(brettw) need to get the address range of this module and then remove all breakpoints in
+  // that range.
 }
 
 void BreakpointImpl::WillDestroyTarget(Target* target) {
   if (target == settings_.scope_target) {
-    // As with threads going away, when the target goes away for a
-    // target-scoped breakpoint, convert to a disabled system-wide breakpoint.
+    // As with threads going away, when the target goes away for a target-scoped breakpoint, convert
+    // to a disabled system-wide breakpoint.
     settings_.scope = BreakpointSettings::Scope::kSystem;
     settings_.scope_target = nullptr;
     settings_.scope_thread = nullptr;
@@ -204,8 +223,12 @@ void BreakpointImpl::WillDestroyTarget(Target* target) {
 
 void BreakpointImpl::GlobalDidCreateProcess(Process* process) {
   if (CouldApplyToProcess(process)) {
-    if (RegisterProcess(process))
+    if (RegisterProcess(process)) {
       SyncBackend();
+
+      for (auto& observer : session()->breakpoint_observers())
+        observer.OnBreakpointMatched(this, false);
+    }
   }
 }
 
@@ -217,8 +240,7 @@ void BreakpointImpl::GlobalWillDestroyProcess(Process* process) {
   if (found->second.observing)
     process->RemoveObserver(this);
 
-  // Only need to update the backend if there was an enabled address associated
-  // with this process.
+  // Only need to update the backend if there was an enabled address associated with this process.
   bool send_update = found->second.HasEnabledLocation();
 
   // When the process exits, disable breakpoints that are entirely address-based since the addresses
@@ -279,9 +301,8 @@ void BreakpointImpl::SendBackendAddOrChange(fit::callback<void(const Err&)> call
         case debug_ipc::BreakpointType::kHardware:
           addition.address = pair.second.address();
           break;
-        // TODO(donosoc): This should receive a range within input location,
-        //                but x64 doesn't allow big ranges so this works as a
-        //                first pass.
+        // TODO(donosoc): This should receive a range within input location, but x64 doesn't allow
+        // big ranges so this works as a first pass.
         case debug_ipc::BreakpointType::kWatchpoint: {
           uint64_t address = pair.second.address();
           addition.address_range = {address, address};
@@ -298,13 +319,11 @@ void BreakpointImpl::SendBackendAddOrChange(fit::callback<void(const Err&)> call
   session()->remote_api()->AddOrChangeBreakpoint(
       request, [callback = std::move(callback), breakpoint = impl_weak_factory_.GetWeakPtr()](
                    const Err& err, debug_ipc::AddOrChangeBreakpointReply reply) mutable {
-        // Be sure to issue the callback even if the breakpoint no longer
-        // exists.
+        // Be sure to issue the callback even if the breakpoint no longer exists.
         if (err.has_error()) {
-          // Transport error. We don't actually know what state the agent is in
-          // since it never got the message. In general this means things were
-          // disconnected and the agent no longer exists, so mark the breakpoint
-          // disabled.
+          // Transport error. We don't actually know what state the agent is in since it never got
+          // the message. In general this means things were disconnected and the agent no longer
+          // exists, so mark the breakpoint disabled.
           if (breakpoint) {
             breakpoint->settings_.enabled = false;
             breakpoint->backend_installed_ = false;
@@ -312,11 +331,9 @@ void BreakpointImpl::SendBackendAddOrChange(fit::callback<void(const Err&)> call
           if (callback)
             callback(err);
         } else if (reply.status != 0) {
-          // Backend error. The protocol specifies that errors adding or
-          // changing will result in any existing breakpoints with that ID
-          // being removed. So mark the breakpoint disabled but keep the
-          // settings to the user can fix the problem from the current state if
-          // desired.
+          // Backend error. The protocol specifies that errors adding or changing will result in any
+          // existing breakpoints with that ID being removed. So mark the breakpoint disabled but
+          // keep the settings to the user can fix the problem from the current state if desired.
           if (breakpoint) {
             breakpoint->settings_.enabled = false;
             breakpoint->backend_installed_ = false;
@@ -328,6 +345,10 @@ void BreakpointImpl::SendBackendAddOrChange(fit::callback<void(const Err&)> call
               ss << std::endl
                  << "Is this a hardware breakpoint? Check \"sys-info\" to "
                     "verify the amount available within the system.";
+            } else if (reply.status == debug_ipc::kZxErrNotSupported) {
+              ss << std::endl
+                 << "This kernel command-line flag \"kernel.enable-debugging-syscalls\" is\n"
+                    "likely not set.";
             }
             callback(Err(ss.str()));
           }
@@ -382,7 +403,7 @@ bool BreakpointImpl::RegisterProcess(Process* process) {
 
   // Clear existing locations for this process.
   ProcessRecord& record = procs_[process];
-  bool changed = record.locs.empty();
+  bool changed = !record.locs.empty();
   record.locs.clear();
 
   // Resolve addresses.

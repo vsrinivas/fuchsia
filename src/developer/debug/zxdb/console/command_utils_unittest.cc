@@ -9,8 +9,12 @@
 #include <limits>
 
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/client/mock_breakpoint.h"
+#include "src/developer/debug/zxdb/client/mock_breakpoint_location.h"
+#include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/command.h"
+#include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
@@ -227,6 +231,43 @@ TEST(CommandUtils, FormatLocation) {
   EXPECT_EQ("0x1234, Func() • /path/foo.cc:21",
             FormatLocation(nullptr, loc, true, false).AsString());
   EXPECT_EQ("Func() • /path/foo.cc:21", FormatLocation(nullptr, loc, false, false).AsString());
+}
+
+TEST(CommandUtils, FormatBreakpoint) {
+  Session session;
+  ConsoleContext context(&session);
+  MockBreakpoint breakpoint(&session);
+
+  // Register with the context.
+  SystemObserver* system_observer = &context;
+  system_observer->DidCreateBreakpoint(&breakpoint);
+
+  // Formatting an empty breakpoint
+  EXPECT_EQ("Breakpoint 1 (Software) on Global, Enabled, Stop All, 0 addrs @ <no location>",
+            FormatBreakpoint(&context, &breakpoint).AsString());
+
+  // Provide settings.
+  BreakpointSettings settings;
+  settings.locations.push_back(InputLocation(FileLine("foo.cc", 21)));
+  breakpoint.set_settings(settings);
+
+  // Provide matched location. The formatting doesn't use the Process so we provide a null one.
+  std::vector<std::unique_ptr<BreakpointLocation>> locs;
+  locs.push_back(std::make_unique<MockBreakpointLocation>(nullptr));
+  breakpoint.set_locations(std::move(locs));
+
+  EXPECT_EQ("Breakpoint 1 (Software) on Global, Enabled, Stop All, 1 addr @ foo.cc:21",
+            FormatBreakpoint(&context, &breakpoint).AsString());
+
+  // Provide 2 matched locations
+  locs.push_back(std::make_unique<MockBreakpointLocation>(nullptr));
+  locs.push_back(std::make_unique<MockBreakpointLocation>(nullptr));
+  breakpoint.set_locations(std::move(locs));
+
+  EXPECT_EQ("Breakpoint 1 (Software) on Global, Enabled, Stop All, 2 addrs @ foo.cc:21",
+            FormatBreakpoint(&context, &breakpoint).AsString());
+
+  system_observer->WillDestroyBreakpoint(&breakpoint);
 }
 
 TEST(CommandUtils, DescribeFileLine) {

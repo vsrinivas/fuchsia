@@ -27,6 +27,7 @@ class StreamBuffer;
 namespace zxdb {
 
 class ArchInfo;
+class BreakpointObserver;
 class ProcessImpl;
 class RemoteAPI;
 class RemoteAPIImpl;
@@ -56,6 +57,9 @@ class Session : public SettingStoreObserver {
 
   void AddObserver(SessionObserver* observer);
   void RemoveObserver(SessionObserver* observer);
+
+  void AddBreakpointObserver(BreakpointObserver* observer);
+  void RemoveBreakpointObserver(BreakpointObserver* observer);
 
   void AddFilterObserver(FilterObserver* observer);
   void RemoveFilterObserver(FilterObserver* observer);
@@ -122,10 +126,9 @@ class Session : public SettingStoreObserver {
   // connected.
   const ArchInfo* arch_info() const { return arch_info_.get(); }
 
-  // Get the list of filter observers.
+  // Observer list getters.
+  fxl::ObserverList<BreakpointObserver>& breakpoint_observers() { return breakpoint_observers_; }
   fxl::ObserverList<FilterObserver>& filter_observers() { return filter_observers_; }
-
-  // Get the list of filter observers.
   fxl::ObserverList<DownloadObserver>& download_observers() { return download_observers_; }
 
   // When the client tells the agent to launch a component, it will return an
@@ -211,10 +214,9 @@ class Session : public SettingStoreObserver {
   // stuff obsolete.
   bool is_minidump_ = false;
 
-  // Observers for filter changes within this session.
+  // Observers.
+  fxl::ObserverList<BreakpointObserver> breakpoint_observers_;
   fxl::ObserverList<FilterObserver> filter_observers_;
-  //
-  // Observers for download activity.
   fxl::ObserverList<DownloadObserver> download_observers_;
 
   // Non-owning pointer to the connected stream. If this is non-null and

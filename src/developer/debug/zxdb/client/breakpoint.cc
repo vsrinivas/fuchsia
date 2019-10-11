@@ -9,12 +9,6 @@ namespace zxdb {
 Breakpoint::Breakpoint(Session* session) : ClientObject(session), weak_factory_(this) {}
 Breakpoint::~Breakpoint() {}
 
-void Breakpoint::AddObserver(BreakpointObserver* observer) { observers_.AddObserver(observer); }
-
-void Breakpoint::RemoveObserver(BreakpointObserver* observer) {
-  observers_.RemoveObserver(observer);
-}
-
 fxl::WeakPtr<Breakpoint> Breakpoint::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 }  // namespace zxdb

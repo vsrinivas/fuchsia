@@ -154,6 +154,9 @@ static_library("client") {
 source_set("test_support") {
   testonly = true
   sources = [
+    "mock_breakpoint.cc",
+    "mock_breakpoint.h",
+    "mock_breakpoint_location.h",
     "mock_frame.cc",
     "mock_frame.h",
     "mock_process.cc",

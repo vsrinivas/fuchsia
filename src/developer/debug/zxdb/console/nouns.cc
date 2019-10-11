@@ -552,16 +552,18 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
       row.emplace_back();
 
     BreakpointSettings settings = pair.second->GetSettings();
+    auto matched_locs = pair.second->GetLocations();
 
     row.push_back(OutputBuffer(Syntax::kSpecial, fxl::StringPrintf("%d", pair.first)));
     row.emplace_back(BreakpointScopeToString(context, settings));
     row.emplace_back(BreakpointStopToString(settings.stop_mode));
     row.emplace_back(BreakpointEnabledToString(settings.enabled));
     row.emplace_back(BreakpointTypeToString(settings.type));
+    row.emplace_back(fxl::StringPrintf("%zu", matched_locs.size()));
     row.push_back(FormatInputLocations(settings.locations));
 
     if (include_locations) {
-      for (const auto& loc : pair.second->GetLocations()) {
+      for (const auto& loc : matched_locs) {
         std::vector<OutputBuffer>& loc_row = rows.emplace_back();
 
         loc_row.resize(2);  // Empty columns.
@@ -579,7 +581,7 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
   FormatTable({ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
                ColSpec(Align::kLeft, 0, "Scope"), ColSpec(Align::kLeft, 0, "Stop"),
                ColSpec(Align::kLeft, 0, "Enabled"), ColSpec(Align::kLeft, 0, "Type"),
-               ColSpec(Align::kLeft, 0, "Location")},
+               ColSpec(Align::kRight, 0, "# Addrs"), ColSpec(Align::kLeft, 0, "Location")},
               rows, &out);
   Console::get()->Output(out);
 }

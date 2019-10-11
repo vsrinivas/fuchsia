@@ -32,8 +32,8 @@ TEST_F(NounsTest, BreakpointList) {
 
   // Create a breakpoint with no settings.
   const char kExpectedNoSettings[] =
-      R"( # Scope  Stop Enabled Type     Location
- 1 Global All  Enabled Software <no location>
+      R"( # Scope  Stop Enabled Type     # Addrs Location
+ 1 Global All  Enabled Software       0 <no location>
 )";
   Breakpoint* bp = session().system().CreateNewBreakpoint();
   console.ProcessInputLine(kListBreakpointsLine);
@@ -60,8 +60,8 @@ TEST_F(NounsTest, BreakpointList) {
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ(
-      R"( # Scope  Stop Enabled  Type     Location
- 1 Global All  Disabled Software Foo
+      R"( # Scope  Stop Enabled  Type     # Addrs Location
+ 1 Global All  Disabled Software       0 Foo
 )",
       event.output.AsString());
 

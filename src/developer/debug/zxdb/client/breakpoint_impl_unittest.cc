@@ -8,6 +8,7 @@
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
+#include "src/developer/debug/zxdb/client/breakpoint_observer.h"
 #include "src/developer/debug/zxdb/client/process_impl.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -86,10 +87,37 @@ class BreakpointImplTest : public RemoteAPITest {
   BreakpointSink* sink_;  // Owned by the session.
 };
 
+class BreakpointObserverSink : public BreakpointObserver {
+ public:
+  // The Session must outlive this object.
+  explicit BreakpointObserverSink(Session* session) : session_(session) {
+    session->AddBreakpointObserver(this);
+  }
+  ~BreakpointObserverSink() { session_->RemoveBreakpointObserver(this); }
+
+  void OnBreakpointMatched(Breakpoint* breakpoint, bool user_requested) override {
+    notification_count++;
+    last_breakpoint = breakpoint;
+    last_user_requested = user_requested;
+  }
+
+  int notification_count = 0;
+
+  // Parameters of last notification.
+  Breakpoint* last_breakpoint = nullptr;
+  bool last_user_requested = false;
+
+ private:
+  Session* session_;
+};
+
 }  // namespace
 
 TEST_F(BreakpointImplTest, DynamicLoading) {
+  BreakpointObserverSink observer_sink(&session());
+
   BreakpointImpl bp(&session(), false);
+  EXPECT_EQ(0, observer_sink.notification_count);
 
   ProcessSymbolsTestSetup setup;
   auto module_symbols1 = fxl::MakeRefCounted<MockModuleSymbols>("myfile1.so");
@@ -111,12 +139,14 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   // Setting the disabled settings shouldn't update the backend.
   Err err = SyncSetSettings(bp, in);
   EXPECT_FALSE(err.has_error());
+  EXPECT_EQ(0, observer_sink.notification_count);  // No calls because it matched no places.
   ASSERT_TRUE(sink().adds.empty());
 
   // Setting enabled settings with no processes should not update the backend.
   in.enabled = true;
   err = SyncSetSettings(bp, in);
   EXPECT_FALSE(err.has_error());
+  EXPECT_EQ(0, observer_sink.notification_count);
   ASSERT_TRUE(sink().adds.empty());
 
   TargetImpl* target = session().system_impl().GetTargetImpls()[0];
@@ -189,6 +219,12 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   modules.push_back(load2);
   target->process()->OnModules(modules, std::vector<uint64_t>());
   ASSERT_TRUE(sink().adds.empty());
+
+  // Should have sent a notification. It should not be marked user-requested since this was a
+  // result of loading a new process.
+  EXPECT_EQ(1, observer_sink.notification_count);
+  EXPECT_EQ(&bp, observer_sink.last_breakpoint);
+  EXPECT_EQ(false, observer_sink.last_user_requested);
 
   // Disabling should send the delete message.
   ASSERT_TRUE(sink().removes.empty());  // Should have none so far.

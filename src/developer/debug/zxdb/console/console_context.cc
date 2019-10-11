@@ -31,6 +31,7 @@ namespace zxdb {
 ConsoleContext::ConsoleContext(Session* session) : session_(session) {
   session->AddObserver(this);
   session->AddDownloadObserver(this);
+  session->AddBreakpointObserver(this);
   session->system().AddObserver(this);
 
   // Pick up any previously created targets. This will normally just be the
@@ -48,6 +49,7 @@ ConsoleContext::ConsoleContext(Session* session) : session_(session) {
 ConsoleContext::~ConsoleContext() {
   // Unregister for all observers.
   session_->system().RemoveObserver(this);
+  session_->RemoveBreakpointObserver(this);
 
   for (auto& target_pair : id_to_target_) {
     target_pair.second.target->RemoveObserver(this);
@@ -720,6 +722,21 @@ void ConsoleContext::OnDownloadsStarted() { Console::get()->Output("Downloading 
 void ConsoleContext::OnDownloadsStopped(size_t success, size_t fail) {
   Console::get()->Output(
       fxl::StringPrintf("Symbol downloading complete. %zu succeeded, %zu failed.", success, fail));
+}
+
+void ConsoleContext::OnBreakpointMatched(Breakpoint* breakpoint, bool user_requested) {
+  if (user_requested)
+    return;  // Don't need to notify for user-requested changes.
+
+  BreakpointSettings settings = breakpoint->GetSettings();
+  size_t matched_locs = breakpoint->GetLocations().size();
+
+  OutputBuffer out("Breakpoint ");
+  out.Append(Syntax::kSpecial, fxl::StringPrintf("%d", IdForBreakpoint(breakpoint)));
+  out.Append(fxl::StringPrintf(" now matching %zu addrs for ", matched_locs));
+  out.Append(FormatInputLocations(settings.locations));
+
+  Console::get()->Output(out);
 }
 
 ConsoleContext::TargetRecord* ConsoleContext::GetTargetRecord(int target_id) {

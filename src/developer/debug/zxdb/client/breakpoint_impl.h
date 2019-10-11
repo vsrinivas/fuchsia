@@ -45,6 +45,7 @@ class BreakpointImpl : public Breakpoint, public ProcessObserver, public SystemO
   void SetSettings(const BreakpointSettings& settings,
                    fit::callback<void(const Err&)> callback) override;
   bool IsInternal() const override;
+  std::vector<const BreakpointLocation*> GetLocations() const override;
   std::vector<BreakpointLocation*> GetLocations() override;
 
   // Called whenever new stats are available from the debug agent.

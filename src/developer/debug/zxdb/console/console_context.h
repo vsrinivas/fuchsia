@@ -175,6 +175,9 @@ class ConsoleContext : public ProcessObserver,
   void OnDownloadsStarted() override;
   void OnDownloadsStopped(size_t success, size_t fail) override;
 
+  // BreakpointObserver implementation.
+  void OnBreakpointMatched(Breakpoint* breakpoint, bool user_requested) override;
+
   // Returns the record for the given target, or null (+ assertion) if not
   // found. These pointers are not stable across target list changes.
   TargetRecord* GetTargetRecord(int target_id);

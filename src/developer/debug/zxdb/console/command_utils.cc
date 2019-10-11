@@ -263,10 +263,13 @@ OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* b
   const char* type = BreakpointTypeToString(settings.type);
   OutputBuffer location = FormatInputLocations(settings.locations);
 
+  size_t matched_locs = breakpoint->GetLocations().size();
+  const char* locations_str = matched_locs == 1 ? "addr" : "addrs";
+
   OutputBuffer result("Breakpoint ");
   result.Append(Syntax::kSpecial, fxl::StringPrintf("%d", context->IdForBreakpoint(breakpoint)));
-  result.Append(fxl::StringPrintf(" (%s) on %s, %s, stop=%s, @ ", type, scope.c_str(), enabled,
-                                  stop.c_str()));
+  result.Append(fxl::StringPrintf(" (%s) on %s, %s, Stop %s, %zu %s @ ", type, scope.c_str(),
+                                  enabled, stop.c_str(), matched_locs, locations_str));
 
   result.Append(std::move(location));
   return result;
