@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    blackout_target::{generate_content, generate_name, CommonCommand, CommonOpts},
+    blackout_target::{
+        static_tree::{DirectoryEntry, EntryDistribution},
+        CommonCommand, CommonOpts,
+    },
     failure::{Error, ResultExt},
     fs_management::{Filesystem, Minfs},
-    std::{
-        fs::File,
-        io::{Read, Write},
-    },
+    rand::{rngs::StdRng, Rng, SeedableRng},
     structopt::StructOpt,
 };
 
@@ -37,25 +37,16 @@ fn test(mut minfs: Filesystem<Minfs>, seed: u64) -> Result<(), Error> {
     minfs.mount(&root).context("failed to mount minfs")?;
 
     println!("generating load");
-    // create a file, write some garbage to it, close it, open it, read it, verify random garbage
-    // contents, delete it, rinse, repeat.
+    let mut rng = StdRng::seed_from_u64(seed);
     loop {
-        let contents = generate_content(seed);
-        let file_path = format!("{}/{}", root, generate_name(seed));
-
-        {
-            let mut file = File::create(&file_path)?;
-            file.write_all(&contents)?;
-        }
-
-        {
-            let mut file = File::open(&file_path)?;
-            let mut read_contents = Vec::new();
-            file.read_to_end(&mut read_contents)?;
-            assert_eq!(contents, read_contents);
-        }
-
-        std::fs::remove_file(&file_path)?;
+        println!("generating tree");
+        let dist = EntryDistribution::new(6);
+        let tree: DirectoryEntry = rng.sample(&dist);
+        println!("generated tree: {:?}", tree);
+        println!("writing tree");
+        tree.write_tree(&root).context("failed to write directory tree")?;
+        // it's entirely possible that we generate a tree small enough that we manage to write the
+        // whole thing before the test is stopped. if that happens, write another tree!
     }
 }
 

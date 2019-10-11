@@ -11,6 +11,8 @@ use {
     structopt::StructOpt,
 };
 
+pub mod static_tree;
+
 /// Common options for the target test binary
 #[derive(Debug, StructOpt)]
 #[structopt(rename_all = "kebab-case")]
@@ -35,16 +37,6 @@ pub enum CommonCommand {
     /// Run the verification step.
     #[structopt(name = "verify")]
     Verify,
-}
-
-/// Generate a random file name. It will be 17 characters long, start with an 'a' to confirm it's a
-/// valid file name, and contain random letters and numbers.
-pub fn generate_name(seed: u64) -> String {
-    let mut rng = StdRng::seed_from_u64(seed);
-
-    let mut name = String::from("a");
-    name.push_str(&rng.sample_iter(&distributions::Alphanumeric).take(16).collect::<String>());
-    name
 }
 
 /// Generate a Vec<u8> of random bytes from a seed using a standard distribution.

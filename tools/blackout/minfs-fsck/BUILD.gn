@@ -26,6 +26,7 @@ rustc_binary("minfs-fsck-target-bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//src/storage/fs-management",
     "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:rand",
     "//third_party/rust_crates:structopt",
     "//tools/blackout/blackout-target",
   ]

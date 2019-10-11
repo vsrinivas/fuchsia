@@ -15,5 +15,6 @@ group("tests") {
   public_deps = [
     "blobfs-fsck-soft:tests",
     "//tools/blackout/blackout-host:tests",
+    "//tools/blackout/blackout-target:tests",
   ]
 }
