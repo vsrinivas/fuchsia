@@ -211,4 +211,18 @@ mod test {
             .expect("Unable to render main template");
         assert_eq!(result, source);
     }
+
+    #[test]
+    fn render_enum_declarations_test() {
+        let source = include_str!("testdata/enum_declarations.md");
+        let testdata = include_str!("testdata/enum_declarations.json");
+        let declarations: Value =
+            serde_json::from_str(testdata).expect("Unable to parse enum_declarations.json");
+
+        let template = MarkdownTemplate::new(&PathBuf::new());
+
+        let result = render_template(&template.handlebars, "enums".to_string(), &declarations)
+            .expect("Unable to render enums template");
+        assert_eq!(result, source);
+    }
 }
