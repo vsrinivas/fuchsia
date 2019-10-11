@@ -5,9 +5,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_AP_INFRA_BSS_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_AP_INFRA_BSS_H_
 
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <zircon/types.h>
+
 #include <queue>
 
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/ap/beacon_sender.h>
 #include <wlan/mlme/ap/bss_interface.h>
@@ -17,7 +19,6 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/rust_utils.h>
 #include <wlan/mlme/service.h>
-#include <zircon/types.h>
 
 namespace wlan {
 
@@ -108,6 +109,7 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
 
   const common::MacAddr bssid_;
   DeviceInterface* device_;
+  ApStation rust_ap_;
   fbl::unique_ptr<BeaconSender> bcn_sender_;
   zx_time_t started_at_;
   ClientMap clients_;

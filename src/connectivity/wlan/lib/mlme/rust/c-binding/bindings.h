@@ -16,6 +16,8 @@
 
 #include <ddk/protocol/wlan/info.h>
 
+typedef struct wlan_ap_sta_t wlan_ap_sta_t;
+
 /**
  * A STA running in Client mode.
  * The Client STA is in its early development process and does not yet manage its internal state
@@ -120,6 +122,12 @@ typedef struct {
    */
   void (*cancel)(void *cookie, wlan_scheduler_event_id_t id);
 } wlan_scheduler_ops_t;
+
+extern "C" void ap_sta_delete(wlan_ap_sta_t *sta);
+
+extern "C" wlan_ap_sta_t *ap_sta_new(mlme_device_ops_t device,
+                                     mlme_buffer_provider_ops_t buf_provider,
+                                     const uint8_t (*bssid)[6]);
 
 extern "C" void client_sta_delete(wlan_client_sta_t *sta);
 

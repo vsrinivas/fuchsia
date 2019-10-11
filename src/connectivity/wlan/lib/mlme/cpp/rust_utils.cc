@@ -18,4 +18,9 @@ ClientStation NewClientStation(mlme_device_ops_t device, mlme_buffer_provider_op
       client_sta_delete);
 }
 
+ApStation NewApStation(mlme_device_ops_t device, mlme_buffer_provider_ops_t buf_provider,
+                       common::MacAddr bssid) {
+  return ApStation(ap_sta_new(device, buf_provider, &bssid.byte), ap_sta_delete);
+}
+
 }  // namespace wlan

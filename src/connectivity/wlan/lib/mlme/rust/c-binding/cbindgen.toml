@@ -24,7 +24,8 @@ include = ["wlan_mlme", "wlan_common"]
 [export]
 # Explicitly declare types to export as cbindgen seems to have trouble
 # detecting their usage.
-include = ["BufferProvider", "Device", "InBuf", "OutBuf", "Client", "Scheduler", "EventId"]
+include = ["Ap", "BufferProvider", "Device", "InBuf", "OutBuf", "Client",
+           "Scheduler", "EventId"]
 
 # Banjo types.
 exclude = ["WlanChannel"]
@@ -33,6 +34,7 @@ exclude = ["WlanChannel"]
 # Unfortunately cbindgen's rename machinery is rather simple
 # and doesn't accomodate our needs. As a result we have to
 # explicitly declare the items which should get renamed
+"Ap" = "wlan_ap_sta_t"
 "BufferProvider" = "mlme_buffer_provider_ops_t"
 "Device" = "mlme_device_ops_t"
 "InBuf" = "mlme_in_buf_t"

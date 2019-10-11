@@ -20,15 +20,43 @@ namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
+#define BSS(b) static_cast<InfraBss*>(b)
 InfraBss::InfraBss(DeviceInterface* device, fbl::unique_ptr<BeaconSender> bcn_sender,
                    const common::MacAddr& bssid, fbl::unique_ptr<Timer> timer)
     : bssid_(bssid),
       device_(device),
+      rust_ap_(nullptr, ap_sta_delete),
       bcn_sender_(std::move(bcn_sender)),
       started_at_(0),
       seq_mgr_(NewSequenceManager()),
       timer_mgr_(std::move(timer)) {
   ZX_DEBUG_ASSERT(bcn_sender_ != nullptr);
+  auto rust_device = mlme_device_ops_t{
+      .device = static_cast<void*>(this),
+      .deliver_eth_frame = [](void* bss, const uint8_t* data, size_t len) -> zx_status_t {
+        return BSS(bss)->device_->DeliverEthernet({data, len});
+      },
+      .send_wlan_frame = [](void* bss, mlme_out_buf_t buf, uint32_t flags) -> zx_status_t {
+        auto pkt = FromRustOutBuf(buf);
+        if (MgmtFrameView<>::CheckType(pkt.get())) {
+          return BSS(bss)->SendMgmtFrame(MgmtFrame<>(std::move(pkt)));
+        }
+        if (DataFrameView<>::CheckType(pkt.get())) {
+          return BSS(bss)->SendDataFrame(DataFrame<>(std::move(pkt)), flags);
+        }
+        return BSS(bss)->device_->SendWlan(std::move(pkt));
+      },
+      .get_sme_channel = [](void* bss) -> zx_handle_t {
+        return BSS(bss)->device_->GetSmeChannelRef();
+      },
+      .set_wlan_channel = [](void* bss, wlan_channel_t chan) -> zx_status_t {
+        return BSS(bss)->device_->SetChannel(chan);
+      },
+      .get_wlan_channel = [](void* bss) -> wlan_channel_t {
+        return BSS(bss)->device_->GetState()->channel();
+      },
+  };
+  rust_ap_ = NewApStation(rust_device, rust_buffer_provider, bssid_);
 }
 
 InfraBss::~InfraBss() {
