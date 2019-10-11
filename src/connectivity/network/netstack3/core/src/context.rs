@@ -163,7 +163,7 @@ pub(crate) trait TimerHandler<Ctx, Id> {
 //   certain kinds of fingerprinting and denial of service attacks.
 
 /// A context that provides a random number generator.
-pub(crate) trait RngContext {
+pub trait RngContext {
     // TODO(joshlf): If the CSPRNG requirement becomes a performance problem,
     // introduce a second, non-cryptographically secure, RNG.
 

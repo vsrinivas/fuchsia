@@ -135,7 +135,7 @@ example of how it can be used for parsing UDP packets.
 [`FromBytes`]: crate::FromBytes
 [`AsBytes`]: crate::AsBytes
 [`Unaligned`]: crate::Unaligned"),
-            #[derive(FromBytes, Unaligned, Default, Copy, Clone, Eq, PartialEq)]
+            #[derive(FromBytes, Unaligned, Default, Copy, Clone, Eq, PartialEq, Hash)]
             #[repr(transparent)]
             pub struct $name<O: ByteOrder>([u8; $bytes], PhantomData<O>);
         }

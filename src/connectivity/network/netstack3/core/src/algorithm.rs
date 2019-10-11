@@ -4,16 +4,19 @@
 
 //! Common algorithms.
 
+pub(crate) use port_alloc::*;
+
 /// Ephemeral port allocation provider.
 ///
 /// Defines the [`PortAlloc`] structure and [`PortAllocImpl`] trait, used for
 /// ephemeral port allocations in transport protocols.
 mod port_alloc {
     use std::hash::Hash;
-    use std::num::NonZeroUsize;
+    use std::num::{NonZeroU16, NonZeroUsize};
     use std::ops::RangeInclusive;
 
     use mundane::{hash::Digest, hmac::HmacSha256};
+    use net_types::{ip::IpAddress, SpecifiedAddr};
     use rand::RngCore;
 
     use byteorder::{ByteOrder, NativeEndian};
@@ -23,6 +26,45 @@ mod port_alloc {
     // use of the PortAlloc algorithm is to allocate `u16` ports, it's just
     // defined as a type alias for simplicity.
     pub(crate) type PortNumber = u16;
+
+    /// A common implementation of `HashableId` providing usual 3-tuple flow
+    /// identifiers.
+    ///
+    /// `ProtocolFlowId` provides the most common 3-tuple needed
+    /// to be used with a [`PortAlloc`] structure: local IP,
+    /// remote IP, and remote port number.
+    #[derive(Hash, Debug)]
+    pub(crate) struct ProtocolFlowId<I: IpAddress> {
+        local_addr: SpecifiedAddr<I>,
+        remote_addr: SpecifiedAddr<I>,
+        remote_port: NonZeroU16,
+    }
+
+    impl<I: IpAddress> ProtocolFlowId<I> {
+        /// Creates a new `ProtocolFlowId` with given parameters.
+        pub(crate) fn new(
+            local_addr: SpecifiedAddr<I>,
+            remote_addr: SpecifiedAddr<I>,
+            remote_port: NonZeroU16,
+        ) -> Self {
+            Self { local_addr, remote_addr, remote_port }
+        }
+
+        /// Gets this `ProtocolFlowId`'s local address.
+        pub(crate) fn local_addr(&self) -> &SpecifiedAddr<I> {
+            &self.local_addr
+        }
+
+        /// Gets this `ProtocolFlowId`'s remote address.
+        pub(crate) fn remote_addr(&self) -> &SpecifiedAddr<I> {
+            &self.remote_addr
+        }
+
+        /// Gets this `ProtocolFlowId`'s remote port number.
+        pub(crate) fn remote_port(&self) -> NonZeroU16 {
+            self.remote_port
+        }
+    }
 
     /// Length, in bytes, of secret numbers used for port allocations.
     const SECRET_LEN: usize = 16;

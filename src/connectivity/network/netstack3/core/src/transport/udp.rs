@@ -13,18 +13,72 @@ use packet::{BufferMut, ParsablePacket, Serializer};
 use specialize_ip_macro::specialize_ip;
 use zerocopy::ByteSlice;
 
-use crate::context::StateContext;
+use crate::algorithm::{PortAlloc, PortAllocImpl, ProtocolFlowId};
+use crate::context::{RngContext, RngContextExt, StateContext};
 use crate::ip::{BufferTransportIpContext, IpPacketFromArgs, IpProto, TransportIpContext};
 use crate::transport::{ConnAddrMap, ListenerAddrMap};
 use crate::wire::udp::{UdpPacket, UdpPacketBuilder, UdpParseArgs};
 use crate::{BufferDispatcher, Context, EventDispatcher};
+use std::num::NonZeroUsize;
+use std::ops::RangeInclusive;
 
 /// The state associated with the UDP protocol.
 #[derive(Default)]
 pub struct UdpState<I: Ip> {
+    conn_state: UdpConnectionState<I>,
+    /// port_aloc is lazy-initialized when it's used
+    lazy_port_alloc: Option<PortAlloc<UdpConnectionState<I>>>,
+}
+
+/// Holder structure that keeps all the connection maps for UDP connections.
+///
+/// `UdpConnectionState` provides a [`PortAllocImpl`] implementation to
+/// allocate unused local ports.
+#[derive(Default)]
+struct UdpConnectionState<I: Ip> {
     conns: ConnAddrMap<Conn<I::Addr>>,
     listeners: ListenerAddrMap<Listener<I::Addr>>,
     wildcard_listeners: ListenerAddrMap<NonZeroU16>,
+}
+
+/// Helper function to allocate a local port.
+///
+/// Attempts to allocate a new unused local port with the given flow identifier
+/// `id`.
+fn try_alloc_local_port<I: Ip, C: UdpContext<I>>(
+    ctx: &mut C,
+    id: &ProtocolFlowId<I::Addr>,
+) -> Option<NonZeroU16> {
+    // TODO(brunodalbo): We're crating a split rng context here because we
+    // don't have a way to access different contexts mutably. We should pass
+    // directly the RngContext defined by the UdpContext once we can do
+    // that.
+    let mut rng = ctx.new_xorshift_rng();
+    let state = ctx.get_state_mut();
+    // lazily init port_alloc if it hasn't been inited yet.
+    let port_alloc = state.lazy_port_alloc.get_or_insert_with(|| PortAlloc::new(&mut rng));
+    port_alloc.try_alloc(&id, &state.conn_state).and_then(NonZeroU16::new)
+}
+
+impl<I: Ip> PortAllocImpl for UdpConnectionState<I> {
+    const TABLE_SIZE: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(20) };
+    const EPHEMERAL_RANGE: RangeInclusive<u16> = 49152..=65535;
+    type Id = ProtocolFlowId<I::Addr>;
+
+    fn is_port_available(&self, id: &Self::Id, port: u16) -> bool {
+        // we can safely unwrap here, because the ports received in
+        // `is_port_available` are guaranteed to be in `EPHEMERAL_RANGE`.
+        let port = NonZeroU16::new(port).unwrap();
+        // check if we have any listeners:
+        // return true if we have no listeners or active connections using the
+        // selected local port:
+        self.listeners.get_by_addr(&Listener { addr: *id.local_addr(), port: port }).is_none()
+            && self.wildcard_listeners.get_by_addr(&port).is_none()
+            && self
+                .conns
+                .get_id_by_addr(&Conn::from_protocol_flow_and_local_port(id, port))
+                .is_none()
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
@@ -52,6 +106,15 @@ impl<A: IpAddress> Conn<A> {
             remote_addr: src_ip,
             remote_port: packet.src_port()?,
         })
+    }
+
+    fn from_protocol_flow_and_local_port(id: &ProtocolFlowId<A>, local_port: NonZeroU16) -> Self {
+        Self {
+            local_addr: *id.local_addr(),
+            local_port,
+            remote_addr: *id.remote_addr(),
+            remote_port: id.remote_port(),
+        }
     }
 }
 
@@ -115,7 +178,10 @@ impl UdpListenerId {
 }
 
 /// An execution context for the UDP protocol.
-pub trait UdpContext<I: Ip>: TransportIpContext<I> + StateContext<UdpState<I>> {}
+pub trait UdpContext<I: Ip>:
+    TransportIpContext<I> + StateContext<UdpState<I>> + RngContext
+{
+}
 
 /// An execution context for the UDP protocol when a buffer is provided.
 ///
@@ -237,16 +303,18 @@ pub(crate) fn receive_ip_packet<A: IpAddress, B: BufferMut, C: BufferUdpContext<
 
     if let Some(conn) = SpecifiedAddr::new(src_ip)
         .and_then(|src_ip| Conn::from_packet(src_ip, dst_ip, &packet))
-        .and_then(|conn| state.conns.get_id_by_addr(&conn))
+        .and_then(|conn| state.conn_state.conns.get_id_by_addr(&conn))
     {
         ctx.receive_udp_from_conn(UdpConnId(conn), packet.body());
         Ok(())
     } else if let Some(listener) = state
+        .conn_state
         .listeners
         .get_by_addr(&Listener::from_packet(dst_ip, &packet))
         .map(UdpListenerId::new_specified)
         .or_else(|| {
             state
+                .conn_state
                 .wildcard_listeners
                 .get_by_addr(&packet.dst_port())
                 .map(UdpListenerId::new_wildcard)
@@ -297,8 +365,11 @@ pub(crate) fn send_udp_conn<I: Ip, B: BufferMut, C: BufferUdpContext<I, B>>(
     body: B,
 ) {
     let state = ctx.get_state();
-    let Conn { local_addr, local_port, remote_addr, remote_port } =
-        *state.conns.get_conn_by_id(conn.0).expect("transport::udp::send_udp_conn: no such conn");
+    let Conn { local_addr, local_port, remote_addr, remote_port } = *state
+        .conn_state
+        .conns
+        .get_conn_by_id(conn.0)
+        .expect("transport::udp::send_udp_conn: no such conn");
 
     ctx.send_frame(
         IpPacketFromArgs::new(local_addr, remote_addr, IpProto::Udp),
@@ -339,7 +410,7 @@ pub(crate) fn send_udp_listener<A: IpAddress, B: BufferMut, C: BufferUdpContext<
 
     let local_port = match listener.listener_type {
         ListenerType::Specified => {
-            state.listeners.get_by_listener(listener.id).and_then(|addrs| {
+            state.conn_state.listeners.get_by_listener(listener.id).and_then(|addrs| {
                 // We found the listener. Make sure at least one of the addresses
                 // associated with it is the local_addr the caller passed.
                 addrs
@@ -348,7 +419,7 @@ pub(crate) fn send_udp_listener<A: IpAddress, B: BufferMut, C: BufferUdpContext<
             })
         }
         ListenerType::Wildcard => {
-            state.wildcard_listeners.get_by_listener(listener.id).map(|ports| ports[0])
+            state.conn_state.wildcard_listeners.get_by_listener(listener.id).map(|ports| ports[0])
         }
     }
     .unwrap_or_else(|| {
@@ -401,20 +472,25 @@ pub(crate) fn connect_udp<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Ver
     };
 
     let local_addr = local_addr.unwrap_or(default_local);
-    if let Some(local_port) = local_port {
-        let c = Conn { local_addr, local_port, remote_addr, remote_port };
-        let listener = Listener { addr: local_addr, port: local_port };
-        let state = ctx.get_state_mut();
-        if state.conns.get_id_by_addr(&c).is_some()
-            || state.listeners.get_by_addr(&listener).is_some()
-        {
-            // TODO(joshlf): Return error
-            panic!("UDP connection in use");
-        }
-        UdpConnId(state.conns.insert(c.clone(), c))
+    let local_port = if let Some(local_port) = local_port {
+        local_port
     } else {
-        unimplemented!()
+        // TODO(brunodalbo): If a local port could not be allocated, return an
+        // error instead of panicking.
+        try_alloc_local_port(ctx, &ProtocolFlowId::new(local_addr, remote_addr, remote_port))
+            .expect("connect_udp: failed to allocate local port")
+    };
+
+    let c = Conn { local_addr, local_port, remote_addr, remote_port };
+    let listener = Listener { addr: local_addr, port: local_port };
+    let state = ctx.get_state_mut();
+    if state.conn_state.conns.get_id_by_addr(&c).is_some()
+        || state.conn_state.listeners.get_by_addr(&listener).is_some()
+    {
+        // TODO(joshlf): Return error
+        panic!("UDP connection in use");
     }
+    UdpConnId(state.conn_state.conns.insert(c.clone(), c))
 }
 
 /// Listen on for incoming UDP packets.
@@ -439,22 +515,25 @@ pub(crate) fn listen_udp<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Vers
 ) -> UdpListenerId {
     let mut state = ctx.get_state_mut();
     if addrs.is_empty() {
-        if state.wildcard_listeners.get_by_addr(&port).is_some() {
+        if state.conn_state.wildcard_listeners.get_by_addr(&port).is_some() {
             // TODO(joshlf): Return error
             panic!("UDP listener address in use");
         }
         // TODO(joshlf): Check for connections bound to this IP:port.
-        UdpListenerId::new_wildcard(state.wildcard_listeners.insert(vec![port]))
+        UdpListenerId::new_wildcard(state.conn_state.wildcard_listeners.insert(vec![port]))
     } else {
         for addr in &addrs {
             let listener = Listener { addr: *addr, port };
-            if state.listeners.get_by_addr(&listener).is_some() {
+            if state.conn_state.listeners.get_by_addr(&listener).is_some() {
                 // TODO(joshlf): Return error
                 panic!("UDP listener address in use");
             }
         }
         UdpListenerId::new_specified(
-            state.listeners.insert(addrs.into_iter().map(|addr| Listener { addr, port }).collect()),
+            state
+                .conn_state
+                .listeners
+                .insert(addrs.into_iter().map(|addr| Listener { addr, port }).collect()),
         )
     }
 }
@@ -463,11 +542,14 @@ pub(crate) fn listen_udp<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Vers
 mod tests {
     use net_types::ip::{Ipv4, Ipv6};
     use packet::serialize::Buf;
+    use rand_xorshift::XorShiftRng;
     use specialize_ip_macro::ip_test;
 
     use super::*;
     use crate::ip::IpProto;
-    use crate::testutil::{get_other_ip_address, set_logger_for_test};
+    use crate::testutil::{
+        get_other_ip_address, new_fake_crypto_rng, set_logger_for_test, FakeCryptoRng,
+    };
 
     /// The listener data sent through a [`DummyUdpContext`].
     struct ListenData<A: IpAddress> {
@@ -484,11 +566,22 @@ mod tests {
         body: Vec<u8>,
     }
 
-    #[derive(Default)]
     struct DummyUdpContext<I: Ip> {
         state: UdpState<I>,
         listen_data: Vec<ListenData<I::Addr>>,
         conn_data: Vec<ConnData>,
+        rng: FakeCryptoRng<XorShiftRng>,
+    }
+
+    impl<I: Ip> Default for DummyUdpContext<I> {
+        fn default() -> Self {
+            DummyUdpContext {
+                state: Default::default(),
+                listen_data: Default::default(),
+                conn_data: Default::default(),
+                rng: new_fake_crypto_rng(0),
+            }
+        }
     }
 
     type DummyContext<I> = crate::context::testutil::DummyContext<
@@ -517,6 +610,14 @@ mod tests {
 
         fn get_state_mut_with(&mut self, _id: ()) -> &mut UdpState<I> {
             &mut self.get_mut().state
+        }
+    }
+
+    impl<I: Ip> RngContext for DummyContext<I> {
+        type Rng = FakeCryptoRng<XorShiftRng>;
+
+        fn rng(&mut self) -> &mut Self::Rng {
+            &mut self.get_mut().rng
         }
     }
 
@@ -896,11 +997,65 @@ mod tests {
             remote_addr::<I>(),
             remote_port,
         );
-        let connid = ctx.get_ref().state.conns.get_conn_by_id(conn.into()).unwrap();
+        let connid = ctx.get_ref().state.conn_state.conns.get_conn_by_id(conn.into()).unwrap();
 
         assert_eq!(connid.local_addr, local_addr::<I>());
         assert_eq!(connid.local_port, local_port);
         assert_eq!(connid.remote_addr, remote_addr::<I>());
         assert_eq!(connid.remote_port, remote_port);
+    }
+
+    /// Tests local port allocation for [`connect_udp`].
+    ///
+    /// Tests that calling [`connect_udp`] causes a valid local port to be
+    /// allocated when no local port is passed.
+    #[ip_test]
+    fn test_udp_local_port_alloc<I: Ip>() {
+        let mut ctx = DummyContext::<I>::default();
+        let local_ip = local_addr::<I>();
+        let ip_a = get_other_ip_address::<I::Addr>(100);
+        let ip_b = get_other_ip_address::<I::Addr>(200);
+
+        let conn_a = connect_udp::<I::Addr, Buf<&mut [u8]>, _>(
+            &mut ctx,
+            Some(local_ip),
+            None,
+            ip_a,
+            NonZeroU16::new(1010).unwrap(),
+        );
+        let conn_b = connect_udp::<I::Addr, Buf<&mut [u8]>, _>(
+            &mut ctx,
+            Some(local_ip),
+            None,
+            ip_b,
+            NonZeroU16::new(1010).unwrap(),
+        );
+        let conn_c = connect_udp::<I::Addr, Buf<&mut [u8]>, _>(
+            &mut ctx,
+            Some(local_ip),
+            None,
+            ip_a,
+            NonZeroU16::new(2020).unwrap(),
+        );
+        let conn_d = connect_udp::<I::Addr, Buf<&mut [u8]>, _>(
+            &mut ctx,
+            Some(local_ip),
+            None,
+            ip_a,
+            NonZeroU16::new(1010).unwrap(),
+        );
+        let conns = &ctx.get_ref().state.conn_state.conns;
+        let valid_range = &UdpConnectionState::<I>::EPHEMERAL_RANGE;
+        let port_a = conns.get_conn_by_id(conn_a.into()).unwrap().local_port.get();
+        assert!(valid_range.contains(&port_a));
+        let port_b = conns.get_conn_by_id(conn_b.into()).unwrap().local_port.get();
+        assert!(valid_range.contains(&port_b));
+        assert_ne!(port_a, port_b);
+        let port_c = conns.get_conn_by_id(conn_c.into()).unwrap().local_port.get();
+        assert!(valid_range.contains(&port_c));
+        assert_ne!(port_a, port_c);
+        let port_d = conns.get_conn_by_id(conn_d.into()).unwrap().local_port.get();
+        assert!(valid_range.contains(&port_d));
+        assert_ne!(port_a, port_d);
     }
 }
