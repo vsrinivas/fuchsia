@@ -59,7 +59,7 @@ zx_status_t ControllerDevice::GetChannel2(zx_handle_t handle) {
   return ZX_ERR_INTERNAL;
 }
 
-void ControllerDevice::ShutDown() {}
+void ControllerDevice::ShutDown() { controller_loop_.Shutdown(); }
 
 zx_status_t ControllerDevice::StartThread() {
   return controller_loop_.StartThread("camera-controller-loop", &loop_thread_);

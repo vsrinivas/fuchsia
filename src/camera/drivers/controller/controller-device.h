@@ -48,6 +48,7 @@ class ControllerDevice : public ControllerDeviceType,
         isp_(isp),
         gdc_(gdc),
         controller_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+  ~ControllerDevice() { ShutDown(); }
 
   // Setup() is used to create an instance of Controller.
   static zx_status_t Setup(zx_device_t* parent, std::unique_ptr<ControllerDevice>* out);
