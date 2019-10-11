@@ -891,10 +891,10 @@ wlan_stats::ApMlmeStats BuildApMlmeStats(const wlanif_ap_mlme_stats_t& ap_stats)
 void ConvertMlmeStats(wlan_stats::MlmeStats* fidl_stats, const wlanif_mlme_stats_t& stats) {
   switch (stats.tag) {
     case WLANIF_MLME_STATS_TYPE_CLIENT:
-      fidl_stats->set_client_mlme_stats(BuildClientMlmeStats(stats.client_mlme_stats));
+      fidl_stats->set_client_mlme_stats(BuildClientMlmeStats(stats.stats.client_mlme_stats));
       break;
     case WLANIF_MLME_STATS_TYPE_AP:
-      fidl_stats->set_ap_mlme_stats(BuildApMlmeStats(stats.ap_mlme_stats));
+      fidl_stats->set_ap_mlme_stats(BuildApMlmeStats(stats.stats.ap_mlme_stats));
       break;
     default:
       ZX_ASSERT(0);

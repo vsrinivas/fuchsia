@@ -462,7 +462,6 @@ enum WlanifMlmeStatsType : uint8 {
 };
 
 struct WlanifClientMlmeStats {
-    WlanifMlmeStatsType tag;
     WlanifPacketCounter svc_msg;
     WlanifPacketCounter data_frame;
     WlanifPacketCounter mgmt_frame;
@@ -473,14 +472,17 @@ struct WlanifClientMlmeStats {
 };
 
 struct WlanifApMlmeStats {
-    WlanifMlmeStatsType tag;
     WlanifPacketCounter not_used;
 };
 
-union WlanifMlmeStats {
-    WlanifMlmeStatsType tag;
+union StatsUnion {
     WlanifClientMlmeStats client_mlme_stats;
     WlanifApMlmeStats ap_mlme_stats;
+};
+
+struct WlanifMlmeStats {
+    WlanifMlmeStatsType tag;
+    StatsUnion stats;
 };
 
 struct WlanifStats {

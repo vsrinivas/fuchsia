@@ -3524,7 +3524,7 @@ void brcmf_hook_stats_query_req(void* ctx) {
       int32_t fw_err = 0;
 
       mlme_stats.tag = WLANIF_MLME_STATS_TYPE_CLIENT;
-      wlanif_client_mlme_stats_t* stats = &mlme_stats.client_mlme_stats;
+      wlanif_client_mlme_stats_t* stats = &mlme_stats.stats.client_mlme_stats;
       memset(stats, 0, sizeof(*stats));
       // Retrieve the stats from firmware and fill in the relevant mlme
       // stats
@@ -3538,31 +3538,32 @@ void brcmf_hook_stats_query_req(void* ctx) {
                   pktcnt.rx_good_pkt, pktcnt.rx_bad_pkt, pktcnt.tx_good_pkt, pktcnt.tx_bad_pkt,
                   pktcnt.rx_ocast_good_pkt);
 
-        mlme_stats.client_mlme_stats.rx_frame.in.count =
+        mlme_stats.stats.client_mlme_stats.rx_frame.in.count =
             pktcnt.rx_good_pkt + pktcnt.rx_bad_pkt + pktcnt.rx_ocast_good_pkt;
-        mlme_stats.client_mlme_stats.rx_frame.in.name = "Good+Bad+Ocast";
+        mlme_stats.stats.client_mlme_stats.rx_frame.in.name = "Good+Bad+Ocast";
 
-        mlme_stats.client_mlme_stats.rx_frame.out.count =
+        mlme_stats.stats.client_mlme_stats.rx_frame.out.count =
             pktcnt.rx_good_pkt + pktcnt.rx_ocast_good_pkt;
-        mlme_stats.client_mlme_stats.rx_frame.out.name = "Good+Ocast";
+        mlme_stats.stats.client_mlme_stats.rx_frame.out.name = "Good+Ocast";
 
-        mlme_stats.client_mlme_stats.rx_frame.drop.count = pktcnt.rx_bad_pkt;
-        mlme_stats.client_mlme_stats.rx_frame.drop.name = "Bad";
+        mlme_stats.stats.client_mlme_stats.rx_frame.drop.count = pktcnt.rx_bad_pkt;
+        mlme_stats.stats.client_mlme_stats.rx_frame.drop.name = "Bad";
 
-        mlme_stats.client_mlme_stats.tx_frame.in.count = pktcnt.tx_good_pkt + pktcnt.tx_bad_pkt;
-        mlme_stats.client_mlme_stats.tx_frame.in.name = "Good+Bad";
+        mlme_stats.stats.client_mlme_stats.tx_frame.in.count =
+            pktcnt.tx_good_pkt + pktcnt.tx_bad_pkt;
+        mlme_stats.stats.client_mlme_stats.tx_frame.in.name = "Good+Bad";
 
-        mlme_stats.client_mlme_stats.tx_frame.out.count = pktcnt.tx_good_pkt;
-        mlme_stats.client_mlme_stats.tx_frame.out.name = "Good";
+        mlme_stats.stats.client_mlme_stats.tx_frame.out.count = pktcnt.tx_good_pkt;
+        mlme_stats.stats.client_mlme_stats.tx_frame.out.name = "Good";
 
-        mlme_stats.client_mlme_stats.tx_frame.drop.count = pktcnt.tx_bad_pkt;
-        mlme_stats.client_mlme_stats.tx_frame.drop.name = "Bad";
+        mlme_stats.stats.client_mlme_stats.tx_frame.drop.count = pktcnt.tx_bad_pkt;
+        mlme_stats.stats.client_mlme_stats.tx_frame.drop.name = "Bad";
       }
       break;
     }
     case WLAN_INFO_MAC_ROLE_AP: {
       mlme_stats.tag = WLANIF_MLME_STATS_TYPE_AP;
-      wlanif_ap_mlme_stats_t* stats = &mlme_stats.ap_mlme_stats;
+      wlanif_ap_mlme_stats_t* stats = &mlme_stats.stats.ap_mlme_stats;
       memset(stats, 0, sizeof(*stats));
       break;
     }
