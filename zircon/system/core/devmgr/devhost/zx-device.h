@@ -33,7 +33,8 @@ struct ProxyIostate;
 
 }  // namespace devmgr
 
-#define DEV_MAGIC 'MDEV'
+// 'MDEV'
+#define DEV_MAGIC 0x4D444556
 
 // This needs to be a struct, not a class, to match the public definition
 struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_device> {

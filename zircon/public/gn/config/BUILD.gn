@@ -413,7 +413,6 @@ config("default_warnings") {
   cflags = [
     "-Wall",
     "-Wextra",
-    "-Wno-multichar",
     "-Wno-unused-parameter",
     "-Wno-unused-function",
     "-Werror=unused-label",
