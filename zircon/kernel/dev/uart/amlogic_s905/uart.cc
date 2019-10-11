@@ -118,6 +118,14 @@ static interrupt_eoi uart_irq(void* arg) {
     char c = static_cast<char>(UARTREG(base, S905_UART_RFIFO));
     cbuf_write_char(&uart_rx_buf, c);
   }
+
+  /* handle any framing/parity errors */
+  if (UARTREG(base, S905_UART_STATUS) & (S905_UART_STATUS_FRAMEERR | S905_UART_STATUS_PARERR)) {
+    /* clear the status by writing to the control register */
+    UARTREG(base, S905_UART_CONTROL) |= S905_UART_CONTROL_CLRERR;
+  }
+
+  /* handle TX */
   if (UARTREG(s905_uart_base, S905_UART_CONTROL) & S905_UART_CONTROL_TXINTEN) {
     spin_lock(&uart_spinlock);
     if (!(UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_TXFULL))
