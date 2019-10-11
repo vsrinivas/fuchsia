@@ -303,7 +303,7 @@ $ fx set core.x64 --with //garnet/tests/zircon:zircon_fuzzers --with //garnet/pa
 $ fx build
 ```
 
-Note that Zircon fuzzers *must* have names that end in "\_fuzzer".
+Note that Zircon fuzzers *must* have names that end in "-fuzzer".
 
 ## Q: How do I run a fuzzer? {#q-how-do-i-run-a-fuzzer}
 
