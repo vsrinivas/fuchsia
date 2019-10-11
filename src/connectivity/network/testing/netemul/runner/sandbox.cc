@@ -32,6 +32,7 @@ using namespace fuchsia::netemul;
 
 namespace netemul {
 
+static const char* kDebianGuestUrl = "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cmx";
 static const char* kEndpointMountPath = "class/ethernet/";
 static const char* kGuestManagerUrl =
     "fuchsia-pkg://fuchsia.com/guest_manager#meta/guest_manager.cmx";
@@ -513,7 +514,7 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
 
         return bridge.consumer.promise();
       })
-      .and_then([](zx::socket& socket) -> PromiseResult {
+      .and_then([&guest](zx::socket& socket) -> PromiseResult {
         // Wait until the guest's serial console becomes usable to ensure that the guest has
         // finished booting.
         GuestConsole serial(std::make_unique<ZxSocket>(std::move(socket)));
@@ -522,6 +523,27 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
         if (status != ZX_OK) {
           return fit::error(SandboxResult(SandboxResult::Status::SETUP_FAILED,
                                           "Could not start guest serial connection"));
+        }
+
+        if (guest.guest_image_url() == kDebianGuestUrl) {
+          // Wait for systemctl to show that the guest_discovery_service is active.
+          while (true) {
+            std::string output;
+            zx_status_t status = serial.ExecuteBlocking(
+                "systemctl is-active guest_interaction_daemon", "$", &output);
+            // If the command cannot be executed, break out of the loop so the test can fail.
+            if (status != ZX_OK) {
+              return fit::error(
+                  SandboxResult(SandboxResult::Status::SETUP_FAILED,
+                                "Could not communicate with guest over serial connection"));
+            }
+
+            // Ensure that the output from the command indicates that guest_interaction_daemon is
+            // active.
+            if (output.find("inactive") == std::string::npos) {
+              break;
+            }
+          }
         }
 
         return fit::ok();

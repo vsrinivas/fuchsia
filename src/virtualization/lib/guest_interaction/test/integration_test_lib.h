@@ -73,7 +73,27 @@ class GuestInteractionTest : public sys::testing::TestWithEnvironment {
 
     GuestConsole serial(std::make_unique<ZxSocket>(std::move(socket)));
     zx_status_t status = serial.Start();
-    ASSERT_TRUE(status == ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+
+    // Wait until sysctl shows that the guest_interaction_daemon is running.
+    RunLoopUntil([&status, &serial]() -> bool {
+      std::string output;
+      status = serial.ExecuteBlocking("systemctl is-active guest_interaction_daemon", "$", &output);
+
+      // If the command cannot be executed, break out of the loop so the test can fail.
+      if (status != ZX_OK) {
+        return true;
+      }
+
+      // Ensure that the output from the command indicates that guest_interaction_daemon is
+      // active.
+      if (output.find("inactive") != std::string::npos) {
+        return false;
+      }
+      return true;
+    });
+
+    ASSERT_EQ(status, ZX_OK);
   }
 
   uint32_t cid_;
