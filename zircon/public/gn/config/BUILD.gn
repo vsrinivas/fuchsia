@@ -420,14 +420,10 @@ config("default_warnings") {
   ]
   cflags_c = [
     "-Werror=implicit-function-declaration",
-    "-Wstrict-prototypes",
-    "-Wwrite-strings",
     "-Wno-absolute-value",
   ]
   cflags_cc = [
-    "-Wconversion",
     "-Wno-sign-conversion",
-    "-Wextra-semi",
   ]
   if (is_gcc) {
     cflags += [
