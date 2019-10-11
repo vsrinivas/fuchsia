@@ -152,7 +152,25 @@ foreach(gen, _fidl_generators) {
 #     Type: bool
 #     Default: true iff $sources includes "*.test.fidl" files
 #
+#   fuzzers
+#     Optional: Protocol/methods for which to generate LibFuzzer fuzz targets.
+#       Example:
+#       [
+#         {
+#           # Required:
+#           protocol = "fully.qualified.FIDLProtocolName"
+#           # Optional. Default: All methods in protocol.
+#           methods = [ "MethodName1", "MethodName2", ... ]
+#         },
+#         ...
+#       ]
+#     Type: list({protocol, methods})
+#
 template("fidl_library") {
+  if (defined(invoker.fuzzers)) {
+    not_needed(invoker, [ "fuzzers" ])
+  }
+
   assert(defined(invoker.sources),
          "fidl_library(\"$target_name\") must set `sources`")
 
