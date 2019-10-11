@@ -38,6 +38,8 @@ pub use timer::MockTimer;
 pub use timer::StubTimer;
 pub use timer::Timer;
 
+const LAST_CHECK_TIME: &str = "last_check_time";
+
 /// This is the core state machine for a client's update check.  It is instantiated and used to
 /// perform a single update check process.
 #[derive(Debug)]
@@ -256,6 +258,28 @@ where
         }
     }
 
+    /// Report update check interval based on the last check time stored in storage.
+    /// It will also persist the new last check time to storage.
+    async fn report_check_interval(&mut self) {
+        // Clone the Rc first to avoid borrowing self for the rest of the function.
+        let storage_ref = self.storage_ref.clone();
+        let mut storage = storage_ref.lock().await;
+        let now = clock::now();
+        if let Some(last_check_time) = storage.get_int(LAST_CHECK_TIME).await {
+            match now.duration_since(time::i64_to_time(last_check_time)) {
+                Ok(duration) => self.report_metrics(Metrics::UpdateCheckInterval(duration)),
+                Err(e) => warn!("Last check time is in the future: {}", e),
+            }
+        }
+        if let Err(e) = storage.set_int(LAST_CHECK_TIME, time::time_to_i64(now)).await {
+            error!("Unable to persist {}: {}", LAST_CHECK_TIME, e);
+            return;
+        }
+        if let Err(e) = storage.commit().await {
+            error!("Unable to commit persisted data: {}", e);
+        }
+    }
+
     /// Perform update check and handle the result, including updating the update check context
     /// and cohort.
     pub async fn start_update_check(&mut self, options: CheckOptions) {
@@ -336,7 +360,7 @@ where
 
     /// This function constructs the chain of async futures needed to perform all of the async tasks
     /// that comprise an update check.
-    pub async fn perform_update_check(
+    async fn perform_update_check(
         &mut self,
         options: CheckOptions,
         context: update_check::Context,
@@ -375,6 +399,8 @@ where
         };
 
         self.set_state(State::CheckingForUpdates);
+
+        self.report_check_interval().await;
 
         // Construct a request for the app(s).
         let mut request_builder = RequestBuilder::new(&self.client_config, &request_params);
@@ -1444,6 +1470,48 @@ mod tests {
             let apps = app_set.to_vec().await;
             assert_eq!(persisted_app.cohort, apps[0].cohort);
             assert_eq!(UserCounting::ClientRegulatedByDate(Some(22222)), apps[0].user_counting);
+        });
+    }
+
+    #[test]
+    fn test_report_check_interval() {
+        block_on(async {
+            let config = config_generator();
+            let storage_ref = Rc::new(Mutex::new(MemStorage::new()));
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                StubHttpRequest,
+                StubInstaller::default(),
+                &config,
+                StubTimer,
+                MockMetricsReporter::new(false),
+                storage_ref,
+                make_test_app_set(),
+            )
+            .await;
+
+            clock::mock::set(time::i64_to_time(123456789));
+            state_machine.report_check_interval().await;
+            // No metrics should be reported because no last check time in storage.
+            assert!(state_machine.metrics_reporter.metrics.is_empty());
+            {
+                let storage = state_machine.storage_ref.lock().await;
+                assert_eq!(storage.get_int(LAST_CHECK_TIME).await, Some(123456789));
+                assert_eq!(storage.len(), 1);
+                assert!(storage.committed());
+            }
+            // A second update check should report metrics.
+            let duration = Duration::from_micros(999999);
+            clock::mock::set(clock::now() + duration);
+            state_machine.report_check_interval().await;
+            assert_eq!(
+                state_machine.metrics_reporter.metrics,
+                vec![Metrics::UpdateCheckInterval(duration)]
+            );
+            let storage = state_machine.storage_ref.lock().await;
+            assert_eq!(storage.get_int(LAST_CHECK_TIME).await, Some(123456789 + 999999));
+            assert_eq!(storage.len(), 1);
+            assert!(storage.committed());
         });
     }
 }

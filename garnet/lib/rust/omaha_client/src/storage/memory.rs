@@ -41,6 +41,10 @@ impl MemStorage {
     pub fn committed(&self) -> bool {
         self.committed
     }
+
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
 }
 
 impl Storage for MemStorage {
