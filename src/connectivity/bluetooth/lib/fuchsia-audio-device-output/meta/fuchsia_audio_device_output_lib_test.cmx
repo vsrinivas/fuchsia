@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/fuchsia_audio_device_output_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

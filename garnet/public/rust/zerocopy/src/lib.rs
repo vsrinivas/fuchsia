@@ -240,6 +240,15 @@ pub unsafe trait AsBytes {
     }
 }
 
+// Special case for bool
+unsafe impl AsBytes for bool {
+    fn only_derive_is_allowed_to_implement_this_trait()
+    where
+        Self: Sized,
+    {
+    }
+}
+
 impl_for_primitives!(FromBytes);
 impl_for_primitives!(AsBytes);
 impl_for_composite_types!(FromBytes);

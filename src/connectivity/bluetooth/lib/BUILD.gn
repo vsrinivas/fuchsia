@@ -11,6 +11,8 @@ group("lib") {
     "bt-avdtp:tests",
     "fidl",
     "fidl:tests",
+    "fuchsia-audio-device-output",
+    "fuchsia-audio-device-output:fuchsia-audio-device-output-tests",
     "fuchsia-bluetooth",
     "fuchsia-bluetooth:tests",
   ]
