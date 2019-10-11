@@ -55,21 +55,23 @@ Err ParseLocalInputLocation(const Frame* optional_frame, const std::string& inpu
 // Set |symbolize| to make the output locations symbolized. This will be slightly slower. If you
 // just need the addresses, pass false.
 //
-// The variant with optional_frame will use ParseLocalInputLocation() above. See that for the
-// behavior of local functions definitions.
-Err ResolveInputLocations(const ProcessSymbols* process_symbols,
-                          const InputLocation& input_location, bool symbolize,
-                          std::vector<Location>* locations);
-Err ResolveInputLocations(const ProcessSymbols* process_symbols,
-                          const std::vector<InputLocation>& input_locations, bool symbolize,
-                          std::vector<Location>* locations);
+// The |optional_frame| will be passed for context to ParseLocalInputLocation() above to handle
+// finding names based on the current scope. See that for the behavior of local functions
+// definitions.
+//
+// Underneath final resolution is done by ResolvePermissiveInputLocations() so will match functions
+// in any namespace unless globally qualified.
 Err ResolveInputLocations(const ProcessSymbols* process_symbols, const Frame* optional_frame,
                           const std::string& input, bool symbolize,
                           std::vector<Location>* locations);
 
+// Variant of the above that takes a pre-parsed list of input locations.
+Err ResolveInputLocations(const ProcessSymbols* process_symbols,
+                          const std::vector<InputLocation>& input_locations, bool symbolize,
+                          std::vector<Location>* locations);
+
 // Resolves the given input string to a Location object. Returns an error parsing or if the location
-// can not be resolved or resolves to more than one
-// address.
+// can not be resolved or resolves to more than one address.
 //
 // Set |symbolize| to make the output |*location| symbolized. This will be slightly slower. If you
 // just need the address, pass false.

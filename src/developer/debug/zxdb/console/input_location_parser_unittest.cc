@@ -112,6 +112,8 @@ TEST_F(InputLocationParserTest, ParseGlobal) {
 }
 
 TEST_F(InputLocationParserTest, ResolveInputLocation) {
+  auto& index_root = mock_module_symbols_->index().root();
+
   // Resolve to nothing.
   Location output;
   Err err = ResolveUniqueInputLocation(&symbols_.process(), nullptr, "Foo", false, &output);
@@ -120,10 +122,16 @@ TEST_F(InputLocationParserTest, ResolveInputLocation) {
 
   Location expected(0x12345678, FileLine("file.cc", 12), 0, symbol_context_);
 
-  // Resolve to one location (success) case.
+  // To be found, "Foo" must be in both the index and in the symbol location mock list.
+  const char kFooName[] = "Foo";
+  auto foo = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  foo->set_assigned_name(kFooName);
+  TestIndexedSymbol foo_indexed(mock_module_symbols_, &index_root, kFooName, foo);
   mock_module_symbols_->AddSymbolLocations("Foo", {expected});
+
+  // Resolve to one location (success) case.
   err = ResolveUniqueInputLocation(&symbols_.process(), nullptr, "Foo", false, &output);
-  EXPECT_FALSE(err.has_error());
+  EXPECT_FALSE(err.has_error()) << err.msg();
   EXPECT_EQ(expected.address(), output.address());
 
   // Resolve to lots of locations, it should give suggestions. Even though we didn't request

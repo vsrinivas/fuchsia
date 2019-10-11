@@ -18,6 +18,7 @@
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/find_name.h"
+#include "src/developer/debug/zxdb/expr/permissive_input_location.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/index.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
@@ -172,23 +173,13 @@ Err ParseLocalInputLocation(const Frame* frame, const std::string& input,
 }
 
 Err ResolveInputLocations(const ProcessSymbols* process_symbols,
-                          const InputLocation& input_location, bool symbolize,
-                          std::vector<Location>* locations) {
-  return ResolveInputLocations(process_symbols, std::vector<InputLocation>{input_location},
-                               symbolize, locations);
-}
-
-Err ResolveInputLocations(const ProcessSymbols* process_symbols,
                           const std::vector<InputLocation>& input_locations, bool symbolize,
                           std::vector<Location>* locations) {
   ResolveOptions options;
   options.symbolize = symbolize;
 
-  locations->clear();
-  for (const auto& input : input_locations) {
-    auto resolved = process_symbols->ResolveInputLocation(input, options);
-    locations->insert(locations->end(), resolved.begin(), resolved.end());
-  }
+  *locations = ResolvePermissiveInputLocations(process_symbols, options,
+                                               FindNameContext(process_symbols), input_locations);
 
   if (locations->empty()) {
     if (input_locations.size() == 1) {
