@@ -144,7 +144,7 @@ handlebars = "2.0.0-beta.2"
 indoc = "0.3.3"
 proc-macro2 = "1.0.1"
 quote = "1.0.2"
-syn = { version = "1.0.5", features = ["full", "visit-mut"] }
+syn = { version = "1.0.5", features = ["full", "visit-mut", "extra-traits"] }
 synstructure = "0.12.1"
 tar = "0.4.25"
 tokio = "0.1.22"
