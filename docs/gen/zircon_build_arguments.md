@@ -104,7 +104,7 @@ From //kernel/params.gni:35
 
 ### enable_kernel_debugging_features
 Whether to include various features (non-shipping, insecure, etc.) in the
-kernel or netsvc builds.
+netsvc build.
 
 **Current value (from the default):** `false`
 

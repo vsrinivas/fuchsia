@@ -6,7 +6,9 @@ import("//products/bringup.gni")
 
 bootfs_only = false
 
-zircon_enable_kernel_debugging_features = false
+kernel_cmdline_args -= [ "kernel.oom.behavior=jobkill" ]
+kernel_cmdline_args += [ "kernel.oom.behavior=reboot" ]
+
 zircon_enable_netsvc_debugging_features = false
 
 meta_package_labels += [

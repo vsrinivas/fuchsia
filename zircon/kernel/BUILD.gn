@@ -109,10 +109,6 @@ if (current_toolchain == default_toolchain) {
       defines += [ "WITH_KERNEL_PCIE" ]
     }
 
-    if (enable_kernel_debugging_features) {
-      defines += [ "ENABLE_KERNEL_DEBUGGING_FEATURES" ]
-    }
-
     cflags = [ "-fpie" ]
   }
 

@@ -8,7 +8,6 @@
 
 declare_args() {
   # Whether to include various features (non-shipping, insecure, etc.) in the
-  # kernel or netsvc builds.
-  enable_kernel_debugging_features = false
+  # netsvc build.
   enable_netsvc_debugging_features = false
 }

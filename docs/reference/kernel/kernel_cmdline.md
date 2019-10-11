@@ -252,6 +252,18 @@ This option is intended for test use only. When set to `true` it forces the
 mexec syscall to place the ramdisk for the following kernel in high memory
 (64-bit address space, >= 4GiB offset). The default value is `false`.
 
+## kernel.oom.behavior=\<string>
+
+This option can be used to configure the behavior of the kernel when
+encountering an OOM situation. Valid values are `jobkill`, and `reboot`. If
+unset or set to an invalid value, defaults to `reboot`.
+
+If set to `jobkill`, when encountering OOM, the kernel attempts to kill jobs that
+have the `ZX_PROP_JOB_KILL_ON_OOM` bit set to recover memory.
+
+If set to `reboot`, when encountering OOM, the kernel signals an event (see
+`zx_system_get_event()`), delays briefly, and then reboots the system.
+
 ## kernel.oom.enable=\<bool>
 
 This option (true by default) turns on the out-of-memory (OOM) kernel thread,

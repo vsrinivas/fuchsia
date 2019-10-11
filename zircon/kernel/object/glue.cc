@@ -46,31 +46,45 @@ static void mem_avail_state_updated_cb(uint8_t idx) {
 
 // Helper called by the oom thread when low memory mode is entered.
 static void on_lowmem() {
-#if defined(ENABLE_KERNEL_DEBUGGING_FEATURES)
-  // See ZX-3637 for the product details on when this path vs. the reboot
-  // should be used.
+  const char* oom_behavior_str = gCmdline.GetString("kernel.oom.behavior");
 
-  if (!root_job->KillJobWithKillOnOOM()) {
-    printf("OOM: no alive job has a kill bit\n");
+  // Default to reboot if not set or set to an unexpected value. See fxbug.dev/33429 for the product
+  // details on when this path vs. the reboot should be used.
+  enum class OomBehavior {
+    kReboot,
+    kJobKill,
+  } oom_behavior = OomBehavior::kReboot;
+
+  if (oom_behavior_str && strcmp(oom_behavior_str, "jobkill") == 0) {
+    oom_behavior = OomBehavior::kJobKill;
   }
 
-  // Since killing is asynchronous, sleep for a short period for the system to quiesce. This
-  // prevents us from rapidly killing more jobs than necessary. And if we don't find a
-  // killable job, don't just spin since the next iteration probably won't find a one either.
-  thread_sleep_relative(ZX_MSEC(500));
-#else
-  const int kSleepSeconds = 8;
-  printf("OOM: pausing for %ds after low mem signal\n", kSleepSeconds);
-  zx_status_t status = thread_sleep_relative(ZX_SEC(kSleepSeconds));
-  if (status != ZX_OK) {
-    printf("OOM: sleep failed: %d\n", status);
+  switch (oom_behavior) {
+    case OomBehavior::kJobKill:
+
+      if (!root_job->KillJobWithKillOnOOM()) {
+        printf("OOM: no alive job has a kill bit\n");
+      }
+
+      // Since killing is asynchronous, sleep for a short period for the system to quiesce. This
+      // prevents us from rapidly killing more jobs than necessary. And if we don't find a
+      // killable job, don't just spin since the next iteration probably won't find a one either.
+      thread_sleep_relative(ZX_MSEC(500));
+      break;
+
+    case OomBehavior::kReboot:
+      const int kSleepSeconds = 8;
+      printf("OOM: pausing for %ds after low mem signal\n", kSleepSeconds);
+      zx_status_t status = thread_sleep_relative(ZX_SEC(kSleepSeconds));
+      if (status != ZX_OK) {
+        printf("OOM: sleep failed: %d\n", status);
+      }
+      printf("OOM: rebooting\n");
+      static char buf[1024];
+      size_t len = crashlog_to_string(buf, sizeof(buf), CrashlogType::OOM);
+      platform_stow_crashlog(buf, len);
+      platform_graceful_halt_helper(HALT_ACTION_REBOOT);
   }
-  printf("OOM: rebooting\n");
-  static char buf[1024];
-  size_t len = crashlog_to_string(buf, sizeof(buf), CrashlogType::OOM);
-  platform_stow_crashlog(buf, len);
-  platform_graceful_halt_helper(HALT_ACTION_REBOOT);
-#endif
 }
 
 static int oom_thread(void* unused) {

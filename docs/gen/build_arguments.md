@@ -2473,7 +2473,6 @@ silently clobber the default value shown here.
 ```
 {
   default_deps = ["//:legacy-arm64"]
-  enable_kernel_debugging_features = false
   enable_netsvc_debugging_features = false
   goma_dir = "/home/swarming/goma"
   use_ccache = false
@@ -2511,9 +2510,9 @@ Default is $target_cpu.
 
 From //BUILD.gn:64
 
-### zircon_enable_kernel_debugging_features
+### zircon_enable_netsvc_debugging_features
 Whether to include various features (non-shipping, insecure, etc.) in the
-kernel or netsvc builds.
+netsvc build.
 
 **Current value for `target_cpu = "arm64"`:** `false`
 

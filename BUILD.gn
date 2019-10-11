@@ -52,8 +52,7 @@ declare_args() {
   zircon_extra_deps = []
 
   # Whether to include various features (non-shipping, insecure, etc.) in the
-  # kernel or netsvc builds.
-  zircon_enable_kernel_debugging_features = false
+  # netsvc build.
   zircon_enable_netsvc_debugging_features = false
 
   # Where to emit a tracelog from Zircon's GN run. No trace will be produced if
@@ -96,7 +95,6 @@ declare_args() {
     }
     variants = zircon_variants
     default_deps = [ "//:legacy-$target_cpu" ] + zircon_extra_deps
-    enable_kernel_debugging_features = zircon_enable_kernel_debugging_features
     enable_netsvc_debugging_features = zircon_enable_netsvc_debugging_features
     forward_variables_from(zircon_extra_args, "*")
   }
