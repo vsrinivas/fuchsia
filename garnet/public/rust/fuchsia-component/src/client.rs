@@ -216,14 +216,9 @@ impl App {
         let drain = |pipe: Option<fasync::Socket>| match pipe {
             None => future::ready(Ok(vec![])).left_future(),
             Some(pipe) => pipe
-                .take_while(|maybe_result| {
-                    future::ready(match maybe_result {
-                        Err(zx::Status::PEER_CLOSED) => false,
-                        _ => true,
-                    })
-                })
+                .into_datagram_stream()
                 .try_concat()
-                .map_err(|err| err.into())
+                .err_into()
                 .right_future(),
         };
 

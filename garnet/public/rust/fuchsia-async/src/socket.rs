@@ -262,6 +262,18 @@ impl Socket {
     pub async fn read_datagram<'a>(&'a self, out: &'a mut Vec<u8>) -> Result<usize, zx::Status> {
         poll_fn(move |cx| self.poll_datagram(cx, out)).await
     }
+
+    /// Use this socket as a stream of `Result<Vec<u8>, zx::Status>` datagrams.
+    ///
+    /// Note: multiple concurrent streams from the same socket are not supported.
+    pub fn as_datagram_stream<'a>(&'a self) -> DatagramStream<&'a Self> {
+        DatagramStream(self)
+    }
+
+    /// Convert this socket into a stream of `Result<Vec<u8>, zx::Status>` datagrams.
+    pub fn into_datagram_stream(self) -> DatagramStream<Self> {
+        DatagramStream(self)
+    }
 }
 
 impl fmt::Debug for Socket {
@@ -338,32 +350,32 @@ impl<'a> AsyncWrite for &'a Socket {
     }
 }
 
-/// Note: It's probably a good idea to split the socket into read/write halves
-/// before using this so you can still write on this socket.
-/// Taking two streams of the same socket will not work.
-impl Stream for Socket {
+/// A datagram stream from a `Socket`.
+#[derive(Debug)]
+pub struct DatagramStream<S>(pub S);
+
+fn poll_datagram_as_stream(socket: &Socket, cx: &mut Context<'_>) -> Poll<Option<Result<Vec<u8>, zx::Status>>> {
+    let mut res = Vec::<u8>::new();
+    Poll::Ready(match ready!(socket.poll_datagram(cx, &mut res)) {
+        Ok(_size) => Some(Ok(res)),
+        Err(zx::Status::PEER_CLOSED) => None,
+        Err(e) => Some(Err(e)),
+    })
+}
+
+impl Stream for DatagramStream<Socket> {
     type Item = Result<Vec<u8>, zx::Status>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let mut res = Vec::<u8>::new();
-        match self.poll_datagram(cx, &mut res) {
-            Poll::Ready(Ok(_size)) => Poll::Ready(Some(Ok(res))),
-            Poll::Ready(Err(e)) => Poll::Ready(Some(Err(e))),
-            Poll::Pending => Poll::Pending,
-        }
+        poll_datagram_as_stream(&self.0, cx)
     }
 }
 
-impl<'a> Stream for &'a Socket {
+impl Stream for DatagramStream<&Socket> {
     type Item = Result<Vec<u8>, zx::Status>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let mut res = Vec::<u8>::new();
-        match self.poll_datagram(cx, &mut res) {
-            Poll::Ready(Ok(_size)) => Poll::Ready(Some(Ok(res))),
-            Poll::Ready(Err(e)) => Poll::Ready(Some(Err(e))),
-            Poll::Pending => Poll::Pending,
-        }
+        poll_datagram_as_stream(self.0, cx)
     }
 }
 
@@ -376,7 +388,7 @@ mod tests {
     };
     use fuchsia_zircon::prelude::*;
     use futures::future::{try_join, FutureExt, TryFutureExt};
-    use futures::stream::StreamExt;
+    use futures::stream::TryStreamExt;
 
     #[test]
     fn can_read_write() {
@@ -435,7 +447,7 @@ mod tests {
         let mut exec = Executor::new().unwrap();
 
         let (tx, rx) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        let mut rx = Socket::from_socket(rx).unwrap();
+        let mut rx = Socket::from_socket(rx).unwrap().into_datagram_stream();
 
         let packets = 20;
 
@@ -450,12 +462,7 @@ mod tests {
 
         let stream_read_fut = async move {
             let mut count = 0;
-            while let Some(packet) = rx.next().await {
-                let packet = match packet {
-                    Ok(bytes) => bytes,
-                    Err(zx::Status::PEER_CLOSED) => break,
-                    e => panic!("received error from stream: {:?}", e),
-                };
+            while let Some(packet) = rx.try_next().await.expect("received error from stream") {
                 count = count + 1;
                 assert_eq!(packet.len(), count);
                 assert!(packet.iter().all(|&x| x == count as u8));

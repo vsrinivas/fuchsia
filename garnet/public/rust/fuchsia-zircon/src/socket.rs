@@ -180,6 +180,7 @@ impl Socket {
         ok(status)
     }
 
+    /// Returns the number of bytes available on the socket.
     pub fn outstanding_read_bytes(&self) -> Result<usize, Status> {
         Ok(self.info()?.rx_buf_available)
     }

@@ -37,9 +37,9 @@ async fn to_body(body_opt: Option<Box<oldhttp::UrlBody>>) -> Result<hyper::Body,
         match *body {
             oldhttp::UrlBody::Stream(socket) => {
                 let stream = fasync::Socket::from_socket(socket)?
-                    .into_stream()
+                    .into_datagram_stream()
                     .map_err(|status| Error::from(status));
-                Ok(hyper::Body::wrap_stream(stream.compat()))
+                Ok(hyper::Body::wrap_stream(futures::stream::TryStreamExt::compat(stream)))
             }
             oldhttp::UrlBody::Buffer(buffer) => {
                 let mut bytes = vec![0; buffer.size as usize];
