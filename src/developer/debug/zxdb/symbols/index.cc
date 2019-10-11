@@ -108,7 +108,7 @@ class UnitIndexer {
  public:
   // All passed-in objects must outlive this class.
   explicit UnitIndexer(llvm::DWARFContext* context, llvm::DWARFUnit* unit)
-      : context_(context), unit_(unit), scanner_(unit), name_decoder_(context, unit) {
+      : context_(context), unit_(unit), scanner_(unit), name_decoder_(context) {
     // The indexable array is 1:1 with the scanner entries.
     indexable_.resize(scanner_.die_count());
 
@@ -179,12 +179,11 @@ class UnitIndexer {
 
 // The symbol storage will be filled with the indexable entries.
 void UnitIndexer::Scan(std::vector<IndexNode::DieRef>* main_functions) {
-  DwarfDieDecoder decoder(context_, unit_);
+  DwarfDieDecoder decoder(context_);
 
   // The offset of the declaration. This can be unit-relative or .debug_info-relative (global).
-  llvm::Optional<uint64_t> decl_unit_offset;
-  llvm::Optional<uint64_t> decl_global_offset;
-  decoder.AddReference(llvm::dwarf::DW_AT_specification, &decl_unit_offset, &decl_global_offset);
+  llvm::DWARFDie decl_die;
+  decoder.AddReference(llvm::dwarf::DW_AT_specification, &decl_die);
 
   llvm::Optional<bool> is_declaration;
   decoder.AddBool(llvm::dwarf::DW_AT_declaration, &is_declaration);
@@ -211,19 +210,16 @@ void UnitIndexer::Scan(std::vector<IndexNode::DieRef>* main_functions) {
     // This DIE is of the type we want to index so decode. Must reset all output vars first.
     is_declaration.reset();
     has_const_value = false;
-    decl_unit_offset.reset();
-    decl_global_offset.reset();
+    decl_die = llvm::DWARFDie();
     is_main_subprogram.reset();
     name.reset();
-    if (!decoder.Decode(*die))
+    if (!decoder.Decode(llvm::DWARFDie(unit_, die)))
       continue;
 
     // Compute the offset of a separate declaration if this DIE has one.
     uint32_t decl_offset = 0;
-    if (decl_unit_offset)
-      decl_offset = unit_->getOffset() + *decl_unit_offset;
-    else if (decl_global_offset)
-      decl_offset = *decl_global_offset;
+    if (decl_die)
+      decl_offset = decl_die.getOffset();
 
     if (kind == IndexNode::Kind::kVar && die->getTag() == llvm::dwarf::DW_TAG_member &&
         !has_const_value) {
@@ -316,9 +312,7 @@ IndexNode::Kind UnitIndexer::GetKindForDie(const llvm::DWARFDebugInfoEntry* die)
 
 const char* UnitIndexer::GetDieName(uint32_t index) {
   name_decoder_name_.reset();
-  const llvm::DWARFDebugInfoEntry* die = unit_->getDIEAtIndex(index).getDebugInfoEntry();
-
-  if (name_decoder_.Decode(*die) && name_decoder_name_)
+  if (name_decoder_.Decode(unit_->getDIEAtIndex(index)) && name_decoder_name_)
     return *name_decoder_name_;
   return "";
 }

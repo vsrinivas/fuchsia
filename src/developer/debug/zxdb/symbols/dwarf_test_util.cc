@@ -12,9 +12,8 @@ namespace zxdb {
 namespace {
 
 // Returns the DW_AT_Name for the given DIE or the empty string on failure.
-std::string GetDIEName(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
-                       const llvm::DWARFDie& die) {
-  DwarfDieDecoder decoder(context, unit);
+std::string GetDIEName(llvm::DWARFContext* context, const llvm::DWARFDie& die) {
+  DwarfDieDecoder decoder(context);
 
   llvm::Optional<const char*> name;
   decoder.AddCString(llvm::dwarf::DW_AT_name, &name);
@@ -30,7 +29,7 @@ llvm::DWARFUnit* GetUnitWithNameEndingIn(llvm::DWARFContext* context, llvm::DWAR
                                          const std::string& name) {
   for (unsigned i = 0; i < units.size(); i++) {
     llvm::DWARFUnit* unit = units[i].get();
-    std::string unit_name = GetDIEName(context, unit, unit->getUnitDIE());
+    std::string unit_name = GetDIEName(context, unit->getUnitDIE());
     if (StringEndsWith(unit_name, name))
       return unit;
   }
@@ -42,7 +41,7 @@ llvm::DWARFDie GetFirstDieOfTagAndName(llvm::DWARFContext* context, llvm::DWARFU
   for (unsigned i = 0; i < unit->getNumDIEs(); i++) {
     llvm::DWARFDie die = unit->getDIEAtIndex(i);
     if (die.getTag() == tag) {
-      if (GetDIEName(context, unit, die) == name)
+      if (GetDIEName(context, die) == name)
         return die;
     }
   }

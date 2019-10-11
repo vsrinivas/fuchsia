@@ -49,7 +49,7 @@ class DwarfDieDecoder {
   };
 
   // The context and unit must outlive this class.
-  DwarfDieDecoder(llvm::DWARFContext* context, llvm::DWARFUnit* unit);
+  explicit DwarfDieDecoder(llvm::DWARFContext* context);
   ~DwarfDieDecoder();
 
   // Adds a check for the given attribute. If the attribute is encountered, the given boolean will
@@ -73,16 +73,8 @@ class DwarfDieDecoder {
   void AddLineTableFile(llvm::dwarf::Attribute attribute, llvm::Optional<std::string>* output);
   void AddConstValue(llvm::dwarf::Attribute attribute, ConstValue* const_value);
 
-  // For cross-DIE references. These references can be within the current unit (byte offsets, not
-  // DIE indices), or from within the object file. To accommodate both, this function will fill in
-  // the corresponding output variable according to the storage form of the attribute.
-  //
-  // Most callers will want to use the next variant which returns a DIE.
-  void AddReference(llvm::dwarf::Attribute attribute, llvm::Optional<uint64_t>* unit_offset,
-                    llvm::Optional<uint64_t>* global_offset);
-
-  // Variant of the above AddReference that automatically converts a reference to an actual DIE. If
-  // the attribute doesn't exist or is invalid, this DIE will be !isValid().
+  // For cross-DIE references. Note that the resulting DIE may not be in the same unit. If the
+  // attribute doesn't exist or is invalid, this DIE will be !isValid().
   void AddReference(llvm::dwarf::Attribute attribute, llvm::DWARFDie* output);
 
   // Extract a file name. File names (e.g. for DW_AT_decl_file) are not strings but rather indices
@@ -120,7 +112,6 @@ class DwarfDieDecoder {
   // Decode one info entry. Returns true on success, false means the DIE was corrupt. The outputs
   // for each encountered attribute will be set.
   bool Decode(const llvm::DWARFDie& die);
-  bool Decode(const llvm::DWARFDebugInfoEntry& die);
 
  public:
   using Dispatch =
@@ -132,11 +123,12 @@ class DwarfDieDecoder {
   // corrupt symbols, this function takes a maximum number of abstract origin references to follow
   // which is decremented each time a recursive call is made. When this gets to 0, no more abstract
   // origin references will be followed.
-  bool DecodeInternal(const llvm::DWARFDebugInfoEntry& die, int abstract_origin_refs_to_follow);
+  bool DecodeInternal(const llvm::DWARFDie& die, int abstract_origin_refs_to_follow);
+
+  // Decodes a cross-DIE reference. Return value will be !isValid() on failure.
+  llvm::DWARFDie DecodeReference(const llvm::DWARFFormValue& form);
 
   llvm::DWARFContext* context_;
-  llvm::DWARFUnit* unit_;
-  llvm::DWARFDataExtractor extractor_;
 
   // Normally there will be few attributes and a brute-force search through a contiguous array will
   // be faster than a map lookup.

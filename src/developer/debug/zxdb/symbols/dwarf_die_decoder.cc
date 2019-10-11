@@ -17,42 +17,9 @@ namespace {
 // before givin up. Prevents blowing out the stack for corrupt symbols.
 constexpr int kMaxAbstractOriginRefsToFollow = 8;
 
-// Decodes a cross-DIE reference. Return value will be !isValid() on failure.
-llvm::DWARFDie DecodeReference(llvm::DWARFUnit* unit, const llvm::DWARFFormValue& form) {
-  switch (form.getForm()) {
-    case llvm::dwarf::DW_FORM_ref1:
-    case llvm::dwarf::DW_FORM_ref2:
-    case llvm::dwarf::DW_FORM_ref4:
-    case llvm::dwarf::DW_FORM_ref8:
-    case llvm::dwarf::DW_FORM_ref_udata: {
-      // A DWARF "form" is the way a value is encoded in the file. These
-      // are all relative location of DIEs within the same unit.
-      auto ref_value = form.getAsReferenceUVal();
-      if (ref_value)
-        return unit->getDIEForOffset(unit->getOffset() + *ref_value);
-      break;
-    }
-    case llvm::dwarf::DW_FORM_ref_addr: {
-      // This is an absolute DIE address which can be used across units.
-      auto ref_value = form.getAsReferenceUVal();
-      if (ref_value)
-        return unit->getDIEForOffset(*ref_value);
-      break;
-    }
-    default:
-      // Note that we don't handle DW_FORM_ref_sig8, DW_FORM_ref_sup4, or
-      // DW_FORM_ref_sup8. The "sig8" one requries a different type encoding
-      // that our Clang toolchain doesn't seem to generate. The "sup4/8" ones
-      // require a shared separate symbol file we don't use.
-      break;
-  }
-  return llvm::DWARFDie();
-}
-
 }  // namespace
 
-DwarfDieDecoder::DwarfDieDecoder(llvm::DWARFContext* context, llvm::DWARFUnit* unit)
-    : context_(context), unit_(unit), extractor_(unit_->getDebugInfoExtractor()) {}
+DwarfDieDecoder::DwarfDieDecoder(llvm::DWARFContext* context) : context_(context) {}
 
 DwarfDieDecoder::~DwarfDieDecoder() = default;
 
@@ -108,17 +75,19 @@ void DwarfDieDecoder::AddCString(llvm::dwarf::Attribute attribute,
 
 void DwarfDieDecoder::AddLineTableFile(llvm::dwarf::Attribute attribute,
                                        llvm::Optional<std::string>* output) {
-  const llvm::DWARFDebugLine::LineTable* line_table = context_->getLineTableForUnit(unit_);
-  if (line_table) {
-    attrs_.emplace_back(attribute, [output, line_table](const llvm::DWARFFormValue& form) {
-      output->emplace();
-      // Pass "" for the compilation directory so it doesn't rebase the file name. Our output
-      // file names are always relative to the build (compilation) dir.
-      line_table->getFileNameByIndex(form.getAsUnsignedConstant().getValue(), "",
-                                     llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
-                                     output->getValue());
-    });
-  }
+  attrs_.emplace_back(attribute, [this, output](const llvm::DWARFFormValue& form) {
+    const llvm::DWARFDebugLine::LineTable* line_table =
+        context_->getLineTableForUnit(const_cast<llvm::DWARFUnit*>(form.getUnit()));
+    if (!line_table)
+      return;
+
+    output->emplace();
+    // Pass "" for the compilation directory so it doesn't rebase the file name. Our output
+    // file names are always relative to the build (compilation) dir.
+    line_table->getFileNameByIndex(form.getAsUnsignedConstant().getValue(), "",
+                                   llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+                                   output->getValue());
+  });
 }
 
 void DwarfDieDecoder::AddConstValue(llvm::dwarf::Attribute attribute, ConstValue* output) {
@@ -145,31 +114,9 @@ void DwarfDieDecoder::AddConstValue(llvm::dwarf::Attribute attribute, ConstValue
   });
 }
 
-void DwarfDieDecoder::AddReference(llvm::dwarf::Attribute attribute,
-                                   llvm::Optional<uint64_t>* unit_offset,
-                                   llvm::Optional<uint64_t>* global_offset) {
-  attrs_.emplace_back(attribute, [unit_offset, global_offset](const llvm::DWARFFormValue& form) {
-    // See DecodeReference() function above for more info.
-    switch (form.getForm()) {
-      case llvm::dwarf::DW_FORM_ref1:
-      case llvm::dwarf::DW_FORM_ref2:
-      case llvm::dwarf::DW_FORM_ref4:
-      case llvm::dwarf::DW_FORM_ref8:
-      case llvm::dwarf::DW_FORM_ref_udata:
-        *unit_offset = form.getAsReferenceUVal();
-        break;
-      case llvm::dwarf::DW_FORM_ref_addr:
-        *global_offset = form.getAsReferenceUVal();
-        break;
-      default:
-        break;
-    }
-  });
-}
-
 void DwarfDieDecoder::AddReference(llvm::dwarf::Attribute attribute, llvm::DWARFDie* output) {
   attrs_.emplace_back(attribute, [this, output](const llvm::DWARFFormValue& form) {
-    *output = DecodeReference(unit_, form);
+    *output = DecodeReference(form);
   });
 }
 
@@ -180,7 +127,10 @@ void DwarfDieDecoder::AddFile(llvm::dwarf::Attribute attribute,
     if (!file_index)
       return;
 
-    const llvm::DWARFDebugLine::LineTable* line_table = context_->getLineTableForUnit(unit_);
+    const llvm::DWARFDebugLine::LineTable* line_table =
+        context_->getLineTableForUnit(const_cast<llvm::DWARFUnit*>(form.getUnit()));
+    if (!line_table)
+      return;
 
     // Pass "" for the compilation directory so it doesn't rebase the file name. Our output file
     // names are always relative to the build (compilation) dir.
@@ -202,14 +152,12 @@ void DwarfDieDecoder::AddCustom(llvm::dwarf::Attribute attribute,
   attrs_.emplace_back(attribute, std::move(callback));
 }
 
-bool DwarfDieDecoder::Decode(const llvm::DWARFDie& die) { return Decode(*die.getDebugInfoEntry()); }
-
-bool DwarfDieDecoder::Decode(const llvm::DWARFDebugInfoEntry& die) {
+bool DwarfDieDecoder::Decode(const llvm::DWARFDie& die) {
   seen_attrs_.clear();
   return DecodeInternal(die, kMaxAbstractOriginRefsToFollow);
 }
 
-bool DwarfDieDecoder::DecodeInternal(const llvm::DWARFDebugInfoEntry& die,
+bool DwarfDieDecoder::DecodeInternal(const llvm::DWARFDie& die,
                                      int abstract_origin_refs_to_follow) {
   // This indicates the abbreviation. Each DIE starts with an abbreviation
   // code.  The is the number that the DWARFAbbreviationDeclaration was derived
@@ -226,11 +174,13 @@ bool DwarfDieDecoder::DecodeInternal(const llvm::DWARFDebugInfoEntry& die,
   if (!abbrev)
     return false;
 
+  llvm::DWARFUnit* unit = die.getDwarfUnit();
+  llvm::DWARFDataExtractor extractor = unit->getDebugInfoExtractor();
   uint32_t offset = die.getOffset();
 
   // Skip over the abbreviationcode. We don't actually need this (the abbrev
   // pointer above is derived from this) but we need to move offset past it.
-  uint32_t abbr_code = extractor_.getULEB128(&offset);
+  uint32_t abbr_code = extractor.getULEB128(&offset);
   if (!abbr_code) {
     FXL_NOTREACHED();  // Should have gotten a null abbrev for this above.
     return false;
@@ -254,8 +204,8 @@ bool DwarfDieDecoder::DecodeInternal(const llvm::DWARFDebugInfoEntry& die,
       // Abtract origins are handled after loop completion. Explicitly don't
       // check for duplicate attributes in this case so we can follow more than
       // one link in the chain.
-      form_value.extractValue(extractor_, &offset, unit_->getFormParams(), unit_);
-      abstract_origin = DecodeReference(unit_, form_value);
+      form_value.extractValue(extractor, &offset, unit->getFormParams(), unit);
+      abstract_origin = DecodeReference(form_value);
       decoded_current = true;
     } else {
       // Track attributes that we've already seen and don't decode duplicates
@@ -278,7 +228,7 @@ bool DwarfDieDecoder::DecodeInternal(const llvm::DWARFDebugInfoEntry& die,
 
         // Found the attribute, dispatch it and mark it read.
         if (!decoded_current) {
-          form_value.extractValue(extractor_, &offset, unit_->getFormParams(), unit_);
+          form_value.extractValue(extractor, &offset, unit->getFormParams(), unit);
           decoded_current = true;
         }
         dispatch.second(form_value);
@@ -288,22 +238,55 @@ bool DwarfDieDecoder::DecodeInternal(const llvm::DWARFDebugInfoEntry& die,
 
     if (!decoded_current) {
       // When the attribute wasn't read, skip over it to go to the next.
-      form_value.skipValue(extractor_, &offset, unit_->getFormParams());
+      form_value.skipValue(extractor, &offset, unit->getFormParams());
     }
   }
 
   // Recursively decode abstract origins. The attributes on the abstract origin
   // DIE "underlay" any attributes present on the current one.
   if (abstract_origin.isValid() && abstract_origin_refs_to_follow > 0) {
-    return DecodeInternal(*abstract_origin.getDebugInfoEntry(), abstract_origin_refs_to_follow - 1);
+    return DecodeInternal(abstract_origin, abstract_origin_refs_to_follow - 1);
   } else {
-    // The deepest DIE in the abstract origin chain was found (which will be
-    // the original DIE itself if there was no abstract origin).
+    // The deepest DIE in the abstract origin chain was found (which will be the original DIE itself
+    // if there was no abstract origin).
     if (abstract_parent_)
-      *abstract_parent_ = unit_->getParent(&die);
+      *abstract_parent_ = die.getParent();
   }
 
   return true;
+}
+
+llvm::DWARFDie DwarfDieDecoder::DecodeReference(const llvm::DWARFFormValue& form) {
+  switch (form.getForm()) {
+    case llvm::dwarf::DW_FORM_ref1:
+    case llvm::dwarf::DW_FORM_ref2:
+    case llvm::dwarf::DW_FORM_ref4:
+    case llvm::dwarf::DW_FORM_ref8:
+    case llvm::dwarf::DW_FORM_ref_udata: {
+      // A DWARF "form" is the way a value is encoded in the file. These
+      // are all relative location of DIEs within the same unit.
+      auto ref_value = form.getAsReferenceUVal();
+      if (ref_value) {
+        llvm::DWARFUnit* unit = const_cast<llvm::DWARFUnit*>(form.getUnit());
+        return unit->getDIEForOffset(unit->getOffset() + *ref_value);
+      }
+      break;
+    }
+    case llvm::dwarf::DW_FORM_ref_addr: {
+      // This is an absolute DIE address which can be used across units.
+      auto ref_value = form.getAsReferenceUVal();
+      if (ref_value)
+        return context_->getDIEForOffset(*ref_value);
+      break;
+    }
+    default:
+      // Note that we don't handle DW_FORM_ref_sig8, DW_FORM_ref_sup4, or
+      // DW_FORM_ref_sup8. The "sig8" one requries a different type encoding
+      // that our Clang toolchain doesn't seem to generate. The "sup4/8" ones
+      // require a shared separate symbol file we don't use.
+      break;
+  }
+  return llvm::DWARFDie();
 }
 
 }  // namespace zxdb
