@@ -149,14 +149,20 @@ size_t Database::GarbageCollect() {
   }
 
   if (num_pruned + num_cleaned > 0) {
+    // We need to store the |UUID|s to be removed from |additional_data_| because erasing a
+    // |UUID| within the loop will invalidate the generated iterator and cause a use-after-free bug.
+    std::vector<UUID> clean_up;
     crashpad::CrashReportDatabase::Report report;
     for (const auto& [uuid, _] : additional_data_) {
       if (database_->LookUpCrashReport(uuid, &report) != OperationStatus::kNoError) {
-        additional_data_.erase(uuid);
+        clean_up.push_back(uuid);
       }
     }
-  }
 
+    for (const auto& uuid : clean_up) {
+      CleanUp(uuid);
+    }
+  }
   return num_pruned + num_cleaned;
 }
 
