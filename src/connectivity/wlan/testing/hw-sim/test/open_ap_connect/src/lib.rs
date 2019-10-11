@@ -70,7 +70,7 @@ async fn open_ap_connect() {
     // (client->ap) send a mock auth req
     let proxy = helper.proxy();
     proxy
-        .rx(0, &mut auth_req.iter().cloned(), &mut create_rx_info(&CHANNEL))
+        .rx(0, &mut auth_req.iter().cloned(), &mut create_rx_info(&CHANNEL, 0))
         .expect("cannot send auth req frame");
 
     // (ap->client) verify auth response frame was sent
@@ -79,7 +79,7 @@ async fn open_ap_connect() {
     // (client->ap) send a mock assoc req
     let proxy = helper.proxy();
     proxy
-        .rx(0, &mut assoc_req.iter().cloned(), &mut create_rx_info(&CHANNEL))
+        .rx(0, &mut assoc_req.iter().cloned(), &mut create_rx_info(&CHANNEL, 0))
         .expect("cannot send assoc req frame");
 
     // (ap->client) verify assoc response frame was sent

@@ -86,11 +86,12 @@ pub struct Beacon<'a> {
     bssid: Bssid,
     ssid: Vec<u8>,
     protection: Protection,
+    rssi: i8,
 }
 
 impl<'a> Beacon<'a> {
     pub fn send(phy: &'a wlantap::WlantapPhyProxy) -> Self {
-        Self { phy: phy, bssid: Bssid([1; 6]), ssid: vec![], protection: Protection::Open }
+        Self { phy: phy, bssid: Bssid([1; 6]), ssid: vec![], protection: Protection::Open, rssi: 0 }
     }
 
     pub fn bssid(self, bssid: Bssid) -> Self {
@@ -104,12 +105,24 @@ impl<'a> Beacon<'a> {
     pub fn protection(self, protection: Protection) -> Self {
         Self { protection, ..self }
     }
+
+    pub fn rssi(self, rssi: i8) -> Self {
+        Self { rssi, ..self }
+    }
 }
 
 impl<'a> Action<wlantap::SetChannelArgs> for Beacon<'a> {
     fn run(&mut self, args: &wlantap::SetChannelArgs) {
-        send_beacon(&mut vec![], &args.chan, &self.bssid, &self.ssid, &self.protection, &self.phy)
-            .unwrap();
+        send_beacon(
+            &mut vec![],
+            &args.chan,
+            &self.bssid,
+            &self.ssid,
+            &self.protection,
+            &self.phy,
+            self.rssi,
+        )
+        .unwrap();
     }
 }
 

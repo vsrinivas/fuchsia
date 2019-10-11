@@ -48,10 +48,12 @@ pub fn default_wlantap_config_ap() -> WlantapPhyConfig {
     config::create_wlantap_config(format!("wlantap-ap"), AP_MAC_ADDR.0, MacRole::Ap)
 }
 
-pub fn create_rx_info(channel: &WlanChan) -> WlanRxInfo {
+pub fn create_rx_info(channel: &WlanChan, rssi_dbm: i8) -> WlanRxInfo {
+    // should match enum WlanRxInfoValid::RSSI in zircon/system/banjo/ddk.protocol.wlan.info/info.banjo
+    const WLAN_RX_INFO_VALID_RSSI: u32 = 0x10;
     WlanRxInfo {
         rx_flags: 0,
-        valid_fields: 0,
+        valid_fields: if rssi_dbm == 0 { 0 } else { WLAN_RX_INFO_VALID_RSSI },
         phy: 0,
         data_rate: 0,
         chan: WlanChan {
@@ -61,7 +63,7 @@ pub fn create_rx_info(channel: &WlanChan) -> WlanRxInfo {
             secondary80: channel.secondary80,
         },
         mcs: 0,
-        rssi_dbm: 0,
+        rssi_dbm,
         rcpi_dbmh: 0,
         snr_dbh: 0,
     }
@@ -74,6 +76,7 @@ pub fn send_beacon(
     ssid: &[u8],
     protection: &Protection,
     proxy: &WlantapPhyProxy,
+    rssi_dbm: i8,
 ) -> Result<(), failure::Error> {
     frame_buf.clear();
 
@@ -109,7 +112,7 @@ pub fn send_beacon(
         _ => panic!("unsupported fake beacon: {:?}", protection),
     };
 
-    proxy.rx(0, &mut frame_buf.iter().cloned(), &mut create_rx_info(channel))?;
+    proxy.rx(0, &mut frame_buf.iter().cloned(), &mut create_rx_info(channel, rssi_dbm))?;
     Ok(())
 }
 
@@ -137,7 +140,7 @@ fn send_authentication(
         status_code: mac::StatusCode::SUCCESS,
     })?;
 
-    proxy.rx(0, &mut frame_buf.iter().cloned(), &mut create_rx_info(channel))?;
+    proxy.rx(0, &mut frame_buf.iter().cloned(), &mut create_rx_info(channel, 0))?;
     Ok(())
 }
 
@@ -172,7 +175,7 @@ fn send_association_response(
     // tx_vec_idx:                            133 134 basic_135  136
     ie::write_ext_supported_rates(frame_buf, &[48, 72, 128 + 96, 108])?;
 
-    proxy.rx(0, &mut frame_buf.iter().cloned(), &mut create_rx_info(channel))?;
+    proxy.rx(0, &mut frame_buf.iter().cloned(), &mut create_rx_info(channel, 0))?;
     Ok(())
 }
 
@@ -259,7 +262,7 @@ fn handle_connect_events(
         WlantapPhyEvent::SetChannel { args } => {
             println!("channel: {:?}", args.chan);
             if args.chan.primary == CHANNEL.primary {
-                send_beacon(&mut vec![], &args.chan, bssid, ssid, protection, &phy).unwrap();
+                send_beacon(&mut vec![], &args.chan, bssid, ssid, protection, &phy, 0).unwrap();
             }
         }
         WlantapPhyEvent::Tx { args } => {
@@ -394,7 +397,7 @@ pub fn rx_wlan_data_frame(
     data_writer::write_snap_llc_hdr(buf, ether_type)?;
     buf.append_bytes(payload)?;
 
-    phy.rx(0, &mut buf.iter().cloned(), &mut create_rx_info(channel))?;
+    phy.rx(0, &mut buf.iter().cloned(), &mut create_rx_info(channel, 0))?;
     Ok(())
 }
 

@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_wlan_tap::WlantapPhyProxy,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
-    wlan_common::mac::Bssid,
+    wlan_common::{bss::Protection, mac::Bssid},
     wlan_hw_sim::*,
 };
 
@@ -30,9 +30,29 @@ async fn scan(
             EventHandlerBuilder::new()
                 .on_set_channel(
                     MatchChannel::new()
-                        .on_primary(1, Beacon::send(&phy).bssid(BSS_FOO).ssid(SSID_FOO.to_vec()))
-                        .on_primary(6, Beacon::send(&phy).bssid(BSS_BAR).ssid(SSID_BAR.to_vec()))
-                        .on_primary(11, Beacon::send(&phy).bssid(BSS_BAZ).ssid(SSID_BAZ.to_vec()),
+                        .on_primary(
+                            1,
+                            Beacon::send(&phy)
+                                .bssid(BSS_FOO)
+                                .ssid(SSID_FOO.to_vec())
+                                .protection(Protection::Wpa2Personal)
+                                .rssi(-60),
+                        )
+                        .on_primary(
+                            6,
+                            Beacon::send(&phy)
+                                .bssid(BSS_BAR)
+                                .ssid(SSID_BAR.to_vec())
+                                .protection(Protection::Wpa2Personal)
+                                .rssi(-40),
+                        )
+                        .on_primary(
+                            11,
+                            Beacon::send(&phy)
+                                .bssid(BSS_BAZ)
+                                .ssid(SSID_BAZ.to_vec())
+                                .protection(Protection::Wpa2Personal)
+                                .rssi(-60),
                         ),
                 )
                 .build(),
@@ -65,13 +85,13 @@ async fn simulate_scan() {
         .aps
         .expect("Got empty scan results")
         .into_iter()
-        .map(|ap| (ap.ssid, ap.bssid))
+        .map(|ap| (ap.ssid, ap.bssid, ap.is_secure, ap.rssi_dbm))
         .collect();
     aps.sort();
     let mut expected_aps = [
-        (String::from_utf8_lossy(SSID_FOO).to_string(), BSS_FOO.0.to_vec()),
-        (String::from_utf8_lossy(SSID_BAR).to_string(), BSS_BAR.0.to_vec()),
-        (String::from_utf8_lossy(SSID_BAZ).to_string(), BSS_BAZ.0.to_vec()),
+        (String::from_utf8_lossy(SSID_FOO).to_string(), BSS_FOO.0.to_vec(), true, -60),
+        (String::from_utf8_lossy(SSID_BAR).to_string(), BSS_BAR.0.to_vec(), true, -40),
+        (String::from_utf8_lossy(SSID_BAZ).to_string(), BSS_BAZ.0.to_vec(), true, -60),
     ];
     expected_aps.sort();
     assert_eq!(&expected_aps, &aps[..]);

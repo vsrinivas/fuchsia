@@ -39,6 +39,7 @@ async fn scan(
                             SSID_WPA1,
                             &Protection::Wpa1,
                             &phy,
+                            0,
                         )
                         .unwrap();
                         send_beacon(
@@ -48,6 +49,7 @@ async fn scan(
                             SSID_WEP,
                             &Protection::Wep,
                             &phy,
+                            0,
                         )
                         .unwrap();
                         send_beacon(
@@ -57,6 +59,7 @@ async fn scan(
                             SSID_MIXED,
                             &Protection::Wpa1Wpa2Personal,
                             &phy,
+                            0,
                         )
                         .unwrap();
                     }
