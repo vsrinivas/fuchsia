@@ -431,9 +431,7 @@ zx_status_t PerfmonDevice::PmuStart() {
   zxlogf(TRACE, "%s: global ctrl 0x%lx, fixed ctrl 0x%lx\n", __func__,
          per_trace->config.global_ctrl, per_trace->config.fixed_ctrl);
 
-  // |per_trace->configured| should not have been set if there's nothing
-  // to trace.
-  assert(per_trace->config.global_ctrl != 0);
+  // Note: If only misc counters are enabled then |global_ctrl| will be zero.
 #endif
 
   // Please do not use get_root_resource() in new code. See ZX-1467.
