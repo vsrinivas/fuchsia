@@ -322,6 +322,7 @@ type Root struct {
 	PrimaryHeader   string
 	Headers         []string
 	LLHeaders       []string
+	LFHeaders       []string
 	HandleTypes     []string
 	Library         types.LibraryIdentifier
 	LibraryReversed types.LibraryIdentifier
@@ -1306,6 +1307,7 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 		}
 		libraryIdent := types.ParseLibraryName(l.Name)
 		root.Headers = append(root.Headers, fmt.Sprintf("%s/cpp/fidl.h", formatLibraryPath(libraryIdent)))
+		root.LFHeaders = append(root.LFHeaders, fmt.Sprintf("%s/cpp/libfuzzer.h", formatLibraryPath(libraryIdent)))
 		root.LLHeaders = append(root.LLHeaders, fmt.Sprintf("%s/llcpp/fidl.h", formatLibraryPath(libraryIdent)))
 	}
 

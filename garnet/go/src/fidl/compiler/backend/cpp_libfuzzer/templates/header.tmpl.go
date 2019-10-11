@@ -16,8 +16,13 @@ const Header = `
 {{ range .Headers -}}
 #include <{{ . }}>
 {{- end }}
+{{ if .LFHeaders -}}
+{{ "" }}
+{{ range .LFHeaders -}}
+#include <{{ . }}>
+{{ end -}}
+{{ end -}}
 
-namespace fidl {
 namespace fuzzing {
 
 {{ range .Decls }}
@@ -36,6 +41,5 @@ using {{ .Name }} = {{ .Namespace }}::{{ .Name }};
 {{- end }}
 
 }  // namespace fuzzing
-}  // namespace fidl
 {{ end }}
 `

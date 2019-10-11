@@ -6,8 +6,6 @@
 #include "lib/fidl/cpp/internal/header.h"
 
 #include <test/name/cpp/fidl.h>
-
-namespace fidl {
 namespace fuzzing {
 
 
@@ -15,4 +13,3 @@ namespace fuzzing {
 
 
 }  // namespace fuzzing
-}  // namespace fidl

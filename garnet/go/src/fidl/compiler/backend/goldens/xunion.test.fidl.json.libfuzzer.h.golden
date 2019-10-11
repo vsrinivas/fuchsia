@@ -6,8 +6,6 @@
 #include "lib/fidl/cpp/internal/header.h"
 
 #include <test/name/cpp/fidl.h>
-
-namespace fidl {
 namespace fuzzing {
 
 
@@ -128,4 +126,3 @@ struct Allocate<XUnionContainingEmptyStruct> {
 };
 
 }  // namespace fuzzing
-}  // namespace fidl

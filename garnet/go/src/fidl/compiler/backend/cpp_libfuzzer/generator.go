@@ -63,17 +63,6 @@ func (gen *FidlGenerator) GenerateSource(wr io.Writer, tree ir.Root) error {
 
 // GenerateFidl generates all files required for the C++ libfuzzer code.
 func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
-	if len(fidl.Interfaces) == 0 {
-		return fmt.Errorf("No interfaces in FIDL library: %s", string(fidl.Name))
-	}
-	mthdCount := 0
-	for _, iface := range fidl.Interfaces {
-		mthdCount += len(iface.Methods)
-	}
-	if mthdCount == 0 {
-		return fmt.Errorf("No non-empty interfaces in FIDL library: %s", string(fidl.Name))
-	}
-
 	tree := ir.Compile(fidl)
 	prepareTree(fidl.Name, &tree)
 
@@ -95,14 +84,24 @@ func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) err
 		return err
 	}
 
-	sourceFile, err := os.Create(sourcePath)
-	if err != nil {
-		return err
-	}
-	defer sourceFile.Close()
+	if len(fidl.Interfaces) > 0 {
+		mthdCount := 0
+		for _, iface := range fidl.Interfaces {
+			mthdCount += len(iface.Methods)
+		}
+		if mthdCount == 0 {
+			return fmt.Errorf("No non-empty interfaces in FIDL library: %s", string(fidl.Name))
+		}
 
-	if err := gen.GenerateSource(sourceFile, tree); err != nil {
-		return err
+		sourceFile, err := os.Create(sourcePath)
+		if err != nil {
+			return err
+		}
+		defer sourceFile.Close()
+
+		if err := gen.GenerateSource(sourceFile, tree); err != nil {
+			return err
+		}
 	}
 
 	return nil

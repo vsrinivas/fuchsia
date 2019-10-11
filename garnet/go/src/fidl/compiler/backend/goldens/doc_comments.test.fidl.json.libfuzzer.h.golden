@@ -6,8 +6,6 @@
 #include "lib/fidl/cpp/internal/header.h"
 
 #include <test/name/cpp/fidl.h>
-
-namespace fidl {
 namespace fuzzing {
 
 
@@ -68,4 +66,3 @@ struct Allocate<Struct> {
 };
 
 }  // namespace fuzzing
-}  // namespace fidl

@@ -6,8 +6,6 @@
 #include "lib/fidl/cpp/internal/header.h"
 
 #include <test/name/cpp/fidl.h>
-
-namespace fidl {
 namespace fuzzing {
 
 
@@ -18,4 +16,3 @@ using MultiHeterogeneousMemberService = ::test::name::MultiHeterogeneousMemberSe
 
 
 }  // namespace fuzzing
-}  // namespace fidl

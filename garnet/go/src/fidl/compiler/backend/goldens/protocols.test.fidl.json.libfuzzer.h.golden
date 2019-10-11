@@ -6,8 +6,6 @@
 #include "lib/fidl/cpp/internal/header.h"
 
 #include <test/name/cpp/fidl.h>
-
-namespace fidl {
 namespace fuzzing {
 
 
@@ -136,4 +134,3 @@ struct Allocate<WithErrorSyntax_ErrorAsEnum_Result> {
 };
 
 }  // namespace fuzzing
-}  // namespace fidl
