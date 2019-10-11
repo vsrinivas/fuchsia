@@ -188,12 +188,17 @@ test_package("netemul_sandbox_test") {
     {
       # Running guests is resource intensive.  Limit this test to only run on NUCs.
       name = "guest_test"
-      environments = [ nuc_env ]
+      environments = [
+        {
+          dimensions = {
+            device_type = "Intel NUC Kit NUC7i5DNHE"
+          }
 
-      # Bug: 37093
-      # There appears to be some flakiness in the gRPC communications with the guest.  Move this
-      # test to the flaky builders until that issue is resolved.
-      tags = [ "flaky" ]
+          # There appears to be some flakiness in the gRPC communications with the guest.  Move this
+          # test to the flaky builders until that issue is resolved.
+          tags = [ "flaky" ]  # Bug: 37093
+        },
+      ]
     },
   ]
 }
