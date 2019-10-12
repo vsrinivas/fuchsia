@@ -45,6 +45,7 @@
 #include <ddk/protocol/wlan/info.h>
 #include <wlan/protocol/info.h>
 
+#include "garnet/lib/wlan/protocol/include/wlan/protocol/mac.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/file.h"
@@ -354,6 +355,7 @@ struct iwl_probe_resp_data {
  *  data to be inserted into probe response.
  * @zxdev: the placeholder for MAC device
  * @mac_role: the role of interface
+ * @ifc: store callback functions of MLME
  */
 struct iwl_mvm_vif {
   struct iwl_mvm* mvm;
@@ -461,6 +463,7 @@ struct iwl_mvm_vif {
   zx_device_t* zxdev;
   wlan_info_mac_role_t mac_role;
   zx_handle_t sme_channel;  // Channel passed from devmgr. Will be passed to MLME at mac_start().
+  wlanmac_ifc_t ifc;
 };
 
 static inline struct iwl_mvm_vif* iwl_mvm_vif_from_mac80211(struct ieee80211_vif* vif) {

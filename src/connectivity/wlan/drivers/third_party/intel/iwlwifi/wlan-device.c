@@ -91,6 +91,8 @@ static zx_status_t mac_start(void* ctx, wlanmac_ifc_t* ifc, zx_handle_t* out_sme
   *out_sme_channel = mvmvif->sme_channel;
   mvmvif->sme_channel = ZX_HANDLE_INVALID;
 
+  mvmvif->ifc = *ifc;
+
   IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
   return ZX_OK;  // Temporarily returns OK to make the interface list-able.
 }
