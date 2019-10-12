@@ -144,10 +144,7 @@ class Device : public fbl::RefCounted<Device>,
    public:
     ChildListIterator() : state_(Done{}) {}
     explicit ChildListIterator(DeviceType* device)
-        : cur_component_(Composite{}), state_(device->children_.begin()), device_(device) {
-      if (device_->parent_) {
-        cur_component_ = device->parent_->components().begin();
-      }
+        : state_(device->children_.begin()), device_(device) {
       SkipInvalidStates();
     }
     ChildListIterator operator++(int) {
@@ -167,7 +164,7 @@ class Device : public fbl::RefCounted<Device>,
             if constexpr (std::is_same_v<T, IterType>) {
               ++arg;
             } else if constexpr (std::is_same_v<T, Composite>) {
-              cur_component_++;
+              ++arg;
             } else if constexpr (std::is_same_v<T, Done>) {
               state_ = Done{};
             }
@@ -179,12 +176,12 @@ class Device : public fbl::RefCounted<Device>,
 
     DeviceType& operator*() const {
       return std::visit(
-          [this](auto&& arg) -> DeviceType& {
+          [](auto&& arg) -> DeviceType& {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, IterType>) {
               return *arg;
             } else if constexpr (std::is_same_v<T, Composite>) {
-              return *(cur_component_->composite()->device());
+              return *(arg->composite()->device());
             } else {
               __builtin_trap();
             }
@@ -209,7 +206,13 @@ class Device : public fbl::RefCounted<Device>,
                 if (arg != device_->children_.end()) {
                   return false;
                 }
-                state_ = Composite{};
+                // If there are no more children, run through the Composite
+                // state next.
+                if (device_->parent_) {
+                  state_ = Composite{device_->parent_->components().begin()};
+                } else {
+                  state_ = Composite{};
+                }
                 return true;
               } else if constexpr (std::is_same_v<T, Composite>) {
                 // Check if this device is an internal component device
@@ -217,8 +220,8 @@ class Device : public fbl::RefCounted<Device>,
                 // the composite has been constructed, the iterator
                 // should yield the composite.
                 if (device_->parent_) {
-                  if (cur_component_ != device_->parent_->components().end() &&
-                      cur_component_->composite()->device() != nullptr) {
+                  if (arg != device_->parent_->components().end() &&
+                      arg->composite()->device() != nullptr) {
                     return false;
                   }
                 }
@@ -237,7 +240,6 @@ class Device : public fbl::RefCounted<Device>,
     struct Done {
       bool operator==(Done) const { return true; }
     };
-    Composite cur_component_;
     std::variant<IterType, Composite, Done> state_;
     DeviceType* device_;
   };
