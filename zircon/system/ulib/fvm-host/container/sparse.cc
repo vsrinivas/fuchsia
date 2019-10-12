@@ -474,7 +474,7 @@ zx_status_t SparseContainer::Pave(fbl::unique_ptr<fvm::host::FileWrapper> wrappe
 
   uint64_t wrapper_size = static_cast<uint64_t>(wrapper->Size());
   if (wrapper_size < disk_offset + minimum_disk_size) {
-    fprintf(stderr, "Cannot pave %lu bytes at offset %lu to FileWrapper of size %lu bytes\n",
+    fprintf(stderr, "Cannot pave %" PRIu64 " bytes at offset %zu to FileWrapper of size %" PRIu64 " bytes\n",
             minimum_disk_size, disk_offset, wrapper_size);
     return ZX_ERR_INVALID_ARGS;
   }

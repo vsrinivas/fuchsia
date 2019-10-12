@@ -5,6 +5,7 @@
 #include "test_library.h"
 
 #define BORINGSSL_NO_CXX
+#include <cinttypes>
 #include <regex>
 
 #include <openssl/sha.h>
@@ -110,7 +111,7 @@ protocol b {
 
     for (size_t i = 0; i < b->methods.size(); i++) {
       const auto& method = b->methods.at(i);
-      fprintf(stderr, "[%zu] name=%s ordinal32=%x, ordinal64=%lx\n", i,
+      fprintf(stderr, "[%zu] name=%s ordinal32=%x, ordinal64=%" PRIx64 "\n", i,
               std::string(method.name.data()).c_str(), method.generated_ordinal32->value,
               method.generated_ordinal64->value);
     }

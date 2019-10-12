@@ -366,7 +366,7 @@ zx_status_t CheckSuperblock(const Superblock* info, uint32_t max_blocks) {
 #endif
   DumpInfo(info);
   if ((info->magic0 != kMinfsMagic0) || (info->magic1 != kMinfsMagic1)) {
-    FS_TRACE_ERROR("minfs: bad magic: %08lu. Minfs magic: %08lu\n", info->magic0, kMinfsMagic0);
+    FS_TRACE_ERROR("minfs: bad magic: %08" PRIi64 ". Minfs magic: %08" PRIu64 "\n", info->magic0, kMinfsMagic0);
     return ZX_ERR_WRONG_TYPE;
   }
   if (info->version_major != kMinfsMajorVersion) {
