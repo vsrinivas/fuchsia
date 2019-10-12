@@ -131,11 +131,35 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     // are for whether this memory should be protected (e.g. usable for DRM content, the precise
     // definition depending on the system).
     constraints_.buffer_memory_constraints.secure_required = constraints->secure_required;
+    // It's always ok to specify inaccessible_domain_supported, though this does mean that CPU
+    // access will potentially be impossible.  This must be true when secure_required is true.
     constraints_.buffer_memory_constraints.inaccessible_domain_supported = true;
 
     constraints_.buffer_memory_constraints.ram_domain_supported = constraints->ram_domain_supported;
     constraints_.buffer_memory_constraints.cpu_domain_supported = constraints->cpu_domain_supported;
     constraints_.buffer_memory_constraints.min_size_bytes = constraints->min_size_bytes;
+
+    // TODO(dustingreen): (or jbauman) Ideally we wouldn't need this fixup, as callers would avoid
+    // specifying secure_required && (cpu_domain_supported || ram_domain_supported).  Only the
+    // inaccessible domain makes sense with secure_required.
+    if (constraints_.buffer_memory_constraints.secure_required) {
+      // Sysmem requires that cpu_domain_supported and ram_domain_supported are false when
+      // secure_required.  For now, we avoid being this picky for PlatformBufferConstraints clients,
+      // but we complain in debug in the hope that clients can be updated so we no longer need this
+      // fixup here.
+      if (constraints_.buffer_memory_constraints.cpu_domain_supported) {
+        // Callers should please stop specifying cpu_domain_supported with secure_required, as it
+        // doesn't really make sense.
+        DMESSAGE("ignoring impossible cpu_domain_supported because secure_required - please fix\n");
+        constraints_.buffer_memory_constraints.cpu_domain_supported = false;
+      }
+      if (constraints_.buffer_memory_constraints.ram_domain_supported) {
+        // Callers should please stop specifying ram_domain_supported with secure_required, as it
+        // doesn't really make sense.
+        DMESSAGE("ignoring impossible ram_domain_supported because secure_required - please fix\n");
+        constraints_.buffer_memory_constraints.ram_domain_supported = false;
+      }
+    }
   }
 
   Status SetImageFormatConstraints(
@@ -287,9 +311,16 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
     constraints.min_buffer_count_for_camping = 1;
     constraints.has_buffer_memory_constraints = true;
     constraints.buffer_memory_constraints.min_size_bytes = size;
+    // It's always ok to support inaccessible domain, though this does imply that CPU access will
+    // potentially not be possible.
     constraints.buffer_memory_constraints.inaccessible_domain_supported = true;
     if (flags & MAGMA_SYSMEM_FLAG_PROTECTED) {
       constraints.buffer_memory_constraints.secure_required = true;
+      // This defaults to true so we have to set it to false, since it's not allowed to specify
+      // secure_required and cpu_domain_supported at the same time.
+      constraints.buffer_memory_constraints.cpu_domain_supported = false;
+      // This must also be false if secure_required is true.
+      DASSERT(!constraints.buffer_memory_constraints.ram_domain_supported);
     }
     constraints.image_format_constraints_count = 0;
 

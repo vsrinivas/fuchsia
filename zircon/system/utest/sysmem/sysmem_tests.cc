@@ -2161,6 +2161,67 @@ extern "C" bool test_sysmem_heap_amlogic_secure_vdec(void) {
   END_TEST;
 }
 
+extern "C" bool test_sysmem_cpu_usage_and_inaccessible_domain_supported_succeeds(void) {
+  BEGIN_TEST;
+
+  zx::channel collection_client;
+  zx_status_t status = make_single_participant_collection(&collection_client);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  constexpr uint32_t kBufferCount = 3;
+  constexpr uint32_t kBufferSize = 64 * 1024;
+  BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
+  constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
+  constraints->min_buffer_count_for_camping = kBufferCount;
+  constraints->has_buffer_memory_constraints = true;
+  constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+      .min_size_bytes = kBufferSize,
+      .max_size_bytes = 128 * 1024,
+      .physically_contiguous_required = false,
+      .secure_required = false,
+      .ram_domain_supported = false,
+      .cpu_domain_supported = true,
+      .inaccessible_domain_supported = true,
+      .heap_permitted_count = 0,
+      .heap_permitted = {},
+  };
+  ZX_DEBUG_ASSERT(constraints->image_format_constraints_count == 0);
+  status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
+                                                         constraints.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx_status_t allocation_status;
+  BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
+  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+      collection_client.get(), &allocation_status, buffer_collection_info.get());
+  // This is the first round-trip to/from sysmem.  A failure here can be due
+  // to any step above failing async.
+  ASSERT_EQ(status, ZX_OK, "");
+  ASSERT_EQ(allocation_status, ZX_OK, "");
+
+  ASSERT_EQ(buffer_collection_info->buffer_count, kBufferCount, "");
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kBufferSize, "");
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false, "");
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, false, "");
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
+            fuchsia_sysmem_CoherencyDomain_CPU, "");
+  ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
+
+  for (uint32_t i = 0; i < 64; ++i) {
+    if (i < kBufferCount) {
+      ASSERT_NE(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
+      uint64_t size_bytes = 0;
+      status = zx_vmo_get_size(buffer_collection_info->buffers[i].vmo, &size_bytes);
+      ASSERT_EQ(status, ZX_OK, "");
+      ASSERT_EQ(size_bytes, kBufferSize, "");
+    } else {
+      ASSERT_EQ(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
+    }
+  }
+
+  END_TEST;
+}
+
 // TODO(dustingreen): Add tests to cover more failure cases.
 
 // clang-format off
@@ -2186,5 +2247,6 @@ BEGIN_TEST_CASE(sysmem_tests)
     RUN_TEST(test_sysmem_close_token)
     RUN_TEST(test_sysmem_heap_amlogic_secure)
     RUN_TEST(test_sysmem_heap_amlogic_secure_vdec)
+    RUN_TEST(test_sysmem_cpu_usage_and_inaccessible_domain_supported_succeeds)
 END_TEST_CASE(sysmem_tests)
 // clang-format on

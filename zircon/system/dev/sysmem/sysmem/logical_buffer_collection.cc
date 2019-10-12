@@ -590,6 +590,38 @@ bool LogicalBufferCollection::CombineConstraints() {
   return true;
 }
 
+// TODO(dustingreen): This needs to avoid permitting any heap when a participant with non-none usage
+// doesn't specify any heaps.  Instead, any heap is permitted if a noneUsage participant specifies
+// zero heaps, otherwise the default is the normal RAM heap.  Also fix the comment on heaps field
+// in FIDL file.  Probably implement in "CheckSanitize".
+//
+// TODO(dustingreen): From a particular participant, CPU usage without
+// IsCpuAccessibleHeapPermitted() should fail.
+//
+// TODO(dustingreen): From a particular participant, be more picky about which domains are supported
+// vs. which heaps are supported.
+static bool IsHeapPermitted(const fuchsia_sysmem_BufferMemoryConstraints* constraints,
+                            fuchsia_sysmem_HeapType heap) {
+  if (constraints->heap_permitted_count) {
+    auto begin = constraints->heap_permitted;
+    auto end = constraints->heap_permitted + constraints->heap_permitted_count;
+    return std::find(begin, end, heap) != end;
+  }
+  return true;
+}
+
+static bool IsSecurePermitted(const fuchsia_sysmem_BufferMemoryConstraints* constraints) {
+  // TODO(37452): Generalize this by finding if there's a heap that maps to secure MemoryAllocator
+  // in the permitted heaps.
+  return constraints->inaccessible_domain_supported &&
+         (IsHeapPermitted(constraints, fuchsia_sysmem_HeapType_AMLOGIC_SECURE) ||
+          IsHeapPermitted(constraints, fuchsia_sysmem_HeapType_AMLOGIC_SECURE_VDEC));
+}
+
+static bool IsCpuAccessSupported(const fuchsia_sysmem_BufferMemoryConstraints* constraints) {
+  return constraints->cpu_domain_supported || constraints->ram_domain_supported;
+}
+
 // Nearly all constraint checks must go under here or under ::Allocate() (not in
 // the Accumulate* methods), else we could fail to notice a single participant
 // providing unsatisfiable constraints, where no Accumulate* happens.  The
@@ -641,10 +673,29 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
     constraints->has_buffer_memory_constraints = true;
   }
   ZX_DEBUG_ASSERT(constraints->has_buffer_memory_constraints);
-  if (IsCpuUsage(constraints->usage) &&
-      constraints->buffer_memory_constraints.inaccessible_domain_supported) {
-    LogError("IsCpuUsage && inaccessible_domain_supported doesn't make sense.");
-    return false;
+  if (!is_aggregated) {
+    if (IsCpuUsage(constraints->usage)) {
+      if (!IsCpuAccessSupported(&constraints->buffer_memory_constraints)) {
+        LogError("IsCpuUsage() && !IsCpuAccessSupported()");
+        return false;
+      }
+      // From a single participant, reject secure_required in combination with CPU usage, since CPU
+      // usage isn't possible given secure memory.
+      if (constraints->buffer_memory_constraints.secure_required) {
+        LogError("IsCpuUsage() && secure_required");
+        return false;
+      }
+      // It's fine if a participant sets CPU usage but also permits inaccessible domain and possibly
+      // IsSecurePermitted().  In that case the participant is expected to pay attetion to the
+      // coherency domain and is_secure and realize that it shouldn't attempt to read/write the
+      // VMOs.
+    }
+    if (constraints->buffer_memory_constraints.secure_required &&
+        IsCpuAccessSupported(&constraints->buffer_memory_constraints)) {
+      // This is a little picky, but easier to be less picky later than more picky later.
+      LogError("secure_required && IsCpuAccessSupported()");
+      return false;
+    }
   }
   if (!CheckSanitizeBufferMemoryConstraints(&constraints->buffer_memory_constraints)) {
     return false;
@@ -653,16 +704,6 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
     if (!CheckSanitizeImageFormatConstraints(&constraints->image_format_constraints[i])) {
       return false;
     }
-  }
-  return true;
-}
-
-static bool IsHeapPermitted(const fuchsia_sysmem_BufferMemoryConstraints* constraints,
-                            fuchsia_sysmem_HeapType heap) {
-  if (constraints->heap_permitted_count) {
-    auto begin = constraints->heap_permitted;
-    auto end = constraints->heap_permitted + constraints->heap_permitted_count;
-    return std::find(begin, end, heap) != end;
   }
   return true;
 }
@@ -676,14 +717,11 @@ bool LogicalBufferCollection::CheckSanitizeBufferMemoryConstraints(
     LogError("min_size_bytes > max_size_bytes");
     return false;
   }
-  // TODO(37452): Generalize this by finding if there's a heap that maps to secure MemoryAllocator
-  // in the permitted heaps.
-  bool secure_permitted = IsHeapPermitted(constraints, fuchsia_sysmem_HeapType_AMLOGIC_SECURE) ||
-                          IsHeapPermitted(constraints, fuchsia_sysmem_HeapType_AMLOGIC_SECURE_VDEC);
-  if (constraints->secure_required && !secure_permitted) {
+  if (constraints->secure_required && !IsSecurePermitted(constraints)) {
     LogError("secure memory required but not permitted");
     return false;
   }
+
   return true;
 }
 
@@ -876,12 +914,6 @@ bool LogicalBufferCollection::AccumulateConstraintBufferCollection(
   ZX_DEBUG_ASSERT(c->has_buffer_memory_constraints);
   if (!AccumulateConstraintBufferMemory(&acc->buffer_memory_constraints,
                                         &c->buffer_memory_constraints)) {
-    return false;
-  }
-
-  // Reject secure_required in combination with any CPU usage, since CPU usage
-  // isn't possible given secure memory.
-  if (acc->buffer_memory_constraints.secure_required && IsCpuUsage(acc->usage)) {
     return false;
   }
 
@@ -1168,9 +1200,7 @@ static uint64_t GetHeap(const fuchsia_sysmem_BufferMemoryConstraints* constraint
     // TODO(37452): Generalize this.
     //
     // checked previously
-    ZX_DEBUG_ASSERT(!constraints->secure_required ||
-                    IsHeapPermitted(constraints, fuchsia_sysmem_HeapType_AMLOGIC_SECURE) ||
-                    IsHeapPermitted(constraints, fuchsia_sysmem_HeapType_AMLOGIC_SECURE_VDEC));
+    ZX_DEBUG_ASSERT(!constraints->secure_required || IsSecurePermitted(constraints));
     if (IsHeapPermitted(constraints, fuchsia_sysmem_HeapType_AMLOGIC_SECURE)) {
       return fuchsia_sysmem_HeapType_AMLOGIC_SECURE;
     } else {
@@ -1288,7 +1318,8 @@ BufferCollection::BufferCollectionInfo LogicalBufferCollection::Allocate(
         &constraints_->buffer_memory_constraints;
     buffer_settings->is_physically_contiguous = buffer_constraints->physically_contiguous_required;
     // checked previously
-    ZX_DEBUG_ASSERT(!(buffer_constraints->secure_required && IsCpuUsage(constraints_->usage)));
+    ZX_DEBUG_ASSERT(IsSecurePermitted(&constraints_->buffer_memory_constraints) ||
+                    !buffer_constraints->secure_required);
     buffer_settings->is_secure = buffer_constraints->secure_required;
     buffer_settings->heap = GetHeap(buffer_constraints);
     // We can't fill out buffer_settings yet because that also depends on
@@ -1310,9 +1341,6 @@ BufferCollection::BufferCollectionInfo LogicalBufferCollection::Allocate(
     *allocation_result = ZX_ERR_NOT_SUPPORTED;
     return BufferCollection::BufferCollectionInfo(BufferCollection::BufferCollectionInfo::Null);
   }
-
-  ZX_DEBUG_ASSERT(constraints_->usage.cpu == 0 ||
-                  buffer_settings->coherency_domain != fuchsia_sysmem_CoherencyDomain_INACCESSIBLE);
 
   // It's allowed for zero participants to have any ImageFormatConstraint(s),
   // in which case the combined constraints_ will have zero (and that's fine,
