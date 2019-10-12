@@ -8,6 +8,11 @@ group("netemul") {
     "runner:netemul_devmgr",
     "runner:netemul_sandbox",
     "runner/runner:netemul_runner",
+
+    # The following packages are needed to run the netemul guest integration test.
+    "//garnet/packages/prod:guest_runner",
+    "//src/virtualization/lib/guest_interaction",
+    "//src/virtualization/packages",
   ]
 }
 
