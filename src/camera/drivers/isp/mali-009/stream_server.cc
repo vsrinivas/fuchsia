@@ -4,6 +4,7 @@
 
 #include "stream_server.h"
 
+#include <array>
 #include <memory>
 
 #include <ddktl/protocol/isp.h>
@@ -11,8 +12,6 @@
 #include <src/lib/fxl/logging.h>
 
 #include "../modules/dma-mgr.h"
-#include "arm-isp-test.h"
-#include "arm-isp.h"
 
 namespace {
 static const auto kDmaPixelFormat = camera::DmaFormat::PixelType::NV12_YUV;
@@ -26,13 +25,11 @@ static const uint32_t kFramesToHold = kBufferCount - 2;
 
 namespace camera {
 
-zx_status_t StreamServer::Create(ArmIspDeviceTester* tester,
-                                 std::unique_ptr<StreamServer>* server_out,
+zx_status_t StreamServer::Create(zx::bti* bti, std::unique_ptr<StreamServer>* server_out,
                                  fuchsia_sysmem_BufferCollectionInfo* buffers_out) {
   *buffers_out = fuchsia_sysmem_BufferCollectionInfo{};
 
   auto server = std::make_unique<StreamServer>();
-  server->tester_ = tester;
 
   // Start a loop to handle client messages.
   zx_status_t status = server->loop_.StartThread("isp-stream-server-loop");
@@ -56,9 +53,8 @@ zx_status_t StreamServer::Create(ArmIspDeviceTester* tester,
   buffers.buffer_count = kBufferCount;
   buffers.vmo_size = format.GetImageSize();
 
-  fbl::AutoLock lock(&server->tester_->isp_lock_);
   for (uint32_t i = 0; i < buffers.buffer_count; ++i) {
-    status = zx::vmo::create_contiguous(server->tester_->GetBti(), buffers.vmo_size, 0,
+    status = zx::vmo::create_contiguous(*bti, buffers.vmo_size, 0,
                                         &buffers.vmos[i]);
     if (status != ZX_OK) {
       FXL_PLOG(ERROR, status) << "Failed to create vmo";
@@ -139,7 +135,7 @@ zx_status_t StreamServer::GetBuffers(fuchsia_sysmem_BufferCollectionInfo* buffer
   return ZX_OK;
 }
 
-void StreamServer::FrameAvailable(uint32_t id) {
+void StreamServer::FrameAvailable(uint32_t id, std::list<uint32_t>* out_frames_to_be_released) {
   // Clean up any disconnected clients.
   std::unordered_set<uint32_t> disconnected_client_ids;
   for (const auto& stream : streams_) {
@@ -153,7 +149,7 @@ void StreamServer::FrameAvailable(uint32_t id) {
   }
 
   // Release any unused frames back to the ISP.
-  uint32_t buffer_refs[kBufferCount]{};
+  std::array<uint32_t, kBufferCount> buffer_refs{};
   for (const auto& stream : streams_) {
     const auto& buffer_ids = stream.second->GetOutstandingBuffers();
     if (buffer_ids.size() >= kFramesToHold) {
@@ -164,11 +160,11 @@ void StreamServer::FrameAvailable(uint32_t id) {
       ++buffer_refs[buffer_id];
     }
   }
-  fbl::AutoLock lock(&tester_->isp_lock_);
+
   for (uint32_t i = 0; i < kBufferCount; ++i) {
     auto it = read_locked_buffers_.find(i);
     if (buffer_refs[i] == 0 && it != read_locked_buffers_.end()) {
-      tester_->isp_->ReleaseFrame(i, STREAM_TYPE_FULL_RESOLUTION);
+      out_frames_to_be_released->push_back(i);
       read_locked_buffers_.erase(it);
     }
   }
@@ -177,7 +173,7 @@ void StreamServer::FrameAvailable(uint32_t id) {
   if (read_locked_buffers_.size() >= kFramesToHold) {
     FXL_LOG(WARNING)
         << "Clients are collectively holding too many buffers. Frames will be dropped.";
-    tester_->isp_->ReleaseFrame(id, STREAM_TYPE_FULL_RESOLUTION);
+    out_frames_to_be_released->push_back(id);
     return;
   }
 

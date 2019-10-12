@@ -11,6 +11,7 @@
 #include <zircon/fidl.h>
 
 #include <memory>
+#include <list>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
@@ -51,6 +52,8 @@ class ArmIspDeviceTester : public IspDeviceTesterType,
   // Disconnect function, so that the ArmIspDevice can notify the
   // ArmIspDeviceTester that it is going away.
   static zx_status_t Create(ArmIspDevice* isp, fit::callback<void()>* on_isp_unbind);
+
+  void ReleaseFrames(const std::list<uint32_t>& frames_to_be_released);
 
   // Returns the ISP's BTI. Avoids the need to add more friend classes to the ISP.
   zx::bti& GetBti() __TA_REQUIRES(isp_lock_);

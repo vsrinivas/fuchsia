@@ -8,10 +8,6 @@
 #include <fbl/auto_lock.h>
 #include <src/lib/fxl/logging.h>
 
-#include "../modules/dma-mgr.h"
-#include "arm-isp-test.h"
-#include "arm-isp.h"
-
 namespace camera {
 
 zx_status_t StreamImpl::Create(zx::channel channel, async_dispatcher_t* dispatcher,
@@ -38,7 +34,7 @@ void StreamImpl::FrameAvailable(uint32_t id) {
   fuchsia::camera::common::FrameAvailableEvent event{};
   event.frame_status = fuchsia::camera::common::FrameStatus::OK;
   event.buffer_id = id;
-  binding_.events().OnFrameAvailable(std::move(event));
+  binding_.events().OnFrameAvailable(event);
   outstanding_buffers_.insert(id);
 }
 

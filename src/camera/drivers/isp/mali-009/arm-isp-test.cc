@@ -42,6 +42,13 @@ zx_status_t ArmIspDeviceTester::Create(ArmIspDevice* isp, fit::callback<void()>*
   return status;
 }
 
+void ArmIspDeviceTester::ReleaseFrames(const std::list<uint32_t>& frames_to_be_released) {
+  fbl::AutoLock guard(&isp_lock_);
+  for (const auto id : frames_to_be_released) {
+    isp_->ReleaseFrame(id, STREAM_TYPE_FULL_RESOLUTION);
+  }
+}
+
 zx::bti& ArmIspDeviceTester::GetBti() { return isp_->bti_; }
 
 // Methods required by the ddk.
@@ -294,10 +301,14 @@ zx_status_t ArmIspDeviceTester::RunTests(fidl_txn_t* txn) {
 
 zx_status_t ArmIspDeviceTester::CreateStreamServer() {
   fuchsia_sysmem_BufferCollectionInfo buffers{};
-  zx_status_t status = StreamServer::Create(this, &server_, &buffers);
-  if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to create StreamServer";
-    return status;
+  zx_status_t status;
+  {
+    fbl::AutoLock guard(&isp_lock_);
+    status = StreamServer::Create(&GetBti(), &server_, &buffers);
+    if (status != ZX_OK) {
+      FXL_PLOG(ERROR, status) << "Failed to create StreamServer";
+      return status;
+    }
   }
 
   fuchsia_camera_common_FrameRate rate = {.frames_per_sec_numerator = 30,
@@ -306,7 +317,9 @@ zx_status_t ArmIspDeviceTester::CreateStreamServer() {
   cb.frame_ready = [](void* ctx, uint32_t buffer_id) {
     auto tester = static_cast<ArmIspDeviceTester*>(ctx);
     fbl::AutoLock server_guard(&tester->server_lock_);
-    tester->server_->FrameAvailable(buffer_id);
+    std::list<uint32_t> frames_to_be_released;
+    tester->server_->FrameAvailable(buffer_id, &frames_to_be_released);
+    tester->ReleaseFrames(frames_to_be_released);
     if (tester->server_->GetNumClients() == 0) {
       // Stop streaming server upon losing the last client.
       FXL_LOG(INFO) << "Last client disconnected. Stopping server.";

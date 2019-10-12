@@ -9,13 +9,12 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <zircon/types.h>
 
+#include <list>
 #include <unordered_set>
 
 #include "stream_impl.h"
 
 namespace camera {
-
-class ArmIspDeviceTester;
 
 // |StreamImpl| provides a simple stream interface usable by multiple consumers. It is intended to
 // be used only in conjunction with ArmIspDeviceTester.
@@ -28,14 +27,14 @@ class StreamServer {
   StreamServer() : loop_(&kAsyncLoopConfigNoAttachToThread) {}
 
   // Create a server and return writable buffer handles.
-  static zx_status_t Create(ArmIspDeviceTester* tester, std::unique_ptr<StreamServer>* server_out,
+  static zx_status_t Create(zx::bti* bti, std::unique_ptr<StreamServer>* server_out,
                             fuchsia_sysmem_BufferCollectionInfo* buffers_out);
 
   // Add a client and return read-only buffer handles.
   zx_status_t AddClient(zx::channel channel, fuchsia_sysmem_BufferCollectionInfo* buffers_out);
 
   // Called when a new frame is available from the ISP.
-  void FrameAvailable(uint32_t id);
+  void FrameAvailable(uint32_t id, std::list<uint32_t>* out_frames_to_be_released);
 
   // Gets the number of clients connected to the server.
   size_t GetNumClients() { return streams_.size(); }
@@ -43,7 +42,6 @@ class StreamServer {
  private:
   zx_status_t GetBuffers(fuchsia_sysmem_BufferCollectionInfo* buffers_out);
 
-  ArmIspDeviceTester* tester_;
   uint32_t next_stream_id_ = 1;
   std::map<uint32_t, std::unique_ptr<camera::StreamImpl>> streams_;
   async::Loop loop_;
