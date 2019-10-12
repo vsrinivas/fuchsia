@@ -25,6 +25,8 @@ const Header = `
 
 // For ::std::max_element().
 #include <algorithm>
+// For uint64_t.
+#include <stdint.h>
 
 namespace fuzzing {
 

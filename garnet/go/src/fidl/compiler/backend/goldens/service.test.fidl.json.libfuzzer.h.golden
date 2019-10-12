@@ -8,6 +8,8 @@
 #include <test/name/cpp/fidl.h>
 // For ::std::max_element().
 #include <algorithm>
+// For uint64_t.
+#include <stdint.h>
 
 namespace fuzzing {
 

@@ -8,6 +8,8 @@
 #include <test/name/cpp/fidl.h>
 // For ::std::max_element().
 #include <algorithm>
+// For uint64_t.
+#include <stdint.h>
 
 namespace fuzzing {
 
@@ -147,15 +149,26 @@ struct Allocate<WithErrorSyntax_ErrorAsEnum_Response> {
 };
 template<>
 struct MinSize<ErrorEnun> {
-  operator size_t() { return sizeof(ErrorEnun); }
+  operator size_t() { return sizeof(uint64_t); }
 };
 template<>
 struct Allocate<ErrorEnun> {
   ErrorEnun operator()(FuzzInput* src, size_t* size) {
     ErrorEnun out;
-    ZX_ASSERT(*size >= sizeof(ErrorEnun));
-    ZX_ASSERT(src->CopyObject(&out));
-    *size = sizeof(ErrorEnun);
+    uint64_t selector;
+    ZX_ASSERT(*size >= sizeof(uint64_t));
+    ZX_ASSERT(src->CopyObject(&selector));
+    *size = sizeof(uint64_t);
+
+    switch (selector % 2) {
+      case 0:
+        out = ErrorEnun::ERR_FOO;
+        break;
+      case 1:
+        out = ErrorEnun::ERR_BAR;
+        break;
+    }
+
     return out;
   }
 };
