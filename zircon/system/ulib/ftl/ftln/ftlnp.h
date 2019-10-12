@@ -24,7 +24,7 @@
 #define INC_ELIST TRUE    // if true, write erased blocks list
 #define DEBUG_ELIST FALSE
 #ifndef FTLN_DEBUG
-#define FTLN_DEBUG TRUE
+#define FTLN_DEBUG 1     // 0, 1, 2, or 3
 #endif
 #ifndef FTLN_DEBUG_PTR
 #define FTLN_DEBUG_PTR FALSE
@@ -200,20 +200,21 @@ struct ftln {
   ui32 resume_tblk;       // tmp blk for interrupted recycle recovery
   ui32 resume_po;         // resume vblk's highest used page offset
 #if INC_ELIST
-  ui32 elist_blk;  // if valid, # of block holding erased list
+  ui32 elist_blk;         // if valid, # of block holding erased list
 #endif
-  ftl_ndm_stats stats;  // driver call counts
+  ui32 vol_pg_writes;     // metrics: sum of volume page writes
+  ui32 fl_pg_writes;      // metrics: sum of flash page writes
+  ui32 recycle_needed;    // # times recycle needed in FtlnRecCheck()
+  ui32 wc_lag_sum;        // sum of block wear count 'lag' values
+  ftl_ndm_stats stats;    // driver call counts
+  FtlWearData wear_data;   // wear leveling metrics
 
-  ui8* main_buf;   // NAND main page buffer
-  ui8* spare_buf;  // spare buffer for single/multi-pg access
+  ui8* main_buf;          // NAND main page buffer
+  ui8* spare_buf;         // spare buffer for single/multi-pg access
 
-  ui8 eb_size;         // spare area size in bytes
-  ui8 copy_end_found;  // vblk resume copy-end mark found
-  ui8 deferment;       // # of recycles before applying wear limit
-#if FTLN_DEBUG
-  ui8 max_wc_lag;   // maximum observed lag below hi wear count
-  ui8 max_wc_over;  // # of times max WC (0xFF) was exceeded
-#endif
+  ui8 eb_size;            // spare area size in bytes
+  ui8 copy_end_found;     // vblk resume copy-end mark found
+  ui8 deferment;          // # of recycles before applying wear limit
 #if FS_ASSERT
   ui8 assert_no_recycle;  // test no recycle changes physical page #
 #endif
@@ -229,6 +230,11 @@ extern CircLink FtlnVols;
 #if FTLN_DEBUG_PTR
 extern FTLN Ftln;
 #endif
+extern uint32_t FtlnLim2Lag;
+extern uint32_t FtlnLim1Lag;
+extern uint32_t FtlnLim0Lag;
+extern uint32_t FtlnLim0Def;
+extern uint32_t FtlnLim1Def;
 
 //
 // Function Prototypes.

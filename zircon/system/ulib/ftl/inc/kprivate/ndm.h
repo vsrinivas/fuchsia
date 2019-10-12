@@ -125,7 +125,7 @@ int ndmDelVols(CNDM ndm);
 int ndmDelVol(CNDM ndm, ui32 part_num);
 
 // FTL Volume API
-int ndmAddVolFTL(NDM ndm, ui32 part_no, FtlNdmVol* ftl, XfsVol* xfs);
+void* ndmAddVolFTL(NDM ndm, ui32 part_no, FtlNdmVol* ftl, XfsVol* xfs);
 
 // Driver Test/Special Routines
 int ndmExtractBBL(NDM ndm);

@@ -20,15 +20,17 @@
 /***********************************************************************/
 
 // Flag values for the file systems' driver flags field
-#define FTLN_FATAL_ERR (1 << 0)  // fatal I/O error has occurred
-#define FTLN_MOUNTED (1 << 1)    // FTL is mounted flag
-#define FSF_EXTRA_FREE (1 << 2)
-#define FSF_TRANSFER_PAGE (1 << 3)
-#define FSF_MULTI_ACCESS (1 << 4)
-#define FSF_FREE_SPARE_ECC (1 << 5)   // spare decode has no overhead
-#define FSF_NDM_INIT_WRITE (1 << 6)   // re-write NDM metadata on init
-#define FSF_READ_WEAR_LIMIT (1 << 7)  // driver specs read-wear limit
-#define FSF_READ_ONLY_INIT (1 << 8)   // dev is read-only during init
+#define FTLN_FATAL_ERR      (1u << 0)   // fatal I/O error has occurred
+#define FTLN_MOUNTED        (1u << 1)   // FTL is mounted flag
+#define FSF_EXTRA_FREE      (1u << 2)
+#define FSF_TRANSFER_PAGE   (1u << 3)
+#define FSF_MULTI_ACCESS    (1u << 4)
+#define FSF_FREE_SPARE_ECC  (1u << 5)   // spare decode has no overhead
+#define FSF_NDM_INIT_WRITE  (1u << 6)   // re-write NDM metadata on init
+#define FSF_READ_WEAR_LIMIT (1u << 7)   // driver specs read-wear limit
+#define FSF_READ_ONLY_INIT  (1u << 8)   // dev is read-only during init
+#define FTLN_VERBOSE        (1u << 9)   // Turn debug messages on.
+#define FTLN_DO_WEAR_BASED  (1u << 10)  // do a wear-based recycle
 
 // Size in bytes of a FAT sector
 #define FAT_SECT_SZ 512

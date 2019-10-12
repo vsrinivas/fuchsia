@@ -467,17 +467,9 @@ static void set_wc_lag(FTLN ftl, ui32 b, ui32 wc, ui32* low_wc) {
       // Update previously set wear count lags, avoiding ui8 overflow.
       if (ftl->blk_wc_lag[lb] + increase > 0xFF) {
         ftl->blk_wc_lag[lb] = 0xFF;
-#if FTLN_DEBUG
-        ++ftl->max_wc_over;
-#endif
+        ++ftl->wear_data.max_wc_over;
       } else
         ftl->blk_wc_lag[lb] += increase;
-
-#if FTLN_DEBUG
-      // If new value, record maximum encountered wear lag.
-      if (ftl->max_wc_lag < ftl->blk_wc_lag[lb])
-        ftl->max_wc_lag = ftl->blk_wc_lag[lb];
-#endif
     }
 
     // Remember new high wear count.
@@ -487,17 +479,9 @@ static void set_wc_lag(FTLN ftl, ui32 b, ui32 wc, ui32* low_wc) {
   // Set block wear count lag, avoiding ui8 overflow.
   if (ftl->high_wc - wc > 0xFF) {
     ftl->blk_wc_lag[b] = 0xFF;
-#if FTLN_DEBUG
-    ++ftl->max_wc_over;
-#endif
+    ++ftl->wear_data.max_wc_over;
   } else
     ftl->blk_wc_lag[b] = ftl->high_wc - wc;
-
-#if FTLN_DEBUG
-  // If new value, record maximum encountered wear lag.
-  if (ftl->max_wc_lag < ftl->blk_wc_lag[b])
-    ftl->max_wc_lag = ftl->blk_wc_lag[b];
-#endif
 }
 
 // format_status: Check if FTL volume is formatted
@@ -817,10 +801,13 @@ static int copy_end_mark(CFTLN ftl, ui32 b) {
 //
 static int resume_copy(FTLN ftl, ui32 src_b, ui32 dst_b, ui32 bc) {
   int rc;
-  ui32 po, vpn;
+  ui32 po, vpn, wc;
   ui32 src_pg0 = ftl->start_pn + src_b * ftl->pgs_per_blk;
   ui32 dst_pg0 = ftl->start_pn + dst_b * ftl->pgs_per_blk;
-  ui32 wc = ftl->high_wc - ftl->blk_wc_lag[src_b];
+
+  // Get the wear count of the source block.
+  wc = ftl->high_wc - ftl->blk_wc_lag[src_b];
+  PfAssert((int)wc > 0);
 
   // Copy all used pages from selected volume block to free block.
   for (po = 0; po <= ftl->resume_po; ++po) {
@@ -1047,7 +1034,7 @@ static int init_ftln(FTLN ftl) {
   }
 
 #if FTLN_DEBUG > 1
-  printf("init_ftln: FTL formatted - hi_bc = %u, hi_wc = %u\n", ftl->high_bc, ftl->high_wc);
+  printf("init_ftln: FTL formatted - high_bc = %u, high_wc = %u\n", ftl->high_bc, ftl->high_wc);
 #endif
 
   // Do recycles if needed and return status.
@@ -1121,9 +1108,9 @@ static int rd_map_pg(void* vol, ui32 mpn, void* buf, int* unmapped) {
 //      Inputs: ftl_cfg = pointer to FTL configuration structure
 //              xfs = pointer to FTL interface structure
 //
-//     Returns: -1 if error, 0 for success.
+//     Returns: FTL handle on success, NULL on error.
 //
-int FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* xfs) {
+void* FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* xfs) {
   ui32 n, vol_blks;
   ui8* buf;
   FTLN ftl;
@@ -1131,20 +1118,20 @@ int FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* xfs) {
   // If number of blocks less than 7, FTL-NDM cannot work.
   if (ftl_cfg->num_blocks < 7) {
     FsError2(FTL_CFG_ERR, EINVAL);
-    return -1;
+    return NULL;
   }
 
   // Ensure FTL flags are valid.
   if (ftl_cfg->flags & ~(FSF_EXTRA_FREE | FSF_READ_WEAR_LIMIT | FSF_READ_ONLY_INIT)) {
     FsError2(FTL_CFG_ERR, EINVAL);
-    return -1;
+    return NULL;
   }
 
 #if CACHE_LINE_SIZE
   // Ensure driver page size is a multiple of the CPU cache line size.
   if (ftl_cfg->page_size % CACHE_LINE_SIZE) {
     FsError2(FTL_CFG_ERR, EINVAL);
-    return -1;
+    return NULL;
   }
 #endif
 
@@ -1153,14 +1140,14 @@ int FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* xfs) {
   if (ftl_cfg->page_size % FAT_SECT_SZ || ftl_cfg->page_size == 0 ||
       ftl_cfg->page_size > ftl_cfg->block_size) {
     FsError2(FTL_CFG_ERR, EINVAL);
-    return -1;
+    return NULL;
   }
 
   // Allocate memory for FTL control block. Return NULL if unable.
   ftl = FsCalloc(1, sizeof(struct ftln));
   if (ftl == NULL) {
     FsError2(FTL_ENOMEM, ENOMEM);
-    return -1;
+    return NULL;
   }
 #if FTLN_DEBUG_PTR
   Ftln = ftl;
@@ -1183,6 +1170,7 @@ int FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* xfs) {
     FsError2(FTL_CFG_ERR, EINVAL);
     goto FtlnAddV_err;
   }
+
 #if !FTLN_LEGACY && FTLN_3B_PN
   // Verify number of pages doesn't exceed 3B field width.
   if (ftl->num_pages > 0x1000000) {
@@ -1347,6 +1335,18 @@ int FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* xfs) {
   if (init_ftln(ftl))
     goto FtlnAddV_err;
 
+  // For recycle limit, get sum, average, and max of wear count lag.
+  ftl->wear_data.cur_max_lag = ftl->wc_lag_sum = 0;
+  for (n = 0; n < ftl->num_blks; ++n) {
+    ui32 wc_lag = ftl->blk_wc_lag[n];
+
+    ftl->wc_lag_sum += wc_lag;
+    if (ftl->wear_data.cur_max_lag < wc_lag)
+      ftl->wear_data.cur_max_lag = wc_lag;
+  }
+  ftl->wear_data.lft_max_lag = ftl->wear_data.cur_max_lag;
+  ftl->wear_data.avg_wc_lag = ftl->wc_lag_sum / ftl->num_blks;
+
 #if FTLN_DEBUG > 1
   // Display FTL statistics.
   FtlnStats(ftl);
@@ -1374,13 +1374,13 @@ int FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* xfs) {
   CIRC_LIST_APPEND(&ftl->link, &FtlnVols);
   semPostBin(FileSysSem);
 
-  // Return success.
-  return 0;
+  // Return pointer to FTL control block.
+  return ftl;
 
 // Error exit.
 FtlnAddV_err:
   free_ftl(ftl);
-  return -1;
+  return NULL;
 }
 
 //  FtlnDelVol: Delete an existing FTL NDM volume (both FTL and FS)

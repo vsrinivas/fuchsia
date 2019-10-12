@@ -910,7 +910,7 @@ int ndmCheckPage(uint32_t vpn, ui8* data, ui8* spare, NDM ndm) {
     return FsError2(NDM_EIO, EIO);
   }
 
-  // Release exclusive access to NDM and return success.
+  // Release exclusive access to NDM and return status.
   semPostBin(ndm->sem);
   return status;
 }
@@ -1287,19 +1287,25 @@ ui32 ndmGetNumVBlocks(CNDM ndm) { return ndm->num_vblks; }
 //              ftl_cfg = pointer to FTL config structure
 //              xfs = XFS volume information
 //
-//     Returns: 0 on success, -1 on error
+//     Returns: FTL handle on success, NULL on error
 //
-int ndmAddVolFTL(NDM ndm, ui32 part_num, FtlNdmVol* ftl_cfg, XfsVol* xfs) {
+void* ndmAddVolFTL(NDM ndm, ui32 part_num, FtlNdmVol* ftl_cfg, XfsVol* xfs) {
   NDMPartition* part;
 
   // Check partition number.
   if (part_num >= ndm->num_partitions)
-    return FsError2(NDM_CFG_ERR, EINVAL);
+  {
+    FsError2(NDM_CFG_ERR, EINVAL);
+    return NULL;
+  }
   part = &ndm->partitions[part_num];
 
   // Check partition first block and number of blocks.
   if (part->first_block + part->num_blocks > ndm->num_vblks)
-    return FsError2(NDM_CFG_ERR, ENOSPC);
+  {
+    FsError2(NDM_CFG_ERR, ENOSPC);
+    return NULL;
+  }
 
   // Assign the NDM-supplied configuration.
   ftl_cfg->page_size = ndm->page_size;

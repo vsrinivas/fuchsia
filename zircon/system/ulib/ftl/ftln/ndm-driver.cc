@@ -167,7 +167,7 @@ const char* NdmBaseDriver::CreateNdmVolume(const Volume* ftl_volume, const Volum
   ftl.extra_free = 6;  // Over-provision 6% of the device.
   xfs.ftl_volume = const_cast<Volume*>(ftl_volume);
 
-  if (ndmAddVolFTL(ndm_, 0, &ftl, &xfs) != 0) {
+  if (ndmAddVolFTL(ndm_, 0, &ftl, &xfs) == NULL) {
     return "ndmAddVolFTL failed";
   }
 
