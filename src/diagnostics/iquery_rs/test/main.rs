@@ -169,7 +169,26 @@ macro_rules! tests {
 }
 
 tests![
-    // TODO(fxb/37937): enable non-vmo tests
+    cat_recursive_absolute,
+    cat_recursive_full,
+    cat_recursive_json_absolute,
+    cat_recursive_json_full,
+    cat_recursive_json,
+    cat_recursive,
+    cat_single_absolute,
+    cat_single_full,
+    cat_single,
+    explicit_file_full,
+    explicit_file,
+    find_recursive_json,
+    find_recursive,
+    find,
+    ls_json_absolute,
+    ls_json_full,
+    ls_json,
+    ls,
+    report_json,
+    report,
     vmo_cat_recursive_absolute,
     vmo_cat_recursive_full,
     vmo_cat_recursive_json_absolute,

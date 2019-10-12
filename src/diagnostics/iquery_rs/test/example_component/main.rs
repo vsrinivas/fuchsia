@@ -3,10 +3,17 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error, fuchsia_async as fasync, fuchsia_component::server::ServiceFs,
-    fuchsia_inspect::*, futures::StreamExt, std::ops::AddAssign, structopt::StructOpt,
+    crate::{deprecated_fidl_server::*, table::*},
+    failure::Error,
+    fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    fuchsia_inspect::*,
+    futures::StreamExt,
+    std::ops::AddAssign,
+    structopt::StructOpt,
 };
 
+mod deprecated_fidl_server;
 mod table;
 
 struct PopulateParams<T> {
@@ -52,45 +59,44 @@ async fn main() -> Result<(), Error> {
     let root = inspector.root();
     assert!(inspector.is_valid());
 
-    // TODO: also expose deprecated FIDL.
+    reset_unique_names();
+    let table_node_name = unique_name("table");
+    let example_table =
+        Table::new(opts.rows, opts.columns, &table_node_name, root.create_child(&table_node_name));
 
-    table::reset_unique_names();
-    let _table =
-        table::Table::new(opts.rows, opts.columns, root.create_child(table::unique_name("table")));
-
-    let _int_array = root.create_int_array(table::unique_name("array"), 3);
+    let _int_array = root.create_int_array(unique_name("array"), 3);
     _int_array.set(0, 1);
     _int_array.add(1, 10);
     _int_array.subtract(2, 3);
 
-    let _uint_array = root.create_uint_array(table::unique_name("array"), 3);
+    let _uint_array = root.create_uint_array(unique_name("array"), 3);
     _uint_array.set(0, 1);
     _uint_array.add(1, 10);
     _uint_array.set(2, 3);
     _uint_array.subtract(2, 1);
 
-    let _double_array = root.create_double_array(table::unique_name("array"), 3);
+    let _double_array = root.create_double_array(unique_name("array"), 3);
     _double_array.set(0, 0.25);
     _double_array.add(1, 1.25);
     _double_array.subtract(2, 0.75);
 
     let _int_linear_hist = populated(
         root.create_int_linear_histogram(
-            table::unique_name("histogram"),
+            unique_name("histogram"),
             LinearHistogramParams { floor: -10, step_size: 5, buckets: 3 },
         ),
         PopulateParams { floor: -20, step: 1, count: 40 },
     );
     let _uint_linear_hist = populated(
         root.create_uint_linear_histogram(
-            table::unique_name("histogram"),
+            unique_name("histogram"),
             LinearHistogramParams { floor: 5, step_size: 5, buckets: 3 },
         ),
         PopulateParams { floor: 0, step: 1, count: 40 },
     );
     let _double_linear_hist = populated(
         root.create_double_linear_histogram(
-            table::unique_name("histogram"),
+            unique_name("histogram"),
             LinearHistogramParams { floor: 0.0, step_size: 0.5, buckets: 3 },
         ),
         PopulateParams { floor: -1.0, step: 0.1, count: 40 },
@@ -98,7 +104,7 @@ async fn main() -> Result<(), Error> {
 
     let _int_exp_hist = populated(
         root.create_int_exponential_histogram(
-            table::unique_name("histogram"),
+            unique_name("histogram"),
             ExponentialHistogramParams {
                 floor: -10,
                 initial_step: 5,
@@ -110,7 +116,7 @@ async fn main() -> Result<(), Error> {
     );
     let _uint_exp_hist = populated(
         root.create_uint_exponential_histogram(
-            table::unique_name("histogram"),
+            unique_name("histogram"),
             ExponentialHistogramParams {
                 floor: 0,
                 initial_step: 1,
@@ -122,7 +128,7 @@ async fn main() -> Result<(), Error> {
     );
     let _double_exp_hist = populated(
         root.create_double_exponential_histogram(
-            table::unique_name("histogram"),
+            unique_name("histogram"),
             ExponentialHistogramParams {
                 floor: 0.0,
                 initial_step: 1.25,
@@ -134,10 +140,15 @@ async fn main() -> Result<(), Error> {
     );
 
     let mut fs = ServiceFs::new();
+    // NOTE: this FIDL service is deprecated and the following *should not* be done.
+    // Rust doesn't have a way of writing to the deprecated FIDL service, therefore
+    // we read what we wrote to the VMO and provide it through the service for testing
+    // purposes.
+    fs.dir("objects").add_fidl_service(move |stream| {
+        spawn_inspect_server(stream, example_table.get_node_object());
+    });
     inspector.export(&mut fs);
     fs.take_and_serve_directory_handle()?;
 
-    fs.collect::<()>().await;
-
-    Ok(())
+    Ok(fs.collect().await)
 }

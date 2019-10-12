@@ -56,6 +56,86 @@ test_package("iquery_rs_golden_tests") {
 
   resources = [
     {
+      path = rebase_path("goldens/cat-recursive-absolute.txt")
+      dest = "iquery_goldens/cat-recursive-absolute.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-recursive-full.txt")
+      dest = "iquery_goldens/cat-recursive-full.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-recursive-json-absolute.txt")
+      dest = "iquery_goldens/cat-recursive-json-absolute.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-recursive-json-full.txt")
+      dest = "iquery_goldens/cat-recursive-json-full.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-recursive-json.txt")
+      dest = "iquery_goldens/cat-recursive-json.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-recursive.txt")
+      dest = "iquery_goldens/cat-recursive.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-single-absolute.txt")
+      dest = "iquery_goldens/cat-single-absolute.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-single-full.txt")
+      dest = "iquery_goldens/cat-single-full.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-single.txt")
+      dest = "iquery_goldens/cat-single.txt"
+    },
+    {
+      path = rebase_path("goldens/explicit-file-full.txt")
+      dest = "iquery_goldens/explicit-file-full.txt"
+    },
+    {
+      path = rebase_path("goldens/explicit-file.txt")
+      dest = "iquery_goldens/explicit-file.txt"
+    },
+    {
+      path = rebase_path("goldens/find-recursive-json.txt")
+      dest = "iquery_goldens/find-recursive-json.txt"
+    },
+    {
+      path = rebase_path("goldens/find-recursive.txt")
+      dest = "iquery_goldens/find-recursive.txt"
+    },
+    {
+      path = rebase_path("goldens/find.txt")
+      dest = "iquery_goldens/find.txt"
+    },
+    {
+      path = rebase_path("goldens/ls-json-absolute.txt")
+      dest = "iquery_goldens/ls-json-absolute.txt"
+    },
+    {
+      path = rebase_path("goldens/ls-json-full.txt")
+      dest = "iquery_goldens/ls-json-full.txt"
+    },
+    {
+      path = rebase_path("goldens/ls-json.txt")
+      dest = "iquery_goldens/ls-json.txt"
+    },
+    {
+      path = rebase_path("goldens/ls.txt")
+      dest = "iquery_goldens/ls.txt"
+    },
+    {
+      path = rebase_path("goldens/report-json.txt")
+      dest = "iquery_goldens/report-json.txt"
+    },
+    {
+      path = rebase_path("goldens/report.txt")
+      dest = "iquery_goldens/report.txt"
+    },
+    {
       path = rebase_path("goldens/vmo-cat-single.txt")
       dest = "iquery_goldens/vmo-cat-single.txt"
     },

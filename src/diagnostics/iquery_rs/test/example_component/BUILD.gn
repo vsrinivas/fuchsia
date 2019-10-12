@@ -12,8 +12,10 @@ rustc_binary("iquery_rs_example_component") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//src/lib/inspect/rust/fuchsia-inspect",
+    "//third_party/rust_crates:derivative",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:structopt",
+    "//zircon/system/fidl/fuchsia-inspect-deprecated:fuchsia-inspect-deprecated-rustc",
   ]
 }

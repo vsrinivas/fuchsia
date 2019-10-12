@@ -99,7 +99,8 @@ impl FromStr for InspectLocation {
             // Some valid locations won't include the `fuchsia.inspect.Inspect` in
             // the name and will be just the directory. Append the name and attempt
             // to load that file.
-            path.push("fuchsia.inspect.Inspect");
+            let service_name = <InspectMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+            path.push(service_name);
             InspectLocation::try_from(path)
         })?;
         location.parts = inspect_parts.into_iter().map(|p| p.to_string()).collect();
