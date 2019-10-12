@@ -121,7 +121,7 @@ use netstack3_core::{
     add_ip_addr_subnet, add_route, del_device_route, del_ip_addr, get_all_ip_addr_subnets,
     get_all_routes, handle_timeout, initialize_device, receive_frame, remove_device, Context,
     DeviceId, DeviceLayerEventDispatcher, EntryEither, EventDispatcher, IpLayerEventDispatcher,
-    StackState, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
+    StackStateBuilder, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
 };
 
 /// The message that is sent to the main event loop to indicate that an
@@ -252,16 +252,17 @@ impl EventLoop {
         let (event_send, event_recv) = futures::channel::mpsc::unbounded::<Event>();
         let fidl_worker = crate::fidl_worker::FidlWorker;
         fidl_worker.spawn(event_send.clone()).expect("Unable to spawn fidl worker");
-        Self::new_with_channels(event_send, event_recv)
+        Self::new_with_channels(StackStateBuilder::default(), event_send, event_recv)
     }
 
     fn new_with_channels(
+        builder: StackStateBuilder,
         event_send: futures::channel::mpsc::UnboundedSender<Event>,
         event_recv: futures::channel::mpsc::UnboundedReceiver<Event>,
     ) -> Self {
         EventLoop {
             ctx: Context::new(
-                StackState::default(),
+                builder.build(),
                 EventLoopInner {
                     devices: Devices::default(),
                     timers: timers::TimerDispatcher::new(event_send.clone()),

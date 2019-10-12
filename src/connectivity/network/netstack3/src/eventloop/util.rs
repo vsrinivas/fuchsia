@@ -415,6 +415,7 @@ mod tests {
 
     use super::*;
     use crate::eventloop::EventLoop;
+    use netstack3_core::StackStateBuilder;
 
     struct FakeConversionContext {
         binding: u64,
@@ -426,7 +427,7 @@ mod tests {
             // we need a valid context to be able to create DeviceIds, so
             // we just create it, get the device id and then destroy everything
             let (snd, rcv) = futures::channel::mpsc::unbounded();
-            let mut evt_loop = EventLoop::new_with_channels(snd, rcv);
+            let mut evt_loop = EventLoop::new_with_channels(StackStateBuilder::default(), snd, rcv);
             let core =
                 evt_loop.ctx.state_mut().add_ethernet_device(Mac::new([1, 2, 3, 4, 5, 6]), 1500);
             Self { binding: 1, core }

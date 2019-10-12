@@ -180,8 +180,20 @@ impl TestStack {
     }
 
     fn new() -> Self {
+        // Create a new EventLoop with Duplicate Address Detection disabled for tests.
+        //
+        // TODO(fxb/36238): Remove this code when an event is dispatched when Duplicate Address
+        // Detection finishes or when an IPv6 address has been assigned. Without such events, tests
+        // do not know how long to wait for the stack to be ready for events.
+        use netstack3_core::NdpConfigurations;
+        let mut builder = StackStateBuilder::default();
+        let mut config = NdpConfigurations::default();
+        config.set_dup_addr_detect_transmits(None);
+        builder.device_builder().set_default_ndp_configs(config);
+
         let (event_sender, evt_rcv) = futures::channel::mpsc::unbounded();
-        let mut event_loop = EventLoop::new_with_channels(event_sender.clone(), evt_rcv);
+        let mut event_loop = EventLoop::new_with_channels(builder, event_sender.clone(), evt_rcv);
+
         let (test_sender, mut test_receiver) = futures::channel::mpsc::unbounded();
         event_loop.ctx.dispatcher_mut().test_events = Some(test_sender);
         let data = Arc::new(Mutex::new(TestData::default()));
@@ -1400,7 +1412,8 @@ async fn test_socket_describe() {
 #[fasync::run_singlethreaded(test)]
 async fn test_main_loop() {
     let (event_sender, evt_rcv) = futures::channel::mpsc::unbounded();
-    let event_loop = EventLoop::new_with_channels(event_sender.clone(), evt_rcv);
+    let event_loop =
+        EventLoop::new_with_channels(StackStateBuilder::default(), event_sender.clone(), evt_rcv);
     fasync::spawn_local(
         event_loop.run().unwrap_or_else(|e| panic!("Event loop failed with error {:?}", e)),
     );
