@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+test("loader-service") {
+  sources = [
+    "unit-test.cc",
+  ]
+
+  deps = [
+    "$zx/system/fidl/fuchsia-io:llcpp",
+    "$zx/system/fidl/fuchsia-ldsvc:llcpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl-async",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/loader-service",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}

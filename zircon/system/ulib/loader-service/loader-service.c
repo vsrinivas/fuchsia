@@ -8,6 +8,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/wait.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
 #include <limits.h>
 #include <stdatomic.h>
@@ -68,41 +69,38 @@ static void loader_service_deref(loader_service_t* svc) {
 // When loading a library object, search in the locations provided in
 // |lib_paths|, which is required to be NULL-terminated.
 static int open_from_lib_paths(int root_dir_fd, const char* const* lib_paths, const char* fn) {
-  int fd = -1;
-  for (size_t n = 0; fd < 0 && lib_paths[n]; ++n) {
+  for (size_t n = 0; lib_paths[n]; ++n) {
     char path[PATH_MAX];
     if (snprintf(path, sizeof(path), "%s/%s", lib_paths[n], fn) < 0) {
       return -1;
     }
-    fd = openat(root_dir_fd, path, O_RDONLY);
+
+    int fd = -1;
+    zx_status_t status =
+        fdio_open_fd_at(root_dir_fd, path, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE, &fd);
+    if (status == ZX_OK) {
+      return fd;
+    }
   }
-  return fd;
+  return -1;
 }
 
 // Always consumes the |fd|.
 static zx_handle_t vmo_from_fd(int fd, const char* fn, zx_handle_t* out) {
   zx_handle_t vmo;
-  zx_handle_t exec_vmo;
-  zx_status_t status = fdio_get_vmo_clone(fd, &vmo);
+  zx_status_t status = fdio_get_vmo_exec(fd, &vmo);
   close(fd);
-
   if (status != ZX_OK) {
     return status;
   }
 
-  status = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &exec_vmo);
+  status = zx_object_set_property(vmo, ZX_PROP_NAME, fn, strlen(fn));
   if (status != ZX_OK) {
     zx_handle_close(vmo);
     return status;
   }
 
-  status = zx_object_set_property(exec_vmo, ZX_PROP_NAME, fn, strlen(fn));
-  if (status != ZX_OK) {
-    zx_handle_close(exec_vmo);
-    return status;
-  }
-
-  *out = exec_vmo;
+  *out = vmo;
   return ZX_OK;
 }
 

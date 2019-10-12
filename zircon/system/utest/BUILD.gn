@@ -260,6 +260,7 @@ if (current_cpu != "") {
       "kernel-clocks",
       "kernel-cmdline",
       "kernel-unittests",
+      "loader-service",
       "log",
       "logger",
       "memfs",
