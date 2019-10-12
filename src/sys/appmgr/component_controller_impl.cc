@@ -15,8 +15,8 @@
 #include <utility>
 
 #include <fbl/string_printf.h>
-#include <fs/pseudo-file.h>
-#include <fs/remote-dir.h>
+#include <fs/pseudo_file.h>
+#include <fs/remote_dir.h>
 #include <fs/service.h>
 #include <trace/event.h>
 

@@ -17,7 +17,7 @@
 #include <string>
 #include <unordered_map>
 
-#include <fs/synchronous-vfs.h>
+#include <fs/synchronous_vfs.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/memory/ref_ptr.h>
 #include <src/lib/fxl/strings/string_view.h>

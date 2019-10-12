@@ -13,8 +13,8 @@
 #include <fs/transaction/writeback.h>
 #include <storage/operation/buffered-operation.h>
 
-#include "entry-view.h"
-#include "replay-tree.h"
+#include "entry_view.h"
+#include "replay_tree.h"
 
 namespace fs {
 namespace {

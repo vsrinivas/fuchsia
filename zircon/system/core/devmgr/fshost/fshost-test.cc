@@ -15,7 +15,7 @@
 #include <cobalt-client/cpp/in-memory-logger.h>
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
-#include <fs/pseudo-dir.h>
+#include <fs/pseudo_dir.h>
 #include <zxtest/zxtest.h>
 
 #include "fs-manager.h"

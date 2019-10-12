@@ -15,8 +15,8 @@
 #include <lib/zx/time.h>
 
 #include <cobalt-client/cpp/collector.h>
-#include <fs/metrics/cobalt-metrics.h>
-#include <fs/metrics/composite-latency-event.h>
+#include <fs/metrics/cobalt_metrics.h>
+#include <fs/metrics/composite_latency_event.h>
 #include <fs/metrics/events.h>
 #include <fs/metrics/histograms.h>
 #include <fs/ticker.h>

@@ -13,7 +13,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <fs/synchronous-vfs.h>
+#include <fs/synchronous_vfs.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/macros.h"

@@ -11,7 +11,7 @@ library("transaction") {
   static = true
 
   sources = [
-    "block-transaction.cc",
+    "block_transaction.cc",
   ]
 
   public_deps = [
@@ -48,7 +48,7 @@ group("test") {
 
 test("fs-transaction") {
   sources = [
-    "test/writeback-test.cc",
+    "test/writeback_test.cc",
   ]
   deps = [
     ":transaction",

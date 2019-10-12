@@ -13,7 +13,7 @@
 
 #include <string>
 
-#include <fs/pseudo-file.h>
+#include <fs/pseudo_file.h>
 
 #include "src/media/playback/mediaplayer/player_impl.h"
 

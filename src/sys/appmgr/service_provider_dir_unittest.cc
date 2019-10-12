@@ -4,7 +4,7 @@
 
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <fs/service.h>
-#include <fs/synchronous-vfs.h>
+#include <fs/synchronous_vfs.h>
 
 #include "gtest/gtest.h"
 #include "lib/gtest/real_loop_fixture.h"

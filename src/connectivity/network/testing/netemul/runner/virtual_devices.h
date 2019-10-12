@@ -6,8 +6,8 @@
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_VIRTUAL_DEVICES_H_
 
 #include <fbl/ref_ptr.h>
-#include <fs/pseudo-dir.h>
-#include <fs/synchronous-vfs.h>
+#include <fs/pseudo_dir.h>
+#include <fs/synchronous_vfs.h>
 #include <fs/vnode.h>
 #include <fuchsia/netemul/network/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_ptr.h>

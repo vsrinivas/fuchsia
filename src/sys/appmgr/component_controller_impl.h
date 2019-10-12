@@ -13,7 +13,7 @@
 
 #include <vector>
 
-#include <fs/pseudo-dir.h>
+#include <fs/pseudo_dir.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "src/sys/appmgr/component_container.h"

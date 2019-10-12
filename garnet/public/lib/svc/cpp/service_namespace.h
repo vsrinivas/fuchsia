@@ -6,8 +6,8 @@
 #define LIB_SVC_CPP_SERVICE_NAMESPACE_H_
 
 #include <fbl/ref_ptr.h>
-#include <fs/pseudo-dir.h>
-#include <fs/synchronous-vfs.h>
+#include <fs/pseudo_dir.h>
+#include <fs/synchronous_vfs.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 

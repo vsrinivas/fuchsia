@@ -6,7 +6,7 @@
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_VIRTUAL_DATA_H_
 
 #include <fbl/ref_ptr.h>
-#include <fs/synchronous-vfs.h>
+#include <fs/synchronous_vfs.h>
 #include <fs/vnode.h>
 #include <lib/memfs/cpp/vnode.h>
 

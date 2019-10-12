@@ -22,9 +22,9 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fs/pseudo-dir.h>
+#include <fs/pseudo_dir.h>
 #include <fs/service.h>
-#include <fs/synchronous-vfs.h>
+#include <fs/synchronous_vfs.h>
 #include <fs/vfs_types.h>
 
 #include "fbl/ref_ptr.h"

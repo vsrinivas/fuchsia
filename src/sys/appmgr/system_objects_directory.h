@@ -9,7 +9,7 @@
 #include <lib/zx/thread.h>
 
 #include <fbl/string.h>
-#include <fs/lazy-dir.h>
+#include <fs/lazy_dir.h>
 #include <src/lib/fxl/strings/string_view.h>
 
 #include "src/lib/inspect_deprecated/deprecated/exposed_object.h"

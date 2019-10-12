@@ -13,7 +13,7 @@
 
 #include <thread>
 
-#include <fs/synchronous-vfs.h>
+#include <fs/synchronous_vfs.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

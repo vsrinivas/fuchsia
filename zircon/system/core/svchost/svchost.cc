@@ -31,7 +31,7 @@
 #include <crashsvc/crashsvc.h>
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
-#include <fs/remote-dir.h>
+#include <fs/remote_dir.h>
 
 #include "sysmem.h"
 

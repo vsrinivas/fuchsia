@@ -10,7 +10,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 
-#include <fs/pseudo-dir.h>
+#include <fs/pseudo_dir.h>
 
 #include "lib/svc/cpp/services.h"
 #include "src/lib/component/cpp/startup_context.h"

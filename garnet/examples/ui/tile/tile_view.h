@@ -17,8 +17,8 @@
 #include <map>
 #include <memory>
 
-#include <fs/pseudo-dir.h>
-#include <fs/synchronous-vfs.h>
+#include <fs/pseudo_dir.h>
+#include <fs/synchronous_vfs.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
 

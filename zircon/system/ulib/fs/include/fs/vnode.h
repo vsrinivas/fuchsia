@@ -24,8 +24,8 @@
 #include <fbl/ref_counted_internal.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
-#include <fs/mount-channel.h>
-#include <fs/ref-counted.h>
+#include <fs/mount_channel.h>
+#include <fs/ref_counted.h>
 #include <fs/vfs_types.h>
 
 #ifdef __Fuchsia__

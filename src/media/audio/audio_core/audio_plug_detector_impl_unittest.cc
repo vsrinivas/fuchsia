@@ -12,9 +12,9 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/real_loop_fixture.h>
 
-#include <fs/pseudo-dir.h>
+#include <fs/pseudo_dir.h>
 #include <fs/service.h>
-#include <fs/synchronous-vfs.h>
+#include <fs/synchronous_vfs.h>
 
 namespace media::audio {
 namespace {

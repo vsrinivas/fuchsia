@@ -14,7 +14,7 @@
 
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
-#include <fs/transaction/block-transaction.h>
+#include <fs/transaction/block_transaction.h>
 #include <storage/operation/buffered-operation.h>
 #include <storage/operation/unbuffered-operations-builder.h>
 

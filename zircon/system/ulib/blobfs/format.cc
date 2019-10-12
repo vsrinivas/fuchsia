@@ -9,7 +9,7 @@
 #include <blobfs/blobfs.h>
 #include <blobfs/fsck.h>
 #include <fbl/ref_ptr.h>
-#include <fs/transaction/block-transaction.h>
+#include <fs/transaction/block_transaction.h>
 #include <fvm/client.h>
 
 namespace blobfs {

@@ -5,7 +5,7 @@
 #include "src/sys/appmgr/hub/hub.h"
 
 #include <fbl/ref_ptr.h>
-#include <fs/pseudo-file.h>
+#include <fs/pseudo_file.h>
 #include <fs/vnode.h>
 
 #include "src/sys/appmgr/hub/hub_info.h"

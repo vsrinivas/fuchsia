@@ -8,7 +8,7 @@
 
 #include <cstdint>
 
-#include <fs/vmo-file.h>
+#include <fs/vmo_file.h>
 
 #include "src/lib/inspect_deprecated/component.h"
 

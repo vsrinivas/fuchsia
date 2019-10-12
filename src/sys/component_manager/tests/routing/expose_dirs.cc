@@ -9,7 +9,7 @@
 #include <lib/svc/outgoing.h>
 #include <lib/zx/channel.h>
 
-#include <fs/remote-dir.h>
+#include <fs/remote_dir.h>
 
 int main(int argc, char* argv[]) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

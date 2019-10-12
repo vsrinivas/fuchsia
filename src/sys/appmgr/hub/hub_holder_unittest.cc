@@ -5,7 +5,7 @@
 #include <lib/zx/channel.h>
 
 #include <fbl/ref_ptr.h>
-#include <fs/pseudo-dir.h>
+#include <fs/pseudo_dir.h>
 
 #include "gtest/gtest.h"
 #include "src/sys/appmgr/hub/realm_hub.h"

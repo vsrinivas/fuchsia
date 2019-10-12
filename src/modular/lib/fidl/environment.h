@@ -16,9 +16,9 @@
 #include <vector>
 
 #include <fbl/ref_ptr.h>
-#include <fs/pseudo-dir.h>
+#include <fs/pseudo_dir.h>
 #include <fs/service.h>
-#include <fs/synchronous-vfs.h>
+#include <fs/synchronous_vfs.h>
 
 namespace modular {
 

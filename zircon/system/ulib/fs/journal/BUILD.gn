@@ -12,13 +12,13 @@ library("journal") {
 
   if (is_fuchsia) {
     sources += [
-      "background-executor.cc",
-      "data-streamer.cc",
-      "entry-view.cc",
-      "journal-writer.cc",
+      "background_executor.cc",
+      "data_streamer.cc",
+      "entry_view.cc",
+      "journal_writer.cc",
       "journal.cc",
-      "operation-tracker.cc",
-      "replay-tree.cc",
+      "operation_tracker.cc",
+      "replay_tree.cc",
       "replay.cc",
       "superblock.cc",
     ]
@@ -55,14 +55,14 @@ group("test") {
 test("journal-unit") {
   test_group = "fs"
   sources = [
-    "test/background-executor-test.cc",
-    "test/data-streamer-test.cc",
-    "test/entry-view-test.cc",
-    "test/journal-test.cc",
-    "test/operation-tracker-test.cc",
-    "test/replay-test.cc",
-    "test/replay-tree-test.cc",
-    "test/superblock-test.cc",
+    "test/background_executor_test.cc",
+    "test/data_streamer_test.cc",
+    "test/entry_view_test.cc",
+    "test/journal_test.cc",
+    "test/operation_tracker_test.cc",
+    "test/replay_test.cc",
+    "test/replay_tree_test.cc",
+    "test/superblock_test.cc",
   ]
   deps = [
     ":journal",

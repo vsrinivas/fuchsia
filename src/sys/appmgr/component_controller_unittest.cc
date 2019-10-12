@@ -5,10 +5,10 @@
 #include <lib/fdio/spawn.h>
 #include <zircon/syscalls/object.h>
 
-#include <fs/pseudo-dir.h>
-#include <fs/pseudo-file.h>
-#include <fs/remote-dir.h>
-#include <fs/synchronous-vfs.h>
+#include <fs/pseudo_dir.h>
+#include <fs/pseudo_file.h>
+#include <fs/remote_dir.h>
+#include <fs/synchronous_vfs.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

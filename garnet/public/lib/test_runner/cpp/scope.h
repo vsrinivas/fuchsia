@@ -10,9 +10,9 @@
 #include <memory>
 #include <string>
 
-#include <fs/pseudo-dir.h>
+#include <fs/pseudo_dir.h>
 #include <fs/service.h>
-#include <fs/synchronous-vfs.h>
+#include <fs/synchronous_vfs.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"

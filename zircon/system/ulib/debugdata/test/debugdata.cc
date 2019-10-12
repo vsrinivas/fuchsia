@@ -25,10 +25,10 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <fs/pseudo-dir.h>
+#include <fs/pseudo_dir.h>
 #include <fs/service.h>
-#include <fs/synchronous-vfs.h>
-#include <fs/vmo-file.h>
+#include <fs/synchronous_vfs.h>
+#include <fs/vmo_file.h>
 #include <zxtest/zxtest.h>
 
 namespace {

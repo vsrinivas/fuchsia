@@ -30,7 +30,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
-#include <fs/journal/data-streamer.h>
+#include <fs/journal/data_streamer.h>
 #include <fs/metrics/events.h>
 #include <fs/transaction/writeback.h>
 #include <fs/vfs_types.h>

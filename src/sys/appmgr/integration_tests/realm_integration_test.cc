@@ -26,8 +26,8 @@
 #include <vector>
 
 #include <fidl/examples/echo/cpp/fidl.h>
-#include <fs/pseudo-dir.h>
-#include <fs/synchronous-vfs.h>
+#include <fs/pseudo_dir.h>
+#include <fs/synchronous_vfs.h>
 #include <src/lib/fxl/logging.h>
 #include <test/appmgr/integration/cpp/fidl.h>
 

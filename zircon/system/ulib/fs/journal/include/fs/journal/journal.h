@@ -14,11 +14,11 @@
 #include <algorithm>
 
 #include <fbl/vector.h>
-#include <fs/journal/background-executor.h>
+#include <fs/journal/background_executor.h>
 #include <fs/journal/format.h>
-#include <fs/journal/internal/journal-writer.h>
+#include <fs/journal/internal/journal_writer.h>
 #include <fs/journal/superblock.h>
-#include <fs/transaction/block-transaction.h>
+#include <fs/transaction/block_transaction.h>
 #include <storage/buffer/blocking-ring-buffer.h>
 #include <storage/buffer/ring-buffer.h>
 #include <storage/operation/buffered-operation.h>

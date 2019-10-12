@@ -14,7 +14,7 @@
 #include <fbl/function.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
-#include <fs/transaction/block-transaction.h>
+#include <fs/transaction/block_transaction.h>
 #include <minfs/allocator-promise.h>
 #include <minfs/format.h>
 #include <minfs/mutex.h>

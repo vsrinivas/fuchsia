@@ -19,9 +19,9 @@
 #include <memory>
 
 #include <crashsvc/crashsvc.h>
-#include <fs/pseudo-dir.h>
+#include <fs/pseudo_dir.h>
 #include <fs/service.h>
-#include <fs/synchronous-vfs.h>
+#include <fs/synchronous_vfs.h>
 #include <mini-process/mini-process.h>
 #include <zxtest/zxtest.h>
 

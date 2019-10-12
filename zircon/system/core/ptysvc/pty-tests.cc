@@ -9,7 +9,7 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
 
-#include <fs/managed-vfs.h>
+#include <fs/managed_vfs.h>
 #include <fs/vfs_types.h>
 #include <zxtest/zxtest.h>
 

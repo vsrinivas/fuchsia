@@ -36,7 +36,7 @@
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
-#include <fs/synchronous-vfs.h>
+#include <fs/synchronous_vfs.h>
 #include <loader-service/loader-service.h>
 #include <runtests-utils/fuchsia-run-test.h>
 #include <runtests-utils/service-proxy-dir.h>

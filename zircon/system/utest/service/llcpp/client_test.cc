@@ -8,9 +8,9 @@
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 
-#include <fs/pseudo-dir.h>
+#include <fs/pseudo_dir.h>
 #include <fs/service.h>
-#include <fs/synchronous-vfs.h>
+#include <fs/synchronous_vfs.h>
 #include <zxtest/zxtest.h>
 
 #include "../generated/fidl_llcpp_test.h"

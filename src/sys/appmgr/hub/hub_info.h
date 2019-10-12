@@ -6,7 +6,7 @@
 #define SRC_SYS_APPMGR_HUB_HUB_INFO_H_
 
 #include <fbl/string.h>
-#include <fs/pseudo-dir.h>
+#include <fs/pseudo_dir.h>
 
 namespace component {
 

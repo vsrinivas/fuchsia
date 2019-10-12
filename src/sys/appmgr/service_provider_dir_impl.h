@@ -12,9 +12,9 @@
 #include <utility>
 #include <vector>
 
-#include <fs/pseudo-dir.h>
+#include <fs/pseudo_dir.h>
 #include <fs/service.h>
-#include <fs/synchronous-vfs.h>
+#include <fs/synchronous_vfs.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/logging.h"

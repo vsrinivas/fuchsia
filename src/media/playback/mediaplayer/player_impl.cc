@@ -19,7 +19,7 @@
 
 #include <sstream>
 
-#include <fs/pseudo-file.h>
+#include <fs/pseudo_file.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/core/demux_source_segment.h"

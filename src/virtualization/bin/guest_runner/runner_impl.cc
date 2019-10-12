@@ -4,8 +4,8 @@
 
 #include "src/virtualization/bin/guest_runner/runner_impl.h"
 
-#include <fs/pseudo-dir.h>
-#include <fs/remote-dir.h>
+#include <fs/pseudo_dir.h>
+#include <fs/remote_dir.h>
 #include <fuchsia/virtualization/vmm/cpp/fidl.h>
 #include <lib/async/default.h>
 

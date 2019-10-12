@@ -28,7 +28,7 @@
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/mutex.h>
 #include <fs/client.h>
-#include <fs/mount-channel.h>
+#include <fs/mount_channel.h>
 #include <fs/vnode.h>
 #endif  // __Fuchsia__
 

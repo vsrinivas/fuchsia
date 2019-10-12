@@ -6,7 +6,7 @@
 #define SRC_SYS_APPMGR_HUB_HUB_H_
 
 #include <fbl/ref_ptr.h>
-#include <fs/pseudo-dir.h>
+#include <fs/pseudo_dir.h>
 #include <fs/vnode.h>
 
 #include "src/lib/fxl/macros.h"

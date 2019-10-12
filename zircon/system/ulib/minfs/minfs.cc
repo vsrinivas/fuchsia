@@ -20,7 +20,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <fs/trace.h>
-#include <fs/transaction/block-transaction.h>
+#include <fs/transaction/block_transaction.h>
 #include <minfs/minfs.h>
 #include <safemath/checked_math.h>
 

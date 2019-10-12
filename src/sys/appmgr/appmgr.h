@@ -7,9 +7,9 @@
 
 #include <lib/sys/cpp/service_directory.h>
 
-#include <fs/pseudo-dir.h>
+#include <fs/pseudo_dir.h>
 #include <fs/service.h>
-#include <fs/synchronous-vfs.h>
+#include <fs/synchronous_vfs.h>
 #include <src/lib/fxl/macros.h>
 
 #include "garnet/lib/loader/package_loader.h"

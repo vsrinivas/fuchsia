@@ -7,7 +7,7 @@
 #include <zircon/types.h>
 
 #include <fbl/ref_ptr.h>
-#include <fs/pseudo-dir.h>
+#include <fs/pseudo_dir.h>
 
 #include "src/sys/appmgr/hub/hub.h"
 #include "src/sys/appmgr/hub/hub_info.h"

@@ -10,8 +10,8 @@
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 
-#include <fs/pseudo-dir.h>
-#include <fs/synchronous-vfs.h>
+#include <fs/pseudo_dir.h>
+#include <fs/synchronous_vfs.h>
 
 #include "registry_vnode.h"
 

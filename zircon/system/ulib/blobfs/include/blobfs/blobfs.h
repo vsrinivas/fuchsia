@@ -55,10 +55,10 @@
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <fs/journal/journal.h>
-#include <fs/managed-vfs.h>
-#include <fs/metrics/cobalt-metrics.h>
+#include <fs/managed_vfs.h>
+#include <fs/metrics/cobalt_metrics.h>
 #include <fs/trace.h>
-#include <fs/transaction/block-transaction.h>
+#include <fs/transaction/block_transaction.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <storage/operation/unbuffered-operations-builder.h>

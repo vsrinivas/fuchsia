@@ -11,7 +11,7 @@
 #include <lib/memfs/cpp/vnode.h>
 
 #include <fs/service.h>
-#include <fs/tracked-remote-dir.h>
+#include <fs/tracked_remote_dir.h>
 #include <fs/vfs_types.h>
 
 namespace devmgr {

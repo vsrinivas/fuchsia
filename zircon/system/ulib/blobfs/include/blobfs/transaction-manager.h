@@ -14,7 +14,7 @@
 #include <blobfs/metrics.h>
 #include <fbl/unique_ptr.h>
 #include <fs/journal/journal.h>
-#include <fs/transaction/block-transaction.h>
+#include <fs/transaction/block_transaction.h>
 #include <fs/vnode.h>
 
 namespace blobfs {

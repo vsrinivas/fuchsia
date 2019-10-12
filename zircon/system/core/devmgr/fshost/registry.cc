@@ -6,7 +6,7 @@
 
 #include <fuchsia/fshost/llcpp/fidl.h>
 
-#include <fs/pseudo-dir.h>
+#include <fs/pseudo_dir.h>
 #include <fs/vfs_types.h>
 
 namespace devmgr {

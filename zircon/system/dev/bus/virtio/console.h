@@ -11,7 +11,7 @@
 #include <ddk/device.h>
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>
-#include <fs/managed-vfs.h>
+#include <fs/managed_vfs.h>
 
 #include "device.h"
 #include "ring.h"

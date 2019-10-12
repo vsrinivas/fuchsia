@@ -12,7 +12,7 @@
 #include <fbl/string_printf.h>
 #include <fs/metrics/histograms.h>
 #include <fs/metrics/internal/attributes.h>
-#include <fs/metrics/internal/object-offsets.h>
+#include <fs/metrics/internal/object_offsets.h>
 #include <zircon/assert.h>
 
 namespace fs_metrics {

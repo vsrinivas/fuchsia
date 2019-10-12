@@ -19,8 +19,8 @@
 #include <variant>
 #include <vector>
 
-#include <fs/lazy-dir.h>
-#include <fs/pseudo-file.h>
+#include <fs/lazy_dir.h>
+#include <fs/pseudo_file.h>
 
 namespace component {
 

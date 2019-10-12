@@ -9,7 +9,7 @@
 #include <fs/trace.h>
 #include <fs/transaction/writeback.h>
 
-#include "entry-view.h"
+#include "entry_view.h"
 
 namespace fs {
 namespace {

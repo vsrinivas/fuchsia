@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <fidl/test/echo/c/fidl.h>
-#include <fs/pseudo-dir.h>
+#include <fs/pseudo_dir.h>
 #include <fs/service.h>
-#include <fs/synchronous-vfs.h>
-#include <fs/vmo-file.h>
+#include <fs/synchronous_vfs.h>
+#include <fs/vmo_file.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>

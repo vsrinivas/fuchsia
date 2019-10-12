@@ -8,7 +8,7 @@ import("$zx_build/public/gn/test_shim.gni")
 # Metrics which depend on cobalt only.
 library("metrics-cobalt") {
   sources = [
-    "cobalt-metrics.cc",
+    "cobalt_metrics.cc",
   ]
   public_deps = [
     "$zx/system/ulib/cobalt-client:headers",
@@ -43,7 +43,7 @@ library("metrics-inspect") {
 # TODO(ZX-3150): Remove once inspect broker service is complete.
 library("metrics-composite-latency-event") {
   sources = [
-    "composite-latency-event.cc",
+    "composite_latency_event.cc",
   ]
   public_deps = [
     "$zx/system/ulib/cobalt-client:headers",

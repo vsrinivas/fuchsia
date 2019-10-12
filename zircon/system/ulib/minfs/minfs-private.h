@@ -20,7 +20,7 @@
 #include <lib/zx/vmo.h>
 
 #include <fs/journal/journal.h>
-#include <fs/managed-vfs.h>
+#include <fs/managed_vfs.h>
 #include <fs/remote.h>
 #include <fs/watcher.h>
 #include <minfs/metrics.h>
@@ -38,7 +38,7 @@
 #include <fs/locking.h>
 #include <fs/ticker.h>
 #include <fs/trace.h>
-#include <fs/transaction/block-transaction.h>
+#include <fs/transaction/block_transaction.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <minfs/format.h>

@@ -13,7 +13,7 @@
 
 #include <memory>
 
-#include <fs/pseudo-dir.h>
+#include <fs/pseudo_dir.h>
 #include <fs/service.h>
 
 #include "lib/svc/cpp/service_namespace.h"
