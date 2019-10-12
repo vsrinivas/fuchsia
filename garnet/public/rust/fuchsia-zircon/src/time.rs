@@ -177,27 +177,27 @@ impl Duration {
         self.into_minutes() / 60
     }
 
-    pub fn from_nanos(nanos: i64) -> Self {
+    pub const fn from_nanos(nanos: i64) -> Self {
         Duration(nanos)
     }
 
-    pub fn from_micros(micros: i64) -> Self {
+    pub const fn from_micros(micros: i64) -> Self {
         Duration(micros * 1_000)
     }
 
-    pub fn from_millis(millis: i64) -> Self {
+    pub const fn from_millis(millis: i64) -> Self {
         Duration::from_micros(millis * 1_000)
     }
 
-    pub fn from_seconds(secs: i64) -> Self {
+    pub const fn from_seconds(secs: i64) -> Self {
         Duration::from_millis(secs * 1_000)
     }
 
-    pub fn from_minutes(min: i64) -> Self {
+    pub const fn from_minutes(min: i64) -> Self {
         Duration::from_seconds(min * 60)
     }
 
-    pub fn from_hours(hours: i64) -> Self {
+    pub const fn from_hours(hours: i64) -> Self {
         Duration::from_minutes(hours * 60)
     }
 }
