@@ -201,9 +201,9 @@ where
             Err(status) => return responder(status),
         };
 
-        let _entry_name = match path.next() {
+        let entry_name = match path.next() {
             None => return responder(Status::BAD_PATH),
-            Some(name) => name,
+            Some(name) => name.to_string(),
         };
 
         // We do not support traversal for the `Unlink` operation for now.  It is non-trivial, as
@@ -219,7 +219,11 @@ where
             return responder(Status::BAD_PATH);
         }
 
-        responder(Status::NOT_SUPPORTED)
+        match self.base.directory.clone().remove_entry_impl(entry_name) {
+            Ok(None) => responder(Status::NOT_FOUND),
+            Ok(Some(_entry)) => responder(Status::OK),
+            Err(status) => responder(status),
+        }
     }
 
     fn handle_get_token<R>(&self, responder: R) -> Result<(), fidl::Error>

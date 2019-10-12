@@ -664,3 +664,27 @@ macro_rules! assert_get_buffer_err {
         );
     }};
 }
+
+// See comment at the top of the file for why this is a macro.
+#[macro_export]
+macro_rules! assert_unlink {
+    ($proxy:expr, $path:expr) => {{
+        use $crate::test_utils::assertions::reexport::Status;
+
+        let status = $proxy.unlink($path).await.expect("unlink failed");
+
+        assert_eq!(Status::from_raw(status), Status::OK);
+    }};
+}
+
+// See comment at the top of the file for why this is a macro.
+#[macro_export]
+macro_rules! assert_unlink_err {
+    ($proxy:expr, $path:expr, $expected_status:expr) => {{
+        use $crate::test_utils::assertions::reexport::Status;
+
+        let status = $proxy.unlink($path).await.expect("unlink failed");
+
+        assert_eq!(Status::from_raw(status), $expected_status);
+    }};
+}
