@@ -17,15 +17,15 @@ std::vector<fuchsia::camera2::hal::Config> ControllerImpl::SherlockConfigs() {
   std::vector<fuchsia::camera2::hal::Config> configs;
 
   // Debug configuration.
-  configs.push_back(std::move(DebugConfig()));
+  configs.push_back(DebugConfig());
   InternalConfigInfo debug_config_info;
-  debug_config_info.streams_info.push_back(std::move(DebugConfigFullRes()));
+  debug_config_info.streams_info.push_back(DebugConfigFullRes());
 
   // Pushing the internal configurations
   internal_configs_.configs_info.push_back(std::move(debug_config_info));
 
   // Monitoring configuration.
-  configs.push_back(std::move(MonitoringConfig()));
+  configs.push_back(MonitoringConfig());
   InternalConfigInfo monitor_config_info;
   monitor_config_info.streams_info.push_back(MonitorConfigFullRes());
   monitor_config_info.streams_info.push_back(MonitorConfigFDownScaledRes());

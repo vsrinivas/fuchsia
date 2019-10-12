@@ -95,7 +95,7 @@ bool Database::MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
                               const std::string& server_report_id) {
   const UUID local_report_id = upload_report->GetUUID();
   if (const auto status = database_->RecordUploadComplete(
-          std::move(upload_report->TransferUploadReport()), server_report_id);
+          upload_report->TransferUploadReport(), server_report_id);
       status != OperationStatus::kNoError) {
     FX_LOGS(ERROR) << fxl::StringPrintf(
         "Unable to record local crash report %s as uploaded in the database (%u)",

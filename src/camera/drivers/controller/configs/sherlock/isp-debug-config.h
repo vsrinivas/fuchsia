@@ -98,7 +98,7 @@ static fuchsia::camera2::hal::StreamConfig IspDebugStreamConfig() {
 
 fuchsia::camera2::hal::Config DebugConfig() {
   fuchsia::camera2::hal::Config config;
-  config.stream_configs.push_back(std::move(IspDebugStreamConfig()));
+  config.stream_configs.push_back(IspDebugStreamConfig());
   return config;
 }
 
@@ -127,7 +127,7 @@ InternalConfigNode DebugConfigFullRes() {
   node.output_frame_rate.frames_per_sec_denominator = 1;
   node.input_stream_type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION;
   node.supported_streams.push_back(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
-  node.child_nodes.push_back(std::move(OutputStream()));
+  node.child_nodes.push_back(OutputStream());
   return node;
 }
 

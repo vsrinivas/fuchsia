@@ -246,9 +246,9 @@ static fuchsia::camera2::hal::StreamConfig OutputStreamMonitoringConfig() {
 
 fuchsia::camera2::hal::Config MonitoringConfig() {
   fuchsia::camera2::hal::Config config;
-  config.stream_configs.push_back(std::move(OutputStreamMLFRConfig()));
-  config.stream_configs.push_back(std::move(OutputStreamMLDSConfig()));
-  config.stream_configs.push_back(std::move(OutputStreamMonitoringConfig()));
+  config.stream_configs.push_back(OutputStreamMLFRConfig());
+  config.stream_configs.push_back(OutputStreamMLDSConfig());
+  config.stream_configs.push_back(OutputStreamMonitoringConfig());
   return config;
 }
 
@@ -283,7 +283,7 @@ static InternalConfigNode Gdc1() {
   node.output_frame_rate.frames_per_sec_denominator = 1;
   node.output_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
                             fuchsia::camera2::CameraStreamType::MACHINE_LEARNING;
-  node.child_nodes.push_back(std::move(OutputStreamMLDS()));
+  node.child_nodes.push_back(OutputStreamMLDS());
   node.gdc_info.config_type = DUMMY_CONFIG_0;
   return node;
 }
@@ -298,8 +298,8 @@ InternalConfigNode MonitorConfigFullRes() {
                                    fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
   node.supported_streams.push_back(fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
                                    fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
-  node.child_nodes.push_back(std::move(OutputStreamMLFR()));
-  node.child_nodes.push_back(std::move(Gdc1()));
+  node.child_nodes.push_back(OutputStreamMLFR());
+  node.child_nodes.push_back(Gdc1());
   return node;
 }
 
@@ -320,7 +320,7 @@ static InternalConfigNode Gdc2() {
   node.output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate;
   node.output_frame_rate.frames_per_sec_denominator = 1;
   node.output_stream_type = fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE;
-  node.child_nodes.push_back(std::move(OutputStreamMonitoring()));
+  node.child_nodes.push_back(OutputStreamMonitoring());
   node.gdc_info.config_type = DUMMY_CONFIG_1;
   return node;
 }
@@ -332,7 +332,7 @@ InternalConfigNode MonitorConfigFDownScaledRes() {
   node.output_frame_rate.frames_per_sec_denominator = 1;
   node.input_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION;
   node.supported_streams.push_back(fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
-  node.child_nodes.push_back(std::move(Gdc2()));
+  node.child_nodes.push_back(Gdc2());
   return node;
 }
 
