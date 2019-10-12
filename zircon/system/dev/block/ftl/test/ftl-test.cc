@@ -463,18 +463,17 @@ TEST(FtlTest, WearCountDistribution) {
   ASSERT_OK(ftl.volume()->GetStats(&stats));
   EXPECT_EQ(100, stats.num_blocks);
 
-  // Verify that none of the buckets close to get too behind (the lower 30% of
+  // Verify that none of the buckets close to get too behind (the lower 25% of
   // the histogram) is accumulating too many blocks.
-  // TODO(fxb/35898): Enable this test.
   int close_to_fall_of = 0;
-  for (int bucket = 0; bucket < 6; bucket++) {
+  for (int bucket = 0; bucket < 5; bucket++) {
     // If the distribution is flat, no bucket should have more than 5 blocks.
-    // 20 sounds like a reasonable limit.
-    //EXPECT_GT(20, stats.wear_histogram[bucket], "Bucket %d too big", bucket);
+    EXPECT_GT(5, stats.wear_histogram[bucket], "Bucket %d too big", bucket);
 
     close_to_fall_of += stats.wear_histogram[bucket];
   }
-  //EXPECT_GT(60, close_to_fall_of);
+  // In aggregate, the tail must be better than flat.
+  EXPECT_GT(15, close_to_fall_of);
 }
 
 }  // namespace
