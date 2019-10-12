@@ -56,6 +56,8 @@ source_set("testing_deps") {
     "session_handler_test.h",
     "session_test.cc",
     "session_test.h",
+    "vk_session_handler_test.cc",
+    "vk_session_handler_test.h",
     "vk_session_test.cc",
     "vk_session_test.h",
   ]
@@ -155,7 +157,9 @@ executable("unittests") {
     "hittest_global_unittest.cc",
     "host_image_unittest.cc",
     "image_pipe2_unittest.cc",
+    "image_pipe_render_unittest.cc",
     "image_pipe_unittest.cc",
+    "image_pipe_unittest_common.cc",
     "import_unittest.cc",
     "memory_unittest.cc",
     "node_unittest.cc",

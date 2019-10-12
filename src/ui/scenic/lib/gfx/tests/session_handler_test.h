@@ -40,6 +40,8 @@ class SessionHandlerTest : public ErrorReportingTest, public SessionUpdater {
   void InitializeSessionHandler();
   void InitializeScenicSession(SessionId session_id);
 
+  virtual escher::EscherWeakPtr GetEscherWeakPtr();
+
   SessionHandler* session_handler() {
     FXL_DCHECK(command_dispatcher_);
     return static_cast<SessionHandler*>(command_dispatcher_.get());

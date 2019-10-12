@@ -71,6 +71,8 @@ class ImagePipe2 : public ImagePipeBase {
 
   bool use_protected_memory() override { return num_protected_images_ > 0; }
 
+  ImagePtr current_image() const { return current_image_; }
+
  protected:
   // |BufferCollectionInfo| stores the information regarding BufferCollection added.
   using BufferCollectionId = uint32_t;

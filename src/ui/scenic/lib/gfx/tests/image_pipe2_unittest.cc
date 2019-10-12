@@ -11,6 +11,7 @@
 #include "src/ui/lib/escher/flib/fence.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "src/ui/lib/escher/util/image_utils.h"
+#include "src/ui/scenic/lib/gfx/tests/image_pipe_unittest_common.h"
 #include "src/ui/scenic/lib/gfx/tests/session_handler_test.h"
 #include "src/ui/scenic/lib/gfx/tests/util.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
@@ -106,47 +107,36 @@ VK_TEST_F(CreateImagePipe2CmdTest, ApplyCommand) {
       fidl::InterfaceRequest<fuchsia::images::ImagePipe2>(std::move(remote_endpoint)))));
 }
 
-class DummyImage : public Image {
+class ImagePipe2ThatCreatesFakeImages : public ImagePipe2 {
  public:
-  DummyImage(Session* session, ResourceId id, escher::ImagePtr image)
-      : Image(session, id, Image::kTypeInfo) {
-    image_ = std::move(image);
-  }
-
-  void Accept(class ResourceVisitor*) override {}
-
-  uint32_t update_count_ = 0;
-
- protected:
-  bool UpdatePixels(escher::BatchGpuUploader* gpu_uploader) override {
-    ++update_count_;
-    // Update pixels returns the new dirty state. False will stop additional
-    // calls to UpdatePixels() until the image is marked dirty.
-    return false;
-  }
-};
-
-class ImagePipe2ThatCreatesDummyImages : public ImagePipe2 {
- public:
-  ImagePipe2ThatCreatesDummyImages(Session* session,
-                                   fidl::InterfaceRequest<fuchsia::images::ImagePipe2> request,
-                                   escher::ResourceManager* dummy_resource_manager)
+  ImagePipe2ThatCreatesFakeImages(Session* session,
+                                  fidl::InterfaceRequest<fuchsia::images::ImagePipe2> request,
+                                  escher::ResourceManager* fake_resource_manager)
       : ImagePipe2(session, 0u, std::move(request), session->image_pipe_updater(),
                    session->shared_error_reporter()),
-        dummy_resource_manager_(dummy_resource_manager) {
+        fake_resource_manager_(fake_resource_manager) {
     FXL_CHECK(session->session_context().frame_scheduler);
 
     zx_status_t status = fdio_service_connect(
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
     EXPECT_EQ(status, ZX_OK);
   }
-  ~ImagePipe2ThatCreatesDummyImages() { CloseConnectionAndCleanUp(); }
+  ~ImagePipe2ThatCreatesFakeImages() { CloseConnectionAndCleanUp(); }
+
+  ImagePipeUpdateResults Update(escher::ReleaseFenceSignaller* release_fence_signaller,
+                                zx::time presentation_time) override {
+    auto result = ImagePipe2::Update(release_fence_signaller, presentation_time);
+    if (result.image_updated) {
+      static_cast<FakeImage*>(current_image().get())->update_count_++;
+    }
+    return result;
+  }
 
   fuchsia::sysmem::Allocator_Sync* sysmem_allocator() { return sysmem_allocator_.get(); }
 
   void set_next_image_is_protected(bool is_protected) { next_image_is_protected_ = is_protected; }
 
-  std::vector<fxl::RefPtr<DummyImage>> dummy_images_;
+  std::vector<fxl::RefPtr<FakeImage>> fake_images_;
 
  private:
   bool SetBufferCollectionConstraints(
@@ -172,15 +162,15 @@ class ImagePipe2ThatCreatesDummyImages : public ImagePipe2 {
       next_image_is_protected_ = false;
     }
     escher::ImagePtr escher_image =
-        escher::Image::WrapVkImage(dummy_resource_manager_, escher_info, vk::Image());
+        escher::Image::WrapVkImage(fake_resource_manager_, escher_info, vk::Image());
     FXL_CHECK(escher_image);
-    auto image = fxl::AdoptRef(new DummyImage(session, image_id, escher_image));
-    dummy_images_.push_back(image);
+    auto image = fxl::AdoptRef(new FakeImage(session, image_id, escher_image));
+    fake_images_.push_back(image);
     return image;
   }
 
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
-  escher::ResourceManager* dummy_resource_manager_;
+  escher::ResourceManager* fake_resource_manager_;
   bool next_image_is_protected_ = false;
 };
 
@@ -189,8 +179,8 @@ class ImagePipe2Test : public SessionHandlerTest, public escher::ResourceManager
  public:
   ImagePipe2Test() : escher::ResourceManager(escher::EscherWeakPtr()) {}
 
-  fxl::RefPtr<ImagePipe2ThatCreatesDummyImages> CreateImagePipe() {
-    return fxl::MakeRefCounted<ImagePipe2ThatCreatesDummyImages>(
+  fxl::RefPtr<ImagePipe2ThatCreatesFakeImages> CreateImagePipe() {
+    return fxl::MakeRefCounted<ImagePipe2ThatCreatesFakeImages>(
         session(), image_pipe_handle_.NewRequest(), this);
   }
 
@@ -452,17 +442,20 @@ TEST_F(ImagePipe2Test, ImagePipePresentTwoFrames) {
 
   // Current presented image should be null, since we haven't signalled acquire fence yet.
   ASSERT_FALSE(RunLoopFor(zx::sec(1)));
+  ASSERT_FALSE(image_pipe->current_image());
   ASSERT_FALSE(image_pipe->GetEscherImage());
 
   // Signal on the acquire fence.
   acquire_fence1.signal(0u, escher::kFenceSignalled);
 
-  // Run until image1 is presented.
+  // Run until image1 is presented, but image1 will not be rendered since we have no engine render
+  // visitor.
   ASSERT_TRUE(RunLoopFor(zx::sec(1)));
-  ASSERT_TRUE(image_pipe->GetEscherImage());
+  ASSERT_TRUE(image_pipe->current_image());
+  ASSERT_FALSE(image_pipe->GetEscherImage());
 
   // Image should now be presented.
-  escher::ImagePtr image1 = image_pipe->GetEscherImage();
+  ImagePtr image1 = image_pipe->current_image();
   ASSERT_TRUE(image1);
 
   const uint32_t kImageId2 = 2;
@@ -482,14 +475,16 @@ TEST_F(ImagePipe2Test, ImagePipePresentTwoFrames) {
   // Verify that the currently display image hasn't changed yet, since we
   // haven't signalled the acquire fence.
   ASSERT_FALSE(RunLoopUntilIdle());
-  ASSERT_EQ(image_pipe->GetEscherImage(), image1);
+  ASSERT_FALSE(image_pipe->GetEscherImage());
+  ASSERT_EQ(image_pipe->current_image(), image1);
 
   // Signal on the acquire fence.
   acquire_fence2.signal(0u, escher::kFenceSignalled);
 
   // There should be a new image presented.
   ASSERT_TRUE(RunLoopFor(zx::sec(1)));
-  escher::ImagePtr image2 = image_pipe->GetEscherImage();
+  ASSERT_FALSE(image_pipe->GetEscherImage());
+  ImagePtr image2 = image_pipe->current_image();
   ASSERT_TRUE(image2);
   ASSERT_NE(image1, image2);
 
@@ -546,13 +541,14 @@ TEST_F(ImagePipe2Test, ImagePipeUpdateTwoFrames) {
   // Let all updates get scheduled and finished
   ASSERT_TRUE(RunLoopFor(zx::sec(1)));
 
-  auto image_out = image_pipe->GetEscherImage();
+  auto image_out = image_pipe->current_image();
   // We should get the second image in the queue, since both should have been ready.
   ASSERT_TRUE(image_out);
-  ASSERT_EQ(image_out->width(), kImage2Width);
-  ASSERT_EQ(image_pipe->dummy_images_.size(), 2u);
-  ASSERT_EQ(image_pipe->dummy_images_[0]->update_count_, 0u);
-  ASSERT_EQ(image_pipe->dummy_images_[1]->update_count_, 1u);
+  ASSERT_FALSE(image_pipe->GetEscherImage());
+  ASSERT_EQ(static_cast<FakeImage*>(image_out.get())->image_info_.width, kImage2Width);
+  ASSERT_EQ(image_pipe->fake_images_.size(), 2u);
+  ASSERT_EQ(image_pipe->fake_images_[0]->update_count_, 0u);
+  ASSERT_EQ(image_pipe->fake_images_[1]->update_count_, 1u);
 
   // Do it again, to make sure that update is called a second time (since released images could be
   // edited by the client before presentation).
@@ -566,12 +562,12 @@ TEST_F(ImagePipe2Test, ImagePipeUpdateTwoFrames) {
                            std::vector<zx::event>(), nullptr);
   ASSERT_TRUE(RunLoopFor(zx::sec(1)));
 
-  image_out = image_pipe->GetEscherImage();
-  ASSERT_EQ(image_pipe->dummy_images_.size(), 2u);
+  image_out = image_pipe->current_image();
+  ASSERT_EQ(image_pipe->fake_images_.size(), 2u);
   // Because Present was handled for image 1, we should have a call to
   // UpdatePixels for that image.
-  ASSERT_EQ(image_pipe->dummy_images_[0]->update_count_, 1u);
-  ASSERT_EQ(image_pipe->dummy_images_[1]->update_count_, 2u);
+  ASSERT_EQ(image_pipe->fake_images_[0]->update_count_, 1u);
+  ASSERT_EQ(image_pipe->fake_images_[1]->update_count_, 2u);
 }
 
 // Present two frames on the ImagePipe. After presenting the first image but before signaling its
@@ -603,6 +599,7 @@ TEST_F(ImagePipe2Test, ImagePipeRemoveImageThatIsPendingPresent) {
 
   // Current presented image should be null, since we haven't signalled acquire fence yet.
   ASSERT_FALSE(RunLoopFor(zx::sec(1)));
+  ASSERT_FALSE(image_pipe->current_image());
   ASSERT_FALSE(image_pipe->GetEscherImage());
 
   // Remove the image; by the ImagePipe semantics, the consumer will
@@ -614,8 +611,9 @@ TEST_F(ImagePipe2Test, ImagePipeRemoveImageThatIsPendingPresent) {
 
   // Run until image1 is presented.
   ASSERT_TRUE(RunLoopFor(zx::sec(1)));
-  ASSERT_TRUE(image_pipe->GetEscherImage());
-  escher::ImagePtr image1 = image_pipe->GetEscherImage();
+  ASSERT_TRUE(image_pipe->current_image());
+  ASSERT_FALSE(image_pipe->GetEscherImage());
+  ImagePtr image1 = image_pipe->current_image();
 
   // Image should now be presented.
   ASSERT_TRUE(image1);
@@ -639,15 +637,16 @@ TEST_F(ImagePipe2Test, ImagePipeRemoveImageThatIsPendingPresent) {
   // Verify that the currently display image hasn't changed yet, since we
   // haven't signalled the acquire fence.
   ASSERT_FALSE(RunLoopFor(zx::sec(1)));
-  ASSERT_EQ(image_pipe->GetEscherImage(), image1);
+  ASSERT_EQ(image_pipe->current_image(), image1);
 
   // Signal on the acquire fence.
   acquire_fence2.signal(0u, escher::kFenceSignalled);
 
   // There should be a new image presented.
   ASSERT_TRUE(RunLoopFor(zx::sec(1)));
-  escher::ImagePtr image2 = image_pipe->GetEscherImage();
+  ImagePtr image2 = image_pipe->current_image();
   ASSERT_TRUE(image2);
+  ASSERT_FALSE(image_pipe->GetEscherImage());
   ASSERT_NE(image1, image2);
 
   // The first image should have been released.

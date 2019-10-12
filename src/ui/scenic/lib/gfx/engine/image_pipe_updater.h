@@ -50,8 +50,7 @@ class ImagePipeUpdater {
   // responsible for deciding when to apply the updates.
   friend class Session;
   ApplyScheduledUpdatesResult ApplyScheduledUpdates(
-      CommandContext* command_context, zx::time target_presentation_time,
-      escher::ReleaseFenceSignaller* release_fence_signaller);
+      zx::time target_presentation_time, escher::ReleaseFenceSignaller* release_fence_signaller);
 
   struct ImagePipeUpdate {
     zx::time presentation_time;

@@ -214,7 +214,7 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* comman
   }
 
   ImagePipeUpdater::ApplyScheduledUpdatesResult image_pipe_update_results =
-      image_pipe_updater_->ApplyScheduledUpdates(command_context, target_presentation_time,
+      image_pipe_updater_->ApplyScheduledUpdates(target_presentation_time,
                                                  session_context_.release_fence_signaller);
 
   update_results.needs_render =

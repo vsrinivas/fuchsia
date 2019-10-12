@@ -70,6 +70,8 @@ class ImagePipe : public ImagePipeBase {
 
   fxl::WeakPtr<ImagePipe> GetWeakPtr() { return weak_ptr_factory_.GetWeakPtr(); }
 
+  ImagePtr current_image() const { return current_image_; }
+
  private:
   friend class ImagePipeHandler;
 

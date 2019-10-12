@@ -58,6 +58,9 @@ Engine::Engine(sys::ComponentContext* app_context,
                std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
                escher::EscherWeakPtr weak_escher)
     : escher_(std::move(weak_escher)),
+      image_factory_(escher() ? std::make_unique<escher::ImageFactoryAdapter>(
+                                    escher()->gpu_allocator(), escher()->resource_recycler())
+                              : nullptr),
       release_fence_signaller_(std::move(release_fence_signaller)),
       frame_scheduler_(frame_scheduler),
       scene_graph_(app_context),

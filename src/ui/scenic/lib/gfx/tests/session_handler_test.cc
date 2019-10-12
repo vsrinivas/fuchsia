@@ -71,9 +71,8 @@ void SessionHandlerTest::InitializeEngine() {
   frame_scheduler_ = std::make_shared<DefaultFrameScheduler>(
       display_manager_->default_display(),
       std::make_unique<ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
-  engine_ =
-      std::make_unique<Engine>(app_context_.context(), frame_scheduler_,
-                               std::move(mock_release_fence_signaller), escher::EscherWeakPtr());
+  engine_ = std::make_unique<Engine>(app_context_.context(), frame_scheduler_,
+                                     std::move(mock_release_fence_signaller), GetEscherWeakPtr());
   frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());
   frame_scheduler_->AddSessionUpdater(weak_factory_.GetWeakPtr());
 }
@@ -82,6 +81,8 @@ void SessionHandlerTest::InitializeScenicSession(SessionId session_id) {
   fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener;
   scenic_session_ = std::make_unique<scenic_impl::Session>(session_id, std::move(listener));
 }
+
+escher::EscherWeakPtr SessionHandlerTest::GetEscherWeakPtr() { return escher::EscherWeakPtr(); }
 
 SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
     std::unordered_set<SessionId> sessions_to_update, zx::time presentation_time,

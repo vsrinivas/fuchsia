@@ -30,11 +30,9 @@ void ImagePipeUpdater::ScheduleImagePipeUpdate(zx::time presentation_time,
 }
 
 ImagePipeUpdater::ApplyScheduledUpdatesResult ImagePipeUpdater::ApplyScheduledUpdates(
-    CommandContext* command_context, zx::time target_presentation_time,
-    escher::ReleaseFenceSignaller* release_fence_signaller) {
+    zx::time target_presentation_time, escher::ReleaseFenceSignaller* release_fence_signaller) {
   ApplyScheduledUpdatesResult result{.needs_render = false};
 
-  std::unordered_map<ResourceId, ImagePipeBasePtr> image_pipe_updates_to_upload;
   while (!scheduled_image_pipe_updates_.empty() &&
          scheduled_image_pipe_updates_.top().presentation_time <= target_presentation_time) {
     auto& update = scheduled_image_pipe_updates_.top();
@@ -54,24 +52,11 @@ ImagePipeUpdater::ApplyScheduledUpdatesResult ImagePipeUpdater::ApplyScheduledUp
       // of the |Session::UpdateResults| struct.
       MoveAllItemsFromQueueToQueue(&image_pipe_update_results.callbacks, &result.callbacks);
 
-      // Only upload images that were updated and are currently dirty, and only
-      // do one upload per ImagePipe.
-      if (image_pipe_update_results.image_updated) {
-        image_pipe_updates_to_upload.try_emplace(update.image_pipe->id(),
-                                                 ImagePipeBasePtr(update.image_pipe.get()));
-      }
+      // |ImagePipe| needs to be re-rendered if its most recent image is updated.
+      result.needs_render = result.needs_render || image_pipe_update_results.image_updated;
     }
     scheduled_image_pipe_updates_.pop();
   }
-
-  // Stage GPU uploads for the latest dirty image on each updated ImagePipe.
-  for (const auto& entry : image_pipe_updates_to_upload) {
-    ImagePipeBasePtr image_pipe = entry.second;
-    image_pipe->UpdateEscherImage(command_context->batch_gpu_uploader());
-    // Image was updated so the image in the scene is dirty.
-    result.needs_render = true;
-  }
-  image_pipe_updates_to_upload.clear();
 
   return result;
 }
