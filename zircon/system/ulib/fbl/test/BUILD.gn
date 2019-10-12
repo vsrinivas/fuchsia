@@ -41,7 +41,7 @@ test("fbl") {
   ]
   deps = [
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/unittest",    # TODO: convert to zxtest.
+    "$zx/system/ulib/unittest",  # TODO: convert to zxtest.
     "$zx/system/ulib/zxtest",
   ]
 
@@ -60,6 +60,7 @@ test("fbl") {
     sources += [
       "condition_variable_tests.cc",
       "ref_counted_tests.cc",
+      "ref_counted_upgradeable_tests.cc",
       "ring_buffer_tests.cc",
       "slab_allocator_tests.cc",
     ]

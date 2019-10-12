@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/event.h>
+#include <pthread.h>
+
 #include <atomic>
+
 #include <fbl/auto_lock.h>
 #include <fbl/ref_counted_upgradeable.h>
 #include <fbl/ref_ptr.h>
-#include <lib/zx/event.h>
-#include <pthread.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
+
 template <bool EnableAdoptionValidator>
 class RawUpgradeTester
     : public fbl::RefCountedUpgradeable<RawUpgradeTester<EnableAdoptionValidator>,
@@ -41,12 +44,9 @@ void* adopt_and_reset(void* arg) {
   rc_client.reset();
   return NULL;
 }
-}  // namespace
 
 template <bool EnableAdoptionValidator>
-static bool upgrade_fail_test() {
-  BEGIN_TEST;
-
+void upgrade_fail_test() {
   fbl::Mutex mutex;
   fbl::AllocChecker ac;
   std::atomic<bool> destroying{false};
@@ -77,13 +77,10 @@ static bool upgrade_fail_test() {
   }
 
   pthread_join(thread, NULL);
-  END_TEST;
 }
 
 template <bool EnableAdoptionValidator>
-static bool upgrade_success_test() {
-  BEGIN_TEST;
-
+void upgrade_success_test() {
   fbl::Mutex mutex;
   fbl::AllocChecker ac;
   std::atomic<bool> destroying{false};
@@ -103,13 +100,26 @@ static bool upgrade_success_test() {
 
   ref.reset();
   EXPECT_TRUE(atomic_load(&destroying));
-
-  END_TEST;
 }
 
-BEGIN_TEST_CASE(ref_counted_upgradeable_tests)
-RUN_NAMED_TEST("Fail to upgrade raw pointer (adoption validation on)", upgrade_fail_test<true>)
-RUN_NAMED_TEST("Fail to upgrade raw pointer (adoption validation off)", upgrade_fail_test<false>)
-RUN_NAMED_TEST("Upgrade raw pointer (adoption validation on)", upgrade_success_test<true>)
-RUN_NAMED_TEST("Upgrade raw pointer (adoption validation off)", upgrade_success_test<false>)
-END_TEST_CASE(ref_counted_upgradeable_tests);
+TEST(RefCountedUpgradeableTest, UpgradeFailAdoptValidationOn) {
+  auto do_test = upgrade_fail_test<true>;
+  ASSERT_NO_FAILURES(do_test());
+}
+
+TEST(RefCountedUpgradeableTest, UpgradeFailAdoptValidationOff) {
+  auto do_test = upgrade_fail_test<false>;
+  ASSERT_NO_FAILURES(do_test());
+}
+
+TEST(RefCountedUpgradeableTest, UpgradeSuccessAdoptValidationOn) {
+  auto do_test = upgrade_success_test<true>;
+  ASSERT_NO_FAILURES(do_test());
+}
+
+TEST(RefCountedUpgradeableTest, UpgradeSuccessAdoptValidationOff) {
+  auto do_test = upgrade_success_test<false>;
+  ASSERT_NO_FAILURES(do_test());
+}
+
+}  // namespace
