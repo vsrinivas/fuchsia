@@ -665,8 +665,7 @@ void platform_mexec_prep(uintptr_t final_bootimage_addr, size_t final_bootimage_
   }
 
   alloc_pages_greater_than(final_bootimage_addr + final_bootimage_len + PAGE_SIZE,
-                           kTotalPageTableCount, kBytesToIdentityMap,
-                           mexec_safe_pages);
+                           kTotalPageTableCount, kBytesToIdentityMap, mexec_safe_pages);
 }
 
 void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops, uintptr_t new_bootimage_addr,
@@ -779,8 +778,8 @@ static void platform_init_smp(void) {
       const uint32_t apic_id = processor.architecture_info.x86.apic_ids[i];
       const bool keep = (i < 1) || use_ht;
 
-      dprintf(INFO, "\t%zu: apic id 0x%x %s%s\n", cpu_index++, apic_id,
-              (apic_id == bsp_apic_id) ? " BSP" : "", keep ? "" : " (not using)");
+      dprintf(INFO, "\t%3zu: apic id %#4x %s%s%s\n", cpu_index++, apic_id, (i > 0) ? "SMT " : "",
+              (apic_id == bsp_apic_id) ? "BSP " : "", keep ? "" : "(not using)");
 
       if (keep) {
         if (apic_id == bsp_apic_id) {

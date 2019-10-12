@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "arch/x86/cpuid.h"
+
 #include <pow2.h>
+#include <trace.h>
 
 #include <memory>
 
-#include <arch/x86/cpuid.h>
+#define LOCAL_TRACE 0
 
 namespace cpu_id {
 namespace {
@@ -46,29 +49,42 @@ Registers CallCpuId(uint32_t leaf, uint32_t subleaf = 0) {
 uint8_t ToShiftWidth(uint32_t value) { return static_cast<uint8_t>(log2_uint_ceil(value)); }
 
 Registers FindHighestCacheSubleaf(uint32_t leaf) {
-  std::optional<Registers> highest;
-  for (uint32_t i = 0; i < 1000; i++) {
-    const Registers current = CallCpuId(leaf, i);
-    if ((current.eax() & 0xF) == 0) {  // Null level
-      // If we encounter a null level the last level should be the
-      // highest.
+  Registers empty = {};
 
-      // If there is no highest just return the current.
+  // Check to see if these are valid leaves for this processor.
+  Registers max_leaf = CallCpuId((leaf < ExtendedLeaf<0>()) ? 0 : ExtendedLeaf<0>());
+  if (leaf > max_leaf.eax()) {
+    // Out of range, return an empty value.
+    return empty;
+  }
+
+  std::optional<Registers> highest;
+  const uint32_t max_cache_levels = 32;
+  for (uint32_t i = 0; i < max_cache_levels; i++) {
+    const Registers current = CallCpuId(leaf, i);
+    LTRACEF("leaf %#x %#x: %#x %#x %#x %#x\n", leaf, i, current.eax(), current.ebx(), current.ecx(),
+            current.edx());
+    if ((current.eax() & 0xF) == 0) {  // Null level
+      // If we encounter a null level the last level should be the highest.
+
+      // If there is no highest just return an empty value.
       if (!highest) {
-        printf("WARNING: unable to find any cache levels.\n");
-        return current;
+        printf("WARNING: unable to find any cache levels on leaf %#x.\n", leaf);
+        return empty;
       }
       return *highest;
     }
 
     // We want to find the numerically highest cache level.
-    if (highest && ((*highest).eax() & 0xFF) < (current.eax() & 0xFF)) {
+    if (!highest || ((*highest).eax() & 0xFF) < (current.eax() & 0xFF)) {
       highest = {current};
     }
   }
 
-  printf("WARNING: more than 1000 levels of cache, couldn't find highest.\n");
-  return *highest;
+  printf("WARNING: more than %u levels of cache, couldn't find highest on leaf %#x\n",
+         max_cache_levels, leaf);
+
+  return highest.value_or(empty);
 }
 
 }  // namespace
@@ -325,6 +341,7 @@ Topology::Cache Topology::highest_level_cache() const {
   const auto& leaf = (leaf4_.eax() != 0) ? leaf4_ /*Intel*/ : leaf8_1D_ /*AMD*/;
   const uint16_t threads_sharing_cache =
       static_cast<uint16_t>(ExtractBits<uint16_t>(leaf.eax(), 25, 14) + 1);
+  LTRACEF("threads sharing cache %u\n", threads_sharing_cache);
   return {
       .level = ExtractBits<uint8_t>(leaf.eax(), 7, 5),
       .shift_width = ToShiftWidth(threads_sharing_cache),

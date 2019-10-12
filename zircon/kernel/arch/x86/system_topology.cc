@@ -172,7 +172,7 @@ class ApicDecoder {
     const auto topology = cpuid.ReadTopology();
     const auto cache = topology.highest_level_cache();
     cache_shift = cache.shift_width;
-    LTRACEF("Top cache level: %u shift: %u size: %lu\n", cache.level, cache.shift_width,
+    LTRACEF("Top cache level: %u shift: %u size: %#lx\n", cache.level, cache.shift_width,
             cache.size_bytes);
 
     const auto levels_opt = topology.levels();
@@ -182,10 +182,11 @@ class ApicDecoder {
 
     // If cpuid failed to provide levels fallback to one that just treats
     // every core as separate.
-    const auto& levels = levels_opt ? *levels_opt :
-        cpu_id::Topology::Levels {
-          .levels = {{.type = cpu_id::Topology::LevelType::CORE, .id_bits = 31}},
-          .level_count = 1 };
+    const auto& levels =
+        levels_opt ? *levels_opt
+                   : cpu_id::Topology::Levels{
+                         .levels = {{.type = cpu_id::Topology::LevelType::CORE, .id_bits = 31}},
+                         .level_count = 1};
 
     for (int i = 0; i < levels.level_count; i++) {
       const auto& level = levels.levels[i];
@@ -224,7 +225,7 @@ class ApicDecoder {
   }
 
   uint32_t cache_id(uint32_t apic_id) const {
-    return (cache_shift_ == 0) ? 0 : apic_id >> cache_shift_;
+    return (cache_shift_ == 0) ? 0 : (apic_id >> cache_shift_);
   }
 
   bool has_cache_info() const { return cache_shift_ > 0; }
@@ -268,6 +269,7 @@ zx_status_t GenerateTree(const cpu_id::CpuId& cpuid, const AcpiTables& acpi_tabl
     const bool is_primary = primary_apic_id == apic_id;
 
     const uint32_t die_id = decoder.die_id(apic_id);
+    const uint32_t smt_id = decoder.smt_id(apic_id);
 
     if (die_id >= dies->size()) {
       GrowVector(die_id + 1, dies, &checker);
@@ -299,8 +301,8 @@ zx_status_t GenerateTree(const cpu_id::CpuId& cpuid, const AcpiTables& acpi_tabl
     core->SetPrimary(is_primary);
     core->AddThread(logical_id, apic_id);
 
-    LTRACEF("apic: %X logical: %u die: %u cache: %u core: %u \n", apic_id, logical_id, die_id,
-            decoder.cache_id(apic_id), decoder.core_id(apic_id));
+    LTRACEF("apic: %#4x logical: %3u die: %u cache: %u core: %u thread: %u \n", apic_id, logical_id,
+            die_id, decoder.cache_id(apic_id), decoder.core_id(apic_id), smt_id);
   }
 
   return ZX_OK;
@@ -406,21 +408,26 @@ zx_status_t FlattenTree(const fbl::Vector<ktl::unique_ptr<Die>>& dies,
   return ZX_OK;
 }
 
+// clang-format off
 static constexpr zbi_topology_node_t kFallbackTopology = {
     .entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR,
     .parent_index = ZBI_TOPOLOGY_NO_PARENT,
     .entity = {
-        .processor = {
-             .logical_ids = {0},
-             .logical_id_count = 1,
-             .flags = ZBI_TOPOLOGY_PROCESSOR_PRIMARY,
-             .architecture = ZBI_TOPOLOGY_ARCH_X86,
-             .architecture_info = {
-                 .x86 = {
-                     .apic_ids = {0},
-                     .apic_id_count = 1,
-                 }}}}};
-
+      .processor = {
+        .logical_ids = {0},
+        .logical_id_count = 1,
+        .flags = ZBI_TOPOLOGY_PROCESSOR_PRIMARY,
+        .architecture = ZBI_TOPOLOGY_ARCH_X86,
+        .architecture_info = {
+          .x86 = {
+            .apic_ids = {0},
+            .apic_id_count = 1,
+          }
+        }
+      }
+    }
+};
+// clang-format on
 
 zx_status_t GenerateAndInitSystemTopology() {
   const AcpiTableProvider table_provider;
