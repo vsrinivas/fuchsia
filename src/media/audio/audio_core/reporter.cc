@@ -358,30 +358,31 @@ std::string Reporter::NextCapturerName() {
   return os.str();
 }
 
-void Reporter::OutputUnderflow(zx_duration_t output_underflow_duration,
-                               zx_time_t uptime_to_underflow) {
+void Reporter::OutputUnderflow(zx::duration output_underflow_duration,
+                               zx::time uptime_to_underflow) {
   // Bucket this into exponentially-increasing time since system boot.
   // By default, bucket the overflow into the last bucket: "more than 8 minutes after startup".
 
   int bucket = UpMoreThan64m;
+  zx::duration uptime = uptime_to_underflow - zx::time(0);
 
-  if (uptime_to_underflow < ZX_SEC(15)) {
+  if (uptime < zx::sec(15)) {
     bucket = UpLessThan15s;
-  } else if (uptime_to_underflow < ZX_SEC(30)) {
+  } else if (uptime < zx::sec(30)) {
     bucket = UpLessThan30s;
-  } else if (uptime_to_underflow < ZX_MIN(1)) {
+  } else if (uptime < zx::min(1)) {
     bucket = UpLessThan1m;
-  } else if (uptime_to_underflow < ZX_MIN(2)) {
+  } else if (uptime < zx::min(2)) {
     bucket = UpLessThan2m;
-  } else if (uptime_to_underflow < ZX_MIN(4)) {
+  } else if (uptime < zx::min(4)) {
     bucket = UpLessThan4m;
-  } else if (uptime_to_underflow < ZX_MIN(8)) {
+  } else if (uptime < zx::min(8)) {
     bucket = UpLessThan8m;
-  } else if (uptime_to_underflow < ZX_MIN(16)) {
+  } else if (uptime < zx::min(16)) {
     bucket = UpLessThan16m;
-  } else if (uptime_to_underflow < ZX_MIN(32)) {
+  } else if (uptime < zx::min(32)) {
     bucket = UpLessThan32m;
-  } else if (uptime_to_underflow < ZX_MIN(64)) {
+  } else if (uptime < zx::min(64)) {
     bucket = UpLessThan64m;
   }
 
@@ -390,14 +391,14 @@ void Reporter::OutputUnderflow(zx_duration_t output_underflow_duration,
     return;
   }
 
-  cobalt_logger_->LogElapsedTime(kAudioOutputUnderflowDurationMetricId, bucket, "",
-                                 output_underflow_duration, [](fuchsia::cobalt::Status status) {
-                                   if (status != fuchsia::cobalt::Status::OK &&
-                                       status != fuchsia::cobalt::Status::BUFFER_FULL) {
-                                     FXL_PLOG(ERROR, fidl::ToUnderlying(status))
-                                         << "Cobalt logger returned an error";
-                                   }
-                                 });
+  cobalt_logger_->LogElapsedTime(
+      kAudioOutputUnderflowDurationMetricId, bucket, "", output_underflow_duration.get(),
+      [](fuchsia::cobalt::Status status) {
+        if (status != fuchsia::cobalt::Status::OK &&
+            status != fuchsia::cobalt::Status::BUFFER_FULL) {
+          FXL_PLOG(ERROR, fidl::ToUnderlying(status)) << "Cobalt logger returned an error";
+        }
+      });
 }
 
 #endif  // ENABLE_REPORTER

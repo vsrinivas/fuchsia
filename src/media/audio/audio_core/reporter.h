@@ -113,7 +113,7 @@ class Reporter {
 
   // Logs an Underflow event to cobalt. output_duration_missed is the amount of time by which we
   // missed a time-critical write into the output buffer.
-  void OutputUnderflow(zx_duration_t output_duration_missed, zx_time_t uptime_to_underflow);
+  void OutputUnderflow(zx::duration output_duration_missed, zx::time uptime_to_underflow);
 
  private:
   void InitInspect();

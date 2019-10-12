@@ -25,7 +25,7 @@ static constexpr fuchsia::media::AudioSampleFormat kDefaultAudioFmt =
     fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
 static constexpr zx::duration kDefaultMaxRetentionNsec = zx::msec(60);
 static constexpr zx::duration kDefaultRetentionGapNsec = zx::msec(10);
-static constexpr zx_duration_t kUnderflowCooldown = ZX_SEC(1);
+static constexpr zx::duration kUnderflowCooldown = zx::sec(1);
 
 static std::atomic<zx_txid_t> TXID_GEN(1);
 static thread_local zx_txid_t TXID = TXID_GEN.fetch_add(1);
@@ -124,7 +124,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
   }
 
   FXL_DCHECK(driver_ring_buffer() != nullptr);
-  auto uptime = async::Now(mix_domain().dispatcher()).get();
+  auto uptime = async::Now(mix_domain().dispatcher());
   const auto& cm2rd_pos = clock_mono_to_ring_buf_pos_frames_;
   const auto& cm2frames = cm2rd_pos.rate();
   const auto& rb = *driver_ring_buffer();
@@ -137,28 +137,28 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
     // output_frames_consumed is the number of frames that the audio output device has read so far.
     // output_frames_emitted is the slightly-smaller number of frames that have physically exited
     // the device itself (the number of frames that have "made sound" so far);
-    int64_t output_frames_consumed = cm2rd_pos.Apply(uptime);
+    int64_t output_frames_consumed = cm2rd_pos.Apply(uptime.get());
     int64_t output_frames_emitted = output_frames_consumed - fifo_frames;
 
     if (output_frames_consumed >= frames_sent_) {
-      if (!underflow_start_time_) {
+      if (!underflow_start_time_.get()) {
         // If this was the first time we missed our limit, log a message, mark the start time of the
         // underflow event, and fill our entire ring buffer with silence.
         int64_t output_underflow_frames = output_frames_consumed - frames_sent_;
         int64_t low_water_frames_underflow = output_underflow_frames + low_water_frames_;
 
-        zx_duration_t output_underflow_duration =
-            cm2frames.Inverse().Scale(output_underflow_frames);
-        FXL_CHECK(output_underflow_duration >= 0);
+        zx::duration output_underflow_duration =
+            zx::nsec(cm2frames.Inverse().Scale(output_underflow_frames));
+        FXL_CHECK(output_underflow_duration.get() >= 0);
 
-        zx_duration_t output_variance_from_expected_wakeup =
-            cm2frames.Inverse().Scale(low_water_frames_underflow);
+        zx::duration output_variance_from_expected_wakeup =
+            zx::nsec(cm2frames.Inverse().Scale(low_water_frames_underflow));
 
         FXL_LOG(ERROR) << "OUTPUT UNDERFLOW: Missed mix target by (worst-case, expected) = ("
                        << std::setprecision(4)
-                       << static_cast<double>(output_underflow_duration) / ZX_MSEC(1) << ", "
-                       << output_variance_from_expected_wakeup / ZX_MSEC(1)
-                       << ") ms. Cooling down for " << kUnderflowCooldown / ZX_MSEC(1)
+                       << static_cast<double>(output_underflow_duration.to_nsecs()) / ZX_MSEC(1)
+                       << ", " << output_variance_from_expected_wakeup.to_msecs()
+                       << ") ms. Cooling down for " << kUnderflowCooldown.to_msecs()
                        << " milliseconds.";
 
         // Use our Reporter to log this to Cobalt, if enabled.
@@ -174,14 +174,14 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
       // Regardless of whether this was the first or a subsequent underflow,
       // update the cooldown deadline (the time at which we will start producing
       // frames again, provided we don't underflow again)
-      underflow_cooldown_deadline_ = zx_deadline_after(kUnderflowCooldown);
+      underflow_cooldown_deadline_ = zx::deadline_after(kUnderflowCooldown);
     }
 
     int64_t fill_target =
-        cm2rd_pos.Apply(uptime + kDefaultHighWaterNsec.get()) + driver()->fifo_depth_frames();
+        cm2rd_pos.Apply((uptime + kDefaultHighWaterNsec).get()) + driver()->fifo_depth_frames();
 
     // Are we in the middle of an underflow cooldown? If so, check whether we have recovered yet.
-    if (underflow_start_time_) {
+    if (underflow_start_time_.get()) {
       if (uptime < underflow_cooldown_deadline_) {
         // Looks like we have not recovered yet.  Pretend to have produced the
         // frames we were going to produce and schedule the next wakeup time.
@@ -191,9 +191,9 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
       } else {
         // Looks like we recovered.  Log and go back to mixing.
         FXL_LOG(WARNING) << "OUTPUT UNDERFLOW: Recovered after "
-                         << (uptime - underflow_start_time_) / ZX_MSEC(1) << " ms.";
-        underflow_start_time_ = 0;
-        underflow_cooldown_deadline_ = 0;
+                         << (uptime - underflow_start_time_).to_msecs() << " ms.";
+        underflow_start_time_ = zx::time(0);
+        underflow_cooldown_deadline_ = zx::time(0);
       }
     }
 
