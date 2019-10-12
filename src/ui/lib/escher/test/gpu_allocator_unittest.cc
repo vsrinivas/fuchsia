@@ -14,8 +14,12 @@ using namespace escher::test;
 using ::testing::_;
 
 VulkanDeviceQueuesPtr CreateVulkanDeviceQueues(bool use_protected_memory) {
-  VulkanInstance::Params instance_params(
-      {{"VK_LAYER_KHRONOS_validation"}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
+  VulkanInstance::Params instance_params({{}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
+
+  auto validation_layer_name = VulkanInstance::GetValidationLayerName();
+  if (validation_layer_name) {
+    instance_params.layer_names.insert(*validation_layer_name);
+  }
 
   auto vulkan_instance = VulkanInstance::New(std::move(instance_params));
   // This test doesn't use the global Escher environment so TestWithVkValidationLayer won't work.

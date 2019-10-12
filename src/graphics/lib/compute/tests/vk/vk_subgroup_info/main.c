@@ -11,6 +11,7 @@
 #include <stdlib.h>
 
 #include "common/macros.h"
+#include "common/vk/find_validation_layer.h"
 #include "common/vk/vk_assert.h"
 #include "common/vk/vk_debug.h"
 
@@ -32,7 +33,7 @@ main(int argc, char const * argv[])
                                        .engineVersion      = 0,
                                        .apiVersion         = VK_API_VERSION_1_1 };
 
-  char const * const instance_enabled_layers[] = { "VK_LAYER_KHRONOS_validation", NULL };
+  char const * const instance_enabled_layers[] = { vk_find_validation_layer(), NULL };
 
   char const * const instance_enabled_extensions[] = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME, NULL };
 

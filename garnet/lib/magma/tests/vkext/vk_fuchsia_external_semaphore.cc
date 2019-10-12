@@ -88,9 +88,34 @@ bool VulkanTest::InitVulkan() {
   if (found_count != instance_extensions.size())
     return DRETF(false, "failed to find instance extensions");
 
+  // Setup validation layer.
+  uint32_t layer_count;
+  result = vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
+  if (result != VK_SUCCESS)
+    return DRETF(false, "vkEnumerateInstanceLayerProperties returned %d\n", result);
+
+  std::vector<VkLayerProperties> layer_properties(layer_count);
+  result = vkEnumerateInstanceLayerProperties(&layer_count, layer_properties.data());
+
+  bool found_khr_validation = false;
+  bool found_lunarg_validation = false;
+
+  for (const auto& property : layer_properties) {
+    found_khr_validation =
+        found_khr_validation || (strcmp(property.layerName, "VK_LAYER_KHRONOS_validation") == 0);
+    found_lunarg_validation =
+        found_lunarg_validation ||
+        (strcmp(property.layerName, "VK_LAYER_LUNARG_standard_validation") == 0);
+  }
+
   std::vector<const char*> layers;
   // Vulkan loader is needed for loading layers.
-  layers.push_back("VK_LAYER_KHRONOS_validation");
+  if (found_khr_validation) {
+    layers.push_back("VK_LAYER_KHRONOS_validation");
+  } else if (found_lunarg_validation) {
+    layers.push_back("VK_LAYER_LUNARG_standard_validation");
+  }
+
   VkInstanceCreateInfo create_info{
       VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,  // VkStructureType             sType;
       nullptr,                                 // const void*                 pNext;

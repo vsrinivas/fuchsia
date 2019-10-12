@@ -2149,17 +2149,22 @@ static void demo_init_vk(struct demo* demo) {
   VkResult err;
   uint32_t instance_extension_count = 0;
   uint32_t instance_layer_count = 0;
-  const char** instance_validation_layers = NULL;
   demo->enabled_extension_count = 0;
   demo->enabled_layer_count = 0;
 
-  const char* instance_validation_layers_alt1[] = {
+  const char* instance_validation_layers_khr[] = {
 #ifndef NDEBUG
       "VK_LAYER_KHRONOS_validation",
 #endif
   };
 
-  const char* instance_validation_layers_alt2[] = {
+  const char* instance_validation_layers_lunarg[] = {
+#ifndef NDEBUG
+      "VK_LAYER_LUNARG_standard_validation",
+#endif
+  };
+
+  const char* instance_validation_layers_alt[] = {
 #ifndef NDEBUG
       "VK_LAYER_GOOGLE_threading",      "VK_LAYER_LUNARG_parameter_validation",
       "VK_LAYER_LUNARG_object_tracker", "VK_LAYER_LUNARG_core_validation",
@@ -2188,31 +2193,41 @@ static void demo_init_vk(struct demo* demo) {
     err = vkEnumerateInstanceLayerProperties(&instance_layer_count, NULL);
     assert(!err);
 
-    instance_validation_layers = instance_validation_layers_alt1;
     if (instance_layer_count > 0) {
       VkLayerProperties* instance_layers = reinterpret_cast<VkLayerProperties*>(
           malloc(sizeof(VkLayerProperties) * instance_layer_count));
       err = vkEnumerateInstanceLayerProperties(&instance_layer_count, instance_layers);
       assert(!err);
 
-      validation_found =
-          demo_check_layers(ARRAY_SIZE(instance_validation_layers_alt1), instance_validation_layers,
-                            instance_layer_count, instance_layers);
-      if (validation_found) {
-        demo->enabled_layer_count = ARRAY_SIZE(instance_validation_layers_alt1);
-        demo->enabled_layers[0] = "VK_LAYER_KHRONOS_validation";
+      VkBool32 khr_validation_found =
+          demo_check_layers(ARRAY_SIZE(instance_validation_layers_khr),
+                            instance_validation_layers_khr, instance_layer_count, instance_layers);
+
+      VkBool32 lunarg_validation_found = demo_check_layers(
+          ARRAY_SIZE(instance_validation_layers_lunarg), instance_validation_layers_lunarg,
+          instance_layer_count, instance_layers);
+
+      VkBool32 alt_validation_found =
+          demo_check_layers(ARRAY_SIZE(instance_validation_layers_alt),
+                            instance_validation_layers_alt, instance_layer_count, instance_layers);
+
+      if (khr_validation_found) {
+        validation_found = khr_validation_found;
+        demo->enabled_layer_count = ARRAY_SIZE(instance_validation_layers_khr);
         for (uint32_t i = 0; i < demo->enabled_layer_count; i++) {
-          demo->enabled_layers[i] = instance_validation_layers[i];
+          demo->enabled_layers[i] = instance_validation_layers_khr[i];
         }
-      } else {
-        // use alternative set of validation layers
-        instance_validation_layers = instance_validation_layers_alt2;
-        demo->enabled_layer_count = ARRAY_SIZE(instance_validation_layers_alt2);
-        validation_found =
-            demo_check_layers(ARRAY_SIZE(instance_validation_layers_alt2),
-                              instance_validation_layers, instance_layer_count, instance_layers);
+      } else if (lunarg_validation_found) {
+        validation_found = lunarg_validation_found;
+        demo->enabled_layer_count = ARRAY_SIZE(instance_validation_layers_lunarg);
         for (uint32_t i = 0; i < demo->enabled_layer_count; i++) {
-          demo->enabled_layers[i] = instance_validation_layers[i];
+          demo->enabled_layers[i] = instance_validation_layers_lunarg[i];
+        }
+      } else if (alt_validation_found) {
+        // use alternative set of validation layers
+        demo->enabled_layer_count = ARRAY_SIZE(instance_validation_layers_alt);
+        for (uint32_t i = 0; i < demo->enabled_layer_count; i++) {
+          demo->enabled_layers[i] = instance_validation_layers_alt[i];
         }
       }
       free(instance_layers);

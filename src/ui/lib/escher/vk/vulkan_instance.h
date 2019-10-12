@@ -29,7 +29,7 @@ class VulkanInstance : public fxl::RefCountedThreadSafe<VulkanInstance> {
  public:
   // Parameters used to construct a new Vulkan Instance.
   struct Params {
-    std::set<std::string> layer_names{"VK_LAYER_KHRONOS_validation"};
+    std::set<std::string> layer_names;
     std::set<std::string> extension_names;
     bool requires_surface = true;
   };
@@ -59,6 +59,12 @@ class VulkanInstance : public fxl::RefCountedThreadSafe<VulkanInstance> {
   static fxl::RefPtr<VulkanInstance> New(Params params);
 
   ~VulkanInstance();
+
+  // Get the name of Vulkan validation layer. On platforms with Vulkan API
+  // < 1.1.106 only VK_LAYER_LUNARG_standard_validation is supported, while it
+  // is deprecated and we need to use VK_LAYER_KHRONOS_validation instead if
+  // possible.
+  static std::optional<std::string> GetValidationLayerName();
 
   // Enumerate the available instance layers.  Return true if all required
   // layers are present, and false otherwise.

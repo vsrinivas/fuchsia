@@ -20,7 +20,12 @@ std::unique_ptr<DemoHarness> CreateHarnessDemo(std::string demo_name, uint32_t w
 
   DemoHarness::WindowParams window_params{demo_name, width, height, 2, use_fullscreen};
 
-  return DemoHarness::New(window_params, DemoHarness::InstanceParams());
+  DemoHarness::InstanceParams instance_params;
+  auto validation_layer_name = escher::VulkanInstance::GetValidationLayerName();
+  if (validation_layer_name != "") {
+    instance_params.layer_names.insert(*validation_layer_name);
+  }
+  return DemoHarness::New(window_params, std::move(instance_params));
 }
 
 int main(int argc, char** argv) {

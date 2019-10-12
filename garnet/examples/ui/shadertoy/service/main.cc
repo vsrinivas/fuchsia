@@ -4,11 +4,11 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <trace-provider/provider.h>
 
 #include "garnet/examples/ui/shadertoy/service/app.h"
-#include <lib/sys/cpp/component_context.h>
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/escher_process_init.h"
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
@@ -28,7 +28,10 @@ int main(int argc, const char** argv) {
           VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME},
          false});
 #if !defined(NDEBUG)
-    instance_params.layer_names.insert("VK_LAYER_KHRONOS_validation");
+    auto validation_layer_name = escher::VulkanInstance::GetValidationLayerName();
+    if (validation_layer_name) {
+      instance_params.layer_names.insert(*validation_layer_name);
+    }
 #endif
     auto vulkan_instance = escher::VulkanInstance::New(std::move(instance_params));
 
@@ -48,8 +51,7 @@ int main(int argc, const char** argv) {
     async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
     trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
-    std::unique_ptr<sys::ComponentContext> app_context(
-        sys::ComponentContext::Create());
+    std::unique_ptr<sys::ComponentContext> app_context(sys::ComponentContext::Create());
 
     shadertoy::App app(&loop, app_context.get(), escher.GetWeakPtr());
     loop.Run();

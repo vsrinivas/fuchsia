@@ -11,6 +11,7 @@ config("vk_common_public_config") {
 
 source_set("vk") {
   public = [
+    "find_validation_layer.h",
     "vk_assert.h",
     "vk_barrier.h",
     "vk_cache.h",
@@ -19,6 +20,8 @@ source_set("vk") {
     "vk_shader_info_amd.h",
   ]
   sources = [
+    "find_validation_layer.c",
+    "find_validation_layer.h",
     "vk_assert.c",
     "vk_assert.h",
     "vk_barrier.c",

@@ -30,10 +30,15 @@ EscherEnvironment* EscherEnvironment::GetGlobalTestEnvironment() {
 void EscherEnvironment::SetUp() {
   if (!VK_TESTS_SUPPRESSED()) {
     VulkanInstance::Params instance_params(
-        {{"VK_LAYER_KHRONOS_validation"},
+        {{},
          {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME,
           VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME},
          false});
+    auto validation_layer_name = VulkanInstance::GetValidationLayerName();
+    if (validation_layer_name) {
+      instance_params.layer_names.insert(*validation_layer_name);
+    }
+
     VulkanDeviceQueues::Params device_params(
         {{VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME, VK_KHR_MAINTENANCE1_EXTENSION_NAME,
           VK_KHR_BIND_MEMORY_2_EXTENSION_NAME, VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME},
