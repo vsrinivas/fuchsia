@@ -6,10 +6,12 @@
 // Chromium's |base::WeakPtr<T>| and |base::WeakPtrFactory<T>|. Note that we do
 // not provide anything analogous to |base::SupportsWeakPtr<T>|.
 
-#ifndef LIB_FXL_MEMORY_WEAK_PTR_H_
-#define LIB_FXL_MEMORY_WEAK_PTR_H_
+#ifndef SRC_LIB_FXL_MEMORY_WEAK_PTR_H_
+#define SRC_LIB_FXL_MEMORY_WEAK_PTR_H_
 
 #include <inttypes.h>
+
+#include <cstddef>
 #include <utility>
 
 #include "src/lib/fxl/logging.h"
@@ -38,6 +40,7 @@ template <typename T>
 class WeakPtr {
  public:
   WeakPtr() : ptr_(nullptr) {}
+  WeakPtr(std::nullptr_t) : WeakPtr() {}
 
   // Copy constructor.
   WeakPtr(const WeakPtr<T>& r) = default;
@@ -184,4 +187,4 @@ class WeakPtrFactory {
 
 }  // namespace fxl
 
-#endif  // LIB_FXL_MEMORY_WEAK_PTR_H_
+#endif  // SRC_LIB_FXL_MEMORY_WEAK_PTR_H_

@@ -58,6 +58,21 @@ TEST(WeakPtrTest, MoveAssignment) {
   EXPECT_EQ(&data, ptr2.get());
 }
 
+TEST(WeakPtrTest, NullConstruction) {
+  WeakPtr<int> ptr = nullptr;
+  EXPECT_FALSE(ptr);
+  EXPECT_EQ(nullptr, ptr.get());
+}
+
+TEST(WeakPtrTest, NullAssignment) {
+  int data = 0;
+  WeakPtrFactory<int> factory(&data);
+  WeakPtr<int> ptr = factory.GetWeakPtr();
+  ptr = nullptr;
+  EXPECT_FALSE(ptr);
+  EXPECT_EQ(nullptr, ptr.get());
+}
+
 TEST(WeakPtrTest, Testable) {
   int data = 0;
   WeakPtrFactory<int> factory(&data);

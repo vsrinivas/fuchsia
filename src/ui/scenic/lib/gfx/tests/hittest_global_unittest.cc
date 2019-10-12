@@ -401,7 +401,7 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
   sys::testing::ComponentContextProvider context_provider;
   std::unique_ptr<Engine> engine =
       std::make_unique<Engine>(context_provider.context(), /*frame_scheduler*/ nullptr,
-                               /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
+                               /*release fence signaller*/ nullptr, /*escher*/ nullptr);
 
   // Create our tokens for View/ViewHolder creation.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
