@@ -16,6 +16,7 @@ library("async") {
     "lib/async/time.h",
     "lib/async/trap.h",
     "lib/async/wait.h",
+    "lib/async/irq.h",
   ]
   public_deps = [
     # <lib/async/cpp/wait.h> has #include <lib/fit/function.h>.
@@ -40,6 +41,7 @@ library("async-cpp") {
     "lib/async/cpp/time.h",
     "lib/async/cpp/trap.h",
     "lib/async/cpp/wait.h",
+    "lib/async/cpp/irq.h",
   ]
   public_deps = [
     # <lib/async/cpp/executor.h> has #include <lib/zx/time.h>.
@@ -56,6 +58,7 @@ library("async-cpp") {
     "task.cc",
     "trap.cc",
     "wait.cc",
+    "irq.cc",
   ]
   deps = [
     ":async",

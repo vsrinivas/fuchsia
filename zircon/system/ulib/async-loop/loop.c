@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
+#include <lib/async/irq.h>
 #include <lib/async/receiver.h>
 #include <lib/async/task.h>
 #include <lib/async/trap.h>
@@ -33,19 +34,23 @@ static zx_status_t async_loop_queue_packet(async_dispatcher_t* dispatcher,
 static zx_status_t async_loop_set_guest_bell_trap(async_dispatcher_t* dispatcher,
                                                   async_guest_bell_trap_t* trap, zx_handle_t guest,
                                                   zx_vaddr_t addr, size_t length);
+static zx_status_t async_loop_bind_irq(async_dispatcher_t* dispatcher, async_irq_t* irq);
+static zx_status_t async_loop_unbind_irq(async_dispatcher_t* dispatcher, async_irq_t* irq);
 
-static const async_ops_t async_loop_ops = {
-    .version = ASYNC_OPS_V1,
-    .reserved = 0,
-    .v1 = {
-        .now = async_loop_now,
-        .begin_wait = async_loop_begin_wait,
-        .cancel_wait = async_loop_cancel_wait,
-        .post_task = async_loop_post_task,
-        .cancel_task = async_loop_cancel_task,
-        .queue_packet = async_loop_queue_packet,
-        .set_guest_bell_trap = async_loop_set_guest_bell_trap,
-    }};
+static const async_ops_v2_t async_loop_ops = {
+    .bind_irq = async_loop_bind_irq,
+    .unbind_irq = async_loop_unbind_irq,
+    .v1 = {.version = ASYNC_OPS_V2,
+           .reserved = 0,
+           .v1 = {
+               .now = async_loop_now,
+               .begin_wait = async_loop_begin_wait,
+               .cancel_wait = async_loop_cancel_wait,
+               .post_task = async_loop_post_task,
+               .cancel_task = async_loop_cancel_task,
+               .queue_packet = async_loop_queue_packet,
+               .set_guest_bell_trap = async_loop_set_guest_bell_trap,
+           }}};
 
 typedef struct thread_record {
   list_node_t node;
@@ -83,12 +88,15 @@ typedef struct async_loop {
   list_node_t task_list;    // pending tasks, earliest deadline first
   list_node_t due_list;     // due tasks, earliest deadline first
   list_node_t thread_list;  // earliest created thread first
+  list_node_t irq_list;     // list of IRQs
   bool timer_armed;         // true if timer has been set and has not fired yet
 } async_loop_t;
 
 static zx_status_t async_loop_run_once(async_loop_t* loop, zx_time_t deadline);
 static zx_status_t async_loop_dispatch_wait(async_loop_t* loop, async_wait_t* wait,
                                             zx_status_t status, const zx_packet_signal_t* signal);
+static zx_status_t async_loop_dispatch_irq(async_loop_t* loop, async_irq_t* irq, zx_status_t status,
+                                           const zx_packet_interrupt_t* interrupt);
 static zx_status_t async_loop_dispatch_tasks(async_loop_t* loop);
 static void async_loop_dispatch_task(async_loop_t* loop, async_task_t* task, zx_status_t status);
 static zx_status_t async_loop_dispatch_packet(async_loop_t* loop, async_receiver_t* receiver,
@@ -114,11 +122,15 @@ static inline async_wait_t* node_to_wait(list_node_t* node) {
   return FROM_NODE(async_wait_t, node);
 }
 
+static inline list_node_t* irq_to_node(async_irq_t* irq) { return TO_NODE(async_irq_t, irq); }
+
 static inline list_node_t* task_to_node(async_task_t* task) { return TO_NODE(async_task_t, task); }
 
 static inline async_task_t* node_to_task(list_node_t* node) {
   return FROM_NODE(async_task_t, node);
 }
+
+static inline async_irq_t* node_to_irq(list_node_t* node) { return FROM_NODE(async_irq_t, node); }
 
 zx_status_t async_loop_create(const async_loop_config_t* config, async_loop_t** out_loop) {
   ZX_DEBUG_ASSERT(out_loop);
@@ -133,7 +145,7 @@ zx_status_t async_loop_create(const async_loop_config_t* config, async_loop_t** 
   atomic_init(&loop->state, ASYNC_LOOP_RUNNABLE);
   atomic_init(&loop->active_threads, 0u);
 
-  loop->dispatcher.ops = &async_loop_ops;
+  loop->dispatcher.ops = (const async_ops_t*)&async_loop_ops;
   loop->config = *config;
   if (config->make_default_for_current_thread && config->default_accessors.setter == NULL) {
     loop->config.default_accessors.getter = async_get_default_dispatcher;
@@ -141,11 +153,13 @@ zx_status_t async_loop_create(const async_loop_config_t* config, async_loop_t** 
   }
   mtx_init(&loop->lock, mtx_plain);
   list_initialize(&loop->wait_list);
+  list_initialize(&loop->irq_list);
   list_initialize(&loop->task_list);
   list_initialize(&loop->due_list);
   list_initialize(&loop->thread_list);
 
-  zx_status_t status = zx_port_create(0u, &loop->port);
+  zx_status_t status =
+      zx_port_create(config->irq_support ? ZX_PORT_BIND_TO_INTERRUPT : 0, &loop->port);
   if (status == ZX_OK)
     status = zx_timer_create(ZX_TIMER_SLACK_LATE, ZX_CLOCK_MONOTONIC, &loop->timer);
   if (status == ZX_OK) {
@@ -197,6 +211,10 @@ void async_loop_shutdown(async_loop_t* loop) {
   while ((node = list_remove_head(&loop->task_list))) {
     async_task_t* task = node_to_task(node);
     async_loop_dispatch_task(loop, task, ZX_ERR_CANCELED);
+  }
+  while ((node = list_remove_head(&loop->irq_list))) {
+    async_irq_t* task = node_to_irq(node);
+    async_loop_dispatch_irq(loop, task, ZX_ERR_CANCELED, NULL);
   }
 
   if (loop->config.make_default_for_current_thread) {
@@ -267,6 +285,12 @@ static zx_status_t async_loop_run_once(async_loop_t* loop, zx_time_t deadline) {
       async_guest_bell_trap_t* trap = (void*)(uintptr_t)packet.key;
       return async_loop_dispatch_guest_bell_trap(loop, trap, packet.status, &packet.guest_bell);
     }
+
+    // Handle interrupt packets.
+    if (packet.type == ZX_PKT_TYPE_INTERRUPT) {
+      async_irq_t* irq = (void*)(uintptr_t)packet.key;
+      return async_loop_dispatch_irq(loop, irq, packet.status, &packet.interrupt);
+    }
   }
 
   ZX_DEBUG_ASSERT(false);
@@ -294,6 +318,14 @@ static zx_status_t async_loop_dispatch_wait(async_loop_t* loop, async_wait_t* wa
                                             zx_status_t status, const zx_packet_signal_t* signal) {
   async_loop_invoke_prologue(loop);
   wait->handler((async_dispatcher_t*)loop, wait, status, signal);
+  async_loop_invoke_epilogue(loop);
+  return ZX_OK;
+}
+
+static zx_status_t async_loop_dispatch_irq(async_loop_t* loop, async_irq_t* irq, zx_status_t status,
+                                           const zx_packet_interrupt_t* interrupt) {
+  async_loop_invoke_prologue(loop);
+  irq->handler((async_dispatcher_t*)loop, irq, status, interrupt);
   async_loop_invoke_epilogue(loop);
   return ZX_OK;
 }
@@ -636,6 +668,49 @@ static void async_loop_invoke_prologue(async_loop_t* loop) {
 static void async_loop_invoke_epilogue(async_loop_t* loop) {
   if (loop->config.epilogue)
     loop->config.epilogue(loop, loop->config.data);
+}
+
+static zx_status_t async_loop_bind_irq(async_dispatcher_t* dispatcher, async_irq_t* irq) {
+  async_loop_t* loop = (async_loop_t*)dispatcher;
+  ZX_DEBUG_ASSERT(loop);
+  ZX_DEBUG_ASSERT(irq);
+
+  if (atomic_load_explicit(&loop->state, memory_order_acquire) == ASYNC_LOOP_SHUTDOWN)
+    return ZX_ERR_BAD_STATE;
+
+  mtx_lock(&loop->lock);
+
+  zx_status_t status =
+      zx_interrupt_bind(irq->object, loop->port, (uintptr_t)irq, ZX_INTERRUPT_BIND);
+  if (status == ZX_OK) {
+    list_add_head(&loop->irq_list, irq_to_node(irq));
+  } else {
+    ZX_ASSERT_MSG(status == ZX_ERR_ACCESS_DENIED, "zx_object_wait_async: status=%d", status);
+  }
+
+  mtx_unlock(&loop->lock);
+  return status;
+}
+
+static zx_status_t async_loop_unbind_irq(async_dispatcher_t* dispatcher, async_irq_t* irq) {
+  async_loop_t* loop = (async_loop_t*)dispatcher;
+  ZX_DEBUG_ASSERT(loop);
+  ZX_DEBUG_ASSERT(irq);
+
+  if (atomic_load_explicit(&loop->state, memory_order_acquire) == ASYNC_LOOP_SHUTDOWN)
+    return ZX_ERR_BAD_STATE;
+
+  mtx_lock(&loop->lock);
+
+  zx_status_t status =
+      zx_interrupt_bind(irq->object, loop->port, (uintptr_t)irq, ZX_INTERRUPT_UNBIND);
+  if (status == ZX_OK) {
+    list_delete(irq_to_node(irq));
+  } else {
+    ZX_ASSERT_MSG(status == ZX_ERR_ACCESS_DENIED, "zx_object_wait_async: status=%d", status);
+  }
+  mtx_unlock(&loop->lock);
+  return status;
 }
 
 static int async_loop_run_thread(void* data) {

@@ -69,6 +69,9 @@ typedef struct async_loop_config {
 
   // Data to pass to the callback functions.
   void* data;
+
+  // True if IRQs should be supported
+  bool irq_support;
 } async_loop_config_t;
 
 // Using this symbol from this header is deprecated.  Please use the variant

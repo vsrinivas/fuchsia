@@ -20,6 +20,7 @@ typedef struct async_guest_bell_trap async_guest_bell_trap_t;
 typedef struct async_wait async_wait_t;
 typedef struct async_task async_task_t;
 typedef struct async_receiver async_receiver_t;
+typedef struct async_irq async_irq_t;
 
 // Private state owned by the asynchronous dispatcher.
 // This allows the dispatcher to associate a small amount of state with pending
@@ -69,6 +70,7 @@ typedef struct {
 typedef uint32_t async_ops_version_t;
 
 #define ASYNC_OPS_V1 ((async_ops_version_t)1)
+#define ASYNC_OPS_V2 ((async_ops_version_t)2)
 
 typedef struct async_ops {
   // The interface version number, e.g. |ASYNC_OPS_V1|.
@@ -98,6 +100,12 @@ typedef struct async_ops {
                                        zx_vaddr_t addr, size_t length);
   } v1;
 } async_ops_t;
+
+typedef struct async_ops_v2 {
+  async_ops_t v1;
+  zx_status_t (*bind_irq)(async_dispatcher_t* dispatcher, async_irq_t* irq);
+  zx_status_t (*unbind_irq)(async_dispatcher_t* dispatcher, async_irq_t* irq);
+} async_ops_v2_t;
 
 struct async_dispatcher {
   const async_ops_t* ops;

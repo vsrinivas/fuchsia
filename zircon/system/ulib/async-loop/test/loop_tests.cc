@@ -6,12 +6,14 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/time.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/async/irq.h>
 #include <lib/async/receiver.h>
 #include <lib/async/task.h>
 #include <lib/async/time.h>
 #include <lib/async/wait.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/event.h>
+#include <lib/zx/interrupt.h>
 #include <threads.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
@@ -65,6 +67,44 @@ class TestWait : public async_wait_t {
   }
 
   zx_packet_signal_t last_signal_storage_;
+};
+
+class TestWaitIrq : public async_irq_t {
+ public:
+  TestWaitIrq(zx_handle_t irq) : async_irq_t{{ASYNC_STATE_INIT}, &TestWaitIrq::CallHandler, irq} {}
+
+  virtual ~TestWaitIrq() = default;
+
+  uint32_t run_count = 0u;
+  zx_status_t last_status = ZX_ERR_INTERNAL;
+  const zx_packet_interrupt_t* last_signal = nullptr;
+
+  virtual zx_status_t Begin(async_dispatcher_t* dispatcher) {
+    return async_bind_irq(dispatcher, this);
+  }
+
+  zx_status_t Cancel(async_dispatcher_t* dispatcher) { return async_unbind_irq(dispatcher, this); }
+
+ protected:
+  virtual void Handle(async_dispatcher_t* dispatcher, zx_status_t status,
+                      const zx_packet_interrupt_t* signal) {
+    run_count++;
+    last_status = status;
+    if (signal) {
+      last_signal_storage_ = *signal;
+      last_signal = &last_signal_storage_;
+    } else {
+      last_signal = nullptr;
+    }
+  }
+
+ private:
+  static void CallHandler(async_dispatcher_t* dispatcher, async_irq_t* wait, zx_status_t status,
+                          const zx_packet_interrupt_t* signal) {
+    static_cast<TestWaitIrq*>(wait)->Handle(dispatcher, status, signal);
+  }
+
+  zx_packet_interrupt_t last_signal_storage_;
 };
 
 class CascadeWait : public TestWait {
@@ -466,6 +506,76 @@ bool wait_test() {
 
   loop.Shutdown();
 
+  END_TEST;
+}
+
+bool irq_test() {
+  BEGIN_TEST;
+  async_loop_config_t config = kAsyncLoopConfigNoAttachToThread;
+  config.irq_support = true;
+  // Ensure that we get the IRQ
+  {
+    async::Loop loop(&config);
+    zx::interrupt irq;
+    EXPECT_EQ(ZX_OK, zx::interrupt::create({}, 0, ZX_INTERRUPT_VIRTUAL, &irq));
+    TestWaitIrq wait(irq.get());
+    EXPECT_EQ(ZX_OK, wait.Begin(loop.dispatcher()));
+    irq.trigger(0, zx::time());
+    EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
+    EXPECT_EQ(1, wait.run_count);
+    EXPECT_EQ(ZX_OK, irq.ack());
+    wait.Cancel(loop.dispatcher());
+  }
+  // Ensure that we don't get the IRQ if it wasn't triggered
+  {
+    async::Loop loop(&config);
+    zx::interrupt irq;
+    EXPECT_EQ(ZX_OK, zx::interrupt::create({}, 0, ZX_INTERRUPT_VIRTUAL, &irq));
+    TestWaitIrq wait(irq.get());
+    EXPECT_EQ(ZX_OK, wait.Begin(loop.dispatcher()));
+    EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
+    EXPECT_EQ(0, wait.run_count);
+    wait.Cancel(loop.dispatcher());
+  }
+  // Ensure that the packet is pulled out of the port on unbind
+  {
+    async::Loop loop(&config);
+    zx::interrupt irq;
+    EXPECT_EQ(ZX_OK, zx::interrupt::create({}, 0, ZX_INTERRUPT_VIRTUAL, &irq));
+    TestWaitIrq wait(irq.get());
+    EXPECT_EQ(ZX_OK, wait.Begin(loop.dispatcher()));
+    irq.trigger(0, zx::time());
+    EXPECT_EQ(ZX_OK, wait.Cancel(loop.dispatcher()));
+    EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
+    EXPECT_EQ(0, wait.run_count);
+  }
+  // Ensure that the interrupt gets unbound from the port on unbind
+  {
+    async::Loop loop(&config);
+    zx::interrupt irq;
+    EXPECT_EQ(ZX_OK, zx::interrupt::create({}, 0, ZX_INTERRUPT_VIRTUAL, &irq));
+    TestWaitIrq wait(irq.get());
+    EXPECT_EQ(ZX_OK, wait.Begin(loop.dispatcher()));
+    EXPECT_EQ(ZX_OK, wait.Cancel(loop.dispatcher()));
+    irq.trigger(0, zx::time());
+    EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
+    EXPECT_EQ(0, wait.run_count);
+  }
+  // Ensure that we get an error on unbind if the interrupt was still pending when the loop shuts
+  // down
+  {
+    zx::interrupt irq;
+    EXPECT_EQ(ZX_OK, zx::interrupt::create({}, 0, ZX_INTERRUPT_VIRTUAL, &irq));
+    TestWaitIrq wait(irq.get());
+    {
+      async::Loop loop(&config);
+      EXPECT_EQ(ZX_OK, wait.Begin(loop.dispatcher()));
+      EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
+    }
+    EXPECT_EQ(1, wait.run_count);
+    EXPECT_EQ(ZX_ERR_CANCELED, wait.last_status);
+    EXPECT_EQ(ZX_OK, irq.ack());
+  }
   END_TEST;
 }
 
@@ -1150,6 +1260,7 @@ RUN_TEST(make_default_true_test)
 RUN_TEST(quit_test)
 RUN_TEST(time_test)
 RUN_TEST(wait_test)
+RUN_TEST(irq_test)
 RUN_TEST(wait_timestamp_test)
 RUN_TEST(wait_timestamp_integration_test)
 RUN_TEST(wait_unwaitable_handle_test)
