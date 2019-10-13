@@ -40,7 +40,7 @@ static constexpr uint16_t kCaptureOverflowTraceInterval = 1;
 static constexpr uint16_t kCaptureOverflowInfoInterval = 10;
 static constexpr uint16_t kCaptureOverflowErrorInterval = 100;
 
-zx_duration_t kAssumedWorstSourceFenceTime = ZX_MSEC(5);
+zx::duration kAssumedWorstSourceFenceTime = zx::msec(5);
 
 constexpr float kInitialCaptureGainDb = Gain::kUnityGainDb;
 constexpr int64_t kMaxTimePerCapture = ZX_MSEC(50);
@@ -844,7 +844,7 @@ zx_status_t AudioCapturerImpl::Process() {
     // TODO(johngro) : If we have only one capture source, and our frame rate
     // matches their frame rate, align our start time exactly with one of their
     // sample boundaries.
-    auto now = zx::clock::get_monotonic().get();
+    auto now = zx::clock::get_monotonic();
     if (!dest_frames_to_clock_mono_.invertible()) {
       // TODO(johngro) : It would be nice if we could alter the offsets in a
       // timeline function without needing to change the scale factor. This
@@ -853,7 +853,7 @@ zx_status_t AudioCapturerImpl::Process() {
       // time. Since the frame rate we supply is already reduced, this step
       // should go pretty quickly.
       dest_frames_to_clock_mono_ =
-          TimelineFunction(now, frame_count_, dest_frames_to_clock_mono_rate_);
+          TimelineFunction(now.get(), frame_count_, dest_frames_to_clock_mono_rate_);
       dest_frames_to_clock_mono_gen_.Next();
       FXL_DCHECK(dest_frames_to_clock_mono_.invertible());
     }
@@ -864,8 +864,9 @@ zx_status_t AudioCapturerImpl::Process() {
     }
 
     // Figure out when we can finish the job. If in the future, wait until then.
-    int64_t last_frame_time = dest_frames_to_clock_mono_.Apply(frame_count_ + mix_frames);
-    if (last_frame_time == TimelineRate::kOverflow) {
+    zx::time last_frame_time =
+        zx::time(dest_frames_to_clock_mono_.Apply(frame_count_ + mix_frames));
+    if (last_frame_time.get() == TimelineRate::kOverflow) {
       FXL_LOG(ERROR) << "Fatal timeline overflow in capture mixer, shutting down capture.";
       ShutdownFromMixDomain();
       return ZX_ERR_INTERNAL;
@@ -881,8 +882,7 @@ zx_status_t AudioCapturerImpl::Process() {
       // a new source shows up and pushes the largest fence time out, the next
       // time we wake up, it will be early. We will need to recognize this
       // condition and go back to sleep for a little bit before actually mixing.
-      zx::time next_mix_time(
-          static_cast<zx_time_t>(last_frame_time + kAssumedWorstSourceFenceTime));
+      zx::time next_mix_time = last_frame_time + kAssumedWorstSourceFenceTime;
       zx_status_t status = mix_timer_.PostForTime(mix_domain_->dispatcher(), next_mix_time);
       if (status != ZX_OK) {
         FXL_PLOG(ERROR, status) << "Failed to schedule capturer mix";
@@ -935,7 +935,7 @@ zx_status_t AudioCapturerImpl::Process() {
           // timeline function, we will re-establish it and flag a discontinuity
           // next time we have work to do.
           dest_frames_to_clock_mono_ =
-              TimelineFunction(now, frame_count_, dest_frames_to_clock_mono_rate_);
+              TimelineFunction(now.get(), frame_count_, dest_frames_to_clock_mono_rate_);
           dest_frames_to_clock_mono_gen_.Next();
         }
       }
