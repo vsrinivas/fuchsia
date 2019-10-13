@@ -5,6 +5,7 @@
 mod bind_library;
 mod bind_program;
 mod c_generation;
+pub mod compiler;
 mod dependency_graph;
 mod instruction;
 mod parser_common;

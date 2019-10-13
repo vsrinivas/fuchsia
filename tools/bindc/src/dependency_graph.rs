@@ -7,7 +7,6 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::mem;
 
-#[allow(dead_code)]
 pub struct DependencyGraph<K: Eq + Hash, V> {
     // Storage for all nodes in the graph.
     nodes: Vec<Node<K, V>>,
@@ -40,7 +39,6 @@ pub enum DependencyError<K: Debug + PartialEq> {
     CircularDependency,
 }
 
-#[allow(dead_code)]
 impl<K: Eq + Hash + Clone + Debug, V> DependencyGraph<K, V> {
     const ROOT_INDEX: usize = 0;
 

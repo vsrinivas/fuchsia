@@ -17,7 +17,7 @@ use nom::{
     IResult,
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CompoundIdentifier {
     pub namespace: Vec<String>,
     pub name: String,
