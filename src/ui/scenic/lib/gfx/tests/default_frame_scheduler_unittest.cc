@@ -510,12 +510,12 @@ TEST_F(FrameSchedulerTest, SinglePredictedPresentation_ShouldBeReasonable) {
   auto predicted_presents = scheduler->GetFuturePresentationTimes(zx::duration(0));
 
   EXPECT_GE(predicted_presents.size(), 1u);
-  EXPECT_EQ(predicted_presents[0].presentation_time, static_cast<uint64_t>(next_vsync.get()));
+  EXPECT_EQ(predicted_presents[0].presentation_time, next_vsync.get());
 
   for (size_t i = 0; i < predicted_presents.size(); i++) {
     auto current = predicted_presents[i];
     EXPECT_LT(current.latch_point, current.presentation_time);
-    EXPECT_GE(current.latch_point, static_cast<uint64_t>(Now().get()));
+    EXPECT_GE(current.latch_point, Now().get());
   }
 }
 
@@ -542,12 +542,12 @@ TEST_F(FrameSchedulerTest, ArbitraryPredictedPresentation_ShouldBeReasonable) {
   auto predicted_presents = scheduler->GetFuturePresentationTimes(zx::duration(0));
 
   EXPECT_GE(predicted_presents.size(), 1u);
-  EXPECT_EQ(predicted_presents[0].presentation_time, static_cast<uint64_t>(vsync2.get()));
+  EXPECT_EQ(predicted_presents[0].presentation_time, vsync2.get());
 
   for (size_t i = 0; i < predicted_presents.size(); i++) {
     auto current = predicted_presents[i];
     EXPECT_LT(current.latch_point, current.presentation_time);
-    EXPECT_GE(current.latch_point, static_cast<uint64_t>(Now().get()));
+    EXPECT_GE(current.latch_point, Now().get());
   }
 }
 
@@ -577,7 +577,7 @@ TEST_F(FrameSchedulerTest, MultiplePredictedPresentations_ShouldBeReasonable) {
   for (size_t i = 0; i < predicted_presents.size(); i++) {
     auto current = predicted_presents[i];
     EXPECT_LT(current.latch_point, current.presentation_time);
-    EXPECT_GE(current.latch_point, static_cast<uint64_t>(Now().get()));
+    EXPECT_GE(current.latch_point, Now().get());
 
     if (i > 0)
       EXPECT_LT(past_prediction.presentation_time, current.presentation_time);
@@ -599,12 +599,12 @@ TEST_F(FrameSchedulerTest, InfinitelyLargePredictionRequest_ShouldBeTruncated) {
   constexpr static const uint64_t kOverlyLargeRequestCount = 100u;
 
   EXPECT_LE(predicted_presents.size(), kOverlyLargeRequestCount);
-  EXPECT_EQ(predicted_presents[0].presentation_time, static_cast<uint64_t>(next_vsync.get()));
+  EXPECT_EQ(predicted_presents[0].presentation_time, next_vsync.get());
 
   for (size_t i = 0; i < predicted_presents.size(); i++) {
     auto current = predicted_presents[i];
     EXPECT_LT(current.latch_point, current.presentation_time);
-    EXPECT_GE(current.latch_point, static_cast<uint64_t>(Now().get()));
+    EXPECT_GE(current.latch_point, Now().get());
   }
 }
 

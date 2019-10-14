@@ -54,7 +54,14 @@ void Session::Present(uint64_t presentation_time, std::vector<zx::event> acquire
                                     std::move(release_fences), std::move(callback));
 }
 
-void Session::RequestPresentationTimes(uint64_t requested_prediction_span,
+void Session::Present2(zx_time_t requested_presentation_time, std::vector<zx::event> acquire_fences,
+                       std::vector<zx::event> release_fences,
+                       zx_duration_t requested_prediction_span, Present2Callback callback) {
+  FXL_NOTIMPLEMENTED();
+  return;
+}
+
+void Session::RequestPresentationTimes(zx_duration_t requested_prediction_span,
                                        RequestPresentationTimesCallback callback) {
   GetTempSessionDelegate()->RequestPresentationTimes(requested_prediction_span,
                                                      std::move(callback));

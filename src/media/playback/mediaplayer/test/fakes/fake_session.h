@@ -54,7 +54,11 @@ class FakeSession : public fuchsia::ui::scenic::Session {
   void Present(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
                std::vector<zx::event> release_fences, PresentCallback callback) override;
 
-  void RequestPresentationTimes(uint64_t prediction_time_span,
+  void Present2(zx_time_t requested_presentation_time, std::vector<zx::event> acquire_fences,
+                std::vector<zx::event> release_fences, zx_duration_t requested_prediction_span,
+                Present2Callback callback) override;
+
+  void RequestPresentationTimes(zx_duration_t prediction_time_span,
                                 RequestPresentationTimesCallback callback) override;
 
   void SetDebugName(std::string debug_name) override {}

@@ -4,16 +4,24 @@
 
 library fuchsia.scenic.scheduling;
 
-struct PresentationInfo {
-    /// The |latch_point| is guaranteed to be less than |presentation_time|. The
-    /// latch point is the time where clients should aim to have their updates
-    /// and fences ready in order for the content to be presented at the
-    /// corresponding presentation time.
-    uint64 latch_point;
+using zx;
 
-    /// The predicted time in which the enqueued operations are anticipated to take
-    /// visible effect, expressed in nanoseconds in the |CLOCK_MONOTONIC| timebase.
-    uint64 presentation_time;
+/// When PresentationInfo is used in |FuturePresentationTimes|, the fields refer
+/// to predicted times. When it is used in |FramePresentedInfo|, the fields
+/// refer to the actual times since they were captured after the fact.
+///
+/// The times are expressed in nanoseconds in the |CLOCK_MONOTONIC| timebase.
+struct PresentationInfo {
+    /// The time where Scenic processes all pending updates to its scene graph
+    /// and render a new frame. Clients should aim to have all  commands sent
+    /// and acquire fences reached in order to have their  content be
+    /// presented at the corresponding |presentation_time|. The |latch_point|
+    /// is guaranteed to be less than |presentation_time|.
+    zx.time latch_point;
+
+    /// The time in which the enqueued operations submitted before |latch_point|
+    /// take visible effect. This time is usually but not necessarily vsync.
+    zx.time presentation_time;
 };
 
 /// The data type returned in |fuchsia.ui.scenic::RequestPresentationTimes|. See
@@ -34,4 +42,18 @@ struct FuturePresentationTimes {
     /// This value is decremented every Present() call, and is incremented every
     /// OnFramePresented() event.
     int64 remaining_presents_in_flight_allowed;
+};
+
+struct FramePresentedInfo {
+    /// The time the frame was presented to the user. This value was captured
+    /// after the fact, differentiating it from the |presentation_time|s
+    /// included in |FuturePresentationTimes|.
+    zx.time actual_presentation_time;
+
+    /// The presentation informations for each Present2() that comprised the
+    /// content of this frame. These are ordered by present submission order.
+    vector<PresentationInfo>:32 presentation_infos;
+
+    /// The number of times remaining that the client can call |Present2|.
+    uint64 num_presents_allowed;
 };

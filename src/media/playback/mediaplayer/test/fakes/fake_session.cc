@@ -147,10 +147,36 @@ void FakeSession::Present(uint64_t presentation_time, std::vector<zx::event> acq
   });
 }
 
-void FakeSession::RequestPresentationTimes(uint64_t prediction_time_span,
+void FakeSession::Present2(zx_time_t requested_presentation_time,
+                           std::vector<zx::event> acquire_fences,
+                           std::vector<zx::event> release_fences,
+                           zx_duration_t requested_prediction_span, Present2Callback callback) {
+  // The video renderer doesn't use these fences, so we don't support them in
+  // the fake.
+  FXL_CHECK(acquire_fences.empty()) << "Present2: acquire_fences not supported.";
+  FXL_CHECK(release_fences.empty()) << "Present2: release_fences not supported.";
+
+  // Here we create an empty prediction: one where we "predict" up until the 0 timestamp, meaning
+  // we are providing no information.
+  if (callback)
+    callback({.remaining_presents_in_flight_allowed = 1, .future_presentations = {}});
+
+  async::PostTask(dispatcher_, [this, weak_this = GetWeakThis()]() {
+    if (!weak_this) {
+      return;
+    }
+
+    binding_.events().OnFramePresented(
+        {.actual_presentation_time = next_presentation_time_.get() - kPresentationInterval.get(),
+         .presentation_infos = {},
+         .num_presents_allowed = 1});
+  });
+}
+
+void FakeSession::RequestPresentationTimes(zx_duration_t prediction_time_span,
                                            FakeSession::RequestPresentationTimesCallback callback) {
-  // Here we create an empty prediction: one where we "predict" up until the 0 timestamp, meaning we
-  // are providing no information.
+  // Here we create an empty prediction: one where we "predict" up until the 0 timestamp, meaning
+  // we are providing no information.
   callback({.remaining_presents_in_flight_allowed = 1, .future_presentations = {}});
 }
 
