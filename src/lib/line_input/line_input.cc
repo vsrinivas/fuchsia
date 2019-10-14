@@ -144,6 +144,12 @@ bool LineInputBase::OnInput(char c) {
 }
 
 void LineInputBase::AddToHistory(const std::string& line) {
+  if (line.empty())
+    return;
+
+  if (history_.size() > 1 && history_[1] == line)
+    return;
+
   if (history_.size() == max_history_)
     history_.pop_back();
 

@@ -215,6 +215,27 @@ TEST(LineInput, History) {
   EXPECT_EQ("three", input.line());
 }
 
+TEST(LineInput, HistoryEdgeCases) {
+  TestLineInput input("");
+
+  input.AddToHistory("one");
+  ASSERT_EQ(input.history().size(), 2u);
+
+  // If input is empty, it should not add to history.
+  input.AddToHistory("");
+  ASSERT_EQ(input.history().size(), 2u);
+
+  // Same input should not work.
+  input.AddToHistory("one");
+  ASSERT_EQ(input.history().size(), 2u);
+
+  // A past input should work.
+  input.AddToHistory("two");
+  ASSERT_EQ(input.history().size(), 3u);
+  input.AddToHistory("one");
+  ASSERT_EQ(input.history().size(), 4u);
+}
+
 TEST(LineInput, Completions) {
   TestLineInput input("");
   input.set_completion_callback(&CompletionCallback);
