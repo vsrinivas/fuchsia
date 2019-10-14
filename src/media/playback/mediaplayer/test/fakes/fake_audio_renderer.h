@@ -45,10 +45,23 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
 
   // Returns true if everything has gone as expected so far.
   bool expected() {
-    return expected_ &&
-           (expected_packets_info_.empty() ||
-            expected_packets_info_iter_ == expected_packets_info_.end()) &&
-           (delay_packet_retirement_pts_ == fuchsia::media::NO_TIMESTAMP || packet_queue_.empty());
+    if (!expected_) {
+      // A message is logged when |expected_| is set to false, so we don't log anything here.
+      return false;
+    }
+
+    if (!expected_packets_info_.empty() &&
+        expected_packets_info_iter_ != expected_packets_info_.end()) {
+      FXL_LOG(ERROR) << "Expected packets did not arrive.";
+      return false;
+    }
+
+    if ((delay_packet_retirement_pts_ != fuchsia::media::NO_TIMESTAMP) && !packet_queue_.empty()) {
+      FXL_LOG(ERROR) << "Packet queue not empty, contains " << packet_queue_.size() << " packets.";
+      return false;
+    }
+
+    return true;
   }
 
   // Sets a flag indicating whether this fake renderer should retain packets
