@@ -262,6 +262,9 @@ struct Sprite {
     type.
 *   Not nullable.
 *   Bits must have at least one member.
+*   Serializing or deserializing a bits value which has a bit set that is not a
+    member of the bits declaration is a validation error.
+
 
 #### Use
 
@@ -281,6 +284,8 @@ bits InfoFeatures : uint32 {
     type.
 *   Not nullable.
 *   Enums must have at least one member.
+*   Serializing or deserializing an enum from a value which is not defined in
+    FIDL is a validation error.
 
 #### Declaration
 
