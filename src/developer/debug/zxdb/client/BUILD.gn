@@ -210,11 +210,19 @@ copy("copy_fake_home") {
 
 copy("copy_sample_core") {
   sources = [
-    "//prebuilt/test_data/debug/sample_core",
+    "//prebuilt/test_data/debug/sample_core/core/0ef11cdd012be885a0a08a2c6914a391c887654a",
+    "//prebuilt/test_data/debug/sample_core/core/0ef11cdd012be885a0a08a2c6914a391c887654a.debug",
+    "//prebuilt/test_data/debug/sample_core/core/4cf7a2a4abe78160de9ff7d641ac1afaf4480a46",
+    "//prebuilt/test_data/debug/sample_core/core/4cf7a2a4abe78160de9ff7d641ac1afaf4480a46.debug",
+    "//prebuilt/test_data/debug/sample_core/core/core.dmp",
+    "//prebuilt/test_data/debug/sample_core/core/ebc1c4a1e012b3d93e8638fc32c02b4ea0968584",
+    "//prebuilt/test_data/debug/sample_core/core/ebc1c4a1e012b3d93e8638fc32c02b4ea0968584.debug",
+    "//prebuilt/test_data/debug/sample_core/core/f7d86af0ee7ec020",
+    "//prebuilt/test_data/debug/sample_core/core/f7d86af0ee7ec020.debug",
   ]
 
   outputs = [
-    "$root_out_dir/test_data/zxdb/sample_core",
+    "$root_out_dir/test_data/zxdb/sample_core/core/{{source_file_part}}",
   ]
 }
 
@@ -271,7 +279,6 @@ source_set("tests") {
     ":test_support",
     "//src/developer/debug/zxdb/common:test_support",
     "//src/developer/debug/zxdb/symbols:test_support",
-    "//src/developer/debug/zxdb/symbols:tests",
     "//third_party/googletest:gtest",
   ]
 }

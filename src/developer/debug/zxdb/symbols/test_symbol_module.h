@@ -55,6 +55,10 @@ class TestSymbolModule {
   TestSymbolModule();
   ~TestSymbolModule();
 
+  // Returns the relative directory where the test program can find the checked-in test files. It
+  // will have a trailing slash.
+  static std::string GetTestDataDir();
+
   // Returns the name of the .so file used by this class for doing tests with it that involve
   // different types of setup.
   static std::string GetTestFileName();

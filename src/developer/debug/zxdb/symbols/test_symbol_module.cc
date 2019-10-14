@@ -51,15 +51,16 @@ const char kRelativeTestDataPath[] = "test_data/zxdb/";
 }  // namespace
 
 // static
+std::string TestSymbolModule::GetTestDataDir() { return GetTestFilePath(kRelativeTestDataPath); }
+
+// static
 std::string TestSymbolModule::GetTestFileName() {
-  std::string path = GetTestFilePath(kRelativeTestDataPath);
-  return path + "libzxdb_symbol_test.targetso";
+  return GetTestDataDir() + "libzxdb_symbol_test.targetso";
 }
 
 // static
 std::string TestSymbolModule::GetCheckedInTestFileName() {
-  std::string path = GetTestFilePath(kRelativeTestDataPath);
-  return path + "libsymbol_test_so.targetso";
+  return GetTestDataDir() + "libsymbol_test_so.targetso";
 }
 
 // static
@@ -67,8 +68,7 @@ std::string TestSymbolModule::GetCheckedInTestFileBuildID() { return "5110be4602
 
 // static
 std::string TestSymbolModule::GetStrippedCheckedInTestFileName() {
-  std::string path = GetTestFilePath(kRelativeTestDataPath);
-  return path + "libsymbol_test_so_stripped.targetso";
+  return GetTestDataDir() + "libsymbol_test_so_stripped.targetso";
 }
 
 // static

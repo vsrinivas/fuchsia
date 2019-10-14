@@ -5,10 +5,15 @@
 import("//build/config/clang/clang.gni")
 
 static_library("symbols") {
-  # The client library one directory up instantiates the "Impl" classes using
-  # the non-public headers.
   friend = [
     ":*",
+
+    # These "large" test files should really live in this directory but it's small and keeping it in
+    # the zxdb root makes the flag controlling the compilation of that target need to be local to
+    # only one file.
+    "//src/developer/debug/zxdb:zxdb_large_tests",
+
+    # The client one directory up instantiates the "Impl" classes using the non-public headers.
     "//src/developer/debug/zxdb/client/*",
   ]
 
@@ -132,22 +137,13 @@ static_library("symbols") {
     "//src/developer/debug/zxdb/common",
     "//src/lib/elflib",
     "//src/lib/fxl",
+    "//third_party/googletest:gtest_prod",
   ]
 
   deps = [
     "//garnet/third_party/llvm:LLVMDebugInfoDWARF",
     "//src/lib/elflib",
-
-    # TODO(brettw) include this when googletest rolls:
-    # "//third_party/googletest:gtest_prod",
   ]
-
-  # Temporary workaround for lack of "gtest_prod" target in current googletest
-  # repo.
-  # TODO(brettw) Remove when "gtest_prod" target above can be used.
-  configs += [ "//third_party/googletest:gtest_config" ]
-  sources +=
-      [ "//third_party/googletest/googletest/include/gtest/gtest_prod.h" ]
 }
 
 static_library("test_support") {
@@ -164,13 +160,15 @@ static_library("test_support") {
     "mock_symbol_data_provider.h",
     "process_symbols_test_setup.cc",
     "process_symbols_test_setup.h",
+    "test_symbol_module.cc",
+    "test_symbol_module.h",
     "type_test_support.cc",
     "type_test_support.h",
     "variable_test_support.cc",
     "variable_test_support.h",
   ]
 
-  deps = [
+  public_deps = [
     ":symbols",
     "//garnet/third_party/llvm:LLVMDebugInfoDWARF",
     "//src/developer/debug/zxdb/common:test_support",
@@ -254,7 +252,6 @@ source_set("tests") {
     "process_symbols_unittest.cc",
     "symbol_utils_unittest.cc",
     "target_symbols_unittest.cc",
-    "test_symbol_module.cc",
     "variable_location_unittest.cc",
     "visit_scopes_unittest.cc",
   ]

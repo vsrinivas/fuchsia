@@ -54,6 +54,9 @@ class AddressRanges {
     return *this;
   }
 
+  bool operator==(const AddressRanges& other) const { return ranges_ == other.ranges_; }
+  bool operator!=(const AddressRanges& other) const { return !operator==(other); }
+
   size_t size() const noexcept { return ranges_.size(); }
   bool empty() const { return ranges_.empty(); }
 
