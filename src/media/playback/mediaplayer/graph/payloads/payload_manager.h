@@ -270,6 +270,9 @@ class PayloadManager {
     return output_.vmo_allocator_ ? output_.vmo_allocator_.get() : input_.vmo_allocator_.get();
   }
 
+  // Ensures that the connector has a pair of buffer collection tokens.
+  void EnsureBufferCollectionTokens(Connector* connector, ServiceProvider* service_provider);
+
   // Decrements |ready_deferrals_| and signals readiness if this |PayloadManager| is ready.
   //
   // This method must be called on the main graph thread.
@@ -283,7 +286,7 @@ class PayloadManager {
   // Updates the allocators based in the current configs.
   //
   // This method must be called on the main graph thread.
-  void UpdateAllocators() FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+  void UpdateAllocators(ServiceProvider* service_provider) FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Determines whether the output and input configuration are compatible.
   // The |mode_| values are not examined and are assumed to be compatible.

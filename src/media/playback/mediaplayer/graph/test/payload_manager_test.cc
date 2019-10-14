@@ -987,10 +987,10 @@ TEST_F(PayloadManagerTest, UsesSysmemVmos_UsesSysmemVmos) {
 
   LoopUntilReady(under_test);
 
-  // No allocators. Payloads are not copied.
-  EXPECT_EQ(nullptr, under_test.output_vmo_payload_allocator_for_testing());
+  // One allocator (so we know how many buffers are in the collection). Payloads are not copied.
+  EXPECT_NE(nullptr, under_test.output_vmo_payload_allocator_for_testing());
   EXPECT_EQ(nullptr, under_test.output_local_memory_payload_allocator_for_testing());
-  EXPECT_EQ(nullptr, under_test.input_vmo_payload_allocator_for_testing());
+  EXPECT_NE(nullptr, under_test.input_vmo_payload_allocator_for_testing());
   EXPECT_FALSE(under_test.must_copy_for_testing());
 }
 
