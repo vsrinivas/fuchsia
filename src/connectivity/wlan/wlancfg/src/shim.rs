@@ -111,10 +111,6 @@ async fn handle_request(
             }
             responder.send()
         }
-        legacy::WlanRequest::GetSavedNetworks { responder } => {
-            let networks = ess_store.get_known_networks();
-            responder.send(&mut networks.iter().map(|x| x.as_str()))
-        }
     }
 }
 
@@ -356,17 +352,7 @@ fn empty_counter() -> fidl_wlan_stats::Counter {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::known_ess_store::KnownEss,
-        fidl::endpoints::create_proxy,
-        fuchsia_async as fasync,
-        futures::{channel::mpsc, task::Poll},
-        pin_utils::pin_mut,
-        std::path::Path,
-        wlan_common::assert_variant,
-    };
-
+    use super::*;
     #[test]
     fn test_convert_bss_to_legacy_ap() {
         let bss = fidl_sme::BssInfo {
@@ -396,98 +382,5 @@ mod tests {
         let ap = legacy::Ap { is_secure: false, ..ap };
 
         assert_eq!(convert_bss_info(&bss), ap);
-    }
-
-    /// Creates an ESS Store holding entries for protected and unprotected networks.
-    fn create_ess_store(path: &Path) -> Arc<KnownEssStore> {
-        let ess_store = Arc::new(
-            KnownEssStore::new_with_paths(path.join("store.json"), path.join("store.json.tmp"))
-                .expect("Failed to create a KnownEssStore"),
-        );
-        ess_store
-            .store(b"foobar".to_vec(), KnownEss { password: vec![] })
-            .expect("error saving network");
-        ess_store
-            .store(b"foobar-protected".to_vec(), KnownEss { password: b"supersecure".to_vec() })
-            .expect("error saving network");
-        ess_store
-            .store("\u{1F4F6} Fuchsia WLAN".to_string().into_bytes(), KnownEss { password: vec![] })
-            .expect("error saving network");
-        ess_store
-    }
-
-    fn make_env() -> (legacy::WlanProxy, legacy::WlanRequestStream, ClientRef) {
-        let (sme_proxy, _sme_remote) =
-            create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create ClientSme proxy");
-        let (device_svx_proxy, _device_svc_remote) =
-            create_proxy::<wlan_service::DeviceServiceMarker>()
-                .expect("failed to create DeviceServce proxy");
-
-        let (proxy, remote) =
-            create_proxy::<legacy::WlanMarker>().expect("failed to create Wlan proxy");
-        let requests = remote.into_stream().expect("failed to create stream");
-
-        let (sender, _receiver) = mpsc::unbounded();
-        let client = ClientRef(Arc::new(Mutex::new(Some(Client {
-            service: device_svx_proxy,
-            client: sender.into(),
-            sme: sme_proxy,
-            iface_id: 0,
-        }))));
-        (proxy, requests, client)
-    }
-
-    #[test]
-    fn test_get_saved_network_names_empty() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
-        ess_store.clear().expect("error clearing saved network list");
-
-        // Serve the API.
-        let (proxy, requests, client) = make_env();
-        let serve_fut = serve_legacy(requests, client, ess_store);
-        pin_mut!(serve_fut);
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Retrieve saved networks.
-        let req_fut = proxy.get_saved_networks();
-        pin_mut!(req_fut);
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Progress and verify request.
-        let result = assert_variant!(
-            exec.run_until_stalled(&mut req_fut),
-            Poll::Ready(result) => result
-        );
-        let networks = result.expect("network retrieval failed");
-        assert!(networks.is_empty());
-    }
-
-    #[test]
-    fn test_get_saved_network_names() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
-
-        // Serve the API.
-        let (proxy, requests, client) = make_env();
-        let serve_fut = serve_legacy(requests, client, ess_store);
-        pin_mut!(serve_fut);
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Retrieve saved networks.
-        let req_fut = proxy.get_saved_networks();
-        pin_mut!(req_fut);
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Progress and verify request.
-        let result = assert_variant!(
-            exec.run_until_stalled(&mut req_fut),
-            Poll::Ready(result) => result
-        );
-        let mut networks = result.expect("network retrieval failed");
-        networks.sort();
-        assert_eq!(networks, vec!["foobar", "foobar-protected", "\u{1F4F6} Fuchsia WLAN"]);
     }
 }

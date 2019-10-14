@@ -32,12 +32,6 @@ pub struct Client {
     req_sender: mpsc::UnboundedSender<ManualRequest>,
 }
 
-impl From<mpsc::UnboundedSender<ManualRequest>> for Client {
-    fn from(req_sender: mpsc::UnboundedSender<ManualRequest>) -> Self {
-        Self { req_sender }
-    }
-}
-
 impl Client {
     pub fn connect(&self, request: ConnectRequest) -> Result<(), failure::Error> {
         handle_send_err(self.req_sender.unbounded_send(ManualRequest::Connect(request)))
@@ -58,7 +52,7 @@ pub struct ConnectRequest {
     pub responder: oneshot::Sender<fidl_sme::ConnectResultCode>,
 }
 
-pub enum ManualRequest {
+enum ManualRequest {
     Connect(ConnectRequest),
     // The sender will be notified once we are done disconnecting.
     // If the disconnect request is canceled or superseded (e.g., by a connect request),

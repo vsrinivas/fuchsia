@@ -87,5 +87,4 @@ protocol Wlan {
     StopBss() -> (Error error);
     Stats() -> (WlanStats stats);
     ClearSavedNetworks() -> ();
-    GetSavedNetworks() -> (vector<string> networks);
 };
