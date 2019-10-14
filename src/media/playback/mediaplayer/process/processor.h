@@ -14,9 +14,12 @@ namespace media_player {
 // Abstract base class for nodes that process sstreams.
 class Processor : public Node {
  public:
-  enum class Function { kDecode, kDecrypt };
-
   ~Processor() override {}
+
+  // Sets the type of the stream the processor will consume. This method is used primarily for
+  // 'injected' decryptors, which are generally created before the input type is known. Decoders
+  // don't require a call to this method, but are not harmed by it.
+  virtual void SetInputStreamType(const StreamType& stream_type) = 0;
 
   // Returns the type of the stream the processor will produce.
   virtual std::unique_ptr<StreamType> output_stream_type() const = 0;

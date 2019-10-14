@@ -16,11 +16,20 @@ namespace media_player {
 // Fidl processor as exposed by the codec factory service or CDM.
 class FidlProcessor : public Processor {
  public:
+  enum class Function { kDecode, kDecrypt };
+
   // Creates a fidl processor. Calls the callback with the initalized processor on success. Calls
-  // the callback with nullptr on failure.
+  // the callback with nullptr on failure. This method is used by the |FidlDecoderFactory|, which
+  // has no way of knowing whether |processor| is viable without calling this method.
   static void Create(ServiceProvider* service_provider, StreamType::Medium medium,
                      Function function, fuchsia::media::StreamProcessorPtr processor,
                      fit::function<void(std::shared_ptr<Processor>)> callback);
+
+  // Creates a fidl processor. This method is used e.g. in injection scenarios in which |processor|
+  // is assumed to be viable.
+  static std::shared_ptr<Processor> Create(ServiceProvider* service_provider,
+                                           StreamType::Medium medium, Function function,
+                                           fuchsia::media::StreamProcessorPtr processor);
 
   FidlProcessor(ServiceProvider* service_provider, StreamType::Medium medium, Function function);
 
@@ -46,6 +55,8 @@ class FidlProcessor : public Processor {
   void FlushOutput(size_t output_index, fit::closure callback) override;
 
   void RequestOutputPacket() override;
+
+  void SetInputStreamType(const StreamType& stream_type) override;
 
   std::unique_ptr<StreamType> output_stream_type() const override;
 

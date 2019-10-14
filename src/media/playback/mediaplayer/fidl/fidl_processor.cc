@@ -11,6 +11,7 @@
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 #include "src/media/playback/mediaplayer/graph/types/audio_stream_type.h"
+#include "src/media/playback/mediaplayer/util/safe_clone.h"
 
 namespace media_player {
 
@@ -25,6 +26,15 @@ void FidlProcessor::Create(ServiceProvider* service_provider, StreamType::Medium
                        [fidl_processor, callback = std::move(callback)](bool succeeded) {
                          callback(succeeded ? fidl_processor : nullptr);
                        });
+}
+
+// static
+std::shared_ptr<Processor> FidlProcessor::Create(ServiceProvider* service_provider,
+                                                 StreamType::Medium medium, Function function,
+                                                 fuchsia::media::StreamProcessorPtr processor) {
+  auto fidl_processor = std::make_shared<FidlProcessor>(service_provider, medium, function);
+  fidl_processor->Init(std::move(processor), nullptr);
+  return fidl_processor;
 }
 
 FidlProcessor::FidlProcessor(ServiceProvider* service_provider, StreamType::Medium medium,
@@ -53,7 +63,6 @@ void FidlProcessor::Init(fuchsia::media::StreamProcessorPtr processor,
                          fit::function<void(bool)> callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(processor);
-  FXL_DCHECK(callback);
 
   outboard_processor_ = std::move(processor);
   init_callback_ = std::move(callback);
@@ -235,6 +244,37 @@ void FidlProcessor::RequestOutputPacket() {
   MaybeRequestInputPacket();
 }
 
+void FidlProcessor::SetInputStreamType(const StreamType& stream_type) {
+  FXL_DCHECK(stream_type.medium() == medium_);
+
+  if (function_ == Function::kDecode) {
+    // Decoders know their input stream type when they come from the factory.
+    return;
+  }
+
+  FXL_DCHECK(stream_type.encrypted());
+
+  switch (medium_) {
+    case StreamType::Medium::kAudio: {
+      auto& t = *stream_type.audio();
+      output_stream_type_ =
+          AudioStreamType::Create(nullptr, t.encoding(), SafeClone(t.encoding_parameters()),
+                                  t.sample_format(), t.channels(), t.frames_per_second());
+    } break;
+    case StreamType::Medium::kVideo: {
+      auto& t = *stream_type.video();
+      output_stream_type_ = VideoStreamType::Create(
+          nullptr, t.encoding(), SafeClone(t.encoding_parameters()), t.pixel_format(),
+          t.color_space(), t.width(), t.height(), t.coded_width(), t.coded_height(),
+          t.pixel_aspect_ratio_width(), t.pixel_aspect_ratio_height(), t.line_stride());
+    } break;
+    case StreamType::Medium::kText:
+    case StreamType::Medium::kSubpicture:
+      FXL_CHECK(false) << "Only audio and video are supported.";
+      break;
+  }
+}
+
 std::unique_ptr<StreamType> FidlProcessor::output_stream_type() const {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(output_stream_type_);
@@ -349,10 +389,8 @@ void FidlProcessor::OnOutputConstraints(fuchsia::media::StreamOutputConstraints 
   }
 
   // Use a single VMO for audio, VMO per buffer for video.
-  FXL_DCHECK(output_stream_type_);
-  const bool success =
-      output_buffers_.ApplyConstraints(constraints.buffer_constraints(),
-                                       output_stream_type_->medium() == StreamType::Medium::kAudio);
+  const bool success = output_buffers_.ApplyConstraints(constraints.buffer_constraints(),
+                                                        medium_ == StreamType::Medium::kAudio);
   if (!success) {
     FXL_LOG(ERROR) << "OnOutputConstraints: Failed to apply constraints.";
     InitFailed();

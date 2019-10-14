@@ -54,6 +54,7 @@ test("tests") {
 
   sources = [
     "test/buffer_set_test.cc",
+    "test/fidl_processor_test.cc",
   ]
 
   deps = [

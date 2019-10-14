@@ -28,6 +28,8 @@ class FfmpegDecoderBase : public SoftwareProcessor {
   ~FfmpegDecoderBase() override;
 
   // Processor implementation.
+  void SetInputStreamType(const StreamType& stream_type) override {}
+
   std::unique_ptr<StreamType> output_stream_type() const override;
 
   // Node implementation.

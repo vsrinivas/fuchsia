@@ -39,6 +39,8 @@ class FakeDecoder : public Processor {
 
   void RequestOutputPacket() override {}
 
+  void SetInputStreamType(const StreamType& stream_type) override {}
+
   std::unique_ptr<StreamType> output_stream_type() const override {
     FXL_DCHECK(output_stream_type_);
     return output_stream_type_->Clone();

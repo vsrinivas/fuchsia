@@ -45,7 +45,7 @@ void FidlDecoderFactory::CreateDecoder(const StreamType& stream_type,
   codec_factory_->CreateDecoder(std::move(decoder_params), decoder.NewRequest());
   FXL_DCHECK(decoder);
 
-  FidlProcessor::Create(service_provider_, stream_type.medium(), Processor::Function::kDecode,
+  FidlProcessor::Create(service_provider_, stream_type.medium(), FidlProcessor::Function::kDecode,
                         std::move(decoder), std::move(callback));
 }
 
