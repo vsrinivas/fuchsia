@@ -25,7 +25,7 @@
 #include <fbl/unique_ptr.h>
 #include <fs/queue.h>
 #include <fs/vfs.h>
-#include <minfs/allocator-promise.h>
+#include <minfs/allocator-reservation.h>
 #include <minfs/bcache.h>
 #include <minfs/format.h>
 #include <minfs/pending-work.h>
@@ -66,13 +66,13 @@ class Transaction final : public PendingWork {
   ////////////////
   // Other methods.
   size_t AllocateInode() {
-    ZX_DEBUG_ASSERT(inode_promise_.IsInitialized());
-    return inode_promise_.Allocate(this);
+    ZX_DEBUG_ASSERT(inode_reservation_.IsInitialized());
+    return inode_reservation_.Allocate(this);
   }
 
   size_t AllocateBlock() {
-    ZX_DEBUG_ASSERT(block_promise_.IsInitialized());
-    return block_promise_.Allocate(this);
+    ZX_DEBUG_ASSERT(block_reservation_.IsInitialized());
+    return block_reservation_.Allocate(this);
   }
 
   void PinVnode(fbl::RefPtr<VnodeMinfs> vnode);
@@ -89,25 +89,25 @@ class Transaction final : public PendingWork {
   }
 
   size_t SwapBlock(size_t old_bno) {
-    ZX_DEBUG_ASSERT(block_promise_.IsInitialized());
-    return block_promise_.Swap(old_bno);
+    ZX_DEBUG_ASSERT(block_reservation_.IsInitialized());
+    return block_reservation_.Swap(old_bno);
   }
 
   void Resolve() {
-    if (block_promise_.IsInitialized()) {
-      block_promise_.SwapCommit(this);
+    if (block_reservation_.IsInitialized()) {
+      block_reservation_.SwapCommit(this);
     }
   }
 
-  // Removes |requested| blocks from block_promise_ and gives them to |other_promise|.
-  void GiveBlocksToPromise(size_t requested, AllocatorPromise* other_promise) {
-    ZX_DEBUG_ASSERT(block_promise_.IsInitialized());
-    block_promise_.GiveBlocks(requested, other_promise);
+  // Removes |requested| blocks from block_reservation_ and gives them to |other_reservation|.
+  void GiveBlocksToReservation(size_t requested, AllocatorReservation* other_reservation) {
+    ZX_DEBUG_ASSERT(block_reservation_.IsInitialized());
+    block_reservation_.GiveBlocks(requested, other_reservation);
   }
 
-  // Removes all reserved blocks from |other_promise| and gives them to block_promise_.
-  void TakeReservedBlocksFromReservation(AllocatorPromise* other_promise) {
-    other_promise->GiveBlocks(other_promise->GetReserved(), &block_promise_);
+  // Removes all reserved blocks from |other_reservation| and gives them to block_reservation_.
+  void TakeReservedBlocksFromReservation(AllocatorReservation* other_reservation) {
+    other_reservation->GiveBlocks(other_reservation->GetReserved(), &block_reservation_);
   }
 
   std::vector<fbl::RefPtr<VnodeMinfs>> RemovePinnedVnodes();
@@ -124,8 +124,8 @@ class Transaction final : public PendingWork {
   fs::WriteTxn transaction_;
 #endif
 
-  AllocatorPromise inode_promise_;
-  AllocatorPromise block_promise_;
+  AllocatorReservation inode_reservation_;
+  AllocatorReservation block_reservation_;
 };
 
 }  // namespace minfs

@@ -54,8 +54,8 @@ class InodeManager : public InspectableInodeManager {
 #endif
 
   // Reserve |inodes| inodes in the allocator.
-  zx_status_t Reserve(PendingWork* transaction, size_t inodes, AllocatorPromise* promise) {
-    return promise->Initialize(transaction, inodes, inode_allocator_.get());
+  zx_status_t Reserve(PendingWork* transaction, size_t inodes, AllocatorReservation* reservation) {
+    return reservation->Initialize(transaction, inodes, inode_allocator_.get());
   }
 
   // Free an inode.

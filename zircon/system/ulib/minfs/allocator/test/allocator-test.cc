@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Tests Minfs Allocator and AllocatorPromise behavior.
+// Tests Minfs Allocator and AllocatorReservation behavior.
 
 #include "allocator.h"
 
@@ -67,32 +67,33 @@ void CreateAllocator(fbl::unique_ptr<Allocator>* out) {
   ASSERT_OK(Allocator::Create(nullptr, std::move(storage), &allocator));
 
   // Allocate the '0' index (the Allocator assumes that this is reserved).
-  AllocatorPromise zero_promise;
-  zero_promise.Initialize(nullptr, 1, allocator.get());
-  size_t index = zero_promise.Allocate(nullptr);
+  AllocatorReservation zero_reservation;
+  zero_reservation.Initialize(nullptr, 1, allocator.get());
+  size_t index = zero_reservation.Allocate(nullptr);
   ZX_DEBUG_ASSERT(index == 0);
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements);
 
   *out = std::move(allocator);
 }
 
-// Initializes the |promise| with |reserved_count| elements from |allocator|.
+// Initializes the |reservation| with |reserved_count| elements from |allocator|.
 // Should only be called if initialization is expected to succeed.
-void InitializePromise(size_t reserved_count, Allocator* allocator, AllocatorPromise* promise) {
-  ASSERT_FALSE(promise->IsInitialized());
-  ASSERT_OK(promise->Initialize(nullptr, reserved_count, allocator));
-  ASSERT_TRUE(promise->IsInitialized());
-  ASSERT_EQ(promise->GetReserved(), reserved_count);
+void InitializeReservation(size_t reserved_count, Allocator* allocator,
+                           AllocatorReservation* reservation) {
+  ASSERT_FALSE(reservation->IsInitialized());
+  ASSERT_OK(reservation->Initialize(nullptr, reserved_count, allocator));
+  ASSERT_TRUE(reservation->IsInitialized());
+  ASSERT_EQ(reservation->GetReserved(), reserved_count);
 }
 
 TEST(AllocatorTest, InitializeEmpty) {
   fbl::unique_ptr<Allocator> allocator;
   ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
 
-  // Initialize an empty AllocatorPromise (with no reserved units);
+  // Initialize an empty AllocatorReservation (with no reserved units);
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements);
-  AllocatorPromise promise;
-  ASSERT_NO_FATAL_FAILURES(InitializePromise(0, allocator.get(), &promise));
+  AllocatorReservation reservation;
+  ASSERT_NO_FATAL_FAILURES(InitializeReservation(0, allocator.get(), &reservation));
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements);
 }
 
@@ -100,22 +101,24 @@ TEST(AllocatorTest, InitializeSplit) {
   fbl::unique_ptr<Allocator> allocator;
   ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
 
-  // Initialize an AllocatorPromise with all available units reserved.
-  AllocatorPromise full_promise;
-  ASSERT_NO_FATAL_FAILURES(InitializePromise(kTotalElements, allocator.get(), &full_promise));
+  // Initialize an AllocatorReservation with all available units reserved.
+  AllocatorReservation full_reservation;
+  ASSERT_NO_FATAL_FAILURES(
+      InitializeReservation(kTotalElements, allocator.get(), &full_reservation));
   ASSERT_EQ(allocator->GetAvailable(), 0);
 
-  // Now split the full promise with the uninit promise, and check that it becomes initialized.
-  AllocatorPromise uninit_promise;
-  full_promise.GiveBlocks(1, &uninit_promise);
-  ASSERT_TRUE(uninit_promise.IsInitialized());
-  ASSERT_EQ(full_promise.GetReserved(), kTotalElements - 1);
-  ASSERT_EQ(uninit_promise.GetReserved(), 1);
+  // Now split the full reservation with the uninit reservation, and check that it becomes
+  // initialized.
+  AllocatorReservation uninit_reservation;
+  full_reservation.GiveBlocks(1, &uninit_reservation);
+  ASSERT_TRUE(uninit_reservation.IsInitialized());
+  ASSERT_EQ(full_reservation.GetReserved(), kTotalElements - 1);
+  ASSERT_EQ(uninit_reservation.GetReserved(), 1);
 
-  // Cancel the promises.
-  uninit_promise.Cancel();
+  // Cancel the reservations.
+  uninit_reservation.Cancel();
   ASSERT_EQ(allocator->GetAvailable(), 1);
-  full_promise.Cancel();
+  full_reservation.Cancel();
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements);
 }
 
@@ -124,22 +127,22 @@ TEST(AllocatorTest, InitializeOverReserve) {
   ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
 
   // Attempt to reserve more elements than the allocator has.
-  AllocatorPromise promise;
-  ASSERT_NOT_OK(promise.Initialize(nullptr, kTotalElements + 1, allocator.get()));
+  AllocatorReservation reservation;
+  ASSERT_NOT_OK(reservation.Initialize(nullptr, kTotalElements + 1, allocator.get()));
 }
 
 TEST(AllocatorTest, InitializeTwiceFails) {
   fbl::unique_ptr<Allocator> allocator;
   ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
 
-  AllocatorPromise promise;
-  ASSERT_NO_FATAL_FAILURES(InitializePromise(1, allocator.get(), &promise));
+  AllocatorReservation reservation;
+  ASSERT_NO_FATAL_FAILURES(InitializeReservation(1, allocator.get(), &reservation));
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements - 1);
 
-  // Attempting to initialize a previously initialized AllocatorPromise should fail.
-  ASSERT_NOT_OK(promise.Initialize(nullptr, 1, allocator.get()));
+  // Attempting to initialize a previously initialized AllocatorReservation should fail.
+  ASSERT_NOT_OK(reservation.Initialize(nullptr, 1, allocator.get()));
 
-  promise.Cancel();
+  reservation.Cancel();
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements);
 }
 
@@ -152,26 +155,27 @@ TEST(AllocatorTest, SplitInitialized) {
   ASSERT_GT(first_count, 0);
   ASSERT_GT(second_count, 0);
 
-  // Initialize an AllocatorPromise with half of the available elements reserved.
-  AllocatorPromise first_promise;
-  ASSERT_NO_FATAL_FAILURES(InitializePromise(first_count, allocator.get(), &first_promise));
+  // Initialize an AllocatorReservation with half of the available elements reserved.
+  AllocatorReservation first_reservation;
+  ASSERT_NO_FATAL_FAILURES(InitializeReservation(first_count, allocator.get(), &first_reservation));
   ASSERT_EQ(allocator->GetAvailable(), second_count);
 
-  // Initialize a second AllocatorPromise with the remaining elements.
-  AllocatorPromise second_promise;
-  ASSERT_NO_FATAL_FAILURES(InitializePromise(second_count, allocator.get(), &second_promise));
+  // Initialize a second AllocatorReservation with the remaining elements.
+  AllocatorReservation second_reservation;
+  ASSERT_NO_FATAL_FAILURES(
+      InitializeReservation(second_count, allocator.get(), &second_reservation));
   ASSERT_EQ(allocator->GetAvailable(), 0);
 
-  // Now split the first promise's reservation with the second.
-  first_promise.GiveBlocks(1, &second_promise);
-  ASSERT_EQ(second_promise.GetReserved(), second_count + 1);
-  ASSERT_EQ(first_promise.GetReserved(), first_count - 1);
+  // Now split the first reservation's reservation with the second.
+  first_reservation.GiveBlocks(1, &second_reservation);
+  ASSERT_EQ(second_reservation.GetReserved(), second_count + 1);
+  ASSERT_EQ(first_reservation.GetReserved(), first_count - 1);
   ASSERT_EQ(allocator->GetAvailable(), 0);
 
-  // Cancel all promises.
-  first_promise.Cancel();
+  // Cancel all reservations.
+  first_reservation.Cancel();
   ASSERT_EQ(allocator->GetAvailable(), first_count - 1);
-  second_promise.Cancel();
+  second_reservation.Cancel();
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements);
 }
 
@@ -179,28 +183,29 @@ TEST(AllocatorTest, TestSplitUninitialized) {
   fbl::unique_ptr<Allocator> allocator;
   ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
 
-  // Initialize an AllocatorPromise with all available elements reserved.
-  AllocatorPromise first_promise;
-  ASSERT_NO_FATAL_FAILURES(InitializePromise(kTotalElements, allocator.get(), &first_promise));
+  // Initialize an AllocatorReservation with all available elements reserved.
+  AllocatorReservation first_reservation;
+  ASSERT_NO_FATAL_FAILURES(
+      InitializeReservation(kTotalElements, allocator.get(), &first_reservation));
   ASSERT_EQ(allocator->GetAvailable(), 0);
 
-  // Give half of the first promise's elements to the uninitialized promise.
-  AllocatorPromise second_promise;
+  // Give half of the first reservation's elements to the uninitialized reservation.
+  AllocatorReservation second_reservation;
   uint32_t second_count = kTotalElements / 2;
   uint32_t first_count = kTotalElements - second_count;
   ASSERT_GT(first_count, 0);
   ASSERT_GT(second_count, 0);
-  ASSERT_FALSE(second_promise.IsInitialized());
-  first_promise.GiveBlocks(second_count, &second_promise);
-  ASSERT_TRUE(second_promise.IsInitialized());
-  ASSERT_EQ(second_promise.GetReserved(), second_count);
-  ASSERT_EQ(first_promise.GetReserved(), first_count);
+  ASSERT_FALSE(second_reservation.IsInitialized());
+  first_reservation.GiveBlocks(second_count, &second_reservation);
+  ASSERT_TRUE(second_reservation.IsInitialized());
+  ASSERT_EQ(second_reservation.GetReserved(), second_count);
+  ASSERT_EQ(first_reservation.GetReserved(), first_count);
   ASSERT_EQ(allocator->GetAvailable(), 0);
 
-  // Cancel all promises.
-  first_promise.Cancel();
+  // Cancel all reservations.
+  first_reservation.Cancel();
   ASSERT_EQ(allocator->GetAvailable(), first_count);
-  second_promise.Cancel();
+  second_reservation.Cancel();
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements);
 }
 
@@ -210,42 +215,44 @@ fbl::Array<size_t> CreateArray(size_t size) {
   return array;
 }
 
-// Helper which allocates |allocate_count| units through |promise|.
+// Helper which allocates |allocate_count| units through |reservation|.
 // Allocated indices are returned in |out|.
-void PerformAllocate(size_t allocate_count, AllocatorPromise* promise, fbl::Array<size_t>* out) {
-  ASSERT_NOT_NULL(promise);
+void PerformAllocate(size_t allocate_count, AllocatorReservation* reservation,
+                     fbl::Array<size_t>* out) {
+  ASSERT_NOT_NULL(reservation);
   ASSERT_NOT_NULL(out);
-  ASSERT_LE(allocate_count, promise->GetReserved());
-  size_t remaining_count = promise->GetReserved() - allocate_count;
+  ASSERT_LE(allocate_count, reservation->GetReserved());
+  size_t remaining_count = reservation->GetReserved() - allocate_count;
 
   fbl::Array<size_t> indices = CreateArray(allocate_count);
 
   for (size_t i = 0; i < allocate_count; i++) {
-    indices[i] = promise->Allocate(nullptr);
+    indices[i] = reservation->Allocate(nullptr);
   }
 
-  ASSERT_EQ(promise->GetReserved(), remaining_count);
+  ASSERT_EQ(reservation->GetReserved(), remaining_count);
   *out = std::move(indices);
 }
 
-// Helper which swaps |swap_count| units through |promise|. |indices| must contain the units to be
-// swapped out (can be 0). These values will be replaced with the newly swapp indices.
-void PerformSwap(size_t swap_count, AllocatorPromise* promise, fbl::Array<size_t>* indices) {
-  ASSERT_NOT_NULL(promise);
+// Helper which swaps |swap_count| units through |reservation|. |indices| must contain the units to
+// be swapped out (can be 0). These values will be replaced with the newly swapp indices.
+void PerformSwap(size_t swap_count, AllocatorReservation* reservation,
+                 fbl::Array<size_t>* indices) {
+  ASSERT_NOT_NULL(reservation);
   ASSERT_NOT_NULL(indices);
   ASSERT_GE(indices->size(), swap_count);
-  ASSERT_GE(promise->GetReserved(), swap_count);
-  size_t remaining_count = promise->GetReserved() - swap_count;
+  ASSERT_GE(reservation->GetReserved(), swap_count);
+  size_t remaining_count = reservation->GetReserved() - swap_count;
 
   for (size_t i = 0; i < swap_count; i++) {
     size_t old_index = (*indices)[i];
-    (*indices)[i] = promise->Swap(old_index);
+    (*indices)[i] = reservation->Swap(old_index);
   }
 
-  ASSERT_EQ(promise->GetReserved(), remaining_count);
+  ASSERT_EQ(reservation->GetReserved(), remaining_count);
 
   // Commit the swap.
-  promise->SwapCommit(nullptr);
+  reservation->SwapCommit(nullptr);
 }
 
 // Frees all units in |indices| from |allocator|.
@@ -264,16 +271,16 @@ TEST(AllocatorTest, Allocate) {
   ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
 
   // Reserve all of the elements.
-  AllocatorPromise promise;
-  ASSERT_OK(promise.Initialize(nullptr, kTotalElements, allocator.get()));
+  AllocatorReservation reservation;
+  ASSERT_OK(reservation.Initialize(nullptr, kTotalElements, allocator.get()));
 
-  // Allocate half of the promise's reserved elements.
+  // Allocate half of the reservation's reserved elements.
   fbl::Array<size_t> indices;
-  ASSERT_NO_FATAL_FAILURES(PerformAllocate(kTotalElements / 2, &promise, &indices));
+  ASSERT_NO_FATAL_FAILURES(PerformAllocate(kTotalElements / 2, &reservation, &indices));
 
   // Cancel the remaining reservation.
-  size_t reserved_count = promise.GetReserved();
-  promise.Cancel();
+  size_t reserved_count = reservation.GetReserved();
+  reservation.Cancel();
   ASSERT_EQ(allocator->GetAvailable(), reserved_count);
 
   // Free the allocated elements.
@@ -285,19 +292,19 @@ TEST(AllocatorTest, Swap) {
   ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
 
   // Reserve all of the elements.
-  AllocatorPromise promise;
-  ASSERT_OK(promise.Initialize(nullptr, kTotalElements, allocator.get()));
+  AllocatorReservation reservation;
+  ASSERT_OK(reservation.Initialize(nullptr, kTotalElements, allocator.get()));
 
-  // Swap half of the promise's reserved elements.
+  // Swap half of the reservation's reserved elements.
   size_t swap_count = kTotalElements / 2;
   ASSERT_GT(swap_count, 0);
   fbl::Array<size_t> indices = CreateArray(swap_count);
-  ASSERT_NO_FATAL_FAILURES(PerformSwap(swap_count, &promise, &indices));
+  ASSERT_NO_FATAL_FAILURES(PerformSwap(swap_count, &reservation, &indices));
   ASSERT_EQ(allocator->GetAvailable(), 0);
 
   // Cancel the remaining reservation.
-  size_t reserved_count = promise.GetReserved();
-  promise.Cancel();
+  size_t reserved_count = reservation.GetReserved();
+  reservation.Cancel();
   ASSERT_EQ(allocator->GetAvailable(), reserved_count);
 
   // Free the allocated elements.
@@ -309,23 +316,23 @@ TEST(AllocatorTest, AllocateSwap) {
   ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
 
   // Reserve all of the elements.
-  AllocatorPromise promise;
-  ASSERT_OK(promise.Initialize(nullptr, kTotalElements, allocator.get()));
+  AllocatorReservation reservation;
+  ASSERT_OK(reservation.Initialize(nullptr, kTotalElements, allocator.get()));
 
-  // Allocate half of the promise's reserved elements.
+  // Allocate half of the reservation's reserved elements.
   size_t allocate_count = kTotalElements / 2;
   ASSERT_GT(allocate_count, 0);
   fbl::Array<size_t> indices;
-  ASSERT_NO_FATAL_FAILURES(PerformAllocate(allocate_count, &promise, &indices));
+  ASSERT_NO_FATAL_FAILURES(PerformAllocate(allocate_count, &reservation, &indices));
 
   // Swap as many of the allocated elements as possible.
-  size_t swap_count = fbl::min(promise.GetReserved(), allocate_count);
+  size_t swap_count = fbl::min(reservation.GetReserved(), allocate_count);
   ASSERT_GT(swap_count, 0);
-  ASSERT_NO_FATAL_FAILURES(PerformSwap(swap_count, &promise, &indices));
+  ASSERT_NO_FATAL_FAILURES(PerformSwap(swap_count, &reservation, &indices));
 
   // Cancel the remaining reservation.
-  size_t reserved_count = promise.GetReserved();
-  promise.Cancel();
+  size_t reserved_count = reservation.GetReserved();
+  reservation.Cancel();
   ASSERT_EQ(allocator->GetAvailable(), swap_count + reserved_count);
 
   // Free the allocated elements.

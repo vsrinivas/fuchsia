@@ -38,15 +38,15 @@ zx_status_t Transaction::Create(TransactionalFs* minfs, size_t reserve_inodes,
     // However, acquiring the reservation may cause the superblock to be modified via extension,
     // so we still need to acquire the lock first.
     zx_status_t status =
-        inode_manager->Reserve(transaction.get(), reserve_inodes, &transaction->inode_promise_);
+        inode_manager->Reserve(transaction.get(), reserve_inodes, &transaction->inode_reservation_);
     if (status != ZX_OK) {
       return status;
     }
   }
 
   if (reserve_blocks) {
-    zx_status_t status =
-        transaction->block_promise_.Initialize(transaction.get(), reserve_blocks, block_allocator);
+    zx_status_t status = transaction->block_reservation_.Initialize(
+        transaction.get(), reserve_blocks, block_allocator);
     if (status != ZX_OK) {
       return status;
     }
@@ -68,8 +68,8 @@ Transaction::Transaction(TransactionalFs* minfs)
 
 Transaction::~Transaction() {
   // Unreserve all reserved inodes/blocks while the lock is still held.
-  inode_promise_.Cancel();
-  block_promise_.Cancel();
+  inode_reservation_.Cancel();
+  block_reservation_.Cancel();
 }
 
 #ifdef __Fuchsia__

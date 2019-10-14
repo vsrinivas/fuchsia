@@ -6,16 +6,16 @@
 
 #include <utility>
 
-#include <minfs/allocator-promise.h>
+#include <minfs/allocator-reservation.h>
 
 #include "allocator.h"
 
 namespace minfs {
 
-AllocatorPromise::~AllocatorPromise() { Cancel(); }
+AllocatorReservation::~AllocatorReservation() { Cancel(); }
 
-zx_status_t AllocatorPromise::Initialize(PendingWork* transaction, size_t reserved,
-                                         Allocator* allocator) {
+zx_status_t AllocatorReservation::Initialize(PendingWork* transaction, size_t reserved,
+                                             Allocator* allocator) {
   if (allocator_ != nullptr) {
     return ZX_ERR_BAD_STATE;
   }
@@ -34,7 +34,7 @@ zx_status_t AllocatorPromise::Initialize(PendingWork* transaction, size_t reserv
   return status;
 }
 
-size_t AllocatorPromise::Allocate(PendingWork* transaction) {
+size_t AllocatorReservation::Allocate(PendingWork* transaction) {
   ZX_DEBUG_ASSERT(allocator_ != nullptr);
   ZX_DEBUG_ASSERT(reserved_ > 0);
   reserved_--;
@@ -42,35 +42,35 @@ size_t AllocatorPromise::Allocate(PendingWork* transaction) {
 }
 
 #ifdef __Fuchsia__
-size_t AllocatorPromise::Swap(size_t old_index) {
+size_t AllocatorReservation::Swap(size_t old_index) {
   ZX_DEBUG_ASSERT(allocator_ != nullptr);
   ZX_DEBUG_ASSERT(reserved_ > 0);
   reserved_--;
   return allocator_->Swap({}, old_index);
 }
 
-void AllocatorPromise::SwapCommit(PendingWork* transaction) {
+void AllocatorReservation::SwapCommit(PendingWork* transaction) {
   ZX_DEBUG_ASSERT(allocator_ != nullptr);
   allocator_->SwapCommit({}, transaction);
 }
 
-void AllocatorPromise::GiveBlocks(size_t requested, AllocatorPromise* other_promise) {
+void AllocatorReservation::GiveBlocks(size_t requested, AllocatorReservation* other_reservation) {
   ZX_DEBUG_ASSERT(requested <= reserved_);
-  ZX_DEBUG_ASSERT(other_promise != nullptr);
+  ZX_DEBUG_ASSERT(other_reservation != nullptr);
 
-  if (other_promise->IsInitialized()) {
-    ZX_DEBUG_ASSERT(other_promise->allocator_ == allocator_);
+  if (other_reservation->IsInitialized()) {
+    ZX_DEBUG_ASSERT(other_reservation->allocator_ == allocator_);
   } else {
-    other_promise->allocator_ = allocator_;
+    other_reservation->allocator_ = allocator_;
   }
 
   reserved_ -= requested;
-  other_promise->reserved_ += requested;
+  other_reservation->reserved_ += requested;
 }
 
 #endif
 
-void AllocatorPromise::Cancel() {
+void AllocatorReservation::Cancel() {
   if (IsInitialized() && reserved_ > 0) {
     allocator_->Unreserve({}, reserved_);
     reserved_ = 0;

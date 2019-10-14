@@ -76,8 +76,8 @@ zx_status_t Allocator::GrowMapLocked(size_t new_size, size_t* old_size) {
   return ZX_OK;
 }
 
-zx_status_t Allocator::Reserve(AllocatorPromiseKey, PendingWork* transaction, size_t count,
-                               AllocatorPromise* promise) {
+zx_status_t Allocator::Reserve(AllocatorReservationKey, PendingWork* transaction, size_t count,
+                               AllocatorReservation* reservation) {
   AutoLock lock(&lock_);
   if (GetAvailableLocked() < count) {
     // If we do not have enough free elements, attempt to extend the partition.
@@ -104,7 +104,7 @@ bool Allocator::CheckAllocated(size_t index) const {
   return map_.Get(index, index + 1);
 }
 
-size_t Allocator::Allocate(AllocatorPromiseKey, PendingWork* transaction) {
+size_t Allocator::Allocate(AllocatorReservationKey, PendingWork* transaction) {
   AutoLock lock(&lock_);
   ZX_DEBUG_ASSERT(reserved_ > 0);
   size_t bitoff_start = FindLocked();
@@ -117,7 +117,7 @@ size_t Allocator::Allocate(AllocatorPromiseKey, PendingWork* transaction) {
   return bitoff_start;
 }
 
-void Allocator::Unreserve(AllocatorPromiseKey, size_t count) {
+void Allocator::Unreserve(AllocatorReservationKey, size_t count) {
   AutoLock lock(&lock_);
 #ifdef __Fuchsia__
   ZX_DEBUG_ASSERT(swap_in_.num_bits() == 0);

@@ -9,7 +9,7 @@ library("minfs") {
   static = true
   sources = [
     "allocator/allocator-common.cc",
-    "allocator/allocator-promise.cc",
+    "allocator/allocator-reservation.cc",
     "allocator/metadata.cc",
     "allocator/storage-common.cc",
     "directory.cc",

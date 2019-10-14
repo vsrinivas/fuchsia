@@ -74,7 +74,7 @@ size_t Allocator::FindLocked() const {
   }
 }
 
-size_t Allocator::Swap(AllocatorPromiseKey, size_t old_index) {
+size_t Allocator::Swap(AllocatorReservationKey, size_t old_index) {
   AutoLock lock(&lock_);
   ZX_DEBUG_ASSERT(reserved_ > 0);
 
@@ -92,7 +92,7 @@ size_t Allocator::Swap(AllocatorPromiseKey, size_t old_index) {
   return new_index;
 }
 
-void Allocator::SwapCommit(AllocatorPromiseKey, PendingWork* transaction) {
+void Allocator::SwapCommit(AllocatorReservationKey, PendingWork* transaction) {
   AutoLock lock(&lock_);
   if (swap_in_.num_bits() == 0 && swap_out_.num_bits() == 0) {
     return;

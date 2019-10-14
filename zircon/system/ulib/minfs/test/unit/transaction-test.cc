@@ -401,31 +401,33 @@ TEST_F(TransactionTest, RemovePinnedVnodeContainsManyVnodes) {
   }
 }
 
-// Checks that GiveBlocksToPromise correctly transfers block allocation to an external promise.
-TEST_F(TransactionTest, GiveBlocksToPromiseAddsAllocation) {
+// Checks that GiveBlocksToReservation correctly transfers block allocation to an external
+// reservation.
+TEST_F(TransactionTest, GiveBlocksToReservationAddsAllocation) {
   fbl::unique_ptr<Transaction> transaction;
   ASSERT_OK(CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
   transaction->AllocateBlock();
 
-  AllocatorPromise promise;
-  ASSERT_OK(promise.Initialize(transaction.get(), 0, BlockAllocator()));
-  ASSERT_EQ(0, promise.GetReserved());
+  AllocatorReservation reservation;
+  ASSERT_OK(reservation.Initialize(transaction.get(), 0, BlockAllocator()));
+  ASSERT_EQ(0, reservation.GetReserved());
 
-  transaction->GiveBlocksToPromise(1, &promise);
-  ASSERT_EQ(1, promise.GetReserved());
+  transaction->GiveBlocksToReservation(1, &reservation);
+  ASSERT_EQ(1, reservation.GetReserved());
 }
 
-// Checks that TakeReservedBlocks correctly transfers block allocation from an external promise.
-TEST_F(TransactionTest, TakeReservedBlocksRemovesAllocation) {
+// Checks that TakeBlockReservation correctly transfers block allocation from an external
+// reservation.
+TEST_F(TransactionTest, TakeBlockReservationRemovesAllocation) {
   fbl::unique_ptr<Transaction> transaction;
   ASSERT_OK(CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
 
-  AllocatorPromise promise;
-  ASSERT_OK(promise.Initialize(transaction.get(), 1, BlockAllocator()));
-  ASSERT_EQ(1, promise.GetReserved());
+  AllocatorReservation reservation;
+  ASSERT_OK(reservation.Initialize(transaction.get(), 1, BlockAllocator()));
+  ASSERT_EQ(1, reservation.GetReserved());
 
-  transaction->TakeReservedBlocksFromReservation(&promise);
-  ASSERT_EQ(0, promise.GetReserved());
+  transaction->TakeReservedBlocksFromReservation(&reservation);
+  ASSERT_EQ(0, reservation.GetReserved());
 }
 
 }  // namespace

@@ -5,8 +5,8 @@
 // This file describes the structure used to allocate
 // from an on-disk bitmap.
 
-#ifndef MINFS_ALLOCATOR_PROMISE_H_
-#define MINFS_ALLOCATOR_PROMISE_H_
+#ifndef MINFS_ALLOCATOR_RESERVATION_H_
+#define MINFS_ALLOCATOR_RESERVATION_H_
 
 #include <fbl/function.h>
 #include <fbl/macros.h>
@@ -25,17 +25,17 @@ namespace minfs {
 // Forward declaration for a reference to the internal allocator.
 class Allocator;
 
-// This class represents a promise from an Allocator to save a particular number of reserved
+// This class represents a reservation from an Allocator to save a particular number of reserved
 // elements for later allocation. Allocation for reserved elements must be done through the
-// AllocatorPromise class.
+// AllocatorReservation class.
 // This class is thread-compatible.
 // This class is not assignable, copyable, or moveable.
-class AllocatorPromise {
+class AllocatorReservation {
  public:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(AllocatorPromise);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(AllocatorReservation);
 
-  AllocatorPromise() {}
-  ~AllocatorPromise();
+  AllocatorReservation() {}
+  ~AllocatorReservation();
 
   // Returns |ZX_OK| when |allocator| reserves |reserved| elements and |this| is successfully
   // initialized. Returns an error if not enough elements are available for reservation,
@@ -62,9 +62,9 @@ class AllocatorPromise {
   // Commit any pending swaps, allocating new indices and de-allocating old indices.
   void SwapCommit(PendingWork* transaction);
 
-  // Remove |requested| reserved elements and give them to |other_promise|.
+  // Remove |requested| reserved elements and give them to |other_reservation|.
   // The reserved count belonging to the Allocator does not change.
-  void GiveBlocks(size_t requested, AllocatorPromise* other_promise);
+  void GiveBlocks(size_t requested, AllocatorReservation* other_reservation);
 
   size_t GetReserved() const { return reserved_; }
 #endif
@@ -72,10 +72,10 @@ class AllocatorPromise {
   Allocator* allocator_ = nullptr;
   size_t reserved_ = 0;
 
-  // TODO(planders): Optionally store swap info in AllocatorPromise,
-  //                 to ensure we only swap the current promise's blocks on SwapCommit.
+  // TODO(planders): Optionally store swap info in AllocatorReservation,
+  //                 to ensure we only swap the current reservation's blocks on SwapCommit.
 };
 
 }  // namespace minfs
 
-#endif  // MINFS_ALLOCATOR_PROMISE_H_
+#endif  // MINFS_ALLOCATOR_RESERVATION_H_

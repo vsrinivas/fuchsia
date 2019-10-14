@@ -15,7 +15,7 @@
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <fs/transaction/block_transaction.h>
-#include <minfs/allocator-promise.h>
+#include <minfs/allocator-reservation.h>
 #include <minfs/format.h>
 #include <minfs/mutex.h>
 #include <minfs/superblock.h>
@@ -36,15 +36,15 @@ using BlockRegion = fuchsia_minfs_BlockRegion;
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 #endif
 
-// An empty key class which represents the |AllocatorPromise|'s access to
+// An empty key class which represents the |AllocatorReservation|'s access to
 // restricted |Allocator| interfaces.
-class AllocatorPromiseKey {
+class AllocatorReservationKey {
  public:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(AllocatorPromiseKey);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(AllocatorReservationKey);
 
  private:
-  friend AllocatorPromise;
-  AllocatorPromiseKey() {}
+  friend AllocatorReservation;
+  AllocatorReservationKey() {}
 };
 
 // The Allocator class is used to abstract away the mechanism by which minfs
@@ -81,24 +81,24 @@ class Allocator {
   // Returns |true| if |index| is allocated. Returns |false| otherwise.
   bool CheckAllocated(size_t index) const FS_TA_EXCLUDES(lock_);
 
-  // AllocatorPromise Methods:
+  // AllocatorReservation Methods:
   //
-  // The following methods are restricted to AllocatorPromise via the passkey
-  // idiom. They are public, but require an empty |AllocatorPromiseKey|.
+  // The following methods are restricted to AllocatorReservation via the passkey
+  // idiom. They are public, but require an empty |AllocatorReservationKey|.
 
   // Allocate a single element and return its newly allocated index.
-  size_t Allocate(AllocatorPromiseKey, PendingWork* transaction) FS_TA_EXCLUDES(lock_);
+  size_t Allocate(AllocatorReservationKey, PendingWork* transaction) FS_TA_EXCLUDES(lock_);
 
   // Reserve |count| elements. This is required in order to later allocate them.
-  // Outputs a |promise| which contains reservation details.
-  zx_status_t Reserve(AllocatorPromiseKey, PendingWork* transaction, size_t count,
-                      AllocatorPromise* promise) FS_TA_EXCLUDES(lock_);
+  // Outputs a |reservation| which contains reservation details.
+  zx_status_t Reserve(AllocatorReservationKey, PendingWork* transaction, size_t count,
+                      AllocatorReservation* reservation) FS_TA_EXCLUDES(lock_);
 
   // Unreserve |count| elements. This may be called in the event of failure, or if we
   // over-reserved initially.
   //
-  // PRECONDITION: AllocatorPromise must have |reserved| > 0.
-  void Unreserve(AllocatorPromiseKey, size_t count) FS_TA_EXCLUDES(lock_);
+  // PRECONDITION: AllocatorReservation must have |reserved| > 0.
+  void Unreserve(AllocatorReservationKey, size_t count) FS_TA_EXCLUDES(lock_);
 
 #ifdef __Fuchsia__
   // Mark |index| for de-allocation by adding it to the swap_out map,
@@ -106,8 +106,8 @@ class Allocator {
   // This is currently only used for the block allocator.
   //
   // PRECONDITION: |index| must be allocated in the internal map.
-  // PRECONDITION: AllocatorPromise must have |reserved| > 0.
-  size_t Swap(AllocatorPromiseKey, size_t index) FS_TA_EXCLUDES(lock_);
+  // PRECONDITION: AllocatorReservation must have |reserved| > 0.
+  size_t Swap(AllocatorReservationKey, size_t index) FS_TA_EXCLUDES(lock_);
 
   // Allocate / de-allocate elements from the swap_in / swap_out maps (respectively).
   // This persists the results of |Swap|.
@@ -116,7 +116,7 @@ class Allocator {
   // and swap_out_ maps are guaranteed to belong to only one Vnode. This method should only be
   // called in the same thread as the block swaps -- i.e. we should never be resolving blocks for
   // more than one vnode at a time.
-  void SwapCommit(AllocatorPromiseKey, PendingWork* transaction) FS_TA_EXCLUDES(lock_);
+  void SwapCommit(AllocatorReservationKey, PendingWork* transaction) FS_TA_EXCLUDES(lock_);
 #endif
 
  private:
@@ -142,12 +142,11 @@ class Allocator {
   // Does NOT guard the allocator |storage_|.
   mutable Mutex lock_;
 
-  // Total number of elements reserved by AllocatorPromise objects. Represents the maximum number
-  // of elements that are allowed to be allocated or swapped in at a given time.
-  // Once an element is marked for allocation or swap, the reserved_ count is updated accordingly.
-  // Remaining reserved blocks will be committed by the end of each Vnode operation,
-  // with the exception of copy-on-write data blocks.
-  // These will be committed asynchronously via the WorkQueue thread.
+  // Total number of elements reserved by AllocatorReservation objects. Represents the maximum
+  // number of elements that are allowed to be allocated or swapped in at a given time. Once an
+  // element is marked for allocation or swap, the reserved_ count is updated accordingly. Remaining
+  // reserved blocks will be committed by the end of each Vnode operation, with the exception of
+  // copy-on-write data blocks. These will be committed asynchronously via the WorkQueue thread.
   // This means that at the time of reservation if |reserved_| > 0, all reserved blocks must
   // belong to vnodes which are already enqueued in the WorkQueue thread.
   size_t reserved_ FS_TA_GUARDED(lock_);
