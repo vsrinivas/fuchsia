@@ -5,10 +5,10 @@
 import 'dart:async';
 
 import 'package:device_settings/model.dart';
+import 'package:fidl_fuchsia_pkg/fidl_async.dart' as pkg;
+import 'package:fidl_fuchsia_pkg_rewrite/fidl_async.dart' as pkg_rewrite;
 import 'package:fidl_fuchsia_recovery/fidl_async.dart' as recovery;
 import 'package:fidl_fuchsia_update/fidl_async.dart' as update;
-import 'package:fidl_fuchsia_update_channelcontrol/fidl_async.dart'
-    as channelcontrol;
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
 
@@ -22,8 +22,11 @@ class TestSystemInterface extends Mock implements SystemInterface {
 
 class MockUpdateManager extends Mock implements update.Manager {}
 
-class MockChannelControl extends Mock implements channelcontrol.ChannelControl {
-}
+class MockRepositoryManager extends Mock implements pkg.RepositoryManager {}
+
+class MockRewriteManager extends Mock implements pkg_rewrite.Engine {}
+
+class MockRepositoryIterator extends Mock implements pkg.RepositoryIterator {}
 
 class MockFactoryReset extends Mock implements recovery.FactoryReset {}
 
@@ -32,33 +35,41 @@ void main() {
   test('test_start', () async {
     final TestSystemInterface sysInterface = TestSystemInterface();
 
-    when(sysInterface.getCurrentChannel()).thenAnswer((_) => Future.value(''));
+    when(sysInterface.listRepositories())
+        .thenAnswer((_) => Stream.fromIterable([]));
 
-    when(sysInterface.getChannelList()).thenAnswer((_) => Future.value([]));
+    when(sysInterface.listRules()).thenAnswer((_) => Stream.fromIterable([]));
+
+    when(sysInterface.listStaticRules())
+        .thenAnswer((_) => Stream.fromIterable([]));
 
     final DeviceSettingsModel model = DeviceSettingsModel(sysInterface);
     await model.start();
 
     // Ensure resolver is interacted with on the first start.
-    verify(sysInterface.getCurrentChannel());
-    verify(sysInterface.getChannelList());
+    verify(sysInterface.listRepositories());
+    verify(sysInterface.listRules());
+    verify(sysInterface.listStaticRules());
 
     // We should not be waiting on anything in the second start as it should be
     // an early return.
     await model.start();
 
     // Ensure resolver has not been interacted with since the first start.
-    verifyNever(sysInterface.getCurrentChannel());
-    verifyNever(sysInterface.getChannelList());
+    verifyNever(sysInterface.listRepositories());
+    verifyNever(sysInterface.listRules());
+    verifyNever(sysInterface.listStaticRules());
   });
 
   // Ensure checkForSystemUpdate has the intended side effects.
   test('test_check_for_updates', () async {
     final TestSystemInterface sysInterface = TestSystemInterface();
 
-    when(sysInterface.getCurrentChannel()).thenAnswer((_) => Future.value(''));
-
-    when(sysInterface.getChannelList()).thenAnswer((_) => Future.value([]));
+    when(sysInterface.listRepositories())
+        .thenAnswer((_) => Stream.fromIterable([]));
+    when(sysInterface.listRules()).thenAnswer((_) => Stream.fromIterable([]));
+    when(sysInterface.listStaticRules())
+        .thenAnswer((_) => Stream.fromIterable([]));
 
     when(sysInterface.checkForSystemUpdate())
         .thenAnswer((_) => Future.value(true));
@@ -83,14 +94,25 @@ void main() {
   test('test_channel_updating_state', () async {
     final TestSystemInterface sysInterface = TestSystemInterface();
 
-    var currentChannelCompleter = Completer<String>();
-    var channelListCompleter = Completer<List<String>>();
+    var repoCompleter = Completer();
+    var ruleCompleter = Completer();
+    var staticRuleCompleter = Completer();
 
-    when(sysInterface.getCurrentChannel())
-        .thenAnswer((_) => currentChannelCompleter.future);
-
-    when(sysInterface.getChannelList())
-        .thenAnswer((_) => channelListCompleter.future);
+    when(sysInterface.listRepositories()).thenAnswer((_) async* {
+      for (var repo in await repoCompleter.future) {
+        yield repo;
+      }
+    });
+    when(sysInterface.listRules()).thenAnswer((_) async* {
+      for (var rule in await ruleCompleter.future) {
+        yield rule;
+      }
+    });
+    when(sysInterface.listStaticRules()).thenAnswer((_) async* {
+      for (var rule in await staticRuleCompleter.future) {
+        yield rule;
+      }
+    });
 
     final DeviceSettingsModel model = DeviceSettingsModel(sysInterface);
     final Future startFuture = model.start();
@@ -98,22 +120,28 @@ void main() {
     // On start, the model should report it is updating as the proxy has not
     // returned
     expect(model.channelUpdating, true);
-    currentChannelCompleter.complete('');
-    channelListCompleter.complete([]);
+    repoCompleter.complete([]);
+    ruleCompleter.complete([]);
+    staticRuleCompleter.complete([]);
     await startFuture;
     expect(model.channelUpdating, false);
 
     // Reset update completer so it can be used in the next step.
-    currentChannelCompleter = Completer<String>();
-    channelListCompleter = Completer<List<String>>();
+    repoCompleter = Completer();
+    ruleCompleter = Completer();
+    staticRuleCompleter = Completer();
 
-    when(sysInterface.setTargetChannel(any)).thenAnswer((_) async {});
+    when(sysInterface.updateRules(any)).thenAnswer((_) async {
+      return 0;
+    });
 
     // make sure we are also updating when selecting a channel.
-    Future selectFuture = model.selectChannel('stable');
+    Future selectFuture = model.selectChannel(
+        pkg.RepositoryConfig(repoUrl: 'fuchsia-pkg://example.com'));
     expect(model.channelUpdating, true);
-    currentChannelCompleter.complete('');
-    channelListCompleter.complete([]);
+    repoCompleter.complete([]);
+    ruleCompleter.complete([]);
+    staticRuleCompleter.complete([]);
     await selectFuture;
     expect(model.channelUpdating, false);
   });
@@ -122,9 +150,13 @@ void main() {
   test('test_check_for_factory_reset', () async {
     final TestSystemInterface sysInterface = TestSystemInterface();
 
-    when(sysInterface.getCurrentChannel()).thenAnswer((_) => Future.value(''));
+    when(sysInterface.listRepositories())
+        .thenAnswer((_) => Stream.fromIterable([]));
 
-    when(sysInterface.getChannelList()).thenAnswer((_) => Future.value([]));
+    when(sysInterface.listRules()).thenAnswer((_) => Stream.fromIterable([]));
+
+    when(sysInterface.listStaticRules())
+        .thenAnswer((_) => Stream.fromIterable([]));
 
     final DeviceSettingsModel model = DeviceSettingsModel(sysInterface);
     await model.start();
@@ -147,9 +179,13 @@ void main() {
   test('test_check_for_factory_reset', () async {
     final TestSystemInterface sysInterface = TestSystemInterface();
 
-    when(sysInterface.getCurrentChannel()).thenAnswer((_) => Future.value(''));
+    when(sysInterface.listRepositories())
+        .thenAnswer((_) => Stream.fromIterable([]));
 
-    when(sysInterface.getChannelList()).thenAnswer((_) => Future.value([]));
+    when(sysInterface.listRules()).thenAnswer((_) => Stream.fromIterable([]));
+
+    when(sysInterface.listStaticRules())
+        .thenAnswer((_) => Stream.fromIterable([]));
 
     final DeviceSettingsModel model = DeviceSettingsModel(sysInterface);
     await model.start();

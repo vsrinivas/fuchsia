@@ -109,18 +109,25 @@ Widget _buildSelectPopup(DeviceSettingsModel model, double scale) {
             widthFactor: 0.8,
             heightFactor: 0.8,
             child: SingleChildScrollView(
-                physics: BouncingScrollPhysics(),
-                padding: EdgeInsets.all(16.0),
-                child: SettingsSection(
-                    title: 'Select channel',
-                    scale: scale,
-                    child: Column(
-                        children: model.channels
-                            .map((channel) => SettingsButton(
-                                onTap: () => model.selectChannel(channel),
+              physics: BouncingScrollPhysics(),
+              padding: EdgeInsets.all(16.0),
+              child: SettingsSection(
+                  title: 'Select channel',
+                  scale: scale,
+                  child: Column(
+                      children: model.repos
+                          .map((repo) => SettingsButton(
+                              onTap: () => model.selectChannel(repo),
+                              scale: scale,
+                              text: '${repo?.repoUrl ?? 'None'}'))
+                          .toList()
+                            ..add(SettingsButton(
+                                onTap: () => model.clearChannel(),
                                 scale: scale,
-                                text: '$channel'))
-                            .toList()))),
+                                text: model.defaultChannel == null
+                                    ? 'None'
+                                    : 'Default (${model.defaultChannel})')))),
+            ),
           )));
 }
 

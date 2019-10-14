@@ -25,9 +25,10 @@ flutter_app("device_settings") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.pkg",
+    "//sdk/fidl/fuchsia.pkg.rewrite",
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.update",
-    "//sdk/fidl/fuchsia.update.channelcontrol",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//topaz/lib/settings:lib.settings",
     "//topaz/public/dart/fuchsia_logger",

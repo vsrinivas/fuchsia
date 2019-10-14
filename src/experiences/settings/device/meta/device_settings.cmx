@@ -15,12 +15,13 @@
             "fuchsia.fonts.Provider",
             "fuchsia.logger.LogSink",
             "fuchsia.modular.Clipboard",
+            "fuchsia.pkg.RepositoryManager",
+            "fuchsia.pkg.rewrite.Engine",
             "fuchsia.recovery.FactoryReset",
             "fuchsia.sys.Environment",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",
-            "fuchsia.update.channelcontrol.ChannelControl",
             "fuchsia.update.Manager"
         ]
     }
