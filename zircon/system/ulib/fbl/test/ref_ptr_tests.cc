@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdio.h>
+
+#include <utility>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <stdio.h>
-#include <unittest/unittest.h>
-
-#include <utility>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -50,8 +51,7 @@ bool RefCallCounter::Release() {
 static_assert(std::is_standard_layout_v<fbl::RefPtr<RefCallCounter>>,
               "fbl::RefPtr<T>'s should have a standard layout.");
 
-static bool ref_ptr_test() {
-  BEGIN_TEST;
+TEST(RefPtrTest, Basic) {
   using RefCallPtr = fbl::RefPtr<RefCallCounter>;
 
   RefCallCounter counter;
@@ -123,12 +123,9 @@ static bool ref_ptr_test() {
   EXPECT_EQ(1, RefCallCounter::destroy_calls());
   EXPECT_FALSE(static_cast<bool>(ptr));
   EXPECT_FALSE(ptr.get());
-
-  END_TEST;
 }
 
-static bool ref_ptr_compare_test() {
-  BEGIN_TEST;
+TEST(RefPtrTest, Compare) {
   using RefCallPtr = fbl::RefPtr<RefCallCounter>;
 
   RefCallCounter obj1, obj2;
@@ -158,8 +155,6 @@ static bool ref_ptr_compare_test() {
   EXPECT_FALSE(null_ref_ptr != nullptr);
   EXPECT_TRUE(nullptr == null_ref_ptr);
   EXPECT_FALSE(nullptr != null_ref_ptr);
-
-  END_TEST;
 }
 
 namespace upcasting {
@@ -245,24 +240,18 @@ struct custom_delete {
 };
 
 template <typename RefPtrType>
-static bool handoff_lvalue_fn(const RefPtrType& ptr) {
-  BEGIN_TEST;
-  EXPECT_NONNULL(ptr);
-  END_TEST;
+static void handoff_lvalue_fn(const RefPtrType& ptr) {
+  EXPECT_NOT_NULL(ptr.get());
 }
 
 template <typename RefPtrType>
-static bool handoff_copy_fn(RefPtrType ptr) {
-  BEGIN_TEST;
-  EXPECT_NONNULL(ptr);
-  END_TEST;
+static void handoff_copy_fn(RefPtrType ptr) {
+  EXPECT_NOT_NULL(ptr.get());
 }
 
 template <typename RefPtrType>
-static bool handoff_rvalue_fn(RefPtrType&& ptr) {
-  BEGIN_TEST;
-  EXPECT_NONNULL(ptr);
-  END_TEST;
+static void handoff_rvalue_fn(RefPtrType&& ptr) {
+  EXPECT_NOT_NULL(ptr.get());
 }
 
 class OverloadTestHelper {
@@ -301,8 +290,7 @@ class OverloadTestHelper {
 };
 
 template <typename Base, typename Derived>
-static bool do_test() {
-  BEGIN_TEST;
+void DoUpcastTest() {
   fbl::AllocChecker ac;
 
   fbl::RefPtr<Derived> derived_ptr;
@@ -312,7 +300,7 @@ static bool do_test() {
   derived_ptr = fbl::AdoptRef<Derived>(new (&ac) Derived());
   ASSERT_TRUE(ac.check());
   {
-    EXPECT_NONNULL(derived_ptr);
+    EXPECT_NOT_NULL(derived_ptr);
     EXPECT_EQ(1, Stats::adopt_calls());
     EXPECT_EQ(0, Stats::add_ref_calls());
     EXPECT_EQ(0, Stats::release_calls());
@@ -320,8 +308,8 @@ static bool do_test() {
 
     fbl::RefPtr<Base> base_ptr(derived_ptr);
 
-    EXPECT_NONNULL(derived_ptr);
-    EXPECT_NONNULL(base_ptr);
+    EXPECT_NOT_NULL(derived_ptr);
+    EXPECT_NOT_NULL(base_ptr);
     EXPECT_EQ(1, Stats::adopt_calls());
     EXPECT_EQ(1, Stats::add_ref_calls());
     EXPECT_EQ(0, Stats::release_calls());
@@ -330,7 +318,7 @@ static bool do_test() {
 
   // Construct RefPtr<Base> with a move and implicit cast
   {
-    EXPECT_NONNULL(derived_ptr);
+    EXPECT_NOT_NULL(derived_ptr);
     EXPECT_EQ(1, Stats::adopt_calls());
     EXPECT_EQ(1, Stats::add_ref_calls());
     EXPECT_EQ(1, Stats::release_calls());
@@ -339,7 +327,7 @@ static bool do_test() {
     fbl::RefPtr<Base> base_ptr(std::move(derived_ptr));
 
     EXPECT_NULL(derived_ptr);
-    EXPECT_NONNULL(base_ptr);
+    EXPECT_NOT_NULL(base_ptr);
     EXPECT_EQ(1, Stats::adopt_calls());
     EXPECT_EQ(1, Stats::add_ref_calls());
     EXPECT_EQ(1, Stats::release_calls());
@@ -356,7 +344,7 @@ static bool do_test() {
   derived_ptr = fbl::AdoptRef<Derived>(new (&ac) Derived());
   ASSERT_TRUE(ac.check());
   {
-    EXPECT_NONNULL(derived_ptr);
+    EXPECT_NOT_NULL(derived_ptr);
     EXPECT_EQ(1, Stats::adopt_calls());
     EXPECT_EQ(0, Stats::add_ref_calls());
     EXPECT_EQ(0, Stats::release_calls());
@@ -364,8 +352,8 @@ static bool do_test() {
 
     fbl::RefPtr<Base> base_ptr = derived_ptr;
 
-    EXPECT_NONNULL(derived_ptr);
-    EXPECT_NONNULL(base_ptr);
+    EXPECT_NOT_NULL(derived_ptr);
+    EXPECT_NOT_NULL(base_ptr);
     EXPECT_EQ(1, Stats::adopt_calls());
     EXPECT_EQ(1, Stats::add_ref_calls());
     EXPECT_EQ(0, Stats::release_calls());
@@ -374,7 +362,7 @@ static bool do_test() {
 
   // Assign RefPtr<Base> at declaration time with a std::move
   {
-    EXPECT_NONNULL(derived_ptr);
+    EXPECT_NOT_NULL(derived_ptr);
     EXPECT_EQ(1, Stats::adopt_calls());
     EXPECT_EQ(1, Stats::add_ref_calls());
     EXPECT_EQ(1, Stats::release_calls());
@@ -383,7 +371,7 @@ static bool do_test() {
     fbl::RefPtr<Base> base_ptr = std::move(derived_ptr);
 
     EXPECT_NULL(derived_ptr);
-    EXPECT_NONNULL(base_ptr);
+    EXPECT_NOT_NULL(base_ptr);
     EXPECT_EQ(1, Stats::adopt_calls());
     EXPECT_EQ(1, Stats::add_ref_calls());
     EXPECT_EQ(1, Stats::release_calls());
@@ -400,7 +388,7 @@ static bool do_test() {
   derived_ptr = fbl::AdoptRef<Derived>(new (&ac) Derived());
   ASSERT_TRUE(ac.check());
   {
-    EXPECT_NONNULL(derived_ptr);
+    EXPECT_NOT_NULL(derived_ptr);
     EXPECT_EQ(1, Stats::adopt_calls());
     EXPECT_EQ(0, Stats::add_ref_calls());
     EXPECT_EQ(0, Stats::release_calls());
@@ -409,8 +397,8 @@ static bool do_test() {
     fbl::RefPtr<Base> base_ptr;
     base_ptr = derived_ptr;
 
-    EXPECT_NONNULL(derived_ptr);
-    EXPECT_NONNULL(base_ptr);
+    EXPECT_NOT_NULL(derived_ptr);
+    EXPECT_NOT_NULL(base_ptr);
     EXPECT_EQ(1, Stats::adopt_calls());
     EXPECT_EQ(1, Stats::add_ref_calls());
     EXPECT_EQ(0, Stats::release_calls());
@@ -419,7 +407,7 @@ static bool do_test() {
 
   // Assign RefPtr<Base> after declaration with a std::move
   {
-    EXPECT_NONNULL(derived_ptr);
+    EXPECT_NOT_NULL(derived_ptr);
     EXPECT_EQ(1, Stats::adopt_calls());
     EXPECT_EQ(1, Stats::add_ref_calls());
     EXPECT_EQ(1, Stats::release_calls());
@@ -429,7 +417,7 @@ static bool do_test() {
     base_ptr = std::move(derived_ptr);
 
     EXPECT_NULL(derived_ptr);
-    EXPECT_NONNULL(base_ptr);
+    EXPECT_NOT_NULL(base_ptr);
     EXPECT_EQ(1, Stats::adopt_calls());
     EXPECT_EQ(1, Stats::add_ref_calls());
     EXPECT_EQ(1, Stats::release_calls());
@@ -446,7 +434,7 @@ static bool do_test() {
   derived_ptr = fbl::AdoptRef<Derived>(new (&ac) Derived());
   ASSERT_TRUE(ac.check());
   {
-    EXPECT_NONNULL(derived_ptr);
+    EXPECT_NOT_NULL(derived_ptr);
     EXPECT_EQ(1, Stats::adopt_calls());
     EXPECT_EQ(0, Stats::add_ref_calls());
     EXPECT_EQ(0, Stats::release_calls());
@@ -458,10 +446,10 @@ static bool do_test() {
     // reference to a RefPtr<Derived>; instead we are creating a temp
     // RefPtr<Base> (which is where the addref happens) and then passing a
     // refernce to *that* to the function.
-    bool test_res = handoff_lvalue_fn<fbl::RefPtr<Base>>(derived_ptr);
-    EXPECT_TRUE(test_res);
+    auto fn = handoff_lvalue_fn<fbl::RefPtr<Base>>;
+    ASSERT_NO_FAILURES(fn(derived_ptr));
 
-    EXPECT_NONNULL(derived_ptr);
+    EXPECT_NOT_NULL(derived_ptr);
     EXPECT_EQ(1, Stats::adopt_calls());
     EXPECT_EQ(1, Stats::add_ref_calls());
     EXPECT_EQ(1, Stats::release_calls());
@@ -470,10 +458,10 @@ static bool do_test() {
 
   // Pass the pointer to a function with a copy and implicit cast
   {
-    bool test_res = handoff_copy_fn<fbl::RefPtr<Base>>(derived_ptr);
-    EXPECT_TRUE(test_res);
+    auto fn = handoff_copy_fn<fbl::RefPtr<Base>>;
+    ASSERT_NO_FAILURES(fn(derived_ptr));
 
-    EXPECT_NONNULL(derived_ptr);
+    EXPECT_NOT_NULL(derived_ptr);
     EXPECT_EQ(1, Stats::adopt_calls());
     EXPECT_EQ(2, Stats::add_ref_calls());
     EXPECT_EQ(2, Stats::release_calls());
@@ -482,8 +470,8 @@ static bool do_test() {
 
   // Pass the pointer to a function as an rvalue reference and implicit cast
   {
-    bool test_res = handoff_rvalue_fn<fbl::RefPtr<Base>>(std::move(derived_ptr));
-    EXPECT_TRUE(test_res);
+    auto fn = handoff_rvalue_fn<fbl::RefPtr<Base>>;
+    ASSERT_NO_FAILURES(fn(std::move(derived_ptr)));
 
     EXPECT_NULL(derived_ptr);
     EXPECT_EQ(1, Stats::adopt_calls());
@@ -491,30 +479,25 @@ static bool do_test() {
     EXPECT_EQ(3, Stats::release_calls());
     EXPECT_EQ(1, Stats::destroy_count());
   }
-
-  END_TEST;
 }
 
-static bool ref_ptr_upcast_test() {
-  BEGIN_TEST;
-  bool test_res;
-
+TEST(RefPtrTest, Upcast) {
   // This should work.  C derives from A, A has a virtual destructor, and
   // everything is using the default deleter.
-  test_res = do_test<A, C>();
-  EXPECT_TRUE(test_res);
+  auto do_test = DoUpcastTest<A, C>;
+  ASSERT_NO_FAILURES(do_test());
 
 #if TEST_WILL_NOT_COMPILE || 0
   // This should not work.  C derives from B, but B has no virtual destructor.
-  test_res = do_test<B, C>();
-  EXPECT_FALSE(test_res);
+  auto do_test = DoUpcastTest<B, C>;
+  ASSERT_NO_FAILURES(do_test());
 #endif
 
 #if TEST_WILL_NOT_COMPILE || 0
   // This should not work.  D has a virtual destructor, but it is not a base
   // class of C.
-  test_res = do_test<D, C>();
-  EXPECT_FALSE(test_res);
+  auto do_test = DoUpcastTest<D, C>;
+  ASSERT_NO_FAILURES(do_test());
 #endif
 
   // Test overload resolution.  Make a C and the try to pass it to
@@ -532,7 +515,7 @@ static bool ref_ptr_upcast_test() {
     OverloadTestHelper helper;
     helper.PassByCopy(ptr);
 
-    ASSERT_NONNULL(ptr);
+    ASSERT_NOT_NULL(ptr);
     EXPECT_EQ(OverloadTestHelper::Result::ClassA, helper.result());
   }
 
@@ -544,25 +527,18 @@ static bool ref_ptr_upcast_test() {
     EXPECT_NULL(ptr);
     EXPECT_EQ(OverloadTestHelper::Result::ClassA, helper.result());
   }
-
-  END_TEST;
 }
 
 }  // namespace upcasting
 
-static bool ref_ptr_adopt_null_test() {
-  BEGIN_TEST;
-
+TEST(RefPtrTest, AdoptNull) {
   class C : public fbl::RefCounted<C> {};
 
   fbl::RefPtr<C> ptr = fbl::AdoptRef(static_cast<C*>(nullptr));
   EXPECT_NULL(ptr);
-  END_TEST;
 }
 
-static bool ref_ptr_to_const_test() {
-  BEGIN_TEST;
-
+TEST(RefPtrTest, PtrToConst) {
   class C : public fbl::RefCounted<C> {
    public:
     explicit C(int x) : x_(x) {}
@@ -580,15 +556,15 @@ static bool ref_ptr_to_const_test() {
   // Copy a ref-ptr to a ref-ptr-to-const.
   fbl::RefPtr<const C> const_refptr = refptr;
   // refptr should have been copied, not moved.
-  ASSERT_NONNULL(refptr.get());
+  ASSERT_NOT_NULL(refptr.get());
 
   // Call a const member function on a ref-ptr-to-const.
-  EXPECT_NONNULL(const_refptr.get());
+  EXPECT_NOT_NULL(const_refptr.get());
   EXPECT_EQ(const_refptr->get_x(), 23);
 
   // Move a ref-ptr to a ref-ptr-to-const.
   fbl::RefPtr<const C> moved_const_refptr = std::move(refptr);
-  ASSERT_NONNULL(moved_const_refptr.get());
+  ASSERT_NOT_NULL(moved_const_refptr.get());
   // Now refptr should have been nulled out.
   ASSERT_NULL(refptr.get());
 
@@ -596,14 +572,11 @@ static bool ref_ptr_to_const_test() {
   const_refptr.reset();
   ASSERT_NULL(const_refptr);
   const_refptr = std::move(moved_const_refptr);
-  ASSERT_NONNULL(const_refptr);
+  ASSERT_NOT_NULL(const_refptr);
   ASSERT_NULL(moved_const_refptr);
-
-  END_TEST;
 }
 
-static bool ref_ptr_move_assign() {
-  BEGIN_TEST;
+TEST(RefPtrTest, MoveAssign) {
   using RefCallPtr = fbl::RefPtr<RefCallCounter>;
 
   RefCallCounter counter1, counter2;
@@ -611,8 +584,8 @@ static bool ref_ptr_move_assign() {
   RefCallPtr ptr2 = fbl::AdoptRef<RefCallCounter>(&counter2);
 
   EXPECT_NE(ptr1.get(), ptr2.get());
-  EXPECT_NONNULL(ptr1);
-  EXPECT_NONNULL(ptr2);
+  EXPECT_NOT_NULL(ptr1);
+  EXPECT_NOT_NULL(ptr2);
 
   ptr1 = std::move(ptr2);
   EXPECT_EQ(ptr1.get(), &counter2);
@@ -632,17 +605,6 @@ static bool ref_ptr_move_assign() {
 #endif
   EXPECT_EQ(ptr1.get(), &counter2);
   EXPECT_EQ(0, counter2.release_calls());
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(ref_ptr_tests)
-RUN_NAMED_TEST("Ref Pointer", ref_ptr_test)
-RUN_NAMED_TEST("Ref Pointer Comparison", ref_ptr_compare_test)
-RUN_NAMED_TEST("Ref Pointer Upcast", upcasting::ref_ptr_upcast_test)
-RUN_NAMED_TEST("Ref Pointer Adopt null", ref_ptr_adopt_null_test)
-RUN_NAMED_TEST("Ref Pointer To Const", ref_ptr_to_const_test)
-RUN_NAMED_TEST("Ref Pointer Move Assignment", ref_ptr_move_assign)
-END_TEST_CASE(ref_ptr_tests)
