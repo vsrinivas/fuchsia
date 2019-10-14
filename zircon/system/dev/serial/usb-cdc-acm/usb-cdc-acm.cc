@@ -76,7 +76,6 @@ zx_status_t UsbCdcAcmDevice::DdkRead(void* data, size_t len, zx_off_t /*off*/, s
 
     // Skip invalid or empty responses.
     if (req->request()->response.status == ZX_OK && req->request()->response.actual > 0) {
-
       // |offset| will always be zero if a response is being read for the first time. It can only be
       // non-zero if |req| was re-queued below, which should guarantee that |offset| is within the
       // response length.
@@ -326,7 +325,7 @@ zx_status_t UsbCdcAcmDevice::Bind() {
 
   for (auto interface : *usb_interface_list) {
     if (interface.descriptor()->bNumEndpoints > 1) {
-      for (auto endpoint : interface) {
+      for (auto& endpoint : interface.GetEndpointList()) {
         if (usb_ep_type(&endpoint.descriptor) == USB_ENDPOINT_BULK) {
           if (usb_ep_direction(&endpoint.descriptor) == USB_ENDPOINT_IN) {
             bulk_in_address = endpoint.descriptor.bEndpointAddress;

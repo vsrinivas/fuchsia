@@ -5,12 +5,15 @@
 #include "ftdi.h"
 
 #include <fcntl.h>
+#include <fuchsia/hardware/serial/c/fidl.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+#include <zircon/hw/usb.h>
+#include <zircon/listnode.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -21,11 +24,8 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <fuchsia/hardware/serial/c/fidl.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
-#include <zircon/hw/usb.h>
-#include <zircon/listnode.h>
 
 #include "ftdi-i2c.h"
 
@@ -389,22 +389,23 @@ zx_status_t FtdiDevice::Bind() {
     return status;
   }
 
-  auto usb_interface = usb_interface_list->begin();
-
   uint8_t bulk_in_addr = 0;
   uint8_t bulk_out_addr = 0;
 
-  for (auto endp : *usb_interface) {
-    if (usb_ep_direction(&endp.descriptor) == USB_ENDPOINT_OUT) {
-      if (usb_ep_type(&endp.descriptor) == USB_ENDPOINT_BULK) {
-        bulk_out_addr = endp.descriptor.bEndpointAddress;
-      }
-    } else {
-      if (usb_ep_type(&endp.descriptor) == USB_ENDPOINT_BULK) {
-        bulk_in_addr = endp.descriptor.bEndpointAddress;
+  for (auto& interface : *usb_interface_list) {
+    for (auto ep_itr : interface.GetEndpointList()) {
+      if (usb_ep_direction(&ep_itr.descriptor) == USB_ENDPOINT_OUT) {
+        if (usb_ep_type(&ep_itr.descriptor) == USB_ENDPOINT_BULK) {
+          bulk_out_addr = ep_itr.descriptor.bEndpointAddress;
+        }
+      } else {
+        if (usb_ep_type(&ep_itr.descriptor) == USB_ENDPOINT_BULK) {
+          bulk_in_addr = ep_itr.descriptor.bEndpointAddress;
+        }
       }
     }
   }
+
   if (!bulk_in_addr || !bulk_out_addr) {
     zxlogf(ERROR, "FTDI: could not find all endpoints\n");
     return ZX_ERR_NOT_SUPPORTED;

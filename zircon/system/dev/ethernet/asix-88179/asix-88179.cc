@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "asix-88179.h"
+
 #include <inttypes.h>
 #include <lib/cksum.h>
 #include <stdio.h>
@@ -20,7 +22,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 
-#include "asix-88179.h"
 #include "asix-88179-regs.h"
 
 static constexpr uint8_t kMediaMode[6][2] = {
@@ -510,8 +511,8 @@ void Asix88179Ethernet::Shutdown() {
 }
 
 void Asix88179Ethernet::DdkRelease() {
-    cancel_thread_.detach();
-    delete this;
+  cancel_thread_.detach();
+  delete this;
 }
 
 zx_status_t Asix88179Ethernet::EthernetImplQuery(uint32_t options, ethernet_info_t* info) {
@@ -858,8 +859,8 @@ zx_status_t Asix88179Ethernet::Initialize() {
   uint8_t bulk_out_address = 0;
   uint8_t interrupt_address = 0;
 
-  for (auto endpoint : *interface) {
-    usb_endpoint_descriptor_t* endp = &endpoint.descriptor;
+  for (auto endpoint : interface->GetEndpointList()) {
+    const usb_endpoint_descriptor_t* endp = &endpoint.descriptor;
     if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
       if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
         bulk_out_address = endp->bEndpointAddress;

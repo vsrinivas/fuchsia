@@ -2,10 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/hw/usb/hid.h>
+
 #include <usb/usb.h>
 #include <zxtest/zxtest.h>
 
 namespace usb {
+
+typedef struct {
+  uint8_t bLength;
+  uint8_t bDescriptorType;
+  uint16_t bcdHID;
+  uint8_t bCountryCode;
+  uint8_t bNumDescriptors;
+} __attribute__((packed)) usb_hid_descriptor_for_test_t;
 
 // The interface configuration corresponding to a HighSpeed device having one alt-interface.
 typedef struct {
@@ -13,6 +23,7 @@ typedef struct {
     usb_interface_descriptor_t interface;
     usb_endpoint_descriptor_t  ep1;
     usb_endpoint_descriptor_t  ep2;
+    usb_hid_descriptor_for_test_t hid_descriptor;
     usb_interface_descriptor_t alt_interface;
   // clang-format on
 } alt_hs_config;
@@ -59,6 +70,14 @@ constexpr alt_hs_config kTestHSInterface = {
             .bmAttributes = 2,
             .wMaxPacketSize = 1024,
             .bInterval = 0,
+        },
+    .hid_descriptor =
+        {
+            .bLength = sizeof(usb_hid_descriptor_for_test_t),
+            .bDescriptorType = USB_DT_HID,
+            .bcdHID = 0,
+            .bCountryCode = 0,
+            .bNumDescriptors = 0,
         },
     .alt_interface =
         {
@@ -165,6 +184,12 @@ static void EXPECT_SS_EP_COMP_EQ(usb_ss_ep_comp_descriptor_t a, usb_ss_ep_comp_d
   EXPECT_EQ(a.wBytesPerInterval, b.wBytesPerInterval);
 }
 
+static void EXPECT_DESCRIPTOR_EQ(const usb_descriptor_header_t* a,
+                                 const usb_descriptor_header_t* b) {
+  EXPECT_EQ(a->bDescriptorType, b->bDescriptorType);
+  EXPECT_EQ(a->bLength, b->bLength);
+}
+
 // HighSpeedWrapperTest tests an InterfaceList's ability to process interface descriptors
 // corresponding to a HighSpeed device structure (i.e. no SS-COMPANION descriptors).
 class HighSpeedWrapperTest : public zxtest::Test {
@@ -194,6 +219,8 @@ TEST_F(HighSpeedWrapperTest, TestInterfaceRangeIterationSkippingAlt) {
   ASSERT_OK(InterfaceList::Create(usb_, true, &ilist));
 
   int count = 0;
+  const auto interface = ilist->begin();
+  EXPECT_INTERFACE_EQ(kTestHSInterface.interface, *interface->descriptor());
   for (auto& interface : *ilist) {
     EXPECT_TRUE(count++ < 1);
     EXPECT_INTERFACE_EQ(kTestHSInterface.interface, *interface.descriptor());
@@ -211,6 +238,7 @@ TEST_F(HighSpeedWrapperTest, TestInterfaceRangeIterationNotSkippingAlt) {
   ASSERT_OK(InterfaceList::Create(usb_, false, &ilist));
 
   unsigned int count = 0;
+
   for (auto& interface : *ilist) {
     EXPECT_TRUE(count < countof(wants));
     EXPECT_INTERFACE_EQ(wants[count++], *interface.descriptor());
@@ -229,7 +257,7 @@ TEST_F(HighSpeedWrapperTest, TestEndpointRangeIteration) {
 
   unsigned int count = 0;
   for (auto& interface : *ilist) {
-    for (auto& ep : interface) {
+    for (auto ep : interface.GetEndpointList()) {
       EXPECT_TRUE(count < countof(wants));
       EXPECT_ENDPOINT_EQ(wants[count++], ep.descriptor);
       EXPECT_FALSE(ep.has_companion);
@@ -272,10 +300,9 @@ TEST_F(HighSpeedWrapperTest, TestEndpointAccessOps) {
   std::optional<InterfaceList> ilist;
   ASSERT_OK(InterfaceList::Create(usb_, true, &ilist));
 
-  auto itr = ilist->begin();
   unsigned int count = 0;
-  do {
-    auto ep_itr = itr->begin();
+  for (auto& interface : *ilist) {
+    auto ep_itr = interface.GetEndpointList().begin();
     do {
       EXPECT_TRUE(count < countof(wants));
       auto& want = wants[count++];
@@ -291,8 +318,8 @@ TEST_F(HighSpeedWrapperTest, TestEndpointAccessOps) {
       // .endpoint()
       ptr = &ep_itr.endpoint()->descriptor;
       EXPECT_ENDPOINT_EQ(want, *ptr);
-    } while (++ep_itr != itr->end());
-  } while (++itr != ilist->end());
+    } while (++ep_itr != interface.GetEndpointList().end());
+  }
 }
 
 TEST_F(HighSpeedWrapperTest, TestInterfaceIterationSkippingAlt) {
@@ -336,16 +363,15 @@ TEST_F(HighSpeedWrapperTest, TestEndpointIteration) {
   std::optional<InterfaceList> ilist;
   ASSERT_OK(InterfaceList::Create(usb_, true, &ilist));
 
-  auto itr = ilist->begin();
   unsigned int count = 0;
-  do {
-    auto ep_itr = itr->begin();
+  for (auto& interface : *ilist) {
+    auto ep_itr = interface.GetEndpointList().begin();
     do {
       EXPECT_TRUE(count < countof(wants));
       EXPECT_ENDPOINT_EQ(wants[count++], ep_itr->descriptor);
       EXPECT_FALSE(ep_itr->has_companion);
-    } while (++ep_itr != itr->end());
-  } while (++itr != ilist->end());
+    } while (++ep_itr != interface.GetEndpointList().end());
+  }
 }
 
 TEST_F(HighSpeedWrapperTest, TestInterfaceConstIterationSkippingAlt) {
@@ -389,19 +415,39 @@ TEST_F(HighSpeedWrapperTest, TestEndpointConstIteration) {
   std::optional<InterfaceList> ilist;
   ASSERT_OK(InterfaceList::Create(usb_, true, &ilist));
 
-  auto itr = ilist->cbegin();
   unsigned int count = 0;
-  do {
-    auto ep_itr = itr->cbegin();
+  for (auto& interface : *ilist) {
+    auto ep_itr = interface.GetEndpointList().cbegin();
     do {
       EXPECT_TRUE(count < countof(wants));
       EXPECT_ENDPOINT_EQ(wants[count++], ep_itr->descriptor);
       EXPECT_FALSE(ep_itr->has_companion);
-    } while (++ep_itr != itr->cend());
-  } while (++itr != ilist->cend());
+    } while (++ep_itr != interface.GetEndpointList().cend());
+  }
 }
 
-// SuperpeedWrapperTest tests an InterfaceList's ability to process interface descriptors
+TEST_F(HighSpeedWrapperTest, TestDescriptorRangeIterationSkippingAlt) {
+  // This tests that for(x : y) syntax produces the correct descriptors.
+  std::optional<InterfaceList> ilist;
+  ASSERT_OK(InterfaceList::Create(usb_, true, &ilist));
+
+  for (auto& interface : *ilist) {
+    auto descriptor_list_itr = interface.GetDescriptorList().cbegin();
+    EXPECT_DESCRIPTOR_EQ(reinterpret_cast<const usb_descriptor_header_t*>(&kTestHSInterface.ep1),
+                         descriptor_list_itr.header());
+    ++descriptor_list_itr;
+    EXPECT_DESCRIPTOR_EQ(reinterpret_cast<const usb_descriptor_header_t*>(&kTestHSInterface.ep2),
+                         descriptor_list_itr.header());
+    ++descriptor_list_itr;
+    EXPECT_DESCRIPTOR_EQ(
+        reinterpret_cast<const usb_descriptor_header_t*>(&kTestHSInterface.hid_descriptor),
+        descriptor_list_itr.header());
+    ++descriptor_list_itr;
+    EXPECT_EQ(descriptor_list_itr, interface.GetDescriptorList().cend());
+  }
+}
+
+// SuperSpeedWrapperTest tests an InterfaceList's ability to process interface descriptors
 // corresponding to a SuperSpeed device structure.
 class SuperSpeedWrapperTest : public zxtest::Test {
  protected:
@@ -436,12 +482,13 @@ TEST_F(SuperSpeedWrapperTest, TestEndpointRangeIteration) {
 
   unsigned int count = 0;
   for (auto& interface : *ilist) {
-    for (auto& ep : interface) {
+    auto ep = interface.GetEndpointList().cbegin();
+    do {
       EXPECT_TRUE(count < countof(wants));
-      EXPECT_ENDPOINT_EQ(wants[count].descriptor, ep.descriptor);
-      EXPECT_SS_EP_COMP_EQ(wants[count++].ss_companion, ep.ss_companion);
-      EXPECT_TRUE(ep.has_companion);
-    }
+      EXPECT_ENDPOINT_EQ(wants[count].descriptor, ep->descriptor);
+      EXPECT_SS_EP_COMP_EQ(wants[count++].ss_companion, ep->ss_companion);
+      EXPECT_TRUE(ep->has_companion);
+    } while (++ep != interface.GetEndpointList().cend());
   }
 }
 
@@ -455,17 +502,16 @@ TEST_F(SuperSpeedWrapperTest, TestEndpointIteration) {
   std::optional<InterfaceList> ilist;
   ASSERT_OK(InterfaceList::Create(usb_, true, &ilist));
 
-  auto itr = ilist->begin();
   unsigned int count = 0;
-  do {
-    auto ep_itr = itr->begin();
+  for (auto& interface : *ilist) {
+    auto ep_itr = interface.GetEndpointList().cbegin();
     do {
       EXPECT_TRUE(count < countof(wants));
       EXPECT_ENDPOINT_EQ(wants[count].descriptor, ep_itr->descriptor);
       EXPECT_SS_EP_COMP_EQ(wants[count++].ss_companion, ep_itr->ss_companion);
       EXPECT_TRUE(ep_itr->has_companion);
-    } while (++ep_itr != itr->end());
-  } while (++itr != ilist->end());
+    } while (++ep_itr != interface.GetEndpointList().cend());
+  }
 }
 
 TEST_F(SuperSpeedWrapperTest, TestEndpointConstIteration) {
@@ -478,17 +524,16 @@ TEST_F(SuperSpeedWrapperTest, TestEndpointConstIteration) {
   std::optional<InterfaceList> ilist;
   ASSERT_OK(InterfaceList::Create(usb_, true, &ilist));
 
-  auto itr = ilist->cbegin();
   unsigned int count = 0;
-  do {
-    auto ep_itr = itr->cbegin();
+  for (auto& interface : *ilist) {
+    auto ep_itr = interface.GetEndpointList().cbegin();
     do {
       EXPECT_TRUE(count < countof(wants));
       EXPECT_ENDPOINT_EQ(wants[count].descriptor, ep_itr->descriptor);
       EXPECT_SS_EP_COMP_EQ(wants[count++].ss_companion, ep_itr->ss_companion);
       EXPECT_TRUE(ep_itr->has_companion);
-    } while (++ep_itr != itr->cend());
-  } while (++itr != ilist->cend());
+    } while (++ep_itr != interface.GetEndpointList().end());
+  }
 }
 
 }  // namespace usb

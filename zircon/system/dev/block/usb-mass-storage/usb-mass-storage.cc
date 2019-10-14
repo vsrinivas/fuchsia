@@ -4,7 +4,11 @@
 
 #include "usb-mass-storage.h"
 
-#include "block.h"
+#include <endian.h>
+#include <stdio.h>
+#include <string.h>
+#include <zircon/assert.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
@@ -12,11 +16,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
-#include <zircon/assert.h>
-
-#include <endian.h>
-#include <stdio.h>
-#include <string.h>
+#include "block.h"
 
 // comment the next line if you don't want debug messages
 #define DEBUG 0
@@ -131,6 +131,12 @@ zx_status_t UsbMassStorageDevice::Init() {
   }
   auto interface = interfaces->begin();
   const usb_interface_descriptor_t* interface_descriptor = interface->descriptor();
+  uint8_t interface_number = interface_descriptor->bInterfaceNumber;
+  uint8_t bulk_in_addr = 0;
+  uint8_t bulk_out_addr = 0;
+  size_t bulk_in_max_packet = 0;
+  size_t bulk_out_max_packet = 0;
+
   if (interface == interfaces->end()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -140,13 +146,8 @@ zx_status_t UsbMassStorageDevice::Init() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  uint8_t interface_number = interface_descriptor->bInterfaceNumber;
-  uint8_t bulk_in_addr = 0;
-  uint8_t bulk_out_addr = 0;
-  size_t bulk_in_max_packet = 0;
-  size_t bulk_out_max_packet = 0;
-  for (auto endpoint : *interface) {
-    usb_endpoint_descriptor_t* endp = &endpoint.descriptor;
+  for (auto ep_itr : interfaces->begin()->GetEndpointList()) {
+    const usb_endpoint_descriptor_t* endp = &ep_itr.descriptor;
     if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
       if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
         bulk_out_addr = endp->bEndpointAddress;
