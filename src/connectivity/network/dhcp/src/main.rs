@@ -19,7 +19,7 @@ use {
     futures::{Future, StreamExt, TryFutureExt, TryStreamExt},
     std::{
         cell::RefCell,
-        net::{IpAddr, SocketAddr},
+        net::{IpAddr, Ipv4Addr, SocketAddr},
     },
     void::Void,
 };
@@ -56,7 +56,6 @@ async fn main() -> Result<(), Error> {
 
     let args: Args = argh::from_env();
     let config = configuration::load_server_config_from_file(args.config)?;
-    let server_ip = config.server_ip;
     let server = Server::from_config(
         config,
         || zx::Time::get(zx::ClockId::UTC).into_nanos() / 1_000_000_000,
@@ -90,8 +89,9 @@ async fn main() -> Result<(), Error> {
         fx_log_info!("starting server in test only mode");
         let () = admin_fut.await?;
     } else {
-        let socket_addr = SocketAddr::new(IpAddr::V4(server_ip), SERVER_PORT);
-        let udp_socket = UdpSocket::bind(&socket_addr).context("unable to bind socket")?;
+        let udp_socket =
+            UdpSocket::bind(&SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), SERVER_PORT))
+                .context("unable to bind socket")?;
         let () = udp_socket.set_broadcast(true).context("unable to set broadcast")?;
         let msg_handling_loop = define_msg_handling_loop_future(udp_socket, &server);
         let lease_expiration_handler = define_lease_expiration_handler_future(&server);

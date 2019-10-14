@@ -256,16 +256,21 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 	}
 	switch clientState {
 	case initSelecting:
-		bindAddress.Addr = tcpipHeader.IPv4Any
+		bindAddress.Addr = tcpipHeader.IPv4Broadcast
 
-		// TODO(NET-2555): remove calls to {Add,Remove}Address when they're
-		// no longer required to send and receive broadcast.
-		if err := c.stack.AddAddressWithOptions(c.nicid, ipv4.ProtocolNumber, tcpipHeader.IPv4Any, stack.NeverPrimaryEndpoint); err != nil {
-			panic(fmt.Sprintf("AddAddressWithOptions(%d, %d, %s): %s", c.nicid, ipv4.ProtocolNumber, tcpipHeader.IPv4Any, err))
+		protocolAddress := tcpip.ProtocolAddress{
+			Protocol: ipv4.ProtocolNumber,
+			AddressWithPrefix: tcpip.AddressWithPrefix{
+				Address:   tcpipHeader.IPv4Any,
+				PrefixLen: 0,
+			},
+		}
+		if err := c.stack.AddProtocolAddress(c.nicid, protocolAddress); err != nil {
+			panic(fmt.Sprintf("AddProtocolAddress(%d, %s): %s", c.nicid, protocolAddress.AddressWithPrefix, err))
 		}
 		defer func() {
-			if err := c.stack.RemoveAddress(c.nicid, tcpipHeader.IPv4Any); err != nil {
-				panic(fmt.Sprintf("RemoveAddress(%d, %s): %s", c.nicid, tcpipHeader.IPv4Any, err))
+			if err := c.stack.RemoveAddress(c.nicid, protocolAddress.AddressWithPrefix.Address); err != nil {
+				panic(fmt.Sprintf("RemoveAddress(%d, %s): %s", c.nicid, protocolAddress.AddressWithPrefix.Address, err))
 			}
 		}()
 
@@ -401,7 +406,7 @@ retransmitRequest:
 			reqOpts,
 			writeOpts,
 			xid[:],
-			clientState != renewing,      /* broadcast */
+			clientState == initSelecting, /* broadcast */
 			clientState != initSelecting, /* ciaddr */
 		); err != nil {
 			return Config{}, fmt.Errorf("%s: %s", dhcpREQUEST, err)

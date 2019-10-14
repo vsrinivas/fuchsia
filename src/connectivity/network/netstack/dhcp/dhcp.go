@@ -133,7 +133,8 @@ func (h header) op() op           { return op(h[0]) }
 func (h header) setOp(o op)       { h[0] = byte(o) }
 func (h header) xidbytes() []byte { return h[4:8] }
 func (h header) xid() xid         { return xid(h[4])<<24 | xid(h[5])<<16 | xid(h[6])<<8 | xid(h[7]) }
-func (h header) setBroadcast()    { h[10], h[11] = 0x80, 0x00 } // flags top bit
+func (h header) setBroadcast()    { h[10] |= 1 << 7 }
+func (h header) broadcast() bool  { return h[10]&1<<7 != 0 }
 func (h header) ciaddr() []byte   { return h[12:16] }
 func (h header) yiaddr() []byte   { return h[16:20] }
 func (h header) siaddr() []byte   { return h[20:24] }

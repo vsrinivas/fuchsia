@@ -31,20 +31,9 @@ const (
 	defaultResendTime     = 400 * time.Millisecond
 )
 
-func createTestStack(t *testing.T) *stack.Stack {
-	s, linkEP := createTestStackWithChannel(t)
+const defaultMTU = 65536
 
-	go func() {
-		for pkt := range linkEP.C {
-			linkEP.Inject(pkt.Proto, buffer.NewVectorisedView(len(pkt.Header)+len(pkt.Payload), []buffer.View{pkt.Header, pkt.Payload}))
-		}
-	}()
-
-	return s
-}
-
-func createTestStackWithChannel(t *testing.T) (*stack.Stack, *channel.Endpoint) {
-	const defaultMTU = 65536
+func createTestStackWithChannel(t *testing.T, addresses []tcpip.Address) (*stack.Stack, *channel.Endpoint) {
 	ch := channel.New(256, defaultMTU, "")
 	var linkEP stack.LinkEndpoint = ch
 	if testing.Verbose() {
@@ -63,8 +52,10 @@ func createTestStackWithChannel(t *testing.T) (*stack.Stack, *channel.Endpoint) 
 	if err := s.CreateNIC(nicid, linkEP); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.AddAddress(nicid, ipv4.ProtocolNumber, serverAddr); err != nil {
-		t.Fatal(err)
+	for _, address := range addresses {
+		if err := s.AddAddress(nicid, ipv4.ProtocolNumber, address); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	s.SetRouteTable([]tcpip.Route{{
@@ -79,7 +70,7 @@ func createTestStackWithChannel(t *testing.T) (*stack.Stack, *channel.Endpoint) 
 // addresses at the same time.
 func TestSimultaneousDHCPClients(t *testing.T) {
 	const clientCount = 2
-	s, serverLinkEP := createTestStackWithChannel(t)
+	serverStack, serverLinkEP := createTestStackWithChannel(t, []tcpip.Address{serverAddr})
 	defer close(serverLinkEP.C)
 
 	// clientLinkEPs are the endpoints on which to inject packets to the client.
@@ -98,15 +89,10 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	for i := 0; i < clientCount; i++ {
-		const defaultMTU = 65536
-		clientLinkEP := channel.New(256, defaultMTU, "")
+		clientStack, clientLinkEP := createTestStackWithChannel(t, nil)
 		clientLinkEPs = append(clientLinkEPs, clientLinkEP)
-		clientNicid := tcpip.NICID(100 + i)
-		if err := s.CreateNIC(clientNicid, clientLinkEP); err != nil {
-			t.Fatalf("could not create NIC: %s", err)
-		}
 		const clientLinkAddr = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-		c := NewClient(s, clientNicid, clientLinkAddr, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
+		c := NewClient(clientStack, nicid, clientLinkAddr, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
 		go func() {
 			// Packets from the clients get sent to the server.
 			for pkt := range clientLinkEP.C {
@@ -151,20 +137,20 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 		},
 		LeaseLength: 24 * time.Hour,
 	}
-	if _, err := newEPConnServer(ctx, s, clientAddrs, serverCfg); err != nil {
+	if _, err := newEPConnServer(ctx, serverStack, clientAddrs, serverCfg); err != nil {
 		t.Fatal(err)
 	}
 
 	// Wait for all clients to finish and collect results.
 	for i := 0; i < clientCount; i++ {
 		if err := <-errs; err != nil {
-			t.Fatal(err)
+			t.Error(err)
 		}
 	}
 }
 
 func TestDHCP(t *testing.T) {
-	s := createTestStack(t)
+	s, _ := createTestStackWithChannel(t, []tcpip.Address{serverAddr})
 	clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02", "\xc0\xa8\x03\x03"}
 
 	serverCfg := Config{
@@ -267,19 +253,24 @@ func TestDelayRetransmission(t *testing.T) {
 		{name: "DelayedRequestWithShortAcquisitionFails", discoverDelay: 0, requestDelay: 1 * time.Second, acquisition: 500 * time.Millisecond, retransmission: 100 * time.Millisecond, success: false},
 	}
 	for _, tc := range delayTests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			s, ch := createTestStackWithChannel(t)
+			serverStack, serverLinkEP := createTestStackWithChannel(t, []tcpip.Address{serverAddr})
+			clientStack, clientLinkEP := createTestStackWithChannel(t, nil)
+
+			go func() {
+				for pkt := range serverLinkEP.C {
+					clientLinkEP.Inject(pkt.Proto, buffer.NewVectorisedView(len(pkt.Header)+len(pkt.Payload), []buffer.View{pkt.Header, pkt.Payload}))
+				}
+			}()
+
 			go func(discoverDelay, requestDelay time.Duration) {
 				if err := func() error {
 					discoverRcvd := 0
 					requestRcvd := 0
-					for pkt := range ch.C {
+					for pkt := range clientLinkEP.C {
 						vv := buffer.NewVectorisedView(len(pkt.Header)+len(pkt.Payload), []buffer.View{pkt.Header, pkt.Payload})
-						buf := []byte(vv.ToView())
-						ip := tcpipHeader.IPv4(buf[:len(pkt.Header)])
-						udp := tcpipHeader.UDP(ip.Payload())
-						dhcp := header(udp.Payload())
+
+						dhcp := header(pkt.Payload)
 						opts, err := dhcp.options()
 						if err != nil {
 							return err
@@ -294,15 +285,15 @@ func TestDelayRetransmission(t *testing.T) {
 						case dhcpDISCOVER:
 							if discoverRcvd == 0 {
 								discoverRcvd++
-								time.AfterFunc(discoverDelay, func() { ch.Inject(proto, vv) })
+								time.AfterFunc(discoverDelay, func() { serverLinkEP.Inject(proto, vv) })
 							}
 						case dhcpREQUEST:
 							if requestRcvd == 0 {
 								requestRcvd++
-								time.AfterFunc(requestDelay, func() { ch.Inject(proto, vv) })
+								time.AfterFunc(requestDelay, func() { serverLinkEP.Inject(proto, vv) })
 							}
 						default:
-							ch.Inject(pkt.Proto, vv)
+							serverLinkEP.Inject(pkt.Proto, vv)
 						}
 					}
 					return nil
@@ -324,19 +315,18 @@ func TestDelayRetransmission(t *testing.T) {
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			if _, err := newEPConnServer(ctx, s, clientAddrs, serverCfg); err != nil {
+			if _, err := newEPConnServer(ctx, serverStack, clientAddrs, serverCfg); err != nil {
 				t.Fatal(err)
 			}
 
 			const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-			c0 := NewClient(s, nicid, clientLinkAddr0, tc.acquisition, defaulBackoffTime, tc.retransmission, nil)
+			c0 := NewClient(clientStack, nicid, clientLinkAddr0, tc.acquisition, defaulBackoffTime, tc.retransmission, nil)
 			ctx, cancel = context.WithTimeout(ctx, tc.acquisition)
 			defer cancel()
 			cfg, err := c0.acquire(ctx, initSelecting)
 			if tc.success {
 				if err != nil {
-					t.Error(err)
-					return
+					t.Fatal(err)
 				}
 				if got, want := c0.addr.Address, clientAddrs[0]; got != want {
 					t.Errorf("c.addr=%s, want=%s", got, want)
@@ -350,7 +340,7 @@ func TestDelayRetransmission(t *testing.T) {
 				case context.DeadlineExceeded:
 					// Success case: error is expected type.
 				default:
-					t.Errorf("got err=%s, want=%s", err, context.DeadlineExceeded)
+					t.Errorf("got err=%v, want=%s", err, context.DeadlineExceeded)
 				}
 			}
 		})
@@ -393,26 +383,33 @@ func TestStateTransition(t *testing.T) {
 			t.Fatalf("unknown test type %d", typ)
 		}
 		t.Run(name, func(t *testing.T) {
-			s, linkEP := createTestStackWithChannel(t)
-			clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02"}
+			serverStack, serverLinkEP := createTestStackWithChannel(t, []tcpip.Address{serverAddr})
+			clientStack, clientLinkEP := createTestStackWithChannel(t, nil)
+
+			go func() {
+				for pkt := range serverLinkEP.C {
+					clientLinkEP.Inject(pkt.Proto, buffer.NewVectorisedView(len(pkt.Header)+len(pkt.Payload), []buffer.View{pkt.Header, pkt.Payload}))
+				}
+			}()
 
 			var blockData uint32 = 0
 			go func() {
-				for pkt := range linkEP.C {
+				for pkt := range clientLinkEP.C {
 					if atomic.LoadUint32(&blockData) == 1 {
 						continue
 					}
 					if typ == testRebind {
-						// Only pass broadcast packets back into the stack. This simulates
-						// packet loss during the Client's unicast RENEWING state, forcing
+						// Only pass client broadcast packets back into the stack. This simulates
+						// packet loss during the client's unicast RENEWING state, forcing
 						// it into broadcast REBINDING state.
 						if tcpipHeader.IPv4(pkt.Header).DestinationAddress() != tcpipHeader.IPv4Broadcast {
 							continue
 						}
 					}
-					linkEP.Inject(pkt.Proto, buffer.NewVectorisedView(len(pkt.Header)+len(pkt.Payload), []buffer.View{pkt.Header, pkt.Payload}))
+					serverLinkEP.Inject(pkt.Proto, buffer.NewVectorisedView(len(pkt.Header)+len(pkt.Payload), []buffer.View{pkt.Header, pkt.Payload}))
 				}
 			}()
+			clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02"}
 
 			serverCfg := Config{
 				ServerAddress: serverAddr,
@@ -425,7 +422,7 @@ func TestStateTransition(t *testing.T) {
 			}
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			if _, err := newEPConnServer(ctx, s, clientAddrs, serverCfg); err != nil {
+			if _, err := newEPConnServer(ctx, serverStack, clientAddrs, serverCfg); err != nil {
 				t.Fatal(err)
 			}
 
@@ -444,7 +441,7 @@ func TestStateTransition(t *testing.T) {
 				// will need to send from that address when it tries to renew its lease.
 				if curAddr != oldAddr {
 					if oldAddr != (tcpip.AddressWithPrefix{}) {
-						if err := s.RemoveAddress(nicid, oldAddr.Address); err != nil {
+						if err := clientStack.RemoveAddress(nicid, oldAddr.Address); err != nil {
 							t.Fatalf("RemoveAddress(%s): %s", oldAddr.Address, err)
 						}
 					}
@@ -454,7 +451,7 @@ func TestStateTransition(t *testing.T) {
 							Protocol:          ipv4.ProtocolNumber,
 							AddressWithPrefix: curAddr,
 						}
-						if err := s.AddProtocolAddress(nicid, protocolAddress); err != nil {
+						if err := clientStack.AddProtocolAddress(nicid, protocolAddress); err != nil {
 							t.Fatalf("AddProtocolAddress(%+v): %s", protocolAddress, err)
 						}
 					}
@@ -469,7 +466,7 @@ func TestStateTransition(t *testing.T) {
 			}
 
 			const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-			c := NewClient(s, nicid, clientLinkAddr0, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, acquiredFunc)
+			c := NewClient(clientStack, nicid, clientLinkAddr0, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, acquiredFunc)
 
 			c.Run(ctx)
 
@@ -590,7 +587,7 @@ func (c *chConn) Read() (buffer.View, tcpip.FullAddress, error) {
 func (c *chConn) Write(b []byte, addr *tcpip.FullAddress) error { return c.c.Write(b, addr) }
 
 func TestTwoServers(t *testing.T) {
-	s := createTestStack(t)
+	s, _ := createTestStackWithChannel(t, []tcpip.Address{serverAddr})
 
 	wq := new(waiter.Queue)
 	ep, err := s.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, wq)

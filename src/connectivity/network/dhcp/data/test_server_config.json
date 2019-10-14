@@ -1,18 +1,18 @@
 {
-    "server_ip": "192.168.0.1",
     "default_lease_time": 86400,
-    "subnet_mask": 25,
     "managed_addrs": [
         "192.168.0.2",
         "192.168.0.3",
         "192.168.0.4"
     ],
-    "routers": [
-	"127.0.0.1"
-    ],
+    "max_lease_time_s": 86400,
     "name_servers": [
-	"8.8.8.8",
-	"8.8.4.4"
+        "8.8.8.8",
+        "8.8.4.4"
     ],
-  "max_lease_time_s": 86400
+    "routers": [
+        "127.0.0.1"
+    ],
+    "server_ip": "192.168.0.1",
+    "subnet_mask": 25
 }

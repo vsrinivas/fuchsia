@@ -380,7 +380,16 @@ func (s *Server) handleRequest(hreq header, opts options) {
 	copy(h.yiaddr(), lease.addr)
 	copy(h.chaddr(), hreq.chaddr())
 	h.setOptions(opts)
-	s.conn.Write([]byte(h), &s.broadcast)
+	addr := s.broadcast
+	if !hreq.broadcast() {
+		for _, b := range hreq.ciaddr() {
+			if b != 0 {
+				addr.Addr = tcpip.Address(hreq.ciaddr())
+				break
+			}
+		}
+	}
+	s.conn.Write([]byte(h), &addr)
 }
 
 type leaseState int

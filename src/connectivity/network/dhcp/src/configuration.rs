@@ -44,7 +44,7 @@ pub struct ServerConfig {
 impl ServerConfig {
     pub fn new() -> Self {
         ServerConfig {
-            server_ip: Ipv4Addr::new(0, 0, 0, 0),
+            server_ip: Ipv4Addr::UNSPECIFIED,
             default_lease_time: 60 * 60 * 24, // One day in seconds
             subnet_mask: SubnetMask { ones: 24 },
             managed_addrs: vec![],
