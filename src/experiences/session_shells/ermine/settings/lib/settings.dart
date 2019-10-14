@@ -5,3 +5,4 @@
 export 'src/battery.dart';
 export 'src/brightness.dart';
 export 'src/memory.dart';
+export 'src/weather.dart';

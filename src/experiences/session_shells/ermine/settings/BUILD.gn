@@ -13,6 +13,7 @@ dart_library("settings") {
     "src/battery.dart",
     "src/brightness.dart",
     "src/memory.dart",
+    "src/weather.dart",
   ]
 
   deps = [

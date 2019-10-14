@@ -96,7 +96,7 @@ class BatteryModel {
   }) : _binding = binding ?? BatteryInfoWatcherBinding() {
     monitor
       ..watch(_binding.wrap(_BatteryInfoWatcherImpl(this)))
-      ..getBatteryInfo().then(updateBattery);
+      ..getBatteryInfo().then(_updateBattery);
   }
 
   void dispose() {
@@ -109,7 +109,7 @@ class BatteryModel {
     onChange?.call();
   }
 
-  void updateBattery(BatteryInfo info) {
+  void _updateBattery(BatteryInfo info) {
     final chargeStatus = info.chargeStatus;
     charging = chargeStatus == ChargeStatus.charging;
     battery = info.levelPercent;
@@ -122,6 +122,6 @@ class _BatteryInfoWatcherImpl extends BatteryInfoWatcher {
 
   @override
   Future<void> onChangeBatteryInfo(BatteryInfo info) async {
-    batteryModel.updateBattery(info);
+    batteryModel._updateBattery(info);
   }
 }

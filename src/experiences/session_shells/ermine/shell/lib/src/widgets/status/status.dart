@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:ui';
+
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:flutter/material.dart';
 import 'package:internationalization/strings.dart';
@@ -42,6 +44,7 @@ class Status extends StatelessWidget {
           _StatusEntry(model.brightness),
           _StatusEntry(model.battery),
           _StatusEntry(model.memory),
+          _StatusEntry(model.weather),
         ],
       ),
     );
@@ -86,58 +89,25 @@ class _StatusEntry extends StatelessWidget {
     List<Widget> result = <Widget>[];
     List<Widget> widgets = <Widget>[];
 
-    Widget titleRow(String title, List<Widget> children) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        textBaseline: TextBaseline.alphabetic,
-        children: <Widget>[
-          Container(
-            width: kTitleWidth,
-            child: Text(title.toUpperCase()),
-          ),
-          Expanded(
-            child: Wrap(
-              children: children,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              alignment: WrapAlignment.end,
-              spacing: kPadding,
-              runSpacing: kPadding,
-            ),
-          ),
-        ],
-      );
-    }
-
-    Widget valueRow(List<Widget> children) {
-      return Wrap(
-        children: children,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        alignment: WrapAlignment.end,
-        spacing: kPadding,
-        runSpacing: kPadding,
-      );
-    }
-
     for (final group in spec.groups) {
       for (final value in group.values) {
         final widget = _buildFromValue(value, update);
-        if (value is GridValue) {
+        if (value.$tag == ValueTag.grid) {
           if (result.isEmpty) {
-            result.add(titleRow(group.title, widgets.toList()));
+            result.add(_buildTitleRow(group.title, widgets.toList()));
           } else {
-            result.add(valueRow(widgets.toList()));
+            result.add(_buildValueRow(widgets.toList()));
           }
           widgets.clear();
-          result.add(widget);
-        } else {
-          widgets.add(widget);
         }
+        widgets.add(widget);
       }
+
       if (widgets.isNotEmpty) {
         if (result.isEmpty) {
-          result.add(titleRow(group.title, widgets.toList()));
+          result.add(_buildTitleRow(group.title, widgets.toList()));
         } else {
-          result.add(valueRow(widgets.toList()));
+          result.add(_buildValueRow(widgets.toList()));
         }
       }
     }
@@ -164,14 +134,30 @@ class _StatusEntry extends StatelessWidget {
     }
 
     if (value.$tag == ValueTag.grid) {
-      return Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: GridView.count(
-          shrinkWrap: true,
-          childAspectRatio: 4,
-          physics: NeverScrollableScrollPhysics(),
-          crossAxisCount: value.grid.columns,
-          children: value.grid.values.map((v) => Text(v.text)).toList(),
+      int columns = value.grid.columns;
+      int rows = value.grid.values.length ~/ columns;
+      return Container(
+        padding: EdgeInsets.only(left: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: List<Widget>.generate(rows, (row) {
+            return Padding(
+              padding: EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List<Widget>.generate(value.grid.columns, (column) {
+                  final index = row * value.grid.columns + column;
+                  return Expanded(
+                    flex: column == 0 ? 2 : 1,
+                    child: Text(
+                      value.grid.values[index].text,
+                      textAlign: column == 0 ? TextAlign.start : TextAlign.end,
+                    ),
+                  );
+                }),
+              ),
+            );
+          }),
         ),
       );
     }
@@ -192,6 +178,49 @@ class _StatusEntry extends StatelessWidget {
     }
     return Offstage();
   }
+}
+
+Widget _buildValueRow(List<Widget> children) {
+  return Wrap(
+    children: children,
+    alignment: WrapAlignment.end,
+    spacing: kPadding,
+    runSpacing: kPadding,
+  );
+}
+
+Widget _buildTitleRow(String title, List<Widget> children) {
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    textBaseline: TextBaseline.alphabetic,
+    children: <Widget>[
+      Container(
+        width: kTitleWidth,
+        child: Text(title.toUpperCase()),
+      ),
+      Expanded(
+        child: _buildValueRow(children),
+      ),
+    ],
+  );
+}
+
+Widget _buildButton(String label, void Function() onTap) {
+  return GestureDetector(
+    onTap: onTap,
+    child: Container(
+      height: kItemHeight,
+      color: Colors.white,
+      padding: EdgeInsets.symmetric(vertical: 0, horizontal: 2),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          color: Colors.black,
+          fontWeight: FontWeight.w400,
+        ),
+      ),
+    ),
+  );
 }
 
 class _ManualStatusEntry extends StatelessWidget {
@@ -215,22 +244,4 @@ class _ManualStatusEntry extends StatelessWidget {
       ),
     );
   }
-}
-
-Widget _buildButton(String label, void Function() onTap) {
-  return GestureDetector(
-    onTap: onTap,
-    child: Container(
-      height: kItemHeight,
-      color: Colors.white,
-      padding: EdgeInsets.symmetric(vertical: 0, horizontal: 2),
-      child: Text(
-        label.toUpperCase(),
-        style: TextStyle(
-          color: Colors.black,
-          fontWeight: FontWeight.w400,
-        ),
-      ),
-    ),
-  );
 }
