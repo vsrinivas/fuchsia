@@ -140,7 +140,7 @@ impl NodeTable {
         let (version, callbacks) = self.version_tracker.take_triggered_callbacks();
         for mut cb in callbacks {
             if let Err(e) = cb.trigger(version, &self) {
-                warn!("Node state callback failed: {:?}", e);
+                log::warn!("Node state callback failed: {:?}", e);
             }
         }
     }
@@ -179,7 +179,7 @@ impl NodeTable {
         let node = self.get_or_create_node_mut(node_id);
         node.desc = desc;
         self.version_tracker.incr_version();
-        trace!("{}", self.digraph_string());
+        log::trace!("{}", self.digraph_string());
     }
 
     /// Is a connection established to some node?
@@ -189,7 +189,7 @@ impl NodeTable {
 
     /// Mark a node as being established
     pub fn mark_established(&mut self, node_id: NodeId) {
-        trace!("{:?} mark node established: {:?}", self.root_node, node_id);
+        log::trace!("{:?} mark node established: {:?}", self.root_node, node_id);
         let node = self.get_or_create_node_mut(node_id);
         if node.established {
             return;
@@ -211,11 +211,17 @@ impl NodeTable {
         link_id: NodeLinkId,
         desc: LinkDescription,
     ) {
-        trace!("update_link: from:{:?} to:{:?} link_id:{:?} desc:{:?}", from, to, link_id, desc);
+        log::trace!(
+            "update_link: from:{:?} to:{:?} link_id:{:?} desc:{:?}",
+            from,
+            to,
+            link_id,
+            desc
+        );
         assert_ne!(from, to);
         self.get_or_create_node_mut(to);
         self.get_or_create_node_mut(from).links.insert(link_id, Link { to, desc });
-        trace!("{}", self.digraph_string());
+        log::trace!("{}", self.digraph_string());
     }
 
     /// Build a routing table for our node based on current link data
@@ -242,10 +248,10 @@ impl NodeTable {
                 .or_insert_with(|| new_progress);
         }
 
-        trace!("BUILD START: progress={:?} todo={:?}", progress, todo);
+        log::trace!("BUILD START: progress={:?} todo={:?}", progress, todo);
 
         while let Some(from) = todo.pop() {
-            trace!("STEP {:?}: progress={:?} todo={:?}", from, progress, todo);
+            log::trace!("STEP {:?}: progress={:?} todo={:?}", from, progress, todo);
             let progress_from = progress.get(&from).unwrap().clone();
             for (_, link) in self.nodes.get(&from).unwrap().links.iter() {
                 if link.to == self.root_node {
@@ -270,7 +276,7 @@ impl NodeTable {
             }
         }
 
-        trace!("DONE: progress={:?} todo={:?}", progress, todo);
+        log::trace!("DONE: progress={:?} todo={:?}", progress, todo);
         progress
             .into_iter()
             .map(|(node_id, NodeProgress { outgoing_link: link_id, .. })| (node_id, link_id))
@@ -312,25 +318,25 @@ mod test {
         let mut result = true;
         for (node_id, link_id) in outcome {
             if !remove_item(&((*node_id).into(), (*link_id).into()), &mut got) {
-                trace!("Expected outcome not found: {}#{}", node_id, link_id);
+                log::trace!("Expected outcome not found: {}#{}", node_id, link_id);
                 result = false;
             }
         }
         for (node_id, link_id) in got {
-            trace!("Unexpected outcome: {}#{}", node_id.0, link_id.0);
+            log::trace!("Unexpected outcome: {}#{}", node_id.0, link_id.0);
             result = false;
         }
         result
     }
 
     fn builds_route_ok(links: &[(u64, u64, u64, u64)], outcome: &[(u64, u64)]) -> bool {
-        trace!("TEST: {:?} --> {:?}", links, outcome);
+        log::trace!("TEST: {:?} --> {:?}", links, outcome);
         let node_table = construct_node_table_from_links(links);
         let built: Vec<(NodeId, NodeLinkId)> = node_table.build_routes().collect();
         let r = is_outcome(built.clone(), outcome);
         if !r {
-            trace!("NODE_TABLE: {:?}", node_table.nodes);
-            trace!("BUILT: {:?}", built);
+            log::trace!("NODE_TABLE: {:?}", node_table.nodes);
+            log::trace!("BUILT: {:?}", built);
         }
         r
     }

@@ -105,7 +105,7 @@ impl PingTracker {
         empty_packet: bool,
     ) -> (Option<u64>, PingTrackerResult) {
         self.mutate(now, |this| {
-            trace!(
+            log::trace!(
                 "MAYBE SEND PING: empty_packet:{} last_ping_sent:{:?} ping_spacing:{:?} now:{:?}",
                 empty_packet,
                 this.last_ping_sent,
@@ -130,7 +130,7 @@ impl PingTracker {
     /// Upon timeout: check whether that timeout causes a ping to need to be scheduled
     pub fn on_timeout(&mut self, now: Instant) -> PingTrackerResult {
         self.mutate(now, |this| {
-            trace!(
+            log::trace!(
                 "TIMEOUT: now:{:?} samples:{:?} sent_ping_list:{:?} sent_ping_map:{:?}",
                 now,
                 this.samples,
@@ -153,7 +153,12 @@ impl PingTracker {
     /// Upon receiving a pong: return a set of operations that need to be scheduled
     pub fn got_pong(&mut self, now: Instant, pong: Pong) -> PingTrackerResult {
         self.mutate(now, |this| {
-            trace!("GOT_PONG: {:?} now:{:?} sent_ping_map:{:?}", pong, now, this.sent_ping_map);
+            log::trace!(
+                "GOT_PONG: {:?} now:{:?} sent_ping_map:{:?}",
+                pong,
+                now,
+                this.sent_ping_map
+            );
             if let Some(send_time) = this.sent_ping_map.remove(&pong.id) {
                 this.samples
                     .push_back(Sample { when: now, rtt_us: (now - send_time).as_micros() as i64 });
@@ -167,18 +172,18 @@ impl PingTracker {
         now: Instant,
         f: impl FnOnce(&mut Self) -> R,
     ) -> (R, PingTrackerResult) {
-        trace!("BEGIN MUTATE");
+        log::trace!("BEGIN MUTATE");
 
         let variance_before = self.variance;
         let r = f(self);
         if let Err(e) = self.recalculate_stats() {
-            trace!("Failed to recalculate statistics: {}", e);
+            log::trace!("Failed to recalculate statistics: {}", e);
             self.mean = 0;
             self.variance = 0;
         }
         let variance_after = self.variance;
 
-        trace!("END MUTATE: variance:{}->{} ping_spacing:{:?} mean:{} scheduled_send:{} scheduled_timeout:{:?}", variance_before, variance_after, self.ping_spacing, self.mean, self.scheduled_send, self.scheduled_timeout);
+        log::trace!("END MUTATE: variance:{}->{} ping_spacing:{:?} mean:{} scheduled_send:{} scheduled_timeout:{:?}", variance_before, variance_after, self.ping_spacing, self.mean, self.scheduled_send, self.scheduled_timeout);
 
         if self.used_ping_spacing {
             if variance_after > variance_before {
@@ -224,7 +229,10 @@ impl PingTracker {
     }
 
     fn recalculate_stats(&mut self) -> Result<(), &'static str> {
-        trace!("RECALCSTATS: {:?}", self.samples.iter().map(|x| x.rtt_us).collect::<Vec<i64>>());
+        log::trace!(
+            "RECALCSTATS: {:?}",
+            self.samples.iter().map(|x| x.rtt_us).collect::<Vec<i64>>()
+        );
 
         let mut total = 0i64;
         let n = self.samples.len() as i64;

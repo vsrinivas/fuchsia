@@ -6,13 +6,8 @@
 
 #![deny(missing_docs)]
 
-#[macro_use]
-extern crate failure;
 #[cfg(test)]
 extern crate timebomb;
-#[macro_use]
-extern crate log;
-extern crate salt_slab;
 
 mod coding;
 mod labels;

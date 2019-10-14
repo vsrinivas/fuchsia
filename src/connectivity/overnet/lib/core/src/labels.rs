@@ -75,7 +75,7 @@ impl RoutingLabel {
         link_dst: NodeId,
         mut buf: impl std::io::Write,
     ) -> Result<usize, Error> {
-        trace!("ENCODE {:?}", self);
+        log::trace!("ENCODE {:?}", self);
         let mut control: u8 = 0;
         let mut length: usize = 0;
         if link_src != self.src {
@@ -107,7 +107,7 @@ impl RoutingLabel {
         if self.to_client {
             control |= ROUTING_LABEL_TO_CLIENT;
         }
-        trace!("control={:x} link_src={:?} link_dst={:?}", control, link_src, link_dst);
+        log::trace!("control={:x} link_src={:?} link_dst={:?}", control, link_src, link_dst);
         length += 1;
         buf.write_u8(control)?;
         Ok(length)
@@ -124,7 +124,7 @@ impl RoutingLabel {
     ) -> Result<(RoutingLabel, usize), Error> {
         let mut r = ReverseReader(buf);
         let control = r.rd_u8()?;
-        trace!("control={:x} link_src={:?} link_dst={:?}", control, link_src, link_dst);
+        log::trace!("control={:x} link_src={:?} link_dst={:?}", control, link_src, link_dst);
         let h = RoutingLabel {
             to_client: (control & ROUTING_LABEL_TO_CLIENT) != 0,
             debug_token: if (control & ROUTING_LABEL_HAS_DEBUG_TOKEN) != 0 {
@@ -164,7 +164,7 @@ impl<'a> ReverseReader<'a> {
     fn take(&mut self, amt: usize) -> Result<&[u8], Error> {
         let len = self.0.len();
         if len < amt {
-            bail!("Tried to read {} bytes from {} byte buffer", amt, len);
+            failure::bail!("Tried to read {} bytes from {} byte buffer", amt, len);
         }
         let (head, tail) = self.0.split_at(len - amt);
         self.0 = head;
@@ -178,10 +178,10 @@ mod test {
     use super::*;
 
     fn round_trips_buf(r: RoutingLabel, link_src: NodeId, link_dst: NodeId) {
-        trace!("Check roundtrips: {:?} with src={:?} dst={:?}", r, link_src, link_dst);
+        log::trace!("Check roundtrips: {:?} with src={:?} dst={:?}", r, link_src, link_dst);
         let mut buf: [u8; 128] = [0; 128];
         let suffix_len = r.encode_for_link(link_src, link_dst, &mut buf[10..]).unwrap();
-        trace!("Encodes to: {:?}", &buf[10..10 + suffix_len]);
+        log::trace!("Encodes to: {:?}", &buf[10..10 + suffix_len]);
         assert_eq!(buf[0..10].to_vec(), vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
         let (q, len) = RoutingLabel::decode(link_src, link_dst, &buf[0..10 + suffix_len]).unwrap();
         assert_eq!(len, 10);

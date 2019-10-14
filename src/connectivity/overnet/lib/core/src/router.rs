@@ -219,7 +219,7 @@ impl ReadState {
                 | ((buf[3] as u32) << 24)
         };
 
-        trace!("recv bytes: state={:?} bytes={:?}", self, bytes);
+        log::trace!("recv bytes: state={:?} bytes={:?}", self, bytes);
 
         match self {
             ReadState::Unbound { mut incoming } => {
@@ -245,7 +245,7 @@ impl ReadState {
                         Ok(_) => ReadState::Initial { incoming: vec![], stream_type }
                             .recv(&mut incoming[len..], got),
                         Err(e) => {
-                            trace!("Error reading stream: {:?}", e);
+                            log::trace!("Error reading stream: {:?}", e);
                             got(stream_type, None).unwrap();
                             ReadState::FinishedWithError
                         }
@@ -477,14 +477,14 @@ struct Endpoints<Time: RouterTime> {
 impl<Time: RouterTime> Endpoints<Time> {
     /// Update the routing table for `dest` to use `link_id`.
     fn adjust_route(&mut self, dest: NodeId, link_id: LinkId) -> Result<(), Error> {
-        trace!("ADJUST_ROUTE: {:?} via {:?}", dest, link_id);
+        log::trace!("ADJUST_ROUTE: {:?} via {:?}", dest, link_id);
 
         let server_peer_id = self.server_peer_id(dest);
-        trace!("  server_peer_id = {:?}", server_peer_id);
+        log::trace!("  server_peer_id = {:?}", server_peer_id);
         if let Some(peer_id) = server_peer_id {
             let peer = self.peers.get_mut(peer_id).unwrap();
             if peer.current_link.is_none() && !peer.pending_writes {
-                trace!("Mark writable: {:?}", peer_id);
+                log::trace!("Mark writable: {:?}", peer_id);
                 peer.pending_writes = true;
                 self.write_peers.push(peer_id);
             }
@@ -492,7 +492,7 @@ impl<Time: RouterTime> Endpoints<Time> {
         }
         let peer_id = self.client_peer_id(dest, Some(link_id))?;
         let peer = self.peers.get_mut(peer_id).unwrap();
-        trace!("  client_peer_id = {:?}", peer_id);
+        log::trace!("  client_peer_id = {:?}", peer_id);
         peer.current_link = Some(link_id);
         Ok(())
     }
@@ -512,7 +512,10 @@ impl<Time: RouterTime> Endpoints<Time> {
         assert_ne!(node, self.node_id);
         let peer_id = self.client_peer_id(node, None)?;
         let peer = self.peers.get_mut(peer_id).unwrap();
-        let id = peer.next_stream.checked_shl(2).ok_or_else(|| format_err!("Too many streams"))?;
+        let id = peer
+            .next_stream
+            .checked_shl(2)
+            .ok_or_else(|| failure::format_err!("Too many streams"))?;
         peer.next_stream += 1;
         let connection_stream_id = peer.connection_stream_id;
         let stream_id = self.streams.insert(Stream {
@@ -529,7 +532,7 @@ impl<Time: RouterTime> Endpoints<Time> {
             }),
             |mut bytes: &mut Vec<u8>, handles: &mut Vec<fidl::Handle>| {
                 if handles.len() > 0 {
-                    bail!("Expected no handles");
+                    failure::bail!("Expected no handles");
                 }
                 self.queue_send_raw_datagram(connection_stream_id, Some(&mut bytes), false)
             },
@@ -559,7 +562,7 @@ impl<Time: RouterTime> Endpoints<Time> {
         for stream_id in stream_ids {
             let mut desc = self.node_desc_packet.clone();
             if let Err(e) = self.queue_send_raw_datagram(stream_id, Some(&mut desc), false) {
-                warn!("Failed to send datagram: {:?}", e);
+                log::warn!("Failed to send datagram: {:?}", e);
             }
         }
         Ok(())
@@ -575,12 +578,12 @@ impl<Time: RouterTime> Endpoints<Time> {
         let stream = self
             .streams
             .get(stream_id)
-            .ok_or_else(|| format_err!("Stream not found {:?}", stream_id))?;
+            .ok_or_else(|| failure::format_err!("Stream not found {:?}", stream_id))?;
         let peer_id = stream.peer_id;
         let peer = self
             .peers
             .get_mut(peer_id)
-            .ok_or_else(|| format_err!("Peer not found {:?}", peer_id))?;
+            .ok_or_else(|| failure::format_err!("Peer not found {:?}", peer_id))?;
         let streams = &mut self.streams;
         let (handles, stream_ids): (Vec<_>, Vec<_>) = handles
             .into_iter()
@@ -606,7 +609,7 @@ impl<Time: RouterTime> Endpoints<Time> {
             &mut ZirconChannelMessage { bytes, handles },
             |bytes, handles| {
                 if handles.len() != 0 {
-                    bail!("Unexpected handles in encoding");
+                    failure::bail!("Unexpected handles in encoding");
                 }
                 self.queue_send_raw_datagram(stream_id, Some(bytes), false)
             },
@@ -621,7 +624,7 @@ impl<Time: RouterTime> Endpoints<Time> {
         frame: Option<&mut [u8]>,
         fin: bool,
     ) -> Result<(), Error> {
-        trace!(
+        log::trace!(
             "{:?} queue_send: stream_id={:?} frame={:?} fin={:?}",
             self.node_id,
             stream_id,
@@ -631,14 +634,14 @@ impl<Time: RouterTime> Endpoints<Time> {
         let stream = self
             .streams
             .get(stream_id)
-            .ok_or_else(|| format_err!("Stream not found {:?}", stream_id))?;
-        trace!("  peer_id={:?} stream_index={}", stream.peer_id, stream.id);
+            .ok_or_else(|| failure::format_err!("Stream not found {:?}", stream_id))?;
+        log::trace!("  peer_id={:?} stream_index={}", stream.peer_id, stream.id);
         let peer_id = stream.peer_id;
         let peer = self
             .peers
             .get_mut(peer_id)
-            .ok_or_else(|| format_err!("Peer not found {:?}", peer_id))?;
-        trace!("  node_id={:?}", peer.node_id);
+            .ok_or_else(|| failure::format_err!("Peer not found {:?}", peer_id))?;
+        log::trace!("  node_id={:?}", peer.node_id);
         if let Some(frame) = frame {
             let frame_len = frame.len();
             assert!(frame_len <= 0xffff_ffff);
@@ -663,7 +666,7 @@ impl<Time: RouterTime> Endpoints<Time> {
                 .with_context(|_| format!("Sending to stream {:?} peer {:?}", stream, peer))?;
         }
         if !peer.pending_writes {
-            trace!("Mark writable: {:?}", stream.peer_id);
+            log::trace!("Mark writable: {:?}", stream.peer_id);
             peer.pending_writes = true;
             self.write_peers.push(stream.peer_id);
         }
@@ -680,19 +683,19 @@ impl<Time: RouterTime> Endpoints<Time> {
         let cert_file = self
             .server_cert_file
             .as_ref()
-            .ok_or_else(|| format_err!("No cert file for server"))?
+            .ok_or_else(|| failure::format_err!("No cert file for server"))?
             .as_ref()
             .as_ref()
             .to_str()
-            .ok_or_else(|| format_err!("Cannot convert path to string"))?;
+            .ok_or_else(|| failure::format_err!("Cannot convert path to string"))?;
         let key_file = self
             .server_key_file
             .as_ref()
-            .ok_or_else(|| format_err!("No key file for server"))?
+            .ok_or_else(|| failure::format_err!("No key file for server"))?
             .as_ref()
             .as_ref()
             .to_str()
-            .ok_or_else(|| format_err!("Cannot convert path to string"))?;
+            .ok_or_else(|| failure::format_err!("Cannot convert path to string"))?;
         config
             .load_cert_chain_from_pem_file(cert_file)
             .context(format!("Loading server certificate '{}'", cert_file))?;
@@ -739,7 +742,7 @@ impl<Time: RouterTime> Endpoints<Time> {
                     .context("Decoding quic header")?;
 
                 if hdr.ty == quiche::Type::VersionNegotiation {
-                    bail!("Version negotiation invalid on the server");
+                    failure::bail!("Version negotiation invalid on the server");
                 }
 
                 // If we're asked for a server connection, we should create a client connection
@@ -785,7 +788,7 @@ impl<Time: RouterTime> Endpoints<Time> {
                     self.write_peers.push(peer_id);
                     (peer_id, false)
                 } else {
-                    bail!("No server for link {:?}, and not an Initial packet", link_id);
+                    failure::bail!("No server for link {:?}, and not an Initial packet", link_id);
                 }
             }
             (true, true) => (self.client_peer_id(routing_label.src, Some(link_id))?, false),
@@ -794,7 +797,7 @@ impl<Time: RouterTime> Endpoints<Time> {
                 self.ensure_client_peer_id(routing_label.src, Some(link_id))?;
                 self.ensure_client_peer_id(routing_label.dst, None)?;
                 let peer_id = self.server_peer_id(routing_label.dst).ok_or_else(|| {
-                    format_err!("Node server peer not found for {:?}", routing_label.dst)
+                    failure::format_err!("Node server peer not found for {:?}", routing_label.dst)
                 })?;
                 (peer_id, true)
             }
@@ -807,12 +810,12 @@ impl<Time: RouterTime> Endpoints<Time> {
         // Guaranteed correct ID by peer_index above.
         let peer = self.peers.get_mut(peer_id).unwrap();
         if forward {
-            trace!("FORWARD: {:?}", routing_label);
+            log::trace!("FORWARD: {:?}", routing_label);
             peer.forward.push((routing_label, packet.to_vec()));
         } else {
             peer.conn.0.recv(packet).context("Receiving packet on quic connection")?;
             if !peer.pending_reads {
-                trace!("{:?} Mark readable: {:?}", self.node_id, peer_id);
+                log::trace!("{:?} Mark readable: {:?}", self.node_id, peer_id);
                 peer.pending_reads = true;
                 self.read_peers.push(peer_id);
             }
@@ -825,7 +828,7 @@ impl<Time: RouterTime> Endpoints<Time> {
             }
         }
         if !peer.pending_writes {
-            trace!("{:?} Mark writable: {:?}", self.node_id, peer_id);
+            log::trace!("{:?} Mark writable: {:?}", self.node_id, peer_id);
             peer.pending_writes = true;
             self.write_peers.push(peer_id);
         }
@@ -846,7 +849,7 @@ impl<Time: RouterTime> Endpoints<Time> {
 
         while let Some(peer_id) = self.read_peers.pop() {
             if let Err(e) = self.recv_from_peer_id(peer_id, &mut buf, got) {
-                warn!("Error receiving packet: {:?}", e);
+                log::warn!("Error receiving packet: {:?}", e);
                 unimplemented!();
             }
         }
@@ -866,18 +869,18 @@ impl<Time: RouterTime> Endpoints<Time> {
     where
         Got: MessageReceiver,
     {
-        trace!("{:?} flush_recvs {:?}", self.node_id, peer_id);
+        log::trace!("{:?} flush_recvs {:?}", self.node_id, peer_id);
         let mut peer = self
             .peers
             .get_mut(peer_id)
-            .ok_or_else(|| format_err!("Peer not found {:?}", peer_id))?;
+            .ok_or_else(|| failure::format_err!("Peer not found {:?}", peer_id))?;
         assert!(peer.pending_reads);
         peer.pending_reads = false;
         // TODO(ctiller): We currently copy out the readable streams here just to satisfy the
         // bounds checker. Find a way to avoid this wasteful allocation.
         let readable: Vec<u64> = peer.conn.0.readable().collect();
         for stream_index in readable {
-            trace!("{:?}   stream {} is readable", self.node_id, stream_index);
+            log::trace!("{:?}   stream {} is readable", self.node_id, stream_index);
             let mut stream_id = peer.streams.get(&stream_index).copied();
             if stream_id.is_none() {
                 if !is_local_quic_stream_index(stream_index, peer.is_client) {
@@ -897,7 +900,7 @@ impl<Time: RouterTime> Endpoints<Time> {
             let mut rs = self
                 .streams
                 .get_mut(stream_id.unwrap())
-                .ok_or_else(|| format_err!("Stream not found {:?}", stream_id))?
+                .ok_or_else(|| failure::format_err!("Stream not found {:?}", stream_id))?
                 .read_state
                 .take();
             let remove = loop {
@@ -933,7 +936,7 @@ impl<Time: RouterTime> Endpoints<Time> {
             };
             self.streams
                 .get_mut(stream_id.unwrap())
-                .ok_or_else(|| format_err!("Stream not found {:?}", stream_id))?
+                .ok_or_else(|| failure::format_err!("Stream not found {:?}", stream_id))?
                 .read_state = rs;
             if remove {
                 unimplemented!();
@@ -963,11 +966,11 @@ impl<Time: RouterTime> Endpoints<Time> {
         link_id_hint: Option<LinkId>,
     ) -> Result<PeerId, Error> {
         if let Some(peer_id) = self.node_to_client_peer.get(&node_id) {
-            trace!("Existing client: {:?}", node_id);
+            log::trace!("Existing client: {:?}", node_id);
             return Ok(*peer_id);
         }
 
-        trace!("New client: {:?}", node_id);
+        log::trace!("New client: {:?}", node_id);
 
         let mut config = self.client_config()?;
         let scid: Vec<u8> = rand::thread_rng()
@@ -1023,7 +1026,7 @@ impl<Time: RouterTime> Endpoints<Time> {
                 if peer.timeout_generation != timeout_generation {
                     continue;
                 }
-                trace!(
+                log::trace!(
                     "{:?} expire peer timeout {:?} gen={}",
                     self.node_id,
                     peer_id,
@@ -1058,7 +1061,7 @@ impl<Time: RouterTime> Endpoints<Time> {
                 peer.timeout_generation += 1;
                 if let Some(duration) = peer.conn.0.timeout() {
                     let when = Time::after(self.now, duration.into());
-                    trace!(
+                    log::trace!(
                         "{:?} queue timeout in {:?} in {:?} [gen={}]",
                         self.node_id,
                         peer_id,
@@ -1098,7 +1101,7 @@ where
     /// Receive a datagram, parse it, and dispatch it to the right methods.
     /// message==None => end of stream.
     fn recv(&mut self, stream_type: StreamType, message: Option<&mut [u8]>) -> Result<(), Error> {
-        trace!(
+        log::trace!(
             "{:?} Peer {:?} {:?} stream {:?} index {} gets {:?}",
             self.node_id,
             self.peer_id,
@@ -1109,8 +1112,12 @@ where
         );
 
         match (stream_type, message) {
-            (StreamType::PeerClientEnd, None) => bail!("Peer control stream closed on client"),
-            (StreamType::PeerServerEnd, None) => bail!("Peer control stream closed on server"),
+            (StreamType::PeerClientEnd, None) => {
+                failure::bail!("Peer control stream closed on client")
+            }
+            (StreamType::PeerServerEnd, None) => {
+                failure::bail!("Peer control stream closed on server")
+            }
             (_, None) => {
                 self.got.close(self.stream_id);
                 Ok(())
@@ -1135,14 +1142,14 @@ where
             }
             (StreamType::PeerServerEnd, Some(bytes)) => {
                 let msg = decode_fidl::<PeerMessage>(bytes).context("Decoding PeerMessage")?;
-                trace!("{:?} Got peer message: {:?}", self.node_id, msg);
+                log::trace!("{:?} Got peer message: {:?}", self.node_id, msg);
                 match msg {
                     PeerMessage::ConnectToService(ConnectToService {
                         service_name: service,
                         stream_id: new_stream_index,
                         options: _,
                     }) => {
-                        trace!(
+                        log::trace!(
                             "Log new connection request: peer {:?} new_stream_index {:?} service: {}",
                             self.peer_id,
                             new_stream_index,
@@ -1185,18 +1192,18 @@ where
                         Ok(())
                     }
                     x => {
-                        bail!("Unknown variant: {:?}", x);
+                        failure::bail!("Unknown variant: {:?}", x);
                     }
                 }
             }
             (StreamType::PeerClientEnd, Some(bytes)) => {
                 let msg = decode_fidl::<PeerReply>(bytes).context("Decoding PeerReply")?;
-                trace!("{:?} Got peer reply: {:?}", self.node_id, msg);
+                log::trace!("{:?} Got peer reply: {:?}", self.node_id, msg);
                 match msg {
                     PeerReply::UpdateLinkStatusAck { .. } => {
                         let new_status = match self.peer.link_status_update_state {
                             Some(PeerLinkStatusUpdateState::Unscheduled) => {
-                                bail!("Unexpected unscheduled status")
+                                failure::bail!("Unexpected unscheduled status")
                             }
                             Some(PeerLinkStatusUpdateState::Sent) => {
                                 Some(PeerLinkStatusUpdateState::Unscheduled)
@@ -1211,7 +1218,7 @@ where
                         Ok(())
                     }
                     x => {
-                        bail!("Unknown variant: {:?}", x);
+                        failure::bail!("Unknown variant: {:?}", x);
                     }
                 }
             }
@@ -1226,7 +1233,7 @@ where
         mut app_bind: impl FnMut(StreamId, &mut Got) -> Result<R, Error>,
     ) -> Result<R, Error> {
         if stream_index == 0 {
-            bail!("Cannot connect stream 0");
+            failure::bail!("Cannot connect stream 0");
         }
         let bind_stream_id = match self.peer.streams.entry(stream_index) {
             btree_map::Entry::Occupied(stream_id) => *stream_id.get(),
@@ -1236,7 +1243,7 @@ where
                     id: stream_index,
                     read_state: ReadState::new_bound(stream_type),
                 }));
-                trace!("Bind stream stream_index={} no current read_state", stream_index);
+                log::trace!("Bind stream stream_index={} no current read_state", stream_index);
                 // early return
                 return app_bind(stream_id, self.got);
             }
@@ -1245,10 +1252,10 @@ where
         let mut rs = self
             .streams
             .get_mut(bind_stream_id)
-            .ok_or_else(|| format_err!("Stream not found for bind {:?}", bind_stream_id))?
+            .ok_or_else(|| failure::format_err!("Stream not found for bind {:?}", bind_stream_id))?
             .read_state
             .take();
-        trace!("Bind stream stream_index={} read_state={:?}", stream_index, rs);
+        log::trace!("Bind stream stream_index={} read_state={:?}", stream_index, rs);
         let mut recv_message_context = RecvMessageContext {
             node_id: self.node_id,
             got: self.got,
@@ -1266,7 +1273,7 @@ where
         });
         self.streams
             .get_mut(bind_stream_id)
-            .ok_or_else(|| format_err!("Stream not found for bind {:?}", bind_stream_id))?
+            .ok_or_else(|| failure::format_err!("Stream not found for bind {:?}", bind_stream_id))?
             .read_state = rs;
         Ok(result)
     }
@@ -1302,7 +1309,7 @@ impl<Time: RouterTime> LinkQueues<Time> {
         link: &mut Link<LinkData>,
         ptres: PingTrackerResult,
     ) {
-        trace!("HANDLE_PTRES: link_id:{:?} ptres:{:?}", link_id, ptres);
+        log::trace!("HANDLE_PTRES: link_id:{:?} ptres:{:?}", link_id, ptres);
         if ptres.sched_send {
             self.ping_links.push(link_id);
         }
@@ -1327,8 +1334,9 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
         link_id: LinkId,
         packet: &'a mut [u8],
     ) -> Result<(RoutingLabel, &'a mut [u8]), Error> {
-        let link = self.links.get_mut(link_id).ok_or_else(|| format_err!("Link not found"))?;
-        trace!(
+        let link =
+            self.links.get_mut(link_id).ok_or_else(|| failure::format_err!("Link not found"))?;
+        log::trace!(
             "Decode routing label from id={:?}[peer={:?}, id={:?}, up={:?}]",
             link_id,
             link.peer,
@@ -1336,7 +1344,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
             link.link_data
         );
         let (routing_label, packet_length) = RoutingLabel::decode(link.peer, self.node_id, packet)?;
-        trace!(
+        log::trace!(
             "{:?} routing_label={:?} packet_length={} src_len={}",
             self.node_id,
             routing_label,
@@ -1366,13 +1374,13 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
     {
         while let Some(link_id) = self.queues.pong_links.pop() {
             if let Err(e) = self.pong_link(&mut send_to, link_id, buf) {
-                warn!("Pong link failed: {:?}", e);
+                log::warn!("Pong link failed: {:?}", e);
             }
         }
 
         while let Some(link_id) = self.queues.ping_links.pop() {
             if let Err(e) = self.ping_link(&mut send_to, link_id, buf) {
-                warn!("Ping link failed: {:?}", e);
+                log::warn!("Ping link failed: {:?}", e);
             }
         }
     }
@@ -1390,7 +1398,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
         let link = self
             .links
             .get_mut(link_id)
-            .ok_or_else(|| format_err!("Link {:?} expired before pong", link_id))?;
+            .ok_or_else(|| failure::format_err!("Link {:?} expired before pong", link_id))?;
         let src = self.node_id;
         let dst = link.peer;
         if let Some(id) = link.pong_tracker.maybe_send_pong() {
@@ -1423,7 +1431,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
         let link = self
             .links
             .get_mut(link_id)
-            .ok_or_else(|| format_err!("Link {:?} expired before pong", link_id))?;
+            .ok_or_else(|| failure::format_err!("Link {:?} expired before pong", link_id))?;
         let src = self.node_id;
         let dst = link.peer;
         let (ping, r) = link.ping_tracker.maybe_send_ping(Instant::now(), true);
@@ -1456,7 +1464,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
                 if link.timeout_generation != timeout_generation {
                     continue;
                 }
-                trace!(
+                log::trace!(
                     "{:?} expire link timeout {:?} gen={}",
                     self.node_id,
                     link_id,
@@ -1486,7 +1494,7 @@ fn make_desc_packet(services: Vec<String>) -> Result<Vec<u8>, Error> {
         &mut PeerMessage::UpdateNodeDescription(PeerDescription { services: Some(services) }),
         |bytes, handles| {
             if handles.len() != 0 {
-                bail!("Unexpected handles in encoding");
+                failure::bail!("Unexpected handles in encoding");
             }
             Ok(bytes.clone())
         },
@@ -1572,7 +1580,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
             pong_tracker: PongTracker::new(),
             timeout_generation: 1,
         });
-        trace!(
+        log::trace!(
             "new_link: id={:?} peer={:?} node_link_id={:?} link_data={:?}",
             link_id,
             peer,
@@ -1590,7 +1598,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
             if peer.current_link.is_none() {
                 peer.current_link = Some(link_id);
                 if !peer.pending_writes {
-                    trace!("{:?} Mark writable: {:?}", self.node_id, client_peer);
+                    log::trace!("{:?} Mark writable: {:?}", self.node_id, client_peer);
                     peer.pending_writes = true;
                     self.endpoints.write_peers.push(client_peer);
                 }
@@ -1601,14 +1609,14 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                 if peer.current_link.is_none() {
                     peer.current_link = Some(link_id);
                     if !peer.pending_writes {
-                        trace!("{:?} Mark writable: {:?}", self.node_id, server_peer);
+                        log::trace!("{:?} Mark writable: {:?}", self.node_id, server_peer);
                         peer.pending_writes = true;
                         self.endpoints.write_peers.push(server_peer);
                     }
                 }
             }
         }
-        trace!("LINK TABLE: {:?}", self.links.links);
+        log::trace!("LINK TABLE: {:?}", self.links.links);
         Ok(link_id)
     }
 
@@ -1672,12 +1680,12 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
             Ok((routing_label, packet)) => {
                 if packet.len() > 0 {
                     if let Err(e) = self.endpoints.queue_recv(link_id, routing_label, packet) {
-                        warn!("Error receiving packet from link {:?}: {:?}", link_id, e);
+                        log::warn!("Error receiving packet from link {:?}: {:?}", link_id, e);
                     }
                 }
             }
             Err(e) => {
-                warn!("Error routing packet from link {:?}: {:?}", link_id, e);
+                log::warn!("Error routing packet from link {:?}: {:?}", link_id, e);
             }
         }
     }
@@ -1693,16 +1701,16 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
         SendTo: FnMut(&LinkData, &mut [u8]) -> Result<(), Error>,
     {
         let buf_len = buf.len();
-        trace!("{:?} flush_sends {:?}", self.node_id, peer_id);
+        log::trace!("{:?} flush_sends {:?}", self.node_id, peer_id);
         let peer = self
             .endpoints
             .peers
             .get_mut(peer_id)
-            .ok_or_else(|| format_err!("Peer {:?} not found for sending", peer_id))?;
+            .ok_or_else(|| failure::format_err!("Peer {:?} not found for sending", peer_id))?;
         assert!(peer.pending_writes);
         peer.pending_writes = false;
         let current_link = peer.current_link.ok_or_else(|| {
-            format_err!(
+            failure::format_err!(
                 "No current link for peer {:?}; node={:?} client={}",
                 peer_id,
                 peer.node_id,
@@ -1710,7 +1718,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
             )
         })?;
         let link = self.links.links.get_mut(current_link).ok_or_else(|| {
-            format_err!("Current link {:?} for peer {:?} not found", current_link, peer_id)
+            failure::format_err!("Current link {:?} for peer {:?} not found", current_link, peer_id)
         })?;
         let peer_node_id = peer.node_id;
         let link_dst_id = link.peer;
@@ -1734,7 +1742,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                         to_client: !is_peer_client,
                         debug_token: crate::labels::new_debug_token(),
                     };
-                    trace!("outgoing routing label {:?}", rl);
+                    log::trace!("outgoing routing label {:?}", rl);
                     let suffix_len = rl.encode_for_link(src_node_id, link_dst_id, &mut buf[n..])?;
                     if !peer.check_timeout {
                         peer.check_timeout = true;
@@ -1749,7 +1757,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                                 .push(peer.connection_stream_id);
                         }
                     }
-                    trace!(
+                    log::trace!(
                         "send on link: {:?}[peer={:?}, id={:?}, up={:?}]",
                         current_link,
                         link.peer,
@@ -1768,7 +1776,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                                 .push(peer.connection_stream_id);
                         }
                     }
-                    trace!("{:?} sends done {:?}", self.node_id, peer_id);
+                    log::trace!("{:?} sends done {:?}", self.node_id, peer_id);
                     return Ok(());
                 }
                 _ => unimplemented!(),
@@ -1788,7 +1796,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
 
         while let Some(peer_id) = self.endpoints.write_peers.pop() {
             if let Err(e) = self.flush_sends_to_peer(&mut send_to, peer_id, &mut buf) {
-                warn!("Send to peer failed: {:?}", e);
+                log::warn!("Send to peer failed: {:?}", e);
                 if let Some(peer) = self.endpoints.peers.get_mut(peer_id) {
                     if let Some(link_id) = peer.current_link.take() {
                         self.drop_link(link_id);
@@ -1804,7 +1812,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
     fn flush_internal_sends(&mut self) {
         while let Some((peer, link_id_hint)) = self.endpoints.recently_mentioned_peers.pop() {
             if let Err(e) = self.endpoints.ensure_client_peer_id(peer, link_id_hint) {
-                warn!("Failed ensuring recently seen peer id has a client endpoint: {}", e);
+                log::warn!("Failed ensuring recently seen peer id has a client endpoint: {}", e);
             }
         }
 
@@ -1834,7 +1842,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                 Some(&mut self.endpoints.node_desc_packet.clone()),
                 false,
             ) {
-                warn!("Failed to send initial update to {:?}: {:?}", stream_id, e);
+                log::warn!("Failed to send initial update to {:?}: {:?}", stream_id, e);
             }
             self.endpoints.link_status_updates.push(stream_id);
         }
@@ -1845,7 +1853,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                 Some(&mut self.ack_link_status_frame.clone()),
                 false,
             ) {
-                warn!("Failed to ack link state update from {:?}: {:?}", stream_id, e);
+                log::warn!("Failed to ack link state update from {:?}: {:?}", stream_id, e);
             }
         }
 
@@ -1860,14 +1868,14 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
             });
             fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
                 if let Err(e) = fidl::encoding::Encoder::encode(bytes, handles, &mut status) {
-                    warn!("{}", e);
+                    log::warn!("{}", e);
                     return;
                 }
                 while let Some(stream_id) = self.endpoints.link_status_updates.pop() {
                     if let Err(e) =
                         self.queue_send_raw_datagram(stream_id, Some(&mut bytes.clone()), false)
                     {
-                        warn!("Failed to send link status update to {:?}: {:?}", stream_id, e);
+                        log::warn!("Failed to send link status update to {:?}: {:?}", stream_id, e);
                     }
                 }
             });

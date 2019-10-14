@@ -26,7 +26,7 @@ impl StreamFramer {
             return Ok(());
         }
         if bytes.len() > (std::u16::MAX as usize) + 1 {
-            bail!("Packet length ({}) too long for stream framing", bytes.len());
+            failure::bail!("Packet length ({}) too long for stream framing", bytes.len());
         }
         self.outgoing.write_u8(10u8)?; // '\n'
         self.outgoing.write_u8(0u8)?; // '\0'

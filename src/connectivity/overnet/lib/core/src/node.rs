@@ -90,7 +90,7 @@ impl<'a, Runtime: NodeRuntime + 'static> MessageReceiver for Receiver<'a, Runtim
         let app_channel = self.make_channel(stream_id)?;
         self.service_map
             .get(service_name)
-            .ok_or_else(|| format_err!("Unknown service {}", service_name))?
+            .ok_or_else(|| failure::format_err!("Unknown service {}", service_name))?
             .connect_to_service(app_channel, connection_info)?;
         Ok(())
     }
@@ -106,7 +106,7 @@ impl<'a, Runtime: NodeRuntime + 'static> MessageReceiver for Receiver<'a, Runtim
         handles: &mut Vec<Self::Handle>,
     ) -> Result<(), Error> {
         let stream = self.streams.get(stream_id).ok_or_else(|| {
-            format_err!("Stream {:?} not found for datagram {:?}", stream_id, bytes)
+            failure::format_err!("Stream {:?} not found for datagram {:?}", stream_id, bytes)
         })?;
         match stream {
             StreamBinding::Channel(ref chan) => {
@@ -126,7 +126,7 @@ impl<'a, Runtime: NodeRuntime + 'static> MessageReceiver for Receiver<'a, Runtim
 
     fn update_link(&mut self, from: NodeId, to: NodeId, link: NodeLinkId, desc: LinkDescription) {
         self.node_table.update_link(from, to, link, desc);
-        trace!("Schedule routing update");
+        log::trace!("Schedule routing update");
         self.update_routing = true;
     }
 
@@ -173,7 +173,7 @@ impl NodeStateCallback for ListPeersResponse {
             })
             .collect();
         peers.shuffle(&mut rand::thread_rng());
-        info!("Respond to list_peers: {:?}", peers);
+        log::info!("Respond to list_peers: {:?}", peers);
         {
             let list_peers_state = &mut *self.list_peers_state.borrow_mut();
             assert!(list_peers_state.in_query);
@@ -184,7 +184,7 @@ impl NodeStateCallback for ListPeersResponse {
         match self
             .responder
             .take()
-            .ok_or_else(|| format_err!("State callback called twice"))?
+            .ok_or_else(|| failure::format_err!("State callback called twice"))?
             .send(Ok(peers))
         {
             Ok(_) => Ok(()),
@@ -285,11 +285,11 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         let rx = {
             let this = &mut *self.inner.borrow_mut();
             if this.list_peers_state.borrow().in_query {
-                bail!("Already querying peers");
+                failure::bail!("Already querying peers");
             }
             this.list_peers_state.borrow_mut().in_query = true;
             let (tx, rx) = futures::channel::oneshot::channel();
-            trace!(
+            log::trace!(
                 "Request list_peers last_seen_version={}",
                 this.list_peers_state.borrow().last_seen_version
             );
@@ -310,14 +310,14 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         provider: fidl::endpoints::ClientEnd<ServiceProviderMarker>,
     ) -> Result<(), Error> {
         let this = &mut *self.inner.borrow_mut();
-        info!("Request register_service '{}'", service_name);
+        log::info!("Request register_service '{}'", service_name);
         if this.service_map.insert(service_name.clone(), provider.into_proxy()?).is_none() {
-            info!("Publish new service '{}'", service_name);
+            log::info!("Publish new service '{}'", service_name);
             // This is a new service
             let services: Vec<String> = this.service_map.keys().cloned().collect();
             if let Err(e) = this.router.publish_node_description(services.clone()) {
                 this.service_map.remove(&service_name);
-                bail!(e)
+                failure::bail!(e)
             }
             this.node_table.update_node(this.router.node_id(), NodeDescription { services });
             self.clone().need_flush(this);
@@ -333,11 +333,11 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         chan: Channel,
     ) -> Result<(), Error> {
         let this = &mut *self.inner.borrow_mut();
-        info!("Request connect_to_service '{}' on {:?}", service_name, node_id);
+        log::info!("Request connect_to_service '{}' on {:?}", service_name, node_id);
         if node_id == this.router.node_id() {
             this.service_map
                 .get(service_name)
-                .ok_or_else(|| format_err!("Unknown service {}", service_name))?
+                .ok_or_else(|| failure::format_err!("Unknown service {}", service_name))?
                 .connect_to_service(
                     chan,
                     fidl_fuchsia_overnet::ConnectionInfo { peer: Some(node_id.into()) },
@@ -376,7 +376,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         socket: fidl::Socket,
     ) {
         if let Err(e) = self.handshake_socket_inner(node_link_id, connection_label, socket).await {
-            warn!("Socket handshake failed: {}", e);
+            log::warn!("Socket handshake failed: {}", e);
         }
     }
 
@@ -419,13 +419,18 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         fidl::encoding::Decoder::decode_into(greeting_bytes.as_mut(), &mut [], &mut greeting)?;
 
         let node_id = match greeting {
-            StreamSocketGreeting { magic_string: None, .. } => {
-                bail!("Required magic string '{}' not present in greeting", GREETING_STRING)
-            }
+            StreamSocketGreeting { magic_string: None, .. } => failure::bail!(
+                "Required magic string '{}' not present in greeting",
+                GREETING_STRING
+            ),
             StreamSocketGreeting { magic_string: Some(ref x), .. } if x != GREETING_STRING => {
-                bail!("Expected magic string '{}' in greeting, got '{}'", GREETING_STRING, x)
+                failure::bail!(
+                    "Expected magic string '{}' in greeting, got '{}'",
+                    GREETING_STRING,
+                    x
+                )
             }
-            StreamSocketGreeting { node_id: None, .. } => bail!("No node id in greeting"),
+            StreamSocketGreeting { node_id: None, .. } => failure::bail!("No node id in greeting"),
             StreamSocketGreeting { node_id: Some(n), .. } => n.id,
         };
 
@@ -444,7 +449,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
             ) {
                 Err(e) => {
                     this.socket_links.remove(id);
-                    bail!(e);
+                    failure::bail!(e);
                 }
                 Ok(x) => {
                     this.socket_links.get_mut(id).unwrap().router_id = x;
@@ -570,7 +575,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
             PhysLinkId::SocketLink(link_id) => {
                 let link = socket_links
                     .get_mut(*link_id)
-                    .ok_or_else(|| format_err!("Link {:?} not found", link_id))?;
+                    .ok_or_else(|| failure::format_err!("Link {:?} not found", link_id))?;
                 link.framer.queue_send(data)?;
                 if let Some(tx) = link.writes.take() {
                     runtime.spawn_local(self.clone().flush_sends_to_socket_link(
@@ -588,7 +593,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         // Schedule an update to expire timers later, if necessary.
         this.timeout_key += 1;
         let timeout = this.router.next_timeout();
-        trace!(
+        log::trace!(
             "timeout key -> {}; timeout={:?} now={:?}",
             this.timeout_key,
             timeout,
@@ -621,7 +626,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         }
         if let Err(e) = tx.write_all(frame.as_slice()).await {
             let this = &mut *self.inner.borrow_mut();
-            warn!("Socket write failed: {}", e);
+            log::warn!("Socket write failed: {}", e);
             this.socket_links.remove(link_id);
             return;
         }
@@ -640,9 +645,9 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         let mut this = &mut *self.inner.borrow_mut();
         assert!(this.routing_update_queued);
         this.routing_update_queued = false;
-        trace!("UPDATE ROUTES");
+        log::trace!("UPDATE ROUTES");
         for (node_id, link_id) in this.node_table.build_routes() {
-            trace!("  {:?} -> {:?}", node_id, link_id);
+            log::trace!("  {:?} -> {:?}", node_id, link_id);
             if let Some(app_id) = this.node_to_app_link_ids.get(&link_id).copied() {
                 let rtr_id = match app_id {
                     PhysLinkId::UpLink(app_id) => this.runtime.router_link_id(app_id),
@@ -653,10 +658,10 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
                         .unwrap_or(LinkId::invalid()),
                 };
                 if let Err(e) = this.router.adjust_route(node_id, rtr_id) {
-                    trace!("Failed updating route to {:?}: {:?}", node_id, e);
+                    log::trace!("Failed updating route to {:?}: {:?}", node_id, e);
                 }
             } else {
-                trace!("Couldn't find appid");
+                log::trace!("Couldn't find appid");
             }
         }
     }
@@ -700,7 +705,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
     /// Wrapper for the above loop to handle errors 'gracefully'.
     async fn channel_reader(self, chan: Rc<AsyncChannel>, stream_id: StreamId) {
         if let Err(e) = self.channel_reader_inner(chan, stream_id).await {
-            warn!("Channel reader failed: {:?}", e);
+            log::warn!("Channel reader failed: {:?}", e);
         }
     }
 }
