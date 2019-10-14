@@ -106,6 +106,14 @@ impl KnownEssStore {
         self.ess_by_ssid.lock().len()
     }
 
+    pub fn get_known_networks(&self) -> Vec<String> {
+        self.ess_by_ssid
+            .lock()
+            .keys()
+            .map(|bytes| String::from_utf8_lossy(&bytes[..]).into_owned())
+            .collect()
+    }
+
     fn write(&self, guard: MutexGuard<EssMap>) -> Result<(), failure::Error> {
         let temp_file = TempFile::create(&self.tmp_storage_path)?;
         let mut list = Vec::with_capacity(guard.len());
