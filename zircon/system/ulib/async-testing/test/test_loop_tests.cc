@@ -10,13 +10,14 @@
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
 #include <lib/zx/time.h>
-#include <unittest/unittest.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
 #include <array>
 #include <memory>
 #include <utility>
+
+#include <unittest/unittest.h>
 
 namespace {
 
@@ -681,6 +682,45 @@ bool DispatchOrderIsDeterministic() {
   END_TEST;
 }
 
+bool BlockCurrentSubLoopAndRunOthersUntilOtherLoopFor(uint32_t random_seed) {
+  BEGIN_HELPER;
+  std::unique_ptr<async::TestLoop> loop;
+
+  EXPECT_TRUE(SeedTestLoopWithEnv(random_seed, &loop));
+  auto loopB = loop->StartNewLoop();
+  std::vector<int> elements;
+
+  async::PostTask(loop->dispatcher(), [&] {
+    async::PostTask(loopB->dispatcher(), [&] { elements.push_back(0); });
+    EXPECT_TRUE(loop->BlockCurrentSubLoopAndRunOthersUntil(
+        [&] { return elements.size() == 1 && elements[0] == 0; }));
+    elements.push_back(1);
+  });
+
+  loop->RunUntilIdle();
+  EXPECT_EQ(elements.size(), 2);
+  EXPECT_EQ(elements[0], 0);
+  EXPECT_EQ(elements[1], 1);
+
+  END_HELPER;
+}
+
+bool BlockCurrentSubLoopAndRunOthersUntilOtherLoop() {
+  BEGIN_TEST;
+
+  EXPECT_TRUE(BlockCurrentSubLoopAndRunOthersUntilOtherLoopFor(1));
+  EXPECT_TRUE(BlockCurrentSubLoopAndRunOthersUntilOtherLoopFor(43));
+  EXPECT_TRUE(BlockCurrentSubLoopAndRunOthersUntilOtherLoopFor(893));
+  EXPECT_TRUE(BlockCurrentSubLoopAndRunOthersUntilOtherLoopFor(39408));
+  EXPECT_TRUE(BlockCurrentSubLoopAndRunOthersUntilOtherLoopFor(844018));
+  EXPECT_TRUE(BlockCurrentSubLoopAndRunOthersUntilOtherLoopFor(83018299));
+  EXPECT_TRUE(BlockCurrentSubLoopAndRunOthersUntilOtherLoopFor(3213));
+  EXPECT_TRUE(BlockCurrentSubLoopAndRunOthersUntilOtherLoopFor(139133113));
+  EXPECT_TRUE(BlockCurrentSubLoopAndRunOthersUntilOtherLoopFor(1323234373));
+
+  END_TEST;
+}
+
 // Test that non-async-dispatcher loops run fine.
 struct ExternalLoop : async_test_subloop_t {
   ExternalLoop() { ops = &kOps; }
@@ -785,6 +825,32 @@ bool ExternalLoopIsRunAndFinalized() {
   END_TEST;
 }
 
+bool BlockCurrentSubLoopAndRunOthersUntilTrue() {
+  BEGIN_TEST;
+
+  async::TestLoop loop;
+  async::PostTask(loop.dispatcher(), [&] {
+    EXPECT_TRUE(loop.BlockCurrentSubLoopAndRunOthersUntil([] { return true; }));
+  });
+
+  loop.RunUntilIdle();
+
+  END_TEST;
+}
+
+bool BlockCurrentSubLoopAndRunOthersUntilFalse() {
+  BEGIN_TEST;
+
+  async::TestLoop loop;
+  async::PostTask(loop.dispatcher(), [&] {
+    EXPECT_FALSE(loop.BlockCurrentSubLoopAndRunOthersUntil([] { return false; }));
+  });
+
+  loop.RunUntilIdle();
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(SingleLoopTests)
@@ -803,10 +869,13 @@ RUN_TEST(NestedWaitsAreDispatched)
 RUN_TEST(WaitsAreCanceled)
 RUN_TEST(NestedTasksAndWaitsAreDispatched)
 RUN_TEST(ExternalLoopIsRunAndFinalized)
+RUN_TEST(BlockCurrentSubLoopAndRunOthersUntilTrue)
+RUN_TEST(BlockCurrentSubLoopAndRunOthersUntilFalse)
 END_TEST_CASE(SingleLoopTests)
 
 BEGIN_TEST_CASE(MultiLoopTests)
 RUN_TEST(TasksAreDispatchedOnManyLoops)
 RUN_TEST(WaitsAreDispatchedOnManyLoops)
 RUN_TEST(DispatchOrderIsDeterministic)
+RUN_TEST(BlockCurrentSubLoopAndRunOthersUntilOtherLoop)
 END_TEST_CASE(MultiLoopTests)

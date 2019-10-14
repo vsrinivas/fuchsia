@@ -5,12 +5,13 @@
 #ifndef LIB_ASYNC_TESTING_TEST_LOOP_H_
 #define LIB_ASYNC_TESTING_TEST_LOOP_H_
 
-#include <memory>
-#include <vector>
-
 #include <lib/async-testing/test_subloop.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 #include <lib/zx/time.h>
+
+#include <memory>
+#include <vector>
 
 namespace async {
 
@@ -68,6 +69,12 @@ class TestLoop final {
   // dispatch as usual.
   void Quit();
 
+  // This method must be called while running. It will block the current subloop
+  // until |condition| is realized. Other subloops will continue to run. Returns
+  // |true| when |condition| is realized, and |false| if |condition| is not
+  // realized and no further progress is possible.
+  bool BlockCurrentSubLoopAndRunOthersUntil(fit::function<bool()> condition);
+
   // Advances the fake clock time by the smallest possible amount.
   // This doesn't run the loop.
   void AdvanceTimeByEpsilon();
@@ -109,6 +116,20 @@ class TestLoop final {
   // Advances the time to |time| and notifies the subloops.
   void AdvanceTimeTo(zx::time time);
 
+  // Returns whether the given subloop is locked.
+  bool IsLockedSubLoop(TestSubloop* subloop);
+
+  // Runs the loop until either:
+  // - The loop quit method is called.
+  // - No unlocked subloop has any available task.
+  // - An event on the current loop must be run when the current loop is locked.
+  //
+  // This method returns |true| if an event has been dispatched while running,
+  // or some event could be run but the method returned due to trying
+  // dispatching an event on the current locked loop.
+  // |current_subloop_| is guaranteed to be unchanged when this method returns.
+  bool Run();
+
   // The current time. Invariant: all subloops have been notified of the
   // current time.
   zx::time current_time_;
@@ -122,12 +143,20 @@ class TestLoop final {
   // The dispatchers running in this test loop.
   std::vector<TestSubloop> subloops_;
 
+  // The subloop dispatching the currently run event.
+  TestSubloop* current_subloop_ = nullptr;
+
+  // The set of subloop currently blocked on |BlockCurrentSubLoopAndRunOthersUntil|.
+  std::vector<TestSubloop*> locked_subloops_;
+
   // The seed of a pseudo-random number used to determinisitically determine the
   // dispatching order across |dispatchers_|.
   uint32_t initial_state_;
   // The current state of the pseudo-random generator.
   uint32_t state_;
 
+  // The deadline of the current run of the loop.
+  zx::time deadline_;
   // Quit state of the loop.
   bool has_quit_ = false;
   // Whether the loop is currently running.

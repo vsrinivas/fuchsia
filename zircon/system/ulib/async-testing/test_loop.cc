@@ -5,17 +5,14 @@
 // TODO(joshuseaton): Once std lands in Zircon, simplify everything below.
 
 #include <lib/async-testing/test_loop.h>
-
-#include <stdio.h>
-#include <stdlib.h>
-
-#include <algorithm>
-
 #include <lib/async-testing/test_loop_dispatcher.h>
 #include <lib/async/default.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
 #include <utility>
 
 namespace async {
@@ -128,6 +125,26 @@ TestLoop::~TestLoop() { async_set_default_dispatcher(nullptr); }
 
 async_dispatcher_t* TestLoop::dispatcher() { return default_dispatcher_; }
 
+bool TestLoop::BlockCurrentSubLoopAndRunOthersUntil(fit::function<bool()> condition) {
+  ZX_ASSERT(is_running_);
+  ZX_ASSERT(!IsLockedSubLoop(current_subloop_));
+  locked_subloops_.push_back(current_subloop_);
+  bool success = false;
+
+  while (!success) {
+    bool did_work = Run();
+
+    success = condition();
+    if (!did_work) {
+      break;
+    }
+  }
+
+  ZX_ASSERT(locked_subloops_.back() == current_subloop_);
+  locked_subloops_.pop_back();
+  return success;
+}
+
 std::unique_ptr<LoopInterface> TestLoop::StartNewLoop() {
   async_dispatcher_t* dispatcher_interface;
   async_test_subloop_t* subloop;
@@ -151,26 +168,38 @@ void TestLoop::AdvanceTimeByEpsilon() { AdvanceTimeTo(Now() + zx::duration(1)); 
 bool TestLoop::RunUntil(zx::time deadline) {
   ZX_ASSERT(!is_running_);
   is_running_ = true;
-  bool did_work = false;
-  while (!has_quit_) {
-    if (!HasPendingWork()) {
-      zx::time next_due_time = GetNextTaskDueTime();
-      if (next_due_time > deadline) {
-        AdvanceTimeTo(deadline);
-        break;
-      }
-      AdvanceTimeTo(next_due_time);
-    }
-
-    Randomize(&state_);
-    size_t current_index = state_ % subloops_.size();
-    auto& current_subloop = subloops_[current_index];
-
-    did_work |= current_subloop.DispatchNextDueMessage();
-  }
-  is_running_ = false;
+  deadline_ = deadline;
+  bool did_work = Run();
   has_quit_ = false;
+  is_running_ = false;
   return did_work;
+}
+
+bool TestLoop::RunFor(zx::duration duration) { return RunUntil(Now() + duration); }
+
+bool TestLoop::RunUntilIdle() { return RunUntil(Now()); }
+
+bool TestLoop::HasPendingWork() {
+  for (auto& subloop : subloops_) {
+    if (IsLockedSubLoop(&subloop)) {
+      continue;
+    }
+    if (subloop.HasPendingWork()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+zx::time TestLoop::GetNextTaskDueTime() {
+  zx::time next_due_time = zx::time::infinite();
+  for (auto& subloop : subloops_) {
+    if (IsLockedSubLoop(&subloop)) {
+      continue;
+    }
+    next_due_time = std::min<zx::time>(next_due_time, subloop.GetNextTaskDueTime());
+  }
+  return next_due_time;
 }
 
 void TestLoop::AdvanceTimeTo(zx::time time) {
@@ -182,25 +211,39 @@ void TestLoop::AdvanceTimeTo(zx::time time) {
   }
 }
 
-bool TestLoop::RunFor(zx::duration duration) { return RunUntil(Now() + duration); }
-
-bool TestLoop::RunUntilIdle() { return RunUntil(Now()); }
-
-bool TestLoop::HasPendingWork() {
-  for (auto& subloop : subloops_) {
-    if (subloop.HasPendingWork()) {
-      return true;
-    }
-  }
-  return false;
+bool TestLoop::IsLockedSubLoop(TestSubloop* subloop) {
+  return std::find(locked_subloops_.begin(), locked_subloops_.end(), subloop) !=
+         locked_subloops_.end();
 }
 
-zx::time TestLoop::GetNextTaskDueTime() {
-  zx::time next_due_time = zx::time::infinite();
-  for (auto& subloop : subloops_) {
-    next_due_time = std::min<zx::time>(next_due_time, subloop.GetNextTaskDueTime());
+bool TestLoop::Run() {
+  TestSubloop* initial_loop = current_subloop_;
+  bool did_work = false;
+  while (!has_quit_) {
+    if (!HasPendingWork()) {
+      zx::time next_due_time = GetNextTaskDueTime();
+      if (next_due_time > deadline_) {
+        AdvanceTimeTo(deadline_);
+        break;
+      }
+      AdvanceTimeTo(next_due_time);
+    }
+
+    Randomize(&state_);
+    size_t current_index = state_ % subloops_.size();
+    current_subloop_ = &subloops_[current_index];
+    if (IsLockedSubLoop(current_subloop_)) {
+      if (current_subloop_ == initial_loop) {
+        did_work = true;
+        break;
+      }
+      continue;
+    }
+
+    did_work |= current_subloop_->DispatchNextDueMessage();
   }
-  return next_due_time;
+  current_subloop_ = initial_loop;
+  return did_work;
 }
 
 }  // namespace async
