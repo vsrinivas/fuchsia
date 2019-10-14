@@ -69,6 +69,7 @@ trace_flow_id_t PointerTraceHACK(float fa, float fb) {
   return (((uint64_t)ia) << 32) | ib;
 }
 
+// LINT.IfChange
 // Helper for Dispatch[Touch|Mouse]Command and PerformGlobalHitTest.
 escher::ray4 CreateScreenPerpendicularRay(float x, float y) {
   // We set the elevation for the origin point, and Z value for the direction,
@@ -91,6 +92,7 @@ escher::ray4 CreateScreenPerpendicularRay(float x, float y) {
   return {{std::floor(x) + 0.5f, std::floor(y) + 0.5f, 1.f, 1.f},  // Origin as homogeneous point.
           {0.f, 0.f, -1.f, 0.f}};
 }
+// LINT.ThenChange(//src/ui/scenic/lib/gfx/tests/hittest_global_unittest.cc)
 
 // Helper for Dispatch[Touch|Mouse]Command.
 escher::vec2 TransformPointerEvent(const escher::ray4& ray, const escher::mat4& transform) {
