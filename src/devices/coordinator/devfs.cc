@@ -167,8 +167,7 @@ void describe_error(zx::channel h, zx_status_t status) {
 // its device has no rpc handle
 bool devnode_is_dir(const Devnode* dn) {
   if (dn->children.is_empty()) {
-    return (dn->device == nullptr) || (!dn->device->device_controller().channel().is_valid()) ||
-           (!dn->device->channel()->is_valid());
+    return (dn->device == nullptr) || (!dn->device->channel()->is_valid());
   }
   return true;
 }
@@ -179,7 +178,7 @@ bool devnode_is_local(Devnode* dn) {
   if (dn->device == nullptr) {
     return true;
   }
-  if (!dn->device->device_controller().channel().get()) {
+  if (!dn->device->channel()->is_valid()) {
     return true;
   }
   if (dn->device->flags & DEV_CTX_MUST_ISOLATE) {
@@ -438,8 +437,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
   }
 
   // Otherwise we will pass the request on to the remote.
-  fuchsia_io_DirectoryOpen(dn->device->device_controller().channel().get(), flags, 0, ".", 1,
-                           ipc.release());
+  fuchsia_io_DirectoryOpen(dn->device->channel()->get(), flags, 0, ".", 1, ipc.release());
 }
 
 void devfs_remove(Devnode* dn) {
@@ -623,8 +621,8 @@ zx_status_t devfs_connect(const Device* dev, zx::channel client_remote) {
   if (!client_remote.is_valid()) {
     return ZX_ERR_BAD_HANDLE;
   }
-  fuchsia_io_DirectoryOpen(dev->device_controller().channel().get(), 0 /* flags */, 0 /* mode */,
-                           ".", 1, client_remote.release());
+  fuchsia_io_DirectoryOpen(dev->channel()->get(), 0 /* flags */, 0 /* mode */, ".", 1,
+                           client_remote.release());
   return ZX_OK;
 }
 

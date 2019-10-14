@@ -5,18 +5,6 @@
 #ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_DEVHOST_H_
 #define ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_DEVHOST_H_
 
-#include <fuchsia/device/manager/llcpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/async/cpp/wait.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <lib/zx/channel.h>
-#include <stdint.h>
-#include <threads.h>
-#include <zircon/compiler.h>
-#include <zircon/fidl.h>
-#include <zircon/types.h>
-
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -26,6 +14,17 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/device/manager/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/zx/channel.h>
+#include <stdint.h>
+#include <threads.h>
+#include <zircon/compiler.h>
+#include <zircon/fidl.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <zircon/types.h>
 
 #include "../shared/async-loop-owned-rpc-handler.h"
 #include "devhost-context.h"
@@ -44,8 +43,7 @@ struct BindContext {
 struct CreationContext {
   fbl::RefPtr<zx_device_t> parent;
   fbl::RefPtr<zx_device_t> child;
-  zx::unowned_channel device_controller_rpc;
-  zx::unowned_channel coordinator_rpc;
+  zx::unowned_channel rpc;
 };
 
 void devhost_set_bind_context(BindContext* ctx);
@@ -163,12 +161,11 @@ zx_status_t devhost_device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) R
 zx_status_t devhost_device_suspend(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags) REQ_DM_LOCK;
 zx_status_t devhost_device_suspend_new(const fbl::RefPtr<zx_device_t>& dev,
                                        fuchsia_device_DevicePowerState requested_state,
-                                       fuchsia_device_DevicePowerState* out_state);
-zx_status_t devhost_device_resume(const fbl::RefPtr<zx_device_t>& dev,
-                                  uint32_t target_system_state) REQ_DM_LOCK;
+                                       fuchsia_device_DevicePowerState *out_state);
+zx_status_t devhost_device_resume(const fbl::RefPtr<zx_device_t>& dev, uint32_t target_system_state) REQ_DM_LOCK;
 zx_status_t devhost_device_resume_new(const fbl::RefPtr<zx_device_t>& dev,
-                                      fuchsia_device_DevicePowerState requested_state,
-                                      fuchsia_device_DevicePowerState* out_state);
+                                       fuchsia_device_DevicePowerState requested_state,
+                                       fuchsia_device_DevicePowerState *out_state);
 void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK;
 
 zx_status_t devhost_load_firmware(const fbl::RefPtr<zx_device_t>& dev, const char* path,
@@ -208,16 +205,13 @@ class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostContr
   zx_status_t HandleRead();
 
  private:
-  void CreateDevice(zx::channel coordinator_rpc, zx::channel device_controller_rpc,
-                    ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy,
-                    ::fidl::StringView proxy_args, uint64_t local_device_id,
-                    CreateDeviceCompleter::Sync completer) override;
-  void CreateCompositeDevice(zx::channel coordinator_rpc, zx::channel device_controller_rpc,
-                             ::fidl::VectorView<uint64_t> components, ::fidl::StringView name,
-                             uint64_t local_device_id,
+  void CreateDevice(zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver,
+                    ::zx::handle parent_proxy, ::fidl::StringView proxy_args,
+                    uint64_t local_device_id, CreateDeviceCompleter::Sync completer) override;
+  void CreateCompositeDevice(zx::channel rpc, ::fidl::VectorView<uint64_t> components,
+                             ::fidl::StringView name, uint64_t local_device_id,
                              CreateCompositeDeviceCompleter::Sync completer) override;
-  void CreateDeviceStub(zx::channel coordinator_rpc, zx::channel device_controller_rpc,
-                        uint32_t protocol_id, uint64_t local_device_id,
+  void CreateDeviceStub(zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id,
                         CreateDeviceStubCompleter::Sync completer) override;
 };
 
@@ -250,6 +244,7 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& dev, const fbl::RefPtr<z
 // Note that devhost_remove() takes a RefPtr rather than a const RefPtr&.
 // It intends to consume a reference.
 zx_status_t devhost_remove(fbl::RefPtr<zx_device_t> dev) REQ_DM_LOCK;
+zx_status_t devhost_send_unbind_done(const fbl::RefPtr<zx_device_t>& dev);
 zx_status_t devhost_schedule_remove(const fbl::RefPtr<zx_device_t>& dev,
                                     bool unbind_self) REQ_DM_LOCK;
 zx_status_t devhost_schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;

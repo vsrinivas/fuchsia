@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_SHARED_ASYNC_LOOP_OWNED_RPC_HANDLER_H_
-#define ZIRCON_SYSTEM_CORE_DEVMGR_SHARED_ASYNC_LOOP_OWNED_RPC_HANDLER_H_
+#pragma once
 
+#include <fbl/unique_ptr.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
 
 #include <utility>
-
-#include <fbl/unique_ptr.h>
 
 namespace devmgr {
 
@@ -66,16 +64,11 @@ class AsyncLoopOwnedRpcHandler {
     return old;
   }
 
-  void set_coordinator_channel(zx::channel h) { coordinator_rpc = std::move(h); }
-
   using WaitType =
       async::WaitMethod<AsyncLoopOwnedRpcHandler<T>, &AsyncLoopOwnedRpcHandler<T>::HandleRpcEntry>;
 
  private:
-  zx::channel coordinator_rpc;
   WaitType wait_{this, ZX_HANDLE_INVALID, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED};
 };
 
 }  // namespace devmgr
-
-#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_SHARED_ASYNC_LOOP_OWNED_RPC_HANDLER_H_

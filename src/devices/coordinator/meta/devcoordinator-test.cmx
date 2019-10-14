@@ -7,8 +7,6 @@
             "deprecated-shell",
             "deprecated-ambient-replace-as-executable"
         ],
-        "services": [
-            "fuchsia.boot.Items"
-        ]
+        "services": [ ]
     }
 }

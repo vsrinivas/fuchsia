@@ -23,11 +23,9 @@ class DeviceControllerConnection
       public llcpp::fuchsia::device::manager::DeviceController::Interface,
       public llcpp::fuchsia::io::Directory::Interface {
  public:
-  DeviceControllerConnection(fbl::RefPtr<zx_device> dev, zx::channel rpc,
-                             zx::channel coordinator_rpc);
+  DeviceControllerConnection(fbl::RefPtr<zx_device> dev, zx::channel rpc);
 
   static zx_status_t Create(fbl::RefPtr<zx_device> dev, zx::channel rpc,
-                            zx::channel coordinator_rpc,
                             std::unique_ptr<DeviceControllerConnection>* conn);
 
   ~DeviceControllerConnection();

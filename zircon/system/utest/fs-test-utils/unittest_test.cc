@@ -4,8 +4,6 @@
 
 #include <fcntl.h>
 #include <stdio.h>
-#include <zircon/device/block.h>
-#include <zircon/syscalls.h>
 
 #include <fbl/auto_call.h>
 #include <fbl/function.h>
@@ -16,6 +14,8 @@
 #include <fs-test-utils/unittest.h>
 #include <ramdevice-client/ramdisk.h>
 #include <unittest/unittest.h>
+#include <zircon/device/block.h>
+#include <zircon/syscalls.h>
 
 namespace fs_test_utils {
 namespace {
@@ -64,8 +64,7 @@ BEGIN_FS_TEST_CASE(UnittestFixtureTest, OptionsUseRamdiskAndFvm2)
 RUN_FS_TEST_F(VerifyRamdiskAndFvmExist)
 // TODO(gevalentino): FLK-48 flaky.
 // RUN_FS_TEST_F(VerifyRamdiskAndFvmExist)
-// TODO(38168): flaky tests
-// RUN_FS_TEST_F(VerifyRamdiskAndFvmExist2)
+RUN_FS_TEST_F(VerifyRamdiskAndFvmExist2)
 END_FS_TEST_CASE(UnittestFixtureTest, OptionsUseRamdiskAndFvm2)
 
 }  // namespace

@@ -12,8 +12,7 @@
 
 namespace devmgr {
 
-zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel coordinator_rpc,
-                                  zx::channel device_controller_rpc, zx::vmo driver,
+zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel rpc, zx::vmo driver,
                                   const char* args, zx::handle rpc_proxy) {
   size_t driver_path_size = dev->libname().size();
   size_t args_size = strlen(args);
@@ -31,8 +30,7 @@ zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel coordina
   // TODO(teisenbe): Allocate and track txids
   req->hdr.txid = 1;
 
-  req->coordinator_rpc = FIDL_HANDLE_PRESENT;
-  req->device_controller_rpc = FIDL_HANDLE_PRESENT;
+  req->rpc = FIDL_HANDLE_PRESENT;
 
   req->driver_path.size = driver_path_size;
   req->driver_path.data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
@@ -47,9 +45,8 @@ zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel coordina
 
   req->local_device_id = dev->local_id();
 
-  zx_handle_t handles[4] = {coordinator_rpc.release(), device_controller_rpc.release(),
-                            driver.release()};
-  uint32_t num_handles = 3;
+  zx_handle_t handles[3] = {rpc.release(), driver.release()};
+  uint32_t num_handles = 2;
 
   if (rpc_proxy.is_valid()) {
     handles[num_handles++] = rpc_proxy.release();
@@ -59,8 +56,8 @@ zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel coordina
   return msg.Write(dh->hrpc(), 0);
 }
 
-zx_status_t dh_send_create_device_stub(Device* dev, Devhost* dh, zx::channel coordinator_rpc,
-                                       zx::channel device_controller_rpc, uint32_t protocol_id) {
+zx_status_t dh_send_create_device_stub(Device* dev, Devhost* dh, zx::channel rpc,
+                                       uint32_t protocol_id) {
   FIDL_ALIGNDECL char
       wr_bytes[sizeof(fuchsia_device_manager_DevhostControllerCreateDeviceStubRequest)];
   fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
@@ -71,84 +68,139 @@ zx_status_t dh_send_create_device_stub(Device* dev, Devhost* dh, zx::channel coo
   // TODO(teisenbe): Allocate and track txids
   req->hdr.txid = 1;
 
-  req->coordinator_rpc = FIDL_HANDLE_PRESENT;
-  req->device_controller_rpc = FIDL_HANDLE_PRESENT;
+  req->rpc = FIDL_HANDLE_PRESENT;
   req->protocol_id = protocol_id;
   req->local_device_id = dev->local_id();
 
-  zx_handle_t handles[] = {coordinator_rpc.release(), device_controller_rpc.release()};
+  zx_handle_t handles[] = {rpc.release()};
   fidl::Message msg(builder.Finalize(),
                     fidl::HandlePart(handles, fbl::count_of(handles), fbl::count_of(handles)));
   return msg.Write(dh->hrpc(), 0);
 }
 
-zx_status_t dh_send_bind_driver(Device* dev_ptr, const char* libname, zx::vmo driver,
-                                fit::function<void(zx_status_t, zx::channel)> cb) {
-  auto dev = fbl::RefPtr(dev_ptr);
-  dev_ptr->device_controller()->BindDriver(libname, std::move(driver), std::move(cb));
-  return ZX_OK;
+zx_status_t dh_send_bind_driver(const Device* dev, const char* libname, zx::vmo driver) {
+  size_t libname_size = strlen(libname);
+  uint32_t wr_num_bytes = static_cast<uint32_t>(
+      sizeof(fuchsia_device_manager_DeviceControllerBindDriverRequest) + FIDL_ALIGN(libname_size));
+  FIDL_ALIGNDECL char wr_bytes[wr_num_bytes];
+  fidl::Builder builder(wr_bytes, wr_num_bytes);
+
+  auto req = builder.New<fuchsia_device_manager_DeviceControllerBindDriverRequest>();
+  char* libname_data = builder.NewArray<char>(static_cast<uint32_t>(libname_size));
+  ZX_ASSERT(req != nullptr && libname_data != nullptr);
+  req->hdr.ordinal = fuchsia_device_manager_DeviceControllerBindDriverOrdinal;
+  // TODO(teisenbe): Allocate and track txids
+  req->hdr.txid = 1;
+
+  req->driver_path.size = libname_size;
+  req->driver_path.data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
+  memcpy(libname_data, libname, libname_size);
+
+  req->driver = FIDL_HANDLE_PRESENT;
+
+  zx_handle_t handles[] = {driver.release()};
+  fidl::Message msg(builder.Finalize(),
+                    fidl::HandlePart(handles, fbl::count_of(handles), fbl::count_of(handles)));
+  return msg.Write(dev->channel()->get(), 0);
 }
 
 zx_status_t dh_send_connect_proxy(const Device* dev, zx::channel proxy) {
-  dev->device_controller()->ConnectProxy(std::move(proxy));
-  return ZX_OK;
+  FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_device_manager_DeviceControllerConnectProxyRequest)];
+  fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
+
+  auto req = builder.New<fuchsia_device_manager_DeviceControllerConnectProxyRequest>();
+  ZX_ASSERT(req != nullptr);
+  req->hdr.ordinal = fuchsia_device_manager_DeviceControllerConnectProxyOrdinal;
+  // TODO(teisenbe): Allocate and track txids
+  req->hdr.txid = 1;
+
+  req->shadow = FIDL_HANDLE_PRESENT;
+
+  zx_handle_t handles[] = {proxy.release()};
+  fidl::Message msg(builder.Finalize(),
+                    fidl::HandlePart(handles, fbl::count_of(handles), fbl::count_of(handles)));
+  return msg.Write(dev->channel()->get(), 0);
 }
 
-zx_status_t dh_send_suspend(Device* dev_ptr, uint32_t flags) {
-  auto dev = fbl::RefPtr(dev_ptr);
-  dev->device_controller()->Suspend(flags, [dev](zx_status_t status) {
-    if (status != ZX_OK) {
-      log(ERROR, "devcoordinator: rpc: suspend '%s' status %d\n", dev->name().data(), status);
-    }
+zx_status_t dh_send_suspend(const Device* dev, uint32_t flags) {
+  FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_device_manager_DeviceControllerSuspendRequest)];
+  fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
 
-    log(ERROR, "devcoordinator: suspended name='%s' status %d\n", dev->name().data(), status);
-    dev->CompleteSuspend(status);
-  });
-  return ZX_OK;
+  auto req = builder.New<fuchsia_device_manager_DeviceControllerSuspendRequest>();
+  ZX_ASSERT(req != nullptr);
+  req->hdr.ordinal = fuchsia_device_manager_DeviceControllerSuspendOrdinal;
+  // TODO(teisenbe): Allocate and track txids
+  req->hdr.txid = 1;
+  req->flags = flags;
+
+  fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
+  return msg.Write(dev->channel()->get(), 0);
 }
 
-zx_status_t dh_send_resume(Device* dev_ptr, uint32_t target_system_state) {
-  auto dev = fbl::RefPtr(dev_ptr);
-  dev_ptr->device_controller()->Resume(target_system_state, [dev](zx_status_t status) {
-    log(INFO, "devcoordinator: resumed dev %p name='%s'\n", dev.get(), dev->name().data());
-    dev->CompleteResume(status);
-  });
-  return ZX_OK;
+zx_status_t dh_send_resume(const Device* dev, uint32_t target_system_state) {
+  FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_device_manager_DeviceControllerResumeRequest)];
+  fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
+
+  auto req = builder.New<fuchsia_device_manager_DeviceControllerResumeRequest>();
+  ZX_ASSERT(req != nullptr);
+  req->hdr.ordinal = fuchsia_device_manager_DeviceControllerResumeOrdinal;
+  // TODO(teisenbe): Allocate and track txids
+  req->hdr.txid = 1;
+  req->target_system_state = target_system_state;
+
+  fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
+  return msg.Write(dev->channel()->get(), 0);
 }
 
 zx_status_t dh_send_complete_compatibility_tests(const Device* dev, zx_status_t status) {
-  dev->device_controller()->CompleteCompatibilityTests(
-      static_cast<fuchsia::device::manager::CompatibilityTestStatus>(status));
-  return ZX_OK;
+  FIDL_ALIGNDECL char
+      wr_bytes[sizeof(fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsRequest)];
+  fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
+
+  auto req =
+      builder.New<fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsRequest>();
+  ZX_ASSERT(req != nullptr);
+  req->hdr.ordinal = fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsOrdinal;
+  // TODO(teisenbe): Allocate and track txids
+  req->hdr.txid = 1;
+  req->status = status;
+
+  fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
+  return msg.Write(dev->channel()->get(), 0);
 }
 
-zx_status_t dh_send_unbind(Device* dev_ptr) {
-  auto dev = fbl::RefPtr(dev_ptr);
-  dev->device_controller()->Unbind(
-      [dev](fuchsia::device::manager::DeviceController_Unbind_Result status) {
-        log(ERROR, "devcoordinator: unbind done '%s'\n", dev->name().data());
-        dev->CompleteUnbind();
-      });
-  return ZX_OK;
+zx_status_t dh_send_unbind(const Device* dev) {
+  FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_device_manager_DeviceControllerUnbindRequest)];
+  fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
+
+  auto req = builder.New<fuchsia_device_manager_DeviceControllerUnbindRequest>();
+  ZX_ASSERT(req != nullptr);
+  req->hdr.ordinal = fuchsia_device_manager_DeviceControllerUnbindOrdinal;
+  // TODO(teisenbe): Allocate and track txids
+  req->hdr.txid = 1;
+
+  fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
+  return msg.Write(dev->channel()->get(), 0);
 }
 
-zx_status_t dh_send_complete_removal(Device* dev_ptr, fit::function<void()> cb) {
-  auto dev = fbl::RefPtr(dev_ptr);
-  dev->set_state(Device::State::kUnbinding);
-  dev->device_controller()->CompleteRemoval(
-      [dev, cb = std::move(cb)](
-          fuchsia::device::manager::DeviceController_CompleteRemoval_Result status) {
-        log(ERROR, "devcoordinator: remove done '%s'\n", dev->name().data());
-        cb();
-      });
-  return ZX_OK;
+zx_status_t dh_send_complete_removal(const Device* dev) {
+  FIDL_ALIGNDECL char
+      wr_bytes[sizeof(fuchsia_device_manager_DeviceControllerCompleteRemovalRequest)];
+  fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
+
+  auto req = builder.New<fuchsia_device_manager_DeviceControllerCompleteRemovalRequest>();
+  ZX_ASSERT(req != nullptr);
+  req->hdr.ordinal = fuchsia_device_manager_DeviceControllerCompleteRemovalOrdinal;
+  // TODO(teisenbe): Allocate and track txids
+  req->hdr.txid = 1;
+
+  fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
+  return msg.Write(dev->channel()->get(), 0);
 }
 
 zx_status_t dh_send_create_composite_device(Devhost* dh, const Device* composite_dev,
                                             const CompositeDevice& composite,
-                                            const uint64_t* component_local_ids,
-                                            zx::channel coordinator_rpc,
-                                            zx::channel device_controller_rpc) {
+                                            const uint64_t* component_local_ids, zx::channel rpc) {
   size_t components_size = composite.components_count() * sizeof(uint64_t);
   size_t name_size = composite.name().size();
   uint32_t wr_num_bytes = static_cast<uint32_t>(
@@ -166,8 +218,7 @@ zx_status_t dh_send_create_composite_device(Devhost* dh, const Device* composite
   // TODO(teisenbe): Allocate and track txids
   req->hdr.txid = 1;
 
-  req->coordinator_rpc = FIDL_HANDLE_PRESENT;
-  req->device_controller_rpc = FIDL_HANDLE_PRESENT;
+  req->rpc = FIDL_HANDLE_PRESENT;
 
   req->components.count = composite.components_count();
   req->components.data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
@@ -179,8 +230,8 @@ zx_status_t dh_send_create_composite_device(Devhost* dh, const Device* composite
 
   req->local_device_id = composite_dev->local_id();
 
-  zx_handle_t handles[2] = {coordinator_rpc.release(), device_controller_rpc.release()};
-  uint32_t num_handles = 2;
+  zx_handle_t handles[1] = {rpc.release()};
+  uint32_t num_handles = 1;
 
   fidl::Message msg(builder.Finalize(), fidl::HandlePart(handles, num_handles, num_handles));
   return msg.Write(dh->hrpc(), 0);
