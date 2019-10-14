@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
+#include <lib/async-testing/test_loop.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
@@ -13,6 +12,7 @@
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/environment/environment.h"
+#include "src/ledger/bin/environment/test_loop_notification.h"
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
 #include "src/ledger/bin/p2p_provider/public/p2p_provider.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
@@ -20,6 +20,7 @@
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/fuzz_data.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 
 namespace p2p_sync {
 namespace {
@@ -54,16 +55,24 @@ class FuzzingP2PProvider : public p2p_provider::P2PProvider {
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) {
   ledger::FuzzData fuzz_data(Data, Size);
 
+  // Get the TestLoop state.
+  auto loop_state = fuzz_data.GetNext<uint32_t>();
+  if (!loop_state) {
+    return 0;
+  }
   std::string bytes = fuzz_data.RemainingString();
 
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  async::TestLoop loop(loop_state.value());
+  auto io_loop = loop.StartNewLoop();
   auto component_context = sys::ComponentContext::Create();
-  ledger::Environment environment(ledger::EnvironmentBuilder()
-                                      .SetDisableStatistics(true)
-                                      .SetAsync(loop.dispatcher())
-                                      .SetIOAsync(loop.dispatcher())
-                                      .SetStartupContext(component_context.get())
-                                      .Build());
+  ledger::Environment environment(
+      ledger::EnvironmentBuilder()
+          .SetDisableStatistics(true)
+          .SetAsync(loop.dispatcher())
+          .SetIOAsync(io_loop->dispatcher())
+          .SetNotificationFactory(ledger::TestLoopNotification::NewFactory(&loop))
+          .SetStartupContext(component_context.get())
+          .Build());
   auto provider = std::make_unique<FuzzingP2PProvider>();
   FuzzingP2PProvider* provider_ptr = provider.get();
 

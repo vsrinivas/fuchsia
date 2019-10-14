@@ -13,6 +13,7 @@
 #include <memory>
 
 #include "peridot/lib/rng/random.h"
+#include "src/ledger/bin/environment/notification.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/backoff/backoff.h"
@@ -24,12 +25,14 @@ namespace ledger {
 class Environment {
  public:
   using BackoffFactory = fit::function<std::unique_ptr<backoff::Backoff>()>;
+  using NotificationFactory = fit::function<std::unique_ptr<Notification>()>;
   Environment(bool disable_statistics, async_dispatcher_t* dispatcher,
               async_dispatcher_t* io_dispatcher, std::string firebase_api_key,
               sys::ComponentContext* component_context,
               std::unique_ptr<coroutine::CoroutineService> coroutine_service,
-              BackoffFactory backoff_factory, std::unique_ptr<timekeeper::Clock> clock,
-              std::unique_ptr<rng::Random> random, storage::GarbageCollectionPolicy gc_policy);
+              BackoffFactory backoff_factory, NotificationFactory notification_factory,
+              std::unique_ptr<timekeeper::Clock> clock, std::unique_ptr<rng::Random> random,
+              storage::GarbageCollectionPolicy gc_policy);
   Environment(Environment&& other) noexcept;
   ~Environment();
 
@@ -49,6 +52,8 @@ class Environment {
   coroutine::CoroutineService* coroutine_service() const { return coroutine_service_.get(); }
 
   std::unique_ptr<backoff::Backoff> MakeBackoff();
+
+  std::unique_ptr<Notification> MakeNotification();
 
   timekeeper::Clock* clock() const { return clock_.get(); }
 
@@ -70,6 +75,7 @@ class Environment {
   sys::ComponentContext* component_context_;
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   BackoffFactory backoff_factory_;
+  NotificationFactory notification_factory_;
   std::unique_ptr<timekeeper::Clock> clock_;
   std::unique_ptr<rng::Random> random_;
   storage::GarbageCollectionPolicy gc_policy_;
@@ -97,6 +103,7 @@ class EnvironmentBuilder {
   EnvironmentBuilder& SetCoroutineService(
       std::unique_ptr<coroutine::CoroutineService> coroutine_service);
   EnvironmentBuilder& SetBackoffFactory(Environment::BackoffFactory backoff_factory);
+  EnvironmentBuilder& SetNotificationFactory(Environment::NotificationFactory notification_factory);
   EnvironmentBuilder& SetClock(std::unique_ptr<timekeeper::Clock> clock);
   EnvironmentBuilder& SetRandom(std::unique_ptr<rng::Random> random);
   EnvironmentBuilder& SetGcPolicy(storage::GarbageCollectionPolicy gc_policy);
@@ -111,6 +118,7 @@ class EnvironmentBuilder {
   sys::ComponentContext* component_context_ = nullptr;
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   Environment::BackoffFactory backoff_factory_;
+  Environment::NotificationFactory notification_factory_;
   std::unique_ptr<timekeeper::Clock> clock_;
   std::unique_ptr<rng::Random> random_;
   storage::GarbageCollectionPolicy gc_policy_ = storage::GarbageCollectionPolicy::NEVER;

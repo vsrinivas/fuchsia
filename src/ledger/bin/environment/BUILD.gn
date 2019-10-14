@@ -8,6 +8,9 @@ source_set("environment") {
   sources = [
     "environment.cc",
     "environment.h",
+    "notification.h",
+    "thread_notification.cc",
+    "thread_notification.h",
   ]
 
   public_deps = [
@@ -30,20 +33,39 @@ source_set("environment") {
   configs += [ "//src/ledger:ledger_config" ]
 }
 
+source_set("test_loop_notification") {
+  testonly = true
+
+  sources = [
+    "test_loop_notification.cc",
+    "test_loop_notification.h",
+  ]
+
+  public_deps = [
+    ":environment",
+    "//zircon/public/lib/async-testing",
+  ]
+}
+
 source_set("unittests") {
   testonly = true
 
   sources = [
     "environment_unittest.cc",
+    "test_loop_notification_unittest.cc",
+    "thread_notification_unittest.cc",
   ]
 
   deps = [
     ":environment",
+    ":test_loop_notification",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/timekeeper:testing",
     "//peridot/lib/rng:testing",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

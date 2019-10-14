@@ -20,6 +20,7 @@
 #include "peridot/lib/socket/socket_writer.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
+#include "src/ledger/bin/environment/test_loop_notification.h"
 #include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/fidl_helpers/bound_interface_set.h"
 #include "src/ledger/bin/inspect/inspect.h"
@@ -68,6 +69,7 @@ Environment BuildEnvironment(async::TestLoop* loop, async_dispatcher_t* dispatch
   return EnvironmentBuilder()
       .SetAsync(dispatcher)
       .SetIOAsync(io_dispatcher)
+      .SetNotificationFactory(ledger::TestLoopNotification::NewFactory(loop))
       .SetStartupContext(component_context)
       .SetBackoffFactory([random] {
         return std::make_unique<backoff::ExponentialBackoff>(kBackoffDuration, 1u, kBackoffDuration,

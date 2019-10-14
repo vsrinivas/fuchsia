@@ -8,6 +8,7 @@
 
 #include "peridot/lib/ledger_client/constants.h"
 #include "peridot/lib/rng/system_random.h"
+#include "src/ledger/bin/environment/thread_notification.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
 #include "src/lib/backoff/exponential_backoff.h"
@@ -19,7 +20,8 @@ Environment::Environment(bool disable_statistics, async_dispatcher_t* dispatcher
                          async_dispatcher_t* io_dispatcher, std::string firebase_api_key,
                          sys::ComponentContext* component_context,
                          std::unique_ptr<coroutine::CoroutineService> coroutine_service,
-                         BackoffFactory backoff_factory, std::unique_ptr<timekeeper::Clock> clock,
+                         BackoffFactory backoff_factory, NotificationFactory notification_factory,
+                         std::unique_ptr<timekeeper::Clock> clock,
                          std::unique_ptr<rng::Random> random,
                          storage::GarbageCollectionPolicy gc_policy)
     : disable_statistics_(disable_statistics),
@@ -29,44 +31,30 @@ Environment::Environment(bool disable_statistics, async_dispatcher_t* dispatcher
       component_context_(component_context),
       coroutine_service_(std::move(coroutine_service)),
       backoff_factory_(std::move(backoff_factory)),
+      notification_factory_(std::move(notification_factory)),
       clock_(std::move(clock)),
       random_(std::move(random)),
       gc_policy_(gc_policy) {
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(io_dispatcher_);
+  FXL_DCHECK(dispatcher_ != io_dispatcher_);
   FXL_DCHECK(component_context_);
   FXL_DCHECK(coroutine_service_);
   FXL_DCHECK(backoff_factory_);
+  FXL_DCHECK(notification_factory_);
   FXL_DCHECK(clock_);
   FXL_DCHECK(random_);
 }
 
 Environment::Environment(Environment&& other) noexcept { *this = std::move(other); }
 
-Environment& Environment::operator=(Environment&& other) noexcept {
-  disable_statistics_ = other.disable_statistics_;
-  dispatcher_ = other.dispatcher_;
-  io_dispatcher_ = other.io_dispatcher_;
-  firebase_api_key_ = std::move(other.firebase_api_key_);
-  component_context_ = other.component_context_;
-  coroutine_service_ = std::move(other.coroutine_service_);
-  backoff_factory_ = std::move(other.backoff_factory_);
-  clock_ = std::move(other.clock_);
-  random_ = std::move(other.random_);
-  gc_policy_ = other.gc_policy_;
-  FXL_DCHECK(dispatcher_);
-  FXL_DCHECK(io_dispatcher_);
-  FXL_DCHECK(component_context_);
-  FXL_DCHECK(coroutine_service_);
-  FXL_DCHECK(backoff_factory_);
-  FXL_DCHECK(clock_);
-  FXL_DCHECK(random_);
-  return *this;
-}
+Environment& Environment::operator=(Environment&& other) noexcept = default;
 
 Environment::~Environment() = default;
 
 std::unique_ptr<backoff::Backoff> Environment::MakeBackoff() { return backoff_factory_(); }
+
+std::unique_ptr<Notification> Environment::MakeNotification() { return notification_factory_(); }
 
 EnvironmentBuilder::EnvironmentBuilder() : firebase_api_key_(modular::kFirebaseApiKey) {}
 
@@ -110,6 +98,12 @@ EnvironmentBuilder& EnvironmentBuilder::SetBackoffFactory(
   return *this;
 }
 
+EnvironmentBuilder& EnvironmentBuilder::SetNotificationFactory(
+    Environment::NotificationFactory notification_factory) {
+  notification_factory_ = std::move(notification_factory);
+  return *this;
+}
+
 EnvironmentBuilder& EnvironmentBuilder::SetClock(std::unique_ptr<timekeeper::Clock> clock) {
   clock_ = std::move(clock);
   return *this;
@@ -140,9 +134,13 @@ Environment EnvironmentBuilder::Build() {
       return std::make_unique<backoff::ExponentialBackoff>(random->NewBitGenerator<uint64_t>());
     };
   }
+  if (!notification_factory_) {
+    notification_factory_ = [] { return std::make_unique<ThreadNotification>(); };
+  }
   return Environment(disable_statistics_, dispatcher_, io_dispatcher_, std::move(firebase_api_key_),
                      component_context_, std::move(coroutine_service_), std::move(backoff_factory_),
-                     std::move(clock_), std::move(random_), gc_policy_);
+                     std::move(notification_factory_), std::move(clock_), std::move(random_),
+                     gc_policy_);
 }
 
 }  // namespace ledger

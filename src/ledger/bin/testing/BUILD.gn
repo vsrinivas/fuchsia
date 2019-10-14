@@ -68,6 +68,7 @@ source_set("lib") {
     "//src/ledger/bin/app:flags",
     "//src/ledger/bin/app:lib",
     "//src/ledger/bin/environment",
+    "//src/ledger/bin/environment:test_loop_notification",
     "//src/ledger/bin/fidl/include",
     "//src/ledger/bin/inspect:inspect",
     "//src/ledger/bin/public",
