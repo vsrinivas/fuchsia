@@ -9,6 +9,22 @@
 
 #include "magma_common_defs.h"
 
+enum VslGcCompressionOption : uint8_t {
+  kVslGcCompressionOptionNone = 0x0,
+  kVslGcCompressionOptionColor = 0x1,
+  kVslGcCompressionOptionDepth = 0x2,
+  kVslGcCompressionOptionMsaaColor = 0x4,
+  kVslGcCompressionOptionMsaaDepth = 0x8,
+  kVslGcCompressionOptionDefault = kVslGcCompressionOptionColor | kVslGcCompressionOptionDepth |
+      kVslGcCompressionOptionMsaaColor | kVslGcCompressionOptionMsaaDepth,
+};
+
+enum VslGcSecureMode : uint8_t {
+  kVslGcSecureModeNone = 0,
+  kVslGcSecureModeNormal = 1,
+  kVslGcSecureModeTa = 2,
+};
+
 struct magma_vsl_gc_chip_identity {
   uint32_t chip_model;
   uint32_t chip_revision;
@@ -24,6 +40,16 @@ struct magma_vsl_gc_chip_identity {
   uint8_t chip_flags;
   uint32_t eco_id;
   uint32_t customer_id;
+} __attribute__((packed));
+
+struct magma_vsl_gc_chip_option {
+  bool gpu_profiler;
+  bool allow_fast_clear;
+  bool power_management;
+  bool enable_mmu;
+  VslGcCompressionOption compression;
+  uint32_t usc_l1_cache_ratio;
+  VslGcSecureMode secure_mode;
 } __attribute__((packed));
 
 #endif  // GARNET_DRIVERS_GPU_MSD_VSL_GC_INCLUDE_MAGMA_VSL_GC_TYPES_H_

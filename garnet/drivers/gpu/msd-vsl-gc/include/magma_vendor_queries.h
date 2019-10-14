@@ -9,6 +9,7 @@
 
 enum MsdVslVendorQuery {
   kMsdVslVendorQueryChipIdentity = MAGMA_QUERY_VENDOR_PARAM_0,
+  kMsdVslVendorQueryChipOption = MAGMA_QUERY_VENDOR_PARAM_0 + 1,
 };
 
 #endif  // GARNET_DRIVERS_GPU_MSD_VSL_GC_INCLUDE_MAGMA_VENDOR_QUERIES_H_

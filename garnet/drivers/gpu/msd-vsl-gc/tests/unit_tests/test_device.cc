@@ -55,6 +55,23 @@ TEST_F(MsdVslDeviceTest, QueryReturnsBufferBadId) {
   EXPECT_NE(MAGMA_STATUS_OK, msd_device_query_returns_buffer(device_.get(), 0 /* id */, &buffer));
 }
 
+TEST_F(MsdVslDeviceTest, ChipOption) {
+  magma_vsl_gc_chip_option option;
+  ASSERT_EQ(MAGMA_STATUS_OK, device_->ChipOption(&option));
+
+  // Now try to get it as a buffer.
+  uint32_t option_buffer;
+  EXPECT_EQ(MAGMA_STATUS_OK, msd_device_query_returns_buffer(device_.get(),
+                                                             kMsdVslVendorQueryChipOption,
+                                                             &option_buffer));
+  magma_vsl_gc_chip_option option_from_buf;
+  auto buffer = magma::PlatformBuffer::Import(option_buffer);
+  EXPECT_TRUE(buffer);
+  EXPECT_TRUE(buffer->Read(&option_from_buf, 0, sizeof(option_from_buf)));
+
+  EXPECT_EQ(0, memcmp(&option, &option_from_buf, sizeof(option_from_buf)));
+}
+
 TEST_F(MsdVslDeviceTest, FetchEngineDma) {
   constexpr uint32_t kPageCount = 1;
 

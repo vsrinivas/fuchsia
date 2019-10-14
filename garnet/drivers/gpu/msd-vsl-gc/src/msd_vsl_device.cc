@@ -226,6 +226,22 @@ magma_status_t MsdVslDevice::ChipIdentity(magma_vsl_gc_chip_identity* out_identi
   return MAGMA_STATUS_OK;
 }
 
+magma_status_t MsdVslDevice::ChipOption(magma_vsl_gc_chip_option* out_option) {
+  if (device_id() != 0x8000) {
+    // TODO(fxb/37962): Read hardcoded values from features database instead.
+    return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "unhandled device id 0x%x", device_id());
+  }
+  memset(out_option, 0, sizeof(*out_option));
+  out_option->gpu_profiler = false;
+  out_option->allow_fast_clear = false;
+  out_option->power_management = false;
+  out_option->enable_mmu = true;
+  out_option->compression = kVslGcCompressionOptionNone;
+  out_option->usc_l1_cache_ratio = 0;
+  out_option->secure_mode = kVslGcSecureModeNormal;
+  return MAGMA_STATUS_OK;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 msd_connection_t* msd_device_open(msd_device_t* device, msd_client_id_t client_id) {
@@ -280,6 +296,14 @@ magma_status_t msd_device_query_returns_buffer(msd_device_t* device, uint64_t id
         return status;
       }
       return DataToBuffer("chip_identity", &result, sizeof(result), buffer_out);
+    }
+    case kMsdVslVendorQueryChipOption: {
+      magma_vsl_gc_chip_option result;
+      magma_status_t status = MsdVslDevice::cast(device)->ChipOption(&result);
+      if (status != MAGMA_STATUS_OK) {
+        return status;
+      }
+      return DataToBuffer("chip_option", &result, sizeof(result), buffer_out);
     }
     default:
       return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "unhandled id %" PRIu64, id);

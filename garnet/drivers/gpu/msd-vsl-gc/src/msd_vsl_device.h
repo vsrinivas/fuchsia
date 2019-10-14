@@ -34,6 +34,7 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   std::unique_ptr<MsdVslConnection> Open(msd_client_id_t client_id);
 
   magma_status_t ChipIdentity(magma_vsl_gc_chip_identity* out_identity);
+  magma_status_t ChipOption(magma_vsl_gc_chip_option* out_option);
 
   static MsdVslDevice* cast(msd_device_t* dev) {
     DASSERT(dev);
