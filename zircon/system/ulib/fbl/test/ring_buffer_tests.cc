@@ -5,16 +5,14 @@
 #include <memory>
 
 #include <fbl/ring_buffer.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
 enum class AddBehavior { kTestPush, kTestEmplace };
 
 template <AddBehavior behavior>
-bool pod_test_helper() {
-  BEGIN_TEST;
-
+void pod_test_helper() {
   constexpr uint32_t kBuffSize = 10;
   fbl::RingBuffer<uint8_t, kBuffSize> buffer;
   ASSERT_EQ(buffer.size(), 0);
@@ -49,53 +47,35 @@ bool pod_test_helper() {
     buffer.emplace(static_cast<uint8_t>(11));
   }
   EXPECT_EQ(buffer.front(), 11);
-
-  END_TEST;
 }
 
-bool pod_test_push() {
-  BEGIN_TEST;
-  ASSERT_TRUE(pod_test_helper<AddBehavior::kTestPush>());
-  END_TEST;
+TEST(RingBufferTest, PodPush) {
+  auto fn = pod_test_helper<AddBehavior::kTestPush>;
+  ASSERT_NO_FAILURES(fn());
 }
 
-bool pod_test_emplace() {
-  BEGIN_TEST;
-  ASSERT_TRUE(pod_test_helper<AddBehavior::kTestEmplace>());
-  END_TEST;
+TEST(RingBufferTest, PodEmplace) {
+  auto fn = pod_test_helper<AddBehavior::kTestEmplace>;
+  ASSERT_NO_FAILURES(fn());
 }
 
-bool empty_asserts_test() {
-  BEGIN_TEST;
+TEST(RingBufferTest, EmptyAsserts) {
   if constexpr (ZX_DEBUG_ASSERT_IMPLEMENTED) {
     constexpr uint32_t kBuffSize = 10;
     fbl::RingBuffer<uint8_t, kBuffSize> buffer;
 
-    ASSERT_DEATH(([](void* void_buf) {
-                   auto buf = reinterpret_cast<fbl::RingBuffer<uint8_t, kBuffSize>*>(void_buf);
-                   buf->pop();
-                 }),
-                 &buffer, "Assert should have fired after popping an empty buffer\n");
+    ASSERT_DEATH([&buffer]() { buffer.pop(); },
+                 "Assert should have fired after popping an empty buffer\n");
 
-    ASSERT_DEATH(([](void* void_buf) {
-                   auto buf = reinterpret_cast<fbl::RingBuffer<uint8_t, kBuffSize>*>(void_buf);
-                   buf->front();
-                 }),
-                 &buffer, "Assert should have fired after calling front on an empty buffer\n");
+    ASSERT_DEATH([&buffer]() { buffer.front(); },
+                 "Assert should have fired after calling front on an empty buffer\n");
 
-    ASSERT_DEATH(([](void* void_buf) {
-                   auto buf = reinterpret_cast<fbl::RingBuffer<uint8_t, kBuffSize>*>(void_buf);
-                   buf->back();
-                 }),
-                 &buffer, "Assert should have fired after calling back on an empty buffer\n");
+    ASSERT_DEATH([&buffer]() { buffer.back(); },
+                 "Assert should have fired after calling back on an empty buffer\n");
   }
-
-  END_TEST;
 }
 
-bool full_asserts_test() {
-  BEGIN_TEST;
-
+TEST(RingBufferTest, FullAsserts) {
   if constexpr (ZX_DEBUG_ASSERT_IMPLEMENTED) {
     constexpr uint32_t kBuffSize = 10;
     fbl::RingBuffer<int, kBuffSize> buffer;
@@ -105,25 +85,15 @@ bool full_asserts_test() {
       buffer.push(i);
     }
 
-    ASSERT_DEATH(([](void* void_buf) {
-                   auto buf = reinterpret_cast<fbl::RingBuffer<int, kBuffSize>*>(void_buf);
-                   buf->push(5);
-                 }),
-                 &buffer, "Assert should have fired after pushing to a full buffer\n");
+    ASSERT_DEATH([&buffer]() { buffer.push(5); },
+                 "Assert should have fired after pushing to a full buffer\n");
 
-    ASSERT_DEATH(([](void* void_buf) {
-                   auto buf = reinterpret_cast<fbl::RingBuffer<int, kBuffSize>*>(void_buf);
-                   buf->emplace(5);
-                 }),
-                 &buffer, "Assert should have fired after emplacing to a full buffer\n");
+    ASSERT_DEATH([&buffer]() { buffer.emplace(5); },
+                 "Assert should have fired after emplacing to a full buffer\n");
   }
-
-  END_TEST;
 }
 
-bool move_only_test() {
-  BEGIN_TEST;
-
+TEST(RingBufferTest, MoveOnly) {
   constexpr uint32_t kBuffSize = 10;
   fbl::RingBuffer<std::unique_ptr<uint8_t>, kBuffSize> buffer;
   uint8_t data_value = 1;
@@ -148,8 +118,6 @@ bool move_only_test() {
   ASSERT_EQ(*buffer.front(), data_value);
   buffer.pop();
   data_value++;
-
-  END_TEST;
 }
 
 class TestObj {
@@ -194,9 +162,7 @@ class TestObj {
 uint32_t TestObj::constructed_ = 0;
 uint32_t TestObj::destructed_ = 0;
 
-bool no_default_constructor_test() {
-  BEGIN_TEST;
-
+TEST(RingBufferTest, NoDefaultConstructor) {
   constexpr uint32_t kBuffSize = 10;
   fbl::RingBuffer<TestObj, kBuffSize> buffer;
   buffer.push(TestObj(1));
@@ -204,13 +170,9 @@ bool no_default_constructor_test() {
 
   ASSERT_EQ(buffer.front().GetA(), 1);
   ASSERT_EQ(buffer.back().GetA(), 2);
-
-  END_TEST;
 }
 
-bool construct_destruct_match_test() {
-  BEGIN_TEST;
-
+TEST(RingBufferTest, ConstructDestructMatch) {
   TestObj::ResetDestructCount();
   TestObj::ResetConstructCount();
 
@@ -257,20 +219,6 @@ bool construct_destruct_match_test() {
   // Assert that going out of scope called the destructors.
   EXPECT_EQ(TestObj::ConstructCount(), 5);
   EXPECT_EQ(TestObj::DestructCount(), 5);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(ring_buffer_tests)
-
-RUN_TEST(pod_test_push)
-RUN_TEST(pod_test_emplace)
-RUN_TEST(move_only_test)
-RUN_TEST(full_asserts_test)
-RUN_TEST(empty_asserts_test)
-RUN_TEST(no_default_constructor_test)
-RUN_TEST(construct_destruct_match_test)
-
-END_TEST_CASE(ring_buffer_tests)
