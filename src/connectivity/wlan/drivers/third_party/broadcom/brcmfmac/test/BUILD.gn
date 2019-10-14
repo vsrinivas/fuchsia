@@ -64,6 +64,8 @@ executable("scan_test") {
   testonly = true
   sources = [
     "scan_test.cc",
+    "sim_test.cc",
+    "sim_test.h",
   ]
   deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
