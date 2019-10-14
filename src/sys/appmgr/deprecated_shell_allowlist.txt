@@ -15,7 +15,6 @@ fuchsia-pkg://fuchsia.com/coordinator_tests#meta/devcoordinator-task-test.cmx
 fuchsia-pkg://fuchsia.com/cpuperf_provider_integration_tests#meta/cpuperf_provider_integration_tests.cmx
 fuchsia-pkg://fuchsia.com/cpuperf_provider_tests#meta/cpuperf_provider_integration_tests.cmx
 fuchsia-pkg://fuchsia.com/dart_inspect_vmo_test#meta/dart_inspect_vmo_test.cmx
-fuchsia-pkg://fuchsia.com/detach_tests#meta/detach_tests.cmx
 fuchsia-pkg://fuchsia.com/driver_example_mod_tests#meta/driver_example_mod_tests.cmx
 fuchsia-pkg://fuchsia.com/factory_reset_tests#meta/factory_reset_unittests.cmx
 fuchsia-pkg://fuchsia.com/factory_reset_unittests#meta/factory_reset_unittests.cmx
@@ -55,7 +54,6 @@ fuchsia-pkg://fuchsia.com/sshd-host#meta/sshd-host.cmx
 fuchsia-pkg://fuchsia.com/test_harness_fixture_test#meta/test_harness_fixture_test_bin.cmx
 fuchsia-pkg://fuchsia.com/trace_integration_tests#meta/trace_integration_tests.cmx
 fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx
-fuchsia-pkg://fuchsia.com/trace_tests#meta/detach_tests.cmx
 fuchsia-pkg://fuchsia.com/trace_tests#meta/ktrace_integration_tests.cmx
 fuchsia-pkg://fuchsia.com/trace_tests#meta/provider_destruction_tests.cmx
 fuchsia-pkg://fuchsia.com/trace_tests#meta/return_child_result_tests.cmx
