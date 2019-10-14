@@ -64,7 +64,8 @@ group("all") {
     "//garnet/packages/tools:netstack",
     "//garnet/packages/tools:runmany",
     "//garnet/packages/tools:scenic",
-    "//garnet/packages/tools:sl4f",
+    # TODO(fxb/36227): sl4f is explicitly excluded here, we can consider adding it back once it
+    # migrates off 'deprecated-shell'
     "//garnet/packages/tools:system_monitor",
     "//garnet/packages/tools:tiles",
     "//garnet/packages/tools:whereiscl",
