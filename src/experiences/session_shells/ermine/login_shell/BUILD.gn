@@ -19,19 +19,25 @@ flutter_app("userpicker_base_shell") {
   manifest = "pubspec.yaml"
 
   sources = [
-    "authentication_overlay.dart",
     "authentication_overlay_model.dart",
+    "authentication_overlay.dart",
     "authentication_ui_context_impl.dart",
+    "base_model.dart",
+    "base_shell_model.dart",
+    "base_shell_widget.dart",
     "circular_button.dart",
     "clock.dart",
+    "netstack_model.dart",
     "time_stringer.dart",
     "user_list.dart",
+    "user_manager.dart",
     "user_picker_base_shell_model.dart",
     "user_picker_base_shell_screen.dart",
     "user_picker_screen.dart",
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.timezone",
@@ -39,7 +45,6 @@ flutter_app("userpicker_base_shell") {
     "//sdk/fidl/fuchsia.ui.views",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/pub/http",
-    "//topaz/lib/base_shell:lib.base_shell",
     "//topaz/lib/settings:lib.settings",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_scenic_flutter",

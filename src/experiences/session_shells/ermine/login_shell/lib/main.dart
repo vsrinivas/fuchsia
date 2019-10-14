@@ -6,8 +6,6 @@ import 'package:fidl_fuchsia_netstack/fidl_async.dart';
 import 'package:flutter/material.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
-import 'package:lib.base_shell/base_shell_widget.dart';
-import 'package:lib.base_shell/netstack_model.dart';
 import 'package:lib.widgets/application.dart';
 import 'package:lib.widgets/model.dart';
 import 'package:meta/meta.dart';
@@ -16,6 +14,8 @@ import 'package:fidl_fuchsia_sys/fidl_async.dart';
 import 'authentication_overlay.dart';
 import 'authentication_overlay_model.dart';
 import 'authentication_ui_context_impl.dart';
+import 'base_shell_widget.dart';
+import 'netstack_model.dart';
 import 'user_picker_base_shell_model.dart';
 import 'user_picker_base_shell_screen.dart';
 
@@ -30,10 +30,10 @@ void main() {
   StartupContext startupContext = StartupContext.fromStartupInfo();
   final launcherProxy = LauncherProxy();
   startupContext.incoming.connectToService(launcherProxy);
-  
+
   NetstackProxy netstackProxy = NetstackProxy();
   startupContext.incoming.connectToService(netstackProxy);
-  
+
   NetstackModel netstackModel = NetstackModel(netstack: netstackProxy)..start();
 
   _OverlayModel wifiInfoOverlayModel = _OverlayModel();
@@ -71,25 +71,25 @@ void main() {
   List<OverlayEntry> overlays = <OverlayEntry>[
     OverlayEntry(
       builder: (BuildContext context) => MediaQuery(
-            data: MediaQueryData(),
-            child: FocusScope(
-              node: FocusScopeNode(),
-              autofocus: true,
-              child: app,
-            ),
-          ),
+        data: MediaQueryData(),
+        child: FocusScope(
+          node: FocusScopeNode(),
+          autofocus: true,
+          child: app,
+        ),
+      ),
     ),
     OverlayEntry(
       builder: (BuildContext context) => ScopedModel<_OverlayModel>(
-            model: wifiInfoOverlayModel,
-            child: _WifiInfo(
-              wifiWidget: ApplicationWidget(
-                url:
-                    'fuchsia-pkg://fuchsia.com/wifi_settings#meta/wifi_settings.cmx',
-                launcher: launcherProxy,
-              ),
-            ),
+        model: wifiInfoOverlayModel,
+        child: _WifiInfo(
+          wifiWidget: ApplicationWidget(
+            url:
+                'fuchsia-pkg://fuchsia.com/wifi_settings#meta/wifi_settings.cmx',
+            launcher: launcherProxy,
           ),
+        ),
+      ),
     ),
   ];
 
@@ -128,33 +128,33 @@ class _WifiInfo extends StatelessWidget {
           _OverlayModel model,
         ) =>
             Offstage(
-              offstage: !model.showing,
-              child: Stack(
-                children: <Widget>[
-                  Listener(
-                    behavior: HitTestBehavior.opaque,
-                    onPointerDown: (PointerDownEvent event) {
-                      model.showing = false;
-                    },
-                  ),
-                  Center(
-                    child: FractionallySizedBox(
-                      widthFactor: 0.75,
-                      heightFactor: 0.75,
-                      child: Container(
-                        margin: EdgeInsets.all(8.0),
-                        child: PhysicalModel(
-                          color: Colors.grey[900],
-                          elevation: _kIndicatorElevation,
-                          borderRadius: BorderRadius.circular(8.0),
-                          child: wifiWidget,
-                        ),
-                      ),
+          offstage: !model.showing,
+          child: Stack(
+            children: <Widget>[
+              Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: (PointerDownEvent event) {
+                  model.showing = false;
+                },
+              ),
+              Center(
+                child: FractionallySizedBox(
+                  widthFactor: 0.75,
+                  heightFactor: 0.75,
+                  child: Container(
+                    margin: EdgeInsets.all(8.0),
+                    child: PhysicalModel(
+                      color: Colors.grey[900],
+                      elevation: _kIndicatorElevation,
+                      borderRadius: BorderRadius.circular(8.0),
+                      child: wifiWidget,
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
+          ),
+        ),
       );
 }
 

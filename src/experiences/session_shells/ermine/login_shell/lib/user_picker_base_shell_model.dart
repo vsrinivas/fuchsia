@@ -13,10 +13,11 @@ import 'package:fidl_fuchsia_ui_policy/fidl_async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:lib.base_shell/base_model.dart';
 import 'package:lib.widgets/model.dart';
 import 'package:zircon/zircon.dart';
 import 'package:fuchsia_logger/logger.dart';
+
+import 'base_model.dart';
 
 export 'package:lib.widgets/model.dart'
     show ScopedModel, ScopedModelDescendant, ModelFinder;
@@ -79,30 +80,30 @@ class UserPickerBaseShellModel extends CommonBaseShellModel
 
   /// Call when reset is tapped.
   void resetTapped() async {
-      final ChannelPair channels = ChannelPair();
-      if (channels.status != 0) {
-        log.severe('Unable to create channels: $channels.status');
-        return;
-      }
+    final ChannelPair channels = ChannelPair();
+    if (channels.status != 0) {
+      log.severe('Unable to create channels: $channels.status');
+      return;
+    }
 
-      int status = System.connectToService(
+    int status = System.connectToService(
         '/svc/${devmgr.Administrator.$serviceName}',
         channels.second.passHandle());
-      if (status != 0 ) {
-        channels.first.close();
-        log.severe('Unable to connect to device administrator service: $status');
-        return;
-      }
+    if (status != 0) {
+      channels.first.close();
+      log.severe('Unable to connect to device administrator service: $status');
+      return;
+    }
 
-      final devmgr.AdministratorProxy admin = devmgr.AdministratorProxy();
-      admin.ctrl.bind(InterfaceHandle<devmgr.Administrator>(channels.first));
+    final devmgr.AdministratorProxy admin = devmgr.AdministratorProxy();
+    admin.ctrl.bind(InterfaceHandle<devmgr.Administrator>(channels.first));
 
-      status = await admin.suspend(devmgr.suspendFlagReboot);
-      if (status != 0) {
-        log.severe('Reboot call failed with status: $status');
-      }
+    status = await admin.suspend(devmgr.suspendFlagReboot);
+    if (status != 0) {
+      log.severe('Reboot call failed with status: $status');
+    }
 
-      admin.ctrl.close();
+    admin.ctrl.close();
   }
 
   /// Create a new user and login with that user
