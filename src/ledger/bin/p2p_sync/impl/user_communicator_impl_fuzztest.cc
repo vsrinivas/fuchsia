@@ -18,6 +18,7 @@
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
 #include "src/ledger/bin/storage/public/page_sync_client.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
+#include "src/ledger/bin/testing/fuzz_data.h"
 #include "src/lib/fxl/macros.h"
 
 namespace p2p_sync {
@@ -51,7 +52,9 @@ class FuzzingP2PProvider : public p2p_provider::P2PProvider {
 
 // Fuzz the peer-to-peer messages received by a |UserCommunicatorImpl|.
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) {
-  std::string bytes(reinterpret_cast<const char*>(Data), Size);
+  ledger::FuzzData fuzz_data(Data, Size);
+
+  std::string bytes = fuzz_data.RemainingString();
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto component_context = sys::ComponentContext::Create();

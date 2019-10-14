@@ -21,6 +21,9 @@ class FuzzData {
   // Returns a short string or none if there is not enough data left.
   std::optional<std::string> GetNextShortString();
 
+  // Returns the remaining of the data as a string.
+  std::string RemainingString();
+
  private:
   const uint8_t* data_;
   size_t remaining_size_;

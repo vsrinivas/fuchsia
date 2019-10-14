@@ -88,5 +88,6 @@ fuzzer("p2p_sync_fuzzer") {
     ":impl",
     "//src/ledger/bin/p2p_provider/public",
     "//src/ledger/bin/storage/testing",
+    "//src/ledger/bin/testing:lib",
   ]
 }

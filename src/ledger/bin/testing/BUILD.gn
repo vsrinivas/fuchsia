@@ -172,6 +172,7 @@ source_set("unittests") {
 
   sources = [
     "blocking_callback_waiter_unittest.cc",
+    "fuzz_data_unittest.cc",
     "ledger_matcher_unittest.cc",
     "ledger_memory_usage_unittest.cc",
   ]

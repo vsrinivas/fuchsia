@@ -40,4 +40,11 @@ std::optional<std::string> FuzzData::GetNextShortString() {
   return convert::ToHex(s);
 }
 
+std::string FuzzData::RemainingString() {
+  std::string result(reinterpret_cast<const char*>(data_), remaining_size_);
+  data_ = nullptr;
+  remaining_size_ = 0;
+  return result;
+}
+
 }  // namespace ledger
