@@ -880,6 +880,86 @@ protocol Canvas {
 };
 ```
 
+### Privacy by Design
+
+The client and server in a protocol frequently have access to different sets of
+sensitive data. Privacy or security problems can be caused by unintentionally
+leaking more data than necessary over the protocol.
+
+When designing a protocol pay particular attention to fields in your protocol
+that:
+
+* Contain personally identifiable information such as names, email addresses,
+  or payment details.
+* Are supplied by the user so potentially contain personal information. Examples
+  include device names and comment fields.
+* Act as a unique identifier that can be correlated across vendors, users,
+  devices, or resets. Examples include serial numbers, MAC addresses, IP
+  addresses and global account IDs.
+
+These types of fields are reviewed thoroughly and the availability of protocols
+that include them may be restricted. Make sure that your protocols don't contain
+more information than is needed.
+
+If a use case for an API requires personal or linkable data and other use cases
+do not, consider using two different protocols so that access to the more
+sensitive use case may be controlled separately.
+
+Consider two hypothetical examples that illustrate privacy violations caused by
+API design choices:
+
+* [Example 1 - Serial numbers in a peripheral control API](#privacy-example-1)
+* [Example 2 - Device names in a device setup API](#privacy-example-2)
+
+#### Example 1 - Serial numbers in a peripheral control API {#privacy-example-1}
+
+Consider a peripheral control API that includes the serial numbers of USB
+peripherals. A serial number does not contain personal data but it is a very
+stable identifier that is easy to correlate. Including the serial number in this
+API leads to many privacy concerns:
+
+* Any client with access to the API could correlate the different accounts
+  using the same Fuchsia device.
+* Any client with access to the API could correlate the different personae
+  within an account.
+* Different software vendors could collude to learn whether they are being used
+  by the same users or on the same device.
+* If a peripheral is moved between devices, any client with access to the API
+  could correlate the set of devices and users the peripheral is shared between.
+* If a peripheral is sold, clients with access to the API could correlate the
+  old and new owner of the peripheral.
+* Some manufacturers encode information in their serial numbers. This may let
+  clients with access to the API deduce where or when the user purchased the
+  peripheral.
+
+In this example, the intent of the serial number is to allow clients to detect
+when the same USB peripheral is reconnected. Meeting this intent does require a
+stable identifier but it does not require a global identifier. Different clients
+do not need to receive the same identifier, the same client does not need to
+receive the same identifier across different Fuchsia devices, and the identifier
+does not need to remain constant across factory reset events.
+
+In this example, a good alternative is to send an identifier that is only
+guaranteed to be stable for a single client on a single device. This identifier
+could potentially be a hash of the peripheral's serial number, the Fuchsia
+device identifier, and the moniker of the connection.
+
+#### Example 2 - Device names in a device setup API {#privacy-example-2}
+
+Consider a device setup API that includes the model of the phone that is used to
+assist in the setup of a device. In most cases a phone's model string is set by
+the OEM, but some phones report a user-supplied device name as their model. This
+leads to many model strings containing the real names or pseudonyms of their
+users. Therefore, this API risks associating a user across identities or across
+devices. A rare or pre-release model string might reveal sensitive information
+even when it isn't supplied by the user.
+
+In some cases, it might be appropriate to use the model string but restrict
+which clients can access the API. Alternatively, the API could use fields that
+are never controlled by the user such as the manufacturer string. Another
+alternative is to sanitize the model string by comparing it to an allowlist of
+popular phone models and replacing rare model strings with a generic string.
+
 ### Client-assigned identifiers
 
 Often a protocol will let a client manipulate multiple pieces of state held by
