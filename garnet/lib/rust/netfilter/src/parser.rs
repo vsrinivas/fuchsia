@@ -104,6 +104,29 @@ pub enum InvalidReason {
     PortRangeLengthMismatch,
 }
 
+impl std::fmt::Display for InvalidReason {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MixedIPVersions => write!(f, "mixed IP versions"),
+            Self::InvalidPortRange => write!(f, "invalid port range"),
+            Self::PortRangeLengthMismatch => write!(f, "port range length mismatch"),
+        }
+    }
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Pest(e) => write!(f, "pest error: {}", e),
+            Self::Addr(e) => std::fmt::Display::fmt(e, f),
+            Self::Num(e) => std::fmt::Display::fmt(e, f),
+            Self::Invalid(e) => write!(f, "invalid: {}", e),
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
 fn parse_action(pair: Pair<Rule>) -> filter::Action {
     assert_eq!(pair.as_rule(), Rule::action);
     match pair.into_inner().next().unwrap().as_rule() {

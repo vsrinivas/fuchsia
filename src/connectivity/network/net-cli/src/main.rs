@@ -6,16 +6,18 @@ use failure::{format_err, Error, ResultExt};
 use fidl_fuchsia_hardware_ethernet as zx_eth;
 use fidl_fuchsia_inspect_deprecated as inspect;
 use fidl_fuchsia_net as net;
-use fidl_fuchsia_net_filter::{self as filter, FilterMarker, FilterProxy};
+use fidl_fuchsia_net_filter::{FilterMarker, FilterProxy};
 use fidl_fuchsia_net_stack::{
     self as netstack, InterfaceInfo, LogMarker, LogProxy, StackMarker, StackProxy,
 };
-use fidl_fuchsia_net_stack_ext as pretty;
+use fidl_fuchsia_net_stack_ext::{self as pretty, FidlReturn};
 use fidl_fuchsia_netstack::{NetstackMarker, NetstackProxy};
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
 use glob::glob;
+use log::{info, Level, Log, Metadata, Record, SetLoggerError};
+use netfilter::FidlReturn as FilterFidlReturn;
 use prettytable::{cell, format, row, Table};
 use std::fs::File;
 use std::os::unix::io::AsRawFd;
@@ -25,8 +27,50 @@ mod opts;
 
 use crate::opts::*;
 
+macro_rules! stack_fidl {
+    ($method:expr, $context:expr) => {
+        $method.await.squash_result().context($context)
+    };
+}
+
+macro_rules! filter_fidl {
+    ($method:expr, $context:expr) => {
+        $method.await.transform_result().context($context)
+    };
+}
+
+/// Logger which prints levels at or below info to stdout and levels at or
+/// above warn to stderr.
+struct Logger;
+
+const LOG_LEVEL: Level = Level::Info;
+
+impl Log for Logger {
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= LOG_LEVEL
+    }
+
+    fn log(&self, record: &Record) {
+        if self.enabled(record.metadata()) {
+            match record.metadata().level() {
+                Level::Trace | Level::Debug | Level::Info => println!("{}", record.args()),
+                Level::Warn | Level::Error => eprintln!("{}", record.args()),
+            }
+        }
+    }
+
+    fn flush(&self) {}
+}
+
+static LOGGER: Logger = Logger;
+
+fn logger_init() -> Result<(), SetLoggerError> {
+    log::set_logger(&LOGGER).map(|()| log::set_max_level(LOG_LEVEL.to_level_filter()))
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    let () = logger_init()?;
     let opt = Opt::from_args();
     let stack = connect_to_service::<StackMarker>().context("failed to connect to netstack")?;
     let netstack =
@@ -118,60 +162,41 @@ async fn do_if(cmd: opts::IfCmd, stack: &StackProxy) -> Result<(), Error> {
                 // Safe because we checked the return status above.
                 zx::Channel::from(unsafe { zx::Handle::from_raw(client) }),
             );
-            let response = stack
-                .add_ethernet_interface(&topological_path, dev)
-                .await
-                .context("error adding device")?;
-            match response {
-                Ok(id) => println!("Added interface {}", id),
-                Err(e) => eprintln!("Error adding interface {}: {:?}", path, e),
-            }
+            let id = stack_fidl!(
+                stack.add_ethernet_interface(&topological_path, dev),
+                "error adding interface"
+            )?;
+            info!("Added interface {}", id);
         }
         IfCmd::Del { id } => {
-            let response =
-                stack.del_ethernet_interface(id).await.context("error removing device")?;
-            match response {
-                Ok(()) => println!("Interface {} deleted", id),
-                Err(e) => eprintln!("Error removing interface {}: {:?}", id, e),
-            }
+            let () = stack_fidl!(stack.del_ethernet_interface(id), "error removing interface")?;
+            info!("Deleted interface {}", id);
         }
         IfCmd::Get { id } => {
-            let response = stack.get_interface_info(id).await.context("error getting response")?;
-            match response {
-                Ok(info) => println!("{}", pretty::InterfaceInfo::from(info)),
-                Err(e) => eprintln!("Error getting interface {}: {:?}", id, e),
-            }
+            let info = stack_fidl!(stack.get_interface_info(id), "error getting interface")?;
+            println!("{}", pretty::InterfaceInfo::from(info));
         }
         IfCmd::Enable { id } => {
-            let response = stack.enable_interface(id).await.context("error getting response")?;
-            match response {
-                Ok(()) => println!("Interface {} enabled", id),
-                Err(e) => eprintln!("Error enabling interface {}: {:?}", id, e),
-            }
+            let () = stack_fidl!(stack.enable_interface(id), "error enabling interface")?;
+            info!("Interface {} enabled", id);
         }
         IfCmd::Disable { id } => {
-            let response = stack.disable_interface(id).await.context("error getting response")?;
-            match response {
-                Ok(()) => println!("Interface {} disabled", id),
-                Err(e) => eprintln!("Error disabling interface {}: {:?}", id, e),
-            }
+            let () = stack_fidl!(stack.disable_interface(id), "error disabling interface")?;
+            info!("Interface {} disabled", id);
         }
         IfCmd::Addr(AddrCmd::Add { id, addr, prefix }) => {
             let parsed_addr = parse_ip_addr(&addr)?;
             let mut fidl_addr =
                 netstack::InterfaceAddress { ip_address: parsed_addr, prefix_len: prefix };
-            let response = stack
-                .add_interface_address(id, &mut fidl_addr)
-                .await
-                .context("error setting interface address")?;
-            match response {
-                Ok(()) => println!(
-                    "Address {} added to interface {}",
-                    pretty::InterfaceAddress::from(fidl_addr),
-                    id
-                ),
-                Err(e) => eprintln!("Error adding interface address to interface {}: {:?}", id, e),
-            }
+            let () = stack_fidl!(
+                stack.add_interface_address(id, &mut fidl_addr),
+                "error adding interface address"
+            )?;
+            info!(
+                "Address {} added to interface {}",
+                pretty::InterfaceAddress::from(fidl_addr),
+                id
+            );
         }
         IfCmd::Addr(AddrCmd::Del { id, addr, prefix }) => {
             let parsed_addr = parse_ip_addr(&addr)?;
@@ -180,20 +205,15 @@ async fn do_if(cmd: opts::IfCmd, stack: &StackProxy) -> Result<(), Error> {
                 net::IpAddress::Ipv6(_) => 128,
             });
             let mut fidl_addr = netstack::InterfaceAddress { ip_address: parsed_addr, prefix_len };
-            let response = stack
-                .del_interface_address(id, &mut fidl_addr)
-                .await
-                .context("error deleting interface address")?;
-            match response {
-                Ok(()) => println!(
-                    "Address {} deleted from interface {}",
-                    pretty::InterfaceAddress::from(fidl_addr),
-                    id
-                ),
-                Err(e) => {
-                    eprintln!("Error deleting interface address from interface {}: {:?}", id, e)
-                }
-            }
+            let () = stack_fidl!(
+                stack.del_interface_address(id, &mut fidl_addr),
+                "error deleting interface address"
+            )?;
+            info!(
+                "Address {} deleted from interface {}",
+                pretty::InterfaceAddress::from(fidl_addr),
+                id
+            );
         }
     }
     Ok(())
@@ -209,49 +229,34 @@ async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
             }
         }
         FwdCmd::AddDevice { id, addr, prefix } => {
-            let response = stack
-                .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
-                    subnet: net::Subnet { addr: parse_ip_addr(&addr)?, prefix_len: prefix },
-                    destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(id),
-                })
-                .await
-                .context("error adding forwarding entry")?;
-            match response {
-                Ok(()) => {
-                    println!("Added forwarding entry for {}/{} to device {}", addr, prefix, id)
-                }
-                Err(e) => eprintln!("Error adding forwarding entry: {:?}", e),
-            }
+            let mut entry = netstack::ForwardingEntry {
+                subnet: net::Subnet { addr: parse_ip_addr(&addr)?, prefix_len: prefix },
+                destination: netstack::ForwardingDestination::DeviceId(id),
+            };
+            let () = stack_fidl!(
+                stack.add_forwarding_entry(&mut entry),
+                "error adding device forwarding entry"
+            )?;
+            info!("Added forwarding entry for {}/{} to device {}", addr, prefix, id);
         }
         FwdCmd::AddHop { next_hop, addr, prefix } => {
-            let response = stack
-                .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
-                    subnet: net::Subnet { addr: parse_ip_addr(&addr)?, prefix_len: prefix },
-                    destination: fidl_fuchsia_net_stack::ForwardingDestination::NextHop(
-                        parse_ip_addr(&next_hop)?,
-                    ),
-                })
-                .await
-                .context("error adding forwarding entry")?;
-            match response {
-                Ok(()) => {
-                    println!("Added forwarding entry for {}/{} to {}", addr, prefix, next_hop)
-                }
-                Err(e) => eprintln!("Error adding forwarding entry: {:?}", e),
-            }
+            let mut entry = netstack::ForwardingEntry {
+                subnet: net::Subnet { addr: parse_ip_addr(&addr)?, prefix_len: prefix },
+                destination: netstack::ForwardingDestination::NextHop(parse_ip_addr(&next_hop)?),
+            };
+            let () = stack_fidl!(
+                stack.add_forwarding_entry(&mut entry),
+                "error adding next-hop forwarding entry"
+            )?;
+            info!("Added forwarding entry for {}/{} to {}", addr, prefix, next_hop);
         }
         FwdCmd::Del { addr, prefix } => {
-            let response = stack
-                .del_forwarding_entry(&mut net::Subnet {
-                    addr: parse_ip_addr(&addr)?,
-                    prefix_len: prefix,
-                })
-                .await
-                .context("error removing forwarding entry")?;
-            match response {
-                Ok(()) => println!("Removed forwarding entry for {}/{}", addr, prefix),
-                Err(e) => eprintln!("Error removing forwarding entry: {:?}", e),
-            }
+            let mut entry = net::Subnet { addr: parse_ip_addr(&addr)?, prefix_len: prefix };
+            let () = stack_fidl!(
+                stack.del_forwarding_entry(&mut entry),
+                "error removing forwarding entry"
+            )?;
+            info!("Removed forwarding entry for {}/{}", addr, prefix);
         }
     }
     Ok(())
@@ -303,97 +308,61 @@ fn parse_ip_addr(addr: &str) -> Result<net::IpAddress, Error> {
 async fn do_filter(cmd: opts::FilterCmd, filter: FilterProxy) -> Result<(), Error> {
     match cmd {
         FilterCmd::Enable => {
-            let status = filter.enable(true).await.context("error getting response")?;
-            println!("{:?}", status);
+            let () = filter_fidl!(filter.enable(true), "error enabling filter")?;
+            info!("successfully enabled filter");
         }
         FilterCmd::Disable => {
-            let status = filter.enable(false).await.context("error getting response")?;
-            println!("{:?}", status);
+            let () = filter_fidl!(filter.enable(false), "error disabling filter")?;
+            info!("successfully disabled filter");
         }
         FilterCmd::IsEnabled => {
-            let is_enabled = filter.is_enabled().await.context("error getting response")?;
+            let is_enabled = filter.is_enabled().await.context("FIDL error")?;
             println!("{:?}", is_enabled);
         }
         FilterCmd::GetRules => {
-            let (rules, generation, status) =
-                filter.get_rules().await.context("error getting response")?;
-            if status == filter::Status::Ok {
-                println!("{:?} (generation {})", rules, generation);
-            } else {
-                eprintln!("{:?}", status);
-            }
+            let (rules, generation) =
+                filter_fidl!(filter.get_rules(), "error getting filter rules")?;
+            println!("{:?} (generation {})", rules, generation);
         }
         FilterCmd::SetRules { rules } => {
-            let (_cur_rules, generation, status) =
-                filter.get_rules().await.context("error getting response")?;
-            if status != filter::Status::Ok {
-                println!("{:?}", status);
-                return Ok(());
-            }
-            match netfilter::parser::parse_str_to_rules(&rules) {
-                Ok(mut rules) => {
-                    let status = filter
-                        .update_rules(&mut rules.iter_mut(), generation)
-                        .await
-                        .context("error getting response")?;
-                    println!("{:?}", status);
-                }
-                Err(e) => eprintln!("{:?}", e),
-            }
+            let (_cur_rules, generation) =
+                filter_fidl!(filter.get_rules(), "error getting filter rules")?;
+            let mut rules = netfilter::parser::parse_str_to_rules(&rules)?;
+            let () = filter_fidl!(
+                filter.update_rules(&mut rules.iter_mut(), generation),
+                "error setting filter rules"
+            )?;
+            info!("successfully set filter rules");
         }
         FilterCmd::GetNatRules => {
-            let (rules, generation, status) =
-                filter.get_nat_rules().await.context("error getting response")?;
-            if status == filter::Status::Ok {
-                println!("{:?} (generation {})", rules, generation);
-            } else {
-                eprintln!("{:?}", status);
-            }
+            let (rules, generation) =
+                filter_fidl!(filter.get_nat_rules(), "error getting NAT rules")?;
+            println!("{:?} (generation {})", rules, generation);
         }
         FilterCmd::SetNatRules { rules } => {
-            let (_cur_rules, generation, status) =
-                filter.get_nat_rules().await.context("error getting response")?;
-            if status != filter::Status::Ok {
-                println!("{:?}", status);
-                return Ok(());
-            }
-            match netfilter::parser::parse_str_to_nat_rules(&rules) {
-                Ok(mut rules) => {
-                    let status = filter
-                        .update_nat_rules(&mut rules.iter_mut(), generation)
-                        .await
-                        .context("error getting response")?;
-                    println!("{:?}", status);
-                }
-                Err(e) => eprintln!("{:?}", e),
-            }
+            let (_cur_rules, generation) =
+                filter_fidl!(filter.get_nat_rules(), "error getting NAT rules")?;
+            let mut rules = netfilter::parser::parse_str_to_nat_rules(&rules)?;
+            let () = filter_fidl!(
+                filter.update_nat_rules(&mut rules.iter_mut(), generation),
+                "error setting NAT rules"
+            )?;
+            info!("successfully set NAT rules");
         }
         FilterCmd::GetRdrRules => {
-            let (rules, generation, status) =
-                filter.get_rdr_rules().await.context("error getting response")?;
-            if status == filter::Status::Ok {
-                println!("{:?} (generation {})", rules, generation);
-            } else {
-                eprintln!("{:?}", status);
-            }
+            let (rules, generation) =
+                filter_fidl!(filter.get_rdr_rules(), "error getting RDR rules")?;
+            println!("{:?} (generation {})", rules, generation);
         }
         FilterCmd::SetRdrRules { rules } => {
-            let (_cur_rules, generation, status) =
-                filter.get_rdr_rules().await.context("error getting response")?;
-            if status != filter::Status::Ok {
-                println!("{:?}", status);
-                return Ok(());
-            }
-            match netfilter::parser::parse_str_to_rdr_rules(&rules) {
-                Ok(mut rules) => {
-                    let status = filter
-                        .update_rdr_rules(&mut rules.iter_mut(), generation)
-                        .await
-                        .context("error getting response")?;
-                    println!("{:?}", status);
-                }
-                Err(e) => eprintln!("{:?}", e),
-            }
+            let (_cur_rules, generation) =
+                filter_fidl!(filter.get_rdr_rules(), "error getting RDR rules")?;
+            let mut rules = netfilter::parser::parse_str_to_rdr_rules(&rules)?;
+            let () = filter_fidl!(
+                filter.update_rdr_rules(&mut rules.iter_mut(), generation),
+                "error setting RDR rules"
+            )?;
+            info!("successfully set RDR rules");
         }
     }
     Ok(())
@@ -402,10 +371,8 @@ async fn do_filter(cmd: opts::FilterCmd, filter: FilterProxy) -> Result<(), Erro
 async fn do_log(cmd: opts::LogCmd, log: LogProxy) -> Result<(), Error> {
     match cmd {
         LogCmd::SetLevel { log_level } => {
-            match log.set_log_level(log_level.into()).await.context("failed to set log level")? {
-                Ok(()) => println!("log level set to {:?}", log_level),
-                Err(e) => eprintln!("failed to set log level to {:?}: {:?}", log_level, e),
-            }
+            let () = stack_fidl!(log.set_log_level(log_level.into()), "error setting log level")?;
+            info!("log level set to {:?}", log_level);
         }
     }
     Ok(())
@@ -587,7 +554,7 @@ mod tests {
         .expect("net-cli do_if del address should succeed");
 
         // Make the second request.
-        let () = do_if(
+        do_if(
             opts::IfCmd::Addr(opts::AddrCmd::Del {
                 id: 2,
                 addr: String::from("fd00::1"),
@@ -596,7 +563,6 @@ mod tests {
             &stack,
         )
         .await
-        .expect("net-cli do_if del address should succeed");
-        // TODO(gongt) do_if should probably return an error if the FIDL method returns an error.
+        .expect_err("net-cli do_if del address should have failed");
     }
 }

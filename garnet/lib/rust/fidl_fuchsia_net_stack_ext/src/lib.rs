@@ -69,8 +69,7 @@ impl From<fidl::ForwardingEntry> for ForwardingEntry {
 impl std::fmt::Display for ForwardingEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         let Self { subnet, destination } = self;
-        write!(f, "{}", subnet)?;
-        write!(f, "{}", destination)?;
+        write!(f, "{} {}", subnet, destination)?;
         Ok(())
     }
 }

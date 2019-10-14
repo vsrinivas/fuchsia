@@ -6,8 +6,15 @@ use failure::ResultExt;
 
 use fidl_fuchsia_net_stack as fidl_net_stack;
 
-#[derive(Debug)]
+/// Newtype wrapper of `fidl_fuchsia_net_stack::Error` so that external traits
+/// (`failure::Fail` in particular) can be implemented for it.
 pub struct NetstackError(fidl_net_stack::Error);
+
+impl std::fmt::Debug for NetstackError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&self.0, f)
+    }
+}
 
 impl std::fmt::Display for NetstackError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
