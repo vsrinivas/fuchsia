@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef USB_VIRTUAL_BUS_LAUNCHER_USB_VIRTUAL_BUS_LAUNCHER_H_
-#define USB_VIRTUAL_BUS_LAUNCHER_USB_VIRTUAL_BUS_LAUNCHER_H_
+#ifndef LIB_USB_VIRTUAL_BUS_LAUNCHER_USB_VIRTUAL_BUS_LAUNCHER_H_
+#define LIB_USB_VIRTUAL_BUS_LAUNCHER_USB_VIRTUAL_BUS_LAUNCHER_H_
 
 #include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
@@ -39,9 +39,10 @@ class __EXPORT USBVirtualBusBase {
     return virtual_bus_.value();
   }
 
+  IsolatedDevmgr devmgr_;
+
  protected:
   IsolatedDevmgr::Args args_;
-  IsolatedDevmgr devmgr_;
 
  private:
   std::optional<llcpp::fuchsia::hardware::usb::peripheral::Device::SyncClient> peripheral_;
@@ -52,4 +53,4 @@ class __EXPORT USBVirtualBusBase {
 
 }  // namespace usb_virtual_bus_base
 
-#endif  // USB_VIRTUAL_BUS_LAUNCHER_USB_VIRTUAL_BUS_LAUNCHER_H_
+#endif  // LIB_USB_VIRTUAL_BUS_LAUNCHER_USB_VIRTUAL_BUS_LAUNCHER_H_

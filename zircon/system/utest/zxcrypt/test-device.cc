@@ -71,7 +71,6 @@ char* Error(const char* fmt, ...) {
 // Waits for the given |path| to be opened, opens it, and returns the file descriptor via |out|.
 bool WaitAndOpenAt(int dirfd, char* path, fbl::unique_fd* out) {
   BEGIN_HELPER;
-
   ASSERT_EQ(wait_for_device_at(dirfd, path, ZX_SEC(3)), ZX_OK,
             Error("failed while waiting to bind %s", path));
   fbl::unique_fd fd(openat(dirfd, path, O_RDWR));
@@ -207,6 +206,12 @@ bool TestDevice::Rebind() {
   fvm_part_.reset();
 
   ASSERT_EQ(ramdisk_rebind(ramdisk_), ZX_OK);
+  // TODO(38113): remove rebind api
+  // BWB: Timing changes in the devhost caused this bug to surface. Most fixes result
+  // in a deadlock due to syncronous code paths. mid-term solution is to remove this
+  // api.
+  sleep(1);
+
   if (strlen(fvm_part_path_) != 0) {
     // We need to explicitly rebind FVM here, since now that we're not
     // relying on the system-wide block-watcher, the driver won't rebind by

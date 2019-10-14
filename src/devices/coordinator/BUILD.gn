@@ -33,8 +33,8 @@ source_set("lib") {
     "env.cc",
     "fdio.cc",
     "fidl.cc",
-    "suspend-task.cc",
     "resume-task.cc",
+    "suspend-task.cc",
     "system-instance.cc",
     "system-instance.h",
     "task.cc",
@@ -43,6 +43,9 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",
@@ -63,6 +66,7 @@ source_set("lib") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/fidl/fuchsia-device-manager",
     "//zircon/system/fidl/fuchsia-device-manager:c",
     "//zircon/system/fidl/fuchsia-device-manager:llcpp",
     "//zircon/system/fidl/fuchsia-driver-test:c",
@@ -102,18 +106,18 @@ executable("devcoordinator-test") {
   testonly = true
 
   sources = [
-    "coordinator-test-utils.cc",
-    "multiple-device-test-utils.cc",
     "binding-test.cc",
-    "misc-tests.cc",
     "boot-args-test.cc",
-    "task-test.cc",
-    "system-instance-test.cc",
-    "multiple-device-test.cc",
-    "suspend-tests.cc",
-    "unbind-tests.cc",
     "composite-device-tests.cc",
-    "resume-tests.cc"
+    "coordinator-test-utils.cc",
+    "misc-tests.cc",
+    "multiple-device-test-utils.cc",
+    "multiple-device-test.cc",
+    "resume-tests.cc",
+    "suspend-tests.cc",
+    "system-instance-test.cc",
+    "task-test.cc",
+    "unbind-tests.cc",
   ]
 
   deps = [

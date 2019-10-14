@@ -5,8 +5,19 @@
 #ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_ZX_DEVICE_H_
 #define ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_ZX_DEVICE_H_
 
-#include <ddk/device.h>
+#include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/device/manager/llcpp/fidl.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/eventpair.h>
+#include <zircon/compiler.h>
+
+#include <array>
+#include <atomic>
+
+#include <ddk/debug.h>
 #include <ddk/device-power-states.h>
+#include <ddk/device.h>
 #include <ddk/driver.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -16,14 +27,6 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
 #include <fs/handler.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/eventpair.h>
-#include <zircon/compiler.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <fuchsia/device/manager/c/fidl.h>
-
-#include <atomic>
-#include <array>
 
 namespace devmgr {
 
@@ -109,8 +112,18 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
   zx::eventpair event;
   zx::eventpair local_event;
+
   // The RPC channel is owned by |conn|
+  // fuchsia.device.manager.DeviceController
   zx::unowned_channel rpc;
+
+  // The RPC channel is owned by |conn|
+  // fuchsia.device.manager.Coordinator
+  zx::unowned_channel coordinator_rpc;
+
+  fit::callback<void(zx_status_t)> removal_cb;
+
+  fit::callback<void(zx_status_t)> unbind_cb;
 
   // most devices implement a single
   // protocol beyond the base device protocol
@@ -167,17 +180,22 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   bool has_composite();
   void set_composite(fbl::RefPtr<devmgr::CompositeDevice> composite);
   fbl::RefPtr<devmgr::CompositeDevice> take_composite();
-  const std::array<fuchsia_device_DevicePowerStateInfo,
-             fuchsia_device_MAX_DEVICE_POWER_STATES>& GetPowerStates() const;
-  zx_status_t SetPowerStates(const device_power_state_info_t* power_states,
-                             uint8_t count);
-  zx_status_t SetSystemPowerStateMapping(const std::array<fuchsia_device_SystemPowerStateInfo,
-             fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>& mapping);
+  const std::array<fuchsia_device_DevicePowerStateInfo, fuchsia_device_MAX_DEVICE_POWER_STATES>&
+  GetPowerStates() const;
+  zx_status_t SetPowerStates(const device_power_state_info_t* power_states, uint8_t count);
+  zx_status_t SetSystemPowerStateMapping(
+      const std::array<fuchsia_device_SystemPowerStateInfo,
+                       fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>& mapping);
   const std::array<fuchsia_device_SystemPowerStateInfo,
-             fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>& GetSystemPowerStateMapping() const;
+                   fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>&
+  GetSystemPowerStateMapping() const;
   fuchsia_device_DevicePowerState GetCurrentDevicePowerState() { return current_power_state_; }
+
  private:
   zx_device() = default;
+
+  // The fuchsia.Device.Manager.Coordinator protocol
+  zx::channel coordinator_rpc_;
 
   friend class fbl::Recyclable<zx_device_t>;
   void fbl_recycle();
@@ -216,9 +234,9 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
       TA_GUARDED(test_compatibility_conn_lock_);
 
   std::array<fuchsia_device_DevicePowerStateInfo, fuchsia_device_MAX_DEVICE_POWER_STATES>
-                                                                        power_states_;
-  std::array<fuchsia_device_SystemPowerStateInfo,
-      fuchsia_device_manager_MAX_SYSTEM_POWER_STATES> system_power_states_mapping_;
+      power_states_;
+  std::array<fuchsia_device_SystemPowerStateInfo, fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>
+      system_power_states_mapping_;
   fuchsia_device_DevicePowerState current_power_state_;
 };
 
