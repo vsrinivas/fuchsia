@@ -61,5 +61,4 @@ fuchsia-pkg://fuchsia.com/trace_tests#meta/provider_destruction_tests.cmx
 fuchsia-pkg://fuchsia.com/trace_tests#meta/return_child_result_tests.cmx
 fuchsia-pkg://fuchsia.com/trace_tests#meta/shared_provider_integration_tests.cmx
 fuchsia-pkg://fuchsia.com/trace_tests#meta/trace_integration_tests.cmx
-fuchsia-pkg://fuchsia.com/zircon_benchmarks#meta/zircon_benchmarks.cmx
 test_namespace

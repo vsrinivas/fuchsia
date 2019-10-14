@@ -75,8 +75,6 @@ fidl("fidl_interface") {
 }
 
 test_package("zircon_benchmarks") {
-  deprecated_shell = "//build"
-
   deps = [
     ":bin",
     ":fdio_spawn_helper",
