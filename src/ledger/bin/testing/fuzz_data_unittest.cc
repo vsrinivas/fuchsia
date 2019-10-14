@@ -26,5 +26,12 @@ TEST(FuzzDataTest, RemainingString) {
   EXPECT_EQ(data.GetNextSmallInt(), std::nullopt);
 }
 
+TEST(FuzzDataTest, GenericNext) {
+  uint32_t i = 0xdeadbeef;
+  FuzzData data(&i, sizeof(i));
+  EXPECT_EQ(data.GetNext<uint32_t>(), i);
+  EXPECT_EQ(data.GetNext<uint32_t>(), std::nullopt);
+}
+
 }  // namespace
 }  // namespace ledger
