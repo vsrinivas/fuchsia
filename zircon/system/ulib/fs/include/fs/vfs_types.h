@@ -45,7 +45,7 @@ union Rights {
   fbl::BitFieldMember<uint32_t, 2, 1> admin;
   fbl::BitFieldMember<uint32_t, 3, 1> execute;
 
-  constexpr Rights() : raw_value(0) {}
+  explicit constexpr Rights(uint32_t initial = 0) : raw_value(initial) {}
 
   // True if any right is present.
   bool any() const { return raw_value != 0; }
@@ -64,41 +64,23 @@ union Rights {
   bool StricterOrSameAs(Rights other) const { return (raw_value & ~(other.raw_value)) == 0; }
 
   // Convenience factory functions for commonly used option combinations.
-
-  constexpr static Rights ReadOnly() {
-    Rights rights;
-    rights.read = true;
-    return rights;
-  }
-
-  constexpr static Rights WriteOnly() {
-    Rights rights;
-    rights.write = true;
-    return rights;
-  }
-
-  constexpr static Rights ReadWrite() {
-    Rights rights;
-    rights.read = true;
-    rights.write = true;
-    return rights;
-  }
-
-  constexpr static Rights ReadExec() {
-    Rights rights;
-    rights.read = true;
-    rights.execute = true;
-    return rights;
-  }
-
-  constexpr static Rights All() {
-    Rights rights;
-    rights.read = true;
-    rights.write = true;
-    rights.admin = true;
-    rights.execute = true;
-    return rights;
-  }
+  // TODO(38296) : Remove the magic numbers and go back to a style of
+  //
+  // '''
+  // constexpr static Rights FooAndBar() {
+  //   Rights rights;
+  //   rights.foo = true;
+  //   rights.bar = true;
+  //   return rights;
+  // }
+  // '''
+  // Once we have resolved the GCC issues with fbl::BitFieldMember
+  //
+  constexpr static Rights ReadOnly() { return Rights{0x1}; }
+  constexpr static Rights WriteOnly() { return Rights{0x2}; }
+  constexpr static Rights ReadWrite() { return Rights{0x3}; }
+  constexpr static Rights ReadExec() { return Rights{0x9}; }
+  constexpr static Rights All() { return Rights{0xf}; }
 };
 
 // Options specified during opening and cloning.
@@ -129,7 +111,7 @@ struct VnodeConnectionOptions {
 
   } flags = {};
 
-  Rights rights = {};
+  Rights rights{};
 
   constexpr VnodeConnectionOptions set_directory() {
     flags.directory = true;
