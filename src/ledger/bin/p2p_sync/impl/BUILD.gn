@@ -89,7 +89,6 @@ fuzzer("p2p_sync_fuzzer") {
     "//src/ledger/bin/environment:test_loop_notification",
     "//src/ledger/bin/p2p_provider/public",
     "//src/ledger/bin/storage/testing",
-    "//src/ledger/bin/testing:lib",
     "//zircon/public/lib/async-testing",
   ]
 }

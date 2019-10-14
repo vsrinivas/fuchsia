@@ -11,11 +11,12 @@
 #include <string>
 #include <vector>
 
+#include <fuzzer/FuzzedDataProvider.h>
+
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/storage/impl/leveldb.h"
 #include "src/ledger/bin/storage/public/db.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/ledger/bin/testing/fuzz_data.h"
 #include "src/ledger/bin/testing/run_in_coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
@@ -43,12 +44,8 @@ std::unique_ptr<storage::Db> GetDb(scoped_tmpfs::ScopedTmpFS* tmpfs,
 enum class Operation { PUT = 0, DELETE = 1, EXECUTE = 2, QUERY_HAS_KEY = 3 };
 
 // Picks the next operation to perform, using the given source of fuzz data.
-std::optional<Operation> GetNextOperation(ledger::FuzzData* fuzz_data) {
-  auto maybe_int = fuzz_data->GetNextSmallInt();
-  if (!maybe_int.has_value()) {
-    return {};
-  }
-  return static_cast<Operation>(maybe_int.value() % 4);
+Operation GetNextOperation(FuzzedDataProvider* data_provider) {
+  return static_cast<Operation>(data_provider->ConsumeIntegralInRange<uint8_t>(0, 3));
 }
 
 // Starts a new batch of mutation operations.
@@ -117,7 +114,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t remaining_size
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   async::TestLoop test_loop;
   coroutine::CoroutineServiceImpl coroutine_service;
-  ledger::FuzzData fuzz_data(data, remaining_size);
+  FuzzedDataProvider data_provider(data, remaining_size);
 
   std::unique_ptr<storage::Db::Batch> batch;
   auto db = GetDb(&tmpfs_, test_loop.dispatcher());
@@ -126,31 +123,20 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t remaining_size
   // Start the batch.
   DoStartBatch(&test_loop, &coroutine_service, db.get(), &batch);
 
-  const int kMaxIterations = 20;
-  for (int i = 0; i < kMaxIterations; i++) {
+  uint8_t operation_count = data_provider.ConsumeIntegral<uint8_t>();
+  for (int i = 0; i < operation_count; i++) {
+    // Break if no more random operation can be generated.
+    if (data_provider.remaining_bytes() == 0) {
+      break;
+    }
+
     // Derive the operation and arguments from the fuzz data.
-    auto maybe_operation = GetNextOperation(&fuzz_data);
-    if (!maybe_operation.has_value()) {
-      // Not enough fuzz data.
-      break;
-    }
-
-    auto maybe_arg1 = fuzz_data.GetNextShortString();
-    if (!maybe_arg1.has_value()) {
-      // Not enough fuzz data.
-      break;
-    }
-    std::string arg1 = maybe_arg1.value();
-
-    auto maybe_arg2 = fuzz_data.GetNextShortString();
-    if (!maybe_arg2.has_value()) {
-      // Not enough fuzz data.
-      break;
-    }
-    std::string arg2 = maybe_arg2.value();
+    auto operation = GetNextOperation(&data_provider);
+    auto arg1 = data_provider.ConsumeRandomLengthString(255);
+    auto arg2 = data_provider.ConsumeRandomLengthString(255);
 
     // Perform the db operation.
-    switch (maybe_operation.value()) {
+    switch (operation) {
       case Operation::PUT:
         DoPut(&test_loop, &coroutine_service, batch.get(), arg1, arg2);
         break;

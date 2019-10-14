@@ -10,6 +10,8 @@
 #include <algorithm>
 #include <string>
 
+#include <fuzzer/FuzzedDataProvider.h>
+
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/environment/test_loop_notification.h"
@@ -18,7 +20,6 @@
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
 #include "src/ledger/bin/storage/public/page_sync_client.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
-#include "src/ledger/bin/testing/fuzz_data.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 
@@ -53,16 +54,9 @@ class FuzzingP2PProvider : public p2p_provider::P2PProvider {
 
 // Fuzz the peer-to-peer messages received by a |UserCommunicatorImpl|.
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) {
-  ledger::FuzzData fuzz_data(Data, Size);
+  FuzzedDataProvider data_provider(Data, Size);
 
-  // Get the TestLoop state.
-  auto loop_state = fuzz_data.GetNext<uint32_t>();
-  if (!loop_state) {
-    return 0;
-  }
-  std::string bytes = fuzz_data.RemainingString();
-
-  async::TestLoop loop(loop_state.value());
+  async::TestLoop loop(data_provider.ConsumeIntegral<uint32_t>());
   auto io_loop = loop.StartNewLoop();
   auto component_context = sys::ComponentContext::Create();
   ledger::Environment environment(
@@ -83,6 +77,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) {
   storage::PageStorageEmptyImpl page_storage;
 
   auto page_communicator = ledger_communicator->GetPageCommunicator(&page_storage, &page_storage);
+
+  std::string bytes = data_provider.ConsumeRemainingBytesAsString();
 
   provider_ptr->client_->OnDeviceChange(MakeP2PClientId(0), p2p_provider::DeviceChangeType::NEW);
   provider_ptr->client_->OnNewMessage(MakeP2PClientId(0), bytes);
