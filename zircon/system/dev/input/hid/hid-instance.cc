@@ -78,8 +78,8 @@ zx_status_t HidInstance::DdkRead(void* buf, size_t count, zx_off_t off, size_t* 
     ClearReadable();
   }
   if (r > 0) {
-    TRACE_FLOW_STEP("input", "hid_report", hid_report_trace_id(trace_id_, reports_read_));
-    ++reports_read_;
+    TRACE_FLOW_STEP("input", "hid_report", hid_report_trace_id(trace_id_, reports_sent_));
+    ++reports_sent_;
     *actual = r;
     r = ZX_OK;
   } else if (r == 0) {
@@ -89,7 +89,7 @@ zx_status_t HidInstance::DdkRead(void* buf, size_t count, zx_off_t off, size_t* 
 }
 
 void HidInstance::GetReports(GetReportsCompleter::Sync completer) {
-  TRACE_DURATION("input", "HID GetReports Instance");
+  TRACE_DURATION("input", "HID GetReports Instance", "bytes_in_fifo", zx_hid_fifo_size(&fifo_));
 
   if (flags_ & kHidFlagsDead) {
     ::fidl::VectorView<uint8_t> buf_view(nullptr, 0);
@@ -103,6 +103,7 @@ void HidInstance::GetReports(GetReportsCompleter::Sync completer) {
 
   fbl::AutoLock lock(&fifo_lock_);
   uint8_t rpt_id;
+  size_t local_reports_read = 0;
   while (zx_hid_fifo_peek(&fifo_, &rpt_id) > 0) {
     size_t xfer = base_->GetReportSizeById(rpt_id, ReportType::INPUT);
     if (xfer == 0) {
@@ -131,7 +132,7 @@ void HidInstance::GetReports(GetReportsCompleter::Sync completer) {
       status = ZX_ERR_INTERNAL;
       break;
     }
-    ++reports_read_;
+    ++local_reports_read;
     buf_index += rpt_size;
   }
   lock.release();
@@ -144,8 +145,11 @@ void HidInstance::GetReports(GetReportsCompleter::Sync completer) {
 
   if (buf_index == 0) {
     status = ZX_ERR_SHOULD_WAIT;
-  } else {
-    TRACE_FLOW_STEP("input", "hid_report", hid_report_trace_id(trace_id_, reports_read_));
+  }
+
+  while (local_reports_read--) {
+    TRACE_FLOW_STEP("input", "hid_report", hid_report_trace_id(trace_id_, reports_sent_));
+    reports_sent_ += 1;
   }
   ::fidl::VectorView<uint8_t> buf_view(buf, buf_index);
   completer.Reply(status, buf_view);

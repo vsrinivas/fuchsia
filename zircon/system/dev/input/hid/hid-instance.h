@@ -83,7 +83,8 @@ class HidInstance : public HidInstanceDeviceType,
 
   uint32_t trace_id_ = 0;
   uint32_t reports_written_ = 0;
-  uint32_t reports_read_ = 0;
+  // The number of reports sent out to the client.
+  uint32_t reports_sent_ = 0;
 };
 
 }  // namespace hid_driver
