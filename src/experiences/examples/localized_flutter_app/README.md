@@ -8,3 +8,15 @@ localization-loading classes.
 
 This is intended as a testbed for any efforts to integrate Fuchsia's Gerrit with
 a translation pipeline.
+
+## Building
+
+    fx set workstation.chromebook-x64 --with //src/experiences/examples/localized_flutter_app
+    fx build
+
+## Testing
+
+To run unit tests
+
+    fx set workstation.<BOARD> --with //src/experiences:tests
+    fx run-host-tests localized_flutter_app_unittests

@@ -5,10 +5,10 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:lib.widgets/model.dart';
 
 import 'localized_mod_localizations_delegate.dart' as localizations_delegate;
 import 'localized_mod_strings.dart';
+import 'provider.dart';
 import 'supported_locales.dart' as supported_locales;
 
 void main() {
