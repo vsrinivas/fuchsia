@@ -173,6 +173,7 @@ executable("unit_tests") {
     "debugged_job_unittest.cc",
     "debugged_thread_unittest.cc",
     "hardware_breakpoint_unittest.cc",
+    "limbo_provider_unittest.cc",
     "process_watchpoint_unittest.cc",
     "software_breakpoint_unittest.cc",
     "system_info_unittests.cc",
@@ -189,6 +190,7 @@ executable("unit_tests") {
 
   deps = [
     ":test_lib",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/debug/ipc:tests",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",

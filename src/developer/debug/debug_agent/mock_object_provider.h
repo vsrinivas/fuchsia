@@ -31,7 +31,6 @@ struct MockObject {
   Type type = Type::kLast;
 
   bool is_valid() const { return type != Type::kLast; }
-
 };
 
 struct MockThreadObject : public MockObject {
@@ -64,6 +63,16 @@ class MockObjectProvider : public ObjectProvider {
 
   std::string NameForObject(zx_handle_t object) const override;
   zx_koid_t KoidForObject(zx_handle_t object) const override;
+
+  // Meant to be called with handle objects (zx::process, zx::thread, etc.).
+  template <typename T>
+  std::string NameForObject(const T& handle) const {
+    return NameForObject(handle.get());
+  }
+  template <typename T>
+  zx_koid_t KoidForObject(const T& handle) const {
+    return KoidForObject(handle.get());
+  }
 
   zx::job GetRootJob() const override;
   zx_koid_t GetRootJobKoid() const override;

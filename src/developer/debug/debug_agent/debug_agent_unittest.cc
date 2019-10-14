@@ -99,6 +99,8 @@ class DebugAgentMockProcess : public MockProcess {
 
 class MockLimboProvider : public LimboProvider {
  public:
+  MockLimboProvider() : LimboProvider(nullptr) {}
+
   zx_status_t ListProcessesOnLimbo(std::vector<ProcessExceptionMetadata>* out) override {
     *out = std::move(processes_);
     return ZX_OK;

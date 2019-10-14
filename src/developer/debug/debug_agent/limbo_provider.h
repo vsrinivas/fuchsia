@@ -1,12 +1,17 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_LIMBO_PROVIDER_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_LIMBO_PROVIDER_H_
 
 #include <fuchsia/exception/cpp/fidl.h>
+#include <lib/sys/cpp/service_directory.h>
 
+#include <map>
 #include <optional>
 #include <vector>
+
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace debug_agent {
 
@@ -17,9 +22,16 @@ namespace debug_agent {
 // exception occurred. We call this process Just In Time Debugging (JITD).
 class LimboProvider {
  public:
+  explicit LimboProvider(std::shared_ptr<sys::ServiceDirectory> services);
   virtual ~LimboProvider();
+
   virtual zx_status_t ListProcessesOnLimbo(
       std::vector<fuchsia::exception::ProcessExceptionMetadata>* out);
+
+ private:
+  std::shared_ptr<sys::ServiceDirectory> services_;
 };
 
 }  // namespace debug_agent
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_LIMBO_PROVIDER_H_

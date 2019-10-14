@@ -3,22 +3,24 @@
 
 #include "src/developer/debug/debug_agent/limbo_provider.h"
 
+#include <zircon/status.h>
+
 using namespace fuchsia::exception;
 
 namespace debug_agent {
 
+LimboProvider::LimboProvider(std::shared_ptr<sys::ServiceDirectory> services)
+    : services_(std::move(services)) {}
 LimboProvider::~LimboProvider() = default;
 
 zx_status_t LimboProvider::ListProcessesOnLimbo(std::vector<ProcessExceptionMetadata>* out) {
-  std::vector<ProcessExceptionMetadata> exceptions;
-
+  // We connect synchronously to the limbo service.
   ProcessLimboSyncPtr process_limbo;
-  zx_status_t status = process_limbo->ListProcessesWaitingOnException(&exceptions);
+  zx_status_t status = services_->Connect(process_limbo.NewRequest());
   if (status != ZX_OK)
     return status;
 
-  *out = std::move(exceptions);
-  return ZX_OK;
+  return process_limbo->ListProcessesWaitingOnException(out);
 }
 
 }  // namespace debug_agent
