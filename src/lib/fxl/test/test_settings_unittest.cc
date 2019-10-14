@@ -46,7 +46,7 @@ class TestSettingsFixture : public ::testing::Test {
 // Because FXL is cross-platform, we cannot test that the environment variable
 // correctly propagates the random seed to the test loop, which is
 // Fuchsia-specific. This propagation test is performed in
-// //garnet/public/lib/gtest/test_loop_fixture_unittest.cc instead.
+// //src/lib/testing/loop_fixture/test_loop_fixture_unittest.cc instead.
 TEST_F(TestSettingsFixture, RandomSeed) {
   EXPECT_TRUE(SetTestSettings(CommandLineFromInitializerList({"argv0", "--test_loop_seed=1"})));
   EXPECT_THAT(getenv("TEST_LOOP_RANDOM_SEED"), StrEq("1"));

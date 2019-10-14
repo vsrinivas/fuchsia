@@ -1,0 +1,48 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("gtest") {
+  testonly = true
+
+  sources = [
+    "real_loop_fixture.cc",
+    "real_loop_fixture.h",
+    "test_loop_fixture.cc",
+    "test_loop_fixture.h",
+    "test_loop_fixture.h",
+  ]
+
+  deps = [
+    "//zircon/public/lib/async-cpp",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/async-testing",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+
+  public_configs = [ "//garnet/public:config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "real_loop_fixture_unittest.cc",
+    "test_loop_fixture_unittest.cc",
+  ]
+
+  deps = [
+    ":gtest",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
+    "//third_party/googletest:gmock",
+    "//zircon/public/lib/async-cpp",
+  ]
+}

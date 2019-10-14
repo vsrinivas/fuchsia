@@ -52,8 +52,8 @@ void IdleWaiter::WaitUntilIdle(fit::closure callback) {
 void IdleWaiter::PostIdleCheck() {
   FXL_DCHECK(loop_) << "No message loop set for debug features. If this is a "
                        "unit test rather than an integration test, consider "
-                       "using //garnet/public/lib/gtest gtest::TestLoopFixture "
-                       "features instead.";
+                       "gtest::TestLoopFixture from "
+                       "//src/lib/testing/test_fixture instead.";
 
   if (!(callbacks_.empty() || activity_ || idle_check_pending_)) {
     FXL_DCHECK(loop_->dispatcher() == async_get_default_dispatcher());
