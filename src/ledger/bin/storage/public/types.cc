@@ -25,8 +25,8 @@ ObjectDigest::ObjectDigest(const flatbuffers::Vector<uint8_t>* digest)
 
 ObjectDigest::ObjectDigest(const ObjectDigest&) = default;
 ObjectDigest& ObjectDigest::operator=(const ObjectDigest&) = default;
-ObjectDigest::ObjectDigest(ObjectDigest&&) = default;
-ObjectDigest& ObjectDigest::operator=(ObjectDigest&&) = default;
+ObjectDigest::ObjectDigest(ObjectDigest&&) noexcept = default;
+ObjectDigest& ObjectDigest::operator=(ObjectDigest&&) noexcept = default;
 
 bool ObjectDigest::IsValid() const { return digest_.has_value(); }
 const std::string& ObjectDigest::Serialize() const {
@@ -54,9 +54,9 @@ ObjectIdentifier::ObjectIdentifier(uint32_t key_index, ObjectDigest object_diges
     : key_index_(key_index), object_digest_(std::move(object_digest)), token_(std::move(token)) {}
 
 ObjectIdentifier::ObjectIdentifier(const ObjectIdentifier&) = default;
-ObjectIdentifier::ObjectIdentifier(ObjectIdentifier&&) = default;
 ObjectIdentifier& ObjectIdentifier::operator=(const ObjectIdentifier&) = default;
-ObjectIdentifier& ObjectIdentifier::operator=(ObjectIdentifier&&) = default;
+ObjectIdentifier::ObjectIdentifier(ObjectIdentifier&&) noexcept = default;
+ObjectIdentifier& ObjectIdentifier::operator=(ObjectIdentifier&&) noexcept = default;
 
 // The destructor must be defined even if purely virtual for destruction to work.
 ObjectIdentifier::Token::~Token() = default;

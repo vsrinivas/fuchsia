@@ -53,8 +53,8 @@ class ObjectDigest {
 
   ObjectDigest(const ObjectDigest&);
   ObjectDigest& operator=(const ObjectDigest&);
-  ObjectDigest(ObjectDigest&&);
-  ObjectDigest& operator=(ObjectDigest&&);
+  ObjectDigest(ObjectDigest&&) noexcept;
+  ObjectDigest& operator=(ObjectDigest&&) noexcept;
 
   // Returns whether this object represents a valid object digest.
   bool IsValid() const;
@@ -109,8 +109,8 @@ class ObjectIdentifier {
 
   ObjectIdentifier(const ObjectIdentifier&);
   ObjectIdentifier& operator=(const ObjectIdentifier&);
-  ObjectIdentifier(ObjectIdentifier&&);
-  ObjectIdentifier& operator=(ObjectIdentifier&&);
+  ObjectIdentifier(ObjectIdentifier&&) noexcept;
+  ObjectIdentifier& operator=(ObjectIdentifier&&) noexcept;
 
   uint32_t key_index() const { return key_index_; }
   const ObjectDigest& object_digest() const { return object_digest_; }

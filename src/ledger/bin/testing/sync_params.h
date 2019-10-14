@@ -20,9 +20,9 @@ namespace ledger {
 struct SyncParams {
   SyncParams();
   SyncParams(const SyncParams& other);
-  SyncParams(SyncParams&& other);
+  SyncParams(SyncParams&& other) noexcept;
   SyncParams& operator=(const SyncParams& other);
-  SyncParams& operator=(SyncParams&& other);
+  SyncParams& operator=(SyncParams&& other) noexcept;
 
   // API key used to access the database.
   std::string api_key;

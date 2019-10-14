@@ -37,12 +37,13 @@ std::string GenerateUserId() {
 
 CloudProviderFactory::UserId::UserId(const UserId& user_id) = default;
 
-CloudProviderFactory::UserId::UserId(UserId&& user_id) = default;
+CloudProviderFactory::UserId::UserId(UserId&& user_id) noexcept = default;
 
 CloudProviderFactory::UserId& CloudProviderFactory::UserId::operator=(const UserId& user_id) =
     default;
 
-CloudProviderFactory::UserId& CloudProviderFactory::UserId::operator=(UserId&& user_id) = default;
+CloudProviderFactory::UserId& CloudProviderFactory::UserId::operator=(UserId&& user_id) noexcept =
+    default;
 
 CloudProviderFactory::UserId CloudProviderFactory::UserId::New() { return UserId(); }
 

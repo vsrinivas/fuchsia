@@ -34,9 +34,9 @@ class CloudProviderFactory {
   class UserId {
    public:
     UserId(const UserId& user_id);
-    UserId(UserId&& user_id);
+    UserId(UserId&& user_id) noexcept;
     UserId& operator=(const UserId& user_id);
-    UserId& operator=(UserId&& user_id);
+    UserId& operator=(UserId&& user_id) noexcept;
 
     static UserId New();
 

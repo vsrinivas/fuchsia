@@ -139,11 +139,9 @@ namespace ledger {
 
 SyncParams::SyncParams() = default;
 
-SyncParams::SyncParams(SyncParams&& other) = default;
-
 SyncParams::SyncParams(const SyncParams& other) { *this = other; }
 
-SyncParams& SyncParams::operator=(SyncParams&& other) = default;
+SyncParams::SyncParams(SyncParams&& other) noexcept = default;
 
 SyncParams& SyncParams::operator=(const SyncParams& other) {
   api_key = other.api_key;
@@ -152,6 +150,8 @@ SyncParams& SyncParams::operator=(const SyncParams& other) {
   }
   return *this;
 }
+
+SyncParams& SyncParams::operator=(SyncParams&& other) noexcept = default;
 
 std::string GetSyncParamsUsage() {
   std::ostringstream result;
