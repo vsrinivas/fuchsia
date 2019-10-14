@@ -49,8 +49,6 @@ executable("test") {
 }
 
 test_package("iquery_golden_test") {
-  deprecated_shell = "//build"
-
   deps = [
     ":bin",
     ":test",
