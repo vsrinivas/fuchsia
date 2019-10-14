@@ -123,10 +123,10 @@ DebuggedThread::SuspendToken::~SuspendToken() {
 // DebuggedThread ----------------------------------------------------------------------------------
 
 DebuggedThread::DebuggedThread(DebugAgent* debug_agent, CreateInfo&& create_info)
-    : debug_agent_(debug_agent),
-      process_(create_info.process),
-      koid_(create_info.koid),
+    : koid_(create_info.koid),
       handle_(std::move(create_info.handle)),
+      debug_agent_(debug_agent),
+      process_(create_info.process),
       exception_token_(std::move(create_info.exception)),
       arch_provider_(std::move(create_info.arch_provider)),
       object_provider_(std::move(create_info.object_provider)),
@@ -592,14 +592,12 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
 
 DebuggedThread::OnStop DebuggedThread::UpdateForHardwareBreakpoint(
     zx_thread_state_general_regs* regs, std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
-
   // TODO(donosoc): Reactivate when HW breakpoints are active again.
   return OnStop::kIgnore;
 
 #ifdef BREAKPOINT_REFACTORING
-  uint64_t breakpoint_address =
-      arch_provider_->BreakpointInstructionForHardwareExceptionAddress(
-          *arch_provider_->IPInRegs(regs));
+  uint64_t breakpoint_address = arch_provider_->BreakpointInstructionForHardwareExceptionAddress(
+      *arch_provider_->IPInRegs(regs));
   ProcessBreakpoint* found_bp = nullptr;
   if (!found_bp) {
     // Hit a hw debug exception that doesn't belong to any ProcessBreakpoint.

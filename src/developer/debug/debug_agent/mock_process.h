@@ -9,6 +9,8 @@
 
 namespace debug_agent {
 
+class MockThread;
+
 // Meant to be used by tests for having light-weight processes that don't talk
 // to zircon in order to spin up threads.
 class MockProcess : public DebuggedProcess {
@@ -17,7 +19,7 @@ class MockProcess : public DebuggedProcess {
               std::shared_ptr<ObjectProvider> object_provider);
   ~MockProcess();
 
-  DebuggedThread* AddThread(zx_koid_t koid);
+  MockThread* AddThread(zx_koid_t koid);
 
   DebuggedThread* GetThread(zx_koid_t koid) const override;
 

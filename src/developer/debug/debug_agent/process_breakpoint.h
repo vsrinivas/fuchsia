@@ -49,7 +49,7 @@ class ProcessBreakpoint {
   // will not work.
   zx_status_t Init();
 
-  virtual bool Installed() const = 0;
+  virtual bool Installed(zx_koid_t thread_koid) const = 0;
 
   fxl::WeakPtr<ProcessBreakpoint> GetWeakPtr();
 
@@ -138,11 +138,11 @@ class ProcessBreakpoint {
   // Exposed mostly for testing purposes (see process_breakpoint_unittest.cc).
   std::vector<zx_koid_t> CurrentlySuspendedThreads() const;
 
- private:
   virtual zx_status_t Update() = 0;
 
+ private:
   virtual zx_status_t Uninstall(DebuggedThread* thread) = 0;
-  virtual zx_status_t Uninstall() = 0;                    // Uninstall for all the threads.
+  virtual zx_status_t Uninstall() = 0;  // Uninstall for all the threads.
 
   // As stepping over are queued, only one thread should be left running at a time. This makes the
   // breakpoint get a suspend token for each other thread within the system.

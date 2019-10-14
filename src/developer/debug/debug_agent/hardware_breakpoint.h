@@ -10,39 +10,32 @@
 #include <set>
 
 #include "src/developer/debug/debug_agent/arch.h"
+#include "src/developer/debug/debug_agent/process_breakpoint.h"
 
 namespace debug_agent {
 
-class ProcessBreakpoint;
-
-class HardwareBreakpoint {
+class HardwareBreakpoint : public ProcessBreakpoint {
  public:
-  explicit HardwareBreakpoint(std::shared_ptr<arch::ArchProvider> arch_provider,
-                              ProcessBreakpoint*);
+  explicit HardwareBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process, uint64_t address,
+                              std::shared_ptr<arch::ArchProvider> arch_provider);
   ~HardwareBreakpoint();
 
-  // Checks if any of the installations need to be added/removed.
-  zx_status_t Update(const std::set<zx_koid_t>& thread_koids);
-  // Uninstall all the threads.
-  zx_status_t Uninstall();
+  zx_status_t Update() override;
+
+  debug_ipc::BreakpointType Type() const override { return debug_ipc::BreakpointType::kHardware; }
+  bool Installed(zx_koid_t thread_koid) const override;
 
   const std::set<zx_koid_t>& installed_threads() const { return installed_threads_; }
 
  private:
-  // Install/Uninstall a particular thread.
-  zx_status_t Install(zx_koid_t thread_koid);
-  zx_status_t Uninstall(zx_koid_t thread_koid);
+  zx_status_t Install(DebuggedThread* thread);
+
+  zx_status_t Uninstall(DebuggedThread* thread) override;
+  zx_status_t Uninstall() override;
 
   std::shared_ptr<arch::ArchProvider> arch_provider_;
-
-  ProcessBreakpoint* process_bp_;  // Not-owning.
   std::set<zx_koid_t> installed_threads_;
 };
-
-// A given set of breakpoints have a number of locations, which could target
-// different threads. We need to get all the threads that are targeted to
-// this particular location.
-std::set<zx_koid_t> HWThreadsTargeted(const ProcessBreakpoint& pb);
 
 }  // namespace debug_agent
 

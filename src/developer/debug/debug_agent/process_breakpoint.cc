@@ -58,7 +58,8 @@ fxl::WeakPtr<ProcessBreakpoint> ProcessBreakpoint::GetWeakPtr() {
 
 zx_status_t ProcessBreakpoint::RegisterBreakpoint(Breakpoint* breakpoint) {
   // Shouldn't get duplicates.
-  FXL_DCHECK(std::find(breakpoints_.begin(), breakpoints_.end(), breakpoint) == breakpoints_.end());
+  if (std::find(breakpoints_.begin(), breakpoints_.end(), breakpoint) != breakpoints_.end())
+    return ZX_ERR_ALREADY_BOUND;
 
   // Should be the same type.
   FXL_DCHECK(Type() == breakpoint->type());

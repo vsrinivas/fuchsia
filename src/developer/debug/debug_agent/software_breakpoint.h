@@ -25,7 +25,8 @@ class SoftwareBreakpoint : public ProcessBreakpoint {
 
   debug_ipc::BreakpointType Type() const override { return debug_ipc::BreakpointType::kSoftware; }
 
-  bool Installed() const override { return installed_; }
+  // Software breakpoint is either installed for all threads or no one.
+  bool Installed(zx_koid_t thread_koid) const override { return installed_; }
 
   // virtual picture of memory is needed, this function will replace the replacement from this
   // breakpoint if it appears in the given block. Otherwise does nothing.

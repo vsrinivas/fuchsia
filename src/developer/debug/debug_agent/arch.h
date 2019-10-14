@@ -86,7 +86,6 @@ class ArchProvider {
   // is it.
   debug_ipc::ExceptionType DecodeExceptionType(const DebuggedThread&, uint32_t exception_type);
 
-  // TODO: Support watchpoints.
   virtual zx_status_t InstallHWBreakpoint(zx::thread*, uint64_t address);
   virtual zx_status_t UninstallHWBreakpoint(zx::thread*, uint64_t address);
 

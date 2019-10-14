@@ -28,9 +28,9 @@ zx_status_t SoftwareBreakpoint::Update() {
       sw_bp_count++;
   }
 
-  if (sw_bp_count == 0 && Installed()) {
+  if (sw_bp_count == 0 && installed_) {
     Uninstall();
-  } else if (sw_bp_count > 0 && !Installed()) {
+  } else if (sw_bp_count > 0 && !installed_) {
     return Install();
   }
 

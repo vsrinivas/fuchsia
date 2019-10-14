@@ -228,8 +228,7 @@ struct ProcessBreakpointSettings {
   // Required to be nonzero.
   uint64_t process_koid = 0;
 
-  // Zero indicates this is a process-wide breakpoint. Otherwise, this
-  // indicates the thread to break.
+  // Zero indicates this is a process-wide breakpoint. Otherwise, this is the thread to break.
   uint64_t thread_koid = 0;
 
   // Address to break at.
@@ -256,9 +255,9 @@ enum class BreakpointType : uint32_t {
 const char* BreakpointTypeToString(BreakpointType);
 
 struct BreakpointSettings {
-  // The ID if this breakpoint. This is assigned by the client. This is
-  // different than the ID in the console frontend which can be across mutliple
-  // processes or may match several addresses in a single process.
+  // The ID if this breakpoint. This is assigned by the client. This is different than the ID in
+  // the console frontend which can be across mutliple processes or may match several addresses in
+  // a single process.
   uint32_t id = 0;
 
   // Name used to recognize a breakpoint. Useful for debugging purposes. Optional.
@@ -273,9 +272,8 @@ struct BreakpointSettings {
 
   // Processes to which this breakpoint applies.
   //
-  // If any process specifies a nonzero thread_koid, it must be the only
-  // process (a breakpoint can apply either to all threads in a set of
-  // processes, or exactly one thread globally).
+  // If any process specifies a nonzero thread_koid, it must be the only process (a breakpoint can
+  // apply either to all threads in a set of processes, or exactly one thread globally).
   std::vector<ProcessBreakpointSettings> locations;
 };
 

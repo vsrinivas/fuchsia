@@ -3,14 +3,16 @@
 
 #include "src/developer/debug/debug_agent/software_breakpoint.h"
 
-#include <gtest/gtest.h>
 #include <string.h>
 #include <zircon/syscalls/exception.h>
+
+#include <gtest/gtest.h>
 
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/mock_arch_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
+#include "src/developer/debug/debug_agent/mock_thread.h"
 #include "src/developer/debug/debug_agent/process_memory_accessor.h"
 #include "src/developer/debug/shared/logging/debug.h"
 
@@ -181,7 +183,7 @@ TEST(ProcessBreakpoint, InstallAndFixup) {
   MockProcess process(process_koid, process_name, arch_provider, object_provider);
 
   SoftwareBreakpoint bp(&main_breakpoint, &process, process_delegate.mem().memory(),
-                       BreakpointFakeMemory::kAddress);
+                        BreakpointFakeMemory::kAddress);
   ASSERT_EQ(ZX_OK, bp.Init());
 
   // Should have written the breakpoint instruction to the buffer.
@@ -231,11 +233,11 @@ TEST(ProcessBreakpoint, StepSingle) {
   constexpr zx_koid_t kThread3Koid = 3;
   constexpr zx_koid_t kThread4Koid = 4;
   constexpr zx_koid_t kThread5Koid = 5;
-  DebuggedThread* mock_thread1 = process.AddThread(kThread1Koid);
-  DebuggedThread* mock_thread2 = process.AddThread(kThread2Koid);
-  DebuggedThread* mock_thread3 = process.AddThread(kThread3Koid);
-  DebuggedThread* mock_thread4 = process.AddThread(kThread4Koid);
-  DebuggedThread* mock_thread5 = process.AddThread(kThread5Koid);
+  MockThread* mock_thread1 = process.AddThread(kThread1Koid);
+  MockThread* mock_thread2 = process.AddThread(kThread2Koid);
+  MockThread* mock_thread3 = process.AddThread(kThread3Koid);
+  MockThread* mock_thread4 = process.AddThread(kThread4Koid);
+  MockThread* mock_thread5 = process.AddThread(kThread5Koid);
 
   mock_thread5->set_client_state(DebuggedThread::ClientState::kPaused);
   mock_thread5->Suspend();

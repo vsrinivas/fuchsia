@@ -16,10 +16,10 @@ MockProcess::MockProcess(zx_koid_t koid, std::string name,
 
 MockProcess::~MockProcess() = default;
 
-DebuggedThread* MockProcess::AddThread(zx_koid_t thread_koid) {
+MockThread* MockProcess::AddThread(zx_koid_t thread_koid) {
   auto mock_thread =
       std::make_unique<MockThread>(this, thread_koid, arch_provider_, object_provider_);
-  DebuggedThread* thread_ptr = mock_thread.get();
+  MockThread* thread_ptr = mock_thread.get();
   threads_[thread_koid] = std::move(mock_thread);
   return thread_ptr;
 }

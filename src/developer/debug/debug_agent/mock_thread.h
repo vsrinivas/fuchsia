@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_THREAD_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_THREAD_H_
 
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 
@@ -13,6 +14,7 @@ class MockThread : public DebuggedThread {
   MockThread(DebuggedProcess* process, zx_koid_t thread_koid,
              std::shared_ptr<arch::ArchProvider> arch_provider,
              std::shared_ptr<ObjectProvider> object_provider);
+  ~MockThread();
 
   void ResumeException() override;
   void ResumeSuspension() override;
@@ -41,3 +43,5 @@ class MockThread : public DebuggedThread {
 };
 
 }  // namespace debug_agent
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_THREAD_H_

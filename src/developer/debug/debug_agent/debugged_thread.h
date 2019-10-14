@@ -69,7 +69,7 @@ class DebuggedThread {
     zx::thread handle;
     ThreadCreationOption creation_option = ThreadCreationOption::kRunningKeepRunning;
 
-    zx::exception exception;    // Optional.
+    zx::exception exception;  // Optional.
 
     std::shared_ptr<arch::ArchProvider> arch_provider;
     std::shared_ptr<ObjectProvider> object_provider;
@@ -171,6 +171,9 @@ class DebuggedThread {
   virtual void IncreaseSuspend();
   virtual void DecreaseSuspend();
 
+  zx_koid_t koid_;
+  zx::thread handle_;
+
  private:
   enum class OnStop {
     kIgnore,  // Don't do anything, keep the thread stopped and don't notify.
@@ -224,9 +227,6 @@ class DebuggedThread {
 
   DebugAgent* debug_agent_;   // Non-owning.
   DebuggedProcess* process_;  // Non-owning.
-
-  zx_koid_t koid_;
-  zx::thread handle_;
 
   // The main thing we're doing. When automatically resuming, this will be
   // what happens.
