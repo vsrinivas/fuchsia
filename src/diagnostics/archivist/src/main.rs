@@ -27,7 +27,6 @@ mod inspect;
 mod logs;
 mod selector_evaluator;
 mod selectors;
-mod trie;
 
 static ARCHIVE_PATH: &str = "/data/archive";
 static INSPECT_ALL_SELECTORS: &str = "/config/data/pipelines/all/";

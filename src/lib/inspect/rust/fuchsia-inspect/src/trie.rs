@@ -7,6 +7,9 @@ use {
     std::{cmp::Eq, hash::Hash},
 };
 
+//TODO(38342): Move this mod to its own lib to avoid leaking its existance in the
+//             fuchsia_inspect documentation.
+
 /// Trie mapping a sequence of key fragments to nodes that
 /// are able to store a vector of multiple values which
 /// are all identifiable by the same key sequence.
@@ -92,8 +95,8 @@ where
 }
 
 pub struct TrieIterableWorkEvent<'a, K, N> {
-    key_state: TrieIterableKeyState<'a, K>,
-    potential_child: Option<&'a N>,
+    pub key_state: TrieIterableKeyState<'a, K>,
+    pub potential_child: Option<&'a N>,
 }
 
 /// Trait defining the properties a graph
@@ -265,7 +268,7 @@ where
     }
 }
 
-enum TrieIterableKeyState<'a, K> {
+pub enum TrieIterableKeyState<'a, K> {
     AddKeyFragment(&'a K),
     PopKeyFragment,
 }
@@ -274,8 +277,8 @@ pub struct TrieIterableType<'a, K, V, T: TrieIterable<'a, K, V>>
 where
     K: Hash + Eq,
 {
-    iterator: T,
-    _marker: PhantomData<fn() -> (&'a K, &'a V)>,
+    pub iterator: T,
+    pub _marker: PhantomData<fn() -> (&'a K, &'a V)>,
 }
 
 impl<'a, K, V, T: TrieIterable<'a, K, V>> Iterator for TrieIterableType<'a, K, V, T>

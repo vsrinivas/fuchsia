@@ -5,7 +5,6 @@ use {
     crate::collection::*,
     crate::selector_evaluator,
     crate::selectors,
-    crate::trie::*,
     failure::{self, err_msg, format_err, Error},
     fidl_fuchsia_diagnostics_inspect::{
         DisplaySettings, FormatSettings, ReaderError, ReaderRequest, ReaderRequestStream,
@@ -13,6 +12,7 @@ use {
     },
     fidl_fuchsia_io::{DirectoryProxy, NodeInfo, CLONE_FLAG_SAME_RIGHTS},
     fidl_fuchsia_mem, files_async, fuchsia_async as fasync,
+    fuchsia_inspect::trie,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::future::{join_all, BoxFuture},
     futures::{future, FutureExt, TryFutureExt, TryStreamExt},
@@ -21,7 +21,7 @@ use {
     std::sync::{Arc, Mutex},
 };
 
-type InspectDataTrie = Trie<char, (PathBuf, DirectoryProxy, Vec<Arc<Selector>>)>;
+type InspectDataTrie = trie::Trie<char, (PathBuf, DirectoryProxy, Vec<Arc<Selector>>)>;
 
 /// InspectDataCollector holds the information needed to retrieve the Inspect
 /// VMOs associated with a particular component

@@ -6,15 +6,17 @@ use {
     crate::{
         format::{block::PropertyFormat, block_type::BlockType},
         reader::snapshot::{ScannedBlock, Snapshot},
+        trie::*,
         utils, Inspector,
     },
+    core::marker::PhantomData,
     failure::{bail, format_err, Error},
     fuchsia_zircon::Vmo,
     maplit::btreemap,
     num_traits::bounds::Bounded,
     std::{
         cmp::min,
-        collections::BTreeMap,
+        collections::{BTreeMap, HashMap},
         convert::TryFrom,
         ops::{Add, AddAssign, MulAssign},
     },
@@ -23,6 +25,10 @@ use {
 pub use crate::format::block::ArrayFormat;
 
 pub mod snapshot;
+
+/// Each item of the iterator returns pairs (Vec<String>, Property) where the string vector
+/// are the names of nodes in the path in the inspect hierarchy to get to that property.
+type PropertyIterator<'a> = TrieIterableType<'a, String, Property, NodeHierarchyIterator<'a>>;
 
 /// A hierarchy of Inspect Nodes.
 ///
@@ -59,6 +65,112 @@ impl NodeHierarchy {
         for child in self.children.iter_mut() {
             child.sort();
         }
+    }
+
+    // Provides an iterator over the node hierarchy returning properties in pre-order.
+    pub fn property_iter(&self) -> PropertyIterator {
+        TrieIterableType { iterator: NodeHierarchyIterator::new(&self), _marker: PhantomData }
+    }
+}
+
+impl TrieIterableNode<String, Property> for NodeHierarchy {
+    fn get_children(&self) -> HashMap<&String, &Self> {
+        self.children
+            .iter()
+            .map(|node_hierarchy| (&node_hierarchy.name, node_hierarchy))
+            .collect::<HashMap<&String, &Self>>()
+    }
+
+    fn get_values(&self) -> &[Property] {
+        return &self.properties;
+    }
+}
+
+pub struct NodeHierarchyIterator<'a> {
+    root: &'a NodeHierarchy,
+    iterator_initialized: bool,
+    work_stack: Vec<TrieIterableWorkEvent<'a, String, NodeHierarchy>>,
+    curr_key: Vec<&'a String>,
+    curr_node: Option<&'a NodeHierarchy>,
+    curr_val_index: usize,
+}
+
+impl<'a> NodeHierarchyIterator<'a> {
+    pub fn new(root: &'a NodeHierarchy) -> Self {
+        NodeHierarchyIterator {
+            root,
+            iterator_initialized: false,
+            work_stack: Vec::new(),
+            curr_key: Vec::new(),
+            curr_node: None,
+            curr_val_index: 0,
+        }
+    }
+}
+
+impl<'a> TrieIterable<'a, String, Property> for NodeHierarchyIterator<'a> {
+    type Node = NodeHierarchy;
+    fn is_initialized(&self) -> bool {
+        self.iterator_initialized
+    }
+
+    fn initialize(&mut self) {
+        self.iterator_initialized = true;
+        self.add_work_event(TrieIterableWorkEvent {
+            key_state: TrieIterableKeyState::PopKeyFragment,
+            potential_child: None,
+        });
+
+        self.curr_node = Some(self.root);
+        self.curr_key.push(&self.root.name);
+        for (key_fragment, child_node) in self.root.get_children().iter() {
+            self.add_work_event(TrieIterableWorkEvent {
+                key_state: TrieIterableKeyState::AddKeyFragment(key_fragment),
+                potential_child: Some(child_node),
+            });
+        }
+    }
+
+    fn add_work_event(&mut self, work_event: TrieIterableWorkEvent<'a, String, Self::Node>) {
+        self.work_stack.push(work_event);
+    }
+
+    fn expect_work_event(&mut self) -> TrieIterableWorkEvent<'a, String, Self::Node> {
+        self.work_stack
+            .pop()
+            .expect("Should never attempt to retrieve an event from an empty work stack,")
+    }
+    fn expect_curr_node(&self) -> &'a Self::Node {
+        self.curr_node.expect("We should never be trying to retrieve an unset working node.")
+    }
+    fn set_curr_node(&mut self, new_node: &'a Self::Node) {
+        self.curr_val_index = 0;
+        self.curr_node = Some(new_node);
+    }
+    fn is_curr_node_fully_processed(&self) -> bool {
+        let curr_node = self
+            .curr_node
+            .expect("We should always have a working node when checking progress on that node.");
+        curr_node.get_values().is_empty() || curr_node.get_values().len() <= self.curr_val_index
+    }
+    fn is_work_stack_empty(&self) -> bool {
+        self.work_stack.is_empty()
+    }
+    fn pop_curr_key_fragment(&mut self) {
+        self.curr_key.pop();
+    }
+    fn extend_curr_key(&mut self, new_fragment: &'a String) {
+        self.curr_key.push(new_fragment);
+    }
+    fn expect_next_value(&mut self) -> (Vec<&'a String>, &'a Property) {
+        self.curr_val_index = self.curr_val_index + 1;
+        (
+            self.curr_key.clone(),
+            &self
+                .curr_node
+                .expect("Should never be retrieving a node value without a working node.")
+                .get_values()[self.curr_val_index - 1],
+        )
     }
 }
 
@@ -577,6 +689,115 @@ mod tests {
                 ],
             }
         );
+    }
+
+    #[test]
+    fn test_node_hierarchy_iteration() {
+        let double_array_data = vec![-1.2, 2.3, 3.4, 4.5, -5.6];
+        let chars = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+        let string_data = chars.iter().cycle().take(6000).collect::<String>();
+        let bytes_data = (0u8..=9u8).cycle().take(5000).collect::<Vec<u8>>();
+
+        let test_hierarchy = NodeHierarchy {
+            name: "root".to_string(),
+            properties: vec![
+                Property::Int("int-root".to_string(), 3),
+                Property::DoubleArray(
+                    "property-double-array".to_string(),
+                    ArrayValue::new(double_array_data.clone(), ArrayFormat::Default),
+                ),
+            ],
+            children: vec![NodeHierarchy {
+                name: "child-1".to_string(),
+                properties: vec![
+                    Property::Uint("property-uint".to_string(), 10),
+                    Property::Double("property-double".to_string(), -3.4),
+                    Property::String("property-string".to_string(), string_data.clone()),
+                    Property::IntArray(
+                        "property-int-array".to_string(),
+                        ArrayValue::new(vec![1, 2, 1, 1, 1, 1, 1], ArrayFormat::LinearHistogram),
+                    ),
+                ],
+                children: vec![NodeHierarchy {
+                    name: "child-1-1".to_string(),
+                    properties: vec![
+                        Property::Int("property-int".to_string(), -9),
+                        Property::Bytes("property-bytes".to_string(), bytes_data.clone()),
+                        Property::UintArray(
+                            "property-uint-array".to_string(),
+                            ArrayValue::new(
+                                vec![1, 1, 2, 0, 1, 1, 2, 0, 0],
+                                ArrayFormat::ExponentialHistogram,
+                            ),
+                        ),
+                    ],
+                    children: vec![],
+                }],
+            }],
+        };
+
+        let mut results_vec = vec![
+            (
+                vec!["root".to_string(), "child-1".to_string(), "child-1-1".to_string()],
+                Property::UintArray(
+                    "property-uint-array".to_string(),
+                    ArrayValue::new(
+                        vec![1, 1, 2, 0, 1, 1, 2, 0, 0],
+                        ArrayFormat::ExponentialHistogram,
+                    ),
+                ),
+            ),
+            (
+                vec!["root".to_string(), "child-1".to_string(), "child-1-1".to_string()],
+                Property::Bytes("property-bytes".to_string(), bytes_data),
+            ),
+            (
+                vec!["root".to_string(), "child-1".to_string(), "child-1-1".to_string()],
+                Property::Int("property-int".to_string(), -9),
+            ),
+            (
+                vec!["root".to_string(), "child-1".to_string()],
+                Property::IntArray(
+                    "property-int-array".to_string(),
+                    ArrayValue::new(vec![1, 2, 1, 1, 1, 1, 1], ArrayFormat::LinearHistogram),
+                ),
+            ),
+            (
+                vec!["root".to_string(), "child-1".to_string()],
+                Property::String("property-string".to_string(), string_data),
+            ),
+            (
+                vec!["root".to_string(), "child-1".to_string()],
+                Property::Double("property-double".to_string(), -3.4),
+            ),
+            (
+                vec!["root".to_string(), "child-1".to_string()],
+                Property::Uint("property-uint".to_string(), 10),
+            ),
+            (
+                vec!["root".to_string()],
+                Property::DoubleArray(
+                    "property-double-array".to_string(),
+                    ArrayValue::new(double_array_data, ArrayFormat::Default),
+                ),
+            ),
+            (vec!["root".to_string()], Property::Int("int-root".to_string(), 3)),
+        ];
+
+        let expected_num_entries = results_vec.len();
+        let mut num_entries = 0;
+        for (key, val) in test_hierarchy.property_iter() {
+            num_entries = num_entries + 1;
+            let (expected_key, expected_property) = results_vec.pop().unwrap();
+            assert_eq!(
+                key.iter().map(|s| s.as_str()).collect::<Vec<&str>>().join("/"),
+                expected_key.iter().map(|s| s.as_str()).collect::<Vec<&str>>().join("/")
+            );
+
+            assert_eq!(*val, expected_property);
+        }
+
+        assert_eq!(num_entries, expected_num_entries);
     }
 
     #[test]
