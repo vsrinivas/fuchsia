@@ -206,9 +206,11 @@ TEST_P(SyncIntegrationTest, DISABLED_LazyToEagerTransition) {
   EXPECT_THAT(get_result, MatchesString(convert::ToString(big_value)));
 }
 
-// Verifies that a PageWatcher correctly delivers notifications about the
-// change in case of a lazy value not already present on disk.
-TEST_P(SyncIntegrationTest, PageChangeLazyEntry) {
+// Verifies that a PageWatcher correctly delivers notifications about the change in case of a lazy
+// value not already present on disk.
+// TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=12287): re-enable for P2P only once P2P
+// handles large objects.
+TEST_P(SyncIntegrationCloudTest, PageChangeLazyEntry) {
   auto instance1 = NewLedgerAppInstance();
   auto instance2 = NewLedgerAppInstance();
 
