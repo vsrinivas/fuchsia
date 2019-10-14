@@ -15,7 +15,7 @@ import (
 
 // The program on fuchsia used to stream system logs through a shell, not to be confused
 // with the zircon host tool "loglistener" (no underscore) used to zircon-level logs to host.
-const logListener = "bin/log_listener"
+const logListener = "/bin/log_listener"
 
 // Syslogger represents an session with a Fuchsia instance through which system logs may be streamed.
 type Syslogger struct {

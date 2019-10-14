@@ -52,18 +52,59 @@ func TestExecute(t *testing.T) {
 		// is called and closed after it finishes.
 		var imgs []build.Image
 		targetSetup := cmd.setupTargets(ctx, imgs, targets)
-		for _, file := range targetSetup.syslogs {
-			if _, err := io.WriteString(file, "File is open!"); err != nil {
+		for _, log := range targetSetup.syslogs {
+			if _, err := io.WriteString(log.file, "File is open!"); err != nil {
 				t.Fatalf("File is not open: %v", err)
 			}
 		}
 		if err = cmd.runCmdWithTargets(ctx, targetSetup, []string{scriptPath}); err != nil {
 			t.Fatalf("Execute failed with error: %v", err)
 		}
-		for _, file := range targetSetup.syslogs {
-			if _, err := io.WriteString(file, "File is closed!"); err == nil {
+		for _, log := range targetSetup.syslogs {
+			if _, err := io.WriteString(log.file, "File is closed!"); err == nil {
 				t.Fatalf("File is open: %v", err)
 			}
+		}
+		// Logs are not empty since we wrote to it when checking to see if they were open.
+		if err = cmd.checkEmptyLogs(ctx, targetSetup); err != nil {
+			t.Fatalf("%v", err)
+		}
+	})
+
+	t.Run("fail for empty logs", func(t *testing.T) {
+		tmpDir, err := ioutil.TempDir("", fmt.Sprintf("test-data"))
+		if err != nil {
+			t.Fatalf("failed to create temp dir: %v", err)
+		}
+		defer os.RemoveAll(tmpDir)
+		syslogPath := filepath.Join(tmpDir, "syslog.txt")
+
+		// create empty script to pass as cmd to run.
+		scriptPath := filepath.Join(tmpDir, "test_script.sh")
+		if err = ioutil.WriteFile(scriptPath, []byte("#!/bin/bash\n# don't do anything."), 0755); err != nil {
+			t.Fatalf("Failed to write to script: %s", err)
+		}
+
+		cmd := &RunCommand{
+			syslogFile: syslogPath,
+			netboot:    true,
+			timeout:    time.Second * 5,
+		}
+		ctx := context.Background()
+		target, err := target.NewMockTarget(ctx, "mock-target")
+		if err != nil {
+			t.Fatalf("failed to create new target: %v", err)
+		}
+		targets := []Target{target}
+
+		var imgs []build.Image
+		targetSetup := cmd.setupTargets(ctx, imgs, targets)
+		if err = cmd.runCmdWithTargets(ctx, targetSetup, []string{scriptPath}); err != nil {
+			t.Fatalf("Execute failed with error: %v", err)
+		}
+		// Logs should be empty.
+		if err = cmd.checkEmptyLogs(ctx, targetSetup); err == nil {
+			t.Fatalf("Did not fail for empty logs")
 		}
 	})
 }

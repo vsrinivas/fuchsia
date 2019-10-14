@@ -179,13 +179,18 @@ func getIndexedFilename(filename string, index int) string {
 
 type targetSetup struct {
 	targets    []Target
-	syslogs    []io.ReadWriteCloser
-	serialLogs []io.ReadWriteCloser
+	syslogs    []*logWriter
+	serialLogs []*logWriter
 	err        error
 }
 
+type logWriter struct {
+	name string
+	file io.ReadWriteCloser
+}
+
 func (r *RunCommand) setupTargets(ctx context.Context, imgs []build.Image, targets []Target) *targetSetup {
-	var syslogs, serialLogs []io.ReadWriteCloser
+	var syslogs, serialLogs []*logWriter
 	errs := make(chan error, len(targets))
 	var wg sync.WaitGroup
 	var setupErr error
@@ -203,7 +208,10 @@ func (r *RunCommand) setupTargets(ctx context.Context, imgs []build.Image, targe
 				setupErr = err
 				break
 			}
-			syslogs = append(syslogs, syslog)
+			syslogs = append(syslogs, &logWriter{
+				name: syslogFile,
+				file: syslog,
+			})
 		}
 
 		zirconArgs := r.zirconArgs
@@ -218,7 +226,10 @@ func (r *RunCommand) setupTargets(ctx context.Context, imgs []build.Image, targe
 					setupErr = err
 					break
 				}
-				serialLogs = append(serialLogs, serialLog)
+				serialLogs = append(serialLogs, &logWriter{
+					name: serialLogFile,
+					file: serialLog,
+				})
 
 				// Here we invoke the `dlog` command over serial to tail the existing log buffer into the
 				// output file.  This should give us everything since Zedboot boot, and new messages should
@@ -312,11 +323,11 @@ func (r *RunCommand) runCmdWithTargets(ctx context.Context, targetSetup *targetS
 		}(t)
 	}
 
-	for _, file := range targetSetup.syslogs {
-		defer file.Close()
+	for _, log := range targetSetup.syslogs {
+		defer log.file.Close()
 	}
-	for _, file := range targetSetup.serialLogs {
-		defer file.Close()
+	for _, log := range targetSetup.serialLogs {
+		defer log.file.Close()
 	}
 	if targetSetup.err != nil {
 		return targetSetup.err
@@ -341,6 +352,19 @@ func (r *RunCommand) runCmdWithTargets(ctx context.Context, targetSetup *targetS
 	case err := <-errs:
 		return err
 	case <-ctx.Done():
+	}
+	return nil
+}
+
+func (r *RunCommand) checkEmptyLogs(ctx context.Context, targetSetup *targetSetup) error {
+	for _, log := range append(targetSetup.syslogs, targetSetup.serialLogs...) {
+		b, err := ioutil.ReadFile(log.name)
+		if err != nil {
+			return err
+		}
+		if len(b) == 0 {
+			return fmt.Errorf("log is empty.")
+		}
 	}
 	return nil
 }
@@ -378,7 +402,10 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	defer cancel()
 
 	targetSetup := r.setupTargets(ctx, imgs, targets)
-	return r.runCmdWithTargets(ctx, targetSetup, args)
+	if err := r.runCmdWithTargets(ctx, targetSetup, args); err != nil {
+		return err
+	}
+	return r.checkEmptyLogs(ctx, targetSetup)
 }
 
 func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
