@@ -167,7 +167,7 @@ void Runner::GetFormatCallback(::std::vector<fuchsia::camera::VideoFormat> fmts,
       fbl::round_up(format.format.height * format.format.planes[0].bytes_per_row, 4096u);
   buffer_collection.buffer_count = kMaxFrames;
   buffer_collection.vmo_size = buffer_size;
-  buffer_collection.format.set_image(std::move(format.format));
+  buffer_collection.format.image = std::move(format.format);
 
   for (uint32_t i = 0; i < kMaxFrames; ++i) {
     zx::vmo vmo;

@@ -58,10 +58,10 @@ std::unique_ptr<fuchsia::camera2::Stream> IspStreamProvider::ConnectToStream(
   }
 
   // Populate output parameters with ISP-provided values and known parameters.
-  format_out->pixel_format.type = buffers.format.image().pixel_format.type;
-  format_out->display_width = buffers.format.image().width;
-  format_out->display_height = buffers.format.image().height;
-  format_out->bytes_per_row = buffers.format.image().planes[0].bytes_per_row;
+  format_out->pixel_format.type = buffers.format.image.pixel_format.type;
+  format_out->display_width = buffers.format.image.width;
+  format_out->display_height = buffers.format.image.height;
+  format_out->bytes_per_row = buffers.format.image.planes[0].bytes_per_row;
   buffers_out->buffer_count = buffers.buffer_count;
   buffers_out->settings.buffer_settings.size_bytes = buffers.vmo_size;
   for (uint32_t i = 0; i < buffers.buffer_count; ++i) {

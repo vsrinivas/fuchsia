@@ -300,7 +300,7 @@ zx_status_t UsbVideoStream::CreateStream(fuchsia::sysmem::BufferCollectionInfo b
                                          fuchsia::camera::FrameRate frame_rate) {
   fbl::AutoLock lock(&lock_);
   fuchsia::camera::VideoFormat video_format;
-  video_format.format = buffer_collection.format.image();
+  video_format.format = buffer_collection.format.image;
   video_format.rate = frame_rate;
   // Convert from the client's video format proto to the device driver format
   // and frame descriptors.

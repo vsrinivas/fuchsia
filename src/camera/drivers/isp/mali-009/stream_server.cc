@@ -41,15 +41,15 @@ zx_status_t StreamServer::Create(zx::bti* bti, std::unique_ptr<StreamServer>* se
   // Construct the buffers to pass to the ISP.
   auto format = DmaFormat(kWidth, kHeight, kDmaPixelFormat, false);
   fuchsia::sysmem::BufferCollectionInfo buffers{};
-  buffers.format.image().width = kWidth;
-  buffers.format.image().height = kHeight;
-  buffers.format.image().layers = 2;
-  buffers.format.image().pixel_format.type = kPixelFormat;
-  buffers.format.image().color_space.type = kColorSpace;
-  buffers.format.image().planes[0].bytes_per_row =
+  buffers.format.image.width = kWidth;
+  buffers.format.image.height = kHeight;
+  buffers.format.image.layers = 2;
+  buffers.format.image.pixel_format.type = kPixelFormat;
+  buffers.format.image.color_space.type = kColorSpace;
+  buffers.format.image.planes[0].bytes_per_row =
       std::abs(static_cast<int32_t>(format.GetLineOffset()));  // May be 'negative'.
-  buffers.format.image().planes[1].bytes_per_row =
-      buffers.format.image().planes[0].bytes_per_row / 2;
+  buffers.format.image.planes[1].bytes_per_row =
+      buffers.format.image.planes[0].bytes_per_row / 2;
   buffers.buffer_count = kBufferCount;
   buffers.vmo_size = format.GetImageSize();
 
@@ -108,14 +108,14 @@ zx_status_t StreamServer::AddClient(zx::channel channel,
 }
 
 zx_status_t StreamServer::GetBuffers(fuchsia_sysmem_BufferCollectionInfo* buffers_out) {
-  buffers_out->format.image.width = buffers_.format.image().width;
-  buffers_out->format.image.height = buffers_.format.image().height;
-  buffers_out->format.image.layers = buffers_.format.image().layers;
+  buffers_out->format.image.width = buffers_.format.image.width;
+  buffers_out->format.image.height = buffers_.format.image.height;
+  buffers_out->format.image.layers = buffers_.format.image.layers;
   buffers_out->format.image.pixel_format.type =
-      static_cast<uint32_t>(buffers_.format.image().pixel_format.type);
+      static_cast<uint32_t>(buffers_.format.image.pixel_format.type);
   buffers_out->format.image.color_space.type =
-      static_cast<uint32_t>(buffers_.format.image().color_space.type);
-  memcpy(buffers_out->format.image.planes, buffers_.format.image().planes.data(),
+      static_cast<uint32_t>(buffers_.format.image.color_space.type);
+  memcpy(buffers_out->format.image.planes, buffers_.format.image.planes.data(),
          sizeof(buffers_out->format.image.planes));
   buffers_out->buffer_count = buffers_.buffer_count;
   buffers_out->vmo_size = buffers_.vmo_size;

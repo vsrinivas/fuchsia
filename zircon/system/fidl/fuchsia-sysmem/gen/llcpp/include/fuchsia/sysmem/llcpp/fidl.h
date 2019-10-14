@@ -77,7 +77,6 @@ enum class ColorSpaceType : uint32_t {
 
 struct ColorSpace;
 struct ImageSpec;
-struct BufferSpec;
 struct ImageFormat_2;
 struct ImageFormatConstraints;
 struct ImageFormat;
@@ -2965,77 +2964,6 @@ struct ImageSpec {
   ::llcpp::fuchsia::sysmem::ColorSpace color_space = {};
 };
 
-extern "C" const fidl_type_t fuchsia_sysmem_BufferSpecTable;
-
-// Describes constraints for allocating buffers of some desired form.
-// Buffers of each type are described by their own tables.
-struct BufferSpec {
-  enum class Tag : fidl_union_tag_t {
-    kImage = 0,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  BufferSpec();
-  ~BufferSpec();
-
-  BufferSpec(BufferSpec&& other) {
-    tag_ = Tag::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  BufferSpec& operator=(BufferSpec&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
-
-  bool is_image() const { return tag_ == Tag::kImage; }
-
-  static BufferSpec WithImage(::llcpp::fuchsia::sysmem::ImageSpec&& val) {
-    BufferSpec result;
-    result.set_image(std::move(val));
-    return result;
-  }
-
-  ::llcpp::fuchsia::sysmem::ImageSpec& mutable_image();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::ImageSpec>::value && std::is_copy_assignable<T>::value>
-  set_image(const T& v) {
-    mutable_image() = v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::ImageSpec>::value && std::is_move_assignable<T>::value>
-  set_image(T&& v) {
-    mutable_image() = std::move(v);
-  }
-
-  ::llcpp::fuchsia::sysmem::ImageSpec const & image() const { return image_; }
-
-  Tag which() const { return tag_; }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferSpecTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 48;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-
- private:
-  void Destroy();
-  void MoveImpl_(BufferSpec&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
-  union {
-    ::llcpp::fuchsia::sysmem::ImageSpec image_;
-  };
-};
-
 extern "C" const fidl_type_t fuchsia_sysmem_ImageFormat_2Table;
 
 // Describes how an image is represented.
@@ -3258,70 +3186,18 @@ extern "C" const fidl_type_t fuchsia_sysmem_BufferFormatTable;
 // Describes how the contents of buffers are represented.
 // Buffers of each type are described by their own tables.
 struct BufferFormat {
-  enum class Tag : fidl_union_tag_t {
-    kImage = 0,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  BufferFormat();
-  ~BufferFormat();
-
-  BufferFormat(BufferFormat&& other) {
-    tag_ = Tag::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  BufferFormat& operator=(BufferFormat&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
-
-  bool is_image() const { return tag_ == Tag::kImage; }
-
-  static BufferFormat WithImage(::llcpp::fuchsia::sysmem::ImageFormat&& val) {
-    BufferFormat result;
-    result.set_image(std::move(val));
-    return result;
-  }
-
-  ::llcpp::fuchsia::sysmem::ImageFormat& mutable_image();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::ImageFormat>::value && std::is_copy_assignable<T>::value>
-  set_image(const T& v) {
-    mutable_image() = v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::ImageFormat>::value && std::is_move_assignable<T>::value>
-  set_image(T&& v) {
-    mutable_image() = std::move(v);
-  }
-
-  ::llcpp::fuchsia::sysmem::ImageFormat const & image() const { return image_; }
-
-  Tag which() const { return tag_; }
-
   static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferFormatTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 80;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
- private:
-  void Destroy();
-  void MoveImpl_(BufferFormat&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
-  union {
-    ::llcpp::fuchsia::sysmem::ImageFormat image_;
-  };
+  // Since this struct used to be a single member union, we kept the tag
+  // to avoid any wire format changes. The tag must be set to `0`,
+  // no other value is correct.
+  uint32_t tag = {};
+
+  ::llcpp::fuchsia::sysmem::ImageFormat image = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionInfoTable;
@@ -5636,10 +5512,6 @@ static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageSpec, color_space) == 32);
 static_assert(sizeof(::llcpp::fuchsia::sysmem::ImageSpec) == ::llcpp::fuchsia::sysmem::ImageSpec::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::sysmem::BufferSpec> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::BufferSpec>);
-
-template <>
 struct IsFidlType<::llcpp::fuchsia::sysmem::ImageFormat_2> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::ImageFormat_2>);
 static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormat_2, pixel_format) == 0);
@@ -5697,6 +5569,9 @@ static_assert(sizeof(::llcpp::fuchsia::sysmem::ImageFormat) == ::llcpp::fuchsia:
 template <>
 struct IsFidlType<::llcpp::fuchsia::sysmem::BufferFormat> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::BufferFormat>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferFormat, tag) == 0);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferFormat, image) == 8);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferFormat) == ::llcpp::fuchsia::sysmem::BufferFormat::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::sysmem::BufferCollectionInfo> : public std::true_type {};

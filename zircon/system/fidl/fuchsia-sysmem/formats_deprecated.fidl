@@ -6,12 +6,10 @@ library fuchsia.sysmem;
 
 /// Describes how the contents of buffers are represented.
 /// Buffers of each type are described by their own tables.
-union BufferFormat {
+struct BufferFormat {
+    /// Since this struct used to be a single member union, we kept the tag
+    /// to avoid any wire format changes. The tag must be set to `0`,
+    /// no other value is correct.
+    uint32 tag = 0;
     ImageFormat image;
-};
-
-/// Describes constraints for allocating buffers of some desired form.
-/// Buffers of each type are described by their own tables.
-union BufferSpec {
-    ImageSpec image;
 };
