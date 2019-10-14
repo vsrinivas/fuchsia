@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <cassert>
+
 #include <bits/limits.h>
 #include "trb-sizes.h"
 #include "xhci-hw.h"
