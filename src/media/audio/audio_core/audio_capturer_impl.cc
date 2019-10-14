@@ -161,7 +161,6 @@ void AudioCapturerImpl::Shutdown() {
 
   ReportStop();
   volume_manager_.RemoveStream(this);
-  REP(RemovingCapturer(*this));
 
   // Make sure we have left the set of active AudioCapturers.
   if (InContainer()) {
@@ -185,6 +184,8 @@ void AudioCapturerImpl::Shutdown() {
     }
 
     self->payload_buf_vmo_.reset();
+
+    REP(RemovingCapturer(*self.get()));
   }));
 }
 
