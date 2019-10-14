@@ -16,6 +16,7 @@
 // See hid-utest-data.cpp for the definitions of the test data
 extern "C" const uint8_t push_pop_test[70];
 extern "C" const uint8_t minmax_signed_test[68];
+extern "C" const uint8_t report_count_oom_test[31];
 
 TEST(HidParserHelperTest, ParseEmptyData) {
   hid::DeviceDescriptor* dev = nullptr;
@@ -742,4 +743,10 @@ TEST(HidParserHelperTest, InsertTests) {
   ASSERT_TRUE(InsertWithUnit(report, report_len, attr, unit_out, 20));
   ASSERT_TRUE(ExtractWithUnit(report, report_len, attr, unit_out, &double_out));
   EXPECT_EQ(static_cast<int>(double_out), 20);
+}
+
+TEST(HidParserHelperTest, ReportCountOomTest) {
+  hid::DeviceDescriptor* dev = nullptr;
+  auto res = hid::ParseReportDescriptor(report_count_oom_test, sizeof(report_count_oom_test), &dev);
+  ASSERT_EQ(res, hid::ParseResult::kParseNoMemory);
 }

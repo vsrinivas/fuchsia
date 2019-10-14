@@ -94,3 +94,21 @@ extern "C" const uint8_t minmax_signed_test[68] = {
 
     0xC0,  // End Collection
 };
+
+extern "C" const uint8_t report_count_oom_test[31] = {
+    0x05, 0x01,                    // Usage Page (Generic Desktop Ctrls)
+    0x09, 0x02,                    // Usage (Mouse)
+    0xA1, 0x01,                    // Collection (Application)
+    0x09, 0x01,                    //   Usage (Pointer)
+    0xA1, 0x00,                    //   Collection (Physical)
+    0x05, 0x01,                    //     Usage Page (Generic Desktop Ctrls)
+    0x09, 0x30,                    //     Usage (X)
+    0x09, 0x31,                    //     Usage (Y)
+    0x15, 0x81,                    //     Logical Minimum (-127)
+    0x25, 0x7F,                    //     Logical Maximum (127)
+    0x75, 0x08,                    //     Report Size (8)
+    0x97, 0xFF, 0xFF, 0xFF, 0x7F,  //     Report Count (2147483646)
+    0x81, 0x06,  //     Input (Data,Var,Rel,No Wrap,Linear,Preferred State,No Null Position)
+    0xC0,        //   End Collection
+    0xC0,        // End Collection
+};

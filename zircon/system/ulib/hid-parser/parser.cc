@@ -485,6 +485,9 @@ class ParseState {
   }
 
   ParseResult set_report_count(uint32_t data) {  // Global
+    if (data > UINT16_MAX) {
+      return kParseNoMemory;
+    }
     table_.report_count = data;
     return kParseOk;
   }
