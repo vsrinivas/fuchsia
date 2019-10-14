@@ -5,8 +5,8 @@
 #ifndef SRC_COBALT_BIN_SYSTEM_METRICS_CPU_STATS_FETCHER_IMPL_H_
 #define SRC_COBALT_BIN_SYSTEM_METRICS_CPU_STATS_FETCHER_IMPL_H_
 
-#include <lib/zx/resource.h>
 #include <fuchsia/kernel/llcpp/fidl.h>
+#include <lib/zx/resource.h>
 
 #include <chrono>
 #include <vector>
@@ -20,12 +20,12 @@ namespace cobalt {
 class CpuStatsFetcherImpl : public CpuStatsFetcher {
  public:
   CpuStatsFetcherImpl();
-  bool FetchCpuPercentage(double *cpu_percentage) override;
+  bool FetchCpuPercentage(double* cpu_percentage) override;
 
  private:
   bool FetchCpuCoreCount();
   bool FetchCpuStats();
-  bool CalculateCpuPercentage(double *cpu_percentage);
+  bool CalculateCpuPercentage(double* cpu_percentage);
   void InitializeKernelStats();
 
   size_t num_cpu_cores_ = 0;
@@ -34,10 +34,10 @@ class CpuStatsFetcherImpl : public CpuStatsFetcher {
   std::unique_ptr<llcpp::fuchsia::kernel::Stats::SyncClient> stats_service_;
   std::unique_ptr<fidl::Buffer<llcpp::fuchsia::kernel::Stats::GetCpuStatsResponse>>
       cpu_stats_buffer_;
-  llcpp::fuchsia::kernel::CpuStats* cpu_stats_;
+  llcpp::fuchsia::kernel::CpuStats* cpu_stats_ = nullptr;
   std::unique_ptr<fidl::Buffer<llcpp::fuchsia::kernel::Stats::GetCpuStatsResponse>>
       last_cpu_stats_buffer_;
-  llcpp::fuchsia::kernel::CpuStats* last_cpu_stats_;
+  llcpp::fuchsia::kernel::CpuStats* last_cpu_stats_ = nullptr;
 };
 
 }  // namespace cobalt
