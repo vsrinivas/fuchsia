@@ -167,7 +167,7 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
     case llvm::dwarf::DW_OP_rot:
       return OpRot();
     case llvm::dwarf::DW_OP_xderef:
-      // TODO(brettw) implement this.
+      // We don't have multiple address spaces.
       ReportUnimplementedOpcode(op);
       return Completion::kSync;
     case llvm::dwarf::DW_OP_abs:
@@ -230,13 +230,11 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
       ReportUnimplementedOpcode(op);
       return Completion::kSync;
     case llvm::dwarf::DW_OP_deref:
-      return OpDeref();
+      return OpDeref(sizeof(uint64_t));
     case llvm::dwarf::DW_OP_deref_size:
-      // TODO(brettw) implement this.
-      ReportUnimplementedOpcode(op);
-      return Completion::kSync;
+      return OpDerefSize();
     case llvm::dwarf::DW_OP_xderef_size:
-      // TODO(brettw) implement this.
+      // We don't have multiple address spaces.
       ReportUnimplementedOpcode(op);
       return Completion::kSync;
     case llvm::dwarf::DW_OP_nop:
@@ -558,29 +556,34 @@ DwarfExprEval::Completion DwarfExprEval::OpBregx() {
   return PushRegisterWithOffset(static_cast<int>(reg), offset);
 }
 
-// Pops the stack and pushes an address-sized value from memory at that
-// location.
-DwarfExprEval::Completion DwarfExprEval::OpDeref() {
+// Pops the stack and pushes an given-sized value from memory at that location.
+DwarfExprEval::Completion DwarfExprEval::OpDeref(uint32_t byte_size) {
   if (stack_.empty()) {
     ReportStackUnderflow();
+    return Completion::kSync;
+  }
+
+  if (byte_size == 0 || byte_size > 8) {
+    ReportError(fxl::StringPrintf("Invalid DWARF expression read size: %u", byte_size));
     return Completion::kSync;
   }
 
   uint64_t addr = stack_.back();
   stack_.pop_back();
   data_provider_->GetMemoryAsync(
-      addr, 8,
-      [addr, weak_eval = weak_factory_.GetWeakPtr()](const Err& err, std::vector<uint8_t> value) {
+      addr, byte_size,
+      [addr, byte_size, weak_eval = weak_factory_.GetWeakPtr()](const Err& err,
+                                                                std::vector<uint8_t> value) {
         if (!weak_eval) {
           return;
         } else if (err.has_error()) {
           weak_eval->ReportError(err);
-        } else if (value.size() != 8) {
+        } else if (value.size() != byte_size) {
           weak_eval->ReportError(fxl::StringPrintf("Invalid pointer 0x%" PRIx64 ".", addr));
         } else {
-          // Success reading 8 bytes.
-          uint64_t to_push;
-          memcpy(&to_push, &value[0], 8);
+          // Success (this assumes little-endian and copies starting from the low bytes).
+          uint64_t to_push = 0;
+          memcpy(&to_push, &value[0], byte_size);
           weak_eval->Push(to_push);
 
           // Picks up processing at the next instruction.
@@ -588,6 +591,16 @@ DwarfExprEval::Completion DwarfExprEval::OpDeref() {
         }
       });
   return Completion::kAsync;
+}
+
+DwarfExprEval::Completion DwarfExprEval::OpDerefSize() {
+  // The operand is a 1-byte unsigned constant following the opcode.
+  uint64_t byte_size = 0;
+  if (!ReadUnsigned(1, &byte_size))
+    return Completion::kSync;
+
+  // The generic deref path can handle the rest.
+  return OpDeref(static_cast<uint32_t>(byte_size));
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpMod() {

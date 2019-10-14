@@ -135,7 +135,8 @@ class DwarfExprEval {
   Completion OpBra();
   Completion OpBreg(uint8_t op);
   Completion OpCFA();
-  Completion OpDeref();
+  Completion OpDeref(uint32_t byte_size);
+  Completion OpDerefSize();
   Completion OpDiv();
   Completion OpDrop();
   Completion OpDup();

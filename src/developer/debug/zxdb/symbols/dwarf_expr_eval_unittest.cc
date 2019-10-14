@@ -615,4 +615,25 @@ TEST_F(DwarfExprEvalTest, Deref) {
              DwarfExprEval::ResultType::kPointer);
 }
 
+TEST_F(DwarfExprEvalTest, DerefSize) {
+  // This is a real program GCC generated.
+  // This is "[BYTE PTR rdx] + 2"
+  constexpr uint8_t kAddAmount = 2;
+  const std::vector<uint8_t> program = {
+      llvm::dwarf::DW_OP_breg1,       0,          llvm::dwarf::DW_OP_deref_size, 0x01,
+      llvm::dwarf::DW_OP_plus_uconst, kAddAmount, llvm::dwarf::DW_OP_stack_value};
+
+  constexpr uint64_t kReg1 = 0x1000;
+  provider()->AddRegisterValue(kDWARFReg1ID, true, kReg1);
+
+  // Contents of the data at [reg1]. We have the value and some other bytes following it to make
+  // sure the correct number of bytes were read.
+  constexpr uint8_t kMemValue = 0x50;
+  std::vector<uint8_t> mem{kMemValue, 0xff, 0xff, 0xff, 0xff};
+  provider()->AddMemory(kReg1, mem);
+
+  DoEvalTest(program, true, DwarfExprEval::Completion::kAsync, kMemValue + kAddAmount,
+             DwarfExprEval::ResultType::kValue);
+}
+
 }  // namespace zxdb
