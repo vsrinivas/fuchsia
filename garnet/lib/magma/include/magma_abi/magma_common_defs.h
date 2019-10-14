@@ -61,6 +61,7 @@ enum {
   MAGMA_FORMAT_R8G8B8A8 = 0,
   MAGMA_FORMAT_BGRA32 = 1,
   MAGMA_FORMAT_NV12 = 2,
+  MAGMA_FORMAT_I420 = 3,
 };
 
 // These must match the fuchsia.sysmem format modifier values.

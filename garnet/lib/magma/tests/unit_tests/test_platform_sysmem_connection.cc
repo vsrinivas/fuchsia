@@ -29,13 +29,7 @@ class TestPlatformSysmemConnection {
     std::unique_ptr<magma_sysmem::PlatformBufferCollection> collection;
     EXPECT_EQ(MAGMA_STATUS_OK, connection->ImportBufferCollection(token, &collection).get());
 
-    magma_buffer_format_constraints_t buffer_constraints{};
-    buffer_constraints.count = 1;
-    buffer_constraints.usage = 0;
-    buffer_constraints.secure_permitted = false;
-    buffer_constraints.secure_required = false;
-    buffer_constraints.cpu_domain_supported = true;
-    buffer_constraints.min_size_bytes = 0;
+    magma_buffer_format_constraints_t buffer_constraints = get_standard_buffer_constraints();
 
     std::unique_ptr<magma_sysmem::PlatformBufferConstraints> constraints;
     EXPECT_EQ(MAGMA_STATUS_OK,
@@ -64,6 +58,57 @@ class TestPlatformSysmemConnection {
     magma_image_plane_t planes[MAGMA_MAX_IMAGE_PLANES] = {};
     EXPECT_TRUE(description->GetPlanes(128, 128, planes));
     EXPECT_EQ(128u * 4, planes[0].bytes_per_row);
+
+    uint32_t handle;
+    uint32_t offset;
+    EXPECT_EQ(MAGMA_STATUS_OK, collection->GetBufferHandle(0u, &handle, &offset).get());
+
+    auto platform_handle = magma::PlatformHandle::Create(handle);
+    EXPECT_NE(nullptr, platform_handle);
+  }
+
+  static void TestI420() {
+    auto connection = magma_sysmem::PlatformSysmemConnection::Create();
+
+    ASSERT_NE(nullptr, connection.get());
+
+    uint32_t token;
+    EXPECT_EQ(MAGMA_STATUS_OK, connection->CreateBufferCollectionToken(&token).get());
+    std::unique_ptr<magma_sysmem::PlatformBufferCollection> collection;
+    EXPECT_EQ(MAGMA_STATUS_OK, connection->ImportBufferCollection(token, &collection).get());
+
+    magma_buffer_format_constraints_t buffer_constraints = get_standard_buffer_constraints();
+
+    std::unique_ptr<magma_sysmem::PlatformBufferConstraints> constraints;
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              connection->CreateBufferConstraints(&buffer_constraints, &constraints).get());
+
+    magma_image_format_constraints_t image_constraints{};
+    image_constraints.image_format = MAGMA_FORMAT_I420;
+    image_constraints.has_format_modifier = false;
+    image_constraints.format_modifier = 0;
+    image_constraints.width = 512;
+    image_constraints.height = 512;
+    image_constraints.layers = 1;
+    image_constraints.bytes_per_row_divisor = 1;
+    image_constraints.min_bytes_per_row = 0;
+
+    EXPECT_EQ(MAGMA_STATUS_OK, constraints->SetImageFormatConstraints(0, &image_constraints).get());
+    EXPECT_EQ(MAGMA_STATUS_OK, collection->SetConstraints(constraints.get()).get());
+
+    std::unique_ptr<magma_sysmem::PlatformBufferDescription> description;
+    EXPECT_EQ(MAGMA_STATUS_OK, collection->GetBufferDescription(&description).get());
+    magma_image_plane_t planes[MAGMA_MAX_IMAGE_PLANES] = {};
+    constexpr uint32_t kImageWidth = 128;
+    constexpr uint32_t kImageHeight = 128;
+    EXPECT_TRUE(description->GetPlanes(kImageWidth, kImageHeight, planes));
+    EXPECT_EQ(kImageWidth, planes[0].bytes_per_row);
+    EXPECT_EQ(kImageWidth / 2, planes[1].bytes_per_row);
+    EXPECT_EQ(kImageWidth / 2, planes[2].bytes_per_row);
+    EXPECT_EQ(0u, planes[0].byte_offset);
+    EXPECT_EQ(kImageWidth * kImageHeight, planes[1].byte_offset);
+    EXPECT_EQ(kImageWidth * kImageHeight + (kImageWidth / 2) * (kImageHeight / 2),
+              planes[2].byte_offset);
 
     uint32_t handle;
     uint32_t offset;
@@ -178,6 +223,18 @@ class TestPlatformSysmemConnection {
 
     EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_RAM, description->coherency_domain());
   }
+
+ private:
+  static magma_buffer_format_constraints_t get_standard_buffer_constraints() {
+    magma_buffer_format_constraints_t buffer_constraints{};
+    buffer_constraints.count = 1;
+    buffer_constraints.usage = 0;
+    buffer_constraints.secure_permitted = false;
+    buffer_constraints.secure_required = false;
+    buffer_constraints.cpu_domain_supported = true;
+    buffer_constraints.min_size_bytes = 0;
+    return buffer_constraints;
+  }
 };
 
 TEST(PlatformSysmemConnection, CreateBuffer) { TestPlatformSysmemConnection::TestCreateBuffer(); }
@@ -186,6 +243,7 @@ TEST(PlatformSysmemConnection, SetConstraints) {
   TestPlatformSysmemConnection::TestSetConstraints();
 }
 
+TEST(PlatformSysmemConnection, I420) { TestPlatformSysmemConnection::TestI420(); }
 TEST(PlatformSysmemConnection, IntelTiling) { TestPlatformSysmemConnection::TestIntelTiling(); }
 
 TEST(PlatformSysmemConnection, Buffer) { TestPlatformSysmemConnection::TestBuffer(); }

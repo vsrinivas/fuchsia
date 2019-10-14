@@ -80,7 +80,9 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
 
     uint32_t bytes_per_pixel = 4;
     if (settings_.image_format_constraints.pixel_format.type ==
-        fuchsia::sysmem::PixelFormatType::NV12) {
+            fuchsia::sysmem::PixelFormatType::NV12 ||
+        settings_.image_format_constraints.pixel_format.type ==
+            fuchsia::sysmem::PixelFormatType::I420) {
       bytes_per_pixel = 1;
     } else if (settings_.image_format_constraints.pixel_format.type !=
                    fuchsia::sysmem::PixelFormatType::BGRA32 &&
@@ -94,14 +96,24 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
                  bytes_per_pixel * width),
         settings_.image_format_constraints.bytes_per_row_divisor);
     planes_out[0].byte_offset = 0;
+    uint32_t coded_height =
+          std::max(static_cast<uint64_t>(settings_.image_format_constraints.min_coded_height),
+                   height);
     if (settings_.image_format_constraints.pixel_format.type ==
         fuchsia::sysmem::PixelFormatType::NV12) {
       // Planes are assumed to be tightly-packed for now.
       planes_out[1].bytes_per_row = planes_out[0].bytes_per_row;
       planes_out[1].byte_offset =
-          planes_out[0].bytes_per_row *
-          std::max(static_cast<uint64_t>(settings_.image_format_constraints.min_coded_height),
-                   height);
+          planes_out[0].bytes_per_row * coded_height;
+    } else if (settings_.image_format_constraints.pixel_format.type ==
+               fuchsia::sysmem::PixelFormatType::I420) {
+      // Planes are assumed to be tightly-packed for now.
+      planes_out[1].bytes_per_row = planes_out[2].bytes_per_row = planes_out[0].bytes_per_row / 2;
+      planes_out[1].byte_offset =
+          planes_out[0].bytes_per_row * coded_height;
+      planes_out[2].byte_offset =
+          planes_out[1].byte_offset +
+          planes_out[1].bytes_per_row * coded_height / 2;
     }
     return true;
   }
@@ -197,6 +209,10 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
         break;
       case MAGMA_FORMAT_NV12:
         constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
+        constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::REC709;
+        break;
+      case MAGMA_FORMAT_I420:
+        constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::I420;
         constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::REC709;
         break;
       default:
