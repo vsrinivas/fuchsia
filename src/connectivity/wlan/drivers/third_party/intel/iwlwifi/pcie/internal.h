@@ -367,7 +367,7 @@ struct iwl_txq {
   int write_ptr;
   int read_ptr;
   dma_addr_t dma_addr;
-  int n_window;
+  uint16_t n_window;
   uint32_t id;
   int low_mark;
   int high_mark;
@@ -1016,9 +1016,9 @@ void iwl_pcie_txq_free_tfd(struct iwl_trans* trans, struct iwl_txq* txq);
 int iwl_queue_space(struct iwl_trans* trans, const struct iwl_txq* q);
 void iwl_pcie_apm_stop_master(struct iwl_trans* trans);
 void iwl_pcie_conf_msix_hw(struct iwl_trans_pcie* trans_pcie);
-zx_status_t iwl_pcie_txq_init(struct iwl_trans* trans, struct iwl_txq* txq, int slots_num,
+zx_status_t iwl_pcie_txq_init(struct iwl_trans* trans, struct iwl_txq* txq, uint16_t slots_num,
                               bool cmd_queue);
-zx_status_t iwl_pcie_txq_alloc(struct iwl_trans* trans, struct iwl_txq* txq, int slots_num,
+zx_status_t iwl_pcie_txq_alloc(struct iwl_trans* trans, struct iwl_txq* txq, uint16_t slots_num,
                                bool cmd_queue);
 zx_status_t iwl_pcie_alloc_dma_ptr(struct iwl_trans* trans, struct iwl_dma_ptr* ptr, size_t size);
 void iwl_pcie_free_dma_ptr(struct iwl_trans* trans, struct iwl_dma_ptr* ptr);

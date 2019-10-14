@@ -50,6 +50,7 @@
 #if 0  // NEEDS_PORTING
 #define IWL_TX_CRC_SIZE 4
 #define IWL_TX_DELIMITER_SIZE 4
+#endif // NEEDS_PORTING
 
 /*************** DMA-QUEUE-GENERAL-FUNCTIONS  *****
  * DMA services
@@ -74,37 +75,38 @@
  ***************************************************/
 
 int iwl_queue_space(struct iwl_trans* trans, const struct iwl_txq* q) {
-    unsigned int max;
-    unsigned int used;
+  uint16_t max;
+  uint16_t used;
 
-    /*
-     * To avoid ambiguity between empty and completely full queues, there
-     * should always be less than max_tfd_queue_size elements in the queue.
-     * If q->n_window is smaller than max_tfd_queue_size, there is no need
-     * to reserve any queue entries for this purpose.
-     */
-    if (q->n_window < trans->cfg->base_params->max_tfd_queue_size) {
-        max = q->n_window;
-    } else {
-        max = trans->cfg->base_params->max_tfd_queue_size - 1;
-    }
+  /*
+   * To avoid ambiguity between empty and completely full queues, there
+   * should always be less than max_tfd_queue_size elements in the queue.
+   * If q->n_window is smaller than max_tfd_queue_size, there is no need
+   * to reserve any queue entries for this purpose.
+   */
+  if (q->n_window < trans->cfg->base_params->max_tfd_queue_size) {
+    max = q->n_window;
+  } else {
+    max = trans->cfg->base_params->max_tfd_queue_size - 1;
+  }
 
-    /*
-     * max_tfd_queue_size is a power of 2, so the following is equivalent to
-     * modulo by max_tfd_queue_size and is well defined.
-     */
-    used = (q->write_ptr - q->read_ptr) & (trans->cfg->base_params->max_tfd_queue_size - 1);
+  /*
+   * max_tfd_queue_size is a power of 2, so the following is equivalent to
+   * modulo by max_tfd_queue_size and is well defined.
+   */
+  used = (q->write_ptr - q->read_ptr) & (trans->cfg->base_params->max_tfd_queue_size - 1);
 
-    if (WARN_ON(used > max)) { return 0; }
+  if (WARN_ON(used > max)) {
+    return 0;
+  }
 
-    return max - used;
+  return max - used;
 }
-#endif
 
 /*
  * iwl_queue_init - Initialize queue's high/low-water and read/write indexes
  */
-static zx_status_t iwl_queue_init(struct iwl_txq* q, int slots_num) {
+static zx_status_t iwl_queue_init(struct iwl_txq* q, uint16_t slots_num) {
   q->n_window = slots_num;
 
   // slots_num must be power-of-two size, otherwise iwl_pcie_get_cmd_index is broken.
@@ -504,7 +506,7 @@ __UNUSED static zx_status_t iwl_pcie_txq_build_tfd(struct iwl_trans* trans, stru
   return ZX_OK;
 }
 
-zx_status_t iwl_pcie_txq_alloc(struct iwl_trans* trans, struct iwl_txq* txq, int slots_num,
+zx_status_t iwl_pcie_txq_alloc(struct iwl_trans* trans, struct iwl_txq* txq, uint16_t slots_num,
                                bool cmd_queue) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
@@ -571,7 +573,7 @@ error:
   return ZX_ERR_NO_MEMORY;
 }
 
-zx_status_t iwl_pcie_txq_init(struct iwl_trans* trans, struct iwl_txq* txq, int slots_num,
+zx_status_t iwl_pcie_txq_init(struct iwl_trans* trans, struct iwl_txq* txq, uint16_t slots_num,
                               bool cmd_queue) {
   uint32_t tfd_queue_max_size = trans->cfg->base_params->max_tfd_queue_size;
 
