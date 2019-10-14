@@ -20,6 +20,8 @@ namespace testing {
 
 class IfaceDevice;
 
+class DeviceConnector;
+
 class PhyDevice : public ::fuchsia::wlan::device::Phy {
  public:
   PhyDevice(zx_device_t* device);
@@ -51,6 +53,8 @@ class PhyDevice : public ::fuchsia::wlan::device::Phy {
   // Next available Iface id. Must be checked against the map to prevent overwriting an existing
   // IfaceDevice pointer in the map.
   uint16_t next_id_ = 0;
+
+  friend class DeviceConnector;
 };
 
 }  // namespace testing

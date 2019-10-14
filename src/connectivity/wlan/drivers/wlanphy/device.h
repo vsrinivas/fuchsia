@@ -12,6 +12,8 @@
 
 namespace wlanphy {
 
+class DeviceConnector;
+
 class Device : public ::fuchsia::wlan::device::Phy {
  public:
   Device(zx_device_t* device, wlanphy_impl_protocol_t wlanphy_impl_proto);
@@ -42,6 +44,8 @@ class Device : public ::fuchsia::wlan::device::Phy {
   wlanphy_impl_protocol_t wlanphy_impl_;
 
   wlan::common::Dispatcher<::fuchsia::wlan::device::Phy> dispatcher_;
+
+  friend class DeviceConnector;
 };
 
 }  // namespace wlanphy

@@ -4,7 +4,6 @@
 
 #include "device.h"
 
-#include <fuchsia/wlan/mlme/c/fidl.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>

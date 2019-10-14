@@ -4,7 +4,7 @@
 
 #include "phy-device.h"
 
-#include <fuchsia/wlan/device/c/fidl.h>
+#include <fuchsia/wlan/device/llcpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <stdio.h>
 
@@ -15,6 +15,7 @@
 #include <wlan/common/element.h>
 #include <wlan/common/phy.h>
 
+#include "ddktl/fidl.h"
 #include "driver.h"
 #include "iface-device.h"
 
@@ -37,6 +38,19 @@ static zx_protocol_device_t wlanphy_test_device_ops = {
 
 static wlanphy_protocol_ops_t wlanphy_test_ops = {
     .dummy = nullptr,
+};
+
+class DeviceConnector : public llcpp::fuchsia::wlan::device::Connector::Interface {
+ public:
+  DeviceConnector(PhyDevice* device) : device_(device) {}
+  void Connect(
+      ::zx::channel request,
+      ConnectCompleter::Sync _completer) override {
+    device_->Connect(std::move(request));
+  }
+
+ private:
+  PhyDevice* device_;
 };
 
 PhyDevice::PhyDevice(zx_device_t* device) : parent_(device) {}
@@ -75,14 +89,11 @@ void PhyDevice::Release() {
 }
 
 zx_status_t PhyDevice::Message(fidl_msg_t* msg, fidl_txn_t* txn) {
-  auto connect = [](void* ctx, zx_handle_t request) {
-    zxlogf(INFO, "wlanphy ioctl: connect\n");
-    return static_cast<PhyDevice*>(ctx)->Connect(zx::channel(request));
-  };
-  static const fuchsia_wlan_device_Connector_ops_t ops = {
-      .Connect = connect,
-  };
-  return fuchsia_wlan_device_Connector_dispatch(this, txn, msg, &ops);
+  DdkTransaction transaction(txn);
+  DeviceConnector connector(this);
+
+  llcpp::fuchsia::wlan::device::Connector::Dispatch(&connector, msg, &transaction);
+  return transaction.Status();
 }
 
 namespace {
