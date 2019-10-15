@@ -35,7 +35,7 @@ using utils::FuchsiaHTTPClient;
 
 const size_t kMaxBytesPerEnvelope = 512 * 1024;  // 0.5 MiB.
 
-constexpr char kClearcutEndpoint[] = "https://jmt17.google.com/log";
+constexpr char kClearcutEndpoint[] = "https://play.googleapis.com/staging/log";
 
 constexpr char kMetricsRegistryPath[] = "/pkg/data/global_metrics_registry.pb";
 
