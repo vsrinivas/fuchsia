@@ -250,5 +250,244 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
   EXPECT_EQ(arch_provider->uninstalls()[7].second, kAddress);
 }
 
+TEST(HardwareBreakpoint, StepSimple) {
+  auto arch_provider = std::make_shared<MockArchProvider>();
+  auto object_provider = std::make_shared<ObjectProvider>();
+
+  constexpr zx_koid_t process_koid = 0x1234;
+  const std::string process_name = "process";
+  MockProcess process(process_koid, process_name, arch_provider, object_provider);
+
+  MockProcessDelegate process_delegate;
+  Breakpoint main_breakpoint(&process_delegate);
+
+  debug_ipc::BreakpointSettings settings;
+  settings.locations.push_back(CreateLocation(process, nullptr, kAddress));  // All threads.
+  main_breakpoint.SetSettings(debug_ipc::BreakpointType::kHardware, settings);
+
+  // The step over strategy is as follows:
+  // Thread 1, 2, 3 will hit the breakpoint and attempt a step over.
+  // Thread 4 will remain oblivious to the breakpoint, as will 5.
+  // Thread 5 is IsSuspended from the client, so it should not be resumed by the
+  // agent during step over.
+
+  constexpr zx_koid_t kThread1Koid = 1;
+  MockThread* mock_thread1 = process.AddThread(kThread1Koid);
+
+  HardwareBreakpoint bp(&main_breakpoint, &process, kAddress, arch_provider);
+  ASSERT_EQ(bp.Init(), ZX_OK);
+
+  // Should've installed the breakpoint.
+  ASSERT_EQ(arch_provider->installs().size(), 1u);
+  EXPECT_EQ(arch_provider->installs()[0].first, mock_thread1->koid());
+  EXPECT_EQ(arch_provider->installs()[0].second, kAddress);
+  ASSERT_EQ(arch_provider->uninstalls().size(), 0u);
+
+  // Hit the breakpoint ----------------------------------------------------------------------------
+
+  bp.BeginStepOver(mock_thread1);
+
+  // There should be an enqueued step over.
+  ASSERT_EQ(process.step_over_queue().size(), 1u);
+  ASSERT_EQ(process.step_over_queue()[0].process_breakpoint.get(), &bp);
+  ASSERT_EQ(process.step_over_queue()[0].thread.get(), mock_thread1);
+
+  // Thread should be running and stepping over.
+  ASSERT_TRUE(mock_thread1->running());
+  ASSERT_TRUE(mock_thread1->stepping_over_breakpoint());
+
+  // Breakpoint should've been uninstalled for this thread.
+
+  ASSERT_EQ(arch_provider->installs().size(), 1u);
+  ASSERT_EQ(arch_provider->uninstalls().size(), 1u);
+  EXPECT_EQ(arch_provider->uninstalls()[0].first, mock_thread1->koid());
+  EXPECT_EQ(arch_provider->uninstalls()[0].second, kAddress);
+
+  // End the step over -----------------------------------------------------------------------------
+
+  bp.EndStepOver(mock_thread1);
+
+  ASSERT_EQ(process.step_over_queue().size(), 0u);
+
+  // Thread should be running and stepping over.
+  ASSERT_TRUE(mock_thread1->running());
+  ASSERT_FALSE(mock_thread1->stepping_over_breakpoint());
+
+  // It should've reinstalled the breakpoint for this thread.
+  ASSERT_EQ(arch_provider->installs().size(), 2u);
+  EXPECT_EQ(arch_provider->installs()[1].first, mock_thread1->koid());
+  EXPECT_EQ(arch_provider->installs()[1].second, kAddress);
+  ASSERT_EQ(arch_provider->uninstalls().size(), 1u);
+}
+
+TEST(HardwareBreakpoint, MultipleSteps) {
+  auto arch_provider = std::make_shared<MockArchProvider>();
+  auto object_provider = std::make_shared<ObjectProvider>();
+
+  constexpr zx_koid_t process_koid = 0x1234;
+  const std::string process_name = "process";
+  MockProcess process(process_koid, process_name, arch_provider, object_provider);
+
+  MockProcessDelegate process_delegate;
+  Breakpoint main_breakpoint(&process_delegate);
+
+  debug_ipc::BreakpointSettings settings;
+  settings.locations.push_back(CreateLocation(process, nullptr, kAddress));  // All threads.
+  main_breakpoint.SetSettings(debug_ipc::BreakpointType::kHardware, settings);
+
+  // The step over strategy is as follows:
+  // Thread 1, 2, 3 will hit the breakpoint and attempt a step over.
+  // Thread 4 will remain oblivious to the breakpoint, as will 5.
+  // Thread 5 is IsSuspended from the client, so it should not be resumed by the
+  // agent during step over.
+
+  constexpr zx_koid_t kThread1Koid = 1;
+  constexpr zx_koid_t kThread2Koid = 2;
+  constexpr zx_koid_t kThread3Koid = 3;
+  MockThread* mock_thread1 = process.AddThread(kThread1Koid);
+  MockThread* mock_thread2 = process.AddThread(kThread2Koid);
+  MockThread* mock_thread3 = process.AddThread(kThread3Koid);
+
+  HardwareBreakpoint bp(&main_breakpoint, &process, kAddress, arch_provider);
+  ASSERT_EQ(bp.Init(), ZX_OK);
+
+  // Should've installed the breakpoint.
+  ASSERT_EQ(arch_provider->installs().size(), 3u);
+  EXPECT_EQ(arch_provider->installs()[0].first, mock_thread1->koid());
+  EXPECT_EQ(arch_provider->installs()[0].second, kAddress);
+  EXPECT_EQ(arch_provider->installs()[1].first, mock_thread2->koid());
+  EXPECT_EQ(arch_provider->installs()[1].second, kAddress);
+  EXPECT_EQ(arch_provider->installs()[2].first, mock_thread3->koid());
+  EXPECT_EQ(arch_provider->installs()[2].second, kAddress);
+  ASSERT_EQ(arch_provider->uninstalls().size(), 0u);
+
+  // Hit the breakpoint ----------------------------------------------------------------------------
+
+  bp.BeginStepOver(mock_thread1);
+
+  // There should be an enqueued step over.
+  ASSERT_EQ(process.step_over_queue().size(), 1u);
+  ASSERT_EQ(process.step_over_queue()[0].process_breakpoint.get(), &bp);
+  ASSERT_EQ(process.step_over_queue()[0].thread.get(), mock_thread1);
+
+  // Thread should be running and stepping over.
+  ASSERT_TRUE(mock_thread1->stepping_over_breakpoint());
+  ASSERT_FALSE(mock_thread2->stepping_over_breakpoint());
+  ASSERT_FALSE(mock_thread3->stepping_over_breakpoint());
+
+  // Breakpoint should've been uninstalled for this thread.
+
+  ASSERT_EQ(arch_provider->installs().size(), 3u);
+  ASSERT_EQ(arch_provider->uninstalls().size(), 1u);
+  EXPECT_EQ(arch_provider->uninstalls()[0].first, mock_thread1->koid());
+  EXPECT_EQ(arch_provider->uninstalls()[0].second, kAddress);
+
+  // Hit the breakpoint two more times -------------------------------------------------------------
+
+  bp.BeginStepOver(mock_thread2);
+  ASSERT_EQ(process.step_over_queue().size(), 2u);
+  ASSERT_EQ(process.step_over_queue()[1].process_breakpoint.get(), &bp);
+  ASSERT_EQ(process.step_over_queue()[1].thread.get(), mock_thread2);
+
+  bp.BeginStepOver(mock_thread3);
+  ASSERT_EQ(process.step_over_queue().size(), 3u);
+  ASSERT_EQ(process.step_over_queue()[2].process_breakpoint.get(), &bp);
+  ASSERT_EQ(process.step_over_queue()[2].thread.get(), mock_thread3);
+
+  // End the step over -----------------------------------------------------------------------------
+
+  bp.EndStepOver(mock_thread1);
+
+  // Should've started the second step over.
+  ASSERT_EQ(process.step_over_queue().size(), 2u);
+  ASSERT_EQ(process.step_over_queue()[0].process_breakpoint.get(), &bp);
+  ASSERT_EQ(process.step_over_queue()[0].thread.get(), mock_thread2);
+
+  ASSERT_FALSE(mock_thread1->stepping_over_breakpoint());
+  ASSERT_TRUE(mock_thread2->stepping_over_breakpoint());
+  ASSERT_FALSE(mock_thread3->stepping_over_breakpoint());
+
+  // It should've reinstalled the breakpoint for this thread.
+  ASSERT_EQ(arch_provider->installs().size(), 4u);
+  EXPECT_EQ(arch_provider->installs()[3].first, mock_thread1->koid());
+  EXPECT_EQ(arch_provider->installs()[3].second, kAddress);
+
+  // It should've uninstalled for the second.
+  ASSERT_EQ(arch_provider->uninstalls().size(), 2u);
+  EXPECT_EQ(arch_provider->uninstalls()[1].first, mock_thread2->koid());
+  EXPECT_EQ(arch_provider->uninstalls()[1].second, kAddress);
+
+  // First thread hits again! ----------------------------------------------------------------------
+
+  bp.BeginStepOver(mock_thread1);
+  ASSERT_EQ(process.step_over_queue().size(), 3u);
+  ASSERT_EQ(process.step_over_queue()[2].process_breakpoint.get(), &bp);
+  ASSERT_EQ(process.step_over_queue()[2].thread.get(), mock_thread1);
+
+  // Second thread ends ----------------------------------------------------------------------------
+
+  bp.EndStepOver(mock_thread2);
+
+  // Should've started the third step over.
+  ASSERT_EQ(process.step_over_queue().size(), 2u);
+  ASSERT_EQ(process.step_over_queue()[0].process_breakpoint.get(), &bp);
+  ASSERT_EQ(process.step_over_queue()[0].thread.get(), mock_thread3);
+
+  ASSERT_FALSE(mock_thread1->stepping_over_breakpoint());
+  ASSERT_FALSE(mock_thread2->stepping_over_breakpoint());
+  ASSERT_TRUE(mock_thread3->stepping_over_breakpoint());
+
+  // It should've reinstalled the breakpoint for this thread.
+  ASSERT_EQ(arch_provider->installs().size(), 5u);
+  EXPECT_EQ(arch_provider->installs()[4].first, mock_thread2->koid());
+  EXPECT_EQ(arch_provider->installs()[4].second, kAddress);
+
+  // It should've uninstalled for the second.
+  ASSERT_EQ(arch_provider->uninstalls().size(), 3u);
+  EXPECT_EQ(arch_provider->uninstalls()[2].first, mock_thread3->koid());
+  EXPECT_EQ(arch_provider->uninstalls()[2].second, kAddress);
+
+  // Third thread ends -----------------------------------------------------------------------------
+
+  bp.EndStepOver(mock_thread3);
+
+  // Should've started the third step over.
+  ASSERT_EQ(process.step_over_queue().size(), 1u);
+  ASSERT_EQ(process.step_over_queue()[0].process_breakpoint.get(), &bp);
+  ASSERT_EQ(process.step_over_queue()[0].thread.get(), mock_thread1);
+
+  ASSERT_TRUE(mock_thread1->stepping_over_breakpoint());
+  ASSERT_FALSE(mock_thread2->stepping_over_breakpoint());
+  ASSERT_FALSE(mock_thread3->stepping_over_breakpoint());
+
+  // It should've reinstalled the breakpoint for this thread.
+  ASSERT_EQ(arch_provider->installs().size(), 6u);
+  EXPECT_EQ(arch_provider->installs()[5].first, mock_thread3->koid());
+  EXPECT_EQ(arch_provider->installs()[5].second, kAddress);
+
+  // It should've uninstalled for the second.
+  ASSERT_EQ(arch_provider->uninstalls().size(), 4u);
+  EXPECT_EQ(arch_provider->uninstalls()[3].first, mock_thread1->koid());
+  EXPECT_EQ(arch_provider->uninstalls()[3].second, kAddress);
+
+  // First thread ends again -----------------------------------------------------------------------
+
+  bp.EndStepOver(mock_thread1);
+
+  // Should've started the third step over.
+  ASSERT_EQ(process.step_over_queue().size(), 0u);
+
+  ASSERT_FALSE(mock_thread1->stepping_over_breakpoint());
+  ASSERT_FALSE(mock_thread2->stepping_over_breakpoint());
+  ASSERT_FALSE(mock_thread3->stepping_over_breakpoint());
+
+  // It should've reinstalled the breakpoint for this thread.
+  ASSERT_EQ(arch_provider->installs().size(), 7u);
+  EXPECT_EQ(arch_provider->installs()[6].first, mock_thread1->koid());
+  EXPECT_EQ(arch_provider->installs()[6].second, kAddress);
+
+  ASSERT_EQ(arch_provider->uninstalls().size(), 4u);
+}
+
 }  // namespace
 }  // namespace debug_agent

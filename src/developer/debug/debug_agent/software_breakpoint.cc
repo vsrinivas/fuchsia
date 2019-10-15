@@ -146,7 +146,6 @@ void SoftwareBreakpoint::ExecuteStepOver(DebuggedThread* thread) {
 
   // This thread now has to continue running.
   thread->ResumeException();
-  thread->ResumeSuspension();
 }
 
 void SoftwareBreakpoint::EndStepOver(DebuggedThread* thread) {

@@ -16,6 +16,26 @@ namespace debug_agent {
 
 namespace {
 
+std::string LogPreamble(ProcessBreakpoint* b) {
+  std::stringstream ss;
+
+  ss << "[HW BP 0x" << std::hex << b->address();
+  bool first = true;
+
+  // Add the names of all the breakpoints associated with this process breakpoint.
+  ss << " (";
+  for (Breakpoint* breakpoint : b->breakpoints()) {
+    if (!first) {
+      first = false;
+      ss << ", ";
+    }
+    ss << breakpoint->settings().name;
+  }
+
+  ss << ")] ";
+  return ss.str();
+}
+
 enum class WarningType {
   kInstall,
   kUninstall,
@@ -83,6 +103,39 @@ HardwareBreakpoint::~HardwareBreakpoint() { Uninstall(); }
 
 bool HardwareBreakpoint::Installed(zx_koid_t thread_koid) const {
   return installed_threads_.count(thread_koid) > 0;
+}
+
+// ProcessBreakpoint Implementation ----------------------------------------------------------------
+
+void HardwareBreakpoint::ExecuteStepOver(DebuggedThread* thread) {
+  FXL_DCHECK(current_stepping_over_threads_.count(thread->koid()) == 0);
+  FXL_DCHECK(!thread->stepping_over_breakpoint());
+
+  DEBUG_LOG(Breakpoint) << LogPreamble(this) << "Thread " << thread->koid() << " is stepping over.";
+  thread->set_stepping_over_breakpoint(true);
+  current_stepping_over_threads_.insert(thread->koid());
+
+  // HW breakpoints don't need to suspend any threads.
+  Uninstall(thread);
+
+  // The thread now can continue with the step over.
+  thread->ResumeException();
+}
+
+void HardwareBreakpoint::EndStepOver(DebuggedThread* thread) {
+  FXL_DCHECK(thread->stepping_over_breakpoint());
+  FXL_DCHECK(current_stepping_over_threads_.count(thread->koid()) > 0);
+
+  DEBUG_LOG(Breakpoint) << LogPreamble(this) << "Thread " << thread->koid() << " ending step over.";
+
+  thread->set_stepping_over_breakpoint(false);
+  current_stepping_over_threads_.erase(thread->koid());
+
+  // We reinstall this breakpoint for the thread.
+  Install(thread);
+
+  // Tell the process we're done stepping over.
+  process_->OnBreakpointFinishedSteppingOver();
 }
 
 // Update ------------------------------------------------------------------------------------------

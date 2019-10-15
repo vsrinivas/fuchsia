@@ -28,10 +28,10 @@ class HardwareBreakpoint : public ProcessBreakpoint {
   const std::set<zx_koid_t>& installed_threads() const { return installed_threads_; }
 
   // Public ProcessBreakpoint overrides. See ProcessBreakpoint for more details.
-  // TODO(donosoc): Activate after refactoring.
-  void EndStepOver(DebuggedThread* thread) override { FXL_NOTREACHED() << "Not implemented."; }
-  void ExecuteStepOver(DebuggedThread* thread) override { FXL_NOTREACHED() << "Not implemented."; }
-  void StepOverCleanup(DebuggedThread* thread) override { FXL_NOTREACHED() << "Not implemented."; }
+  void EndStepOver(DebuggedThread* thread) override;
+  void ExecuteStepOver(DebuggedThread* thread) override;
+
+  void StepOverCleanup(DebuggedThread* thread) override {}
 
  private:
   zx_status_t Install(DebuggedThread* thread);
@@ -40,7 +40,9 @@ class HardwareBreakpoint : public ProcessBreakpoint {
   zx_status_t Uninstall() override;
 
   std::shared_ptr<arch::ArchProvider> arch_provider_;
+
   std::set<zx_koid_t> installed_threads_;
+  std::set<zx_koid_t> current_stepping_over_threads_;
 };
 
 }  // namespace debug_agent
