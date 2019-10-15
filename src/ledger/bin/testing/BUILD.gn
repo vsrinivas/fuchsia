@@ -168,6 +168,26 @@ source_set("get_ledger") {
   configs += [ "//src/ledger:ledger_config" ]
 }
 
+source_set("run_trace") {
+  testonly = true
+
+  sources = [
+    "run_trace.cc",
+    "run_trace.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/sys/cpp",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 source_set("unittests") {
   testonly = true
 
@@ -182,6 +202,7 @@ source_set("unittests") {
     ":get_ledger",
     ":ledger_instance_factory",
     ":lib",
+    ":run_trace",
     "//src/ledger/bin/app:flags",
     "//src/lib/callback",
     "//src/lib/fxl",

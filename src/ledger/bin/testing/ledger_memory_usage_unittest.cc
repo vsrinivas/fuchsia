@@ -15,6 +15,8 @@
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/testing/get_ledger.h"
+#include "src/ledger/bin/testing/run_trace.h"
+#include "src/lib/fxl/strings/concatenate.h"
 
 namespace ledger {
 namespace {
@@ -24,18 +26,11 @@ using ::testing::Gt;
 int64_t LaunchTestBenchmark(async::Loop* loop) {
   auto component_context = sys::ComponentContext::Create();
   fuchsia::sys::ComponentControllerPtr component_controller;
-  scoped_tmpfs::ScopedTmpFS tmp_dir;
 
-  fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = "fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx";
-  launch_info.arguments.emplace(
-      {"record",
-       "--spec-file="
-       "/pkgfs/packages/ledger_tests/0/data/memory_usage_test_benchmark.tspec"});
-
-  fuchsia::sys::LauncherPtr launcher;
-  component_context->svc()->Connect(launcher.NewRequest());
-  launcher->CreateComponent(std::move(launch_info), component_controller.NewRequest());
+  std::vector<std::string> argv{"record",
+                                fxl::Concatenate({"--spec-file=", kTraceTestDataRemotePath,
+                                                  "/memory_usage_test_benchmark.tspec"})};
+  RunTrace(component_context.get(), &component_controller, argv);
 
   int64_t return_code = INT64_MIN;
   component_controller.events().OnTerminated =
