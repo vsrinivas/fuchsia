@@ -32,9 +32,18 @@ class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
 
   void RetrieveException(uint64_t process_koid,
                          ProcessLimbo::RetrieveExceptionCallback callback) override {
-    // TODO(donosoc): Implement retrieving exception.
-    FXL_NOTIMPLEMENTED();
-    FXL_NOTREACHED();
+    for (auto& metadata : processes_) {
+      if (metadata.info().process_koid != process_koid)
+        continue;
+
+      // We cannot set any fake handles, as they will fail on the channel write.
+      ProcessException exception;
+      exception.set_info(metadata.info());
+
+      callback(fit::ok(std::move(exception)));
+    }
+
+    return callback(fit::error(ZX_ERR_NOT_FOUND));
   }
 
   void AppendException(const MockProcessObject& process, const MockThreadObject& thread,
@@ -109,6 +118,40 @@ TEST(LimboProvider, ListProcessesOnException) {
   EXPECT_EQ(processes[1].info().process_koid, process2->koid);
   EXPECT_EQ(processes[1].info().thread_koid, thread2->koid);
   EXPECT_EQ(processes[1].info().type, exception2);
+}
+
+TEST(LimboProvider, RetriveException) {
+  // Set the process limbo.
+  auto object_provider = CreateDefaultMockObjectProvider();
+  auto [process1, thread1] = GetProcessThread(*object_provider, "root-p2", "initial-thread");
+
+  constexpr ExceptionType exception1 = ExceptionType::FATAL_PAGE_FAULT;
+  auto [process2, thread2] = GetProcessThread(*object_provider, "job121-p2", "third-thread");
+  constexpr ExceptionType exception2 = ExceptionType::UNALIGNED_ACCESS;
+
+  StubProcessLimbo process_limbo;
+  process_limbo.AppendException(*process1, *thread1, exception1);
+  process_limbo.AppendException(*process2, *thread2, exception2);
+
+  // Setup the async loop to respond to the async call.
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  sys::testing::ServiceDirectoryProvider services(loop.dispatcher());
+  services.AddService(process_limbo.GetHandler());
+  ASSERT_EQ(loop.StartThread("process-limbo-thread"), ZX_OK);
+
+  LimboProvider limbo_provider(services.service_directory());
+
+  // Some random koid should fail.
+  fuchsia::exception::ProcessException exception;
+  ASSERT_EQ(limbo_provider.RetrieveException(-1, &exception), ZX_ERR_NOT_FOUND);
+
+  // Getting a valid one should work.
+  ASSERT_EQ(limbo_provider.RetrieveException(process1->koid, &exception), ZX_OK);
+
+  // We can only check the info in this test.
+  EXPECT_EQ(exception.info().process_koid, process1->koid);
+  EXPECT_EQ(exception.info().thread_koid, thread1->koid);
+  EXPECT_EQ(exception.info().type, exception1);
 }
 
 }  // namespace

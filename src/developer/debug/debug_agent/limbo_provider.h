@@ -28,6 +28,9 @@ class LimboProvider {
   virtual zx_status_t ListProcessesOnLimbo(
       std::vector<fuchsia::exception::ProcessExceptionMetadata>* out);
 
+  virtual zx_status_t RetrieveException(uint64_t process_koid,
+                                        fuchsia::exception::ProcessException* out);
+
  private:
   std::shared_ptr<sys::ServiceDirectory> services_;
 };
