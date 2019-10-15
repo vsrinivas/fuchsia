@@ -65,6 +65,11 @@ class __EXPORT Volume {
   // Issues a command to format the FTL (aka, delete all data).
   virtual zx_status_t Format() = 0;
 
+  // Issues a command to format the FTL (aka, delete all data), and also treat
+  // all blocks as equally leveled (same number of erase cycles). Use this with
+  // caution as losing wear leveling information is normally a bad thing.
+  virtual zx_status_t FormatAndLevel() = 0;
+
   // Marks the volume as in use (Mount) or not (Unmount).
   virtual zx_status_t Mount() = 0;
   virtual zx_status_t Unmount() = 0;
@@ -95,6 +100,7 @@ class __EXPORT VolumeImpl final : public Volume {
   zx_status_t Read(uint32_t first_page, int num_pages, void* buffer) final;
   zx_status_t Write(uint32_t first_page, int num_pages, const void* buffer) final;
   zx_status_t Format() final;
+  zx_status_t FormatAndLevel() final;
   zx_status_t Mount() final;
   zx_status_t Unmount() final;
   zx_status_t Flush() final;

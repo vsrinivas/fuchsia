@@ -121,6 +121,37 @@ TEST(FtlTest, Format) {
   ASSERT_TRUE(IsEmptyPage(&ftl, 10));
 }
 
+TEST(FtlTest, FormatAndLevel) {
+  ftl::VolumeOptions options = kDefaultOptions;
+  options.num_blocks = 30;
+  options.block_size = 4 * kPageSize;
+
+  FtlShell ftl;
+  ASSERT_TRUE(ftl.Init(options));
+
+  // Remember what a leveled volume looks like.
+  ftl::Volume::Stats stats;
+  ASSERT_OK(ftl.volume()->GetStats(&stats));
+  uint32_t last_bucket = stats.wear_histogram[fbl::count_of(stats.wear_histogram) - 1];
+
+  for (uint32_t i = 0; i < ftl.num_pages(); i++) {
+    ASSERT_OK(WritePage(&ftl, i));
+  }
+
+  for (int i = 0; i < 100; i++) {
+    ASSERT_OK(WritePage(&ftl, 10));
+  }
+
+  ASSERT_OK(ftl.volume()->GetStats(&stats));
+  ASSERT_NE(last_bucket, stats.wear_histogram[fbl::count_of(stats.wear_histogram) - 1]);
+
+  ASSERT_OK(ftl.volume()->FormatAndLevel());
+
+  ASSERT_OK(ftl.volume()->GetStats(&stats));
+  ASSERT_EQ(last_bucket, stats.wear_histogram[fbl::count_of(stats.wear_histogram) - 1]);
+  ASSERT_TRUE(IsEmptyPage(&ftl, 10));
+}
+
 TEST(FtlTest, Trim) {
   FtlShell ftl;
   ASSERT_TRUE(ftl.Init(kDefaultOptions));

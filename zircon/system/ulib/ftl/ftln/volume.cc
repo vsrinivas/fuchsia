@@ -52,6 +52,13 @@ zx_status_t VolumeImpl::Format() {
   return ZX_OK;
 }
 
+zx_status_t VolumeImpl::FormatAndLevel() {
+  if (report_(vol_, FS_FORMAT_RESET_WC) != 0) {
+    return ZX_ERR_BAD_STATE;
+  }
+  return ZX_OK;
+}
+
 zx_status_t VolumeImpl::Mount() {
   if (report_(vol_, FS_MOUNT) != 0) {
     return ZX_ERR_BAD_STATE;

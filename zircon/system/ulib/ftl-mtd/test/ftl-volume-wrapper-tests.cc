@@ -64,6 +64,7 @@ class FakeVolume final : public ftl::Volume {
     return ZX_OK;
   }
   zx_status_t Format() final { return ZX_OK; }
+  zx_status_t FormatAndLevel() final { return ZX_OK; }
   zx_status_t Mount() final { return ZX_OK; }
   zx_status_t Unmount() final { return ZX_OK; }
   zx_status_t Flush() final {
