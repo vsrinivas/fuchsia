@@ -47,6 +47,11 @@ func TestDisableDebuggingSyscalls(t *testing.T) {
 
 	// Check status of syscalls by doing a test call, and ensure disabled.
 	i.RunCommand("/boot/bin/syscall-check")
+	i.WaitForLogMessage("zx_debug_send_command: disabled")
+	i.WaitForLogMessage("zx_ktrace_control: disabled")
+	i.WaitForLogMessage("zx_ktrace_read: disabled")
+	i.WaitForLogMessage("zx_ktrace_write: disabled")
+	i.WaitForLogMessage("zx_mtrace_control: disabled")
 	i.WaitForLogMessage("zx_process_write_memory: disabled")
 }
 
@@ -78,5 +83,10 @@ func TestEnableDebuggingSyscalls(t *testing.T) {
 
 	// Check status of syscalls by doing a test call, and ensure enabled.
 	i.RunCommand("/boot/bin/syscall-check")
+	i.WaitForLogMessage("zx_debug_send_command: enabled")
+	i.WaitForLogMessage("zx_ktrace_control: enabled")
+	i.WaitForLogMessage("zx_ktrace_read: enabled")
+	i.WaitForLogMessage("zx_ktrace_write: enabled")
+	i.WaitForLogMessage("zx_mtrace_control: enabled")
 	i.WaitForLogMessage("zx_process_write_memory: enabled")
 }

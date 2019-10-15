@@ -85,6 +85,10 @@ zx_status_t sys_debug_write(user_in_ptr<const char> ptr, size_t len) {
 zx_status_t sys_debug_send_command(zx_handle_t handle, user_in_ptr<const char> ptr, size_t len) {
   LTRACEF("ptr %p, len %zu\n", ptr.get(), len);
 
+  if (!DebuggingSyscallsEnabled()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   // TODO(ZX-971): finer grained validation
   zx_status_t status;
   if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {
@@ -106,6 +110,10 @@ zx_status_t sys_debug_send_command(zx_handle_t handle, user_in_ptr<const char> p
 // zx_status_t zx_ktrace_read
 zx_status_t sys_ktrace_read(zx_handle_t handle, user_out_ptr<void> _data, uint32_t offset,
                             size_t len, user_out_ptr<size_t> _actual) {
+  if (!DebuggingSyscallsEnabled()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   // TODO(ZX-971): finer grained validation
   zx_status_t status;
   if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {
@@ -122,6 +130,10 @@ zx_status_t sys_ktrace_read(zx_handle_t handle, user_out_ptr<void> _data, uint32
 // zx_status_t zx_ktrace_control
 zx_status_t sys_ktrace_control(zx_handle_t handle, uint32_t action, uint32_t options,
                                user_inout_ptr<void> _ptr) {
+  if (!DebuggingSyscallsEnabled()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   // TODO(ZX-971): finer grained validation
   zx_status_t status;
   if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {
@@ -143,6 +155,10 @@ zx_status_t sys_ktrace_control(zx_handle_t handle, uint32_t action, uint32_t opt
 
 // zx_status_t zx_ktrace_write
 zx_status_t sys_ktrace_write(zx_handle_t handle, uint32_t event_id, uint32_t arg0, uint32_t arg1) {
+  if (!DebuggingSyscallsEnabled()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   // TODO(ZX-971): finer grained validation
   zx_status_t status;
   if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {
@@ -167,6 +183,10 @@ zx_status_t sys_ktrace_write(zx_handle_t handle, uint32_t event_id, uint32_t arg
 // zx_status_t zx_mtrace_control
 zx_status_t sys_mtrace_control(zx_handle_t handle, uint32_t kind, uint32_t action, uint32_t options,
                                user_inout_ptr<void> ptr, size_t size) {
+  if (!DebuggingSyscallsEnabled()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   // TODO(ZX-971): finer grained validation
   zx_status_t status;
   if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {
