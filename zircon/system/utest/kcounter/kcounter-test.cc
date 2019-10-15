@@ -13,6 +13,7 @@
 #include <lib/zx/vmo.h>
 #include <unistd.h>
 #include <zxtest/zxtest.h>
+#include "../../uapp/kcounter/kcounter_cmdline.h"
 
 #include <algorithm>
 #include <cinttypes>
@@ -101,6 +102,57 @@ TEST(Counters, Basic) {
       EXPECT_GT(value, 0);
     }
   }
+}
+
+TEST(Counters, CmdlineNormalSuccess) {
+  const char* const argv[] = {"self.exe", "-v", "-w", "channel", nullptr};
+
+  KcounterCmdline cmdline;
+  ASSERT_TRUE(
+      kcounter_parse_cmdline(static_cast<int>(countof(argv)), argv, /*err=*/nullptr, &cmdline));
+  EXPECT_FALSE(cmdline.help);
+  EXPECT_FALSE(cmdline.list);
+  EXPECT_FALSE(cmdline.terse);
+  EXPECT_TRUE(cmdline.verbose);
+  EXPECT_GT(cmdline.period, 1);
+  EXPECT_EQ(cmdline.unparsed_args_start, 3);
+}
+
+TEST(Counters, CmdlineFailListAndTerse) {
+  const char* const argv[] = {"self.exe", "-l", "-t", nullptr};
+
+  KcounterCmdline cmdline;
+  char errbuf[2048];
+  FILE* err = fmemopen(errbuf, sizeof(errbuf), "w");
+  ASSERT_TRUE(err);
+  ASSERT_FALSE(kcounter_parse_cmdline(static_cast<int>(countof(argv)), argv, err, &cmdline));
+  fclose(err);
+  ASSERT_TRUE(strstr(errbuf, "--list, --terse"));
+  ASSERT_TRUE(strstr(errbuf, "Usage: self.exe"));
+}
+
+TEST(Counters, CmdlineFailTerseAndVerbose) {
+  const char* const argv[] = {"self.exe", "--terse", "-v", nullptr};
+
+  KcounterCmdline cmdline;
+  char errbuf[2048];
+  FILE* err = fmemopen(errbuf, sizeof(errbuf), "w");
+  ASSERT_TRUE(err);
+  ASSERT_FALSE(kcounter_parse_cmdline(static_cast<int>(countof(argv)), argv, err, &cmdline));
+  fclose(err);
+  ASSERT_TRUE(strstr(errbuf, "--terse, and --verbose are mutually exclusive"));
+}
+
+TEST(Counters, CmdlineFailListAndWatch) {
+  const char* const argv[] = {"self.exe", "-l", "-w", "things", nullptr};
+
+  KcounterCmdline cmdline;
+  char errbuf[2048];
+  FILE* err = fmemopen(errbuf, sizeof(errbuf), "w");
+  ASSERT_TRUE(err);
+  ASSERT_FALSE(kcounter_parse_cmdline(static_cast<int>(countof(argv)), argv, err, &cmdline));
+  fclose(err);
+  ASSERT_TRUE(strstr(errbuf, "--list and --watch are mutually exclusive"));
 }
 
 }  // anonymous namespace

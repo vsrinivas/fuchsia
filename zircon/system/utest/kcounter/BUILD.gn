@@ -4,6 +4,7 @@
 
 test("kcounter") {
   sources = [
+    "../../uapp/kcounter/kcounter_cmdline.cc",
     "kcounter-test.cc",
   ]
   deps = [

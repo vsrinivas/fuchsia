@@ -5,6 +5,7 @@
 executable("kcounter") {
   sources = [
     "kcounter.cc",
+    "kcounter_cmdline.cc",
   ]
   deps = [
     "$zx/kernel/lib/counters",

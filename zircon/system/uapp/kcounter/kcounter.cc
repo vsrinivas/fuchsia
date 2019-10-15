@@ -9,7 +9,6 @@
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
 #include <fcntl.h>
-#include <getopt.h>
 #include <lib/counter-vmo-abi.h>
 #include <lib/fdio/io.h>
 #include <lib/fzl/owned-vmo-mapper.h>
@@ -19,90 +18,27 @@
 #include <zircon/compiler.h>
 #include <zircon/status.h>
 
+#include "kcounter_cmdline.h"
+
 namespace {
-
-constexpr char kShortOptions[] = "hltvw::";
-constexpr struct option kLongOptions[] = {
-    {"help", no_argument, nullptr, 'h'},        {"list", no_argument, nullptr, 'l'},
-    {"terse", no_argument, nullptr, 't'},       {"verbose", no_argument, nullptr, 'v'},
-    {"watch", optional_argument, nullptr, 'w'}, {nullptr, 0, nullptr, 0}};
-
-constexpr int default_period = 3;
-
-void usage(const char* myname) {
-  printf(
-      "\
-Usage: %s [-hltvw] [--help] [--list] [--terse] [--verbose] [--watch [period]] [PREFIX...]\n\
-Prints one counter per line.\n\
-With --help or -h, display this help and exit.\n\
-With --list or -l, show names and types rather than values.\n\
-With --terse or -t, show only values and no names.\n\
-With --verbose or -v, show space-separated lists of per-CPU values.\n\
-With --watch or -w, keep showing the values every [period] seconds, default is %d seconds.\n\
-Otherwise values are aggregated summaries across all CPUs.\n\
-If PREFIX arguments are given, only matching names are shown.\n\
-Results are always sorted by name.\n\
-",
-      myname, default_period);
-}
 
 constexpr char kVmoFileDir[] = "/boot/kernel";
 
 }  // anonymous namespace
 
 int main(int argc, char** argv) {
-  bool help = false;
-  bool list = false;
-  bool terse = false;
-  bool verbose = false;
-  int period = 0;
-
-  int opt;
-  while ((opt = getopt_long(argc, argv, kShortOptions, kLongOptions, nullptr)) != -1) {
-    switch (opt) {
-      case 'h':
-        help = true;
-        break;
-      case 'l':
-        list = true;
-        break;
-      case 't':
-        terse = true;
-        break;
-      case 'v':
-        verbose = true;
-        break;
-      case 'w':
-        // default to every 3 seconds.
-        period = optarg ? atoi(optarg) : default_period;
-        if (period < 1) {
-          fprintf(stderr, "watch period must be greater than 1\n");
-          return 1;
-        } else {
-          printf("watch mode every %d seconds\n", period);
-        }
-        break;
-      default:
-        usage(argv[0]);
-        return 1;
-    }
+  KcounterCmdline cmdline;
+  if (!kcounter_parse_cmdline(argc, argv, stderr, &cmdline)) {
+    return 1;
   }
 
-  if (help) {
-    usage(argv[0]);
+  if (cmdline.help) {
+    kcounter_usage(argv[0], stdout);
     return 0;
   }
 
-  if (list + terse + verbose > 1) {
-    fprintf(stderr, "%s: --list, --terse, and --verbose are mutually exclusive\n", argv[0]);
-    usage(argv[0]);
-    return 1;
-  }
-
-  if (list + period > 1) {
-    fprintf(stderr, "%s: --list and --watch are mutually exclusive\n", argv[0]);
-    usage(argv[0]);
-    return 1;
+  if (cmdline.period) {
+    printf("watch mode every %d seconds\n", cmdline.period);
   }
 
   fbl::unique_fd dir_fd(open(kVmoFileDir, O_RDONLY | O_DIRECTORY));
@@ -155,7 +91,7 @@ int main(int argc, char** argv) {
 
   fzl::OwnedVmoMapper arena_mapper;
   const volatile int64_t* arena = nullptr;
-  if (!list) {
+  if (!cmdline.list) {
     fbl::unique_fd arena_fd(openat(dir_fd.get(), counters::kArenaVmoName, O_RDONLY));
     if (!arena_fd) {
       fprintf(stderr, "%s/%s: %s\n", kVmoFileDir, counters::kArenaVmoName, strerror(errno));
@@ -192,14 +128,15 @@ int main(int argc, char** argv) {
 
   dir_fd.reset();
 
-  fbl::Array<bool> matched(new bool[argc - optind](), argc - optind);
+  fbl::Array<bool> matched(new bool[argc - cmdline.unparsed_args_start](),
+                           argc - cmdline.unparsed_args_start);
   auto matches = [&](const char* name) -> bool {
-    if (optind == argc) {
+    if (cmdline.unparsed_args_start == argc) {
       return true;
     }
-    for (int i = optind; i < argc; ++i) {
+    for (int i = cmdline.unparsed_args_start; i < argc; ++i) {
       if (!strncmp(name, argv[i], strlen(argv[i]))) {
-        matched[i - optind] = true;
+        matched[i - cmdline.unparsed_args_start] = true;
         return true;
       }
     }
@@ -211,15 +148,15 @@ int main(int argc, char** argv) {
   bool match_failed = false;
 
   while (true) {
-    if (period != 0) {
-      deadline = zx_deadline_after(ZX_SEC(period));
+    if (cmdline.period != 0) {
+      deadline = zx_deadline_after(ZX_SEC(cmdline.period));
       printf("[%zu]\n", times);
     }
 
     for (size_t i = 0; i < desc->num_counters(); ++i) {
       const auto& entry = desc->descriptor_table[i];
       if (matches(entry.name)) {
-        if (list) {
+        if (cmdline.list) {
           fputs(entry.name, stdout);
           switch (entry.type) {
             case counters::Type::kSum:
@@ -235,17 +172,17 @@ int main(int argc, char** argv) {
               printf(" ??? unknown type %" PRIu64 " ???\n", static_cast<uint64_t>(entry.type));
           }
         } else {
-          if (!terse) {
+          if (!cmdline.terse) {
             printf("%s =%s", entry.name,
-                   !verbose ? " "
-                            : entry.type == counters::Type::kMin
-                                  ? " min("
-                                  : entry.type == counters::Type::kMax ? " max(" : " ");
+                   !cmdline.verbose ? " "
+                                    : entry.type == counters::Type::kMin
+                                          ? " min("
+                                          : entry.type == counters::Type::kMax ? " max(" : " ");
           }
           int64_t value = 0;
           for (uint64_t cpu = 0; cpu < desc->max_cpus; ++cpu) {
             const int64_t cpu_value = arena[(cpu * desc->num_counters()) + i];
-            if (verbose) {
+            if (cmdline.verbose) {
               printf("%s%" PRId64,
                      cpu == 0 ? "" : entry.type == counters::Type::kSum ? " + " : ", ", cpu_value);
             }
@@ -266,7 +203,7 @@ int main(int argc, char** argv) {
                 break;
             }
           }
-          if (verbose) {
+          if (cmdline.verbose) {
             printf("%s = %" PRId64 "\n", entry.type == counters::Type::kSum ? "" : ")", value);
           } else {
             int64_t ev_per_nsec = 0;
@@ -289,13 +226,14 @@ int main(int argc, char** argv) {
     if (times == 1) {
       for (auto it = matched.begin(); it != matched.end(); ++it) {
         if (!*it) {
-          fprintf(stderr, "%s: prefix not found\n", argv[optind + (it - matched.begin())]);
+          fprintf(stderr, "%s: prefix not found\n",
+                  argv[cmdline.unparsed_args_start + (it - matched.begin())]);
           match_failed = true;
         }
       }
     }
 
-    if ((period == 0) || match_failed) {
+    if ((cmdline.period == 0) || match_failed) {
       break;
     }
 
