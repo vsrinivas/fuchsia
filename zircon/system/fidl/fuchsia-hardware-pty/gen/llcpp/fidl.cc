@@ -48,6 +48,16 @@ constexpr uint64_t kDevice_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetAttrResponseTable;
 [[maybe_unused]]
+constexpr uint64_t kDevice_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_NodeSetFlags_GenOrdinal = 0x5295b76c71fde733lu;
+extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceNodeSetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceNodeSetFlagsResponseTable;
+[[maybe_unused]]
 constexpr uint64_t kDevice_Read_Ordinal = 0x25f7418400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Read_GenOrdinal = 0x29b2b7074c95208clu;
@@ -496,6 +506,129 @@ Device::UnownedResultOf::SetAttr Device::Call::SetAttr(zx::unowned_channel _clie
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::SetAttrResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+Device::ResultOf::NodeGetFlags_Impl<Device::NodeGetFlagsResponse>::NodeGetFlags_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeGetFlagsRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, NodeGetFlagsRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeGetFlagsRequest));
+  ::fidl::DecodedMessage<NodeGetFlagsRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Device::InPlace::NodeGetFlags(std::move(_client_end), Super::response_buffer()));
+}
+
+Device::ResultOf::NodeGetFlags Device::SyncClient::NodeGetFlags() {
+  return ResultOf::NodeGetFlags(zx::unowned_channel(this->channel_));
+}
+
+Device::ResultOf::NodeGetFlags Device::Call::NodeGetFlags(zx::unowned_channel _client_end) {
+  return ResultOf::NodeGetFlags(std::move(_client_end));
+}
+
+template <>
+Device::UnownedResultOf::NodeGetFlags_Impl<Device::NodeGetFlagsResponse>::NodeGetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(NodeGetFlagsRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, NodeGetFlagsRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(NodeGetFlagsRequest));
+  ::fidl::DecodedMessage<NodeGetFlagsRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Device::InPlace::NodeGetFlags(std::move(_client_end), std::move(_response_buffer)));
+}
+
+Device::UnownedResultOf::NodeGetFlags Device::SyncClient::NodeGetFlags(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeGetFlags(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+Device::UnownedResultOf::NodeGetFlags Device::Call::NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeGetFlags(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Device::NodeGetFlagsResponse> Device::InPlace::NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(NodeGetFlagsRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<NodeGetFlagsRequest> params(std::move(_request_buffer));
+  Device::SetTransactionHeaderFor::NodeGetFlagsRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Device::NodeGetFlagsResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<NodeGetFlagsRequest, NodeGetFlagsResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Device::NodeGetFlagsResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+Device::ResultOf::NodeSetFlags_Impl<Device::NodeSetFlagsResponse>::NodeSetFlags_Impl(zx::unowned_channel _client_end, uint32_t flags) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeSetFlagsRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, NodeSetFlagsRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<NodeSetFlagsRequest*>(_write_bytes);
+  _request.flags = std::move(flags);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeSetFlagsRequest));
+  ::fidl::DecodedMessage<NodeSetFlagsRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Device::InPlace::NodeSetFlags(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+Device::ResultOf::NodeSetFlags Device::SyncClient::NodeSetFlags(uint32_t flags) {
+  return ResultOf::NodeSetFlags(zx::unowned_channel(this->channel_), std::move(flags));
+}
+
+Device::ResultOf::NodeSetFlags Device::Call::NodeSetFlags(zx::unowned_channel _client_end, uint32_t flags) {
+  return ResultOf::NodeSetFlags(std::move(_client_end), std::move(flags));
+}
+
+template <>
+Device::UnownedResultOf::NodeSetFlags_Impl<Device::NodeSetFlagsResponse>::NodeSetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < NodeSetFlagsRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<NodeSetFlagsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, NodeSetFlagsRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<NodeSetFlagsRequest*>(_request_buffer.data());
+  _request.flags = std::move(flags);
+  _request_buffer.set_actual(sizeof(NodeSetFlagsRequest));
+  ::fidl::DecodedMessage<NodeSetFlagsRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Device::InPlace::NodeSetFlags(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+Device::UnownedResultOf::NodeSetFlags Device::SyncClient::NodeSetFlags(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeSetFlags(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(_response_buffer));
+}
+
+Device::UnownedResultOf::NodeSetFlags Device::Call::NodeSetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeSetFlags(std::move(_client_end), std::move(_request_buffer), std::move(flags), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Device::NodeSetFlagsResponse> Device::InPlace::NodeSetFlags(zx::unowned_channel _client_end, ::fidl::DecodedMessage<NodeSetFlagsRequest> params, ::fidl::BytePart response_buffer) {
+  Device::SetTransactionHeaderFor::NodeSetFlagsRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Device::NodeSetFlagsResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<NodeSetFlagsRequest, NodeSetFlagsResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Device::NodeSetFlagsResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -1604,6 +1737,31 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::SetAttrCompleter::Sync(txn));
       return true;
     }
+    case kDevice_NodeGetFlags_Ordinal:
+    case kDevice_NodeGetFlags_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<NodeGetFlagsRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->NodeGetFlags(
+        Interface::NodeGetFlagsCompleter::Sync(txn));
+      return true;
+    }
+    case kDevice_NodeSetFlags_Ordinal:
+    case kDevice_NodeSetFlags_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<NodeSetFlagsRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->NodeSetFlags(std::move(message->flags),
+        Interface::NodeSetFlagsCompleter::Sync(txn));
+      return true;
+    }
     case kDevice_Read_Ordinal:
     case kDevice_Read_GenOrdinal:
     {
@@ -2034,6 +2192,80 @@ void Device::Interface::SetAttrCompleterBase::Reply(::fidl::BytePart _buffer, in
 
 void Device::Interface::SetAttrCompleterBase::Reply(::fidl::DecodedMessage<SetAttrResponse> params) {
   Device::SetTransactionHeaderFor::SetAttrResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void Device::Interface::NodeGetFlagsCompleterBase::Reply(int32_t s, uint32_t flags) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeGetFlagsResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<NodeGetFlagsResponse*>(_write_bytes);
+  Device::SetTransactionHeaderFor::NodeGetFlagsResponse(
+      ::fidl::DecodedMessage<NodeGetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeGetFlagsResponse::PrimarySize,
+              NodeGetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  _response.flags = std::move(flags);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeGetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeGetFlagsResponse>(std::move(_response_bytes)));
+}
+
+void Device::Interface::NodeGetFlagsCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, uint32_t flags) {
+  if (_buffer.capacity() < NodeGetFlagsResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<NodeGetFlagsResponse*>(_buffer.data());
+  Device::SetTransactionHeaderFor::NodeGetFlagsResponse(
+      ::fidl::DecodedMessage<NodeGetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeGetFlagsResponse::PrimarySize,
+              NodeGetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  _response.flags = std::move(flags);
+  _buffer.set_actual(sizeof(NodeGetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeGetFlagsResponse>(std::move(_buffer)));
+}
+
+void Device::Interface::NodeGetFlagsCompleterBase::Reply(::fidl::DecodedMessage<NodeGetFlagsResponse> params) {
+  Device::SetTransactionHeaderFor::NodeGetFlagsResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void Device::Interface::NodeSetFlagsCompleterBase::Reply(int32_t s) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeSetFlagsResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<NodeSetFlagsResponse*>(_write_bytes);
+  Device::SetTransactionHeaderFor::NodeSetFlagsResponse(
+      ::fidl::DecodedMessage<NodeSetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeSetFlagsResponse::PrimarySize,
+              NodeSetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeSetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeSetFlagsResponse>(std::move(_response_bytes)));
+}
+
+void Device::Interface::NodeSetFlagsCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s) {
+  if (_buffer.capacity() < NodeSetFlagsResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<NodeSetFlagsResponse*>(_buffer.data());
+  Device::SetTransactionHeaderFor::NodeSetFlagsResponse(
+      ::fidl::DecodedMessage<NodeSetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeSetFlagsResponse::PrimarySize,
+              NodeSetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  _buffer.set_actual(sizeof(NodeSetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeSetFlagsResponse>(std::move(_buffer)));
+}
+
+void Device::Interface::NodeSetFlagsCompleterBase::Reply(::fidl::DecodedMessage<NodeSetFlagsResponse> params) {
+  Device::SetTransactionHeaderFor::NodeSetFlagsResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -2681,6 +2913,24 @@ void Device::SetTransactionHeaderFor::SetAttrRequest(const ::fidl::DecodedMessag
 void Device::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMessage<Device::SetAttrResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
   _msg.message()->_hdr.ordinal = kDevice_SetAttr_Ordinal;
+}
+
+void Device::SetTransactionHeaderFor::NodeGetFlagsRequest(const ::fidl::DecodedMessage<Device::NodeGetFlagsRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_NodeGetFlags_Ordinal;
+}
+void Device::SetTransactionHeaderFor::NodeGetFlagsResponse(const ::fidl::DecodedMessage<Device::NodeGetFlagsResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_NodeGetFlags_Ordinal;
+}
+
+void Device::SetTransactionHeaderFor::NodeSetFlagsRequest(const ::fidl::DecodedMessage<Device::NodeSetFlagsRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_NodeSetFlags_Ordinal;
+}
+void Device::SetTransactionHeaderFor::NodeSetFlagsResponse(const ::fidl::DecodedMessage<Device::NodeSetFlagsResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDevice_NodeSetFlags_Ordinal;
 }
 
 void Device::SetTransactionHeaderFor::ReadRequest(const ::fidl::DecodedMessage<Device::ReadRequest>& _msg) {

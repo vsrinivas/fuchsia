@@ -215,6 +215,24 @@ protocol Node {
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     SetAttr(uint32 flags, NodeAttributes attributes) -> (zx.status s);
+
+    /// Acquires the `Directory.Open` rights and flags used to access this file.
+    ///
+    /// This method does not require any rights.
+    /// This method has the same functionality as GetFlags for File and is
+    /// meant as an in-progress replacement.
+    [Transitional]
+    NodeGetFlags() -> (zx.status s, uint32 flags);
+
+    /// Changes the `Directory.Open` flags used to access the file.
+    /// Supported flags which can be turned on / off:
+    /// - `OPEN_FLAG_APPEND`
+    ///
+    /// This method does not require any rights.
+    /// This method has the same functionality as SetFlags for File and is
+    /// meant as an in-progress replacement.
+    [Transitional]
+    NodeSetFlags(uint32 flags) -> (zx.status s);
 };
 
 /// Bits reserved for posix protections. Native fuchsia filesystems

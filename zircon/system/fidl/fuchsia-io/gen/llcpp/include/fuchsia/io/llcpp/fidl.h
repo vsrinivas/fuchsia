@@ -858,6 +858,8 @@ extern "C" const fidl_type_t fuchsia_io_NodeSyncResponseTable;
 extern "C" const fidl_type_t fuchsia_io_NodeGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_NodeSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeSetAttrResponseTable;
+extern "C" const fidl_type_t fuchsia_io_NodeNodeSetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_io_NodeNodeSetFlagsResponseTable;
 
 // Node defines the minimal interface for entities which can be accessed in a filesystem.
 class Node final {
@@ -983,6 +985,50 @@ class Node final {
     using ResponseType = SetAttrResponse;
   };
 
+  struct NodeGetFlagsResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t s;
+    uint32_t flags;
+
+    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using NodeGetFlagsRequest = ::fidl::AnyZeroArgMessage;
+
+  struct NodeSetFlagsResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t s;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_io_NodeNodeSetFlagsResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct NodeSetFlagsRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    uint32_t flags;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_io_NodeNodeSetFlagsRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = NodeSetFlagsResponse;
+  };
+
 
   struct EventHandlers {
     // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
@@ -1092,6 +1138,38 @@ class Node final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class NodeGetFlags_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      NodeGetFlags_Impl(zx::unowned_channel _client_end);
+      ~NodeGetFlags_Impl() = default;
+      NodeGetFlags_Impl(NodeGetFlags_Impl&& other) = default;
+      NodeGetFlags_Impl& operator=(NodeGetFlags_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class NodeSetFlags_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      NodeSetFlags_Impl(zx::unowned_channel _client_end, uint32_t flags);
+      ~NodeSetFlags_Impl() = default;
+      NodeSetFlags_Impl(NodeSetFlags_Impl&& other) = default;
+      NodeSetFlags_Impl& operator=(NodeSetFlags_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using Clone = Clone_Impl;
@@ -1100,6 +1178,8 @@ class Node final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
+    using NodeGetFlags = NodeGetFlags_Impl<NodeGetFlagsResponse>;
+    using NodeSetFlags = NodeSetFlags_Impl<NodeSetFlagsResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -1198,6 +1278,38 @@ class Node final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class NodeGetFlags_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      NodeGetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~NodeGetFlags_Impl() = default;
+      NodeGetFlags_Impl(NodeGetFlags_Impl&& other) = default;
+      NodeGetFlags_Impl& operator=(NodeGetFlags_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class NodeSetFlags_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      NodeSetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
+      ~NodeSetFlags_Impl() = default;
+      NodeSetFlags_Impl(NodeSetFlags_Impl&& other) = default;
+      NodeSetFlags_Impl& operator=(NodeSetFlags_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using Clone = Clone_Impl;
@@ -1206,6 +1318,8 @@ class Node final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
+    using NodeGetFlags = NodeGetFlags_Impl<NodeGetFlagsResponse>;
+    using NodeSetFlags = NodeSetFlags_Impl<NodeSetFlagsResponse>;
   };
 
   class SyncClient final {
@@ -1324,6 +1438,42 @@ class Node final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::NodeGetFlags NodeGetFlags();
+
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::NodeGetFlags NodeGetFlags(::fidl::BytePart _response_buffer);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::NodeSetFlags NodeSetFlags(uint32_t flags);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::NodeSetFlags NodeSetFlags(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -1445,6 +1595,42 @@ class Node final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::NodeGetFlags NodeGetFlags(zx::unowned_channel _client_end);
+
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::NodeGetFlags NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::NodeSetFlags NodeSetFlags(zx::unowned_channel _client_end, uint32_t flags);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::NodeSetFlags NodeSetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
+
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
@@ -1504,6 +1690,22 @@ class Node final {
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
+
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    static ::fidl::DecodeResult<NodeGetFlagsResponse> NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    static ::fidl::DecodeResult<NodeSetFlagsResponse> NodeSetFlags(zx::unowned_channel _client_end, ::fidl::DecodedMessage<NodeSetFlagsRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1589,6 +1791,34 @@ class Node final {
 
     virtual void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, SetAttrCompleter::Sync _completer) = 0;
 
+    class NodeGetFlagsCompleterBase : public _Base {
+     public:
+      void Reply(int32_t s, uint32_t flags);
+      void Reply(::fidl::BytePart _buffer, int32_t s, uint32_t flags);
+      void Reply(::fidl::DecodedMessage<NodeGetFlagsResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using NodeGetFlagsCompleter = ::fidl::Completer<NodeGetFlagsCompleterBase>;
+
+    virtual void NodeGetFlags(NodeGetFlagsCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
+
+    class NodeSetFlagsCompleterBase : public _Base {
+     public:
+      void Reply(int32_t s);
+      void Reply(::fidl::BytePart _buffer, int32_t s);
+      void Reply(::fidl::DecodedMessage<NodeSetFlagsResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using NodeSetFlagsCompleter = ::fidl::Completer<NodeSetFlagsCompleterBase>;
+
+    virtual void NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
+
   };
 
   // Attempts to dispatch the incoming message to a handler function in the server implementation.
@@ -1649,6 +1879,10 @@ class Node final {
     static void GetAttrResponse(const ::fidl::DecodedMessage<Node::GetAttrResponse>& _msg);
     static void SetAttrRequest(const ::fidl::DecodedMessage<Node::SetAttrRequest>& _msg);
     static void SetAttrResponse(const ::fidl::DecodedMessage<Node::SetAttrResponse>& _msg);
+    static void NodeGetFlagsRequest(const ::fidl::DecodedMessage<Node::NodeGetFlagsRequest>& _msg);
+    static void NodeGetFlagsResponse(const ::fidl::DecodedMessage<Node::NodeGetFlagsResponse>& _msg);
+    static void NodeSetFlagsRequest(const ::fidl::DecodedMessage<Node::NodeSetFlagsRequest>& _msg);
+    static void NodeSetFlagsResponse(const ::fidl::DecodedMessage<Node::NodeSetFlagsResponse>& _msg);
   };
 };
 
@@ -1660,6 +1894,8 @@ extern "C" const fidl_type_t fuchsia_io_FileSyncResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetAttrResponseTable;
+extern "C" const fidl_type_t fuchsia_io_FileNodeSetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_io_FileNodeSetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileReadResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileReadAtResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileWriteRequestTable;
@@ -1796,6 +2032,50 @@ class File final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = SetAttrResponse;
+  };
+
+  struct NodeGetFlagsResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t s;
+    uint32_t flags;
+
+    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using NodeGetFlagsRequest = ::fidl::AnyZeroArgMessage;
+
+  struct NodeSetFlagsResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t s;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_io_FileNodeSetFlagsResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct NodeSetFlagsRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    uint32_t flags;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_io_FileNodeSetFlagsRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = NodeSetFlagsResponse;
   };
 
   struct ReadResponse final {
@@ -2157,6 +2437,38 @@ class File final {
       using Super::operator*;
     };
     template <typename ResponseType>
+    class NodeGetFlags_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      NodeGetFlags_Impl(zx::unowned_channel _client_end);
+      ~NodeGetFlags_Impl() = default;
+      NodeGetFlags_Impl(NodeGetFlags_Impl&& other) = default;
+      NodeGetFlags_Impl& operator=(NodeGetFlags_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class NodeSetFlags_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      NodeSetFlags_Impl(zx::unowned_channel _client_end, uint32_t flags);
+      ~NodeSetFlags_Impl() = default;
+      NodeSetFlags_Impl(NodeSetFlags_Impl&& other) = default;
+      NodeSetFlags_Impl& operator=(NodeSetFlags_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class Read_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -2308,6 +2620,8 @@ class File final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
+    using NodeGetFlags = NodeGetFlags_Impl<NodeGetFlagsResponse>;
+    using NodeSetFlags = NodeSetFlags_Impl<NodeSetFlagsResponse>;
     using Read = Read_Impl<ReadResponse>;
     using ReadAt = ReadAt_Impl<ReadAtResponse>;
     using Write = Write_Impl<WriteResponse>;
@@ -2407,6 +2721,38 @@ class File final {
       ~SetAttr_Impl() = default;
       SetAttr_Impl(SetAttr_Impl&& other) = default;
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class NodeGetFlags_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      NodeGetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~NodeGetFlags_Impl() = default;
+      NodeGetFlags_Impl(NodeGetFlags_Impl&& other) = default;
+      NodeGetFlags_Impl& operator=(NodeGetFlags_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class NodeSetFlags_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      NodeSetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
+      ~NodeSetFlags_Impl() = default;
+      NodeSetFlags_Impl(NodeSetFlags_Impl&& other) = default;
+      NodeSetFlags_Impl& operator=(NodeSetFlags_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -2567,6 +2913,8 @@ class File final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
+    using NodeGetFlags = NodeGetFlags_Impl<NodeGetFlagsResponse>;
+    using NodeSetFlags = NodeSetFlags_Impl<NodeSetFlagsResponse>;
     using Read = Read_Impl<ReadResponse>;
     using ReadAt = ReadAt_Impl<ReadAtResponse>;
     using Write = Write_Impl<WriteResponse>;
@@ -2694,6 +3042,42 @@ class File final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::NodeGetFlags NodeGetFlags();
+
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::NodeGetFlags NodeGetFlags(::fidl::BytePart _response_buffer);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::NodeSetFlags NodeSetFlags(uint32_t flags);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::NodeSetFlags NodeSetFlags(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
 
     // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
@@ -2949,6 +3333,42 @@ class File final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::NodeGetFlags NodeGetFlags(zx::unowned_channel _client_end);
+
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::NodeGetFlags NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::NodeSetFlags NodeSetFlags(zx::unowned_channel _client_end, uint32_t flags);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::NodeSetFlags NodeSetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
+
     // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
@@ -3143,6 +3563,22 @@ class File final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
 
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    static ::fidl::DecodeResult<NodeGetFlagsResponse> NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    static ::fidl::DecodeResult<NodeSetFlagsResponse> NodeSetFlags(zx::unowned_channel _client_end, ::fidl::DecodedMessage<NodeSetFlagsRequest> params, ::fidl::BytePart response_buffer);
+
     // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
@@ -3284,6 +3720,34 @@ class File final {
     using SetAttrCompleter = ::fidl::Completer<SetAttrCompleterBase>;
 
     virtual void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, SetAttrCompleter::Sync _completer) = 0;
+
+    class NodeGetFlagsCompleterBase : public _Base {
+     public:
+      void Reply(int32_t s, uint32_t flags);
+      void Reply(::fidl::BytePart _buffer, int32_t s, uint32_t flags);
+      void Reply(::fidl::DecodedMessage<NodeGetFlagsResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using NodeGetFlagsCompleter = ::fidl::Completer<NodeGetFlagsCompleterBase>;
+
+    virtual void NodeGetFlags(NodeGetFlagsCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
+
+    class NodeSetFlagsCompleterBase : public _Base {
+     public:
+      void Reply(int32_t s);
+      void Reply(::fidl::BytePart _buffer, int32_t s);
+      void Reply(::fidl::DecodedMessage<NodeSetFlagsResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using NodeSetFlagsCompleter = ::fidl::Completer<NodeSetFlagsCompleterBase>;
+
+    virtual void NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
     class ReadCompleterBase : public _Base {
      public:
@@ -3471,6 +3935,10 @@ class File final {
     static void GetAttrResponse(const ::fidl::DecodedMessage<File::GetAttrResponse>& _msg);
     static void SetAttrRequest(const ::fidl::DecodedMessage<File::SetAttrRequest>& _msg);
     static void SetAttrResponse(const ::fidl::DecodedMessage<File::SetAttrResponse>& _msg);
+    static void NodeGetFlagsRequest(const ::fidl::DecodedMessage<File::NodeGetFlagsRequest>& _msg);
+    static void NodeGetFlagsResponse(const ::fidl::DecodedMessage<File::NodeGetFlagsResponse>& _msg);
+    static void NodeSetFlagsRequest(const ::fidl::DecodedMessage<File::NodeSetFlagsRequest>& _msg);
+    static void NodeSetFlagsResponse(const ::fidl::DecodedMessage<File::NodeSetFlagsResponse>& _msg);
     static void ReadRequest(const ::fidl::DecodedMessage<File::ReadRequest>& _msg);
     static void ReadResponse(const ::fidl::DecodedMessage<File::ReadResponse>& _msg);
     static void ReadAtRequest(const ::fidl::DecodedMessage<File::ReadAtRequest>& _msg);
@@ -3500,6 +3968,8 @@ extern "C" const fidl_type_t fuchsia_io_DirectorySyncResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectorySetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectorySetAttrResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryNodeSetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryNodeSetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryUnlinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryUnlinkResponseTable;
@@ -3635,6 +4105,50 @@ class Directory final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = SetAttrResponse;
+  };
+
+  struct NodeGetFlagsResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t s;
+    uint32_t flags;
+
+    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using NodeGetFlagsRequest = ::fidl::AnyZeroArgMessage;
+
+  struct NodeSetFlagsResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t s;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryNodeSetFlagsResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct NodeSetFlagsRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    uint32_t flags;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryNodeSetFlagsRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = NodeSetFlagsResponse;
   };
 
   struct OpenRequest final {
@@ -3941,6 +4455,38 @@ class Directory final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class NodeGetFlags_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      NodeGetFlags_Impl(zx::unowned_channel _client_end);
+      ~NodeGetFlags_Impl() = default;
+      NodeGetFlags_Impl(NodeGetFlags_Impl&& other) = default;
+      NodeGetFlags_Impl& operator=(NodeGetFlags_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class NodeSetFlags_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      NodeSetFlags_Impl(zx::unowned_channel _client_end, uint32_t flags);
+      ~NodeSetFlags_Impl() = default;
+      NodeSetFlags_Impl(NodeSetFlags_Impl&& other) = default;
+      NodeSetFlags_Impl& operator=(NodeSetFlags_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
     class Open_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
@@ -4072,6 +4618,8 @@ class Directory final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
+    using NodeGetFlags = NodeGetFlags_Impl<NodeGetFlagsResponse>;
+    using NodeSetFlags = NodeSetFlags_Impl<NodeSetFlagsResponse>;
     using Open = Open_Impl;
     using Unlink = Unlink_Impl<UnlinkResponse>;
     using ReadDirents = ReadDirents_Impl<ReadDirentsResponse>;
@@ -4170,6 +4718,38 @@ class Directory final {
       ~SetAttr_Impl() = default;
       SetAttr_Impl(SetAttr_Impl&& other) = default;
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class NodeGetFlags_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      NodeGetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~NodeGetFlags_Impl() = default;
+      NodeGetFlags_Impl(NodeGetFlags_Impl&& other) = default;
+      NodeGetFlags_Impl& operator=(NodeGetFlags_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class NodeSetFlags_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      NodeSetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
+      ~NodeSetFlags_Impl() = default;
+      NodeSetFlags_Impl(NodeSetFlags_Impl&& other) = default;
+      NodeSetFlags_Impl& operator=(NodeSetFlags_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -4309,6 +4889,8 @@ class Directory final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
+    using NodeGetFlags = NodeGetFlags_Impl<NodeGetFlagsResponse>;
+    using NodeSetFlags = NodeSetFlags_Impl<NodeSetFlagsResponse>;
     using Open = Open_Impl;
     using Unlink = Unlink_Impl<UnlinkResponse>;
     using ReadDirents = ReadDirents_Impl<ReadDirentsResponse>;
@@ -4435,6 +5017,42 @@ class Directory final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::NodeGetFlags NodeGetFlags();
+
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::NodeGetFlags NodeGetFlags(::fidl::BytePart _response_buffer);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::NodeSetFlags NodeSetFlags(uint32_t flags);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::NodeSetFlags NodeSetFlags(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
 
     // Opens a new object relative to this directory object.
     //
@@ -4834,6 +5452,42 @@ class Directory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::NodeGetFlags NodeGetFlags(zx::unowned_channel _client_end);
+
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::NodeGetFlags NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::NodeSetFlags NodeSetFlags(zx::unowned_channel _client_end, uint32_t flags);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::NodeSetFlags NodeSetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
+
     // Opens a new object relative to this directory object.
     //
     // `path` may contain multiple segments, separated by "/" characters,
@@ -5172,6 +5826,22 @@ class Directory final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
 
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    static ::fidl::DecodeResult<NodeGetFlagsResponse> NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    static ::fidl::DecodeResult<NodeSetFlagsResponse> NodeSetFlags(zx::unowned_channel _client_end, ::fidl::DecodedMessage<NodeSetFlagsRequest> params, ::fidl::BytePart response_buffer);
+
     // Opens a new object relative to this directory object.
     //
     // `path` may contain multiple segments, separated by "/" characters,
@@ -5387,6 +6057,34 @@ class Directory final {
 
     virtual void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, SetAttrCompleter::Sync _completer) = 0;
 
+    class NodeGetFlagsCompleterBase : public _Base {
+     public:
+      void Reply(int32_t s, uint32_t flags);
+      void Reply(::fidl::BytePart _buffer, int32_t s, uint32_t flags);
+      void Reply(::fidl::DecodedMessage<NodeGetFlagsResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using NodeGetFlagsCompleter = ::fidl::Completer<NodeGetFlagsCompleterBase>;
+
+    virtual void NodeGetFlags(NodeGetFlagsCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
+
+    class NodeSetFlagsCompleterBase : public _Base {
+     public:
+      void Reply(int32_t s);
+      void Reply(::fidl::BytePart _buffer, int32_t s);
+      void Reply(::fidl::DecodedMessage<NodeSetFlagsResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using NodeSetFlagsCompleter = ::fidl::Completer<NodeSetFlagsCompleterBase>;
+
+    virtual void NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
+
     using OpenCompleter = ::fidl::Completer<>;
 
     virtual void Open(uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object, OpenCompleter::Sync _completer) = 0;
@@ -5549,6 +6247,10 @@ class Directory final {
     static void GetAttrResponse(const ::fidl::DecodedMessage<Directory::GetAttrResponse>& _msg);
     static void SetAttrRequest(const ::fidl::DecodedMessage<Directory::SetAttrRequest>& _msg);
     static void SetAttrResponse(const ::fidl::DecodedMessage<Directory::SetAttrResponse>& _msg);
+    static void NodeGetFlagsRequest(const ::fidl::DecodedMessage<Directory::NodeGetFlagsRequest>& _msg);
+    static void NodeGetFlagsResponse(const ::fidl::DecodedMessage<Directory::NodeGetFlagsResponse>& _msg);
+    static void NodeSetFlagsRequest(const ::fidl::DecodedMessage<Directory::NodeSetFlagsRequest>& _msg);
+    static void NodeSetFlagsResponse(const ::fidl::DecodedMessage<Directory::NodeSetFlagsResponse>& _msg);
     static void OpenRequest(const ::fidl::DecodedMessage<Directory::OpenRequest>& _msg);
     static void UnlinkRequest(const ::fidl::DecodedMessage<Directory::UnlinkRequest>& _msg);
     static void UnlinkResponse(const ::fidl::DecodedMessage<Directory::UnlinkResponse>& _msg);
@@ -5575,6 +6277,8 @@ extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSyncResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSetAttrResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminNodeSetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminNodeSetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnlinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnlinkResponseTable;
@@ -5719,6 +6423,50 @@ class DirectoryAdmin final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = SetAttrResponse;
+  };
+
+  struct NodeGetFlagsResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t s;
+    uint32_t flags;
+
+    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using NodeGetFlagsRequest = ::fidl::AnyZeroArgMessage;
+
+  struct NodeSetFlagsResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t s;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminNodeSetFlagsResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct NodeSetFlagsRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    uint32_t flags;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminNodeSetFlagsRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = NodeSetFlagsResponse;
   };
 
   struct OpenRequest final {
@@ -6146,6 +6894,38 @@ class DirectoryAdmin final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class NodeGetFlags_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      NodeGetFlags_Impl(zx::unowned_channel _client_end);
+      ~NodeGetFlags_Impl() = default;
+      NodeGetFlags_Impl(NodeGetFlags_Impl&& other) = default;
+      NodeGetFlags_Impl& operator=(NodeGetFlags_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class NodeSetFlags_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      NodeSetFlags_Impl(zx::unowned_channel _client_end, uint32_t flags);
+      ~NodeSetFlags_Impl() = default;
+      NodeSetFlags_Impl(NodeSetFlags_Impl&& other) = default;
+      NodeSetFlags_Impl& operator=(NodeSetFlags_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
     class Open_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
@@ -6373,6 +7153,8 @@ class DirectoryAdmin final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
+    using NodeGetFlags = NodeGetFlags_Impl<NodeGetFlagsResponse>;
+    using NodeSetFlags = NodeSetFlags_Impl<NodeSetFlagsResponse>;
     using Open = Open_Impl;
     using Unlink = Unlink_Impl<UnlinkResponse>;
     using ReadDirents = ReadDirents_Impl<ReadDirentsResponse>;
@@ -6477,6 +7259,38 @@ class DirectoryAdmin final {
       ~SetAttr_Impl() = default;
       SetAttr_Impl(SetAttr_Impl&& other) = default;
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class NodeGetFlags_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      NodeGetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~NodeGetFlags_Impl() = default;
+      NodeGetFlags_Impl(NodeGetFlags_Impl&& other) = default;
+      NodeGetFlags_Impl& operator=(NodeGetFlags_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class NodeSetFlags_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      NodeSetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
+      ~NodeSetFlags_Impl() = default;
+      NodeSetFlags_Impl(NodeSetFlags_Impl&& other) = default;
+      NodeSetFlags_Impl& operator=(NodeSetFlags_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -6712,6 +7526,8 @@ class DirectoryAdmin final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
+    using NodeGetFlags = NodeGetFlags_Impl<NodeGetFlagsResponse>;
+    using NodeSetFlags = NodeSetFlags_Impl<NodeSetFlagsResponse>;
     using Open = Open_Impl;
     using Unlink = Unlink_Impl<UnlinkResponse>;
     using ReadDirents = ReadDirents_Impl<ReadDirentsResponse>;
@@ -6844,6 +7660,42 @@ class DirectoryAdmin final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::NodeGetFlags NodeGetFlags();
+
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::NodeGetFlags NodeGetFlags(::fidl::BytePart _response_buffer);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::NodeSetFlags NodeSetFlags(uint32_t flags);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::NodeSetFlags NodeSetFlags(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
 
     // Opens a new object relative to this directory object.
     //
@@ -7303,6 +8155,42 @@ class DirectoryAdmin final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::NodeGetFlags NodeGetFlags(zx::unowned_channel _client_end);
+
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::NodeGetFlags NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::NodeSetFlags NodeSetFlags(zx::unowned_channel _client_end, uint32_t flags);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::NodeSetFlags NodeSetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
+
     // Opens a new object relative to this directory object.
     //
     // `path` may contain multiple segments, separated by "/" characters,
@@ -7701,6 +8589,22 @@ class DirectoryAdmin final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
 
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    static ::fidl::DecodeResult<NodeGetFlagsResponse> NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    static ::fidl::DecodeResult<NodeSetFlagsResponse> NodeSetFlags(zx::unowned_channel _client_end, ::fidl::DecodedMessage<NodeSetFlagsRequest> params, ::fidl::BytePart response_buffer);
+
     // Opens a new object relative to this directory object.
     //
     // `path` may contain multiple segments, separated by "/" characters,
@@ -7939,6 +8843,34 @@ class DirectoryAdmin final {
     using SetAttrCompleter = ::fidl::Completer<SetAttrCompleterBase>;
 
     virtual void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, SetAttrCompleter::Sync _completer) = 0;
+
+    class NodeGetFlagsCompleterBase : public _Base {
+     public:
+      void Reply(int32_t s, uint32_t flags);
+      void Reply(::fidl::BytePart _buffer, int32_t s, uint32_t flags);
+      void Reply(::fidl::DecodedMessage<NodeGetFlagsResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using NodeGetFlagsCompleter = ::fidl::Completer<NodeGetFlagsCompleterBase>;
+
+    virtual void NodeGetFlags(NodeGetFlagsCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
+
+    class NodeSetFlagsCompleterBase : public _Base {
+     public:
+      void Reply(int32_t s);
+      void Reply(::fidl::BytePart _buffer, int32_t s);
+      void Reply(::fidl::DecodedMessage<NodeSetFlagsResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using NodeSetFlagsCompleter = ::fidl::Completer<NodeSetFlagsCompleterBase>;
+
+    virtual void NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
     using OpenCompleter = ::fidl::Completer<>;
 
@@ -8186,6 +9118,10 @@ class DirectoryAdmin final {
     static void GetAttrResponse(const ::fidl::DecodedMessage<DirectoryAdmin::GetAttrResponse>& _msg);
     static void SetAttrRequest(const ::fidl::DecodedMessage<DirectoryAdmin::SetAttrRequest>& _msg);
     static void SetAttrResponse(const ::fidl::DecodedMessage<DirectoryAdmin::SetAttrResponse>& _msg);
+    static void NodeGetFlagsRequest(const ::fidl::DecodedMessage<DirectoryAdmin::NodeGetFlagsRequest>& _msg);
+    static void NodeGetFlagsResponse(const ::fidl::DecodedMessage<DirectoryAdmin::NodeGetFlagsResponse>& _msg);
+    static void NodeSetFlagsRequest(const ::fidl::DecodedMessage<DirectoryAdmin::NodeSetFlagsRequest>& _msg);
+    static void NodeSetFlagsResponse(const ::fidl::DecodedMessage<DirectoryAdmin::NodeSetFlagsResponse>& _msg);
     static void OpenRequest(const ::fidl::DecodedMessage<DirectoryAdmin::OpenRequest>& _msg);
     static void UnlinkRequest(const ::fidl::DecodedMessage<DirectoryAdmin::UnlinkRequest>& _msg);
     static void UnlinkResponse(const ::fidl::DecodedMessage<DirectoryAdmin::UnlinkResponse>& _msg);
@@ -8427,6 +9363,31 @@ static_assert(sizeof(::llcpp::fuchsia::io::Node::SetAttrResponse)
 static_assert(offsetof(::llcpp::fuchsia::io::Node::SetAttrResponse, s) == 16);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::io::Node::NodeGetFlagsResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::io::Node::NodeGetFlagsResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::io::Node::NodeGetFlagsResponse)
+    == ::llcpp::fuchsia::io::Node::NodeGetFlagsResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::io::Node::NodeGetFlagsResponse, s) == 16);
+static_assert(offsetof(::llcpp::fuchsia::io::Node::NodeGetFlagsResponse, flags) == 20);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::io::Node::NodeSetFlagsRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::io::Node::NodeSetFlagsRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::io::Node::NodeSetFlagsRequest)
+    == ::llcpp::fuchsia::io::Node::NodeSetFlagsRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::io::Node::NodeSetFlagsRequest, flags) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::io::Node::NodeSetFlagsResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::io::Node::NodeSetFlagsResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::io::Node::NodeSetFlagsResponse)
+    == ::llcpp::fuchsia::io::Node::NodeSetFlagsResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::io::Node::NodeSetFlagsResponse, s) == 16);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::io::File::CloneRequest> : public std::true_type {};
 template <>
 struct IsFidlMessage<::llcpp::fuchsia::io::File::CloneRequest> : public std::true_type {};
@@ -8493,6 +9454,31 @@ struct IsFidlMessage<::llcpp::fuchsia::io::File::SetAttrResponse> : public std::
 static_assert(sizeof(::llcpp::fuchsia::io::File::SetAttrResponse)
     == ::llcpp::fuchsia::io::File::SetAttrResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::io::File::SetAttrResponse, s) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::io::File::NodeGetFlagsResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::io::File::NodeGetFlagsResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::io::File::NodeGetFlagsResponse)
+    == ::llcpp::fuchsia::io::File::NodeGetFlagsResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::io::File::NodeGetFlagsResponse, s) == 16);
+static_assert(offsetof(::llcpp::fuchsia::io::File::NodeGetFlagsResponse, flags) == 20);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::io::File::NodeSetFlagsRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::io::File::NodeSetFlagsRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::io::File::NodeSetFlagsRequest)
+    == ::llcpp::fuchsia::io::File::NodeSetFlagsRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::io::File::NodeSetFlagsRequest, flags) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::io::File::NodeSetFlagsResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::io::File::NodeSetFlagsResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::io::File::NodeSetFlagsResponse)
+    == ::llcpp::fuchsia::io::File::NodeSetFlagsResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::io::File::NodeSetFlagsResponse, s) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::io::File::ReadRequest> : public std::true_type {};
@@ -8709,6 +9695,31 @@ static_assert(sizeof(::llcpp::fuchsia::io::Directory::SetAttrResponse)
 static_assert(offsetof(::llcpp::fuchsia::io::Directory::SetAttrResponse, s) == 16);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::io::Directory::NodeGetFlagsResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::io::Directory::NodeGetFlagsResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::io::Directory::NodeGetFlagsResponse)
+    == ::llcpp::fuchsia::io::Directory::NodeGetFlagsResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::io::Directory::NodeGetFlagsResponse, s) == 16);
+static_assert(offsetof(::llcpp::fuchsia::io::Directory::NodeGetFlagsResponse, flags) == 20);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::io::Directory::NodeSetFlagsRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::io::Directory::NodeSetFlagsRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::io::Directory::NodeSetFlagsRequest)
+    == ::llcpp::fuchsia::io::Directory::NodeSetFlagsRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::io::Directory::NodeSetFlagsRequest, flags) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::io::Directory::NodeSetFlagsResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::io::Directory::NodeSetFlagsResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::io::Directory::NodeSetFlagsResponse)
+    == ::llcpp::fuchsia::io::Directory::NodeSetFlagsResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::io::Directory::NodeSetFlagsResponse, s) == 16);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::io::Directory::OpenRequest> : public std::true_type {};
 template <>
 struct IsFidlMessage<::llcpp::fuchsia::io::Directory::OpenRequest> : public std::true_type {};
@@ -8890,6 +9901,31 @@ struct IsFidlMessage<::llcpp::fuchsia::io::DirectoryAdmin::SetAttrResponse> : pu
 static_assert(sizeof(::llcpp::fuchsia::io::DirectoryAdmin::SetAttrResponse)
     == ::llcpp::fuchsia::io::DirectoryAdmin::SetAttrResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::io::DirectoryAdmin::SetAttrResponse, s) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::io::DirectoryAdmin::NodeGetFlagsResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::io::DirectoryAdmin::NodeGetFlagsResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::io::DirectoryAdmin::NodeGetFlagsResponse)
+    == ::llcpp::fuchsia::io::DirectoryAdmin::NodeGetFlagsResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::io::DirectoryAdmin::NodeGetFlagsResponse, s) == 16);
+static_assert(offsetof(::llcpp::fuchsia::io::DirectoryAdmin::NodeGetFlagsResponse, flags) == 20);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::io::DirectoryAdmin::NodeSetFlagsRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::io::DirectoryAdmin::NodeSetFlagsRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::io::DirectoryAdmin::NodeSetFlagsRequest)
+    == ::llcpp::fuchsia::io::DirectoryAdmin::NodeSetFlagsRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::io::DirectoryAdmin::NodeSetFlagsRequest, flags) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::io::DirectoryAdmin::NodeSetFlagsResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::io::DirectoryAdmin::NodeSetFlagsResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::io::DirectoryAdmin::NodeSetFlagsResponse)
+    == ::llcpp::fuchsia::io::DirectoryAdmin::NodeSetFlagsResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::io::DirectoryAdmin::NodeSetFlagsResponse, s) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::io::DirectoryAdmin::OpenRequest> : public std::true_type {};

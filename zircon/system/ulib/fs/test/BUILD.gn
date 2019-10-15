@@ -5,6 +5,7 @@
 group("test") {
   testonly = true
   deps = [
+    ":fs-connection",
     ":fs-vnode",
   ]
 }
@@ -39,5 +40,28 @@ test("fs-vnode") {
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+  ]
+}
+
+test("fs-connection") {
+  sources = [
+    "connection_tests.cc",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-io:llcpp",
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async:async-default",
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }

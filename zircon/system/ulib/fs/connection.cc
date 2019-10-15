@@ -275,6 +275,8 @@ ZXFIDL_OPERATION(NodeDescribe)
 ZXFIDL_OPERATION(NodeSync)
 ZXFIDL_OPERATION(NodeGetAttr)
 ZXFIDL_OPERATION(NodeSetAttr)
+ZXFIDL_OPERATION(NodeNodeGetFlags)
+ZXFIDL_OPERATION(NodeNodeSetFlags)
 
 const fuchsia_io_Node_ops kNodeOps = {
     .Clone = NodeCloneOp,
@@ -283,6 +285,8 @@ const fuchsia_io_Node_ops kNodeOps = {
     .Sync = NodeSyncOp,
     .GetAttr = NodeGetAttrOp,
     .SetAttr = NodeSetAttrOp,
+    .NodeGetFlags = NodeNodeGetFlagsOp,
+    .NodeSetFlags = NodeNodeSetFlagsOp
 };
 
 ZXFIDL_OPERATION(FileRead)
@@ -302,6 +306,8 @@ const fuchsia_io_File_ops kFileOps = {
     .Sync = NodeSyncOp,
     .GetAttr = NodeGetAttrOp,
     .SetAttr = NodeSetAttrOp,
+    .NodeGetFlags = NodeNodeGetFlagsOp,
+    .NodeSetFlags = NodeNodeSetFlagsOp,
     .Read = FileReadOp,
     .ReadAt = FileReadAtOp,
     .Write = FileWriteOp,
@@ -329,6 +335,8 @@ const fuchsia_io_Directory_ops kDirectoryOps{
     .Sync = NodeSyncOp,
     .GetAttr = NodeGetAttrOp,
     .SetAttr = NodeSetAttrOp,
+    .NodeGetFlags = NodeNodeGetFlagsOp,
+    .NodeSetFlags = NodeNodeSetFlagsOp,
     .Open = DirectoryOpenOp,
     .Unlink = DirectoryUnlinkOp,
     .ReadDirents = DirectoryReadDirentsOp,
@@ -353,6 +361,8 @@ const fuchsia_io_DirectoryAdmin_ops kDirectoryAdminOps{
     .Sync = NodeSyncOp,
     .GetAttr = NodeGetAttrOp,
     .SetAttr = NodeSetAttrOp,
+    .NodeGetFlags = NodeNodeGetFlagsOp,
+    .NodeSetFlags = NodeNodeSetFlagsOp,
     .Open = DirectoryOpenOp,
     .Unlink = DirectoryUnlinkOp,
     .ReadDirents = DirectoryReadDirentsOp,
@@ -631,6 +641,17 @@ zx_status_t Connection::NodeSetAttr(uint32_t flags, const fuchsia_io_NodeAttribu
                                      ? std::make_optional(attributes->modification_time)
                                      : std::nullopt));
   return fuchsia_io_NodeSetAttr_reply(txn, status);
+}
+
+zx_status_t Connection::NodeNodeGetFlags(fidl_txn_t* txn) {
+  uint32_t flags = options_.ToIoV1Flags() & (kStatusFlags | ZX_FS_RIGHTS);
+  return fuchsia_io_NodeNodeGetFlags_reply(txn, ZX_OK, flags);
+}
+
+zx_status_t Connection::NodeNodeSetFlags(uint32_t flags, fidl_txn_t* txn) {
+  auto options = VnodeConnectionOptions::FromIoV1Flags(flags);
+  options_.flags.append = options.flags.append;
+  return fuchsia_io_NodeNodeSetFlags_reply(txn, ZX_OK);
 }
 
 zx_status_t Connection::FileRead(uint64_t count, fidl_txn_t* txn) {

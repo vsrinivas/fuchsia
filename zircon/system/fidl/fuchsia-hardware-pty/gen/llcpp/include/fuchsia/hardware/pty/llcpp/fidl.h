@@ -48,6 +48,8 @@ extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSyncResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetAttrResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceNodeSetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceNodeSetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceReadResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceReadAtResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceWriteRequestTable;
@@ -190,6 +192,50 @@ class Device final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = SetAttrResponse;
+  };
+
+  struct NodeGetFlagsResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t s;
+    uint32_t flags;
+
+    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using NodeGetFlagsRequest = ::fidl::AnyZeroArgMessage;
+
+  struct NodeSetFlagsResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t s;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_pty_DeviceNodeSetFlagsResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct NodeSetFlagsRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    uint32_t flags;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_pty_DeviceNodeSetFlagsRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = NodeSetFlagsResponse;
   };
 
   struct ReadResponse final {
@@ -698,6 +744,38 @@ class Device final {
       using Super::operator*;
     };
     template <typename ResponseType>
+    class NodeGetFlags_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      NodeGetFlags_Impl(zx::unowned_channel _client_end);
+      ~NodeGetFlags_Impl() = default;
+      NodeGetFlags_Impl(NodeGetFlags_Impl&& other) = default;
+      NodeGetFlags_Impl& operator=(NodeGetFlags_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class NodeSetFlags_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      NodeSetFlags_Impl(zx::unowned_channel _client_end, uint32_t flags);
+      ~NodeSetFlags_Impl() = default;
+      NodeSetFlags_Impl(NodeSetFlags_Impl&& other) = default;
+      NodeSetFlags_Impl& operator=(NodeSetFlags_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class Read_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -945,6 +1023,8 @@ class Device final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
+    using NodeGetFlags = NodeGetFlags_Impl<NodeGetFlagsResponse>;
+    using NodeSetFlags = NodeSetFlags_Impl<NodeSetFlagsResponse>;
     using Read = Read_Impl<ReadResponse>;
     using ReadAt = ReadAt_Impl<ReadAtResponse>;
     using Write = Write_Impl<WriteResponse>;
@@ -1050,6 +1130,38 @@ class Device final {
       ~SetAttr_Impl() = default;
       SetAttr_Impl(SetAttr_Impl&& other) = default;
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class NodeGetFlags_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      NodeGetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~NodeGetFlags_Impl() = default;
+      NodeGetFlags_Impl(NodeGetFlags_Impl&& other) = default;
+      NodeGetFlags_Impl& operator=(NodeGetFlags_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class NodeSetFlags_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      NodeSetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
+      ~NodeSetFlags_Impl() = default;
+      NodeSetFlags_Impl(NodeSetFlags_Impl&& other) = default;
+      NodeSetFlags_Impl& operator=(NodeSetFlags_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -1306,6 +1418,8 @@ class Device final {
     using Sync = Sync_Impl<SyncResponse>;
     using GetAttr = GetAttr_Impl<GetAttrResponse>;
     using SetAttr = SetAttr_Impl<SetAttrResponse>;
+    using NodeGetFlags = NodeGetFlags_Impl<NodeGetFlagsResponse>;
+    using NodeSetFlags = NodeSetFlags_Impl<NodeSetFlagsResponse>;
     using Read = Read_Impl<ReadResponse>;
     using ReadAt = ReadAt_Impl<ReadAtResponse>;
     using Write = Write_Impl<WriteResponse>;
@@ -1439,6 +1553,42 @@ class Device final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::NodeGetFlags NodeGetFlags();
+
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::NodeGetFlags NodeGetFlags(::fidl::BytePart _response_buffer);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::NodeSetFlags NodeSetFlags(uint32_t flags);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::NodeSetFlags NodeSetFlags(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
 
     // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
@@ -1772,6 +1922,42 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::NodeGetFlags NodeGetFlags(zx::unowned_channel _client_end);
+
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::NodeGetFlags NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::NodeSetFlags NodeSetFlags(zx::unowned_channel _client_end, uint32_t flags);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::NodeSetFlags NodeSetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
+
     // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
@@ -2044,6 +2230,22 @@ class Device final {
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
 
+    // Acquires the `Directory.Open` rights and flags used to access this file.
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as GetFlags for File and is
+    // meant as an in-progress replacement.
+    static ::fidl::DecodeResult<NodeGetFlagsResponse> NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Changes the `Directory.Open` flags used to access the file.
+    // Supported flags which can be turned on / off:
+    // - `OPEN_FLAG_APPEND`
+    //
+    // This method does not require any rights.
+    // This method has the same functionality as SetFlags for File and is
+    // meant as an in-progress replacement.
+    static ::fidl::DecodeResult<NodeSetFlagsResponse> NodeSetFlags(zx::unowned_channel _client_end, ::fidl::DecodedMessage<NodeSetFlagsRequest> params, ::fidl::BytePart response_buffer);
+
     // Reads `count` bytes at the seek offset.
     // The seek offset is moved forward by the number of bytes read.
     //
@@ -2218,6 +2420,34 @@ class Device final {
     using SetAttrCompleter = ::fidl::Completer<SetAttrCompleterBase>;
 
     virtual void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, SetAttrCompleter::Sync _completer) = 0;
+
+    class NodeGetFlagsCompleterBase : public _Base {
+     public:
+      void Reply(int32_t s, uint32_t flags);
+      void Reply(::fidl::BytePart _buffer, int32_t s, uint32_t flags);
+      void Reply(::fidl::DecodedMessage<NodeGetFlagsResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using NodeGetFlagsCompleter = ::fidl::Completer<NodeGetFlagsCompleterBase>;
+
+    virtual void NodeGetFlags(NodeGetFlagsCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
+
+    class NodeSetFlagsCompleterBase : public _Base {
+     public:
+      void Reply(int32_t s);
+      void Reply(::fidl::BytePart _buffer, int32_t s);
+      void Reply(::fidl::DecodedMessage<NodeSetFlagsResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using NodeSetFlagsCompleter = ::fidl::Completer<NodeSetFlagsCompleterBase>;
+
+    virtual void NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
     class ReadCompleterBase : public _Base {
      public:
@@ -2489,6 +2719,10 @@ class Device final {
     static void GetAttrResponse(const ::fidl::DecodedMessage<Device::GetAttrResponse>& _msg);
     static void SetAttrRequest(const ::fidl::DecodedMessage<Device::SetAttrRequest>& _msg);
     static void SetAttrResponse(const ::fidl::DecodedMessage<Device::SetAttrResponse>& _msg);
+    static void NodeGetFlagsRequest(const ::fidl::DecodedMessage<Device::NodeGetFlagsRequest>& _msg);
+    static void NodeGetFlagsResponse(const ::fidl::DecodedMessage<Device::NodeGetFlagsResponse>& _msg);
+    static void NodeSetFlagsRequest(const ::fidl::DecodedMessage<Device::NodeSetFlagsRequest>& _msg);
+    static void NodeSetFlagsResponse(const ::fidl::DecodedMessage<Device::NodeSetFlagsResponse>& _msg);
     static void ReadRequest(const ::fidl::DecodedMessage<Device::ReadRequest>& _msg);
     static void ReadResponse(const ::fidl::DecodedMessage<Device::ReadResponse>& _msg);
     static void ReadAtRequest(const ::fidl::DecodedMessage<Device::ReadAtRequest>& _msg);
@@ -2622,6 +2856,31 @@ struct IsFidlMessage<::llcpp::fuchsia::hardware::pty::Device::SetAttrResponse> :
 static_assert(sizeof(::llcpp::fuchsia::hardware::pty::Device::SetAttrResponse)
     == ::llcpp::fuchsia::hardware::pty::Device::SetAttrResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::hardware::pty::Device::SetAttrResponse, s) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::pty::Device::NodeGetFlagsResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::pty::Device::NodeGetFlagsResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::pty::Device::NodeGetFlagsResponse)
+    == ::llcpp::fuchsia::hardware::pty::Device::NodeGetFlagsResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::pty::Device::NodeGetFlagsResponse, s) == 16);
+static_assert(offsetof(::llcpp::fuchsia::hardware::pty::Device::NodeGetFlagsResponse, flags) == 20);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::pty::Device::NodeSetFlagsRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::pty::Device::NodeSetFlagsRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::pty::Device::NodeSetFlagsRequest)
+    == ::llcpp::fuchsia::hardware::pty::Device::NodeSetFlagsRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::pty::Device::NodeSetFlagsRequest, flags) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::pty::Device::NodeSetFlagsResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::pty::Device::NodeSetFlagsResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::pty::Device::NodeSetFlagsResponse)
+    == ::llcpp::fuchsia::hardware::pty::Device::NodeSetFlagsResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::pty::Device::NodeSetFlagsResponse, s) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::pty::Device::ReadRequest> : public std::true_type {};

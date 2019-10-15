@@ -86,6 +86,8 @@ class Connection : public fbl::DoublyLinkedListable<fbl::unique_ptr<Connection>>
   zx_status_t NodeIoctl(uint32_t opcode, uint64_t max_out, const zx_handle_t* handles_data,
                         size_t handles_count, const uint8_t* in_data, size_t in_count,
                         fidl_txn_t* txn);
+  zx_status_t NodeNodeGetFlags(fidl_txn_t* txn);
+  zx_status_t NodeNodeSetFlags(uint32_t flags, fidl_txn_t* txn);
 
   // File Operations.
   zx_status_t FileRead(uint64_t count, fidl_txn_t* txn);

@@ -325,6 +325,16 @@ constexpr uint64_t kNode_SetAttr_Ordinal = 0xbd5559a00000000lu;
 constexpr uint64_t kNode_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
 extern "C" const fidl_type_t fuchsia_io_NodeSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeSetAttrResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kNode_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
+[[maybe_unused]]
+constexpr uint64_t kNode_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
+[[maybe_unused]]
+constexpr uint64_t kNode_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kNode_NodeSetFlags_GenOrdinal = 0x5295b76c71fde733lu;
+extern "C" const fidl_type_t fuchsia_io_NodeNodeSetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_io_NodeNodeSetFlagsResponseTable;
 
 }  // namespace
 
@@ -700,6 +710,129 @@ Node::UnownedResultOf::SetAttr Node::Call::SetAttr(zx::unowned_channel _client_e
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+Node::ResultOf::NodeGetFlags_Impl<Node::NodeGetFlagsResponse>::NodeGetFlags_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeGetFlagsRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, NodeGetFlagsRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeGetFlagsRequest));
+  ::fidl::DecodedMessage<NodeGetFlagsRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Node::InPlace::NodeGetFlags(std::move(_client_end), Super::response_buffer()));
+}
+
+Node::ResultOf::NodeGetFlags Node::SyncClient::NodeGetFlags() {
+  return ResultOf::NodeGetFlags(zx::unowned_channel(this->channel_));
+}
+
+Node::ResultOf::NodeGetFlags Node::Call::NodeGetFlags(zx::unowned_channel _client_end) {
+  return ResultOf::NodeGetFlags(std::move(_client_end));
+}
+
+template <>
+Node::UnownedResultOf::NodeGetFlags_Impl<Node::NodeGetFlagsResponse>::NodeGetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(NodeGetFlagsRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, NodeGetFlagsRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(NodeGetFlagsRequest));
+  ::fidl::DecodedMessage<NodeGetFlagsRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Node::InPlace::NodeGetFlags(std::move(_client_end), std::move(_response_buffer)));
+}
+
+Node::UnownedResultOf::NodeGetFlags Node::SyncClient::NodeGetFlags(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeGetFlags(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+Node::UnownedResultOf::NodeGetFlags Node::Call::NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeGetFlags(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Node::NodeGetFlagsResponse> Node::InPlace::NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(NodeGetFlagsRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<NodeGetFlagsRequest> params(std::move(_request_buffer));
+  Node::SetTransactionHeaderFor::NodeGetFlagsRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Node::NodeGetFlagsResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<NodeGetFlagsRequest, NodeGetFlagsResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Node::NodeGetFlagsResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+Node::ResultOf::NodeSetFlags_Impl<Node::NodeSetFlagsResponse>::NodeSetFlags_Impl(zx::unowned_channel _client_end, uint32_t flags) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeSetFlagsRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, NodeSetFlagsRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<NodeSetFlagsRequest*>(_write_bytes);
+  _request.flags = std::move(flags);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeSetFlagsRequest));
+  ::fidl::DecodedMessage<NodeSetFlagsRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Node::InPlace::NodeSetFlags(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+Node::ResultOf::NodeSetFlags Node::SyncClient::NodeSetFlags(uint32_t flags) {
+  return ResultOf::NodeSetFlags(zx::unowned_channel(this->channel_), std::move(flags));
+}
+
+Node::ResultOf::NodeSetFlags Node::Call::NodeSetFlags(zx::unowned_channel _client_end, uint32_t flags) {
+  return ResultOf::NodeSetFlags(std::move(_client_end), std::move(flags));
+}
+
+template <>
+Node::UnownedResultOf::NodeSetFlags_Impl<Node::NodeSetFlagsResponse>::NodeSetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < NodeSetFlagsRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<NodeSetFlagsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, NodeSetFlagsRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<NodeSetFlagsRequest*>(_request_buffer.data());
+  _request.flags = std::move(flags);
+  _request_buffer.set_actual(sizeof(NodeSetFlagsRequest));
+  ::fidl::DecodedMessage<NodeSetFlagsRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Node::InPlace::NodeSetFlags(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+Node::UnownedResultOf::NodeSetFlags Node::SyncClient::NodeSetFlags(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeSetFlags(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(_response_buffer));
+}
+
+Node::UnownedResultOf::NodeSetFlags Node::Call::NodeSetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeSetFlags(std::move(_client_end), std::move(_request_buffer), std::move(flags), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Node::NodeSetFlagsResponse> Node::InPlace::NodeSetFlags(zx::unowned_channel _client_end, ::fidl::DecodedMessage<NodeSetFlagsRequest> params, ::fidl::BytePart response_buffer) {
+  Node::SetTransactionHeaderFor::NodeSetFlagsRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Node::NodeSetFlagsResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<NodeSetFlagsRequest, NodeSetFlagsResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Node::NodeSetFlagsResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
 zx_status_t Node::SyncClient::HandleEvents(Node::EventHandlers handlers) {
   return Node::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
 }
@@ -854,6 +987,31 @@ bool Node::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
       auto message = result.message.message();
       impl->SetAttr(std::move(message->flags), std::move(message->attributes),
         Interface::SetAttrCompleter::Sync(txn));
+      return true;
+    }
+    case kNode_NodeGetFlags_Ordinal:
+    case kNode_NodeGetFlags_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<NodeGetFlagsRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->NodeGetFlags(
+        Interface::NodeGetFlagsCompleter::Sync(txn));
+      return true;
+    }
+    case kNode_NodeSetFlags_Ordinal:
+    case kNode_NodeSetFlags_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<NodeSetFlagsRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->NodeSetFlags(std::move(message->flags),
+        Interface::NodeSetFlagsCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -1098,6 +1256,80 @@ void Node::Interface::SetAttrCompleterBase::Reply(::fidl::DecodedMessage<SetAttr
 }
 
 
+void Node::Interface::NodeGetFlagsCompleterBase::Reply(int32_t s, uint32_t flags) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeGetFlagsResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<NodeGetFlagsResponse*>(_write_bytes);
+  Node::SetTransactionHeaderFor::NodeGetFlagsResponse(
+      ::fidl::DecodedMessage<NodeGetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeGetFlagsResponse::PrimarySize,
+              NodeGetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  _response.flags = std::move(flags);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeGetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeGetFlagsResponse>(std::move(_response_bytes)));
+}
+
+void Node::Interface::NodeGetFlagsCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, uint32_t flags) {
+  if (_buffer.capacity() < NodeGetFlagsResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<NodeGetFlagsResponse*>(_buffer.data());
+  Node::SetTransactionHeaderFor::NodeGetFlagsResponse(
+      ::fidl::DecodedMessage<NodeGetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeGetFlagsResponse::PrimarySize,
+              NodeGetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  _response.flags = std::move(flags);
+  _buffer.set_actual(sizeof(NodeGetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeGetFlagsResponse>(std::move(_buffer)));
+}
+
+void Node::Interface::NodeGetFlagsCompleterBase::Reply(::fidl::DecodedMessage<NodeGetFlagsResponse> params) {
+  Node::SetTransactionHeaderFor::NodeGetFlagsResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void Node::Interface::NodeSetFlagsCompleterBase::Reply(int32_t s) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeSetFlagsResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<NodeSetFlagsResponse*>(_write_bytes);
+  Node::SetTransactionHeaderFor::NodeSetFlagsResponse(
+      ::fidl::DecodedMessage<NodeSetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeSetFlagsResponse::PrimarySize,
+              NodeSetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeSetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeSetFlagsResponse>(std::move(_response_bytes)));
+}
+
+void Node::Interface::NodeSetFlagsCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s) {
+  if (_buffer.capacity() < NodeSetFlagsResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<NodeSetFlagsResponse*>(_buffer.data());
+  Node::SetTransactionHeaderFor::NodeSetFlagsResponse(
+      ::fidl::DecodedMessage<NodeSetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeSetFlagsResponse::PrimarySize,
+              NodeSetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  _buffer.set_actual(sizeof(NodeSetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeSetFlagsResponse>(std::move(_buffer)));
+}
+
+void Node::Interface::NodeSetFlagsCompleterBase::Reply(::fidl::DecodedMessage<NodeSetFlagsResponse> params) {
+  Node::SetTransactionHeaderFor::NodeSetFlagsResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
 
 void Node::SetTransactionHeaderFor::CloneRequest(const ::fidl::DecodedMessage<Node::CloneRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
@@ -1154,6 +1386,24 @@ void Node::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMessage
   _msg.message()->_hdr.ordinal = kNode_SetAttr_Ordinal;
 }
 
+void Node::SetTransactionHeaderFor::NodeGetFlagsRequest(const ::fidl::DecodedMessage<Node::NodeGetFlagsRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kNode_NodeGetFlags_Ordinal;
+}
+void Node::SetTransactionHeaderFor::NodeGetFlagsResponse(const ::fidl::DecodedMessage<Node::NodeGetFlagsResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kNode_NodeGetFlags_Ordinal;
+}
+
+void Node::SetTransactionHeaderFor::NodeSetFlagsRequest(const ::fidl::DecodedMessage<Node::NodeSetFlagsRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kNode_NodeSetFlags_Ordinal;
+}
+void Node::SetTransactionHeaderFor::NodeSetFlagsResponse(const ::fidl::DecodedMessage<Node::NodeSetFlagsResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kNode_NodeSetFlags_Ordinal;
+}
+
 namespace {
 
 [[maybe_unused]]
@@ -1192,6 +1442,16 @@ constexpr uint64_t kFile_SetAttr_Ordinal = 0xbd5559a00000000lu;
 constexpr uint64_t kFile_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
 extern "C" const fidl_type_t fuchsia_io_FileSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetAttrResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kFile_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
+[[maybe_unused]]
+constexpr uint64_t kFile_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
+[[maybe_unused]]
+constexpr uint64_t kFile_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kFile_NodeSetFlags_GenOrdinal = 0x5295b76c71fde733lu;
+extern "C" const fidl_type_t fuchsia_io_FileNodeSetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_io_FileNodeSetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_Read_Ordinal = 0x25f7418400000000lu;
 [[maybe_unused]]
@@ -1611,6 +1871,129 @@ File::UnownedResultOf::SetAttr File::Call::SetAttr(zx::unowned_channel _client_e
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<File::SetAttrResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+File::ResultOf::NodeGetFlags_Impl<File::NodeGetFlagsResponse>::NodeGetFlags_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeGetFlagsRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, NodeGetFlagsRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeGetFlagsRequest));
+  ::fidl::DecodedMessage<NodeGetFlagsRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      File::InPlace::NodeGetFlags(std::move(_client_end), Super::response_buffer()));
+}
+
+File::ResultOf::NodeGetFlags File::SyncClient::NodeGetFlags() {
+  return ResultOf::NodeGetFlags(zx::unowned_channel(this->channel_));
+}
+
+File::ResultOf::NodeGetFlags File::Call::NodeGetFlags(zx::unowned_channel _client_end) {
+  return ResultOf::NodeGetFlags(std::move(_client_end));
+}
+
+template <>
+File::UnownedResultOf::NodeGetFlags_Impl<File::NodeGetFlagsResponse>::NodeGetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(NodeGetFlagsRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, NodeGetFlagsRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(NodeGetFlagsRequest));
+  ::fidl::DecodedMessage<NodeGetFlagsRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      File::InPlace::NodeGetFlags(std::move(_client_end), std::move(_response_buffer)));
+}
+
+File::UnownedResultOf::NodeGetFlags File::SyncClient::NodeGetFlags(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeGetFlags(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+File::UnownedResultOf::NodeGetFlags File::Call::NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeGetFlags(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<File::NodeGetFlagsResponse> File::InPlace::NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(NodeGetFlagsRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<NodeGetFlagsRequest> params(std::move(_request_buffer));
+  File::SetTransactionHeaderFor::NodeGetFlagsRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<File::NodeGetFlagsResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<NodeGetFlagsRequest, NodeGetFlagsResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<File::NodeGetFlagsResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+File::ResultOf::NodeSetFlags_Impl<File::NodeSetFlagsResponse>::NodeSetFlags_Impl(zx::unowned_channel _client_end, uint32_t flags) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeSetFlagsRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, NodeSetFlagsRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<NodeSetFlagsRequest*>(_write_bytes);
+  _request.flags = std::move(flags);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeSetFlagsRequest));
+  ::fidl::DecodedMessage<NodeSetFlagsRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      File::InPlace::NodeSetFlags(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+File::ResultOf::NodeSetFlags File::SyncClient::NodeSetFlags(uint32_t flags) {
+  return ResultOf::NodeSetFlags(zx::unowned_channel(this->channel_), std::move(flags));
+}
+
+File::ResultOf::NodeSetFlags File::Call::NodeSetFlags(zx::unowned_channel _client_end, uint32_t flags) {
+  return ResultOf::NodeSetFlags(std::move(_client_end), std::move(flags));
+}
+
+template <>
+File::UnownedResultOf::NodeSetFlags_Impl<File::NodeSetFlagsResponse>::NodeSetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < NodeSetFlagsRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<NodeSetFlagsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, NodeSetFlagsRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<NodeSetFlagsRequest*>(_request_buffer.data());
+  _request.flags = std::move(flags);
+  _request_buffer.set_actual(sizeof(NodeSetFlagsRequest));
+  ::fidl::DecodedMessage<NodeSetFlagsRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      File::InPlace::NodeSetFlags(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+File::UnownedResultOf::NodeSetFlags File::SyncClient::NodeSetFlags(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeSetFlags(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(_response_buffer));
+}
+
+File::UnownedResultOf::NodeSetFlags File::Call::NodeSetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeSetFlags(std::move(_client_end), std::move(_request_buffer), std::move(flags), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<File::NodeSetFlagsResponse> File::InPlace::NodeSetFlags(zx::unowned_channel _client_end, ::fidl::DecodedMessage<NodeSetFlagsRequest> params, ::fidl::BytePart response_buffer) {
+  File::SetTransactionHeaderFor::NodeSetFlagsRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<File::NodeSetFlagsResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<NodeSetFlagsRequest, NodeSetFlagsResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<File::NodeSetFlagsResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -2345,6 +2728,31 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::SetAttrCompleter::Sync(txn));
       return true;
     }
+    case kFile_NodeGetFlags_Ordinal:
+    case kFile_NodeGetFlags_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<NodeGetFlagsRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->NodeGetFlags(
+        Interface::NodeGetFlagsCompleter::Sync(txn));
+      return true;
+    }
+    case kFile_NodeSetFlags_Ordinal:
+    case kFile_NodeSetFlags_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<NodeSetFlagsRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->NodeSetFlags(std::move(message->flags),
+        Interface::NodeSetFlagsCompleter::Sync(txn));
+      return true;
+    }
     case kFile_Read_Ordinal:
     case kFile_Read_GenOrdinal:
     {
@@ -2699,6 +3107,80 @@ void File::Interface::SetAttrCompleterBase::Reply(::fidl::BytePart _buffer, int3
 
 void File::Interface::SetAttrCompleterBase::Reply(::fidl::DecodedMessage<SetAttrResponse> params) {
   File::SetTransactionHeaderFor::SetAttrResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void File::Interface::NodeGetFlagsCompleterBase::Reply(int32_t s, uint32_t flags) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeGetFlagsResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<NodeGetFlagsResponse*>(_write_bytes);
+  File::SetTransactionHeaderFor::NodeGetFlagsResponse(
+      ::fidl::DecodedMessage<NodeGetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeGetFlagsResponse::PrimarySize,
+              NodeGetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  _response.flags = std::move(flags);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeGetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeGetFlagsResponse>(std::move(_response_bytes)));
+}
+
+void File::Interface::NodeGetFlagsCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, uint32_t flags) {
+  if (_buffer.capacity() < NodeGetFlagsResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<NodeGetFlagsResponse*>(_buffer.data());
+  File::SetTransactionHeaderFor::NodeGetFlagsResponse(
+      ::fidl::DecodedMessage<NodeGetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeGetFlagsResponse::PrimarySize,
+              NodeGetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  _response.flags = std::move(flags);
+  _buffer.set_actual(sizeof(NodeGetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeGetFlagsResponse>(std::move(_buffer)));
+}
+
+void File::Interface::NodeGetFlagsCompleterBase::Reply(::fidl::DecodedMessage<NodeGetFlagsResponse> params) {
+  File::SetTransactionHeaderFor::NodeGetFlagsResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void File::Interface::NodeSetFlagsCompleterBase::Reply(int32_t s) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeSetFlagsResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<NodeSetFlagsResponse*>(_write_bytes);
+  File::SetTransactionHeaderFor::NodeSetFlagsResponse(
+      ::fidl::DecodedMessage<NodeSetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeSetFlagsResponse::PrimarySize,
+              NodeSetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeSetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeSetFlagsResponse>(std::move(_response_bytes)));
+}
+
+void File::Interface::NodeSetFlagsCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s) {
+  if (_buffer.capacity() < NodeSetFlagsResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<NodeSetFlagsResponse*>(_buffer.data());
+  File::SetTransactionHeaderFor::NodeSetFlagsResponse(
+      ::fidl::DecodedMessage<NodeSetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeSetFlagsResponse::PrimarySize,
+              NodeSetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  _buffer.set_actual(sizeof(NodeSetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeSetFlagsResponse>(std::move(_buffer)));
+}
+
+void File::Interface::NodeSetFlagsCompleterBase::Reply(::fidl::DecodedMessage<NodeSetFlagsResponse> params) {
+  File::SetTransactionHeaderFor::NodeSetFlagsResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -3126,6 +3608,24 @@ void File::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMessage
   _msg.message()->_hdr.ordinal = kFile_SetAttr_Ordinal;
 }
 
+void File::SetTransactionHeaderFor::NodeGetFlagsRequest(const ::fidl::DecodedMessage<File::NodeGetFlagsRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kFile_NodeGetFlags_Ordinal;
+}
+void File::SetTransactionHeaderFor::NodeGetFlagsResponse(const ::fidl::DecodedMessage<File::NodeGetFlagsResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kFile_NodeGetFlags_Ordinal;
+}
+
+void File::SetTransactionHeaderFor::NodeSetFlagsRequest(const ::fidl::DecodedMessage<File::NodeSetFlagsRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kFile_NodeSetFlags_Ordinal;
+}
+void File::SetTransactionHeaderFor::NodeSetFlagsResponse(const ::fidl::DecodedMessage<File::NodeSetFlagsResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kFile_NodeSetFlags_Ordinal;
+}
+
 void File::SetTransactionHeaderFor::ReadRequest(const ::fidl::DecodedMessage<File::ReadRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
   _msg.message()->_hdr.ordinal = kFile_Read_Ordinal;
@@ -3245,6 +3745,16 @@ constexpr uint64_t kDirectory_SetAttr_Ordinal = 0xbd5559a00000000lu;
 constexpr uint64_t kDirectory_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
 extern "C" const fidl_type_t fuchsia_io_DirectorySetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectorySetAttrResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kDirectory_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDirectory_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
+[[maybe_unused]]
+constexpr uint64_t kDirectory_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDirectory_NodeSetFlags_GenOrdinal = 0x5295b76c71fde733lu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryNodeSetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryNodeSetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Open_Ordinal = 0x77e4cceb00000000lu;
 [[maybe_unused]]
@@ -3659,6 +4169,129 @@ Directory::UnownedResultOf::SetAttr Directory::Call::SetAttr(zx::unowned_channel
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Directory::SetAttrResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+Directory::ResultOf::NodeGetFlags_Impl<Directory::NodeGetFlagsResponse>::NodeGetFlags_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeGetFlagsRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, NodeGetFlagsRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeGetFlagsRequest));
+  ::fidl::DecodedMessage<NodeGetFlagsRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Directory::InPlace::NodeGetFlags(std::move(_client_end), Super::response_buffer()));
+}
+
+Directory::ResultOf::NodeGetFlags Directory::SyncClient::NodeGetFlags() {
+  return ResultOf::NodeGetFlags(zx::unowned_channel(this->channel_));
+}
+
+Directory::ResultOf::NodeGetFlags Directory::Call::NodeGetFlags(zx::unowned_channel _client_end) {
+  return ResultOf::NodeGetFlags(std::move(_client_end));
+}
+
+template <>
+Directory::UnownedResultOf::NodeGetFlags_Impl<Directory::NodeGetFlagsResponse>::NodeGetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(NodeGetFlagsRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, NodeGetFlagsRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(NodeGetFlagsRequest));
+  ::fidl::DecodedMessage<NodeGetFlagsRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Directory::InPlace::NodeGetFlags(std::move(_client_end), std::move(_response_buffer)));
+}
+
+Directory::UnownedResultOf::NodeGetFlags Directory::SyncClient::NodeGetFlags(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeGetFlags(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+Directory::UnownedResultOf::NodeGetFlags Directory::Call::NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeGetFlags(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Directory::NodeGetFlagsResponse> Directory::InPlace::NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(NodeGetFlagsRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<NodeGetFlagsRequest> params(std::move(_request_buffer));
+  Directory::SetTransactionHeaderFor::NodeGetFlagsRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Directory::NodeGetFlagsResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<NodeGetFlagsRequest, NodeGetFlagsResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Directory::NodeGetFlagsResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+Directory::ResultOf::NodeSetFlags_Impl<Directory::NodeSetFlagsResponse>::NodeSetFlags_Impl(zx::unowned_channel _client_end, uint32_t flags) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeSetFlagsRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, NodeSetFlagsRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<NodeSetFlagsRequest*>(_write_bytes);
+  _request.flags = std::move(flags);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeSetFlagsRequest));
+  ::fidl::DecodedMessage<NodeSetFlagsRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Directory::InPlace::NodeSetFlags(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+Directory::ResultOf::NodeSetFlags Directory::SyncClient::NodeSetFlags(uint32_t flags) {
+  return ResultOf::NodeSetFlags(zx::unowned_channel(this->channel_), std::move(flags));
+}
+
+Directory::ResultOf::NodeSetFlags Directory::Call::NodeSetFlags(zx::unowned_channel _client_end, uint32_t flags) {
+  return ResultOf::NodeSetFlags(std::move(_client_end), std::move(flags));
+}
+
+template <>
+Directory::UnownedResultOf::NodeSetFlags_Impl<Directory::NodeSetFlagsResponse>::NodeSetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < NodeSetFlagsRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<NodeSetFlagsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, NodeSetFlagsRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<NodeSetFlagsRequest*>(_request_buffer.data());
+  _request.flags = std::move(flags);
+  _request_buffer.set_actual(sizeof(NodeSetFlagsRequest));
+  ::fidl::DecodedMessage<NodeSetFlagsRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Directory::InPlace::NodeSetFlags(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+Directory::UnownedResultOf::NodeSetFlags Directory::SyncClient::NodeSetFlags(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeSetFlags(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(_response_buffer));
+}
+
+Directory::UnownedResultOf::NodeSetFlags Directory::Call::NodeSetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeSetFlags(std::move(_client_end), std::move(_request_buffer), std::move(flags), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Directory::NodeSetFlagsResponse> Directory::InPlace::NodeSetFlags(zx::unowned_channel _client_end, ::fidl::DecodedMessage<NodeSetFlagsRequest> params, ::fidl::BytePart response_buffer) {
+  Directory::SetTransactionHeaderFor::NodeSetFlagsRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Directory::NodeSetFlagsResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<NodeSetFlagsRequest, NodeSetFlagsResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Directory::NodeSetFlagsResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -4353,6 +4986,31 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::SetAttrCompleter::Sync(txn));
       return true;
     }
+    case kDirectory_NodeGetFlags_Ordinal:
+    case kDirectory_NodeGetFlags_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<NodeGetFlagsRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->NodeGetFlags(
+        Interface::NodeGetFlagsCompleter::Sync(txn));
+      return true;
+    }
+    case kDirectory_NodeSetFlags_Ordinal:
+    case kDirectory_NodeSetFlags_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<NodeSetFlagsRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->NodeSetFlags(std::move(message->flags),
+        Interface::NodeSetFlagsCompleter::Sync(txn));
+      return true;
+    }
     case kDirectory_Open_Ordinal:
     case kDirectory_Open_GenOrdinal:
     {
@@ -4697,6 +5355,80 @@ void Directory::Interface::SetAttrCompleterBase::Reply(::fidl::DecodedMessage<Se
 }
 
 
+void Directory::Interface::NodeGetFlagsCompleterBase::Reply(int32_t s, uint32_t flags) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeGetFlagsResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<NodeGetFlagsResponse*>(_write_bytes);
+  Directory::SetTransactionHeaderFor::NodeGetFlagsResponse(
+      ::fidl::DecodedMessage<NodeGetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeGetFlagsResponse::PrimarySize,
+              NodeGetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  _response.flags = std::move(flags);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeGetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeGetFlagsResponse>(std::move(_response_bytes)));
+}
+
+void Directory::Interface::NodeGetFlagsCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, uint32_t flags) {
+  if (_buffer.capacity() < NodeGetFlagsResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<NodeGetFlagsResponse*>(_buffer.data());
+  Directory::SetTransactionHeaderFor::NodeGetFlagsResponse(
+      ::fidl::DecodedMessage<NodeGetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeGetFlagsResponse::PrimarySize,
+              NodeGetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  _response.flags = std::move(flags);
+  _buffer.set_actual(sizeof(NodeGetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeGetFlagsResponse>(std::move(_buffer)));
+}
+
+void Directory::Interface::NodeGetFlagsCompleterBase::Reply(::fidl::DecodedMessage<NodeGetFlagsResponse> params) {
+  Directory::SetTransactionHeaderFor::NodeGetFlagsResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void Directory::Interface::NodeSetFlagsCompleterBase::Reply(int32_t s) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeSetFlagsResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<NodeSetFlagsResponse*>(_write_bytes);
+  Directory::SetTransactionHeaderFor::NodeSetFlagsResponse(
+      ::fidl::DecodedMessage<NodeSetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeSetFlagsResponse::PrimarySize,
+              NodeSetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeSetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeSetFlagsResponse>(std::move(_response_bytes)));
+}
+
+void Directory::Interface::NodeSetFlagsCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s) {
+  if (_buffer.capacity() < NodeSetFlagsResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<NodeSetFlagsResponse*>(_buffer.data());
+  Directory::SetTransactionHeaderFor::NodeSetFlagsResponse(
+      ::fidl::DecodedMessage<NodeSetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeSetFlagsResponse::PrimarySize,
+              NodeSetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  _buffer.set_actual(sizeof(NodeSetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeSetFlagsResponse>(std::move(_buffer)));
+}
+
+void Directory::Interface::NodeSetFlagsCompleterBase::Reply(::fidl::DecodedMessage<NodeSetFlagsResponse> params) {
+  Directory::SetTransactionHeaderFor::NodeSetFlagsResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
 void Directory::Interface::UnlinkCompleterBase::Reply(int32_t s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnlinkResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
@@ -5019,6 +5751,24 @@ void Directory::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMe
   _msg.message()->_hdr.ordinal = kDirectory_SetAttr_Ordinal;
 }
 
+void Directory::SetTransactionHeaderFor::NodeGetFlagsRequest(const ::fidl::DecodedMessage<Directory::NodeGetFlagsRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDirectory_NodeGetFlags_Ordinal;
+}
+void Directory::SetTransactionHeaderFor::NodeGetFlagsResponse(const ::fidl::DecodedMessage<Directory::NodeGetFlagsResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDirectory_NodeGetFlags_Ordinal;
+}
+
+void Directory::SetTransactionHeaderFor::NodeSetFlagsRequest(const ::fidl::DecodedMessage<Directory::NodeSetFlagsRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDirectory_NodeSetFlags_Ordinal;
+}
+void Directory::SetTransactionHeaderFor::NodeSetFlagsResponse(const ::fidl::DecodedMessage<Directory::NodeSetFlagsResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDirectory_NodeSetFlags_Ordinal;
+}
+
 void Directory::SetTransactionHeaderFor::OpenRequest(const ::fidl::DecodedMessage<Directory::OpenRequest>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
   _msg.message()->_hdr.ordinal = kDirectory_Open_Ordinal;
@@ -5125,6 +5875,16 @@ constexpr uint64_t kDirectoryAdmin_SetAttr_Ordinal = 0xbd5559a00000000lu;
 constexpr uint64_t kDirectoryAdmin_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSetAttrResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kDirectoryAdmin_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDirectoryAdmin_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
+[[maybe_unused]]
+constexpr uint64_t kDirectoryAdmin_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDirectoryAdmin_NodeSetFlags_GenOrdinal = 0x5295b76c71fde733lu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminNodeSetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminNodeSetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Open_Ordinal = 0x77e4cceb00000000lu;
 [[maybe_unused]]
@@ -5571,6 +6331,129 @@ DirectoryAdmin::UnownedResultOf::SetAttr DirectoryAdmin::Call::SetAttr(zx::unown
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<DirectoryAdmin::SetAttrResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+DirectoryAdmin::ResultOf::NodeGetFlags_Impl<DirectoryAdmin::NodeGetFlagsResponse>::NodeGetFlags_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeGetFlagsRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, NodeGetFlagsRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeGetFlagsRequest));
+  ::fidl::DecodedMessage<NodeGetFlagsRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      DirectoryAdmin::InPlace::NodeGetFlags(std::move(_client_end), Super::response_buffer()));
+}
+
+DirectoryAdmin::ResultOf::NodeGetFlags DirectoryAdmin::SyncClient::NodeGetFlags() {
+  return ResultOf::NodeGetFlags(zx::unowned_channel(this->channel_));
+}
+
+DirectoryAdmin::ResultOf::NodeGetFlags DirectoryAdmin::Call::NodeGetFlags(zx::unowned_channel _client_end) {
+  return ResultOf::NodeGetFlags(std::move(_client_end));
+}
+
+template <>
+DirectoryAdmin::UnownedResultOf::NodeGetFlags_Impl<DirectoryAdmin::NodeGetFlagsResponse>::NodeGetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(NodeGetFlagsRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, NodeGetFlagsRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(NodeGetFlagsRequest));
+  ::fidl::DecodedMessage<NodeGetFlagsRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      DirectoryAdmin::InPlace::NodeGetFlags(std::move(_client_end), std::move(_response_buffer)));
+}
+
+DirectoryAdmin::UnownedResultOf::NodeGetFlags DirectoryAdmin::SyncClient::NodeGetFlags(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeGetFlags(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+DirectoryAdmin::UnownedResultOf::NodeGetFlags DirectoryAdmin::Call::NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeGetFlags(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<DirectoryAdmin::NodeGetFlagsResponse> DirectoryAdmin::InPlace::NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(NodeGetFlagsRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<NodeGetFlagsRequest> params(std::move(_request_buffer));
+  DirectoryAdmin::SetTransactionHeaderFor::NodeGetFlagsRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DirectoryAdmin::NodeGetFlagsResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<NodeGetFlagsRequest, NodeGetFlagsResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DirectoryAdmin::NodeGetFlagsResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+DirectoryAdmin::ResultOf::NodeSetFlags_Impl<DirectoryAdmin::NodeSetFlagsResponse>::NodeSetFlags_Impl(zx::unowned_channel _client_end, uint32_t flags) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeSetFlagsRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, NodeSetFlagsRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<NodeSetFlagsRequest*>(_write_bytes);
+  _request.flags = std::move(flags);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeSetFlagsRequest));
+  ::fidl::DecodedMessage<NodeSetFlagsRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      DirectoryAdmin::InPlace::NodeSetFlags(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+DirectoryAdmin::ResultOf::NodeSetFlags DirectoryAdmin::SyncClient::NodeSetFlags(uint32_t flags) {
+  return ResultOf::NodeSetFlags(zx::unowned_channel(this->channel_), std::move(flags));
+}
+
+DirectoryAdmin::ResultOf::NodeSetFlags DirectoryAdmin::Call::NodeSetFlags(zx::unowned_channel _client_end, uint32_t flags) {
+  return ResultOf::NodeSetFlags(std::move(_client_end), std::move(flags));
+}
+
+template <>
+DirectoryAdmin::UnownedResultOf::NodeSetFlags_Impl<DirectoryAdmin::NodeSetFlagsResponse>::NodeSetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < NodeSetFlagsRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<NodeSetFlagsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, NodeSetFlagsRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<NodeSetFlagsRequest*>(_request_buffer.data());
+  _request.flags = std::move(flags);
+  _request_buffer.set_actual(sizeof(NodeSetFlagsRequest));
+  ::fidl::DecodedMessage<NodeSetFlagsRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      DirectoryAdmin::InPlace::NodeSetFlags(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+DirectoryAdmin::UnownedResultOf::NodeSetFlags DirectoryAdmin::SyncClient::NodeSetFlags(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeSetFlags(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(_response_buffer));
+}
+
+DirectoryAdmin::UnownedResultOf::NodeSetFlags DirectoryAdmin::Call::NodeSetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::NodeSetFlags(std::move(_client_end), std::move(_request_buffer), std::move(flags), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<DirectoryAdmin::NodeSetFlagsResponse> DirectoryAdmin::InPlace::NodeSetFlags(zx::unowned_channel _client_end, ::fidl::DecodedMessage<NodeSetFlagsRequest> params, ::fidl::BytePart response_buffer) {
+  DirectoryAdmin::SetTransactionHeaderFor::NodeSetFlagsRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DirectoryAdmin::NodeSetFlagsResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<NodeSetFlagsRequest, NodeSetFlagsResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DirectoryAdmin::NodeSetFlagsResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -6642,6 +7525,31 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         Interface::SetAttrCompleter::Sync(txn));
       return true;
     }
+    case kDirectoryAdmin_NodeGetFlags_Ordinal:
+    case kDirectoryAdmin_NodeGetFlags_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<NodeGetFlagsRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->NodeGetFlags(
+        Interface::NodeGetFlagsCompleter::Sync(txn));
+      return true;
+    }
+    case kDirectoryAdmin_NodeSetFlags_Ordinal:
+    case kDirectoryAdmin_NodeSetFlags_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<NodeSetFlagsRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->NodeSetFlags(std::move(message->flags),
+        Interface::NodeSetFlagsCompleter::Sync(txn));
+      return true;
+    }
     case kDirectoryAdmin_Open_Ordinal:
     case kDirectoryAdmin_Open_GenOrdinal:
     {
@@ -7056,6 +7964,80 @@ void DirectoryAdmin::Interface::SetAttrCompleterBase::Reply(::fidl::BytePart _bu
 
 void DirectoryAdmin::Interface::SetAttrCompleterBase::Reply(::fidl::DecodedMessage<SetAttrResponse> params) {
   DirectoryAdmin::SetTransactionHeaderFor::SetAttrResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void DirectoryAdmin::Interface::NodeGetFlagsCompleterBase::Reply(int32_t s, uint32_t flags) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeGetFlagsResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<NodeGetFlagsResponse*>(_write_bytes);
+  DirectoryAdmin::SetTransactionHeaderFor::NodeGetFlagsResponse(
+      ::fidl::DecodedMessage<NodeGetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeGetFlagsResponse::PrimarySize,
+              NodeGetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  _response.flags = std::move(flags);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeGetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeGetFlagsResponse>(std::move(_response_bytes)));
+}
+
+void DirectoryAdmin::Interface::NodeGetFlagsCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, uint32_t flags) {
+  if (_buffer.capacity() < NodeGetFlagsResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<NodeGetFlagsResponse*>(_buffer.data());
+  DirectoryAdmin::SetTransactionHeaderFor::NodeGetFlagsResponse(
+      ::fidl::DecodedMessage<NodeGetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeGetFlagsResponse::PrimarySize,
+              NodeGetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  _response.flags = std::move(flags);
+  _buffer.set_actual(sizeof(NodeGetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeGetFlagsResponse>(std::move(_buffer)));
+}
+
+void DirectoryAdmin::Interface::NodeGetFlagsCompleterBase::Reply(::fidl::DecodedMessage<NodeGetFlagsResponse> params) {
+  DirectoryAdmin::SetTransactionHeaderFor::NodeGetFlagsResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void DirectoryAdmin::Interface::NodeSetFlagsCompleterBase::Reply(int32_t s) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeSetFlagsResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<NodeSetFlagsResponse*>(_write_bytes);
+  DirectoryAdmin::SetTransactionHeaderFor::NodeSetFlagsResponse(
+      ::fidl::DecodedMessage<NodeSetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeSetFlagsResponse::PrimarySize,
+              NodeSetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(NodeSetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeSetFlagsResponse>(std::move(_response_bytes)));
+}
+
+void DirectoryAdmin::Interface::NodeSetFlagsCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s) {
+  if (_buffer.capacity() < NodeSetFlagsResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<NodeSetFlagsResponse*>(_buffer.data());
+  DirectoryAdmin::SetTransactionHeaderFor::NodeSetFlagsResponse(
+      ::fidl::DecodedMessage<NodeSetFlagsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              NodeSetFlagsResponse::PrimarySize,
+              NodeSetFlagsResponse::PrimarySize)));
+  _response.s = std::move(s);
+  _buffer.set_actual(sizeof(NodeSetFlagsResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<NodeSetFlagsResponse>(std::move(_buffer)));
+}
+
+void DirectoryAdmin::Interface::NodeSetFlagsCompleterBase::Reply(::fidl::DecodedMessage<NodeSetFlagsResponse> params) {
+  DirectoryAdmin::SetTransactionHeaderFor::NodeSetFlagsResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -7621,6 +8603,24 @@ void DirectoryAdmin::SetTransactionHeaderFor::SetAttrRequest(const ::fidl::Decod
 void DirectoryAdmin::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMessage<DirectoryAdmin::SetAttrResponse>& _msg) {
   ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
   _msg.message()->_hdr.ordinal = kDirectoryAdmin_SetAttr_Ordinal;
+}
+
+void DirectoryAdmin::SetTransactionHeaderFor::NodeGetFlagsRequest(const ::fidl::DecodedMessage<DirectoryAdmin::NodeGetFlagsRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_NodeGetFlags_Ordinal;
+}
+void DirectoryAdmin::SetTransactionHeaderFor::NodeGetFlagsResponse(const ::fidl::DecodedMessage<DirectoryAdmin::NodeGetFlagsResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_NodeGetFlags_Ordinal;
+}
+
+void DirectoryAdmin::SetTransactionHeaderFor::NodeSetFlagsRequest(const ::fidl::DecodedMessage<DirectoryAdmin::NodeSetFlagsRequest>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_NodeSetFlags_Ordinal;
+}
+void DirectoryAdmin::SetTransactionHeaderFor::NodeSetFlagsResponse(const ::fidl::DecodedMessage<DirectoryAdmin::NodeSetFlagsResponse>& _msg) {
+  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
+  _msg.message()->_hdr.ordinal = kDirectoryAdmin_NodeSetFlags_Ordinal;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::OpenRequest(const ::fidl::DecodedMessage<DirectoryAdmin::OpenRequest>& _msg) {
