@@ -4,17 +4,16 @@
 
 use {
     base64,
-    failure::{bail, Error, ResultExt},
+    failure::{bail, format_err, Error, ResultExt},
     fidl_fuchsia_bluetooth::UInt16,
     fidl_fuchsia_bluetooth_le::{
         AdvertisingDataDeprecated, ManufacturerSpecificDataEntry, PeripheralMarker,
         PeripheralProxy, ServiceDataEntry,
     },
     fuchsia_async as fasync,
-    fuchsia_bluetooth::assigned_numbers::{find_service_uuid, AssignedNumber},
+    fuchsia_bluetooth::{assigned_numbers::find_service_uuid, types::Uuid},
     fuchsia_component::client::connect_to_service,
     futures::TryStreamExt,
-    std::fmt,
     structopt::StructOpt,
 };
 
@@ -86,41 +85,15 @@ struct Opt {
     binary_manufacturer_data: Vec<ManufacturerSpecificDataEntry>,
 }
 
-/// Represents a Bluetooth ID
-enum BluetoothUUID {
-    /// Bluetooth SIG assigned identifier
-    Assigned(AssignedNumber),
-    /// Custom identifier
-    Custom(String),
-}
-
-impl BluetoothUUID {
-    /// returns the identifier of a `BluetoothUUID`
-    fn to_uuid(&self) -> &str {
-        match self {
-            BluetoothUUID::Assigned(id) => id.number,
-            BluetoothUUID::Custom(ref id) => id,
-        }
+fn parse_service_uuid(raw: &str) -> Result<Uuid, Error> {
+    match find_service_uuid(raw) {
+        Some(assigned_number) => Ok(Uuid::new16(assigned_number.number)),
+        None => raw.parse::<Uuid>().map_err(|_| format_err!("invalid UUID: {}", raw)),
     }
 }
 
-impl fmt::Display for BluetoothUUID {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let name = match self {
-            BluetoothUUID::Assigned(id) => id.name,
-            BluetoothUUID::Custom(ref id) => id,
-        };
-        write!(f, "{}", name)
-    }
-}
-
-/// Parse a vector of `BluetoothUUID` values from a vector of `String` values
-fn parse_service_uuids(raw: Vec<String>) -> Vec<BluetoothUUID> {
-    raw.into_iter()
-        .map(|id| {
-            find_service_uuid(&id).map(BluetoothUUID::Assigned).unwrap_or(BluetoothUUID::Custom(id))
-        })
-        .collect()
+fn parse_service_uuids(raw: Vec<String>) -> Result<Vec<Uuid>, Error> {
+    raw.into_iter().map(|id| parse_service_uuid(&id)).collect()
 }
 
 /// Parse a raw string as a millisecond interval checking that it lies within the allowed range.
@@ -161,13 +134,13 @@ fn parse_binary_data(raw: &str) -> Result<(&str, Vec<u8>), Error> {
 
 fn parse_service_data(raw: &str) -> Result<ServiceDataEntry, Error> {
     let (raw_id, data) = parse_data(raw)?;
-    let uuid = find_service_uuid(raw_id).map(|id| id.number).unwrap_or(raw_id).to_string();
+    let uuid = parse_service_uuid(raw_id)?.to_string();
     Ok(ServiceDataEntry { uuid, data })
 }
 
 fn parse_binary_service_data(raw: &str) -> Result<ServiceDataEntry, Error> {
     let (raw_id, data) = parse_binary_data(raw)?;
-    let uuid = find_service_uuid(raw_id).map(|id| id.number).unwrap_or(raw_id).to_string();
+    let uuid = parse_service_uuid(raw_id)?.to_string();
     Ok(ServiceDataEntry { uuid, data })
 }
 
@@ -237,10 +210,9 @@ fn main() -> Result<(), Error> {
         binary_manufacturer_data,
     } = Opt::from_args();
 
-    let service_uuids = parse_service_uuids(service_uuids);
-    let service_names: Vec<_> = service_uuids.iter().map(ToString::to_string).collect();
-    let service_uuids: Vec<_> =
-        service_uuids.iter().map(BluetoothUUID::to_uuid).map(ToString::to_string).collect();
+    let service_uuids = parse_service_uuids(service_uuids)?;
+    let service_uuids: Vec<_> = service_uuids.iter().map(Uuid::to_string).collect();
+    let service_names = service_uuids.clone();
     service_data.extend(binary_service_data);
     manufacturer_data.extend(binary_manufacturer_data);
 

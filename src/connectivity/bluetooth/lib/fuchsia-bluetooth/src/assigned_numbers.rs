@@ -5,6 +5,7 @@
 use self::constants::{
     CHARACTERISTIC_NUMBERS, CUSTOM_SERVICE_UUIDS, DESCRIPTOR_NUMBERS, SERVICE_UUIDS,
 };
+use crate::types::Uuid;
 
 mod constants;
 
@@ -12,8 +13,8 @@ mod constants;
 /// Includes an associated abbreviation and human-readable name for the number.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct AssignedNumber {
-    /// Assigned uuid in canonical 8-4-4-4-12 string format
-    pub number: &'static str,
+    /// 16-bit Bluetooth UUID.
+    pub number: u16,
     /// Short abbreviation of the `name`
     pub abbreviation: Option<&'static str>,
     /// Human readable name
@@ -40,19 +41,18 @@ impl AssignedNumber {
         self.name.to_uppercase() == identifier
     }
 
-    fn short_id(&self) -> &str {
-        self.number.split("-").next().expect("split iter always has at least 1 item")
-    }
-
     /// Matches full uuid or short form of Bluetooth SIG assigned numbers.
     /// Precondition: identifier should already be uppercase when passed into the method.
     fn matches_number(&self, identifier: &str) -> bool {
         let identifier = if identifier.starts_with("0X") { &identifier[2..] } else { identifier };
+        let string = Uuid::new16(self.number).to_string().to_uppercase();
         if identifier.len() == 32 + 4 {
-            self.number == identifier
+            identifier == string
         } else {
+            let short_form =
+                string.split("-").next().expect("split iter always has at least 1 item");
             // pad out the identifier with leading zeros to a width of 8
-            self.short_id() == format!("{:0>8}", identifier)
+            short_form == format!("{:0>8}", identifier)
         }
     }
 }
@@ -85,18 +85,10 @@ pub fn find_descriptor_number(identifier: &str) -> Option<AssignedNumber> {
 #[macro_export]
 macro_rules! assigned_number {
     ($num:expr, $abbr:expr, $name:expr) => {
-        AssignedNumber {
-            number: concat!("0000", $num, "-0000-1000-8000-00805F9B34FB"),
-            abbreviation: Some($abbr),
-            name: $name,
-        }
+        AssignedNumber { number: $num, abbreviation: Some($abbr), name: $name }
     };
     ($num:expr, $name:expr) => {
-        AssignedNumber {
-            number: concat!("0000", $num, "-0000-1000-8000-00805F9B34FB"),
-            abbreviation: None,
-            name: $name,
-        }
+        AssignedNumber { number: $num, abbreviation: None, name: $name }
     };
 }
 
@@ -142,6 +134,10 @@ mod tests {
         assert_eq!(find_service_uuid("0000183a"), Some(SERVICE_UUIDS[39]));
         assert_eq!(
             find_service_uuid("0000183A-0000-1000-8000-00805F9B34FB"),
+            Some(SERVICE_UUIDS[39])
+        );
+        assert_eq!(
+            find_service_uuid("0000183a-0000-1000-8000-00805f9b34fb"),
             Some(SERVICE_UUIDS[39])
         );
         assert_eq!(find_service_uuid("0000183A-0000-1000-8000-000000000000"), None);
