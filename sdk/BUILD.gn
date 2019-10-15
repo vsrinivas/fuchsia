@@ -141,6 +141,7 @@ sdk_molecule("fidl") {
     "//zircon/system/fidl/fuchsia-hardware-goldfish-address-space:fuchsia-hardware-goldfish-address-space_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-hardware-goldfish-control:fuchsia-hardware-goldfish-control_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-hardware-goldfish-pipe:fuchsia-hardware-goldfish-pipe_sdk($fidl_toolchain)",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-logger:fuchsia-logger_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket_sdk($fidl_toolchain)",
