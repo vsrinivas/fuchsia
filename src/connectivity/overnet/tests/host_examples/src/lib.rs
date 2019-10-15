@@ -20,7 +20,9 @@ mod tests {
         path.pop();
         path.push("overnet_host_examples_test_commands");
         path.push(name);
-        Command::new(path)
+        let mut cmd = Command::new(path);
+        cmd.env("RUST_BACKTRACE", "1");
+        cmd
     }
 
     struct Daemon {
