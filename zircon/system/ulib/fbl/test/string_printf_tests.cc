@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/string_printf.h>
-
 #include <stdarg.h>
 
 #include <fbl/array.h>
-#include <unittest/unittest.h>
+#include <fbl/string_printf.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -22,9 +21,7 @@ fbl::String VAListHelper(Runnable runnable, ...) {
   return rv;
 }
 
-bool string_printf_basic_test() {
-  BEGIN_TEST;
-
+TEST(StringPrintfTest, Basic) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-zero-length"
   EXPECT_STR_EQ("", fbl::StringPrintf("").c_str());
@@ -32,13 +29,9 @@ bool string_printf_basic_test() {
   EXPECT_STR_EQ("hello", fbl::StringPrintf("hello").c_str());
   EXPECT_STR_EQ("hello-123", fbl::StringPrintf("hello%d", -123).c_str());
   EXPECT_STR_EQ("hello0123FACE", fbl::StringPrintf("%s%04d%X", "hello", 123, 0xfaceU).c_str());
-
-  END_TEST;
 }
 
-bool string_vprintf_basic_test() {
-  BEGIN_TEST;
-
+TEST(StringPrintfTest, VprintfBasic) {
   EXPECT_STR_EQ("", VAListHelper([](va_list ap) -> fbl::String {
                       return fbl::StringVPrintf("", ap);
                     }).c_str());
@@ -55,16 +48,12 @@ bool string_vprintf_basic_test() {
       VAListHelper([](va_list ap) -> fbl::String { return fbl::StringVPrintf("%s%04d%X", ap); },
                    "hello", 123, 0xfaceU)
           .c_str());
-
-  END_TEST;
 }
 
 // Generally, we assume that everything forwards to |fbl::StringVPrintf()|, so
 // testing |fbl::StringPrintf()| more carefully suffices.
 
-bool string_printf_boundary_test() {
-  BEGIN_TEST;
-
+TEST(StringPrintfTest, Boundary) {
   // Note: The size of strings generated should cover the boundary cases in the
   // constant |kStackBufferSize| in |StringVPrintf()|.
   for (size_t i = 800; i < 1200; i++) {
@@ -73,28 +62,15 @@ bool string_printf_boundary_test() {
     EXPECT_STR_EQ(fbl::String::Concat({stuff, "123", "hello world"}).c_str(),
                   fbl::StringPrintf(format.c_str(), 123, "hello").c_str());
   }
-
-  END_TEST;
 }
 
-bool string_printf_very_big_string_test() {
-  BEGIN_TEST;
-
+TEST(StringPrintfTest, VeryBigString) {
   // 4 megabytes of exes (we'll generate 5 times this).
   fbl::String stuff(4u << 20u, 'x');
   fbl::String format = fbl::String::Concat({"%s", stuff, "%s", stuff, "%s"});
   EXPECT_STR_EQ(
       fbl::String::Concat({stuff, stuff, stuff, stuff, stuff}).c_str(),
       fbl::StringPrintf(format.c_str(), stuff.c_str(), stuff.c_str(), stuff.c_str()).c_str());
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(string_printf_tests)
-RUN_TEST(string_printf_basic_test)
-RUN_TEST(string_vprintf_basic_test)
-RUN_TEST(string_printf_boundary_test)
-RUN_TEST(string_printf_very_big_string_test)
-END_TEST_CASE(string_printf_tests)
