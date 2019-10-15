@@ -27,7 +27,7 @@ pub struct RewriteManager {
     static_rules: Vec<Rule>,
     dynamic_rules: Vec<Rule>,
     generation: u32,
-    dynamic_rules_path: PathBuf,
+    dynamic_rules_path: Option<PathBuf>,
     inspect: RewriteManagerInspectState,
 }
 
@@ -46,6 +46,8 @@ struct RewriteManagerInspectState {
 pub enum CommitError {
     #[fail(display = "the provided rule set is based on an older generation")]
     TooLate,
+    #[fail(display = "editing rewrite rules is permanently disabled")]
+    DynamicConfigurationDisabled,
 }
 
 impl RewriteManager {
@@ -67,22 +69,22 @@ impl RewriteManager {
         url
     }
 
-    fn save(&mut self) -> io::Result<()> {
-        let config = RuleConfig::Version1(std::mem::replace(&mut self.dynamic_rules, vec![]));
+    fn save(dynamic_rules: &mut Vec<Rule>, dynamic_rules_path: &Path) -> io::Result<()> {
+        let config = RuleConfig::Version1(std::mem::replace(dynamic_rules, vec![]));
 
         let result = (|| {
-            let mut temp_path = self.dynamic_rules_path.clone().into_os_string();
+            let mut temp_path = dynamic_rules_path.to_owned().into_os_string();
             temp_path.push(".new");
             let temp_path = PathBuf::from(temp_path);
             {
                 let f = File::create(&temp_path)?;
                 serde_json::to_writer(io::BufWriter::new(f), &config)?;
             };
-            fs::rename(temp_path, &self.dynamic_rules_path)
+            fs::rename(temp_path, dynamic_rules_path)
         })();
 
         let RuleConfig::Version1(rules) = config;
-        self.dynamic_rules = rules;
+        *dynamic_rules = rules;
 
         result
     }
@@ -100,17 +102,21 @@ impl RewriteManager {
     /// [RewriteRuleStates] have been applied since `transaction` was cloned from this
     /// [RewriteManager].
     pub fn apply(&mut self, transaction: Transaction) -> Result<(), CommitError> {
-        if self.generation != transaction.generation {
-            Err(CommitError::TooLate)
-        } else {
-            self.dynamic_rules = transaction.dynamic_rules.into();
-            self.generation += 1;
-            // FIXME(kevinwells) synchronous I/O in an async context
-            if let Err(err) = self.save() {
-                fx_log_err!("error while saving dynamic rewrite rules: {}", err);
+        if let Some(ref dynamic_rules_path) = self.dynamic_rules_path {
+            if self.generation != transaction.generation {
+                Err(CommitError::TooLate)
+            } else {
+                self.dynamic_rules = transaction.dynamic_rules.into();
+                self.generation += 1;
+                // FIXME(kevinwells) synchronous I/O in an async context
+                if let Err(err) = Self::save(&mut self.dynamic_rules, dynamic_rules_path) {
+                    fx_log_err!("error while saving dynamic rewrite rules: {}", err);
+                }
+                self.update_inspect_objects();
+                Ok(())
             }
-            self.update_inspect_objects();
-            Ok(())
+        } else {
+            Err(CommitError::DynamicConfigurationDisabled)
         }
     }
 
@@ -187,7 +193,7 @@ pub struct UnsetInspectNode;
 pub struct RewriteManagerBuilder<N> {
     static_rules: Vec<Rule>,
     dynamic_rules: Vec<Rule>,
-    dynamic_rules_path: PathBuf,
+    dynamic_rules_path: Option<PathBuf>,
     inspect_node: N,
 }
 
@@ -196,23 +202,27 @@ impl RewriteManagerBuilder<UnsetInspectNode> {
     /// provided path. If the provided dynamic rule config file does not exist or is corrupt, this
     /// method returns an [RewriteManagerBuilder] initialized with no rules and configured with the
     /// given dynamic config path.
-    pub fn new<T>(dynamic_rules_path: T) -> Result<Self, (Self, io::Error)>
+    pub fn new<T>(dynamic_rules_path: Option<T>) -> Result<Self, (Self, io::Error)>
     where
         T: Into<PathBuf>,
     {
         let mut builder = RewriteManagerBuilder {
             static_rules: vec![],
             dynamic_rules: vec![],
-            dynamic_rules_path: dynamic_rules_path.into(),
+            dynamic_rules_path: dynamic_rules_path.map(|p| p.into()),
             inspect_node: UnsetInspectNode,
         };
 
-        match Self::load_rules(&builder.dynamic_rules_path) {
-            Ok(rules) => {
-                builder.dynamic_rules = rules;
-                Ok(builder)
+        if let Some(ref path) = builder.dynamic_rules_path {
+            match Self::load_rules(path) {
+                Ok(rules) => {
+                    builder.dynamic_rules = rules;
+                    Ok(builder)
+                }
+                Err(err) => Err((builder, err)),
             }
-            Err(err) => Err((builder, err)),
+        } else {
+            Ok(builder)
         }
     }
 
@@ -292,10 +302,9 @@ impl RewriteManagerBuilder<inspect::Node> {
             dynamic_rules_node: self.inspect_node.create_child("dynamic_rules"),
             dynamic_rules_states: vec![],
             generation_property: self.inspect_node.create_uint("generation", 0),
-            dynamic_rules_path_property: self.inspect_node.create_string(
-                "dynamic_rules_path",
-                &self.dynamic_rules_path.display().to_string(),
-            ),
+            dynamic_rules_path_property: self
+                .inspect_node
+                .create_string("dynamic_rules_path", &format!("{:?}", self.dynamic_rules_path)),
             node: self.inspect_node,
         };
 
@@ -318,7 +327,10 @@ impl RewriteManagerBuilder<inspect::Node> {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use {super::*, failure::Error, fuchsia_inspect::assert_inspect_tree, serde_json::json};
+    use {
+        super::*, failure::Error, fuchsia_inspect::assert_inspect_tree, matches::assert_matches,
+        serde_json::json,
+    };
 
     macro_rules! rule {
         ($host_match:expr => $host_replacement:expr,
@@ -352,7 +364,7 @@ pub(crate) mod tests {
     fn test_empty_configs() {
         let config = make_rule_config(vec![]);
 
-        let manager = RewriteManagerBuilder::new(&config)
+        let manager = RewriteManagerBuilder::new(Some(&config))
             .unwrap()
             .static_rules_path(&config)
             .unwrap()
@@ -368,7 +380,7 @@ pub(crate) mod tests {
 
         let dynamic_config = make_rule_config(vec![]);
         let static_config = make_rule_config(rules.clone());
-        let manager = RewriteManagerBuilder::new(&dynamic_config)
+        let manager = RewriteManagerBuilder::new(Some(&dynamic_config))
             .unwrap()
             .static_rules_path(&static_config)
             .unwrap()
@@ -383,7 +395,7 @@ pub(crate) mod tests {
         let rules = vec![rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice")];
 
         let dynamic_config = make_rule_config(rules.clone());
-        let manager = RewriteManagerBuilder::new(&dynamic_config).unwrap().build();
+        let manager = RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().build();
 
         assert_eq!(manager.list_static().cloned().collect::<Vec<_>>(), vec![]);
         assert_eq!(manager.list().cloned().collect::<Vec<_>>(), rules);
@@ -403,7 +415,7 @@ pub(crate) mod tests {
                 })
             )
         });
-        let (builder, _) = RewriteManagerBuilder::new(&dynamic_config)
+        let (builder, _) = RewriteManagerBuilder::new(Some(&dynamic_config))
             .unwrap()
             .static_rules_path(&static_config)
             .unwrap_err();
@@ -419,7 +431,7 @@ pub(crate) mod tests {
         let rule = rule!("test.com" => "test.com", "/a" => "/b");
 
         {
-            let (builder, _) = RewriteManagerBuilder::new(&dynamic_config).unwrap_err();
+            let (builder, _) = RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap_err();
             let mut manager = builder.build();
 
             assert_eq!(manager.list().cloned().collect::<Vec<_>>(), vec![]);
@@ -432,7 +444,7 @@ pub(crate) mod tests {
         }
 
         // Verify the dynamic config file is no longer corrupt and contains the newly added rule.
-        let manager = RewriteManagerBuilder::new(&dynamic_config).unwrap().build();
+        let manager = RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().build();
         assert_eq!(manager.list().cloned().collect::<Vec<_>>(), vec![rule]);
     }
 
@@ -444,7 +456,7 @@ pub(crate) mod tests {
         ];
 
         let dynamic_config = make_rule_config(rules);
-        let manager = RewriteManagerBuilder::new(&dynamic_config).unwrap().build();
+        let manager = RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().build();
 
         let url: PkgUrl = "fuchsia-pkg://fuchsia.com/c".parse().unwrap();
         assert_eq!(manager.rewrite(url.clone()), url);
@@ -458,7 +470,7 @@ pub(crate) mod tests {
         ];
 
         let dynamic_config = make_rule_config(rules);
-        let manager = RewriteManagerBuilder::new(&dynamic_config).unwrap().build();
+        let manager = RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().build();
 
         let url = "fuchsia-pkg://fuchsia.com/package".parse().unwrap();
         assert_eq!(manager.rewrite(url), "fuchsia-pkg://fuchsia.com/remapped".parse().unwrap());
@@ -472,7 +484,7 @@ pub(crate) mod tests {
         let static_config = make_rule_config(vec![
             rule!("fuchsia.com" => "fuchsia.com", "/package" => "/incorrect"),
         ]);
-        let manager = RewriteManagerBuilder::new(&dynamic_config)
+        let manager = RewriteManagerBuilder::new(Some(&dynamic_config))
             .unwrap()
             .static_rules_path(&static_config)
             .unwrap()
@@ -491,7 +503,7 @@ pub(crate) mod tests {
         let static_config = make_rule_config(static_rules);
         let dynamic_config = make_rule_config(dynamic_rules);
 
-        let manager = RewriteManagerBuilder::new(&dynamic_config)
+        let manager = RewriteManagerBuilder::new(Some(&dynamic_config))
             .unwrap()
             .static_rules_path(&static_config)
             .unwrap()
@@ -507,7 +519,7 @@ pub(crate) mod tests {
         let override_rule = rule!("fuchsia.com" => "fuchsia.com", "/a" => "/c");
         let dynamic_config =
             make_rule_config(vec![rule!("fuchsia.com" => "fuchsia.com", "/a" => "/b")]);
-        let mut manager = RewriteManagerBuilder::new(&dynamic_config).unwrap().build();
+        let mut manager = RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().build();
 
         let mut transaction = manager.transaction();
         transaction.add(override_rule.clone());
@@ -529,7 +541,7 @@ pub(crate) mod tests {
 
         let rules = vec![existing_rule.clone()];
         let dynamic_config = make_rule_config(rules.clone());
-        let mut manager = RewriteManagerBuilder::new(&dynamic_config).unwrap().build();
+        let mut manager = RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().build();
         assert_eq!(manager.list().cloned().collect::<Vec<_>>(), rules);
 
         // Fork the existing state, add a rule, and verify both instances are distinct
@@ -544,7 +556,7 @@ pub(crate) mod tests {
         assert_eq!(manager.list().cloned().collect::<Vec<_>>(), new_rules);
 
         // Ensure new rules are persisted to the dynamic config file
-        let manager = RewriteManagerBuilder::new(&dynamic_config).unwrap().build();
+        let manager = RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().build();
         assert_eq!(manager.list().cloned().collect::<Vec<_>>(), new_rules);
     }
 
@@ -556,7 +568,7 @@ pub(crate) mod tests {
         ];
 
         let dynamic_config = make_rule_config(rules.clone());
-        let mut manager = RewriteManagerBuilder::new(&dynamic_config).unwrap().build();
+        let mut manager = RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().build();
         assert_eq!(manager.list().cloned().collect::<Vec<_>>(), rules);
 
         let mut transaction = manager.transaction();
@@ -567,7 +579,7 @@ pub(crate) mod tests {
         assert_eq!(manager.apply(transaction).unwrap(), ());
         assert_eq!(manager.list().cloned().collect::<Vec<_>>(), vec![]);
 
-        let manager = RewriteManagerBuilder::new(&dynamic_config).unwrap().build();
+        let manager = RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().build();
         assert_eq!(manager.list().cloned().collect::<Vec<_>>(), vec![]);
     }
 
@@ -583,7 +595,7 @@ pub(crate) mod tests {
             vec![rule!("example.com" => "example.org", "/this_throwdice" => "/that_throwdice")];
         let static_config = make_rule_config(static_rules.clone());
 
-        let _manager = RewriteManagerBuilder::new(&dynamic_config)
+        let _manager = RewriteManagerBuilder::new(Some(&dynamic_config))
             .unwrap()
             .static_rules_path(&static_config)
             .unwrap()
@@ -602,7 +614,7 @@ pub(crate) mod tests {
                             path_prefix_replacement: "/that_rolldice",
                         },
                     },
-                    dynamic_rules_path: dynamic_config.to_str().unwrap().to_string(),
+                    dynamic_rules_path: format!("{:?}", Some(&*dynamic_config)),
                     static_rules: {
                         "0": {
                             host_match: "example.com",
@@ -618,18 +630,39 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn test_transaction_updates_inspect() {
+    fn test_inspect_rewrite_manager_no_dynamic_rules_path() {
         let inspector = fuchsia_inspect::Inspector::new();
         let node = inspector.root().create_child("rewrite_manager");
-        let dynamic_config = make_rule_config(vec![]);
-        let mut manager =
-            RewriteManagerBuilder::new(&dynamic_config).unwrap().inspect_node(node).build();
+
+        let _manager =
+            RewriteManagerBuilder::new(Option::<&Path>::None).unwrap().inspect_node(node).build();
+
         assert_inspect_tree!(
             inspector,
             root: {
                 rewrite_manager: {
                     dynamic_rules: {},
-                    dynamic_rules_path: dynamic_config.to_str().unwrap().to_string(),
+                    dynamic_rules_path: format!("{:?}", Option::<&Path>::None),
+                    static_rules: {},
+                    generation: 0u64,
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_transaction_updates_inspect() {
+        let inspector = fuchsia_inspect::Inspector::new();
+        let node = inspector.root().create_child("rewrite_manager");
+        let dynamic_config = make_rule_config(vec![]);
+        let mut manager =
+            RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().inspect_node(node).build();
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                rewrite_manager: {
+                    dynamic_rules: {},
+                    dynamic_rules_path: format!("{:?}", Some(&*dynamic_config)),
                     static_rules: {},
                     generation: 0u64,
                 }
@@ -653,11 +686,56 @@ pub(crate) mod tests {
                             path_prefix_replacement: "/that_rolldice/",
                         },
                     },
-                    dynamic_rules_path: dynamic_config.to_str().unwrap().to_string(),
+                    dynamic_rules_path: format!("{:?}", Some(&*dynamic_config)),
                     static_rules: {},
                     generation: 1u64,
                 }
             }
         );
+    }
+
+    #[test]
+    fn test_no_dynamic_rules_if_no_dynamic_rules_path() {
+        let manager = RewriteManagerBuilder::new(Option::<&Path>::None).unwrap().build();
+
+        assert_eq!(manager.list().cloned().collect::<Vec<_>>(), vec![]);
+    }
+
+    #[test]
+    fn test_same_dynamic_rules_if_apply_fails() {
+        let dynamic_config = make_rule_config(vec![]);
+        let rule0 = rule!("test0.com" => "test0.com", "/a" => "/b");
+        let rule1 = rule!("test1.com" => "test1.com", "/a" => "/b");
+        let mut manager = RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().build();
+        assert_eq!(manager.list().collect::<Vec<_>>(), Vec::<&Rule>::new());
+
+        // transaction0 adds a dynamic rule
+        let mut transaction0 = manager.transaction();
+        let mut transaction1 = manager.transaction();
+        transaction0.add(rule0.clone());
+        manager.apply(transaction0).unwrap();
+        assert_eq!(manager.list().cloned().collect::<Vec<_>>(), vec![rule0.clone()]);
+
+        // transaction1 fails to apply b/c it was created before transaction0 was applied
+        // the dynamic rewrite rules should be unchanged
+        transaction1.add(rule1.clone());
+        assert_matches!(manager.apply(transaction1), Err(CommitError::TooLate));
+        assert_eq!(manager.list().cloned().collect::<Vec<_>>(), vec![rule0.clone()]);
+
+        // transaction2 applies the rule from transaction1
+        let mut transaction2 = manager.transaction();
+        transaction2.add(rule1.clone());
+        manager.apply(transaction2).unwrap();
+        assert_eq!(manager.list().cloned().collect::<Vec<_>>(), vec![rule1.clone(), rule0.clone()]);
+    }
+
+    #[test]
+    fn test_apply_fails_with_no_change_if_no_dynamic_rules_path() {
+        let mut manager = RewriteManagerBuilder::new(Option::<&Path>::None).unwrap().build();
+        let mut transaction = manager.transaction();
+        transaction.add(rule!("test0.com" => "test0.com", "/a" => "/b"));
+
+        assert_matches!(manager.apply(transaction), Err(CommitError::DynamicConfigurationDisabled));
+        assert_eq!(manager.list().cloned().collect::<Vec<_>>(), vec![]);
     }
 }

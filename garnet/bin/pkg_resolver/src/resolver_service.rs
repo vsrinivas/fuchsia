@@ -452,7 +452,7 @@ mod tests {
             let cache = PackageCache::new(cache_proxy, pkgfs_install, pkgfs_needs);
 
             let dynamic_rule_config = make_rule_config(self.dynamic_rewrite_rules);
-            let rewrite_manager = RewriteManagerBuilder::new(&dynamic_rule_config)
+            let rewrite_manager = RewriteManagerBuilder::new(Some(&dynamic_rule_config))
                 .unwrap()
                 .static_rules(self.static_rewrite_rules)
                 .build();

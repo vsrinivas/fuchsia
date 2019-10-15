@@ -19,6 +19,7 @@ use {
 
 mod amber_connector;
 mod cache;
+mod config;
 mod experiment;
 mod font_package_manager;
 mod repository_manager;
@@ -58,6 +59,8 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
 
+    let config = config::Config::load_from_config_data_or_default();
+
     let pkg_cache =
         connect_to_service::<PackageCacheMarker>().context("error connecting to package cache")?;
     let pkgfs_install = connect_to_pkgfs("install").context("error connecting to pkgfs/install")?;
@@ -75,8 +78,11 @@ fn main() -> Result<(), Error> {
 
     let font_package_manager = Arc::new(load_font_package_manager());
     let repo_manager = Arc::new(RwLock::new(load_repo_manager(amber_connector, experiments)));
-    let rewrite_manager =
-        Arc::new(RwLock::new(load_rewrite_manager(rewrite_inspect_node, &repo_manager.read())));
+    let rewrite_manager = Arc::new(RwLock::new(load_rewrite_manager(
+        rewrite_inspect_node,
+        &repo_manager.read(),
+        config.disable_dynamic_configuration(),
+    )));
 
     let resolver_cb = {
         // Capture a clone of repo and rewrite manager's Arc so the new client callback has a copy
@@ -200,8 +206,11 @@ fn load_repo_manager(
 fn load_rewrite_manager(
     node: inspect::Node,
     repo_manager: &RepositoryManager<AmberConnector>,
+    disable_dynamic_configuration: bool,
 ) -> RewriteManager {
-    let builder = RewriteManagerBuilder::new(DYNAMIC_RULES_PATH)
+    let dynamic_rules_path =
+        if disable_dynamic_configuration { None } else { Some(DYNAMIC_RULES_PATH) };
+    let builder = RewriteManagerBuilder::new(dynamic_rules_path)
         .unwrap_or_else(|(builder, err)| {
             if err.kind() != io::ErrorKind::NotFound {
                 fx_log_err!(

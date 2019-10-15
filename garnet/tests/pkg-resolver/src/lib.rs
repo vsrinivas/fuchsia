@@ -8,11 +8,14 @@ use {
     failure::Error,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_amber::ControlMarker as AmberMarker,
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
+    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
     fidl_fuchsia_pkg::{
         ExperimentToggle as Experiment, PackageCacheMarker, PackageResolverAdminMarker,
         PackageResolverAdminProxy, PackageResolverMarker, PackageResolverProxy,
         RepositoryManagerMarker, RepositoryManagerProxy, UpdatePolicy,
+    },
+    fidl_fuchsia_pkg_rewrite::{
+        EngineMarker as RewriteEngineMarker, EngineProxy as RewriteEngineProxy,
     },
     fidl_fuchsia_sys::LauncherProxy,
     fuchsia_async as fasync,
@@ -21,10 +24,13 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_pkg_testing::{pkgfs::TestPkgFs, Package, PackageBuilder},
-    fuchsia_zircon::Status,
+    fuchsia_zircon::{self as zx, Status},
     futures::prelude::*,
+    std::fs::File,
+    tempfile::TempDir,
 };
 
+mod dynamic_rewrite_disabled;
 mod resolve_propagates_pkgfs_failure;
 mod resolve_recovers_from_http_errors;
 mod resolve_succeeds;
@@ -39,6 +45,56 @@ impl PkgFs for TestPkgFs {
     }
 }
 
+struct Mounts {
+    pkg_resolver_data: DirOrProxy,
+    pkg_resolver_config_data: DirOrProxy,
+}
+
+enum DirOrProxy {
+    Dir(TempDir),
+    Proxy(DirectoryProxy),
+}
+
+trait AppBuilderExt {
+    fn add_dir_or_proxy_to_namespace(
+        self,
+        path: impl Into<String>,
+        dir_or_proxy: &DirOrProxy,
+    ) -> Self;
+}
+
+impl AppBuilderExt for AppBuilder {
+    fn add_dir_or_proxy_to_namespace(
+        self,
+        path: impl Into<String>,
+        dir_or_proxy: &DirOrProxy,
+    ) -> Self {
+        match dir_or_proxy {
+            DirOrProxy::Dir(d) => {
+                self.add_dir_to_namespace(path.into(), File::open(d.path()).unwrap()).unwrap()
+            }
+            DirOrProxy::Proxy(p) => {
+                self.add_handle_to_namespace(path.into(), clone_directory_proxy(p))
+            }
+        }
+    }
+}
+
+fn clone_directory_proxy(proxy: &DirectoryProxy) -> zx::Handle {
+    let (client, server) = fidl::endpoints::create_endpoints().unwrap();
+    proxy.clone(CLONE_FLAG_SAME_RIGHTS, server).unwrap();
+    client.into()
+}
+
+impl Mounts {
+    fn new() -> Self {
+        Self {
+            pkg_resolver_data: DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist")),
+            pkg_resolver_config_data: DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist")),
+        }
+    }
+}
+
 struct Apps {
     _amber: App,
     _pkg_cache: App,
@@ -49,6 +105,7 @@ struct Proxies {
     resolver_admin: PackageResolverAdminProxy,
     resolver: PackageResolverProxy,
     repo_manager: RepositoryManagerProxy,
+    rewrite_engine: RewriteEngineProxy,
 }
 
 struct TestEnv<P = TestPkgFs> {
@@ -56,11 +113,16 @@ struct TestEnv<P = TestPkgFs> {
     env: NestedEnvironment,
     apps: Apps,
     proxies: Proxies,
+    _mounts: Mounts,
 }
 
 impl TestEnv<TestPkgFs> {
     fn new() -> Self {
         Self::new_with_pkg_fs(TestPkgFs::start(None).expect("pkgfs to start"))
+    }
+
+    fn new_with_mounts(mounts: Mounts) -> Self {
+        Self::new_with_pkg_fs_and_mounts(TestPkgFs::start(None).expect("pkgfs to start"), mounts)
     }
 
     async fn stop(self) {
@@ -74,6 +136,10 @@ impl TestEnv<TestPkgFs> {
 
 impl<P: PkgFs> TestEnv<P> {
     fn new_with_pkg_fs(pkgfs: P) -> Self {
+        Self::new_with_pkg_fs_and_mounts(pkgfs, Mounts::new())
+    }
+
+    fn new_with_pkg_fs_and_mounts(pkgfs: P, mounts: Mounts) -> Self {
         let mut amber =
             AppBuilder::new("fuchsia-pkg://fuchsia.com/pkg-resolver-tests#meta/amber.cmx")
                 .add_handle_to_namespace(
@@ -95,7 +161,9 @@ impl<P: PkgFs> TestEnv<P> {
         .add_handle_to_namespace(
             "/pkgfs".to_owned(),
             pkgfs.root_dir_client_end().expect("pkgfs dir to open").into(),
-        );
+        )
+        .add_dir_or_proxy_to_namespace("/data", &mounts.pkg_resolver_data)
+        .add_dir_or_proxy_to_namespace("/config/data", &mounts.pkg_resolver_config_data);
 
         let mut fs = ServiceFs::new();
         fs.add_proxy_service::<fidl_fuchsia_net::NameLookupMarker, _>()
@@ -131,6 +199,9 @@ impl<P: PkgFs> TestEnv<P> {
         let repo_manager_proxy = env
             .connect_to_service::<RepositoryManagerMarker>()
             .expect("connect to repository manager");
+        let rewrite_engine_proxy = pkg_resolver
+            .connect_to_service::<RewriteEngineMarker>()
+            .expect("connect to rewrite engine");
 
         Self {
             env,
@@ -140,7 +211,9 @@ impl<P: PkgFs> TestEnv<P> {
                 resolver: resolver_proxy,
                 resolver_admin: resolver_admin_proxy,
                 repo_manager: repo_manager_proxy,
+                rewrite_engine: rewrite_engine_proxy,
             },
+            _mounts: mounts,
         }
     }
 

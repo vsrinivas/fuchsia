@@ -4,7 +4,6 @@
     },
     "sandbox": {
         "features": [
-            "isolated-persistent-storage",
             "root-ssl-certificates"
         ],
         "services": [
