@@ -4,9 +4,9 @@
 
 #include "src/modular/lib/module_manifest/module_facet_reader_impl.h"
 
-#include "lib/cmx_facet_parser/cmx_facet_parser.h"
 #include "lib/json/json_parser.h"
 #include "lib/sys/cpp/component_context.h"
+#include "src/lib/cmx/facet_parser/cmx_facet_parser.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 #include "src/lib/pkg_url/url_resolver.h"
