@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/posix/socket/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -11,11 +10,13 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/zxs/protocol.h>
 #include <netinet/in.h>
-#include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 #include <array>
+#include <cerrno>
+#include <cstring>
+#include <vector>
 
 #include <zxtest/zxtest.h>
 
@@ -29,11 +30,20 @@ class Server final : public llcpp::fuchsia::posix::socket::Control::Interface {
     ASSERT_OK(peer_.signal(0, ZX_USER_SIGNAL_3));
   }
 
+  ~Server() {
+    for (auto &completer : close_completers_) {
+      completer.Reply(ZX_OK);
+    }
+  }
+
   void Clone(uint32_t flags, ::zx::channel object, CloneCompleter::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Close(CloseCompleter::Sync completer) override { return completer.Reply(ZX_OK); }
+  void Close(CloseCompleter::Sync completer) override {
+    // Take the completer hostage until the destructor runs.
+    close_completers_.push_back(completer.ToAsync());
+  }
 
   void Describe(DescribeCompleter::Sync completer) override {
     llcpp::fuchsia::io::Socket socket;
@@ -94,6 +104,7 @@ class Server final : public llcpp::fuchsia::posix::socket::Control::Interface {
 
  private:
   zx::socket peer_;
+  std::vector<CloseCompleter::Async> close_completers_;
 };
 
 static void set_nonblocking_io(int fd) {

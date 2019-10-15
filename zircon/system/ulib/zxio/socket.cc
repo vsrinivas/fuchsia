@@ -14,9 +14,18 @@ namespace fio = ::llcpp::fuchsia::io;
 
 static zx_status_t zxio_socket_close(zxio_t* io) {
   auto zs = reinterpret_cast<zxio_socket_t*>(io);
-  auto result = zs->control.Close();
+  // N.B. we don't call zs->control.Close() because such a call would block
+  // until all bytes are drained zs->pipe.socket. Closing the channel (via the
+  // destructor) is semantically equivalent and doesn't block.
+  //
+  // These semantics are not quite in accordance with POSIX, but this is the
+  // best we can do given the double buffering inherent in the use of a zircon
+  // socket as the transport. In the case of us backing a blocking socket, we
+  // might want to block here, but the knowledge of blocking-or-not is not
+  // available in this context, and the consequence of this deviation is judged
+  // (by me - tamird@) to be minor.
   zs->~zxio_socket_t();
-  return result.ok() ? result->s : result.status();
+  return ZX_OK;
 }
 
 static zx_status_t zxio_socket_release(zxio_t* io, zx_handle_t* out_handle) {
