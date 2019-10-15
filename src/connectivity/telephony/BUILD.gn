@@ -17,10 +17,10 @@ group("telephony") {
 group("tests") {
   testonly = true
   public_deps = [
-    "//src/connectivity/telephony/drivers/qmi-fake-transport",
     "//src/connectivity/telephony/lib:tel_devmgr",
     "//src/connectivity/telephony/telephony:tests",
     "//src/connectivity/telephony/tests:telephony-tests",
+    "//src/connectivity/telephony/tests/fake-drivers",
     "//src/lib/isolated_devmgr",
   ]
 }

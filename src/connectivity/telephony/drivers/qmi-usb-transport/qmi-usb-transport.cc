@@ -5,28 +5,15 @@
 #include "qmi-usb-transport.h"
 
 #include <assert.h>
-#include <fuchsia/hardware/telephony/transport/llcpp/fidl.h>
-#include <fuchsia/telephony/snoop/c/fidl.h>
-#include <lib/sync/completion.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zircon/hw/usb/cdc.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/usb.h>
 #include <ddktl/fidl.h>
-#include <usb/usb.h>
 #define _ALL_SOURCE
-#include <threads.h>
-
-#include <usb/usb-request.h>
 
 // The maximum amount of memory we are willing to allocate to transaction
 // buffers
@@ -55,57 +42,6 @@ typedef struct txn_info {
 static void complete_txn(txn_info_t* txn, zx_status_t status) {
   txn->completion_cb(txn->cookie, status, &txn->netbuf);
 }
-
-// qmi usb transport device
-typedef struct qmi_ctx {
-  // Interrupt handling
-  usb_request_t* int_txn_buf;
-  sync_completion_t completion;
-  thrd_t int_thread;
-
-  uint16_t max_packet_size;
-
-  // Port to watch for QMI messages on
-  zx_handle_t channel_port;
-  zx_handle_t channel;
-
-  // Port for snoop QMI messages
-  zx_handle_t snoop_channel_port;
-  zx_handle_t snoop_channel;
-
-  usb_protocol_t usb;
-  zx_device_t* usb_device;
-  zx_device_t* zxdev;
-  size_t parent_req_size;
-
-  // Ethernet
-  zx_device_t* eth_zxdev;
-
-  mtx_t ethernet_mutex;
-  ethernet_ifc_protocol_t ethernet_ifc;
-
-  // Device attributes
-  uint8_t mac_addr[ETH_MAC_SIZE];
-  uint16_t mtu;
-
-  // Connection attributes
-  bool online;
-  uint32_t ds_bps;
-  uint32_t us_bps;
-
-  // Send context
-  mtx_t tx_mutex;
-  uint8_t tx_endpoint_addr;
-  uint16_t endpoint_size;
-  list_node_t tx_txn_bufs;       // list of usb_request_t
-  list_node_t tx_pending_infos;  // list of txn_info_t
-  bool unbound;                  // set to true when device is going away. Guarded by tx_mutex
-  uint64_t tx_endpoint_delay;    // wait time between 2 transmit requests
-
-  // Receive context
-  uint8_t rx_endpoint_addr;
-  uint64_t rx_endpoint_delay;  // wait time between 2 recv requests
-} qmi_ctx_t;
 
 static void usb_write_complete(void* ctx, usb_request_t* request);
 
@@ -290,45 +226,44 @@ static zx_status_t set_snoop_channel(qmi_ctx_t* qmi_ctx, zx_handle_t channel) {
   return result;
 }
 
-class QmiServer final : public telephony_transport::Qmi::Interface {
- public:
-  QmiServer(qmi_ctx_t* ctx) : qmi_ctx(ctx) {}
-  void SetChannel(::zx::channel transport, SetChannelCompleter::Sync completer) override {
-    zx_status_t status = set_channel(qmi_ctx, transport.get());
-    if (status == ZX_OK) {
-      completer.Reply(telephony_transport::Qmi_SetChannel_Result::WithResponse({
-          .__reserved = 0,
-      }));
-    } else {
-      completer.Reply(
-          telephony_transport::Qmi_SetChannel_Result::WithErr(static_cast<int32_t>(status)));
+void Device::SetChannel(::zx::channel transport, SetChannelCompleter::Sync completer) {
+  zx_status_t set_channel_res = set_channel(qmi_ctx, transport.release());
+  if (set_channel_res == ZX_OK) {
+    completer.Reply(telephony_transport::Qmi_SetChannel_Result::WithResponse({
+        .__reserved = 0,
+    }));
+    zx_status_t status = set_async_wait(qmi_ctx);
+    if (status != ZX_OK) {
+      zx_handle_close(qmi_ctx->channel);
     }
+  } else {
+    completer.Reply(
+        telephony_transport::Qmi_SetChannel_Result::WithErr(static_cast<int32_t>(set_channel_res)));
   }
-  void SetNetwork(bool connected, SetNetworkCompleter::Sync completer) override {
-    qmi_update_online_status(qmi_ctx, connected);
-    completer.Reply();
-  }
-  void SetSnoopChannel(::zx::channel interface, SetSnoopChannelCompleter::Sync completer) override {
-    zx_status_t status = set_snoop_channel(qmi_ctx, interface.get());
-    if (status == ZX_OK) {
-      completer.Reply(telephony_transport::Qmi_SetSnoopChannel_Result::WithResponse({
-          .__reserved = 0,
-      }));
-    } else {
-      completer.Reply(
-          telephony_transport::Qmi_SetSnoopChannel_Result::WithErr(static_cast<int32_t>(status)));
-    }
-  }
+}
 
- private:
-  qmi_ctx_t* qmi_ctx;
-};
+void Device::SetNetwork(bool connected, SetNetworkCompleter::Sync completer) {
+  qmi_update_online_status(qmi_ctx, connected);
+  completer.Reply();
+}
+
+void Device::SetSnoopChannel(::zx::channel interface, SetSnoopChannelCompleter::Sync completer) {
+  zx_status_t set_snoop_res = set_snoop_channel(qmi_ctx, interface.release());
+  if (set_snoop_res == ZX_OK) {
+    completer.Reply(telephony_transport::Qmi_SetSnoopChannel_Result::WithResponse({
+        .__reserved = 0,
+    }));
+  } else {
+    completer.Reply(telephony_transport::Qmi_SetSnoopChannel_Result::WithErr(
+        static_cast<int32_t>(set_snoop_res)));
+  }
+}
 
 static zx_status_t qmi_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-  QmiServer server(static_cast<qmi_ctx_t*>(ctx));
+  Device qmi_device(static_cast<qmi_ctx_t*>(ctx));
   DdkTransaction ddkTxn(txn);
-  zx_status_t status = telephony_transport::Qmi::Dispatch(&server, msg, &ddkTxn);
-  return status;
+  bool res = telephony_transport::Qmi::Dispatch(&qmi_device, msg, &ddkTxn);
+  return res ? ddkTxn.Status() : ZX_ERR_PEER_CLOSED;
 }
 
 static void qmi_release(void* ctx) {
@@ -478,13 +413,11 @@ static void qmi_handle_interrupt(qmi_ctx_t* qmi_ctx, usb_request_t* request) {
       }
       if (qmi_ctx->snoop_channel) {
         telephony_snoop::QmiMessage qmi_msg;
-        if (sizeof(buffer) > sizeof(qmi_msg.opaque_bytes)) {
-          qmi_msg.is_partial_copy = true;
-        } else {
-          qmi_msg.is_partial_copy = false;
-        }
+        uint32_t current_length = std::min(sizeof(buffer), sizeof(qmi_msg.opaque_bytes));
+        qmi_msg.is_partial_copy = true;
         qmi_msg.direction = telephony_snoop::Direction::FROM_MODEM;
         qmi_msg.timestamp = zx_clock_get_monotonic();
+        memcpy(qmi_msg.opaque_bytes.data_, buffer, current_length);
         telephony_snoop::Message snoop_msg =
             telephony_snoop::Message::WithQmiMessage(std::move(qmi_msg));
         telephony_snoop::Publisher::Call::SendMessage(zx::unowned_channel(qmi_ctx->snoop_channel),
@@ -498,7 +431,7 @@ static void qmi_handle_interrupt(qmi_ctx_t* qmi_ctx, usb_request_t* request) {
 }
 
 static void qmi_interrupt_cb(void* ctx, usb_request_t* req) {
-  qmi_ctx_t* qmi_ctx = (qmi_ctx_t*)ctx;
+  qmi_ctx_t* qmi_ctx = static_cast<qmi_ctx_t*>(ctx);
 
   zx_port_packet_t packet = {};
   packet.key = INTERRUPT_MSG;
@@ -553,13 +486,11 @@ static int qmi_transport_thread(void* cookie) {
         }
         if (ctx->snoop_channel) {
           telephony_snoop::QmiMessage qmi_msg;
-          if (sizeof(buffer) > sizeof(qmi_msg.opaque_bytes)) {
-            qmi_msg.is_partial_copy = true;
-          } else {
-            qmi_msg.is_partial_copy = false;
-          }
+          uint32_t current_length = std::min(sizeof(buffer), sizeof(qmi_msg.opaque_bytes));
+          qmi_msg.is_partial_copy = true;
           qmi_msg.direction = telephony_snoop::Direction::TO_MODEM;
           qmi_msg.timestamp = zx_clock_get_monotonic();
+          memcpy(qmi_msg.opaque_bytes.data_, buffer, current_length);
           telephony_snoop::Message snoop_msg =
               telephony_snoop::Message::WithQmiMessage(std::move(qmi_msg));
           telephony_snoop::Publisher::Call::SendMessage(zx::unowned_channel(ctx->snoop_channel),
@@ -717,6 +648,18 @@ static void usb_write_complete(void* context, usb_request_t* request) {
   // set to ZX_ERR_IO_NOT_PRESENT. There's not much we can do except ignore it.
 }
 
+static void qmi_bind_failed_no_err(qmi_ctx_t* qmi_ctx, usb_request_t* int_buf) {
+  if (int_buf) {
+    usb_request_release(int_buf);
+  }
+  free(qmi_ctx);
+}
+
+static void qmi_bind_failed_err(zx_status_t status, qmi_ctx_t* qmi_ctx, usb_request_t* int_buf) {
+  zxlogf(ERROR, "qmi-usb-transport: bind failed: %s\n", zx_status_get_string(status));
+  qmi_bind_failed_no_err(qmi_ctx, int_buf);
+}
+
 static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
   zx_status_t status;
   qmi_ctx_t* qmi_ctx;
@@ -725,25 +668,13 @@ static zx_status_t qmi_bind(void* ctx, zx_device_t* device) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  goto body;
-
-fail:
-  zxlogf(ERROR, "qmi-usb-transport: bind failed: %s\n", zx_status_get_string(status));
-failnoerr:
-  if (int_buf) {
-    usb_request_release(int_buf);
-  }
-  free(qmi_ctx);
-  return status;
-
-body:
-
   // Set up USB stuff
   usb_protocol_t usb;
   status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
   if (status != ZX_OK) {
     zxlogf(ERROR, "qmi-usb-transport: get protocol failed: %s\n", zx_status_get_string(status));
-    goto fail;
+    qmi_bind_failed_err(status, qmi_ctx, int_buf);
+    return status;
   }
 
   // Initialize context
@@ -762,7 +693,8 @@ body:
   usb_desc_iter_t iter;
   zx_status_t result = usb_desc_iter_init(&usb, &iter);
   if (result < 0) {
-    goto fail;
+    qmi_bind_failed_err(status, qmi_ctx, int_buf);
+    return status;
   }
 
   // QMI needs to bind to interface QMI_INTERFACE_NUM on current hardware.
@@ -772,7 +704,8 @@ body:
   if (!intf || intf->bInterfaceNumber != QMI_INTERFACE_NUM) {
     usb_desc_iter_release(&iter);
     status = ZX_ERR_NOT_SUPPORTED;
-    goto failnoerr;  // this is not a big deal, just don't bind
+    qmi_bind_failed_no_err(qmi_ctx, int_buf);
+    return status;
   }
 
   if (intf->bNumEndpoints != 3) {
@@ -781,7 +714,8 @@ body:
            "endpoints\n");
     usb_desc_iter_release(&iter);
     status = ZX_ERR_NOT_SUPPORTED;
-    goto fail;
+    qmi_bind_failed_err(status, qmi_ctx, int_buf);
+    return status;
   }
 
   uint8_t bulk_in_addr = 0;
@@ -814,12 +748,14 @@ body:
 
   if (bulk_in_addr == 0 || bulk_out_addr == 0 || intr_addr == 0) {
     zxlogf(ERROR, "qmi-usb-transport: failed to find one of the usb endpoints");
-    goto fail;
+    qmi_bind_failed_err(status, qmi_ctx, int_buf);
+    return status;
   }
 
   if (intr_max_packet < 1 || bulk_max_packet < 1) {
     zxlogf(ERROR, "qmi-usb-transport: failed to find reasonable max packet sizes");
-    goto fail;
+    qmi_bind_failed_err(status, qmi_ctx, int_buf);
+    return status;
   }
 
   qmi_ctx->rx_endpoint_delay = ETHERNET_INITIAL_RECV_DELAY;
@@ -834,7 +770,8 @@ body:
   if (status != ZX_OK) {
     zxlogf(ERROR, "qmi-usb-transport: failed to allocate for usb request: %s\n",
            zx_status_get_string(status));
-    goto fail;
+    qmi_bind_failed_err(status, qmi_ctx, int_buf);
+    return status;
   }
   qmi_ctx->int_txn_buf = int_buf;
 
@@ -842,7 +779,8 @@ body:
   status = zx_port_create(0, &qmi_ctx->channel_port);
   if (status != ZX_OK) {
     zxlogf(ERROR, "qmi-usb-transport: failed to create a port: %s\n", zx_status_get_string(status));
-    goto fail;
+    qmi_bind_failed_err(status, qmi_ctx, int_buf);
+    return status;
   }
   qmi_ctx->tx_endpoint_addr = bulk_out_addr;
   qmi_ctx->rx_endpoint_addr = bulk_in_addr;
@@ -858,7 +796,8 @@ body:
         usb_request_alloc(&tx_buf, tx_buf_sz, qmi_ctx->tx_endpoint_addr, req_size);
     if (alloc_result != ZX_OK) {
       result = alloc_result;
-      goto fail;
+      qmi_bind_failed_err(status, qmi_ctx, int_buf);
+      return status;
     }
 
     // As per the CDC-ECM spec, we need to send a zero-length packet to signify
@@ -882,7 +821,8 @@ body:
         usb_request_alloc(&rx_buf, rx_buf_sz, qmi_ctx->rx_endpoint_addr, req_size);
     if (alloc_result != ZX_OK) {
       result = alloc_result;
-      goto fail;
+      qmi_bind_failed_err(status, qmi_ctx, int_buf);
+      return status;
     }
 
     usb_request_complete_t complete = {
@@ -902,11 +842,11 @@ body:
   qmi_ctx->mac_addr[5] = 0x62;
 
   // Kick off the handler thread
-  int thread_result = thrd_create_with_name(&qmi_ctx->int_thread, qmi_transport_thread, qmi_ctx,
-                                            "qmi_transport_thread");
+  int thread_result = thrd_create(&qmi_ctx->int_thread, qmi_transport_thread, qmi_ctx);
   if (thread_result != thrd_success) {
     zxlogf(ERROR, "qmi-usb-transport: failed to create transport thread (%d)\n", thread_result);
-    goto fail;
+    qmi_bind_failed_err(status, qmi_ctx, int_buf);
+    return status;
   }
 
   device_add_args_t eth_args = {
@@ -918,10 +858,12 @@ body:
       .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
       .proto_ops = &ethernet_impl_ops,
   };
+
   result = device_add(device, &eth_args, &qmi_ctx->eth_zxdev);
   if (result < 0) {
     zxlogf(ERROR, "qmi-usb-transport: failed to add ethernet device: %d\n", (int)result);
-    goto fail;
+    qmi_bind_failed_err(status, qmi_ctx, int_buf);
+    return status;
   }
 
   // Add the devices
@@ -934,7 +876,8 @@ body:
   };
 
   if ((status = device_add(device, &args, &qmi_ctx->zxdev)) < 0) {
-    goto fail;
+    qmi_bind_failed_err(status, qmi_ctx, int_buf);
+    return status;
   }
 
   return ZX_OK;
