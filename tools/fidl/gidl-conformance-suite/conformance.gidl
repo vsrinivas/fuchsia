@@ -432,7 +432,7 @@ decode_failure("StrictXUnion Field Unknown") {
 	],
 	err = STRICT_XUNION_UNKNOWN_FIELD,
 	// TODO(8047) Enable this. Currently only go supports this error.
-	bindings_allowlist = [go,],
+	bindings_allowlist = [dart,go,],
 }
 
 success("AddEthernetDeviceRequest") {
