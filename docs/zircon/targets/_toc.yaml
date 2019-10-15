@@ -12,8 +12,6 @@ toc:
   path: /docs/zircon/targets/imx8mevk.md
 - title: "Zircon on Khadas VIM2 Board"
   path: /docs/zircon/targets/khadas-vim.md
-- title: "Intel NUC (Kaby Lake, Skylake and Broadwell)"
-  path: /docs/zircon/targets/nuc.md
 - title: "Toulouse"
   path: /docs/zircon/targets/toulouse.md
 - title: "Setup with a USB Flash Drive"

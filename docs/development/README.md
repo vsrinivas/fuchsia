@@ -103,7 +103,6 @@ This section covers Fuchsia-wide conventions and best practices.
 
 
 [acer_12]: /docs/zircon/targets/acer12.md "Acer 12"
-[intel_nuc]: /docs/zircon/targets/nuc.md "Intel NUC"
 [pixelbook]: hardware/pixelbook.md "Pixelbook"
 [toulouse]: /docs/zircon/targets/toulouse.md "Toulouse"
 [khadas-vim]: /docs/zircon/targets/khadas-vim.md "Khadas VIM2"

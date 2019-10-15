@@ -2,13 +2,8 @@
 
 This document describes how to get a NUC up and running with Fuchsia.
 
-[1. Get Parts](#get-parts)<br/>
-[2. Prepare the NUC](#prepare-the-nuc)<br/>
-[3. Update NUC BIOS to allow netbooting](#enable-efi-booting)<br/>
-[4. Install Fuchsia](#build-fuchsia)<br/>
-[5. Pave Fuchsia onto the device](#pave-fuchsia)
+[TOC]
 
------
 
 ## 1. Get Parts {#get-parts}
 
@@ -29,7 +24,7 @@ This table shows what I bought from Amazon.
 
 | Item | Link | Notes: |
 | ---- | ---- | ------ |
-| NUC | [B01MSZLO9P](https://www.amazon.com/gp/product/B01MSZLO9P) | Get a NUC7 or NUC6 for gpu support. |
+| NUC | [B01MSZLO9P](https://www.amazon.com/gp/product/B01MSZLO9P) | Get a NUC7 (Kaby Lake) or NUC6(Skylake) for gpu support. |
 | RAM | [B01BIWKP58](https://www.amazon.com/gp/product/B01BIWKP58) | Works fine. |
 | SSD (Only need one, | [B01IAGSDJ0](https://www.amazon.com/gp/product/B01IAGSDJ0) | Works fine. |
 | I bought some of each) | [B00TGIVZTW](https://www.amazon.com/gp/product/B00TGIVZTW) | Works fine. |
@@ -67,33 +62,47 @@ NUCs don’t come with RAM or an SSD so you need to install them.
 
 1. Reboot NUC.
 1. Press F2 while booting to enter BIOS.
-1. In the Boot Order window on the left click the Legacy tab.
+1. In the Boot Order window on the left, click the Legacy tab.
 1. Uncheck ‘Legacy Boot’.
 <br/><center><img width="50%" src="/docs/images/developing_on_nuc/bios.jpg"/></center><br/><br/>
-1. Press the X in the top right to leave the BIOS.  Ensure you save before exiting.
+1. Click the `Advanced` button and confirm the following boot configuration:
 
-In addition to enabling EFI, you may need to disable secure boot.
+    1.1. Select the `Boot Priority` tab.
+        1.1.1. Check `UEFI Boot`.
+        1.1.2. Set `USB` the first entry in the boot order.
+
+    1.2. Select the `Boot configuration` tab.
+
+        1.2.1. Check `Boot Network Devices Last`.
+        1.2.2. Check `Unlimited Network Boot Attepts`.
+        1.2.3. Check `USB boot devices`.
+        1.2.4. Set `Network boot` to `UEFI PXE & iSCSI`.
+
+2. Select the `Secure Boot` tab and uncheck `Secure Boot`.
+3. Press F10 to save the changes and exit BIOS.
+
+Note: Network booting only works with the NUC's *built-in* ethernet, netbooting via
+USB-ethernet dongle is unsupported.
+
+If you want to remotely manage the device, see [Remote Management for NUC](nuc-remote-management.md).
 
 -----
 
 ## 4. Build Fuchsia {#build-fuchsia}
 
-1. Follow the [getting started guidelines](/docs/getting_started.md)
+1. Follow the [getting started guidelines](/docs/getting_started.md). Make sure to
+use the board configuration `x86` when running `fx set`. For example `fx set core.x86`.
 
 -----
 
 ## 5. Pave Fuchsia {#pave-fuchsia}
 
-1. Plug in your USB key to your build workstation
-1. Identify the path to your USB key by running `fx list-usb-disks`
-1. Create a Zedboot USB by running `fx mkzedboot /path/to/usb/disk`
-1. Plug the Zedboot USB key into the NUC and boot it
+1. Plug in your USB key to your build workstation.
+1. Identify the path to your USB key by running `fx list-usb-disks`.
+1. Create a Zedboot USB by running `fx mkzedboot /path/to/usb/disk`.
+1. Plug the Zedboot USB key into the NUC and boot it.
+1. When Zedboot is started, press Alt+F3 to switch to a command line prompt.
 1. Run `lsblk` on the device. Take note of the HDD or SSD's device path.
     1. An example path looks like `/dev/sys/pci/00:17.0/ahci/sata0/block`
-1. Run `install-disk-image init-partition-tables <BLOCK_DEVICE_PATH>` on the device.
-1. Run `fx pave` on your workstation.
-
------
-
-
-All done!
+1. Run `install-disk-image init-partition-tables --block-device <BLOCK_DEVICE_PATH>` on the device.
+1. Run `fx update` on your workstation.

@@ -60,7 +60,7 @@ through the steps to set the boot device, don't continue with any instructions o
 creating install media.
 
 * [Acer Switch Alpha 12](/docs/zircon/targets/acer12.md)
-* [Intel NUC](/docs/zircon/targets/nuc.md)
+* [Intel NUC](/docs/development/hardware/developing_on_nuc.md)
 * [Google Pixelbook](/docs/development/hardware/pixelbook.md)
 
 Paving should occur automatically after the device is booted into Zedboot from the

@@ -6,3 +6,5 @@ toc:
   path: /docs/development/hardware/developing_on_nuc.md
 - title: "Preparing to install Fuchsia on Pixelbook"
   path: /docs/development/hardware/pixelbook.md
+- title: "Configuring remote management for NUC"
+  path: /docs/development/hardware/nuc-remote-management.md

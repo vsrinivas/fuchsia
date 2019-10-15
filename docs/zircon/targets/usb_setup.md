@@ -44,5 +44,5 @@ the default boot behavior with the `bootloader.default` flag in `cmdline`.
 
 See also:
 * [Setting up the Acer device](acer12.md)
-* [Setting up the NUC device](nuc.md)
+* [Setting up the NUC device](/docs/development/hardware/developing_on_nuc.md)
 * [Command line flags](/docs/reference/kernel/kernel_cmdline.md)
