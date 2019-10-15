@@ -134,9 +134,9 @@ void AmlPdmDevice::InitRegs() {
 */
 void AmlPdmDevice::ConfigFilters() {
   pdm_mmio_.Write32((1 << 31) |         // Enable
-                        (0x11 << 24) |  // Final gain shift parameter)
+                        (0x0e << 24) |  // Final gain shift parameter)
                         (0x80 << 16) |  // Final gain multiplier
-                        (0x08 << 4) |   // hcic downsample rate=8
+                        (0x04 << 4) |   // hcic downsample rate=4
                         (0x07 << 0),    // hcic stage number (must be between 3-9)
                     PDM_HCIC_CTRL1);
   pdm_mmio_.Write32((0x01 << 31) |          // Enable filter
