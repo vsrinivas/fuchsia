@@ -17,11 +17,12 @@ use {
     futures::future::{join_all, BoxFuture},
     futures::{future, FutureExt, TryFutureExt, TryStreamExt},
     io_util,
+    regex::{Regex, RegexSet},
     std::path::{Path, PathBuf},
     std::sync::{Arc, Mutex},
 };
 
-type InspectDataTrie = trie::Trie<char, (PathBuf, DirectoryProxy, Vec<Arc<Selector>>)>;
+type InspectDataTrie = trie::Trie<char, (PathBuf, DirectoryProxy, RegexSet, Vec<Regex>)>;
 
 /// InspectDataCollector holds the information needed to retrieve the Inspect
 /// VMOs associated with a particular component
@@ -165,7 +166,7 @@ impl InspectDataRepository {
         absolute_moniker: Vec<String>,
         component_hierachy_path: PathBuf,
         directory_proxy: DirectoryProxy,
-    ) {
+    ) -> Result<(), Error> {
         let matched_selectors = selector_evaluator::match_component_moniker_against_selectors(
             &absolute_moniker,
             &self.static_selectors,
@@ -173,13 +174,44 @@ impl InspectDataRepository {
         match matched_selectors {
             Ok(selectors) => {
                 if !selectors.is_empty() {
+                    let node_path_regexes = selectors
+                        .iter()
+                        .map(|selector| match &selector.tree_selector.node_path {
+                            Some(node_path) => selectors::convert_path_selector_to_regex(node_path),
+                            None => unreachable!("Selectors are required to specify a node path."),
+                        })
+                        .collect::<Result<Vec<Regex>, Error>>()?;
+
+                    let node_path_regex_set = RegexSet::new(
+                        &node_path_regexes
+                            .iter()
+                            .map(|selector_regex| selector_regex.as_str())
+                            .collect::<Vec<&str>>(),
+                    )?;
+
+                    let property_regexes = selectors
+                        .iter()
+                        .map(|selector| match &selector.tree_selector.target_properties {
+                            Some(target_property) => {
+                                selectors::convert_property_selector_to_regex(target_property)
+                            }
+                            None => unreachable!("Selectors are required to specify a node path."),
+                        })
+                        .collect::<Result<Vec<Regex>, Error>>()?;
+
                     self.data_directories.insert(
                         component_name.chars().collect(),
-                        (component_hierachy_path, directory_proxy, selectors),
+                        (
+                            component_hierachy_path,
+                            directory_proxy,
+                            node_path_regex_set,
+                            property_regexes,
+                        ),
                     );
                 }
+                Ok(())
             }
-            Err(_) => eprintln!("Failed to match absolute moniker against static selectors."),
+            Err(e) => Err(format_err!("Absoute moniker matching encountered error: {}.", e)),
         }
     }
 
@@ -189,7 +221,7 @@ impl InspectDataRepository {
         return self
             .data_directories
             .iter()
-            .filter_map(|(_, (_, y, _))| {
+            .filter_map(|(_, (_, y, _, _))| {
                 match io_util::clone_directory(&y, CLONE_FLAG_SAME_RIGHTS) {
                     Ok(directory) => Some(directory),
                     Err(_) => None,
@@ -506,7 +538,9 @@ mod tests {
                 // selector, so any path would match.
                 let absolute_moniker = vec!["a".to_string(), "b".to_string()];
 
-                inspect_repo.add("root.inspect".to_string(), absolute_moniker, path, out_dir_proxy);
+                inspect_repo
+                    .add("root.inspect".to_string(), absolute_moniker, path, out_dir_proxy)
+                    .unwrap();
 
                 let reader_server = ReaderServer::new(Arc::new(Mutex::new(inspect_repo)));
 

@@ -336,8 +336,7 @@ fn populate_inspect_repo(
         inspect_reader_data.absolute_moniker,
         inspect_reader_data.component_hierarchy_path,
         inspect_directory_proxy,
-    );
-    Ok(())
+    )
 }
 
 async fn process_event(

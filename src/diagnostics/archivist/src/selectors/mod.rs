@@ -238,12 +238,14 @@ pub fn parse_selectors(selector_path: impl Into<PathBuf>) -> Result<Vec<Selector
     Ok(selector_vec)
 }
 
-pub fn convert_selector_to_regex(selector: Vec<PathSelectionNode>) -> Result<Regex, Error> {
+pub fn convert_path_selector_to_regex(selector: &Vec<PathSelectionNode>) -> Result<Regex, Error> {
     let mut regex_string = "^".to_string();
     for path_selector in selector {
         match path_selector {
             PathSelectionNode::StringPattern(string_pattern) => {
                 // TODO(4601): Support regex conversion of wildcarded string literals.
+                // TODO(4601): Support converting escaped char patterns into a form
+                //             matched by regex.
                 regex_string.push_str(&string_pattern)
             }
             PathSelectionNode::PatternMatcher(enum_pattern) => match enum_pattern {
@@ -254,6 +256,26 @@ pub fn convert_selector_to_regex(selector: Vec<PathSelectionNode>) -> Result<Reg
         }
         regex_string.push_str("/");
     }
+    regex_string.push_str("$");
+
+    Ok(Regex::new(&regex_string)?)
+}
+
+pub fn convert_property_selector_to_regex(selector: &PropertySelector) -> Result<Regex, Error> {
+    let mut regex_string = "^".to_string();
+
+    match selector {
+        PropertySelector::StringPattern(string_pattern) => {
+            // TODO(4601): Support regex conversion of wildcarded string literals.
+            regex_string.push_str(&string_pattern);
+        }
+        // NOTE: With property selectors, the wildcard is equivalent to a glob, since it
+        //       unconditionally matches all entries, and there's no concept of recursion on
+        //       property selection.
+        PropertySelector::Wildcard(_) => regex_string.push_str(GLOB_REGEX_EQUIVALENT),
+        _ => unreachable!("no expected alternative variants of the property selection node."),
+    };
+
     regex_string.push_str("$");
 
     Ok(Regex::new(&regex_string)?)
@@ -498,7 +520,7 @@ mod tests {
     }
 
     #[test]
-    fn canonical_regex_transpilation_test() {
+    fn canonical_path_regex_transpilation_test() {
         // Note: We provide the full selector syntax but this test is only transpiling
         // the node-path of the selector, and validating against that.
         let test_cases = vec![
@@ -511,13 +533,13 @@ mod tests {
             let parsed_selector = parse_selector(selector).unwrap();
             let tree_selector = parsed_selector.tree_selector;
             let node_path = tree_selector.node_path.unwrap();
-            let selector_regex = convert_selector_to_regex(node_path).unwrap();
+            let selector_regex = convert_path_selector_to_regex(&node_path).unwrap();
             assert!(selector_regex.is_match(string_to_match));
         }
     }
 
     #[test]
-    fn failing_regex_transpilation_test() {
+    fn failing_path_regex_transpilation_test() {
         // Note: We provide the full selector syntax but this test is only transpiling
         // the node-path of the tree selector, and valdating against that.
         let test_cases = vec![
@@ -532,7 +554,47 @@ mod tests {
             let parsed_selector = parse_selector(selector).unwrap();
             let tree_selector = parsed_selector.tree_selector;
             let node_path = tree_selector.node_path.unwrap();
-            let selector_regex = convert_selector_to_regex(node_path).unwrap();
+            let selector_regex = convert_path_selector_to_regex(&node_path).unwrap();
+            assert!(!selector_regex.is_match(string_to_match));
+        }
+    }
+
+    #[test]
+    fn canonical_property_regex_transpilation_test() {
+        // Note: We provide the full selector syntax but this test is only transpiling
+        // the property of the selector, and validating against that.
+        let test_cases =
+            vec![(r#"**:a:*"#, r#"a"#), (r#"**:a:bob"#, r#"bob"#), (r#"**:a:\\\*"#, r#"\*"#)];
+        for (selector, string_to_match) in test_cases {
+            let parsed_selector = parse_selector(selector).unwrap();
+            let tree_selector = parsed_selector.tree_selector;
+            let property_selector = tree_selector.target_properties.unwrap();
+            let selector_regex = convert_property_selector_to_regex(&property_selector).unwrap();
+            eprintln!("{}", selector_regex.as_str());
+            assert!(selector_regex.is_match(string_to_match));
+        }
+    }
+
+    #[test]
+    fn failing_property_regex_transpilation_test() {
+        // Note: We provide the full selector syntax but this test is only transpiling
+        // the node-path of the tree selector, and valdating against that.
+        let test_cases = vec![
+            // TODO(4601): This test case should pass when we support wildcarded string literals.
+            (r#"**:a:b*"#, r#"bob"#),
+            // TODO(4601): This test case should pass when we support translating string literals
+            //             with escapes. Right now, the matching selector must be
+            //             r#"**:a:\\\*"#
+            (r#"**:a:\*"#, r#"\*"#),
+            (r#"**:a:c"#, r#"d"#),
+            (r#"**:a:bob"#, r#"thebob"#),
+            (r#"**:a:c"#, r#"cdog"#),
+        ];
+        for (selector, string_to_match) in test_cases {
+            let parsed_selector = parse_selector(selector).unwrap();
+            let tree_selector = parsed_selector.tree_selector;
+            let target_properties = tree_selector.target_properties.unwrap();
+            let selector_regex = convert_property_selector_to_regex(&target_properties).unwrap();
             assert!(!selector_regex.is_match(string_to_match));
         }
     }
