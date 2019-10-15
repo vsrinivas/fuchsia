@@ -38,12 +38,15 @@ impl TryFrom<&FamilyV1> for v2::Family {
             .map(|(asset_path, font_group)| group_fonts_into_assets(asset_path, font_group))
             .collect();
 
+        // v1 manifests only allow plain aliases, without any typeface property overrides.
+        let aliases = match &old.aliases {
+            None => vec![],
+            Some(aliases) => vec![v2::FontFamilyAliasSet::without_overrides(aliases)?],
+        };
+
         Ok(v2::Family {
             name: old.family.clone(),
-            aliases: old.aliases.as_ref().map_or_else(
-                || vec![],
-                |aliases| aliases.iter().map(|alias| alias.clone().into()).collect(),
-            ),
+            aliases,
             generic_family: old.generic_family.clone(),
             fallback: old.fallback,
             assets: assets?,
@@ -169,10 +172,9 @@ mod tests {
             families: vec![
                 v2::Family {
                     name: "FamilyA".to_string(),
-                    aliases: vec![
-                        v2::FontFamilyAlias::new("Family A"),
-                        v2::FontFamilyAlias::new("A Family"),
-                    ],
+                    aliases: vec![v2::FontFamilyAliasSet::without_overrides(vec![
+                        "Family A", "A Family",
+                    ])?],
                     generic_family: Some(GenericFontFamily::SansSerif),
                     fallback: true,
                     assets: vec![
@@ -216,10 +218,9 @@ mod tests {
                 },
                 v2::Family {
                     name: "FamilyB".to_string(),
-                    aliases: vec![
-                        v2::FontFamilyAlias::new("Family B"),
-                        v2::FontFamilyAlias::new("B Family"),
-                    ],
+                    aliases: vec![v2::FontFamilyAliasSet::without_overrides(vec![
+                        "Family B", "B Family",
+                    ])?],
                     generic_family: None,
                     fallback: false,
                     assets: vec![v2::Asset {

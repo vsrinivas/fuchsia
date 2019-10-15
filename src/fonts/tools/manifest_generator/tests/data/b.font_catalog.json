@@ -4,9 +4,13 @@
     {
       "name": "Beta Sans",
       "aliases": [
-        "BetaSans",
-        "Beta",
-        "β Sans"
+        {
+          "names": [
+            "BetaSans",
+            "Beta",
+            "β Sans"
+          ]
+        }
       ],
       "generic_family": "sans-serif",
       "fallback": true,
@@ -37,6 +41,50 @@
                 "ar"
               ],
               "width": "condensed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gamma CJK",
+      "aliases": [
+        {
+          "names": [
+            "Gamma CJK JP",
+            "Gamma JP"
+          ],
+          "languages": [
+            "ja"
+          ]
+        },
+        {
+          "names": [
+            "Gamma CJK KR",
+            "Gamma KR"
+          ],
+          "languages": [
+            "ko"
+          ]
+        }
+      ],
+      "generic_family": "sans-serif",
+      "fallback": true,
+      "assets": [
+        {
+          "file_name": "GammaCJK-Regular.ttc",
+          "typefaces": [
+            {
+              "index": 0,
+              "languages": [
+                "ja"
+              ]
+            },
+            {
+              "index": 1,
+              "languages": [
+                "ko"
+              ]
             }
           ]
         }

@@ -10,6 +10,11 @@
       "file_name": "BetaSans-Condensed.ttf",
       "safe_name": "betasans-condensed-ttf",
       "path_prefix": "beta"
+    },
+    {
+      "file_name": "GammaCJK-Regular.ttc",
+      "safe_name": "gammacjk-regular-ttc",
+      "path_prefix": "beta"
     }
   ]
 }

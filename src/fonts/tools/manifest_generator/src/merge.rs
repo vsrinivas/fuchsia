@@ -36,6 +36,13 @@ pub(crate) trait TryMerge:
     /// Merges a group of items into one. At this point, it has already been confirmed that all the
     /// items in the group have matching fields, as defined by [`has_matching_fields`].
     fn try_merge_group(group: Vec<Self>) -> Result<Self, Error>;
+
+    /// Perform validation on the entire set of merged groups.
+    ///
+    /// The default implementation is a no-op.
+    fn post_validate(groups: Vec<Self>) -> Result<Vec<Self>, MergeError<Self>> {
+        Ok(groups)
+    }
 }
 
 /// Try to merge multiple items into a single one. If there are any inconsistencies in the
@@ -88,7 +95,7 @@ where
 
         let mut merged = merged?;
         merged.sort_by_key(|item| item.key());
-        Ok(merged)
+        TryMerge::post_validate(merged).map_err(|e| e.into())
     }
 }
 
@@ -108,4 +115,6 @@ where
 {
     #[fail(display = "Conflict when attempting to merge {:?}", _0)]
     Conflict(Vec<V>),
+    #[fail(display = "Post validation failed with [{}] on list {:?}", _0, _1)]
+    PostInvalid(String, Vec<V>),
 }

@@ -6,21 +6,23 @@
 
 use {
     crate::{
-        merge::{TryMerge, TryMergeGroups},
+        merge::{MergeError, TryMerge, TryMergeGroups},
         serde_ext::{self, LoadError},
     },
     failure::Error,
     fidl_fuchsia_fonts::GenericFontFamily,
+    itertools::Itertools,
     manifest::{
         serde_ext::*,
-        v2::{FontFamilyAlias, Style},
+        v2::{FontFamilyAliasSet, Style},
     },
     rayon::prelude::*,
     serde_derive::Deserialize,
     std::{
-        collections::BTreeSet,
+        collections::HashSet,
         path::{Path, PathBuf},
     },
+    unicase::UniCase,
 };
 
 /// Possible versions of [FontCatalog].
@@ -75,7 +77,7 @@ impl FontCatalog {
 pub(crate) struct Family {
     pub name: String,
     #[serde(default)]
-    pub aliases: BTreeSet<FontFamilyAlias>,
+    pub aliases: Vec<FontFamilyAliasSet>,
     #[serde(with = "OptGenericFontFamily", default)] // Default to `None`
     pub generic_family: Option<GenericFontFamily>,
     pub fallback: bool,
@@ -94,15 +96,65 @@ impl TryMerge for Family {
         self.generic_family == other.generic_family && self.fallback == other.fallback
     }
 
-    fn try_merge_group(group: Vec<Self>) -> Result<Self, Error> {
+    fn try_merge_group(mut group: Vec<Self>) -> Result<Self, Error> {
         let name = (&group[0].name).to_string();
         let generic_family = (&group[0]).generic_family;
         let fallback = (&group[0]).fallback;
-        let aliases = group.iter().flat_map(|family| family.aliases.iter()).cloned().collect();
+
+        let aliases = group
+            .iter_mut()
+            // Move `aliases` out
+            .flat_map(|family| std::mem::replace(&mut family.aliases, Default::default()))
+            .try_merge_groups()?
+            .into_iter()
+            .map(|alias_set: FontFamilyAliasSet| alias_set.into())
+            .collect();
 
         let assets = group.into_iter().flat_map(|family| family.assets).try_merge_groups()?;
 
         Ok(Family { name, aliases, generic_family, fallback, assets })
+    }
+}
+
+impl TryMerge for FontFamilyAliasSet {
+    type Key = (StyleOptions, Vec<String>);
+
+    fn key(&self) -> Self::Key {
+        (self.style_overrides().clone(), self.language_overrides().cloned().collect_vec())
+    }
+
+    fn has_matching_fields(&self, _other: &Self) -> bool {
+        // All of the fields we want to match are already part of the `Key`, so this is trivially
+        // true.
+        true
+    }
+
+    fn try_merge_group(group: Vec<Self>) -> Result<Self, Error> {
+        let names = group
+            .iter()
+            .flat_map(|set| set.names())
+            .map(|name| UniCase::new(name))
+            .sorted()
+            .unique()
+            .collect_vec();
+        FontFamilyAliasSet::new(
+            names,
+            group[0].style_overrides().clone(),
+            group[0].language_overrides().cloned().collect_vec(),
+        )
+    }
+
+    /// Ensure that every alias `name` is unique among all the `FontFamilyAliasSet`s.
+    fn post_validate(groups: Vec<Self>) -> Result<Vec<Self>, MergeError<Self>> {
+        let mut unique = HashSet::new();
+        let first_duplicate =
+            groups.iter().flat_map(|group| group.names()).find(|name| !unique.insert(name.clone()));
+        match first_duplicate {
+            Some(name) => {
+                Err(MergeError::PostInvalid(format!("{:?} appeared more than once", name), groups))
+            }
+            None => Ok(groups),
+        }
     }
 }
 
@@ -142,9 +194,63 @@ pub(crate) struct Typeface {
 mod tests {
     use {
         super::*,
-        fidl_fuchsia_fonts::{GenericFontFamily, Slant, Width, WEIGHT_NORMAL},
+        fidl_fuchsia_fonts::{GenericFontFamily, Slant, Style2 as FidlStyle, Width, WEIGHT_NORMAL},
         pretty_assertions::assert_eq,
+        std::iter,
     };
+
+    #[test]
+    fn test_try_merge_aliases() -> Result<(), Error> {
+        let aliases: Vec<FontFamilyAliasSet> = vec![
+            FontFamilyAliasSet::without_overrides(vec!["Abc"])?,
+            FontFamilyAliasSet::without_overrides(vec!["Def"])?,
+            // Duplicate
+            FontFamilyAliasSet::without_overrides(vec!["Abc"])?,
+            FontFamilyAliasSet::new(
+                vec!["Abc Condensed", "Abc Squished"],
+                FidlStyle { slant: None, weight: None, width: Some(Width::Condensed) },
+                iter::empty::<String>(),
+            )?,
+            // Duplicate
+            FontFamilyAliasSet::new(
+                vec!["Abc Condensed", "Condensed Abc"],
+                FidlStyle { slant: None, weight: None, width: Some(Width::Condensed) },
+                iter::empty::<String>(),
+            )?,
+        ];
+
+        let expected = vec![
+            FontFamilyAliasSet::without_overrides(vec!["Abc", "Def"])?,
+            FontFamilyAliasSet::new(
+                vec!["Abc Condensed", "Abc Squished", "Condensed Abc"],
+                StyleOptions { width: Some(Width::Condensed), ..Default::default() },
+                iter::empty::<String>(),
+            )?,
+        ];
+
+        let actual = aliases.into_iter().try_merge_groups()?;
+        assert_eq!(actual, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_try_merge_aliases_collision() -> Result<(), Error> {
+        let aliases: Vec<FontFamilyAliasSet> = vec![
+            FontFamilyAliasSet::without_overrides(vec!["Abc"])?,
+            FontFamilyAliasSet::without_overrides(vec!["Def"])?,
+            FontFamilyAliasSet::new(
+                vec!["Def"],
+                FidlStyle { slant: None, weight: None, width: None },
+                vec!["en", "es"],
+            )?,
+        ];
+
+        let actual = aliases.into_iter().try_merge_groups();
+        println!("{:#?}", actual);
+        assert!(actual.is_err());
+        Ok(())
+    }
 
     #[test]
     fn test_try_merge_assets() -> Result<(), Error> {
@@ -310,8 +416,12 @@ mod tests {
                 families: vec![Family {
                     name: "Family A".to_string(),
                     aliases: vec![
-                        FontFamilyAlias::new("Family Ay"),
-                        FontFamilyAlias::new("A Family"),
+                        FontFamilyAliasSet::without_overrides(vec!["Family Ay", "A Family"])?,
+                        FontFamilyAliasSet::new(
+                            vec!["Family A Condensed"],
+                            StyleOptions { width: Some(Width::Condensed), ..Default::default() },
+                            iter::empty::<String>(),
+                        )?,
                     ]
                     .into_iter()
                     .collect(),
@@ -361,9 +471,19 @@ mod tests {
                     Family {
                         name: "Family A".to_string(),
                         aliases: vec![
-                            FontFamilyAlias::new("Family Ayyyy"),
-                            FontFamilyAlias::new("FamilyA"),
-                            FontFamilyAlias::new("a family"),
+                            FontFamilyAliasSet::without_overrides(vec![
+                                "Family Ayyyy",
+                                "FamilyA",
+                                "a family",
+                            ])?,
+                            FontFamilyAliasSet::new(
+                                vec!["Family A Squished"],
+                                StyleOptions {
+                                    width: Some(Width::Condensed),
+                                    ..Default::default()
+                                },
+                                iter::empty::<String>(),
+                            )?,
                         ]
                         .into_iter()
                         .collect(),
@@ -398,10 +518,9 @@ mod tests {
                     },
                     Family {
                         name: "Family B".to_string(),
-                        aliases: vec![
-                            FontFamilyAlias::new("FamilyB"),
-                            FontFamilyAlias::new("BFamily"),
-                        ]
+                        aliases: vec![FontFamilyAliasSet::without_overrides(vec![
+                            "FamilyB", "BFamily",
+                        ])?]
                         .into_iter()
                         .collect(),
                         generic_family: Some(GenericFontFamily::Serif),
@@ -428,10 +547,17 @@ mod tests {
                 Family {
                     name: "Family A".to_string(),
                     aliases: vec![
-                        FontFamilyAlias::new("A Family"),
-                        FontFamilyAlias::new("Family Ay"),
-                        FontFamilyAlias::new("Family Ayyyy"),
-                        FontFamilyAlias::new("FamilyA"),
+                        FontFamilyAliasSet::without_overrides(vec![
+                            "A Family",
+                            "Family Ay",
+                            "Family Ayyyy",
+                            "FamilyA",
+                        ])?,
+                        FontFamilyAliasSet::new(
+                            vec!["Family A Condensed", "Family A Squished"],
+                            StyleOptions { width: Some(Width::Condensed), ..Default::default() },
+                            iter::empty::<String>(),
+                        )?,
                     ]
                     .into_iter()
                     .collect(),
@@ -489,9 +615,14 @@ mod tests {
                 },
                 Family {
                     name: "Family B".to_string(),
-                    aliases: vec![FontFamilyAlias::new("BFamily"), FontFamilyAlias::new("FamilyB")]
-                        .into_iter()
-                        .collect(),
+                    aliases: vec![FontFamilyAliasSet::new(
+                        vec!["BFamily", "FamilyB"],
+                        StyleOptions::default(),
+                        iter::empty::<String>(),
+                    )?
+                    .into()]
+                    .into_iter()
+                    .collect(),
                     generic_family: Some(GenericFontFamily::Serif),
                     fallback: true,
                     assets: vec![Asset {

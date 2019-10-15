@@ -100,7 +100,11 @@ macro_rules! derive_opt {
 ///
 /// We can't just use a Serde remote type for `Style2` here because there are lots of other required
 /// traits that are not derived for FIDL tables.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq, Hash)]
+///
+/// `Ord` is derived for use with the manifest generator's `TryMergeGroups` trait. The ordering is
+/// by necessity arbitrary, comparing each field in sequence, recursively comparing enum values and
+/// numbers.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct StyleOptions {
     #[serde(default, with = "OptSlant", skip_serializing_if = "Option::is_none")]
     pub slant: Option<Slant>,

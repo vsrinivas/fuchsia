@@ -5,15 +5,17 @@
 use {
     crate::serde_ext::*,
     char_set::CharSet,
+    failure::{ensure, Error},
     fidl_fuchsia_fonts::{GenericFontFamily, Slant, Width, WEIGHT_NORMAL},
     fuchsia_url::pkg_url::PkgUrl,
+    itertools::Itertools,
     offset_string::OffsetString,
     serde::{
-        de::{Deserialize, Deserializer, Error},
+        de::{Deserialize, Deserializer, Error as DeError},
         ser::{Serialize, Serializer},
     },
     serde_derive::{Deserialize, Serialize},
-    std::{cmp::Ordering, convert::TryFrom, path::PathBuf},
+    std::{convert::TryFrom, iter, ops::Deref, path::PathBuf},
     unicase::UniCase,
 };
 
@@ -34,7 +36,7 @@ pub struct Family {
     /// Alternate names for the font family.
     // During de/serialization, omitted `aliases` are treated as an empty array and vice-versa.
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub aliases: Vec<FontFamilyAlias>,
+    pub aliases: Vec<FontFamilyAliasSet>,
     /// The generic font family that this font belongs to. If this is a specialty font (e.g. for
     /// custom icons), this should be set to `None`.
     #[serde(with = "OptGenericFontFamily", default)]
@@ -46,119 +48,167 @@ pub struct Family {
     pub assets: Vec<Asset>,
 }
 
-/// Represents a font family alias and optional style properties that should be applied when
-/// treating the alias as the canonical family.
+/// Represents a set of font family aliases, and optionally, typeface properties that should be
+/// applied when treating those aliases as the canonical family.
 ///
-/// For example, the font family "Roboto" might have an alias of the form:
-/// ```text
-/// FontFamilyAlias {
-///     name: "Roboto Condensed",
-///     style: StyleOptions {
-///         width: Width::Condensed
-///     }
+/// For example, the font family `"Roboto"` might have one alias set of the form:
+/// ```json
+/// {
+///   "names": [ "Roboto Condensed" ],
+///   "width": "condensed"
 /// }
 /// ```
+/// This means that when a client requests the family `"Roboto Condensed"`, the font server will
+/// treat that as a request for `"Roboto"` with `Width::Condensed`.
+///
+/// The font family `"Noto Sans CJK"` might have aliases of the form:
+/// ```json
+/// [
+///   {
+///     "names": [ "Noto Sans CJK KR", "Noto Sans KR" ],
+///     "languages": [ "ko" ]
+///   },
+///   {
+///     "names": [ "Noto Sans CJK JP", "Noto Sans JP" ],
+///     "languages: [ "ja" ]
+///   }
+/// ]
+/// ```
+///
+/// When a client requests `"Noto Sans CJK JP"` or `"Noto Sans JP"`, the font server will look under
+/// `"Noto Sans CJK"` for typefaces that support Japanese (`"ja"`).
+///
+/// Create using [`FontFamilyAliasSet::new`] if the aliases will map to typeface property overrides,
+/// or [`FontFamilyAliasSet::without_overrides`] to create a plain set of aliases.
+///
+/// When loaded by the font server, a `FontFamilyAliasSet` is expanded over all the `names`,
+/// creating an alias entry for every name, with identical `style` and `languages` values.
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Deserialize, Serialize)]
-#[serde(from = "StringOrFontFamilyAliasHelper", into = "StringOrFontFamilyAliasHelper")]
-pub struct FontFamilyAlias {
-    alias: UniCase<String>,
+pub struct FontFamilyAliasSet {
+    /// Alternate names for the font family.
+    #[serde(
+        deserialize_with = "FontFamilyAliasSet::deserialize_names",
+        serialize_with = "FontFamilyAliasSet::serialize_names"
+    )]
+    names: Vec<UniCase<String>>,
+    /// If non-empty, style overrides that will automatically be inserted into `TypefaceQuery` when
+    /// a client requests a font family using `alias` as the font family name.
+    #[serde(flatten)]
     style: StyleOptions,
+    /// If non-empty, the languages that will automatically be inserted into `TypefaceQuery` when a
+    /// requests a font family using `alias` as the font family name. Language codes should be
+    /// specified in descending order of preference (i.e. more preferred languages come first).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    languages: Vec<String>,
 }
 
-impl FontFamilyAlias {
-    /// Creates a new `FontFamilyAlias` without any style overrides.
-    pub fn new(name: impl AsRef<str>) -> Self {
-        Self::with_style(name, StyleOptions::default())
+impl FontFamilyAliasSet {
+    /// Create a new `FontFamilyAliasSet` with one or more names, and with optional style and
+    /// language overrides.
+    ///
+    /// - `names`: A list of one more alias names
+    /// - `style`: Optionally, style overrides that are automatically applied to the typeface
+    ///    request when one of the `names` is requested.
+    /// - `languages`: Optionally, a list of language codes that is automatically applied to the
+    ///   typeface request when one of the `names` is requested.
+    ///   Do not sort the language codes. They are given in priority order, just as in
+    ///   `TypefaceQuery.languages`.
+    ///
+    /// Examples:
+    /// ```
+    /// use manifest::v2::FontFamilyAliasSet;
+    /// use manifest::serde_ext::StyleOptions;
+    ///
+    /// // Alias set for "Noto Sans CJK" for Traditional Chinese. Both `"Noto Sans CJK TC"` and
+    /// // `"Noto Sans TC"` will serve as aliases that apply the languages `["zh-Hant", "zh-Bopo"]`
+    /// // when requested.
+    /// FontFamilyAliasSet::new(
+    ///     vec!["Noto Sans CJK TC", "Noto Sans TC"],
+    ///     StyleOptions::default(),
+    ///     vec!["zh-Hant", "zh-Bopo"]);
+    ///
+    /// // Alias set for "Roboto Condensed". `"Roboto Condensed"` will serve as an alias that
+    /// // applies the style options `width: condensed` when requested.
+    /// FontFamilyAliasSet::new(
+    ///     vec!["Roboto Condensed"],
+    ///     StyleOptions {
+    ///         width: Some(fidl_fuchsia_fonts::Width::Condensed),
+    ///         ..Default::default()
+    ///     },
+    ///     vec![]);
+    /// ```
+    pub fn new(
+        names: impl IntoIterator<Item = impl AsRef<str>>,
+        style: impl Into<StyleOptions>,
+        languages: impl IntoIterator<Item = impl AsRef<str>>,
+    ) -> Result<Self, Error> {
+        let set = FontFamilyAliasSet {
+            names: Self::preprocess_names(names),
+            style: style.into(),
+            // Note: Do not sort the language codes. They are given in priority order, just as in
+            // `TypefaceQuery.languages`.
+            languages: languages.into_iter().map(|s| s.as_ref().to_string()).collect_vec(),
+        };
+        ensure!(!set.names.is_empty(), "Must contain at least one name");
+        Ok(set)
     }
 
-    /// Creates a new `FontFamilyAlias` with style overrides.
-    pub fn with_style(name: impl AsRef<str>, style: impl Into<StyleOptions>) -> Self {
-        FontFamilyAlias { alias: UniCase::new(name.as_ref().to_string()), style: style.into() }
+    /// Create a new `FontFamilyAliasSet` with one or more names, with no typeface property
+    /// overrides.
+    pub fn without_overrides(
+        names: impl IntoIterator<Item = impl AsRef<str>>,
+    ) -> Result<Self, Error> {
+        Self::new(names, StyleOptions::default(), iter::empty::<String>())
     }
 
-    pub fn alias(&self) -> &str {
-        self.alias.as_ref()
+    /// Gets the alias names in this set.
+    pub fn names(&self) -> impl Iterator<Item = &String> {
+        (&self.names).iter().map(|uni| uni.deref())
     }
 
-    pub fn style(&self) -> &StyleOptions {
+    /// Gets the style property overrides for this set of aliases (may be empty).
+    pub fn style_overrides(&self) -> &StyleOptions {
         &self.style
     }
 
-    pub fn has_style(&self) -> bool {
+    /// Gets the language code overrides for this set of aliases (may be empty).
+    pub fn language_overrides(&self) -> impl Iterator<Item = &String> {
+        (&self.languages).iter()
+    }
+
+    /// Whether the alias set has any property overrides. If `false`, it's just a name alias.
+    pub fn has_overrides(&self) -> bool {
+        self.has_style_overrides() || self.has_language_overrides()
+    }
+
+    /// Whether the alias set has style overrides.
+    pub fn has_style_overrides(&self) -> bool {
         self.style != StyleOptions::default()
     }
-}
 
-impl Ord for FontFamilyAlias {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.alias.cmp(&other.alias)
+    /// Whether the alias set has language overrides.
+    pub fn has_language_overrides(&self) -> bool {
+        !self.languages.is_empty()
     }
-}
 
-impl PartialOrd for FontFamilyAlias {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
+    fn deserialize_names<'de, D>(deserializer: D) -> Result<Vec<UniCase<String>>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let names: Vec<String> = Vec::deserialize(deserializer)?;
+        Ok(Self::preprocess_names(names))
     }
-}
 
-impl<T: AsRef<str>> From<T> for FontFamilyAlias {
-    fn from(s: T) -> Self {
-        FontFamilyAlias::new(s)
-    }
-}
-
-/// Serialization helper for `FontFamilyAlias`.
-#[derive(Deserialize, Serialize)]
-struct FontFamilyAliasHelper {
-    alias: String,
-    #[serde(flatten)]
-    style: StyleOptions,
-}
-
-/// Serialization helper for `FontFamilyAlias`. Allows aliases to be either plain strings or structs
-/// with style options.
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum StringOrFontFamilyAliasHelper {
-    String(String),
-    // We can't directly use `FontFamilyAlias` here because that would create an infinite loop in
-    // the serde deserializer.
-    Alias(FontFamilyAliasHelper),
-}
-
-impl From<StringOrFontFamilyAliasHelper> for FontFamilyAlias {
-    fn from(wrapper: StringOrFontFamilyAliasHelper) -> Self {
-        match wrapper {
-            StringOrFontFamilyAliasHelper::String(s) => FontFamilyAlias::new(s),
-            StringOrFontFamilyAliasHelper::Alias(a) => {
-                FontFamilyAlias::with_style(a.alias, a.style)
-            }
-        }
-    }
-}
-
-impl From<FontFamilyAlias> for StringOrFontFamilyAliasHelper {
-    fn from(source: FontFamilyAlias) -> Self {
-        if source.has_style() {
-            StringOrFontFamilyAliasHelper::Alias(FontFamilyAliasHelper {
-                alias: source.alias.to_string(),
-                style: source.style.clone(),
-            })
-        } else {
-            StringOrFontFamilyAliasHelper::String(source.alias.to_string())
-        }
-    }
-}
-
-impl Serialize for StringOrFontFamilyAliasHelper {
-    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
+    fn serialize_names<S>(names: &Vec<UniCase<String>>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        match self {
-            StringOrFontFamilyAliasHelper::String(s) => s.serialize(serializer),
-            StringOrFontFamilyAliasHelper::Alias(a) => a.serialize(serializer),
-        }
+        names.iter().map(|u| u.deref().to_string()).collect_vec().serialize(serializer)
+    }
+
+    /// Sort the names using case-insensitive sort.
+    fn preprocess_names(names: impl IntoIterator<Item = impl AsRef<str>>) -> Vec<UniCase<String>> {
+        names.into_iter().map(|name| UniCase::new(name.as_ref().to_string())).sorted().collect()
     }
 }
 
@@ -305,38 +355,5 @@ impl Style {
 
     fn default_width() -> Width {
         Width::Normal
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use failure::Error;
-
-    #[test]
-    fn test_deserialize_font_family_alias_flat_alias() -> Result<(), Error> {
-        let json = r#""Beta Sans""#;
-        let result: FontFamilyAlias = serde_json::from_str(json)?;
-        assert_eq!(result, FontFamilyAlias::new("Beta Sans"));
-        Ok(())
-    }
-
-    #[test]
-    fn test_deserialize_font_family_alias_with_style() -> Result<(), Error> {
-        let json = r#"
-        {
-            "alias": "Beta Condensed",
-            "width": "condensed"
-        }
-        "#;
-        let result: FontFamilyAlias = serde_json::from_str(json)?;
-        assert_eq!(
-            result,
-            FontFamilyAlias::with_style(
-                "Beta Condensed",
-                StyleOptions { width: Some(Width::Condensed), ..Default::default() }
-            )
-        );
-        Ok(())
     }
 }

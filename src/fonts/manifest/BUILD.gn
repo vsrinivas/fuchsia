@@ -29,6 +29,8 @@ rustc_library("manifest") {
     "//third_party/rust_crates:unic-char-range",
     "//third_party/rust_crates:unicase",
   ]
+
+  test_deps = [ "//third_party/rust_crates:pretty_assertions" ]
 }
 
 test_package("manifest_tests") {

@@ -4,8 +4,12 @@
     {
       "name": "Alpha Sans",
       "aliases": [
-        "Alpha",
-        "AlphaSans"
+        {
+          "names": [
+            "Alpha",
+            "AlphaSans"
+          ]
+        }
       ],
       "generic_family": "sans-serif",
       "fallback": true,
@@ -99,13 +103,19 @@
     {
       "name": "Beta Sans",
       "aliases": [
-        "Beta",
         {
-          "alias": "Beta Condensed",
-          "width": "condensed"
+          "names": [
+            "Beta",
+            "BetaSans",
+            "β Sans"
+          ]
         },
-        "BetaSans",
-        "β Sans"
+        {
+          "names": [
+            "Beta Condensed"
+          ],
+          "width": "condensed"
+        }
       ],
       "generic_family": "sans-serif",
       "fallback": true,
@@ -222,6 +232,64 @@
               "weight": 400,
               "width": "normal",
               "code_points": "0,45+1,20,16+1,14,4+2,5,2,4+3"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gamma CJK",
+      "aliases": [
+        {
+          "names": [
+            "Gamma CJK JP",
+            "Gamma JP"
+          ],
+          "languages": [
+            "ja"
+          ]
+        },
+        {
+          "names": [
+            "Gamma CJK KR",
+            "Gamma KR"
+          ],
+          "languages": [
+            "ko"
+          ]
+        }
+      ],
+      "generic_family": "sans-serif",
+      "fallback": true,
+      "assets": [
+        {
+          "file_name": "GammaCJK-Regular.ttc",
+          "location": {
+            "package": {
+              "url": "fuchsia-pkg://fuchsia.com/font-package-gammacjk-regular-ttc",
+              "set": "universe"
+            }
+          },
+          "typefaces": [
+            {
+              "index": 0,
+              "languages": [
+                "ja"
+              ],
+              "slant": "upright",
+              "weight": 400,
+              "width": "normal",
+              "code_points": "0,45+1,21,4,3+1,7,15,2,2,2,5+1,5,2+1"
+            },
+            {
+              "index": 1,
+              "languages": [
+                "ko"
+              ],
+              "slant": "upright",
+              "weight": 400,
+              "width": "normal",
+              "code_points": "1,44+1,21,4,3+1,7,15,2,2,2,5+1,5,2+1"
             }
           ]
         }

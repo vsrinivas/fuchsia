@@ -5,8 +5,12 @@
     {
       "name": "Alpha Sans",
       "aliases": [
-        "AlphaSans",
-        "Alpha"
+        {
+          "names": [
+            "AlphaSans",
+            "Alpha"
+          ]
+        }
       ],
       "generic_family": "sans-serif",
       "fallback": true,
@@ -60,10 +64,16 @@
     {
       "name": "Beta Sans",
       "aliases": [
-        "BetaSans",
-        "Beta",
         {
-          "alias": "Beta Condensed",
+          "names": [
+            "BetaSans",
+            "Beta"
+          ]
+        },
+        {
+          "names": [
+            "Beta Condensed"
+          ],
           "width": "condensed"
         }
       ],

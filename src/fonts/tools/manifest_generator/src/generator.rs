@@ -28,7 +28,12 @@ pub(crate) fn generate_manifest(
             .iter_families()
             .map(|fi_family| v2::Family {
                 name: fi_family.name.clone(),
-                aliases: fi_family.aliases.iter().cloned().collect(),
+                aliases: fi_family
+                    .aliases
+                    .iter()
+                    .cloned()
+                    .map(|string_or_alias_set| string_or_alias_set.into())
+                    .collect(),
                 generic_family: fi_family.generic_family,
                 fallback: fi_family.fallback,
                 assets: db
