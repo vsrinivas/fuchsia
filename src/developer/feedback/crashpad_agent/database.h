@@ -19,10 +19,13 @@
 
 namespace feedback {
 
-// Wrapper around Crashpad's CrashReportDatabase that also stores annotations.
+// Wrapper around the Crashpad database that also stores annotations.
 class Database {
  public:
   static std::unique_ptr<Database> TryCreate(CrashpadDatabaseConfig config);
+
+  // Returns the path to the underlying Crashpad database.
+  const char* path();
 
   // Make a new report in |database_|.
   //

@@ -80,8 +80,6 @@ void InspectManager::ExposeConfig(const feedback::Config& config) {
   auto* crash_server = &config_.crash_server;
 
   crashpad_database->node = config_.node.CreateChild(kCrashpadDatabaseKey);
-  crashpad_database->path = config_.crashpad_database.node.CreateString(
-      kCrashpadDatabasePathKey, config.crashpad_database.path);
   crashpad_database->max_size_in_kb = crashpad_database->node.CreateUint(
       kCrashpadDatabaseMaxSizeInKbKey, config.crashpad_database.max_size_in_kb);
 

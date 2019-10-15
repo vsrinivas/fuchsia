@@ -1,5 +1,5 @@
 {
     "crashpad_database": {
-        "path": "/foo/crashes"
+        "max_size_in_kb": 1024
     }
 }

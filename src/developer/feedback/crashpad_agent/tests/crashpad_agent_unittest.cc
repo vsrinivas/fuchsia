@@ -34,7 +34,6 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
-#include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
@@ -73,6 +72,8 @@ constexpr uint64_t kMaxTotalReportSizeInKb = 1024u;
 constexpr bool kUploadSuccessful = true;
 constexpr bool kUploadFailed = false;
 
+constexpr char kCrashpadDatabasePath[] = "/tmp/crashes";
+
 // "attachments" should be kept in sync with the value defined in
 // //crashpad/client/crash_report_database_generic.cc
 constexpr char kCrashpadAttachmentsDir[] = "attachments";
@@ -93,6 +94,10 @@ Attachment BuildAttachment(const std::string& key, const std::string& value) {
 // This does not test the environment service. It directly instantiates the class, without
 // connecting through FIDL.
 class CrashpadAgentTest : public gtest::TestLoopFixture {
+  void TearDown() override {
+    ASSERT_TRUE(files::DeletePath(kCrashpadDatabasePath, /*recursive=*/true));
+  }
+
  protected:
   // Sets up the underlying agent using the given |config| and |crash_server|.
   void SetUpAgent(Config config, std::unique_ptr<StubCrashServer> crash_server) {
@@ -100,7 +105,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
               (!config.crash_server.url && !crash_server));
     crash_server_ = crash_server.get();
 
-    attachments_dir_ = files::JoinPath(config.crashpad_database.path, kCrashpadAttachmentsDir);
+    attachments_dir_ = files::JoinPath(kCrashpadDatabasePath, kCrashpadAttachmentsDir);
     inspector_ = std::make_unique<inspect::Inspector>();
     clock_ = std::make_unique<timekeeper::TestClock>();
     inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot(), clock_.get());
@@ -121,7 +126,6 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
     SetUpAgent(
         Config{/*crashpad_database=*/
                {
-                   /*path=*/database_path_.path(),
                    /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
                },
                /*crash_server=*/
@@ -363,7 +367,6 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
 
  protected:
   std::unique_ptr<CrashpadAgent> agent_;
-  files::ScopedTempDir database_path_;
 
  private:
   sys::testing::ServiceDirectoryProvider service_directory_provider_;
@@ -536,7 +539,6 @@ TEST_F(CrashpadAgentTest, Succeed_OnFailedUpload) {
   SetUpAgent(
       Config{/*crashpad_database=*/
              {
-                 /*path=*/database_path_.path(),
                  /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
              },
              /*crash_server=*/
@@ -553,7 +555,6 @@ TEST_F(CrashpadAgentTest, Succeed_OnDisabledUpload) {
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   SetUpAgent(Config{/*crashpad_database=*/
                     {
-                        /*path=*/database_path_.path(),
                         /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
                     },
                     /*crash_server=*/
@@ -644,7 +645,6 @@ TEST_F(CrashpadAgentTest, Check_InitialInspectTree) {
                     NodeMatches(
                         AllOf(NameMatches(kCrashpadDatabaseKey),
                               PropertyList(UnorderedElementsAreArray({
-                                  StringIs(kCrashpadDatabasePathKey, database_path_.path()),
                                   UintIs(kCrashpadDatabaseMaxSizeInKbKey, kMaxTotalReportSizeInKb),
                               })))),
                     NodeMatches(

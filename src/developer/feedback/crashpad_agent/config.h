@@ -14,9 +14,6 @@
 namespace feedback {
 
 struct CrashpadDatabaseConfig {
-  // Directory path under which to store the Crashpad database.
-  std::string path;
-
   // Maximum size (in kilobytes) that the Crashpad database should grow to, excluding current
   // reports being generated.
   uint64_t max_size_in_kb;

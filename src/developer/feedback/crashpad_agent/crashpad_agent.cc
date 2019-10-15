@@ -22,9 +22,7 @@
 #include "src/developer/feedback/crashpad_agent/feedback_data_provider_ptr.h"
 #include "src/developer/feedback/crashpad_agent/report_util.h"
 #include "src/developer/feedback/crashpad_agent/scoped_unlink.h"
-#include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -93,14 +91,8 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services, Config config,
     std::unique_ptr<CrashServer> crash_server, InspectManager* inspect_manager) {
-  if (!files::IsDirectory(config.crashpad_database.path)) {
-    files::CreateDirectory(config.crashpad_database.path);
-  }
-
   auto database = Database::TryCreate(config.crashpad_database);
   if (!database) {
-    FX_LOGS(ERROR) << "Error initializing local crash report database at "
-                   << config.crashpad_database.path;
     FX_LOGS(FATAL) << "Failed to set up crash analyzer";
     return nullptr;
   }
@@ -190,9 +182,9 @@ void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback cal
 
 bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id) {
   if (settings_.upload_policy() == Settings::UploadPolicy::DISABLED) {
-    FX_LOGS(INFO) << "Upload to remote crash server disabled. Local crash report, ID "
-                  << local_report_id.ToString() << ", available under "
-                  << config_.crashpad_database.path;
+    FX_LOGS(INFO) << fxl::StringPrintf(
+        "Upload to remote crash server disabled. Local crash report, ID %s, available under %s",
+        local_report_id.ToString().c_str(), database_->path());
     if (!database_->Archive(local_report_id)) {
       FX_LOGS(ERROR) << "Error archiving local report " << local_report_id.ToString();
     }

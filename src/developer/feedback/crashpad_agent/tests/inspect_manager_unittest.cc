@@ -195,7 +195,6 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {
   inspect_manager_->ExposeConfig(Config{
       /*crashpad_database=*/
       {
-          /*path=*/"/foo/crashes",
           /*max_size_in_kb=*/1234,
       },
       /*crash_server=*/
@@ -210,7 +209,6 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {
           ChildrenMatch(UnorderedElementsAreArray({
               NodeMatches(AllOf(NameMatches(kCrashpadDatabaseKey),
                                 PropertyList(UnorderedElementsAreArray({
-                                    StringIs(kCrashpadDatabasePathKey, "/foo/crashes"),
                                     UintIs(kCrashpadDatabaseMaxSizeInKbKey, 1234),
                                 })))),
               NodeMatches(AllOf(NameMatches(kCrashServerKey),
@@ -224,7 +222,6 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {
 TEST_F(InspectManagerTest, ExposeConfig_UploadDisabled) {
   inspect_manager_->ExposeConfig(Config{/*crashpad_database=*/
                                         {
-                                            /*path=*/"/foo/crashes",
                                             /*max_size_in_kb=*/1234,
                                         },
                                         /*crash_server=*/
@@ -239,7 +236,6 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadDisabled) {
           ChildrenMatch(UnorderedElementsAreArray({
               NodeMatches(AllOf(NameMatches(kCrashpadDatabaseKey),
                                 PropertyList(UnorderedElementsAreArray({
-                                    StringIs(kCrashpadDatabasePathKey, "/foo/crashes"),
                                     UintIs(kCrashpadDatabaseMaxSizeInKbKey, 1234),
                                 })))),
               NodeMatches(AllOf(NameMatches(kCrashServerKey),
@@ -251,7 +247,6 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadDisabled) {
 TEST_F(InspectManagerTest, ExposeConfig_UploadReadFromPrivacySettings) {
   inspect_manager_->ExposeConfig(Config{/*crashpad_database=*/
                                         {
-                                            /*path=*/"/foo/crashes",
                                             /*max_size_in_kb=*/1234,
                                         },
                                         /*crash_server=*/
@@ -266,7 +261,6 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadReadFromPrivacySettings) {
           ChildrenMatch(UnorderedElementsAreArray({
               NodeMatches(AllOf(NameMatches(kCrashpadDatabaseKey),
                                 PropertyList(UnorderedElementsAreArray({
-                                    StringIs(kCrashpadDatabasePathKey, "/foo/crashes"),
                                     UintIs(kCrashpadDatabaseMaxSizeInKbKey, 1234),
                                 })))),
               NodeMatches(AllOf(

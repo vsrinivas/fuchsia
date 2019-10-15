@@ -23,15 +23,11 @@ const char kSchema[] = R"({
     "crashpad_database": {
       "type": "object",
       "properties": {
-        "path": {
-          "type": "string"
-        },
         "max_size_in_kb": {
           "type": "integer"
         }
       },
       "required": [
-        "path",
         "max_size_in_kb"
       ],
       "additionalProperties": false
@@ -90,7 +86,6 @@ bool CheckAgainstSchema(rapidjson::Document& doc) {
 template <typename JsonObject>
 CrashpadDatabaseConfig ParseCrashpadDatabaseConfig(const JsonObject& obj) {
   CrashpadDatabaseConfig config;
-  config.path = obj[kCrashpadDatabasePathKey].GetString();
   config.max_size_in_kb = obj[kCrashpadDatabaseMaxSizeInKbKey].GetUint();
   return config;
 }

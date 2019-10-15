@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "src/developer/feedback/crashpad_agent/report_util.h"
+#include "src/lib/files/directory.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -20,11 +21,18 @@ using crashpad::UUID;
 using CrashSkippedReason = crashpad::Metrics::CrashSkippedReason;
 using OperationStatus = crashpad::CrashReportDatabase::OperationStatus;
 
+constexpr char kCrashpadDatabasePath[] = "/tmp/crashes";
+
 std::unique_ptr<Database> Database::TryCreate(CrashpadDatabaseConfig config) {
-  auto crashpad_database = crashpad::CrashReportDatabase::Initialize(base::FilePath(config.path));
+  if (!files::IsDirectory(kCrashpadDatabasePath)) {
+    files::CreateDirectory(kCrashpadDatabasePath);
+  }
+
+  auto crashpad_database =
+      crashpad::CrashReportDatabase::Initialize(base::FilePath(kCrashpadDatabasePath));
   if (!crashpad_database) {
     FX_LOGS(ERROR) << fxl::StringPrintf("Error initializing local crash report database at %s",
-                                        config.path.c_str());
+                                        kCrashpadDatabasePath);
     return nullptr;
   }
 
@@ -36,6 +44,8 @@ Database::Database(CrashpadDatabaseConfig config,
     : config_(config), database_(std::move(database)) {
   FXL_DCHECK(database_);
 }
+
+const char* Database::path() { return kCrashpadDatabasePath; }
 
 bool Database::MakeNewReport(const std::map<std::string, fuchsia::mem::Buffer>& attachments,
                              const std::optional<fuchsia::mem::Buffer>& minidump,

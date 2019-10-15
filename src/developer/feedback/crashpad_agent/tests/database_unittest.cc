@@ -8,7 +8,6 @@
 
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
-#include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
@@ -31,6 +30,7 @@ using testing::UnorderedElementsAreArray;
 
 constexpr uint64_t kMaxTotalReportsSizeInKb = 1024u;
 
+constexpr char kCrashpadDatabasePath[] = "/tmp/crashes";
 constexpr char kCrashpadAttachmentsDir[] = "attachments";
 constexpr char kCrashpadCompletedDir[] = "completed";
 constexpr char kCrashpadPendingDir[] = "pending";
@@ -71,15 +71,18 @@ class DatabaseTest : public ::testing::Test {
  public:
   void SetUp() override { SetUpDatabase(/*max_size_in_kb=*/kMaxTotalReportsSizeInKb); }
 
+  void TearDown() override {
+    ASSERT_TRUE(files::DeletePath(kCrashpadDatabasePath, /*recursive=*/true));
+  }
+
  protected:
   void SetUpDatabase(const uint64_t max_size_in_kb) {
-    auto new_database =
-        Database::TryCreate(CrashpadDatabaseConfig{database_path_.path(), max_size_in_kb});
+    auto new_database = Database::TryCreate(CrashpadDatabaseConfig{max_size_in_kb});
     FXL_CHECK(new_database) << "Error creating database";
     database_ = std::move(new_database);
-    attachments_dir_ = files::JoinPath(database_path_.path(), kCrashpadAttachmentsDir);
-    completed_dir_ = files::JoinPath(database_path_.path(), kCrashpadCompletedDir);
-    pending_dir_ = files::JoinPath(database_path_.path(), kCrashpadPendingDir);
+    attachments_dir_ = files::JoinPath(kCrashpadDatabasePath, kCrashpadAttachmentsDir);
+    completed_dir_ = files::JoinPath(kCrashpadDatabasePath, kCrashpadCompletedDir);
+    pending_dir_ = files::JoinPath(kCrashpadDatabasePath, kCrashpadPendingDir);
   }
 
   std::vector<std::string> GetAttachmentsDirContents() {
@@ -145,7 +148,6 @@ class DatabaseTest : public ::testing::Test {
   }
 
  protected:
-  files::ScopedTempDir database_path_;
   std::unique_ptr<Database> database_;
   std::string attachments_dir_;
 
