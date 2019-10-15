@@ -292,18 +292,53 @@ mod tests {
         verify_blob(&blob, contents).await
     }
 
+    // Dropping a FileProxy synchronously closes the zircon channel, but it is not guaranteed
+    // that blobfs will respond to the channel closing before it responds to a request on a
+    // separate channel to open the same blob. This means a test case that:
+    // 1. opens writable + truncates on channel 0
+    // 2. drops channel 0
+    // 3. opens writable on channel 1
+    // can fail with ACCESS_DENIED in step 3, unless we wait.
+    async fn wait_for_blob_to_be_creatable(blobfs: &DirectoryProxy, merkle: &str) {
+        for _ in 0..50 {
+            let res = open_blob(
+                &blobfs,
+                merkle,
+                fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+            )
+            .await;
+            match res {
+                Err(zx::Status::ACCESS_DENIED) => {
+                    fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(10))).await;
+                    continue;
+                }
+                Err(err) => {
+                    panic!("unexpected error waiting for blob to become writable: {:?}", err);
+                }
+                Ok((blob, _)) => {
+                    // Explicitly close the blob so that when this function returns the blob
+                    // is in the state (creatable + not openable for read). If we just drop
+                    // the FileProxy instead of closing, the blob will be openable for read until
+                    // blobfs asynchronously cleans up.
+                    Status::ok(blob.close().await.unwrap()).unwrap();
+                    return;
+                }
+            }
+        }
+        panic!("timeout waiting for blob to become creatable");
+    }
+
     #[fasync::run_singlethreaded(test)]
-    async fn test_open_for_create_drop_create() -> Result<(), Error> {
+    async fn test_open_for_create_create() -> Result<(), Error> {
         let blobfs_server = TestBlobFs::start()?;
         let root_dir = blobfs_server.root_dir_proxy();
 
-        let (blob, _) = open_blob(
+        let (_blob, _) = open_blob(
             &root_dir,
             BLOB_MERKLE,
             fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
         )
         .await?;
-        drop(blob);
 
         create_blob(&root_dir, BLOB_MERKLE, BLOB_CONTENTS).await?;
 
@@ -323,6 +358,7 @@ mod tests {
         .await?;
         Status::ok(blob.truncate(BLOB_CONTENTS.len() as u64).await?)?;
         drop(blob);
+        wait_for_blob_to_be_creatable(&root_dir, BLOB_MERKLE).await;
 
         create_blob(&root_dir, BLOB_MERKLE, BLOB_CONTENTS).await?;
 
@@ -343,6 +379,7 @@ mod tests {
         Status::ok(blob.truncate(BLOB_CONTENTS.len() as u64).await?)?;
         write_blob(&blob, &BLOB_CONTENTS[0..1]).await?;
         drop(blob);
+        wait_for_blob_to_be_creatable(&root_dir, BLOB_MERKLE).await;
 
         create_blob(&root_dir, BLOB_MERKLE, BLOB_CONTENTS).await?;
 
