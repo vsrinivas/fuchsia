@@ -760,15 +760,6 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
       return;
     }
 
-    // Update the inspect properties of a mod.
-    if (running_mod_info) {
-      if (module_data_.has_annotations()) {
-        fidl::Clone(module_data_.annotations(),
-                    running_mod_info->module_data->mutable_annotations());
-      }
-      running_mod_info->ResetInspect();
-    }
-
     // We do not auto-start Modules that were added through ModuleContext on
     // other devices.
     //
@@ -987,6 +978,14 @@ StoryControllerImpl::StoryControllerImpl(SessionStorage* const session_storage,
       story_shell_context_impl_{story_id_, story_provider_impl},
       weak_factory_(this) {
   story_storage_->set_on_module_data_updated([this](fuchsia::modular::ModuleData module_data) {
+    auto* const running_mod_info = FindRunningModInfo(module_data.module_path());
+    if (running_mod_info) {
+      if (module_data.has_annotations()) {
+        fidl::Clone(module_data.annotations(),
+                    running_mod_info->module_data->mutable_annotations());
+      }
+      running_mod_info->ResetInspect();
+    }
     OnModuleDataUpdated(std::move(module_data));
   });
 

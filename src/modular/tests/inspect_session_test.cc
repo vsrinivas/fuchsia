@@ -168,8 +168,7 @@ TEST_F(InspectSessionTest, NodeHierarchyNoStories) {
               AllOf(inspect::testing::NodeMatches(inspect::testing::NameMatches("root"))));
 }
 
-// Disabled: fxb/37256
-TEST_F(InspectSessionTest, DISABLED_CheckNodeHierarchyStartAndStopStory) {
+TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
   RunHarnessAndInterceptSessionShell();
 
   // Create a new story using PuppetMaster and launch a new story shell.
@@ -215,6 +214,64 @@ TEST_F(InspectSessionTest, DISABLED_CheckNodeHierarchyStartAndStopStory) {
     last_focus_timestamps.push_back(story_info.last_focus_time());
   });
 
+  // Story doesn't start unless it has a mod, so add a mod.
+  AddMod add_mod;
+  add_mod.mod_name_transitional = "mod1";
+  add_mod.intent.handler = kFakeModuleUrl;
+
+  StoryCommand command;
+  command.set_add_mod(std::move(add_mod));
+
+  std::vector<StoryCommand> commands;
+  commands.push_back(std::move(command));
+
+  story_master->Enqueue(std::move(commands));
+  bool execute_called = false;
+  story_master->Execute(
+      [&execute_called](fuchsia::modular::ExecuteResult result) { execute_called = true; });
+  RunLoopUntil([&] { return execute_called; });
+
+  zx::vmo vmo_inspect;
+  ASSERT_EQ(ZX_OK, GetInspectVmo(&vmo_inspect));
+  auto hierarchy = inspect::ReadFromVmo(std::move(vmo_inspect)).take_value();
+  EXPECT_THAT(hierarchy, (NodeMatches(NameMatches("root"))));
+
+  const auto& child = hierarchy.children();
+  EXPECT_THAT(child.size(), 1);
+  EXPECT_THAT(child.at(0), NodeMatches(NameMatches("my_story")));
+  EXPECT_THAT(child.at(0), NodeMatches(AllOf(PropertyList(UnorderedElementsAre(
+                               IntIs("last_focus_time", last_focus_timestamps.back()),
+                               StringIs("annotation: test_key", "test_value"))))));
+
+  bool story_deleted = false;
+  puppet_master->DeleteStory(kStoryId, [&] { story_deleted = true; });
+
+  RunLoopUntil([&] { return story_deleted; });
+
+  // Check that a node is removed from the hierarchy when a story is removed.
+  ASSERT_EQ(ZX_OK, GetInspectVmo(&vmo_inspect));
+  std::cout << "5" << std::endl;
+
+  hierarchy = inspect::ReadFromVmo(std::move(vmo_inspect)).take_value();
+  EXPECT_THAT(hierarchy, AllOf(NodeMatches(NameMatches("root"))));
+}
+
+TEST_F(InspectSessionTest, CheckNodeHierarchyMods) {
+  RunHarnessAndInterceptSessionShell();
+
+  // Create a new story using PuppetMaster and launch a new story shell.
+  fuchsia::modular::PuppetMasterPtr puppet_master;
+  fuchsia::modular::StoryPuppetMasterPtr story_master;
+
+  fuchsia::modular::testing::ModularService svc;
+  svc.set_puppet_master(puppet_master.NewRequest());
+  test_harness()->ConnectToModularService(std::move(svc));
+
+  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_->story_provider();
+  ASSERT_TRUE(story_provider != nullptr);
+  const char kStoryId[] = "my_story";
+
+  puppet_master->ControlStory(kStoryId, story_master.NewRequest());
   AddMod add_mod;
   add_mod.mod_name_transitional = "mod1";
   auto initial_module_intent =
@@ -234,7 +291,7 @@ TEST_F(InspectSessionTest, DISABLED_CheckNodeHierarchyStartAndStopStory) {
 
   // Annotate the module.
   auto text_mod_annotation_value = fuchsia::modular::AnnotationValue{};
-  text_mod_annotation_value.set_text("text_value");
+  text_mod_annotation_value.set_bytes({01});
   auto text_mod_annotation = fuchsia::modular::Annotation{
       .key = "text_key", .value = fidl::MakeOptional(fidl::Clone(text_mod_annotation_value))};
   std::vector<fuchsia::modular::Annotation> mod_annotations;
@@ -257,9 +314,6 @@ TEST_F(InspectSessionTest, DISABLED_CheckNodeHierarchyStartAndStopStory) {
   const auto& child = hierarchy.children();
   EXPECT_THAT(child.size(), 1);
   EXPECT_THAT(child.at(0), NodeMatches(NameMatches("my_story")));
-  EXPECT_THAT(child.at(0), NodeMatches(AllOf(PropertyList(UnorderedElementsAre(
-                               IntIs("last_focus_time", last_focus_timestamps.back()),
-                               StringIs("annotation: test_key", "test_value"))))));
 
   const auto& grandchild = child.at(0).children();
 
@@ -277,16 +331,6 @@ TEST_F(InspectSessionTest, DISABLED_CheckNodeHierarchyStartAndStopStory) {
                   StringIs(modular_config::kInspectSurfaceRelationDependency, "NONE"),
                   DoubleIs(modular_config::kInspectSurfaceRelationEmphasis, 1.0),
                   StringIs(modular_config::kInspectModulePath, "mod1"),
-                  StringIs("annotation: text_key", "text_value"))))));
-
-  bool story_deleted = false;
-  puppet_master->DeleteStory(kStoryId, [&] { story_deleted = true; });
-
-  RunLoopUntil([&] { return story_deleted; });
-
-  // Check that a node is removed from the hierarchy when a story is removed.
-  ASSERT_EQ(ZX_OK, GetInspectVmo(&vmo_inspect));
-  hierarchy = inspect::ReadFromVmo(std::move(vmo_inspect)).take_value();
-  EXPECT_THAT(hierarchy, AllOf(NodeMatches(NameMatches("root"))));
+                  StringIs("annotation: text_key", "bytes"))))));
 }
 }  // namespace
