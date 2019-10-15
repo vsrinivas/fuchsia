@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/string.h>
+#include <utility>
 
 #include <fbl/algorithm.h>
-#include <unittest/unittest.h>
-
-#include <utility>
+#include <fbl/string.h>
+#include <zxtest/zxtest.h>
 
 namespace fbl {
 namespace tests {
@@ -21,9 +20,7 @@ using fbl::tests::StringTestHelper;
 
 namespace {
 
-bool empty_string_test() {
-  BEGIN_TEST;
-
+TEST(StringTest, Empty) {
   {
     fbl::String empty;
 
@@ -113,13 +110,9 @@ bool empty_string_test() {
 
     EXPECT_EQ(0, empty[0u]);
   }
-
-  END_TEST;
 }
 
-bool non_empty_string_test() {
-  BEGIN_TEST;
-
+TEST(StringTest, NonEmpty) {
   {
     fbl::String str("abc");
 
@@ -187,13 +180,9 @@ bool non_empty_string_test() {
 
     EXPECT_EQ('b', str[1u]);
   }
-
-  END_TEST;
 }
 
-bool copy_move_and_assignment_test() {
-  BEGIN_TEST;
-
+TEST(StringTest, CopyMoveAndAssignment) {
   {
     fbl::String abc("abc");
     fbl::String copy(abc);
@@ -252,13 +241,9 @@ bool copy_move_and_assignment_test() {
     EXPECT_STR_EQ("", move.data());
     EXPECT_EQ(0u, move.length());
   }
-
-  END_TEST;
 }
 
-bool set_clear_test() {
-  BEGIN_TEST;
-
+TEST(StringTest, SetClear) {
   fbl::String str;
   EXPECT_STR_EQ("", str.data());
   EXPECT_EQ(0u, str.length());
@@ -294,13 +279,9 @@ bool set_clear_test() {
   str.clear();
   EXPECT_STR_EQ("", str.data());
   EXPECT_EQ(0u, str.length());
-
-  END_TEST;
 }
 
-bool compare_test() {
-  BEGIN_TEST;
-
+TEST(StringTest, Compare) {
   const char data[] = "abc";
   fbl::String empty;
   fbl::String a(data, 1);
@@ -368,13 +349,9 @@ bool compare_test() {
   EXPECT_TRUE(bc > a);
   EXPECT_TRUE(bc >= a);
   EXPECT_FALSE(bc <= a);
-
-  END_TEST;
 }
 
-bool concat_test() {
-  BEGIN_TEST;
-
+TEST(StringTest, Concat) {
   {
     fbl::String empty = fbl::String::Concat({});
     EXPECT_STR_EQ("", empty.c_str());
@@ -428,13 +405,9 @@ bool concat_test() {
     EXPECT_STR_EQ("abcdefghijklmnop", str.c_str());
     EXPECT_EQ(16u, str.length());
   }
-
-  END_TEST;
 }
 
-bool alloc_checker_test() {
-  BEGIN_TEST;
-
+TEST(StringTest, AllocChecker) {
   // Empty constructor
 
   {
@@ -596,13 +569,9 @@ bool alloc_checker_test() {
     EXPECT_STR_EQ("abcdefghijklmnop", str.c_str());
     EXPECT_EQ(16u, str.length());
   }
-
-  END_TEST;
 }
 
-bool to_string_piece_test() {
-  BEGIN_TEST;
-
+TEST(StringTest, ToString) {
   {
     fbl::String empty;
     fbl::StringPiece piece(empty.ToStringPiece());
@@ -616,13 +585,9 @@ bool to_string_piece_test() {
     EXPECT_EQ(str.data(), piece.data());
     EXPECT_EQ(3u, piece.length());
   }
-
-  END_TEST;
 }
 
-bool swap_test() {
-  BEGIN_TEST;
-
+TEST(StringTest, Swap) {
   fbl::String empty;
   fbl::String abc("abc");
   fbl::String def("def");
@@ -633,13 +598,9 @@ bool swap_test() {
   EXPECT_STR_EQ("def", empty.data());
   EXPECT_STR_EQ("", abc.data());
   EXPECT_STR_EQ("abc", def.data());
-
-  END_TEST;
 }
 
-bool ref_count_test() {
-  BEGIN_TEST;
-
+TEST(StringTest, RefCount) {
   // Empty strings
 
   {
@@ -751,8 +712,6 @@ bool ref_count_test() {
     }
     EXPECT_EQ(1u, StringTestHelper::GetRefCount(xs));
   }
-
-  END_TEST;
 }
 
 constexpr char kFakeStringData[] = "hello";
@@ -778,9 +737,7 @@ struct EmptyString {
   size_t length() const { return 0u; }
 };
 
-bool conversion_from_string_like_object() {
-  BEGIN_TEST;
-
+TEST(StringTest, ConversionFromStringLikeObject) {
   {
     SimpleFakeString str;
     fbl::String p(str);
@@ -801,13 +758,9 @@ bool conversion_from_string_like_object() {
     EXPECT_STR_EQ("", p.data());
     EXPECT_EQ(0u, p.length());
   }
-
-  END_TEST;
 }
 
-bool assignment_from_string_like_object() {
-  BEGIN_TEST;
-
+TEST(StringTest, AssignmentFromStringLikeObject) {
   {
     SimpleFakeString str;
     fbl::String p;
@@ -831,23 +784,6 @@ bool assignment_from_string_like_object() {
     EXPECT_STR_EQ("", p.data());
     EXPECT_EQ(0u, p.length());
   }
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(string_tests)
-RUN_TEST(empty_string_test)
-RUN_TEST(non_empty_string_test)
-RUN_TEST(copy_move_and_assignment_test)
-RUN_TEST(set_clear_test)
-RUN_TEST(compare_test)
-RUN_TEST(concat_test)
-RUN_TEST(alloc_checker_test)
-RUN_TEST(to_string_piece_test)
-RUN_TEST(swap_test)
-RUN_TEST(ref_count_test)
-RUN_TEST(conversion_from_string_like_object)
-RUN_TEST(assignment_from_string_like_object)
-END_TEST_CASE(string_tests)
