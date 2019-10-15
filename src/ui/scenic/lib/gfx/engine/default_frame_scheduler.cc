@@ -251,8 +251,11 @@ DefaultFrameScheduler::GetFuturePresentationTimes(zx::duration requested_predict
     request.requested_presentation_time = zx::time(0);
 
     PredictedTimes times = frame_predictor_->GetPrediction(request);
-    infos.push_back({.latch_point = times.latch_point_time.get(),
-                     .presentation_time = times.presentation_time.get()});
+    fuchsia::scenic::scheduling::PresentationInfo info =
+        fuchsia::scenic::scheduling::PresentationInfo();
+    info.set_latch_point(times.latch_point_time.get());
+    info.set_presentation_time(times.presentation_time.get());
+    infos.push_back(std::move(info));
 
     // The new now time is one tick after the returned latch point. This ensures uniqueness in the
     // results we give to the client since we know we cannot schedule a frame for a latch point in
