@@ -151,34 +151,42 @@ pub extern "C" fn fidlhdl_channel_create() -> FidlHdlPairCreateResult {
     FidlHdlPairCreateResult { left, right }
 }
 
-unsafe fn complete_channel_read(
+fn complete_channel_read(
     st: &mut HalfChannelState,
-    bytes: *mut u8,
-    mut handles: *mut u32,
-    num_bytes: usize,
-    num_handles: usize,
-    actual_bytes: *mut usize,
-    actual_handles: *mut usize,
-) -> FidlHdlReadResult {
+    bytes: &mut [u8],
+    handles: &mut [Handle],
+) -> (FidlHdlReadResult, usize, usize) {
     if let Some(mut msg) = st.messages.pop_front() {
         let msg_bytes = msg.bytes.len();
         let msg_handles = msg.handles.len();
-        *actual_bytes = msg_bytes;
-        *actual_handles = msg_handles;
-        if num_bytes >= msg.bytes.len() && num_handles >= msg.handles.len() {
-            std::ptr::copy_nonoverlapping(msg.bytes.as_ptr(), bytes, num_bytes);
-            for h in msg.handles.iter_mut() {
-                *handles = h.raw_take();
-                handles = handles.offset(1);
-            }
-            FidlHdlReadResult::Ok
-        } else {
+        if msg_bytes > bytes.len() || msg_handles > handles.len() {
             st.messages.push_front(msg);
-            FidlHdlReadResult::BufferTooSmall
+            return (FidlHdlReadResult::BufferTooSmall, msg_bytes, msg_handles);
         }
+        bytes[..msg_bytes].copy_from_slice(&msg.bytes);
+        handles[..msg_handles].swap_with_slice(&mut msg.handles);
+        (FidlHdlReadResult::Ok, msg_bytes, msg_handles)
     } else {
-        FidlHdlReadResult::Pending
+        (FidlHdlReadResult::Pending, 0, 0)
     }
+}
+
+fn channel_read(
+    hdl: u32,
+    bytes: &mut [u8],
+    handles: &mut [Handle],
+) -> (FidlHdlReadResult, usize, usize) {
+    with_handle(hdl, |obj| match obj {
+        FidlHandle::LeftChannel(cs, _) => match *cs.lock() {
+            ChannelState::Closed => (FidlHdlReadResult::PeerClosed, 0, 0),
+            ChannelState::Open(ref mut st, _) => complete_channel_read(st, bytes, handles),
+        },
+        FidlHandle::RightChannel(cs, _) => match *cs.lock() {
+            ChannelState::Closed => (FidlHdlReadResult::PeerClosed, 0, 0),
+            ChannelState::Open(_, ref mut st) => complete_channel_read(st, bytes, handles),
+        },
+        _ => panic!("Non channel passed to channel_read"),
+    })
 }
 
 /// Read from a channel - takes ownership of all handles
@@ -192,33 +200,15 @@ pub unsafe extern "C" fn fidlhdl_channel_read(
     actual_bytes: *mut usize,
     actual_handles: *mut usize,
 ) -> FidlHdlReadResult {
-    with_handle(hdl, |obj| match obj {
-        FidlHandle::LeftChannel(cs, _) => match *cs.lock() {
-            ChannelState::Closed => FidlHdlReadResult::PeerClosed,
-            ChannelState::Open(ref mut st, _) => complete_channel_read(
-                st,
-                bytes,
-                handles,
-                num_bytes,
-                num_handles,
-                actual_bytes,
-                actual_handles,
-            ),
-        },
-        FidlHandle::RightChannel(cs, _) => match *cs.lock() {
-            ChannelState::Closed => FidlHdlReadResult::PeerClosed,
-            ChannelState::Open(_, ref mut st) => complete_channel_read(
-                st,
-                bytes,
-                handles,
-                num_bytes,
-                num_handles,
-                actual_bytes,
-                actual_handles,
-            ),
-        },
-        _ => panic!("Non channel passed to channel_read"),
-    })
+    let mut bytes = std::slice::from_raw_parts_mut(bytes, num_bytes);
+    for i in 0..num_handles {
+        handles.offset(i as isize).write(INVALID_HANDLE);
+    }
+    let mut handles = std::slice::from_raw_parts_mut(handles as *mut Handle, num_handles);
+    let (r, bytes, handles) = channel_read(hdl, &mut bytes, &mut handles);
+    *actual_bytes = bytes;
+    *actual_handles = handles;
+    r
 }
 
 fn complete_channel_write(
@@ -271,25 +261,32 @@ pub unsafe extern "C" fn fidlhdl_channel_write(
     )
 }
 
-unsafe fn complete_socket_read(
-    st: &mut HalfSocketState,
-    mut bytes: *mut u8,
-    num_bytes: usize,
-    actual_bytes: *mut usize,
-) -> FidlHdlReadResult {
-    if num_bytes == 0 {
-        return FidlHdlReadResult::Ok;
+fn complete_socket_read(st: &mut HalfSocketState, bytes: &mut [u8]) -> (FidlHdlReadResult, usize) {
+    if bytes.len() == 0 {
+        return (FidlHdlReadResult::Ok, 0);
     }
-    let copy_bytes = std::cmp::min(num_bytes, st.bytes.len());
+    let copy_bytes = std::cmp::min(bytes.len(), st.bytes.len());
     if copy_bytes == 0 {
-        return FidlHdlReadResult::Pending;
+        return (FidlHdlReadResult::Pending, 0);
     }
-    for b in st.bytes.drain(..copy_bytes) {
-        *bytes = b;
-        bytes = bytes.add(1);
+    for (i, b) in st.bytes.drain(..copy_bytes).enumerate() {
+        bytes[i] = b;
     }
-    *actual_bytes = copy_bytes;
-    FidlHdlReadResult::Ok
+    (FidlHdlReadResult::Ok, copy_bytes)
+}
+
+fn socket_read(hdl: u32, bytes: &mut [u8]) -> (FidlHdlReadResult, usize) {
+    with_handle(hdl, |obj| match obj {
+        FidlHandle::LeftSocket(cs, _) => match *cs.lock() {
+            SocketState::Closed => (FidlHdlReadResult::PeerClosed, 0),
+            SocketState::Open(ref mut st, _) => complete_socket_read(st, bytes),
+        },
+        FidlHandle::RightSocket(cs, _) => match *cs.lock() {
+            SocketState::Closed => (FidlHdlReadResult::PeerClosed, 0),
+            SocketState::Open(_, ref mut st) => complete_socket_read(st, bytes),
+        },
+        _ => panic!("Non socket passed to socket_read"),
+    })
 }
 
 /// Read from a socket
@@ -300,21 +297,9 @@ pub unsafe extern "C" fn fidlhdl_socket_read(
     num_bytes: usize,
     actual_bytes: *mut usize,
 ) -> FidlHdlReadResult {
-    with_handle(hdl, |obj| match obj {
-        FidlHandle::LeftSocket(cs, _) => match *cs.lock() {
-            SocketState::Closed => FidlHdlReadResult::PeerClosed,
-            SocketState::Open(ref mut st, _) => {
-                complete_socket_read(st, bytes, num_bytes, actual_bytes)
-            }
-        },
-        FidlHandle::RightSocket(cs, _) => match *cs.lock() {
-            SocketState::Closed => FidlHdlReadResult::PeerClosed,
-            SocketState::Open(_, ref mut st) => {
-                complete_socket_read(st, bytes, num_bytes, actual_bytes)
-            }
-        },
-        _ => panic!("Non socket passed to socket_read"),
-    })
+    let (r, bytes) = socket_read(hdl, std::slice::from_raw_parts_mut(bytes, num_bytes));
+    *actual_bytes = bytes;
+    r
 }
 
 unsafe fn complete_socket_write(
