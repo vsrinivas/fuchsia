@@ -6,6 +6,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -272,6 +273,12 @@ bool BlockDevice::InitFtl() {
   if (volume_->GetStats(&stats) == ZX_OK) {
     zxlogf(INFO, "FTL: Wear count: %u, Garbage level: %d%%\n", stats.wear_count,
            stats.garbage_level);
+    if (stats.wear_count) {
+      // TODO(35898): Remove this code when troubleshooting is over.
+      for (uint32_t i = 0; i < fbl::count_of(stats.wear_histogram); i++) {
+        zxlogf(INFO, "FTL: Wear bucket %02u: %04u\n", i, stats.wear_histogram[i]);
+      }
+    }
   }
 
   zxlogf(INFO, "FTL: InitFtl ok\n");
