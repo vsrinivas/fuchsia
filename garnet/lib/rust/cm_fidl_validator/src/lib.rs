@@ -153,18 +153,24 @@ impl fmt::Display for ErrorList {
 }
 
 /// Validates a ComponentDecl.
+///
 /// The ComponentDecl may ultimately originate from a CM file, or be directly constructed by the
 /// caller. Either way, a ComponentDecl should always be validated before it's used. Examples
 /// of what is validated (which may evolve in the future):
+///
 /// - That all semantically required fields are present
 /// - That a child_name referenced in a source actually exists in the list of children
 /// - That there are no duplicate target paths.
+/// - That a cap is not offered back to the child that exposed it.
+///
+/// All checks are local to this ComponentDecl.
 pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
     let ctx = ValidationContext {
         decl,
         all_children: HashSet::new(),
         all_collections: HashSet::new(),
         all_storage_and_sources: HashMap::new(),
+        all_runners_and_sources: HashMap::new(),
         child_target_paths: HashMap::new(),
         collection_target_paths: HashMap::new(),
         errors: vec![],
@@ -192,6 +198,7 @@ struct ValidationContext<'a> {
     all_children: HashSet<&'a str>,
     all_collections: HashSet<&'a str>,
     all_storage_and_sources: HashMap<&'a str, Option<&'a str>>,
+    all_runners_and_sources: HashMap<&'a str, Option<&'a str>>,
     child_target_paths: PathMap<'a>,
     collection_target_paths: PathMap<'a>,
     errors: Vec<Error>,
@@ -225,6 +232,13 @@ impl<'a> ValidationContext<'a> {
         if let Some(storage) = self.decl.storage.as_ref() {
             for storage in storage.iter() {
                 self.validate_storage_decl(&storage);
+            }
+        }
+
+        // Validate "runners" and build the set of all runners.
+        if let Some(runners) = self.decl.runners.as_ref() {
+            for runner in runners.iter() {
+                self.validate_runner_decl(&runner);
             }
         }
 
@@ -375,6 +389,31 @@ impl<'a> ValidationContext<'a> {
                 self.errors.push(Error::duplicate_field("StorageDecl", "name", name.as_str()));
             }
         }
+    }
+
+    fn validate_runner_decl(&mut self, runner: &'a fsys::RunnerDecl) {
+        let runner_source = match runner.source.as_ref() {
+            Some(fsys::Ref::Self_(_)) => None,
+            Some(fsys::Ref::Child(child)) => {
+                self.validate_source_child(child, "RunnerDecl");
+                Some(&child.name as &str)
+            }
+            Some(_) => {
+                self.errors.push(Error::invalid_field("RunnerDecl", "source"));
+                None
+            }
+            None => {
+                self.errors.push(Error::missing_field("RunnerDecl", "source"));
+                None
+            }
+        };
+        if check_name(runner.name.as_ref(), "RunnerDecl", "name", &mut self.errors) {
+            let name = runner.name.as_ref().unwrap();
+            if self.all_runners_and_sources.insert(name, runner_source).is_some() {
+                self.errors.push(Error::duplicate_field("RunnerDecl", "name", name.as_str()));
+            }
+        }
+        check_path(runner.source_path.as_ref(), "RunnerDecl", "source_path", &mut self.errors);
     }
 
     fn validate_source_child(&mut self, child: &fsys::ChildRef, decl_type: &str) {
@@ -847,9 +886,9 @@ mod tests {
             ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability,
             ExposeDecl, ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeServiceDecl,
             FrameworkRef, OfferDecl, OfferDirectoryDecl, OfferLegacyServiceDecl, OfferServiceDecl,
-            OfferStorageDecl, RealmRef, Ref, SelfRef, StartupMode, StorageDecl, StorageRef,
-            StorageType, UseDecl, UseDirectoryDecl, UseLegacyServiceDecl, UseServiceDecl,
-            UseStorageDecl,
+            OfferStorageDecl, RealmRef, Ref, RunnerDecl, SelfRef, StartupMode, StorageDecl,
+            StorageRef, StorageType, UseDecl, UseDirectoryDecl, UseLegacyServiceDecl,
+            UseServiceDecl, UseStorageDecl,
         },
         lazy_static::lazy_static,
         proptest::prelude::*,
@@ -2196,6 +2235,100 @@ mod tests {
             result = Err(ErrorList::new(vec![
                 Error::field_too_long("StorageDecl", "source_path"),
                 Error::field_too_long("StorageDecl", "name"),
+            ])),
+        },
+
+        // runners
+        test_validate_runners_empty => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.runners = Some(vec![RunnerDecl{
+                    name: None,
+                    source: None,
+                    source_path: None,
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("RunnerDecl", "source"),
+                Error::missing_field("RunnerDecl", "name"),
+                Error::missing_field("RunnerDecl", "source_path"),
+            ])),
+        },
+        test_validate_runners_invalid_identifiers => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.runners = Some(vec![RunnerDecl{
+                    name: Some("^bad".to_string()),
+                    source: Some(Ref::Collection(CollectionRef {
+                        name: "/bad".to_string()
+                    })),
+                    source_path: Some("&bad".to_string()),
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_field("RunnerDecl", "source"),
+                Error::invalid_character_in_field("RunnerDecl", "name", '^'),
+                Error::invalid_field("RunnerDecl", "source_path"),
+            ])),
+        },
+        test_validate_runners_invalid_child => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.runners = Some(vec![RunnerDecl{
+                    name: Some("elf".to_string()),
+                    source: Some(Ref::Collection(CollectionRef {
+                        name: "invalid".to_string(),
+                    })),
+                    source_path: Some("/elf".to_string()),
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_field("RunnerDecl", "source"),
+            ])),
+        },
+        test_validate_runners_long_identifiers => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.runners = Some(vec![
+                    RunnerDecl{
+                        name: Some("a".repeat(101)),
+                        source: Some(Ref::Child(ChildRef {
+                            name: "b".repeat(101),
+                            collection: None,
+                        })),
+                        source_path: Some(format!("/{}", "c".repeat(1024))),
+                    },
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::field_too_long("RunnerDecl", "source.child.name"),
+                Error::field_too_long("RunnerDecl", "name"),
+                Error::field_too_long("RunnerDecl", "source_path"),
+            ])),
+        },
+        test_validate_runners_duplicate_name => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.runners = Some(vec![
+                    RunnerDecl {
+                        name: Some("elf".to_string()),
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_path: Some("/elf".to_string()),
+                    },
+                    RunnerDecl {
+                        name: Some("elf".to_string()),
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_path: Some("/elf2".to_string()),
+                    },
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::duplicate_field("RunnerDecl", "name", "elf"),
             ])),
         },
     }
