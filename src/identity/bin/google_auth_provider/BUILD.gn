@@ -6,7 +6,7 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
-  name = "google_auth_provider_rust"
+  name = "google_auth_provider"
   with_unit_tests = true
   edition = "2018"
 
@@ -35,17 +35,17 @@ rustc_binary("bin") {
   ]
 }
 
-package("google_auth_provider_rust") {
+package("google_auth_provider") {
   deps = [
     ":bin",
   ]
 
-  binary = "google_auth_provider_rust"
+  binary = "google_auth_provider"
 
   meta = [
     {
-      path = rebase_path("meta/google_auth_provider_rust.cmx")
-      dest = "google_auth_provider_rust.cmx"
+      path = rebase_path("meta/google_auth_provider.cmx")
+      dest = "google_auth_provider.cmx"
     },
   ]
 }

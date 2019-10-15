@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:args/args.dart';
 import 'package:fidl_fuchsia_auth/fidl_async.dart';
 import 'package:fidl_fuchsia_sys/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
@@ -21,15 +20,12 @@ const String userProfileId = 'test_user_profile';
 const String googleAuthProviderType = 'Google';
 const String googleAuthProviderUrl =
     'fuchsia-pkg://fuchsia.com/google_auth_provider#meta/google_auth_provider.cmx';
-const String googleAuthProviderRustUrl =
-    'fuchsia-pkg://fuchsia.com/google_auth_provider_rust#meta/google_auth_provider_rust.cmx';
 const List<String> accessTokenScopes = [
   'https://www.googleapis.com/auth/plus.login'
 ];
 
 const String glifFlag = 'glif';
 const String dedicatedEndpointFlag = 'dedicated-endpoint';
-const String rustFlag = 'rust';
 
 const String authStatusField = 'auth-status';
 const String successAuthStatus = 'success';
@@ -43,18 +39,9 @@ const AppConfig googleAppConfig = AppConfig(
 
 /// Thin app used for invoking token manager
 void main(List<String> args) {
-  final parser = ArgParser()
-    ..addFlag(glifFlag)
-    ..addFlag(dedicatedEndpointFlag)
-    ..addFlag(rustFlag);
-  final argResults = parser.parse(args);
-
   setupLogger();
 
-  final model = GoogleLoginTesterModel(inspect.Inspect().root)
-    ..glif = argResults[glifFlag]
-    ..dedicatedEndpoint = argResults[dedicatedEndpointFlag]
-    ..rust = argResults[rustFlag];
+  final model = GoogleLoginTesterModel(inspect.Inspect().root);
 
   final app = ScopedModel(
     model: model,
@@ -73,12 +60,6 @@ class GoogleLoginTesterModel extends Model {
   final TokenManagerProxy tokenManager = TokenManagerProxy();
   final ComponentControllerProxy controller = ComponentControllerProxy();
 
-  // Whether to request the glif or redcarpet UI.
-  bool glif = false;
-  // Whether to request the dedicated or normal endpoint.
-  bool dedicatedEndpoint = false;
-  // Whether to use the Rust or C++ GoogleAuthProvider.
-  bool rust = false;
   // Inspect node used to report if the authentication flow has succeeded.
   final inspect.Node _inspectNode;
 
@@ -102,15 +83,11 @@ class GoogleLoginTesterModel extends Model {
   }
 
   List<AuthProviderConfig> _buildAuthProviderConfigs() {
-    var params = <String>[]
-      ..add(glif ? '--glif' : '--redcarpet')
-      ..add(dedicatedEndpoint ? '--fuchsiaendpoint' : '--oauthendpoint');
-
     return [
       AuthProviderConfig(
           authProviderType: googleAuthProviderType,
-          url: rust ? googleAuthProviderRustUrl : googleAuthProviderUrl,
-          params: params)
+          url: googleAuthProviderUrl,
+          params: <String>[])
     ];
   }
 

@@ -20,7 +20,6 @@ flutter_jit_app("google_signin_e2e_tester") {
   deps = [
     "//sdk/fidl/fuchsia.auth",
     "//sdk/fidl/fuchsia.ui.views",
-    "//third_party/dart-pkg/pub/args",
     "//topaz/lib/settings:lib.settings",
     "//topaz/public/dart/fidl",
     "//topaz/public/dart/fuchsia_inspect",

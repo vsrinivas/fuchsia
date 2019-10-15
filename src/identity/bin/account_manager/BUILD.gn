@@ -54,6 +54,6 @@ package("account_manager") {
 
 group("account_manager_auth_providers") {
   public_deps = [
-    "../google_auth_provider_rust",
+    "../google_auth_provider",
   ]
 }
