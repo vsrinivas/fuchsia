@@ -11,6 +11,7 @@
             "fuchsia.pkg.PackageResolver",
             "fuchsia.process.Launcher",
             "fuchsia.logger.LogSink",
+            "fuchsia.sys.Loader",
             "fuchsia.ui.scenic.Scenic"
         ]
     }

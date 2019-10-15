@@ -100,7 +100,7 @@ pub trait ElementManager {
 /// tracking which elements are running, de-duplicating elements, etc.).
 pub struct SimpleElementManager {
     /// The realm which this element manager uses to create components.
-    realm: fsys::RealmProxy
+    realm: fsys::RealmProxy,
 }
 
 impl SimpleElementManager {

@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/simple_element"
+    },
+    "use": [
+        {
+            "legacy_service": "/svc/fuchsia.session.examples.ElementPing",
+        },
+    ],
+}

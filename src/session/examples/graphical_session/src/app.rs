@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_ui_scenic::{ScenicMarker, ScenicProxy},
     fuchsia_async::{self as fasync},
     fuchsia_component::client::connect_to_service,
-    fuchsia_scenic,
+    fuchsia_scenic, fuchsia_syslog as syslog,
     fuchsia_zircon::{ClockId, Duration, Time},
     futures::{StreamExt, TryFutureExt},
 };
@@ -94,7 +94,7 @@ impl App {
                 .lock()
                 .present(self.context.lock().unwrap().presentation_time.into_nanos() as u64)
                 .map_ok(|_| ())
-                .unwrap_or_else(|e| eprintln!("present error: {:?}", e)),
+                .unwrap_or_else(|error| syslog::fx_log_err!("Present error: {:?}", error)),
         );
     }
 }

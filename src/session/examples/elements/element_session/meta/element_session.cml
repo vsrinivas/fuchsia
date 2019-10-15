@@ -1,0 +1,46 @@
+{
+    "program": {
+        "binary": "bin/element_session"
+    },
+    "children": [
+        {
+            "name": "element_proposer",
+            "url": "fuchsia-pkg://fuchsia.com/element_proposer#meta/element_proposer.cm",
+            "startup": "eager",
+        }
+    ],
+    "collections": [
+        {
+            "name": "elements",
+            "durability": "transient",
+        },
+    ],
+    "expose": [
+        {
+            "legacy_service": "/svc/fuchsia.session.ElementManager",
+            "from": "self",
+        },
+        {
+            "legacy_service": "/svc/fuchsia.session.examples.ElementPing",
+            "from": "self",
+        },
+    ],
+    "use": [
+        {
+            "legacy_service": "/svc/fuchsia.sys2.Realm",
+            "from": "framework",
+        },
+    ],
+    "offer": [
+        {
+            "legacy_service": "/svc/fuchsia.session.examples.ElementPing",
+            "from": "self",
+            "to": [ "#elements" ],
+        },
+        {
+            "legacy_service": "/svc/fuchsia.session.ElementManager",
+            "from": "self",
+            "to": [ "#element_proposer" ],
+        },
+    ],
+}

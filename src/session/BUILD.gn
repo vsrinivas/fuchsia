@@ -15,7 +15,8 @@ group("examples") {
   testonly = true
 
   deps = [
-    "//src/session/example_sessions/graphical_session",
+    "//src/session/examples/elements",
+    "//src/session/examples/graphical_session",
   ]
 }
 

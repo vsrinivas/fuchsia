@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/element_proposer"
+    },
+    "use": [
+        {
+            "legacy_service": "/svc/fuchsia.session.ElementManager"
+        },
+    ]
+}
