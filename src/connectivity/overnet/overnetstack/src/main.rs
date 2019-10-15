@@ -6,11 +6,6 @@
 
 #![deny(missing_docs)]
 
-#[macro_use]
-extern crate failure;
-#[macro_use]
-extern crate log;
-
 mod mdns;
 
 use failure::{Error, ResultExt};
@@ -59,7 +54,7 @@ impl NodeRuntime for AppRuntime {
     fn handle_type(handle: &zx::Handle) -> Result<SendHandle, Error> {
         match handle.basic_info()?.object_type {
             zx::ObjectType::CHANNEL => Ok(SendHandle::Channel),
-            _ => bail!("Handle type not proxyable {:?}", handle.basic_info()?.object_type),
+            _ => failure::bail!("Handle type not proxyable {:?}", handle.basic_info()?.object_type),
         }
     }
 
@@ -90,14 +85,14 @@ impl NodeRuntime for AppRuntime {
                     Ok(app
                         .udp_socket
                         .as_ref()
-                        .ok_or_else(|| format_err!("no udp socket"))?
+                        .ok_or_else(|| failure::format_err!("no udp socket"))?
                         .sock
                         .clone())
                 })?;
                 let sock = sock.deref().as_ref();
                 if let Err(e) = sock.send_to(packet, addr) {
                     if e.kind() == std::io::ErrorKind::BrokenPipe {
-                        warn!("BrokenPipe on UDP socket: let's make a new one");
+                        log::warn!("BrokenPipe on UDP socket: let's make a new one");
                         with_app_mut(|app| {
                             app.udp_socket.take();
                             app.udp_socket = Some(UdpSocketHolder::new(app.node_id)?);
@@ -194,7 +189,7 @@ async fn read_udp_inner() -> Result<(), Error> {
             Ok(app
                 .udp_socket
                 .as_ref()
-                .ok_or_else(|| format_err!("No udp socket to read from"))?
+                .ok_or_else(|| failure::format_err!("No udp socket to read from"))?
                 .sock
                 .clone())
         })?;
@@ -205,7 +200,7 @@ async fn read_udp_inner() -> Result<(), Error> {
             if let Some(link_id) = app.udp_link_ids.get(&sender) {
                 app.node.queue_recv(*link_id, &mut buf[..length]);
             } else {
-                warn!("No link for received packet {:?}", sender);
+                log::warn!("No link for received packet {:?}", sender);
             }
             Ok(())
         })?;
@@ -215,7 +210,7 @@ async fn read_udp_inner() -> Result<(), Error> {
 /// Read UDP socket until closed, logging errors.
 async fn read_udp() {
     if let Err(e) = read_udp_inner().await {
-        warn!("UDP read loop failed: {:?}", e);
+        log::warn!("UDP read loop failed: {:?}", e);
     }
 }
 
@@ -241,7 +236,7 @@ async fn run_list_peers_inner(responder: OvernetListPeersResponder) -> Result<()
 
 async fn run_list_peers(responder: OvernetListPeersResponder) {
     if let Err(e) = run_list_peers_inner(responder).await {
-        warn!("List peers gets error: {:?}", e);
+        log::warn!("List peers gets error: {:?}", e);
     }
 }
 
@@ -265,7 +260,7 @@ async fn run_overnet_server(mut stream: OvernetRequestStream) -> Result<(), Erro
         });
         match result {
             Ok(()) => (),
-            Err(e) => warn!("Error servicing request: {:?}", e),
+            Err(e) => log::warn!("Error servicing request: {:?}", e),
         }
     }
     Ok(())
@@ -295,7 +290,7 @@ async fn main() -> Result<(), Error> {
 
     const MAX_CONCURRENT: usize = 10_000;
     fs.for_each_concurrent(MAX_CONCURRENT, |IncomingService::Overnet(stream)| {
-        run_overnet_server(stream).unwrap_or_else(|e| trace!("{:?}", e))
+        run_overnet_server(stream).unwrap_or_else(|e| log::trace!("{:?}", e))
     })
     .await;
     Ok(())

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use overnet_core::NodeId;
 use failure::Error;
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_net_mdns::{
@@ -12,6 +11,7 @@ use fidl_fuchsia_net_mdns::{
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
+use overnet_core::NodeId;
 
 const SERVICE_NAME: &str = "_rustic_overnet._udp.";
 
@@ -21,7 +21,7 @@ async fn connect_to_proxy(
     port: u16,
     proxy: zx::Channel,
 ) {
-    info!("Publish overnet service on port {}", port);
+    log::info!("Publish overnet service on port {}", port);
 
     match publisher
         .publish_service_instance(
@@ -32,9 +32,9 @@ async fn connect_to_proxy(
         )
         .await
     {
-        Ok(Ok(())) => warn!("Published overnet service"),
-        Err(e) => warn!("FIDL failure: {:?}", e),
-        Ok(Err(e)) => warn!("Mdns failure: {:?}", e),
+        Ok(Ok(())) => log::warn!("Published overnet service"),
+        Err(e) => log::warn!("FIDL failure: {:?}", e),
+        Ok(Err(e)) => log::warn!("Mdns failure: {:?}", e),
     }
 }
 
@@ -47,7 +47,7 @@ async fn publish_inner(node_id: NodeId, port: u16) -> Result<(), Error> {
 
     fasync::spawn_local(connect_to_proxy(publisher, node_id, port, proxy));
 
-    info!("Waiting for mdns requests");
+    log::info!("Waiting for mdns requests");
 
     while let Some(request) = stream.try_next().await? {
         let mut ok_publication = Publication {
@@ -78,7 +78,7 @@ async fn publish_inner(node_id: NodeId, port: u16) -> Result<(), Error> {
         }
     }
 
-    info!("Mdns publisher finishes");
+    log::info!("Mdns publisher finishes");
 
     Ok(())
 }
@@ -86,7 +86,7 @@ async fn publish_inner(node_id: NodeId, port: u16) -> Result<(), Error> {
 /// Run main loop to publish a udp socket to mdns.
 pub async fn publish(node_id: NodeId, port: u16) {
     if let Err(e) = publish_inner(node_id, port).await {
-        warn!("mdns-publish-loop failed: {:?}", e);
+        log::warn!("mdns-publish-loop failed: {:?}", e);
     }
 }
 
@@ -126,17 +126,17 @@ async fn subscribe_inner() -> Result<(), Error> {
     let server = fasync::Channel::from_channel(server)?;
     let mut stream = ServiceSubscriberRequestStream::from_channel(server);
 
-    info!("Query for overnet services");
+    log::info!("Query for overnet services");
 
     fuchsia_component::client::connect_to_service::<SubscriberMarker>()?
         .subscribe_to_service(SERVICE_NAME, fidl::endpoints::ClientEnd::new(proxy))?;
 
-    info!("Wait for overnet services");
+    log::info!("Wait for overnet services");
 
     while let Some(request) = stream.try_next().await? {
         match request {
             ServiceSubscriberRequest::OnInstanceDiscovered { instance, responder } => {
-                info!("Discovered: {:?}", instance);
+                log::info!("Discovered: {:?}", instance);
                 for endpoint in instance.endpoints.into_iter() {
                     crate::register_udp(
                         endpoint_to_socket(endpoint),
@@ -146,7 +146,7 @@ async fn subscribe_inner() -> Result<(), Error> {
                 responder.send()?;
             }
             ServiceSubscriberRequest::OnInstanceChanged { instance, responder } => {
-                info!("Changed: {:?}", instance);
+                log::info!("Changed: {:?}", instance);
                 for endpoint in instance.endpoints.into_iter() {
                     crate::register_udp(
                         endpoint_to_socket(endpoint),
@@ -156,13 +156,13 @@ async fn subscribe_inner() -> Result<(), Error> {
                 responder.send()?;
             }
             ServiceSubscriberRequest::OnInstanceLost { responder, .. } => {
-                info!("Removed a thing");
+                log::info!("Removed a thing");
                 responder.send()?;
             }
         }
     }
 
-    info!("Mdns subscriber finishes");
+    log::info!("Mdns subscriber finishes");
 
     Ok(())
 }
@@ -170,6 +170,6 @@ async fn subscribe_inner() -> Result<(), Error> {
 /// Run main loop to look for overnet mdns advertisements and add them to the mesh.
 pub async fn subscribe() {
     if let Err(e) = subscribe_inner().await {
-        warn!("mdns-subscribe failed: {:?}", e);
+        log::warn!("mdns-subscribe failed: {:?}", e);
     }
 }
