@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <lib/devmgr-integration-test/fixture.h>
+
 #include <string>
 
 #include <fbl/macros.h>
@@ -15,7 +17,7 @@
 // Simple wrapper around a ramdisk.
 class RamDisk {
  public:
-  RamDisk(uint32_t page_size, uint32_t num_pages);
+  RamDisk(const fbl::unique_fd& devfs_root, uint32_t page_size, uint32_t num_pages);
   ~RamDisk();
 
   const char* path() const { return path_.c_str(); }
@@ -64,15 +66,25 @@ class Environment : public zxtest::Environment {
 
   const char* device_path() const { return path_.c_str(); }
 
+  // Returns the path of the underlying device with the caveat that if the test
+  // is using a ramdisk, the returned path is not usable to access the device
+  // because it will not be rooted on the correct device manager. This only
+  // makes sense when comparing against a path provided by the filesystem.
+  const char* GetRelativeDevicePath() const;
+
   const RamDisk* ramdisk() const { return ramdisk_.get(); }
+
+  const fbl::unique_fd& devfs_root() const { return devmgr_.devfs_root(); }
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Environment);
 
  private:
   bool OpenDevice(const char* path);
+  void CreateDevmgr();
 
   TestConfig config_;
 
+  devmgr_integration_test::IsolatedDevmgr devmgr_;
   std::unique_ptr<RamDisk> ramdisk_;
   std::string path_;
 

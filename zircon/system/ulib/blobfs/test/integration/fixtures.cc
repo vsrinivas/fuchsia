@@ -6,6 +6,8 @@
 
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
+#include <fuchsia/hardware/block/partition/c/fidl.h>
+#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/fzl/fdio.h>
 #include <limits.h>
 
@@ -137,18 +139,23 @@ void FilesystemTestWithFvm::CreatePartition() {
   fbl::unique_fd fd(open(fvm_path_.c_str(), O_RDWR));
   ASSERT_TRUE(fd, "Could not open FVM driver");
 
-  alloc_req_t request = {};
-  request.slice_count = 1;
-  strcpy(request.name, "fs-test-partition");
-  memcpy(request.type, kTestPartGUID, sizeof(request.type));
-  memcpy(request.guid, kTestUniqueGUID, sizeof(request.guid));
+  std::string name("fs-test-partition");
+  fzl::FdioCaller caller(std::move(fd));
+  auto type = reinterpret_cast<const fuchsia_hardware_block_partition_GUID*>(kTestPartGUID);
+  auto guid = reinterpret_cast<const fuchsia_hardware_block_partition_GUID*>(kTestUniqueGUID);
+  zx_status_t status;
+  zx_status_t io_status = fuchsia_hardware_block_volume_VolumeManagerAllocatePartition(
+      caller.borrow_channel(), 1, type, guid, name.c_str(), name.size() + 1,
+      0, &status);
+  ASSERT_OK(io_status, "Could not send message to FVM driver");
+  ASSERT_OK(status, "Could not allocate FVM partition");
 
-  fd.reset(fvm_allocate_partition(fd.get(), &request));
-  ASSERT_TRUE(fd, "Could not allocate FVM partition");
+  std::string path(fvm_path_);
+  path.append("/");
+  path.append(name);
+  path.append("-p-1/block");
 
-  char path[PATH_MAX];
-  fd.reset(open_partition(kTestUniqueGUID, kTestPartGUID, 0, path));
-  ASSERT_TRUE(fd, "Could not locate FVM partition");
+  ASSERT_OK(wait_for_device(path.c_str(), zx::sec(10).get()));
 
   // The base test must see the FVM volume as the device to work with.
   partition_path_.swap(device_path_);
@@ -158,13 +165,13 @@ void FilesystemTestWithFvm::CreatePartition() {
 FixedDiskSizeTest::FixedDiskSizeTest(uint64_t disk_size) {
   const int kBlockSize = 512;
   uint64_t num_blocks = disk_size / kBlockSize;
-  ramdisk_ = std::make_unique<RamDisk>(kBlockSize, num_blocks);
+  ramdisk_ = std::make_unique<RamDisk>(environment_->devfs_root(), kBlockSize, num_blocks);
   device_path_ = ramdisk_->path();
 }
 
 FixedDiskSizeTestWithFvm::FixedDiskSizeTestWithFvm(uint64_t disk_size) {
   const int kBlockSize = 512;
   uint64_t num_blocks = disk_size / kBlockSize;
-  ramdisk_ = std::make_unique<RamDisk>(kBlockSize, num_blocks);
+  ramdisk_ = std::make_unique<RamDisk>(environment_->devfs_root(), kBlockSize, num_blocks);
   device_path_ = ramdisk_->path();
 }

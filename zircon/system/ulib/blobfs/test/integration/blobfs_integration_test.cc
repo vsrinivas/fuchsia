@@ -1184,7 +1184,9 @@ void RunQueryDevicePathTest(const std::string& device_path) {
   ASSERT_STATUS(ZX_ERR_ACCESS_DENIED, DirectoryAdminGetDevicePath(std::move(root_fd), &path));
 }
 
-TEST_F(BlobfsTest, QueryDevicePath) { RunQueryDevicePathTest(device_path()); }
+TEST_F(BlobfsTest, QueryDevicePath) {
+  RunQueryDevicePathTest(environment_->GetRelativeDevicePath());
+}
 
 TEST_F(BlobfsTestWithFvm, QueryDevicePath) {
   // Make sure the two paths to compare are in the same form.
