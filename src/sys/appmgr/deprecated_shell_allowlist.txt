@@ -22,7 +22,6 @@ fuchsia-pkg://fuchsia.com/glob#meta/glob.cmx
 fuchsia-pkg://fuchsia.com/has_deprecated_shell#meta/has_deprecated_shell.cmx
 fuchsia-pkg://fuchsia.com/has_hub_deprecated_shell#meta/has_hub_deprecated_shell.cmx
 fuchsia-pkg://fuchsia.com/ktrace_integration_tests#meta/ktrace_integration_tests.cmx
-fuchsia-pkg://fuchsia.com/netemul_devmgr#meta/netemul_devmgr.cmx
 fuchsia-pkg://fuchsia.com/netstack_ifconfig_test#meta/netstack_ifconfig_test.cmx
 fuchsia-pkg://fuchsia.com/opal_test#meta/opal_test.cmx
 fuchsia-pkg://fuchsia.com/provider_destruction_tests#meta/provider_destruction_tests.cmx
