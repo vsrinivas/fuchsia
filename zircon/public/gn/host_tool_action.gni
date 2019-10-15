@@ -93,7 +93,8 @@ template("_host_tool_action_target") {
     ]
     inputs += [ rspfile ]
 
-    depfile = "$target_out_dir/$target_name._host_tool_action.d"
+    depfile =
+        "$target_out_dir/$target_name.{{source_file_part}}._host_tool_action.d"
     if (defined(invoker.depfile)) {
       orig_depfile = rebase_path(invoker.depfile, root_build_dir)
     } else {
