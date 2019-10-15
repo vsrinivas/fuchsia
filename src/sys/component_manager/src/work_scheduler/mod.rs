@@ -4,5 +4,7 @@
 
 pub mod work_scheduler;
 
+mod work_item;
+
 #[cfg(test)]
 mod routing_tests;

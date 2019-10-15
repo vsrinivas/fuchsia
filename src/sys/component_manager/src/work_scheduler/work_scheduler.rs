@@ -17,6 +17,7 @@ use {
     crate::{
         framework::FrameworkCapability,
         model::{error::ModelError, hooks::*, AbsoluteMoniker, Realm},
+        work_scheduler::work_item::WorkItem,
     },
     cm_rust::{CapabilityPath, ExposeDecl, ExposeTarget, FrameworkCapabilityDecl},
     failure::{format_err, Error},
@@ -31,7 +32,7 @@ use {
     },
     lazy_static::lazy_static,
     log::warn,
-    std::{cmp::Ordering, convert::TryInto, sync::Arc},
+    std::{convert::TryInto, sync::Arc},
 };
 
 lazy_static! {
@@ -43,75 +44,6 @@ lazy_static! {
         "/svc/fuchsia.sys2.WorkSchedulerControl".try_into().unwrap();
     pub static ref ROOT_WORK_SCHEDULER: Arc<Mutex<WorkScheduler>> =
         Arc::new(Mutex::new(WorkScheduler::new()));
-}
-
-/// `WorkItem` is a single item in the ordered-by-deadline collection maintained by `WorkScheduler`.
-#[derive(Clone, Debug, Eq)]
-struct WorkItem {
-    /// The `AbsoluteMoniker` of the realm/component instance that owns this `WorkItem`.
-    abs_moniker: AbsoluteMoniker,
-    /// Unique identifier for this unit of work **relative to others with the same `abs_moniker`**.
-    id: String,
-    /// Next deadline for this unit of work, in monotonic time.
-    next_deadline_monotonic: i64,
-    /// Period between repeating this unit of work (if any), measure in nanoseconds.
-    period: Option<i64>,
-}
-
-/// WorkItem default equality: identical `abs_moniker` and `id`.
-impl PartialEq for WorkItem {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id && self.abs_moniker == other.abs_moniker
-    }
-}
-
-impl WorkItem {
-    fn new(
-        abs_moniker: &AbsoluteMoniker,
-        id: &str,
-        next_deadline_monotonic: i64,
-        period: Option<i64>,
-    ) -> Self {
-        WorkItem {
-            abs_moniker: abs_moniker.clone(),
-            id: id.to_string(),
-            next_deadline_monotonic,
-            period,
-        }
-    }
-
-    /// Produce a canonical `WorkItem` from its identifying information: `abs_moniker` + `id`. Note
-    /// that other fields are ignored in equality testing.
-    fn new_by_identity(abs_moniker: &AbsoluteMoniker, id: &str) -> Self {
-        WorkItem {
-            abs_moniker: abs_moniker.clone(),
-            id: id.to_string(),
-            next_deadline_monotonic: 0,
-            period: None,
-        }
-    }
-
-    /// Attempt to unpack identifying info (`abs_moniker`, `id`) + `WorkRequest` into a `WorkItem`.
-    /// Errors:
-    /// - INVALID_ARGUMENTS: Missing or invalid `work_request.start` value.
-    fn try_new(
-        abs_moniker: &AbsoluteMoniker,
-        id: &str,
-        work_request: &fsys::WorkRequest,
-    ) -> Result<Self, fsys::Error> {
-        let next_deadline_monotonic = match &work_request.start {
-            None => Err(fsys::Error::InvalidArguments),
-            Some(start) => match start {
-                fsys::Start::MonotonicTime(monotonic_time) => Ok(monotonic_time),
-                _ => Err(fsys::Error::InvalidArguments),
-            },
-        }?;
-        Ok(WorkItem::new(abs_moniker, id, *next_deadline_monotonic, work_request.period))
-    }
-
-    fn deadline_order(left: &Self, right: &Self) -> Ordering {
-        left.next_deadline_monotonic.cmp(&right.next_deadline_monotonic)
-    }
 }
 
 /// A self-managed timer instantiated by `WorkScheduler` to implement the "wakeup" part of its
