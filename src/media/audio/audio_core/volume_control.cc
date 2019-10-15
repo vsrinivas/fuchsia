@@ -10,11 +10,6 @@ namespace media::audio {
 
 namespace {
 
-// TODO(turnage): Move to FIDL
-constexpr int64_t kBacklogFullEpitaph = 88;
-
-// This layer of indirection on VolumeControl just holds a per-client ack count.
-//
 // This exists because impls in a BindingSet cannot access their own binding to send events in a
 // safe way.
 class VolumeControlImpl : public fuchsia::media::audio::VolumeControl {
@@ -22,18 +17,12 @@ class VolumeControlImpl : public fuchsia::media::audio::VolumeControl {
   VolumeControlImpl(::media::audio::VolumeControl* volume_control)
       : volume_control_(volume_control) {}
 
-  // Counts an event sent to this client among the pending acks.
-  // Returns the events already sent.
-  uint64_t CountEvent() { return events_sent_without_ack_++; }
-
  private:
   // |fuchsia::media::audio::VolumeControl|
   void SetVolume(float volume) override { volume_control_->SetVolume(volume); }
   void SetMute(bool mute) override { volume_control_->SetMute(mute); }
-  void NotifyVolumeMuteChangedHandled() override { events_sent_without_ack_ = 0; }
 
   ::media::audio::VolumeControl* volume_control_;
-  uint64_t events_sent_without_ack_ = 0;
 };
 
 }  // namespace
@@ -74,13 +63,7 @@ void VolumeControl::SetMute(bool mute) {
 
 void VolumeControl::NotifyClientsOfState() {
   for (auto& binding : bindings_.bindings()) {
-    auto impl = static_cast<VolumeControlImpl*>(binding->impl().get());
-    if (impl->CountEvent() < kMaxEventsSentWithoutAck) {
-      binding->events().OnVolumeMuteChanged(current_volume_, muted_);
-    } else {
-      binding->Close(kBacklogFullEpitaph);
-      AUD_LOG(WARNING) << "Disconnected volume control client because they did not ACK events";
-    }
+    binding->events().OnVolumeMuteChanged(current_volume_, muted_);
   }
 }
 

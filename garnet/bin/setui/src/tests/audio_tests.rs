@@ -145,8 +145,6 @@ async fn test_audio() {
         (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
         audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::Media).unwrap()
     );
-
-    assert_eq!(2, audio_core_service_handle.read().get_ack_count(AudioRenderUsage::Media).unwrap());
 }
 
 // Test to ensure mic input change events are received.
@@ -247,12 +245,6 @@ async fn test_audio_pair_media_system() {
         (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
         audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::SystemAgent).unwrap()
     );
-
-    assert_eq!(2, audio_core_service_handle.read().get_ack_count(AudioRenderUsage::Media).unwrap());
-    assert_eq!(
-        2,
-        audio_core_service_handle.read().get_ack_count(AudioRenderUsage::SystemAgent).unwrap()
-    );
 }
 
 // Test to ensure that when |pair_media_and_system_agent| is disabled, setting the media volume will
@@ -289,9 +281,6 @@ async fn test_audio_pair_media_system_off() {
         None,
         audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::SystemAgent)
     );
-
-    assert_eq!(2, audio_core_service_handle.read().get_ack_count(AudioRenderUsage::Media).unwrap());
-    assert_eq!(None, audio_core_service_handle.read().get_ack_count(AudioRenderUsage::SystemAgent));
 }
 
 // Test to ensure that when |pair_media_and_system_agent| is enabled, setting the media volume
@@ -338,12 +327,6 @@ async fn test_audio_pair_media_system_with_system_agent_change() {
     assert_eq!(
         (CHANGED_SYSTEM_LEVEL, CHANGED_SYSTEM_MUTED),
         audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::SystemAgent).unwrap()
-    );
-
-    assert_eq!(2, audio_core_service_handle.read().get_ack_count(AudioRenderUsage::Media).unwrap());
-    assert_eq!(
-        1,
-        audio_core_service_handle.read().get_ack_count(AudioRenderUsage::SystemAgent).unwrap()
     );
 }
 

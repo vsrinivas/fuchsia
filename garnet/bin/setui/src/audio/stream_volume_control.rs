@@ -4,12 +4,12 @@
 
 use {
     crate::switchboard::base::{AudioStream, AudioStreamType},
-    fidl::endpoints::create_proxy,
+    fidl::{self, endpoints::create_proxy},
     fidl_fuchsia_media::{AudioRenderUsage, Usage},
-    fidl_fuchsia_media_audio::{VolumeControlEvent, VolumeControlProxy},
+    fidl_fuchsia_media_audio::VolumeControlProxy,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
-    futures::TryStreamExt,
+    futures::{FutureExt, TryFutureExt, TryStreamExt},
 };
 
 // Stores an AudioStream and a VolumeControl proxy bound to the AudioCore
@@ -77,18 +77,17 @@ fn bind_volume_control(
     // TODO(fxb/37777): Update |stored_stream| in StreamVolumeControl and send a notification
     // when we receive an update.
     let proxy_clone = vol_control_proxy.clone();
-    fasync::spawn(async move {
-        let mut stream = proxy_clone.take_event_stream();
-        while let Some(evt) = stream.try_next().await.unwrap() {
-            match evt {
-                VolumeControlEvent::OnVolumeMuteChanged { new_volume: _, new_muted: _ } => {
-                    proxy_clone.notify_volume_mute_changed_handled().unwrap_or_else(move |e| {
-                        fx_log_err!("failed to notify volume mute change handling, {}", e);
-                    });
-                }
-            }
-        }
-    });
+    let consume_volume_events = async move {
+        let mut volume_events = proxy_clone.take_event_stream();
+        while let Some(_) = volume_events.try_next().await? {}
+
+        Ok(())
+    };
+    fasync::spawn(
+        consume_volume_events
+            .map_err(|e: fidl::Error| fx_log_err!("Volume event stream failed: {}", e))
+            .map(|_| ()),
+    );
 
     Some(vol_control_proxy)
 }

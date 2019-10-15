@@ -24,8 +24,4 @@ protocol VolumeControl {
 
     /// Emitted when the volume or mute state of the audio element changes.
     -> OnVolumeMuteChanged(float32 new_volume, bool new_muted);
-    /// Acknowledges receipt of a volume or mute change event. Clients must
-    /// acknowledge receipt to continue receiving events.
-    // TODO(35429): Remove when FIDL gets event responses.
-    NotifyVolumeMuteChangedHandled();
 };

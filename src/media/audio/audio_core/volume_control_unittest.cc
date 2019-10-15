@@ -12,9 +12,6 @@
 namespace media::audio {
 namespace {
 
-// TODO(turnage): Move to FIDL
-constexpr zx_status_t kBacklogFullEpitaph = 88;
-
 class MockVolumeSetting : public VolumeSetting {
  public:
   void SetVolume(float volume) override { volume_ = volume; }
@@ -101,9 +98,7 @@ TEST_F(VolumeControlTest, ClientEvents) {
   float volume;
   bool muted;
   auto client = BindVolumeControl();
-  client.events().OnVolumeMuteChanged = [&client, &volume, &muted](float new_volume,
-                                                                   bool new_muted) {
-    client->NotifyVolumeMuteChangedHandled();
+  client.events().OnVolumeMuteChanged = [&volume, &muted](float new_volume, bool new_muted) {
     volume = new_volume;
     muted = new_muted;
   };
@@ -134,9 +129,8 @@ TEST_F(VolumeControlTest, DuplicateSetsGenerateNoEvents) {
   bool muted;
   size_t event_count = 0;
   auto client = BindVolumeControl();
-  client.events().OnVolumeMuteChanged = [&client, &event_count, &volume, &muted](float new_volume,
-                                                                                 bool new_muted) {
-    client->NotifyVolumeMuteChangedHandled();
+  client.events().OnVolumeMuteChanged = [&event_count, &volume, &muted](float new_volume,
+                                                                        bool new_muted) {
     volume = new_volume;
     muted = new_muted;
     ++event_count;
@@ -161,9 +155,7 @@ TEST_F(VolumeControlTest, AllClientsReceiveEvents) {
   float volume1;
   bool muted1;
   auto client1 = BindVolumeControl();
-  client1.events().OnVolumeMuteChanged = [&client1, &volume1, &muted1](float new_volume,
-                                                                       bool new_muted) {
-    client1->NotifyVolumeMuteChangedHandled();
+  client1.events().OnVolumeMuteChanged = [&volume1, &muted1](float new_volume, bool new_muted) {
     volume1 = new_volume;
     muted1 = new_muted;
   };
@@ -171,9 +163,7 @@ TEST_F(VolumeControlTest, AllClientsReceiveEvents) {
   float volume2;
   bool muted2;
   auto client2 = BindVolumeControl();
-  client2.events().OnVolumeMuteChanged = [&client2, &volume2, &muted2](float new_volume,
-                                                                       bool new_muted) {
-    client2->NotifyVolumeMuteChangedHandled();
+  client2.events().OnVolumeMuteChanged = [&volume2, &muted2](float new_volume, bool new_muted) {
     volume2 = new_volume;
     muted2 = new_muted;
   };
@@ -184,28 +174,6 @@ TEST_F(VolumeControlTest, AllClientsReceiveEvents) {
   EXPECT_FALSE(muted1);
   EXPECT_FLOAT_EQ(volume2, 0.1);
   EXPECT_FALSE(muted2);
-}
-
-TEST_F(VolumeControlTest, ClientDisconnectsIfAckLimitExceeded) {
-  size_t client1_event_count = 0;
-  auto client1 = BindVolumeControl();
-  client1.events().OnVolumeMuteChanged = [&client1, &client1_event_count](float _volume,
-                                                                          bool _muted) {
-    client1->NotifyVolumeMuteChangedHandled();
-    client1_event_count += 1;
-  };
-
-  auto client2 = BindVolumeControl();
-  zx_status_t client2_error = ZX_OK;
-  client2.set_error_handler([&client2_error](zx_status_t error) { client2_error = error; });
-
-  for (size_t i = 0; i < VolumeControl::kMaxEventsSentWithoutAck + 1; ++i) {
-    client1->SetVolume(static_cast<float>(i) / 100.0);
-    RunLoopUntilIdle();
-  }
-
-  EXPECT_EQ(client1_event_count, VolumeControl::kMaxEventsSentWithoutAck + 1);
-  EXPECT_EQ(client2_error, kBacklogFullEpitaph);
 }
 
 }  // namespace
