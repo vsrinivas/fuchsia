@@ -2,12 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[macro_use]
-extern crate failure;
-
-#[macro_use]
-extern crate log;
-
 use failure::Error;
 use fidl::Handle;
 use fidl_fuchsia_overnet_protocol::StreamSocketGreeting;
@@ -102,7 +96,7 @@ impl NodeRuntime for AscenddRuntime {
                     let link = app
                         .unix_links
                         .get_mut(id)
-                        .ok_or_else(|| format_err!("No such link {:?}", id))?;
+                        .ok_or_else(|| failure::format_err!("No such link {:?}", id))?;
                     link.framer.queue_send(packet)?;
                     if let Some(tx) = link.state.become_writing() {
                         start_writes(id, tx, link.framer.take_sends());
@@ -194,7 +188,7 @@ async fn finish_writes(
             });
             start_writes(id, tx, bytes);
         }
-        Err(e) => warn!("Write failed: {}", e),
+        Err(e) => log::warn!("Write failed: {}", e),
     }
 }
 
@@ -226,7 +220,7 @@ async fn read_incoming(
     chan: futures::channel::mpsc::Sender<Vec<u8>>,
 ) {
     if let Err(e) = read_incoming_inner(stream, chan).await {
-        warn!("Error reading: {}", e);
+        log::warn!("Error reading: {}", e);
     }
 }
 
@@ -254,26 +248,26 @@ async fn process_incoming_inner(
 
     let first_frame = rx_frames
         .next()
-        .map(|r| r.ok_or_else(|| format_err!("Stream closed before greeting received")));
+        .map(|r| r.ok_or_else(|| failure::format_err!("Stream closed before greeting received")));
     let (mut frame, (tx_bytes, _)) = futures::try_join!(first_frame, wr)?;
     let mut greeting = StreamSocketGreeting::empty();
     fidl::encoding::Decoder::decode_into(frame.as_mut(), &mut [], &mut greeting)?;
 
     let node_id = match greeting {
-        StreamSocketGreeting { magic_string: None, .. } => bail!(
+        StreamSocketGreeting { magic_string: None, .. } => failure::bail!(
             "Required magic string '{}' not present in greeting",
             hoist::ASCENDD_CLIENT_CONNECTION_STRING
         ),
         StreamSocketGreeting { magic_string: Some(ref x), .. }
             if x != hoist::ASCENDD_CLIENT_CONNECTION_STRING =>
         {
-            bail!(
+            failure::bail!(
                 "Expected magic string '{}' in greeting, got '{}'",
                 hoist::ASCENDD_CLIENT_CONNECTION_STRING,
                 x
             )
         }
-        StreamSocketGreeting { node_id: None, .. } => bail!("No node id in greeting"),
+        StreamSocketGreeting { node_id: None, .. } => failure::bail!("No node id in greeting"),
         StreamSocketGreeting { node_id: Some(n), .. } => n.id,
     };
 
@@ -288,7 +282,7 @@ async fn process_incoming_inner(
         match app.node.new_link(node_id.into(), PhysLinkId::UnixLink(id)) {
             Err(e) => {
                 app.unix_links.remove(id);
-                bail!(e);
+                failure::bail!(e);
             }
             Ok(x) => {
                 app.unix_links.get_mut(id).unwrap().router_id = x;
@@ -314,7 +308,7 @@ async fn process_incoming(
     tx_bytes: tokio::io::WriteHalf<tokio::net::UnixStream>,
 ) {
     if let Err(e) = process_incoming_inner(rx, tx_bytes).await {
-        warn!("Error processing incoming frame: {}", e);
+        log::warn!("Error processing incoming frame: {}", e);
     }
 }
 
@@ -344,7 +338,7 @@ fn main() {
     current_thread::run(
         (async move {
             if let Err(e) = async_main().await {
-                warn!("Error: {}", e);
+                log::warn!("Error: {}", e);
             }
         })
             .unit_error()
