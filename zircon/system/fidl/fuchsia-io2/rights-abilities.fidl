@@ -55,8 +55,7 @@ bits Operations : uint64 {
 ///
 /// Invoking an operation without the corresponding right results in a
 /// `ZX_ERR_ACCESS_DENIED` error.
-using Rights = Operations;
-
+///
 /// Right Aliases - Useful constants for commonly used collections of rights.
 /// Currently FIDL doesn't support expressions on assignment so these cannot
 /// be defined. They are left here as documentation.
@@ -72,6 +71,7 @@ using Rights = Operations;
 ///
 /// "x*" a collection of rights to execute from a directory.
 /// const Rights X_STAR_DIR = CONNECT | ENUMERATE | TRAVERSE | EXECUTE;
+using Rights = Operations;
 
 /// Abilities are properties intrinsic to a node. They specify which operations
 /// are supported by it.
