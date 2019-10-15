@@ -16,9 +16,9 @@ set -o pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh
 fx-config-read
 
-export FUCHSIA_IPV4_ADDR=$(fx-command-run shell ifconfig eth | perl -n -e 'print $1 if /inet addr:(\S*)/')
+export FUCHSIA_IPV4_ADDR=$(get-fuchsia-device-addr)
 if [[ -z "$FUCHSIA_IPV4_ADDR" ]]; then
-  fx-error "Can not determine IPV4 address of Fuchsia target"
+  fx-error "Can not determine IP address of Fuchsia target"
   exit 1
 fi
 
