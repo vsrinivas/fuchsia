@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "src/developer/feedback/crashpad_agent/report_util.h"
+#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "third_party/crashpad/client/prune_crash_reports.h"
@@ -32,7 +33,9 @@ std::unique_ptr<Database> Database::TryCreate(CrashpadDatabaseConfig config) {
 
 Database::Database(CrashpadDatabaseConfig config,
                    std::unique_ptr<crashpad::CrashReportDatabase> database)
-    : config_(config), database_(std::move(database)) {}
+    : config_(config), database_(std::move(database)) {
+  FXL_DCHECK(database_);
+}
 
 bool Database::MakeNewReport(const std::map<std::string, fuchsia::mem::Buffer>& attachments,
                              const std::optional<fuchsia::mem::Buffer>& minidump,
@@ -93,9 +96,14 @@ std::unique_ptr<UploadReport> Database::GetUploadReport(const UUID& local_report
 
 bool Database::MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
                               const std::string& server_report_id) {
+  if (!upload_report) {
+    FX_LOGS(ERROR) << "upload report is null";
+    return false;
+  }
+
   const UUID local_report_id = upload_report->GetUUID();
-  if (const auto status = database_->RecordUploadComplete(
-          upload_report->TransferUploadReport(), server_report_id);
+  if (const auto status =
+          database_->RecordUploadComplete(upload_report->TransferUploadReport(), server_report_id);
       status != OperationStatus::kNoError) {
     FX_LOGS(ERROR) << fxl::StringPrintf(
         "Unable to record local crash report %s as uploaded in the database (%u)",
@@ -108,6 +116,11 @@ bool Database::MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
 }
 
 bool Database::MarkAsTooManyUploadAttempts(std::unique_ptr<UploadReport> upload_report) {
+  if (!upload_report) {
+    FX_LOGS(ERROR) << "upload report is null";
+    return false;
+  }
+
   const UUID local_report_id = upload_report->GetUUID();
   upload_report.reset();  // Release the lockfile.
   return Archive(local_report_id);
