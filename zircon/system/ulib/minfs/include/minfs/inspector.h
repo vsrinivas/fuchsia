@@ -7,8 +7,8 @@
 
 #pragma once
 
+#include <block-client/cpp/block-device.h>
 #include <lib/disk-inspector/common-types.h>
-#include <fbl/unique_fd.h>
 #include <minfs/bcache.h>
 
 namespace minfs {
@@ -21,19 +21,19 @@ class Inspector : public disk_inspector::DiskInspector {
   Inspector& operator=(const Inspector&) = delete;
   Inspector& operator=(Inspector&&) = delete;
 
-  explicit Inspector(fbl::unique_fd fd) : fd_(std::move(fd)) {}
+  explicit Inspector(std::unique_ptr<block_client::BlockDevice> device)
+    : device_(std::move(device)) {}
 
   // DiskInspector interface:
   zx_status_t GetRoot(std::unique_ptr<disk_inspector::DiskObject>* out) final;
 
  private:
   // Creates root DiskObject.
-  // Return ZX_OK on success.
   zx_status_t CreateRoot(std::unique_ptr<Bcache> bc,
                          std::unique_ptr<disk_inspector::DiskObject>* out);
 
-  // File descriptor of the device to inspect.
-  fbl::unique_fd fd_;
+  // Device being inspected.
+  std::unique_ptr<block_client::BlockDevice> device_;
 };
 
 }  // namespace minfs

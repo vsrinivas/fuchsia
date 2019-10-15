@@ -6,8 +6,6 @@
 
 #include <lib/disk-inspector/common-types.h>
 
-#include <minfs/inspector.h>
-
 #include "inspector-inode.h"
 #include "inspector-private.h"
 

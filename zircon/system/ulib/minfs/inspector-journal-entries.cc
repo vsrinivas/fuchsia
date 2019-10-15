@@ -8,8 +8,6 @@
 
 #include <array>
 
-#include <minfs/inspector.h>
-
 #include "inspector-private.h"
 
 namespace minfs {

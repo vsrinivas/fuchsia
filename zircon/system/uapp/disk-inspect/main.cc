@@ -5,8 +5,11 @@
 #include <fcntl.h>
 #include <stdio.h>
 
+#include <block-client/cpp/block-device.h>
+#include <block-client/cpp/remote-block-device.h>
 #include <fbl/unique_fd.h>
 #include <lib/disk-inspector/disk-inspector.h>
+#include <lib/fdio/fdio.h>
 #include <minfs/inspector.h>
 #include <zircon/status.h>
 
@@ -65,8 +68,8 @@ void ProcessDiskObjects(std::unique_ptr<disk_inspector::DiskObject> obj, uint32_
   }
 }
 
-int Inspect(fbl::unique_fd fd) {
-  minfs::Inspector inspector = minfs::Inspector(std::move(fd));
+int Inspect(std::unique_ptr<block_client::BlockDevice> device) {
+  minfs::Inspector inspector = minfs::Inspector(std::move(device));
   std::unique_ptr<disk_inspector::DiskObject> root;
 
   if (inspector.GetRoot(&root) == ZX_OK) {
@@ -91,5 +94,21 @@ int main(int argc, char **argv) {
     fprintf(stderr, "ERROR: Failed to open device: %d\n", fd.get());
     return -1;
   }
-  return Inspect(std::move(fd));
+
+  zx::channel channel;
+  zx_status_t status = fdio_get_service_handle(fd.release(),
+                                               channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    fprintf(stderr, "ERROR: cannot acquire handle: %d\n", status);
+    return -1;
+  }
+
+  std::unique_ptr<block_client::RemoteBlockDevice> device;
+  status = block_client::RemoteBlockDevice::Create(std::move(channel), &device);
+  if (status != ZX_OK) {
+    fprintf(stderr, "ERROR: cannot create remote device: %d\n", status);
+    return -1;
+  }
+
+  return Inspect(std::move(device));
 }

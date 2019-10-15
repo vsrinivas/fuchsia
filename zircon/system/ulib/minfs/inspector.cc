@@ -38,28 +38,9 @@ std::unique_ptr<disk_inspector::DiskObjectUint32Array> CreateUint32ArrayDiskObj(
 }
 
 zx_status_t Inspector::GetRoot(std::unique_ptr<disk_inspector::DiskObject>* out) {
-  struct stat stats;
-  if (fstat(fd_.get(), &stats) < 0) {
-    fprintf(stderr, "minfsInspector: could not find end of file/device\n");
-    return ZX_ERR_IO;
-  }
-
-  if (stats.st_size == 0) {
-    fprintf(stderr, "minfsInspector: invalid disk size\n");
-    return ZX_ERR_IO;
-  }
-
-  size_t size = stats.st_size / minfs::kMinfsBlockSize;
-
-  std::unique_ptr<block_client::BlockDevice> device;
-  zx_status_t status = minfs::FdToBlockDevice(fd_, &device);
-  if (status != ZX_OK) {
-    fprintf(stderr, "fshost: Cannot convert fd to block device: %d\n", status);
-    return status;
-  }
-
   std::unique_ptr<minfs::Bcache> bc;
-  status = minfs::Bcache::Create(std::move(device), static_cast<uint32_t>(size), &bc);
+  bool readonly_device = false;
+  zx_status_t status = CreateBcache(std::move(device_), &readonly_device, &bc);
   if (status != ZX_OK) {
     fprintf(stderr, "minfsInspector: cannot create block cache\n");
     return status;
