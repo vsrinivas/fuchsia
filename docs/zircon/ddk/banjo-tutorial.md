@@ -16,6 +16,7 @@ This tutorial is structured as follows:
 * explanation of generated code from example
 
 There's also a reference section that includes:
+
 * a list of builtin keywords and primitive types.
 
 # Overview
@@ -125,6 +126,7 @@ to include the structure definition that's common to the C++ version as well.
 ## C
 
 The C implementation is relatively straightforward:
+
 * `struct`s and `union`s map almost directly into their C language counterparts.
 * `enum`s and constants are generated as `#define` macros.
 * `protocol`s are generated as two `struct`s:
@@ -212,6 +214,7 @@ Next, we see our `const uint32` constants converted into `#define` statements:
 
 In the C version, We chose `#define` instead of "passing through" the `const uint32_t`
 representation because:
+
 * `#define` statements only exist at compile time, and get inlined at every usage site, whereas
   a `const uint32_t` would get embedded in the binary, and
 * `#define` allows for more compile time optimizations (e.g., doing math with the constant value).
@@ -297,6 +300,7 @@ Let's take a look.
 The Banjo transpiler generates three files:
 the first is the C file discussed above, and the other two are under
 `//zircon/build-`_TARGET_`/system/banjo/ddk-protocol-i2c/gen/include/ddktl/protocol/`:
+
 * `i2c.h` &mdash; the file your program should include, and
 * `i2c-internal.h` &mdash; an internal file, included by `i2c.h`
 
@@ -341,6 +345,7 @@ The boilerplate is pretty much what you'd expect:
 ```
 
 It `#include`s a bunch of DDK and OS headers, including:
+
 * the C version of the header (line `[011]`, which means that everything discussed
   [above in the C section](#a-simple-example-c-1) applies here as well), and
 * the generated `i2c-internal.h` file (line `[018]`).
@@ -417,6 +422,7 @@ structure (defined in the C include file, line `[41]` which we discussed in
 ```
 
 There are three constructors:
+
 * the default one (`[101]`) that sets `ops_` and `ctx_` to `nullptr`,
 * an initializer (`[103]`) that takes a pointer to an `i2c_protocol_t` structure and populates
   the `ops_` and `ctx`_ fields from their namesakes in the structure, and
@@ -433,12 +439,14 @@ if (!i2c.is_valid()) {
 ```
 
 Three convenience member functions are provided:
+
 * `[117]` **GetProto()** fetches the `ctx_` and `ops_` members into a protocol structure,
 * `[121]` **is_valid()** returns a `bool` indicating if the class has been initialized with
    a protocol, and
 * `[124]` **clear()** invalidates the `ctx_` and `ops_` pointers.
 
 Next we find the three member functions that were specified in the `.banjo` file:
+
 * `[134]` **Transact()**,
 * `[138]` **GetMaxTransferSize()**, and
 * `[141]` **GetInterrupt()**.
