@@ -30,6 +30,7 @@ struct SpecialCharacters {
   static constexpr char kKeyEnter = 13;
   static constexpr char kKeyControlN = 14;
   static constexpr char kKeyControlP = 16;
+  static constexpr char kKeyControlR = 18;
   static constexpr char kKeyControlU = 21;
   static constexpr char kKeyControlW = 23;
   static constexpr char kKeyEsc = 27;
@@ -107,6 +108,13 @@ class LineInputBase {
   virtual void EnsureRawMode() {}
   virtual void EnsureNoRawMode() {}
 
+  bool in_reverse_history_mode() const { return reverse_history_mode_; }
+  size_t reverse_history_index() const { return reverse_history_index_; }
+
+  // Exposed for testing purposes.
+  std::string GetReverseHistoryPrompt() const;
+  std::string GetReverseHistorySuggestion() const;
+
  protected:
   // Abstract output function, overridden by a derived class to output to
   // screen.
@@ -136,6 +144,12 @@ class LineInputBase {
   // EndOfFile means Ctrl-D with an empty input line.
   void HandleEndOfFile();
 
+  // ReverseHistory means Ctrl-R.
+  void HandleReverseHistory(char c);
+  void StartReverseHistoryMode();
+  void EndReverseHistoryMode(bool accept_suggestion);
+  void SearchNextReverseHistory(bool restart);
+
   void Insert(char c);
   void MoveLeft();
   void MoveRight();
@@ -148,9 +162,11 @@ class LineInputBase {
   void AcceptCompletion();
 
   void RepaintLine();
+
   void ResetLineState();
 
   std::string prompt_;
+
   size_t max_cols_ = 0;
   CompletionCallback completion_callback_;
 
@@ -196,12 +212,20 @@ class LineInputBase {
   bool reading_escaped_input_ = false;
   std::string escape_sequence_;
 
+  bool reverse_history_mode_ = false;
+  std::string reverse_history_input_;
+
+  // Index within history the reverse search suggestion current is. 0 means not found, as that is
+  // pointing to the current line, which we don't want to do a history search in.
+  size_t reverse_history_index_ = 0;
+
   size_t pos_;  // Current editing position.
 };
 
 // Implementation of LineInput that prints to stdout. The caller is still
 // responsible for providing input asynchronously. The initial width of the
-// output will be automatically derived from the terminal associated with
+// output will be automatically derived from the terminal associated wit, as that is
+// pointing to the current line, which we don't want to do a history search in.
 // stdout (if any).
 class LineInputStdout : public LineInputBase {
  public:

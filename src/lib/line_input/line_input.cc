@@ -69,6 +69,12 @@ bool LineInputBase::OnInput(char c) {
   FXL_DCHECK(editing_);  // BeginReadLine not called.
   FXL_DCHECK(visible_);  // Don't call while hidden.
 
+  // Reverse history mode does its own input handling.
+  if (reverse_history_mode_) {
+    HandleReverseHistory(c);
+    return false;
+  }
+
   if (reading_escaped_input_) {
     HandleEscapedInput(c);
     return false;
@@ -122,6 +128,9 @@ bool LineInputBase::OnInput(char c) {
       break;
     case SpecialCharacters::kKeyControlP:
       MoveUp();
+      break;
+    case SpecialCharacters::kKeyControlR:
+      StartReverseHistoryMode();
       break;
     case SpecialCharacters::kKeyControlU:
       HandleNegAck();
@@ -329,6 +338,123 @@ void LineInputBase::HandleEndOfFile() {
   editing_ = false;
 }
 
+void LineInputBase::HandleReverseHistory(char c) {
+  if (reading_escaped_input_) {
+    // Escape sequences are two bytes, buffer until we have both.
+    escape_sequence_.push_back(c);
+    if (escape_sequence_.size() < 2)
+      return;
+
+    if (escape_sequence_[0] == '[') {
+      if (escape_sequence_[1] >= '0' && escape_sequence_[1] <= '9') {
+        // 3-character extended sequence.
+        if (escape_sequence_.size() < 3)
+          return;  // Wait for another character.
+      }
+    }
+
+    // Any other escape sequence exists reverse history mode.
+    EndReverseHistoryMode(false);
+  }
+
+  // Only a handful of operations are valid in reverse history mode.
+  switch (c) {
+    // Enters selects the current suggestion.
+    case SpecialCharacters::kKeyEnter:
+    case SpecialCharacters::kKeyNewline:
+      EndReverseHistoryMode(true);
+      break;
+    // ctrl-r again searches for the next match.
+    case SpecialCharacters::kKeyControlR:
+      SearchNextReverseHistory(false);
+      break;
+    // Deleting a character starts the search anew.
+    case SpecialCharacters::kKeyControlH:
+    case SpecialCharacters::kKeyBackspace:
+      if (!reverse_history_input_.empty())
+        reverse_history_input_.resize(reverse_history_input_.size() - 1);
+      SearchNextReverseHistory(true);
+      break;
+    // Almost all special characters end history mode. This is what sh does.
+    case SpecialCharacters::kKeyControlA:
+    case SpecialCharacters::kKeyControlB:
+    case SpecialCharacters::kKeyControlD:
+    case SpecialCharacters::kKeyControlE:
+    case SpecialCharacters::kKeyControlF:
+    case SpecialCharacters::kKeyFormFeed:
+    case SpecialCharacters::kKeyTab:
+    case SpecialCharacters::kKeyControlN:
+    case SpecialCharacters::kKeyControlP:
+    case SpecialCharacters::kKeyControlU:
+    case SpecialCharacters::kKeyControlW:
+    case SpecialCharacters::kKeyEsc:
+      EndReverseHistoryMode(false);
+      break;
+    // Add the input to the current search string and do the lookup anew.
+    default:
+      reverse_history_input_.append(1, c);
+      SearchNextReverseHistory(true);
+      break;
+  }
+
+  RepaintLine();
+};
+
+void LineInputBase::StartReverseHistoryMode() {
+  FXL_DCHECK(!reverse_history_mode_);
+  reverse_history_mode_ = true;
+  reverse_history_index_ = 0;
+  reverse_history_input_.clear();
+
+  RepaintLine();
+}
+
+void LineInputBase::EndReverseHistoryMode(bool accept_suggestion) {
+  FXL_DCHECK(reverse_history_mode_);
+  reverse_history_mode_ = false;
+
+  if (accept_suggestion) {
+    cur_line() = GetReverseHistorySuggestion();
+    pos_ = cur_line().size();
+  } else {
+    pos_ = 0;
+  }
+}
+
+void LineInputBase::SearchNextReverseHistory(bool restart) {
+  if (restart) {
+    reverse_history_index_ = 0;
+  } else {
+    // We want to find the *next* suggestion after the current one.
+    reverse_history_index_++;
+  }
+
+  // No input, no search.
+  if (reverse_history_input_.empty()) {
+    pos_ = 0;
+    return;
+  }
+
+  // Search for a history entry that has the input a a substring.
+  size_t index = reverse_history_index_ == 0 ? 1 : reverse_history_index_;
+  for (size_t i = index; i < history_.size(); i++) {
+    const std::string& line = history_[i];
+    auto cursor_offset = line.find(reverse_history_input_);
+    if (cursor_offset == std::string::npos)
+      continue;
+
+    // We found a suggestion.
+    reverse_history_index_ = i;
+    pos_ = cursor_offset;
+    return;
+  }
+
+  // If we didn't find a suggestion, we reset the state and clear the state, to indicate to the user
+  // that it rolled over or it didn't find anything.
+  reverse_history_index_ = 0;
+  pos_ = 0;
+}
+
 void LineInputBase::HandleFormFeed() {
   Write("\033c");  // Form feed.
   RepaintLine();
@@ -405,16 +531,23 @@ void LineInputBase::AcceptCompletion() {
 }
 
 void LineInputBase::RepaintLine() {
+  std::string prompt, line_data;
+  if (!reverse_history_mode_) {
+    prompt = prompt_;
+    line_data = prompt + cur_line();
+  } else {
+    prompt = GetReverseHistoryPrompt();
+    line_data = prompt + GetReverseHistorySuggestion();
+  }
+
   EnsureRawMode();
 
   std::string buf;
   buf.reserve(64);
-
   buf += SpecialCharacters::kTermBeginningOfLine;
 
   // Only print up to max_cols_ - 1 to leave room for the cursor at the end.
-  std::string line_data = prompt_ + cur_line();
-  size_t pos_in_cols = prompt_.size() + pos_;
+  size_t pos_in_cols = prompt.size() + pos_;
   if (max_cols_ > 0 && line_data.size() >= max_cols_ - 1) {
     // Needs scrolling. This code scrolls both the user entry and the prompt.
     // This avoids some edge cases where the prompt is wider than the screen.
@@ -441,6 +574,27 @@ void LineInputBase::RepaintLine() {
   Write(buf);
 }
 
+std::string LineInputBase::GetReverseHistoryPrompt() const {
+  std::string buf;
+  buf.reserve(64);
+
+  buf += "(reverse-i-search)`";
+  buf += reverse_history_input_;
+  buf += "': ";
+
+  return buf;
+}
+
+std::string LineInputBase::GetReverseHistorySuggestion() const {
+  if (reverse_history_input_.empty())
+    return {};
+
+  if (reverse_history_index_ == 0 || reverse_history_index_ >= history_.size())
+    return {};
+
+  return history_[reverse_history_index_];
+}
+
 void LineInputBase::ResetLineState() {
   editing_ = true;
   pos_ = 0;
@@ -450,6 +604,8 @@ void LineInputBase::ResetLineState() {
 
   cur_line() = std::string();
 }
+
+// LineInputStdout ---------------------------------------------------------------------------------
 
 LineInputStdout::LineInputStdout(const std::string& prompt) : LineInputBase(prompt) {
   set_max_cols(GetTerminalMaxCols(STDIN_FILENO));
