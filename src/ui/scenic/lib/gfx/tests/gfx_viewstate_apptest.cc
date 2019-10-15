@@ -80,4 +80,87 @@ VK_TEST_F(ViewEmbedderTest, ProtectedVkcube) {
       zx::sec(kTestTimeout)));
 }
 
+// Initialize two sessions and their associated views, and ensure that killing the embedded
+// session triggers a ViewDisconnected event to the holding one.
+TEST_F(ViewEmbedderTest, DeadBindingShouldKillSession) {
+  // Initialize session 1.
+  auto test_session = SetUpTestSession();
+  scenic::Session* const session = &test_session->session;
+  const auto [display_width, display_height] = test_session->display_dimensions;
+  scenic::Scene* const scene = &test_session->scene;
+  test_session->SetUpCamera().SetProjection(0);
+
+  // Initialize session 2.
+  auto unique_session2 = std::make_unique<scenic::Session>(scenic());
+  auto session2 = unique_session2.get();
+  session2->set_error_handler([this](zx_status_t status) {
+    FXL_LOG(INFO) << "Session2 terminated.";
+    QuitLoop();
+  });
+
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  auto [view_token2, view_holder_token2] = scenic::ViewTokenPair::New();
+
+  scenic::View view(session, std::move(view_token), "ClipView");
+  scenic::ViewHolder view_holder(session, std::move(view_holder_token), "ClipViewHolder");
+
+  // View 2 is embedded by view 1.
+  scenic::View view2(session2, std::move(view_token2), "ClipView2");
+  scenic::ViewHolder view_holder2(session, std::move(view_holder_token2), "ClipViewHolder2");
+
+  scene->AddChild(view_holder);
+
+  // Transform and embed view holder 2 in first view.
+  scenic::EntityNode transform_node(session);
+  transform_node.SetTranslation(display_width / 2, 0, 0);
+  view.AddChild(transform_node);
+  transform_node.AddChild(view_holder2);
+
+  // Ensure that view2 connects to view1.
+  bool view_connected_observed = false;
+
+  session->set_event_handler(
+      [&view_connected_observed](std::vector<fuchsia::ui::scenic::Event> events) {
+        for (const auto& event : events) {
+          if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
+              event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewConnected) {
+            view_connected_observed = true;
+            return;
+          }
+        }
+        ASSERT_FALSE(true);
+      });
+
+  Present(session);
+  Present(session2);
+
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([&view_connected_observed]() { return view_connected_observed; }));
+
+  // Crash Session2 by submitting an invalid release resource command.
+  session2->AllocResourceId();
+  session2->ReleaseResource(session2->next_resource_id() + 1);
+
+  bool view_disconnected_observed = false;
+
+  session->set_event_handler(
+      [&view_disconnected_observed](std::vector<fuchsia::ui::scenic::Event> events) {
+        for (const auto& event : events) {
+          if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
+              event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewDisconnected) {
+            view_disconnected_observed = true;
+            return;
+          }
+        }
+        ASSERT_FALSE(true);
+      });
+
+  // Observe results.
+  Present(session2);
+  Present(session);
+
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&view_disconnected_observed]() { return view_disconnected_observed; }));
+}
+
 }  // namespace

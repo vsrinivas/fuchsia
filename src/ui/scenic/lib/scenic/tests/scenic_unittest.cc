@@ -44,6 +44,39 @@ TEST_F(ScenicTest, CreateAndDestroySession) {
   EXPECT_EQ(scenic()->num_sessions(), 0U);
 }
 
+TEST_F(ScenicTest, CreateAndDestroyMultipleSessions) {
+  auto mock_system = scenic()->RegisterSystem<DummySystem>();
+  scenic()->SetInitialized();
+  EXPECT_EQ(scenic()->num_sessions(), 0U);
+
+  auto session1 = CreateSession();
+  EXPECT_EQ(scenic()->num_sessions(), 1U);
+  EXPECT_EQ(mock_system->GetNumDispatchers(), 1U);
+  auto session1_impl = mock_system->GetLastSession();
+  EXPECT_TRUE(session1_impl);
+
+  auto session2 = CreateSession();
+  EXPECT_EQ(scenic()->num_sessions(), 2U);
+  EXPECT_EQ(mock_system->GetNumDispatchers(), 2U);
+  auto session2_impl = mock_system->GetLastSession();
+  EXPECT_TRUE(session2_impl);
+
+  auto session3 = CreateSession();
+  EXPECT_EQ(scenic()->num_sessions(), 3U);
+  EXPECT_EQ(mock_system->GetNumDispatchers(), 3U);
+  auto session3_impl = mock_system->GetLastSession();
+  EXPECT_TRUE(session3_impl);
+
+  scenic()->CloseSession(session2_impl);
+  EXPECT_EQ(scenic()->num_sessions(), 2U);
+
+  scenic()->CloseSession(session3_impl);
+  EXPECT_EQ(scenic()->num_sessions(), 1U);
+
+  scenic()->CloseSession(session1_impl);
+  EXPECT_EQ(scenic()->num_sessions(), 0U);
+}
+
 TEST_F(ScenicTest, SessionCreatedAfterInitialization) {
   EXPECT_EQ(scenic()->num_sessions(), 0U);
 
