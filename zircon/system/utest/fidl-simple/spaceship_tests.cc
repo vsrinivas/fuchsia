@@ -73,18 +73,6 @@ class SpaceShip {
   virtual zx_status_t AddFuelTank(const fidl_test_spaceship_FuelLevel* level, fidl_txn_t* txn) {
     return fidl_test_spaceship_SpaceShipAddFuelTank_reply(txn, level->reaction_mass / 2);
   }
-
-  virtual zx_status_t ReportAstrologicalData(const fidl_test_spaceship_AstrologicalData* data,
-                                             fidl_txn_t* txn) {
-    EXPECT_EQ(data->tag, fidl_test_spaceship_AstrologicalDataTag_star, "");
-    for (size_t idx = 0; idx < sizeof(data->star.data); ++idx) {
-      EXPECT_EQ(42, data->star.data[idx], "");
-    }
-
-    const zx_status_t status = ZX_OK;
-    return fidl_test_spaceship_SpaceShipReportAstrologicalData_reply(txn, status);
-  }
-
   virtual zx_status_t ActivateShields(fidl_test_spaceship_Shields shields) { return ZX_OK; }
 
   virtual zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel) {
@@ -96,7 +84,6 @@ class SpaceShip {
         .GetFuelRemaining = SpaceShipBinder::BindMember<&SpaceShip::GetFuelRemaining>,
         .AddFuelTank = SpaceShipBinder::BindMember<&SpaceShip::AddFuelTank>,
         .ScanForTensorLifeforms = SpaceShipBinder::BindMember<&SpaceShip::ScanForTensorLifeforms>,
-        .ReportAstrologicalData = SpaceShipBinder::BindMember<&SpaceShip::ReportAstrologicalData>,
         .ActivateShields = SpaceShipBinder::BindMember<&SpaceShip::ActivateShields>,
     };
 
@@ -201,15 +188,6 @@ bool spaceship_test(void) {
     ASSERT_EQ(4741u, out_consumed, "");
   }
 
-  {
-    fidl_test_spaceship_AstrologicalData data = {};
-    data.tag = fidl_test_spaceship_AstrologicalDataTag_star;
-    memset(&data.star, 42, sizeof(data.star));
-    ASSERT_EQ(ZX_OK,
-              fidl_test_spaceship_SpaceShipReportAstrologicalData(client.get(), &data, &status));
-    ASSERT_EQ(ZX_OK, status);
-  }
-
   ASSERT_EQ(ZX_OK, zx_handle_close(client.release()));
 
   async_loop_destroy(loop);
@@ -284,7 +262,6 @@ class AsyncSpaceShip : public SpaceShip {
         .GetFuelRemaining = SpaceShipBinder::BindMember<&SpaceShip::GetFuelRemaining>,
         .AddFuelTank = SpaceShipBinder::BindMember<&SpaceShip::AddFuelTank>,
         .ScanForTensorLifeforms = SpaceShipBinder::BindMember<&SpaceShip::ScanForTensorLifeforms>,
-        .ReportAstrologicalData = SpaceShipBinder::BindMember<&SpaceShip::ReportAstrologicalData>,
         .ActivateShields = SpaceShipBinder::BindMember<&SpaceShip::ActivateShields>,
     };
 
@@ -390,7 +367,6 @@ class Derived : public SpaceShip {
       .GetFuelRemaining = DerivedBinder::BindMember<&SpaceShip::GetFuelRemaining>,
       .AddFuelTank = DerivedBinder::BindMember<&SpaceShip::AddFuelTank>,
       .ScanForTensorLifeforms = DerivedBinder::BindMember<&Derived::ScanForTensorLifeforms>,
-      .ReportAstrologicalData = DerivedBinder::BindMember<&Derived::ReportAstrologicalData>,
       .ActivateShields = SpaceShipBinder::BindMember<&Derived::ActivateShields>,
     };
 

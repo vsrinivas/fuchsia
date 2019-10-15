@@ -23,12 +23,6 @@ struct PlanetData {
     array<uint8>:4 data;
 };
 
-// AstrologicalData is 20 bytes long, i.e. tag of 4 bytes + max(4, 16).
-union AstrologicalData {
-    StarData star;
-    PlanetData planet;
-};
-
 [Layout = "Simple"]
 protocol AstrometricsListener {
     OnNova();
@@ -73,7 +67,6 @@ protocol SpaceShip {
     GetFuelRemaining(handle<eventpair>? cancel) -> (zx.status status, FuelLevel? level);
     AddFuelTank(FuelLevel? level) -> (uint32 consumed);
     ScanForTensorLifeforms() -> (array<array<array<uint32>:3>:5>:8 lifesigns);
-    ReportAstrologicalData(AstrologicalData data) -> (zx.status status);
     ActivateShields(Shields shields);
 };
 

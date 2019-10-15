@@ -128,8 +128,7 @@ static bool reply_test(void) {
   conn.txn.reply = reply_handler;
   conn.count = 0u;
 
-  fidl_test_echo_Echo_Echo_Result result = {};
-  zx_status_t status = fidl_test_echo_EchoEcho_reply(&conn.txn, &result);
+  zx_status_t status = fidl_test_echo_EchoEcho_reply(&conn.txn, ZX_OK);
   ASSERT_EQ(ZX_OK, status, "");
   EXPECT_EQ(1u, conn.count, "");
 

@@ -8,6 +8,6 @@ using zx;
 
 [Layout = "Simple"]
 protocol Echo {
-    Echo(handle<process> process, handle<thread> thread) -> () error zx.status;
+    Echo(handle<process> process, handle<thread> thread) -> (zx.status status);
     Ping();
 };

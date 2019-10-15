@@ -37,7 +37,7 @@ static int echo_server(void* ctx) {
       memset(&response, 0, sizeof(response));
       response.hdr.txid = req->txid;
       response.hdr.ordinal = req->ordinal;
-      response.result.tag = fidl_test_echo_Echo_Echo_ResultTag_response;
+      response.status = ZX_OK;
       status = zx_channel_write(server, 0, &response, sizeof(response), NULL, 0);
       ASSERT_EQ(ZX_OK, status, "");
     } else {
@@ -64,10 +64,10 @@ static bool echo_test(void) {
   status = zx_eventpair_create(0, &h0, &h1);
   ASSERT_EQ(ZX_OK, status, "");
 
-  fidl_test_echo_Echo_Echo_Result analyzer_result;
-  status = fidl_test_echo_EchoEcho(client, h0, h1, &analyzer_result);
+  zx_status_t application_status;
+  status = fidl_test_echo_EchoEcho(client, h0, h1, &application_status);
   ASSERT_EQ(ZX_OK, status, "");
-  ASSERT_EQ(fidl_test_echo_Echo_Echo_ResultTag_response, analyzer_result.tag, "");
+  ASSERT_EQ(ZX_OK, application_status, "");
 
   status = zx_handle_close(client);
   ASSERT_EQ(ZX_OK, status, "");
