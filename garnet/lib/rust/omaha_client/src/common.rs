@@ -183,21 +183,18 @@ impl App {
         if let Some(app_json) = storage.get_string(&self.id).await {
             match serde_json::from_str::<PersistedApp>(&app_json) {
                 Ok(persisted_app) => {
-                    // Do not overwrite existing fields in app if no data for this field is
-                    // persisted.
-                    if let Some(id) = persisted_app.cohort.id {
-                        self.cohort.id = Some(id);
+                    // Do not overwrite existing fields in app.
+                    if self.cohort.id == None {
+                        self.cohort.id = persisted_app.cohort.id;
                     }
-                    if let Some(hint) = persisted_app.cohort.hint {
-                        self.cohort.hint = Some(hint);
+                    if self.cohort.hint == None {
+                        self.cohort.hint = persisted_app.cohort.hint;
                     }
-                    if let Some(name) = persisted_app.cohort.name {
-                        self.cohort.name = Some(name);
+                    if self.cohort.name == None {
+                        self.cohort.name = persisted_app.cohort.name;
                     }
-                    if let UserCounting::ClientRegulatedByDate(Some(days)) =
-                        persisted_app.user_counting
-                    {
-                        self.user_counting = UserCounting::ClientRegulatedByDate(Some(days));
+                    if self.user_counting == UserCounting::ClientRegulatedByDate(None) {
+                        self.user_counting = persisted_app.user_counting;
                     }
                 }
                 Err(e) => {
@@ -481,7 +478,7 @@ mod tests {
                 "ClientRegulatedByDate":123
             }});
             let json = serde_json::to_string(&json).unwrap();
-            let mut app = App::new("some_id", [1, 2], Cohort::new(""));
+            let mut app = App::new("some_id", [1, 2], Cohort::default());
             storage.set_string(&app.id, &json).await.unwrap();
             app.load(&storage).await;
 
@@ -570,7 +567,42 @@ mod tests {
             // existing data not overwritten
             let cohort = Cohort {
                 id: Some("some_id".to_string()),
-                hint: Some("some_hint_2".to_string()),
+                hint: Some("some_hint".to_string()),
+                name: Some("some_name".to_string()),
+            };
+            assert_eq!(cohort, app.cohort);
+            assert_eq!(UserCounting::ClientRegulatedByDate(Some(123)), app.user_counting);
+        });
+    }
+
+    #[test]
+    fn test_app_load_override() {
+        block_on(async {
+            let mut storage = MemStorage::new();
+            let json = serde_json::json!({
+            "cohort": {
+                "cohort": "some_id_2",
+                "cohorthint":"some_hint_2",
+                "cohortname": "some_name_2"
+            },
+            "user_counting": {
+                "ClientRegulatedByDate":123
+            }});
+            let json = serde_json::to_string(&json).unwrap();
+            let cohort = Cohort {
+                id: Some("some_id".to_string()),
+                hint: Some("some_hint".to_string()),
+                name: None,
+            };
+            let mut app = App::new("some_id", [1, 2], cohort);
+            storage.set_string(&app.id, &json).await.unwrap();
+            app.user_counting = UserCounting::ClientRegulatedByDate(Some(123));
+            app.load(&storage).await;
+
+            // existing data not overwritten
+            let cohort = Cohort {
+                id: Some("some_id".to_string()),
+                hint: Some("some_hint".to_string()),
                 name: Some("some_name_2".to_string()),
             };
             assert_eq!(cohort, app.cohort);

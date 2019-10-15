@@ -1442,7 +1442,11 @@ mod tests {
     fn test_load_app() {
         block_on(async {
             let config = config_generator();
-            let app_set = make_test_app_set();
+            let app_set = AppSet::new(vec![App::new(
+                "{00000000-0000-0000-0000-000000000001}",
+                [1, 2, 3, 4],
+                Cohort::default(),
+            )]);
             let mut storage = MemStorage::new();
             let persisted_app = PersistedApp {
                 cohort: Cohort {
