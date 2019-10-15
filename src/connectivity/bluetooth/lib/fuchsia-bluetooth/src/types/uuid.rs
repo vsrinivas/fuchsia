@@ -31,6 +31,7 @@ impl Uuid {
         };
         Uuid(uuid::Uuid::from_bytes(bytes_big_endian))
     }
+
     pub fn new16(value: u16) -> Uuid {
         Uuid::new32(value as u32)
     }
@@ -59,6 +60,20 @@ impl From<fidl::Uuid> for Uuid {
     }
 }
 
+impl From<&Uuid> for fidl::Uuid {
+    fn from(src: &Uuid) -> fidl::Uuid {
+        let mut bytes = src.0.as_bytes().clone();
+        bytes.reverse();
+        fidl::Uuid { value: bytes }
+    }
+}
+
+impl From<Uuid> for fidl::Uuid {
+    fn from(src: Uuid) -> fidl::Uuid {
+        fidl::Uuid::from(&src)
+    }
+}
+
 impl From<uuid::Uuid> for Uuid {
     fn from(src: uuid::Uuid) -> Uuid {
         Uuid(src)
@@ -81,8 +96,8 @@ impl FromStr for Uuid {
 
 #[cfg(test)]
 mod tests {
-    use proptest::prelude::*;
     use super::*;
+    use proptest::prelude::*;
 
     #[test]
     fn uuid16_to_string() {
@@ -128,5 +143,13 @@ mod tests {
         let uuid = fidl::Uuid { value: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] };
         let uuid: Uuid = uuid.into();
         assert_eq!("0f0e0d0c-0b0a-0908-0706-050403020100", uuid.to_string());
+    }
+
+    #[test]
+    fn uuid_into_fidl() {
+        let uuid = Uuid::from_bytes([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+        let uuid: fidl::Uuid = uuid.into();
+        let expected = fidl::Uuid { value: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] };
+        assert_eq!(expected, uuid);
     }
 }
