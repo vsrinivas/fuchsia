@@ -197,6 +197,34 @@ specified `total_runs`. The timeout for running these tests is 40 minutes. If a
 test takes too long, the shard may time out. It is recommended that you start
 with a `total_runs` of `30`.
 
+### Tests should not sleep
+
+Sleeps can lead to flaky tests because timing is difficult to control across
+different test environments.  Some factors that can contribute to this
+difficulty this are the test target's CPU speed, number of cores, and system
+load along with environmental factors like temperature.
+
+*   Avoid something like:
+    ```c++
+    // Check if the callback was called.
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+    EXPECT_EQ(true, callback_happened);
+    ```
+
+*   Instead, explicitly wait for the condition:
+    ```c++
+    // In callback
+    callback() {
+        sync_completion_signal(&event_);
+    }
+
+    // In test
+    sync_completion_wait(&event_, ZX_TIME_INFINITE);
+    sync_completion_reset(&event_);
+    ```
+
+    This code sample was adapted from [task-test.cc](https://fuchsia-review.googlesource.com/c/fuchsia/+/326106/7/src/camera/drivers/hw_accel/ge2d/test/task-test.cc#48).
+
 ## Temporary testability exemptions
 
 The following are currently exempt from Testability, while ongoing work aims to
