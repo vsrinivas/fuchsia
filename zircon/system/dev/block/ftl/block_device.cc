@@ -226,7 +226,23 @@ bool BlockDevice::OnVolumeAdded(uint32_t page_size, uint32_t num_pages) {
 }
 
 zx_status_t BlockDevice::Format() {
-  zx_status_t status = volume_->Format();
+  Volume::Stats stats;
+  zx_status_t status = volume_->GetStats(&stats);
+  if (status == ZX_OK) {
+    // TODO(35898): Remove this code after 10/23/2019.
+    if (stats.wear_histogram[0] > 30 ||
+        stats.wear_histogram[0] + stats.wear_histogram[1] > 100) {
+      status = volume_->FormatAndLevel();
+      if (status == ZX_OK) {
+        return ZX_OK;
+      }
+      zxlogf(ERROR, "FTL: format and level failed\n");
+    }
+  } else {
+    zxlogf(ERROR, "FTL: Unable to get stats");
+  }
+
+  status = volume_->Format();
   if (status != ZX_OK) {
     zxlogf(ERROR, "FTL: format failed\n");
   }
