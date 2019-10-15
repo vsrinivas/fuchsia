@@ -7,8 +7,9 @@
 //! Concurrent work queue helpers
 
 use {
+    failure::Fail,
     futures::{
-        channel::{mpsc, oneshot},
+        channel::mpsc,
         future::{BoxFuture, Shared},
         prelude::*,
         ready,
@@ -18,15 +19,20 @@ use {
     parking_lot::Mutex,
     pin_utils::unsafe_pinned,
     std::{
-        collections::{HashMap, VecDeque},
+        collections::HashMap,
         hash::Hash,
         pin::Pin,
         sync::{Arc, Weak},
     },
 };
 
-mod error;
-pub use error::TaskError;
+mod state;
+use state::{make_canceled_receiver, TaskFuture, TaskVariants};
+
+/// Error type indicating a task failed because the queue was dropped before completing the task.
+#[derive(Debug, PartialEq, Eq, Clone, Fail)]
+#[fail(display = "The queue was dropped before processing this task")]
+pub struct Closed;
 
 /// Trait for merging context for work tasks with the same key.
 ///
@@ -76,30 +82,29 @@ impl TryMerge for () {
 ///     // The queue stream won't terminate until all sender clones are dropped.
 ///     drop(sender);
 ///
-///     while let Some(res) = processor.next().await {
-///         match res {
-///             Ok(key) => println!("Successfully processed {}", key),
-///             Err(key) => println!("Error while processing {}", key),
-///         }
+///     while let Some(key) = processor.next().await {
+///         println!("Finished processing {}", key);
 ///     }
 ///
 ///     for (crate_name, fut) in join_handles {
-///         let res = fut.await.expect("downloads can't fail, right?");
+///         let res = fut
+///             .await
+///             .expect("queue to execute the task")
+///             .expect("downloads can't fail, right?");
 ///         println!("Contents of {}: {:?}", crate_name, res);
 ///     }
 /// });
 /// ```
-pub fn work_queue<W, WF, K, C, O, E>(
+pub fn work_queue<W, WF, K, C, O>(
     concurrency: usize,
     work_fn: W,
-) -> (WorkQueue<W, K, C, O, E>, WorkSender<K, C, O, E>)
+) -> (WorkQueue<W, K, C, O>, WorkSender<K, C, O>)
 where
     W: Fn(K, C) -> WF,
-    WF: Future<Output = Result<O, E>>,
+    WF: Future<Output = O>,
     K: Clone + Eq + Hash + Send + 'static,
     C: TryMerge + Send + 'static,
     O: Send + 'static,
-    E: Send + 'static,
 {
     let tasks = Arc::new(Mutex::new(HashMap::new()));
     let (sender, receiver) = mpsc::unbounded();
@@ -121,45 +126,44 @@ where
 ///
 /// Items are yielded from the stream in the order that they are processed, which may differ from
 /// the order that items are enqueued, depending on which concurrent tasks complete first.
-pub struct WorkQueue<W, K, C, O, E> {
+pub struct WorkQueue<W, K, C, O> {
     /// The work callback function.
     work_fn: W,
     /// Maximum number of tasks to run concurrently.
     concurrency: usize,
     /// Metadata about pending and running work. Modified by the queue itself when running tasks
     /// and by [WorkSender] to add new tasks to the queue.
-    tasks: Arc<Mutex<HashMap<K, VecDeque<WorkInfo<C, O, E>>>>>,
+    tasks: Arc<Mutex<HashMap<K, TaskVariants<C, O>>>>,
 
     // Pinned fields. Must be kept up to date with Unpin impl and unsafe_pinned!() calls.
     /// Receiving end of the queue.
     pending: mpsc::UnboundedReceiver<K>,
     /// Tasks currently being run. Will contain [0, concurrency] futures at any given time.
-    running: FuturesUnordered<RunningTask<K, O, E>>,
+    running: FuturesUnordered<RunningTask<K, O>>,
 }
 
-impl<W, K, C, O, E> Unpin for WorkQueue<W, K, C, O, E>
+impl<W, K, C, O> Unpin for WorkQueue<W, K, C, O>
 where
-    FuturesUnordered<RunningTask<K, O, E>>: Unpin,
+    FuturesUnordered<RunningTask<K, O>>: Unpin,
     mpsc::UnboundedReceiver<K>: Unpin,
 {
 }
 
-impl<W, WF, K, C, O, E> WorkQueue<W, K, C, O, E>
+impl<W, WF, K, C, O> WorkQueue<W, K, C, O>
 where
     W: Fn(K, C) -> WF,
-    WF: Future<Output = Result<O, E>>,
+    WF: Future<Output = O>,
     K: Clone + Eq + Hash + Send + 'static,
     WF: Send + 'static,
     O: Send + 'static,
-    E: Send + 'static,
 {
     // safe because:
     // * WorkQueue does not implement Drop or use repr(packed)
     // * Unpin is only implemented if all pinned fields implement Unpin
     unsafe_pinned!(pending: mpsc::UnboundedReceiver<K>);
-    unsafe_pinned!(running: FuturesUnordered<RunningTask<K, O, E>>);
+    unsafe_pinned!(running: FuturesUnordered<RunningTask<K, O>>);
 
-    /// Converts this stream of Result<K, K> into a single future that resolves when the stream is
+    /// Converts this stream of K into a single future that resolves when the stream is
     /// terminated.
     pub fn into_future(self) -> impl Future<Output = ()> {
         self.map(|_res| ()).collect::<()>()
@@ -188,10 +192,8 @@ where
                         .tasks
                         .lock()
                         .get_mut(&key)
-                        .expect("map entry to exist if in pending queue")[0]
-                        .context
-                        .take()
-                        .expect("context to not yet be claimed");
+                        .expect("map entry to exist if in pending queue")
+                        .start();
 
                     // WorkSender::push_entry guarantees that key will only be pushed into pending
                     // if it created the entry in the map, so it is guaranteed here that multiple
@@ -210,7 +212,7 @@ where
         }
     }
 
-    fn do_work(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Result<K, K>>> {
+    fn do_work(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<K>> {
         match self.as_mut().running().poll_next(cx) {
             Poll::Pending => Poll::Pending,
             Poll::Ready(None) => {
@@ -227,39 +229,22 @@ where
                 }
             }
             Poll::Ready(Some((key, res))) => {
-                let cb = {
-                    let mut tasks = self.tasks.lock();
-                    let infos: &mut VecDeque<WorkInfo<_, _, _>> =
-                        tasks.get_mut(&key).expect("key to exist in map if not resolved");
+                let mut tasks = self.tasks.lock();
+                let infos: &mut TaskVariants<_, _> =
+                    &mut tasks.get_mut(&key).expect("key to exist in map if not resolved");
 
-                    let cb = infos.pop_front().expect("work item entry to still exist").cb;
+                if let Some(next_context) = infos.done(res) {
+                    // start the next operation immediately
+                    let work = (self.work_fn)(key.clone(), next_context);
+                    let key_clone = key.clone();
+                    let fut = async move { (key_clone, work.await) }.boxed();
 
-                    if infos.is_empty() {
-                        // last pending operation with this key
-                        tasks.remove(&key);
-                    } else {
-                        // start the next operation immediately
-                        let context =
-                            infos[0].context.take().expect("context to not yet be claimed");
-
-                        let work = (self.work_fn)(key.clone(), context);
-                        let key_clone = key.clone();
-                        let fut = async move { (key_clone, work.await) }.boxed();
-
-                        drop(tasks);
-                        self.as_mut().running().push(fut);
-                    }
-                    cb
-                };
-
-                let key = match res {
-                    Ok(_) => Ok(key),
-                    Err(_) => Err(key),
-                };
-
-                // As the shared future was just removed from the map, if all clones of that future
-                // have also been dropped, this send can fail. Silently ignore that error.
-                let _ = cb.send(res);
+                    drop(tasks);
+                    self.as_mut().running().push(fut);
+                } else {
+                    // last pending operation with this key
+                    tasks.remove(&key);
+                }
 
                 // Yield the key that was processed to the stream, indicating if proccessing that
                 // value was successful or not.
@@ -269,15 +254,14 @@ where
     }
 }
 
-impl<W, WF, K, C, O, E> Stream for WorkQueue<W, K, C, O, E>
+impl<W, WF, K, C, O> Stream for WorkQueue<W, K, C, O>
 where
     W: Fn(K, C) -> WF,
-    WF: Future<Output = Result<O, E>> + Send + 'static,
+    WF: Future<Output = O> + Send + 'static,
     K: Clone + Eq + Hash + Send + 'static,
     O: Send + 'static,
-    E: Send + 'static,
 {
-    type Item = Result<K, K>;
+    type Item = K;
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
         match (self.as_mut().find_work(cx), self.as_mut().do_work(cx)) {
             (Poll::Ready(None), Poll::Ready(None)) => {
@@ -302,68 +286,32 @@ where
     }
 }
 
-// With feature(type_alias_impl_trait), boxing the future would not be necessary, which would also
-// remove the requirements that O and E are Send + 'static.
-//type TaskFuture<O, E> = impl Future<Output=Result<O, TaskError<E>>>;
-type TaskFuture<O, E> = BoxFuture<'static, Result<O, TaskError<E>>>;
-type RunningTask<K, O, E> = BoxFuture<'static, (K, Result<O, E>)>;
-
-/// Shared state for a single work item. Contains the sending end of the shared future for sending
-/// the result of the task, the clonable shared future that will resolve to that result, and, for
-/// tasks, that are not yet running, the context.
-pub struct WorkInfo<C, O, E> {
-    // Starting to run a task will take the context, so `context` will be None iff the task is
-    // running.
-    context: Option<C>,
-    cb: oneshot::Sender<Result<O, E>>,
-    fut: Shared<TaskFuture<O, E>>,
-}
+type RunningTask<K, O> = BoxFuture<'static, (K, O)>;
 
 /// A clonable handle to the work queue.  When all clones of [WorkSender] are dropped, the queue
 /// will process all remaining requests and terminate its output stream.
 #[derive(Clone)]
-pub struct WorkSender<K, C, O, E> {
+pub struct WorkSender<K, C, O> {
     sender: mpsc::UnboundedSender<K>,
     // Weak reference to ensure that if the queue is dropped, the now unused sender end of the
     // completion callback will be dropped too, canceling the request.
-    tasks: Weak<Mutex<HashMap<K, VecDeque<WorkInfo<C, O, E>>>>>,
+    tasks: Weak<Mutex<HashMap<K, TaskVariants<C, O>>>>,
 }
 
-fn make_broadcast_pair<O, E>() -> (oneshot::Sender<Result<O, E>>, Shared<TaskFuture<O, E>>)
-where
-    O: Clone + Send + 'static,
-    E: Clone + Send + 'static,
-{
-    let (sender, receiver) = oneshot::channel();
-    let fut = async move {
-        match receiver.await {
-            Ok(Ok(o)) => Ok(o),
-            Err(oneshot::Canceled) => Err(TaskError::Canceled),
-            Ok(Err(e)) => Err(TaskError::Inner(e)),
-        }
-    }
-        .boxed()
-        .shared();
-
-    (sender, fut)
-}
-
-impl<K, C, O, E> WorkSender<K, C, O, E>
+impl<K, C, O> WorkSender<K, C, O>
 where
     K: Clone + Send + Eq + Hash,
     C: TryMerge,
     O: Clone + Send + 'static,
-    E: Clone + Send + 'static,
 {
     /// Enqueue the given key to be processed by a worker, or attach to an existing request to
     /// process this key.
-    pub fn push(&self, key: K, context: C) -> impl Future<Output = Result<O, TaskError<E>>> {
+    pub fn push(&self, key: K, context: C) -> impl Future<Output = Result<O, Closed>> {
         let tasks = match self.tasks.upgrade() {
             Some(tasks) => tasks,
             None => {
                 // Work queue no longer exists. Immediately cancel this request.
-                let (_, fut) = make_broadcast_pair();
-                return fut;
+                return make_canceled_receiver();
             }
         };
         let mut tasks = tasks.lock();
@@ -380,7 +328,7 @@ where
     pub fn push_all(
         &self,
         entries: impl Iterator<Item = (K, C)>,
-    ) -> impl Iterator<Item = impl Future<Output = Result<O, TaskError<E>>>> {
+    ) -> impl Iterator<Item = impl Future<Output = Result<O, Closed>>> {
         let mut tasks = self.tasks.upgrade();
         let mut tasks = tasks.as_mut().map(|tasks| tasks.lock());
 
@@ -390,8 +338,7 @@ where
                     Self::push_entry(&mut *tasks, &self.sender, key, context)
                 } else {
                     // Work queue no longer exists. Immediately cancel this request.
-                    let (_, fut) = make_broadcast_pair();
-                    return fut;
+                    return make_canceled_receiver();
                 }
             })
             .collect::<Vec<_>>()
@@ -399,53 +346,27 @@ where
     }
 
     fn push_entry(
-        tasks: &mut HashMap<K, VecDeque<WorkInfo<C, O, E>>>,
+        tasks: &mut HashMap<K, TaskVariants<C, O>>,
         self_sender: &mpsc::UnboundedSender<K>,
         key: K,
-        mut context: C,
-    ) -> Shared<BoxFuture<'static, Result<O, TaskError<E>>>> {
+        context: C,
+    ) -> Shared<TaskFuture<O>> {
         use std::collections::hash_map::Entry;
 
         match tasks.entry(key.clone()) {
             Entry::Vacant(entry) => {
-                let (sender, fut) = make_broadcast_pair();
+                // No other variant of this task is running or pending. Reserve our
+                // spot in line and configure the task's metadata.
                 if let Ok(()) = self_sender.unbounded_send(key) {
-                    // Register the pending task in the map so duplicate request can simply attach
-                    // to the existing task.
-                    entry.insert(
-                        vec![WorkInfo { context: Some(context), cb: sender, fut: fut.clone() }]
-                            .into(),
-                    );
+                    let (infos, fut) = TaskVariants::new(context);
+                    entry.insert(infos);
+                    fut
                 } else {
-                    // Work queue no longer exists. Dropping work resolves this task as canceled.
+                    // Work queue no longer exists. Immediately cancel this request.
+                    make_canceled_receiver()
                 }
-                fut
             }
-            Entry::Occupied(mut entry) => {
-                // First try to try_merge this task with another queued or running task.
-                for info in entry.get_mut().iter_mut() {
-                    if let Some(c) = &mut info.context {
-                        if let Err(unmerged) = c.try_merge(context) {
-                            context = unmerged;
-                        } else {
-                            return info.fut.clone();
-                        }
-                    }
-                }
-
-                // Otherwise, enqueue a new task.
-                let (sender, fut) = make_broadcast_pair();
-
-                // Instead of enqueueing this task to be run, just append this to the existing list
-                // of tasks for this key. When an earlier task completes, it will pick up the next
-                // in the list.
-                entry.get_mut().push_back(WorkInfo {
-                    context: Some(context),
-                    cb: sender,
-                    fut: fut.clone(),
-                });
-                fut
-            }
+            Entry::Occupied(entry) => entry.into_mut().push(context),
         }
     }
 }
@@ -455,6 +376,7 @@ mod tests {
     use {
         super::*,
         futures::{
+            channel::oneshot,
             executor::{block_on, LocalSpawner},
             task::LocalSpawnExt,
         },
@@ -481,19 +403,19 @@ mod tests {
 
         block_on(async move {
             let (keys, res) = futures::future::join(
-                processor.collect::<Vec<Result<String, String>>>(),
-                tasks.collect::<Vec<Result<(), _>>>(),
+                processor.collect::<Vec<String>>(),
+                tasks.collect::<Vec<Result<Result<(), ()>, _>>>(),
             )
             .await;
-            assert_eq!(keys, vec![Ok("a".to_string()), Ok("b".into()), Ok("c".into())]);
-            assert_eq!(res, vec![Ok(()), Ok(()), Ok(()), Ok(()), Ok(()),]);
+            assert_eq!(keys, vec!["a".to_string(), "b".into(), "c".into()]);
+            assert_eq!(res, vec![Ok(Ok(())), Ok(Ok(())), Ok(Ok(())), Ok(Ok(())), Ok(Ok(()))]);
         });
     }
 
     #[test]
     fn into_future() {
-        async fn nop(key: i32, _context: ()) -> Result<i32, ()> {
-            Ok(key)
+        async fn nop(key: i32, _context: ()) -> i32 {
+            key
         }
         let (processor, enqueue) = work_queue(1, nop);
 
@@ -506,7 +428,7 @@ mod tests {
     }
 
     #[derive(Debug, PartialEq, Eq)]
-    struct MergeEqual(i32);
+    pub(crate) struct MergeEqual(pub(crate) i32);
 
     impl TryMerge for MergeEqual {
         fn try_merge(&mut self, other: Self) -> Result<(), Self> {
@@ -533,44 +455,43 @@ mod tests {
         let fut_late = enqueue.push("b", MergeEqual(0));
 
         block_on(async move {
-            assert_eq!(fut_early_a.await, Err(TaskError::Canceled));
-            assert_eq!(fut_early_b.await, Err(TaskError::Canceled));
-            assert_eq!(fut_early_c.await, Err(TaskError::Canceled));
-            assert_eq!(fut_late.await, Err(TaskError::Canceled));
+            assert_eq!(fut_early_a.await, Err(Closed));
+            assert_eq!(fut_early_b.await, Err(Closed));
+            assert_eq!(fut_early_c.await, Err(Closed));
+            assert_eq!(fut_late.await, Err(Closed));
 
             let requests = vec![("1", MergeEqual(0)), ("2", MergeEqual(1)), ("1", MergeEqual(0))];
             for fut in enqueue.push_all(requests.into_iter()) {
-                assert_eq!(fut.await, Err(TaskError::Canceled));
+                assert_eq!(fut.await, Err(Closed));
             }
         });
     }
 
     #[derive(Debug)]
-    struct TestRunningTask<C, O, E> {
-        unblocker: oneshot::Sender<Result<O, E>>,
+    struct TestRunningTask<C, O> {
+        unblocker: oneshot::Sender<O>,
         context: C,
     }
 
     #[derive(Debug)]
-    struct TestRunningTasks<K, C, O, E>
+    struct TestRunningTasks<K, C, O>
     where
         K: Eq + Hash,
     {
-        tasks: Arc<Mutex<HashMap<K, TestRunningTask<C, O, E>>>>,
+        tasks: Arc<Mutex<HashMap<K, TestRunningTask<C, O>>>>,
     }
 
-    impl<K, C, O, E> TestRunningTasks<K, C, O, E>
+    impl<K, C, O> TestRunningTasks<K, C, O>
     where
         K: fmt::Debug + Eq + Hash + Sized + Clone,
         C: fmt::Debug,
         O: fmt::Debug,
-        E: fmt::Debug,
     {
         fn new() -> Self {
             Self { tasks: Arc::new(Mutex::new(HashMap::new())) }
         }
 
-        fn resolve<Q>(&self, key: &Q, res: Result<O, E>) -> C
+        fn resolve<Q>(&self, key: &Q, res: O) -> C
         where
             Q: Eq + Hash + ?Sized,
             K: Borrow<Q>,
@@ -600,12 +521,12 @@ mod tests {
 
     #[derive(Debug)]
     struct TestQueueResults<K> {
-        done: Arc<Mutex<Vec<Result<K, K>>>>,
+        done: Arc<Mutex<Vec<K>>>,
         terminated: Arc<Mutex<bool>>,
     }
 
     impl<K> TestQueueResults<K> {
-        fn take(&self) -> Vec<Result<K, K>> {
+        fn take(&self) -> Vec<K> {
             std::mem::replace(&mut *self.done.lock(), vec![])
         }
 
@@ -614,17 +535,16 @@ mod tests {
         }
     }
 
-    fn spawn_test_work_queue<K, C, O, E>(
+    fn spawn_test_work_queue<K, C, O>(
         mut spawner: LocalSpawner,
         concurrency: usize,
-    ) -> (WorkSender<K, C, O, E>, TestRunningTasks<K, C, O, E>, TestQueueResults<K>)
+    ) -> (WorkSender<K, C, O>, TestRunningTasks<K, C, O>, TestQueueResults<K>)
     where
         K: Send + Clone + fmt::Debug + Eq + Hash + 'static,
         C: TryMerge + Send + fmt::Debug + 'static,
         O: Send + Clone + fmt::Debug + 'static,
-        E: Send + Clone + fmt::Debug + 'static,
     {
-        let running = TestRunningTasks::<K, C, O, E>::new();
+        let running = TestRunningTasks::<K, C, O>::new();
         let running_tasks = running.tasks.clone();
         let do_work = move |key: K, context: C| {
             // wait for the test driver to resolve this work item and return the result it
@@ -632,7 +552,7 @@ mod tests {
             let (sender, receiver) = oneshot::channel();
             assert!(running_tasks
                 .lock()
-                .insert(key, TestRunningTask::<C, O, E> { unblocker: sender, context })
+                .insert(key, TestRunningTask::<C, O> { unblocker: sender, context })
                 .is_none());
             async move { receiver.await.unwrap() }
         };
@@ -660,52 +580,51 @@ mod tests {
         let mut executor = futures::executor::LocalPool::new();
 
         let (enqueue, running, done) =
-            spawn_test_work_queue::<&str, (), usize, ()>(executor.spawner(), 2);
+            spawn_test_work_queue::<&str, (), usize>(executor.spawner(), 2);
 
         let task_hello = enqueue.push("hello", ());
         let task_world = enqueue.push("world!", ());
         let task_test = enqueue.push("test", ());
         executor.run_until_stalled();
-        assert_eq!(done.take(), Vec::<Result<&str, &str>>::new());
+        assert_eq!(done.take(), Vec::<&str>::new());
 
-        running.resolve("hello", Ok(5));
-        running.resolve("world!", Ok(6));
+        running.resolve("hello", 5);
+        running.resolve("world!", 6);
         running.assert_empty();
         executor.run_until_stalled();
-        assert_eq!(done.take(), vec![Ok("hello"), Ok("world!")]);
+        assert_eq!(done.take(), vec!["hello", "world!"]);
 
         assert_eq!(executor.run_until(task_hello), Ok(5));
         assert_eq!(executor.run_until(task_world), Ok(6));
 
-        running.resolve("test", Ok(4));
+        running.resolve("test", 4);
         assert_eq!(executor.run_until(task_test), Ok(4));
-        assert_eq!(done.take(), vec![Ok("test")]);
+        assert_eq!(done.take(), vec!["test"]);
     }
 
     #[test]
     fn restarts_after_draining_input_queue() {
         let mut executor = futures::executor::LocalPool::new();
 
-        let (enqueue, running, done) =
-            spawn_test_work_queue::<&str, (), (), ()>(executor.spawner(), 2);
+        let (enqueue, running, done) = spawn_test_work_queue::<&str, (), ()>(executor.spawner(), 2);
 
         // Process a few tasks to completion through the queue.
         let task_a = enqueue.push("a", ());
         let task_b = enqueue.push("b", ());
         executor.run_until_stalled();
-        running.resolve("a", Ok(()));
-        running.resolve("b", Ok(()));
+        running.resolve("a", ());
+        running.resolve("b", ());
         assert_eq!(executor.run_until(task_a), Ok(()));
         assert_eq!(executor.run_until(task_b), Ok(()));
-        assert_eq!(done.take(), vec![Ok("a"), Ok("b")]);
+        assert_eq!(done.take(), vec!["a", "b"]);
 
         // Ensure the queue processes more tasks after its inner FuturesUnordered queue has
         // previously terminated.
         let task_c = enqueue.push("c", ());
         executor.run_until_stalled();
-        running.resolve("c", Ok(()));
+        running.resolve("c", ());
         assert_eq!(executor.run_until(task_c), Ok(()));
-        assert_eq!(done.take(), vec![Ok("c")]);
+        assert_eq!(done.take(), vec!["c"]);
 
         // Also ensure the queue itself terminates once all send handles are dropped and all tasks
         // are complete.
@@ -714,36 +633,13 @@ mod tests {
         drop(enqueue);
         executor.run_until_stalled();
         assert!(!done.is_terminated());
-        assert_eq!(done.take(), vec![]);
-        running.resolve("a", Ok(()));
-        running.resolve("d", Ok(()));
+        assert_eq!(done.take(), Vec::<&str>::new());
+        running.resolve("a", ());
+        running.resolve("d", ());
         assert_eq!(executor.run_until(task_a), Ok(()));
         assert_eq!(executor.run_until(task_d), Ok(()));
-        assert_eq!(done.take(), vec![Ok("a"), Ok("d")]);
+        assert_eq!(done.take(), vec!["a", "d"]);
         assert!(done.is_terminated());
-    }
-
-    #[test]
-    fn exposes_failures_to_callbacks_and_stream() {
-        let mut executor = futures::executor::LocalPool::new();
-
-        let (enqueue, running, done) =
-            spawn_test_work_queue::<&str, (), (), ()>(executor.spawner(), 1);
-
-        let task_pass = enqueue.push("pass", ());
-        let task_fail = enqueue.push("fail", ());
-        executor.run_until_stalled();
-        assert_eq!(done.take(), Vec::<Result<&str, &str>>::new());
-
-        running.resolve("pass", Ok(()));
-        running.assert_empty();
-        assert_eq!(executor.run_until(task_pass), Ok(()));
-        assert_eq!(done.take(), vec![Ok("pass")]);
-
-        running.resolve("fail", Err(()));
-        running.assert_empty();
-        assert_eq!(executor.run_until(task_fail), Err(TaskError::Inner(())));
-        assert_eq!(done.take(), vec![Err("fail")]);
     }
 
     #[test]
@@ -751,26 +647,26 @@ mod tests {
         let mut executor = futures::executor::LocalPool::new();
 
         let (enqueue, running, done) =
-            spawn_test_work_queue::<&str, (), usize, ()>(executor.spawner(), 2);
+            spawn_test_work_queue::<&str, (), usize>(executor.spawner(), 2);
 
         let mut futs =
             enqueue.push_all(vec![("a", ()), ("b", ()), ("c", ()), ("b", ())].into_iter());
         running.assert_empty();
 
         executor.run_until_stalled();
-        running.resolve("a", Ok(1));
-        running.resolve("b", Ok(2));
+        running.resolve("a", 1);
+        running.resolve("b", 2);
         running.assert_empty();
         assert_eq!(executor.run_until(futs.next().unwrap()), Ok(1));
         assert_eq!(executor.run_until(futs.next().unwrap()), Ok(2));
 
-        running.resolve("c", Ok(3));
+        running.resolve("c", 3);
         running.assert_empty();
         assert_eq!(executor.run_until(futs.next().unwrap()), Ok(3));
         assert_eq!(executor.run_until(futs.next().unwrap()), Ok(2));
         assert!(futs.next().is_none());
 
-        assert_eq!(done.take(), vec![Ok("a"), Ok("b"), Ok("c")]);
+        assert_eq!(done.take(), vec!["a", "b", "c"]);
     }
 
     #[test]
@@ -778,7 +674,7 @@ mod tests {
         let mut executor = futures::executor::LocalPool::new();
 
         let (enqueue, running, done) =
-            spawn_test_work_queue::<String, (), (), ()>(executor.spawner(), 5);
+            spawn_test_work_queue::<String, (), ()>(executor.spawner(), 5);
 
         let mut tasks = FuturesUnordered::new();
 
@@ -798,9 +694,9 @@ mod tests {
         executor.run_until_stalled();
 
         while let Some(key) = running.peek() {
-            running.resolve(&key, Ok(()));
+            running.resolve(&key, ());
             assert_eq!(executor.run_until(tasks.next()), Some(Ok(())));
-            assert_eq!(done.take(), vec![Ok(key)]);
+            assert_eq!(done.take(), vec![key]);
         }
 
         assert_eq!(executor.run_until(task_dups.collect::<Vec<_>>()), vec![Ok(()); 5000]);
@@ -817,10 +713,7 @@ mod tests {
         }
 
         let (enqueue, running, done) =
-            spawn_test_work_queue::<Params, (), &str, std::num::ParseIntError>(
-                executor.spawner(),
-                5,
-            );
+            spawn_test_work_queue::<Params, (), &str>(executor.spawner(), 5);
 
         let key_a = Params { key: "first", options: &[] };
         let key_b = Params { key: "first", options: &["unique"] };
@@ -830,14 +723,14 @@ mod tests {
 
         executor.run_until_stalled();
 
-        running.resolve(&key_b, Ok("first_unique"));
+        running.resolve(&key_b, "first_unique");
         executor.run_until_stalled();
-        assert_eq!(done.take(), vec![Ok(key_b)]);
+        assert_eq!(done.take(), vec![key_b]);
         assert_eq!(executor.run_until(task_b), Ok("first_unique"));
 
-        running.resolve(&key_a, Ok("first_no_options"));
+        running.resolve(&key_a, "first_no_options");
         executor.run_until_stalled();
-        assert_eq!(done.take(), vec![Ok(key_a)]);
+        assert_eq!(done.take(), vec![key_a]);
         assert_eq!(executor.run_until(task_a2), Ok("first_no_options"));
         assert_eq!(executor.run_until(task_a1), Ok("first_no_options"));
     }
@@ -857,7 +750,7 @@ mod tests {
         }
 
         let (enqueue, running, done) =
-            spawn_test_work_queue::<&str, MyContext, (), ()>(executor.spawner(), 1);
+            spawn_test_work_queue::<&str, MyContext, ()>(executor.spawner(), 1);
 
         let task_a = enqueue.push("dup", MyContext("a".into()));
         let task_unique = enqueue.push("unique", MyContext("not-deduped".into()));
@@ -867,30 +760,30 @@ mod tests {
         executor.run_until_stalled();
 
         // "c" not merged in since "dup" was already running with different context.
-        assert_eq!(running.resolve("dup", Ok(())), MyContext("ab".into()));
+        assert_eq!(running.resolve("dup", ()), MyContext("ab".into()));
         assert_eq!(executor.run_until(task_a), Ok(()));
         assert_eq!(executor.run_until(task_b), Ok(()));
-        assert_eq!(done.take(), vec![Ok("dup")]);
+        assert_eq!(done.take(), vec!["dup"]);
 
         // even though "unique" was added to the queue before "dup"/"c", "dup" is given priority
         // since it was already running.
         assert_eq!(running.keys(), vec!["dup"]);
-        assert_eq!(running.resolve("dup", Ok(())), MyContext("c".into()));
+        assert_eq!(running.resolve("dup", ()), MyContext("c".into()));
         assert_eq!(executor.run_until(task_c1), Ok(()));
-        assert_eq!(done.take(), vec![Ok("dup")]);
+        assert_eq!(done.take(), vec!["dup"]);
 
-        assert_eq!(running.resolve("unique", Ok(())), MyContext("not-deduped".into()));
+        assert_eq!(running.resolve("unique", ()), MyContext("not-deduped".into()));
         assert_eq!(executor.run_until(task_unique), Ok(()));
-        assert_eq!(done.take(), vec![Ok("unique")]);
+        assert_eq!(done.take(), vec!["unique"]);
         running.assert_empty();
 
         // ensure re-running a previously completed item executes it again.
         let task_c2 = enqueue.push("dup", MyContext("c".into()));
         executor.run_until_stalled();
         assert_eq!(running.keys(), vec!["dup"]);
-        assert_eq!(running.resolve("dup", Ok(())), MyContext("c".into()));
+        assert_eq!(running.resolve("dup", ()), MyContext("c".into()));
         assert_eq!(executor.run_until(task_c2), Ok(()));
-        assert_eq!(done.take(), vec![Ok("dup")]);
+        assert_eq!(done.take(), vec!["dup"]);
         running.assert_empty();
     }
 }
