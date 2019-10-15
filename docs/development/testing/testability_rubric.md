@@ -63,6 +63,20 @@ The exact contents of the doc may change over time.
     (especially when authored by another engineer) will exercise the same manual
     tests. Exceptions may apply to some parts of the codebase to recognize
     ongoing automation challenges.
+*   **Tests must minimize their external dependencies**. Our test infrastructure
+    explicitly provisions each test with certain resources, but tests are able
+    to access more than those that are provisioned. Examples of resources
+    include hardware, CPU, memory, persistent storage, network, other IO
+    devices, reserved network ports, and system services. The stability and
+    availability of resources that are not provisioned explicitly for a test
+    cannot be guaranteed, so tests that access such resources are inherently
+    flaky and / or difficult to reproduce. Tests must not access external
+    resources beyond the control of the test infrastructure. For example, tests
+    must not access services on the Internet. Tests should only use resources
+    beyond those provisioned explicitly for that test when necessary. For
+    example, tests might have to access system services that do not have test
+    doubles available. A small number of exceptions to this rule are made for
+    end-to-end tests.
 *   **Changes to legacy code** (old code that predates Testability requirements
     and is poorly tested) must be tested. Proximity to poorly-tested code is not
     a reason to not test new code. Untested legacy code isn’t necessarily old
