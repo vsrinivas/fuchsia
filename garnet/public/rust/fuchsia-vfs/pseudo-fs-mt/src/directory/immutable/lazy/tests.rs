@@ -8,9 +8,9 @@ use super::{lazy, lazy_with_watchers, WatcherEvent};
 
 // Macros are exported into the root of the crate.
 use crate::{
-    assert_channel_closed, assert_close, assert_event, assert_read, assert_read_dirents,
-    assert_read_dirents_err, open_get_directory_proxy_assert_ok, open_get_file_proxy_assert_ok,
-    open_get_proxy_assert,
+    assert_channel_closed, assert_close, assert_event, assert_get_token, assert_link, assert_read,
+    assert_read_dirents, assert_read_dirents_err, open_get_directory_proxy_assert_ok,
+    open_get_file_proxy_assert_ok, open_get_proxy_assert,
 };
 
 use crate::{
@@ -22,13 +22,14 @@ use crate::{
     },
     execution_scope::ExecutionScope,
     file::pcb::asynchronous::{read_only, read_only_static},
+    registry::token_registry,
 };
 
 use {
     fidl_fuchsia_io::{
         DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN, OPEN_FLAG_DESCRIBE,
-        OPEN_RIGHT_READABLE, WATCH_MASK_ADDED, WATCH_MASK_EXISTING, WATCH_MASK_IDLE,
-        WATCH_MASK_REMOVED,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, WATCH_MASK_ADDED, WATCH_MASK_EXISTING,
+        WATCH_MASK_IDLE, WATCH_MASK_REMOVED,
     },
     fuchsia_async::Executor,
     fuchsia_zircon::Status,
@@ -49,7 +50,7 @@ use {
 // separate form the above.  "use crate::pseudo_directory" generates a warning referring to
 // "issue #52234 <https://github.com/rust-lang/rust/issues/52234>".
 #[proc_macro_hack(support_nested)]
-use fuchsia_vfs_pseudo_fs_mt_macros::pseudo_directory;
+use fuchsia_vfs_pseudo_fs_mt_macros::{mut_pseudo_directory, pseudo_directory};
 
 type AsyncGetEntryNames = BoxFuture<'static, Result<Box<dyn dirents_sink::Sealed>, Status>>;
 
@@ -551,7 +552,8 @@ fn read_dirents_very_small_buffer() {
         lazy(get_entry_names, |_name| future::ready(Err(Status::NOT_FOUND))),
         |root| {
             async move {
-                // Entry header is 10 bytes, so this read should not be able to return a single entry.
+                // Entry header is 10 bytes, so this read should not be able to return a single
+                // entry.
                 assert_read_dirents_err!(root, 8, Status::BUFFER_TOO_SMALL);
 
                 {
@@ -890,5 +892,88 @@ fn watch_close_watcher_stream() {
         }
     })
     .exec(exec)
+    .run();
+}
+
+#[test]
+fn link_from_lazy_into_mutable() {
+    let get_entry_names = build_sorted_static_get_entry_names(vec![(DIRENT_TYPE_FILE, "passwd")]);
+
+    let get_entry = {
+        let count = Arc::new(AtomicU8::new(0));
+
+        move |name: String| {
+            assert_eq!(name, "passwd");
+
+            let count = count.clone();
+            async move {
+                let count = count.fetch_add(1, Ordering::Relaxed) + 1;
+                Ok(read_only(move || {
+                    async move {
+                        let content = format!("Connection {}", count);
+                        Ok(content.into_bytes())
+                    }
+                }) as Arc<dyn DirectoryEntry>)
+            }
+        }
+    };
+
+    let root = pseudo_directory! {
+        "etc" => lazy(get_entry_names, get_entry),
+        "tmp" => mut_pseudo_directory! {}
+    };
+
+    test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| {
+        async move {
+            let ro_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            let rw_flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
+
+            let etc = open_get_directory_proxy_assert_ok!(&proxy, ro_flags, "etc");
+            let tmp = open_get_directory_proxy_assert_ok!(&proxy, rw_flags, "tmp");
+
+            let tmp_watcher_client = {
+                let mask = WATCH_MASK_EXISTING | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+                let watcher_client = assert_watch!(tmp, mask);
+                assert_watcher_one_message_watched_events!(watcher_client, { EXISTING, "." });
+                watcher_client
+            };
+
+            open_as_file_assert_content!(&etc, ro_flags, "passwd", "Connection 1");
+
+            let tmp_token = assert_get_token!(&tmp);
+            assert_link!(&etc, "passwd", tmp_token, "linked-passwd");
+
+            assert_watcher_one_message_watched_events!(
+                tmp_watcher_client,
+                { ADDED, "linked-passwd" },
+            );
+
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"passwd");
+
+                assert_read_dirents!(etc, 1000, expected.into_vec());
+            }
+
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"linked-passwd");
+
+                assert_read_dirents!(tmp, 1000, expected.into_vec());
+            }
+
+            let linked_passwd = open_get_file_proxy_assert_ok!(&tmp, ro_flags, "linked-passwd");
+            assert_read!(linked_passwd, "Connection 2");
+
+            open_as_file_assert_content!(&etc, ro_flags, "passwd", "Connection 3");
+
+            drop(tmp_watcher_client);
+            assert_close!(linked_passwd);
+            assert_close!(tmp);
+            assert_close!(etc);
+            assert_close!(proxy);
+        }
+    })
+    .token_registry(token_registry::Simple::new())
     .run();
 }

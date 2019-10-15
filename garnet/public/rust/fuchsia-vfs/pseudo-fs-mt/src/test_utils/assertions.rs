@@ -746,3 +746,27 @@ macro_rules! assert_rename_err {
         assert_eq!(Status::from_raw(status), $expected_status);
     }};
 }
+
+// See comment at the top of the file for why this is a macro.
+#[macro_export]
+macro_rules! assert_link {
+    ($proxy:expr, $src:expr, $dst_parent_token:expr, $dst:expr) => {{
+        use $crate::test_utils::assertions::reexport::Status;
+
+        let status = $proxy.link($src, $dst_parent_token, $dst).await.expect("link failed");
+
+        assert_eq!(Status::from_raw(status), Status::OK);
+    }};
+}
+
+// See comment at the top of the file for why this is a macro.
+#[macro_export]
+macro_rules! assert_link_err {
+    ($proxy:expr, $src:expr, $dst_parent_token:expr, $dst:expr, $expected_status:expr) => {{
+        use $crate::test_utils::assertions::reexport::Status;
+
+        let status = $proxy.link($src, $dst_parent_token, $dst).await.expect("link failed");
+
+        assert_eq!(Status::from_raw(status), $expected_status);
+    }};
+}

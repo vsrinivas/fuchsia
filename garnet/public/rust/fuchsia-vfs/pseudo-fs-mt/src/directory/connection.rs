@@ -7,7 +7,7 @@ use crate::{
     directory::{
         common::{check_child_connection_flags, POSIX_DIRECTORY_PROTECTION_ATTRIBUTES},
         entry::DirectoryEntry,
-        entry_container::{self, AsyncReadDirents, EntryContainer, Observable},
+        entry_container::{self, AsyncGetEntry, AsyncReadDirents, EntryContainer, Observable},
         read_dirents,
     },
     execution_scope::ExecutionScope,
@@ -490,15 +490,46 @@ where
 
     async fn handle_link<R>(
         &self,
-        _src: String,
-        _dst_parent_token: Handle,
-        _dst: String,
+        src: String,
+        dst_parent_token: Handle,
+        dst: String,
         responder: R,
     ) -> Result<(), fidl::Error>
     where
         R: FnOnce(Status) -> Result<(), fidl::Error>,
     {
-        responder(Status::NOT_SUPPORTED)
+        let token_registry = match self.scope.token_registry() {
+            None => return responder(Status::NOT_SUPPORTED),
+            Some(registry) => registry,
+        };
+
+        let res = {
+            let directory = self.directory.clone();
+            match directory.get_entry(src) {
+                AsyncGetEntry::Immediate(res) => res,
+                AsyncGetEntry::Future(fut) => fut.await,
+            }
+        };
+
+        let entry = match res {
+            Err(status) => return responder(status),
+            Ok(entry) => entry,
+        };
+
+        if !entry.can_hardlink() {
+            return responder(Status::NOT_FILE);
+        }
+
+        let dst_parent = match token_registry.get_container(dst_parent_token) {
+            Err(status) => return responder(status),
+            Ok(None) => return responder(Status::NOT_FOUND),
+            Ok(Some(entry)) => entry,
+        };
+
+        match dst_parent.link(dst, entry) {
+            Ok(()) => responder(Status::OK),
+            Err(status) => responder(status),
+        }
     }
 
     fn handle_watch<R>(
