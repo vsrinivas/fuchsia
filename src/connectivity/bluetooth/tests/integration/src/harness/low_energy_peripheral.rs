@@ -16,6 +16,7 @@ use {
     futures::{select, Future, FutureExt, TryStreamExt},
     parking_lot::MappedRwLockWriteGuard,
     pin_utils::pin_mut,
+    std::convert::TryInto,
 };
 
 use crate::harness::{
@@ -114,7 +115,10 @@ async fn watch_connections(harness: PeripheralHarness) -> Result<(), Error> {
     while let Some(e) = events.try_next().await? {
         match e {
             PeripheralEvent::OnPeerConnected { peer, connection } => {
-                harness.write_state().connections.push((peer.into(), connection.into_proxy()?));
+                harness
+                    .write_state()
+                    .connections
+                    .push((peer.try_into()?, connection.into_proxy()?));
             }
             // Ignore the deprecated events.
             PeripheralEvent::OnCentralConnected { .. } => (),

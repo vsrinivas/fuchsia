@@ -11,6 +11,7 @@ use {
         types::le::RemoteDevice,
     },
     futures::{Future, TryFutureExt, TryStreamExt},
+    std::convert::TryInto,
 };
 
 use crate::harness::{control::ActivatedFakeHost, emulator::EmulatorHarnessAux, TestHarness};
@@ -77,7 +78,7 @@ async fn handle_central_events(harness: CentralHarness) -> Result<(), Error> {
     while let Some(e) = events.try_next().await? {
         match e {
             CentralEvent::OnDeviceDiscovered { device } => {
-                harness.write_state().remote_devices.push(device.into());
+                harness.write_state().remote_devices.push(device.try_into()?);
                 harness.notify_state_changed();
             }
             CentralEvent::OnScanStateChanged { scanning } => {

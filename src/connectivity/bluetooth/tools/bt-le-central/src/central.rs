@@ -12,7 +12,7 @@ use {
     fuchsia_bluetooth::{error::Error as BTError, types::le::RemoteDevice},
     futures::prelude::*,
     parking_lot::RwLock,
-    std::{process::exit, sync::Arc},
+    std::{convert::TryFrom, process::exit, sync::Arc},
 };
 
 use crate::gatt::repl::start_gatt_loop;
@@ -72,7 +72,13 @@ pub async fn listen_central_events(state: CentralStatePtr) {
                     Ok(())
                 }
                 CentralEvent::OnDeviceDiscovered { device } => {
-                    let device = RemoteDevice::from(device);
+                    let device = match RemoteDevice::try_from(device) {
+                        Ok(d) => d,
+                        Err(e) => {
+                            eprintln!("received malformed scan result: {}", e);
+                            exit(0);
+                        }
+                    };
                     let id = device.identifier.clone();
 
                     eprintln!(" {}", device);
