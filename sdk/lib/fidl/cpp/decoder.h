@@ -31,6 +31,10 @@ class Decoder final {
   void DecodeHandle(zx::object_base* value, size_t offset);
 #endif
 
+  // As part of the union to xunion migration, it may be necessary to decode
+  // unions from xunion bytes rather than union bytes.
+  bool ShouldDecodeUnionFromXUnion() { return message_.should_decode_union_from_xunion(); }
+
  private:
   uint8_t* InternalGetPtr(size_t offset);
 

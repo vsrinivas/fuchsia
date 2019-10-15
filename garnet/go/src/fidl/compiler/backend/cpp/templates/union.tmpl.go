@@ -69,6 +69,7 @@ class {{ .Name }} final {
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t _offset);
+  static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t _offset);
   zx_status_t Clone({{ .Name }}* result) const;
 
   bool has_invalid_tag() const { return Which() == Tag::Invalid; }
@@ -150,6 +151,11 @@ void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {
 }
 
 void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t _offset) {
+  if (_decoder->ShouldDecodeUnionFromXUnion()) {
+    DecodeFromXUnionBytes(_decoder, _value, _offset);
+    return;
+  }
+
   fidl_union_tag_t _tag;
   ::fidl::Decode(_decoder, &_tag, _offset);
   switch (_tag) {
@@ -164,6 +170,31 @@ void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t 
   {{- end }}
    default:
     _value->value_.emplace<0>();
+  }
+}
+
+void {{ .Name }}::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t _offset) {
+  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(_offset);
+
+  uint32_t ordinal;
+  ::fidl::Decode(_decoder, &ordinal, _offset);
+
+{{ if len .Members }}
+  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+{{ end }}
+
+switch (ordinal) {
+  {{- range .Members }}
+    case {{ .XUnionOrdinal }}: {
+      {{ .Type.Decl }} _member{};
+      ::fidl::Decode(_decoder, &_member, envelope_offset);
+      _value->set_{{ .Name }}(std::move(_member));
+      break;
+    }
+  {{- end }}
+  default:
+    _value->value_.emplace<0>();
+    break;
   }
 }
 

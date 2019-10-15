@@ -1,0 +1,24 @@
+// Copyright 2019 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Types useful for tests for the 2019 migration from
+// unions to xunions.
+
+library fidl.test.unionmigration;
+
+xunion BasicXUnion {
+    int32 i32;
+};
+
+union BasicUnion {
+    int32 i32;
+};
+
+struct BasicXUnionStruct {
+    BasicXUnion val;
+};
+
+struct BasicUnionStruct {
+    BasicUnion val;
+};

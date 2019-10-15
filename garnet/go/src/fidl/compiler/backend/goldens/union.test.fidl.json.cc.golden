@@ -40,6 +40,11 @@ void Union::Encode(::fidl::Encoder* _encoder, size_t _offset) {
 }
 
 void Union::Decode(::fidl::Decoder* _decoder, Union* _value, size_t _offset) {
+  if (_decoder->ShouldDecodeUnionFromXUnion()) {
+    DecodeFromXUnionBytes(_decoder, _value, _offset);
+    return;
+  }
+
   fidl_union_tag_t _tag;
   ::fidl::Decode(_decoder, &_tag, _offset);
   switch (_tag) {
@@ -66,6 +71,41 @@ void Union::Decode(::fidl::Decoder* _decoder, Union* _value, size_t _offset) {
     }
    default:
     _value->value_.emplace<0>();
+  }
+}
+
+void Union::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, Union* _value, size_t _offset) {
+  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(_offset);
+
+  uint32_t ordinal;
+  ::fidl::Decode(_decoder, &ordinal, _offset);
+
+
+  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+
+
+switch (ordinal) {
+    case 910042901: {
+      int32_t _member{};
+      ::fidl::Decode(_decoder, &_member, envelope_offset);
+      _value->set_Primitive(std::move(_member));
+      break;
+    }
+    case 891204917: {
+      ::std::string _member{};
+      ::fidl::Decode(_decoder, &_member, envelope_offset);
+      _value->set_StringNeedsConstructor(std::move(_member));
+      break;
+    }
+    case 1452916587: {
+      ::std::vector<::std::string> _member{};
+      ::fidl::Decode(_decoder, &_member, envelope_offset);
+      _value->set_VectorStringAlsoNeedsConstructor(std::move(_member));
+      break;
+    }
+  default:
+    _value->value_.emplace<0>();
+    break;
   }
 }
 
@@ -145,6 +185,11 @@ void FieldCollision::Encode(::fidl::Encoder* _encoder, size_t _offset) {
 }
 
 void FieldCollision::Decode(::fidl::Decoder* _decoder, FieldCollision* _value, size_t _offset) {
+  if (_decoder->ShouldDecodeUnionFromXUnion()) {
+    DecodeFromXUnionBytes(_decoder, _value, _offset);
+    return;
+  }
+
   fidl_union_tag_t _tag;
   ::fidl::Decode(_decoder, &_tag, _offset);
   switch (_tag) {
@@ -157,6 +202,29 @@ void FieldCollision::Decode(::fidl::Decoder* _decoder, FieldCollision* _value, s
     }
    default:
     _value->value_.emplace<0>();
+  }
+}
+
+void FieldCollision::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, FieldCollision* _value, size_t _offset) {
+  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(_offset);
+
+  uint32_t ordinal;
+  ::fidl::Decode(_decoder, &ordinal, _offset);
+
+
+  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+
+
+switch (ordinal) {
+    case 1574011787: {
+      int32_t _member{};
+      ::fidl::Decode(_decoder, &_member, envelope_offset);
+      _value->set_field_collision_tag(std::move(_member));
+      break;
+    }
+  default:
+    _value->value_.emplace<0>();
+    break;
   }
 }
 

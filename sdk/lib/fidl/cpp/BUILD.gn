@@ -232,6 +232,7 @@ source_set("test_sources") {
     ":cpp",
     ":fidl_test",
     ":test_support",
+    ":union_migration_test_fidl",
     "//sdk/lib/fidl/cpp/test",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop",
@@ -317,6 +318,7 @@ if (is_linux || is_mac) {
     ]
   }
 }
+
 # group("host_tests") {
 #   deps = [
 #     ":fidl_cpp_host_conformance_test($host_toolchain)",
@@ -324,3 +326,11 @@ if (is_linux || is_mac) {
 #   ]
 #   testonly = true
 # }
+
+fidl("union_migration_test_fidl") {
+  name = "fidl.test.unionmigration"
+
+  sources = [
+    "union_migration.test.fidl",
+  ]
+}

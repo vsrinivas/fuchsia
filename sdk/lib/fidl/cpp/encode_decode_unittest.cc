@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fidl/cpp/test/test_util.h>
 #include <zircon/types.h>
 
 #include <string>
@@ -9,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "fidl/test/unionmigration/cpp/fidl.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/event_sender.h"
 #include "lib/fidl/cpp/interface_ptr.h"
@@ -65,6 +67,52 @@ TEST(EncodeTest, RequestMagicNumber) {
   loop.RunUntilIdle();
 
   ASSERT_TRUE(handler.is_supported);
+}
+
+// Adapted from RoundTrip in test_util.h.
+TEST(Conformance, DecodeUnionFromXunion) {
+  fidl::test::unionmigration::BasicXUnionStruct input;
+  input.val = fidl::test::unionmigration::BasicXUnion::WithI32(2);
+
+  const size_t input_encoded_size =
+      CodingTraits<fidl::test::unionmigration::BasicXUnionStruct>::encoded_size;
+  const size_t input_padding_size = FIDL_ALIGN(input_encoded_size) - input_encoded_size;
+  const ::fidl::FidlStructField fake_input_interface_fields[] = {
+      ::fidl::FidlStructField(fidl::test::unionmigration::BasicXUnionStruct::FidlType, 16,
+                              input_padding_size),
+  };
+  const fidl_type_t fake_input_interface_struct{
+      ::fidl::FidlCodedStruct(fake_input_interface_fields, 1, 16 + input_encoded_size, "Input")};
+  const size_t output_encoded_size =
+      CodingTraits<fidl::test::unionmigration::BasicXUnionStruct>::encoded_size;
+  const size_t output_padding_size = FIDL_ALIGN(output_encoded_size) - output_encoded_size;
+  const ::fidl::FidlStructField fake_output_interface_fields[] = {
+      ::fidl::FidlStructField(fidl::test::unionmigration::BasicXUnionStruct::FidlType, 16,
+                              output_padding_size),
+  };
+  const fidl_type_t fake_output_interface_struct{
+      ::fidl::FidlCodedStruct(fake_output_interface_fields, 1, 16 + output_encoded_size, "Output")};
+
+  fidl::Encoder enc(0xfefefefe);
+  auto ofs = enc.Alloc(input_encoded_size);
+  fidl::Clone(input).Encode(&enc, ofs);
+  auto msg = enc.GetMessage();
+
+  // Set the bit indicating that this contains xunion bytes.
+  fidl_message_header_t* header = reinterpret_cast<fidl_message_header_t*>(msg.bytes().data());
+  header->flags[0] = 1;
+  // The fidl definition of the union and xunion have different names and therefore different
+  // ordinals. Update the ordinal so the union can decode from its corresponding xunion-encoded
+  // bytes.
+  *reinterpret_cast<uint64_t*>(msg.payload().data()) = 580704578;
+
+  const char* err_msg = nullptr;
+  EXPECT_EQ(ZX_OK, msg.Decode(&fake_output_interface_struct, &err_msg)) << err_msg;
+  fidl::Decoder dec(std::move(msg));
+  fidl::test::unionmigration::BasicUnionStruct output;
+  fidl::test::unionmigration::BasicUnionStruct::Decode(&dec, &output, ofs);
+
+  EXPECT_EQ(output.val.i32(), input.val.i32());
 }
 
 }  // namespace

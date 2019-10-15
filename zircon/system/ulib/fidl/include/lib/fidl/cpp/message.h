@@ -9,6 +9,8 @@
 #include <lib/fidl/cpp/message_part.h>
 #include <zircon/fidl.h>
 
+#define TXN_HEADER_UNION_FROM_XUNION_FLAG (1 << 0)
+
 namespace fidl {
 
 // A FIDL message.
@@ -61,6 +63,10 @@ class Message {
   //
   // Valid only if has_header().
   uint64_t ordinal() const { return header().ordinal; }
+
+  bool should_decode_union_from_xunion() const {
+    return (header().flags[0] & TXN_HEADER_UNION_FROM_XUNION_FLAG) != 0;
+  }
 
   // Whether this message is in a supported version of the wire format.
   //

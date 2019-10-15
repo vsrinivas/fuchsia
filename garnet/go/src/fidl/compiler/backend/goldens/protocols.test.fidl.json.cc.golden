@@ -64,6 +64,11 @@ void WithErrorSyntax_ResponseAsStruct_Result::Encode(::fidl::Encoder* _encoder, 
 }
 
 void WithErrorSyntax_ResponseAsStruct_Result::Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ResponseAsStruct_Result* _value, size_t _offset) {
+  if (_decoder->ShouldDecodeUnionFromXUnion()) {
+    DecodeFromXUnionBytes(_decoder, _value, _offset);
+    return;
+  }
+
   fidl_union_tag_t _tag;
   ::fidl::Decode(_decoder, &_tag, _offset);
   switch (_tag) {
@@ -83,6 +88,35 @@ void WithErrorSyntax_ResponseAsStruct_Result::Decode(::fidl::Decoder* _decoder, 
     }
    default:
     _value->value_.emplace<0>();
+  }
+}
+
+void WithErrorSyntax_ResponseAsStruct_Result::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, WithErrorSyntax_ResponseAsStruct_Result* _value, size_t _offset) {
+  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(_offset);
+
+  uint32_t ordinal;
+  ::fidl::Decode(_decoder, &ordinal, _offset);
+
+
+  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+
+
+switch (ordinal) {
+    case 415743989: {
+      WithErrorSyntax_ResponseAsStruct_Response _member{};
+      ::fidl::Decode(_decoder, &_member, envelope_offset);
+      _value->set_response(std::move(_member));
+      break;
+    }
+    case 1728496323: {
+      uint32_t _member{};
+      ::fidl::Decode(_decoder, &_member, envelope_offset);
+      _value->set_err(std::move(_member));
+      break;
+    }
+  default:
+    _value->value_.emplace<0>();
+    break;
   }
 }
 
@@ -169,6 +203,11 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Encode(::fidl::Encoder* _encoder, 
 }
 
 void WithErrorSyntax_ErrorAsPrimitive_Result::Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsPrimitive_Result* _value, size_t _offset) {
+  if (_decoder->ShouldDecodeUnionFromXUnion()) {
+    DecodeFromXUnionBytes(_decoder, _value, _offset);
+    return;
+  }
+
   fidl_union_tag_t _tag;
   ::fidl::Decode(_decoder, &_tag, _offset);
   switch (_tag) {
@@ -188,6 +227,35 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Decode(::fidl::Decoder* _decoder, 
     }
    default:
     _value->value_.emplace<0>();
+  }
+}
+
+void WithErrorSyntax_ErrorAsPrimitive_Result::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsPrimitive_Result* _value, size_t _offset) {
+  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(_offset);
+
+  uint32_t ordinal;
+  ::fidl::Decode(_decoder, &ordinal, _offset);
+
+
+  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+
+
+switch (ordinal) {
+    case 138512668: {
+      WithErrorSyntax_ErrorAsPrimitive_Response _member{};
+      ::fidl::Decode(_decoder, &_member, envelope_offset);
+      _value->set_response(std::move(_member));
+      break;
+    }
+    case 1043053528: {
+      uint32_t _member{};
+      ::fidl::Decode(_decoder, &_member, envelope_offset);
+      _value->set_err(std::move(_member));
+      break;
+    }
+  default:
+    _value->value_.emplace<0>();
+    break;
   }
 }
 
@@ -1075,6 +1143,11 @@ void WithErrorSyntax_ErrorAsEnum_Result::Encode(::fidl::Encoder* _encoder, size_
 }
 
 void WithErrorSyntax_ErrorAsEnum_Result::Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsEnum_Result* _value, size_t _offset) {
+  if (_decoder->ShouldDecodeUnionFromXUnion()) {
+    DecodeFromXUnionBytes(_decoder, _value, _offset);
+    return;
+  }
+
   fidl_union_tag_t _tag;
   ::fidl::Decode(_decoder, &_tag, _offset);
   switch (_tag) {
@@ -1094,6 +1167,35 @@ void WithErrorSyntax_ErrorAsEnum_Result::Decode(::fidl::Decoder* _decoder, WithE
     }
    default:
     _value->value_.emplace<0>();
+  }
+}
+
+void WithErrorSyntax_ErrorAsEnum_Result::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsEnum_Result* _value, size_t _offset) {
+  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(_offset);
+
+  uint32_t ordinal;
+  ::fidl::Decode(_decoder, &ordinal, _offset);
+
+
+  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+
+
+switch (ordinal) {
+    case 1951667349: {
+      WithErrorSyntax_ErrorAsEnum_Response _member{};
+      ::fidl::Decode(_decoder, &_member, envelope_offset);
+      _value->set_response(std::move(_member));
+      break;
+    }
+    case 887935114: {
+      ErrorEnun _member{};
+      ::fidl::Decode(_decoder, &_member, envelope_offset);
+      _value->set_err(std::move(_member));
+      break;
+    }
+  default:
+    _value->value_.emplace<0>();
+    break;
   }
 }
 

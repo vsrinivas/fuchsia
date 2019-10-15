@@ -129,11 +129,12 @@ type Union struct {
 
 type UnionMember struct {
 	types.Attributes
-	Type        Type
-	Name        string
-	StorageName string
-	TagName     string
-	Offset      int
+	Type          Type
+	Name          string
+	XUnionOrdinal int
+	StorageName   string
+	TagName       string
+	Offset        int
 }
 
 func (um UnionMember) UpperCamelCaseName() string {
@@ -1128,12 +1129,13 @@ func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
 func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	n := changeIfReserved(val.Name, "")
 	return UnionMember{
-		Attributes:  val.Attributes,
-		Type:        c.compileType(val.Type),
-		Name:        n,
-		StorageName: changeIfReserved(val.Name, "_"),
-		TagName:     fmt.Sprintf("k%s", common.ToUpperCamelCase(n)),
-		Offset:      val.Offset,
+		Attributes:    val.Attributes,
+		Type:          c.compileType(val.Type),
+		Name:          n,
+		XUnionOrdinal: val.XUnionOrdinal,
+		StorageName:   changeIfReserved(val.Name, "_"),
+		TagName:       fmt.Sprintf("k%s", common.ToUpperCamelCase(n)),
+		Offset:        val.Offset,
 	}
 }
 
