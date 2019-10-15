@@ -7,7 +7,6 @@ package repo
 import (
 	"bytes"
 	"crypto/rand"
-	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -21,6 +20,14 @@ import (
 
 	"fuchsia.googlesource.com/merkle"
 )
+
+type fakeTimeProvider struct {
+	time int
+}
+
+func (f *fakeTimeProvider) UnixTimestamp() int {
+	return f.time
+}
 
 type targetsFile struct {
 	Signed struct {
@@ -62,12 +69,6 @@ func TestInitRepo(t *testing.T) {
 }
 
 func TestAddPackage(t *testing.T) {
-	keysPath, err := ioutil.TempDir("", "publish-test-keys")
-	if err != nil {
-		t.Fatalf("Couldn't creating test directory %v", err)
-	}
-	defer os.RemoveAll(keysPath)
-
 	repoDir, err := ioutil.TempDir("", "publish-test-repo")
 	if err != nil {
 		t.Fatalf("Couldn't create test repo directory.")
@@ -97,14 +98,16 @@ func TestAddPackage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Problem adding repo file %v", err)
 	}
-
+	testVersion := 1
+	timeProvider := fakeTimeProvider{testVersion}
+	r.timeProvider = &timeProvider
 	if err = r.CommitUpdates(true); err != nil {
 		t.Fatalf("Failure commiting update %s", err)
 	}
 
 	// Check for rolejsons and consistent snapshots:
 	for _, rolejson := range roleJsons {
-		b, err := ioutil.ReadFile(filepath.Join(repoDir, "repository", rolejson))
+		_, err := ioutil.ReadFile(filepath.Join(repoDir, "repository", rolejson))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -112,10 +115,16 @@ func TestAddPackage(t *testing.T) {
 		if rolejson == "timestamp.json" {
 			continue
 		}
-		sum512 := sha512.Sum512(b)
-		path := filepath.Join(repoDir, "repository", fmt.Sprintf("%x.%s", sum512, rolejson))
-		if _, err := os.Stat(path); err != nil {
-			t.Fatal(err)
+
+		if rolejson == "root.json" {
+			// Root version is 1 since we call GenKeys once.
+			if _, err := os.Stat(filepath.Join(repoDir, "repository", "1.root.json")); err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			if _, err := os.Stat(filepath.Join(repoDir, "repository", fmt.Sprintf("%d.%s", testVersion, rolejson))); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 
@@ -292,5 +301,115 @@ func TestLinkOrCopy(t *testing.T) {
 			t.Fatalf("post copy content: got %q, want %q", got, want)
 		}
 	})
+
+}
+
+func copyFile(src string, dest string) error {
+	b, err := ioutil.ReadFile(src)
+	if err != nil {
+		return fmt.Errorf("ReadFile: failed to read file %s, err: %v", src, err)
+	}
+	if err := ioutil.WriteFile(dest, b, os.ModePerm); err != nil {
+		return fmt.Errorf("WriteFile: failed to write file %s, err: %v", dest, err)
+	}
+	return nil
+}
+
+func TestLoadExistingRepo(t *testing.T) {
+	repoDir, err := ioutil.TempDir("", "publish-test-repo")
+	if err != nil {
+		t.Fatalf("Couldn't create test repo directory.")
+	}
+	defer os.RemoveAll(repoDir)
+
+	// Create a test repo.
+	r, err := New(repoDir)
+	if err != nil {
+		t.Fatalf("New: Repo init returned error: %v", err)
+	}
+	if err := r.Init(); err != nil {
+		t.Fatalf("Init: failed to init repo: %v", err)
+	}
+	if err := r.GenKeys(); err != nil {
+		t.Fatalf("GenKeys: failed to generate role keys: %v", err)
+	}
+
+	if err := r.AddTargets([]string{}, json.RawMessage{}); err != nil {
+		t.Fatalf("AddTargets, failed to add empty target: %v", err)
+	}
+
+	testVersion := 1
+	timeProvider := fakeTimeProvider{testVersion}
+	r.timeProvider = &timeProvider
+	if err = r.CommitUpdates(true); err != nil {
+		t.Fatalf("CommitUpdates: failed to commit updates: %v", err)
+	}
+
+	newRepoDir, err := ioutil.TempDir("", "publish-new-test-repo")
+	if err != nil {
+		t.Fatalf("Couldn't create test repo directory.")
+	}
+	if err := os.Mkdir(filepath.Join(newRepoDir, "repository"), os.ModePerm); err != nil {
+		t.Fatalf("Couldn't create test repo directory.")
+	}
+	if err := os.Mkdir(filepath.Join(newRepoDir, "keys"), os.ModePerm); err != nil {
+		t.Fatalf("Couldn't create test keys directory.")
+	}
+	defer os.RemoveAll(newRepoDir)
+	// Copy the metadata and keys to a new test folder.
+	for _, rolejson := range roleJsons {
+		if err := copyFile(filepath.Join(repoDir, "repository", rolejson), filepath.Join(newRepoDir, "repository", rolejson)); err != nil {
+			t.Fatalf("copyFile: failed to copy file: %v", err)
+		}
+
+		if err := copyFile(filepath.Join(repoDir, "keys", rolejson), filepath.Join(newRepoDir, "keys", rolejson)); err != nil {
+			t.Fatalf("copyFile: failed to copy file: %v", err)
+		}
+	}
+
+	if err := copyFile(filepath.Join(repoDir, "repository", "1.root.json"), filepath.Join(newRepoDir, "repository", "1.root.json")); err != nil {
+		t.Fatalf("copyFile: failed to copy file: %v", err)
+	}
+
+	// Initiate a new repo using the folder containing existing metadata and keys.
+	r, err = New(newRepoDir)
+	if err != nil {
+		t.Fatalf("New: failed to init new repo using existing metadata files: %v", err)
+	}
+	if err := r.Init(); err != os.ErrExist {
+		t.Fatalf("Init: expect to return os.ErrExist when the repo already exists, got %v", err)
+	}
+	if err := r.AddTargets([]string{}, json.RawMessage{}); err != nil {
+		t.Fatalf("AddTargets, failed to add empty target: %v", err)
+	}
+	testVersion = 2
+	timeProvider = fakeTimeProvider{testVersion}
+	r.timeProvider = &timeProvider
+	if err = r.CommitUpdates(true); err != nil {
+		t.Fatalf("CommitUpdates: failed to commit updates: %v", err)
+	}
+
+	// Check for rolejsons and consistent snapshots:
+	for _, rolejson := range roleJsons {
+		_, err := ioutil.ReadFile(filepath.Join(newRepoDir, "repository", rolejson))
+		if err != nil {
+			t.Fatal(err)
+		}
+		// timestamp doesn't get a consistent snapshot, as it is the entrypoint
+		if rolejson == "timestamp.json" {
+			continue
+		}
+
+		if rolejson == "root.json" {
+			// Root version is 1 since we call GenKeys once.
+			if _, err := os.Stat(filepath.Join(newRepoDir, "repository", "1.root.json")); err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			if _, err := os.Stat(filepath.Join(newRepoDir, "repository", fmt.Sprintf("%d.%s", testVersion, rolejson))); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
 
 }

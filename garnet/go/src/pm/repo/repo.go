@@ -41,10 +41,24 @@ type customTargetMetadata struct {
 	Size   int64  `json:"size"`
 }
 
+// TimeProvider provides the service to get Unix timestamp.
+type TimeProvider interface {
+	// UnixTimestamp returns the Unix timestamp.
+	UnixTimestamp() int
+}
+
 type Repo struct {
 	*tuf.Repo
 	path          string
 	encryptionKey []byte
+	timeProvider  TimeProvider
+}
+
+// SystemProvider uses the time pkg to get Unix timestamp.
+type SystemTimeProvider struct{}
+
+func (*SystemTimeProvider) UnixTimestamp() int {
+	return int(time.Now().Unix())
 }
 
 func passphrase(role string, confirm bool) ([]byte, error) { return []byte{}, nil }
@@ -60,7 +74,7 @@ func New(path string) (*Repo, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := &Repo{repo, path, nil}
+	r := &Repo{repo, path, nil, &SystemTimeProvider{}}
 
 	blobDir := filepath.Join(r.path, "repository", "blobs")
 	if err := os.MkdirAll(blobDir, os.ModePerm); err != nil {
@@ -235,8 +249,7 @@ func (r *Repo) AddBlob(root string, rd io.Reader) (string, int64, error) {
 // an offset in seconds from epoch (1970-01-01 00:00:00 UTC).
 func (r *Repo) CommitUpdates(dateVersioning bool) error {
 	if dateVersioning {
-		dTime := int(time.Now().Unix())
-
+		dTime := r.timeProvider.UnixTimestamp()
 		tVer, err := r.TargetsVersion()
 		if err != nil {
 			return err
@@ -244,7 +257,6 @@ func (r *Repo) CommitUpdates(dateVersioning bool) error {
 		if dTime > tVer {
 			r.SetTargetsVersion(dTime)
 		}
-
 		sVer, err := r.SnapshotVersion()
 		if err != nil {
 			return err
@@ -252,7 +264,6 @@ func (r *Repo) CommitUpdates(dateVersioning bool) error {
 		if dTime > sVer {
 			r.SetSnapshotVersion(dTime)
 		}
-
 		tsVer, err := r.TimestampVersion()
 		if err != nil {
 			return err
@@ -340,7 +351,9 @@ func (r *Repo) fixupRootConsistentSnapshot() error {
 	sum512 := sha512.Sum512(b)
 	rootSnap := filepath.Join(r.path, "repository", fmt.Sprintf("%x.root.json", sum512))
 	if _, err := os.Stat(rootSnap); os.IsNotExist(err) {
-		return ioutil.WriteFile(rootSnap, b, 0666)
+		if err := ioutil.WriteFile(rootSnap, b, 0666); err != nil {
+			return err
+		}
 	}
 	return nil
 }
