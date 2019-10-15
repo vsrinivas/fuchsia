@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
 #include <zircon/device/vfs.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <utility>
 
@@ -19,15 +21,17 @@
 
 namespace {
 
+namespace fio = ::llcpp::fuchsia::io;
+
 void OpenHelper(const zx::channel& directory, const char* path, zx::channel* response_channel) {
   // Open the requested path from the provded directory, and wait for the open
   // response on the accompanying channel.
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
-  ASSERT_EQ(fuchsia_io_DirectoryOpen(directory.get(),
-                                     fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_FLAG_DESCRIBE,
-                                     0, path, strlen(path), server.release()),
-            ZX_OK);
+  auto result = fio::Directory::Call::Open(zx::unowned_channel(directory),
+                                           fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE, 0,
+                                           fidl::StringView(path, strlen(path)), std::move(server));
+  ASSERT_EQ(result.status(), ZX_OK);
   zx_signals_t pending;
   ASSERT_EQ(
       client.wait_one(ZX_CHANNEL_PEER_CLOSED | ZX_CHANNEL_READABLE, zx::time::infinite(), &pending),
@@ -39,24 +43,30 @@ void OpenHelper(const zx::channel& directory, const char* path, zx::channel* res
 // Validate some size information and expected fields without fully decoding the
 // FIDL message, for opening a path from a directory where we expect to open successfully.
 void FidlOpenValidator(const zx::channel& directory, const char* path,
-                       fidl_union_tag_t expected_tag, size_t expected_handles) {
+                       fio::NodeInfo::Tag expected_tag, size_t expected_handles) {
   zx::channel client;
   ASSERT_NO_FAILURES(OpenHelper(directory, path, &client));
 
-  char buf[8192];
-  zx_handle_t handles[4];
-  uint32_t actual_bytes;
-  uint32_t actual_handles;
-  ASSERT_EQ(client.read(0, buf, handles, sizeof(buf), fbl::count_of(handles), &actual_bytes,
-                        &actual_handles),
-            ZX_OK);
-  ASSERT_EQ(actual_bytes, sizeof(fs::OnOpenMsg));
-  ASSERT_EQ(actual_handles, expected_handles);
-  auto response = reinterpret_cast<fs::OnOpenMsg*>(buf);
-  ASSERT_EQ(response->primary.hdr.ordinal, fuchsia_io_NodeOnOpenOrdinal);
-  ASSERT_OK(response->primary.s);
-  ASSERT_EQ(response->extra.tag, expected_tag);
-  zx_handle_close_many(handles, actual_handles);
+  fio::Node::EventHandlers event_handlers;
+  bool event_tag_ok = false;
+  bool status_ok = false;
+  bool node_info_ok = false;
+  event_handlers.on_open = [&](uint32_t s, fio::NodeInfo* info) -> zx_status_t {
+    event_tag_ok = true;
+    status_ok = s == ZX_OK;
+    if (info)
+      node_info_ok = info->which() == expected_tag;
+    return ZX_OK;
+  };
+  event_handlers.unknown = []() -> zx_status_t {
+    EXPECT_TRUE(false);
+    return ZX_OK;
+  };
+
+  ASSERT_OK(fio::Node::Call::HandleEvents(zx::unowned_channel(client), std::move(event_handlers)));
+  ASSERT_TRUE(event_tag_ok);
+  ASSERT_TRUE(status_ok);
+  ASSERT_TRUE(node_info_ok);
 }
 
 // Validate some size information and expected fields without fully decoding the
@@ -65,18 +75,25 @@ void FidlOpenErrorValidator(const zx::channel& directory, const char* path) {
   zx::channel client;
   ASSERT_NO_FAILURES(OpenHelper(directory, path, &client));
 
-  char buf[8192];
-  zx_handle_t handles[4];
-  uint32_t actual_bytes;
-  uint32_t actual_handles;
-  ASSERT_EQ(client.read(0, buf, handles, sizeof(buf), fbl::count_of(handles), &actual_bytes,
-                        &actual_handles),
-            ZX_OK);
-  ASSERT_EQ(actual_bytes, sizeof(fuchsia_io_NodeOnOpenEvent));
-  ASSERT_EQ(actual_handles, 0);
-  auto response = reinterpret_cast<fuchsia_io_NodeOnOpenEvent*>(buf);
-  ASSERT_EQ(response->hdr.ordinal, fuchsia_io_NodeOnOpenOrdinal);
-  ASSERT_EQ(response->s, ZX_ERR_NOT_FOUND);
+  fio::Node::EventHandlers event_handlers;
+  bool event_tag_ok = false;
+  bool status_ok = false;
+  bool node_info_ok = false;
+  event_handlers.on_open = [&](uint32_t s, fio::NodeInfo* info) -> zx_status_t {
+    event_tag_ok = true;
+    status_ok = static_cast<int>(s) == ZX_ERR_NOT_FOUND;
+    node_info_ok = info == nullptr;
+    return ZX_OK;
+  };
+  event_handlers.unknown = []() -> zx_status_t {
+    EXPECT_TRUE(false);
+    return ZX_OK;
+  };
+
+  ASSERT_OK(fio::Node::Call::HandleEvents(zx::unowned_channel(client), std::move(event_handlers)));
+  ASSERT_TRUE(event_tag_ok);
+  ASSERT_TRUE(status_ok);
+  ASSERT_TRUE(node_info_ok);
 }
 
 // Ensure that our hand-rolled FIDL messages within devfs and memfs are acting correctly
@@ -88,9 +105,9 @@ TEST(FidlTestCase, Open) {
     fdio_ns_t* ns;
     ASSERT_OK(fdio_ns_get_installed(&ns));
     ASSERT_OK(fdio_ns_connect(ns, "/dev", ZX_FS_RIGHT_READABLE, dev_server.release()));
-    ASSERT_NO_FAILURES(FidlOpenValidator(dev_client, "zero", fuchsia_io_NodeInfoTag_device, 1));
+    ASSERT_NO_FAILURES(FidlOpenValidator(dev_client, "zero", fio::NodeInfo::Tag::kDevice, 1));
     ASSERT_NO_FAILURES(
-        FidlOpenValidator(dev_client, "class/platform-bus/000", fuchsia_io_NodeInfoTag_device, 1));
+        FidlOpenValidator(dev_client, "class/platform-bus/000", fio::NodeInfo::Tag::kDevice, 1));
     ASSERT_NO_FAILURES(FidlOpenErrorValidator(dev_client, "this-path-better-not-actually-exist"));
     ASSERT_NO_FAILURES(
         FidlOpenErrorValidator(dev_client, "zero/this-path-better-not-actually-exist"));
@@ -102,38 +119,37 @@ TEST(FidlTestCase, Open) {
     fdio_ns_t* ns;
     ASSERT_OK(fdio_ns_get_installed(&ns));
     ASSERT_OK(fdio_ns_connect(ns, "/boot", ZX_FS_RIGHT_READABLE, dev_server.release()));
-    ASSERT_NO_FAILURES(FidlOpenValidator(dev_client, "lib", fuchsia_io_NodeInfoTag_directory, 0));
+    ASSERT_NO_FAILURES(FidlOpenValidator(dev_client, "lib", fio::NodeInfo::Tag::kDirectory, 0));
     ASSERT_NO_FAILURES(FidlOpenErrorValidator(dev_client, "this-path-better-not-actually-exist"));
   }
 }
 
 TEST(FidlTestCase, Basic) {
-  fuchsia_io_NodeInfo info = {};
   {
     zx::channel client, server;
     ASSERT_OK(zx::channel::create(0, &client, &server));
     ASSERT_OK(fdio_service_connect("/dev/class", server.release()));
-    memset(&info, 0, sizeof(info));
-    ASSERT_OK(fuchsia_io_FileDescribe(client.get(), &info));
-    ASSERT_EQ(info.tag, fuchsia_io_NodeInfoTag_directory);
+    auto result = fio::File::Call::Describe(zx::unowned_channel(client));
+    ASSERT_OK(result.status());
+    ASSERT_TRUE(result->info.is_directory());
   }
 
   {
     zx::channel client, server;
     ASSERT_OK(zx::channel::create(0, &client, &server));
     ASSERT_OK(fdio_service_connect("/dev/zero", server.release()));
-    memset(&info, 0, sizeof(info));
-    ASSERT_OK(fuchsia_io_FileDescribe(client.get(), &info));
-    ASSERT_EQ(info.tag, fuchsia_io_NodeInfoTag_device);
-    ASSERT_NE(info.device.event, ZX_HANDLE_INVALID);
-    zx_handle_close(info.device.event);
+    auto result = fio::File::Call::Describe(zx::unowned_channel(client));
+    auto info = std::move(result->info);
+    ASSERT_TRUE(info.is_device());
+    ASSERT_NE(info.device().event, ZX_HANDLE_INVALID);
+    zx_handle_close(info.mutable_device().event.release());
   }
 }
 
 typedef struct {
   // Buffer containing cached messages
-  uint8_t buf[fuchsia_io_MAX_BUF];
-  uint8_t name_buf[fuchsia_io_MAX_FILENAME + 1];
+  uint8_t buf[fio::MAX_BUF];
+  uint8_t name_buf[fio::MAX_FILENAME + 1];
   // Offset into 'buf' of next message
   uint8_t* ptr;
   // Maximum size of buffer
@@ -181,11 +197,10 @@ TEST(FidlTestCase, DirectoryWatcherExisting) {
   ASSERT_OK(zx::channel::create(0, &watcher, &remote_watcher));
   ASSERT_OK(fdio_service_connect("/dev/class", request.release()));
 
-  zx_status_t status;
-  ASSERT_EQ(fuchsia_io_DirectoryWatch(h.get(), fuchsia_io_WATCH_MASK_ALL, 0,
-                                      remote_watcher.release(), &status),
-            ZX_OK);
-  ASSERT_OK(status);
+  auto result = fio::Directory::Call::Watch(zx::unowned_channel(h), fio::WATCH_MASK_ALL, 0,
+                                            std::move(remote_watcher));
+  ASSERT_EQ(result.status(), ZX_OK);
+  ASSERT_OK(result->s);
 
   watch_buffer_t wb = {};
   // We should see nothing but EXISTING events until we see an IDLE event
@@ -193,11 +208,11 @@ TEST(FidlTestCase, DirectoryWatcherExisting) {
     const char* name = nullptr;
     uint8_t event = 0;
     ASSERT_NO_FAILURES(ReadEvent(&wb, watcher, &name, &event));
-    if (event == fuchsia_io_WATCH_EVENT_IDLE) {
+    if (event == fio::WATCH_EVENT_IDLE) {
       ASSERT_STR_EQ(name, "");
       break;
     }
-    ASSERT_EQ(event, fuchsia_io_WATCH_EVENT_EXISTING);
+    ASSERT_EQ(event, fio::WATCH_EVENT_EXISTING);
     ASSERT_STR_NE(name, "");
   }
 }
@@ -215,25 +230,24 @@ TEST(FidlTestCase, DirectoryWatcherWithClosedHalf) {
   // Close our half of the watcher before devmgr gets its half.
   watcher.reset();
 
-  zx_status_t status;
-  ASSERT_EQ(fuchsia_io_DirectoryWatch(h.get(), fuchsia_io_WATCH_MASK_ALL, 0,
-                                      remote_watcher.release(), &status),
-            ZX_OK);
-  ASSERT_OK(status);
+  auto result = fio::Directory::Call::Watch(zx::unowned_channel(h), fio::WATCH_MASK_ALL, 0,
+                                            std::move(remote_watcher));
+  ASSERT_EQ(result.status(), ZX_OK);
+  ASSERT_OK(result->s);
   // If we're here and usermode didn't crash, we didn't hit the bug.
 
   // Create a new watcher, and see if it's functional at all
   ASSERT_OK(zx::channel::create(0, &watcher, &remote_watcher));
-  ASSERT_EQ(fuchsia_io_DirectoryWatch(h.get(), fuchsia_io_WATCH_MASK_ALL, 0,
-                                      remote_watcher.release(), &status),
-            ZX_OK);
-  ASSERT_OK(status);
+  result = fio::Directory::Call::Watch(zx::unowned_channel(h), fio::WATCH_MASK_ALL, 0,
+                                       std::move(remote_watcher));
+  ASSERT_EQ(result.status(), ZX_OK);
+  ASSERT_OK(result->s);
 
   watch_buffer_t wb = {};
   const char* name = nullptr;
   uint8_t event = 0;
   ASSERT_NO_FAILURES(ReadEvent(&wb, watcher, &name, &event));
-  ASSERT_EQ(event, fuchsia_io_WATCH_EVENT_EXISTING);
+  ASSERT_EQ(event, fio::WATCH_EVENT_EXISTING);
 }
 
 }  // namespace
