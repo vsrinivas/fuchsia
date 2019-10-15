@@ -73,6 +73,10 @@ type endpoint struct {
 	//  - loop{Read,Write}Done are signaled iff loop{Read,Write} have
 	//    exited, respectively.
 	closing, loopReadDone, loopWriteDone chan struct{}
+
+	// This is used to make sure that endpoint.close only cleans up its
+	// resources once - the first time it was closed.
+	closeOnce sync.Once
 }
 
 // loopWrite connects libc write to the network stack.
@@ -494,39 +498,44 @@ func newSocket(netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportP
 // When called, close signals loopRead and loopWrite (via endpoint.closing and
 // ios.local) to exit, and then blocks until its arguments are signaled. close
 // is typically called with ios.loop{Read,Write}Done.
+//
+// Note, calling close on an endpoint that has already been closed is safe as
+// the cleanup work will only be done once.
 func (ios *endpoint) close(loopDone ...<-chan struct{}) int64 {
 	clones := atomic.AddInt64(&ios.clones, -1)
 
 	if clones == 0 {
-		// Interrupt waits on notification channels. Notification reads
-		// are always combined with ios.closing in a select statement.
-		close(ios.closing)
+		ios.closeOnce.Do(func() {
+			// Interrupt waits on notification channels. Notification reads
+			// are always combined with ios.closing in a select statement.
+			close(ios.closing)
 
-		// Interrupt waits on endpoint.local. Handle waits always
-		// include localSignalClosing.
-		if err := ios.local.Handle().Signal(0, localSignalClosing); err != nil {
-			panic(err)
-		}
+			// Interrupt waits on endpoint.local. Handle waits always
+			// include localSignalClosing.
+			if err := ios.local.Handle().Signal(0, localSignalClosing); err != nil {
+				panic(err)
+			}
 
-		// The interruptions above cause our loops to exit. Wait until
-		// they do before releasing resources they may be using.
-		for _, ch := range loopDone {
-			<-ch
-		}
+			// The interruptions above cause our loops to exit. Wait until
+			// they do before releasing resources they may be using.
+			for _, ch := range loopDone {
+				<-ch
+			}
 
-		ios.ep.Close()
+			ios.ep.Close()
 
-		// HACK(crbug.com/1005300): chromium mojo code expects this; it doesn't
-		// care if the socket is closed.
-		ios.local.Shutdown(zx.SocketShutdownRead | zx.SocketShutdownWrite)
+			// HACK(crbug.com/1005300): chromium mojo code expects this; it doesn't
+			// care if the socket is closed.
+			ios.local.Shutdown(zx.SocketShutdownRead | zx.SocketShutdownWrite)
 
-		if err := ios.local.Close(); err != nil {
-			panic(err)
-		}
+			if err := ios.local.Close(); err != nil {
+				panic(err)
+			}
 
-		if err := ios.peer.Close(); err != nil {
-			panic(err)
-		}
+			if err := ios.peer.Close(); err != nil {
+				panic(err)
+			}
+		})
 	}
 
 	return clones
@@ -705,14 +714,30 @@ func (s *socketImpl) Accept(flags int16) (int16, socket.ControlInterface, error)
 	}
 
 	localAddr, err := ep.GetLocalAddress()
-	if err != nil {
+	if err == tcpip.ErrNotConnected {
+		// This should never happen as of writing as GetLocalAddress
+		// does not actually return any errors. However, we handle
+		// the tcpip.ErrNotConnected case now for the same reasons
+		// as mentioned below for the ep.GetRemoteAddress case.
+		syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: disconnected", s.endpoint)
+	} else if err != nil {
 		panic(err)
+	} else {
+		// GetRemoteAddress returns a tcpip.ErrNotConnected error if ep is no
+		// longer connected. This can happen if the endpoint was closed after
+		// the call to Accept returned, but before this point. A scenario this
+		// was actually witnessed was when a TCP RST was received after the call
+		// to Accept returned, but before this point. If GetRemoteAddress
+		// returns other (unexpected) errors, panic.
+		remoteAddr, err := ep.GetRemoteAddress()
+		if err == tcpip.ErrNotConnected {
+			syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: local=%+v, disconnected", s.endpoint, localAddr)
+		} else if err != nil {
+			panic(err)
+		} else {
+			syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: local=%+v, remote=%+v", s.endpoint, localAddr, remoteAddr)
+		}
 	}
-	remoteAddr, err := ep.GetRemoteAddress()
-	if err != nil {
-		panic(err)
-	}
-	syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: local=%+v, remote=%+v", s.endpoint, localAddr, remoteAddr)
 
 	{
 		controlInterface, err := newSocket(s.endpoint.netProto, s.endpoint.transProto, wq, ep, s.controlService)

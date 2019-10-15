@@ -30,6 +30,8 @@ import (
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
 	tcpipstack "github.com/google/netstack/tcpip/stack"
+	"github.com/google/netstack/tcpip/transport/tcp"
+	"github.com/google/netstack/waiter"
 )
 
 const (
@@ -38,6 +40,71 @@ const (
 	testV4Address  tcpip.Address = tcpip.Address("\xc0\xa8\x2a\x10")
 	testV6Address  tcpip.Address = tcpip.Address("\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10")
 )
+
+// TestEndpointDoubleClose tests that closing an endpoint that has already been
+// closed once will not panic. This is in response to a bug where a socketImpl
+// (whose endpoint had already been closed) was cloned, resulting in a second
+// socketImpl with a reference to the already closed endpoint. When this second
+// socketImpl closes, it will attempt to close the endpoint (which is already
+// closed) resulting in a panic.
+func TestEndpointDoubleClose(t *testing.T) {
+	ns := newNetstack(t)
+	wq := &waiter.Queue{}
+	ep, err := ns.mu.stack.NewEndpoint(tcp.ProtocolNumber, ipv6.ProtocolNumber, wq)
+	if err != nil {
+		t.Fatalf("NewEndpoint = %s", err)
+	}
+
+	ios := &endpoint{
+		netProto:      ipv6.ProtocolNumber,
+		transProto:    tcp.ProtocolNumber,
+		wq:            wq,
+		ep:            ep,
+		loopReadDone:  make(chan struct{}),
+		loopWriteDone: make(chan struct{}),
+		closing:       make(chan struct{}),
+	}
+
+	{
+		localS, peerS, err := zx.NewSocket(uint32(zx.SocketStream))
+		if err != nil {
+			t.Fatalf("zx.NewSocket = %s", err)
+		}
+
+		ios.local = localS
+		ios.peer = peerS
+	}
+
+	// We set clones to 2 initially to make sure that resources only get
+	// cleaned up when the ref count drops from 1 to 0.
+	ios.clones = 2
+	if refcount := ios.close(); refcount != 1 {
+		t.Fatalf("got refcount = %d, want = 1", refcount)
+	}
+	select {
+	case <-ios.closing:
+		t.Fatal("ios.closing is closed")
+	default:
+	}
+
+	// Ref count is now 1 so when we call close again, it will cleanup
+	// associated resources.
+	if refcount := ios.close(); refcount != 0 {
+		t.Fatalf("got refcount = %d, want = 0", refcount)
+	}
+	select {
+	case <-ios.closing:
+	default:
+		t.Fatal("ios.closing is not closed")
+	}
+
+	// Set ref count to 1 so it drops to 0 and make sure we do not
+	// do the work of closing again, and therefore should not panic.
+	ios.clones = 1
+	if refcount := ios.close(); refcount != 0 {
+		t.Fatalf("got refcount = %d, want = 0", refcount)
+	}
+}
 
 func TestNicName(t *testing.T) {
 	ns := newNetstack(t)
@@ -306,6 +373,9 @@ func newNetstack(t *testing.T) *Netstack {
 			arp.NewProtocol(),
 			ipv4.NewProtocol(),
 			ipv6.NewProtocol(),
+		},
+		TransportProtocols: []tcpipstack.TransportProtocol{
+			tcp.NewProtocol(),
 		},
 	})
 

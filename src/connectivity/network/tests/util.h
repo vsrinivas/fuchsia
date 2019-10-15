@@ -23,4 +23,7 @@ void DatagramRead(int recvfd, std::string* out, struct sockaddr_in* addr, sockle
                   int ntfyfd, int timeout);
 void DatagramReadWrite(int recvfd, int ntfyfd);
 void DatagramReadWriteV6(int recvfd, int ntfyfd);
+
+void fill_stream_send_buf(int fd, int peer_fd);
+
 #endif  // SRC_CONNECTIVITY_NETWORK_TESTS_UTIL_H_

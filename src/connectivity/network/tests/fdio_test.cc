@@ -5,13 +5,16 @@
 // These tests ensure the zircon libc can talk to netstack.
 // No network connection is required, only a running netstack binary.
 
-#include <thread>
-
 #include <fuchsia/posix/socket/cpp/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/sync/completion.h>
+#include <poll.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+
+#include <thread>
+
+#include <fbl/unique_fd.h>
 
 #include "gtest/gtest.h"
 #include "util.h"
@@ -154,4 +157,75 @@ TEST(SocketTest, CloseZXSocketOnClose) {
                 ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(zx::sec(5)), &observed),
             ZX_OK)
       << zx_status_get_string(status);
+}
+
+TEST(SocketTest, CloseClonedSocketAfterTcpRst) {
+  // Create the listening endpoint (server).
+  fbl::unique_fd serverfd;
+  ASSERT_TRUE(serverfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+
+  struct sockaddr_in addr = {};
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  ASSERT_EQ(bind(serverfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+  ASSERT_EQ(listen(serverfd.get(), 1), 0) << strerror(errno);
+
+  // Get the address the server is listening on.
+  socklen_t addrlen = sizeof(addr);
+  ASSERT_EQ(getsockname(serverfd.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(addrlen, sizeof(addr));
+
+  // Connect to the listening endpoint (client).
+  fbl::unique_fd clientfd;
+  ASSERT_TRUE(clientfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+  ASSERT_EQ(connect(clientfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
+            0)
+      << strerror(errno);
+
+  // Accept the new connection (client) on the listening endpoint (server).
+  fbl::unique_fd connfd;
+  ASSERT_TRUE(connfd = fbl::unique_fd(accept(serverfd.get(), nullptr, nullptr))) << strerror(errno);
+  ASSERT_EQ(close(serverfd.release()), 0) << strerror(errno);
+
+  // Fill up the rcvbuf (client-side).
+  fill_stream_send_buf(connfd.get(), clientfd.get());
+
+  // Closing the client-side connection while it has data that has not been
+  // read by the client should trigger a TCP RST.
+  ASSERT_EQ(close(clientfd.release()), 0) << strerror(errno);
+
+  struct pollfd pfd = {};
+  pfd.fd = connfd.get();
+  pfd.events = POLLOUT;
+  int n = poll(&pfd, 1, kTimeout);
+  ASSERT_GE(n, 0) << strerror(errno);
+  ASSERT_EQ(n, 1);
+  // TODO(crbug.com/1005300): we should check that revents is exactly
+  // OUT|ERR|HUP. Currently, this is a bit racey, and we might see OUT and HUP
+  // but not ERR due to the hack in socket_server.go which references this same
+  // bug.
+  ASSERT_TRUE(pfd.revents & (POLLOUT | POLLHUP)) << pfd.revents;
+
+  // Now that the socket's endpoint has been closed, clone the socket (twice
+  // to increase the endpoint's reference count to at least 1), then close all
+  // copies of the socket.
+  zx_status_t status;
+  zx::channel channel1, channel2;
+  ASSERT_EQ(status = fdio_fd_clone(connfd.get(), channel1.reset_and_get_address()), ZX_OK)
+      << zx_status_get_string(status);
+  ASSERT_EQ(status = fdio_fd_clone(connfd.get(), channel2.reset_and_get_address()), ZX_OK)
+      << zx_status_get_string(status);
+
+  zx_status_t io_status;
+  fuchsia::posix::socket::Control_SyncProxy control1(std::move(channel1));
+  ASSERT_EQ(io_status = control1.Close(&status), ZX_OK) << zx_status_get_string(io_status);
+  ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+
+  fuchsia::posix::socket::Control_SyncProxy control2(std::move(channel2));
+  ASSERT_EQ(io_status = control2.Close(&status), ZX_OK) << zx_status_get_string(io_status);
+  ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+
+  ASSERT_EQ(close(connfd.release()), 0) << strerror(errno);
 }
