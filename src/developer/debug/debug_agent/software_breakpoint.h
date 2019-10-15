@@ -32,6 +32,21 @@ class SoftwareBreakpoint : public ProcessBreakpoint {
   // breakpoint if it appears in the given block. Otherwise does nothing.
   void FixupMemoryBlock(debug_ipc::MemoryBlock* block);
 
+  // Public ProcessBreakpoint overrides. See ProcessBreakpoint for more details.
+  void EndStepOver(DebuggedThread* thread) override;
+  void ExecuteStepOver(DebuggedThread* thread) override;
+  void StepOverCleanup(DebuggedThread* thread) override;
+
+  const DebuggedThread* currently_stepping_over_thread() const {
+    return currently_stepping_over_thread_.get();
+  }
+
+  // Returns a sorted list of the koids associated with a currently held suspend token.
+  // If a thread has more than one suspend token, it wil appear twice.
+  //
+  // Exposed mostly for testing purposes (see process_breakpoint_unittest.cc).
+  std::vector<zx_koid_t> CurrentlySuspendedThreads() const;
+
  private:
   // ProcessBreakpoint overrides.
   zx_status_t Update() override;
@@ -42,6 +57,10 @@ class SoftwareBreakpoint : public ProcessBreakpoint {
 
   zx_status_t Install();
 
+  // As stepping over are queued, only one thread should be left running at a time. This makes the
+  // breakpoint get a suspend token for each other thread within the system.
+  void SuspendAllOtherThreads(zx_koid_t stepping_over_koid);
+
   ProcessMemoryAccessor* memory_accessor_;  // Not-owning.
 
   // Set to true when the instruction has been replaced.
@@ -49,6 +68,26 @@ class SoftwareBreakpoint : public ProcessBreakpoint {
 
   // Previous memory contents before being replaced with the break instruction.
   arch::BreakInstructionType previous_data_ = 0;
+
+  // Tracks the threads currently single-stepping over this breakpoint.
+  // There can be only one thread stepping over, as they're serialized by the process so that only
+  // one thread is stepping at a time.
+  fxl::WeakPtr<DebuggedThread> currently_stepping_over_thread_;
+
+  // A step is executed by putting back the original instruction, stepping the thread, and then
+  // re-inserting the breakpoint instruction. The breakpoint instruction can't be put back until
+  // there are no more threads in this map.
+  //
+  // It is a multimap because if two threads are queued on the same breakpoint (they both hit it at
+  // the same time), the breakpoint will get suspend tokens for all the threads (except the
+  // corresponding exception one) multiple times. If there is only one suspend token per koid, the
+  // breakpoint will uncorrectly resume the thread that just stepped over when the other would
+  // step over too, which is incorrect. We need the ability to have multiple tokens associated to
+  // a thread so that the interim between executing the second step over the same breakpoint can
+  // coincide with waiting for the resources of the first step over to be freed.
+  //
+  // See the implementation of |StepOverCleanup| for more details.
+  std::multimap<zx_koid_t, std::unique_ptr<DebuggedThread::SuspendToken>> suspend_tokens_;
 };
 
 }  // namespace debug_agent
