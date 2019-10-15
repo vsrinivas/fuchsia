@@ -12,6 +12,9 @@
 #include "src/developer/debug/zxdb/symbols/module_symbols_impl.h"
 #include "src/developer/debug/zxdb/symbols/test_symbol_module.h"
 
+// See test_data/README.md for how to download the data required for this test and enable the build
+// for it.
+
 namespace zxdb {
 
 namespace {
