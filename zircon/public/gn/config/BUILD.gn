@@ -417,6 +417,9 @@ config("default_warnings") {
     "-Wno-unused-function",
     "-Werror=unused-label",
     "-Werror=return-type",
+
+    # TODO(37765): Temporarily disable this warning to unblock the GCC roll.
+    "-Wno-address-of-packed-member",
   ]
   cflags_c = [
     "-Werror=implicit-function-declaration",
@@ -427,6 +430,9 @@ config("default_warnings") {
     "-Wconversion",
     "-Wno-sign-conversion",
     "-Wextra-semi",
+
+    # TODO(38640): Temporarily disable this warning to unblock the GCC roll.
+    "-Wno-deprecated-copy",
   ]
   if (is_gcc) {
     cflags += [
