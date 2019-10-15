@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[macro_use]
-extern crate log;
-
 use {
     clap::{App, Arg, SubCommand},
     failure::{Error, ResultExt},
@@ -34,7 +31,7 @@ fn app<'a, 'b>() -> App<'a, 'b> {
 async fn exec_client(svc: impl OvernetProxyInterface, text: Option<&str>) -> Result<(), Error> {
     loop {
         let peers = svc.list_peers().await?;
-        trace!("Got peers: {:?}", peers);
+        log::trace!("Got peers: {:?}", peers);
         for mut peer in peers {
             if peer.description.services.is_none() {
                 continue;
@@ -51,20 +48,20 @@ async fn exec_client(svc: impl OvernetProxyInterface, text: Option<&str>) -> Res
             }
             let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
             if let Err(e) = svc.connect_to_service(&mut peer.id, echo::EchoMarker::NAME, s) {
-                trace!("{:?}", e);
+                log::trace!("{:?}", e);
                 continue;
             }
             let proxy =
                 fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?;
             let cli = echo::EchoProxy::new(proxy);
-            trace!("Sending {:?} to {:?}", text, peer.id);
+            log::trace!("Sending {:?} to {:?}", text, peer.id);
             match cli.echo_string(text).await {
                 Ok(r) => {
-                    trace!("SUCCESS: received {:?}", r);
+                    log::trace!("SUCCESS: received {:?}", r);
                     return Ok(());
                 }
                 Err(e) => {
-                    trace!("ERROR: {:?}", e);
+                    log::trace!("ERROR: {:?}", e);
                     continue;
                 }
             };
@@ -83,23 +80,23 @@ fn spawn_echo_server(chan: fidl::AsyncChannel, quiet: bool) {
                 stream.try_next().await.context("error running echo server")?
             {
                 if !quiet {
-                    trace!("Received echo request for string {:?}", value);
+                    log::trace!("Received echo request for string {:?}", value);
                 }
                 responder.send(value.as_ref().map(|s| &**s)).context("error sending response")?;
                 if !quiet {
-                    trace!("echo response sent successfully");
+                    log::trace!("echo response sent successfully");
                 }
             }
             Ok(())
         }
-            .unwrap_or_else(|e: failure::Error| trace!("{:?}", e)),
+            .unwrap_or_else(|e: failure::Error| log::trace!("{:?}", e)),
     );
 }
 
 async fn next_request(
     stream: &mut ServiceProviderRequestStream,
 ) -> Result<Option<ServiceProviderRequest>, Error> {
-    trace!("Awaiting request");
+    log::trace!("Awaiting request");
     Ok(stream.try_next().await.context("error running service provider server")?)
 }
 
@@ -115,7 +112,7 @@ async fn exec_server(svc: impl OvernetProxyInterface, quiet: bool) -> Result<(),
     }) = next_request(&mut stream).await?
     {
         if !quiet {
-            trace!("Received service request for service");
+            log::trace!("Received service request for service");
         }
         let chan =
             fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
@@ -136,7 +133,7 @@ async fn async_main() -> Result<(), Error> {
         ("server", Some(_)) => exec_server(svc, args.is_present("quiet")).await,
         ("client", Some(cmd)) => {
             let r = exec_client(svc, cmd.value_of("text")).await;
-            trace!("finished client");
+            log::trace!("finished client");
             r
         }
         (_, _) => unimplemented!(),
@@ -146,7 +143,7 @@ async fn async_main() -> Result<(), Error> {
 fn main() {
     hoist::run(async move {
         if let Err(e) = async_main().await {
-            trace!("Error: {}", e)
+            log::trace!("Error: {}", e)
         }
     })
 }
