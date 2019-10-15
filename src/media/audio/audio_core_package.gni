@@ -1,0 +1,84 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+
+# Creates a 'audio_core' package. All packages created with this template will be identical, except
+# for the addition of the effects module.
+#
+# Parameters
+#     effects (optional)
+#       A scope defining a loadable module that implements audio effects.
+#
+# Ex:
+#   audio_core_package("foo_audio") {
+#     effects = {
+#       target = "//path/to/effects/module"
+#       name = "module_name.so"
+#     }
+#   }
+template("audio_core_package") {
+  package_name = target_name
+  config_data("${target_name}_default_audio_policy") {
+    for_pkg = package_name
+    sources = [
+      rebase_path(
+          "//src/media/audio/audio_core/settings/default/audio_policy.json"),
+    ]
+    outputs = [
+      "settings/default/audio_policy.json",
+    ]
+  }
+
+  package(target_name) {
+    deps = [
+      "//src/media/audio/audio_core:audio_core_bin",
+    ]
+    data_deps = [
+      ":${target_name}_default_audio_policy",
+    ]
+    if (defined(invoker.effects)) {
+      forward_variables_from(invoker, [ "effects" ])
+      assert(defined(effects.target))
+      deps += [ effects.target ]
+    } else {
+      # If a target doesn't provide effects, we won't end up using the 'invoker' variable and that
+      # causes some GN errors. We explicitly mark the invoker as unused in this situation to allow
+      # for this use case.
+      not_needed([ "invoker" ])
+    }
+
+    binaries = [
+      {
+        name = "audio_core"
+      },
+    ]
+
+    if (defined(effects)) {
+      assert(defined(effects.name))
+      loadable_modules = [
+        {
+          name = effects.name
+        },
+      ]
+    }
+
+    meta = [
+      {
+        path = rebase_path("//src/media/audio/audio_core/meta/audio_core.cmx")
+        dest = "audio_core.cmx"
+      },
+
+      # The nodevfs cmx is used in some test environments where we would like to provide our own
+      # devfs for the test. At this time we need to remove any dev sandbox metadata as appmgr does
+      # not allow these namespaces to be overridden.
+      {
+        path = rebase_path(
+                "//src/media/audio/audio_core/meta/audio_core_nodevfs.cmx")
+        dest = "audio_core_nodevfs.cmx"
+      },
+    ]
+  }
+}

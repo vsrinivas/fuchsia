@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
-import("//build/package.gni")
 import("//build/test/test_package.gni")
+import("//src/media/audio/audio_core_package.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
 declare_args() {
@@ -17,16 +16,6 @@ config("audio_core_config") {
   if (!audio_core_trace_enabled) {
     defines = [ "NTRACE" ]
   }
-}
-
-config_data("default_audio_policy") {
-  for_pkg = "audio_core"
-  sources = [
-    rebase_path("settings/default/audio_policy.json"),
-  ]
-  outputs = [
-    "settings/default/audio_policy.json",
-  ]
 }
 
 action_foreach("json_schema_headers") {
@@ -55,40 +44,11 @@ metrics_registry("media_metrics_registry") {
   generate_cc = true
 }
 
-package("audio_core") {
-  deps = [
-    "//src/media/audio/audio_core:audio_core_bin",
-    "//src/media/audio/audio_core:default_audio_policy",
-    "//src/media/audio/effects/passthrough:audio_effects",
-  ]
-
-  binaries = [
-    {
-      name = "audio_core"
-    },
-  ]
-
-  loadable_modules = [
-    {
-      # This audio processing library is hosted in the audio_core process.
-      name = "audio_effects.so"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/audio_core.cmx")
-      dest = "audio_core.cmx"
-    },
-
-    # The nodevfs cmx is used in some test environments where we would like to provide our own
-    # devfs for the test. At this time we need to remove any dev sandbox metadata as appmgr does
-    # not allow these namespaces to be overridden.
-    {
-      path = rebase_path("meta/audio_core_nodevfs.cmx")
-      dest = "audio_core_nodevfs.cmx"
-    },
-  ]
+audio_core_package("audio_core") {
+  effects = {
+    target = "//src/media/audio/effects/passthrough:audio_effects"
+    name = "audio_effects.so"
+  }
 }
 
 source_set("audio_core_lib") {
