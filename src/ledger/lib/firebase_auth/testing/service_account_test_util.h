@@ -5,7 +5,7 @@
 #ifndef SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TEST_UTIL_H_
 #define SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TEST_UTIL_H_
 
-#include <lib/network_wrapper/fake_network_wrapper.h>
+#include "src/lib/network_wrapper/fake_network_wrapper.h"
 
 namespace service_account {
 

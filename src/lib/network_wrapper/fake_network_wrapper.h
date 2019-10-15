@@ -8,8 +8,8 @@
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
-#include "lib/network_wrapper/network_wrapper.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/network_wrapper/network_wrapper.h"
 
 namespace network_wrapper {
 

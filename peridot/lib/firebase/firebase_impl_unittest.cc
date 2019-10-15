@@ -6,8 +6,6 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/network_wrapper/fake_network_wrapper.h>
-#include <lib/network_wrapper/network_wrapper_impl.h>
 
 #include <memory>
 #include <utility>
@@ -20,6 +18,8 @@
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/fsl/socket/strings.h"
+#include "src/lib/network_wrapper/fake_network_wrapper.h"
+#include "src/lib/network_wrapper/network_wrapper_impl.h"
 
 namespace firebase {
 namespace {

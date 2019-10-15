@@ -6,7 +6,6 @@
 #define PERIDOT_LIB_FIREBASE_FIREBASE_IMPL_H_
 
 #include <lib/fit/function.h>
-#include <lib/network_wrapper/network_wrapper.h>
 
 #include <functional>
 #include <memory>
@@ -23,6 +22,7 @@
 #include "peridot/lib/socket/socket_drainer_client.h"
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/callback/cancellable.h"
+#include "src/lib/network_wrapper/network_wrapper.h"
 
 namespace firebase {
 

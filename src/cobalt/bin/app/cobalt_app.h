@@ -15,7 +15,6 @@
 #include <string>
 
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/network_wrapper/network_wrapper_impl.h"
 #include "lib/sys/cpp/component_context.h"
 #include "src/cobalt/bin/app/cobalt_controller_impl.h"
 #include "src/cobalt/bin/app/configuration_data.h"
@@ -23,6 +22,7 @@
 #include "src/cobalt/bin/app/system_data_updater_impl.h"
 #include "src/cobalt/bin/app/timer_manager.h"
 #include "src/cobalt/bin/utils/clock.h"
+#include "src/lib/network_wrapper/network_wrapper_impl.h"
 #include "third_party/cobalt/src/lib/util/consistent_proto_store.h"
 #include "third_party/cobalt/src/logger/encoder.h"
 #include "third_party/cobalt/src/logger/event_aggregator.h"

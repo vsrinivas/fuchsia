@@ -7,10 +7,10 @@
 
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 
-#include "lib/network_wrapper/network_wrapper.h"
 #include "src/lib/backoff/backoff.h"
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/callback/scoped_task_runner.h"
+#include "src/lib/network_wrapper/network_wrapper.h"
 
 namespace network_wrapper {
 

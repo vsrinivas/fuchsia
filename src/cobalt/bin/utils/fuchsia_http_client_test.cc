@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/cobalt/bin/utils/fuchsia_http_client.h"
+
 #include <lib/async/cpp/task.h>
 
 #include "gtest/gtest.h"
 #include "lib/gtest/test_loop_fixture.h"
-#include "lib/network_wrapper/fake_network_wrapper.h"
-#include "src/cobalt/bin/utils/fuchsia_http_client.h"
+#include "src/lib/network_wrapper/fake_network_wrapper.h"
 
 namespace cobalt {
 namespace utils {

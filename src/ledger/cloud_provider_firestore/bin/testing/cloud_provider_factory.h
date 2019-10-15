@@ -11,7 +11,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/network_wrapper/network_wrapper_impl.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include "peridot/lib/rng/random.h"
@@ -20,6 +19,7 @@
 #include "src/ledger/lib/firebase_auth/testing/credentials.h"
 #include "src/ledger/lib/firebase_auth/testing/service_account_token_manager.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/network_wrapper/network_wrapper_impl.h"
 
 namespace cloud_provider_firestore {
 

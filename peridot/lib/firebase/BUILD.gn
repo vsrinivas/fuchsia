@@ -23,8 +23,8 @@ source_set("firebase") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/network_wrapper",
     "//peridot/lib/convert",
+    "//src/lib/network_wrapper",
     "//third_party/rapidjson",
   ]
 
@@ -49,10 +49,10 @@ source_set("unittests") {
   deps = [
     ":firebase",
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/network_wrapper:fake",
     "//peridot/lib/convert",
     "//peridot/lib/socket",
     "//src/lib/fxl",
+    "//src/lib/network_wrapper:fake",
     "//third_party/googletest:gtest",
   ]
 }

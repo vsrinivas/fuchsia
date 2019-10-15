@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/network_wrapper/fake_network_wrapper.h>
 
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -11,6 +10,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/network_wrapper/fake_network_wrapper.h"
 
 namespace service_account {
 

@@ -47,11 +47,11 @@ source_set("service_account_provider") {
 
   public_deps = [
     ":service_account",
-    "//garnet/public/lib/network_wrapper",
     "//sdk/fidl/fuchsia.auth",
     "//src/lib/callback",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/network_wrapper",
   ]
 
   deps = [
@@ -111,9 +111,9 @@ source_set("unittests") {
     ":service_account_provider",
     ":service_account_test_constants",
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/network_wrapper:fake",
     "//garnet/public/lib/rapidjson_utils",
     "//src/lib/fsl",
+    "//src/lib/network_wrapper:fake",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
   ]

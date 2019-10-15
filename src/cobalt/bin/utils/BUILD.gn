@@ -22,7 +22,7 @@ source_set("fuchsia_http_client") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/network_wrapper:network_wrapper",
+    "//src/lib/network_wrapper:network_wrapper",
     "//third_party/cobalt/third_party/clearcut:clearcut",
     "//third_party/cobalt/third_party/statusor:statusor",
   ]
@@ -54,9 +54,9 @@ executable("cobalt_utils_unittests") {
     ":clock",
     ":fuchsia_http_client",
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/network_wrapper:fake",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/network_wrapper:fake",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-testing",

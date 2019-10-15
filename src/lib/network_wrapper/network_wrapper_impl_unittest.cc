@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/network_wrapper/network_wrapper_impl.h"
+#include "src/lib/network_wrapper/network_wrapper_impl.h"
 
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
