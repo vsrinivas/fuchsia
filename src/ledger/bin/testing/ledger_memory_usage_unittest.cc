@@ -66,15 +66,22 @@ TEST(LedgerMemoryUsage, LaunchTwoLedgers) {
   // Start a first Ledger instance.
   LedgerPtr top_level_ledger;
   fit::function<void()> error_handler = [] { ADD_FAILURE(); };
+  fit::function<void(fit::closure)> close_ledger;
   Status status =
       GetLedger(component_context.get(), component_controller.NewRequest(), nullptr, "",
                 "top_level_ledger", DetachedPath(tmp_dir.root_fd()), std::move(error_handler),
-                &top_level_ledger, kTestingGarbageCollectionPolicy);
+                &top_level_ledger, kTestingGarbageCollectionPolicy, &close_ledger);
   ASSERT_EQ(status, Status::OK);
 
   // The test benchmark will start another Ledger instance and try to get the
   // memory usage from that one. Ensure this operation succeeds.
   EXPECT_EQ(LaunchTestBenchmark(&loop), EXIT_SUCCESS);
+
+  // Close second ledger.
+  top_level_ledger.Unbind();
+  loop.ResetQuit();
+  close_ledger([&loop] { loop.Quit(); });
+  loop.Run();
 }
 
 TEST(LedgerMemoryUsage, GetCurrentProcessMemoryUsage) {
