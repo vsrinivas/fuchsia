@@ -53,4 +53,22 @@ Any buffers that are required by the library are small and allocated on the stac
 To get started, see the documentation for `sys::OpenServiceAt<FidlService>`, in
 `<lib/service/llcpp/service.h>`.
 
+## Server API
+
+The server API provides a virtual filesystem capable of serving the outgoing namespace of a
+component (`/svc`, etc.). It depends on `//zircon/system/ulib/fs` to actually implement the
+`fuchsia.io` protocols.
+
+The developer may not control allocations performed while serving the VFS. However, the
+developer defines how each member protocol of a FIDL Service is handled through callback
+functions registered with this library.
+
+See `<lib/service/llcpp/outgoing_directory.h>` for details.
+
+The server API is closely modelled (read "copied") after the High Level C++ FIDL `sys` library
+in the SDK (`//sdk/lib/sys/service`).
+
+Once the LLCPP FIDL library is promoted to the SDK, `llcpp::sys::OutgoingDirectory` and
+`sys::OutgoingDirectory` can be merged.
+
 [FTP-041]: https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/ftp/ftp-041.md

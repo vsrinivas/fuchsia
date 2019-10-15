@@ -10,7 +10,7 @@
 #include <lib/service/llcpp/service.h>
 #include <zircon/device/vfs.h>
 
-namespace sys {
+namespace llcpp::sys {
 
 namespace {
 
@@ -19,9 +19,9 @@ constexpr uint64_t kMaxFilename = ::llcpp::fuchsia::io::MAX_FILENAME;
 // Max path length will be two path components, separated by a file separator.
 constexpr uint64_t kMaxPath = (2 * kMaxFilename) + 1;
 
-fidl::result<fidl::StringView> ValidateAndJoinPath(fidl::Array<char, kMaxPath>* buffer,
-                                                   fidl::StringView service,
-                                                   fidl::StringView instance) {
+::fidl::result<::fidl::StringView> ValidateAndJoinPath(::fidl::Array<char, kMaxPath>* buffer,
+                                                       ::fidl::StringView service,
+                                                       ::fidl::StringView instance) {
   if (service.empty() || service.size() > kMaxFilename) {
     return fit::error(ZX_ERR_INVALID_ARGS);
   }
@@ -40,14 +40,15 @@ fidl::result<fidl::StringView> ValidateAndJoinPath(fidl::Array<char, kMaxPath>* 
   path_cursor += service.size();
   *path_cursor++ = '/';
   memcpy(path_cursor, instance.data(), instance.size());
-  return fit::ok(fidl::StringView(buffer->data(), path_size));
+  return fit::ok(::fidl::StringView(buffer->data(), path_size));
 }
 
 }  // namespace
 
 namespace internal {
 
-zx_status_t DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path, zx::channel remote) {
+zx_status_t DirectoryOpenFunc(zx::unowned_channel dir, ::fidl::StringView path,
+                              zx::channel remote) {
   constexpr uint32_t flags =
       ::llcpp::fuchsia::io::OPEN_RIGHT_READABLE | ::llcpp::fuchsia::io::OPEN_RIGHT_WRITABLE;
   ::llcpp::fuchsia::io::Directory::ResultOf::Open result =
@@ -58,14 +59,15 @@ zx_status_t DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path, zx
 
 }  // namespace internal
 
-zx_status_t OpenNamedServiceAt(zx::unowned_channel dir, fidl::StringView service,
-                               fidl::StringView instance, zx::channel remote) {
-  fidl::Array<char, kMaxPath> path_buffer;
-  fidl::result<fidl::StringView> path_result = ValidateAndJoinPath(&path_buffer, service, instance);
+zx_status_t OpenNamedServiceAt(zx::unowned_channel dir, fit::string_view service,
+                               fit::string_view instance, zx::channel remote) {
+  ::fidl::Array<char, kMaxPath> path_buffer;
+  ::fidl::result<::fidl::StringView> path_result =
+      ValidateAndJoinPath(&path_buffer, ::fidl::StringView(service), ::fidl::StringView(instance));
   if (!path_result.is_ok()) {
     return path_result.error();
   }
   return internal::DirectoryOpenFunc(std::move(dir), path_result.take_value(), std::move(remote));
 }
 
-}  // namespace sys
+}  // namespace llcpp::sys

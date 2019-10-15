@@ -15,11 +15,13 @@ if (is_fuchsia) {
   test("service-llcpp-test") {
     sources = [
       "llcpp/client_test.cc",
+      "llcpp/server_test.cc",
     ]
     deps = [
       ":fidl.service.test-llcpp",
       "$zx/system/ulib/async-loop:async-loop-cpp",
       "$zx/system/ulib/async-loop:async-loop-default",
+      "$zx/system/ulib/fdio",
       "$zx/system/ulib/fidl-async",
       "$zx/system/ulib/fidl-async:fidl-async-cpp",
       "$zx/system/ulib/fs",

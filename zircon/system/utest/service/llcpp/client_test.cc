@@ -118,13 +118,13 @@ class ClientTest : public zxtest::Test {
 
 TEST_F(ClientTest, ConnectsToDefault) {
   fidl::result<EchoService::ServiceClient> open_result =
-      sys::OpenServiceAt<EchoService>(std::move(svc_));
+      llcpp::sys::OpenServiceAt<EchoService>(std::move(svc_));
   ASSERT_TRUE(open_result.is_ok());
 
   EchoService::ServiceClient service = open_result.take_value();
 
   // Connect to the member 'foo'.
-  fidl::result<fidl::ClientChannel<Echo>> connect_result = service.ConnectFoo();
+  fidl::result<fidl::ClientChannel<Echo>> connect_result = service.connect_foo();
   ASSERT_TRUE(connect_result.is_ok());
 
   Echo::SyncClient client = fidl::BindSyncClient(connect_result.take_value());
@@ -139,13 +139,13 @@ TEST_F(ClientTest, ConnectsToDefault) {
 
 TEST_F(ClientTest, ConnectsToOther) {
   fidl::result<EchoService::ServiceClient> open_result =
-      sys::OpenServiceAt<EchoService>(std::move(svc_), fidl::StringView("other"));
+      llcpp::sys::OpenServiceAt<EchoService>(std::move(svc_), "other");
   ASSERT_TRUE(open_result.is_ok());
 
   EchoService::ServiceClient service = open_result.take_value();
 
   // Connect to the member 'bar'.
-  fidl::result<fidl::ClientChannel<Echo>> connect_result = service.ConnectBar();
+  fidl::result<fidl::ClientChannel<Echo>> connect_result = service.connect_bar();
   ASSERT_TRUE(connect_result.is_ok());
 
   Echo::SyncClient client = fidl::BindSyncClient(connect_result.take_value());
@@ -165,14 +165,14 @@ TEST_F(ClientTest, FilePathTooLong) {
   // Use an instance name that is too long.
   zx::unowned_channel svc_copy(*svc_);
   fidl::result<EchoService::ServiceClient> open_result =
-      sys::OpenServiceAt<EchoService>(std::move(svc_copy), fidl::StringView(illegal_path));
+      llcpp::sys::OpenServiceAt<EchoService>(std::move(svc_copy), illegal_path);
   ASSERT_TRUE(open_result.is_error());
   ASSERT_EQ(open_result.error(), ZX_ERR_INVALID_ARGS);
 
   // Use a service name that is too long.
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  ASSERT_EQ(sys::OpenNamedServiceAt(std::move(svc_), fidl::StringView(illegal_path),
-                                    fidl::StringView("default"), std::move(remote)),
-            ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(
+      llcpp::sys::OpenNamedServiceAt(std::move(svc_), illegal_path, "default", std::move(remote)),
+      ZX_ERR_INVALID_ARGS);
 }

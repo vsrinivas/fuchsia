@@ -8,15 +8,17 @@
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fit/result.h>
+#include <lib/fit/string_view.h>
+#include <lib/service/llcpp/constants.h>
 #include <lib/zx/channel.h>
 
-namespace sys {
+namespace llcpp::sys {
 
 // Opens a connection to the default instance of a FIDL service of type `FidlService`, rooted at
 // `dir`. The default instance is called 'default'. See
 // `OpenServiceAt(zx::unowned_channel,fidl::StringView)` for details.
 template <typename FidlService>
-fidl::result<typename FidlService::ServiceClient> OpenServiceAt(zx::unowned_channel dir);
+::fidl::result<typename FidlService::ServiceClient> OpenServiceAt(zx::unowned_channel dir);
 
 // Opens a connection to the given instance of a FIDL service of type `FidlService`, rooted at
 // `dir`. The result, if successful, is a `FidlService::ServiceClient` that exposes methods that
@@ -49,8 +51,8 @@ fidl::result<typename FidlService::ServiceClient> OpenServiceAt(zx::unowned_chan
 // Echo::SyncClient client = fidl::BindSyncClient(connect_result.take_value());
 // ```
 template <typename FidlService>
-fidl::result<typename FidlService::ServiceClient> OpenServiceAt(zx::unowned_channel dir,
-                                                                fidl::StringView instance);
+::fidl::result<typename FidlService::ServiceClient> OpenServiceAt(zx::unowned_channel dir,
+                                                                  fit::string_view instance);
 
 // Opens a connection to the given instance of a FIDL service with the name `service_name`, rooted
 // at `dir`. The `remote` channel is passed to the remote service, and its local twin can be used to
@@ -61,26 +63,25 @@ fidl::result<typename FidlService::ServiceClient> OpenServiceAt(zx::unowned_chan
 // Returns ZX_OK on success. In the event of failure, an error value is returned.
 //
 // Returns ZX_ERR_INVALID_ARGS if `service_path` or `instance` are more than 255 characters long.
-zx_status_t OpenNamedServiceAt(zx::unowned_channel dir, fidl::StringView service_path,
-                               fidl::StringView instance, zx::channel remote);
+zx_status_t OpenNamedServiceAt(zx::unowned_channel dir, fit::string_view service_path,
+                               fit::string_view instance, zx::channel remote);
 
 namespace internal {
 
-zx_status_t DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path, zx::channel remote);
+zx_status_t DirectoryOpenFunc(zx::unowned_channel dir, ::fidl::StringView path, zx::channel remote);
 
 }  // namespace internal
 
 template <typename FidlService>
-fidl::result<typename FidlService::ServiceClient> OpenServiceAt(zx::unowned_channel dir,
-                                                                fidl::StringView instance) {
+::fidl::result<typename FidlService::ServiceClient> OpenServiceAt(zx::unowned_channel dir,
+                                                                  fit::string_view instance) {
   zx::channel local, remote;
   zx_status_t result = zx::channel::create(0, &local, &remote);
   if (result != ZX_OK) {
     return fit::error(result);
   }
 
-  result = OpenNamedServiceAt(std::move(dir), fidl::StringView(FidlService::Name), instance,
-                              std::move(remote));
+  result = OpenNamedServiceAt(std::move(dir), FidlService::Name, instance, std::move(remote));
   if (result != ZX_OK) {
     return fit::error(result);
   }
@@ -89,10 +90,10 @@ fidl::result<typename FidlService::ServiceClient> OpenServiceAt(zx::unowned_chan
 }
 
 template <typename FidlService>
-fidl::result<typename FidlService::ServiceClient> OpenServiceAt(zx::unowned_channel dir) {
-  return OpenServiceAt<FidlService>(std::move(dir), fidl::StringView("default"));
+::fidl::result<typename FidlService::ServiceClient> OpenServiceAt(zx::unowned_channel dir) {
+  return OpenServiceAt<FidlService>(std::move(dir), kDefaultInstance);
 }
 
-}  // namespace sys
+}  // namespace llcpp::sys
 
 #endif  // LIB_SERVICE_LLCPP_SERVICE_H_
