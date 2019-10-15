@@ -9,6 +9,7 @@
 int __clock_gettime(clockid_t clk, struct timespec* ts) {
   uint32_t zx_clock;
   switch (clk) {
+    case CLOCK_BOOTTIME: // see fxb/38552
     case CLOCK_MONOTONIC:
     case CLOCK_MONOTONIC_RAW:
       zx_clock = ZX_CLOCK_MONOTONIC;

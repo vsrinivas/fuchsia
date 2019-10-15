@@ -117,9 +117,21 @@ test("debugdata") {
   ]
 }
 
+test("clock-gettime") {
+  test_group = "c"
+  sources = [
+    "clock-gettime.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zx",
+  ]
+}
+
 group("test") {
   testonly = true
   deps = [
+    ":clock-gettime",
     ":debugdata",
     ":noop-tests.instrumented",
   ]
