@@ -18,17 +18,11 @@
 namespace coroutine {
 // CoroutineManager manages the lifetime of coroutines.
 //
-// CoroutineManager is parametrized by the maximum number of coroutines it will use:
-// - if |max_coroutines| is 0, the number of coroutines in unlimited, coroutines are created
-//   on-demand by |StartCoroutine|, and destroyed as soon as their task is over.
-// - otherwise, new coroutines are created on-demand until |max_coroutines| is reached, but
-//   coroutines are *never* destroyed. They stay in a pending state once their task is over, and are
-//   re-used to run further tasks scheduled with |StartCoroutine|. If no coroutine is available when
-//   |StartCoroutine| is called, the task is enqueued to be run later: no coroutine is created, but
-//   the call does not block.
-//
-// Note that this makes max_coroutines == 0 have a very different behavior from max_coroutines ==
-// SIZE_MAX (you should *not* use the latter).
+// CoroutineManager is parametrized by the maximum number of tasks it runs concurrently:
+// - if |max_coroutines| is 0, the number of tasks in unlimited.
+// - otherwise, task are run on-demand until |max_coroutines| is reached, and then queued to execute
+// once another task completes. In both cases, a new coroutine is created when a task starts
+// executing, and discarded once its execution completes.
 class CoroutineManager {
  public:
   explicit CoroutineManager(CoroutineService* service, size_t max_coroutines = 0)
@@ -106,66 +100,52 @@ class CoroutineManager {
     while (!handlers_.empty()) {
       (*handlers_.begin())->Resume(coroutine::ContinuationStatus::INTERRUPTED);
     }
+    FXL_DCHECK(handlers_.empty());
   }
 
   // Enqueues |to_run|. Then either:
-  // - immediately executes it with an existing pending coroutine if available,
-  // - or starts a new coroutine to run it if there are fewer than |max_coroutines_| already.
-  // If |max_coroutines_| are already busy running tasks, simply leaves |to_run| enqueued for a
-  // coroutine to run it later.
+  // - immediately starts a new coroutine to run it if we have not reached |max_coroutines_|
+  // concurrently running tasks.
+  // - otherwise, enqueue it to be run once a task completes.
   void StartOrEnqueueCoroutine(fit::function<void(CoroutineHandler*)> to_run) {
     pending_tasks_.push(std::move(to_run));
-    if (!pending_coroutines_.empty()) {
-      CoroutineHandler* handler = pending_coroutines_.top();
-      pending_coroutines_.pop();
-      handler->Resume(ContinuationStatus::OK);
-      return;
-    }
     if (max_coroutines_ == 0 || handlers_.size() < max_coroutines_) {
       service_->StartCoroutine([this](CoroutineHandler* handler) { RunPending(handler); });
     }
   }
 
-  // Runs pending tasks with the current |handler| coroutine until this coroutine manager is
-  // destructed.
+  // Runs a pending task with the current |handler| coroutine. Once it completes, start the next
+  // pending task if this coroutine manager has not been destructed.
   void RunPending(CoroutineHandler* handler) {
     auto it = sentinels_.emplace(sentinels_.end());
-    while (!disabled_) {
-      // Run the first available task.
-      auto to_run = std::move(pending_tasks_.front());
-      pending_tasks_.pop();
-      if (it->DestructedWhile([to_run = std::move(to_run), handler] { to_run(handler); }) ||
-          disabled_) {
-        // Return early if this manager has been or is being destructed.
-        return;
-      }
-      // Grab the next task.
-      if (!pending_tasks_.empty()) {
-        continue;
-      }
-      // No more task is available.
-      // 1. If we use an unbounded number of coroutines, free them once done.
-      if (max_coroutines_ == 0) {
-        sentinels_.erase(it);
-        return;
-      }
-      // 2. Otherwise, wait for a taks to be available.
-      pending_coroutines_.push(handler);
-      if (handler->Yield() == ContinuationStatus::INTERRUPTED) {
-        return;
-      }
+
+    // Run the first available task.
+    auto to_run = std::move(pending_tasks_.front());
+    pending_tasks_.pop();
+
+    if (it->DestructedWhile([to_run = std::move(to_run), handler] { to_run(handler); }) ||
+        disabled_) {
+      // Return early if this manager has been or is being destructed.
+      return;
+    }
+    sentinels_.erase(it);
+    // The coroutine might be interrupted now: we cannot yield on the handler.
+
+    // Grab and run the next task if there is one.
+    if (!pending_tasks_.empty()) {
+      // Start a new coroutine. The current coroutine will terminate as soon as the new coroutine
+      // yields.
+      service_->StartCoroutine([this](CoroutineHandler* handler) { RunPending(handler); });
     }
   }
 
  private:
-  // Maximum number of coroutines to start. If 0, unlimited.
+  // Maximum number of tasks to execute concurrently. If 0, unlimited.
   const size_t max_coroutines_;
   // Set to true when this manager is being destructed.
   bool disabled_ = false;
   // Currently allocated coroutines.
   std::list<coroutine::CoroutineHandler*> handlers_;
-  // Currently pending coroutines (waiting for tasks to execute). This is a subset of |handlers_|.
-  std::stack<coroutine::CoroutineHandler*> pending_coroutines_;
   // Each coroutine creates a sentinel to detect destruction of this coroutine manager.
   std::list<callback::DestructionSentinel> sentinels_;
   // Queue of pending tasks to execute when coroutines are available.

@@ -340,14 +340,12 @@ TEST(CoroutineManagerTest, MultipleSerializedCoroutines) {
   handler->Resume(ContinuationStatus::OK);
   EXPECT_TRUE(called);
   ASSERT_TRUE(handler_2);
-  EXPECT_EQ(handler, handler_2);
   EXPECT_FALSE(called_2);
   // Complete the second task.
   handler_2->Resume(ContinuationStatus::OK);
   EXPECT_TRUE(called_2);
 
-  // Start a third task. It should be executed by the same coroutine, which is kept around waiting
-  // for work to complete.
+  // Start a third task.
   bool called_3 = false;
   CoroutineHandler* handler_3 = nullptr;
   manager.StartCoroutine(
@@ -359,10 +357,51 @@ TEST(CoroutineManagerTest, MultipleSerializedCoroutines) {
       });
 
   ASSERT_TRUE(handler_3);
-  EXPECT_EQ(handler_3, handler_2);
   EXPECT_FALSE(called_3);
   handler_3->Resume(ContinuationStatus::OK);
   EXPECT_TRUE(called_3);
+}
+
+// Checks that if a coroutine is interrupted, other coroutines can still run on the manager.
+TEST(CoroutineManagerTest, MultipleCoroutinesInterrupted) {
+  CoroutineServiceImpl coroutine_service;
+  // Limit the number of concurrent coroutines to 1 to force them running in sequence.
+  CoroutineManager manager(&coroutine_service, 1);
+
+  bool called = false;
+  CoroutineHandler* handler = nullptr;
+  manager.StartCoroutine(
+      callback::SetWhenCalled(&called),
+      [&handler](CoroutineHandler* current_handler, fit::function<void()> callback) {
+        handler = current_handler;
+        EXPECT_EQ(ContinuationStatus::INTERRUPTED, handler->Yield());
+        callback();
+      });
+
+  bool called_2 = false;
+  CoroutineHandler* handler_2 = nullptr;
+  manager.StartCoroutine(
+      callback::SetWhenCalled(&called_2),
+      [&handler_2](CoroutineHandler* current_handler_2, fit::function<void()> callback) {
+        handler_2 = current_handler_2;
+        EXPECT_EQ(ContinuationStatus::OK, handler_2->Yield());
+        callback();
+      });
+
+  // The first task is running in a coroutine, but has not completed yet.
+  ASSERT_TRUE(handler);
+  EXPECT_FALSE(called);
+  // The second task is enqueued, waiting for a coroutine to run.
+  EXPECT_EQ(handler_2, nullptr);
+  EXPECT_FALSE(called_2);
+  // Resume the coroutine, completing first task and starting the second one.
+  handler->Resume(ContinuationStatus::INTERRUPTED);
+  EXPECT_TRUE(called);
+  ASSERT_TRUE(handler_2);
+  EXPECT_FALSE(called_2);
+  // Complete the second task.
+  handler_2->Resume(ContinuationStatus::OK);
+  EXPECT_TRUE(called_2);
 }
 
 }  // namespace
