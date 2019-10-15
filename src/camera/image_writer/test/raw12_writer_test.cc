@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "../image_writer.h"
+#include "../raw12_writer.h"
 
 #include <array>
 #include <vector>
@@ -39,30 +39,27 @@ constexpr uint32_t kExhaustiveImageSize =
 // Padding is in bytes.
 constexpr uint32_t kPadding = 1000;
 
-TEST(ImageWriterTest, Constructor) { ImageWriter::Init(kWidth, kHeight, kPixelTypeRaw12); }
+TEST(Raw12WriterTest, Constructor) { Raw12Writer::Create(kWidth, kHeight); }
 
-TEST(ImageWriterTest, ConstructorCheckFailsWithInvalidPixelType) {
-  ASSERT_DEATH(ImageWriter::Init(kWidth, kHeight, camera::DmaFormat::INVALID),
-               "Pixel format must be RAW12.");
+TEST(Raw12WriterTest, ConstructorCheckFailsWithZeroWidth) {
+  ASSERT_DEATH(Raw12Writer::Create(0, kHeight), "Invalid dimensions passed in.");
 }
-TEST(ImageWriterTest, ConstructorCheckFailsWithZeroWidth) {
-  ASSERT_DEATH(ImageWriter::Init(0, kHeight, kPixelTypeRaw12), "Invalid dimensions passed in.");
-}
-TEST(ImageWriterTest, ConstructorCheckFailsWithZeroHeight) {
-  ASSERT_DEATH(ImageWriter::Init(kWidth, 0, kPixelTypeRaw12), "Invalid dimensions passed in.");
+TEST(Raw12WriterTest, ConstructorCheckFailsWithZeroHeight) {
+  ASSERT_DEATH(Raw12Writer::Create(kWidth, 0), "Invalid dimensions passed in.");
 }
 
-// Helper method to initialize an ImageWriter and write an image of specified width/height.
-zx_status_t ReadTestImage(std::vector<uint8_t>* buf, uint32_t width, uint32_t height) {
-  std::unique_ptr<ImageWriter> image_writer = ImageWriter::Init(width, height, kPixelTypeRaw12);
+// Helper method to initialize a Raw12Writer and write an image of specified width/height.
+void ReadTestImage(std::vector<uint8_t>* buf, uint32_t width, uint32_t height) {
+  auto image_writer = Raw12Writer::Create(width, height);
 
   zx_status_t status;
   zx::vmo vmo;
 
-  status = image_writer->Write(&vmo);
-  vmo.read(&buf->front(), 0, image_writer->VmoSize());
+  status = image_writer->Write(&vmo, kRedPixel, kMaxVal, kMaxVal);
+  ASSERT_EQ(status, ZX_OK);
 
-  return status;
+  status = vmo.read(&buf->front(), 0, image_writer->VmoSize());
+  ASSERT_EQ(status, ZX_OK);
 }
 
 // Helper method to retrieve a double-pixel byte array from a specific x and y position in an image.
@@ -79,8 +76,8 @@ std::array<uint8_t, kBytesPerDoublePixel> GetDoublePixelAtPostion(uint32_t width
   uint16_t blue_pixel = kRowStep * x_pos;
   uint16_t green_pixel = kHeightStep * y_pos;
 
-  return (y_pos % 2 == 0) ? ImageWriter::PixelValuesToDoublePixel(kRedPixel, green_pixel)
-                          : ImageWriter::PixelValuesToDoublePixel(green_pixel, blue_pixel);
+  return (y_pos % 2 == 0) ? PixelValuesToDoublePixel(kRedPixel, green_pixel)
+                          : PixelValuesToDoublePixel(green_pixel, blue_pixel);
 }
 
 // Helper method to copy a target pixel from one array/vector to the other.
@@ -91,40 +88,36 @@ void CopyDoublePixel(uint8_t* target, const uint8_t* source, uint32_t target_ind
   target[target_index + 2] = source[source_index + 2];
 }
 
-TEST(ImageWriterTest, WriteSquareImage) {
+TEST(Raw12WriterTest, WriteSquareImage) {
   std::vector<uint8_t> buf(kSquareImageSize);
-  zx_status_t status = ReadTestImage(&buf, kWidth, kHeight);
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_NO_FATAL_FAILURE(ReadTestImage(&buf, kWidth, kHeight));
 
   auto expected_buf = std::vector<uint8_t>(kSquareImage.begin(), kSquareImage.end());
 
   EXPECT_TRUE(buf == expected_buf);
 }
 
-TEST(ImageWriterTest, WriteLongImage) {
+TEST(Raw12WriterTest, WriteLongImage) {
   std::vector<uint8_t> buf(kLongImageSize);
-  zx_status_t status = ReadTestImage(&buf, kHalfWidth, kDoubleHeight);
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_NO_FATAL_FAILURE(ReadTestImage(&buf, kHalfWidth, kDoubleHeight));
 
   auto expected_buf = std::vector<uint8_t>(kLongImage.begin(), kLongImage.end());
 
   EXPECT_TRUE(buf == expected_buf);
 }
 
-TEST(ImageWriterTest, WriteWideImage) {
+TEST(Raw12WriterTest, WriteWideImage) {
   std::vector<uint8_t> buf(kWideImageSize);
-  zx_status_t status = ReadTestImage(&buf, kDoubleWidth, kHalfHeight);
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_NO_FATAL_FAILURE(ReadTestImage(&buf, kDoubleWidth, kHalfHeight));
 
   auto expected_buf = std::vector<uint8_t>(kWideImage.begin(), kWideImage.end());
 
   EXPECT_TRUE(buf == expected_buf);
 }
 
-TEST(ImageWriterTest, WriteExhaustiveImage) {
+TEST(Raw12WriterTest, WriteExhaustiveImage) {
   std::vector<uint8_t> buf(kExhaustiveImageSize);
-  zx_status_t status = ReadTestImage(&buf, kExhaustiveWidth, kExhaustiveHeight);
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_NO_FATAL_FAILURE(ReadTestImage(&buf, kExhaustiveWidth, kExhaustiveHeight));
 
   // Test byte value at the center.
   const uint32_t kCenterWidth = kExhaustiveWidth / 2;
@@ -133,7 +126,7 @@ TEST(ImageWriterTest, WriteExhaustiveImage) {
 
   auto double_pixel =
       std::array<uint8_t, kBytesPerDoublePixel>({buf[index], buf[index + 1], buf[index + 2]});
-  std::array<uint8_t, kBytesPerDoublePixel> expected_double_pixel =
+  auto expected_double_pixel =
       GetDoublePixelAtPostion(kExhaustiveWidth, kExhaustiveHeight, kCenterWidth, kCenterHeight);
 
   EXPECT_TRUE(expected_double_pixel == double_pixel);
@@ -181,11 +174,10 @@ TEST(ImageWriterTest, WriteExhaustiveImage) {
   EXPECT_TRUE(actual_right_border == expected_right_border);
 }
 
-TEST(ImageWriterTest, WriteDoesNotOverwriteBytesPastImage) {
+TEST(Raw12WriterTest, WriteDoesNotOverwriteBytesPastImage) {
   // Add some padding to the buffer (after the image).
   std::vector<uint8_t> buf(kExhaustiveImageSize + kPadding);
-  zx_status_t status = ReadTestImage(&buf, kExhaustiveWidth, kExhaustiveHeight);
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_NO_FATAL_FAILURE(ReadTestImage(&buf, kExhaustiveWidth, kExhaustiveHeight));
 
   // Compare it to a buffer of zeroes of equal length to the padding.
   const std::array<uint8_t, kPadding> kExpectedBuf = {};
@@ -197,17 +189,17 @@ TEST(ImageWriterTest, WriteDoesNotOverwriteBytesPastImage) {
       std::equal(kExpectedBuf.begin(), kExpectedBuf.end(), buf.begin() + kExhaustiveImageSize));
 }
 
-TEST(ImageWriterTest, PixelValuesToDoublePixelWorksCorrectly) {
+TEST(Raw12WriterTest, PixelValuesToDoublePixelWorksCorrectly) {
   const std::array<uint8_t, kBytesPerDoublePixel> kExpectedZeroBuf = {};
   const std::array<uint8_t, kBytesPerDoublePixel> kExpectedFullBuf = {0xFF, 0xFF, 0xFF};
   const std::array<uint8_t, kBytesPerDoublePixel> kExpectedRandomBuf = {0x3C, 0x09, 0xD1};
 
-  EXPECT_EQ(kExpectedZeroBuf, ImageWriter::PixelValuesToDoublePixel(0x0, 0x0));
-  EXPECT_EQ(kExpectedFullBuf, ImageWriter::PixelValuesToDoublePixel(0xFFF, 0xFFF));
-  EXPECT_EQ(kExpectedRandomBuf, ImageWriter::PixelValuesToDoublePixel(0x3C1, 0x09D));
+  EXPECT_EQ(kExpectedZeroBuf, PixelValuesToDoublePixel(0x0, 0x0));
+  EXPECT_EQ(kExpectedFullBuf, PixelValuesToDoublePixel(0xFFF, 0xFFF));
+  EXPECT_EQ(kExpectedRandomBuf, PixelValuesToDoublePixel(0x3C1, 0x09D));
 }
 
-TEST(ImageWriterTest, DoublePixelToPixelValuesWorksCorrectly) {
+TEST(Raw12WriterTest, DoublePixelToPixelValuesWorksCorrectly) {
   const std::array<uint8_t, kBytesPerDoublePixel> kZeroBuf = {};
   const std::array<uint8_t, kBytesPerDoublePixel> kFullBuf = {0xFF, 0xFF, 0xFF};
   const std::array<uint8_t, kBytesPerDoublePixel> kRandomBuf = {0x3C, 0x09, 0xD1};
@@ -215,9 +207,9 @@ TEST(ImageWriterTest, DoublePixelToPixelValuesWorksCorrectly) {
   const std::pair<uint16_t, uint16_t> kExpectedFullPair(0xFFF, 0xFFF);
   const std::pair<uint16_t, uint16_t> kExpectedRandomPair(0x3C1, 0x09D);
 
-  EXPECT_EQ(kExpectedZeroPair, ImageWriter::DoublePixelToPixelValues(kZeroBuf));
-  EXPECT_EQ(kExpectedFullPair, ImageWriter::DoublePixelToPixelValues(kFullBuf));
-  EXPECT_EQ(kExpectedRandomPair, ImageWriter::DoublePixelToPixelValues(kRandomBuf));
+  EXPECT_EQ(kExpectedZeroPair, DoublePixelToPixelValues(kZeroBuf));
+  EXPECT_EQ(kExpectedFullPair, DoublePixelToPixelValues(kFullBuf));
+  EXPECT_EQ(kExpectedRandomPair, DoublePixelToPixelValues(kRandomBuf));
 }
 
 }  // namespace

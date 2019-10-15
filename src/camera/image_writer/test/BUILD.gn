@@ -5,8 +5,8 @@
 executable("image_writer_test") {
   testonly = true
   sources = [
-    "//src/camera/calibration/image_writer/image_writer.cc",
-    "image_writer_test.cc",
+    "//src/camera/image_writer/raw12_writer.cc",
+    "raw12_writer_test.cc",
   ]
   deps = [
     "//src/camera/drivers/test_utils",

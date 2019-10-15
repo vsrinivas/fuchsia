@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include <src/camera/calibration/image_writer/image_writer.h>
+#include <src/camera/image_writer/raw12_writer.h>
 
 namespace camera {
 

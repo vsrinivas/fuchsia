@@ -12,6 +12,7 @@ group("camera") {
   deps = [
     "calibration",
     "camera_manager2",
+    "image_writer",
     "drivers",
   ]
 }
@@ -32,7 +33,7 @@ group("tests") {
 test_package("camera_full_test") {
   deps = [
     "//src/camera/calibration/blc/test:blc_test",
-    "//src/camera/calibration/image_writer/test:image_writer_test",
+    "//src/camera/image_writer/test:image_writer_test",
     "//src/camera/camera_manager2/test:camera-manager-test",
     "//src/camera/drivers/controller/test:controller-protocol-test",
     "//src/camera/drivers/controller/test:controller-test",
@@ -107,7 +108,7 @@ test_package("camera_full_test") {
 
     {
       name = "image_writer_test"
-      manifest = "calibration/image_writer/test/meta/image_writer_test.cmx"
+      manifest = "image_writer/test/meta/image_writer_test.cmx"
       environments = basic_envs
     },
     {

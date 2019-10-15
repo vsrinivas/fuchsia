@@ -7,7 +7,6 @@
 #include <array>
 
 #include <gtest/gtest.h>
-#include <src/camera/calibration/image_writer/image_writer.h>
 
 namespace camera {
 namespace {
@@ -19,7 +18,7 @@ constexpr uint16_t kGreenVal = 500;
 constexpr uint16_t kBlueVal = 500;
 
 TEST(BlcTest, BlcRaw12WorksCorrectly) {
-  std::unique_ptr<ImageWriter> image_writer = ImageWriter::Init(kWidth, kHeight, kPixelTypeRaw12);
+  std::unique_ptr<Raw12Writer> image_writer = Raw12Writer::Create(kWidth, kHeight);
 
   zx::vmo vmo;
   std::vector<uint8_t> buf(kWidth * kHeight * kBytesPerDoublePixel);

@@ -8,7 +8,7 @@ executable("image_writer_bin") {
   output_name = "image_writer"
 
   sources = [
-    "image_writer.cc",
+    "raw12_writer.cc",
   ]
 
   deps = [
