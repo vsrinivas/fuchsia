@@ -16,13 +16,15 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/sdhci.h>
-#include <hw/sdhci.h>
+
+#define HOST_CONTROL1_OFFSET 0x28
+#define SDHCI_EMMC_HW_RESET (1 << 12)
 
 typedef struct pci_sdhci_device {
   zx_device_t* zxdev;
   pci_protocol_t pci;
 
-  volatile sdhci_regs_t* regs;
+  volatile uint8_t* regs;
   mmio_buffer_t mmio;
   zx_handle_t bti_handle;
 } pci_sdhci_device_t;
@@ -86,13 +88,14 @@ static void pci_sdhci_hw_reset(void* ctx) {
   if (!dev->regs) {
     return;
   }
-  uint32_t val = dev->regs->ctrl0;
+  volatile uint32_t* const ctrl1 = (volatile uint32_t*)(dev->regs + HOST_CONTROL1_OFFSET);
+  uint32_t val = *ctrl1;
   val |= SDHCI_EMMC_HW_RESET;
-  dev->regs->ctrl0 = val;
+  *ctrl1 = val;
   // minimum is 1us but wait 9us for good measure
   zx_nanosleep(zx_deadline_after(ZX_USEC(9)));
   val &= ~SDHCI_EMMC_HW_RESET;
-  dev->regs->ctrl0 = val;
+  *ctrl1 = val;
   // minimum is 200us but wait 300us for good measure
   zx_nanosleep(zx_deadline_after(ZX_USEC(300)));
 }

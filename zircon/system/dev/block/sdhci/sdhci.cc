@@ -17,15 +17,15 @@
 #include <ddk/debug.h>
 #include <ddk/phys-iter.h>
 #include <ddk/protocol/block.h>
-#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/pmt.h>
 #include <lib/zx/time.h>
 
+#include "sdhci-reg.h"
+
 namespace {
 
-constexpr uint32_t kMhzToHz = 1'000'000;
 constexpr uint32_t kSdFreqSetupHz = 400'000;
 
 constexpr int kMaxTuningCount = 40;
@@ -39,18 +39,6 @@ constexpr uint32_t Lo32(zx_paddr_t val) { return val & 0xffffffff; }
 // also see SDMMC_PAGES_COUNT in ddk/protocol/sdmmc.h
 constexpr int kDmaDescCount = 512;
 
-// If any of these interrupts is asserted in the SDHCI irq register, it means
-// that an error has occurred.
-constexpr uint32_t kErrorInterrupts =
-    (SDHCI_IRQ_ERR | SDHCI_IRQ_ERR_CMD_TIMEOUT | SDHCI_IRQ_ERR_CMD_CRC | SDHCI_IRQ_ERR_CMD_END_BIT |
-     SDHCI_IRQ_ERR_CMD_INDEX | SDHCI_IRQ_ERR_DAT_TIMEOUT | SDHCI_IRQ_ERR_DAT_CRC |
-     SDHCI_IRQ_ERR_DAT_ENDBIT | SDHCI_IRQ_ERR_CURRENT_LIMIT | SDHCI_IRQ_ERR_AUTO_CMD |
-     SDHCI_IRQ_ERR_ADMA | SDHCI_IRQ_ERR_TUNING);
-
-// These interrupts indicate that a transfer or command has progressed normally.
-constexpr uint32_t kNormalInterrupts = (SDHCI_IRQ_CMD_CPLT | SDHCI_IRQ_XFER_CPLT |
-                                        SDHCI_IRQ_BUFF_READ_READY | SDHCI_IRQ_BUFF_WRITE_READY);
-
 constexpr zx::duration kResetTime                = zx::sec(1);
 constexpr zx::duration kClockStabilizationTime   = zx::sec(1);
 constexpr zx::duration kVoltageStabilizationTime = zx::msec(5);
@@ -61,7 +49,7 @@ constexpr bool SdmmcCmdRspBusy(uint32_t cmd_flags) { return cmd_flags & SDMMC_RE
 
 constexpr bool SdmmcCmdHasData(uint32_t cmd_flags) { return cmd_flags & SDMMC_RESP_DATA_PRESENT; }
 
-uint32_t GetClockDividerValue(const uint32_t base_clock, const uint32_t target_rate) {
+uint16_t GetClockDividerValue(const uint32_t base_clock, const uint32_t target_rate) {
   if (target_rate >= base_clock) {
     // A clock divider of 0 means "don't divide the clock"
     // If the base clock is already slow enough to use as the SD clock then
@@ -73,75 +61,82 @@ uint32_t GetClockDividerValue(const uint32_t base_clock, const uint32_t target_r
   if (result * target_rate * 2 < base_clock)
     result++;
 
-  return (((result >> 8) & 0x3) | (result << 2)) << SDHCI_SD_CLOCK_FREQUENCY_SELECT_SHIFT;
+  return std::min(sdhci::ClockControl::kMaxFrequencySelect, static_cast<uint16_t>(result));
 }
 
 }  // namespace
 
 namespace sdhci {
 
-uint32_t Sdhci::PrepareCmd(sdmmc_req_t* req) {
-  constexpr uint32_t kSdmmcSdhciMap[][2] = {
-      {SDMMC_RESP_CRC_CHECK, SDHCI_CMD_RESP_CRC_CHECK},
-      {SDMMC_RESP_CMD_IDX_CHECK, SDHCI_CMD_RESP_CMD_IDX_CHECK},
-      {SDMMC_RESP_DATA_PRESENT, SDHCI_CMD_RESP_DATA_PRESENT},
-      {SDMMC_CMD_DMA_EN, SDHCI_CMD_DMA_EN},
-      {SDMMC_CMD_BLKCNT_EN, SDHCI_CMD_BLKCNT_EN},
-      {SDMMC_CMD_AUTO12, SDHCI_CMD_AUTO12},
-      {SDMMC_CMD_AUTO23, SDHCI_CMD_AUTO23},
-      {SDMMC_CMD_READ, SDHCI_CMD_READ},
-      {SDMMC_CMD_MULTI_BLK, SDHCI_CMD_MULTI_BLK},
-  };
-
-  uint32_t cmd = SDHCI_CMD_IDX(req->cmd_idx);
+void Sdhci::PrepareCmd(sdmmc_req_t* req, TransferMode* transfer_mode, Command* command) {
+  command->set_command_index(static_cast<uint16_t>(req->cmd_idx));
 
   if (req->cmd_flags & SDMMC_RESP_LEN_EMPTY) {
-    cmd |= SDHCI_CMD_RESP_LEN_EMPTY;
+    command->set_response_type(Command::kResponseTypeNone);
   } else if (req->cmd_flags & SDMMC_RESP_LEN_136) {
-    cmd |= SDHCI_CMD_RESP_LEN_136;
+    command->set_response_type(Command::kResponseType136Bits);
   } else if (req->cmd_flags & SDMMC_RESP_LEN_48) {
-    cmd |= SDHCI_CMD_RESP_LEN_48;
+    command->set_response_type(Command::kResponseType48Bits);
   } else if (req->cmd_flags & SDMMC_RESP_LEN_48B) {
-    cmd |= SDHCI_CMD_RESP_LEN_48B;
+    command->set_response_type(Command::kResponseType48BitsWithBusy);
   }
 
   if (req->cmd_flags & SDMMC_CMD_TYPE_NORMAL) {
-    cmd |= SDHCI_CMD_TYPE_NORMAL;
+    command->set_command_type(Command::kCommandTypeNormal);
   } else if (req->cmd_flags & SDMMC_CMD_TYPE_SUSPEND) {
-    cmd |= SDHCI_CMD_TYPE_SUSPEND;
+    command->set_command_type(Command::kCommandTypeSuspend);
   } else if (req->cmd_flags & SDMMC_CMD_TYPE_RESUME) {
-    cmd |= SDHCI_CMD_TYPE_RESUME;
+    command->set_command_type(Command::kCommandTypeResume);
   } else if (req->cmd_flags & SDMMC_CMD_TYPE_ABORT) {
-    cmd |= SDHCI_CMD_TYPE_ABORT;
+    command->set_command_type(Command::kCommandTypeAbort);
   }
 
-  for (unsigned i = 0; i < fbl::count_of(kSdmmcSdhciMap); i++) {
-    if (req->cmd_flags & kSdmmcSdhciMap[i][0]) {
-      cmd |= kSdmmcSdhciMap[i][1];
-    }
+  if (req->cmd_flags & SDMMC_CMD_AUTO12) {
+    transfer_mode->set_auto_cmd_enable(TransferMode::kAutoCmd12);
+  } else if (req->cmd_flags & SDMMC_CMD_AUTO23) {
+    transfer_mode->set_auto_cmd_enable(TransferMode::kAutoCmd23);
   }
-  return cmd;
+
+  if (req->cmd_flags & SDMMC_RESP_CRC_CHECK) {
+    command->set_command_crc_check(1);
+  }
+  if (req->cmd_flags & SDMMC_RESP_CMD_IDX_CHECK) {
+    command->set_command_index_check(1);
+  }
+  if (req->cmd_flags & SDMMC_RESP_DATA_PRESENT) {
+    command->set_data_present(1);
+  }
+  if (req->cmd_flags & SDMMC_CMD_DMA_EN) {
+    transfer_mode->set_dma_enable(1);
+  }
+  if (req->cmd_flags & SDMMC_CMD_BLKCNT_EN) {
+    transfer_mode->set_block_count_enable(1);
+  }
+  if (req->cmd_flags & SDMMC_CMD_READ) {
+    transfer_mode->set_read(1);
+  }
+  if (req->cmd_flags & SDMMC_CMD_MULTI_BLK) {
+    transfer_mode->set_multi_block(1);
+  }
 }
 
-zx_status_t Sdhci::WaitForReset(const uint32_t mask, zx::duration timeout) const {
-  zx::time deadline = zx::clock::get_monotonic() + timeout;
-  while (true) {
-    if (((regs_->ctrl1) & mask) == 0) {
-      break;
+zx_status_t Sdhci::WaitForReset(const SoftwareReset mask) const {
+  const zx::time deadline = zx::clock::get_monotonic() + kResetTime;
+  do {
+    if ((SoftwareReset::Get().ReadFrom(&regs_mmio_buffer_).reg_value() & mask.reg_value()) == 0) {
+      return ZX_OK;
     }
-    if (zx::clock::get_monotonic() > deadline) {
-      zxlogf(ERROR, "sdhci: timed out while waiting for reset\n");
-      return ZX_ERR_TIMED_OUT;
-    }
-  }
-  return ZX_OK;
+  } while (zx::clock::get_monotonic() <= deadline);
+
+  zxlogf(ERROR, "sdhci: timed out while waiting for reset\n");
+  return ZX_ERR_TIMED_OUT;
 }
 
 void Sdhci::CompleteRequestLocked(sdmmc_req_t* req, zx_status_t status) {
   zxlogf(TRACE, "sdhci: complete cmd 0x%08x status %d\n", req->cmd_idx, status);
 
   // Disable irqs when no pending transfer
-  regs_->irqen = 0;
+  InterruptSignalEnable::Get().FromValue(0).WriteTo(&regs_mmio_buffer_);
 
   cmd_req_ = nullptr;
   data_req_ = nullptr;
@@ -160,29 +155,32 @@ void Sdhci::CmdStageCompleteLocked() {
     return;
   }
 
-  const uint32_t cmd = PrepareCmd(cmd_req_);
+  const uint32_t response_0 = Response::Get(0).ReadFrom(&regs_mmio_buffer_).reg_value();
+  const uint32_t response_1 = Response::Get(1).ReadFrom(&regs_mmio_buffer_).reg_value();
+  const uint32_t response_2 = Response::Get(2).ReadFrom(&regs_mmio_buffer_).reg_value();
+  const uint32_t response_3 = Response::Get(3).ReadFrom(&regs_mmio_buffer_).reg_value();
 
   // Read the response data.
-  if (cmd & SDHCI_CMD_RESP_LEN_136) {
+  if (cmd_req_->cmd_flags & SDMMC_RESP_LEN_136) {
     if (quirks_ & SDHCI_QUIRK_STRIP_RESPONSE_CRC) {
-      cmd_req_->response[0] = (regs_->resp3 << 8) | ((regs_->resp2 >> 24) & 0xFF);
-      cmd_req_->response[1] = (regs_->resp2 << 8) | ((regs_->resp1 >> 24) & 0xFF);
-      cmd_req_->response[2] = (regs_->resp1 << 8) | ((regs_->resp0 >> 24) & 0xFF);
-      cmd_req_->response[3] = (regs_->resp0 << 8);
+      cmd_req_->response[0] = (response_3 << 8) | ((response_2 >> 24) & 0xFF);
+      cmd_req_->response[1] = (response_2 << 8) | ((response_1 >> 24) & 0xFF);
+      cmd_req_->response[2] = (response_1 << 8) | ((response_0 >> 24) & 0xFF);
+      cmd_req_->response[3] = (response_0 << 8);
     } else if (quirks_ & SDHCI_QUIRK_STRIP_RESPONSE_CRC_PRESERVE_ORDER) {
-      cmd_req_->response[0] = (regs_->resp0 << 8);
-      cmd_req_->response[1] = (regs_->resp1 << 8) | ((regs_->resp0 >> 24) & 0xFF);
-      cmd_req_->response[2] = (regs_->resp2 << 8) | ((regs_->resp1 >> 24) & 0xFF);
-      cmd_req_->response[3] = (regs_->resp3 << 8) | ((regs_->resp2 >> 24) & 0xFF);
+      cmd_req_->response[0] = (response_0 << 8);
+      cmd_req_->response[1] = (response_1 << 8) | ((response_0 >> 24) & 0xFF);
+      cmd_req_->response[2] = (response_2 << 8) | ((response_1 >> 24) & 0xFF);
+      cmd_req_->response[3] = (response_3 << 8) | ((response_2 >> 24) & 0xFF);
     } else {
-      cmd_req_->response[0] = regs_->resp0;
-      cmd_req_->response[1] = regs_->resp1;
-      cmd_req_->response[2] = regs_->resp2;
-      cmd_req_->response[3] = regs_->resp3;
+      cmd_req_->response[0] = response_0;
+      cmd_req_->response[1] = response_1;
+      cmd_req_->response[2] = response_2;
+      cmd_req_->response[3] = response_3;
     }
-  } else if (cmd & (SDHCI_CMD_RESP_LEN_48 | SDHCI_CMD_RESP_LEN_48B)) {
-    cmd_req_->response[0] = regs_->resp0;
-    cmd_req_->response[1] = regs_->resp1;
+  } else if (cmd_req_->cmd_flags & (SDMMC_RESP_LEN_48 | SDMMC_RESP_LEN_48B)) {
+    cmd_req_->response[0] = response_0;
+    cmd_req_->response[1] = response_1;
   }
 
   // We're done if the command has no data stage or if the data stage completed early
@@ -207,9 +205,10 @@ void Sdhci::DataStageReadReadyLocked() {
     CompleteRequestLocked(data_req_, ZX_OK);
   } else {
     // Sequentially read each block.
-    const size_t offset = (data_blockid_ * data_req_->blocksize) / sizeof(uint32_t);
+    uint32_t* const virt_buffer = reinterpret_cast<uint32_t*>(data_req_->virt_buffer) +
+                                  ((data_blockid_ * data_req_->blocksize) / sizeof(uint32_t));
     for (size_t wordid = 0; wordid < (data_req_->blocksize / sizeof(uint32_t)); wordid++) {
-      *(reinterpret_cast<uint32_t*>(data_req_->virt_buffer) + offset + wordid) = regs_->data;
+      virt_buffer[wordid] = BufferData::Get().ReadFrom(&regs_mmio_buffer_).reg_value();
     }
     data_blockid_ = static_cast<uint16_t>(data_blockid_ + 1);
   }
@@ -224,9 +223,10 @@ void Sdhci::DataStageWriteReadyLocked() {
   }
 
   // Sequentially write each block.
-  const size_t offset = (data_blockid_ * data_req_->blocksize) / sizeof(uint32_t);
+  const uint32_t* const virt_buffer = reinterpret_cast<uint32_t*>(data_req_->virt_buffer) +
+                                      ((data_blockid_ * data_req_->blocksize) / sizeof(uint32_t));
   for (size_t wordid = 0; wordid < (data_req_->blocksize / sizeof(uint32_t)); wordid++) {
-    regs_->data = *(reinterpret_cast<uint32_t*>(data_req_->virt_buffer) + offset + wordid);
+    BufferData::Get().FromValue(virt_buffer[wordid]).WriteTo(&regs_mmio_buffer_);
   }
   data_blockid_ = static_cast<uint16_t>(data_blockid_ + 1);
 }
@@ -246,10 +246,10 @@ void Sdhci::TransferCompleteLocked() {
 
 void Sdhci::ErrorRecoveryLocked() {
   // Reset internal state machines
-  regs_->ctrl1 |= SDHCI_SOFTWARE_RESET_CMD;
-  WaitForReset(SDHCI_SOFTWARE_RESET_CMD, kResetTime);
-  regs_->ctrl1 |= SDHCI_SOFTWARE_RESET_DAT;
-  WaitForReset(SDHCI_SOFTWARE_RESET_DAT, kResetTime);
+  SoftwareReset::Get().ReadFrom(&regs_mmio_buffer_).set_reset_cmd(1).WriteTo(&regs_mmio_buffer_);
+  WaitForReset(SoftwareReset::Get().FromValue(0).set_reset_cmd(1));
+  SoftwareReset::Get().ReadFrom(&regs_mmio_buffer_).set_reset_dat(1).WriteTo(&regs_mmio_buffer_);
+  WaitForReset(SoftwareReset::Get().FromValue(0).set_reset_dat(1));
 
   // TODO(fxb/38209): data stage abort
 
@@ -271,31 +271,33 @@ int Sdhci::IrqThread() {
       break;
     }
 
-    const uint32_t irq = regs_->irq;
-    zxlogf(TRACE, "got irq 0x%08x 0x%08x en 0x%08x\n", regs_->irq, irq, regs_->irqen);
-
     // Acknowledge the IRQs that we stashed. IRQs are cleared by writing
     // 1s into the IRQs that fired.
-    regs_->irq = irq;
+    auto irq = InterruptStatus::Get().ReadFrom(&regs_mmio_buffer_).WriteTo(&regs_mmio_buffer_);
+
+    zxlogf(TRACE, "got irq 0x%08x en 0x%08x\n", irq.reg_value(),
+           InterruptSignalEnable::Get().ReadFrom(&regs_mmio_buffer_).reg_value());
 
     fbl::AutoLock lock(&mtx_);
-    if (irq & SDHCI_IRQ_CMD_CPLT) {
+    if (irq.command_complete()) {
       CmdStageCompleteLocked();
     }
-    if (irq & SDHCI_IRQ_BUFF_READ_READY) {
+    if (irq.buffer_read_ready()) {
       DataStageReadReadyLocked();
     }
-    if (irq & SDHCI_IRQ_BUFF_WRITE_READY) {
+    if (irq.buffer_write_ready()) {
       DataStageWriteReadyLocked();
     }
-    if (irq & SDHCI_IRQ_XFER_CPLT) {
+    if (irq.transfer_complete()) {
       TransferCompleteLocked();
     }
-    if (irq & kErrorInterrupts) {
+    if (irq.ErrorInterrupt()) {
       if (driver_get_log_flags() & DDK_LOG_TRACE) {
-        if (irq & SDHCI_IRQ_ERR_ADMA) {
-          zxlogf(TRACE, "sdhci: ADMA error 0x%x ADMAADDR0 0x%x ADMAADDR1 0x%x\n", regs_->admaerr,
-                 regs_->admaaddr0, regs_->admaaddr1);
+        if (irq.adma_error()) {
+          zxlogf(TRACE, "sdhci: ADMA error 0x%x ADMAADDR0 0x%x ADMAADDR1 0x%x\n",
+                 AdmaErrorStatus::Get().ReadFrom(&regs_mmio_buffer_).reg_value(),
+                 AdmaSystemAddress::Get(0).ReadFrom(&regs_mmio_buffer_).reg_value(),
+                 AdmaSystemAddress::Get(1).ReadFrom(&regs_mmio_buffer_).reg_value());
         }
       }
       ErrorRecoveryLocked();
@@ -350,15 +352,14 @@ zx_status_t Sdhci::BuildDmaDescriptor(sdmmc_req_t* req) {
   phys_iter_init(&iter, &buf, Adma64Descriptor::kMaxDescriptorLength);
 
   int count = 0;
-  size_t length;
-  zx_paddr_t paddr;
-  Adma64Descriptor* desc = descs_;
-  for (;;) {
-    length = phys_iter_next(&iter, &paddr);
+  for (Adma64Descriptor* desc = descs_;; desc++) {
+    zx_paddr_t paddr;
+    size_t length = phys_iter_next(&iter, &paddr);
     if (length == 0) {
       if (desc != descs_) {
         desc -= 1;
-        desc->end = 1;  // set end bit on the last descriptor
+        // set end bit on the last descriptor
+        desc->attr = Adma64DescriptorAttributes::Get(desc->attr).set_end(1).reg_value();
         break;
       } else {
         zxlogf(TRACE, "sdhci: empty descriptor list!\n");
@@ -371,20 +372,17 @@ zx_status_t Sdhci::BuildDmaDescriptor(sdmmc_req_t* req) {
       zxlogf(TRACE, "sdhci: request with more than %zd chunks is unsupported\n", length);
       return ZX_ERR_NOT_SUPPORTED;
     }
-    desc->length = length & Adma64Descriptor::kDescriptorLengthMask;  // 0 = 0x10000 bytes
     desc->address = paddr;
-    desc->attr = 0;
-    desc->valid = 1;
-    desc->act2 = 1;  // transfer data
-    desc += 1;
+    desc->length = static_cast<uint16_t>(length);
+    desc->attr = Adma64DescriptorAttributes::Get().set_valid(1).set_act2(1).reg_value();
   }
 
   if (driver_get_log_flags() & DDK_LOG_SPEW) {
-    desc = descs_;
+    Adma64Descriptor* desc = descs_;
     do {
       zxlogf(SPEW, "desc: addr=0x%" PRIx64 " length=0x%04x attr=0x%04x\n", desc->address,
              desc->length, desc->attr);
-    } while (!(desc++)->end);
+    } while (!Adma64DescriptorAttributes::Get((desc++)->attr).end());
   }
   return ZX_OK;
 }
@@ -393,29 +391,32 @@ zx_status_t Sdhci::StartRequestLocked(sdmmc_req_t* req) {
   const uint32_t arg = req->arg;
   const uint16_t blkcnt = req->blockcount;
   const uint16_t blksiz = req->blocksize;
-  uint32_t cmd = PrepareCmd(req);
   const bool has_data = SdmmcCmdHasData(req->cmd_flags);
+
+  Command command = Command::Get().FromValue(0);
+  TransferMode transfer_mode = TransferMode::Get().FromValue(0);
+  PrepareCmd(req, &transfer_mode, &command);
 
   if (req->use_dma && !SupportsAdma2_64Bit()) {
     zxlogf(TRACE, "sdhci: host does not support DMA\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zxlogf(TRACE, "sdhci: start_req cmd=0x%08x (data %d dma %d bsy %d) blkcnt %u blksiz %u\n", cmd,
-         has_data, req->use_dma, SdmmcCmdRspBusy(req->cmd_flags), blkcnt, blksiz);
+  zxlogf(TRACE, "sdhci: start_req cmd=0x%08x (data %d dma %d bsy %d) blkcnt %u blksiz %u\n",
+         command.reg_value(), has_data, req->use_dma, SdmmcCmdRspBusy(req->cmd_flags), blkcnt,
+         blksiz);
 
   // Every command requires that the Command Inhibit is unset.
-  uint32_t inhibit_mask = SDHCI_STATE_CMD_INHIBIT;
+  auto inhibit_mask = PresentState::Get().FromValue(0).set_command_inhibit_cmd(1);
 
   // Busy type commands must also wait for the DATA Inhibit to be 0 UNLESS
   // it's an abort command which can be issued with the data lines active.
-  if (((cmd & SDHCI_CMD_RESP_LEN_48B) == SDHCI_CMD_RESP_LEN_48B) &&
-      ((cmd & SDHCI_CMD_TYPE_ABORT) == 0)) {
-    inhibit_mask |= SDHCI_STATE_DAT_INHIBIT;
+  if ((req->cmd_flags & SDMMC_RESP_LEN_48B) && (req->cmd_flags & SDMMC_CMD_TYPE_ABORT)) {
+    inhibit_mask.set_command_inhibit_dat(1);
   }
 
   // Wait for the inhibit masks from above to become 0 before issuing the command.
-  while (regs_->state & inhibit_mask) {
+  while (PresentState::Get().ReadFrom(&regs_mmio_buffer_).reg_value() & inhibit_mask.reg_value()) {
     zx::nanosleep(zx::deadline_after(kInhibitWaitTime));
   }
 
@@ -428,32 +429,40 @@ zx_status_t Sdhci::StartRequestLocked(sdmmc_req_t* req) {
       }
 
       zx_paddr_t desc_phys = iobuf_.phys();
-      regs_->admaaddr0 = Lo32(desc_phys);
-      regs_->admaaddr1 = Hi32(desc_phys);
+      AdmaSystemAddress::Get(0).FromValue(Lo32(desc_phys)).WriteTo(&regs_mmio_buffer_);
+      AdmaSystemAddress::Get(1).FromValue(Hi32(desc_phys)).WriteTo(&regs_mmio_buffer_);
 
-      zxlogf(SPEW, "sdhci: descs at 0x%x 0x%x\n", regs_->admaaddr0, regs_->admaaddr1);
+      zxlogf(SPEW, "sdhci: descs at 0x%x 0x%x\n", Lo32(desc_phys), Hi32(desc_phys));
 
-      cmd |= SDHCI_XFERMODE_DMA_ENABLE;
+      transfer_mode.set_dma_enable(1);
     }
 
-    if (cmd & SDHCI_CMD_MULTI_BLK) {
-      cmd |= SDHCI_CMD_AUTO12;
+    if (req->cmd_flags & SDMMC_CMD_MULTI_BLK) {
+      transfer_mode.set_auto_cmd_enable(TransferMode::kAutoCmd12);
     }
   }
 
-  regs_->blkcntsiz = (blksiz | (blkcnt << 16));
+  BlockSize::Get().FromValue(blksiz).WriteTo(&regs_mmio_buffer_);
+  BlockCount::Get().FromValue(blkcnt).WriteTo(&regs_mmio_buffer_);
 
-  regs_->arg1 = arg;
+  Argument::Get().FromValue(arg).WriteTo(&regs_mmio_buffer_);
 
   // Clear any pending interrupts before starting the transaction.
-  regs_->irq = regs_->irqen;
+  auto irq_mask = InterruptSignalEnable::Get().ReadFrom(&regs_mmio_buffer_);
+  InterruptStatus::Get().FromValue(irq_mask.reg_value()).WriteTo(&regs_mmio_buffer_);
 
   // Unmask and enable interrupts
-  regs_->irqen = kErrorInterrupts | kNormalInterrupts;
-  regs_->irqmsk = kErrorInterrupts | kNormalInterrupts;
+  irq_mask.set_reg_value(0).EnableErrorInterrupts().EnableNormalInterrupts().WriteTo(
+      &regs_mmio_buffer_);
+  InterruptStatusEnable::Get()
+      .FromValue(0)
+      .EnableErrorInterrupts()
+      .EnableNormalInterrupts()
+      .WriteTo(&regs_mmio_buffer_);
 
   // Start command
-  regs_->cmd = cmd;
+  transfer_mode.WriteTo(&regs_mmio_buffer_);
+  command.WriteTo(&regs_mmio_buffer_);
 
   cmd_req_ = req;
   if (has_data || SdmmcCmdRspBusy(req->cmd_flags)) {
@@ -506,16 +515,18 @@ zx_status_t Sdhci::SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) {
   }
 
   // Disable the SD clock before messing with the voltage.
-  regs_->ctrl1 &= ~SDHCI_SD_CLOCK_ENABLE;
+  auto clock = ClockControl::Get().ReadFrom(&regs_mmio_buffer_);
+  clock.set_sd_clock_enable(0).WriteTo(&regs_mmio_buffer_);
   zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
 
+  auto ctrl2 = HostControl2::Get().ReadFrom(&regs_mmio_buffer_);
   switch (voltage) {
     case SDMMC_VOLTAGE_V180: {
-      regs_->ctrl2 |= SDHCI_HOSTCTRL2_1P8V_SIGNALLING_ENA;
+      ctrl2.set_voltage_1v8_signalling_enable(1).WriteTo(&regs_mmio_buffer_);
       // 1.8V regulator out should be stable within 5ms
       zx::nanosleep(zx::deadline_after(kVoltageStabilizationTime));
       if (driver_get_log_flags() & DDK_LOG_TRACE) {
-        if (!(regs_->ctrl2 & SDHCI_HOSTCTRL2_1P8V_SIGNALLING_ENA)) {
+        if (!ctrl2.ReadFrom(&regs_mmio_buffer_).voltage_1v8_signalling_enable()) {
           zxlogf(TRACE, "sdhci: 1.8V regulator output did not become stable\n");
           return ZX_ERR_INTERNAL;
         }
@@ -523,11 +534,11 @@ zx_status_t Sdhci::SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) {
       break;
     }
     case SDMMC_VOLTAGE_V330: {
-      regs_->ctrl2 &= ~SDHCI_HOSTCTRL2_1P8V_SIGNALLING_ENA;
+      ctrl2.set_voltage_1v8_signalling_enable(0).WriteTo(&regs_mmio_buffer_);
       // 3.3V regulator out should be stable within 5ms
       zx::nanosleep(zx::deadline_after(kVoltageStabilizationTime));
       if (driver_get_log_flags() & DDK_LOG_TRACE) {
-        if (regs_->ctrl2 & SDHCI_HOSTCTRL2_1P8V_SIGNALLING_ENA) {
+        if (ctrl2.ReadFrom(&regs_mmio_buffer_).voltage_1v8_signalling_enable()) {
           zxlogf(TRACE, "sdhci: 3.3V regulator output did not become stable\n");
           return ZX_ERR_INTERNAL;
         }
@@ -540,25 +551,25 @@ zx_status_t Sdhci::SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) {
   }
 
   // Make sure our changes are acknowledged.
-  uint32_t expected_mask = SDHCI_PWRCTRL_SD_BUS_POWER;
+  uint8_t expected_power = 0;
   switch (voltage) {
     case SDMMC_VOLTAGE_V180:
-      expected_mask |= SDHCI_PWRCTRL_SD_BUS_VOLTAGE_1P8V;
+      expected_power = PowerControl::kBusVoltage1V8;
       break;
     case SDMMC_VOLTAGE_V330:
-      expected_mask |= SDHCI_PWRCTRL_SD_BUS_VOLTAGE_3P3V;
+      expected_power = PowerControl::kBusVoltage3V3;
       break;
     default:
       break;
   }
-  if ((regs_->ctrl0 & expected_mask) != expected_mask) {
-    zxlogf(TRACE, "sdhci: after voltage switch ctrl0=0x%08x, expected=0x%08x\n", regs_->ctrl0,
-           expected_mask);
+  if (PowerControl::Get().ReadFrom(&regs_mmio_buffer_).sd_bus_voltage_vdd1() != expected_power) {
+    zxlogf(TRACE, "sdhci: after voltage switch vdd1=0x%x, expected=0x%x\n",
+           PowerControl::Get().ReadFrom(&regs_mmio_buffer_).sd_bus_voltage_vdd1(), expected_power);
     return ZX_ERR_INTERNAL;
   }
 
   // Turn the clock back on
-  regs_->ctrl1 |= SDHCI_SD_CLOCK_ENABLE;
+  clock.ReadFrom(&regs_mmio_buffer_).set_sd_clock_enable(1).WriteTo(&regs_mmio_buffer_);
   zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
 
   zxlogf(TRACE, "sdhci: switch signal voltage to %d\n", voltage);
@@ -574,27 +585,24 @@ zx_status_t Sdhci::SdmmcSetBusWidth(sdmmc_bus_width_t bus_width) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  uint32_t ctrl0 = regs_->ctrl0;
+  auto ctrl1 = HostControl1::Get().ReadFrom(&regs_mmio_buffer_);
 
   switch (bus_width) {
     case SDMMC_BUS_WIDTH_ONE:
-      ctrl0 &= ~SDHCI_HOSTCTRL_EXT_DATA_WIDTH;
-      ctrl0 &= ~SDHCI_HOSTCTRL_FOUR_BIT_BUS_WIDTH;
+      ctrl1.set_extended_data_transfer_width(0).set_data_transfer_width_4bit(0);
       break;
     case SDMMC_BUS_WIDTH_FOUR:
-      ctrl0 &= ~SDHCI_HOSTCTRL_EXT_DATA_WIDTH;
-      ctrl0 |= SDHCI_HOSTCTRL_FOUR_BIT_BUS_WIDTH;
+      ctrl1.set_extended_data_transfer_width(0).set_data_transfer_width_4bit(1);
       break;
     case SDMMC_BUS_WIDTH_EIGHT:
-      ctrl0 &= ~SDHCI_HOSTCTRL_FOUR_BIT_BUS_WIDTH;
-      ctrl0 |= SDHCI_HOSTCTRL_EXT_DATA_WIDTH;
+      ctrl1.set_extended_data_transfer_width(1).set_data_transfer_width_4bit(0);
       break;
     default:
       zxlogf(ERROR, "sdhci: unknown bus width value %u\n", bus_width);
       return ZX_ERR_INVALID_ARGS;
   }
 
-  regs_->ctrl0 = ctrl0;
+  ctrl1.WriteTo(&regs_mmio_buffer_);
 
   zxlogf(TRACE, "sdhci: set bus width to %d\n", bus_width);
 
@@ -605,26 +613,27 @@ zx_status_t Sdhci::SdmmcSetBusFreq(uint32_t bus_freq) {
   fbl::AutoLock lock(&mtx_);
 
   uint32_t iterations = 0;
-  while (regs_->state & (SDHCI_STATE_CMD_INHIBIT | SDHCI_STATE_DAT_INHIBIT)) {
+  auto state = PresentState::Get().ReadFrom(&regs_mmio_buffer_);
+  while (state.command_inhibit_cmd() || state.command_inhibit_dat()) {
     if (++iterations > 1000) {
       return ZX_ERR_TIMED_OUT;
     }
     zx::nanosleep(zx::deadline_after(kInhibitWaitTime));
+    state.ReadFrom(&regs_mmio_buffer_);
   }
 
   // Turn off the SD clock before messing with the clock rate.
-  regs_->ctrl1 &= ~SDHCI_SD_CLOCK_ENABLE;
+  auto clock = ClockControl::Get().ReadFrom(&regs_mmio_buffer_);
+  clock.set_sd_clock_enable(0).WriteTo(&regs_mmio_buffer_);
   zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
 
   // Write the new divider into the control register.
-  uint32_t ctrl1 = regs_->ctrl1;
-  ctrl1 &= ~SDHCI_SD_CLOCK_FREQUENCY_SELECT_MASK;
-  ctrl1 |= GetClockDividerValue(base_clock_, bus_freq);
-  regs_->ctrl1 = ctrl1;
+  clock.set_frequency_select(GetClockDividerValue(base_clock_, bus_freq))
+      .WriteTo(&regs_mmio_buffer_);
   zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
 
   // Turn the SD clock back on.
-  regs_->ctrl1 |= SDHCI_SD_CLOCK_ENABLE;
+  clock.set_sd_clock_enable(1).WriteTo(&regs_mmio_buffer_);
   zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
 
   zxlogf(TRACE, "sdhci: set bus frequency to %u\n", bus_freq);
@@ -639,29 +648,34 @@ zx_status_t Sdhci::SdmmcSetTiming(sdmmc_timing_t timing) {
 
   fbl::AutoLock lock(&mtx_);
 
+  auto ctrl1 = HostControl1::Get().ReadFrom(&regs_mmio_buffer_);
+
   // Toggle high-speed
   if (timing != SDMMC_TIMING_LEGACY) {
-    regs_->ctrl0 |= SDHCI_HOSTCTRL_HIGHSPEED_ENABLE;
+    ctrl1.set_high_speed_enable(1).WriteTo(&regs_mmio_buffer_);
   } else {
-    regs_->ctrl0 &= ~SDHCI_HOSTCTRL_HIGHSPEED_ENABLE;
+    ctrl1.set_high_speed_enable(0).WriteTo(&regs_mmio_buffer_);
   }
 
   // Disable SD clock before changing UHS timing
-  regs_->ctrl1 &= ~SDHCI_SD_CLOCK_ENABLE;
+  auto clock = ClockControl::Get().ReadFrom(&regs_mmio_buffer_);
+  clock.set_sd_clock_enable(0).WriteTo(&regs_mmio_buffer_);
   zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
 
-  uint32_t ctrl2 = regs_->ctrl2 & ~SDHCI_HOSTCTRL2_UHS_MODE_SELECT_MASK;
+  auto ctrl2 = HostControl2::Get().ReadFrom(&regs_mmio_buffer_);
   if (timing == SDMMC_TIMING_HS200) {
-    ctrl2 |= SDHCI_HOSTCTRL2_UHS_MODE_SELECT_SDR104;
+    ctrl2.set_uhs_mode_select(HostControl2::kUhsModeSdr104);
   } else if (timing == SDMMC_TIMING_HS400) {
-    ctrl2 |= SDHCI_HOSTCTRL2_UHS_MODE_SELECT_HS400;
+    ctrl2.set_uhs_mode_select(HostControl2::kUhsModeHs400);
   } else if (timing == SDMMC_TIMING_HSDDR) {
-    ctrl2 |= SDHCI_HOSTCTRL2_UHS_MODE_SELECT_DDR50;
+    ctrl2.set_uhs_mode_select(HostControl2::kUhsModeDdr50);
+  } else {
+    ctrl2.set_uhs_mode_select(HostControl2::kUhsModeSdr12);
   }
-  regs_->ctrl2 = ctrl2;
+  ctrl2.WriteTo(&regs_mmio_buffer_);
 
   // Turn the SD clock back on.
-  regs_->ctrl1 |= SDHCI_SD_CLOCK_ENABLE;
+  clock.set_sd_clock_enable(1).WriteTo(&regs_mmio_buffer_);
   zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
 
   zxlogf(TRACE, "sdhci: set bus timing to %d\n", timing);
@@ -707,53 +721,50 @@ zx_status_t Sdhci::SdmmcPerformTuning(uint32_t cmd_idx) {
 
   // TODO(fxb/38209): no other commands should run during tuning
 
-  sdmmc_req_t req;
+  uint16_t blocksize;
+  auto ctrl2 = HostControl2::Get().FromValue(0);
+
   {
     fbl::AutoLock lock(&mtx_);
-
-    req = sdmmc_req_t{
-        .cmd_idx = cmd_idx,
-        .cmd_flags = MMC_SEND_TUNING_BLOCK_FLAGS,
-        .arg = 0,
-        .blockcount = 0,
-        .blocksize =
-            static_cast<uint16_t>((regs_->ctrl0 & SDHCI_HOSTCTRL_EXT_DATA_WIDTH) ? 128 : 64),
-        .use_dma = false,
-        .dma_vmo = ZX_HANDLE_INVALID,
-        .virt_buffer = nullptr,
-        .virt_size = 0,
-        .buf_offset = 0,
-        .pmt = ZX_HANDLE_INVALID,
-        .probe_tuning_cmd = true,
-        .response = {},
-        .status = ZX_ERR_BAD_STATE,
-    };
-
-    regs_->ctrl2 |= SDHCI_HOSTCTRL2_EXEC_TUNING;
+    blocksize = static_cast<uint16_t>(
+        HostControl1::Get().ReadFrom(&regs_mmio_buffer_).extended_data_transfer_width() ? 128 : 64);
+    ctrl2.ReadFrom(&regs_mmio_buffer_).set_execute_tuning(1).WriteTo(&regs_mmio_buffer_);
   }
 
-  int count = 0;
-  do {
+  sdmmc_req_t req = {
+      .cmd_idx = cmd_idx,
+      .cmd_flags = MMC_SEND_TUNING_BLOCK_FLAGS,
+      .arg = 0,
+      .blockcount = 0,
+      .blocksize = blocksize,
+      .use_dma = false,
+      .dma_vmo = ZX_HANDLE_INVALID,
+      .virt_buffer = nullptr,
+      .virt_size = 0,
+      .buf_offset = 0,
+      .pmt = ZX_HANDLE_INVALID,
+      .probe_tuning_cmd = true,
+      .response = {},
+      .status = ZX_ERR_BAD_STATE,
+  };
+
+  for (int count = 0; (count < kMaxTuningCount) && ctrl2.execute_tuning(); count++) {
     zx_status_t st = SdmmcRequest(&req);
     if (st != ZX_OK) {
       zxlogf(ERROR, "sdhci: MMC_SEND_TUNING_BLOCK error, retcode = %d\n", req.status);
       return st;
     }
 
-    {
-      fbl::AutoLock lock(&mtx_);
-      if (!(regs_->ctrl2 & SDHCI_HOSTCTRL2_EXEC_TUNING)) {
-        break;
-      }
-    }
-  } while (count++ < kMaxTuningCount);
+    fbl::AutoLock lock(&mtx_);
+    ctrl2.ReadFrom(&regs_mmio_buffer_);
+  }
 
-  bool fail;
   {
     fbl::AutoLock lock(&mtx_);
-    fail = (regs_->ctrl2 & SDHCI_HOSTCTRL2_EXEC_TUNING) ||
-           !(regs_->ctrl2 & SDHCI_HOSTCTRL2_CLOCK_SELECT);
+    ctrl2.ReadFrom(&regs_mmio_buffer_);
   }
+
+  const bool fail = ctrl2.execute_tuning() || !ctrl2.use_tuned_clock();
 
   zxlogf(TRACE, "sdhci: tuning fail %d\n", fail);
 
@@ -776,14 +787,18 @@ void Sdhci::DdkRelease() { delete this; }
 
 zx_status_t Sdhci::Init() {
   // Ensure that we're SDv3.
-  const uint16_t vrsn = (regs_->slotirqversion >> 16) & 0xff;
-  if (vrsn < SDHCI_VERSION_3) {
-    zxlogf(ERROR, "sdhci: SD version is %u, only version %u is supported\n", vrsn, SDHCI_VERSION_3);
+  const uint16_t vrsn =
+      HostControllerVersion::Get().ReadFrom(&regs_mmio_buffer_).specification_version();
+  if (vrsn < HostControllerVersion::kSpecificationVersion300) {
+    zxlogf(ERROR, "sdhci: SD version is %u, only version %u is supported\n", vrsn,
+           HostControllerVersion::kSpecificationVersion300);
     return ZX_ERR_NOT_SUPPORTED;
   }
   zxlogf(TRACE, "sdhci: controller version %d\n", vrsn);
 
-  base_clock_ = ((regs_->caps0 >> 8) & 0xff) * kMhzToHz;
+  auto caps0 = Capabilities0::Get().ReadFrom(&regs_mmio_buffer_);
+
+  base_clock_ = caps0.base_clock_frequency_hz();
   if (base_clock_ == 0) {
     // try to get controller specific base clock
     base_clock_ = sdhci_.GetBaseClock();
@@ -794,17 +809,16 @@ zx_status_t Sdhci::Init() {
   }
 
   // Get controller capabilities
-  uint32_t caps0 = regs_->caps0;
-  if (caps0 & SDHCI_CORECFG_8_BIT_SUPPORT) {
+  if (caps0.bus_width_8_support()) {
     info_.caps |= SDMMC_HOST_CAP_BUS_WIDTH_8;
   }
-  if (caps0 & SDHCI_CORECFG_ADMA2_SUPPORT && !(quirks_ & SDHCI_QUIRK_NO_DMA)) {
+  if (caps0.adma2_support() && !(quirks_ & SDHCI_QUIRK_NO_DMA)) {
     info_.caps |= SDMMC_HOST_CAP_ADMA2;
   }
-  if (caps0 & SDHCI_CORECFG_64BIT_SUPPORT && !(quirks_ & SDHCI_QUIRK_NO_DMA)) {
+  if (caps0.v3_64_bit_system_address_support() && !(quirks_ & SDHCI_QUIRK_NO_DMA)) {
     info_.caps |= SDMMC_HOST_CAP_SIXTY_FOUR_BIT;
   }
-  if (caps0 & SDHCI_CORECFG_3P3_VOLT_SUPPORT) {
+  if (caps0.voltage_3v3_support()) {
     info_.caps |= SDMMC_HOST_CAP_VOLTAGE_330;
   }
   info_.caps |= SDMMC_HOST_CAP_AUTO_CMD12;
@@ -815,24 +829,19 @@ zx_status_t Sdhci::Init() {
     info_.prefs |= SDMMC_HOST_PREFS_DISABLE_HS200 | SDMMC_HOST_PREFS_DISABLE_HS400;
   }
 
-  // Reset the controller.
-  uint32_t ctrl1 = regs_->ctrl1;
-
   // Perform a software reset against both the DAT and CMD interface.
-  ctrl1 |= SDHCI_SOFTWARE_RESET_ALL;
+  SoftwareReset::Get().ReadFrom(&regs_mmio_buffer_).set_reset_all(1).WriteTo(&regs_mmio_buffer_);
 
   // Disable both clocks.
-  ctrl1 &= ~(SDHCI_INTERNAL_CLOCK_ENABLE | SDHCI_SD_CLOCK_ENABLE);
-
-  // Write the register back to the device.
-  regs_->ctrl1 = ctrl1;
+  auto clock = ClockControl::Get().ReadFrom(&regs_mmio_buffer_);
+  clock.set_internal_clock_enable(0).set_sd_clock_enable(0).WriteTo(&regs_mmio_buffer_);
 
   // Wait for reset to take place. The reset is completed when all three
   // of the following flags are reset.
-  const uint32_t target_mask =
-      (SDHCI_SOFTWARE_RESET_ALL | SDHCI_SOFTWARE_RESET_CMD | SDHCI_SOFTWARE_RESET_DAT);
+  const SoftwareReset target_mask =
+      SoftwareReset::Get().FromValue(0).set_reset_all(1).set_reset_cmd(1).set_reset_dat(1);
   zx_status_t status = ZX_OK;
-  if ((status = WaitForReset(target_mask, kResetTime)) != ZX_OK) {
+  if ((status = WaitForReset(target_mask)) != ZX_OK) {
     return status;
   }
 
@@ -848,7 +857,10 @@ zx_status_t Sdhci::Init() {
     info_.max_transfer_size = kDmaDescCount * PAGE_SIZE;
 
     // Select ADMA2
-    regs_->ctrl0 |= SDHCI_HOSTCTRL_DMA_SELECT_ADMA2;
+    HostControl1::Get()
+        .ReadFrom(&regs_mmio_buffer_)
+        .set_dma_select(HostControl1::kDmaSelect64BitAdma2)
+        .WriteTo(&regs_mmio_buffer_);
   } else {
     // no maximum if only PIO supported
     info_.max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED;
@@ -856,8 +868,7 @@ zx_status_t Sdhci::Init() {
   info_.max_transfer_size_non_dma = BLOCK_MAX_TRANSFER_UNBOUNDED;
 
   // Configure the clock.
-  ctrl1 = regs_->ctrl1;
-  ctrl1 |= SDHCI_INTERNAL_CLOCK_ENABLE;
+  clock.ReadFrom(&regs_mmio_buffer_).set_internal_clock_enable(1);
 
   // SDHCI Versions 1.00 and 2.00 handle the clock divider slightly
   // differently compared to SDHCI version 3.00. Since this driver doesn't
@@ -865,21 +876,18 @@ zx_status_t Sdhci::Init() {
   //
   // V3.00 supports a 10 bit divider where the SD clock frequency is defined
   // as F/(2*D) where F is the base clock frequency and D is the divider.
-  ctrl1 &= ~SDHCI_SD_CLOCK_FREQUENCY_SELECT_MASK;
-  ctrl1 |= GetClockDividerValue(base_clock_, kSdFreqSetupHz);
+  clock.set_frequency_select(GetClockDividerValue(base_clock_, kSdFreqSetupHz))
+      .WriteTo(&regs_mmio_buffer_);
 
   // Set the command timeout.
-  ctrl1 |= (0xe << 16);
-
-  // Write back the clock frequency, command timeout and clock enable bits.
-  regs_->ctrl1 = ctrl1;
+  TimeoutControl::Get()
+      .ReadFrom(&regs_mmio_buffer_)
+      .set_data_timeout_counter(TimeoutControl::kDataTimeoutMax)
+      .WriteTo(&regs_mmio_buffer_);
 
   // Wait for the clock to stabilize.
   zx::time deadline = zx::clock::get_monotonic() + kClockStabilizationTime;
-  while (true) {
-    if (((regs_->ctrl1) & SDHCI_INTERNAL_CLOCK_STABLE) != 0)
-      break;
-
+  while (clock.ReadFrom(&regs_mmio_buffer_).internal_clock_stable() == 0) {
     if (zx::clock::get_monotonic() > deadline) {
       zxlogf(ERROR, "sdhci: Clock did not stabilize in time\n");
       return ZX_ERR_TIMED_OUT;
@@ -887,30 +895,28 @@ zx_status_t Sdhci::Init() {
   }
 
   // Cut voltage to the card. This may automatically gate the SD clock on some controllers.
-  regs_->ctrl0 &= ~SDHCI_PWRCTRL_SD_BUS_POWER;
+  auto power = PowerControl::Get().ReadFrom(&regs_mmio_buffer_);
+  power.set_sd_bus_power_vdd1(0).WriteTo(&regs_mmio_buffer_);
 
   // Set SD bus voltage to maximum supported by the host controller
-  uint32_t ctrl0 = regs_->ctrl0 & ~SDHCI_PWRCTRL_SD_BUS_VOLTAGE_MASK;
   if (info_.caps & SDMMC_HOST_CAP_VOLTAGE_330) {
-    ctrl0 |= SDHCI_PWRCTRL_SD_BUS_VOLTAGE_3P3V;
+    power.set_sd_bus_voltage_vdd1(PowerControl::kBusVoltage3V3);
   } else {
-    ctrl0 |= SDHCI_PWRCTRL_SD_BUS_VOLTAGE_1P8V;
+    power.set_sd_bus_voltage_vdd1(PowerControl::kBusVoltage1V8);
   }
-  regs_->ctrl0 = ctrl0;
+  power.WriteTo(&regs_mmio_buffer_);
 
   // Restore voltage to the card.
-  regs_->ctrl0 |= SDHCI_PWRCTRL_SD_BUS_POWER;
+  power.set_sd_bus_power_vdd1(1).WriteTo(&regs_mmio_buffer_);
 
   // Enable the SD clock.
   zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
-  ctrl1 = regs_->ctrl1;
-  ctrl1 |= SDHCI_SD_CLOCK_ENABLE;
-  regs_->ctrl1 = ctrl1;
+  clock.ReadFrom(&regs_mmio_buffer_).set_sd_clock_enable(1).WriteTo(&regs_mmio_buffer_);
   zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
 
   // Disable all interrupts
-  regs_->irqen = 0;
-  regs_->irq = 0xffffffff;
+  InterruptStatus::Get().FromValue(0).ClearAll().WriteTo(&regs_mmio_buffer_);
+  InterruptSignalEnable::Get().FromValue(0).MaskAll().WriteTo(&regs_mmio_buffer_);
 
   if (thrd_create_with_name(
           &irq_thread_, [](void* arg) -> int { return reinterpret_cast<Sdhci*>(arg)->IrqThread(); },
@@ -937,7 +943,7 @@ zx_status_t Sdhci::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
   std::optional<ddk::MmioBuffer> regs_mmio_buffer;
-  status = ddk::MmioBuffer::Create(vmo_offset, sizeof(*Sdhci::regs_), std::move(vmo),
+  status = ddk::MmioBuffer::Create(vmo_offset, kRegisterSetSize, std::move(vmo),
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &regs_mmio_buffer);
   if (status != ZX_OK) {
     zxlogf(ERROR, "sdhci: error %d in mmio_buffer_init\n", status);

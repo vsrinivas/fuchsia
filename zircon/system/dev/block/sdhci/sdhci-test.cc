@@ -32,40 +32,33 @@ class TestSdhci : public Sdhci {
   }
 
  protected:
-  zx_status_t WaitForReset(const uint32_t mask, zx::duration timeout) const override {
-    return ZX_OK;
-  }
+  zx_status_t WaitForReset(const SoftwareReset mask) const override { return ZX_OK; }
 
   zx_status_t WaitForInterrupt() override {
-    regs_mmio_buffer_.Write<uint16_t>(0x0000, 0x30);
-    regs_mmio_buffer_.Write<uint16_t>(0x0000, 0x32);
+    auto status = InterruptStatus::Get().FromValue(0).WriteTo(&regs_mmio_buffer_);
 
     while (run_thread_) {
       switch (GetRequestStatus()) {
         case RequestStatus::COMMAND:
-          regs_mmio_buffer_.Write<uint16_t>(0x0001, 0x30);
+          status.set_command_complete(1).WriteTo(&regs_mmio_buffer_);
           return ZX_OK;
-          break;
         case RequestStatus::TRANSFER_DATA_DMA:
-          regs_mmio_buffer_.Write<uint16_t>(0x0002, 0x30);
+          status.set_transfer_complete(1).WriteTo(&regs_mmio_buffer_);
           return ZX_OK;
-          break;
         case RequestStatus::READ_DATA_PIO:
           if (++current_block_ == blocks_remaining_) {
-            regs_mmio_buffer_.Write<uint16_t>(0x0022, 0x30);
+            status.set_buffer_read_ready(1).set_transfer_complete(1).WriteTo(&regs_mmio_buffer_);
           } else {
-            regs_mmio_buffer_.Write<uint16_t>(0x0020, 0x30);
+            status.set_buffer_read_ready(1).WriteTo(&regs_mmio_buffer_);
           }
           return ZX_OK;
-          break;
         case RequestStatus::WRITE_DATA_PIO:
           if (++current_block_ == blocks_remaining_) {
-            regs_mmio_buffer_.Write<uint16_t>(0x0012, 0x30);
+            status.set_buffer_write_ready(1).set_transfer_complete(1).WriteTo(&regs_mmio_buffer_);
           } else {
-            regs_mmio_buffer_.Write<uint16_t>(0x0010, 0x30);
+            status.set_buffer_write_ready(1).WriteTo(&regs_mmio_buffer_);
           }
           return ZX_OK;
-          break;
         default:
           break;
       }
@@ -83,12 +76,12 @@ class TestSdhci : public Sdhci {
 class SdhciTest : public zxtest::Test {
  public:
   SdhciTest()
-      : registers_(new uint8_t[kMmioSize]),
+      : registers_(new uint8_t[kRegisterSetSize]),
         mmio_(
             {
                 .vaddr = registers_.get(),
                 .offset = 0,
-                .size = kMmioSize,
+                .size = kRegisterSetSize,
                 .vmo = ZX_HANDLE_INVALID,
             },
             0) {}
@@ -97,13 +90,16 @@ class SdhciTest : public zxtest::Test {
 
  protected:
   void CreateDut() {
-    memset(registers_.get(), 0, kMmioSize);
+    memset(registers_.get(), 0, kRegisterSetSize);
 
     dut_.emplace(fake_ddk::kFakeParent, ddk::MmioView(mmio_),
                  ddk::SdhciProtocolClient(mock_sdhci_.GetProto()));
 
-    mmio_.Write<uint16_t>(0x0002, 0xfe);
-    mmio_.Write<uint16_t>(0x0002, 0x2c);
+    HostControllerVersion::Get()
+        .FromValue(0)
+        .set_specification_version(HostControllerVersion::kSpecificationVersion300)
+        .WriteTo(&mmio_);
+    ClockControl::Get().FromValue(0).set_internal_clock_stable(1).WriteTo(&mmio_);
   }
 
   std::unique_ptr<uint8_t[]> registers_;
@@ -111,9 +107,6 @@ class SdhciTest : public zxtest::Test {
   zx::interrupt irq_;
   std::optional<TestSdhci> dut_;
   ddk::MmioView mmio_;
-
- private:
-  static constexpr size_t kMmioSize = 0x200;
 };
 
 TEST_F(SdhciTest, DdkLifecycle) {
@@ -153,7 +146,7 @@ TEST_F(SdhciTest, BaseClockFromHardware) {
   mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
-  mmio_.Write<uint64_t>(0x0000'0000'0000'6800, 0x40);
+  Capabilities0::Get().FromValue(0).set_base_clock_frequency(104).WriteTo(&mmio_);
   EXPECT_OK(dut_->Init());
   dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
@@ -164,7 +157,13 @@ TEST_F(SdhciTest, HostInfo) {
   mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
-  mmio_.Write<uint64_t>(0x0000'0000'1104'0100, 0x40);
+  Capabilities0::Get()
+      .FromValue(0)
+      .set_base_clock_frequency(1)
+      .set_bus_width_8_support(1)
+      .set_voltage_3v3_support(1)
+      .set_v3_64_bit_system_address_support(1)
+      .WriteTo(&mmio_);
   EXPECT_OK(dut_->Init());
   dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
@@ -179,7 +178,13 @@ TEST_F(SdhciTest, HostInfoNoDma) {
   mock_sdhci_.ExpectGetQuirks(SDHCI_QUIRK_NO_DMA);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
-  mmio_.Write<uint64_t>(0x0000'0000'1104'0100, 0x40);
+  Capabilities0::Get()
+      .FromValue(0)
+      .set_base_clock_frequency(1)
+      .set_bus_width_8_support(1)
+      .set_voltage_3v3_support(1)
+      .set_v3_64_bit_system_address_support(1)
+      .WriteTo(&mmio_);
   EXPECT_OK(dut_->Init());
   dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
@@ -194,7 +199,7 @@ TEST_F(SdhciTest, HostInfoNoTuning) {
   mock_sdhci_.ExpectGetQuirks(SDHCI_QUIRK_NON_STANDARD_TUNING);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
-  mmio_.Write<uint64_t>(0x0000'0000'0000'0100, 0x40);
+  Capabilities0::Get().FromValue(0).set_base_clock_frequency(1).WriteTo(&mmio_);
   EXPECT_OK(dut_->Init());
   dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
@@ -209,17 +214,26 @@ TEST_F(SdhciTest, SetSignalVoltage) {
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
-  mmio_.Write<uint64_t>((1 << 26) | (1 << 24), 0x40);
+  Capabilities0::Get().FromValue(0).set_voltage_3v3_support(1).set_voltage_1v8_support(1).WriteTo(
+      &mmio_);
   EXPECT_OK(dut_->Init());
   dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
-  mmio_.Write<uint8_t>(0b0000'1011, 0x29);
+  PowerControl::Get()
+      .FromValue(0)
+      .set_sd_bus_voltage_vdd1(PowerControl::kBusVoltage1V8)
+      .set_sd_bus_power_vdd1(1)
+      .WriteTo(&mmio_);
   EXPECT_OK(dut_->SdmmcSetSignalVoltage(SDMMC_VOLTAGE_V180));
-  EXPECT_TRUE(mmio_.Read<uint16_t>(0x3e) & (1 << 3));
+  EXPECT_TRUE(HostControl2::Get().ReadFrom(&mmio_).voltage_1v8_signalling_enable());
 
-  mmio_.Write<uint8_t>(0b0000'1111, 0x29);
+  PowerControl::Get()
+      .FromValue(0)
+      .set_sd_bus_voltage_vdd1(PowerControl::kBusVoltage3V3)
+      .set_sd_bus_power_vdd1(1)
+      .WriteTo(&mmio_);
   EXPECT_OK(dut_->SdmmcSetSignalVoltage(SDMMC_VOLTAGE_V330));
-  EXPECT_FALSE(mmio_.Read<uint16_t>(0x3e) & (1 << 3));
+  EXPECT_FALSE(HostControl2::Get().ReadFrom(&mmio_).voltage_1v8_signalling_enable());
 }
 
 TEST_F(SdhciTest, SetSignalVoltageUnsupported) {
@@ -234,18 +248,23 @@ TEST_F(SdhciTest, SetBusWidth) {
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
   mock_sdhci_.ExpectGetBaseClock(100'000'000);
-  mmio_.Write<uint64_t>(1 << 18, 0x40);
+  Capabilities0::Get().FromValue(0).set_bus_width_8_support(1).WriteTo(&mmio_);
   EXPECT_OK(dut_->Init());
   dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
+  auto ctrl1 = HostControl1::Get().FromValue(0);
+
   EXPECT_OK(dut_->SdmmcSetBusWidth(SDMMC_BUS_WIDTH_EIGHT));
-  EXPECT_EQ(mmio_.Read<uint8_t>(0x28) & 0b0010'0000, 0b0010'0000);
+  EXPECT_TRUE(ctrl1.ReadFrom(&mmio_).extended_data_transfer_width());
+  EXPECT_FALSE(ctrl1.ReadFrom(&mmio_).data_transfer_width_4bit());
 
   EXPECT_OK(dut_->SdmmcSetBusWidth(SDMMC_BUS_WIDTH_ONE));
-  EXPECT_EQ(mmio_.Read<uint8_t>(0x28), 0);
+  EXPECT_FALSE(ctrl1.ReadFrom(&mmio_).extended_data_transfer_width());
+  EXPECT_FALSE(ctrl1.ReadFrom(&mmio_).data_transfer_width_4bit());
 
   EXPECT_OK(dut_->SdmmcSetBusWidth(SDMMC_BUS_WIDTH_FOUR));
-  EXPECT_EQ(mmio_.Read<uint8_t>(0x28) & 0b0000'0010, 0b0000'0010);
+  EXPECT_FALSE(ctrl1.ReadFrom(&mmio_).extended_data_transfer_width());
+  EXPECT_TRUE(ctrl1.ReadFrom(&mmio_).data_transfer_width_4bit());
 }
 
 TEST_F(SdhciTest, SetBusWidthNotSupported) {
@@ -263,17 +282,23 @@ TEST_F(SdhciTest, SetBusFreq) {
   EXPECT_OK(dut_->Init());
   dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
+  auto clock = ClockControl::Get().FromValue(0);
+
   EXPECT_OK(dut_->SdmmcSetBusFreq(12'500'000));
-  EXPECT_EQ(mmio_.Read<uint16_t>(0x2c) & 0b1111'1111'1100'0100, 0b0000'0100'0000'0100);
+  EXPECT_EQ(clock.ReadFrom(&mmio_).frequency_select(), 4);
+  EXPECT_TRUE(clock.sd_clock_enable());
 
   EXPECT_OK(dut_->SdmmcSetBusFreq(65'190));
-  EXPECT_EQ(mmio_.Read<uint16_t>(0x2c) & 0b1111'1111'1100'0100, 0b1111'1111'1000'0100);
+  EXPECT_EQ(clock.ReadFrom(&mmio_).frequency_select(), 767);
+  EXPECT_TRUE(clock.sd_clock_enable());
 
   EXPECT_OK(dut_->SdmmcSetBusFreq(100'000'000));
-  EXPECT_EQ(mmio_.Read<uint16_t>(0x2c) & 0b1111'1111'1100'0100, 0b0000'0000'0000'0100);
+  EXPECT_EQ(clock.ReadFrom(&mmio_).frequency_select(), 0);
+  EXPECT_TRUE(clock.sd_clock_enable());
 
   EXPECT_OK(dut_->SdmmcSetBusFreq(26'000'000));
-  EXPECT_EQ(mmio_.Read<uint16_t>(0x2c) & 0b1111'1111'1100'0100, 0b0000'0010'0000'0100);
+  EXPECT_EQ(clock.ReadFrom(&mmio_).frequency_select(), 2);
+  EXPECT_TRUE(clock.sd_clock_enable());
 }
 
 TEST_F(SdhciTest, HwReset) {
@@ -309,11 +334,18 @@ TEST_F(SdhciTest, RequestCommandOnly) {
       .status = ZX_ERR_BAD_STATE,
   };
 
-  mmio_.Write<uint32_t>(0xf3bbf2c0, 0x10);
+  Response::Get(0).FromValue(0xf3bbf2c0).WriteTo(&mmio_);
   EXPECT_OK(dut_->SdmmcRequest(&request));
 
-  EXPECT_EQ(mmio_.Read<uint32_t>(0x08), 0x7b7d9fbd);
-  EXPECT_EQ(mmio_.Read<uint16_t>(0x0e), 0x0d1a);
+  auto command = Command::Get().FromValue(0);
+
+  EXPECT_EQ(Argument::Get().ReadFrom(&mmio_).reg_value(), 0x7b7d9fbd);
+  EXPECT_EQ(command.ReadFrom(&mmio_).command_index(), SDMMC_SEND_STATUS);
+  EXPECT_EQ(command.command_type(), Command::kCommandTypeNormal);
+  EXPECT_FALSE(command.data_present());
+  EXPECT_TRUE(command.command_index_check());
+  EXPECT_TRUE(command.command_crc_check());
+  EXPECT_EQ(command.response_type(), Command::kResponseType48Bits);
 
   EXPECT_OK(request.status);
   EXPECT_EQ(request.response[0], 0xf3bbf2c0);
@@ -335,14 +367,18 @@ TEST_F(SdhciTest, RequestCommandOnly) {
       .status = ZX_ERR_BAD_STATE,
   };
 
-  mmio_.Write<uint32_t>(0x9f93b17d, 0x10);
-  mmio_.Write<uint32_t>(0x89aaba9e, 0x14);
-  mmio_.Write<uint32_t>(0xc14b059e, 0x18);
-  mmio_.Write<uint32_t>(0x7329a9e3, 0x1c);
+  Response::Get(0).FromValue(0x9f93b17d).WriteTo(&mmio_);
+  Response::Get(1).FromValue(0x89aaba9e).WriteTo(&mmio_);
+  Response::Get(2).FromValue(0xc14b059e).WriteTo(&mmio_);
+  Response::Get(3).FromValue(0x7329a9e3).WriteTo(&mmio_);
   EXPECT_OK(dut_->SdmmcRequest(&request));
 
-  EXPECT_EQ(mmio_.Read<uint32_t>(0x08), 0x9c1dc1ed);
-  EXPECT_EQ(mmio_.Read<uint16_t>(0x0e), 0x0909);
+  EXPECT_EQ(Argument::Get().ReadFrom(&mmio_).reg_value(), 0x9c1dc1ed);
+  EXPECT_EQ(command.ReadFrom(&mmio_).command_index(), SDMMC_SEND_CSD);
+  EXPECT_EQ(command.command_type(), Command::kCommandTypeNormal);
+  EXPECT_FALSE(command.data_present());
+  EXPECT_TRUE(command.command_crc_check());
+  EXPECT_EQ(command.response_type(), Command::kResponseType136Bits);
 
   EXPECT_OK(request.status);
   EXPECT_EQ(request.response[0], 0x9f93b17d);
@@ -386,15 +422,30 @@ TEST_F(SdhciTest, RequestWithData) {
       .status = ZX_ERR_BAD_STATE,
   };
 
-  mmio_.Write<uint32_t>(0x4ea3f1f3, 0x10);
+  Response::Get(0).FromValue(0x4ea3f1f3).WriteTo(&mmio_);
   EXPECT_OK(dut_->SdmmcRequest(&request));
 
-  EXPECT_EQ(mmio_.Read<uint16_t>(0x04), 16);
-  EXPECT_EQ(mmio_.Read<uint16_t>(0x06), 4);
-  EXPECT_EQ(mmio_.Read<uint32_t>(0x08), 0xfc4e6f56);
-  EXPECT_EQ(mmio_.Read<uint16_t>(0x0c), 0x0026);
-  EXPECT_EQ(mmio_.Read<uint16_t>(0x0e), 0x193a);
-  EXPECT_EQ(mmio_.Read<uint32_t>(0x20), 0x6db4a2d1);
+  auto transfer_mode = TransferMode::Get().FromValue(0);
+  auto command = Command::Get().FromValue(0);
+
+  EXPECT_EQ(BlockSize::Get().ReadFrom(&mmio_).reg_value(), 16);
+  EXPECT_EQ(BlockCount::Get().ReadFrom(&mmio_).reg_value(), 4);
+  EXPECT_EQ(Argument::Get().ReadFrom(&mmio_).reg_value(), 0xfc4e6f56);
+
+  EXPECT_TRUE(transfer_mode.ReadFrom(&mmio_).multi_block());
+  EXPECT_FALSE(transfer_mode.read());
+  EXPECT_EQ(transfer_mode.auto_cmd_enable(), TransferMode::kAutoCmd12);
+  EXPECT_TRUE(transfer_mode.block_count_enable());
+  EXPECT_FALSE(transfer_mode.dma_enable());
+
+  EXPECT_EQ(command.ReadFrom(&mmio_).command_index(), SDMMC_WRITE_MULTIPLE_BLOCK);
+  EXPECT_EQ(command.command_type(), Command::kCommandTypeNormal);
+  EXPECT_TRUE(command.data_present());
+  EXPECT_TRUE(command.command_index_check());
+  EXPECT_TRUE(command.command_crc_check());
+  EXPECT_EQ(command.response_type(), Command::kResponseType48Bits);
+
+  EXPECT_EQ(BufferData::Get().ReadFrom(&mmio_).reg_value(), 0x6db4a2d1);
 
   EXPECT_OK(request.status);
   EXPECT_EQ(request.response[0], 0x4ea3f1f3);
@@ -416,15 +467,26 @@ TEST_F(SdhciTest, RequestWithData) {
       .status = ZX_ERR_BAD_STATE,
   };
 
-  mmio_.Write<uint32_t>(0xa5387c19, 0x10);
-  mmio_.Write<uint32_t>(0xe99dd637, 0x20);
+  Response::Get(0).FromValue(0xa5387c19).WriteTo(&mmio_);
+  BufferData::Get().FromValue(0xe99dd637).WriteTo(&mmio_);
   EXPECT_OK(dut_->SdmmcRequest(&request));
 
-  EXPECT_EQ(mmio_.Read<uint16_t>(0x04), 16);
-  EXPECT_EQ(mmio_.Read<uint16_t>(0x06), 4);
-  EXPECT_EQ(mmio_.Read<uint32_t>(0x08), 0x55c1c22c);
-  EXPECT_EQ(mmio_.Read<uint16_t>(0x0c), 0x0036);
-  EXPECT_EQ(mmio_.Read<uint16_t>(0x0e), 0x123a);
+  EXPECT_EQ(BlockSize::Get().ReadFrom(&mmio_).reg_value(), 16);
+  EXPECT_EQ(BlockCount::Get().ReadFrom(&mmio_).reg_value(), 4);
+  EXPECT_EQ(Argument::Get().ReadFrom(&mmio_).reg_value(), 0x55c1c22c);
+
+  EXPECT_TRUE(transfer_mode.ReadFrom(&mmio_).multi_block());
+  EXPECT_TRUE(transfer_mode.read());
+  EXPECT_EQ(transfer_mode.auto_cmd_enable(), TransferMode::kAutoCmd12);
+  EXPECT_TRUE(transfer_mode.block_count_enable());
+  EXPECT_FALSE(transfer_mode.dma_enable());
+
+  EXPECT_EQ(command.ReadFrom(&mmio_).command_index(), SDMMC_READ_MULTIPLE_BLOCK);
+  EXPECT_EQ(command.command_type(), Command::kCommandTypeNormal);
+  EXPECT_TRUE(command.data_present());
+  EXPECT_TRUE(command.command_index_check());
+  EXPECT_TRUE(command.command_crc_check());
+  EXPECT_EQ(command.response_type(), Command::kResponseType48Bits);
 
   EXPECT_OK(request.status);
   EXPECT_EQ(request.response[0], 0xa5387c19);

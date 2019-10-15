@@ -11,7 +11,6 @@
 #include <ddktl/protocol/sdmmc.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <hw/sdhci.h>
 #include <hw/sdmmc.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
@@ -19,6 +18,8 @@
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
 #include <zircon/threads.h>
+
+#include "sdhci-reg.h"
 
 namespace sdhci {
 
@@ -32,8 +33,6 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
       : DeviceType(parent),
         regs_mmio_buffer_(std::move(regs_mmio_buffer)),
         irq_(std::move(irq)),
-        // TODO(fxb/38209): Use hwreg instead of doing this.
-        regs_(reinterpret_cast<sdhci_regs_t*>(regs_mmio_buffer_.get())),
         sdhci_(sdhci),
         bti_(std::move(bti)),
         quirks_(sdhci_.GetQuirks()) {}
@@ -70,7 +69,7 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
     WRITE_DATA_PIO,
   };
 
-  virtual zx_status_t WaitForReset(const uint32_t mask, zx::duration timeout) const;
+  virtual zx_status_t WaitForReset(const SoftwareReset mask) const;
   virtual zx_status_t WaitForInterrupt() { return irq_.wait(nullptr); }
 
   RequestStatus GetRequestStatus() TA_EXCL(mtx_) {
@@ -96,29 +95,15 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
   struct Adma64Descriptor {
     // 64k max per descriptor
     static constexpr size_t kMaxDescriptorLength = 0x1'0000;  // 64k
-    static constexpr size_t kDescriptorLengthMask = kMaxDescriptorLength - 1;
 
-    union {
-      struct {
-        // TODO(fxb/38209): Don't use bitfields.
-        uint8_t valid : 1;
-        uint8_t end : 1;
-        uint8_t intr : 1;
-        uint8_t rsvd0 : 1;
-        uint8_t act1 : 1;
-        uint8_t act2 : 1;
-        uint8_t rsvd1 : 2;
-        uint8_t rsvd2;
-      } __PACKED;
-      uint16_t attr;
-    } __PACKED;
+    uint16_t attr;
     uint16_t length;
     uint64_t address;
   } __PACKED;
 
   static_assert(sizeof(Adma64Descriptor) == 12, "unexpected ADMA2 descriptor size");
 
-  static uint32_t PrepareCmd(sdmmc_req_t* req);
+  static void PrepareCmd(sdmmc_req_t* req, TransferMode* transfer_mode, Command* command);
   static zx_status_t FinishRequest(sdmmc_req_t* req);
 
   bool SupportsAdma2_64Bit() const {
@@ -140,8 +125,6 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
 
   zx::interrupt irq_;
   thrd_t irq_thread_;
-
-  volatile sdhci_regs_t* regs_;
 
   const ddk::SdhciProtocolClient sdhci_;
 
