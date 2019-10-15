@@ -141,14 +141,26 @@ std::pair<const MockProcessObject*, const MockThreadObject*> GetProcessThread(
 struct TestContext {
   DebugAgentMessageLoop loop;
   DebugAgentStreamBackend stream_backend;
+
   std::shared_ptr<MockObjectProvider> object_provider;
+  std::shared_ptr<MockLimboProvider> limbo_provider;
   std::shared_ptr<arch::ArchProvider> arch_provider;
 };
 
+SystemProviders ToSystemProviders(const TestContext& context) {
+  SystemProviders providers;
+  providers.arch_provider = context.arch_provider;
+  providers.limbo_provider = context.limbo_provider;
+  providers.object_provider = context.object_provider;
+
+  return providers;
+}
+
 std::unique_ptr<TestContext> CreateTestContext() {
   auto context = std::make_unique<TestContext>();
-  context->object_provider = CreateDefaultMockObjectProvider();
   context->arch_provider = std::make_shared<arch::ArchProvider>();
+  context->limbo_provider = std::make_shared<MockLimboProvider>();
+  context->object_provider = CreateDefaultMockObjectProvider();
   return context;
 }
 
@@ -156,7 +168,8 @@ std::unique_ptr<TestContext> CreateTestContext() {
 
 TEST(DebugAgent, OnGlobalStatus) {
   auto test_context = CreateTestContext();
-  DebugAgent debug_agent(nullptr, test_context->arch_provider, test_context->object_provider);
+
+  DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
   debug_agent.Connect(&test_context->stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 
@@ -230,11 +243,8 @@ TEST(DebugAgent, OnGlobalStatus) {
   auto [limbo_proc2, limbo_thread2] =
       GetProcessThread(object_provider, kLimboProcess2, kLimboProcess2Thread);
 
-  auto limbo_provider = std::make_shared<MockLimboProvider>();
-  limbo_provider->AppendException(limbo_proc1, limbo_thread1, kLimboException1);
-  limbo_provider->AppendException(limbo_proc2, limbo_thread2, kLimboException2);
-
-  debug_agent.set_limbo_provider(limbo_provider);
+  test_context->limbo_provider->AppendException(limbo_proc1, limbo_thread1, kLimboException1);
+  test_context->limbo_provider->AppendException(limbo_proc2, limbo_thread2, kLimboException2);
 
   reply = {};
   remote_api->OnStatus(request, &reply);
@@ -259,8 +269,7 @@ TEST(DebugAgent, OnGlobalStatus) {
 
 TEST(DebugAgent, OnProcessStatus) {
   auto test_context = CreateTestContext();
-
-  DebugAgent debug_agent(nullptr, test_context->arch_provider, test_context->object_provider);
+  DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
   debug_agent.Connect(&test_context->stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 
@@ -322,7 +331,7 @@ TEST(DebugAgent, OnAttach) {
   uint32_t transaction_id = 1u;
 
   auto test_context = CreateTestContext();
-  DebugAgent debug_agent(nullptr, test_context->arch_provider, test_context->object_provider);
+  DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
   debug_agent.Connect(&test_context->stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 

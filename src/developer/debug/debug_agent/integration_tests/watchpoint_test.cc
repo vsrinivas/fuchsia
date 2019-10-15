@@ -107,9 +107,7 @@ TEST(Watchpoint, DISABLED_DefaultCase) {
     WatchpointStreamBackend backend(loop);
 
     auto services = sys::ServiceDirectory::CreateFromNamespace();
-    auto arch_provider = std::make_unique<arch::ArchProvider>();
-    auto object_provider = std::make_unique<ObjectProvider>();
-    DebugAgent agent(std::move(services), std::move(arch_provider), std::move(object_provider));
+    DebugAgent agent(std::move(services), SystemProviders::CreateDefaults(services));
     RemoteAPI* remote_api = &agent;
 
     agent.Connect(&backend.stream());

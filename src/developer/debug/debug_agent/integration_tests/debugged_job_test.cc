@@ -216,9 +216,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   JobStreamBackend backend(message_loop);
 
   auto services = sys::ServiceDirectory::CreateFromNamespace();
-  auto arch_provider = std::make_unique<arch::ArchProvider>();
-  auto object_provider = std::make_unique<ObjectProvider>();
-  DebugAgent agent(std::move(services), std::move(arch_provider), std::move(object_provider));
+  DebugAgent agent(std::move(services), SystemProviders::CreateDefaults(services));
   RemoteAPI* remote_api = &agent;
 
   agent.Connect(&backend.stream());
@@ -414,9 +412,8 @@ TEST(DebuggedJobIntegrationTest, AttachSpecial) {
   JobStreamBackend backend(loop_wrapper.loop());
 
   auto services = sys::ServiceDirectory::CreateFromNamespace();
-  auto arch_provider = std::make_unique<arch::ArchProvider>();
-  auto object_provider = std::make_shared<ObjectProvider>();
-  DebugAgent agent(std::move(services), std::move(arch_provider), object_provider);
+  SystemProviders providers = SystemProviders::CreateDefaults(services);
+  DebugAgent agent(std::move(services), providers);
   RemoteAPI* remote_api = &agent;
 
   agent.Connect(&backend.stream());
@@ -439,7 +436,7 @@ TEST(DebuggedJobIntegrationTest, AttachSpecial) {
   // special and the component manager's job won't actually be the real one.
   // But we can at least check that the KOID matches what the component job
   // KOID getter computes.
-  EXPECT_EQ(object_provider->GetComponentJobKoid(), comp_reply.koid);
+  EXPECT_EQ(providers.object_provider->GetComponentJobKoid(), comp_reply.koid);
 
   // Now attach to the system root.
   backend.ClearAttachReply();
@@ -454,7 +451,7 @@ TEST(DebuggedJobIntegrationTest, AttachSpecial) {
   // Validate we got a root job KOID and that its different than the
   // component one. As above, this isn't the real root job so we can't do
   // too much checking.
-  EXPECT_EQ(object_provider->GetRootJobKoid(), root_reply.koid);
+  EXPECT_EQ(providers.object_provider->GetRootJobKoid(), root_reply.koid);
   EXPECT_NE(root_reply.koid, comp_reply.koid);
 }
 

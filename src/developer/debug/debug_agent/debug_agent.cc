@@ -35,6 +35,19 @@
 
 namespace debug_agent {
 
+// SystemProviders ---------------------------------------------------------------------------------
+
+SystemProviders SystemProviders::CreateDefaults(std::shared_ptr<sys::ServiceDirectory> services) {
+  SystemProviders system_providers;
+  system_providers.arch_provider = std::make_shared<arch::ArchProvider>();
+  system_providers.limbo_provider = std::make_shared<LimboProvider>(std::move(services));
+  system_providers.object_provider = std::make_shared<ObjectProvider>();
+
+  return system_providers;
+}
+
+// DebugAgent --------------------------------------------------------------------------------------
+
 namespace {
 
 constexpr size_t kMegabyte = 1024 * 1024;
@@ -63,12 +76,11 @@ std::string LogResumeRequest(const debug_ipc::ResumeRequest& request) {
 
 }  // namespace
 
-DebugAgent::DebugAgent(std::shared_ptr<sys::ServiceDirectory> services,
-                       std::shared_ptr<arch::ArchProvider> arch_provider,
-                       std::shared_ptr<ObjectProvider> object_provider)
+DebugAgent::DebugAgent(std::shared_ptr<sys::ServiceDirectory> services, SystemProviders providers)
     : services_(services),
-      arch_provider_(std::move(arch_provider)),
-      object_provider_(std::move(object_provider)),
+      arch_provider_(std::move(providers.arch_provider)),
+      limbo_provider_(std::move(providers.limbo_provider)),
+      object_provider_(std::move(providers.object_provider)),
       weak_factory_(this) {}
 
 DebugAgent::~DebugAgent() = default;

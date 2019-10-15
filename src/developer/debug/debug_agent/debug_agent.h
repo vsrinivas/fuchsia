@@ -26,6 +26,17 @@
 
 namespace debug_agent {
 
+// Set of dependencies the debug agent needs.
+struct SystemProviders {
+  // Creates the set of providers that represent the actual system. This is what you want to use for
+  // the real debugger.
+  static SystemProviders CreateDefaults(std::shared_ptr<sys::ServiceDirectory> services);
+
+  std::shared_ptr<arch::ArchProvider> arch_provider;
+  std::shared_ptr<LimboProvider> limbo_provider;
+  std::shared_ptr<ObjectProvider> object_provider;
+};
+
 // Main state and control for the debug agent.
 class DebugAgent : public RemoteAPI,
                    public ProcessStartHandler,
@@ -40,9 +51,7 @@ class DebugAgent : public RemoteAPI,
   //
   // |object_provider| provides a view into the Zircon process tree.
   // Can be overriden for test purposes.
-  explicit DebugAgent(std::shared_ptr<sys::ServiceDirectory> services,
-                      std::shared_ptr<arch::ArchProvider> arch_provider,
-                      std::shared_ptr<ObjectProvider> object_provider);
+  explicit DebugAgent(std::shared_ptr<sys::ServiceDirectory> services, SystemProviders providers);
   ~DebugAgent();
 
   fxl::WeakPtr<DebugAgent> GetWeakPtr();
@@ -68,10 +77,6 @@ class DebugAgent : public RemoteAPI,
   void InjectProcessForTest(std::unique_ptr<DebuggedProcess> process);
 
   bool should_quit() const { return configuration_.quit_on_exit; }
-
-  // TODO(donosoc): This should be provided as a dependency, but this clash with in-flight CLs that
-  //                also inject providers to the debug agent. Merge when those are done.
-  void set_limbo_provider(std::shared_ptr<LimboProvider> lp) { limbo_provider_ = std::move(lp); }
 
  private:
   // RemoteAPI implementation.
@@ -190,12 +195,10 @@ class DebugAgent : public RemoteAPI,
   AgentConfiguration configuration_;
 
   std::shared_ptr<arch::ArchProvider> arch_provider_;
+  std::shared_ptr<LimboProvider> limbo_provider_;
   std::shared_ptr<ObjectProvider> object_provider_;
 
   fxl::WeakPtrFactory<DebugAgent> weak_factory_;
-
-
-  std::shared_ptr<LimboProvider> limbo_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebugAgent);
 };
