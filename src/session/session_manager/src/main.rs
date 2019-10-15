@@ -5,7 +5,7 @@
 use {
     failure::Error,
     fuchsia_async as fasync, fuchsia_zircon as zx,
-    session_manager::{cobalt, startup},
+    session_manager_lib::{cobalt, startup},
 };
 
 #[fasync::run_singlethreaded]

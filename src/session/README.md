@@ -7,6 +7,12 @@ fx set core.x64 --with //src/session:session_framework
 fx shell run fuchsia-pkg://fuchsia.com/component_manager_sfw#meta/component_manager_sfw.cmx fuchsia-pkg://fuchsia.com/session_manager#meta/session_manager.cm
 ```
 
+In order to launch a specific example session, update the `session_manager.cml` file:
+
+```
+"args": [ "-s", "fuchsia-pkg://fuchsia.com/element_session#meta/element_session.cm" ],
+```
+
 ## To run the tests
 
 Run `fx shell ifconfig` to find the IP address of the device that will run the test.

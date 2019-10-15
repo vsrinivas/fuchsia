@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/element_management_lib_test"
+    }
+}

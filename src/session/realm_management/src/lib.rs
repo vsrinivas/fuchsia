@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    failure::{format_err, Error, ResultExt},
-    fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_sys2 as fsys,
-};
+use {fidl_fuchsia_io::DirectoryMarker, fidl_fuchsia_sys2 as fsys};
 
 /// Creates a child in the specified `Realm`.
 ///
@@ -23,7 +19,7 @@ pub async fn create_child(
     child_url: &str,
     collection_name: &str,
     realm: &fsys::RealmProxy,
-) -> Result<(), Error> {
+) -> Result<(), fsys::Error> {
     let mut collection_ref = fsys::CollectionRef { name: collection_name.to_string() };
     let child_decl = fsys::ChildDecl {
         name: Some(child_name.to_string()),
@@ -33,8 +29,8 @@ pub async fn create_child(
 
     realm
         .create_child(&mut collection_ref, child_decl)
-        .await?
-        .map_err(|err: fsys::Error| format_err!("Failed to create child: {:?}", err))?;
+        .await
+        .map_err(|_| fsys::Error::Internal)??;
 
     Ok(())
 }
@@ -53,18 +49,15 @@ pub async fn bind_child(
     child_name: &str,
     collection_name: &str,
     realm: &fsys::RealmProxy,
-) -> Result<(), Error> {
+) -> Result<(), fsys::Error> {
     let mut child_ref = fsys::ChildRef {
         name: child_name.to_string(),
         collection: Some(collection_name.to_string()),
     };
 
-    let (_, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()
-        .context("Could not create directory proxy.")?;
-    realm
-        .bind_child(&mut child_ref, server_end)
-        .await?
-        .map_err(|err: fsys::Error| format_err!("Failed to bind session child: {:?}", err))?;
+    let (_, server_end) =
+        fidl::endpoints::create_proxy::<DirectoryMarker>().map_err(|_| fsys::Error::Internal)?;
+    realm.bind_child(&mut child_ref, server_end).await.map_err(|_| fsys::Error::Internal)??;
 
     Ok(())
 }
@@ -94,7 +87,7 @@ mod tests {
             .expect("Failed to create realm proxy and server.");
 
         fasync::spawn(async move {
-            if let Some(realm_request) = realm_server.try_next().await.unwrap() {
+            while let Some(realm_request) = realm_server.try_next().await.unwrap() {
                 request_handler(realm_request);
             }
         });

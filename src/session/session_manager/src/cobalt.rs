@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_cobalt::{LoggerFactoryMarker, LoggerProxy, ReleaseStage},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
-    fuchsia_zircon as zx,
+    fuchsia_syslog as syslog, fuchsia_zircon as zx,
     session_framework_metrics_registry::cobalt_registry::{self as metrics},
 };
 
@@ -32,7 +32,7 @@ pub fn get_logger() -> Result<LoggerProxy, Error> {
             .create_logger_from_project_name(PROJECT_NAME, ReleaseStage::Debug, server_end)
             .await
         {
-            println!("Failed to create Cobalt logger: {}", e);
+            syslog::fx_log_err!("Failed to create Cobalt logger: {}", e);
         }
     });
 

@@ -4,24 +4,30 @@
 
 # This group includes all the dependencies necessary to run Session Framework and its tests.
 group("session_framework") {
-  testonly = true
   deps = [
     "//src/session/component_manager:component_manager_sfw",
-    "//src/session/example_sessions/graphical_session",
+    "//src/session/element_management",
     "//src/session/session_manager",
-    "//src/session/session_manager:session_manager_tests",
-    "//src/session/session_manager_integration_tests",
-    "//src/sys/component_manager_for_test",
-    "//src/testing/runner",
-    "//src/ui/bin/ime:ime_service",
-    "//src/ui/scenic",
+  ]
+}
+
+group("examples") {
+  testonly = true
+
+  deps = [
+    "//src/session/example_sessions/graphical_session",
   ]
 }
 
 group("tests") {
   testonly = true
+
   deps = [
+    "//src/session/element_management:element_management_tests",
     "//src/session/realm_management:realm_management_tests",
     "//src/session/session_manager:session_manager_tests",
+    "//src/session/session_manager_integration_tests",
+    "//src/sys/component_manager_for_test",
+    "//src/testing/runner",
   ]
 }

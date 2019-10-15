@@ -4,7 +4,7 @@
 
 use {
     argh::FromArgs,
-    failure::{self, Error, ResultExt},
+    failure::{self, format_err, Error, ResultExt},
     fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::connect_to_service,
     realm_management,
@@ -43,31 +43,13 @@ pub async fn launch_session() -> Result<(), Error> {
     let session_url = get_session_url();
     let realm =
         connect_to_service::<fsys::RealmMarker>().context("Could not connect to Realm service.")?;
-    add_session_to_realm(&session_url, &realm).await?;
-    bind_session(&realm).await?;
+
+    realm_management::create_child(SESSION_NAME, &session_url, SESSION_CHILD_COLLECTION, &realm)
+        .await
+        .map_err(|err| format_err!("Could not create session {:?}", err))?;
+    realm_management::bind_child(SESSION_NAME, SESSION_CHILD_COLLECTION, &realm)
+        .await
+        .map_err(|err| format_err!("Could not bind to session {:?}", err))?;
 
     Ok(())
-}
-
-/// Adds the session component as a child in the provided realm.
-///
-/// # Parameters
-/// - `session_url`: The URL of the session component.
-/// - `realm`: The realm to create the child in.
-///
-/// # Returns
-/// `Ok` if the child was successfully added to the realm.
-async fn add_session_to_realm(session_url: &str, realm: &fsys::RealmProxy) -> Result<(), Error> {
-    realm_management::create_child(SESSION_NAME, session_url, SESSION_CHILD_COLLECTION, realm).await
-}
-
-/// Binds the session child which runs the session component.
-///
-/// # Parameters
-/// - `realm`: The realm used to bind the child.
-///
-/// # Returns
-/// `Ok` if the session child was successfully bound.
-async fn bind_session(realm: &fsys::RealmProxy) -> Result<(), Error> {
-    realm_management::bind_child(SESSION_NAME, SESSION_CHILD_COLLECTION, realm).await
 }
