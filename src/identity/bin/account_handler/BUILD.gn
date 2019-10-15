@@ -18,6 +18,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
+    "//sdk/fidl/fuchsia.kms:fuchsia.kms-rustc",
     "//src/identity/fidl:account-rustc",
     "//src/identity/lib/account_common",
     "//src/identity/lib/identity_common",

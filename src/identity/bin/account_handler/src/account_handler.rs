@@ -88,6 +88,18 @@ impl AccountHandler {
                 let mut response = self.load_account(id.into(), context).await;
                 responder.send(&mut response)?;
             }
+            AccountHandlerControlRequest::PrepareForAccountTransfer { responder } => {
+                responder.send(&mut Err(ApiError::UnsupportedOperation))?;
+            }
+            AccountHandlerControlRequest::PerformAccountTransfer { responder, .. } => {
+                responder.send(&mut Err(ApiError::UnsupportedOperation))?;
+            }
+            AccountHandlerControlRequest::FinalizeAccountTransfer { responder } => {
+                responder.send(&mut Err(ApiError::UnsupportedOperation))?;
+            }
+            AccountHandlerControlRequest::EncryptAccountData { responder, .. } => {
+                responder.send(&mut Err(ApiError::UnsupportedOperation))?;
+            }
             AccountHandlerControlRequest::RemoveAccount { force, responder } => {
                 let mut response = self.remove_account(force).await;
                 responder.send(&mut response)?;
@@ -99,6 +111,12 @@ impl AccountHandler {
             } => {
                 let mut response = self.get_account(auth_context_provider, account).await;
                 responder.send(&mut response)?;
+            }
+            AccountHandlerControlRequest::GetPublicKey { responder } => {
+                responder.send(&mut Err(ApiError::UnsupportedOperation))?;
+            }
+            AccountHandlerControlRequest::GetGlobalIdHash { responder, .. } => {
+                responder.send(&mut Err(ApiError::UnsupportedOperation))?;
             }
             AccountHandlerControlRequest::Terminate { control_handle } => {
                 self.terminate().await;
