@@ -27,6 +27,10 @@ if (is_linux) {
   }
 
   go_test("recovery_simulator_tests") {
+    # Disable the go-level timeout for this test. This timeout does not provide any
+    # value for this test and causes flakes when running an ASAN build in QEMU.
+    # See fxb/38507 for additional discussion.
+    timeout = "0"
     gopackages = ["fuchsia.googlesource.com/recovery/simulator"]
     deps = [
       ":lib",
