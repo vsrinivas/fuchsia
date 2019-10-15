@@ -29,6 +29,7 @@ void AudioDeviceServiceTest::SetUp() {
   driver_->set_device_manufacturer(kManufacturer);
   driver_->set_device_product(kProduct);
   driver_->set_stream_unique_id(kUniqueId);
+  driver_->Start();
 
   audio_device_enumerator_.events().OnDeviceAdded = [this](fuchsia::media::AudioDeviceInfo info) {
     devices_.push_back(std::move(info));

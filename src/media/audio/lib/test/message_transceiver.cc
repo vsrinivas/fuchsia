@@ -17,18 +17,14 @@ zx_status_t MessageTransceiver::Init(zx::channel channel,
   incoming_message_callback_ = std::move(incoming_message_callback);
   error_callback_ = std::move(error_callback);
 
-  read_wait_.set_object(channel_.get());
-  read_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+  wait_.set_object(channel_.get());
+  wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
 
-  write_wait_.set_object(channel_.get());
-  write_wait_.set_trigger(ZX_CHANNEL_WRITABLE | ZX_CHANNEL_PEER_CLOSED);
-
-  return read_wait_.Begin(dispatcher_);
+  return wait_.Begin(dispatcher_);
 }
 
 void MessageTransceiver::Close() {
-  read_wait_.Cancel();
-  write_wait_.Cancel();
+  wait_.Cancel();
   channel_.reset();
   incoming_message_callback_ = nullptr;
   error_callback_ = nullptr;
@@ -39,12 +35,13 @@ zx_status_t MessageTransceiver::SendMessage(Message message) {
     return ZX_ERR_NOT_CONNECTED;
   }
 
-  outbound_messages_.push(std::move(message));
-
-  if (channel_ && !write_wait_.is_pending()) {
-    WriteChannelMessages(dispatcher_, &write_wait_, ZX_OK, nullptr);
+  zx_status_t status = channel_.write(0, message.bytes_.data(), message.bytes_.size(),
+                                      message.handles_.data(), message.handles_.size());
+  if (status != ZX_OK) {
+    FXL_PLOG(ERROR, status) << "zx::channel::write failed";
+    OnError(status);
+    return status;
   }
-
   return ZX_OK;
 }
 
@@ -101,44 +98,6 @@ void MessageTransceiver::ReadChannelMessages(async_dispatcher_t* dispatcher, asy
     if (incoming_message_callback_) {
       incoming_message_callback_(std::move(message));
     }
-  }
-}
-
-void MessageTransceiver::WriteChannelMessages(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                              zx_status_t status,
-                                              const zx_packet_signal_t* signal) {
-  if (!channel_) {
-    return;
-  }
-
-  while (!outbound_messages_.empty()) {
-    const Message& message = outbound_messages_.front();
-
-    zx_status_t status = channel_.write(0, message.bytes_.data(), message.bytes_.size(),
-                                        message.handles_.data(), message.handles_.size());
-
-    if (status == ZX_ERR_SHOULD_WAIT) {
-      status = wait->Begin(dispatcher);
-      if (status != ZX_OK) {
-        FXL_PLOG(ERROR, status) << "async::WaitMethod::Begin failed";
-        OnError(status);
-      }
-      break;
-    }
-
-    if (status == ZX_ERR_PEER_CLOSED) {
-      // Remote end of the channel closed.
-      OnError(status);
-      break;
-    }
-
-    if (status != ZX_OK) {
-      FXL_PLOG(ERROR, status) << "zx::channel::write failed";
-      OnError(status);
-      break;
-    }
-
-    outbound_messages_.pop();
   }
 }
 

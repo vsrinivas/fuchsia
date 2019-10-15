@@ -25,6 +25,9 @@ class FakeAudioDriver {
 
   fzl::VmoMapper CreateRingBuffer(size_t size);
 
+  void Start();
+  void Stop();
+
   struct SelectedFormat {
     uint32_t frames_per_second;
     audio_sample_format_t sample_format;

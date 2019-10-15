@@ -40,6 +40,12 @@ struct HwGainState {
 
 class AudioDriver {
  public:
+  // Timeout values are chosen to be generous while still providing some guard-rails against
+  // hardware errors. Correctly functioning hardware and drivers should never result in any
+  // timeouts.
+  static constexpr zx::duration kDefaultShortCmdTimeout = zx::sec(2);
+  static constexpr zx::duration kDefaultLongCmdTimeout = zx::sec(4);
+
   enum class State {
     Uninitialized,
     MissingDriverInfo,
@@ -187,7 +193,7 @@ class AudioDriver {
   }
 
   bool fetching_driver_info() const FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token()) {
-    return (fetch_driver_info_timeout_ != ZX_TIME_INFINITE);
+    return fetch_driver_info_deadline_ != zx::time::infinite();
   }
 
   // Accessors for the ring buffer pointer and the current output clock transformation.
@@ -230,9 +236,8 @@ class AudioDriver {
   async::Wait ring_buffer_channel_wait_ FXL_GUARDED_BY(owner_->mix_domain().token());
   async::TaskClosure cmd_timeout_ FXL_GUARDED_BY(owner_->mix_domain().token());
 
-  zx_time_t last_set_timeout_ = ZX_TIME_INFINITE;
   zx_koid_t stream_channel_koid_ = ZX_KOID_INVALID;
-  zx_time_t fetch_driver_info_timeout_ = ZX_TIME_INFINITE;
+  zx::time fetch_driver_info_deadline_ = zx::time::infinite();
   uint32_t fetched_driver_info_ FXL_GUARDED_BY(owner_->mix_domain().token()) = 0;
 
   // State fetched at driver startup time.
@@ -251,7 +256,7 @@ class AudioDriver {
   zx::duration min_ring_buffer_duration_;
   uint32_t fifo_depth_bytes_;
   uint32_t fifo_depth_frames_;
-  zx_time_t configuration_timeout_ = ZX_TIME_INFINITE;
+  zx::time configuration_deadline_ = zx::time::infinite();
 
   // A stashed copy of current format, queryable by destinations (outputs or AudioCapturers) when
   // determining which mixer to use.
@@ -268,7 +273,7 @@ class AudioDriver {
 
   // Plug detection state.
   bool pd_enabled_ = false;
-  zx_time_t pd_enable_timeout_ = ZX_TIME_INFINITE;
+  zx::time pd_enable_deadline_ = zx::time::infinite();
 
   mutable std::mutex plugged_lock_;
   bool plugged_ FXL_GUARDED_BY(plugged_lock_) = false;

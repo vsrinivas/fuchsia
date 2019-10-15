@@ -230,6 +230,7 @@ executable("unittest_bin") {
     "audio_device_settings_persistence_unittest.cc",
     "audio_device_settings_serialization_impl_unittest.cc",
     "audio_device_settings_unittest.cc",
+    "audio_driver_unittest.cc",
     "audio_link_packet_source_unittest.cc",
     "audio_link_unittest.cc",
     "audio_plug_detector_impl_unittest.cc",

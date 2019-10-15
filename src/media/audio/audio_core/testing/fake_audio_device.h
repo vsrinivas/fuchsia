@@ -15,19 +15,51 @@ class FakeAudioDevice : public AudioDevice {
   FakeAudioDevice(AudioDevice::Type type, ThreadingModel* threading_model, ObjectRegistry* registry)
       : AudioDevice(type, threading_model, registry) {}
 
+  bool driver_info_fetched() { return driver_info_fetched_; }
+  bool driver_config_complete() { return driver_config_complete_; }
+  bool driver_start_complete() { return driver_start_complete_; }
+  bool driver_stop_complete() { return driver_stop_complete_; }
+  std::pair<bool, zx::time> driver_plug_state() { return {driver_plug_state_, driver_plug_time_}; }
+
   // |media::audio::AudioDevice|
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override {}
   void OnWakeup() override {}
+  void OnDriverInfoFetched() override { driver_info_fetched_ = true; }
+  void OnDriverConfigComplete() override { driver_config_complete_ = true; }
+  void OnDriverStartComplete() override { driver_start_complete_ = true; }
+  void OnDriverStopComplete() override { driver_stop_complete_ = true; }
+  void OnDriverPlugStateChange(bool plugged, zx::time plug_time) override {
+    driver_plug_state_ = plugged;
+    driver_plug_time_ = plug_time;
+  }
+
+ private:
+  bool driver_info_fetched_ = false;
+  bool driver_config_complete_ = false;
+  bool driver_start_complete_ = false;
+  bool driver_stop_complete_ = false;
+  bool driver_plug_state_ = false;
+  zx::time driver_plug_time_;
 };
 
 class FakeAudioInput : public FakeAudioDevice {
  public:
+  static fbl::RefPtr<FakeAudioInput> Create(ThreadingModel* threading_model,
+                                            ObjectRegistry* registry) {
+    return fbl::AdoptRef(new FakeAudioInput(threading_model, registry));
+  }
+
   FakeAudioInput(ThreadingModel* threading_model, ObjectRegistry* registry)
       : FakeAudioDevice(Type::Input, threading_model, registry) {}
 };
 
 class FakeAudioOutput : public FakeAudioDevice {
  public:
+  static fbl::RefPtr<FakeAudioOutput> Create(ThreadingModel* threading_model,
+                                             ObjectRegistry* registry) {
+    return fbl::AdoptRef(new FakeAudioOutput(threading_model, registry));
+  }
+
   FakeAudioOutput(ThreadingModel* threading_model, ObjectRegistry* registry)
       : FakeAudioDevice(Type::Output, threading_model, registry) {}
 };

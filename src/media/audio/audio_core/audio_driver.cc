@@ -3,6 +3,7 @@
 
 #include "src/media/audio/audio_core/audio_driver.h"
 
+#include <lib/async/cpp/time.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
@@ -20,11 +21,6 @@
 namespace media::audio {
 
 static constexpr zx_txid_t TXID = 1;
-
-// Timeout values are chosen to be generous while still providing some guard-rails against hardware
-// errors. Correctly functioning hardware and drivers should never result in any timeouts.
-static constexpr zx_duration_t kDefaultShortCmdTimeout = ZX_SEC(1);
-static constexpr zx_duration_t kDefaultLongCmdTimeout = ZX_SEC(4);
 
 static constexpr bool kEnablePositionNotifications = true;
 // To what extent should position notification messages be logged? If logging level is SPEW, every
@@ -212,7 +208,8 @@ zx_status_t AudioDriver::GetDriverInfo() {
   }
 
   // Setup our command timeout.
-  fetch_driver_info_timeout_ = zx_deadline_after(kDefaultShortCmdTimeout);
+  fetch_driver_info_deadline_ =
+      async::Now(owner_->mix_domain().dispatcher()) + kDefaultShortCmdTimeout;
   SetupCommandTimeout();
   return ZX_OK;
 }
@@ -298,7 +295,7 @@ zx_status_t AudioDriver::Configure(uint32_t frames_per_second, uint32_t channels
 
   // Change state, setup our command timeout and we are finished.
   state_ = State::Configuring_SettingFormat;
-  configuration_timeout_ = zx_deadline_after(kDefaultLongCmdTimeout);
+  configuration_deadline_ = async::Now(owner_->mix_domain().dispatcher()) + kDefaultLongCmdTimeout;
   SetupCommandTimeout();
 
   return ZX_OK;
@@ -332,7 +329,7 @@ zx_status_t AudioDriver::Start() {
 
   // Change state, setup our command timeout and we are finished.
   state_ = State::Starting;
-  configuration_timeout_ = zx_deadline_after(kDefaultShortCmdTimeout);
+  configuration_deadline_ = async::Now(owner_->mix_domain().dispatcher()) + kDefaultShortCmdTimeout;
   SetupCommandTimeout();
 
   return ZX_OK;
@@ -372,11 +369,11 @@ zx_status_t AudioDriver::Stop() {
   }
 
   // We were recently in steady state, so assert that we have no configuration timeout at this time.
-  FXL_DCHECK(configuration_timeout_ == ZX_TIME_INFINITE);
+  FXL_DCHECK(configuration_deadline_ == zx::time::infinite());
 
   // We are now in the Stopping state.
   state_ = State::Stopping;
-  configuration_timeout_ = zx_deadline_after(kDefaultShortCmdTimeout);
+  configuration_deadline_ = async::Now(owner_->mix_domain().dispatcher()) + kDefaultShortCmdTimeout;
   SetupCommandTimeout();
 
   return ZX_OK;
@@ -395,11 +392,11 @@ zx_status_t AudioDriver::SetPlugDetectEnabled(bool enabled) {
   if (enabled) {
     req.hdr.cmd = AUDIO_STREAM_CMD_PLUG_DETECT;
     req.flags = AUDIO_PDF_ENABLE_NOTIFICATIONS;
-    pd_enable_timeout_ = zx_deadline_after(kDefaultShortCmdTimeout);
+    pd_enable_deadline_ = async::Now(owner_->mix_domain().dispatcher()) + kDefaultShortCmdTimeout;
   } else {
     req.hdr.cmd = static_cast<audio_cmd_t>(AUDIO_STREAM_CMD_PLUG_DETECT | AUDIO_FLAG_NO_ACK);
     req.flags = AUDIO_PDF_DISABLE_NOTIFICATIONS;
-    pd_enable_timeout_ = ZX_TIME_INFINITE;
+    pd_enable_deadline_ = zx::time::infinite();
   }
   req.hdr.transaction_id = TXID;
 
@@ -534,7 +531,7 @@ zx_status_t AudioDriver::ProcessStreamChannelMessage() {
 
       ReportPlugStateChange(plug_state, zx::time(msg.pd_resp.plug_state_time));
 
-      pd_enable_timeout_ = ZX_TIME_INFINITE;
+      pd_enable_deadline_ = zx::time::infinite();
       SetupCommandTimeout();
       break;
 
@@ -774,7 +771,7 @@ zx_status_t AudioDriver::ProcessSetFormatResponse(const audio_stream_cmd_set_for
 
   // Things went well, proceed to the next step in the state machine.
   state_ = State::Configuring_GettingFifoDepth;
-  configuration_timeout_ = zx_deadline_after(kDefaultShortCmdTimeout);
+  configuration_deadline_ = async::Now(owner_->mix_domain().dispatcher()) + kDefaultShortCmdTimeout;
   SetupCommandTimeout();
   return ZX_OK;
 }
@@ -838,7 +835,7 @@ zx_status_t AudioDriver::ProcessGetFifoDepthResponse(
   }
 
   state_ = State::Configuring_GettingRingBuffer;
-  configuration_timeout_ = zx_deadline_after(kDefaultShortCmdTimeout);
+  configuration_deadline_ = async::Now(owner_->mix_domain().dispatcher()) + kDefaultShortCmdTimeout;
   SetupCommandTimeout();
   return ZX_OK;
 }
@@ -873,7 +870,7 @@ zx_status_t AudioDriver::ProcessGetBufferResponse(const audio_rb_cmd_get_buffer_
 
   // We are now Configured. Let our owner know about this important milestone.
   state_ = State::Configured;
-  configuration_timeout_ = ZX_TIME_INFINITE;
+  configuration_deadline_ = zx::time::infinite();
   SetupCommandTimeout();
   owner_->OnDriverConfigComplete();
   return ZX_OK;
@@ -904,7 +901,7 @@ zx_status_t AudioDriver::ProcessStartResponse(const audio_rb_cmd_start_resp_t& r
 
   // We are now Started. Let our owner know about this important milestone.
   state_ = State::Started;
-  configuration_timeout_ = ZX_TIME_INFINITE;
+  configuration_deadline_ = zx::time::infinite();
   SetupCommandTimeout();
   owner_->OnDriverStartComplete();
   return ZX_OK;
@@ -925,7 +922,7 @@ zx_status_t AudioDriver::ProcessStopResponse(const audio_rb_cmd_stop_resp_t& res
 
   // We are now stopped and in Configured state. Let our owner know about this important milestone.
   state_ = State::Configured;
-  configuration_timeout_ = ZX_TIME_INFINITE;
+  configuration_deadline_ = zx::time::infinite();
   SetupCommandTimeout();
   owner_->OnDriverStopComplete();
   return ZX_OK;
@@ -984,19 +981,18 @@ void AudioDriver::ShutdownSelf(const char* reason, zx_status_t status) {
 
 void AudioDriver::SetupCommandTimeout() {
   TRACE_DURATION("audio", "AudioDriver::SetupCommandTimeout");
-  zx_time_t timeout;
+  zx::time deadline;
 
-  timeout = fetch_driver_info_timeout_;
-  timeout = std::min(timeout, configuration_timeout_);
-  timeout = std::min(timeout, pd_enable_timeout_);
+  deadline = fetch_driver_info_deadline_;
+  deadline = std::min(deadline, configuration_deadline_);
+  deadline = std::min(deadline, pd_enable_deadline_);
 
-  if (last_set_timeout_ != timeout) {
-    if (timeout != ZX_TIME_INFINITE) {
-      cmd_timeout_.PostDelayed(owner_->mix_domain().dispatcher(), zx::duration(timeout));
+  if (cmd_timeout_.last_deadline() != deadline) {
+    if (deadline != zx::time::infinite()) {
+      cmd_timeout_.PostForTime(owner_->mix_domain().dispatcher(), deadline);
     } else {
       cmd_timeout_.Cancel();
     }
-    last_set_timeout_ = timeout;
   }
 }
 
@@ -1029,7 +1025,7 @@ zx_status_t AudioDriver::OnDriverInfoFetched(uint32_t info) {
   // Unconfigured state, and let our owner know that we have finished.
   if ((fetched_driver_info_ & kDriverInfoHasAll) == kDriverInfoHasAll) {
     // We are done. Clear the fetch driver info timeout and let our owner know.
-    fetch_driver_info_timeout_ = ZX_TIME_INFINITE;
+    fetch_driver_info_deadline_ = zx::time::infinite();
     state_ = State::Unconfigured;
     SetupCommandTimeout();
     owner_->OnDriverInfoFetched();

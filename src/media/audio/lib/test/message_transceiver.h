@@ -50,6 +50,17 @@ class MessageTransceiver {
   zx_status_t Init(zx::channel channel, IncomingMessageCallback incoming_message_callback,
                    ErrorCallback error_callback);
 
+  const zx::channel& channel() const { return channel_; }
+
+  void StopProcessing() {
+    wait_.Cancel();
+  }
+  void ResumeProcessing() {
+    if (!wait_.is_pending()) {
+      wait_.Begin(dispatcher_);
+    }
+  }
+
   void Close();
 
   zx_status_t SendMessage(Message message);
@@ -61,17 +72,11 @@ class MessageTransceiver {
   void ReadChannelMessages(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                            zx_status_t status, const zx_packet_signal_t* signal);
 
-  // Writes all the messages in messages_to_write_.
-  void WriteChannelMessages(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                            zx_status_t status, const zx_packet_signal_t* signal);
-
   async_dispatcher_t* dispatcher_;
   zx::channel channel_;
   IncomingMessageCallback incoming_message_callback_;
   ErrorCallback error_callback_;
-  async::WaitMethod<MessageTransceiver, &MessageTransceiver::ReadChannelMessages> read_wait_{this};
-  async::WaitMethod<MessageTransceiver, &MessageTransceiver::WriteChannelMessages> write_wait_{
-      this};
+  async::WaitMethod<MessageTransceiver, &MessageTransceiver::ReadChannelMessages> wait_{this};
   std::queue<Message> outbound_messages_;
 };
 

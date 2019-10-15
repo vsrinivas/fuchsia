@@ -17,6 +17,23 @@ FakeAudioDriver::FakeAudioDriver(zx::channel channel, async_dispatcher_t* dispat
       std::move(channel), fit::bind_member(this, &FakeAudioDriver::OnInboundStreamMessage),
       fit::bind_member(this, &FakeAudioDriver::OnInboundStreamError));
   FXL_CHECK(status == ZX_OK);
+  // Initially leave the driver 'stopped' so that it won't reply to any messages until |Start| is
+  // called.
+  stream_transceiver_.StopProcessing();
+}
+
+void FakeAudioDriver::Start() {
+  stream_transceiver_.ResumeProcessing();
+  if (ring_buffer_transceiver_.channel()) {
+    ring_buffer_transceiver_.ResumeProcessing();
+  }
+}
+
+void FakeAudioDriver::Stop() {
+  stream_transceiver_.StopProcessing();
+  if (ring_buffer_transceiver_.channel()) {
+    ring_buffer_transceiver_.StopProcessing();
+  }
 }
 
 fzl::VmoMapper FakeAudioDriver::CreateRingBuffer(size_t size) {

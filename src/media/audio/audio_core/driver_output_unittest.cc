@@ -37,6 +37,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
     driver_ = std::make_unique<testing::FakeAudioDriver>(
         std::move(c1), threading_model().FidlDomain().dispatcher());
     ASSERT_NE(driver_, nullptr);
+    driver_->Start();
 
     output_ = DriverOutput::Create(std::move(c2), &threading_model(), &object_registry_);
     ASSERT_NE(output_, nullptr);
