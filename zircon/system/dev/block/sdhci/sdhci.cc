@@ -652,10 +652,11 @@ zx_status_t Sdhci::SdmmcSetBusFreq(uint32_t bus_freq) {
 
   // Turn off the SD clock before messing with the clock rate.
   auto clock = ClockControl::Get().ReadFrom(&regs_mmio_buffer_);
-  clock.set_sd_clock_enable(0).WriteTo(&regs_mmio_buffer_);
+  clock.set_internal_clock_enable(0).set_sd_clock_enable(0).WriteTo(&regs_mmio_buffer_);
 
   // Write the new divider into the control register.
   clock.set_frequency_select(GetClockDividerValue(base_clock_, bus_freq))
+      .set_internal_clock_enable(1)
       .WriteTo(&regs_mmio_buffer_);
 
   if ((st = WaitForInternalClockStable()) != ZX_OK) {

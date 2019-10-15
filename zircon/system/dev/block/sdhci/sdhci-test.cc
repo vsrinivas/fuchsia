@@ -334,6 +334,23 @@ TEST_F(SdhciTest, SetBusFreqTimeout) {
   EXPECT_NOT_OK(dut_->SdmmcSetBusFreq(12'500'000));
 }
 
+TEST_F(SdhciTest, SetBusFreqInternalClockEnable) {
+  mock_sdhci_.ExpectGetQuirks(0);
+  ASSERT_NO_FATAL_FAILURES(CreateDut());
+
+  mock_sdhci_.ExpectGetBaseClock(100'000'000);
+  EXPECT_OK(dut_->Init());
+  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+
+  ClockControl::Get()
+      .FromValue(0)
+      .set_internal_clock_stable(1)
+      .set_internal_clock_enable(0)
+      .WriteTo(&mmio_);
+  EXPECT_OK(dut_->SdmmcSetBusFreq(12'500'000));
+  EXPECT_TRUE(ClockControl::Get().ReadFrom(&mmio_).internal_clock_enable());
+}
+
 TEST_F(SdhciTest, SetTiming) {
   mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
