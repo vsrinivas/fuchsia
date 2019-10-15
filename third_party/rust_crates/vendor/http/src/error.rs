@@ -13,7 +13,6 @@ use uri;
 /// functions in this crate, but all other errors can be converted to this
 /// error. Consumers of this crate can typically consume and work with this form
 /// of error for conversions with the `?` operator.
-#[derive(Debug)]
 pub struct Error {
     inner: ErrorKind,
 }
@@ -21,7 +20,6 @@ pub struct Error {
 /// A `Result` typedef to use with the `http::Error` type
 pub type Result<T> = result::Result<T, Error>;
 
-#[derive(Debug)]
 enum ErrorKind {
     StatusCode(status::InvalidStatusCode),
     Method(method::InvalidMethod),
@@ -34,9 +32,43 @@ enum ErrorKind {
     HeaderValueShared(header::InvalidHeaderValueBytes),
 }
 
+impl fmt::Debug for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_tuple("http::Error")
+            // Skip the noise of the ErrorKind enum
+            .field(&self.get_ref())
+            .finish()
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        error::Error::description(self).fmt(f)
+        fmt::Display::fmt(self.get_ref(), f)
+    }
+}
+
+impl Error {
+    /// Return true if the underlying error has the same type as T.
+    pub fn is<T: error::Error + 'static>(&self) -> bool {
+        self.get_ref().is::<T>()
+    }
+
+    /// Return a reference to the lower level, inner error.
+    #[allow(warnings)]
+    pub fn get_ref(&self) -> &(error::Error + 'static) {
+        use self::ErrorKind::*;
+
+        match self.inner {
+            StatusCode(ref e) => e,
+            Method(ref e) => e,
+            Uri(ref e) => e,
+            UriShared(ref e) => e,
+            UriParts(ref e) => e,
+            HeaderName(ref e) => e,
+            HeaderNameShared(ref e) => e,
+            HeaderValue(ref e) => e,
+            HeaderValueShared(ref e) => e,
+        }
     }
 }
 
@@ -55,6 +87,13 @@ impl error::Error for Error {
             HeaderValue(ref e) => e.description(),
             HeaderValueShared(ref e) => e.description(),
         }
+    }
+
+    // Return any available cause from the inner error. Note the inner error is
+    // not itself the cause.
+    #[allow(warnings)]
+    fn cause(&self) -> Option<&error::Error> {
+        self.get_ref().cause()
     }
 }
 
@@ -142,3 +181,23 @@ impl error::Error for Never {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn inner_error_is_invalid_status_code() {
+        if let Err(e) = status::StatusCode::from_u16(6666) {
+            let err: Error = e.into();
+            let ie = err.get_ref();
+            assert!(!ie.is::<header::InvalidHeaderValue>());
+            assert!( ie.is::<status::InvalidStatusCode>());
+            ie.downcast_ref::<status::InvalidStatusCode>().unwrap();
+
+            assert!(!err.is::<header::InvalidHeaderValue>());
+            assert!( err.is::<status::InvalidStatusCode>());
+        } else {
+            panic!("Bad status allowed!");
+        }
+    }
+}

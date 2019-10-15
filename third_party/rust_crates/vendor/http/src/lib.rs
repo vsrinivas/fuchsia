@@ -1,4 +1,4 @@
-#![doc(html_root_url = "https://docs.rs/http/0.1.15")]
+#![doc(html_root_url = "https://docs.rs/http/0.1.19")]
 
 //! A general purpose library of common HTTP types
 //!
@@ -55,8 +55,8 @@
 //! to edit the request/response:
 //!
 //! ```
-//! use http::{Response, StatusCode};
-//! use http::header::{CONTENT_TYPE, HeaderValue};
+//! use http::{HeaderValue, Response, StatusCode};
+//! use http::header::CONTENT_TYPE;
 //!
 //! fn add_server_headers<T>(response: &mut Response<T>) {
 //!     response.headers_mut()
@@ -118,7 +118,7 @@
 //! function:
 //!
 //! ```
-//! use http::header::HeaderValue;
+//! use http::HeaderValue;
 //!
 //! let value = HeaderValue::from_static("text/html");
 //! assert_eq!(value.as_bytes(), b"text/html");
@@ -127,7 +127,7 @@
 //! And header values can also be parsed like names:
 //!
 //! ```
-//! use http::header::HeaderValue;
+//! use http::HeaderValue;
 //!
 //! let value = "text/html";
 //! let value = value.parse::<HeaderValue>().unwrap();
@@ -151,7 +151,7 @@
 //!
 //! let uri = "https://www.rust-lang.org/index.html".parse::<Uri>().unwrap();
 //!
-//! assert_eq!(uri.scheme(), Some("https"));
+//! assert_eq!(uri.scheme_str(), Some("https"));
 //! assert_eq!(uri.host(), Some("www.rust-lang.org"));
 //! assert_eq!(uri.path(), "/index.html");
 //! assert_eq!(uri.query(), None);
@@ -162,6 +162,13 @@
 extern crate bytes;
 extern crate fnv;
 extern crate itoa;
+
+#[cfg(test)]
+#[macro_use]
+extern crate doc_comment;
+
+#[cfg(test)]
+doctest!("../README.md");
 
 pub mod header;
 pub mod method;
@@ -179,7 +186,8 @@ mod extensions;
 pub use convert::HttpTryFrom;
 pub use error::{Error, Result};
 pub use extensions::Extensions;
-pub use header::HeaderMap;
+#[doc(no_inline)]
+pub use header::{HeaderMap, HeaderValue};
 pub use method::Method;
 pub use request::Request;
 pub use response::Response;

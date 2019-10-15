@@ -1,3 +1,22 @@
+# 0.1.19 (October 15, 2019)
+
+* Allow `%` in IPv6 addresses in `Uri` (#343).
+
+# 0.1.18 (July 26, 2019)
+
+* Fix compilation of `HeaderName` parsing on WASM targets (#324).
+* Implement `HttpTryFrom<HashMap>` for `HeaderMap` (#326).
+* Export `http::header::HeaderValue` as `http::HeaderValue`.
+
+# 0.1.17 (April 5, 2019)
+
+* Add `Error::inner_ref()` to view the kind of error (#303)
+* Add `headers_ref()` and `headers_mut()` methods to `request::Builder` and `response::Builder` (#293)
+
+# 0.1.16 (February 19, 2019)
+
+* Fix `Uri` to permit more characters in the `path` (#296)
+
 # 0.1.15 (January 22, 2019)
 
 * Fix `Uri::host()` to include brackets of IPv6 literals (#292)

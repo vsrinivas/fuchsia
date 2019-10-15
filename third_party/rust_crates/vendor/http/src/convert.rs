@@ -1,5 +1,5 @@
 use Error;
-use header::{HeaderName, HeaderValue};
+use header::{HeaderName, HeaderValue, HeaderMap};
 use method::Method;
 use sealed::Sealed;
 use status::StatusCode;
@@ -62,3 +62,15 @@ reflexive! {
     Authority,
     PathAndQuery,
 }
+
+// HeaderMap<T> can't use reflexive easily due to the generic T
+
+impl<T> HttpTryFrom<HeaderMap<T>> for HeaderMap<T> {
+    type Error = Error;
+
+    fn try_from(t: Self) -> Result<Self, Self::Error> {
+        Ok(t)
+    }
+}
+
+impl<T> Sealed for HeaderMap<T> {}

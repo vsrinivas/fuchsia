@@ -25,7 +25,6 @@ pub struct HeaderValue {
 
 /// A possible error when converting a `HeaderValue` from a string or byte
 /// slice.
-#[derive(Debug)]
 pub struct InvalidHeaderValue {
     _priv: (),
 }
@@ -521,6 +520,14 @@ impl<'a> HttpTryFrom<&'a str> for HeaderValue {
     }
 }
 
+impl<'a> HttpTryFrom<&'a String> for HeaderValue {
+    type Error = InvalidHeaderValue;
+    #[inline]
+    fn try_from(s: &'a String) -> Result<Self, Self::Error> {
+        Self::from_bytes(s.as_bytes())
+    }
+}
+
 impl<'a> HttpTryFrom<&'a [u8]> for HeaderValue {
     type Error = InvalidHeaderValue;
 
@@ -579,6 +586,14 @@ fn is_visible_ascii(b: u8) -> bool {
 #[inline]
 fn is_valid(b: u8) -> bool {
     b >= 32 && b != 127 || b == b'\t'
+}
+
+impl fmt::Debug for InvalidHeaderValue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("InvalidHeaderValue")
+            // skip _priv noise
+            .finish()
+    }
 }
 
 impl fmt::Display for InvalidHeaderValue {
