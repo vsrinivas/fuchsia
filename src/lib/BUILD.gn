@@ -39,6 +39,7 @@ group("tests") {
     "fuzzing:tests",
     "icu:tests",
     "isolated_devmgr:tests",
+    "json_parser:tests",
     "line_input:tests",
     "mpmc:tests",
     "network_wrapper:tests",

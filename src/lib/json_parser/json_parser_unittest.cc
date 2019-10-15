@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/json/json_parser.h"
+#include "src/lib/json_parser/json_parser.h"
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -10,16 +10,17 @@
 #include <functional>
 #include <string>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+#include <rapidjson/document.h>
+
 #include "lib/fit/function.h"
-#include "rapidjson/document.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/substitute.h"
 
-namespace json {
+namespace json_parser {
 namespace {
 
 class JSONParserTest : public ::testing::Test {
@@ -69,9 +70,8 @@ class JSONParserTest : public ::testing::Test {
   }
 
   std::string NewJSONFileInDir(const std::string& dir, const std::string& json) {
-    const std::string json_file =
-        fxl::Concatenate({dir, "/json_file", std::to_string(unique_id_++)});
-    if (!files::WriteFile(json_file, json.data(), json.size())) {
+    const std::string json_file = "json_file" + std::to_string(unique_id_++);
+    if (!files::WriteFile(dir + "/" + json_file, json.data(), json.size())) {
       return "";
     }
     return json_file;
@@ -240,6 +240,15 @@ TEST_F(JSONParserTest, ParseFromDirectoryWithErrors) {
   EXPECT_EQ(1, props_found_);
 }
 
+TEST_F(JSONParserTest, ParseFromDirectoryDoesNotExist) {
+  std::string dir = "do_not_exist";
+
+  JSONParser parser;
+  std::string error;
+  EXPECT_FALSE(ParseFromDirectory(&parser, dir, &error));
+  EXPECT_NE(std::string::npos, error.find("Could not open directory"));
+}
+
 TEST_F(JSONParserTest, CopyArrayToVectorNonArray) {
   const std::string json = R"JSON({
     "foo": 0
@@ -297,4 +306,4 @@ TEST_F(JSONParserTest, CopyArrayToVector) {
 }
 
 }  // namespace
-}  // namespace json
+}  // namespace json_parser

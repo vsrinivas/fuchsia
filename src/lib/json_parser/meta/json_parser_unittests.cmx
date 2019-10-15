@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/json_unittests"
+        "binary": "test/json_parser_unittests"
     },
     "sandbox": {
         "features": [

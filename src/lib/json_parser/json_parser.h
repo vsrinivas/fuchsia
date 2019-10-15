@@ -10,11 +10,12 @@
 #include <string>
 #include <vector>
 
+#include <rapidjson/document.h>
+
 #include "lib/fit/function.h"
-#include "rapidjson/document.h"
 #include "src/lib/fxl/macros.h"
 
-namespace json {
+namespace json_parser {
 
 // A JSON parser utility class.
 //
@@ -81,6 +82,14 @@ class JSONParser {
   FXL_DISALLOW_COPY_AND_ASSIGN(JSONParser);
 };
 
+}  // namespace json_parser
+
+namespace json {
+// The JSONParser should be used from the json_parser namespace to be consistent with the rest of
+// this library but currently many callsites expect this to live in the json namespace. This alias
+// allows both names to work.
+// TODO(36759): Update callers to new name and remove this alias.
+using JSONParser = ::json_parser::JSONParser;
 }  // namespace json
 
 #endif  // SRC_LIB_JSON_PARSER_JSON_PARSER_H_

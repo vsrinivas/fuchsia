@@ -112,7 +112,6 @@ TEST_F(HubTest, Services) {
                                                "fuchsia.sys.test.CacheControl",
                                                "fuchsia.virtualconsole.SessionManager"};
     sysmgr::Config config;
-    ASSERT_TRUE(config.ParseFromDirectory("/system/data/sysmgr"));
     // The following path is deprecated, and because config-data is component
     // name isolated, it will be impossible to continue to do this in future:
     ASSERT_TRUE(config.ParseFromDirectory("/pkgfs/packages/config-data/0/data/sysmgr"));

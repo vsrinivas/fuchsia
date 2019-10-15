@@ -912,7 +912,6 @@ group("json") {
   testonly = true
   public_deps = [
     "//build/tools/json_merge:json_merge_test($host_toolchain)",
-    "//garnet/public/lib/json:json_unittests",
   ]
 }
 

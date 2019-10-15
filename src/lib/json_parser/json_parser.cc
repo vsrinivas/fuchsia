@@ -2,25 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/json/json_parser.h"
+#include "src/lib/json_parser/json_parser.h"
 
-#include <dirent.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
 
 #include <functional>
 #include <string>
 
+#include <fbl/unique_fd.h>
+#include <rapidjson/document.h>
+#include <rapidjson/error/en.h>
+
 #include "lib/fit/function.h"
-#include "rapidjson/document.h"
-#include "rapidjson/error/en.h"
+#include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace json {
+namespace json_parser {
 namespace {
 
 using ErrorCallback = fit::function<void(size_t, const std::string&)>;
@@ -80,39 +82,27 @@ rapidjson::Document JSONParser::ParseFromString(const std::string& data, const s
 
 void JSONParser::ParseFromDirectory(const std::string& path,
                                     fit::function<void(rapidjson::Document)> cb) {
-  static constexpr char kPathTooLong[] = "Config directory path is too long: %s";
-  char buf[PATH_MAX];
-  buf[0] = '\0';
-  if (strlcpy(buf, path.c_str(), PATH_MAX) >= PATH_MAX) {
-    file_ = path;
-    ReportError(fxl::StringPrintf(kPathTooLong, buf));
+  fbl::unique_fd dir_fd(open(path.c_str(), O_RDONLY | O_DIRECTORY));
+  if (!dir_fd.is_valid()) {
+    ReportError(
+        fxl::StringPrintf("Could not open directory %s error %s", path.c_str(), strerror(errno)));
     return;
   }
-  if (buf[strlen(buf) - 2] != '/' && strlcat(buf, "/", PATH_MAX) >= PATH_MAX) {
-    file_ = path;
-    ReportError(fxl::StringPrintf(kPathTooLong, buf));
+
+  std::vector<std::string> dir_entries;
+  if (!files::ReadDirContentsAt(dir_fd.get(), ".", &dir_entries)) {
+    ReportError(fxl::StringPrintf("Could not read directory contents from path %s error %s",
+                                  path.c_str(), strerror(errno)));
     return;
   }
-  const size_t dir_len = strlen(buf);
-  DIR* cfg_dir = opendir(path.c_str());
-  if (cfg_dir != nullptr) {
-    for (dirent* cfg = readdir(cfg_dir); cfg != nullptr; cfg = readdir(cfg_dir)) {
-      if (strcmp(".", cfg->d_name) == 0 || strcmp("..", cfg->d_name) == 0) {
-        continue;
-      }
-      if (strlcat(buf, cfg->d_name, PATH_MAX) >= PATH_MAX) {
-        file_ = path;
-        ReportError(fxl::StringPrintf(kPathTooLong, buf));
-        continue;
-      }
-      rapidjson::Document document = ParseFromFile(buf);
-      if (!document.HasParseError() && !document.IsNull()) {
-        cb(std::move(document));
-      }
-      // Reset buf to directory path.
-      buf[dir_len] = '\0';
+  for (const auto& entry : dir_entries) {
+    if (!files::IsFileAt(dir_fd.get(), entry))
+      continue;
+
+    rapidjson::Document document = ParseFromFileAt(dir_fd.get(), entry);
+    if (!document.HasParseError() && !document.IsNull()) {
+      cb(std::move(document));
     }
-    closedir(cfg_dir);
   }
 }
 
@@ -150,4 +140,4 @@ bool JSONParser::HasError() const { return !errors_.empty(); }
 
 std::string JSONParser::error_str() const { return fxl::JoinStrings(errors_, "\n"); }
 
-}  // namespace json
+}  // namespace json_parser
