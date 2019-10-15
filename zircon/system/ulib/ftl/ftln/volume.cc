@@ -5,9 +5,9 @@
 #include <lib/ftl/volume.h>
 #include <zircon/assert.h>
 
+#include "ftl_private.h"
 #include "inc/kprivate/ndm.h"
 #include "inc/posix.h"
-#include "ftl_private.h"
 
 namespace ftl {
 

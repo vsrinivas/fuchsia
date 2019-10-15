@@ -662,13 +662,14 @@ static int recycle(FTLN ftl) {
   } else if (ftl->deferment == 0) {
     if (ftl->wear_data.cur_max_lag >= FtlnLim1Lag) {
       ftl->deferment = FtlnLim1Def - FtlnLim1Def * (ftl->wear_data.cur_max_lag - FtlnLim1Lag) /
-                                                   (FtlnLim2Lag - FtlnLim1Lag);
+                                         (FtlnLim2Lag - FtlnLim1Lag);
       ftl->flags |= FTLN_DO_WEAR_BASED;
       ++ftl->wear_data.wc_lim1_recycles;
 
     } else if (ftl->wear_data.avg_wc_lag >= FtlnLim0Lag) {
-      ftl->deferment = FtlnLim0Def - (FtlnLim0Def - FtlnLim1Def) * (ftl->wear_data.avg_wc_lag - FtlnLim0Lag) /
-                                                                   (FtlnLim1Lag - FtlnLim0Lag);
+      ftl->deferment = FtlnLim0Def - (FtlnLim0Def - FtlnLim1Def) *
+                                         (ftl->wear_data.avg_wc_lag - FtlnLim0Lag) /
+                                         (FtlnLim1Lag - FtlnLim0Lag);
       ftl->flags |= FTLN_DO_WEAR_BASED;
       ++ftl->wear_data.wc_sum_recycles;
     }
@@ -1031,12 +1032,11 @@ int FtlnRecCheck(FTLN ftl, int wr_cnt) {
 
 #if FTLN_DEBUG > 1
     if (ftl->flags & FTLN_VERBOSE)
-      printf("\n0 rec begin: free vpn = %5u (%3u), free mpn = %5u (%3u)"
-             " free blocks = %2u\n", ftl->free_vpn,
-              free_vol_list_pgs(ftl),
-              ftl->free_mpn,
-              free_map_list_pgs(ftl),
-              ftl->num_free_blks);
+      printf(
+          "\n0 rec begin: free vpn = %5u (%3u), free mpn = %5u (%3u)"
+          " free blocks = %2u\n",
+          ftl->free_vpn, free_vol_list_pgs(ftl), ftl->free_mpn, free_map_list_pgs(ftl),
+          ftl->num_free_blks);
 #endif
 
     // Loop until enough pages are free.
@@ -1054,20 +1054,18 @@ int FtlnRecCheck(FTLN ftl, int wr_cnt) {
       if (ftl->wear_data.max_consec_rec < count) {
         ftl->wear_data.max_consec_rec = count;
 #if FTLN_DEBUG > 2
-        printf("max_consec_rec=%u, avg_wc_lag=%u\n",
-                ftl->wear_data.max_consec_rec,
-                ftl->wear_data.avg_wc_lag);
+        printf("max_consec_rec=%u, avg_wc_lag=%u\n", ftl->wear_data.max_consec_rec,
+               ftl->wear_data.avg_wc_lag);
 #endif
       }
 
 #if FTLN_DEBUG > 1
       if (ftl->flags & FTLN_VERBOSE)
-        printf("%u rec begin: free vpn = %5u (%3u), free mpn = %5u (%3u)"
-               " free blocks = %2u\n", count, ftl->free_vpn,
-               free_vol_list_pgs(ftl),
-               ftl->free_mpn,
-               free_map_list_pgs(ftl),
-               ftl->num_free_blks);
+        printf(
+            "%u rec begin: free vpn = %5u (%3u), free mpn = %5u (%3u)"
+            " free blocks = %2u\n",
+            count, ftl->free_vpn, free_vol_list_pgs(ftl), ftl->free_mpn, free_map_list_pgs(ftl),
+            ftl->num_free_blks);
 #endif
 
       // Break if enough pages have been freed.

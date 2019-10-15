@@ -5,7 +5,6 @@
 #pragma once
 
 #include <stdio.h>
-
 #include <zircon/compiler.h>
 
 #include "inc/kprivate/fsdriver.h"
@@ -85,8 +84,8 @@ typedef struct {
   uint32_t lag_ge_lim1;       // # of blks w/wear count lag >= lag limit 1.
   uint32_t max_ge_lim2;       // Max blks w/wear lag concurrently >= lim2.
   uint32_t max_wc_over;       // # of times max delta (0xFF) was exceeded.
-  uint8_t  lft_max_lag;       // Lifetime max wear lag below hi wear count.
-  uint8_t  cur_max_lag;       // Current max wear lag.
+  uint8_t lft_max_lag;        // Lifetime max wear lag below hi wear count.
+  uint8_t cur_max_lag;        // Current max wear lag.
 } FtlWearData;
 
 __BEGIN_CDECLS
@@ -109,7 +108,7 @@ void FsFreeClear(void* ptr_ptr);
 void FsAfreeClear(void* ptr_ptr);
 void FsFree(void* ptr);
 
-FtlWearData FtlnGetWearDat(void *ftl);
+FtlWearData FtlnGetWearDat(void* ftl);
 void FtlnSetLim0(uint32_t wc_lim0_lag, uint32_t wc_lim0_def);
 void FtlnSetLim1(uint32_t wc_lim1_lag, uint32_t wc_lim1_def);
 void FtlnSetLim2(uint32_t wc_lim2_lag);

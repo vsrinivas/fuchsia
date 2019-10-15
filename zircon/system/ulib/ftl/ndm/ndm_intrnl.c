@@ -1293,16 +1293,14 @@ void* ndmAddVolFTL(NDM ndm, ui32 part_num, FtlNdmVol* ftl_cfg, XfsVol* xfs) {
   NDMPartition* part;
 
   // Check partition number.
-  if (part_num >= ndm->num_partitions)
-  {
+  if (part_num >= ndm->num_partitions) {
     FsError2(NDM_CFG_ERR, EINVAL);
     return NULL;
   }
   part = &ndm->partitions[part_num];
 
   // Check partition first block and number of blocks.
-  if (part->first_block + part->num_blocks > ndm->num_vblks)
-  {
+  if (part->first_block + part->num_blocks > ndm->num_vblks) {
     FsError2(NDM_CFG_ERR, ENOSPC);
     return NULL;
   }
