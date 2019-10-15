@@ -6,11 +6,11 @@ library fuchsia.net;
 
 struct IpAddressInfo {
     /// All of the IPv4 addresses for the requested hostname.
-    vector<Ipv4Address> ipv4_addrs;
+    vector<Ipv4Address>:256 ipv4_addrs;
     /// All of the IPv6 addresses for the requested hostname.
-    vector<Ipv6Address> ipv6_addrs;
+    vector<Ipv6Address>:256 ipv6_addrs;
     /// The canonical name of the requested hostname (usually the DNS CNAME record, if one exists).
-    string? canonical_name;
+    string:256? canonical_name;
 };
 
 enum LookupError {

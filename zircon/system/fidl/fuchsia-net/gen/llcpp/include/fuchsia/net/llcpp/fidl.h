@@ -402,7 +402,7 @@ struct IpAddressInfo {
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 48;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr uint32_t MaxOutOfLine = 5376;
 
   // All of the IPv4 addresses for the requested hostname.
   ::fidl::VectorView<::llcpp::fuchsia::net::Ipv4Address> ipv4_addrs = {};
@@ -421,7 +421,7 @@ struct NameLookup_LookupIp_Response {
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 48;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr uint32_t MaxOutOfLine = 5376;
 
   ::llcpp::fuchsia::net::IpAddressInfo addr = {};
 };
@@ -508,7 +508,7 @@ struct NameLookup_LookupIp_Result {
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr uint32_t MaxOutOfLine = 5376;
 
  private:
   void Destroy();
@@ -657,7 +657,7 @@ class NameLookup final {
     static constexpr const fidl_type_t* Type = &fuchsia_net_NameLookupLookupIpResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 72;
-    static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t MaxOutOfLine = 5376;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
