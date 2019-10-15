@@ -75,7 +75,12 @@ void Environment::SetUp() {
   ASSERT_TRUE(mkdir(config_.mount_path, 0755) == 0 || errno == EEXIST);
 }
 
-void Environment::TearDown() { ramdisk_.reset(); }
+void Environment::TearDown() {
+  ramdisk_.reset();
+  fdio_ns_t* name_space;
+  ASSERT_OK(fdio_ns_get_installed(&name_space));
+  ASSERT_OK(fdio_ns_unbind(name_space, kTestDevRoot));
+}
 
 const char* Environment::GetRelativeDevicePath() const {
   if (!ramdisk_) {
