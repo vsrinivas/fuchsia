@@ -40,9 +40,8 @@ system shell) with it running.
 > truncated. If the filter isn't working, check the actual name in "ps". We hope
 > to have a better way to match this in the future.
 
-This example sets a pending breakpoint on `main` (Rust users: use "@main") to
-stop at the beginning of execution, and waits for a process called "my_app" to
-start:
+This example sets a pending breakpoint on `main` to stop at the beginning of
+execution, and waits for a process called "my_app" to start:
 
 ```
 [zxdb] attach my_app
@@ -100,16 +99,12 @@ Minimal console apps including some unit tests can be launched directly from
 within the debugger which avoids the "attach" dance:
 
 ```
-[zxdb] break @main
+[zxdb] break main
 Breakpoint 1 (Software) on Global, Enabled, stop=All, @ @main
 Pending: No matches for location, it will be pending library loads.
 
 [zxdb] run /bin/cowsay
 ```
-
-> The "@main" symbol will match the process' entrypoint which is particularly
-> useful for Rust where things live in a namespace. For C/C++, it's equivalent
-> to "main".
 
 If you get a shared library load error or errors about files or services not
 being found, it means the app can't be run from within the debugger's launcher
@@ -406,23 +401,18 @@ Breakpoint 3 (Software) on Global, Enabled, stop=All, @ main
 
 A location can be expressed in many different ways.
 
-  * Plain function name:
+  * Plain function name. This will match functions with the name in any
+    namespace:
 
     ```
     break main
     ```
 
-    There is a special symbol "@main" that matches the entrypoint of the process.
-    This is useful for Rust where the entrypoint is usually in a namespace:
-
-    ```
-    break @main
-    ```
-
-  * Member function or functions inside namespaces:
+  * Member function or functions inside a specific namespace or class:
 
     ```
     break my_namespace::MyClass::MyFunction
+    break ::OtherFunction
     ```
 
   * Source file + line number (separate with a colon):
