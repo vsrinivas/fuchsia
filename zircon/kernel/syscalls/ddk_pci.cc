@@ -428,7 +428,7 @@ zx_status_t sys_pci_get_nth_device(zx_handle_t hrsrc, uint32_t index,
 
   KernelHandle<PciDeviceDispatcher> handle;
   zx_rights_t rights;
-  zx_pcie_device_info_t info;
+  zx_pcie_device_info_t info{};
   status = PciDeviceDispatcher::Create(index, &info, &handle, &rights);
   if (status != ZX_OK) {
     return status;
