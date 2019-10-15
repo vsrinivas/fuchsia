@@ -107,11 +107,9 @@ template("fidl_alias") {
       "_c",
       "_c_client",
       "_c_server",
+      "_libfuzzer",
       "_llcpp",
     ]
-    if (defined(invoker.fuzzers)) {
-      suffixes += [ "_libfuzzer" ]
-    }
     foreach(suffix, suffixes) {
       group(target_name + suffix) {
         forward_variables_from(invoker, [ "testonly" ])
