@@ -817,7 +817,7 @@ inline promise_impl<Continuation> make_promise_with_continuation(Continuation co
 //     }
 //
 //     fit::promise<weather_type, std::string> wait_for_good_weather(int max_days) {
-//         return fit::make_promise([days_left = max_days] (fit::context context&) mutable
+//         return fit::make_promise([days_left = max_days] (fit::context& context) mutable
 //                             -> fit::result<int, std::string> {
 //             weather_type weather = look_outside();
 //             if (weather == weather_type::sunny || weather == weather_type::glorious)
