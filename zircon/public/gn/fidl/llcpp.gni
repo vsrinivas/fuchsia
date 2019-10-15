@@ -126,7 +126,7 @@ template("fidl_llcpp_library") {
   } else {
     # TODO(BLD-441): This exists only for the deps above.  This generates
     # metadata for the build_api_module("fidl_gen") at top-level that
-    # informs the //tool/fidlgen_llcpp_zircon scripts what generated sources
+    # informs the //tools/fidlgen_llcpp_zircon scripts what generated sources
     # need to be updated.
     # This will go away when the bindings generation is done directly here.
     group(library_target) {
