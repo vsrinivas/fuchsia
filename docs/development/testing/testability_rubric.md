@@ -137,6 +137,66 @@ receiving Testability+1.
     observable behavioral change, the CL should include a test for the new
     behavior.
 
+## What does require testing
+
+### Tests must be tested for flakiness (if supported)
+
+As a testability reviewer, if a change is tested with automated tests, you
+should make sure the author has added the MULTIPLY feature as described below
+and has run a successful tryjob that uses this feature (if supported). You can
+check to see if it worked by clicking on the tryjob and looking for a step that
+says `shard multiplied:<shard name>-<test target>` for each target. This feature
+is only supported for builders that test in shards. If there are no such
+builders that run their tests, they will not be able to use this feature.
+
+As a change author, when you add or modify automated tests, you should specifiy
+this with a MULTIPLY field in the commit message. For example, ``MULTIPLY:
+`<json_string>` `` where `<json_string>` should be a list of tests following
+this schema:
+
+```json
+[
+  {
+    "target": <GN test target name, e.g., "//src/foo:foo_bin_test">,
+    "os": <one of "fuchsia", "linux", "mac"; defaults to "fuchsia">,
+    "total_runs": <any positive int; defaults to 1>
+  },
+  ...
+]
+```
+
+The GN target name refers to the name of a test executable inside a
+`test_package` GN target which is located in the `out/default/tests.json` file
+located in your Fuchsia directory. This file is created after you run `fx build`
+inside of your Fuchsia directory. The test target and OS must match one of the
+tests in this list for this feature to work.
+
+An example CL description should look like:
+
+```json
+[foo] Add new foo compatibility tests
+
+This change adds a new test.
+
+MULTIPLY: `[
+  {
+    "target": "//src/foo/compat:tests",
+    "total_runs": 30
+  },
+  {
+    "target": "//src/foo/host:tests",
+    "os": "linux",
+    "total_runs": 30
+  }
+]`
+```
+
+You should then choose a tryjob that runs your tests. These tests show as
+separate shards for each test, which run that test as many times as the
+specified `total_runs`. The timeout for running these tests is 40 minutes. If a
+test takes too long, the shard may time out. It is recommended that you start
+with a `total_runs` of `30`.
+
 ## Temporary testability exemptions
 
 The following are currently exempt from Testability, while ongoing work aims to
