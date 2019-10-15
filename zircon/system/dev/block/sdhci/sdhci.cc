@@ -208,7 +208,6 @@ void Sdhci::CmdStageCompleteLocked() {
     }
   } else if (cmd_req_->cmd_flags & (SDMMC_RESP_LEN_48 | SDMMC_RESP_LEN_48B)) {
     cmd_req_->response[0] = response_0;
-    cmd_req_->response[1] = response_1;
   }
 
   // We're done if the command has no data stage or if the data stage completed early
@@ -672,10 +671,6 @@ zx_status_t Sdhci::SdmmcSetBusFreq(uint32_t bus_freq) {
 }
 
 zx_status_t Sdhci::SdmmcSetTiming(sdmmc_timing_t timing) {
-  if (timing >= SDMMC_TIMING_MAX) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
   fbl::AutoLock lock(&mtx_);
 
   auto ctrl1 = HostControl1::Get().ReadFrom(&regs_mmio_buffer_);
@@ -688,14 +683,32 @@ zx_status_t Sdhci::SdmmcSetTiming(sdmmc_timing_t timing) {
   }
 
   auto ctrl2 = HostControl2::Get().ReadFrom(&regs_mmio_buffer_);
-  if (timing == SDMMC_TIMING_HS200) {
-    ctrl2.set_uhs_mode_select(HostControl2::kUhsModeSdr104);
-  } else if (timing == SDMMC_TIMING_HS400) {
-    ctrl2.set_uhs_mode_select(HostControl2::kUhsModeHs400);
-  } else if (timing == SDMMC_TIMING_HSDDR) {
-    ctrl2.set_uhs_mode_select(HostControl2::kUhsModeDdr50);
-  } else {
-    ctrl2.set_uhs_mode_select(HostControl2::kUhsModeSdr12);
+  switch (timing) {
+    case SDMMC_TIMING_LEGACY:
+    case SDMMC_TIMING_SDR12:
+      ctrl2.set_uhs_mode_select(HostControl2::kUhsModeSdr12);
+      break;
+    case SDMMC_TIMING_HS:
+    case SDMMC_TIMING_SDR25:
+      ctrl2.set_uhs_mode_select(HostControl2::kUhsModeSdr25);
+      break;
+    case SDMMC_TIMING_HSDDR:
+    case SDMMC_TIMING_DDR50:
+      ctrl2.set_uhs_mode_select(HostControl2::kUhsModeDdr50);
+      break;
+    case SDMMC_TIMING_HS200:
+    case SDMMC_TIMING_SDR104:
+      ctrl2.set_uhs_mode_select(HostControl2::kUhsModeSdr104);
+      break;
+    case SDMMC_TIMING_HS400:
+      ctrl2.set_uhs_mode_select(HostControl2::kUhsModeHs400);
+      break;
+    case SDMMC_TIMING_SDR50:
+      ctrl2.set_uhs_mode_select(HostControl2::kUhsModeSdr50);
+      break;
+    default:
+      zxlogf(ERROR, "sdhci: unknown timing value %u\n", timing);
+      return ZX_ERR_INVALID_ARGS;
   }
   ctrl2.WriteTo(&regs_mmio_buffer_);
 

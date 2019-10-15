@@ -334,6 +334,35 @@ TEST_F(SdhciTest, SetBusFreqTimeout) {
   EXPECT_NOT_OK(dut_->SdmmcSetBusFreq(12'500'000));
 }
 
+TEST_F(SdhciTest, SetTiming) {
+  mock_sdhci_.ExpectGetQuirks(0);
+  ASSERT_NO_FATAL_FAILURES(CreateDut());
+
+  EXPECT_OK(dut_->SdmmcSetTiming(SDMMC_TIMING_HS));
+  EXPECT_TRUE(HostControl1::Get().ReadFrom(&mmio_).high_speed_enable());
+  EXPECT_EQ(HostControl2::Get().ReadFrom(&mmio_).uhs_mode_select(), HostControl2::kUhsModeSdr25);
+
+  EXPECT_OK(dut_->SdmmcSetTiming(SDMMC_TIMING_LEGACY));
+  EXPECT_FALSE(HostControl1::Get().ReadFrom(&mmio_).high_speed_enable());
+  EXPECT_EQ(HostControl2::Get().ReadFrom(&mmio_).uhs_mode_select(), HostControl2::kUhsModeSdr12);
+
+  EXPECT_OK(dut_->SdmmcSetTiming(SDMMC_TIMING_HSDDR));
+  EXPECT_TRUE(HostControl1::Get().ReadFrom(&mmio_).high_speed_enable());
+  EXPECT_EQ(HostControl2::Get().ReadFrom(&mmio_).uhs_mode_select(), HostControl2::kUhsModeDdr50);
+
+  EXPECT_OK(dut_->SdmmcSetTiming(SDMMC_TIMING_SDR25));
+  EXPECT_TRUE(HostControl1::Get().ReadFrom(&mmio_).high_speed_enable());
+  EXPECT_EQ(HostControl2::Get().ReadFrom(&mmio_).uhs_mode_select(), HostControl2::kUhsModeSdr25);
+
+  EXPECT_OK(dut_->SdmmcSetTiming(SDMMC_TIMING_SDR12));
+  EXPECT_TRUE(HostControl1::Get().ReadFrom(&mmio_).high_speed_enable());
+  EXPECT_EQ(HostControl2::Get().ReadFrom(&mmio_).uhs_mode_select(), HostControl2::kUhsModeSdr12);
+
+  EXPECT_OK(dut_->SdmmcSetTiming(SDMMC_TIMING_HS400));
+  EXPECT_TRUE(HostControl1::Get().ReadFrom(&mmio_).high_speed_enable());
+  EXPECT_EQ(HostControl2::Get().ReadFrom(&mmio_).uhs_mode_select(), HostControl2::kUhsModeHs400);
+}
+
 TEST_F(SdhciTest, HwReset) {
   mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
