@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 #include <fbl/string_buffer.h>
-
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #define EXPECT_DATA_AND_LENGTH(expected, actual)  \
   do {                                            \
@@ -24,9 +23,7 @@ void VAListHelper(Runnable runnable, ...) {
   va_end(ap);
 }
 
-bool capacity_test() {
-  BEGIN_TEST;
-
+TEST(StringBufferTest, Capacity) {
   {
     fbl::StringBuffer<0u> buf;
     EXPECT_EQ(0u, buf.capacity());
@@ -36,13 +33,9 @@ bool capacity_test() {
     fbl::StringBuffer<100u> buf;
     EXPECT_EQ(100u, buf.capacity());
   }
-
-  END_TEST;
 }
 
-bool empty_string_test() {
-  BEGIN_TEST;
-
+TEST(StringBufferTest, EmptyString) {
   {
     fbl::StringBuffer<0u> empty;
 
@@ -80,13 +73,9 @@ bool empty_string_test() {
 
     EXPECT_EQ(0, empty[0u]);
   }
-
-  END_TEST;
 }
 
-bool append_test() {
-  BEGIN_TEST;
-
+TEST(StringBufferTest, Append) {
   {
     fbl::StringBuffer<16u> str;
     str.Append('a')
@@ -168,13 +157,9 @@ bool append_test() {
     str.Append(fbl::String("cdefg"));
     EXPECT_DATA_AND_LENGTH("abc", str);
   }
-
-  END_TEST;
 }
 
-bool append_printf_test() {
-  BEGIN_TEST;
-
+TEST(StringBufferTest, AppendPrintf) {
   {
     fbl::StringBuffer<12u> str;
     str.AppendPrintf("abc");
@@ -194,110 +179,66 @@ bool append_printf_test() {
     VAListHelper([&str](va_list ap) { str.AppendVPrintf("%d", ap); }, 123456789);
     EXPECT_DATA_AND_LENGTH("abc20,def123", str);
   }
-
-  END_TEST;
 }
 
-bool modify_test() {
-  BEGIN_TEST;
+TEST(StringBufferTest, Modify) {
+  fbl::StringBuffer<16u> str;
+  str.Append("abcdef");
 
-  {
-    fbl::StringBuffer<16u> str;
-    str.Append("abcdef");
+  EXPECT_EQ('c', str[2u]);
+  str[2u] = 'x';
+  EXPECT_EQ('x', str[2u]);
+  EXPECT_DATA_AND_LENGTH("abxdef", str);
 
-    EXPECT_EQ('c', str[2u]);
-    str[2u] = 'x';
-    EXPECT_EQ('x', str[2u]);
-    EXPECT_DATA_AND_LENGTH("abxdef", str);
-
-    memcpy(str.data(), "yyyy", 4u);
-    EXPECT_DATA_AND_LENGTH("yyyyef", str);
-  }
-
-  END_TEST;
+  memcpy(str.data(), "yyyy", 4u);
+  EXPECT_DATA_AND_LENGTH("yyyyef", str);
 }
 
-bool resize_test() {
-  BEGIN_TEST;
+TEST(StringBufferTest, Resize) {
+  fbl::StringBuffer<16u> str;
 
-  {
-    fbl::StringBuffer<16u> str;
+  str.Resize(4u, 'x');
+  EXPECT_STR_EQ("xxxx", str.data());
+  EXPECT_EQ(4u, str.length());
 
-    str.Resize(4u, 'x');
-    EXPECT_STR_EQ("xxxx", str.data());
-    EXPECT_EQ(4u, str.length());
+  str.Resize(8u, 'y');
+  EXPECT_STR_EQ("xxxxyyyy", str.data());
+  EXPECT_EQ(8u, str.length());
 
-    str.Resize(8u, 'y');
-    EXPECT_STR_EQ("xxxxyyyy", str.data());
-    EXPECT_EQ(8u, str.length());
+  str.Resize(16u);
+  EXPECT_STR_EQ("xxxxyyyy", str.data());
+  EXPECT_EQ(0, memcmp("xxxxyyyy\0\0\0\0\0\0\0\0\0", str.data(), str.length() + 1));
+  EXPECT_EQ(16u, str.length());
 
-    str.Resize(16u);
-    EXPECT_STR_EQ("xxxxyyyy", str.data());
-    EXPECT_EQ(0, memcmp("xxxxyyyy\0\0\0\0\0\0\0\0\0", str.data(), str.length() + 1));
-    EXPECT_EQ(16u, str.length());
-
-    str.Resize(0u);
-    EXPECT_STR_EQ("", str.data());
-    EXPECT_EQ(0u, str.length());
-  }
-
-  END_TEST;
+  str.Resize(0u);
+  EXPECT_STR_EQ("", str.data());
+  EXPECT_EQ(0u, str.length());
 }
 
-bool clear_test() {
-  BEGIN_TEST;
+TEST(StringBufferTest, Clear) {
+  fbl::StringBuffer<16u> str;
+  str.Append("abcdef");
 
-  {
-    fbl::StringBuffer<16u> str;
-    str.Append("abcdef");
-
-    str.Clear();
-    EXPECT_STR_EQ("", str.data());
-    EXPECT_EQ(0u, str.length());
-  }
-
-  END_TEST;
+  str.Clear();
+  EXPECT_STR_EQ("", str.data());
+  EXPECT_EQ(0u, str.length());
 }
 
-bool to_string_test() {
-  BEGIN_TEST;
+TEST(StringBufferTest, ToString) {
+  fbl::StringBuffer<16u> buf;
+  buf.Append("abcdef");
 
-  {
-    fbl::StringBuffer<16u> buf;
-    buf.Append("abcdef");
-
-    fbl::String str = buf.ToString();
-    EXPECT_TRUE(str == "abcdef");
-  }
-
-  END_TEST;
+  fbl::String str = buf.ToString();
+  EXPECT_TRUE(str == "abcdef");
 }
 
-bool to_string_piece_test() {
-  BEGIN_TEST;
+TEST(StringBufferTest, ToStringPiece) {
+  fbl::StringBuffer<16u> buf;
+  buf.Append("abcdef");
 
-  {
-    fbl::StringBuffer<16u> buf;
-    buf.Append("abcdef");
-
-    fbl::StringPiece piece = buf.ToStringPiece();
-    EXPECT_EQ(buf.data(), piece.data());
-    EXPECT_EQ(buf.length(), piece.length());
-  }
-
-  END_TEST;
+  fbl::StringPiece piece = buf.ToStringPiece();
+  EXPECT_EQ(buf.data(), piece.data());
+  EXPECT_EQ(buf.length(), piece.length());
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(string_buffer_tests)
-RUN_TEST(capacity_test)
-RUN_TEST(empty_string_test)
-RUN_TEST(append_test)
-RUN_TEST(append_printf_test)
-RUN_TEST(modify_test)
-RUN_TEST(resize_test)
-RUN_TEST(clear_test)
-RUN_TEST(to_string_test)
-RUN_TEST(to_string_piece_test)
-END_TEST_CASE(string_buffer_tests)
