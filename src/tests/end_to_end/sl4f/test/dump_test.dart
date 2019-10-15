@@ -36,10 +36,12 @@ void main() {
       expect(
           dumpDir.listSync().map((f) => f.path.split('/').last),
           unorderedMatches([
-            matches(RegExp(r'-test-diagnostic-top.txt$')),
-            matches(RegExp(r'-test-diagnostic-kstats.txt$')),
             matches(RegExp(r'-test-diagnostic-iquery.txt$')),
+            matches(RegExp(r'-test-diagnostic-kstats.txt$')),
+            matches(RegExp(r'-test-diagnostic-net-if.txt$')),
             matches(RegExp(r'-test-diagnostic-ps.txt$')),
+            matches(RegExp(r'-test-diagnostic-top.txt$')),
+            matches(RegExp(r'-test-diagnostic-wlan.txt$')),
           ]));
     });
   }, timeout: Timeout(_timeout));

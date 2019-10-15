@@ -29,10 +29,12 @@ bool _isNullOrEmpty(String str) => str == null || str.isEmpty;
 /// Handles the SL4F server and communication with it.
 class Sl4f {
   static const diagnostics = {
-    'top': 'top -n 1',
-    'kstats': 'kstats -c -m -n 1',
     'iquery': 'iquery --report',
+    'kstats': 'kstats -c -m -n 1',
+    'net-if': 'net if list',
     'ps': 'ps -T',
+    'top': 'top -n 1',
+    'wlan': 'wlan status',
   };
   static const _sl4fComponentUrl =
       'fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx';
