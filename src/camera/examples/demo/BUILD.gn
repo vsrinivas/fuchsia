@@ -44,7 +44,7 @@ package("${demo_name}") {
 }
 
 group("demo") {
-  deps = [
-    ":${demo_name}",
+  public_deps = [
+    ":${demo_name}"
   ]
 }

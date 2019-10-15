@@ -1,0 +1,21 @@
+{
+  "facets": {
+    "fuchsia.test": {
+      "system-services": [
+        "fuchsia.ui.policy.Presenter",
+        "fuchsia.ui.scenic.Scenic"
+      ]
+    }
+  },
+  "program": {
+    "binary": "test/camera_demo_test"
+  },
+  "sandbox": {
+    "services": [
+      "fuchsia.ui.policy.Presenter",
+      "fuchsia.ui.scenic.Scenic",
+      "fuchsia.sys.Launcher",
+      "fuchsia.tracing.provider.Registry"
+    ]
+  }
+}
