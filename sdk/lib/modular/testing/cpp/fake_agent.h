@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_FAKE_AGENT_H_
-#define SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_FAKE_AGENT_H_
+#ifndef LIB_MODULAR_TESTING_CPP_FAKE_AGENT_H_
+#define LIB_MODULAR_TESTING_CPP_FAKE_AGENT_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/modular/cpp/agent.h>
-
-#include "src/modular/lib/modular_test_harness/cpp/fake_component.h"
+#include <lib/modular/testing/cpp/fake_component.h>
 
 namespace modular_testing {
 
@@ -94,4 +93,4 @@ class FakeAgent : public FakeComponent {
 
 }  // namespace modular_testing
 
-#endif  // SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_FAKE_AGENT_H_
+#endif  // LIB_MODULAR_TESTING_CPP_FAKE_AGENT_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_FAKE_COMPONENT_H_
-#define SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_FAKE_COMPONENT_H_
+#ifndef LIB_MODULAR_TESTING_CPP_FAKE_COMPONENT_H_
+#define LIB_MODULAR_TESTING_CPP_FAKE_COMPONENT_H_
 
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/modular/testing/cpp/test_harness_builder.h>
@@ -117,4 +117,4 @@ class FakeComponent : fuchsia::modular::Lifecycle {
 
 }  // namespace modular_testing
 
-#endif  // SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_FAKE_COMPONENT_H_
+#endif  // LIB_MODULAR_TESTING_CPP_FAKE_COMPONENT_H_

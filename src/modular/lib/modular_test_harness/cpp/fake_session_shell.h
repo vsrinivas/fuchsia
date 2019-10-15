@@ -5,9 +5,10 @@
 #ifndef SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_FAKE_SESSION_SHELL_H_
 #define SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_FAKE_SESSION_SHELL_H_
 
+#include <lib/modular/testing/cpp/fake_component.h>
+
 #include <sdk/lib/sys/cpp/component_context.h>
 
-#include "src/modular/lib/modular_test_harness/cpp/fake_component.h"
 #include "src/modular/lib/testing/session_shell_impl.h"
 
 namespace modular_testing {

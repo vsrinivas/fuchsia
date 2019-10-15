@@ -16,6 +16,10 @@ sdk_source_set("cpp") {
   public_configs = [ "//sdk/config" ]
 
   sources = [
+    "fake_agent.cc",
+    "fake_agent.h",
+    "fake_component.cc",
+    "fake_component.h",
     "test_harness_builder.cc",
     "test_harness_builder.h",
     "test_harness_launcher.cc",
@@ -25,6 +29,7 @@ sdk_source_set("cpp") {
   public_deps = [
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/lib/modular/cpp",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -40,14 +45,18 @@ fidl("fuchsia.modular.test.harness") {
 executable("modular_testing_cpp_tests_bin") {
   testonly = true
   sources = [
+    "fake_agent_test.cc",
+    "fake_component_test.cc",
     "test_harness_builder_test.cc",
     "test_harness_launcher_test.cc",
   ]
+
   deps = [
     ":fuchsia.modular.test.harness",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/modular/testing/cpp",
+    "//sdk/lib/modular/testing/cpp:fuchsia.modular.test.harness",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/sys/cpp/testing:unit",

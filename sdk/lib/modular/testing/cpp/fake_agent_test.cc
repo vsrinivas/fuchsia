@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/modular/lib/modular_test_harness/cpp/fake_agent.h"
-
 #include <fuchsia/modular/test/harness/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
+#include <lib/modular/testing/cpp/fake_agent.h>
 
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 

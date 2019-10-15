@@ -4,11 +4,11 @@
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/modular/testing/cpp/fake_component.h>
 
 #include <src/lib/fxl/logging.h>
 
-#include "src/lib/fsl/vmo/strings.h"
-#include "src/modular/lib/modular_test_harness/cpp/fake_component.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_story_shell.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 #include "src/modular/lib/testing/session_shell_impl.h"

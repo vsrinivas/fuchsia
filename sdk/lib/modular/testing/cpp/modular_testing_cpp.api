@@ -1,4 +1,6 @@
 {
-  "pkg/modular_testing_cpp/include/lib/modular/testing/cpp/test_harness_builder.h": "3edbc6cb5bb6f41b28b9a7198c1dcb8e",
+  "pkg/modular_testing_cpp/include/lib/modular/testing/cpp/fake_agent.h": "c7c41527ecd17791fe15bf9d092f7257",
+  "pkg/modular_testing_cpp/include/lib/modular/testing/cpp/fake_component.h": "dd67b218079d8fd992874084da8a8d88",
+  "pkg/modular_testing_cpp/include/lib/modular/testing/cpp/test_harness_builder.h": "186fd194b154dd716ab4616ebacb7655",
   "pkg/modular_testing_cpp/include/lib/modular/testing/cpp/test_harness_launcher.h": "d28534c75006cf539700b1dec1fc2140"
 }

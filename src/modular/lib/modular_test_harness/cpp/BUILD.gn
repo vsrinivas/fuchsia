@@ -21,10 +21,6 @@ source_set("test_harness_fixture") {
   public_configs = [ "//sdk/config" ]
 
   sources = [
-    "fake_agent.cc",
-    "fake_agent.h",
-    "fake_component.cc",
-    "fake_component.h",
     "fake_module.cc",
     "fake_module.h",
     "fake_session_shell.cc",
@@ -54,8 +50,6 @@ executable("test_harness_fixture_test_bin") {
   testonly = true
 
   sources = [
-    "fake_agent_test.cc",
-    "fake_component_test.cc",
     "test_harness_fixture_test.cc",
   ]
 
@@ -63,7 +57,6 @@ executable("test_harness_fixture_test_bin") {
     ":test_harness_fixture",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/modular/testing/cpp:fuchsia.modular.test.harness",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/sys/cpp/testing:unit",

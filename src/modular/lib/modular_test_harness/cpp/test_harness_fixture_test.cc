@@ -5,14 +5,14 @@
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/modular/testing/cpp/fake_component.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
 #include <src/lib/files/glob.h>
 
 #include "gmock/gmock.h"
-#include "src/lib/fsl/vmo/strings.h"
-#include "src/modular/lib/modular_test_harness/cpp/fake_component.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_module.h"
 
 class TestHarnessFixtureTest : public modular_testing::TestHarnessFixture {};

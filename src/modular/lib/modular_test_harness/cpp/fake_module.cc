@@ -5,8 +5,7 @@
 #include "src/modular/lib/modular_test_harness/cpp/fake_module.h"
 
 #include <fuchsia/modular/cpp/fidl.h>
-
-#include "src/modular/lib/modular_test_harness/cpp/fake_component.h"
+#include <lib/modular/testing/cpp/fake_component.h>
 
 namespace modular_testing {
 

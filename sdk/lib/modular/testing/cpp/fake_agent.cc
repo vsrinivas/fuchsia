@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/modular/lib/modular_test_harness/cpp/fake_agent.h"
+#include <lib/modular/testing/cpp/fake_agent.h>
 
 namespace modular_testing {
 

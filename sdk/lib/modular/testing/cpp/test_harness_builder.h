@@ -19,9 +19,9 @@ namespace modular_testing {
 //
 // SAMPLE USAGE:
 //
-// #include <lib/modular/testing/cpp/test_harness_launcher.h>
+// #include <lib/modular/testing/cpp/fake_component.h>
 // #include <lib/modular/testing/cpp/test_harness_builder.h>
-// #include "src/modular/lib/modular_test_harness/cpp/fake_component.h"
+// #include <lib/modular/testing/cpp/test_harness_launcher.h>
 //
 // class MyTest : gtest::RealLoopFixture {};
 //

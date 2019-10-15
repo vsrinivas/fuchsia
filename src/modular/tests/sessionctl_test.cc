@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
+#include <lib/modular/testing/cpp/fake_component.h>
 
 #include <iostream>
 
 #include "src/lib/files/glob.h"
-#include "src/modular/lib/modular_test_harness/cpp/fake_component.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 constexpr char kModularTestHarnessGlobPath[] =
     "/hub/r/mth_*_test/*/c/sessionmgr.cmx/*/out/debug/sessionctl";
